@@ -102,4 +102,7 @@ def build_graph(tbls, extra, sql_paths):
         "enum_count": sum(1 for n in nodes if n["kind"] == "enum"),
         "edge_count": len(edges),
     }
-    return {"meta": meta, "nodes": nodes, "edges": edges}
+    # partition child -> parent map (tbls lists partition tables as plain tables; this lets the
+    # type-map renderers roll a partition's coverage up to its parent instead of flagging it).
+    partitions = {p["child"]: p["parent"] for p in extra.get("partitions", [])}
+    return {"meta": meta, "nodes": nodes, "edges": edges, "partitions": partitions}

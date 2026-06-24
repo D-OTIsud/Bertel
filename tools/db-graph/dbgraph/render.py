@@ -80,6 +80,9 @@ def write_index_md(g):
            "\n## Artifacts",
            "- `dbdoc/` — per-table docs + ER (tbls)",
            "- `db-graph-out/FUNCTIONS.md` · `POLICIES.md` · `TYPES.md` — the glue (functions/policies/enums)",
+           "- `db-graph-out/OBJECT_TYPES.md` — per object-type map (label · archetype · facet tables · common tables)",
+           "- `db-graph-out/FUNCTION_ACCESS.md` — per function: output · access path · object types served",
+           "- `db-graph-out/SURFACE_COVERAGE.md` — §101/§103 completeness (authorable table → consumer RPC)",
            "- `db-graph-out/graph.json` — the unified model · `graph.html` — interactive force graph",
            "\n## Tables by domain"]
     by_dom = {}

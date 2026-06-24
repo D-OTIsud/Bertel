@@ -12,10 +12,18 @@ from dbgraph.reference_extract import (extract_live_reference_values, extract_re
                                        load_mcp_reference_values, merge_reference_extracts)
 from dbgraph.render import (render_api_db_reference_html, render_html, write_functions_md,  # noqa: E402
                             write_index_md, write_policies_md, write_types_md)
+from dbgraph.typemap import (write_function_access_md, write_object_types_md,  # noqa: E402
+                             write_surface_coverage_md)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "db-graph-out")
 DOCS = os.path.join(ROOT, "docs")
+
+
+def _load_object_type_meta():
+    path = os.path.join(os.path.dirname(__file__), "object_type_meta.json")
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
 
 
 def _read(name):
@@ -77,6 +85,13 @@ def main():
                      ("TYPES.md", write_types_md), ("DB_AGENT_INDEX.md", write_index_md)):
         with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
             f.write(fn(g))
+    # object-type-centric views (computed from the graph + the type/archetype metadata)
+    type_meta = _load_object_type_meta()
+    for name, fn in (("OBJECT_TYPES.md", write_object_types_md),
+                     ("FUNCTION_ACCESS.md", write_function_access_md),
+                     ("SURFACE_COVERAGE.md", write_surface_coverage_md)):
+        with open(os.path.join(OUT, name), "w", encoding="utf-8") as f:
+            f.write(fn(g, type_meta))
     with open(os.path.join(DOCS, "api-db-reference.html"), "w", encoding="utf-8") as f:
         f.write(render_api_db_reference_html(g, refs, live_note=live_note))
     live = refs.get("live", {})

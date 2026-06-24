@@ -46,7 +46,7 @@
 - **ALL** `admin_actor_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_read` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (id = auth.uid()) OR (EXISTS ( SELECT 1
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR ( SELECT api.is_platform_superuser() AS is_platform_superuser) OR (id = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
    FROM (actor_object_role aor
      JOIN object o ON ((o.id = aor.object_id)))
   WHERE ((aor.actor_id = actor.id) AND api.can_read_extended(o.id)))))`
@@ -124,12 +124,28 @@
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.crm_interaction`
-- **ALL** `admin_crm_interaction` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **DELETE** `admin_del_crm_interaction` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **INSERT** `admin_ins_crm_interaction` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `admin_read_crm_interaction` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **UPDATE** `admin_upd_crm_interaction` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.crm_task`
-- **ALL** `admin_crm_task` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **DELETE** `admin_del_crm_task` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **INSERT** `admin_ins_crm_task` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `admin_read_crm_task` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **UPDATE** `admin_upd_crm_task` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.gdpr_erasure_log`
+- **SELECT** `gdpr_erasure_log_admin_read` — roles ['authenticated']
+  - `( SELECT api.is_platform_superuser() AS is_platform_superuser)`
 
 ## `public.i18n_translation`
 - **ALL** `Écriture admin des traductions` — roles ['public']
@@ -151,12 +167,12 @@
    FROM object_place p
   WHERE ((p.id = media.place_id) AND api.user_can_write_object_canonical(p.object_id))))))`
 - **SELECT** `read_media` — roles ['public']
-  - `(((is_published IS TRUE) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
+  - `(((is_published IS TRUE) AND ((visibility IS NULL) OR (visibility = 'public'::text)) AND (((object_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object o
   WHERE ((o.id = media.object_id) AND (o.status = 'published'::object_status))))) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM (object_place p
      JOIN object o ON ((o.id = p.object_id)))
-  WHERE ((p.id = media.place_id) AND (o.status = 'published'::object_status))))))) OR ((object_id IS NO …[truncated — full text in catalog_extra.json or live pg_policies]`
+  WHERE ((p.id = media.place_id) AND (o.sta …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **UPDATE** `canonical_upd_media` — roles ['public']
   - `(((object_id IS NOT NULL) AND api.user_can_write_object_canonical(object_id)) OR ((place_id IS NOT NULL) AND (EXISTS ( SELECT 1
    FROM object_place p
@@ -213,6 +229,10 @@
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id)))) | (EXISTS ( SELECT 1
    FROM object_meeting_room omr
   WHERE ((omr.id = meeting_room_equipment.room_id) AND api.user_can_write_object_canonical(omr.object_id))))`
+
+## `public.metric_snapshot`
+- **SELECT** `metric_snapshot_read` — roles ['authenticated']
+  - `true`
 
 ## `public.object`
 - **ALL** `Accès admin/service_role (object)` — roles ['public']
@@ -276,6 +296,22 @@
 - **UPDATE** `canonical_upd_object_classification` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
+## `public.object_cuisine_type`
+- **DELETE** `canonical_del_object_cuisine_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_cuisine_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_cuisine_type` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_cuisine_type.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_cuisine_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+
+## `public.object_deletion_log`
+- **SELECT** `object_deletion_log_admin_read` — roles ['public']
+  - `( SELECT api.is_platform_superuser() AS is_platform_superuser)`
+
 ## `public.object_description`
 - **DELETE** `canonical_del_object_description` — roles ['public']
   - `(api.is_object_owner(object_id) OR (api.user_can_write_canonical(object_id) AND (org_object_id IS NULL)))`
@@ -296,6 +332,18 @@
 - **SELECT** `ext_discounts_org_actor` — roles ['public']
   - `api.can_read_extended(object_id)`
 - **UPDATE** `canonical_upd_object_discount` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+
+## `public.object_document`
+- **DELETE** `canonical_del_object_document` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_document` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_document` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_document.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_document` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_environment_tag`
@@ -858,6 +906,37 @@
   WHERE ((rt.id = object_room_type_amenity.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
    FROM  …[truncated — full text in catalog_extra.json or live pg_policies]`
 
+## `public.object_room_type_bed`
+- **DELETE** `canonical_del_object_room_type_bed` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object_room_type rt
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid))))))`
+- **INSERT** `canonical_ins_object_room_type_bed` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object_room_type rt
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid))))))`
+- **SELECT** `read_object_room_type_bed` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (rt.is_published IS TRUE) AND (o.status = 'published'::object_status)))) OR (room_type_id IN ( SELECT rt.id
+   FROM object_room_type rt
+  WHERE (rt.object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids))) …[truncated — full text in catalog_extra.json or live pg_policies]`
+- **UPDATE** `canonical_upd_object_room_type_bed` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object_room_type rt
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND api.user_can_write_object_canonical(rt.object_id)))) OR (EXISTS ( SELECT 1
+   FROM (object_room_type rt
+     JOIN object o ON ((o.id = rt.object_id)))
+  WHERE ((rt.id = object_room_type_bed.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
+   FROM object_r …[truncated — full text in catalog_extra.json or live pg_policies]`
+
 ## `public.object_room_type_media`
 - **DELETE** `canonical_del_object_room_type_media` — roles ['public']
   - `((EXISTS ( SELECT 1
@@ -888,6 +967,18 @@
      JOIN object o ON ((o.id = rt.object_id)))
   WHERE ((rt.id = object_room_type_media.room_type_id) AND (o.created_by = ( SELECT auth.uid() AS uid)))))) | ((EXISTS ( SELECT 1
    FROM obje …[truncated — full text in catalog_extra.json or live pg_policies]`
+
+## `public.object_stay_policy`
+- **DELETE** `canonical_del_object_stay_policy` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_stay_policy` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_stay_policy` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_stay_policy.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_stay_policy` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_sustainability_action`
 - **DELETE** `canonical_del_object_sustainability_action` — roles ['public']
@@ -953,6 +1044,18 @@
 ## `public.object_version_default`
 - **ALL** `admin_object_version` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_web_channel`
+- **DELETE** `canonical_del_object_web_channel` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_web_channel` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_web_channel` — roles ['public']
+  - `(((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_web_channel.object_id) AND (o.status = 'published'::object_status)))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_web_channel` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_zone`
 - **DELETE** `canonical_del_object_zone` — roles ['public']
@@ -1223,6 +1326,12 @@
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
+## `public.ref_code_bed_type`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
 ## `public.ref_code_booking_status`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
@@ -1236,6 +1345,12 @@
   - `true`
 
 ## `public.ref_code_contact_kind`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
+## `public.ref_code_crm_sentiment`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
@@ -1319,11 +1434,29 @@
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
+## `public.ref_code_iti_difficulty`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
+## `public.ref_code_iti_open_status`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
 ## `public.ref_code_iti_practice`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `Lecture publique des pratiques ITI` — roles ['public']
   - `true`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
+## `public.ref_code_iti_stage_kind`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
@@ -1385,6 +1518,12 @@
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
+## `public.ref_code_opening_period_type`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
 ## `public.ref_code_opening_schedule_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
@@ -1420,6 +1559,12 @@
   - `true`
 
 ## `public.ref_code_price_kind`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
+## `public.ref_code_price_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
@@ -1640,9 +1785,15 @@
      JOIN user_org_admin_role  …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `storage.objects`
+- **ALL RESTRICTIVE** `documents_no_anon_write` — roles ['anon', 'authenticated']
+  - `(bucket_id <> 'documents'::text) | (bucket_id <> 'documents'::text)`
+- **ALL** `documents_service_role_write` — roles ['service_role']
+  - `(bucket_id = 'documents'::text) | (bucket_id = 'documents'::text)`
 - **ALL RESTRICTIVE** `media_no_anon_write` — roles ['anon', 'authenticated']
   - `(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)`
 - **ALL** `media_service_role_write` — roles ['service_role']
   - `(bucket_id = 'media'::text) | (bucket_id = 'media'::text)`
+- **SELECT** `documents_public_read` — roles ['public']
+  - `(bucket_id = 'documents'::text)`
 - **SELECT** `media_public_read` — roles ['public']
   - `(bucket_id = 'media'::text)`

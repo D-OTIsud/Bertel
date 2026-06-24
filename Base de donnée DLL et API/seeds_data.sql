@@ -677,6 +677,56 @@ FROM (
 JOIN ref_code_amenity_family fam ON fam.code = v.fam_code
 WHERE NOT EXISTS (SELECT 1 FROM ref_amenity ra WHERE ra.code = v.code);
 
+-- ──────────────────────────────────────────────────────────────────────────
+-- Complétude équipements vs standard sectoriel (ajout 2026-06-24).
+-- Réf. : grille de classement meublé de tourisme Gîtes de France / Clévacances /
+-- Atout France + checklists Booking/Airbnb. Comble les 4 familles déclarées mais
+-- VIDES (equipment, comforts, family, business) + les appareils de cuisson
+-- self-catering absents de `kitchen` (four, plaques, lave-vaisselle, congélateur…).
+-- Enjeu produit : 485/497 HEB sont des locatifs entiers (cf. décision §64) dont
+-- l'électroménager standard n'était pas catalogué. i18n en/es inline (≠ bloc 1834).
+-- `sustainable` reste volontairement vide (chevauche le module durabilité dédié —
+-- voir l'audit docs/schema-workbench/ref-seeding-industry-standard-audit-2026-06-24.md).
+-- Idempotent : ON CONFLICT (code) DO NOTHING (additif, ne modifie aucune ligne existante).
+INSERT INTO ref_amenity (code, name, family_id, scope, description, name_i18n, description_i18n)
+SELECT v.code, v.name, fam.id, v.scope, v.description,
+       jsonb_build_object('en', v.name_en, 'es', v.name_es),
+       jsonb_build_object('en', v.desc_en, 'es', v.desc_es)
+FROM (VALUES
+  -- KITCHEN — appareils de cuisson self-catering
+  ('equipped_kitchen','Cuisine équipée','kitchen','both','Cuisine entièrement équipée (distincte d''une kitchenette)','Fully-equipped kitchen','Cocina equipada','Fully-equipped kitchen (distinct from a kitchenette)','Cocina totalmente equipada (distinta de una cocineta)'),
+  ('oven','Four','kitchen','both','Four traditionnel','Oven','Horno','Conventional oven','Horno tradicional'),
+  ('stove','Plaques de cuisson','kitchen','both','Plaques de cuisson (gaz, induction ou vitrocéramique)','Stove / hob','Placa de cocina','Cooking hob (gas, induction or ceramic)','Placa de cocina (gas, inducción o vitrocerámica)'),
+  ('dishwasher','Lave-vaisselle','kitchen','both','Lave-vaisselle','Dishwasher','Lavavajillas','Dishwasher','Lavavajillas'),
+  ('freezer','Congélateur','kitchen','both','Congélateur ou compartiment de congélation','Freezer','Congelador','Freezer or freezer compartment','Congelador o compartimento congelador'),
+  ('toaster','Grille-pain','kitchen','both','Grille-pain','Toaster','Tostadora','Toaster','Tostadora'),
+  ('kettle','Bouilloire','kitchen','both','Bouilloire électrique','Kettle','Hervidor','Electric kettle','Hervidor eléctrico'),
+  ('kitchenware','Vaisselle & ustensiles','kitchen','both','Vaisselle, couverts et ustensiles de cuisine','Kitchenware','Menaje de cocina','Dishes, cutlery and cooking utensils','Vajilla, cubertería y utensilios de cocina'),
+  -- EQUIPMENT — électroménager / entretien (famille vide avant ce patch)
+  ('washing_machine','Lave-linge','equipment','both','Lave-linge','Washing machine','Lavadora','Washing machine','Lavadora'),
+  ('clothes_dryer','Sèche-linge','equipment','both','Sèche-linge','Clothes dryer','Secadora','Clothes dryer','Secadora'),
+  ('vacuum_cleaner','Aspirateur','equipment','both','Aspirateur','Vacuum cleaner','Aspiradora','Vacuum cleaner','Aspiradora'),
+  ('ironing_board','Planche à repasser','equipment','both','Planche à repasser (complément du fer)','Ironing board','Tabla de planchar','Ironing board (complements the iron)','Tabla de planchar (complemento de la plancha)'),
+  ('drying_rack','Étendoir à linge','equipment','both','Étendoir / séchoir à linge','Drying rack','Tendedero','Clothes drying rack','Tendedero de ropa'),
+  -- COMFORTS — éléments de confort (famille vide avant ce patch)
+  ('welcome_basket','Panier d''accueil','comforts','both','Panier ou corbeille de bienvenue','Welcome basket','Cesta de bienvenida','Welcome basket or hamper','Cesta o canasta de bienvenida'),
+  ('daily_housekeeping','Ménage quotidien','comforts','object','Service de ménage quotidien','Daily housekeeping','Limpieza diaria','Daily housekeeping service','Servicio de limpieza diaria'),
+  ('slippers','Chaussons','comforts','both','Chaussons fournis','Slippers','Zapatillas','Slippers provided','Zapatillas disponibles'),
+  ('welcome_drink','Boisson de bienvenue','comforts','object','Boisson de bienvenue à l''arrivée','Welcome drink','Bebida de bienvenida','Welcome drink on arrival','Bebida de bienvenida a la llegada'),
+  -- FAMILY — équipements enfants (famille vide avant ce patch)
+  ('changing_table','Table à langer','family','both','Table à langer','Changing table','Cambiador','Baby changing table','Cambiador para bebés'),
+  ('baby_bath','Baignoire bébé','family','both','Baignoire pour bébé','Baby bath','Bañera para bebés','Baby bath','Bañera para bebés'),
+  ('child_safety_gates','Barrières de sécurité','family','both','Barrières de sécurité enfant (escaliers)','Child safety gates','Barreras de seguridad','Child safety gates (stairs)','Barreras de seguridad infantil (escaleras)'),
+  ('bottle_warmer','Chauffe-biberon','family','both','Chauffe-biberon','Bottle warmer','Calienta biberones','Bottle warmer','Calienta biberones'),
+  ('child_tableware','Vaisselle enfant','family','both','Vaisselle et couverts pour enfants','Children''s tableware','Vajilla infantil','Children''s dishes and cutlery','Vajilla y cubertería infantil'),
+  -- BUSINESS — clientèle affaires (famille vide ; business_center existe déjà côté services)
+  ('meeting_room','Salle de réunion','business','object','Salle de réunion / séminaire','Meeting room','Sala de reuniones','Meeting / seminar room','Sala de reuniones / seminarios'),
+  ('coworking_space','Espace coworking','business','object','Espace de coworking / travail partagé','Coworking space','Espacio de coworking','Coworking / shared workspace','Espacio de coworking / trabajo compartido'),
+  ('printer','Imprimante','business','object','Imprimante / photocopieur en accès','Printer','Impresora','Printer / copier available','Impresora / fotocopiadora disponible')
+) AS v(code,name,fam_code,scope,description,name_en,name_es,desc_en,desc_es)
+JOIN ref_code_amenity_family fam ON fam.code = v.fam_code
+ON CONFLICT (code) DO NOTHING;
+
 -- Types HOT via ref_classification_scheme/value
 INSERT INTO ref_classification_scheme (code, name) VALUES ('type_hot','Type d''hôtel')
 ON CONFLICT (code) DO NOTHING;

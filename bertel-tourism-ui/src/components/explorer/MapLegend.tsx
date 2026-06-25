@@ -9,10 +9,11 @@ import { defaultMarkerStyles, markerIconCatalog } from '../../config/map-markers
  * SOURCE UNIQUE : chaque pastille reprend EXACTEMENT la couleur ET le glyphe du
  * marqueur, lus dans `defaultMarkerStyles` — la même table qui génère les PNG de
  * `public/markers/` (cf. `scripts/generate-marker-pngs.ts`). Le glyphe vient de
- * `markerIconCatalog[icon].glyph`, donc la légende ne peut plus diverger des pins.
- * (Bug corrigé : la légende choisissait des icônes lucide indépendantes —
- * ACT affichait "Activity" alors que le pin est une étoile, VIS "Mountain" vs
- * caméra, SRV "Store" vs bâtiment.) Ancrée bas-gauche par `.map-legend`.
+ * `markerIconCatalog[icon].glyph`, donc la légende ne peut pas diverger des pins.
+ * (Décision §123 : le catalogue porte désormais le tracé lucide d'origine de la
+ * légende — ACT=pouls, VIS=montagne, SRV=boutique — étendu aux pins et aux cartes
+ * de résultats, jolies icônes partout sans re-diverger.) Ancrée bas-gauche par
+ * `.map-legend`.
  */
 interface LegendEntry {
   bucket: ObjectTypeCode;

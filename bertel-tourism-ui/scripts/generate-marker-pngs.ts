@@ -7,7 +7,7 @@ import sharp from 'sharp';
 
 type ObjectTypeCode = 'HOT' | 'RES' | 'ACT' | 'ITI' | 'EVT' | 'VIS' | 'SRV';
 
-type MarkerIconKey = 'bed' | 'utensils' | 'spark' | 'route' | 'calendar' | 'building' | 'camera' | 'leaf';
+type MarkerIconKey = 'bed' | 'utensils' | 'spark' | 'route' | 'calendar' | 'building' | 'camera' | 'leaf' | 'activity' | 'mountain' | 'store';
 
 type MarkerStyle = {
   color: string;
@@ -16,49 +16,63 @@ type MarkerStyle = {
 
 const objectTypeOptions: Array<{ code: ObjectTypeCode }> = [{ code: 'HOT' }, { code: 'RES' }, { code: 'ACT' }, { code: 'ITI' }, { code: 'EVT' }, { code: 'VIS' }, { code: 'SRV' }];
 
+// Glyphes lucide (ISC) — DOIVENT rester synchrones avec `src/config/map-markers.ts`
+// (même catalogue, même défauts). Cf. décision §123.
 const markerIconCatalog: Record<MarkerIconKey, { label: string; glyph: string }> = {
   bed: {
     label: 'Lit',
-    glyph: '<path d="M4 12V9a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v3"/><path d="M2.5 12h19"/><path d="M3.5 16v-4h17v4"/><path d="M5 16v2"/><path d="M19 16v2"/>',
+    glyph: '<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>',
   },
   utensils: {
     label: 'Couverts',
-    glyph: '<path d="M6 3v8"/><path d="M4 3v4"/><path d="M8 3v4"/><path d="M4 7h4"/><path d="M15 3v18"/><path d="M19 3v7a2 2 0 0 1-4 0V3"/>',
+    glyph: '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
   },
   spark: {
     label: 'Etoile',
-    glyph: '<path d="M12 3.5l1.9 4.6 4.9.4-3.7 3.2 1.1 4.8L12 14l-4.2 2.5 1.1-4.8-3.7-3.2 4.9-.4L12 3.5Z"/>',
+    glyph: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
   },
   route: {
     label: 'Trace',
-    glyph: '<circle cx="6" cy="17" r="2"/><circle cx="18" cy="7" r="2"/><path d="M7.8 15.7c1.9-3.8 5.1-3.5 7.8-7.4"/><path d="M9.5 6.5c1.2 0 2.2 1 2.2 2.2S10.7 11 9.5 11 7.3 10 7.3 8.7 8.3 6.5 9.5 6.5Z"/>',
+    glyph: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   },
   calendar: {
     label: 'Calendrier',
-    glyph: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M4 9.5h16"/><path d="M8 13h3"/><path d="M13 13h3"/><path d="M8 17h3"/>',
+    glyph: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
   },
   building: {
     label: 'Batiment',
-    glyph: '<path d="M5 20V6.5L12 3l7 3.5V20"/><path d="M9 9h2"/><path d="M13 9h2"/><path d="M9 13h2"/><path d="M13 13h2"/><path d="M11 20v-4h2v4"/>',
+    glyph: '<path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M12 6h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/><path d="M8 6h.01"/><path d="M9 22v-3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/><rect x="4" y="2" width="16" height="20" rx="2"/>',
   },
   camera: {
     label: 'Camera',
-    glyph: '<path d="M4 8h4l1.4-2h5.2L16 8h4v10H4Z"/><circle cx="12" cy="13" r="3.2"/>',
+    glyph: '<path d="M13.997 4a2 2 0 0 1 1.76 1.05l.486.9A2 2 0 0 0 18.003 7H20a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1.997a2 2 0 0 0 1.759-1.048l.489-.904A2 2 0 0 1 10.004 4z"/><circle cx="12" cy="13" r="3"/>',
   },
   leaf: {
     label: 'Nature',
-    glyph: '<path d="M19 4c-6 .5-10 3.8-10.8 9.1-.2 1.3-.1 2.6.2 3.9C14.2 16 18.3 11.8 19 4Z"/><path d="M5 20c2.7-4 6.2-6.7 10.5-8.3"/>',
+    glyph: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
+  },
+  activity: {
+    label: 'Activite',
+    glyph: '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+  },
+  mountain: {
+    label: 'Montagne',
+    glyph: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>',
+  },
+  store: {
+    label: 'Boutique',
+    glyph: '<path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"/><path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"/><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"/>',
   },
 };
 
 const defaultMarkerStyles: Record<ObjectTypeCode, MarkerStyle> = {
   HOT: { color: '#E27B55', icon: 'bed' },
   RES: { color: '#CF9440', icon: 'utensils' },
-  ACT: { color: '#1E7F78', icon: 'spark' },
+  ACT: { color: '#1E7F78', icon: 'activity' },
   ITI: { color: '#327090', icon: 'route' },
   EVT: { color: '#C75E48', icon: 'calendar' },
-  VIS: { color: '#7E6FB7', icon: 'camera' },
-  SRV: { color: '#587C62', icon: 'building' },
+  VIS: { color: '#7E6FB7', icon: 'mountain' },
+  SRV: { color: '#587C62', icon: 'store' },
 };
 
 function sanitizeMarkerColor(value: string, fallback: string): string {

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { CheckCircle2 } from 'lucide-react';
 import { Modal } from '@/components/common/Modal';
 import {
   inviteUser,
@@ -8,15 +9,11 @@ import {
   grantUserPermission,
   friendlyRbacError,
 } from '@/services/rbac';
-import { BUSINESS_ROLE_CODES, presetPermissionsFor } from '@/features/team/permission-presets';
+import { BUSINESS_ROLE_CODES, businessRoleLabel, presetPermissionsFor } from '@/features/team/permission-presets';
 
 interface InviteMemberDialogProps {
   orgId: string;
   onDone: () => void;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
@@ -110,13 +107,15 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
                   disabled={busy}
                 >
                   {BUSINESS_ROLE_CODES.map((code) => (
-                    <option key={code} value={code}>{capitalize(code)}</option>
+                    <option key={code} value={code}>{businessRoleLabel(code)}</option>
                   ))}
                 </select>
+                <span className="pref__hint">Le préréglage de permissions du rôle est appliqué automatiquement (additif).</span>
               </label>
             </>
           ) : (
             <>
+              <p className="invite-success-line"><CheckCircle2 size={16} aria-hidden /> Invitation créée.</p>
               <p className="muted">
                 Communiquez ce mot de passe temporaire au nouveau membre ; il pourra le changer après connexion.
               </p>

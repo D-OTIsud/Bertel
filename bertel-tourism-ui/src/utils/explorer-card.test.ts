@@ -146,6 +146,24 @@ describe('normalizeExplorerCard', () => {
     expect(card.labels).toContain('Tables & Auberges de France · Gastronomique');
   });
 
+  it('drops the redundant rating-unit parenthetical from a graded scheme name', () => {
+    const card = normalizeExplorerCard({
+      id: 'obj-units',
+      name: 'Gîte',
+      type: 'HLO',
+      badges: [
+        { kind: 'classification', code: 'gites:3', label: 'Gîtes de France (épis) · 3 épis' },
+        { kind: 'classification', code: 'cleva:2', label: 'Clévacances (clés) · 2 clés' },
+      ],
+    });
+
+    // The "(épis)" / "(clés)" only repeats the unit already in the graded value → stripped.
+    expect(card.labels).toContain('Gîtes de France · 3 épis');
+    expect(card.labels).toContain('Clévacances · 2 clés');
+    expect(card.labels).not.toContain('Gîtes de France (épis) · 3 épis');
+    expect(card.labels).not.toContain('Clévacances (clés) · 2 clés');
+  });
+
   it('preserves ranked label metadata and surfaces match distinction pills', () => {
     const certified = normalizeExplorerCard({
       id: 'obj-certified',

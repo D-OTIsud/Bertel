@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
+import { ChevronDown } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { resolveUserRoleLabel, resolveUserRoleTone } from '../utils/user-role-label';
 import { buildMarkerDataUri, defaultMarkerStyles, markerIconCatalog, markerIconChoicesByType, objectTypeOptions, sanitizeCustomMarkerSvg } from '../config/map-markers';
 import { env } from '../lib/env';
 import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schemas';
@@ -21,11 +23,12 @@ import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
 import { useUiStore } from '../store/ui-store';
 import type { ObjectTypeCode, UserRole } from '../types/domain';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 const roles: UserRole[] = ['super_admin', 'tourism_agent', 'owner'];
+
+// 7.1 — libellés complets des langues d'interface (fidélité maquette : « Français » plutôt
+// que « FR »). L'ordre suit l'ordre d'affichage des chips.
+const LANGUAGE_LABELS: Record<string, string> = { fr: 'Français', en: 'English', de: 'Deutsch' };
 
 function buildDrafts(markerStyles: ReturnType<typeof useUiStore.getState>['markerStyles']): Record<ObjectTypeCode, string> {
   return objectTypeOptions.reduce((acc, item) => {
@@ -41,6 +44,7 @@ export default function SettingsPage() {
   const demoMode = useSessionStore((state) => state.demoMode);
   const status = useSessionStore((state) => state.status);
   const errorMessage = useSessionStore((state) => state.errorMessage);
+  const orgName = useSessionStore((state) => state.orgName);
   const setDemoRole = useSessionStore((state) => state.setDemoRole);
   const setLangPrefs = useSessionStore((state) => state.setLangPrefs);
   const theme = useThemeStore((state) => state.theme);
@@ -259,60 +263,90 @@ export default function SettingsPage() {
       ? 'preview locale'
       : 'storage / URL publique';
 
+  const roleLabel = resolveUserRoleLabel(role, adminRank);
+  const roleTone = resolveUserRoleTone(role);
+  const sessionActive = demoMode || status === 'ready';
+
   return (
     <section className="page-grid p-4">
-      <article className="hero-panel">
-        <span className="eyebrow">Configuration</span>
-        <h2>Session, langues et branding</h2>
-        <p>
-          {demoMode
-            ? 'Mode démo actif explicitement. Les rôles peuvent être simulés pour concevoir l’interface et tester le white-label.'
-            : 'En mode normal, le rôle UI vient de la session Supabase et le branding peut être synchronisé via RPC sur la base principale.'}
-        </p>
-      </article>
-
       <div className="settings-console">
         <SettingsRail groups={settingsNav} activeSection={activeSection} onSelect={selectSection} />
         <div className="settings-panel">
 
       {activeSection === 'session' && (
-      <article className="panel-card panel-card--wide">
-        <div className="panel-heading">
-          <h2>Rôle actif</h2>
-        </div>
-        {demoMode ? (
-          <div className="chip-grid">
-            {roles.map((item) => (
-              <button key={item} type="button" className={role === item ? 'chip chip--active' : 'chip'} onClick={() => setDemoRole(item)}>
-                {item}
-              </button>
-            ))}
+      <section className="settings-pane">
+        <div className="settings-pane__head">
+          <div>
+            <h2>Session &amp; rôle</h2>
+            <p>Votre identité de connexion, votre organisation et l’état de la session.</p>
           </div>
-        ) : (
-          <div className="stack-list">
-            <span>Rôle issu de la session : {role ?? 'non chargé'}</span>
-            <span>Statut session : {status}</span>
-            {errorMessage ? <span>{errorMessage}</span> : null}
+        </div>
+
+        <div className="state-card">
+          <div className="state-row">
+            <span className="state-row__k">Rôle</span>
+            <span className="state-row__v"><span className={`badge badge--${roleTone}`}>{roleLabel}</span></span>
+          </div>
+          <div className="state-row">
+            <span className="state-row__k">Organisation</span>
+            <span className="state-row__v">{orgName ?? 'Non rattaché'}</span>
+          </div>
+          <div className="state-row">
+            <span className="state-row__k">Session</span>
+            <span className="state-row__v">
+              <span className={sessionActive ? 'dot dot--ok' : 'dot dot--off'} aria-hidden />
+              {sessionActive ? 'Active' : status}
+            </span>
+          </div>
+          <div className="state-row">
+            <span className="state-row__k">Marque active</span>
+            <span className="state-row__v">{theme.brandName}</span>
+          </div>
+        </div>
+
+        {errorMessage ? <div className="inline-alert inline-alert--danger" role="alert">{errorMessage}</div> : null}
+
+        {demoMode && (
+          <div className="settings-pane__demo">
+            <div className="pref__label">Simuler un rôle (mode démo)</div>
+            <div className="chip-grid">
+              {roles.map((item) => (
+                <button key={item} type="button" className={role === item ? 'chip chip--active' : 'chip'} onClick={() => setDemoRole(item)}>
+                  {resolveUserRoleLabel(item)}
+                </button>
+              ))}
+            </div>
+            <p className="pref__hint">Le mode démo permet de prévisualiser l’interface sous chaque rôle. En production, le rôle vient de la session Supabase.</p>
           </div>
         )}
-      </article>
+
+        <details className="diag">
+          <summary><ChevronDown size={16} aria-hidden /> Diagnostic technique</summary>
+          <div className="diag__body">
+            <div className="diag__line"><span className="muted">Environnement Supabase</span><span className="mono">{env.supabaseUrl ? 'configuré' : 'non configuré'}</span></div>
+            <div className="diag__line"><span className="muted">Source du logo</span><span className="mono">{logoSourceLabel}</span></div>
+            <div className="diag__line"><span className="muted">Mode démonstration</span><span className="mono">{demoMode ? 'oui' : 'non'}</span></div>
+          </div>
+        </details>
+      </section>
 
       )}
 
       {activeSection === 'appearance' && (
-      <article className="panel-card panel-card--wide">
-        <div className="panel-heading">
+      <section className="settings-pane">
+        <div className="settings-pane__head">
           <div>
-            <h2>White-label theme</h2>
-            <p>Logo, palette et styles de marqueurs appliques globalement via variables CSS et RPC Supabase.</p>
+            <h2>Apparence (marque blanche)</h2>
+            <p>Logo, palette et styles de marqueurs appliqués globalement via variables CSS et RPC Supabase.</p>
           </div>
-          <div className="inline-actions">
-            <Button type="button" variant="ghost" onClick={handleThemeReset} disabled={!canManageBrandTheme || themeSaving}>
-              Reinitialiser
-            </Button>
-            <Button type="button" onClick={() => void handleThemeSave()} disabled={!canManageBrandTheme || themeSaving}>
-              {themeSaving ? 'Enregistrement...' : 'Enregistrer le branding'}
-            </Button>
+          <div className="settings-pane__actions">
+            <span className="badge badge--info badge--xs">Super-admin</span>
+            <button type="button" className="ghost-button" onClick={handleThemeReset} disabled={!canManageBrandTheme || themeSaving}>
+              Réinitialiser
+            </button>
+            <button type="button" className="primary-button" onClick={() => void handleThemeSave()} disabled={!canManageBrandTheme || themeSaving}>
+              {themeSaving ? 'Enregistrement…' : 'Enregistrer le branding'}
+            </button>
           </div>
         </div>
 
@@ -344,25 +378,25 @@ export default function SettingsPage() {
           </article>
 
           <article className="panel-card panel-card--nested theme-form-card">
-            <form onSubmit={handleThemeSave} className="space-y-4">
+            <form onSubmit={handleThemeSave} className="theme-form">
               <div className="field-block">
-                <Label htmlFor="brandName">Nom de marque</Label>
-                <Input
+                <label htmlFor="brandName">Nom de marque</label>
+                <input
                   id="brandName"
                   {...themeForm.register('brandName')}
                   disabled={!canManageBrandTheme}
                 />
                 {themeForm.formState.errors.brandName && (
-                  <p className="text-sm text-destructive">{themeForm.formState.errors.brandName.message}</p>
+                  <p className="field-error">{themeForm.formState.errors.brandName.message}</p>
                 )}
               </div>
 
               <div className="field-block">
-                <span className="text-sm font-medium">Logo</span>
+                <span className="pref__label">Logo</span>
                 {canManageBrandTheme ? (
                   <div className="inline-actions">
-                    <Label className="ghost-button marker-upload-button cursor-pointer">
-                      {themeBusy ? 'Extraction...' : 'Importer un logo'}
+                    <label className="ghost-button marker-upload-button cursor-pointer">
+                      {themeBusy ? 'Extraction…' : 'Importer un logo'}
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -373,10 +407,10 @@ export default function SettingsPage() {
                           event.currentTarget.value = '';
                         }}
                       />
-                    </Label>
-                    <Button
+                    </label>
+                    <button
                       type="button"
-                      variant="ghost"
+                      className="ghost-button"
                       onClick={() => {
                         setPendingLogoFile(null);
                         setPendingLogoCleared(true);
@@ -384,11 +418,12 @@ export default function SettingsPage() {
                       }}
                     >
                       Enlever le logo
-                    </Button>
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Seuls les super-admins peuvent modifier le branding.</p>
+                  <p className="muted">Seuls les super-admins peuvent modifier le branding.</p>
                 )}
+                <p className="pref__hint">PNG, JPG, WebP ou SVG. Fond transparent recommandé.</p>
               </div>
 
               {[
@@ -399,16 +434,18 @@ export default function SettingsPage() {
                 ['surfaceColor', 'Couleur surface'],
               ].map(([field, label]) => (
                 <div key={field} className="field-block">
-                  <Label>{label}</Label>
+                  <label>{label}</label>
                   <div className="marker-settings-input-row">
                     <input
                       type="color"
+                      aria-label={`${label} (sélecteur de couleur)`}
                       value={themeForm.watch(field as keyof SettingsThemeFormValues) as string}
                       onChange={(e) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', e.target.value)}
                       className="color-input"
                       disabled={!canManageBrandTheme}
                     />
-                    <Input
+                    <input
+                      aria-label={`${label} (valeur hexadécimale)`}
                       value={themeForm.watch(field as keyof SettingsThemeFormValues) as string}
                       onChange={(e) => handleThemeColorChange(field as 'primaryColor' | 'accentColor' | 'textColor' | 'backgroundColor' | 'surfaceColor', e.target.value)}
                       disabled={!canManageBrandTheme}
@@ -419,20 +456,26 @@ export default function SettingsPage() {
             </form>
           </article>
         </div>
-      </article>
+      </section>
 
       )}
 
       {activeSection === 'markers' && (
-      <article className="panel-card panel-card--wide">
-        <div className="panel-heading">
+      <section className="settings-pane">
+        <div className="settings-pane__head">
           <div>
-            <h2>Markers carte</h2>
-            <p>Couleur et icone SVG affiches au centre du pin pour chaque typologie. Les changements sont enregistres avec le branding.</p>
+            <h2>Marqueurs</h2>
+            <p>Couleur et icône (SVG) affichées au centre du pin pour chaque typologie. Enregistrées avec le branding.</p>
           </div>
-          <button type="button" className="ghost-button" onClick={handleResetMarkers} disabled={!canManageBrandTheme || themeSaving}>
-            Reinitialiser
-          </button>
+          <div className="settings-pane__actions">
+            <span className="badge badge--info badge--xs">Super-admin</span>
+            <button type="button" className="ghost-button" onClick={handleResetMarkers} disabled={!canManageBrandTheme || themeSaving}>
+              Réinitialiser
+            </button>
+            <button type="button" className="primary-button" onClick={() => void handleThemeSave()} disabled={!canManageBrandTheme || themeSaving}>
+              {themeSaving ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
         </div>
         <div className="marker-master-detail">
           <div className="marker-master" role="tablist" aria-label="Types de marqueur">
@@ -449,7 +492,10 @@ export default function SettingsPage() {
                   onClick={() => setSelectedMarkerType(option.code)}
                 >
                   <img src={buildMarkerDataUri(optionMarker)} alt="" aria-hidden className="marker-master__preview" />
-                  <span>{option.label}</span>
+                  <span className="marker-master__text">
+                    <span className="marker-master__name">{option.label}</span>
+                    <span className="marker-master__codes">{option.backendTypes.join(', ')}</span>
+                  </span>
                 </button>
               );
             })}
@@ -477,6 +523,7 @@ export default function SettingsPage() {
                   <div className="marker-settings-input-row">
                     <input
                       type="color"
+                      aria-label={`Couleur du marqueur ${typeOption.label} (sélecteur)`}
                       value={marker.color}
                       onChange={(event) => setMarkerColor(typeOption.code, event.target.value)}
                       className="color-input"
@@ -484,6 +531,7 @@ export default function SettingsPage() {
                     />
                     <input
                       type="text"
+                      aria-label={`Couleur du marqueur ${typeOption.label} (valeur hexadécimale)`}
                       value={marker.color}
                       onChange={(event) => setMarkerColor(typeOption.code, event.target.value)}
                       placeholder="#ef7a49"
@@ -492,35 +540,18 @@ export default function SettingsPage() {
                   </div>
                 </label>
 
-                <div className="segmented-control">
-                  <button
-                    type="button"
-                    className={marker.mode === 'preset' ? 'chip chip--active' : 'chip'}
-                    onClick={() => setMarkerMode(typeOption.code, 'preset')}
-                    disabled={!canManageBrandTheme}
-                  >
-                    Catalogue
-                  </button>
-                  <button
-                    type="button"
-                    className={marker.mode === 'custom' ? 'chip chip--active' : 'chip'}
-                    onClick={() => setMarkerMode(typeOption.code, 'custom')}
-                    disabled={!canManageBrandTheme || !marker.customSvg}
-                  >
-                    SVG custom
-                  </button>
-                </div>
-
                 <div className="field-block">
-                  <span>Icone preset</span>
+                  <span>Icône</span>
                   <div className="marker-icon-grid">
                     {markerIconChoicesByType[typeOption.code].map((iconKey) => {
                       const previewStyle = { ...marker, mode: 'preset' as const, customSvg: null, icon: iconKey };
+                      const iconActive = marker.mode === 'preset' && marker.icon === iconKey;
                       return (
                         <button
                           key={iconKey}
                           type="button"
-                          className={marker.mode === 'preset' && marker.icon === iconKey ? 'marker-icon-option marker-icon-option--active' : 'marker-icon-option'}
+                          aria-pressed={iconActive}
+                          className={iconActive ? 'marker-icon-option marker-icon-option--active' : 'marker-icon-option'}
                           onClick={() => {
                             setMarkerIcon(typeOption.code, iconKey);
                             setMarkerMode(typeOption.code, 'preset');
@@ -576,7 +607,7 @@ export default function SettingsPage() {
                       {customSvgErrors[typeOption.code] ? <div className="inline-alert inline-alert--danger">{customSvgErrors[typeOption.code]}</div> : null}
                     </>
                   ) : (
-                    <p>Seuls les super-admins peuvent charger un SVG personnalise. Les autres profils voient simplement le rendu applique.</p>
+                    <p className="muted">Seuls les super-admins peuvent charger un SVG personnalisé. Les autres profils voient simplement le rendu appliqué.</p>
                   )}
                 </details>
               </article>
@@ -584,45 +615,56 @@ export default function SettingsPage() {
             })()}
           </div>
         </div>
-      </article>
+      </section>
 
       )}
 
       {activeSection === 'preferences' && (
-      <article className="panel-card">
-        <div className="panel-heading">
-          <h2>Langues</h2>
+      <section className="settings-pane">
+        <div className="settings-pane__head">
+          <div>
+            <h2>Préférences</h2>
+            <p>Vos réglages personnels d’interface.</p>
+          </div>
         </div>
-        <div className="chip-grid">
-          {['fr', 'en', 'de'].map((lang) => (
-            <button
-              key={lang}
-              type="button"
-              className={langPrefs.includes(lang) ? 'chip chip--active' : 'chip'}
-              onClick={() => toggleLanguage(lang)}
-            >
-              {lang.toUpperCase()}
-            </button>
-          ))}
+        <div className="settings-pane__demo">
+          <div className="pref__label">Langue de l’interface</div>
+          <div className="chip-grid">
+            {['fr', 'en', 'de'].map((lang) => (
+              <button
+                key={lang}
+                type="button"
+                className={langPrefs.includes(lang) ? 'chip chip--active' : 'chip'}
+                aria-pressed={langPrefs.includes(lang)}
+                onClick={() => toggleLanguage(lang)}
+              >
+                {LANGUAGE_LABELS[lang] ?? lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <p className="pref__hint">Au moins une langue reste active. Enregistré sur votre profil.</p>
         </div>
-      </article>
+      </section>
 
       )}
 
-      {/* 7.1 : carte d'état lisible « Diagnostic » à la place du dump « Runtime » de
-          debug — l'URL Supabase brute n'est plus exposée (juste configurée/non). */}
+      {/* 7.1 : diagnostic plateforme en libellé clair — l'URL Supabase brute n'est jamais
+          exposée (juste configuré/non). Un diagnostic replié figure aussi dans « Session & rôle ». */}
       {activeSection === 'diagnostic' && (
-      <article className="panel-card">
-        <div className="panel-heading">
-          <h2>Diagnostic</h2>
+      <section className="settings-pane">
+        <div className="settings-pane__head">
+          <div>
+            <h2>Diagnostic</h2>
+            <p>État technique de l’environnement (lecture seule).</p>
+          </div>
         </div>
-        <div className="stack-list">
-          <span>Mode démo : {demoMode ? 'actif' : 'inactif'}</span>
-          <span>Base Supabase : {env.supabaseUrl ? 'configurée' : 'à renseigner'}</span>
-          <span>Marque active : {theme.brandName}</span>
-          <span>Source du logo : {logoSourceLabel}</span>
+        <div className="diag__body" style={{ maxWidth: 640 }}>
+          <div className="diag__line"><span className="muted">Environnement Supabase</span><span className="mono">{env.supabaseUrl ? 'configuré' : 'à renseigner'}</span></div>
+          <div className="diag__line"><span className="muted">Mode démonstration</span><span className="mono">{demoMode ? 'oui' : 'non'}</span></div>
+          <div className="diag__line"><span className="muted">Marque active</span><span className="mono">{theme.brandName}</span></div>
+          <div className="diag__line"><span className="muted">Source du logo</span><span className="mono">{logoSourceLabel}</span></div>
         </div>
-      </article>
+      </section>
 
       )}
 

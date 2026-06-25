@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Page assemblée (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82; --ink-4:#94a1a8;
+    --teal:#176b6a; --teal-2:#0d4f4e; --teal-soft:#e2efee; --teal-tint:rgba(23,107,106,.08);
+    --info-bg:#e9f0f7; --info-border:#cdddea; --info-ink:#21465e; --info-accent:#327090;
+    --danger-bg:#fbece9; --danger-border:#eccabf; --danger-ink:#8f3322; --red:#c85c48;
+    --shadow-s:0 1px 0 rgba(24,49,59,.04),0 6px 16px -8px rgba(24,49,59,.10);
+    --shadow-m:0 1px 0 rgba(24,49,59,.04),0 14px 30px -16px rgba(24,49,59,.18);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23,107,106,.10), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242,139,84,.10), transparent 55%),
+      radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50,112,144,.08), transparent 55%),
+      linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%); background-attachment:fixed;}
+  .wrap{max-width:672px;margin:0 auto;padding:40px 16px}
+  a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-radius:6px}
+
+  /* en-tête */
+  header.page{display:flex;gap:13px;align-items:flex-start;margin-bottom:18px}
+  .page__ico{flex:0 0 auto;width:44px;height:44px;border-radius:12px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-s);display:grid;place-items:center;color:var(--teal)}
+  .page__ico svg{width:23px;height:23px}
+  h1{font-family:'Sora';font-size:22px;font-weight:700;margin:1px 0 3px}
+  .page__sub{font-size:14px;color:var(--ink-2);margin:0}
+  .page__legal{font-size:11.5px;color:var(--ink-3);margin:4px 0 0;display:inline-flex;align-items:center;gap:6px}
+  .page__legal svg{width:13px;height:13px}
+
+  /* callout info */
+  .callout{display:flex;gap:13px;background:var(--info-bg);border:1px solid var(--info-border);border-radius:var(--radius-md);padding:14px 15px;margin-bottom:20px}
+  .callout__ico{flex:0 0 auto;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#fff;color:var(--info-accent);border:1px solid var(--info-border)}
+  .callout__ico svg{width:18px;height:18px}
+  .callout__title{font-size:13px;font-weight:700;color:var(--info-ink);margin:1px 0 4px}
+  .callout__text{font-size:12.5px;line-height:1.55;color:var(--info-ink);margin:0}
+  .callout__text strong{font-weight:700}
+
+  /* form card */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-m);padding:20px}
+  .field{display:grid;gap:6px;margin-bottom:16px}
+  .field>label,.legend{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  select,.search,textarea{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;font:inherit;font-size:13px;color:var(--ink);background:var(--surface)}
+  textarea{min-height:64px;resize:vertical}
+  .search-wrap{position:relative}.search{padding-left:34px}
+  .search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3)}
+  .hint{font-size:11.5px;color:var(--ink-3)}
+  .modes{display:grid;gap:10px}
+  .mode{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border:1.5px solid var(--line);border-radius:var(--radius-sm);cursor:pointer}
+  .mode.sel-teal{border-color:var(--teal);background:var(--teal-tint)}
+  .mode__radio{flex:0 0 auto;width:17px;height:17px;border-radius:50%;border:2px solid var(--line-strong);margin-top:2px;display:grid;place-items:center}
+  .mode.sel-teal .mode__radio{border-color:var(--teal)}
+  .mode.sel-teal .mode__radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--teal)}
+  .mode__title{font-size:13.5px;font-weight:700;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .mode__desc{font-size:12px;color:var(--ink-2);margin:2px 0 0;line-height:1.4}
+  .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;padding:2px 8px;border-radius:999px}
+  .tag.reco{background:var(--teal-soft);color:var(--teal-2)}
+  .tag.irr{background:var(--danger-bg);color:var(--danger-ink);border:1px solid var(--danger-border)}
+  .foot{margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .submit{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:var(--radius-sm);border:1px solid var(--teal);background:var(--teal);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .submit:hover{background:var(--teal-2)}.submit svg{width:17px;height:17px}
+  .foot__note{font-size:11.5px;color:var(--ink-3)}
+
+  .section-label{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-4);margin:34px 0 10px}
+
+  /* état refusé */
+  .denied{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-s);padding:20px}
+  .denied__ico{flex:0 0 auto;width:40px;height:40px;border-radius:11px;background:var(--surface-2);color:var(--ink-3);display:grid;place-items:center}
+  .denied__ico svg{width:21px;height:21px}
+  .denied__title{font-family:'Sora';font-size:15px;font-weight:700;margin:1px 0 4px}
+  .denied__text{font-size:12.5px;color:var(--ink-2);line-height:1.5;margin:0}
+  .denied__text a{color:var(--teal);font-weight:600}
+  .note{font-size:12px;color:var(--ink-3);text-align:center;margin:18px 0 0}
+</style>
+</head>
+<body>
+  <main class="wrap" aria-labelledby="rgpd-h1">
+    <header class="page">
+      <span class="page__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/><path d="m17 8 5 5M22 8l-5 5"/></svg></span>
+      <div>
+        <h1 id="rgpd-h1">Effacement RGPD (Art. 17)</h1>
+        <p class="page__sub">Traitement d'une demande d'effacement / anonymisation, par sujet identifié.</p>
+        <p class="page__legal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Accès réservé au référent RGPD · chaque opération est journalisée</p>
+      </div>
+    </header>
+
+    <div class="callout" role="note" aria-label="Périmètre de l'outil">
+      <span class="callout__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4M12 8h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg></span>
+      <div>
+        <p class="callout__title">Ce que cet outil touche — et ce qu'il ne touche pas</p>
+        <p class="callout__text">Agit <strong>uniquement</strong> sur les données personnelles d'un sujet précis (acteur, contacts privés, CRM, déclarant, avis…), <strong>jamais</strong> sur le référentiel public. L'anonymisation conserve la structure ; la suppression est une cascade dure.</p>
+      </div>
+    </div>
+
+    <form class="card" onsubmit="return false">
+      <div class="field">
+        <label for="kind">Type de sujet</label>
+        <select id="kind"><option>Acteur — identité, canaux, consentements, CRM lié</option><option>Déclarant d'un signalement (incident)</option></select>
+      </div>
+      <div class="field">
+        <label for="subject">Rechercher le sujet</label>
+        <div class="search-wrap">
+          <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+          <input class="search" id="subject" placeholder="Nom, e-mail…" aria-describedby="s-hint" />
+        </div>
+        <p class="hint" id="s-hint">Recherchez par nom ou e-mail ; l'identifiant exact est rempli automatiquement.</p>
+      </div>
+      <div class="field">
+        <span class="legend">Mode de traitement</span>
+        <div class="modes" role="radiogroup" aria-label="Mode de traitement">
+          <div class="mode sel-teal" role="radio" aria-checked="true" tabindex="0">
+            <span class="mode__radio" aria-hidden="true"></span>
+            <span><span class="mode__title">Anonymiser <span class="tag reco">Recommandé</span></span><span class="mode__desc">Conserve la structure : liens préservés, identité remplacée.</span></span>
+          </div>
+          <div class="mode" role="radio" aria-checked="false" tabindex="-1">
+            <span class="mode__radio" aria-hidden="true"></span>
+            <span><span class="mode__title">Supprimer définitivement <span class="tag irr">Irréversible</span></span><span class="mode__desc">Cascade dure ; confirmation par saisie requise.</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="reason">Motif / référence de la demande</label>
+        <textarea id="reason" placeholder="Ex. demande d'effacement reçue le … / réf. dossier …"></textarea>
+      </div>
+      <div class="foot">
+        <button class="submit" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0z"/><path d="M3 3l18 18"/></svg>Anonymiser le sujet</button>
+        <span class="foot__note">Action journalisée. Une confirmation sera demandée.</span>
+      </div>
+    </form>
+
+    <p class="section-label">Autre état — accès refusé (non référent RGPD)</p>
+    <div class="denied" role="alert">
+      <span class="denied__ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+      <div>
+        <p class="denied__title">Accès réservé au référent RGPD</p>
+        <p class="denied__text">Cet outil est limité aux administrateurs plateforme (référent RGPD). Si vous devez traiter une demande d'effacement, contactez votre <a href="#">administrateur</a> ou le <a href="#">délégué à la protection des données</a>.</p>
+      </div>
+    </div>
+
+    <p class="note">Maquette à valider — page assemblée (état par défaut + état refusé). Focus clavier visible, cible bouton 44px, échelle de rayons/typo cohérente.</p>
+  </main>
+</body>
+</html>

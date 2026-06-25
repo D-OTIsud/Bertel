@@ -48,11 +48,19 @@ export interface DashboardScorecards {
   /** published / total × 100, 1 decimal */
   published_pct: number;
   /**
-   * Always null in Phase 2A.
-   * Will be the average field-presence score (0–100) in Phase 2C
-   * once the per-type completeness formula is implemented server-side.
+   * Weighted mean (by fiche count) of the per-type avg_score returned by
+   * api.get_dashboard_completeness — visitor-perceived completeness 0–100.
+   * Single source of truth for the 8-essential formula (no client recompute).
+   * null when the filtered pool is empty.
    */
-  avg_completeness: null;
+  avg_completeness: number | null;
+  /**
+   * Objects holding ≥1 granted official classement/label
+   * (ref_classification_scheme.is_distinction), scoped to the filtered pool.
+   */
+  distinctions: number;
+  /** distinctions / total × 100, 1 decimal. 0.0 when the pool is empty */
+  distinctions_pct: number;
   /** pending_change rows scoped to the filtered object pool */
   pending_changes: number;
   /** objects created in the last 30 days within the filtered pool */

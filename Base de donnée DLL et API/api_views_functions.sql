@@ -9158,7 +9158,7 @@ AS $$
     )
   ),
   scoped AS (
-    SELECT o.status, o.created_at
+    SELECT o.id, o.status, o.created_at
     FROM   object o
     JOIN   filtered_ids f ON f.object_id = o.id
     WHERE  o.object_type <> 'ORG'
@@ -9191,12 +9191,42 @@ AS $$
       )                                                                            AS avg_days
     FROM pending_change pc
     WHERE pc.object_id IN (SELECT object_id FROM filtered_ids)
+  ),
+  -- avg_completeness : moyenne pondérée (par nombre de fiches) du score « richesse
+  -- perçue visiteur » par type. On RÉUTILISE api.get_dashboard_completeness (source
+  -- unique de la formule des 8 essentiels) plutôt que de la dupliquer ici — p_below_limit=0
+  -- évite de construire les listes below_80 inutiles dans ce contexte.
+  completeness AS (
+    SELECT
+      SUM((r.value->>'total')::int)                                          AS comp_total,
+      SUM((r.value->>'avg_score')::numeric * (r.value->>'total')::int)       AS comp_weighted
+    FROM jsonb_array_elements(
+           COALESCE(
+             api.get_dashboard_completeness(
+               p_types, p_status, p_filters, p_updated_at_from, p_updated_at_to, 0
+             ) -> 'rows',
+             '[]'::jsonb
+           )
+         ) AS r(value)
+  ),
+  -- distinctions : fiches portant ≥1 classement/label officiel accordé
+  -- (ref_classification_scheme.is_distinction). Même périmètre daté que `scoped`.
+  distinctions AS (
+    SELECT COUNT(DISTINCT oc.object_id) AS cnt
+    FROM   object_classification oc
+    JOIN   ref_classification_scheme s ON s.id = oc.scheme_id
+    WHERE  oc.status = 'granted'
+      AND  s.is_distinction = TRUE
+      AND  oc.object_id IN (SELECT id FROM scoped)
   )
   SELECT jsonb_build_object(
     'total',                m.total,
     'published',            m.published,
     'published_pct',        COALESCE(ROUND(m.published * 100.0 / NULLIF(m.total, 0), 1), 0.0),
-    'avg_completeness',     NULL::numeric,
+    'avg_completeness',     CASE WHEN COALESCE(cp.comp_total, 0) = 0 THEN NULL
+                                 ELSE ROUND(cp.comp_weighted / cp.comp_total, 1) END,
+    'distinctions',         d.cnt,
+    'distinctions_pct',     COALESCE(ROUND(d.cnt * 100.0 / NULLIF(m.total, 0), 1), 0.0),
     'pending_changes',      p.cnt,
     'delta_30d',            m.delta_30d,
     'delta_pct',            CASE
@@ -9205,7 +9235,7 @@ AS $$
                             END,
     'avg_processing_days',  p.avg_days
   )
-  FROM metrics m, pending p;
+  FROM metrics m, pending p, completeness cp, distinctions d;
 $$;
 
 COMMENT ON FUNCTION api.get_dashboard_scorecards IS
@@ -9213,7 +9243,10 @@ COMMENT ON FUNCTION api.get_dashboard_scorecards IS
 Returns total/published counts, pending_change count (scoped to same pool),
 30-day creation delta vs the prior 30 days, and average processing delay
 (COALESCE(applied_at, reviewed_at) - submitted_at) for resolved pending_changes.
-avg_completeness is always NULL in Phase 2A; it will be populated in Phase 2C.
+avg_completeness = weighted mean of api.get_dashboard_completeness avg_score per type
+(single source of truth for the 8-essential formula; NULL when the pool is empty).
+distinctions / distinctions_pct = objects holding >=1 granted official classement/label
+(ref_classification_scheme.is_distinction), scoped to the same dated pool.
 ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.';
 
 -- ─────────────────────────────────────────────────────

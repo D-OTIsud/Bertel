@@ -2,11 +2,7 @@
 
 import type { DashboardCompleteness } from '../../types/dashboard';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
-import { resolveTypeLabel } from '../../utils/labels';
-
-interface Props {
-  data: DashboardCompleteness;
-}
+import { TypePill } from './TypePill';
 
 /** Clés d'essentiels (api.get_dashboard_completeness) → libellés FR. */
 const FIELD_LABELS: Record<string, string> = {
@@ -24,14 +20,21 @@ function fieldLabel(key: string): string {
   return FIELD_LABELS[key] ?? key;
 }
 
-function CompleteBar({ pct }: { pct: number }) {
-  const color = pct >= 80 ? 'var(--teal)' : pct >= 50 ? 'var(--warning)' : '#c85c48';
+/** Jauge de complétude (richesse perçue visiteur 0–100) — couleur par seuil. */
+function Meter({ score, completePct }: { score: number; completePct: number }) {
+  const color = score >= 80 ? 'var(--teal)' : score >= 50 ? 'var(--warn)' : 'var(--red)';
   return (
-    <div className="rate-bar">
-      <div className="rate-bar__fill" style={{ width: `${pct}%`, background: color }} />
-      <span className="rate-bar__label">{pct} %</span>
-    </div>
+    <span className="meter-cell" title={`${completePct} % des fiches complètes`}>
+      <span className="meter">
+        <span className="meter__fill" style={{ width: `${score}%`, background: color }} />
+      </span>
+      <span className="meter__pct">{score} %</span>
+    </span>
   );
+}
+
+interface Props {
+  data: DashboardCompleteness;
 }
 
 export function CompletenessTable({ data }: Props) {
@@ -51,20 +54,19 @@ export function CompletenessTable({ data }: Props) {
       <div className="panel-heading">
         <div>
           <span className="eyebrow">Qualité</span>
-          <h2>Complétude perçue visiteur</h2>
-          <p>Part des fiches qui ne paraissent jamais incomplètes (tous les essentiels présents).</p>
+          <h2>Complétude par type</h2>
+          <p>Richesse perçue visiteur et premier essentiel manquant, par famille.</p>
         </div>
       </div>
 
       <div className="actualisation-table-wrap">
-        <table className="actualisation-table">
+        <table className="actualisation-table completeness-table">
           <thead>
             <tr>
               <th>Type</th>
-              <th>Total</th>
-              <th>Complètes</th>
-              <th>Richesse moy.</th>
-              <th>À compléter</th>
+              <th>Fiches</th>
+              <th className="completeness-table__meter-col">Complétude</th>
+              <th>Champ manquant n°1</th>
             </tr>
           </thead>
           <tbody>
@@ -73,19 +75,18 @@ export function CompletenessTable({ data }: Props) {
                 <td className="actualisation-table__type">
                   <button
                     type="button"
-                    className={`actualisation-table__type-btn${activeTypes.includes(row.type) ? ' actualisation-table__type-btn--active' : ''}`}
-                    title={`Filtrer : ${resolveTypeLabel(row.type)}`}
+                    className={`type-cell-btn${activeTypes.includes(row.type) ? ' type-cell-btn--active' : ''}`}
+                    title={`Filtrer : ${row.type}`}
                     onClick={() => handleType(row.type)}
                     aria-pressed={activeTypes.includes(row.type)}
                   >
-                    {resolveTypeLabel(row.type)}
+                    <TypePill type={row.type} />
                   </button>
                 </td>
-                <td>{row.total}</td>
-                <td className="actualisation-table__rate-cell">
-                  <CompleteBar pct={row.complete_pct} />
+                <td>{row.total.toLocaleString('fr-FR')}</td>
+                <td className="completeness-table__meter-col">
+                  <Meter score={row.avg_score} completePct={row.complete_pct} />
                 </td>
-                <td>{row.avg_score} %</td>
                 <td>
                   {row.missing_top_field ? (
                     <span className="pill-mini">{fieldLabel(row.missing_top_field)}</span>

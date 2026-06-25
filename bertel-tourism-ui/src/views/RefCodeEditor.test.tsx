@@ -22,12 +22,15 @@ beforeEach(() => {
     { domain: 'transport_type', label: 'Transport', nValues: 1, nActive: 1 },
   ]);
   mock.listRefCodeValues.mockResolvedValue([
-    { id: 'v1', code: 'adult', name: 'Adulte', position: 1, isActive: true },
-    { id: 'v2', code: 'child', name: 'Enfant', position: 2, isActive: true },
+    { id: 'v1', code: 'adult', name: 'Adulte', nameI18n: {}, position: 1, isActive: true },
+    { id: 'v2', code: 'child', name: 'Enfant', nameI18n: {}, position: 2, isActive: true },
   ]);
+  // v1 référencé (3 fiches) ⇒ suppression bloquée ; v2 à 0 ⇒ supprimable.
+  mock.getRefCodeUsageCounts.mockResolvedValue({ v1: 3, v2: 0 });
   mock.upsertRefCode.mockResolvedValue('vX');
   mock.setRefCodeActive.mockResolvedValue();
   mock.reorderRefCode.mockResolvedValue();
+  mock.deleteRefCode.mockResolvedValue();
 });
 
 describe('RefCodeEditor (Phase 7.5)', () => {
@@ -35,7 +38,6 @@ describe('RefCodeEditor (Phase 7.5)', () => {
     renderEditor();
     expect(await screen.findByRole('button', { name: /Type de prix/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Transport/ })).toBeInTheDocument();
-    // valeurs du domaine actif (price_type) : code mono + libellé éditable
     expect(await screen.findByText('adult')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Adulte')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Enfant')).toBeInTheDocument();
@@ -51,10 +53,12 @@ describe('RefCodeEditor (Phase 7.5)', () => {
     );
   });
 
-  it('la bascule Actif → Inactif appelle setRefCodeActive(id, domain, false)', async () => {
+  it('la bascule (interrupteur) Actif → Inactif appelle setRefCodeActive(id, domain, false)', async () => {
     renderEditor();
     await screen.findByText('adult');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Actif' })[0]);
+    const switches = screen.getAllByRole('switch');
+    expect(switches[0]).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(switches[0]);
     await waitFor(() => expect(mock.setRefCodeActive).toHaveBeenCalledWith('v1', 'price_type', false));
   });
 
@@ -80,8 +84,41 @@ describe('RefCodeEditor (Phase 7.5)', () => {
   it('changer de domaine recharge ses valeurs', async () => {
     renderEditor();
     await screen.findByText('adult');
-    mock.listRefCodeValues.mockResolvedValueOnce([{ id: 't1', code: 'bus', name: 'Bus', position: 1, isActive: true }]);
+    mock.listRefCodeValues.mockResolvedValueOnce([{ id: 't1', code: 'bus', name: 'Bus', nameI18n: {}, position: 1, isActive: true }]);
     fireEvent.click(screen.getByRole('button', { name: /Transport/ }));
     await waitFor(() => expect(mock.listRefCodeValues).toHaveBeenLastCalledWith('transport_type'));
+  });
+
+  it('affiche « utilisé par N fiches » et bloque la suppression d’une valeur référencée', async () => {
+    renderEditor();
+    await screen.findByText('adult');
+    expect(await screen.findByText('3 fiches')).toBeInTheDocument();
+    expect(screen.getByText('0 fiche')).toBeInTheDocument();
+    // v1 référencé ⇒ bouton supprimer désactivé ; v2 à 0 ⇒ activé.
+    expect(screen.getByRole('button', { name: 'Supprimer adult' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer child' })).toBeEnabled();
+  });
+
+  it('supprime une valeur à 0 référence après confirmation', async () => {
+    renderEditor();
+    await screen.findByText('child');
+    await screen.findByText('0 fiche');
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer child' }));
+    // ConfirmDialog ouvert
+    expect(await screen.findByRole('dialog', { name: /Supprimer définitivement/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer définitivement' }));
+    await waitFor(() => expect(mock.deleteRefCode).toHaveBeenCalledWith('price_type', 'v2'));
+  });
+
+  it('édite les traductions via la modale i18n → upsertRefCode avec nameI18n', async () => {
+    renderEditor();
+    await screen.findByText('adult');
+    fireEvent.click(screen.getAllByRole('button', { name: /^FR/ })[0]);
+    const en = await screen.findByLabelText('Anglais (EN)');
+    fireEvent.change(en, { target: { value: 'Adult' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer les traductions' }));
+    await waitFor(() =>
+      expect(mock.upsertRefCode).toHaveBeenCalledWith({ domain: 'price_type', id: 'v1', name: 'Adulte', nameI18n: { en: 'Adult' } }),
+    );
   });
 });

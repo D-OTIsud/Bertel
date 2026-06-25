@@ -2,6 +2,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { TypeBreakdown } from './TypeBreakdown';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
 
+// HOT → archétype Hébergement, RES → archétype Restaurant : la barre replie les
+// types DB sur leurs archétypes ; le drill-down (dé)sélectionne les types de la famille.
 const data = {
   total: 10,
   rows: [
@@ -10,21 +12,27 @@ const data = {
   ],
 };
 
-describe('TypeBreakdown — drill-down', () => {
+describe('TypeBreakdown — barre empilée par archétype', () => {
   beforeEach(() => {
     useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
   });
 
-  it('clic sur une ligne ajoute le type au filtre (toggle on)', () => {
+  it('rend une légende par archétype (libellés FR, pas de codes)', () => {
     render(<TypeBreakdown data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: /Hotel/ }));
+    expect(screen.getByRole('button', { name: /Hébergement/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Restaurant/ })).toBeInTheDocument();
+  });
+
+  it('clic sur une famille ajoute ses types au filtre (toggle on)', () => {
+    render(<TypeBreakdown data={data} />);
+    fireEvent.click(screen.getByRole('button', { name: /Hébergement/ }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HOT']);
   });
 
-  it('re-clic retire le type (toggle off)', () => {
+  it('re-clic retire la famille (toggle off)', () => {
     useDashboardFilterStore.setState({ filters: { status: ['published'], types: ['HOT'] }, activeTab: 'quality', sidebarCollapsed: false });
     render(<TypeBreakdown data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: /Hotel/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Hébergement/ }));
     expect(useDashboardFilterStore.getState().filters.types).toBeUndefined();
   });
 });

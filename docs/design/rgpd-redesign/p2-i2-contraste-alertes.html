@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Contraste & alertes (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82;
+    --warn-bg:#fbf0dd; --warn-border:#ecd3a6; --warn-ink:#7a4e12; --warn-strong:#d6933a;
+    --danger-bg:#fbece9; --danger-border:#eccabf; --danger-ink:#8f3322; --red:#c85c48;
+    --green:#2ca36f; --green-soft:rgba(44,163,111,.14);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50,112,144,.08), transparent 55%),linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%);background-attachment:fixed;}
+  .wrap{max-width:672px;margin:0 auto;padding:40px 16px;display:grid;gap:20px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);padding:18px}
+  .panel h2{font-family:'Sora';font-size:14px;font-weight:700;margin:0 0 14px;color:var(--ink)}
+  .row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  .col{flex:1 1 240px;min-width:220px}
+  .cap{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+  .cap.bad{color:var(--red)} .cap.good{color:var(--green)}
+  /* texte guidance */
+  .guide-old{font-size:13px;color:var(--ink-3)} /* ~4.0:1 */
+  .guide-new{font-size:13px;color:var(--ink-2)} /* ~7:1 */
+  .ratio{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:1px 6px;border-radius:5px;margin-left:6px}
+  .ratio.bad{background:var(--danger-bg);color:var(--danger-ink)}
+  .ratio.good{background:var(--green-soft);color:#1c6b48}
+  /* alertes */
+  .warn-old{font-size:13px;color:var(--warn-strong)} /* orange ~2:1, illisible */
+  .alert{display:flex;gap:10px;align-items:flex-start;border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;line-height:1.45}
+  .alert svg{width:16px;height:16px;flex:0 0 auto;margin-top:1px}
+  .alert.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink)}
+  .alert.warn svg{color:var(--warn-strong)}
+  .alert.danger{background:var(--danger-bg);border:1px solid var(--danger-border);color:var(--danger-ink)}
+  .alert.danger svg{color:var(--red)}
+  .alert b{font-weight:700}
+  .alerts{display:grid;gap:8px}
+  /* input fix */
+  .field{display:grid;gap:6px}
+  .field span{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  .inp{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;font-family:'IBM Plex Mono',monospace}
+  .inp.broken{background:transparent} /* bg-surface -> --bg-surface indéfini -> transparent */
+  .inp.fixed{background:var(--surface)} /* corrigé : surface -> --surface */
+  .micro{font-size:11px;color:var(--ink-3);margin:5px 0 0}
+  .note{font-size:12px;color:var(--ink-3);text-align:center;margin:0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="panel">
+      <h2>1 · Contraste du texte de guidance</h2>
+      <div class="row">
+        <div class="col">
+          <p class="cap bad">Avant — ink-3</p>
+          <p class="guide-old">Identifiant du sujet requis — collez l'UUID exact.<span class="ratio bad">≈ 4.0:1 ✗</span></p>
+        </div>
+        <div class="col">
+          <p class="cap good">Après — ink-2</p>
+          <p class="guide-new">Identifiant du sujet requis — collez l'UUID exact.<span class="ratio good">≈ 7.0:1 ✓</span></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>2 · Avertissements (stockage / compte)</h2>
+      <p class="cap bad">Avant — texte orange (~2.0:1, illisible)</p>
+      <p class="warn-old">Avertissement stockage : 2 fichiers n'ont pas pu être supprimés.</p>
+      <p class="cap good" style="margin-top:14px">Après — chips d'alerte sémantiques</p>
+      <div class="alerts">
+        <div class="alert warn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+          <span><b>Avertissement stockage</b> — 2 fichiers n'ont pas pu être supprimés du bucket. Ils seront repris par le balayage automatique (GC).</span>
+        </div>
+        <div class="alert danger">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4m0 4h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>
+          <span><b>Avertissement compte</b> — la suppression du compte d'authentification a échoué. Action manuelle requise.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>3 · Correctif systémique du token <code>bg-surface</code></h2>
+      <div class="row">
+        <div class="col">
+          <p class="cap bad">Avant — surface → --bg-surface (indéfini)</p>
+          <div class="field"><span>Identifiant du sujet</span><input class="inp broken" value="a1f3c9e2-7b40-4d1e…" readonly /></div>
+          <p class="micro">Le fond résout vers <code>transparent</code> : le champ laisse passer le dégradé de page.</p>
+        </div>
+        <div class="col">
+          <p class="cap good">Après — surface → --surface</p>
+          <div class="field"><span>Identifiant du sujet</span><input class="inp fixed" value="a1f3c9e2-7b40-4d1e…" readonly /></div>
+          <p class="micro">Fond blanc plein. Correctif partagé par 22 occurrences (Explorer, TopBar…).</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">Maquette à valider — comparaisons avant/après. Tous les textes « après » ≥ 4.5:1.</p>
+  </div>
+</body>
+</html>

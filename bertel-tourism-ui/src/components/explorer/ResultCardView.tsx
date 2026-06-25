@@ -2,10 +2,13 @@
 
 import type { ComponentType } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Accessibility, Award, BadgeCheck, Leaf, MapPin, Star } from 'lucide-react';
+import { Accessibility, Award, BadgeCheck, Key, Leaf, MapPin, Star, Wheat } from 'lucide-react';
 import type { ExplorerTagFilter, ObjectCard } from '../../types/domain';
 import { tagChipStyle } from '../../utils/explorer-card';
-import { cardClassementStars, cardLabelLogos, cardTypeDisplay } from '../../utils/explorer-card-display';
+import { cardClassementRating, cardLabelLogos, cardTypeDisplay } from '../../utils/explorer-card-display';
+import type { ClassementUnit } from '../../utils/explorer-card-display';
+import { defaultMarkerStyles, markerIconCatalog } from '../../config/map-markers';
+import { normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
 
 /** Pictos lucide des pastilles-logo de label (impl. 3.1, primitives Phase 1). */
@@ -16,6 +19,34 @@ const LABEL_LOGO_ICON: Record<string, ComponentType<{ 'aria-hidden'?: boolean }>
   'lbl-qualite': BadgeCheck,
   'lbl-excellence': Award,
 };
+
+/** Picto + libellé FR (singulier, pluriel) de la cocarde par unité de classement. */
+const RATING_ICON: Record<ClassementUnit, ComponentType<{ 'aria-hidden'?: boolean }>> = {
+  etoile: Star,
+  epi: Wheat,
+  cle: Key,
+};
+const RATING_UNIT_LABEL: Record<ClassementUnit, readonly [string, string]> = {
+  etoile: ['étoile', 'étoiles'],
+  epi: ['épi', 'épis'],
+  cle: ['clé', 'clés'],
+};
+
+/**
+ * Cocarde de classement « à cheval » en haut-gauche de la miniature : N pictos de l'unité réelle
+ * (étoiles, épis Gîtes de France, clés Clévacances), jamais des étoiles par défaut.
+ */
+function RatingCockade({ count, unit, typeLabel }: { count: number; unit: ClassementUnit; typeLabel: string }) {
+  const Icon = RATING_ICON[unit];
+  const [singular, plural] = RATING_UNIT_LABEL[unit];
+  return (
+    <span className="thumb__rating" title={`${typeLabel} ${count} ${count > 1 ? plural : singular}`} aria-hidden>
+      {Array.from({ length: count }).map((_, i) => (
+        <Icon key={i} />
+      ))}
+    </span>
+  );
+}
 
 /**
  * Pure presentational Explorer result card (116px tall, grows on demand). Single source of truth
@@ -229,7 +260,11 @@ export function ResultCardView({
   const [expanded, setExpanded] = useState(false);
 
   const display = cardTypeDisplay(card);
-  const stars = cardClassementStars(card);
+  const rating = cardClassementRating(card);
+  // Picto + couleur du type : repris EXACTEMENT de la légende carte (même table marqueur), donc la
+  // carte résultat ne peut pas diverger des pins ni de MapLegend.
+  const markerStyle = defaultMarkerStyles[normalizeExplorerObjectType(card.type)];
+  const typeGlyph = markerIconCatalog[markerStyle.icon].glyph;
   const labelLogos = cardLabelLogos(card);
   const city = card.location?.city?.trim() || 'Lieu non renseigné';
   const taxonomyLabel = pickTaxonomyLabel(card);
@@ -280,12 +315,8 @@ export function ResultCardView({
           className="h-full w-full overflow-hidden rounded-[10px] bg-surface2 bg-cover bg-center"
           style={card.image ? { backgroundImage: `url(${card.image})` } : undefined}
         />
-        {stars != null ? (
-          <span className="thumb__rating" title={`${display.typeLabel} ${stars} étoile${stars > 1 ? 's' : ''}`} aria-hidden>
-            {Array.from({ length: stars }).map((_, i) => (
-              <Star key={i} />
-            ))}
-          </span>
+        {rating != null ? (
+          <RatingCockade count={rating.count} unit={rating.unit} typeLabel={display.typeLabel} />
         ) : null}
         {labelLogos.length > 0 ? (
           <span className="thumb__labels">
@@ -322,7 +353,7 @@ export function ResultCardView({
                 Ouvert
               </span>
             ) : (
-              <span className="badge shrink-0 bg-surface2 text-muted" title="Fermé">
+              <span className="badge badge--muted shrink-0" title="Fermé">
                 <span className="dot dot--off" />
                 Fermé
               </span>
@@ -330,8 +361,28 @@ export function ResultCardView({
           ) : null}
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
-          <span className={cn('type-pill shrink-0', display.accentClass)} title={display.typeLabel}>
+          <span className="inline-flex shrink-0 items-center gap-1" title={display.typeLabel}>
+            {/*
+              Picto de type : glyphe + couleur du marqueur (cf. MapLegend / map-markers), affiché
+              comme un simple picto en ligne — même traitement que la commune, plus de pastille. Le
+              glyphe vient d'une constante interne de confiance (markerIconCatalog), jamais d'une
+              entrée utilisateur.
+            */}
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3 w-3 shrink-0"
+              fill="none"
+              stroke={markerStyle.color}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              dangerouslySetInnerHTML={{ __html: typeGlyph }}
+            />
             {display.typeLabel}
+          </span>
+          <span className="text-ink-4" aria-hidden>
+            ·
           </span>
           <span className="inline-flex min-w-0 items-center gap-1 truncate">
             <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />

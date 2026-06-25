@@ -1,4 +1,4 @@
-import { cardTypeDisplay, cardClassementStars, cardLabelLogos } from './explorer-card-display';
+import { cardTypeDisplay, cardClassementRating, cardLabelLogos } from './explorer-card-display';
 import type { ObjectCard } from '../types/domain';
 
 function card(partial: Partial<ObjectCard>): ObjectCard {
@@ -22,17 +22,25 @@ describe('cardTypeDisplay', () => {
   });
 });
 
-describe('cardClassementStars (cocarde réservée aux HEB)', () => {
-  it('extrait le nombre d’étoiles d’un badge de classement pour un HEB', () => {
+describe('cardClassementRating (cocarde réservée aux HEB)', () => {
+  it('extrait le nombre ET l’unité « étoile » d’un badge de classement pour un HEB', () => {
     const c = card({ type: 'HOT', badges: [{ kind: 'classification', label: '3 étoiles' }] });
-    expect(cardClassementStars(c)).toBe(3);
+    expect(cardClassementRating(c)).toEqual({ count: 3, unit: 'etoile' });
+  });
+  it('reconnaît l’unité « épi » (Gîtes de France) et la distingue des étoiles', () => {
+    const c = card({ type: 'HLO', badges: [{ kind: 'classification', label: 'Gîtes de France · 3 épis' }] });
+    expect(cardClassementRating(c)).toEqual({ count: 3, unit: 'epi' });
+  });
+  it('reconnaît l’unité « clé » (Clévacances)', () => {
+    const c = card({ type: 'HLO', badges: [{ kind: 'classification', label: 'Clévacances · 2 clés' }] });
+    expect(cardClassementRating(c)).toEqual({ count: 2, unit: 'cle' });
   });
   it('renvoie null pour un non-HEB même avec un badge étoilé', () => {
     const c = card({ type: 'RES', badges: [{ kind: 'classification', label: '2 étoiles' }] });
-    expect(cardClassementStars(c)).toBeNull();
+    expect(cardClassementRating(c)).toBeNull();
   });
   it('renvoie null quand aucun badge de classement', () => {
-    expect(cardClassementStars(card({ type: 'HOT', badges: [{ kind: 'label', label: 'Clef Verte' }] }))).toBeNull();
+    expect(cardClassementRating(card({ type: 'HOT', badges: [{ kind: 'label', label: 'Clef Verte' }] }))).toBeNull();
   });
 });
 

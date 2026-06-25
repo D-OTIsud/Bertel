@@ -67,6 +67,19 @@ function shortenDisplayLabel(label: string): string {
   return label;
 }
 
+/**
+ * Drop a redundant rating-unit parenthetical from the SCHEME part of a graded label. The badge label
+ * arrives as "<scheme> · <count> <unit>" (e.g. "Gîtes de France (épis) · 3 épis"); when the scheme name
+ * carries its unit as a parenthetical — "(épis)", "(clés)", "(étoiles)" — it only repeats the unit already
+ * shown by the graded value, so we strip it: "Gîtes de France (épis) · 3 épis" → "Gîtes de France · 3 épis".
+ * Anchored to a parenthetical immediately followed by the " · " value separator, so it never touches a
+ * scheme name whose parenthetical is meaningful and standalone.
+ */
+const REDUNDANT_UNIT_PAREN_RE = /\s*\((?:épis?|clés?|cles?|étoiles?|etoiles?)\)(?=\s*·)/i;
+function stripRedundantUnitParenthetical(label: string): string {
+  return label.replace(REDUNDANT_UNIT_PAREN_RE, '');
+}
+
 // Label values that are a granted STATUS (binary "obtained") rather than a meaningful grade/type.
 const STATUS_VALUE_WORDS = new Set(['obtenu', 'accorde', 'acquis', 'octroye', 'attribue']);
 
@@ -91,7 +104,12 @@ function dedupeLabels(labels: string[]): string[] {
   const seen = new Set<string>();
   const next: string[] = [];
 
-  for (const label of labels.map(cleanText).map(shortenDisplayLabel).map(stripRedundantValueSuffix).filter(Boolean)) {
+  for (const label of labels
+    .map(cleanText)
+    .map(shortenDisplayLabel)
+    .map(stripRedundantUnitParenthetical)
+    .map(stripRedundantValueSuffix)
+    .filter(Boolean)) {
     const key = normalizeForCompare(label);
     if (!key || seen.has(key)) {
       continue;

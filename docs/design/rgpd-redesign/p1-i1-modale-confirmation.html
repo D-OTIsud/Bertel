@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Modale de confirmation destructive (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82; --ink-4:#94a1a8;
+    --teal:#176b6a; --teal-2:#0d4f4e; --teal-soft:#e2efee;
+    --red:#c85c48; --danger-bg:#fbece9; --danger-border:#eccabf; --danger-ink:#8f3322;
+    --shadow-l:0 24px 60px -20px rgba(24,49,59,.30);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; font-family:'Manrope',system-ui,sans-serif; color:var(--ink);
+    background:
+      radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23,107,106,.10), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242,139,84,.10), transparent 55%),
+      radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50,112,144,.08), transparent 55%),
+      linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%);
+    background-attachment:fixed;
+  }
+  /* faux page derrière la modale */
+  .stage{position:relative; min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:48px 16px}
+  .page{max-width:672px; width:100%; filter:saturate(.96)}
+  .page h1{font-family:'Sora';font-size:21px;font-weight:700;margin:0 0 4px}
+  .page p.sub{font-size:14px;color:var(--ink-2);margin:0}
+  .ghost{margin-top:18px;height:220px;border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.5)}
+  /* scrim + modale */
+  .scrim{position:fixed; inset:0; background:rgba(24,49,59,.55); display:flex; align-items:center; justify-content:center; padding:16px}
+  .modal{
+    width:100%; max-width:468px; background:var(--surface); border:1px solid var(--line);
+    border-radius:var(--radius-md); box-shadow:var(--shadow-l); padding:22px 22px 18px; animation:pop .18s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .modal__head{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .modal__icon{flex:0 0 auto;width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--danger-bg);color:var(--red)}
+  .modal__icon svg{width:20px;height:20px}
+  .modal__title{font-family:'Sora';font-size:17px;font-weight:700;margin:2px 0 0;color:var(--ink)}
+  .modal__msg{font-size:13.5px;line-height:1.55;color:var(--ink-2);margin:0 0 14px}
+  .recap{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;margin:0 0 14px}
+  .recap__row{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;font-size:12.5px}
+  .recap__row + .recap__row{border-top:1px solid var(--line-soft)}
+  .recap__k{color:var(--ink-3)}
+  .recap__v{color:var(--ink);font-weight:600;text-align:right}
+  .recap__v.mono{font-family:'IBM Plex Mono',monospace;font-weight:500}
+  .pill-danger{display:inline-flex;align-items:center;gap:6px;background:var(--danger-bg);color:var(--danger-ink);border:1px solid var(--danger-border);border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:700}
+  .pill-danger svg{width:13px;height:13px}
+  .gate{margin:0 0 16px}
+  .gate__label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .gate__label b{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink);background:var(--surface-2);padding:1px 6px;border-radius:6px}
+  .gate__input{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);background:var(--surface)}
+  .gate__input:focus-visible{outline:2px solid var(--red);outline-offset:2px;border-color:var(--red)}
+  .gate__hint{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);margin-top:6px}
+  .gate__hint.ok{color:#2ca36f}
+  .gate__hint svg{width:13px;height:13px}
+  .modal__foot{display:flex;justify-content:flex-end;gap:8px}
+  .btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--surface-2)}
+  .btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+  .btn.danger:hover{filter:brightness(1.05);background:var(--red)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  .note{max-width:672px;margin:14px auto 0;font-size:12px;color:var(--ink-3);text-align:center}
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="page" aria-hidden="true">
+      <h1>Effacement RGPD (Art. 17)</h1>
+      <p class="sub">Traitement d'une demande d'effacement / anonymisation, par sujet identifié.</p>
+      <div class="ghost"></div>
+    </div>
+
+    <div class="scrim" role="dialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-msg">
+      <div class="modal">
+        <div class="modal__head">
+          <div class="modal__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </div>
+          <h2 class="modal__title" id="dlg-title">Supprimer définitivement ce sujet ?</h2>
+        </div>
+
+        <p class="modal__msg" id="dlg-msg">
+          Cette action est <strong>journalisée et irréversible</strong>. La suppression entraîne une
+          cascade dure : toutes les données personnelles du sujet sont effacées et le journal d'audit
+          est purgé de sa PII. Le référentiel public n'est pas touché.
+        </p>
+
+        <div class="recap">
+          <div class="recap__row"><span class="recap__k">Type de sujet</span><span class="recap__v">Acteur — identité, canaux, consentements, CRM lié</span></div>
+          <div class="recap__row"><span class="recap__k">Identifiant</span><span class="recap__v mono">a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77</span></div>
+          <div class="recap__row"><span class="recap__k">Mode</span><span class="recap__v"><span class="pill-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Suppression dure</span></span></div>
+        </div>
+
+        <div class="gate">
+          <label class="gate__label" for="confirm-id">Pour confirmer, tapez l'identifiant <b>a1f3c9e2…6d77</b> ou le mot <b>SUPPRIMER</b></label>
+          <input class="gate__input" id="confirm-id" autocomplete="off" spellcheck="false" placeholder="SUPPRIMER" aria-describedby="gate-hint" />
+          <p class="gate__hint" id="gate-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4m0 4h.01M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg><span id="gate-hint-text">La saisie doit correspondre exactement.</span></p>
+        </div>
+
+        <div class="modal__foot">
+          <button type="button" class="btn" id="cancel">Annuler</button>
+          <button type="button" class="btn danger" id="confirm" disabled>Supprimer le sujet</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Maquette à valider — rendue avec les tokens réels du produit. Tapez « SUPPRIMER » dans le champ pour voir le bouton s'activer.</p>
+
+  <script>
+    var EXPECT_ID = 'a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77';
+    var input = document.getElementById('confirm-id');
+    var confirmBtn = document.getElementById('confirm');
+    var hint = document.getElementById('gate-hint');
+    var hintText = document.getElementById('gate-hint-text');
+    input.addEventListener('input', function(){
+      var v = input.value.trim();
+      var ok = v === 'SUPPRIMER' || v === EXPECT_ID;
+      confirmBtn.disabled = !ok;
+      hint.classList.toggle('ok', ok);
+      hintText.textContent = ok ? 'Confirmation validée.' : 'La saisie doit correspondre exactement.';
+    });
+    document.getElementById('cancel').addEventListener('click', function(){ alert('Annulé (maquette).'); });
+    confirmBtn.addEventListener('click', function(){ if(!confirmBtn.disabled) alert('Suppression confirmée (maquette).'); });
+  </script>
+</body>
+</html>

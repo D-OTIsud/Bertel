@@ -6,6 +6,11 @@ import { SectionPricing } from './SectionPricing';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
 import { getRegisteredSections } from './section-registry';
 
+// SectionPublication (§108 hard-delete) calls useRouter(); the registry mounts it here.
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn(), refresh: jest.fn() }),
+}));
+
 describe('section registry', () => {
   it('returns the full ordered section list by archetype', () => {
     // §90: §20 « Distribution & réseaux sociaux » retired (réseaux/distribution moved to §03).

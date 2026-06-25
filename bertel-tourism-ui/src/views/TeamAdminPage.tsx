@@ -23,6 +23,7 @@ import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
 import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export default function TeamAdminPage() {
   const role = useSessionStore((s) => s.role);
@@ -52,6 +53,9 @@ export default function TeamAdminPage() {
   const [orgPerms, setOrgPerms] = useState<string[]>([]);
   // ID of the membership whose permissions drawer is open (null = closed).
   const [managingId, setManagingId] = useState<string | null>(null);
+  // Membre en attente de confirmation de désactivation (null = aucune ; remplace window.confirm).
+  const [confirmDeactivate, setConfirmDeactivate] = useState<OrgMember | null>(null);
+  const [deactivateBusy, setDeactivateBusy] = useState(false);
 
   const reload = useCallback(async () => {
     if (!effectiveOrgId) { setLoading(false); return; }
@@ -107,32 +111,56 @@ export default function TeamAdminPage() {
     await reload();
   }
 
-  async function handleDeactivate(m: OrgMember) {
-    if (!window.confirm('Désactiver ce membre ?')) return;
+  async function doDeactivate(m: OrgMember) {
+    setDeactivateBusy(true);
     try {
       await deactivateMembership(m.membershipId);
       toast.success('Membre désactivé.');
+      setConfirmDeactivate(null);
     } catch (e) {
       toast.error(friendlyRbacError(e as { message?: string }));
+    } finally {
+      setDeactivateBusy(false);
     }
     await reload();
   }
 
-  if (!allowed) return <section className="p-6"><p>Accès réservé aux administrateurs.</p></section>;
+  if (!allowed) {
+    return (
+      <section className="settings-pane">
+        <div className="notice notice--warn">Accès réservé aux administrateurs d’organisation.</div>
+      </section>
+    );
+  }
   return (
-    <section className="p-6 space-y-4">
-      <header className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Équipe</h1>
-        {effectiveOrgId && <InviteMemberDialog orgId={effectiveOrgId} onDone={reload} />}
-      </header>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-      {loading ? <p className="text-sm text-muted-foreground">Chargement…</p>
+    <section className="settings-pane">
+      <div className="settings-pane__head">
+        <div>
+          <h2>Équipe</h2>
+          <p>Membres de votre organisation, rôles et permissions.</p>
+        </div>
+        <div className="settings-pane__actions">
+          {canManageOrgDefaults ? (
+            effectiveOrgId && <InviteMemberDialog orgId={effectiveOrgId} onDone={reload} />
+          ) : (
+            <>
+              <span className="badge badge--info badge--xs" title="Inviter un membre nécessite le rang ≥ 30">rang ≥ 30</span>
+              <button type="button" className="primary-button" disabled title="Réservé aux administrateurs de rang ≥ 30">
+                Inviter
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {error && <div className="inline-alert inline-alert--danger" role="alert">{error}</div>}
+      {loading ? <p className="muted">Chargement…</p>
         : (
           <MembersTable
             members={members}
             currentUserId={userId}
             onManagePermissions={(m) => setManagingId(m.membershipId)}
-            onDeactivate={handleDeactivate}
+            onDeactivate={(m) => setConfirmDeactivate(m)}
           >
             {(m, isSelf) => ({
               business: (
@@ -141,6 +169,7 @@ export default function TeamAdminPage() {
                   options={bizRoles}
                   callerRank={callerRank}
                   disabled={isSelf}
+                  label={`Rôle métier de ${m.displayName ?? m.email ?? 'ce membre'}`}
                   onChange={(c) => { if (c) void changeBusinessRole(m, c); }}
                 />
               ),
@@ -151,6 +180,7 @@ export default function TeamAdminPage() {
                   callerRank={callerRank}
                   includeNone
                   disabled={isSelf}
+                  label={`Rôle admin de ${m.displayName ?? m.email ?? 'ce membre'}`}
                   onChange={(c) => void changeAdminRole(m, c)}
                 />
               ),
@@ -165,6 +195,21 @@ export default function TeamAdminPage() {
         canManageOrgDefaults={canManageOrgDefaults}
         onClose={() => setManagingId(null)}
         onChanged={reload}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmDeactivate)}
+        tone="danger"
+        title="Désactiver ce membre ?"
+        confirmLabel="Désactiver"
+        busy={deactivateBusy}
+        message={
+          confirmDeactivate
+            ? `${confirmDeactivate.displayName ?? confirmDeactivate.email ?? 'Ce membre'} perdra l’accès à l’organisation. Son compte peut être réactivé ultérieurement.`
+            : ''
+        }
+        onCancel={() => setConfirmDeactivate(null)}
+        onConfirm={() => confirmDeactivate && void doDeactivate(confirmDeactivate)}
       />
     </section>
   );

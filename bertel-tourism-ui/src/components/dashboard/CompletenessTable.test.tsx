@@ -29,14 +29,15 @@ describe('CompletenessTable', () => {
     useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
   });
 
-  it('rend le % de fiches complètes et le libellé FR de l’essentiel manquant', () => {
+  it('rend la jauge de complétude (richesse moyenne) et le libellé FR de l’essentiel manquant', () => {
     render(<CompletenessTable data={data} />);
-    expect(screen.getByText('63.7 %')).toBeInTheDocument();
+    expect(screen.getByText('96 %')).toBeInTheDocument(); // avg_score HLO
+    expect(screen.getByText('98 %')).toBeInTheDocument(); // avg_score HOT
     expect(screen.getByText('Photos')).toBeInTheDocument(); // 'photos' → libellé FR
     expect(screen.getByText('—')).toBeInTheDocument(); // HOT n'a aucun manque
   });
 
-  it('clic sur la cellule type filtre sur ce type (drill-down toggle)', () => {
+  it('clic sur la pastille de type filtre sur ce type (drill-down toggle)', () => {
     render(<CompletenessTable data={data} />);
     fireEvent.click(screen.getByRole('button', { name: 'Hebergement loisir' }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HLO']);

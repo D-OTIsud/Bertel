@@ -6,7 +6,7 @@
  *
  * - cardTypeDisplay : pastille de type (libellé FR + accent d'archétype) + règle
  *   « pastille ouvert » (HEB/RES uniquement).
- * - cardClassementStars : nombre d'étoiles/épis/clés — cocarde RÉSERVÉE aux HEB.
+ * - cardClassementRating : nombre + unité (étoile/épi/clé) — cocarde RÉSERVÉE aux HEB.
  * - cardLabelLogos : pastilles-logo des labels reconnus (granted ; le RPC carte
  *   ne projette que des distinctions accordées sur les fiches publiques).
  */
@@ -40,10 +40,31 @@ function normalize(value: unknown): string {
     .trim();
 }
 
+/** Unité de cocarde : étoiles (hôtels/campings…), épis (Gîtes de France), clés (Clévacances). */
+export type ClassementUnit = 'etoile' | 'epi' | 'cle';
+
+export interface CardClassementRating {
+  count: number;
+  unit: ClassementUnit;
+}
+
 /** Étoiles/épis/clés d'un classement — cocarde réservée aux hébergements (HEB). */
 const STAR_RE = /(\d+)\s*(etoile|epi|cle|star|key)/;
 
-export function cardClassementStars(card: ObjectCard): number | null {
+/** Jeton capturé (déjà normalisé sans accents) → unité de cocarde canonique. */
+const UNIT_BY_TOKEN: Record<string, ClassementUnit> = {
+  etoile: 'etoile',
+  star: 'etoile',
+  epi: 'epi',
+  cle: 'cle',
+  key: 'cle',
+};
+
+/**
+ * Nombre + unité du classement le plus pertinent porté par les badges, pour la cocarde.
+ * RÉSERVÉE aux hébergements (HEB) ; renvoie null hors HEB ou sans badge gradé reconnu.
+ */
+export function cardClassementRating(card: ObjectCard): CardClassementRating | null {
   if (resolveArchetype(card.type) !== 'HEB') {
     return null;
   }
@@ -52,7 +73,7 @@ export function cardClassementStars(card: ObjectCard): number | null {
     if (match) {
       const n = Number(match[1]);
       if (n >= 1 && n <= 5) {
-        return n;
+        return { count: n, unit: UNIT_BY_TOKEN[match[2]] };
       }
     }
   }

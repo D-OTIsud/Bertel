@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockHEB } from './BlockHEB';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -317,7 +317,11 @@ describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => 
     // Annuler: no row added.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Annuler' })); });
+    // The room modal embeds a Markdown editor (lazy) whose icon-only Undo button is also
+    // aria-labelled "Annuler", so getByRole('button', { name: 'Annuler' }) is ambiguous once the
+    // lazy chunk has loaded. Target the footer Cancel by its text node — the Undo button has no
+    // text, only an aria-label — while keeping the query scoped to the open dialog.
+    act(() => { fireEvent.click(within(screen.getByRole('dialog')).getByText('Annuler')); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items).toHaveLength(before);
 

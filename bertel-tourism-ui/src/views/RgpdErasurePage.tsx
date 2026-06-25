@@ -1,9 +1,22 @@
 'use client';
 
-import { type FormEvent, useState } from 'react';
+// Effacement RGPD (Art. 17) — refonte §p1..p4 (cf. docs/design/rgpd-redesign).
+// Écran le plus dangereux de l'app : le poids visuel et les garde-fous sont portés au niveau de
+// l'enjeu. Sécurité (P1) : window.confirm → ConfirmDialog + saisie-pour-confirmer (mode delete) ;
+// mode à escalade visuelle + bouton contextuel. Thème (P2) : tokens info/warn/danger réels.
+// Clarté (P3) : résolution du sujet + résultat structuré. États/focus (P4) : landmark, accès
+// refusé pédagogique, cible 44px. Le contrat backend (requestErasure) est inchangé.
+
+import { type FormEvent, useCallback, useState } from 'react';
+import { Info, Lock, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSessionStore } from '@/store/session-store';
 import { getSupabaseClient } from '@/lib/supabase';
+import { Callout } from '@/components/ui/Callout';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ModeSelect } from './rgpd/ModeSelect';
+import { SubjectResolver } from './rgpd/SubjectResolver';
+import { ErasureResultPanel } from './rgpd/ErasureResultPanel';
 import {
   requestErasure,
   ERASURE_SUBJECT_KINDS,
@@ -14,6 +27,13 @@ import {
   type ErasureResult,
 } from '@/services/rgpd';
 
+interface DoneState {
+  result: ErasureResult;
+  mode: ErasureMode;
+  kind: ErasureSubjectKind;
+  id: string;
+}
+
 export default function RgpdErasurePage() {
   const role = useSessionStore((s) => s.role);
   const allowed = role === 'owner' || role === 'super_admin';
@@ -23,165 +43,218 @@ export default function RgpdErasurePage() {
   const [mode, setMode] = useState<ErasureMode>('anonymize');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<ErasureResult | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState(false);
+  const [done, setDone] = useState<DoneState | null>(null);
+  const [resolverKey, setResolverKey] = useState(0);
+
+  const handleResolved = useCallback((id: string) => setSubjectId(id), []);
 
   if (!allowed) {
     return (
-      <section className="p-6">
-        <p className="text-sm text-ink-3">
-          Accès réservé au référent RGPD (administrateur plateforme).
-        </p>
-      </section>
+      <main aria-labelledby="rgpd-denied-title" className="mx-auto max-w-md p-6">
+        <div role="alert" className="space-y-2 rounded-shellXl border border-line bg-surface p-5 text-center">
+          <Lock size={28} className="mx-auto text-ink-3" aria-hidden />
+          <h1 id="rgpd-denied-title" className="text-lg font-semibold text-ink">
+            Accès réservé
+          </h1>
+          <p className="text-sm text-ink-2">
+            Cet outil d&apos;effacement RGPD est réservé au référent RGPD (administrateur plateforme). Pour
+            faire traiter une demande d&apos;effacement, contactez votre administrateur ou le DPO.
+          </p>
+        </div>
+      </main>
     );
   }
 
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const id = subjectId.trim();
-    if (!id) {
-      toast.error('Identifiant du sujet requis.');
+  const isDelete = mode === 'delete';
+  const hasSubject = subjectId.trim().length > 0;
+
+  function openConfirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!hasSubject) {
+      toast.error('Sélectionnez ou saisissez un sujet valide.');
       return;
     }
-    const verb = mode === 'delete' ? 'SUPPRIMER définitivement' : 'anonymiser';
-    const ok = window.confirm(
-      `Confirmer : ${verb} le sujet « ${ERASURE_KIND_LABELS[subjectKind]} » d'identifiant ${id} ?\n\n` +
-        'Cette action est journalisée et irréversible. Le journal d\'audit est purgé de la PII du sujet.',
-    );
-    if (!ok) return;
+    setDone(null);
+    setPendingConfirm(true);
+  }
 
+  async function runErasure() {
     setBusy(true);
-    setResult(null);
     try {
       const client = getSupabaseClient();
-      const token = client ? (await client.auth.getSession()).data.session?.access_token ?? '' : '';
+      const token = client ? ((await client.auth.getSession()).data.session?.access_token ?? '') : '';
       if (!token) {
         toast.error('Session expirée — reconnectez-vous.');
+        setPendingConfirm(false);
         return;
       }
       const res = await requestErasure({
         subjectKind,
-        subjectId: id,
+        subjectId: subjectId.trim(),
         mode,
         reason: reason.trim() || null,
         accessToken: token,
       });
-      setResult(res);
+      setDone({ result: res, mode, kind: subjectKind, id: subjectId.trim() });
       toast.success(mode === 'delete' ? 'Sujet supprimé.' : 'Sujet anonymisé.');
       setSubjectId('');
       setReason('');
+      setResolverKey((key) => key + 1);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Échec de l'effacement.");
     } finally {
       setBusy(false);
+      setPendingConfirm(false);
     }
   }
 
   return (
-    <section className="mx-auto max-w-2xl space-y-5 p-6">
+    <main aria-labelledby="rgpd-title" className="mx-auto max-w-2xl space-y-5 p-6">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold text-ink">Effacement RGPD (Art. 17)</h1>
-        <p className="text-sm text-ink-3">
+        <div className="flex items-center gap-2">
+          <UserX size={20} className="text-ink-2" aria-hidden />
+          <h1 id="rgpd-title" className="text-xl font-semibold text-ink">
+            Effacement RGPD (Art. 17)
+          </h1>
+        </div>
+        <p className="text-sm text-ink-2">
           Traitement d&apos;une demande d&apos;effacement / anonymisation, par sujet identifié.
         </p>
+        <p className="text-xs text-ink-3">Accès réservé au référent RGPD · chaque opération est journalisée.</p>
       </header>
 
-      <div className="rounded-[12px] border border-info-border bg-info-bg p-3 text-[13px] leading-relaxed text-ink-2">
+      <Callout
+        variant="info"
+        ariaLabel="Périmètre de l'outil"
+        icon={<Info size={16} />}
+        title="Ce que cet outil touche — et ce qu'il ne touche pas"
+        chips={[
+          { label: '✓ Données du sujet' },
+          { label: '✗ Référentiel public' },
+          { label: '⊕ Tracé au registre' },
+        ]}
+      >
         Bertel est un référentiel touristique : la quasi-totalité des données est publique
-        (établissements = personnes morales). Cet outil agit <strong>uniquement</strong> sur les
-        données personnelles d&apos;un sujet précis (acteur, contacts privés, CRM, déclarant, avis…) —
-        jamais sur le référentiel public. L&apos;anonymisation conserve la structure (liens préservés) ;
-        la suppression dure cascade. Le journal d&apos;audit est purgé de la PII du sujet et chaque
-        opération est tracée dans le registre des effacements.
-      </div>
+        (établissements = personnes morales). Cet outil agit <strong>uniquement</strong> sur les données
+        personnelles d&apos;un sujet précis (acteur, contacts privés, CRM, déclarant, avis…) — jamais sur le
+        référentiel public. L&apos;anonymisation conserve la structure ; la suppression dure cascade.
+      </Callout>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-ink-2">Type de sujet</span>
-          <select
-            value={subjectKind}
-            onChange={(e) => setSubjectKind(e.target.value as ErasureSubjectKind)}
-            className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm text-ink"
-          >
-            {ERASURE_SUBJECT_KINDS.map((kind) => (
-              <option key={kind} value={kind}>
-                {ERASURE_KIND_LABELS[kind]}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-ink-2">Identifiant du sujet</span>
-          <input
-            value={subjectId}
-            onChange={(e) => setSubjectId(e.target.value)}
-            placeholder={ERASURE_ID_HINT[subjectKind]}
-            className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 font-mono text-sm text-ink"
-          />
-          <span className="text-xs text-ink-3">{ERASURE_ID_HINT[subjectKind]}</span>
-        </label>
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-ink-2">Mode</legend>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === 'anonymize'}
-              onChange={() => setMode('anonymize')}
-            />
-            Anonymiser <span className="text-ink-3">(recommandé — conserve la structure)</span>
+      <form onSubmit={openConfirm} className="space-y-4">
+        <fieldset disabled={busy} className="space-y-4 border-0 p-0">
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink-2">Type de sujet</span>
+            <select
+              value={subjectKind}
+              onChange={(event) => setSubjectKind(event.target.value as ErasureSubjectKind)}
+              className="w-full rounded-shellLg border border-line bg-surface px-3 py-2 text-sm text-ink"
+            >
+              {ERASURE_SUBJECT_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {ERASURE_KIND_LABELS[kind]}
+                </option>
+              ))}
+            </select>
           </label>
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input
-              type="radio"
-              name="mode"
-              checked={mode === 'delete'}
-              onChange={() => setMode('delete')}
+
+          <SubjectResolver
+            key={`${subjectKind}-${resolverKey}`}
+            kind={subjectKind}
+            onResolved={handleResolved}
+            hint={ERASURE_ID_HINT[subjectKind]}
+            disabled={busy}
+          />
+
+          <div className="space-y-1">
+            <span className="text-sm font-medium text-ink-2">Mode</span>
+            <ModeSelect value={mode} onChange={setMode} disabled={busy} />
+          </div>
+
+          <label className="block space-y-1">
+            <span className="text-sm font-medium text-ink-2">Motif / référence de la demande</span>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={2}
+              placeholder="Ex. demande d'effacement reçue le … / réf. dossier …"
+              className="w-full rounded-shellLg border border-line bg-surface px-3 py-2 text-sm text-ink"
             />
-            Supprimer définitivement <span className="text-ink-3">(cascade dure)</span>
           </label>
         </fieldset>
 
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-ink-2">Motif / référence de la demande</span>
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-            placeholder="Ex. demande d'effacement reçue le … / réf. dossier …"
-            className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm text-ink"
-          />
-        </label>
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-[10px] bg-teal px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-2 disabled:opacity-50"
-        >
-          {busy ? 'Traitement…' : mode === 'delete' ? 'Supprimer le sujet' : 'Anonymiser le sujet'}
-        </button>
+        <div className="space-y-1.5">
+          <button
+            type="submit"
+            disabled={busy || !hasSubject}
+            className={`inline-flex min-h-[44px] items-center justify-center rounded-shellLg px-4 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+              isDelete ? 'bg-danger-strong hover:opacity-90' : 'bg-teal hover:bg-teal-2'
+            }`}
+          >
+            {busy ? 'Traitement…' : isDelete ? 'Supprimer le sujet' : 'Anonymiser le sujet'}
+          </button>
+          <p className={isDelete ? 'text-xs text-danger-ink' : 'text-xs text-ink-2'}>
+            {isDelete
+              ? 'Irréversible — confirmation par saisie requise.'
+              : 'Action journalisée. Une confirmation sera demandée.'}
+          </p>
+        </div>
       </form>
 
-      {result && (
-        <div className="space-y-2 rounded-[12px] border border-line bg-surface2 p-3 text-[13px] text-ink-2">
-          <p className="font-medium text-ink">Effacement effectué</p>
-          {result.storageDeleted.length > 0 && (
-            <p>Fichiers supprimés du stockage : {result.storageDeleted.length}</p>
-          )}
-          {result.storageError && (
-            <p className="text-orange">Avertissement stockage : {result.storageError}</p>
-          )}
-          {result.authUserDeleted && <p>Compte d&apos;authentification supprimé.</p>}
-          {result.authError && <p className="text-orange">Avertissement compte : {result.authError}</p>}
-          <details className="mt-1">
-            <summary className="cursor-pointer text-ink-3">Détail technique (rapport)</summary>
-            <pre className="mt-2 overflow-x-auto rounded-[8px] bg-surface p-2 text-xs text-ink-2">
-              {JSON.stringify(result.report, null, 2)}
-            </pre>
-          </details>
-        </div>
+      {done && (
+        <ErasureResultPanel
+          result={done.result}
+          mode={done.mode}
+          subjectLabel={ERASURE_KIND_LABELS[done.kind]}
+          subjectId={done.id}
+        />
       )}
-    </section>
+
+      <ConfirmDialog
+        open={pendingConfirm}
+        tone={isDelete ? 'danger' : 'default'}
+        title={isDelete ? 'Supprimer définitivement le sujet ?' : 'Anonymiser le sujet ?'}
+        confirmLabel={isDelete ? 'Supprimer le sujet' : 'Anonymiser'}
+        busy={busy}
+        confirmGate={
+          isDelete
+            ? {
+                expected: [subjectId.trim(), 'SUPPRIMER'],
+                label: (
+                  <>
+                    Tapez l&apos;identifiant du sujet ou le mot <strong>SUPPRIMER</strong> pour confirmer.
+                  </>
+                ),
+              }
+            : undefined
+        }
+        message={
+          <span className="block space-y-2">
+            <span className="block">
+              Vous allez {isDelete ? <strong>supprimer définitivement</strong> : 'anonymiser'} le sujet
+              ci-dessous. Cette action est journalisée{isDelete ? ' et irréversible' : ''}.
+            </span>
+            <span className="block space-y-1 rounded-shellMd border border-line bg-bgTint p-2 text-xs">
+              <span className="flex justify-between gap-2">
+                <span className="text-ink-2">Type</span>
+                <span className="text-right text-ink">{ERASURE_KIND_LABELS[subjectKind]}</span>
+              </span>
+              <span className="flex justify-between gap-2">
+                <span className="text-ink-2">Identifiant</span>
+                <span className="break-all text-right font-mono text-ink">{subjectId.trim()}</span>
+              </span>
+              <span className="flex justify-between gap-2">
+                <span className="text-ink-2">Mode</span>
+                <span className={isDelete ? 'font-medium text-danger-ink' : 'font-medium text-teal'}>
+                  {isDelete ? 'Suppression dure' : 'Anonymisation'}
+                </span>
+              </span>
+            </span>
+          </span>
+        }
+        onCancel={() => setPendingConfirm(false)}
+        onConfirm={runErasure}
+      />
+    </main>
   );
 }

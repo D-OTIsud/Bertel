@@ -18,4 +18,16 @@ describe('SettingsRail (Phase 7.1)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Apparence' }));
     expect(onSelect).toHaveBeenCalledWith('appearance');
   });
+
+  it('rend le railhead « Paramètres » et le badge de périmètre des groupes gated', () => {
+    render(<SettingsRail groups={buildSettingsNav('super_admin', { canManageTeam: true })} activeSection="preferences" onSelect={jest.fn()} />);
+    // Railhead (fidélité maquette p7-01).
+    expect(screen.getByText('Paramètres')).toBeInTheDocument();
+    // Périmètre : « tout le monde » (non gated) + badges « admin ORG » / « super-admin » (gated).
+    expect(screen.getByText('tout le monde')).toBeInTheDocument();
+    expect(screen.getByText('admin ORG')).toBeInTheDocument();
+    expect(screen.getByText('super-admin')).toBeInTheDocument();
+    // Le nouvel item « Listes & référentiels » porte un badge « Nouveau ».
+    expect(screen.getByText('Nouveau')).toBeInTheDocument();
+  });
 });

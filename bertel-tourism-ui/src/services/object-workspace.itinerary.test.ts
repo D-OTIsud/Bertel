@@ -104,7 +104,7 @@ describe('buildItineraryStagesPayload', () => {
   it('keeps raw Markdown in the stage save payload (D2 phase F)', () => {
     const RAW = '## Sommet **panoramique** au [refuge](https://ex.re)';
     const module = { unavailableReason: null,
-      stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1', kind: '', lng: '', lat: '', mediaIds: [] }] } as Parameters<typeof buildItineraryStagesPayload>[0];
+      stages: [{ recordId: 'stg-1', name: 'Sommet', description: RAW, position: '1', kind: '', lng: '', lat: '', mediaIds: [] }] } as unknown as Parameters<typeof buildItineraryStagesPayload>[0];
     const payload = buildItineraryStagesPayload(module);
     expect(payload![0].description).toBe(RAW);
   });

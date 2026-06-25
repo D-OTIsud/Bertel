@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Champ sujet & aperçu (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82; --ink-4:#94a1a8;
+    --teal:#176b6a; --teal-2:#0d4f4e; --teal-soft:#e2efee; --teal-tint:rgba(23,107,106,.08);
+    --green:#2ca36f; --shadow-l:0 24px 60px -20px rgba(24,49,59,.30); --shadow-s:0 1px 0 rgba(24,49,59,.04),0 6px 16px -8px rgba(24,49,59,.10);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%);background-attachment:fixed;}
+  .wrap{max-width:560px;margin:0 auto;padding:40px 16px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-s);padding:20px}
+  .field{display:grid;gap:6px;margin-bottom:16px}
+  .field>label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+  select,.search{width:100%;border:1px solid var(--line-strong);border-radius:var(--radius-sm);padding:10px 12px;font:inherit;font-size:13px;color:var(--ink);background:var(--surface)}
+  select:focus-visible,.search:focus-visible{outline:2px solid var(--teal);outline-offset:2px;border-color:var(--teal)}
+  .hint{font-size:11.5px;color:var(--ink-3)}
+  .search-wrap{position:relative}
+  .search{padding-left:34px}
+  .search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-3)}
+  .menu{margin-top:6px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-l);overflow:hidden}
+  .opt{display:flex;align-items:center;gap:11px;padding:9px 12px;cursor:pointer}
+  .opt:hover,.opt.active{background:var(--teal-tint)}
+  .opt+.opt{border-top:1px solid var(--line-soft)}
+  .av{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:var(--teal-soft);color:var(--teal-2);display:grid;place-items:center;font-size:12px;font-weight:700}
+  .opt__name{font-size:13px;font-weight:600;color:var(--ink)}
+  .opt__meta{font-size:11.5px;color:var(--ink-3)}
+  .opt__id{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--ink-4)}
+  /* sujet résolu */
+  .resolved{border:1px solid var(--teal);background:var(--teal-tint);border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:16px}
+  .resolved__head{display:flex;align-items:center;gap:11px}
+  .resolved__head .av{background:var(--teal);color:#fff}
+  .resolved__name{font-size:14px;font-weight:700}
+  .resolved__meta{font-size:11.5px;color:var(--ink-2)}
+  .resolved__id{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-3);margin-top:1px}
+  .resolved__change{margin-left:auto;border:1px solid var(--line);background:var(--surface);border-radius:8px;height:30px;padding:0 11px;font-size:12px;font-weight:600;color:var(--ink-2);cursor:pointer}
+  .impact{margin-top:12px;border-top:1px dashed var(--line);padding-top:11px}
+  .impact__t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);margin:0 0 8px}
+  .impact__grid{display:flex;gap:8px;flex-wrap:wrap}
+  .imp{background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;min-width:84px}
+  .imp b{display:block;font-size:17px;font-weight:800;color:var(--ink);font-family:'Sora'}
+  .imp span{font-size:11px;color:var(--ink-3)}
+  .toggle{font-size:11.5px;color:var(--teal);background:none;border:none;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:2px}
+  .note{font-size:12px;color:var(--ink-3);text-align:center;margin:16px 0 0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="field">
+        <label for="kind">Type de sujet</label>
+        <select id="kind"><option>Acteur — identité, canaux, consentements, CRM lié</option><option>Déclarant d'un signalement (incident)</option><option>Auteur d'un avis (object_review)</option></select>
+      </div>
+
+      <div class="field" id="search-field">
+        <label for="subject">Rechercher le sujet</label>
+        <div class="search-wrap">
+          <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.3-4.3M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/></svg>
+          <input class="search" id="subject" placeholder="Nom, e-mail…" aria-describedby="subject-hint" autocomplete="off" value="mar" />
+        </div>
+        <p class="hint" id="subject-hint">Recherchez par nom ou e-mail ; l'identifiant exact est rempli automatiquement.</p>
+        <div class="menu" id="menu" role="listbox" aria-label="Résultats">
+          <div class="opt active" role="option" data-name="Marie Hoarau" data-meta="marie.hoarau@example.re · Acteur" data-id="a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77" data-init="MH">
+            <span class="av">MH</span><span><span class="opt__name">Marie Hoarau</span><br><span class="opt__meta">marie.hoarau@example.re · Acteur</span></span><span class="opt__id">a1f3c9e2…6d77</span>
+          </div>
+          <div class="opt" role="option" data-name="Marc Técher" data-meta="m.techer@example.re · Acteur" data-id="b2e4d0f3-8c51-4e2f-ad94-3061b1a7e810" data-init="MT">
+            <span class="av">MT</span><span><span class="opt__name">Marc Técher</span><br><span class="opt__meta">m.techer@example.re · Acteur</span></span><span class="opt__id">b2e4d0f3…e810</span>
+          </div>
+        </div>
+        <button class="toggle" id="adv" type="button" style="margin-top:8px">Je connais déjà l'identifiant (coller un UUID)</button>
+      </div>
+
+      <div class="field" id="resolved-field" hidden>
+        <label>Sujet sélectionné</label>
+        <div class="resolved">
+          <div class="resolved__head">
+            <span class="av" id="r-init">MH</span>
+            <span><span class="resolved__name" id="r-name">Marie Hoarau</span><br><span class="resolved__meta" id="r-meta">marie.hoarau@example.re · Acteur</span><br><span class="resolved__id" id="r-id">a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77</span></span>
+            <button class="resolved__change" id="change" type="button">Changer</button>
+          </div>
+          <div class="impact">
+            <p class="impact__t">Aperçu de l'impact (lecture seule)</p>
+            <div class="impact__grid">
+              <span class="imp"><b>2</b><span>canaux de contact</span></span>
+              <span class="imp"><b>1</b><span>fiche CRM</span></span>
+              <span class="imp"><b>3</b><span>avis liés</span></span>
+              <span class="imp"><b>0</b><span>fichier média</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Maquette à valider — cliquez un résultat pour voir le sujet résolu + l'aperçu d'impact ; « Changer » revient à la recherche.</p>
+  </div>
+
+  <script>
+    var menu=document.getElementById('menu'), searchField=document.getElementById('search-field'), resolvedField=document.getElementById('resolved-field');
+    function resolve(opt){
+      document.getElementById('r-init').textContent=opt.dataset.init;
+      document.getElementById('r-name').textContent=opt.dataset.name;
+      document.getElementById('r-meta').textContent=opt.dataset.meta;
+      document.getElementById('r-id').textContent=opt.dataset.id;
+      searchField.hidden=true; resolvedField.hidden=false;
+    }
+    menu.querySelectorAll('.opt').forEach(function(o){o.addEventListener('click',function(){resolve(o);});});
+    document.getElementById('change').addEventListener('click',function(){resolvedField.hidden=true; searchField.hidden=false;});
+  </script>
+</body>
+</html>

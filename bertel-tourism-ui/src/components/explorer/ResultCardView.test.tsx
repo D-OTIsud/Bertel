@@ -69,6 +69,20 @@ describe('ResultCardView', () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
+  it('renders the type as inline text with the map-legend picto, not a colored pill', () => {
+    render(<ResultCardView card={makeCard({ type: 'RES', name: 'Resto Test' })} domId="card-type" onOpen={() => {}} />);
+
+    // The type label sits on a span carrying its own title (used as the tooltip).
+    const typeSpan = screen.getByTitle('Restaurant');
+    expect(typeSpan.textContent).toContain('Restaurant');
+
+    // The old design wrapped the type in a `.type-pill` blob — the new one drops it.
+    expect(typeSpan.classList.contains('type-pill')).toBe(false);
+
+    // It carries the type picto (the same glyph as MapLegend), shown inline like the commune icon.
+    expect(typeSpan.querySelector('svg')).not.toBeNull();
+  });
+
   it('keeps tags inert (no filter button) in the non-interactive §09 preview', () => {
     render(
       <ResultCardView

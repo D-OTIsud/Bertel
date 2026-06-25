@@ -15,7 +15,8 @@ jest.mock('../services/dashboard-reference', () => ({
 
 jest.mock('../services/dashboard-rpc', () => ({
   getDashboardScorecards: jest.fn().mockResolvedValue({
-    total: 10, published: 8, published_pct: 80, avg_completeness: null,
+    total: 10, published: 8, published_pct: 80, avg_completeness: 92,
+    distinctions: 4, distinctions_pct: 40,
     pending_changes: 1, delta_30d: 2, delta_pct: null, avg_processing_days: null,
   }),
   getDashboardTypeBreakdown: jest.fn().mockResolvedValue({
@@ -28,6 +29,9 @@ jest.mock('../services/dashboard-rpc', () => ({
   getDashboardActualisation: jest.fn().mockResolvedValue({
     threshold_days: 90,
     rows: [{ type: 'HOT', total: 10, up_to_date: 7, to_review: 2, stale: 1, rate: 70, weekly_rates: null }],
+  }),
+  getDashboardCompleteness: jest.fn().mockResolvedValue({
+    rows: [{ type: 'HOT', total: 10, avg_score: 95, complete_pct: 80, missing_top_field: 'photos', below_80: [] }],
   }),
   getDashboardDistinctionOverview: jest.fn().mockResolvedValue({
     total_scoped: 10, with_distinction: 4, without_distinction: 6, distinction_pct: 40,
@@ -50,9 +54,10 @@ describe('DashboardPage — onglets', () => {
     useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
   });
 
-  it("l'onglet Qualité (défaut) montre répartition + actualisation, pas les communes", async () => {
+  it("l'onglet Qualité (défaut) montre corpus + complétude + actualisation, pas les communes", async () => {
     renderPage();
-    await waitFor(() => expect(screen.getByText("Par type d'objet")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Corpus par type')).toBeInTheDocument());
+    expect(screen.getByText('Complétude par type')).toBeInTheDocument();
     expect(screen.getByText("Taux d'actualisation")).toBeInTheDocument();
     expect(screen.queryByText('Par commune')).not.toBeInTheDocument();
   });
@@ -63,7 +68,7 @@ describe('DashboardPage — onglets', () => {
     await waitFor(() => expect(screen.getByText('Par commune')).toBeInTheDocument());
     expect(screen.getByText('Distinctions')).toBeInTheDocument();
     expect(screen.queryByText("Taux d'actualisation")).not.toBeInTheDocument();
-    expect(screen.queryByText("Par type d'objet")).not.toBeInTheDocument();
+    expect(screen.queryByText('Corpus par type')).not.toBeInTheDocument();
   });
 
   it("l'onglet Activité affiche le panneau « à venir » explicite", async () => {

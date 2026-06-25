@@ -10,9 +10,11 @@ export default {
         rail: '280px',
       },
       colors: {
-        base: 'var(--bg-base)',
-        surface: 'var(--bg-surface)',
-        elevated: 'var(--bg-elevated)',
+        /* P2 fix: these pointed at undefined --bg-base/--bg-surface/--bg-elevated tokens,
+           so `.bg-surface` resolved to transparent (inputs rendered see-through). */
+        base: 'var(--bg)',
+        surface: 'var(--surface)',
+        elevated: 'var(--panel-strong)',
         bg: 'var(--bg)',
         bgTint: 'var(--bg-tint)',
         surface2: 'var(--surface-2)',
@@ -46,6 +48,25 @@ export default {
           cyan: 'var(--accent-cyan)',
           violet: 'var(--accent-violet)',
           emerald: 'var(--accent-emerald)',
+        },
+        /* Semantic families (RGPD refonte §p2) — bg/border/ink/accent per tone. */
+        info: {
+          bg: 'var(--info-bg)',
+          border: 'var(--info-border)',
+          ink: 'var(--info-ink)',
+          accent: 'var(--info-accent)',
+        },
+        danger: {
+          bg: 'var(--danger-bg)',
+          border: 'var(--danger-border)',
+          ink: 'var(--danger-ink)',
+          strong: 'var(--danger-strong)',
+        },
+        warn: {
+          bg: 'var(--warn-bg)',
+          border: 'var(--warn-border)',
+          ink: 'var(--warn-ink)',
+          strong: 'var(--warn-strong)',
         },
         border: 'var(--border)',
         input: 'var(--input)',

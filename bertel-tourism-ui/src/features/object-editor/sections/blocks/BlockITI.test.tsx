@@ -84,7 +84,7 @@ describe('BlockITI — honest controls (§48)', () => {
  */
 function ItiHarness() {
   const editor = useObjectEditorState('o1', fullModulesFixture());
-  return <BlockITI editor={editor} folded={false} />;
+  return <BlockITI editor={editor} permissions={allowAll} folded={false} />;
 }
 
 describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {

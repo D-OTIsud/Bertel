@@ -74,24 +74,15 @@ export default function DashboardPage() {
           <DashboardTabs />
 
           {activeTab === 'quality' && (
-            <section role="tabpanel" id="dashboard-panel-quality" aria-labelledby="dashboard-tab-quality">
-              <div className="dashboard-kpi__row">
-                <WidgetFrame
-                  isPending={typeBreakdown.isPending}
-                  error={typeBreakdown.error}
-                  isEmpty={typeBreakdown.data?.rows.length === 0}
-                  onRetry={() => typeBreakdown.refetch()}
-                >
-                  {typeBreakdown.data && <TypeBreakdown data={typeBreakdown.data} />}
-                </WidgetFrame>
-              </div>
+            <section className="dashboard-panel" role="tabpanel" id="dashboard-panel-quality" aria-labelledby="dashboard-tab-quality">
+              {/* Ordre maquette 5.1 : corpus par type → complétude par type → actualisation. */}
               <WidgetFrame
-                isPending={actualisation.isPending}
-                error={actualisation.error}
-                isEmpty={actualisation.data?.rows.length === 0}
-                onRetry={() => actualisation.refetch()}
+                isPending={typeBreakdown.isPending}
+                error={typeBreakdown.error}
+                isEmpty={typeBreakdown.data?.rows.length === 0}
+                onRetry={() => typeBreakdown.refetch()}
               >
-                {actualisation.data && <ActualisationTable data={actualisation.data} />}
+                {typeBreakdown.data && <TypeBreakdown data={typeBreakdown.data} />}
               </WidgetFrame>
               <WidgetFrame
                 isPending={completeness.isPending}
@@ -100,6 +91,14 @@ export default function DashboardPage() {
                 onRetry={() => completeness.refetch()}
               >
                 {completeness.data && <CompletenessTable data={completeness.data} />}
+              </WidgetFrame>
+              <WidgetFrame
+                isPending={actualisation.isPending}
+                error={actualisation.error}
+                isEmpty={actualisation.data?.rows.length === 0}
+                onRetry={() => actualisation.refetch()}
+              >
+                {actualisation.data && <ActualisationTable data={actualisation.data} />}
               </WidgetFrame>
             </section>
           )}

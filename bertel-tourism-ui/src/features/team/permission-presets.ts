@@ -3,6 +3,19 @@
 export const BUSINESS_ROLE_CODES = ['viewer', 'contributor', 'editor'] as const;
 export type BusinessRoleCode = (typeof BUSINESS_ROLE_CODES)[number];
 
+// 7.4 — libellés FR des rôles métier (jamais le code brut côté UI : invite, drawer, préréglage).
+const BUSINESS_ROLE_LABELS_FR: Record<string, string> = {
+  viewer: 'Lecteur',
+  contributor: 'Contributeur',
+  editor: 'Éditeur',
+};
+
+/** Libellé FR d'un rôle métier (repli sur le code si inconnu). */
+export function businessRoleLabel(code: string | null | undefined): string {
+  if (!code) return '(aucun rôle)';
+  return BUSINESS_ROLE_LABELS_FR[code] ?? code;
+}
+
 const CONTRIBUTOR_PERMISSIONS = [
   'create_object', 'edit_canonical_when_publisher', 'edit_org_enrichment',
   'edit_hours', 'edit_pricing', 'edit_gallery', 'attach_documents',

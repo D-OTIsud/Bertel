@@ -16,6 +16,8 @@ export interface RefValue {
   id: string;
   code: string;
   name: string;
+  /** Traductions par code langue ({ en, de, … }) — édité via la modale i18n. */
+  nameI18n: Record<string, string>;
   position: number | null;
   isActive: boolean;
 }
@@ -44,7 +46,7 @@ export async function listRefCodeDomains(): Promise<RefDomain[]> {
 export async function listRefCodeValues(domain: string): Promise<RefValue[]> {
   const { data, error } = await requireClient()
     .from('ref_code')
-    .select('id, code, name, position, is_active')
+    .select('id, code, name, name_i18n, position, is_active')
     .eq('domain', domain)
     .order('position', { ascending: true, nullsFirst: false })
     .order('name', { ascending: true });
@@ -53,29 +55,58 @@ export async function listRefCodeValues(domain: string): Promise<RefValue[]> {
     id: String(r.id),
     code: String(r.code),
     name: String(r.name),
+    nameI18n:
+      r.name_i18n && typeof r.name_i18n === 'object'
+        ? (r.name_i18n as Record<string, string>)
+        : {},
     position: r.position == null ? null : Number(r.position),
     isActive: Boolean(r.is_active),
   }));
 }
 
-/** Crée (id absent ⇒ code requis, verrouillé) ou édite (libellé) une valeur. */
+/** Crée (id absent ⇒ code requis, verrouillé) ou édite (libellé + traductions) une valeur. */
 export async function upsertRefCode(input: {
   domain: string;
   name: string;
   id?: string;
   code?: string;
+  nameI18n?: Record<string, string> | null;
   position?: number;
 }): Promise<string> {
+  // On ne transmet que les traductions non vides (évite d'écrire {} et de NULLer par COALESCE).
+  const cleanedI18n =
+    input.nameI18n && Object.values(input.nameI18n).some((v) => v && v.trim().length > 0)
+      ? Object.fromEntries(
+          Object.entries(input.nameI18n).filter(([, v]) => v && v.trim().length > 0),
+        )
+      : undefined;
   const { data, error } = await requireClient().schema('api').rpc('rpc_upsert_ref_code', {
     p_domain: input.domain,
     p_name: input.name,
     p_id: input.id ?? null,
     p_code: input.code ?? null,
-    p_name_i18n: null,
+    p_name_i18n: cleanedI18n ?? null,
     p_position: input.position ?? null,
   });
   if (error) throw new Error(error.message);
   return String((data as Record<string, unknown>)?.id ?? '');
+}
+
+/** Carte d'usage {id -> N références} d'un domaine (super-admin). Alimente « utilisé par N fiches ». */
+export async function getRefCodeUsageCounts(domain: string): Promise<Record<string, number>> {
+  const { data, error } = await requireClient().schema('api').rpc('ref_code_usage_counts', { p_domain: domain });
+  if (error) throw new Error(error.message);
+  const map = (data as Record<string, unknown>) ?? {};
+  return Object.fromEntries(Object.entries(map).map(([id, n]) => [id, Number(n)]));
+}
+
+/** Suppression définitive d'une valeur — refusée par le backend si elle est référencée (23503). */
+export async function deleteRefCode(domain: string, id: string): Promise<void> {
+  const { error } = await requireClient().schema('api').rpc('rpc_delete_ref_code', {
+    p_domain: domain,
+    p_id: id,
+  });
+  if (error) throw new Error(error.message);
 }
 
 /** (Dés)active une valeur. */

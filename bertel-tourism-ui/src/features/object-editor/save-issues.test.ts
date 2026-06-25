@@ -12,6 +12,7 @@ describe('save-issues', () => {
   it('maps failed and blocked modules to req issues labelled by module', () => {
     const result: EditorSaveResult = {
       saved: [],
+      submitted: [],
       failed: [{ module: 'pricing', message: 'Remise invalide.' }],
       blocked: [{ module: 'media', reason: 'Droits insuffisants' }],
     };
@@ -23,7 +24,7 @@ describe('save-issues', () => {
   });
 
   it('returns [] for an empty save result', () => {
-    expect(saveResultToIssues({ saved: [], failed: [], blocked: [] })).toEqual([]);
+    expect(saveResultToIssues({ saved: [], submitted: [], failed: [], blocked: [] })).toEqual([]);
   });
 
   it('turns a publish Error into a Publication req issue, with a fallback for non-errors', () => {

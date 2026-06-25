@@ -856,7 +856,7 @@ describe('descriptions org overlay', () => {
     const detail = { raw: { places: [{ id: 'p1', name: 'Point de RDV', descriptions: [{
       id: 'd1', description: 'Voir le volcan actif.', description_raw: 'Voir le **volcan** actif.',
       description_md: 'Voir le **volcan** actif.', description_i18n: null, visibility: 'public',
-    }] }] } } as unknown as import('./object-detail-parser').ObjectDetail;
+    }] }] } } as unknown as import('../types/domain').ObjectDetail;
     const modules = parseObjectWorkspace(detail, ['fr']);
     expect(modules.descriptions.places[0].description.baseValue).toBe('Voir le **volcan** actif.');
   });
@@ -867,7 +867,7 @@ describe('descriptions org overlay', () => {
       description_md: 'Voir le **volcan** actif.',
       description_i18n: { fr: 'Voir le **volcan** actif.', en: 'See the **active** volcano.' },
       visibility: 'public',
-    }] }] } } as unknown as import('./object-detail-parser').ObjectDetail;
+    }] }] } } as unknown as import('../types/domain').ObjectDetail;
     const modules = parseObjectWorkspace(detail, ['fr']);
     // The raw *_i18n map is the editor's per-language leg — its EN translation must survive raw
     // (the subtract-*_i18n form NULLed it on the next §16 save).

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RGPD — Panneau de résultat (maquette à valider)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#eef1f4; --bg-tint:#f3f6f8; --surface:#fff; --surface-2:#e8edf1;
+    --line:rgba(24,49,59,.10); --line-soft:rgba(24,49,59,.06); --line-strong:rgba(24,49,59,.18);
+    --ink:#18313b; --ink-2:#3a525c; --ink-3:#6a7a82; --ink-4:#94a1a8;
+    --green:#2ca36f; --green-soft:rgba(44,163,111,.14);
+    --warn-bg:#fbf0dd; --warn-border:#ecd3a6; --warn-ink:#7a4e12; --warn-strong:#d6933a;
+    --danger-bg:#fbece9; --danger-border:#eccabf; --danger-ink:#8f3322; --red:#c85c48;
+    --shadow-s:0 1px 0 rgba(24,49,59,.04),0 6px 16px -8px rgba(24,49,59,.10);
+    --radius-md:14px; --radius-sm:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:'Manrope',system-ui,sans-serif;color:var(--ink);
+    background:linear-gradient(180deg,var(--bg-tint) 0%,var(--bg) 100%);background-attachment:fixed;}
+  .wrap{max-width:560px;margin:0 auto;padding:40px 16px}
+  .result{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--shadow-s);overflow:hidden}
+  .result__head{display:flex;align-items:center;gap:12px;padding:16px 18px;background:var(--green-soft);border-bottom:1px solid var(--line)}
+  .result__check{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;flex:0 0 auto}
+  .result__check svg{width:19px;height:19px}
+  .result__title{font-family:'Sora';font-size:15px;font-weight:700;color:#155e3f}
+  .result__sub{font-size:12px;color:#2c6b4e}
+  .result__body{padding:16px 18px}
+  .recap__t{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);margin:0 0 9px}
+  .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .stat{flex:1 1 100px;background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px}
+  .stat b{display:block;font-family:'Sora';font-size:20px;font-weight:800;color:var(--ink)}
+  .stat span{font-size:11px;color:var(--ink-3)}
+  .rows{border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:14px}
+  .r{display:flex;justify-content:space-between;gap:12px;padding:9px 12px;font-size:12.5px}
+  .r+.r{border-top:1px solid var(--line-soft)}
+  .r__k{color:var(--ink-3)} .r__v{color:var(--ink);font-weight:600}
+  .r__v.mono{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:11.5px}
+  .alerts{display:grid;gap:8px;margin-bottom:14px}
+  .alert{display:flex;gap:9px;align-items:flex-start;border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;line-height:1.45}
+  .alert svg{width:16px;height:16px;flex:0 0 auto;margin-top:1px}
+  .alert.warn{background:var(--warn-bg);border:1px solid var(--warn-border);color:var(--warn-ink)}
+  .alert.warn svg{color:var(--warn-strong)}
+  details{border-top:1px dashed var(--line);padding-top:10px}
+  summary{font-size:12px;color:var(--ink-3);cursor:pointer;display:flex;align-items:center;gap:6px;list-style:none}
+  summary svg{width:13px;height:13px;transition:transform .15s}
+  details[open] summary svg{transform:rotate(90deg)}
+  pre{margin:10px 0 0;background:var(--surface-2);border-radius:8px;padding:11px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;color:var(--ink-2);overflow-x:auto}
+  .note{font-size:12px;color:var(--ink-3);text-align:center;margin:16px 0 0}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="result" role="status" aria-live="polite">
+      <div class="result__head">
+        <span class="result__check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        <span><span class="result__title">Sujet anonymisé</span><br><span class="result__sub">Opération tracée au registre des effacements · 23 juin 2026, 14:32</span></span>
+      </div>
+      <div class="result__body">
+        <p class="recap__t">Récapitulatif</p>
+        <div class="stats">
+          <span class="stat"><b>7</b><span>lignes anonymisées</span></span>
+          <span class="stat"><b>2</b><span>fichiers supprimés</span></span>
+          <span class="stat"><b>1</b><span>compte traité</span></span>
+        </div>
+        <div class="rows">
+          <div class="r"><span class="r__k">Sujet</span><span class="r__v">Marie Hoarau — Acteur</span></div>
+          <div class="r"><span class="r__k">Identifiant</span><span class="r__v mono">a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77</span></div>
+          <div class="r"><span class="r__k">Mode</span><span class="r__v">Anonymisation (structure préservée)</span></div>
+          <div class="r"><span class="r__k">Journal d'audit</span><span class="r__v">PII purgée</span></div>
+        </div>
+        <div class="alerts">
+          <div class="alert warn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+            <span><b>Avertissement stockage</b> — 1 fichier non supprimé du bucket ; sera repris par le balayage automatique (GC).</span>
+          </div>
+        </div>
+        <details>
+          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>Détail technique (rapport JSON)</summary>
+          <pre>{
+  "subject": "actor:a1f3c9e2-7b40-4d1e-9c83-2f5b1a0e6d77",
+  "mode": "anonymize",
+  "rows_anonymized": 7,
+  "storage_deleted": ["media/…/cover.jpg", "…"],
+  "audit_pii_purged": true
+}</pre>
+        </details>
+      </div>
+    </div>
+    <p class="note">Maquette à valider — récap lisible d'abord ; le JSON brut reste accessible en repli (déplier « Détail technique »).</p>
+  </div>
+</body>
+</html>

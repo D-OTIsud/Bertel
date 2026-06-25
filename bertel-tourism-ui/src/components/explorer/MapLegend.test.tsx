@@ -43,10 +43,14 @@ describe('MapLegend', () => {
     ]);
   });
 
-  it('corrige la dérive d’origine ACT/VIS/SRV (étoile, caméra, bâtiment)', () => {
+  // Décision §123 : retour aux sujets lucide d'origine de la légende pour les 3
+  // types qui avaient divergé — ACT=pouls (activity), VIS=montagne, SRV=boutique.
+  // Verrouille les défauts choisis pour qu'un futur changement de catalogue ne les
+  // ré-écrase pas silencieusement (légende, pins et cartes lisent cette table).
+  it('porte les sujets par défaut ACT/VIS/SRV (pouls, montagne, boutique)', () => {
     const { container } = render(<MapLegend />);
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="spark"]')).not.toBeNull(); // ACT
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="camera"]')).not.toBeNull(); // VIS
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="building"]')).not.toBeNull(); // SRV
+    expect(container.querySelector('.map-legend__dot[data-marker-icon="activity"]')).not.toBeNull(); // ACT
+    expect(container.querySelector('.map-legend__dot[data-marker-icon="mountain"]')).not.toBeNull(); // VIS
+    expect(container.querySelector('.map-legend__dot[data-marker-icon="store"]')).not.toBeNull(); // SRV
   });
 });

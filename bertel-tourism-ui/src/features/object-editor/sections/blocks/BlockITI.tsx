@@ -84,6 +84,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
           <ItiTraceMap
             objectId={editor.objectId}
             initialTrack={itinerary.trackGeojson}
+            stages={itinerary.stages}
             onImported={(r) => patch({
               distanceKm: r.distanceKm,
               elevationPositiveM: r.elevationGain,

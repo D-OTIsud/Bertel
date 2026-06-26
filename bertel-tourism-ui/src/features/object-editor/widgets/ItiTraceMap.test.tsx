@@ -6,8 +6,13 @@ jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
   Source: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Layer: () => null,
+  Marker: ({ children }: { children?: ReactNode }) => <div data-testid="marker">{children}</div>,
   NavigationControl: () => null,
 }));
+
+function stage(over: Partial<import('../../../services/object-workspace-parser').ObjectWorkspaceItineraryStageSummary>) {
+  return { recordId: null, name: '', description: '', position: '1', kind: '', lng: '', lat: '', mediaIds: [], ...over };
+}
 
 const saveTrackMock = jest.fn();
 jest.mock('../../../services/object-workspace', () => ({
@@ -40,6 +45,23 @@ describe('ItiTraceMap (§111 B1)', () => {
     expect(result.trackGeojson).toEqual(expect.objectContaining({ type: 'LineString' }));
     expect(result.trackGeojson.coordinates).toHaveLength(2);
     expect(saveTrackMock).toHaveBeenCalledWith('ITI1', expect.objectContaining({ type: 'LineString' }));
+  });
+
+  it('renders one numbered marker per stage that has a GPS point', () => {
+    const stages = [
+      stage({ recordId: 's1', name: 'Parking', position: '1', lng: '55.50', lat: '-21.10' }),
+      stage({ recordId: 's2', name: 'Cascade', position: '2', lng: '55.53', lat: '-21.12' }),
+      stage({ recordId: 's3', name: 'Sans point', position: '3', lng: '', lat: '' }),
+    ];
+    const { getAllByTestId, getByText, queryByText } = render(
+      <ItiTraceMap objectId="ITI1" initialTrack={null} stages={stages} onImported={jest.fn()} />,
+    );
+    // only the two stages with coordinates produce a marker
+    expect(getAllByTestId('marker')).toHaveLength(2);
+    // markers are numbered by list position (matches the stage cards below the map)
+    expect(getByText('1')).toBeInTheDocument();
+    expect(getByText('2')).toBeInTheDocument();
+    expect(queryByText('3')).not.toBeInTheDocument();
   });
 
   it('surfaces a friendly error for an unsupported file (no import call)', async () => {

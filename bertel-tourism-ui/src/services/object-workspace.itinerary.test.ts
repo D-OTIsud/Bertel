@@ -21,6 +21,7 @@ const baseInput: ObjectWorkspaceItineraryModule = {
   openStatusOptions: [],
   stageKindOptions: [],
   assocRoleOptions: [],
+  mediaOptions: [],
   associatedObjects: [],
   access: '',
   ambiance: '',

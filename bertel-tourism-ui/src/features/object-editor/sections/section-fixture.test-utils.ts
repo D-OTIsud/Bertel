@@ -278,6 +278,10 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
         { id: 'role-sur', code: 'sur_le_parcours', label: 'Sur le parcours' },
         { id: 'role-resto', code: 'restauration', label: 'Restauration' },
       ],
+      mediaOptions: [
+        { id: 'med-1', code: 'med-1', label: 'Vue du belvédère', url: 'https://cdn.example/iti-1.jpg' },
+        { id: 'med-2', code: 'med-2', label: 'Sentier en forêt', url: 'https://cdn.example/iti-2.jpg' },
+      ],
       associatedObjects: [
         { associatedObjectId: 'RES1', roleId: 'role-resto', note: '', targetName: 'Snack du Maïdo', targetType: 'RES' },
       ],

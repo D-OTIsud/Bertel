@@ -632,6 +632,9 @@ export interface ObjectWorkspaceItineraryModule {
   stageKindOptions: WorkspaceReferenceOption[];
   /** §111 C3 ref_iti_assoc_role — roles for the « objets liés » select (sur_le_parcours/a_proximite/…). */
   assocRoleOptions: WorkspaceReferenceOption[];
+  /** §111 stage-photos closeout — the object's §05 media rows, curated per stage (object_iti_stage_media).
+   *  Like RoomEditModal, stages LINK existing object media; files upload only in §05 (single-writer). */
+  mediaOptions: WorkspaceMediaOption[];
   /** §111 C3 object_iti_associated_object — objets liés (existing tourism objects + a role). */
   associatedObjects: ObjectWorkspaceItineraryAssocSummary[];
   /** §111 object_iti_info — infos pratiques (grouped visually with the is_loop toggle in §06). */
@@ -2243,6 +2246,7 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     openStatusOptions: [],
     stageKindOptions: [],
     assocRoleOptions: [],
+    mediaOptions: [],
     associatedObjects,
     access: readString(infoRecord.access),
     ambiance: readString(infoRecord.ambiance),

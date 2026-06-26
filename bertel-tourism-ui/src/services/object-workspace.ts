@@ -3115,7 +3115,7 @@ async function getObjectWorkspaceItineraryModule(
   // §111 C: stages come from baseModule (parser of get_object_resource.itinerary_details.stages),
   // which now carries kind / lng / lat / mediaIds — richer than a direct object_iti_stage select
   // (lng/lat need ST_X/ST_Y, only available server-side). No stage re-fetch here.
-  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult, stageKindRefsResult, assocRoleRefsResult] = await Promise.allSettled([
+  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult, stageKindRefsResult, assocRoleRefsResult, mediaResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
@@ -3129,6 +3129,9 @@ async function getObjectWorkspaceItineraryModule(
     client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_stage_kind').order('position', { ascending: true }),
     // §111 C3 roles for the linked-objects select (ref_iti_assoc_role — a standalone table, not ref_code)
     client.from('ref_iti_assoc_role').select('id, code, name, position').order('position', { ascending: true }),
+    // §111 stage-photos closeout: the object's §05 media rows, to curate per stage (object_iti_stage_media).
+    // Stages LINK existing object media (single-writer); same source as the rooms loader's mediaOptions.
+    client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
   if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
@@ -3154,6 +3157,10 @@ async function getObjectWorkspaceItineraryModule(
   const assocRoleOptions = assocRoleRefsResult.status === 'fulfilled' && assocRoleRefsResult.value.error == null
     ? dedupeReferenceOptions((assocRoleRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
     : baseModule.assocRoleOptions;
+  // §111 stage-photos: the object's media rows for the per-stage link picker (mirror the rooms loader).
+  const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
+    ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
+    : baseModule.mediaOptions;
   const practiceById = optionMapById(practiceOptions);
   const practiceCodes = practicesResult.status === 'fulfilled' && practicesResult.value.error == null
     ? ((practicesResult.value.data ?? []) as Record<string, unknown>[])
@@ -3180,6 +3187,7 @@ async function getObjectWorkspaceItineraryModule(
     openStatusOptions,
     stageKindOptions,
     assocRoleOptions,
+    mediaOptions,
     associatedObjects: baseModule.associatedObjects,
     stages,
     geometrySummary: row.geom ? 'geometrie presente' : baseModule.geometrySummary,

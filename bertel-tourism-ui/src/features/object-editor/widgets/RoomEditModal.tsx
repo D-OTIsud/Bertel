@@ -1,14 +1,15 @@
 import { useState, type ReactNode } from 'react';
-import { Trash2, Search, Lock, Plus, ChevronDown, ChevronRight, ImagePlus, X, Film, FileText } from 'lucide-react';
+import { Trash2, Search, Lock, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { EditorModal, ReferenceSelect, Field, Input, Toggle, Chip, ChipSet } from '../primitives';
 import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import { fold } from '../../../components/ui/pickers/fold';
-import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule, WorkspaceMediaOption } from '../../../services/object-workspace-parser';
+import type { ObjectWorkspaceRoomTypeItem, ObjectWorkspaceRoomsModule } from '../../../services/object-workspace-parser';
 import {
   applyCouchagesTotal, applyAdults, applyChildren,
   addBedRow, setBedType, removeBedRow, updateBedQuantity, splitRoomAmenities,
-  addRoomMedia, removeRoomMedia, resolveRoomMedia, availableRoomMedia,
 } from '../sections/blocks/rooms-utils';
+import { MediaLinkField } from './MediaLinkField';
+import { resolveMediaLinks } from './media-links';
 
 interface RoomEditModalProps {
   open: boolean;
@@ -39,39 +40,6 @@ const ICON_BTN = {
   border: '1px solid transparent', borderRadius: 8, background: 'transparent',
   color: 'var(--ink-3)', cursor: 'pointer',
 } as const;
-const MEDIA_GRID = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: 8 } as const;
-const MEDIA_TILE = {
-  position: 'relative', aspectRatio: '4 / 3', borderRadius: 8, overflow: 'hidden',
-  border: '1px solid var(--line)', background: 'var(--bg-tint)',
-} as const;
-const MEDIA_IMG = { width: '100%', height: '100%', objectFit: 'cover', display: 'block' } as const;
-const MEDIA_FALLBACK = {
-  display: 'grid', placeItems: 'center', width: '100%', height: '100%',
-  color: 'var(--ink-3)', gap: 2, padding: 4, textAlign: 'center',
-} as const;
-
-/** Storage extension drives the thumbnail: images render as <img>, everything else (videos,
- *  documents) gets a labelled icon tile — robust without a per-row media-type column. */
-const isImageUrl = (url: string) => /\.(jpe?g|png|webp|gif|avif)(\?|#|$)/i.test(url);
-const isVideoUrl = (url: string) => /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
-
-/** One media thumbnail: images render as <img>, videos/documents fall back to a labelled icon
- *  tile (the storage extension, not a per-row type column, drives the choice). */
-function MediaThumb({ option }: { option: WorkspaceMediaOption }) {
-  if (option.url && isImageUrl(option.url)) {
-    return <img src={option.url} alt={option.label} style={MEDIA_IMG} loading="lazy" />;
-  }
-  const Icon = option.url && isVideoUrl(option.url) ? Film : FileText;
-  return (
-    <span style={MEDIA_FALLBACK}>
-      <Icon size={20} aria-hidden />
-      <span style={{ fontSize: 10, lineHeight: 1.2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {option.label}
-      </span>
-    </span>
-  );
-}
-
 /** Focused per-room editor. Edits a draft copy of one room type; onSave returns the patched item.
  *  Grouped column layout + numeric capacities (total anchors a locked adults/enfants split) +
  *  inline searchable equipment (selected pulled to the top). */
@@ -79,7 +47,6 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
   const [draft, setDraft] = useState(room);
   const [equipQuery, setEquipQuery] = useState('');
   const [openFamilies, setOpenFamilies] = useState<Set<string>>(new Set());
-  const [linking, setLinking] = useState(false);
   const set = (patch: Partial<ObjectWorkspaceRoomTypeItem>) => setDraft((d) => ({ ...d, ...patch }));
   const priceUnit = `${draft.currency === 'EUR' ? '€' : draft.currency} / nuit`;
 
@@ -99,8 +66,7 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
 
   // Room photos = a curation of the establishment's media (object_room_type_media). Linking points
   // at an existing object media row; new files are uploaded in §05 Médias (single media-writer).
-  const linkedMedia = resolveRoomMedia(draft.mediaIds, module.mediaOptions);
-  const availableMedia = availableRoomMedia(draft.mediaIds, module.mediaOptions);
+  const linkedMediaCount = resolveMediaLinks(draft.mediaIds, module.mediaOptions).length;
 
   return (
     <EditorModal open={open} title={draft.name || 'Type de chambre'} onClose={onClose} onSave={() => onSave(draft)}>
@@ -209,72 +175,15 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
         />
       </Field>
 
-      <SectionLabel>Photos &amp; médias{linkedMedia.length > 0 ? ` (${linkedMedia.length})` : ''}</SectionLabel>
+      <SectionLabel>Photos &amp; médias{linkedMediaCount > 0 ? ` (${linkedMediaCount})` : ''}</SectionLabel>
       {/* Rattache des photos de l'établissement à cette chambre (object_room_type_media). Les
           fichiers eux-mêmes s'ajoutent dans la section Médias — ici on choisit lesquels montrer. */}
-      {linkedMedia.length > 0 ? (
-        <div style={MEDIA_GRID}>
-          {linkedMedia.map((m) => (
-            <div key={m.id} style={MEDIA_TILE} title={m.label}>
-              <MediaThumb option={m} />
-              <button
-                type="button"
-                aria-label={`Retirer la photo ${m.label}`}
-                onClick={() => set({ mediaIds: removeRoomMedia(draft.mediaIds, m.id) })}
-                style={{
-                  position: 'absolute', top: 4, right: 4, width: 22, height: 22,
-                  display: 'grid', placeItems: 'center', borderRadius: 999, border: 'none',
-                  background: 'rgba(0,0,0,.55)', color: '#fff', cursor: 'pointer',
-                }}
-              >
-                <X size={13} aria-hidden />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <span className="muted" style={{ fontSize: 12 }}>Aucune photo rattachée à cette chambre.</span>
-      )}
-      <button type="button" className="rep-add" onClick={() => setLinking((v) => !v)} aria-expanded={linking}>
-        <ImagePlus size={14} aria-hidden /> {linking ? 'Fermer' : 'Lier une photo'}
-      </button>
-      {linking && (
-        module.mediaOptions.length === 0 ? (
-          <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-            Aucune photo n'est encore enregistrée pour cet établissement. Ajoutez des photos dans la
-            section <strong>Médias</strong>, puis revenez les rattacher ici.
-          </p>
-        ) : availableMedia.length === 0 ? (
-          <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-            Toutes les photos de l'établissement sont déjà rattachées à cette chambre.
-          </p>
-        ) : (
-          <div style={{ ...MEDIA_GRID, marginTop: 8 }}>
-            {availableMedia.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                aria-label={`Lier la photo ${m.label}`}
-                title={m.label}
-                onClick={() => set({ mediaIds: addRoomMedia(draft.mediaIds, m.id) })}
-                style={{ ...MEDIA_TILE, padding: 0, cursor: 'pointer' }}
-              >
-                <MediaThumb option={m} />
-                <span
-                  aria-hidden
-                  style={{
-                    position: 'absolute', bottom: 4, right: 4, width: 22, height: 22,
-                    display: 'grid', placeItems: 'center', borderRadius: 999,
-                    background: 'var(--accent, #2563eb)', color: '#fff',
-                  }}
-                >
-                  <Plus size={13} />
-                </span>
-              </button>
-            ))}
-          </div>
-        )
-      )}
+      <MediaLinkField
+        mediaIds={draft.mediaIds}
+        options={module.mediaOptions}
+        onChange={(mediaIds) => set({ mediaIds })}
+        emptyLinkedHint="Aucune photo rattachée à cette chambre."
+      />
 
       <SectionLabel>Équipements de la chambre</SectionLabel>
       {/* Inline searchable picker — selected pulled to the top, available below (the mockup). */}

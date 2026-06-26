@@ -43,14 +43,19 @@ describe('MapLegend', () => {
     ]);
   });
 
-  // Décision §123 : retour aux sujets lucide d'origine de la légende pour les 3
-  // types qui avaient divergé — ACT=pouls (activity), VIS=montagne, SRV=boutique.
-  // Verrouille les défauts choisis pour qu'un futur changement de catalogue ne les
-  // ré-écrase pas silencieusement (légende, pins et cartes lisent cette table).
-  it('porte les sujets par défaut ACT/VIS/SRV (pouls, montagne, boutique)', () => {
+  // Décision §126 : les défauts reprennent les icônes lucide du modal « Créer une
+  // fiche » (CreateObjectDialog → ARCHETYPE_VISUAL). Verrouille les 7 sujets pour
+  // qu'un futur changement de catalogue ne re-diverge pas du sélecteur de type
+  // (légende, pins et cartes lisent cette même table).
+  it('reprend les sujets du modal « Créer une fiche » (§126)', () => {
     const { container } = render(<MapLegend />);
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="activity"]')).not.toBeNull(); // ACT
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="mountain"]')).not.toBeNull(); // VIS
-    expect(container.querySelector('.map-legend__dot[data-marker-icon="store"]')).not.toBeNull(); // SRV
+    const iconOf = (icon: string) => container.querySelector(`.map-legend__dot[data-marker-icon="${icon}"]`);
+    expect(iconOf('bedDouble')).not.toBeNull(); // HEB
+    expect(iconOf('utensilsCrossed')).not.toBeNull(); // RES
+    expect(iconOf('mountain')).not.toBeNull(); // ASC/ACT
+    expect(iconOf('route')).not.toBeNull(); // ITI
+    expect(iconOf('landmark')).not.toBeNull(); // VIS
+    expect(iconOf('store')).not.toBeNull(); // SRV
+    expect(iconOf('partyPopper')).not.toBeNull(); // FMA/EVT
   });
 });

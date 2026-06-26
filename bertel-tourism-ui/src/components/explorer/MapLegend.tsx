@@ -10,10 +10,10 @@ import { defaultMarkerStyles, markerIconCatalog } from '../../config/map-markers
  * marqueur, lus dans `defaultMarkerStyles` — la même table qui génère les PNG de
  * `public/markers/` (cf. `scripts/generate-marker-pngs.ts`). Le glyphe vient de
  * `markerIconCatalog[icon].glyph`, donc la légende ne peut pas diverger des pins.
- * (Décision §123 : le catalogue porte désormais le tracé lucide d'origine de la
- * légende — ACT=pouls, VIS=montagne, SRV=boutique — étendu aux pins et aux cartes
- * de résultats, jolies icônes partout sans re-diverger.) Ancrée bas-gauche par
- * `.map-legend`.
+ * (Décision §126 : les défauts reprennent les icônes lucide du modal « Créer une
+ * fiche » — HEB=lit double, RES=couverts croisés, ACT=montagne, VIS=monument,
+ * EVT=cotillons — pour aligner légende, pins et cartes sur le sélecteur de type.)
+ * Ancrée bas-gauche par `.map-legend`.
  */
 interface LegendEntry {
   bucket: ObjectTypeCode;

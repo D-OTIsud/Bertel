@@ -26,7 +26,7 @@ describe('map marker config', () => {
     });
 
     expect(presetSvg).toContain(defaultMarkerStyles.HOT.color);
-    expect(presetSvg).toContain('<title>Lit</title>');
+    expect(presetSvg).toContain('<title>Lit double</title>');
     expect(customSvg).toContain('SVG personnalise');
     expect(customSvg).toContain('<circle cx="12" cy="12" r="8"/>');
   });

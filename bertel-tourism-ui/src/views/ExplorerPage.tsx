@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
-import { useExplorerCardsQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
+import { useExplorerCardsQuery, useExplorerMarkersQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
@@ -37,9 +37,13 @@ export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   const cardsQuery = useExplorerCardsQuery();
+  const markersQuery = useExplorerMarkersQuery();
   const referencesQuery = useExplorerReferencesQuery();
 
   const cards = cardsQuery.data ?? [];
+  // §125 — the map is fed by its own lightweight markers query (the full matching
+  // geolocated set), decoupled from the lazily-paginated card list.
+  const markers = useMemo(() => markersQuery.data ?? [], [markersQuery.data]);
   const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;
   const isRefreshing = cardsQuery.isRefreshing;
 
@@ -48,12 +52,17 @@ export default function ExplorerPage() {
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
 
-  const selectedCard = selectedCardId ? cards.find((card) => card.id === selectedCardId) : null;
+  // A card selected from the map may not be in the lazily-loaded list yet — fall back to markers.
+  const selectedCard = selectedCardId
+    ? cards.find((card) => card.id === selectedCardId) ?? markers.find((m) => m.id === selectedCardId) ?? null
+    : null;
   const mobileSheetOpen = isCompactExplorer && Boolean(selectedCard);
 
+  // "Visible" = the full matching geolocated set (markers, the map's set), so selection
+  // tools ("select all", lasso) cover everything shown — not just the loaded list pages.
   useEffect(() => {
-    setVisibleObjectIds(cards.map((c) => c.id));
-  }, [cards, setVisibleObjectIds]);
+    setVisibleObjectIds(markers.map((m) => m.id));
+  }, [markers, setVisibleObjectIds]);
 
   useEffect(() => {
     return () => {
@@ -65,9 +74,10 @@ export default function ExplorerPage() {
   // affiche un bandeau inline et on conserve la dernière donnée valide (les cards
   // viennent d'un cache local, cf. useExplorerCardsQuery) ; « Réessayer » ne
   // relance que la requête fautive.
-  const errorBanner = buildExplorerErrorBanner(cardsQuery.isError, referencesQuery.isError);
+  const errorBanner = buildExplorerErrorBanner(cardsQuery.isError || markersQuery.isError, referencesQuery.isError);
   const retryFailedQueries = () => {
     if (cardsQuery.isError) void cardsQuery.refetch();
+    if (markersQuery.isError) void markersQuery.refetch();
     if (referencesQuery.isError) void referencesQuery.refetch();
   };
 
@@ -82,12 +92,15 @@ export default function ExplorerPage() {
           loading={isInitialLoading}
           isRefreshing={isRefreshing}
           variant="column"
+          hasMore={cardsQuery.hasNextPage}
+          isLoadingMore={cardsQuery.isFetchingNextPage}
+          onLoadMore={() => void cardsQuery.fetchNextPage()}
         />
       );
     }
     return (
       <Suspense fallback={<MapFallback />}>
-        <MapPanel objects={cards} variant="column" />
+        <MapPanel objects={markers} variant="column" />
       </Suspense>
     );
   };
@@ -158,9 +171,17 @@ export default function ExplorerPage() {
       ) : (
         <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(320px,0.8fr)_minmax(420px,1.4fr)] gap-0 overflow-hidden">
           <FiltersPanel references={referencesQuery.data} variant="column" />
-          <ResultsList cards={cards} loading={isInitialLoading} isRefreshing={isRefreshing} variant="column" />
+          <ResultsList
+            cards={cards}
+            loading={isInitialLoading}
+            isRefreshing={isRefreshing}
+            variant="column"
+            hasMore={cardsQuery.hasNextPage}
+            isLoadingMore={cardsQuery.isFetchingNextPage}
+            onLoadMore={() => void cardsQuery.fetchNextPage()}
+          />
           <Suspense fallback={<MapFallback />}>
-            <MapPanel objects={cards} variant="column" />
+            <MapPanel objects={markers} variant="column" />
           </Suspense>
         </div>
       )}

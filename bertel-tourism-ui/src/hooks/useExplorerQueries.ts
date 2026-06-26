@@ -1,7 +1,6 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo } from 'react';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
-import { useCardCacheStore } from '../store/card-cache-store';
 import { useSessionStore } from '../store/session-store';
 import { listExplorerReferences } from '../services/explorer-reference';
 import { listLocationReferenceOptions } from '../services/location-reference';
@@ -9,9 +8,12 @@ import {
   canWriteObjectPrivateNote,
   createObjectPrivateNote,
   deleteObjectPrivateNote,
+  explorerCardsHasNextPage,
+  fetchExplorerCardsPage,
   getObjectResource,
-  listExplorerCards,
+  listObjectMarkers,
   updateObjectPrivateNote,
+  type ExplorerBucketCursorMap,
 } from '../services/rpc';
 import {
   saveObjectWorkspaceCharacteristics,
@@ -45,7 +47,7 @@ import {
   deleteObjectExternalId,
 } from '../services/object-workspace';
 import { getObjectVersions, restoreObjectVersion } from '../services/object-versions';
-import { applyClientPreviewFilters, hasServerOnlyFilters, resolveExplorerStatuses } from '../utils/facets';
+import { dedupeExplorerCards, refineCardsByPolygon, resolveExplorerStatuses, sortExplorerCards } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
   ObjectWorkspaceActivityModule,
@@ -122,16 +124,18 @@ function useExplorerFilters() {
   );
 }
 
-export function useExplorerCardsQuery() {
+// Shared, demo-/role-gated filter snapshot used by BOTH the lazy card list and the
+// map markers query, so the two surfaces always show the same set. Embedding the
+// resolved statuses + demo-gated HOT subtypes in the object means the React-Query
+// cache key reflects the real query (a tourism_agent and an org_admin must NOT share
+// a cache entry). HOT subtypes are zeroed outside demo mode (legacy behaviour: HOT
+// subtype narrowing is a demo-only feature; VIS/SRV subtypes narrow in all modes).
+function useExplorerQueryFilters() {
   const filters = useExplorerFilters();
-  const langPrefs = useSessionStore((state) => state.langPrefs);
   const demoMode = useSessionStore((state) => state.demoMode);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
 
-  // Resolve the effective status set sent to the RPC. We embed it in
-  // `queryFilters.common.statuses` so the React-Query cache key reflects the
-  // real query (a tourism_agent and an org_admin must NOT share cache entries).
-  const queryFilters = useMemo(() => {
+  return useMemo(() => {
     const effectiveStatuses = resolveExplorerStatuses(filters.common.statuses, canEditObjects);
     return {
       ...filters,
@@ -145,47 +149,53 @@ export function useExplorerCardsQuery() {
       },
     };
   }, [canEditObjects, demoMode, filters]);
+}
 
-  const hasServerOnly = useMemo(() => hasServerOnlyFilters(queryFilters), [queryFilters]);
+// §125 — lazy, server-paginated card list. Replaces the eager all-pages fetch +
+// client-preview cache. Each selected bucket carries its own cursor (composite
+// pageParam) so per-bucket filters stay scoped; pages accumulate and load on scroll.
+// All filters run server-side except the polygon refinement (no server equivalent).
+export function useExplorerCardsQuery() {
+  const queryFilters = useExplorerQueryFilters();
+  const langPrefs = useSessionStore((state) => state.langPrefs);
 
-  const cacheCards = useCardCacheStore((state) => state.cards);
-  const cacheHydrated = useCardCacheStore((state) => state.hydrated);
-  const mergeCards = useCardCacheStore((state) => state.mergeCards);
-
-  const query = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ['explorer-cards', queryFilters, langPrefs],
-    queryFn: () => listExplorerCards(queryFilters, langPrefs),
+    queryFn: ({ pageParam }) => fetchExplorerCardsPage(queryFilters, langPrefs, pageParam),
+    initialPageParam: {} as ExplorerBucketCursorMap,
+    getNextPageParam: (lastPage) =>
+      explorerCardsHasNextPage(queryFilters, lastPage.cursors) ? lastPage.cursors : undefined,
     placeholderData: keepPreviousData,
   });
 
-  useEffect(() => {
-    if (!query.data || query.isPlaceholderData) {
-      return;
-    }
-    mergeCards(query.data);
-  }, [mergeCards, query.data, query.isPlaceholderData]);
-
   const data = useMemo(() => {
-    const allCards = Array.from(cacheCards.values());
-    const localView = applyClientPreviewFilters(allCards, queryFilters);
-    if (!hasServerOnly) {
-      return localView;
-    }
-    if (!query.data || query.isPlaceholderData) {
-      return localView;
-    }
-    const apiIds = new Set(query.data.map((card) => card.id));
-    return localView.filter((card) => apiIds.has(card.id));
-  }, [cacheCards, hasServerOnly, query.data, query.isPlaceholderData, queryFilters]);
+    const all = (query.data?.pages ?? []).flatMap((page) => page.cards);
+    return refineCardsByPolygon(sortExplorerCards(dedupeExplorerCards(all)), queryFilters);
+  }, [query.data, queryFilters]);
 
-  const isRefreshing = query.isFetching && (query.isPlaceholderData || hasServerOnly);
+  // "Refreshing" = a filter change is swapping the result set in (keepPreviousData
+  // keeps showing the old cards). NOT a scroll-driven next-page fetch.
+  const isRefreshing = query.isFetching && !query.isFetchingNextPage && query.isPlaceholderData;
 
   return {
     ...query,
     data,
-    isHydrated: cacheHydrated,
     isRefreshing,
   };
+}
+
+// §125 — the MAP's data source: ALL matching geolocated markers in one cheap call
+// per bucket (api.list_object_markers), decoupled from the card pagination above.
+export function useExplorerMarkersQuery() {
+  const queryFilters = useExplorerQueryFilters();
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useQuery({
+    // langPrefs kept in the key for cache correctness even though markers are lang-agnostic today.
+    queryKey: ['explorer-markers', queryFilters, langPrefs],
+    queryFn: () => listObjectMarkers(queryFilters),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useExplorerReferencesQuery() {

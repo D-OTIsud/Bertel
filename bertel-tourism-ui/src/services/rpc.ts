@@ -2,7 +2,7 @@ import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPublication
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { AuditQuestion, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
-import { buildBucketRpcFilters, dedupeExplorerCards, getBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
+import { buildBucketRpcFilters, dedupeExplorerCards, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
 
@@ -175,7 +175,9 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
     p_lang_prefs: input.langPrefs,
     p_page_size: pageSize,
     p_filters: buildBucketRpcFilters(input.filters, input.bucket),
-    p_types: getBackendTypesForBucket(input.bucket),
+    // Subtypes are pushed into p_types (server-side) instead of being filtered client-side,
+    // so lazy server pagination returns exactly the rows the user asked for (§125).
+    p_types: getEffectiveBackendTypesForBucket(input.filters, input.bucket),
     p_status: pStatus,
     p_search: input.filters.common.search || null,
     p_track_format: 'none',
@@ -253,6 +255,155 @@ export async function listExplorerCards(filters: ExplorerFilters, langPrefs: str
     fetchAllExplorerBucketCards(bucket, filters, langPrefs),
   );
   return sortExplorerCards(dedupeExplorerCards(results.flat()));
+}
+
+// ---------------------------------------------------------------------------
+// Explorer map markers (§125) — the MAP's data source, decoupled from the card
+// list. ONE cheap `api.list_object_markers` call per selected bucket (union +
+// dedupe), returning thin ObjectCard-shaped rows ({id,type,name,image,open_now,
+// location{lat,lon,city}}) for ALL matching geolocated objects. Replaces feeding
+// the map the eager all-pages card fetch. No pagination — the marker payload is
+// cheap enough to return the whole filtered set in one shot.
+// ---------------------------------------------------------------------------
+interface RawMarker {
+  id?: unknown;
+  type?: unknown;
+  name?: unknown;
+  image?: unknown;
+  open_now?: unknown;
+  location?: { lat?: unknown; lon?: unknown; city?: unknown } | null;
+}
+
+function normalizeMarkerCards(rows: unknown): ObjectCard[] {
+  if (!Array.isArray(rows)) {
+    return [];
+  }
+  return rows.flatMap((raw): ObjectCard[] => {
+    const r = raw as RawMarker;
+    const id = r?.id != null ? String(r.id) : '';
+    if (!id) {
+      return [];
+    }
+    const lat = r.location?.lat;
+    const lon = r.location?.lon;
+    return [
+      {
+        id,
+        type: (r.type as ObjectCard['type']) ?? '',
+        name: typeof r.name === 'string' ? r.name : '',
+        image: r.image != null ? String(r.image) : null,
+        open_now: typeof r.open_now === 'boolean' ? r.open_now : null,
+        location: {
+          lat: typeof lat === 'number' ? lat : lat != null ? Number(lat) : null,
+          lon: typeof lon === 'number' ? lon : lon != null ? Number(lon) : null,
+          city: r.location?.city != null ? String(r.location.city) : null,
+        },
+      },
+    ];
+  });
+}
+
+// No langPrefs: markers carry the canonical object name (no i18n pick) — keeping the
+// signature lean. The map hover/popup uses the name as-is, same as the legacy card path.
+export async function listObjectMarkers(filters: ExplorerFilters): Promise<ObjectCard[]> {
+  const session = useSessionStore.getState();
+  const client = requireRpcClient();
+  const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
+
+  if (session.demoMode || !client) {
+    // Demo: the mock cards already carry coordinates — reuse the same per-bucket mock filter.
+    const all = buckets.flatMap((bucket) => filterMockCards(filters, bucket));
+    return dedupeExplorerCards(all).filter(
+      (card) => typeof card.location?.lat === 'number' && typeof card.location?.lon === 'number',
+    );
+  }
+
+  const statuses = filters.common.statuses;
+  const pStatus = statuses.length > 0 ? statuses : null;
+
+  const perBucket = await mapWithConcurrency(buckets, EXPLORER_BUCKET_CONCURRENCY, async (bucket) => {
+    const types = getEffectiveBackendTypesForBucket(filters, bucket);
+    if (types.length === 0) {
+      return [] as ObjectCard[];
+    }
+    const { data, error } = await client.schema('api').rpc('list_object_markers', {
+      p_types: types,
+      p_status: pStatus,
+      p_filters: buildBucketRpcFilters(filters, bucket),
+      p_search: filters.common.search || null,
+    });
+    if (error) {
+      throw error;
+    }
+    return normalizeMarkerCards(data);
+  });
+
+  return dedupeExplorerCards(perBucket.flat());
+}
+
+// ---------------------------------------------------------------------------
+// Lazy cross-bucket card pagination (§125) — the LIST's data source. Each
+// selected bucket keeps its own cursor in a composite pageParam so per-bucket
+// filters (buildBucketRpcFilters is per-bucket) stay correctly scoped. A "page"
+// advances every still-open bucket by one server page; getNextPageParam stops
+// when all buckets are DONE. Replaces the eager do/while-all-pages fetch that
+// tipped the 8s authenticated statement_timeout under contention.
+// ---------------------------------------------------------------------------
+export const EXPLORER_BUCKET_CURSOR_DONE = '__DONE__';
+export type ExplorerBucketCursorMap = Partial<Record<ExplorerBucketKey, string | null>>;
+export interface ExplorerCardsPage {
+  cards: ObjectCard[];
+  cursors: ExplorerBucketCursorMap;
+}
+
+export async function fetchExplorerCardsPage(
+  filters: ExplorerFilters,
+  langPrefs: string[],
+  pageParam: ExplorerBucketCursorMap,
+): Promise<ExplorerCardsPage> {
+  const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
+  const cursors: ExplorerBucketCursorMap = {};
+
+  // Buckets that are exhausted, or carry no effective types (a stale/empty subtype
+  // selection), contribute nothing and are marked DONE so pagination can terminate.
+  const active = buckets.filter(
+    (bucket) =>
+      pageParam[bucket] !== EXPLORER_BUCKET_CURSOR_DONE &&
+      getEffectiveBackendTypesForBucket(filters, bucket).length > 0,
+  );
+  for (const bucket of buckets) {
+    if (!active.includes(bucket)) {
+      cursors[bucket] = EXPLORER_BUCKET_CURSOR_DONE;
+    }
+  }
+
+  const results = await mapWithConcurrency(active, EXPLORER_BUCKET_CONCURRENCY, async (bucket) => {
+    const page = await listExplorerPage({
+      bucket,
+      cursor: pageParam[bucket] ?? null,
+      pageSize: EXPLORER_BUCKET_PAGE_SIZE,
+      filters,
+      langPrefs,
+    });
+    return { bucket, page };
+  });
+
+  for (const { bucket, page } of results) {
+    cursors[bucket] = page.meta.next_cursor ?? EXPLORER_BUCKET_CURSOR_DONE;
+  }
+
+  return { cards: results.flatMap((r) => r.page.data), cursors };
+}
+
+export function explorerCardsHasNextPage(
+  filters: ExplorerFilters,
+  cursors: ExplorerBucketCursorMap,
+): boolean {
+  return getEffectiveSelectedBuckets(filters.selectedBuckets).some(
+    (bucket) =>
+      cursors[bucket] !== EXPLORER_BUCKET_CURSOR_DONE &&
+      getEffectiveBackendTypesForBucket(filters, bucket).length > 0,
+  );
 }
 
 export async function getObjectResource(objectId: string, langPrefs: string[]): Promise<ObjectDetail> {

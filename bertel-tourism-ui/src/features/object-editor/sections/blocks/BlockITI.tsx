@@ -232,6 +232,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
               open
               stage={itinerary.stages[editingStage]}
               stageKindOptions={itinerary.stageKindOptions}
+              mediaOptions={itinerary.mediaOptions}
               trackGeojson={itinerary.trackGeojson}
               onSave={(updated) => { updateStage(editingStage, updated); setEditingStage(null); }}
               onClose={() => setEditingStage(null)}

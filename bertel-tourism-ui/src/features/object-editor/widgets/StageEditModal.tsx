@@ -8,14 +8,19 @@ import { EditorModal, Field, Input, ReferenceSelect } from '../primitives';
 import { MarkdownCellField } from '../../../components/markdown/MarkdownCellField';
 import type {
   ObjectWorkspaceItineraryStageSummary,
+  WorkspaceMediaOption,
   WorkspaceReferenceOption,
 } from '../../../services/object-workspace-parser';
 import { isInsideCorridor, metersToTrack } from '../sections/blocks/corridor';
+import { MediaLinkField } from './MediaLinkField';
+import { resolveMediaLinks } from './media-links';
 
 interface StageEditModalProps {
   open: boolean;
   stage: ObjectWorkspaceItineraryStageSummary;
   stageKindOptions: WorkspaceReferenceOption[];
+  /** §111 closeout — the object's §05 media rows; stage photos LINK these (object_iti_stage_media). */
+  mediaOptions: WorkspaceMediaOption[];
   trackGeojson: { type: string; coordinates: number[][] } | null;
   onSave: (stage: ObjectWorkspaceItineraryStageSummary) => void;
   onClose: () => void;
@@ -26,14 +31,16 @@ const DEFAULT_CORRIDOR_M = 50;
 /**
  * §111 C2 — detailed stage / POI editor. Type (iti_stage_kind), name, Markdown description, and a
  * GPS point placed on a map showing the imported trace. The point is constrained to an adjustable
- * corridor (default 50 m) around the trace; with no trace, placement is free. Photos are deferred
- * (object_iti_stage_media needs the §05 media-row creation contract). The parent keys this by the
- * edited stage so the draft resets on each open.
+ * corridor (default 50 m) around the trace; with no trace, placement is free. Photos LINK existing
+ * object media rows (object_iti_stage_media) the same way RoomEditModal does — files upload only in
+ * §05 Médias (single media-writer). The parent keys this by the edited stage so the draft resets on
+ * each open.
  */
-export function StageEditModal({ open, stage, stageKindOptions, trackGeojson, onSave, onClose }: StageEditModalProps) {
+export function StageEditModal({ open, stage, stageKindOptions, mediaOptions, trackGeojson, onSave, onClose }: StageEditModalProps) {
   const [draft, setDraft] = useState(stage);
   const [corridorM, setCorridorM] = useState(DEFAULT_CORRIDOR_M);
   const [rejected, setRejected] = useState(false);
+  const linkedMediaCount = resolveMediaLinks(draft.mediaIds, mediaOptions).length;
 
   const line = trackGeojson?.coordinates ?? null;
   const hasLine = !!line && line.length > 1;
@@ -162,6 +169,20 @@ export function StageEditModal({ open, stage, stageKindOptions, trackGeojson, on
             </button>
           )}
         </div>
+      </div>
+
+      {/* Photos = curation of the object's §05 media (object_iti_stage_media). Files upload in §05;
+          here we choose which existing photos illustrate this stage (single media-writer invariant). */}
+      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>
+          Photos &amp; médias{linkedMediaCount > 0 ? ` (${linkedMediaCount})` : ''}
+        </div>
+        <MediaLinkField
+          mediaIds={draft.mediaIds}
+          options={mediaOptions}
+          onChange={(mediaIds) => setDraft((d) => ({ ...d, mediaIds }))}
+          emptyLinkedHint="Aucune photo rattachée à cette étape."
+        />
       </div>
     </EditorModal>
   );

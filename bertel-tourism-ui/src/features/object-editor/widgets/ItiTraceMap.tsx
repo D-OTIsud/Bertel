@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';
-import { Layer, Map, NavigationControl, Source, type MapRef } from 'react-map-gl/maplibre';
+import { Layer, Map, Marker, NavigationControl, Source, type MapRef } from 'react-map-gl/maplibre';
 import { DEFAULT_APP_MAP_STYLE } from '../../../lib/map-style';
 import { REUNION_MAP_CENTER } from './location-coords';
 import { parseTrackFile, type TrackLineString } from '../sections/blocks/gpx-import';
 import { saveObjectWorkspaceItineraryTrack } from '../../../services/object-workspace';
+import type { ObjectWorkspaceItineraryStageSummary } from '../../../services/object-workspace-parser';
 
 export interface ItiTraceImport {
   distanceKm: string;
@@ -18,6 +19,8 @@ export interface ItiTraceImport {
 interface ItiTraceMapProps {
   objectId: string;
   initialTrack: { type: string; coordinates: number[][] } | null;
+  /** §111 — the draft stages; those carrying a GPS point render as numbered markers on the map. */
+  stages?: ObjectWorkspaceItineraryStageSummary[];
   /** Called after a successful import/clear with the server-derived metrics AND the geometry. */
   onImported: (result: ItiTraceImport) => void;
 }
@@ -41,7 +44,7 @@ function bbox(coords: number[][]): [number, number, number, number] | null {
  * that renders the trace. Importing parses the file client-side (single merged LineString, elevation
  * preserved), then api.set_itinerary_track stores the geometry and returns the auto-derived metrics.
  */
-export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapProps) {
+export function ItiTraceMap({ objectId, initialTrack, stages = [], onImported }: ItiTraceMapProps) {
   const mapRef = useRef<MapRef>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [track, setTrack] = useState<{ type: string; coordinates: number[][] } | null>(initialTrack);
@@ -49,7 +52,12 @@ export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapP
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
 
-  const fitToTrack = useCallback((coords: number[][]) => {
+  // Stages carrying a placed GPS point — keep the original index so marker numbers match the cards.
+  const stagePoints = stages
+    .map((stage, index) => ({ stage, index, lng: Number(stage.lng), lat: Number(stage.lat) }))
+    .filter(({ stage, lng, lat }) => stage.lng !== '' && stage.lat !== '' && Number.isFinite(lng) && Number.isFinite(lat));
+
+  const fitToCoords = useCallback((coords: number[][]) => {
     const map = mapRef.current?.getMap();
     const bb = bbox(coords);
     if (!map || !bb) return;
@@ -58,7 +66,10 @@ export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapP
 
   useEffect(() => {
     if (track && track.coordinates.length > 1) {
-      fitToTrack(track.coordinates);
+      fitToCoords(track.coordinates);
+    } else if (stagePoints.length > 0) {
+      // No trace, but stages have points — frame them so the markers are visible.
+      fitToCoords(stagePoints.map((p) => [p.lng, p.lat]));
     }
     // initial fit only — subsequent fits happen in importFile.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -73,7 +84,7 @@ export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapP
       const metrics = await saveObjectWorkspaceItineraryTrack(objectId, line);
       setTrack(line);
       onImported({ distanceKm: metrics.distanceKm, elevationGain: metrics.elevationGain, elevationLoss: metrics.elevationLoss, trackGeojson: line });
-      fitToTrack(line.coordinates);
+      fitToCoords(line.coordinates);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Import impossible.');
     } finally {
@@ -102,7 +113,11 @@ export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapP
     if (file) void importFile(file);
   }
 
-  const center = track && track.coordinates.length > 0 ? track.coordinates[0] : null;
+  const center = track && track.coordinates.length > 0
+    ? track.coordinates[0]
+    : stagePoints.length > 0
+      ? [stagePoints[0].lng, stagePoints[0].lat]
+      : null;
   const trackData = track
     ? { type: 'Feature' as const, geometry: track as { type: 'LineString'; coordinates: number[][] }, properties: {} }
     : null;
@@ -169,6 +184,31 @@ export function ItiTraceMap({ objectId, initialTrack, onImported }: ItiTraceMapP
               />
             </Source>
           )}
+          {/* §111 — each stage/POI with a placed point shows as a numbered marker (same order as the cards). */}
+          {stagePoints.map(({ stage, index, lng, lat }) => (
+            <Marker key={stage.recordId ?? stage.uid ?? `stage-${index}`} longitude={lng} latitude={lat} anchor="bottom">
+              <span
+                title={stage.name || `Étape ${index + 1}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  background: '#1d9e75',
+                  color: '#fff',
+                  border: '2px solid #fff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  lineHeight: 1,
+                }}
+              >
+                {index + 1}
+              </span>
+            </Marker>
+          ))}
           <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
         </Map>
       </div>

@@ -5,9 +5,11 @@ import {
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   EXPLORER_TYPE_CODE_FAMILIES,
+  getEffectiveBackendTypesForBucket,
   hasServerOnlyFilters,
   normalizeExplorerObjectType,
   normalizeExplorerFilters,
+  refineCardsByPolygon,
   sortExplorerCards,
 } from './facets';
 
@@ -462,6 +464,53 @@ describe('buildBucketRpcFilters', () => {
       label_disability_types_any: ['motor', 'visual'],
       disability_types_any: ['motor', 'visual'],
     });
+  });
+});
+
+describe('getEffectiveBackendTypesForBucket (§125 — subtypes pushed to p_types)', () => {
+  it('returns all bucket types when no subtype is selected (UI default = all)', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: [] } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual(EXPLORER_BUCKET_TYPE_MAP.HOT);
+  });
+
+  it('narrows to the selected HOT subtypes', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['HOT', 'HLO'] } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual(['HOT', 'HLO']);
+  });
+
+  it('returns [] for a stale subtype with no live object_type (so the bucket is skipped)', () => {
+    const filters = buildFilters({ hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['CHLO'] as never } });
+    expect(getEffectiveBackendTypesForBucket(filters, 'HOT')).toEqual([]);
+  });
+
+  it('narrows VIS by its subtypes', () => {
+    const filters = buildFilters({ vis: { subtypes: ['LOI'] } as ExplorerFilters['vis'] });
+    expect(getEffectiveBackendTypesForBucket(filters, 'VIS')).toEqual(['LOI']);
+  });
+
+  it('returns all RES types (RES has no subtype concept)', () => {
+    expect(getEffectiveBackendTypesForBucket(buildFilters(), 'RES')).toEqual(EXPLORER_BUCKET_TYPE_MAP.RES);
+  });
+});
+
+describe('refineCardsByPolygon (§125 — only client-side filter left)', () => {
+  const inside = makeCard({ id: 'in', type: 'HOT', name: 'Inside', location: { lat: 45.0, lon: 6.0 } });
+  const outside = makeCard({ id: 'out', type: 'HOT', name: 'Outside', location: { lat: 50.0, lon: 10.0 } });
+
+  it('returns cards unchanged when no polygon is set', () => {
+    expect(refineCardsByPolygon([inside, outside], buildFilters())).toEqual([inside, outside]);
+  });
+
+  it('keeps only cards inside the drawn polygon', () => {
+    const filters = buildFilters({
+      common: {
+        polygon: {
+          type: 'Polygon',
+          coordinates: [[[5.9, 44.9], [6.1, 44.9], [6.1, 45.1], [5.9, 45.1], [5.9, 44.9]]],
+        },
+      } as ExplorerFilters['common'],
+    });
+    expect(refineCardsByPolygon([inside, outside], filters).map((c) => c.id)).toEqual(['in']);
   });
 });
 

@@ -7186,6 +7186,91 @@ END;
 $$;
 
 -- =====================================================
+-- api.list_object_markers — lightweight Explorer map markers (§125)
+-- -----------------------------------------------------
+-- The MAP's data source. Returns ONLY the cheap direct columns a map pin + hover
+-- needs ({id,type,name,image,open_now,location{lat,lon,city}}) for ALL matching
+-- geolocated objects in ONE call — NO per-row taxonomy/tag/badge enrichment (that
+-- per-row work is what makes api.list_objects_map_view ~240 ms/item / unusable).
+--
+-- §36 authorize-once SECURITY DEFINER: the filtered id set is intersected ONCE with
+-- the caller's readable set (published ∪ extended = the SAME visibility the Explorer
+-- list enforces via the object SELECT RLS gate, §35/§38). Authorization done once
+-- (set-based) ⇒ the object_location read runs RLS-free and never pays the per-row
+-- api.can_read_object scalar — the §35 anti-pattern that made a naïve markers JOIN
+-- take ~6.7 s on the editor (draft) path. Measured 113 ms for the full corpus
+-- (840 markers) vs that 6.7 s. Replaces the eager ~17-heavy-card-page fetch as the
+-- map data source. See decision log §125.
+-- =====================================================
+CREATE OR REPLACE FUNCTION api.list_object_markers(
+  p_types   object_type[]   DEFAULT NULL,
+  p_status  object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters jsonb           DEFAULT '{}'::jsonb,
+  p_search  text            DEFAULT NULL
+)
+RETURNS json
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
+AS $$
+  WITH authz AS (
+    SELECT fids.object_id
+    FROM api.get_filtered_object_ids(
+           COALESCE(p_filters, '{}'::jsonb),
+           p_types,
+           COALESCE(p_status, ARRAY['published']::object_status[]),
+           p_search
+         ) fids
+    WHERE fids.object_id IN (SELECT api.current_user_readable_object_ids())
+  ),
+  markers AS (
+    SELECT
+      o.id,
+      o.object_type::text AS object_type,
+      o.name,
+      o.cached_main_image_url AS image,
+      o.cached_is_open_now    AS open_now,
+      ol.latitude  AS lat,
+      ol.longitude AS lon,
+      ol.city
+    FROM authz a
+    JOIN object o ON o.id = a.object_id
+    JOIN LATERAL (
+      SELECT ol.latitude, ol.longitude, ol.city
+      FROM object_location ol
+      WHERE ol.object_id = o.id
+        AND ol.is_main_location IS TRUE
+        AND ol.latitude  IS NOT NULL
+        AND ol.longitude IS NOT NULL
+      ORDER BY ol.position NULLS LAST, ol.updated_at DESC, ol.id
+      LIMIT 1
+    ) ol ON TRUE
+  )
+  SELECT COALESCE(
+    json_agg(
+      json_build_object(
+        'id', m.id,
+        'type', m.object_type,
+        'name', m.name,
+        'image', m.image,
+        'open_now', m.open_now,
+        'location', json_build_object('lat', m.lat, 'lon', m.lon, 'city', m.city)
+      )
+      ORDER BY m.name NULLS LAST, m.id
+    ),
+    '[]'::json
+  )
+  FROM markers m;
+$$;
+
+REVOKE ALL ON FUNCTION api.list_object_markers(object_type[], object_status[], jsonb, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.list_object_markers(object_type[], object_status[], jsonb, text) TO anon, authenticated, service_role;
+
+COMMENT ON FUNCTION api.list_object_markers(object_type[], object_status[], jsonb, text) IS
+'Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125.';
+
+-- =====================================================
 -- Get filtered media for web display (excludes internal/sensitive)
 -- =====================================================
 CREATE OR REPLACE FUNCTION api.get_media_for_web(

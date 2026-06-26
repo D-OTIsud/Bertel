@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
@@ -12,6 +12,10 @@ interface ResultsListProps {
   isRefreshing?: boolean;
   headerActions?: ReactNode;
   variant?: 'panel' | 'column';
+  /** Lazy pagination (§125): load the next server page when the user nears the bottom. */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 function toResultCardDomId(cardId: string): string {
@@ -44,8 +48,19 @@ function ResultsListSkeleton() {
   );
 }
 
-export function ResultsList({ cards, loading, isRefreshing = false, headerActions, variant = 'column' }: ResultsListProps) {
+export function ResultsList({
+  cards,
+  loading,
+  isRefreshing = false,
+  headerActions,
+  variant = 'column',
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+}: ResultsListProps) {
   const [hasMounted, setHasMounted] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
   const openDrawer = useUiStore((state) => state.openDrawer);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
@@ -78,6 +93,27 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [selectedCardId]);
+
+  // §125 — infinite scroll: fetch the next server page when the bottom sentinel nears the
+  // viewport (rootMargin prefetches before the user hits the end). Re-armed whenever the
+  // page state changes so a freshly-loaded page that leaves the sentinel in view keeps loading.
+  useEffect(() => {
+    const root = scrollRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel || !hasMore || !onLoadMore) {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting) && hasMore && !isLoadingMore) {
+          onLoadMore();
+        }
+      },
+      { root, rootMargin: '400px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, onLoadMore, cards.length]);
 
   if (variant === 'panel') {
     return (
@@ -126,7 +162,7 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+      <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
         {orderedCards.map((card) => {
           const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
           const inSelection = selectedObjectIds.includes(card.id);
@@ -151,6 +187,11 @@ export function ResultsList({ cards, loading, isRefreshing = false, headerAction
             />
           );
         })}
+        {hasMore ? (
+          <div ref={sentinelRef} className="flex h-10 flex-none items-center justify-center" aria-hidden="true">
+            {isLoadingMore ? <span className="text-xs text-ink-3">Chargement…</span> : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

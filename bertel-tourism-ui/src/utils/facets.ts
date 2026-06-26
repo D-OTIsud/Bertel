@@ -297,6 +297,57 @@ export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObje
   return EXPLORER_BUCKET_TYPE_MAP[bucket];
 }
 
+/**
+ * Server-side `p_types` for a bucket, narrowed to the user's selected subtypes (HOT/VIS/SRV).
+ *
+ * This is the server-side equivalent of the legacy client-only subtype filter
+ * (applyFrontendOnlyExplorerFilters): instead of fetching every bucket type and filtering the
+ * client cache down to the chosen subtypes, we push the narrowing into `p_types` so lazy server
+ * pagination (and the markers RPC) return exactly the right rows.
+ *
+ * - Empty subtype selection ⇒ all bucket types (the UI default = "all checked", and the non-demo
+ *   behaviour where useExplorerCardsQuery zeroes subtypes ⇒ no narrowing).
+ * - A non-empty selection ⇒ intersection with the bucket's real types. An empty intersection
+ *   (e.g. a stale subtype code like CHLO that is not a live object_type) returns [] — the caller
+ *   skips that bucket, matching the old client behaviour where such a selection matched no cards.
+ */
+export function getEffectiveBackendTypesForBucket(
+  filters: ExplorerFilters,
+  bucket: ExplorerBucketKey,
+): BackendObjectTypeCode[] {
+  const all = EXPLORER_BUCKET_TYPE_MAP[bucket];
+  const normalized = normalizeExplorerFilters(filters);
+  let selected: BackendObjectTypeCode[] | null = null;
+  if (bucket === 'HOT') {
+    selected = normalized.hot.subtypes;
+  } else if (bucket === 'VIS') {
+    selected = normalized.vis.subtypes;
+  } else if (bucket === 'SRV') {
+    selected = normalized.srv.subtypes;
+  }
+  if (!selected || selected.length === 0) {
+    return [...all];
+  }
+  const allowed = new Set<string>(all);
+  return selected.filter((type) => allowed.has(type));
+}
+
+/**
+ * Polygon (lasso/draw-area) refinement — the ONE Explorer filter with no server equivalent.
+ * Everything else (types/subtypes, cities, search, openNow, bbox, accessibility, sustainability,
+ * tags, taxonomy, capacity, meeting, itinerary, pets, label) is applied server-side by
+ * get_filtered_object_ids, so with lazy server pagination we only refine the loaded cards by the
+ * exact polygon (the server already pre-filtered by its bounding box, cf. setPolygon → bbox).
+ * No polygon set ⇒ returns the cards unchanged.
+ */
+export function refineCardsByPolygon(cards: ObjectCard[], filters: ExplorerFilters): ObjectCard[] {
+  const polygon = normalizeExplorerFilters(filters).common.polygon?.coordinates?.[0] ?? null;
+  if (!polygon) {
+    return cards;
+  }
+  return cards.filter((card) => isWithinPolygon(card, polygon));
+}
+
 export function normalizeExplorerObjectType(type: string): ObjectTypeCode {
   const upper = String(type ?? '').toUpperCase() as BackendObjectTypeCode;
 

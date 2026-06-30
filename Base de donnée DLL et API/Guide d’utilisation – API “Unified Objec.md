@@ -252,7 +252,7 @@ Version batch de la fonction précédente pour charger plusieurs fiches adaptée
 
 422 : types invalides (date, enums, tableaux).
 
-Enums : p_types doit contenir des valeurs valides (RES, PCU, PNA, ORG, ITI, VIL, HPA, ASC, COM, HOT, HLO, LOI, FMA, CAMP), p_status (draft, published, archived, hidden).
+Enums : p_types doit contenir des valeurs valides (RES, PCU, PNA, ORG, ITI, VIL, HPA, ASC, COM, HOT, HLO, LOI, FMA, CAMP, PSV, RVA, ACT, SPU, PRD — soit les 19 valeurs de l'enum `object_type` ; source de vérité = `schema_unified.sql`), p_status (draft, published, archived, hidden).
 
 Curseur invalide : relancez sans p_cursor pour repartir proprement.
 

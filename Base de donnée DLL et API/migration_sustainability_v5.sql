@@ -84,7 +84,13 @@ CREATE INDEX IF NOT EXISTS idx_ref_classification_equivalent_group_group_id
 CREATE INDEX IF NOT EXISTS idx_ref_classification_equivalent_action_action_id
   ON ref_classification_equivalent_action(action_id);
 
-CREATE OR REPLACE VIEW v_object_classification_or_equivalent_scheme AS
+-- security_invoker=true : la vue s'exécute avec les droits de l'APPELANT, donc la RLS
+-- des tables sous-jacentes (object/object_sustainability_action/object_classification)
+-- s'applique. Sans cela (DEFINER par défaut), un anon lisait les ids d'objets `draft`
+-- (fuite advisor security_definer_view). NE PAS retirer : CREATE OR REPLACE ne conserve
+-- pas reloptions, donc l'option doit rester portée par le CREATE. Voir audit API 2026-06-30 (R3).
+CREATE OR REPLACE VIEW v_object_classification_or_equivalent_scheme
+  WITH (security_invoker = true) AS
 WITH equivalent_actions AS (
   SELECT rcea.scheme_id, rcea.action_id
   FROM ref_classification_equivalent_action rcea
@@ -104,7 +110,9 @@ SELECT * FROM explicit_labels
 UNION
 SELECT * FROM equivalent_matches;
 
-CREATE OR REPLACE VIEW v_object_classification_coverage AS
+-- security_invoker=true : idem v_object_classification_or_equivalent_scheme ci-dessus (R3).
+CREATE OR REPLACE VIEW v_object_classification_coverage
+  WITH (security_invoker = true) AS
 WITH expected_actions AS (
   SELECT scheme_id, action_id, requirement_type
   FROM ref_classification_equivalent_action

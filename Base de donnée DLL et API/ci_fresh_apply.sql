@@ -158,6 +158,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== 16c    migration_moderation_rpcs.sql  (P2.1 §120 Moderation: user_can_moderate_object + submit/list/approve/reject_pending_change DEFINER authorize-once; approve re-dispatches the whitelisted section writer (Option A); pending_change table already in schema_unified; needs rls_policies helpers + object_workspace_*_rpcs writers) =='
 \ir migration_moderation_rpcs.sql
 
+\echo '== I1     migration_reference_catalog_rpc.sql  (audit API Phase 1: api.public_catalog_domains/list_catalog/list_reference_bundle — anon-readable catalog over 59 public ref_code domains + 6 separate ref_* tables, i18n-resolved, whitelist default-deny; needs api.i18n_pick + ref tables + seeds) =='
+\ir migration_reference_catalog_rpc.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

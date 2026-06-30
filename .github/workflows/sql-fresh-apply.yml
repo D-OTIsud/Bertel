@@ -271,6 +271,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_stage_geom_roundtrip.sql"
 
+      - name: reference catalog test (I1 — list_catalog/list_reference_bundle: whitelist default-deny, uniform shape, i18n fallback, parent resolution, anon-executable)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_reference_catalog.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

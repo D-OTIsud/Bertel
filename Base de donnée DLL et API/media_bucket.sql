@@ -1,8 +1,11 @@
 -- media_bucket.sql
--- Creates the public `media` bucket used for editor uploads.
+-- Creates the public `media` bucket used for editor uploads (photos + videos).
 -- Write access is restricted to `service_role` so all uploads go through
--- the Next.js route /api/media/upload (which enforces resize ≤ 2000 px
--- and EXIF stripping). Read access is anonymous (public API).
+-- the Next.js route /api/media/upload: images are resized ≤ 2000 px + EXIF
+-- stripped (process-image.ts); videos are validation-only and stored as-is
+-- (process-video.ts — no server-side transcoder in the runtime).
+-- `allowed_mime_types` and `file_size_limit` below MUST stay in sync with those
+-- two pipelines (CLAUDE.md §59). Read access is anonymous (public API).
 -- Idempotent: safe to apply multiple times.
 
 BEGIN;
@@ -12,8 +15,11 @@ VALUES (
   'media',
   'media',
   true,
-  10485760, -- 10 MB cap on already-processed objects (safety net; post-resize objects are far smaller)
-  ARRAY['image/jpeg', 'image/png', 'image/webp']
+  104857600, -- 100 MB — must cover the largest accepted object: videos are stored as-is
+             -- (process-video.ts MAX_VIDEO_INPUT_BYTES = 100*1024*1024). Images are
+             -- validated ≤ 20 MB then re-encoded far smaller (process-image.ts), so this
+             -- ceiling does not weaken image handling.
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime']
 )
 ON CONFLICT (id) DO UPDATE
 SET

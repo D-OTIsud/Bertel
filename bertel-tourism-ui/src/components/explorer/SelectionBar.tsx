@@ -7,6 +7,7 @@ import { useSessionStore } from '../../store/session-store';
 import { exportSelectedObjectsCsv } from '@/services/selection-export';
 import { getObjectResource } from '../../services/rpc';
 import { cn } from '@/lib/utils';
+import { escapeHtml } from '@/lib/safe-output';
 
 /**
  * Floating selection bar over the map.
@@ -35,7 +36,9 @@ export function SelectionBar() {
         const location = d.raw?.location as { address?: unknown; city?: unknown } | undefined;
         const address = typeof location?.address === 'string' ? location.address : '';
         const city = typeof location?.city === 'string' ? location.city : '';
-        return `<tr><td>${d.id}</td><td>${d.name}</td><td>${d.type ?? ''}</td><td>${city}</td><td>${address}</td></tr>`;
+        // SEC-1: every field is operator-editable DB content → escape before
+        // interpolating into the print-window HTML (document.write runs in our origin).
+        return `<tr><td>${escapeHtml(d.id)}</td><td>${escapeHtml(d.name)}</td><td>${escapeHtml(d.type ?? '')}</td><td>${escapeHtml(city)}</td><td>${escapeHtml(address)}</td></tr>`;
       })
       .join('');
 

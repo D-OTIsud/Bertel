@@ -1,12 +1,7 @@
 import { getObjectResource } from './rpc';
 import type { ObjectDetail } from '../types/domain';
-
-function csvEscape(value: unknown): string {
-  const str = value == null ? '' : String(value);
-  const normalized = str.replace(/\r?\n/g, ' ').trim();
-  // Wrap in quotes and escape quotes for valid CSV.
-  return `"${normalized.replace(/"/g, '""')}"`;
-}
+// SEC-2: shared CSV cell encoder neutralizes spreadsheet formula injection (= + - @).
+import { csvCell } from '../lib/safe-output';
 
 function getLocationStrings(detail: ObjectDetail): { city: string; address: string } {
   const location = detail.raw?.location as { city?: unknown; address?: unknown } | undefined;
@@ -25,12 +20,12 @@ export async function exportSelectedObjectsCsv(objectIds: string[], langPrefs: s
   const lines = details.map((d) => {
     const { city, address } = getLocationStrings(d);
     return [
-      csvEscape(d.id),
-      csvEscape(d.name),
-      csvEscape(d.type ?? ''),
-      csvEscape(city),
-      csvEscape(address),
-      csvEscape(JSON.stringify(d.raw ?? {})),
+      csvCell(d.id),
+      csvCell(d.name),
+      csvCell(d.type ?? ''),
+      csvCell(city),
+      csvCell(address),
+      csvCell(JSON.stringify(d.raw ?? {})),
     ].join(',');
   });
 

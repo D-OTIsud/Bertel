@@ -27,11 +27,15 @@ SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
--- RLS: anyone reads, only service_role writes.
+-- RLS read: NONE by design. The bucket is public=true, so objects are served by
+-- the public CDN URL (getPublicUrl) WITHOUT any RLS SELECT policy. A broad SELECT
+-- policy on storage.objects would ONLY enable the .list() enumeration API (advisor
+-- public_bucket_allows_listing) — which the app never calls (verified: 0 .list()
+-- in the front; uploads use service-role, reads use getPublicUrl, deletes rebuild
+-- the path from the logged URL). Listing policy dropped for Q2 (audit API 2026-06-30).
+-- The DROP stays (no CREATE) so re-applying this file on an existing DB removes any
+-- previously-created listing policy.
 DROP POLICY IF EXISTS "media_public_read" ON storage.objects;
-CREATE POLICY "media_public_read"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'media');
 
 -- Note: in Supabase, service_role bypasses RLS entirely. This policy is
 -- intent documentation rather than the actual enforcement mechanism.

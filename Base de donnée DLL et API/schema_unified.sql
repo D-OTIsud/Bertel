@@ -1273,6 +1273,10 @@ DO $$ BEGIN
   BEGIN
     ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'SPU';
   EXCEPTION WHEN others THEN NULL; END;
+  -- ─── Lot PRD — §57 (taxonomie : migration_object_type_prd.sql, 8x) ; foldé ici 2026-06-30 (audit B1) pour qu'une base NEUVE reproduise les 19 valeurs sans dépendre de la migration
+  BEGIN
+    ALTER TYPE object_type ADD VALUE IF NOT EXISTS 'PRD';
+  EXCEPTION WHEN others THEN NULL; END;
 END $$;
 
 -- Valider dimensions médias selon type

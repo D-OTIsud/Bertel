@@ -23,11 +23,14 @@ SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
--- RLS: anyone reads, only service_role writes.
+-- RLS read: NONE by design. The bucket is public=true, so objects are served by
+-- the public CDN URL (getPublicUrl) WITHOUT any RLS SELECT policy. A broad SELECT
+-- policy would ONLY enable the .list() enumeration API (advisor
+-- public_bucket_allows_listing) — which the app never calls. Listing policy dropped
+-- for Q2 (audit API 2026-06-30): justificatifs juridiques (certificats/attestations)
+-- ne doivent pas être énumérables. The DROP stays (no CREATE) so re-applying this
+-- file on an existing DB removes any previously-created listing policy.
 DROP POLICY IF EXISTS "documents_public_read" ON storage.objects;
-CREATE POLICY "documents_public_read"
-  ON storage.objects FOR SELECT
-  USING (bucket_id = 'documents');
 
 -- Intent documentation (service_role bypasses RLS in Supabase).
 DROP POLICY IF EXISTS "documents_service_role_write" ON storage.objects;

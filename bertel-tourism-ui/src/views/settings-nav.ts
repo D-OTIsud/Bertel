@@ -7,6 +7,7 @@ import {
   Activity,
   BadgeCheck,
   Bot,
+  KeyRound,
   ListChecks,
   MapPin,
   Palette,
@@ -67,6 +68,7 @@ const PLATFORM_GROUP: SettingsNavGroup = {
     { id: 'markers', label: 'Marqueurs', icon: MapPin },
     { id: 'referentiels', label: 'Listes & référentiels', icon: ListChecks, isNew: true },
     { id: 'ai', label: 'Fournisseurs IA', icon: Bot },
+    { id: 'partner-keys', label: 'Clés API partenaire', icon: KeyRound, isNew: true },
     { id: 'diagnostic', label: 'Diagnostic', icon: Activity },
   ],
 };

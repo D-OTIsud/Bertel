@@ -5,7 +5,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     const groups = buildSettingsNav('super_admin');
     expect(groups.map((g) => g.id)).toEqual(['account', 'platform']);
     const platform = groups.find((g) => g.id === 'platform');
-    expect(platform?.sections.map((s) => s.id)).toEqual(['appearance', 'markers', 'referentiels', 'ai', 'diagnostic']);
+    expect(platform?.sections.map((s) => s.id)).toEqual(['appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
   });
 
   it('un rôle non super-admin ne voit QUE « Mon compte » (pas de groupe plateforme)', () => {
@@ -21,7 +21,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
   });
 
   it('settingsSectionIds aplatit les sections accessibles', () => {
-    expect(settingsSectionIds('super_admin')).toEqual(['preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'diagnostic']);
+    expect(settingsSectionIds('super_admin')).toEqual(['preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
     expect(settingsSectionIds('owner')).toEqual(['preferences', 'session']);
   });
 

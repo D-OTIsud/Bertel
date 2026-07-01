@@ -14,6 +14,7 @@ import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl,
 import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
+import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
 import TeamAdminPage from './TeamAdminPage';
@@ -684,6 +685,12 @@ export default function SettingsPage() {
       {activeSection === 'ai' && role === 'super_admin' && (
         <article className="panel-card">
           <AiProviderSettings />
+        </article>
+      )}
+
+      {activeSection === 'partner-keys' && role === 'super_admin' && (
+        <article className="panel-card">
+          <PartnerKeysSettings />
         </article>
       )}
 

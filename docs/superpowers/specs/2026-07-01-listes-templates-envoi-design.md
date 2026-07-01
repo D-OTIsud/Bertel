@@ -47,7 +47,7 @@ Deux tables neuves dans `public`, verrouillées en PostgREST (accès via RPCs DE
 
 ```
 id                uuid  PK  default gen_random_uuid()
-org_object_id     uuid  NOT NULL  references object(id)      -- ORG propriétaire (publisher)
+org_object_id     text  NOT NULL  references object(id)      -- ORG propriétaire (object.id est TEXT, ex. 'ORGRUN…')
 created_by        uuid  NOT NULL                              -- auth.uid() de l'auteur
 kind              text  NOT NULL  check (kind in ('static','dynamic'))
 name              text  NOT NULL
@@ -82,7 +82,7 @@ Index : `(org_object_id)`, `(created_by)`, `unique(share_token) where share_toke
 ```
 id         uuid PK default gen_random_uuid()
 list_id    uuid NOT NULL references object_list(id) on delete cascade
-object_id  uuid NOT NULL references object(id)      on delete cascade
+object_id  text NOT NULL references object(id)      on delete cascade   -- object.id est TEXT
 position   int  NOT NULL
 note_fr    text
 note_en    text
@@ -131,7 +131,7 @@ filters = {
 
 `filters_url` (URL Explorer via `buildSearchParams`) est stocké **en plus**, uniquement pour re-hydrater l'Explorer (« Ouvrir dans l'explorateur ») et comme résumé lisible — **jamais** pour la résolution.
 
-**Résolveur DB unique.** On factorise le prédicat WHERE de `list_object_resources_filtered_page` dans un helper ensembliste `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean, p_limit int)` qui renvoie les `object_id` (ordre naturel du moteur), **published-only** quand demandé, borné (**plafond documenté**, ex. 200 objets — `ponytail:` ceiling, upgrade = pagination). Ainsi **une seule** implémentation du filtre sert : la préview compose, la page publique et l'email. Pas de logique de filtre dupliquée côté serveur.
+**Résolveur DB unique.** Le moteur de filtre vit déjà dans le leaf `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text) → (object_id text, label_rank, label_match, relevance)` (DEFINER ; honore `p_status`). On écrit un helper ensembliste `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean, p_limit int)` qui, pour chaque bucket stocké, appelle `get_filtered_object_ids` avec `p_status = ARRAY['published']` (quand `p_published_only`), UNION les `object_id`, et borne (**plafond documenté**, ex. 200 objets — `ponytail:` ceiling, upgrade = pagination). **Zéro duplication** du prédicat : une seule implémentation (`get_filtered_object_ids`) sert la préview compose, la page publique et l'email. Rendu en cartes via `api.get_object_cards_batch(text[], text[])`.
 
 - Compose (préview propriétaire) : `p_published_only = true` (le lien partagé est published-only ; on montre au conseiller ce que verra le visiteur ; cohérent + stable).
 - Page publique / email : `p_published_only = true`.

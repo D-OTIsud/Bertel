@@ -502,18 +502,22 @@ function formatClassificationLabel(scheme: string, level: string, schemeCode = '
   return cleanScheme ? `${cleanScheme} · ${cleanLevel}` : cleanLevel;
 }
 
+// SEC-7 (P0 stored-XSS): only http/https may pass — a `javascript:`/`data:`/other scheme
+// rendered into an <a href> is a one-click same-frame XSS. Mirrors the parser copy
+// (object-detail-parser.ts), which is the one the live drawer uses.
 function normalizeUrlValue(value: string): string {
   const normalized = value.trim();
   if (!normalized) {
     return '';
   }
 
-  if (/^https?:\/\//i.test(normalized)) {
-    return normalized;
-  }
-
-  if (/^[a-z]+:\/\//i.test(normalized)) {
-    return normalized;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized)) {
+    try {
+      const protocol = new URL(normalized).protocol;
+      return protocol === 'http:' || protocol === 'https:' ? normalized : '';
+    } catch {
+      return '';
+    }
   }
 
   return `https://${normalized}`;

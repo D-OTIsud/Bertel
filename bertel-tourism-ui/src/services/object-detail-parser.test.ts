@@ -1,4 +1,22 @@
-import { cleanSustainabilityNote, parseObjectDetail } from './object-detail-parser';
+import { cleanSustainabilityNote, normalizeUrlValue, parseObjectDetail } from './object-detail-parser';
+
+describe('normalizeUrlValue (SEC-7 — only http/https may reach an <a href>)', () => {
+  it('keeps http/https and defaults a bare host to https', () => {
+    expect(normalizeUrlValue('http://example.com')).toBe('http://example.com');
+    expect(normalizeUrlValue('https://example.com/x')).toBe('https://example.com/x');
+    expect(normalizeUrlValue('example.com')).toBe('https://example.com');
+    expect(normalizeUrlValue('   ')).toBe('');
+  });
+
+  it('NEUTRALISES dangerous schemes (stored one-click XSS) to an empty href', () => {
+    // the exact SEC-7 payload: a scheme with // that does NOT start with http
+    expect(normalizeUrlValue('javascript://x%0aalert(document.cookie)')).toBe('');
+    expect(normalizeUrlValue('javascript:alert(1)')).toBe('');
+    expect(normalizeUrlValue('JavaScript://X')).toBe('');
+    expect(normalizeUrlValue('data:text/html,<script>alert(1)</script>')).toBe('');
+    expect(normalizeUrlValue('vbscript:msgbox(1)')).toBe('');
+  });
+});
 
 describe('cleanSustainabilityNote', () => {
   it('strips Old_data provenance and review_required markers, keeping real commitments', () => {

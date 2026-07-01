@@ -4801,31 +4801,11 @@ CREATE TRIGGER trg_refresh_object_filter_caches_object_description
 AFTER INSERT OR UPDATE OR DELETE ON object_description
 FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
 
-DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu ON object_menu;
-CREATE TRIGGER trg_refresh_object_filter_caches_object_menu
-AFTER INSERT OR UPDATE OR DELETE ON object_menu
-FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
-
-DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_cuisine_type ON object_cuisine_type;
-CREATE TRIGGER trg_refresh_object_filter_caches_object_cuisine_type
-AFTER INSERT OR UPDATE OR DELETE ON object_cuisine_type
-FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
-
--- parent-resolved sources
-DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu_item ON object_menu_item;
-CREATE TRIGGER trg_refresh_object_filter_caches_object_menu_item
-AFTER INSERT OR UPDATE OR DELETE ON object_menu_item
-FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_object_menu_item();
-
-DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_dietary ON object_menu_item_dietary_tag;
-CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_dietary
-AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_dietary_tag
-FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
-
-DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_allergen ON object_menu_item_allergen;
-CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_allergen
-AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_allergen
-FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
+-- The menu/cuisine child cache-refresh triggers (object_menu, object_cuisine_type,
+-- object_menu_item, object_menu_item_dietary_tag, object_menu_item_allergen) are RELOCATED
+-- to just after their tables (menu-tables block, before the LEGAL section) — those tables are
+-- defined later in this file, so creating the triggers HERE aborts a fresh apply
+-- (fresh-apply gate, 2026-07-01).
 
 DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_tag_link ON tag_link;
 CREATE TRIGGER trg_refresh_object_filter_caches_tag_link
@@ -5627,6 +5607,37 @@ DROP TRIGGER IF EXISTS update_object_menu_item_media_updated_at ON object_menu_i
 CREATE TRIGGER update_object_menu_item_media_updated_at
 BEFORE UPDATE ON object_menu_item_media
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Filter-cache refresh triggers for the menu/cuisine child tables. RELOCATED here (from the
+-- generic child-trigger block ~700 lines above) so they are created AFTER their tables — the
+-- menu tables are only defined just above, so creating these triggers earlier aborts a fresh
+-- apply (fresh-apply gate, 2026-07-01). Functions live in api_views_functions.sql (defined first).
+-- object_id-direct sources:
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu ON object_menu;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_menu
+AFTER INSERT OR UPDATE OR DELETE ON object_menu
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_cuisine_type ON object_cuisine_type;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_cuisine_type
+AFTER INSERT OR UPDATE OR DELETE ON object_cuisine_type
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_object_filter_caches_from_child();
+
+-- parent-resolved sources:
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_object_menu_item ON object_menu_item;
+CREATE TRIGGER trg_refresh_object_filter_caches_object_menu_item
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_object_menu_item();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_dietary ON object_menu_item_dietary_tag;
+CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_dietary
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_dietary_tag
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
+
+DROP TRIGGER IF EXISTS trg_refresh_object_filter_caches_menu_item_allergen ON object_menu_item_allergen;
+CREATE TRIGGER trg_refresh_object_filter_caches_menu_item_allergen
+AFTER INSERT OR UPDATE OR DELETE ON object_menu_item_allergen
+FOR EACH ROW EXECUTE FUNCTION api.trg_refresh_caches_from_menu_item_link();
 
 -- =====================================================
 -- UNIFIED LEGAL SYSTEM

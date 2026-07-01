@@ -251,7 +251,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_resource_facet_exposure.sql"
 
-      - name: global search test (§109 14y — search_document: amenities/dishes/dietary/description surface in global mode, name mode not broadened, private menu excluded, relevance ranking)
+      - name: "global search test (§109 14y — search_document: amenities/dishes/dietary/description surface in global mode, name mode not broadened, private menu excluded, relevance ranking)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_global_search.sql"
@@ -261,7 +261,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_section06_vocab.sql"
 
-      - name: set_itinerary_track test (§111 — GPX/KML trace ingestion: 2D store + auto distance/elevation/profile + cache-invalidate trigger fix + workspace gate)
+      - name: "set_itinerary_track test (§111 — GPX/KML trace ingestion: 2D store + auto distance/elevation/profile + cache-invalidate trigger fix + workspace gate)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_set_itinerary_track.sql"
@@ -271,7 +271,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_iti_stage_geom_roundtrip.sql"
 
-      - name: reference catalog test (I1 — list_catalog/list_reference_bundle: whitelist default-deny, uniform shape, i18n fallback, parent resolution, anon-executable)
+      - name: "reference catalog test (I1 — list_catalog/list_reference_bundle: whitelist default-deny, uniform shape, i18n fallback, parent resolution, anon-executable)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_reference_catalog.sql"
@@ -281,7 +281,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_api_keys.sql"
 
-      - name: partner rate-limit test (R2 — partner_rate_bucket + partner_rate_check fixed-window: under limit allowed, over denied + retry_after; service-role-only)
+      - name: "partner rate-limit test (R2 — partner_rate_bucket + partner_rate_check fixed-window: under limit allowed, over denied + retry_after; service-role-only)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_rate_limit.sql"

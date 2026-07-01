@@ -8,6 +8,8 @@
 //   * DYNAMIQUE — filtres Explorer sauvegardés (filters jsonb), ré-résolus live à chaque accès.
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
+import type { ExplorerFilters } from '../types/domain';
+import { buildBucketRpcFilters, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets } from '../utils/facets';
 
 type GenericRecord = Record<string, unknown>;
 
@@ -261,6 +263,27 @@ export async function createListFromSelection(name: string, objectIds: string[])
   if (error) throw new Error(error.message || 'Création de la liste impossible.');
   if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
   return data;
+}
+
+/**
+ * Sérialise les filtres Explorer courants en payload de résolution (une entrée par bucket
+ * sélectionné, dans la MÊME forme {types, filters, search} que le moteur DB api.get_filtered_object_ids
+ * — cf. l'assemblage per-bucket de rpc.ts). Un bucket sans type effectif est ignoré.
+ */
+export function buildDynamicListFilters(filters: ExplorerFilters): ListFilterBuckets {
+  const search = filters.common.search || null;
+  const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets)
+    .map((bucket) => {
+      const types = getEffectiveBackendTypesForBucket(filters, bucket);
+      if (types.length === 0) return null;
+      return {
+        types: types as unknown as string[],
+        filters: buildBucketRpcFilters(filters, bucket) as Record<string, unknown>,
+        search,
+      };
+    })
+    .filter((b): b is NonNullable<typeof b> => b !== null);
+  return { buckets };
 }
 
 /** Crée une liste DYNAMIQUE à partir des filtres Explorer courants (re-résolus à chaque accès). */

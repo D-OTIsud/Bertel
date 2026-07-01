@@ -357,6 +357,29 @@ export async function deleteList(listId: string): Promise<void> {
   if (error) throw new Error(error.message || 'Suppression impossible.');
 }
 
+// ---------- envoi e-mail ----------
+/**
+ * Envoie la liste par e-mail via la route serveur POST /api/lists/send (relais SMTP côté VPS).
+ * Passe le JWT de l'appelant en Bearer ; la route ré-autorise via get_list (en tant qu'appelant).
+ */
+export async function sendListByEmail(listId: string, toEmail: string): Promise<void> {
+  const client = getApiClient();
+  if (!client) throw new Error('Supabase non configuré.');
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Session expirée — reconnectez-vous.');
+  const res = await fetch('/api/lists/send', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify({ listId, toEmail }),
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+    throw new Error(j.detail || j.error || "Échec de l'envoi.");
+  }
+}
+
 // ---------- partage ----------
 export async function shareList(
   listId: string,

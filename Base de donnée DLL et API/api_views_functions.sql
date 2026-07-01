@@ -7309,6 +7309,21 @@ $$;
 -- (840 markers) vs that 6.7 s. Replaces the eager ~17-heavy-card-page fetch as the
 -- map data source. See decision log §125.
 -- =====================================================
+
+-- Forward declaration (fresh-apply ordering, 2026-07-01): api.list_object_markers below is a
+-- LANGUAGE sql function whose body references api.current_user_readable_object_ids() — whose real
+-- (SECURITY DEFINER) definition lives in migration_cards_batch_authorize_definer.sql (§36), \ir'd
+-- AFTER this file. A SQL function validates its body at CREATE time, so the reference must resolve
+-- now. This minimal stub (identical signature) lets it validate; the §36 migration then
+-- CREATE OR REPLACEs it with the real body. Mirrors the is_platform_superuser/user_has_permission
+-- forward-decl stubs pattern. The two OTHER references (get_object_versions/snapshot) are plpgsql
+-- (resolved at runtime, after the migration), so they need no stub.
+CREATE OR REPLACE FUNCTION api.current_user_readable_object_ids()
+RETURNS SETOF text
+LANGUAGE sql
+STABLE
+AS $stub$ SELECT NULL::text WHERE false $stub$;
+
 CREATE OR REPLACE FUNCTION api.list_object_markers(
   p_types   object_type[]   DEFAULT NULL,
   p_status  object_status[] DEFAULT ARRAY['published']::object_status[],

@@ -27,7 +27,7 @@ describe('SettingsRail (Phase 7.1)', () => {
     expect(screen.getByText('tout le monde')).toBeInTheDocument();
     expect(screen.getByText('admin ORG')).toBeInTheDocument();
     expect(screen.getByText('super-admin')).toBeInTheDocument();
-    // Le nouvel item « Listes & référentiels » porte un badge « Nouveau ».
-    expect(screen.getByText('Nouveau')).toBeInTheDocument();
+    // Les items neufs (« Listes & référentiels », « Clés API partenaire ») portent un badge « Nouveau ».
+    expect(screen.getAllByText('Nouveau').length).toBeGreaterThanOrEqual(1);
   });
 });

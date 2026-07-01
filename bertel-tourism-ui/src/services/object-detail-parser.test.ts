@@ -1,6 +1,45 @@
-import { parseObjectDetail } from './object-detail-parser';
+import { cleanSustainabilityNote, parseObjectDetail } from './object-detail-parser';
+
+describe('cleanSustainabilityNote', () => {
+  it('strips Old_data provenance and review_required markers, keeping real commitments', () => {
+    expect(
+      cleanSustainabilityNote("Old_data D_Durable | L'hôtel limite la consommation. | review_required"),
+    ).toEqual(["L'hôtel limite la consommation."]);
+  });
+
+  it('splits multiple pipe-separated commitments', () => {
+    expect(
+      cleanSustainabilityNote('Old_data D_Durable | Panneaux solaires | Récupération eau de pluie | review_required'),
+    ).toEqual(['Panneaux solaires', 'Récupération eau de pluie']);
+  });
+
+  it('returns an empty array when only markers are present', () => {
+    expect(cleanSustainabilityNote('Old_data D_Durable | review_required')).toEqual([]);
+    expect(cleanSustainabilityNote('')).toEqual([]);
+  });
+});
 
 describe('parseObjectDetail', () => {
+  it('keeps sustainability action meta short and moves cleaned prose to description', () => {
+    const parsed = parseObjectDetail({
+      id: 'obj-sustainability',
+      name: 'Eco Lodge',
+      sustainability_actions: [
+        {
+          object_action_id: 's-action-clean',
+          action: { name: 'Relevé eau', category: { name: 'Eau & assainissement' } },
+          note: "Old_data D_Durable | L'hôtel limite la consommation. | review_required",
+        },
+      ],
+    });
+
+    const action = parsed.taxonomy.sustainability.actions[0];
+    expect(action.label).toBe('Relevé eau');
+    expect(action.meta).toBe('Eau & assainissement');
+    expect(action.meta).not.toMatch(/old_data|review_required/i);
+    expect(action.description).toBe("L'hôtel limite la consommation.");
+  });
+
   it('derives a platform display name and favicon for object URL contacts', () => {
     const parsed = parseObjectDetail({
       id: 'obj-platform',

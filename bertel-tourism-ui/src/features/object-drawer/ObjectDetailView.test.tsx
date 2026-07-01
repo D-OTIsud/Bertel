@@ -201,6 +201,36 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByRole('button', { name: /Médias/ })).not.toBeInTheDocument();
   });
 
+  it('renders sustainability actions as compact chips and reveals cleaned prose in a modal (no raw tokens inline)', () => {
+    const data: ObjectDetail = {
+      id: 'eco-1',
+      name: 'Eco Lodge',
+      type: 'HOT',
+      raw: {
+        sustainability_actions: [
+          {
+            object_action_id: 's-action-1',
+            action: { name: 'Relevé eau', category: { name: 'Eau & assainissement' } },
+            note: "Old_data D_Durable | L'hôtel limite la consommation. | review_required",
+          },
+        ],
+      },
+    } as ObjectDetail;
+
+    renderDetail(data);
+
+    // The raw import/moderation tokens never reach the DOM, even before opening the modal.
+    expect(screen.queryByText(/Old_data/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/review_required/i)).not.toBeInTheDocument();
+
+    // The action is a compact chip-button (detail behind a modal), not an always-open card.
+    const chip = screen.getByRole('button', { name: /Relevé eau/i });
+    fireEvent.click(chip);
+
+    expect(screen.getByText("L'hôtel limite la consommation.")).toBeInTheDocument();
+    expect(screen.queryByText(/Old_data|review_required/i)).not.toBeInTheDocument();
+  });
+
   it('renders a refined accommodation preview with collapsed intro, side contacts and protected internal cards', () => {
     const data: ObjectDetail = {
       id: 'hotel-1',

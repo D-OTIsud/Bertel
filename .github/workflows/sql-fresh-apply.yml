@@ -301,6 +301,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_jsonld_schemaorg.sql"
 
+      - name: "interop profiles test (I4b — datatourisme/apidae/tourinsoft: crosswalk class per profile, interop_object_core shared reader, per-format shape, address/geo, public-only contacts, published/unknown/unmapped -> NULL, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_profiles.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

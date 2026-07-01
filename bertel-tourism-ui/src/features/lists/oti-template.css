@@ -187,3 +187,14 @@
 .oti--narrow .oti-route__line { left: 21px; }
 .oti--narrow .oti-stop__pin { width: 34px; height: 34px; left: 4px; }
 .oti--narrow .oti-hop { padding-left: 60px; }
+
+/* ---------- Impression (PDF) : n'imprimer QUE le template ----------
+   Un portail rendu directement sous <body> porte un OtiTemplate pleine largeur ;
+   à l'impression on masque tout le reste (shell app, éditeur, aperçu à l'échelle). */
+.oti-print-portal { display: none; }
+@media print {
+  body > *:not(.oti-print-portal) { display: none !important; }
+  .oti-print-portal { display: block !important; position: static; }
+  .oti-print-portal .oti { box-shadow: none; }
+  @page { margin: 10mm; }
+}

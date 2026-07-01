@@ -4,11 +4,13 @@
 // Lecture/écriture via les RPC DEFINER. L'aperçu utilise OtiTemplate (le MÊME rendu que la
 // page publique), dans le canal choisi (email étroit / PDF A4 / lien web) et la langue choisie.
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Copy, Globe, Link2, Loader2, Mail, Printer, Trash2, X } from 'lucide-react';
 import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
+import ChannelFrame from '@/features/lists/ChannelFrame';
 import { useSessionStore } from '@/store/session-store';
 import {
   deleteList,
@@ -44,6 +46,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const [template, setTemplate] = useState<ListTemplate>('carnet');
   const [channel, setChannel] = useState<Channel>('email');
   const [previewLang, setPreviewLang] = useState<'fr' | 'en'>('fr');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!detail) return;
@@ -334,24 +339,53 @@ export default function ListComposeView({ listId }: { listId: string }) {
             Aperçu {channel === 'email' ? 'email' : channel === 'pdf' ? 'PDF' : 'page web'} · {previewLang.toUpperCase()}
           </span>
           <div className="flex-1 overflow-auto p-6 pt-12">
-            <div className={cn('mx-auto w-full overflow-hidden rounded-2xl shadow-xl', previewWidth)}>
-              <OtiTemplate
-                template={template}
-                lang={previewLang}
-                accent={detail.accent}
+            <div className={cn('mx-auto w-full', previewWidth)}>
+              <ChannelFrame
+                channel={channel}
                 name={previewName}
                 recipient={recipient || null}
-                intro={previewIntro}
-                coverUrl={detail.coverUrl}
-                items={itemsToOtiPois(items, previewLang)}
-                narrow={channel === 'email'}
-                showMap={detail.showMap}
-                advisorName={userName}
-              />
+                lang={previewLang}
+                shareUrl={shareUrl}
+              >
+                <OtiTemplate
+                  template={template}
+                  lang={previewLang}
+                  accent={detail.accent}
+                  name={previewName}
+                  recipient={recipient || null}
+                  intro={previewIntro}
+                  coverUrl={detail.coverUrl}
+                  items={itemsToOtiPois(items, previewLang)}
+                  narrow={channel === 'email'}
+                  showMap={detail.showMap}
+                  advisorName={userName}
+                />
+              </ChannelFrame>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Portail d'impression : un OtiTemplate pleine largeur rendu sous <body>, révélé
+          uniquement à l'impression (window.print) — cf. @media print dans oti-template.css. */}
+      {mounted &&
+        createPortal(
+          <div className="oti-print-portal">
+            <OtiTemplate
+              template={template}
+              lang={previewLang}
+              accent={detail.accent}
+              name={previewName}
+              recipient={recipient || null}
+              intro={previewIntro}
+              coverUrl={detail.coverUrl}
+              items={itemsToOtiPois(items, previewLang)}
+              showMap={detail.showMap}
+              advisorName={userName}
+            />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

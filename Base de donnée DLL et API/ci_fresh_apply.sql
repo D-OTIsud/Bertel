@@ -178,6 +178,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)
+\echo '== taxo   migration_taxonomy_trees_seed.sql  (versions the FULL live taxonomy trees: 211 nodes / 192 parent links across 19 taxonomy_* domains — previously live-only/unversioned; idempotent upsert + parent_id resolved by code. LAST, after every taxonomy migration + seeds, so it converges each domain to the live state; before the MV refresh so the MVs include it) =='
+\ir migration_taxonomy_trees_seed.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

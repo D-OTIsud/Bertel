@@ -5064,7 +5064,7 @@ BEGIN
   WITH open_state AS (
     SELECT
       o.id,
-      -- TRI-ÉTAT (décision log §128, migration_open_status_tristate.sql) :
+      -- TRI-ÉTAT (décision log §133, migration_open_status_tristate.sql) :
       --   NULL  = aucune donnée d'ouverture (aucun opening_period) ⇒ l'Explorer n'affiche
       --           PAS de pastille (un booléen FALSE était indistinct de « fermé »).
       --   TRUE  = ouverte (dont « jour ouvert sans horaire », 2ᵉ EXISTS, §93).

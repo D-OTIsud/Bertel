@@ -1,5 +1,5 @@
 -- =====================================================================
--- migration_open_status_tristate.sql  (manifest step 4d; decision log §128)
+-- migration_open_status_tristate.sql  (manifest step 4d; decision log §133)
 -- Pastille « ouvert/fermé » de l'Explorer — passage en TRI-ÉTAT.
 --
 -- SYMPTÔME (PO, cf. capture Explorer) : des fiches SANS aucune donnée d'ouverture
@@ -33,7 +33,7 @@
 --   time_frame) ⇒ 2ᵉ EXISTS ⇒ TRUE le jour concerné. Un import futur créant des
 --   périodes SANS jours ni horaires ressortirait FALSE (aucun weekday à matcher) :
 --   cas différé (0 donnée live aujourd'hui — arm3 à ajouter avec de vraies données
---   pour calibrer la sémantique « toujours ouvert » vs saisonnière). Voir décision §128.
+--   pour calibrer la sémantique « toujours ouvert » vs saisonnière). Voir décision §133.
 --
 -- BLAST RADIUS : api.refresh_open_status (cron toutes les 15 min) uniquement.
 --   Signature inchangée (pas de reload PostgREST : appelée par le cron, pas un RPC

@@ -344,7 +344,7 @@ export function ResultCardView({
           <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
             {card.name}
           </h3>
-          {/* Pastille « ouvert/fermé » — TRI-ÉTAT (§128) piloté par la DONNÉE, pour TOUS les types :
+          {/* Pastille « ouvert/fermé » — TRI-ÉTAT (§133) piloté par la DONNÉE, pour TOUS les types :
               open_now null/undefined = aucune donnée d'ouverture → AUCUNE pastille ;
               true = Ouvert (dont « ouvert sans horaire », §93) ; false = Fermé. */}
           {card.open_now == null ? null : card.open_now ? (

@@ -22,6 +22,7 @@ export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'list_reference_bundle',
   'list_catalog',
   'public_catalog_domains',
+  'list_deleted_objects_since', // C-4 tombstone feed (service-role only in DB)
 ]);
 
 export interface PublicApiResult {

@@ -9336,6 +9336,21 @@ COMMENT ON FUNCTION api.get_object_cards_adapted_batch IS
 --   • p_status defaults to published-only.
 -- =====================================================
 
+-- Forward declaration (fresh-apply ordering, 2026-07-01): get_dashboard_scorecards below is a
+-- LANGUAGE sql function whose body calls api.get_dashboard_completeness(), defined LATER in this
+-- file. A SQL body validates at CREATE, so the reference must resolve now — this minimal stub
+-- (identical signature/param names, RETURNS jsonb) satisfies it; the real definition below
+-- CREATE OR REPLACEs it. (§99 completeness reused by §58 scorecards.)
+CREATE OR REPLACE FUNCTION api.get_dashboard_completeness(
+  p_types           object_type[]   DEFAULT NULL,
+  p_status          object_status[] DEFAULT ARRAY['published']::object_status[],
+  p_filters         jsonb           DEFAULT '{}'::jsonb,
+  p_updated_at_from date            DEFAULT NULL,
+  p_updated_at_to   date            DEFAULT NULL,
+  p_below_limit     int             DEFAULT 10
+)
+RETURNS jsonb LANGUAGE sql STABLE AS $stub$ SELECT NULL::jsonb $stub$;
+
 -- ─────────────────────────────────────────────────────
 -- §1  Hero Scorecards
 -- ─────────────────────────────────────────────────────
@@ -10228,6 +10243,14 @@ GRANT  EXECUTE ON FUNCTION api.get_dashboard_filter_options() TO   authenticated
 -- Folded from migration_object_external_id_writes.sql so a fresh DB reproduces live.
 -- DEFINER + search_path = public, api, internal; gen_random_uuid(); canonical sources locked.
 -- =====================================================
+-- Forward declarations (fresh-apply ordering, 2026-07-01): current_user_is_org_admin below is a
+-- LANGUAGE sql function calling api.is_platform_superuser() + api.current_user_admin_role_code(),
+-- both defined in rls_policies.sql (applied AFTER this file). SQL bodies validate at CREATE, so
+-- these minimal stubs (matching signatures) satisfy it; rls_policies.sql CREATE OR REPLACEs them
+-- with the real SECURITY DEFINER bodies. Mirrors the is_platform_superuser stub in rls_policies.sql.
+CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $stub$ SELECT false $stub$;
+CREATE OR REPLACE FUNCTION api.current_user_admin_role_code() RETURNS text LANGUAGE sql STABLE AS $stub$ SELECT NULL::text $stub$;
+
 CREATE OR REPLACE FUNCTION api.current_user_is_org_admin()
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER

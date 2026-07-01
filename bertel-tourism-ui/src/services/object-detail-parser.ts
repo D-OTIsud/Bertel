@@ -480,16 +480,27 @@ function formatDateRange(start: unknown, end: unknown, fallback: string): string
   return fallback;
 }
 
-function normalizeUrlValue(value: string): string {
+// SEC-7 (P0 stored-XSS): contact values are operator-editable and published objects are
+// anon-visible, so this value is rendered into an <a href>. Only http/https may pass — a
+// `javascript:`/`data:`/other scheme would become a one-click same-frame XSS. Exported for
+// its regression test (object-detail-parser.test.ts).
+export function normalizeUrlValue(value: string): string {
   const normalized = value.trim();
   if (!normalized) {
     return '';
   }
 
-  if (/^https?:\/\//i.test(normalized) || /^[a-z]+:\/\//i.test(normalized)) {
-    return normalized;
+  // Already carries a scheme? Allow ONLY http/https; reject everything else (js:, data:, …).
+  if (/^[a-z][a-z0-9+.-]*:/i.test(normalized)) {
+    try {
+      const protocol = new URL(normalized).protocol;
+      return protocol === 'http:' || protocol === 'https:' ? normalized : '';
+    } catch {
+      return '';
+    }
   }
 
+  // No scheme → treat as a bare host/path and default to https.
   return `https://${normalized}`;
 }
 

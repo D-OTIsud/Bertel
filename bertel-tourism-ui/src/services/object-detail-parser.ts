@@ -35,6 +35,7 @@ import {
   type RelatedObjectItem,
   type RoomTypeItem,
   type TaxonomyGroup,
+  type TaxonomyItem,
 } from '../features/object-drawer/utils';
 import { resolveWebPlatform } from '../lib/web-platform';
 
@@ -148,10 +149,10 @@ export interface ParsedMediaSection {
 }
 
 export interface ParsedSustainabilitySection {
-  labels: Array<{ id: string; label: string; meta: string }>;
-  actions: Array<{ id: string; label: string; meta: string }>;
-  actionLabels: Array<{ id: string; label: string; meta: string }>;
-  merged: Array<{ id: string; label: string; meta: string }>;
+  labels: TaxonomyItem[];
+  actions: TaxonomyItem[];
+  actionLabels: TaxonomyItem[];
+  merged: TaxonomyItem[];
 }
 
 export interface ParsedAmenityItem {
@@ -891,7 +892,7 @@ function mapOwnerContacts(params: {
     .filter((item): item is ContactItem => item !== null);
 }
 
-function buildSustainabilityLabelItems(value: unknown): Array<{ id: string; label: string; meta: string }> {
+function buildSustainabilityLabelItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
     .map((item, index) => {
       const scheme = readString(item.scheme_name, readNamedValue(item.scheme, 'Durabilite'));
@@ -908,12 +909,34 @@ function buildSustainabilityLabelItems(value: unknown): Array<{ id: string; labe
         meta: [readString(item.status), formatDateRange(item.awarded_at, item.valid_until, '')].filter(Boolean).join(' · '),
       };
     })
-    .filter((item): item is { id: string; label: string; meta: string } => item !== null);
+    .filter((item): item is TaxonomyItem => item !== null);
 }
 
-function buildSustainabilityActionItems(value: unknown): Array<{ id: string; label: string; meta: string }> {
+/**
+ * Strips import-provenance and moderation tokens from a sustainability action
+ * note and splits the remaining commitments. The legacy import format is
+ * `Old_data D_Durable | <real text> [| <real text>] | review_required`; those
+ * `Old_data…`/`review_required` markers must never reach the UI. Returns the
+ * real commitment lines (may be empty).
+ */
+export function cleanSustainabilityNote(note: string): string[] {
+  return note
+    .split('|')
+    .map((part) => part.trim())
+    .filter((part) => {
+      if (!part) {
+        return false;
+      }
+      const lower = part.toLowerCase();
+      // Drop the exact provenance/moderation sentinels only ("Old_data D_Durable", "review_required").
+      // The trailing space on the prefix keeps a real commitment that merely starts with "old_data…".
+      return lower !== 'review_required' && !lower.startsWith('old_data ');
+    });
+}
+
+function buildSustainabilityActionItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
-    .map((item, index) => {
+    .map((item, index): TaxonomyItem | null => {
       const actionRecord = readRecord(item.action);
       const categoryRecord = readRecord(actionRecord.category);
       const label = pickFirstText(actionRecord.label, actionRecord.name, item.label, item.name);
@@ -922,20 +945,21 @@ function buildSustainabilityActionItems(value: unknown): Array<{ id: string; lab
         return null;
       }
 
+      const commitments = cleanSustainabilityNote(readString(item.note));
+
       return {
         id: readString(item.object_action_id, readString(item.id, `sustainability-action-${index}`)),
         label,
-        meta: [
-          readNamedValue(categoryRecord),
-          readString(item.status),
-          readString(item.note),
-        ].filter(Boolean).join(' · '),
+        // Short context only — the prose moves to `description` (detail modal),
+        // never inline, and the raw note tokens are stripped.
+        meta: [readNamedValue(categoryRecord), readString(item.status)].filter(Boolean).join(' · '),
+        ...(commitments.length > 0 ? { description: commitments.join('\n') } : {}),
       };
     })
-    .filter((item): item is { id: string; label: string; meta: string } => item !== null);
+    .filter((item): item is TaxonomyItem => item !== null);
 }
 
-function buildSustainabilityActionLabelItems(value: unknown): Array<{ id: string; label: string; meta: string }> {
+function buildSustainabilityActionLabelItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
     .map((item, index) => {
       const labelRecord = readRecord(item.label);
@@ -956,7 +980,7 @@ function buildSustainabilityActionLabelItems(value: unknown): Array<{ id: string
         ].filter(Boolean).join(' · '),
       };
     })
-    .filter((item): item is { id: string; label: string; meta: string } => item !== null);
+    .filter((item): item is TaxonomyItem => item !== null);
 }
 
 function normalizeAggregatedContacts(raw: Record<string, unknown>, organizations: OrganizationItem[]): ParsedContactGroup {

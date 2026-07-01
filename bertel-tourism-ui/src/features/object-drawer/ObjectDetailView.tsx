@@ -82,6 +82,7 @@ import {
   type RelatedObjectItem,
   type RoomTypeItem,
   type TaxonomyGroup,
+  type TaxonomyItem,
 } from './utils';
 import { measureAmenitiesLineClamp } from './amenities-line-clamp';
 import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta, type ArchetypeCode } from '../object-editor/archetypes';
@@ -230,16 +231,6 @@ interface DistinctionGroupMeta {
   title: string;
   icon: typeof Award;
   tone: 'classifications' | 'sustainability' | 'labels' | 'badges';
-  priority: number;
-}
-
-interface DistinctionHighlight {
-  id: string;
-  label: string;
-  meta: string;
-  groupTitle: string;
-  icon: typeof Award;
-  tone: DistinctionGroupMeta['tone'];
   priority: number;
 }
 
@@ -419,57 +410,6 @@ function pickGroups(groups: TaxonomyGroup[], keys: string[]): TaxonomyGroup[] {
 
 function getDistinctionGroupMeta(key: string): DistinctionGroupMeta {
   return DISTINCTION_GROUPS[key] ?? DISTINCTION_GROUPS.labels;
-}
-
-function getDistinctionHighlightScore(params: {
-  label: string;
-  meta: string;
-  groupPriority: number;
-}): number {
-  const haystack = `${params.label} ${params.meta}`.toLowerCase();
-
-  if (/(tourisme\s*&?\s*handicap|handicap|pmr|accessible)/.test(haystack)) {
-    return params.groupPriority - 300;
-  }
-
-  if (/(clef verte|green|durab|eco|ecolo|environ)/.test(haystack)) {
-    return params.groupPriority - 200;
-  }
-
-  if (/(qualite tourisme|qualité tourisme|ecolabel|label)/.test(haystack)) {
-    return params.groupPriority - 100;
-  }
-
-  return params.groupPriority;
-}
-
-function buildDistinctionHighlights(groups: TaxonomyGroup[]): DistinctionHighlight[] {
-  return groups
-    .flatMap((group) => {
-      const meta = getDistinctionGroupMeta(group.key);
-
-      return group.items.map((item) => ({
-        id: `${group.key}-${item.id}`,
-        label: item.label,
-        meta: item.meta,
-        groupTitle: meta.title,
-        icon: meta.icon,
-        tone: meta.tone,
-        priority: getDistinctionHighlightScore({
-          label: item.label,
-          meta: item.meta,
-          groupPriority: meta.priority,
-        }),
-      }));
-    })
-    .sort((left, right) => {
-      if (left.priority !== right.priority) {
-        return left.priority - right.priority;
-      }
-
-      return left.label.localeCompare(right.label, 'fr', { sensitivity: 'base' });
-    })
-    .slice(0, 4);
 }
 
 function toCapacityStats(capacities: CapacityItem[]): StatDef[] {
@@ -1839,7 +1779,46 @@ function TeamNotesSection({
   );
 }
 
+interface DistinctionDetail {
+  label: string;
+  meta: string;
+  lines: string[];
+}
+
+function DistinctionDetailDialog({
+  detail,
+  onOpenChange,
+}: {
+  detail: DistinctionDetail | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={detail !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="detail-distinction-dialog max-w-md">
+        <DialogTitle>{detail?.label ?? ''}</DialogTitle>
+        <DialogDescription className="sr-only">{detail?.meta || 'Détail de la distinction.'}</DialogDescription>
+        {detail ? (
+          <div className="detail-distinction-dialog__body">
+            {detail.meta ? <p className="detail-distinction-dialog__meta">{detail.meta}</p> : null}
+            {detail.lines.length > 1 ? (
+              <ul className="detail-distinction-dialog__list">
+                {detail.lines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : detail.lines.length === 1 ? (
+              <p className="detail-distinction-dialog__text">{detail.lines[0]}</p>
+            ) : null}
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
+  const [detail, setDetail] = useState<DistinctionDetail | null>(null);
+
   if (!groups.length) {
     return null;
   }
@@ -1854,77 +1833,82 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
 
     return left.title.localeCompare(right.title, 'fr', { sensitivity: 'base' });
   });
-  const highlights = buildDistinctionHighlights(sortedGroups);
-  const highlightedIds = new Set(highlights.map((h) => h.id));
 
-  // Items already shown in highlights are excluded from the grid chips to avoid duplication.
-  const remainingGroups = sortedGroups
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !highlightedIds.has(`${group.key}-${item.id}`)),
-    }))
-    .filter((group) => group.items.length > 0);
+  const openDetail = (item: TaxonomyItem) => {
+    const lines = (item.description ?? '').split('\n').map((line) => line.trim()).filter(Boolean);
+    setDetail({ label: item.label, meta: item.meta, lines });
+  };
 
   return (
     <Section title="Distinctions">
-      {highlights.length > 0 && (
-        <div className="detail-distinction-highlights">
-          {highlights.map((item) => {
-            const Icon = item.icon;
+      {/*
+        Compact, single-altitude layout: every distinction is a chip grouped by
+        family. Long sustainability-action prose lives behind a detail modal
+        (`detail-chip--has-detail`), never dumped inline — keeps the section light.
+      */}
+      <div className="detail-distinction-grid">
+        {sortedGroups.map((group) => {
+          const meta = getDistinctionGroupMeta(group.key);
+          const Icon = meta.icon;
 
-            return (
-              <div key={item.id} className={`detail-distinction-highlight detail-distinction-highlight--${item.tone}`}>
-                <span className="detail-distinction-highlight__icon" aria-hidden="true">
-                  <Icon size={18} />
+          return (
+            <div key={group.key} className={`detail-distinction-group detail-distinction-group--${meta.tone}`}>
+              <div className="detail-distinction-group__header">
+                <span className={`detail-distinction-group__icon detail-distinction-group__icon--${meta.tone}`} aria-hidden="true">
+                  <Icon size={14} />
                 </span>
-                <div className="detail-distinction-highlight__copy">
-                  <span className="detail-distinction-highlight__kicker">{item.groupTitle}</span>
-                  <strong>{item.label}</strong>
-                  {item.meta && <small>{item.meta}</small>}
-                </div>
+                <span className="detail-distinction-group__title">{meta.title}</span>
               </div>
-            );
-          })}
-        </div>
-      )}
-      {remainingGroups.length > 0 && (
-        <div className="detail-taxonomy-grid detail-taxonomy-grid--distinctions">
-          {remainingGroups.map((group) => {
-            const meta = getDistinctionGroupMeta(group.key);
-            const Icon = meta.icon;
+              <div className="detail-chip-strip">
+                {group.items.map((item) => {
+                  const chipClass = `detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`;
 
-            return (
-              <div key={group.key} className={`detail-taxonomy-group detail-taxonomy-group--card detail-taxonomy-group--${meta.tone}`}>
-                <div className="detail-taxonomy-group__header">
-                  <span className={`detail-taxonomy-group__icon detail-taxonomy-group__icon--${meta.tone}`} aria-hidden="true">
-                    <Icon size={16} />
-                  </span>
-                  <span className="detail-taxonomy-group__title">{meta.title}</span>
-                </div>
-                <div className="detail-chip-strip">
-                  {group.items.map((item) => {
-                    const chip = (
-                      <span key={item.id} className={`detail-chip detail-chip--distinction detail-chip--distinction-${meta.tone}`}>
-                        {item.label}
-                      </span>
+                  if (item.description) {
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`${chipClass} detail-chip--has-detail`}
+                        onClick={() => openDetail(item)}
+                      >
+                        <span>{item.label}</span>
+                        <Info size={12} aria-hidden="true" />
+                        <span className="sr-only">, voir le détail</span>
+                      </button>
                     );
+                  }
 
-                    if (!item.meta) {
-                      return chip;
-                    }
-
+                  // Short-meta chips (labels/classifications): focusable + named so the
+                  // meta (status/dates) reaches keyboard and screen-reader users, not only hover.
+                  if (item.meta) {
                     return (
                       <DetailTooltip key={item.id} content={item.meta}>
-                        {chip}
+                        <span className={chipClass} tabIndex={0} aria-label={`${item.label}, ${item.meta}`}>
+                          {item.label}
+                        </span>
                       </DetailTooltip>
                     );
-                  })}
-                </div>
+                  }
+
+                  return (
+                    <span key={item.id} className={chipClass}>
+                      {item.label}
+                    </span>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
+      <DistinctionDetailDialog
+        detail={detail}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetail(null);
+          }
+        }}
+      />
     </Section>
   );
 }

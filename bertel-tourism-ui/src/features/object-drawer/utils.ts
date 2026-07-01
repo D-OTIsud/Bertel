@@ -248,6 +248,12 @@ export interface TaxonomyItem {
   id: string;
   label: string;
   meta: string;
+  /**
+   * Optional long-form prose shown on demand (detail modal), never inline.
+   * Populated for sustainability actions whose imported note carries a real
+   * description; absent for short-meta items (labels, classifications).
+   */
+  description?: string;
 }
 
 export interface TaxonomyGroup {

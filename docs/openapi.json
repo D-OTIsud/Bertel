@@ -72,10 +72,11 @@
         "tags": ["Objets"],
         "operationId": "getObject",
         "summary": "Récupérer une fiche publiée",
-        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.",
+        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=jsonld`, un bloc additif `jsonld` (JSON-LD schema.org, `@type` selon le type d'objet) est ajouté à `data` — directement réutilisable pour le SEO / l'interopérabilité. Orthogonal à `lang` ; les clés de base sont inchangées.",
         "parameters": [
           { "$ref": "#/components/parameters/ObjectId" },
-          { "$ref": "#/components/parameters/LangWithAll" }
+          { "$ref": "#/components/parameters/LangWithAll" },
+          { "$ref": "#/components/parameters/Format" }
         ],
         "responses": {
           "200": {
@@ -246,6 +247,12 @@
         "description": "Code langue de résolution (fallback FR). Valeur spéciale `all` : clés de base en FR + bloc additif `i18n` (texte propre par langue).",
         "schema": { "type": "string", "default": "fr" },
         "examples": { "français": { "value": "fr" }, "toutes les langues": { "value": "all" } }
+      },
+      "Format": {
+        "name": "format", "in": "query", "required": false,
+        "description": "Format pivot additif. `jsonld` : ajoute un bloc `data.jsonld` (JSON-LD schema.org). Absent = ressource Bertel seule.",
+        "schema": { "type": "string", "enum": ["jsonld"] },
+        "examples": { "schema.org JSON-LD": { "value": "jsonld" } }
       },
       "Since": {
         "name": "since", "in": "query", "required": false,
@@ -435,7 +442,31 @@
           "i18n": {
             "allOf": [{ "$ref": "#/components/schemas/I18nBlock" }],
             "description": "Présent uniquement avec `?lang=all`."
+          },
+          "jsonld": {
+            "allOf": [{ "$ref": "#/components/schemas/JsonLd" }],
+            "description": "Présent uniquement avec `?format=jsonld`."
           }
+        },
+        "additionalProperties": true
+      },
+      "JsonLd": {
+        "type": "object",
+        "description": "Document JSON-LD schema.org de la fiche (bloc additif `?format=jsonld`). `@type` dépend du type d'objet (crosswalk piloté par table côté serveur). Texte propre ; contacts / médias / réseaux publics uniquement.",
+        "properties": {
+          "@context":   { "type": "string", "example": "https://schema.org" },
+          "@type":      { "type": "string", "example": "Hotel", "description": "Classe schema.org (Hotel, Restaurant, TouristAttraction, TouristTrip, Event, LodgingBusiness, Organization…)." },
+          "@id":        { "type": "string", "example": "urn:bertel:object:HOTRUN0000000001" },
+          "identifier": { "type": "string" },
+          "name":       { "type": "string" },
+          "description":{ "type": "string", "description": "Texte propre (Markdown neutralisé)." },
+          "image":      { "type": "string", "format": "uri" },
+          "url":        { "type": "string", "format": "uri", "description": "Site officiel (http/https)." },
+          "telephone":  { "type": "string" },
+          "email":      { "type": "string" },
+          "address":    { "type": "object", "description": "schema.org PostalAddress.", "additionalProperties": true },
+          "geo":        { "type": "object", "description": "schema.org GeoCoordinates.", "additionalProperties": true },
+          "sameAs":     { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Profils/réseaux publics (http/https)." }
         },
         "additionalProperties": true
       }

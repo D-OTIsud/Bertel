@@ -1,0 +1,189 @@
+/* oti-template.css — rendu « site public OTI » des listes (module Listes).
+   Tout est scopé sous .oti pour ne pas polluer la coque Bertel.
+   Porté depuis le projet design 019e20ac (oti-template.css). Les polices brandées
+   (Kaushan Script / Poppins) sont chargées via next/font (variables --font-kaushan / --font-poppins,
+   layout.tsx) avec repli. */
+
+.oti {
+  --oti-teal: #006883;
+  --oti-teal-d: #024053;
+  --oti-green: #59b573;
+  --oti-gold: #dab848;
+  --oti-terra: #b34b3d;
+  --oti-ink: #2d2a2a;
+  --oti-ink-2: #5b5754;
+  --oti-ink-3: #8a857f;
+  --oti-line: #e7e1d6;
+  --oti-paper: #fbf9f4;
+  --oti-cream: #f5f1e8;
+  --oti-white: #ffffff;
+
+  /* accent courant (défini inline selon la liste) */
+  --oti-accent: #006883;
+  --oti-accent-d: #024053;
+  --oti-accent-soft: #e0eef1;
+
+  --oti-display: var(--font-poppins), 'Poppins', var(--font-display), 'Manrope', sans-serif;
+  --oti-script: var(--font-kaushan), 'Kaushan Script', cursive;
+  --oti-body: var(--font-sans), 'Manrope', system-ui, sans-serif;
+
+  font-family: var(--oti-body);
+  color: var(--oti-ink);
+  background: var(--oti-paper);
+  line-height: 1.6;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  text-align: left;
+}
+.oti *, .oti *::before, .oti *::after { box-sizing: border-box; }
+.oti img { display: block; max-width: 100%; }
+
+/* hue par type d'objet */
+.oti .hue-teal  { --h: #006883; --hsoft: #e0eef1; }
+.oti .hue-terra { --h: #b34b3d; --hsoft: #f6e3df; }
+.oti .hue-green { --h: #4f9c72; --hsoft: #e7f2ec; }
+.oti .hue-gold  { --h: #b08a1e; --hsoft: #f7efd4; }
+
+/* ---------- Hero ---------- */
+.oti-hero { position: relative; background: var(--oti-teal-d); color: #fff; overflow: hidden; isolation: isolate; }
+.oti-hero__bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: -2; }
+.oti-hero__bg::after { content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(2,32,42,0.35) 0%, rgba(2,32,42,0.62) 55%, rgba(2,32,42,0.82) 100%); }
+.oti-hero__inner { position: relative; z-index: 1; padding: 30px 40px 66px; }
+.oti-hero__top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 34px; }
+.oti-logochip { display: inline-flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.96);
+  border-radius: 999px; padding: 7px 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  font-family: var(--oti-display); font-weight: 800; color: var(--oti-teal-d); font-size: 14px; }
+.oti-logochip img { height: 34px; width: auto; }
+.oti-hero__origin { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.82); display: inline-flex; align-items: center; gap: 8px; }
+.oti-hero__origin .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--oti-gold); }
+
+.oti-script { font-family: var(--oti-script); font-weight: 400; color: var(--oti-gold); line-height: 1; }
+.oti-hero__script { font-size: clamp(24px, 3.6vw, 34px); margin-bottom: 6px; }
+.oti-hero__title { font-family: var(--oti-display); font-weight: 800; text-transform: uppercase; letter-spacing: -0.01em;
+  line-height: 1.02; font-size: clamp(34px, 5.6vw, 58px); margin: 0 0 18px; max-width: 18ch; text-wrap: balance; }
+.oti-hero__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); }
+.oti-hero__meta .mi { display: inline-flex; align-items: center; gap: 7px; }
+.oti-hero__meta .mi svg { opacity: 0.85; }
+.oti-hero__meta .mdot { width: 4px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.4); }
+
+/* ---------- Vague séparatrice ---------- */
+.oti-wave { display: block; width: 100%; height: auto; }
+.oti-wave--paper { fill: var(--oti-paper); }
+.oti-wave--ink { fill: var(--oti-ink); }
+.oti-wave.flip { transform: scaleY(-1); }
+
+/* ---------- Mot de l'agent ---------- */
+.oti-word { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start; padding: 4px 40px 6px; max-width: 820px; margin: 0 auto; }
+.oti-ava { width: 54px; height: 54px; border-radius: 999px; flex: none; background: var(--oti-accent); color: #fff;
+  display: grid; place-items: center; font-family: var(--oti-display); font-weight: 700; font-size: 18px; box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+.oti-word__body { min-width: 0; }
+.oti-word__lbl { font-family: var(--oti-script); font-size: 22px; color: var(--oti-accent); margin-bottom: 2px; }
+.oti-word__text { font-size: 16px; color: var(--oti-ink-2); line-height: 1.7; margin: 0 0 8px; }
+.oti-word__sign { font-size: 12.5px; font-weight: 700; color: var(--oti-ink); }
+.oti-word__sign small { display: block; font-weight: 500; color: var(--oti-ink-3); }
+
+/* ---------- Corps ---------- */
+.oti-body { padding: 30px 40px 8px; }
+.oti-secthead { display: flex; align-items: baseline; gap: 12px; max-width: 900px; margin: 0 auto 22px; }
+.oti-secthead__script { font-family: var(--oti-script); font-size: 22px; color: var(--oti-accent); }
+.oti-secthead__line { flex: 1; height: 2px; background: var(--oti-line); border-radius: 2px; }
+.oti-secthead__count { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oti-ink-3); }
+
+.oti-eyebrow { display: inline-flex; align-items: center; gap: 7px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--h, var(--oti-teal)); }
+.oti-eyebrow svg { width: 13px; height: 13px; }
+.oti-eyebrow .sep { color: var(--oti-ink-3); font-weight: 600; letter-spacing: 0; }
+.oti-eyebrow .sep b { color: var(--oti-ink-2); font-weight: 700; }
+
+.oti-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; background: var(--hsoft, var(--oti-accent-soft)); color: var(--h, var(--oti-accent)); }
+.oti-chip svg { width: 13px; height: 13px; }
+
+.oti-note { position: relative; background: var(--oti-cream); border-left: 3px solid var(--oti-accent); border-radius: 0 12px 12px 0; padding: 12px 16px 13px 18px; margin: 12px 0 0; }
+.oti-note__lbl { font-family: var(--oti-script); font-size: 17px; color: var(--oti-accent); display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.oti-note__text { font-size: 14px; color: var(--oti-ink-2); line-height: 1.6; margin: 0; }
+
+.oti-contacts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.oti-cbtn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; border: 1.5px solid var(--oti-line); color: var(--oti-ink); background: #fff; text-decoration: none; }
+.oti-cbtn svg { width: 14px; height: 14px; color: var(--oti-accent); }
+.oti-cbtn--solid { background: var(--oti-accent); color: #fff; border-color: var(--oti-accent); }
+.oti-cbtn--solid svg { color: #fff; }
+
+.oti-poi__title { font-family: var(--oti-display); font-weight: 700; letter-spacing: -0.015em; color: var(--oti-ink); margin: 8px 0 0; line-height: 1.12; }
+
+/* ---------- CARNET ---------- */
+.oti-carnet { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+.oti-poi--carnet { display: grid; grid-template-columns: 1.05fr 1fr; gap: 30px; align-items: center; }
+.oti-poi--carnet:nth-child(even) .oti-poi__media { order: 2; }
+.oti-poi__media { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: var(--fb, #d9d2c6) center/cover no-repeat; box-shadow: 0 24px 44px -26px rgba(2,32,42,0.5); }
+.oti-poi__num { position: absolute; top: 14px; left: 14px; width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,0.95); color: var(--oti-accent); display: grid; place-items: center; font-family: var(--oti-display); font-weight: 800; font-size: 17px; box-shadow: 0 6px 16px rgba(0,0,0,0.18); }
+.oti-poi__citychip { position: absolute; bottom: 12px; left: 12px; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: 999px; background: rgba(255,255,255,0.94); color: var(--oti-ink); font-size: 11.5px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.16); }
+.oti-poi__citychip svg { width: 13px; height: 13px; color: var(--oti-accent); }
+.oti-poi__body { min-width: 0; }
+.oti-poi--carnet .oti-poi__title { font-size: 27px; }
+.oti-poi--carnet .oti-poi__type { font-size: 13.5px; color: var(--oti-ink-3); font-weight: 600; margin-top: 4px; }
+
+/* ---------- GRILLE ---------- */
+.oti-grid { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(248px, 1fr)); gap: 16px; }
+.oti-card { background: #fff; border: 1px solid var(--oti-line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 12px 26px -24px rgba(2,32,42,0.4); }
+.oti-card__media { position: relative; aspect-ratio: 16 / 10; background: var(--fb, #d9d2c6) center/cover no-repeat; }
+.oti-card__num { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 999px; background: rgba(255,255,255,0.95); color: var(--oti-accent); display: grid; place-items: center; font-family: var(--oti-display); font-weight: 800; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+.oti-card__chip { position: absolute; top: 10px; right: 10px; }
+.oti-card__chip .oti-chip { height: 24px; padding: 0 9px; font-size: 10px; }
+.oti-card__body { padding: 12px 13px 13px; display: flex; flex-direction: column; flex: 1; }
+.oti-card .oti-poi__title { font-size: 16.5px; margin-top: 6px; }
+.oti-card__type { font-size: 11.5px; color: var(--oti-ink-3); font-weight: 600; margin-top: 2px; }
+.oti-card .oti-note { margin-top: 9px; padding: 8px 11px; }
+.oti-card .oti-note__lbl { font-size: 14.5px; margin-bottom: 1px; }
+.oti-card .oti-note__text { font-size: 12.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.oti-card .oti-contacts { margin-top: auto; padding-top: 11px; gap: 7px; }
+.oti-cbtn--ico { width: 36px; height: 36px; padding: 0; border-radius: 999px; justify-content: center; }
+
+/* ---------- ITINÉRAIRE ---------- */
+.oti-route { max-width: 820px; margin: 0 auto; position: relative; }
+.oti-route__line { position: absolute; left: 27px; top: 20px; bottom: 40px; width: 2px; background: repeating-linear-gradient(var(--oti-accent) 0 6px, transparent 6px 12px); opacity: 0.5; }
+.oti-stop { position: relative; padding-left: 74px; margin-bottom: 30px; }
+.oti-stop__pin { position: absolute; left: 8px; top: 4px; width: 40px; height: 40px; border-radius: 999px; background: var(--oti-accent); color: #fff; display: grid; place-items: center; font-family: var(--oti-display); font-weight: 800; font-size: 15px; box-shadow: 0 6px 14px rgba(2,32,42,0.28); z-index: 1; border: 3px solid var(--oti-paper); }
+.oti-stop__card { display: grid; grid-template-columns: 128px 1fr; gap: 16px; background: #fff; border: 1px solid var(--oti-line); border-radius: 16px; overflow: hidden; box-shadow: 0 16px 30px -26px rgba(2,32,42,0.4); }
+.oti-stop__media { background: var(--fb, #d9d2c6) center/cover no-repeat; min-height: 128px; }
+.oti-stop__body { padding: 13px 15px 14px 0; min-width: 0; }
+.oti-stop .oti-poi__title { font-size: 18px; }
+.oti-stop__type { font-size: 12px; color: var(--oti-ink-3); font-weight: 600; margin-top: 2px; }
+.oti-stop .oti-note { margin-top: 9px; padding: 9px 12px; background: var(--oti-cream); }
+.oti-stop .oti-note__text { font-size: 12.5px; }
+.oti-stop .oti-contacts { margin-top: 10px; }
+.oti-hop { position: relative; padding-left: 74px; margin: -14px 0 16px; font-size: 12px; font-weight: 600; color: var(--oti-ink-3); display: flex; align-items: center; gap: 7px; }
+.oti-hop svg { color: var(--oti-accent); width: 14px; height: 14px; }
+
+.oti-map { max-width: 820px; margin: 0 auto 30px; position: relative; border-radius: 20px; overflow: hidden; background: linear-gradient(160deg, #d9e6dc 0%, #aac8c0 55%, #8fb6cf 100%); border: 1px solid var(--oti-line); aspect-ratio: 21 / 9; }
+.oti-map__pin { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 999px; background: var(--oti-accent); color: #fff; border: 2px solid #fff; display: grid; place-items: center; font-family: var(--oti-display); font-weight: 800; font-size: 12px; box-shadow: 0 4px 12px rgba(2,32,42,0.35); }
+.oti-map__cap { position: absolute; right: 18px; bottom: 16px; max-width: 46%; color: var(--oti-teal-d); text-align: right; }
+.oti-map__cap .s { font-family: var(--oti-script); font-size: 20px; color: var(--oti-teal-d); }
+.oti-map__cap .t { font-family: var(--oti-display); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.02em; }
+
+/* ---------- Pied ---------- */
+.oti-foot { background: var(--oti-ink); color: rgba(255,255,255,0.8); padding: 30px 40px 34px; }
+.oti-foot__top { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; }
+.oti-foot__brand { display: flex; align-items: center; gap: 12px; }
+.oti-foot__brand .n { font-family: var(--oti-display); font-weight: 700; color: #fff; font-size: 15px; }
+.oti-foot__brand .n small { display: block; font-weight: 500; font-size: 11.5px; color: rgba(255,255,255,0.55); }
+.oti-foot__cta { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; border-radius: 999px; background: var(--oti-gold); color: #2d2a2a; font-weight: 700; font-size: 13px; text-decoration: none; }
+.oti-foot__grid { display: flex; flex-wrap: wrap; gap: 8px 26px; font-size: 13px; }
+.oti-foot__grid a { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.82); text-decoration: none; }
+.oti-foot__grid a svg { width: 14px; height: 14px; color: var(--oti-gold); }
+.oti-foot__legal { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.12); font-size: 11.5px; color: rgba(255,255,255,0.5); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* ---------- Mode étroit (email) ---------- */
+.oti--narrow .oti-hero__inner, .oti--narrow .oti-word, .oti--narrow .oti-body { padding-left: 22px; padding-right: 22px; }
+.oti--narrow .oti-poi--carnet { grid-template-columns: 1fr; gap: 16px; }
+.oti--narrow .oti-poi--carnet .oti-poi__media { order: -1 !important; }
+.oti--narrow .oti-grid { grid-template-columns: 1fr; gap: 16px; }
+.oti--narrow .oti-hero__title { font-size: clamp(28px, 8vw, 38px); }
+.oti--narrow .oti-poi--carnet .oti-poi__title { font-size: 22px; }
+.oti--narrow .oti-stop__card { grid-template-columns: 96px 1fr; }
+.oti--narrow .oti-stop { padding-left: 60px; }
+.oti--narrow .oti-route__line { left: 21px; }
+.oti--narrow .oti-stop__pin { width: 34px; height: 34px; left: 4px; }
+.oti--narrow .oti-hop { padding-left: 60px; }

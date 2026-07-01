@@ -286,6 +286,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_rate_limit.sql"
 
+      - name: partner i18n=all test (C-5 — strip_markdown_i18n per-language strip/lowercase/empty-drop + get_object_i18n_all overlay->canonical, public-only, published gate, map-only, service-role-only)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_i18n_all.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

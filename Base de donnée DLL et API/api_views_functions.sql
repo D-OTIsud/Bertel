@@ -456,6 +456,113 @@ $fn$;
 REVOKE ALL ON FUNCTION api.strip_markdown(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.strip_markdown(text) TO anon, authenticated, service_role;
 
+-- =====================================================================================
+-- C-5 (audit API Phase 1) — multi-language projection for the partner gateway.
+-- Two additive, self-contained functions; get_object_resource is NOT touched (the default
+-- single-language resolution stays byte-identical). Consumed ONLY by /api/public/objects/{id}
+-- on ?lang=all (service-role). See docs/api-audit/2026-06-30-api-fix-plan.md (C-5).
+-- =====================================================================================
+
+-- {lang: markdown} -> {lang: plain text}. Reuses the single-value api.strip_markdown per language,
+-- so a third-party path emits CLEAN TEXT (never raw *_i18n Markdown — §106/§112 contract). Keys
+-- lowercased (matches api.i18n_pick normalization); empty/whitespace values dropped; NULL / '{}' /
+-- all-empty -> NULL so jsonb_strip_nulls omits the field entirely.
+CREATE OR REPLACE FUNCTION api.strip_markdown_i18n(p_i18n jsonb)
+RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $fn$
+  SELECT CASE
+    WHEN p_i18n IS NULL OR p_i18n = '{}'::jsonb THEN NULL
+    ELSE NULLIF(
+      (SELECT jsonb_object_agg(lower(e.key), api.strip_markdown(e.value))
+       FROM jsonb_each_text(p_i18n) e
+       WHERE e.value IS NOT NULL AND btrim(e.value) <> ''),
+      '{}'::jsonb)
+  END;
+$fn$;
+
+REVOKE ALL ON FUNCTION api.strip_markdown_i18n(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.strip_markdown_i18n(jsonb) TO anon, authenticated, service_role;
+
+-- Partner-facing multi-language block for a PUBLISHED object (audit API C-5).
+-- Returns the object_description free-text family (§106 Delivery 1) as {field: {lang: plain text}}
+-- maps, sourced from the SAME row get_object_resource resolves (primary-publisher ORG overlay ->
+-- canonical fallback), public-visibility ONLY (no user context on the partner path ⇒ private /
+-- NULL-visibility overlays are never exposed). Projects ONLY the *_i18n maps: a field authored
+-- FR-only in the plain column (no i18n map) is absent here — its FR value still ships in the base
+-- `description` key of get_object_resource. Empty object => '{}'. Unknown/non-published id => NULL.
+--
+-- SECURITY INVOKER + service_role-only (mirrors C-4 list_deleted_objects_since): the gateway calls
+-- it service-role (which bypasses RLS); the published self-gate below is the belt-and-suspenders
+-- boundary so a mis-call can never surface a draft.
+CREATE OR REPLACE FUNCTION api.get_object_i18n_all(p_object_id text)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY INVOKER
+SET search_path = api, public, extensions
+AS $$
+DECLARE
+  v_prefer_org text;
+  v_block      jsonb;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM object o WHERE o.id = p_object_id AND o.status = 'published') THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT ool.org_object_id INTO v_prefer_org
+  FROM object_org_link ool
+  WHERE ool.object_id = p_object_id AND ool.is_primary IS TRUE
+  ORDER BY ool.updated_at DESC
+  LIMIT 1;
+
+  WITH org_desc AS (
+    SELECT d.* FROM object_description d
+    WHERE d.object_id = p_object_id
+      AND v_prefer_org IS NOT NULL
+      AND d.org_object_id IS NOT DISTINCT FROM v_prefer_org
+      AND (d.visibility IS NULL OR d.visibility = 'public')
+    ORDER BY d.created_at DESC, d.id
+    LIMIT 1
+  ),
+  canonical_desc AS (
+    SELECT d.* FROM object_description d
+    WHERE d.object_id = p_object_id
+      AND d.org_object_id IS NULL
+      AND (d.visibility IS NULL OR d.visibility = 'public')
+    ORDER BY d.created_at DESC, d.id
+    LIMIT 1
+  )
+  SELECT jsonb_strip_nulls(jsonb_build_object(
+    'description',                 api.strip_markdown_i18n(d.description_i18n),
+    'description_chapo',           api.strip_markdown_i18n(d.description_chapo_i18n),
+    'description_mobile',          api.strip_markdown_i18n(d.description_mobile_i18n),
+    'description_edition',         api.strip_markdown_i18n(d.description_edition_i18n),
+    'description_adapted',         api.strip_markdown_i18n(d.description_adapted_i18n),
+    'description_offre_hors_zone', api.strip_markdown_i18n(d.description_offre_hors_zone_i18n),
+    'sanitary_measures',           api.strip_markdown_i18n(d.sanitary_measures_i18n)
+  ))
+  INTO v_block
+  FROM (
+    SELECT * FROM org_desc
+    UNION ALL
+    SELECT * FROM canonical_desc WHERE NOT EXISTS (SELECT 1 FROM org_desc)
+  ) d
+  LIMIT 1;
+
+  RETURN COALESCE(v_block, '{}'::jsonb);
+END;
+$$;
+
+COMMENT ON FUNCTION api.get_object_i18n_all(text) IS
+  'Partner i18n=all block (audit API C-5): object_description free-text family as {field:{lang:plain text}} '
+  '(strip_markdown per language, public-visibility only, published-gated). service_role-only.';
+
+REVOKE ALL ON FUNCTION api.get_object_i18n_all(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.get_object_i18n_all(text) TO service_role;
+
 -- I18N Helper: Get translation from EAV i18n_translation table with fallback
 -- Usage: api.i18n_get_text('object_description', 'desc-uuid-123', 'description', 'en', 'fr')
 -- Returns: Translated text from i18n_translation table with fallback support

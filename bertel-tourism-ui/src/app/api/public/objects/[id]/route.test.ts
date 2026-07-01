@@ -134,4 +134,56 @@ describe('GET /api/public/objects/[id]', () => {
     expect(json.data.id).toBe(VALID_ID);
     expect(json.data.i18n).toBeUndefined(); // block omitted on failure, not an error
   });
+
+  it('?format=jsonld — merges the additive schema.org jsonld block, base keys untouched (I4)', async () => {
+    mockStatus({ status: 'published' });
+    const doc = { '@context': 'https://schema.org', '@type': 'Hotel', name: 'Hôtel' };
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_jsonld'
+        ? Promise.resolve({ ok: true, status: 200, body: doc })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_object_jsonld', { p_object_id: VALID_ID });
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID); // base keys untouched
+    expect(json.data.jsonld).toEqual(doc);
+  });
+
+  it('?format=jsonld — degrades to the base resource if the jsonld block fetch fails (fail-open)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_jsonld'
+        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.jsonld).toBeUndefined(); // block omitted on failure, not an error
+  });
+
+  it('?format=jsonld — omits the block when the RPC returns null (unmapped type / unpublished)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_jsonld'
+        ? Promise.resolve({ ok: true, status: 200, body: null })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const reqJl = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=jsonld`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqJl, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.jsonld).toBeUndefined(); // null body => no jsonld key (not `null`)
+  });
 });

@@ -268,7 +268,6 @@ export function ResultCardView({
   const labelLogos = cardLabelLogos(card);
   const city = card.location?.city?.trim() || 'Lieu non renseigné';
   const taxonomyLabel = pickTaxonomyLabel(card);
-  const isOpen = Boolean(card.open_now);
   const capacityLine = card.render?.capacity?.trim();
 
   const tagChips = card.tagChips ?? [];
@@ -345,20 +344,20 @@ export function ResultCardView({
           <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
             {card.name}
           </h3>
-          {/* Pastille « ouvert/fermé » : statut horaire UNIQUEMENT pour HEB/RES (jamais ITI/FMA/VIS). */}
-          {display.showOpenStatus ? (
-            isOpen ? (
-              <span className="badge badge--ok shrink-0" title="Ouvert">
-                <span className="dot dot--ok" />
-                Ouvert
-              </span>
-            ) : (
-              <span className="badge badge--muted shrink-0" title="Fermé">
-                <span className="dot dot--off" />
-                Fermé
-              </span>
-            )
-          ) : null}
+          {/* Pastille « ouvert/fermé » — TRI-ÉTAT (§128) piloté par la DONNÉE, pour TOUS les types :
+              open_now null/undefined = aucune donnée d'ouverture → AUCUNE pastille ;
+              true = Ouvert (dont « ouvert sans horaire », §93) ; false = Fermé. */}
+          {card.open_now == null ? null : card.open_now ? (
+            <span className="badge badge--ok shrink-0" title="Ouvert">
+              <span className="dot dot--ok" />
+              Ouvert
+            </span>
+          ) : (
+            <span className="badge badge--muted shrink-0" title="Fermé">
+              <span className="dot dot--off" />
+              Fermé
+            </span>
+          )}
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
           <span className="inline-flex shrink-0 items-center gap-1" title={display.typeLabel}>

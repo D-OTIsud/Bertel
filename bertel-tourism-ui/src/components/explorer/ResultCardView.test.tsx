@@ -94,4 +94,38 @@ describe('ResultCardView', () => {
 
     expect(screen.queryByRole('button', { name: 'Filtrer par le tag Bien-être' })).toBeNull();
   });
+
+  // Pastille « ouvert/fermé » — tri-état piloté par open_now (§128), pour TOUS les types.
+  describe('open/closed pill (open_now tri-state)', () => {
+    it('shows "Ouvert" when open_now === true', () => {
+      render(<ResultCardView card={makeCard({ open_now: true })} domId="pill-open" onOpen={() => {}} />);
+      expect(screen.getByTitle('Ouvert')).toBeInTheDocument();
+      expect(screen.queryByTitle('Fermé')).toBeNull();
+    });
+
+    it('shows "Fermé" when open_now === false', () => {
+      render(<ResultCardView card={makeCard({ open_now: false })} domId="pill-closed" onOpen={() => {}} />);
+      expect(screen.getByTitle('Fermé')).toBeInTheDocument();
+      expect(screen.queryByTitle('Ouvert')).toBeNull();
+    });
+
+    it('shows NO pill when open_now is null (no opening data)', () => {
+      render(<ResultCardView card={makeCard({ open_now: null })} domId="pill-null" onOpen={() => {}} />);
+      expect(screen.queryByTitle('Ouvert')).toBeNull();
+      expect(screen.queryByTitle('Fermé')).toBeNull();
+    });
+
+    it('shows NO pill when open_now is undefined (absent)', () => {
+      const card = makeCard();
+      delete (card as { open_now?: unknown }).open_now;
+      render(<ResultCardView card={card} domId="pill-undef" onOpen={() => {}} />);
+      expect(screen.queryByTitle('Ouvert')).toBeNull();
+      expect(screen.queryByTitle('Fermé')).toBeNull();
+    });
+
+    it('drives the pill by data for ALL types — a VIS/PNA object with open_now shows "Ouvert"', () => {
+      render(<ResultCardView card={makeCard({ type: 'PNA', open_now: true })} domId="pill-alltypes" onOpen={() => {}} />);
+      expect(screen.getByTitle('Ouvert')).toBeInTheDocument();
+    });
+  });
 });

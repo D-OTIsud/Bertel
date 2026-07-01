@@ -95,7 +95,7 @@ describe('ResultCardView', () => {
     expect(screen.queryByRole('button', { name: 'Filtrer par le tag Bien-être' })).toBeNull();
   });
 
-  // Pastille « ouvert/fermé » — tri-état piloté par open_now (§128), pour TOUS les types.
+  // Pastille « ouvert/fermé » — tri-état piloté par open_now (§133), pour TOUS les types.
   describe('open/closed pill (open_now tri-state)', () => {
     it('shows "Ouvert" when open_now === true', () => {
       render(<ResultCardView card={makeCard({ open_now: true })} domId="pill-open" onOpen={() => {}} />);

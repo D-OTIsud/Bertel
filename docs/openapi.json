@@ -72,7 +72,7 @@
         "tags": ["Objets"],
         "operationId": "getObject",
         "summary": "Récupérer une fiche publiée",
-        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=jsonld`, un bloc additif `jsonld` (JSON-LD schema.org, `@type` selon le type d'objet) est ajouté à `data` — directement réutilisable pour le SEO / l'interopérabilité. Orthogonal à `lang` ; les clés de base sont inchangées.",
+        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=<profil>`, un bloc additif nommé d'après le profil est ajouté à `data` : `jsonld` (schema.org), `datatourisme`, `apidae`, `tourinsoft`. `@type`/classe selon le type d'objet (crosswalk piloté par table). Orthogonal à `lang` ; les clés de base sont inchangées.",
         "parameters": [
           { "$ref": "#/components/parameters/ObjectId" },
           { "$ref": "#/components/parameters/LangWithAll" },
@@ -250,9 +250,14 @@
       },
       "Format": {
         "name": "format", "in": "query", "required": false,
-        "description": "Format pivot additif. `jsonld` : ajoute un bloc `data.jsonld` (JSON-LD schema.org). Absent = ressource Bertel seule.",
-        "schema": { "type": "string", "enum": ["jsonld"] },
-        "examples": { "schema.org JSON-LD": { "value": "jsonld" } }
+        "description": "Format pivot additif — ajoute un bloc `data.<format>`. `jsonld` : JSON-LD schema.org (SEO). `datatourisme` : JSON-LD ontologie nationale. `apidae` : JSON régional Apidae. `tourinsoft` : enregistrement de syndication SIT. Absent = ressource Bertel seule. (Socle cœur — valider la conformité field-à-field contre l'importeur cible avant synchro de production.)",
+        "schema": { "type": "string", "enum": ["jsonld", "datatourisme", "apidae", "tourinsoft"] },
+        "examples": {
+          "schema.org JSON-LD": { "value": "jsonld" },
+          "DATAtourisme": { "value": "datatourisme" },
+          "Apidae": { "value": "apidae" },
+          "Tourinsoft": { "value": "tourinsoft" }
+        }
       },
       "Since": {
         "name": "since", "in": "query", "required": false,
@@ -446,6 +451,21 @@
           "jsonld": {
             "allOf": [{ "$ref": "#/components/schemas/JsonLd" }],
             "description": "Présent uniquement avec `?format=jsonld`."
+          },
+          "datatourisme": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Présent uniquement avec `?format=datatourisme`. Document JSON-LD ontologie DATAtourisme (`@context` @vocab, `@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`)."
+          },
+          "apidae": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Présent uniquement avec `?format=apidae`. Objet JSON Apidae (`nom.libelleFr`, `type`, `presentation.descriptifCourt`, `localisation.adresse` + `geolocalisation.geoJson`, `informations.moyensCommunication`)."
+          },
+          "tourinsoft": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Présent uniquement avec `?format=tourinsoft`. Enregistrement de syndication SIT (`SyndObjectID`, `type` bordereau, `NomOffre`, `Descriptif`, `Adresse1`/`CodePostal`/`Commune`, `Latitude`/`Longitude`, `Telephone`/`Mel`/`SiteWeb`, `Photo`)."
           }
         },
         "additionalProperties": true

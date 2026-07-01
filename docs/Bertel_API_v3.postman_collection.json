@@ -1222,6 +1222,93 @@
           ]
         },
         {
+          "name": "Fiche + DATAtourisme (I4b · ?format=datatourisme)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('bloc data.datatourisme (JSON-LD)', function () { pm.expect(d.data).to.have.property('datatourisme'); pm.expect(d.data.datatourisme['@type']).to.include('PointOfInterest'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=datatourisme",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [{"key": "format", "value": "datatourisme"}]
+            },
+            "description": "Ajoute un bloc ADDITIF `data.datatourisme` = document JSON-LD de l'ontologie nationale DATAtourisme (`@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`). Socle cœur — valider contre l'importeur DATAtourisme avant synchro de prod."
+          }
+        },
+        {
+          "name": "Fiche + Apidae (I4b · ?format=apidae)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('bloc data.apidae', function () { pm.expect(d.data).to.have.property('apidae'); pm.expect(d.data.apidae).to.have.property('type'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=apidae",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [{"key": "format", "value": "apidae"}]
+            },
+            "description": "Ajoute un bloc ADDITIF `data.apidae` = objet JSON au format Apidae (`nom.libelleFr`, `type`, `presentation.descriptifCourt`, `localisation.adresse` + `geolocalisation.geoJson`, `informations.moyensCommunication`). Socle cœur — valider contre la plateforme Apidae avant synchro de prod."
+          }
+        },
+        {
+          "name": "Fiche + Tourinsoft (I4b · ?format=tourinsoft)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('bloc data.tourinsoft', function () { pm.expect(d.data).to.have.property('tourinsoft'); pm.expect(d.data.tourinsoft).to.have.property('SyndObjectID'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=tourinsoft",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [{"key": "format", "value": "tourinsoft"}]
+            },
+            "description": "Ajoute un bloc ADDITIF `data.tourinsoft` = enregistrement de syndication SIT (`SyndObjectID`, `type` bordereau, `NomOffre`, `Descriptif`, `Adresse1`/`CodePostal`/`Commune`, `Latitude`/`Longitude`, `Telephone`/`Mel`/`SiteWeb`, `Photo`). Les codes Bertel sont de lignée Tourinsoft. Socle cœur — valider contre le SIT régional avant synchro de prod."
+          }
+        },
+        {
           "name": "Fiche — toutes les langues (C-5 · ?lang=all)",
           "request": {
             "method": "GET",

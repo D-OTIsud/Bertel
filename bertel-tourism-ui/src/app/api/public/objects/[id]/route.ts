@@ -20,6 +20,10 @@ const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/; // mirrors chk_obje
  * translation in ONE call. `?lang=<code>` keeps the single-language resolution. Either way, the two
  * editor-only raw-i18n legs (`canonical_description`/`org_description`) are trimmed — a third-party
  * path never carries raw *_i18n Markdown maps (§106/§112).
+ *
+ * Interop (I4): `?format=jsonld` appends an additive top-level `jsonld` block (schema.org, service-role
+ * RPC `get_object_jsonld`; @type from the table-driven `ref_interop_crosswalk`). Orthogonal to `?lang`
+ * and additive — the base keys are never mutated (garde §103). Best-effort like the i18n block.
  */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   const headers = publicHeaders();
@@ -45,6 +49,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const wantAllLangs = lang.toLowerCase() === 'all';
   // `all` is not a language: resolve the base keys in FR and add the multi-language block below.
   const baseLang = wantAllLangs ? 'fr' : lang;
+  const wantJsonld = (url.searchParams.get('format') ?? '').trim().toLowerCase() === 'jsonld';
 
   // Published gate — the security boundary for the single-object read (service-role bypasses RLS).
   const server = getServerSupabaseClient();
@@ -79,6 +84,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       // resource rather than failing the whole response — the object is still fully returned.
       const i18n = await callPublicRpc('get_object_i18n_all', { p_object_id: id });
       if (i18n.ok) (data as Record<string, unknown>).i18n = i18n.body ?? {};
+    }
+
+    if (wantJsonld) {
+      // Additive schema.org JSON-LD block (I4). Best-effort: a failure degrades to the base resource.
+      // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
+      const jsonld = await callPublicRpc('get_object_jsonld', { p_object_id: id });
+      if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
     }
   }
 

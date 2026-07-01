@@ -1112,6 +1112,170 @@
         }
       ],
       "description": "Système juridique complet : CRUD, conformité, expirations, workflow documentaire"
+    },
+    {
+      "name": "13. API Publique Partenaire (/api/public/*)",
+      "description": "Passerelle TIERCE authentifiée par clé partenaire (`Authorization: Bearer bk_live_…`, émise par l'OTI). Contrat stable versionné (`meta.contract_version` + header `X-Bertel-Api-Version`), enveloppe `{ meta, data }`, fiches PUBLIÉES uniquement. NE PAS utiliser la clé anon/`apikey` ni PostgREST direct ici — c'est la surface partenaire dédiée. Variables : `public_base_url` (URL de l'app), `partner_key` (clé `bk_live_…`). Lancer « Lister les fiches publiées » en premier : il remplit `object_id` pour les requêtes de détail.",
+      "item": [
+        {
+          "name": "Lister les fiches publiées",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "if (d.data && d.data.length > 0) { pm.collectionVariables.set('object_id', d.data[0].id); }",
+                  "pm.test('enveloppe { meta, data }', function () { pm.expect(d).to.have.property('meta'); pm.expect(d).to.have.property('data'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}", "description": "Clé partenaire bk_live_…"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?page_size=20",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "page_size", "value": "20"},
+                {"key": "types", "value": "HOT,RES", "disabled": true},
+                {"key": "search", "value": "", "disabled": true}
+              ]
+            },
+            "description": "Page de fiches PUBLIÉES (curseur `cursor`, `page_size` 1–200, `types` csv, `search`, `lang`). Stocke automatiquement `object_id = data[0].id` pour les requêtes suivantes."
+          }
+        },
+        {
+          "name": "Récupérer une fiche publiée",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"]
+            },
+            "description": "Ressource complète d'une fiche PUBLIÉE. Un id inconnu ou non publié → 404 (indistinguable, pas de fuite de brouillon)."
+          }
+        },
+        {
+          "name": "Fiche + JSON-LD schema.org (I4 · ?format=jsonld)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('bloc additif data.jsonld présent', function () { pm.expect(d.data).to.have.property('jsonld'); });",
+                  "pm.test('document schema.org', function () { pm.expect(d.data.jsonld['@context']).to.eql('https://schema.org'); pm.expect(d.data.jsonld).to.have.property('@type'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=jsonld",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [{"key": "format", "value": "jsonld"}]
+            },
+            "description": "Ajoute un bloc ADDITIF `data.jsonld` = document JSON-LD schema.org (`@type` selon le type d'objet, crosswalk piloté par table côté serveur `ref_interop_crosswalk`). Directement réutilisable pour le SEO / l'interopérabilité (à injecter dans un `<script type=\"application/ld+json\">`). Orthogonal à `lang` ; les clés de base ne sont jamais mutées. Contacts / médias / réseaux PUBLICS uniquement ; texte propre (Markdown neutralisé)."
+          },
+          "response": [
+            {
+              "name": "Exemple — Restaurant",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{"key": "Authorization", "value": "Bearer {{partner_key}}"}],
+                "url": {
+                  "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=jsonld",
+                  "host": ["{{public_base_url}}"],
+                  "path": ["api", "public", "objects", "{{object_id}}"],
+                  "query": [{"key": "format", "value": "jsonld"}]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {"key": "Content-Type", "value": "application/json"},
+                {"key": "X-Bertel-Api-Version", "value": "1.0.0"}
+              ],
+              "cookie": [],
+              "body": "{\n  \"meta\": { \"contract_version\": \"1.0.0\" },\n  \"data\": {\n    \"id\": \"RESRUN00000000XK\",\n    \"name\": \"Le Macabit\",\n    \"jsonld\": {\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"Restaurant\",\n      \"@id\": \"urn:bertel:object:RESRUN00000000XK\",\n      \"identifier\": \"RESRUN00000000XK\",\n      \"name\": \"Le Macabit\",\n      \"description\": \"Le restaurant Le Macabit se situe dans le Sud sauvage, à Saint-Philippe…\",\n      \"url\": \"https://www.lemaccabit.re/\",\n      \"telephone\": \"0262 37 15 30\",\n      \"email\": \"lemacabit97442@gmail.com\",\n      \"image\": \"https://…/cover.jpg\",\n      \"address\": {\n        \"@type\": \"PostalAddress\",\n        \"streetAddress\": \"76 Route Nationale 2 Ravine Ango\",\n        \"postalCode\": \"97442\",\n        \"addressLocality\": \"Saint-Philippe\",\n        \"addressRegion\": \"La Réunion\",\n        \"addressCountry\": \"FR\"\n      },\n      \"geo\": { \"@type\": \"GeoCoordinates\", \"latitude\": -21.3488, \"longitude\": 55.792019 }\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Fiche — toutes les langues (C-5 · ?lang=all)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?lang=all",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [{"key": "lang", "value": "all"}]
+            },
+            "description": "Ajoute un bloc ADDITIF `data.i18n` = toutes les traductions (texte propre par langue) en un seul appel. Clés de base résolues en FR."
+          }
+        },
+        {
+          "name": "Flux tombstone (C-4 · suppressions)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/deletions?since=2024-01-01T00:00:00Z",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "deletions"],
+              "query": [{"key": "since", "value": "2024-01-01T00:00:00Z"}]
+            },
+            "description": "Objets DÉFINITIVEMENT supprimés depuis `since` (pour qu'un miroir partenaire retire ses enregistrements fantômes). Projette `{object_id, type, deleted_at}` uniquement. Reprendre la pagination avec `since = meta.cursor`."
+          }
+        },
+        {
+          "name": "Catalogues de référentiels (I1)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/catalog?domains=amenity,payment_method,language",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "catalog"],
+              "query": [
+                {"key": "domains", "value": "amenity,payment_method,language"},
+                {"key": "lang", "value": "fr", "disabled": true}
+              ]
+            },
+            "description": "Vocabulaires contrôlés résolus par langue (forme `{code,name,icon_url,parent_code,domain}`). Sans `domains` → tous les catalogues publics."
+          }
+        }
+      ]
     }
   ],
   "event": [
@@ -1184,6 +1348,16 @@
       "key": "authorization",
       "value": "Bearer your-token-here",
       "description": "Token Bearer (alternative à apikey)"
+    },
+    {
+      "key": "public_base_url",
+      "value": "https://app.bertel.example.com",
+      "description": "URL de l'application (passerelle partenaire /api/public/*)"
+    },
+    {
+      "key": "partner_key",
+      "value": "bk_live_your-partner-key-here",
+      "description": "Clé partenaire (Bearer) émise par l'OTI pour /api/public/*"
     },
     {
       "key": "object_id",

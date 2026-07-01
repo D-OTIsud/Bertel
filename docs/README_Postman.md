@@ -85,13 +85,25 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 - **Request Legal Document** : Marquer un document comme demandé (workflow)
 - **Get Pending Document Requests** : Lister les demandes de documents en attente
 
+### 13. API Publique Partenaire (`/api/public/*`)
+> Surface **tierce** dédiée : un prestataire externe passe par cette passerelle (jamais PostgREST direct). Auth par **clé partenaire** `Authorization: Bearer bk_live_…` (variable `partner_key`), base = `public_base_url`. Enveloppe `{ meta, data }`, `meta.contract_version` + header `X-Bertel-Api-Version`, fiches **publiées** uniquement. Lancer « Lister les fiches publiées » en premier (remplit `object_id`).
+
+- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang`)
+- **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
+- **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
+- **Fiche — toutes les langues (C-5)** : `GET /api/public/objects/{id}?lang=all` → bloc additif `data.i18n`
+- **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
+- **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
+
 ## 🔧 Variables d'environnement
 
 | Variable | Description | Exemple |
 |----------|-------------|---------|
-| `base_url` | URL de base de l'API | `https://api.bertel.example.com` |
+| `base_url` | URL de base de l'API (PostgREST/RPC) | `https://api.bertel.example.com` |
 | `apikey` | Votre clé API | `your-api-key-here` |
 | `authorization` | Token Bearer (optionnel) | `Bearer your-token-here` |
+| `public_base_url` | URL de l'app (passerelle partenaire `/api/public/*`) | `https://app.bertel.example.com` |
+| `partner_key` | Clé partenaire Bearer pour `/api/public/*` (émise par l'OTI) | `bk_live_…` |
 | `object_id` | ID d'objet (auto-rempli) | Auto-généré |
 | `itinerary_id` | ID d'itinéraire (auto-rempli) | Auto-généré |
 | `current_timestamp` | Timestamp actuel (auto-généré) | Auto-généré |

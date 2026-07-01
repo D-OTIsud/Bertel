@@ -4,8 +4,9 @@
  * par l'ObjectCard (badges/labels/rating). Aucune donnée fabriquée : un champ
  * absent n'est pas inventé.
  *
- * - cardTypeDisplay : pastille de type (libellé FR + accent d'archétype) + règle
- *   « pastille ouvert » (HEB/RES uniquement).
+ * - cardTypeDisplay : pastille de type (libellé FR + accent d'archétype).
+ *   NB : la pastille « ouvert/fermé » est désormais pilotée par la DONNÉE
+ *   (open_now tri-état, §128), pour TOUS les types — plus de porte par archétype.
  * - cardClassementRating : nombre + unité (étoile/épi/clé) — cocarde RÉSERVÉE aux HEB.
  * - cardLabelLogos : pastilles-logo des labels reconnus (granted ; le RPC carte
  *   ne projette que des distinctions accordées sur les fiches publiques).
@@ -18,8 +19,6 @@ export interface CardTypeDisplay {
   archetype: ArchetypeCode | null;
   accentClass: string;
   typeLabel: string;
-  /** Le statut « ouvert/fermé » n'a de sens horaire que pour HEB et RES. */
-  showOpenStatus: boolean;
 }
 
 export function cardTypeDisplay(card: ObjectCard): CardTypeDisplay {
@@ -28,7 +27,6 @@ export function cardTypeDisplay(card: ObjectCard): CardTypeDisplay {
     archetype,
     accentClass: resolveArchetypeAccentClass(card.type),
     typeLabel: resolveTypeLabel(card.type),
-    showOpenStatus: archetype === 'HEB' || archetype === 'RES',
   };
 }
 

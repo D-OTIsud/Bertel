@@ -12,13 +12,11 @@ describe('cardTypeDisplay', () => {
     expect(d.accentClass).toBe('acc-vis');
     expect(d.archetype).toBe('VIS');
   });
-  it('affiche le statut ouvert UNIQUEMENT pour HEB et RES', () => {
-    expect(cardTypeDisplay(card({ type: 'HOT' })).showOpenStatus).toBe(true);
-    expect(cardTypeDisplay(card({ type: 'RES' })).showOpenStatus).toBe(true);
-    expect(cardTypeDisplay(card({ type: 'ITI' })).showOpenStatus).toBe(false);
-    expect(cardTypeDisplay(card({ type: 'FMA' })).showOpenStatus).toBe(false);
-    expect(cardTypeDisplay(card({ type: 'PNA' })).showOpenStatus).toBe(false); // VIS
-    expect(cardTypeDisplay(card({ type: 'SPU' })).showOpenStatus).toBe(false); // SRV
+  it('ne porte plus de porte « pastille ouvert » par type (pilotée par la donnée open_now, §128)', () => {
+    // La projection d'affichage ne décide plus de la pastille : c'est open_now (tri-état) qui la pilote,
+    // pour TOUS les types (cf. ResultCardView.test.tsx). Le champ showOpenStatus a été retiré du contrat.
+    const d = cardTypeDisplay(card({ type: 'HOT' })) as Record<string, unknown>;
+    expect('showOpenStatus' in d).toBe(false);
   });
 });
 

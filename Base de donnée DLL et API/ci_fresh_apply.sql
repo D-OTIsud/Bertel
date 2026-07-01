@@ -161,6 +161,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 \echo '== I1     migration_reference_catalog_rpc.sql  (audit API Phase 1: api.public_catalog_domains/list_catalog/list_reference_bundle — anon-readable catalog over 59 public ref_code domains + 6 separate ref_* tables, i18n-resolved, whitelist default-deny; needs api.i18n_pick + ref tables + seeds) =='
 \ir migration_reference_catalog_rpc.sql
 
+\echo '== R1a    migration_partner_api_keys.sql  (partner API key auth foundation: internal.partner_api_key/_call + issue/revoke/list [superuser] + authenticate/log [service-role]; needs api.is_platform_superuser + pgcrypto digest/gen_random_bytes) =='
+\ir migration_partner_api_keys.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

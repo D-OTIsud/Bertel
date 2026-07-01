@@ -21,8 +21,8 @@ import {
   Wheat,
 } from 'lucide-react';
 import type { ListAccent, ListTemplate, ObjectListItem } from '@/services/lists';
+import { HUE_BY_TYPE, LABEL_BY_TYPE, type ListHue } from './type-meta';
 
-type Hue = 'teal' | 'terra' | 'green' | 'gold';
 type IconCmp = typeof MapPin;
 
 export interface OtiPoi {
@@ -46,23 +46,6 @@ const ACCENT: Record<ListAccent, { ink: string; deep: string; soft: string }> = 
   terra: { ink: '#b34b3d', deep: '#8f3a2e', soft: '#f6e3df' },
 };
 
-const HUE_BY_TYPE: Record<string, Hue> = {
-  HOT: 'teal', HLO: 'teal', HPA: 'teal', CAMP: 'teal', RVA: 'teal',
-  RES: 'terra', EVT: 'terra', FMA: 'terra',
-  ACT: 'green', ASC: 'green', ITI: 'green', PNA: 'green',
-  VIS: 'gold', PCU: 'gold', PRD: 'gold', COM: 'gold', SPU: 'gold', LOI: 'gold',
-};
-const LABEL_BY_TYPE: Record<string, { fr: string; en: string }> = {
-  HOT: { fr: 'Hébergement', en: 'Where to stay' }, HLO: { fr: 'Location', en: 'Rental' },
-  HPA: { fr: 'Camping', en: 'Campsite' }, CAMP: { fr: 'Camping', en: 'Campsite' }, RVA: { fr: 'Village vacances', en: 'Holiday village' },
-  RES: { fr: 'Table', en: 'Where to eat' },
-  ACT: { fr: 'Activité', en: 'Activity' }, ASC: { fr: 'Activité', en: 'Activity' },
-  ITI: { fr: 'Itinéraire', en: 'Trail' },
-  VIS: { fr: 'À visiter', en: 'To visit' }, PCU: { fr: 'Patrimoine', en: 'Heritage' },
-  PRD: { fr: 'Producteur', en: 'Producer' }, COM: { fr: 'Commerce', en: 'Shop' },
-  SPU: { fr: 'Nature', en: 'Nature' }, PNA: { fr: 'Nature', en: 'Nature' }, LOI: { fr: 'Loisir', en: 'Leisure' },
-  EVT: { fr: 'Événement', en: 'Event' }, FMA: { fr: 'Manifestation', en: 'Event' },
-};
 const ICON_BY_TYPE: Record<string, IconCmp> = {
   HOT: Bed, HLO: Bed, HPA: Bed, CAMP: Bed, RVA: Bed,
   RES: UtensilsCrossed, ACT: Compass, ASC: Compass, ITI: Navigation,
@@ -70,7 +53,7 @@ const ICON_BY_TYPE: Record<string, IconCmp> = {
   SPU: TreePine, PNA: TreePine, LOI: Compass, EVT: Star, FMA: Star,
 };
 
-function typeMeta(code: string, lang: 'fr' | 'en'): { label: string; hue: Hue; Icon: IconCmp } {
+function typeMeta(code: string, lang: 'fr' | 'en'): { label: string; hue: ListHue; Icon: IconCmp } {
   const hue = HUE_BY_TYPE[code] ?? 'teal';
   const label = LABEL_BY_TYPE[code]?.[lang] ?? code;
   const Icon = ICON_BY_TYPE[code] ?? MapPin;

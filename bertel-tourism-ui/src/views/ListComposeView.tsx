@@ -15,6 +15,7 @@ import { useSessionStore } from '@/store/session-store';
 import {
   deleteList,
   getList,
+  sendListByEmail,
   setListItems,
   shareList,
   updateList,
@@ -47,6 +48,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const [channel, setChannel] = useState<Channel>('email');
   const [previewLang, setPreviewLang] = useState<'fr' | 'en'>('fr');
   const [mounted, setMounted] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -128,6 +130,20 @@ export default function ListComposeView({ listId }: { listId: string }) {
     setTemplate(k);
     if (k !== detail?.template) updateMeta.mutate({ template: k });
   }
+  async function handleSend() {
+    const email = window.prompt('Adresse e-mail du destinataire :', '')?.trim();
+    if (!email) return;
+    setSending(true);
+    try {
+      await sendListByEmail(listId, email);
+      invalidate();
+      window.alert(`E-mail envoyé à ${email}`);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Échec de l'envoi.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   const dirtyItems =
     JSON.stringify(items.map((i) => [i.objectId, i.noteFr, i.noteEn])) !==
@@ -201,6 +217,14 @@ export default function ListComposeView({ listId }: { listId: string }) {
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5">
             <Printer className="h-4 w-4" /> Imprimer
+          </button>
+          <button
+            type="button"
+            disabled={sending}
+            onClick={() => void handleSend()}
+            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5 disabled:opacity-60"
+          >
+            <Mail className="h-4 w-4" /> {sending ? 'Envoi…' : 'Envoyer'}
           </button>
           <button
             type="button"

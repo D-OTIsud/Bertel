@@ -479,5 +479,18 @@ END; $$;
 REVOKE ALL ON FUNCTION api.get_public_list_by_token(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.get_public_list_by_token(text) TO anon, authenticated, service_role;
 
+-- ---------- 7b. Marquer une liste « envoyée » (route email /api/lists/send) ----------
+CREATE OR REPLACE FUNCTION api.mark_list_sent(p_list_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth AS $$
+BEGIN
+  IF NOT api.user_can_write_list(p_list_id) THEN
+    RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
+  END IF;
+  UPDATE object_list SET last_sent_at = now(), status = 'sent' WHERE id = p_list_id;
+END; $$;
+REVOKE ALL ON FUNCTION api.mark_list_sent(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.mark_list_sent(uuid) TO authenticated, service_role;
+
 -- ---------- 8. Reload PostgREST ----------
 NOTIFY pgrst, 'reload schema';

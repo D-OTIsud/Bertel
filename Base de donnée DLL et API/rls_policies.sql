@@ -197,6 +197,10 @@ $$;
 -- (same signatures), so runtime behaviour is unchanged. (Found by the SQL fresh-apply CI gate.)
 CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+-- user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
+-- AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /
+-- USING validate at CREATE). Stub here; SP-1 CREATE OR REPLACEs it with the real DEFINER body.
+CREATE OR REPLACE FUNCTION api.user_can_write_object_canonical(p_object_id text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 
 -- Vérifie si l'utilisateur est propriétaire (owner) de l'objet
 -- via un rôle actor_object_role lié à son email dans actor_channel

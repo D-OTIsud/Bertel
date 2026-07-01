@@ -85,4 +85,53 @@ describe('GET /api/public/objects/[id]', () => {
     expect(json.meta.contract_version).toBe('1.0.0');
     expect(json.data).toEqual({ id: VALID_ID, name: 'Hôtel' });
   });
+
+  it('trims editor-only raw-i18n legs (canonical_description/org_description) from the partner payload', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({
+      ok: true, status: 200,
+      body: { id: VALID_ID, name: 'Hôtel', canonical_description: { fr: 'raw' }, org_description: { fr: 'raw' } },
+    });
+    const res = await GET(req(), ctx());
+    const json = await res.json();
+    expect(json.data.canonical_description).toBeUndefined();
+    expect(json.data.org_description).toBeUndefined();
+    expect(json.data.i18n).toBeUndefined(); // no i18n block unless ?lang=all
+  });
+
+  it('?lang=all — resolves base keys in FR and merges the multi-language i18n block', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_i18n_all'
+        ? Promise.resolve({ ok: true, status: 200, body: { description: { fr: 'Bonjour', en: 'Hello' } } })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqAll, ctx());
+    expect(res.status).toBe(200);
+    // base resource resolved in FR (not "all")
+    expect(rpcMock).toHaveBeenCalledWith('get_object_resource', expect.objectContaining({ p_lang_prefs: ['fr'] }));
+    expect(rpcMock).toHaveBeenCalledWith('get_object_i18n_all', { p_object_id: VALID_ID });
+    const json = await res.json();
+    expect(json.data.i18n).toEqual({ description: { fr: 'Bonjour', en: 'Hello' } });
+  });
+
+  it('?lang=all — degrades to the base resource if the i18n block fetch fails (fail-open)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_i18n_all'
+        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const reqAll = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?lang=all`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(reqAll, ctx());
+    expect(res.status).toBe(200); // still 200 — the object is fully returned
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.i18n).toBeUndefined(); // block omitted on failure, not an error
+  });
 });

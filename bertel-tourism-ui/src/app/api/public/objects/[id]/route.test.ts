@@ -186,4 +186,72 @@ describe('GET /api/public/objects/[id]', () => {
     const json = await res.json();
     expect(json.data.jsonld).toBeUndefined(); // null body => no jsonld key (not `null`)
   });
+
+  it.each(['datatourisme', 'apidae', 'tourinsoft'])(
+    '?format=%s — merges the additive interop block via get_object_interop, base keys untouched (I4b)',
+    async (fmt) => {
+      mockStatus({ status: 'published' });
+      const doc = { profile: fmt, ok: true };
+      rpcMock.mockImplementation((name: string, params: Record<string, unknown>) =>
+        name === 'get_object_interop' && params.p_profile === fmt
+          ? Promise.resolve({ ok: true, status: 200, body: doc })
+          : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+      );
+      const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=${fmt}`, {
+        headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+      });
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(200);
+      expect(rpcMock).toHaveBeenCalledWith('get_object_interop', { p_object_id: VALID_ID, p_profile: fmt });
+      const json = await res.json();
+      expect(json.data.id).toBe(VALID_ID); // base keys untouched
+      expect(json.data[fmt]).toEqual(doc); // merged under a key named after the profile
+      expect(json.data.jsonld).toBeUndefined(); // jsonld RPC not called for interop formats
+    },
+  );
+
+  it('?format=apidae — degrades to the base resource if the interop fetch fails (fail-open)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_interop'
+        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=apidae`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.id).toBe(VALID_ID);
+    expect(json.data.apidae).toBeUndefined();
+  });
+
+  it('?format=tourinsoft — omits the block when the RPC returns null (unmapped type)', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_interop'
+        ? Promise.resolve({ ok: true, status: 200, body: null })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data.tourinsoft).toBeUndefined();
+  });
+
+  it('?format=<unknown> — ignored: no interop/jsonld call, no extra key', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } });
+    const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?format=xml`, {
+      headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+    });
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_jsonld', expect.anything());
+  });
 });

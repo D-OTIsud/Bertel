@@ -7,6 +7,9 @@ export const runtime = 'nodejs';
 
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/; // mirrors chk_object_id_shape
 
+/** Sector-interop profiles served by api.get_object_interop (I4b); 'jsonld' has its own RPC. */
+const INTEROP_FORMATS = new Set(['datatourisme', 'apidae', 'tourinsoft']);
+
 /**
  * GET /api/public/objects/{id} — partner-facing single PUBLISHED object resource (audit API R1b).
  *
@@ -21,9 +24,10 @@ const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/; // mirrors chk_obje
  * editor-only raw-i18n legs (`canonical_description`/`org_description`) are trimmed — a third-party
  * path never carries raw *_i18n Markdown maps (§106/§112).
  *
- * Interop (I4): `?format=jsonld` appends an additive top-level `jsonld` block (schema.org, service-role
- * RPC `get_object_jsonld`; @type from the table-driven `ref_interop_crosswalk`). Orthogonal to `?lang`
- * and additive — the base keys are never mutated (garde §103). Best-effort like the i18n block.
+ * Interop (I4): `?format=<profile>` appends an additive top-level block named after the profile:
+ * `jsonld` (schema.org, RPC `get_object_jsonld`), `datatourisme` / `apidae` / `tourinsoft`
+ * (RPC `get_object_interop`). @type/class comes from the table-driven `ref_interop_crosswalk`.
+ * Orthogonal to `?lang` and additive — the base keys are never mutated (garde §103). Best-effort.
  */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> {
   const headers = publicHeaders();
@@ -49,7 +53,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const wantAllLangs = lang.toLowerCase() === 'all';
   // `all` is not a language: resolve the base keys in FR and add the multi-language block below.
   const baseLang = wantAllLangs ? 'fr' : lang;
-  const wantJsonld = (url.searchParams.get('format') ?? '').trim().toLowerCase() === 'jsonld';
+  const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
 
   // Published gate — the security boundary for the single-object read (service-role bypasses RLS).
   const server = getServerSupabaseClient();
@@ -86,11 +90,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       if (i18n.ok) (data as Record<string, unknown>).i18n = i18n.body ?? {};
     }
 
-    if (wantJsonld) {
+    if (format === 'jsonld') {
       // Additive schema.org JSON-LD block (I4). Best-effort: a failure degrades to the base resource.
       // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
       const jsonld = await callPublicRpc('get_object_jsonld', { p_object_id: id });
       if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
+    } else if (INTEROP_FORMATS.has(format)) {
+      // Additive sector-interop block (I4b): datatourisme / apidae / tourinsoft. Merged under a key
+      // named after the profile (data.datatourisme, data.apidae, data.tourinsoft). Best-effort.
+      const interop = await callPublicRpc('get_object_interop', { p_object_id: id, p_profile: format });
+      if (interop.ok && interop.body != null) (data as Record<string, unknown>)[format] = interop.body;
     }
   }
 

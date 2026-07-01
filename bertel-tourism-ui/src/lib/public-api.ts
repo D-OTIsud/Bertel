@@ -25,6 +25,7 @@ export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'list_deleted_objects_since', // C-4 tombstone feed (service-role only in DB)
   'get_object_i18n_all',        // C-5 i18n=all block (service-role only in DB)
   'get_object_jsonld',          // I4 schema.org JSON-LD block (service-role only in DB)
+  'get_object_interop',         // I4b datatourisme/apidae/tourinsoft block (service-role only in DB)
 ]);
 
 export interface PublicApiResult {

@@ -24,19 +24,23 @@ BEGIN
   ASSERT v_dup, 'duplicate (date,scope,scope_key,metric) must violate unique';
   RAISE NOTICE 'metric_snapshot table assertions passed.';
 END$$;
+
+-- Fixture (top-level, so REFRESH MATERIALIZED VIEW is permitted; transactional — rolled back with
+-- the rest). A fresh DB seeds only the OTI ORG object ⇒ the non-ORG corpus is EMPTY, so
+-- get_dashboard_completeness returns no type rows and capture writes no per-type completeness.
+-- Seed one PUBLISHED HLO AND refresh the filter MV that api.get_filtered_object_ids reads
+-- (internal.mv_filtered_objects, the hot path) so HLO surfaces in the completeness rows — making
+-- this test genuinely self-contained instead of assuming a live corpus. (fresh-apply gate 2026-07-01)
+INSERT INTO object (object_type, name, status, region_code)
+VALUES ('HLO', 'Test HLO complétude (fixture)', 'published', 'RUN');
+REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
+
 DO $$
 DECLARE v_n integer; v_corpus numeric; v_again integer;
 BEGIN
   -- grants : anon ne doit pas exécuter, service_role oui
   ASSERT NOT has_function_privilege('anon','api.capture_metric_snapshots(date)','EXECUTE'),
          'anon must NOT execute capture_metric_snapshots';
-
-  -- Fixture (transactional, rolled back): a fresh DB seeds only the OTI ORG object, so the non-ORG
-  -- corpus is EMPTY and no per-type completeness would be captured. Seed one PUBLISHED HLO so
-  -- get_dashboard_completeness yields an HLO row for the assertion below — making the test genuinely
-  -- self-contained instead of assuming a live corpus. (fresh-apply gate 2026-07-01)
-  INSERT INTO object (object_type, name, status, region_code)
-  VALUES ('HLO', 'Test HLO complétude (fixture)', 'published', 'RUN');
 
   v_n := api.capture_metric_snapshots(DATE '2026-06-18');
   ASSERT v_n > 0, 'capture must write rows';

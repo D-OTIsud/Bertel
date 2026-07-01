@@ -53,6 +53,21 @@ SELECT 'taxonomy_' || d, 'root', upper(d), 'Racine technique Taxonomie ' || uppe
 FROM unnest(ARRAY['pna','pcu','vil','iti','fma','hpa','rva','asc']) AS d
 ON CONFLICT (domain, code) DO NOTHING;
 
+-- Technical roots for the EXISTING spu/com/loi domains too. On a fresh DB their roots are not
+-- guaranteed to exist before this file: taxonomy_spu's root comes from migration_object_type_spu
+-- (step 8u, earlier — kept by ON CONFLICT), but taxonomy_com/_loi had NO versioned root anywhere
+-- in the repo (created ad-hoc on live). Without a root, the node INSERT below (INNER JOIN
+-- r.code='root') silently DROPS every com/loi extension node — the "2 of 5" the fresh-apply gate
+-- caught (2026-07-01). Idempotent: DO NOTHING keeps any pre-existing root; ref_code has no FK to
+-- ref_code_domain_registry, so this needs no prior domain registration.
+INSERT INTO ref_code (domain, code, name, description, position, parent_id, is_assignable, metadata, name_i18n, description_i18n)
+SELECT 'taxonomy_' || d, 'root', upper(d), 'Racine technique Taxonomie ' || upper(d), 0, NULL, FALSE,
+       jsonb_build_object('source','taxonomy_seeds_20260611'),
+       jsonb_build_object('fr', upper(d)),
+       jsonb_build_object('fr', 'Racine technique Taxonomie ' || upper(d))
+FROM unnest(ARRAY['spu','com','loi']) AS d
+ON CONFLICT (domain, code) DO NOTHING;
+
 -- ---------------------------------------------------------------------------
 -- 3. Nœuds assignables par domaine
 -- ---------------------------------------------------------------------------

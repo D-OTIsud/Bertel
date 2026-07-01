@@ -22,12 +22,20 @@
 -- 0. Extensions. pg_cron is intentionally OMITTED: schema_unified.sql references
 --    it only in comments (freshness-strategy docs), never as executed DDL.
 CREATE SCHEMA IF NOT EXISTS extensions;
+-- Mirror the Supabase platform layout so a fresh DB matches live: PostGIS + pgcrypto live in the
+-- `extensions` schema (as on prod), and `extensions` is on the search_path. This makes BOTH the
+-- fully-qualified calls that match live — extensions.geometry / extensions.ST_* (get_object_resource
+-- ITI block) and extensions.digest / extensions.gen_random_bytes (partner-key auth) — AND the
+-- unqualified geometry/ST_*/etc. in schema_unified DDL resolve on the fresh CI DB. Without SCHEMA,
+-- `CREATE EXTENSION postgis` lands in public and the qualified extensions.* refs fail at runtime
+-- (found by the fresh-apply gate, 2026-07-01). search_path replicates live's default.
+SET search_path TO "$user", public, extensions;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS postgis   WITH SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
 \echo '== 1/13  schema_unified.sql =='
 \ir schema_unified.sql

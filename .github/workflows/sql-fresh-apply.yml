@@ -296,6 +296,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_tristate.sql"
 
+      - name: "object JSON-LD schema.org test (I4 — ref_interop_crosswalk table-driven @type + get_object_jsonld: published gate, public-only contacts/website/sameAs, PostalAddress/geo, strip_markdown description, unmapped profile/unknown id -> NULL, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_jsonld_schemaorg.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -291,6 +291,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_i18n_all.sql"
 
+      - name: "open-status tri-state test (§128 — refresh_open_status: no opening_period -> NULL (no pill), open-without-hours today -> TRUE, hours on another day -> FALSE)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_open_status_tristate.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

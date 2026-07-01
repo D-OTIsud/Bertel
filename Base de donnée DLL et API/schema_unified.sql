@@ -5064,7 +5064,16 @@ BEGIN
   WITH open_state AS (
     SELECT
       o.id,
-      (
+      -- TRI-ÉTAT (décision log §128, migration_open_status_tristate.sql) :
+      --   NULL  = aucune donnée d'ouverture (aucun opening_period) ⇒ l'Explorer n'affiche
+      --           PAS de pastille (un booléen FALSE était indistinct de « fermé »).
+      --   TRUE  = ouverte (dont « jour ouvert sans horaire », 2ᵉ EXISTS, §93).
+      --   FALSE = a des horaires mais actuellement fermée.
+      CASE
+        WHEN NOT EXISTS (
+          SELECT 1 FROM opening_period p2 WHERE p2.object_id = o.id
+        ) THEN NULL::boolean
+        ELSE (
         EXISTS (
           SELECT 1
           FROM opening_period p
@@ -5119,7 +5128,8 @@ BEGIN
             ) = ln.local_isodow
             AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
         )
-      ) AS new_is_open_now
+        )
+      END AS new_is_open_now
     FROM object o
     WHERE o.status = 'published'
   )

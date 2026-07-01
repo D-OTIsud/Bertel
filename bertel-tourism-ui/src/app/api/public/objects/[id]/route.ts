@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { authenticatePartner, logPartnerCall } from '@/lib/partner-auth';
+import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
@@ -19,6 +19,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const headers = publicHeaders();
   const partner = await authenticatePartner(req.headers.get('authorization'));
   if (!partner) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers });
+
+  const rate = await checkPartnerRate(partner.keyId);
+  if (!rate.allowed) {
+    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 429);
+    return NextResponse.json({ error: 'rate_limited', retry_after: rate.retryAfter }, {
+      status: 429, headers: { ...headers, 'Retry-After': String(rate.retryAfter) },
+    });
+  }
 
   const { id } = await ctx.params;
   if (!OBJECT_ID_SHAPE.test(id)) {

@@ -61,6 +61,33 @@ export async function authenticatePartner(authHeader: string | null | undefined)
   }
 }
 
+export interface RateVerdict {
+  allowed: boolean;
+  retryAfter: number;
+}
+
+/**
+ * Fixed-window rate check for a partner key (audit API R2). FAIL-OPEN: an abuse limiter must not
+ * block legitimate traffic if the DB call fails — access is already gated by authenticatePartner
+ * (which is fail-closed). Returns {allowed:true} on any infra error.
+ */
+export async function checkPartnerRate(keyId: string, limit = 120, windowSeconds = 60): Promise<RateVerdict> {
+  try {
+    const server = getServerSupabaseClient();
+    if (!server) return { allowed: true, retryAfter: 0 };
+    const { data, error } = await server.schema('api').rpc('partner_rate_check', {
+      p_key_id: keyId,
+      p_limit: limit,
+      p_window_seconds: windowSeconds,
+    });
+    if (error || !data || typeof data !== 'object') return { allowed: true, retryAfter: 0 };
+    const row = data as { allowed?: boolean; retry_after?: number };
+    return { allowed: row.allowed !== false, retryAfter: Number(row.retry_after ?? windowSeconds) };
+  } catch {
+    return { allowed: true, retryAfter: 0 };
+  }
+}
+
 /** Best-effort audit log of a partner call. Path is truncated. NEVER throws (logging must not fail a request). */
 export async function logPartnerCall(keyId: string, path: string, status: number): Promise<void> {
   try {

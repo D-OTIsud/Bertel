@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bertel · API publique partenaire — OpenAPI 3.1</title>
+  <meta name="color-scheme" content="light" />
+  <style>
+    :root { --brand: #76B097; --brand-700: #5A8B73; --line: #E5E7EB; --text: #1F2937; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--text); }
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; border-bottom: 1px solid var(--line);
+      background: linear-gradient(135deg, #8BC2A6, #5A8B73); color: #fff;
+    }
+    .topbar strong { font-size: 15px; font-weight: 700; }
+    .topbar .sep { opacity: .6; }
+    .topbar a { color: #fff; text-decoration: none; font-size: 13px; opacity: .95; }
+    .topbar a:hover { text-decoration: underline; }
+    .topbar .spacer { flex: 1; }
+    #redoc { min-height: calc(100vh - 49px); }
+    .fallback { padding: 24px 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <strong>Bertel · API publique partenaire</strong>
+    <span class="sep">·</span>
+    <span style="font-size:13px;opacity:.9">OpenAPI 3.1 · contrat v1.0.0</span>
+    <span class="spacer"></span>
+    <a href="index.html">← Documentation</a>
+    <span class="sep">·</span>
+    <a href="openapi.json" download>Télécharger openapi.json</a>
+  </div>
+
+  <!-- Redoc renders the spec client-side. If the CDN is unreachable, the raw spec is still
+       downloadable above and directly importable in any OpenAPI 3.1 tool (Postman, Insomnia, codegen). -->
+  <div id="redoc"><redoc spec-url="./openapi.json"></redoc></div>
+  <noscript><p class="fallback">Activez JavaScript pour le rendu, ou téléchargez <a href="openapi.json">openapi.json</a>.</p></noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js"></script>
+</body>
+</html>

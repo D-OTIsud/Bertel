@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Mail, Printer, ShoppingBag, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Download, ListPlus, Printer, ShoppingBag, Trash2 } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import { exportSelectedObjectsCsv } from '@/services/selection-export';
+import { createListFromSelection } from '@/services/lists';
 import { getObjectResource } from '../../services/rpc';
 import { cn } from '@/lib/utils';
 import { escapeHtml } from '@/lib/safe-output';
@@ -24,8 +26,24 @@ export function SelectionBar() {
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const [exporting, setExporting] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const router = useRouter();
   const count = selectedObjectIds.length;
   const empty = count === 0;
+
+  // « Créer une liste » : la sélection active devient une liste STATIQUE (figée), puis on
+  // ouvre la composition où le conseiller la nomme, l'annote, l'imprime, l'envoie ou la partage.
+  async function handleCreateList() {
+    if (empty || creating) return;
+    setCreating(true);
+    try {
+      const name = `Sélection · ${count} ${count > 1 ? 'lieux' : 'lieu'}`;
+      const id = await createListFromSelection(name, selectedObjectIds);
+      router.push(`/listes/${id}`);
+    } finally {
+      setCreating(false);
+    }
+  }
 
   async function handlePrintSelection() {
     if (empty) return;
@@ -145,16 +163,22 @@ export function SelectionBar() {
 
       <span className="h-[18px] w-px bg-white/15" aria-hidden />
 
-      {/* S12 : « Envoyer » n'a pas de back-end — plus de faux bouton activé qui ne fait
-          qu'un toast. Désactivé-avec-raison VISIBLE (pattern §46) en attendant la feature. */}
+      {/* La sélection active se transforme en LISTE (statique) : imprimer / envoyer / partager
+          se font ensuite depuis le module Listes. Remplace l'ancien « Envoyer » inerte. */}
       <button
         type="button"
-        disabled
-        title="Envoi par e-mail de la sélection — bientôt disponible"
-        className="inline-flex h-[30px] shrink-0 cursor-not-allowed items-center gap-1.5 rounded-[9px] bg-orange/30 px-3 text-[12.5px] font-semibold text-white/70"
+        disabled={empty || creating}
+        onClick={() => void handleCreateList()}
+        title="Transformer la sélection en liste (imprimer, envoyer, partager)"
+        className={cn(
+          'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold transition',
+          empty || creating
+            ? 'cursor-not-allowed bg-orange/30 text-white/70'
+            : 'bg-orange text-white hover:bg-orange/90',
+        )}
       >
-        <Mail className="h-3.5 w-3.5 shrink-0" />
-        Envoyer · bientôt
+        <ListPlus className="h-3.5 w-3.5 shrink-0" />
+        {creating ? 'Création…' : 'Créer une liste'}
       </button>
     </div>
   );

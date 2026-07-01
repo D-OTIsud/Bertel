@@ -1,0 +1,444 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Bertel — API publique partenaire",
+    "version": "1.0.0",
+    "summary": "Contrat de lecture pour les prestataires externes (passerelle /api/public/*).",
+    "description": "Surface **partenaire** de la plateforme touristique Bertel (OTI du Sud). Elle ne renvoie que des objets **publiés** et n'expose **jamais** PostgREST ni le schéma interne : chaque endpoint est une route Next.js qui appelle en service-role une liste blanche de RPC de lecture.\n\n**Authentification** : clé API opaque `bk_live_…` en `Authorization: Bearer …` (jamais la clé anon Supabase, jamais un JWT). Clé émise, révocable et scopée par l'OTI.\n\n**Enveloppe** : toute réponse 200 a la forme `{ \"meta\": { \"contract_version\": \"1.0.0\", … }, \"data\": … }` et porte l'en-tête `X-Bertel-Api-Version`. Le versionnage vit dans l'enveloppe (additif dans une majeure ; une rupture sortirait sous `/api/public/v2/*`).\n\n**Texte** : les descriptions sont livrées en **texte propre** (le Markdown canonique est neutralisé). Les clés `*_md` portent la version Markdown brute pour un rendu riche.\n\nCet artefact est **statique** (servi par l'app docs). Il décrit le contrat HTTP de la passerelle, pas les signatures SQL brutes.",
+    "contact": { "name": "OTI du Sud", "email": "d.philippe@otisud.com" },
+    "license": { "name": "Propriétaire — OTI du Sud" }
+  },
+  "servers": [
+    {
+      "url": "https://{host}/api/public",
+      "description": "Passerelle partenaire Bertel.",
+      "variables": {
+        "host": {
+          "default": "bertel.example.org",
+          "description": "Domaine de déploiement Bertel — valeur réelle fournie par l'OTI du Sud."
+        }
+      }
+    }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "tags": [
+    { "name": "Objets", "description": "Fiches touristiques publiées (établissements, itinéraires, événements, …)." },
+    { "name": "Synchronisation", "description": "Flux delta pour maintenir un miroir à jour." },
+    { "name": "Référentiels", "description": "Vocabulaires contrôlés (types, aménités, labels, …)." }
+  ],
+  "paths": {
+    "/objects": {
+      "get": {
+        "tags": ["Objets"],
+        "operationId": "listObjects",
+        "summary": "Lister les objets publiés (paginé)",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Cursor" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "$ref": "#/components/parameters/Types" },
+          { "$ref": "#/components/parameters/Lang" },
+          { "$ref": "#/components/parameters/Search" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page d'objets.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": {
+                      "allOf": [{ "$ref": "#/components/schemas/Meta" }],
+                      "description": "Contient aussi les champs de pagination émis par la source (ex. curseur suivant)."
+                    },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectResource" } }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/objects/{id}": {
+      "get": {
+        "tags": ["Objets"],
+        "operationId": "getObject",
+        "summary": "Récupérer une fiche publiée",
+        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.",
+        "parameters": [
+          { "$ref": "#/components/parameters/ObjectId" },
+          { "$ref": "#/components/parameters/LangWithAll" }
+        ],
+        "responses": {
+          "200": {
+            "description": "La fiche.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": { "$ref": "#/components/schemas/Meta" },
+                    "data": { "$ref": "#/components/schemas/ObjectResource" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Identifiant mal formé.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "invalid_object_id" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/objects/deletions": {
+      "get": {
+        "tags": ["Synchronisation"],
+        "operationId": "listDeletions",
+        "summary": "Flux tombstone (suppressions définitives)",
+        "description": "Liste les objets **définitivement supprimés** depuis `since`, pour qu'un miroir partenaire retire ses enregistrements fantômes. Projette uniquement `{object_id, type, deleted_at}` (jamais de données sensibles).\n\n**Périmètre** : suppressions définitives seulement. L'état courant / les ajouts-modifications viennent de `GET /objects`. Une dépublication est un tombstone **logique** (id absent de la liste publiée **et** absent d'ici). Reprendre la pagination avec `since = meta.cursor`.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Since" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Page de tombstones.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": {
+                      "allOf": [{ "$ref": "#/components/schemas/Meta" }],
+                      "properties": {
+                        "cursor": { "type": ["string", "null"], "format": "date-time", "description": "Max deleted_at de la page (à repasser en `since`). Inchangé si la page est vide." },
+                        "count": { "type": "integer", "description": "Nombre de tombstones dans la page." }
+                      }
+                    },
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/Tombstone" } }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`since` n'est pas un timestamp ISO 8601.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "since must be an ISO 8601 timestamp" } } }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    },
+    "/catalog": {
+      "get": {
+        "tags": ["Référentiels"],
+        "operationId": "getCatalog",
+        "summary": "Catalogues de vocabulaires contrôlés",
+        "description": "Retourne les référentiels publics résolus dans la langue demandée. Sans `domains`, renvoie **tous** les catalogues publics — les clés de l'objet sont la liste des domaines disponibles. Les domaines inconnus/non publics sont silencieusement ignorés.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Domains" },
+          { "$ref": "#/components/parameters/Lang" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bundle de référentiels.",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["meta", "data"],
+                  "properties": {
+                    "meta": { "$ref": "#/components/schemas/Meta" },
+                    "data": {
+                      "type": "object",
+                      "description": "Objet `{ <domaine>: [entrées] }`.",
+                      "additionalProperties": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogEntry" } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "429": { "$ref": "#/components/responses/RateLimited" },
+          "500": { "$ref": "#/components/responses/ServerError" },
+          "502": { "$ref": "#/components/responses/UpstreamError" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "bk_live_<48 hex>",
+        "description": "Clé API partenaire opaque. En-tête `Authorization: Bearer bk_live_…`. Émise/révoquée par l'OTI du Sud."
+      }
+    },
+    "headers": {
+      "ApiVersion": {
+        "description": "Version du contrat public (semver).",
+        "schema": { "type": "string", "example": "1.0.0" }
+      },
+      "RetryAfter": {
+        "description": "Secondes à attendre avant de réessayer (rate-limit).",
+        "schema": { "type": "integer" }
+      }
+    },
+    "parameters": {
+      "ObjectId": {
+        "name": "id", "in": "path", "required": true,
+        "description": "Identifiant d'objet (16 caractères).",
+        "schema": { "type": "string", "pattern": "^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$", "example": "HOTRUN0000000001" }
+      },
+      "Cursor": {
+        "name": "cursor", "in": "query", "required": false,
+        "description": "Curseur de pagination opaque renvoyé dans `meta` de la page précédente. Absent = première page.",
+        "schema": { "type": "string" }
+      },
+      "PageSize": {
+        "name": "page_size", "in": "query", "required": false,
+        "description": "Taille de page (bornée 1–200).",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 }
+      },
+      "Types": {
+        "name": "types", "in": "query", "required": false,
+        "description": "Liste de codes `object_type` séparés par des virgules. Un code invalide ne matche rien.",
+        "schema": { "type": "string", "example": "HOT,RES,ACT" }
+      },
+      "Search": {
+        "name": "search", "in": "query", "required": false,
+        "description": "Recherche plein texte (nom, ville, aménités, tags, menus, cuisines, labels, taxonomie, description).",
+        "schema": { "type": "string" }
+      },
+      "Lang": {
+        "name": "lang", "in": "query", "required": false,
+        "description": "Code langue de résolution (fallback FR).",
+        "schema": { "type": "string", "default": "fr", "example": "fr" }
+      },
+      "LangWithAll": {
+        "name": "lang", "in": "query", "required": false,
+        "description": "Code langue de résolution (fallback FR). Valeur spéciale `all` : clés de base en FR + bloc additif `i18n` (texte propre par langue).",
+        "schema": { "type": "string", "default": "fr" },
+        "examples": { "français": { "value": "fr" }, "toutes les langues": { "value": "all" } }
+      },
+      "Since": {
+        "name": "since", "in": "query", "required": false,
+        "description": "Ne renvoyer que les suppressions strictement postérieures à ce timestamp ISO 8601. Absent = historique complet (borné par `limit`).",
+        "schema": { "type": "string", "format": "date-time" }
+      },
+      "Limit": {
+        "name": "limit", "in": "query", "required": false,
+        "description": "Nombre max de tombstones (borné 1–1000).",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 500 }
+      },
+      "Domains": {
+        "name": "domains", "in": "query", "required": false,
+        "description": "Liste de domaines de référentiels séparés par des virgules. Absent = tous les domaines publics.",
+        "schema": { "type": "string", "example": "amenity,payment_method,language" }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Clé partenaire manquante, mal formée, inconnue, révoquée ou expirée.",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "unauthorized" } } }
+      },
+      "RateLimited": {
+        "description": "Quota par fenêtre dépassé.",
+        "headers": {
+          "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" },
+          "Retry-After": { "$ref": "#/components/headers/RetryAfter" }
+        },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "rate_limited", "retry_after": 42 } } }
+      },
+      "NotFound": {
+        "description": "Objet inconnu ou non publié (indistinguable).",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
+      },
+      "ServerError": {
+        "description": "Passerelle mal configurée (clé service manquante côté serveur).",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "server_misconfigured" } } }
+      },
+      "UpstreamError": {
+        "description": "Erreur de la source de données en amont.",
+        "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "upstream_error", "detail": "…" } } }
+      }
+    },
+    "schemas": {
+      "Meta": {
+        "type": "object",
+        "description": "Métadonnées de l'enveloppe.",
+        "required": ["contract_version"],
+        "properties": {
+          "contract_version": { "type": "string", "description": "Version semver du contrat public.", "example": "1.0.0" }
+        },
+        "additionalProperties": true
+      },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": { "type": "string", "description": "Code d'erreur stable.", "examples": ["unauthorized", "rate_limited", "not_found", "invalid_object_id", "bad_request", "server_misconfigured", "upstream_error"] },
+          "detail": { "type": "string", "description": "Détail optionnel lisible." },
+          "retry_after": { "type": "integer", "description": "Présent sur `rate_limited` : secondes avant réessai." }
+        }
+      },
+      "Tombstone": {
+        "type": "object",
+        "description": "Suppression définitive d'un objet.",
+        "required": ["object_id", "type", "deleted_at"],
+        "properties": {
+          "object_id": { "type": "string", "description": "Identifiant de l'objet supprimé." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "deleted_at": { "type": "string", "format": "date-time", "description": "Horodatage de la suppression définitive." }
+        },
+        "additionalProperties": false
+      },
+      "CatalogEntry": {
+        "type": "object",
+        "description": "Une valeur d'un référentiel contrôlé.",
+        "required": ["code", "name", "domain"],
+        "properties": {
+          "code": { "type": "string", "description": "Code stable de la valeur." },
+          "name": { "type": ["string", "null"], "description": "Libellé résolu dans la langue demandée (fallback FR)." },
+          "icon_url": { "type": ["string", "null"], "description": "URL d'icône éventuelle." },
+          "parent_code": { "type": ["string", "null"], "description": "Code parent (taxonomies / familles) ou null." },
+          "domain": { "type": "string", "description": "Domaine du référentiel." }
+        },
+        "additionalProperties": false
+      },
+      "ObjectType": {
+        "type": "string",
+        "description": "Type d'objet touristique.",
+        "enum": ["RES", "PCU", "PNA", "ORG", "ITI", "VIL", "HPA", "ASC", "COM", "HOT", "HLO", "LOI", "FMA", "CAMP", "PSV", "RVA", "ACT", "SPU", "PRD"]
+      },
+      "ObjectStatus": {
+        "type": "string",
+        "description": "Statut du cycle de vie. Sur cette API publique, toujours `published`.",
+        "enum": ["draft", "published", "archived", "hidden"]
+      },
+      "GeoPoint": {
+        "type": ["object", "null"],
+        "description": "Géométrie GeoJSON Point.",
+        "properties": {
+          "type": { "type": "string", "enum": ["Point"] },
+          "coordinates": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[longitude, latitude]." }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "properties": {
+          "address1": { "type": ["string", "null"] },
+          "address1_suite": { "type": ["string", "null"] },
+          "address2": { "type": ["string", "null"] },
+          "address3": { "type": ["string", "null"] },
+          "postcode": { "type": ["string", "null"] },
+          "city": { "type": ["string", "null"] },
+          "code_insee": { "type": ["string", "null"] },
+          "lieu_dit": { "type": ["string", "null"] },
+          "direction": { "type": ["string", "null"], "description": "Indications d'accès en texte propre." },
+          "direction_md": { "type": ["string", "null"], "description": "Version Markdown brute de `direction`." }
+        },
+        "additionalProperties": true
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "latitude": { "type": ["number", "null"] },
+          "longitude": { "type": ["number", "null"] },
+          "altitude_m": { "type": ["number", "null"] },
+          "geometry": { "$ref": "#/components/schemas/GeoPoint" }
+        },
+        "additionalProperties": true
+      },
+      "I18nFieldMap": {
+        "type": "object",
+        "description": "Traductions d'un champ : { <code langue>: texte propre }. Le Markdown est neutralisé.",
+        "additionalProperties": { "type": "string" },
+        "example": { "fr": "Un hôtel de charme.", "en": "A charming hotel." }
+      },
+      "I18nBlock": {
+        "type": "object",
+        "description": "Bloc multi-langue additif, présent uniquement avec `?lang=all`. Ne contient que les champs réellement traduits (un champ FR-only sans traductions est absent ; son FR reste dans les clés de base).",
+        "properties": {
+          "description": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_chapo": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_mobile": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_edition": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_adapted": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "description_offre_hors_zone": { "$ref": "#/components/schemas/I18nFieldMap" },
+          "sanitary_measures": { "$ref": "#/components/schemas/I18nFieldMap" }
+        },
+        "additionalProperties": false
+      },
+      "ObjectResource": {
+        "type": "object",
+        "description": "Fiche touristique. Le cœur est documenté ci-dessous ; la ressource est riche et **additive** (`additionalProperties: true`) : de nouveaux blocs (aménités, tarifs, chambres, menus, classements, itinéraire, médias, …) peuvent apparaître sans rupture. Les descriptions ont une clé texte propre et une clé sœur `*_md` (Markdown brut). Les couches d'édition internes (`canonical_description`/`org_description`) ne sont **pas** exposées ici.",
+        "required": ["id", "type", "name"],
+        "properties": {
+          "id": { "type": "string", "description": "Identifiant stable (16 caractères)." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "status": { "$ref": "#/components/schemas/ObjectStatus" },
+          "commercial_visibility": { "type": ["string", "null"] },
+          "is_editing": { "type": ["boolean", "null"] },
+          "name": { "type": "string", "description": "Nom de la fiche." },
+          "region_code": { "type": ["string", "null"] },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at_source": { "type": ["string", "null"], "format": "date-time" },
+          "published_at": { "type": ["string", "null"], "format": "date-time" },
+          "address": { "$ref": "#/components/schemas/Address" },
+          "location": { "$ref": "#/components/schemas/Location" },
+          "description": { "type": ["string", "null"], "description": "Description principale, texte propre." },
+          "description_md": { "type": ["string", "null"], "description": "Version Markdown brute de `description`." },
+          "description_chapo": { "type": ["string", "null"], "description": "Chapô, texte propre." },
+          "description_chapo_md": { "type": ["string", "null"] },
+          "description_mobile": { "type": ["string", "null"] },
+          "description_mobile_md": { "type": ["string", "null"] },
+          "description_edition": { "type": ["string", "null"] },
+          "description_edition_md": { "type": ["string", "null"] },
+          "description_adapted": { "type": ["string", "null"], "description": "Description accessibilité, texte propre." },
+          "description_adapted_md": { "type": ["string", "null"] },
+          "description_offre_hors_zone": { "type": ["string", "null"] },
+          "sanitary_measures": { "type": ["string", "null"] },
+          "descriptions": { "type": "array", "description": "Toutes les descriptions publiques.", "items": { "type": "object", "additionalProperties": true } },
+          "external_ids": { "type": "array", "description": "Identifiants externes (raccroche à des systèmes tiers).", "items": { "type": "object", "additionalProperties": true } },
+          "i18n": {
+            "allOf": [{ "$ref": "#/components/schemas/I18nBlock" }],
+            "description": "Présent uniquement avec `?lang=all`."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

@@ -91,7 +91,12 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 - **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang`)
 - **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
 - **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
+- **Fiche + DATAtourisme (I4b)** : `?format=datatourisme` → bloc additif `data.datatourisme` (JSON-LD ontologie nationale)
+- **Fiche + Apidae (I4b)** : `?format=apidae` → bloc additif `data.apidae` (JSON régional Apidae)
+- **Fiche + Tourinsoft (I4b)** : `?format=tourinsoft` → bloc additif `data.tourinsoft` (syndication SIT)
 - **Fiche — toutes les langues (C-5)** : `GET /api/public/objects/{id}?lang=all` → bloc additif `data.i18n`
+
+> Les formats pivot (`jsonld`/`datatourisme`/`apidae`/`tourinsoft`) émettent un **socle cœur** (type/classe, nom, description, adresse, géo, contacts publics, image) dans la structure et le vocabulaire de chaque standard. Valider la conformité field-à-field contre l'importeur cible avant une synchro de production.
 - **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
 - **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
 

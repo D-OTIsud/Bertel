@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 jest.mock('server-only', () => ({}));
-jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), logPartnerCall: jest.fn() }));
+jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn() }));
 jest.mock('@/lib/public-api', () => ({
   callPublicRpc: jest.fn(),
   publicHeaders: () => ({ 'X-Bertel-Api-Version': '1.0.0' }),
@@ -12,11 +12,12 @@ jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }
 
 import { NextRequest } from 'next/server';
 import { GET } from './route';
-import { authenticatePartner } from '@/lib/partner-auth';
+import { authenticatePartner, checkPartnerRate } from '@/lib/partner-auth';
 import { callPublicRpc } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 const authMock = authenticatePartner as jest.Mock;
+const checkMock = checkPartnerRate as jest.Mock;
 const rpcMock = callPublicRpc as jest.Mock;
 const serverMock = getServerSupabaseClient as jest.Mock;
 
@@ -39,9 +40,11 @@ function mockStatus(row: { status: string } | null, error: unknown = null) {
 
 beforeEach(() => {
   authMock.mockReset();
+  checkMock.mockReset();
   rpcMock.mockReset();
   serverMock.mockReset();
-  authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] }); // authenticated by default
+  authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] }); // authenticated + under rate by default
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0 });
 });
 
 describe('GET /api/public/objects/[id]', () => {

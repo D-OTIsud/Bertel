@@ -281,6 +281,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_api_keys.sql"
 
+      - name: partner rate-limit test (R2 — partner_rate_bucket + partner_rate_check fixed-window: under limit allowed, over denied + retry_after; service-role-only)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partner_rate_limit.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

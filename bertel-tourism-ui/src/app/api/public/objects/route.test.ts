@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 jest.mock('server-only', () => ({}));
-jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), logPartnerCall: jest.fn() }));
+jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn() }));
 jest.mock('@/lib/public-api', () => ({
   callPublicRpc: jest.fn(),
   publicHeaders: () => ({ 'X-Bertel-Api-Version': '1.0.0' }),
@@ -11,10 +11,11 @@ jest.mock('@/lib/public-api', () => ({
 
 import { NextRequest } from 'next/server';
 import { GET } from './route';
-import { authenticatePartner } from '@/lib/partner-auth';
+import { authenticatePartner, checkPartnerRate } from '@/lib/partner-auth';
 import { callPublicRpc } from '@/lib/public-api';
 
 const authMock = authenticatePartner as jest.Mock;
+const checkMock = checkPartnerRate as jest.Mock;
 const rpcMock = callPublicRpc as jest.Mock;
 
 function req(qs = '') {
@@ -25,8 +26,10 @@ function req(qs = '') {
 
 beforeEach(() => {
   authMock.mockReset();
+  checkMock.mockReset();
   rpcMock.mockReset();
   authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] });
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0 });
   rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: { next_cursor: 'c2' }, data: [{ id: 'X' }] } });
 });
 
@@ -35,6 +38,14 @@ describe('GET /api/public/objects', () => {
     authMock.mockResolvedValue(null);
     const res = await GET(req());
     expect(res.status).toBe(401);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('429 with Retry-After when the partner is rate-limited (RPC not called)', async () => {
+    checkMock.mockResolvedValue({ allowed: false, retryAfter: 42 });
+    const res = await GET(req());
+    expect(res.status).toBe(429);
+    expect(res.headers.get('Retry-After')).toBe('42');
     expect(rpcMock).not.toHaveBeenCalled();
   });
 

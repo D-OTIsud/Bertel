@@ -36,10 +36,14 @@
   </div>
 
   <!-- Redoc renders the spec client-side. If the CDN is unreachable, the raw spec is still
-       downloadable above and directly importable in any OpenAPI 3.1 tool (Postman, Insomnia, codegen). -->
+       downloadable above and directly importable in any OpenAPI 3.1 tool (Postman, Insomnia, codegen).
+       NOTE: serve this over HTTP (nginx does in prod). Opening via file:// cannot fetch openapi.json. -->
   <div id="redoc"><redoc spec-url="./openapi.json"></redoc></div>
   <noscript><p class="fallback">Activez JavaScript pour le rendu, ou téléchargez <a href="openapi.json">openapi.json</a>.</p></noscript>
 
+  <!-- Redoc's standalone bundle references the Node global `process`; shim it for the browser
+       (fixes "process is not defined"). Must run BEFORE the bundle loads. -->
+  <script>window.process = window.process || { env: {} };</script>
   <script src="https://cdn.jsdelivr.net/npm/redoc@2.1.5/bundles/redoc.standalone.js"></script>
 </body>
 </html>

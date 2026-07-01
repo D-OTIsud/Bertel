@@ -92,6 +92,20 @@ export interface ShareInfo {
   shareExpiresAt: string | null;
 }
 
+/** Vue publique d'une liste (lien partagé) — objets publiés uniquement, sans PII destinataire. */
+export interface PublicList {
+  name: string;
+  nameEn: string | null;
+  introFr: string | null;
+  introEn: string | null;
+  template: ListTemplate;
+  accent: ListAccent;
+  lang: 'fr' | 'en';
+  coverUrl: string | null;
+  showMap: boolean;
+  items: ObjectListItem[];
+}
+
 /** Patch partiel des métadonnées éditables d'une liste. */
 export interface ListPatch {
   name?: string;
@@ -283,6 +297,35 @@ export async function setListItems(listId: string, items: ListItemInput[]): Prom
   if (error) throw new Error(error.message || 'Enregistrement des lieux impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
+}
+
+/**
+ * Lecture PUBLIQUE par token (lien partagé) via api.get_public_list_by_token (anon).
+ * Objets publiés uniquement, sans PII destinataire. Renvoie null si token invalide/expiré/désactivé.
+ */
+export async function getPublicList(token: string): Promise<PublicList | null> {
+  const client = getApiClient();
+  if (!client) return null;
+  const { data, error } = await client.schema('api').rpc('get_public_list_by_token', { p_token: token });
+  if (error) throw new Error(error.message || 'Liste indisponible.');
+  const row = asRecord(data);
+  if (!row) return null;
+  const items = Array.isArray(row.items) ? row.items : [];
+  return {
+    name: readString(row.name),
+    nameEn: readNullableString(row.name_en),
+    introFr: readNullableString(row.intro_fr),
+    introEn: readNullableString(row.intro_en),
+    template: (readString(row.template, 'carnet') as ListTemplate),
+    accent: (readString(row.accent, 'teal') as ListAccent),
+    lang: (readString(row.lang, 'fr') as 'fr' | 'en'),
+    coverUrl: readNullableString(row.cover_url),
+    showMap: readBool(row.show_map),
+    items: items
+      .map((it) => asRecord(it))
+      .filter((it): it is GenericRecord => it !== null)
+      .map(parseItem),
+  };
 }
 
 export async function deleteList(listId: string): Promise<void> {

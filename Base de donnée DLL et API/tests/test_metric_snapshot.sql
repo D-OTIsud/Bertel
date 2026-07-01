@@ -31,6 +31,13 @@ BEGIN
   ASSERT NOT has_function_privilege('anon','api.capture_metric_snapshots(date)','EXECUTE'),
          'anon must NOT execute capture_metric_snapshots';
 
+  -- Fixture (transactional, rolled back): a fresh DB seeds only the OTI ORG object, so the non-ORG
+  -- corpus is EMPTY and no per-type completeness would be captured. Seed one PUBLISHED HLO so
+  -- get_dashboard_completeness yields an HLO row for the assertion below — making the test genuinely
+  -- self-contained instead of assuming a live corpus. (fresh-apply gate 2026-07-01)
+  INSERT INTO object (object_type, name, status, region_code)
+  VALUES ('HLO', 'Test HLO complétude (fixture)', 'published', 'RUN');
+
   v_n := api.capture_metric_snapshots(DATE '2026-06-18');
   ASSERT v_n > 0, 'capture must write rows';
 

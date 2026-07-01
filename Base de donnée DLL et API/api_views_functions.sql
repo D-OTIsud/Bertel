@@ -9993,6 +9993,7 @@ BEGIN
                / NULLIF(SUM((r->>'total')::numeric),0),1),
          SUM((r->>'total')::int)
   FROM jsonb_array_elements(v_comp->'rows') r
+  HAVING SUM((r->>'total')::numeric) > 0   -- empty corpus ⇒ no rows to average ⇒ value would be NULL (NOT NULL); skip (fresh-apply gate 2026-07-01)
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key)
     DO UPDATE SET value=EXCLUDED.value, denominator=EXCLUDED.denominator, captured_at=now();
 

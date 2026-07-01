@@ -1,5 +1,5 @@
 -- test_open_status_tristate.sql
--- Prouve migration_open_status_tristate.sql (§128) : api.refresh_open_status calcule un
+-- Prouve migration_open_status_tristate.sql (§133) : api.refresh_open_status calcule un
 -- TRI-ÉTAT dans object.cached_is_open_now —
 --   * A : AUCUNE donnée d'ouverture (aucun opening_period)              -> NULL  (pas de pastille)
 --   * B : période « toute l'année », jour = aujourd'hui, SANS horaire   -> TRUE  (ouvert sans horaire, §93)

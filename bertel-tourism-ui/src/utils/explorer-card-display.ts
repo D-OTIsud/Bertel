@@ -6,7 +6,7 @@
  *
  * - cardTypeDisplay : pastille de type (libellé FR + accent d'archétype).
  *   NB : la pastille « ouvert/fermé » est désormais pilotée par la DONNÉE
- *   (open_now tri-état, §128), pour TOUS les types — plus de porte par archétype.
+ *   (open_now tri-état, §133), pour TOUS les types — plus de porte par archétype.
  * - cardClassementRating : nombre + unité (étoile/épi/clé) — cocarde RÉSERVÉE aux HEB.
  * - cardLabelLogos : pastilles-logo des labels reconnus (granted ; le RPC carte
  *   ne projette que des distinctions accordées sur les fiches publiques).

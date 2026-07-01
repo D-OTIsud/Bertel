@@ -178,6 +178,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== L1     migration_object_list.sql  (Listes & templates d envoi: object_list/object_list_item tables + RLS lock (no direct PostgREST) + DEFINER authorize-once RPCs create/get/update/set_items/delete/share/list_my_lists + resolve_list_object_ids wrapper over api.get_filtered_object_ids (published-only, bounded) + anon get_public_list_by_token (published-only, no recipient PII); self-contained, needs object + api.get_filtered_object_ids/get_object_cards_batch + rls_policies helpers is_platform_superuser/current_user_org_id/current_user_admin_rank) =='
 \ir migration_object_list.sql
 
+\echo '== I4     migration_object_jsonld_schemaorg.sql  (audit API Phase 2: ref_interop_crosswalk table-driven object_type->schema.org class (profile-keyed) + api.get_object_jsonld service-role-only published-gated JSON-LD serializer; needs api.strip_markdown/i18n_pick from api_views + rls_policies is_platform_superuser) =='
+\ir migration_object_jsonld_schemaorg.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

@@ -4,6 +4,7 @@ import { Suspense, lazy, useState, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
 import { CommandPalette } from './CommandPalette';
+import { MobileNavDrawer } from './MobileNavDrawer';
 import { ProfileDrawer } from './ProfileDrawer';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -37,6 +38,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />
       {/* D24 : palette ⌘K globale (écouteur clavier + modale + dialogs associés). */}
       <CommandPalette />
+      {/* D12 : tiroir de navigation mobile (rail masqué < 768px). */}
+      <MobileNavDrawer />
       <Suspense fallback={null}>
         <ObjectDrawer objectId={drawerObjectId} />
       </Suspense>

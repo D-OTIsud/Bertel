@@ -34,6 +34,7 @@ export function TopBar() {
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen);
+  const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen);
   const drawerDirty = useObjectDrawerStore((state) =>
     drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
@@ -87,10 +88,12 @@ export function TopBar() {
 
       <header className="relative z-40 grid h-14 flex-none grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-[rgba(255,253,248,0.72)] px-5 backdrop-blur-xl">
         <div className="flex items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
+          {/* D12 : ouvre le tiroir de navigation mobile (le rail est masqué < 768px). */}
           <button
             type="button"
             className="grid h-8 w-8 place-items-center rounded-[8px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
-            aria-label="Menu"
+            aria-label="Ouvrir la navigation"
+            onClick={() => setMobileNavOpen(true)}
           >
             <Menu className="h-4 w-4" />
           </button>

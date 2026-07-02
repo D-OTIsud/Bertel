@@ -11,9 +11,12 @@ interface UiState {
   markerStyles: Record<ObjectTypeCode, MarkerStyle>;
   /** D24 : palette de commandes ⌘K (état de session, non persisté). */
   commandPaletteOpen: boolean;
+  /** D12 : tiroir de navigation mobile (bouton Menu de la TopBar). */
+  mobileNavOpen: boolean;
   openDrawer: (objectId: string) => void;
   closeDrawer: () => void;
   setCommandPaletteOpen: (open: boolean) => void;
+  setMobileNavOpen: (open: boolean) => void;
   setMapLayer: (layer: MapLayerMode) => void;
   setNetworkStatus: (status: NetworkStatus) => void;
   setLivePresence: (members: PresenceMember[]) => void;
@@ -35,9 +38,11 @@ export const useUiStore = create<UiState>()(
       liveMembers: [],
       markerStyles: defaultMarkerStyles,
       commandPaletteOpen: false,
+      mobileNavOpen: false,
       openDrawer: (objectId) => set({ drawerObjectId: objectId }),
       closeDrawer: () => set({ drawerObjectId: null }),
       setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+      setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
       setNetworkStatus: (status) => set({ networkStatus: status }),
       setLivePresence: (members) => set({ liveMembers: members }),

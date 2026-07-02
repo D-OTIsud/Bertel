@@ -65,7 +65,6 @@ export default function ExplorerPage() {
   const isRefreshing = cardsQuery.isRefreshing;
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
-  const clearSelection = useExplorerStore((state) => state.clearSelection);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
 
@@ -81,11 +80,9 @@ export default function ExplorerPage() {
     setVisibleObjectIds(markers.map((m) => m.id));
   }, [markers, setVisibleObjectIds]);
 
-  useEffect(() => {
-    return () => {
-      clearSelection();
-    };
-  }, [clearSelection]);
+  // D25 — la sélection SURVIT à la navigation (aller dans l'éditeur puis revenir
+  // ne vide plus le panier) : l'ancien clear-au-démontage est retiré. « Vider »
+  // de la SelectionBar reste le moyen explicite de la remettre à zéro.
 
   // Audit S10 : une requête en échec ne remplace PLUS tout l'Explorateur. On
   // affiche un bandeau inline et on conserve la dernière donnée valide (les cards

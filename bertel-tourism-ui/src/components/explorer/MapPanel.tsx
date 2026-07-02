@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { ArrowUpRight, LassoSelect, Maximize, MapPin } from 'lucide-react';
+import { ArrowUpRight, LassoSelect, Maximize, MapPin, PanelRightClose } from 'lucide-react';
 import { Layer, Map, Marker, NavigationControl, Popup, Source } from 'react-map-gl/maplibre';
 import {
   defaultMarkerStyles,
@@ -112,9 +112,11 @@ function getCategoryLabel(type: string): string {
 interface MapPanelProps {
   objects: ObjectCard[];
   variant?: 'panel' | 'column';
+  /** D16 : rend un bouton « Replier » dans l'en-tête (mode split → vue liste). */
+  onCollapse?: () => void;
 }
 
-export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
+export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
   const openDrawer = useUiStore((state) => state.openDrawer);
 
@@ -622,6 +624,17 @@ export function MapPanel({ objects, variant = 'panel' }: MapPanelProps) {
             {resetZoomButton}
             {lassoButton}
           </div>
+          {onCollapse ? (
+            <button
+              type="button"
+              className="ghost-button results-table__tool ml-auto"
+              title="Replier la carte (vue liste pleine largeur)"
+              onClick={onCollapse}
+            >
+              <PanelRightClose size={13} aria-hidden />
+              Replier
+            </button>
+          ) : null}
         </div>
       ) : null}
       {!isColumn ? (

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
+import { useToast } from '../../hooks/useToast';
 import { getObjectWorkspaceResource } from '../../services/object-workspace';
 import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
@@ -151,6 +152,7 @@ function buildHistoryItems(draft: ObjectWorkspaceModules): HistoryRailItem[] {
 
 function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceResource; objectId: string; meta: ArchetypeMeta }) {
   const router = useRouter();
+  const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
   const editor = useObjectEditorState(objectId, resource.modules);
   const langPrefs = useSessionStore((state) => state.langPrefs);
@@ -387,7 +389,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       const { ok, saveErrors: errors } = await persistDirtyModules();
       if (ok) {
         setSaveErrors([]);
-        setStatusMessage(contributorMode ? 'Modification soumise pour validation.' : 'Brouillon enregistré.');
+        // Confirmation en snackbar (D4 useToast) — le libellé topbar revient à son état « à jour ».
+        toast.success(contributorMode ? 'Modification soumise pour validation' : 'Brouillon enregistré');
       } else {
         setSaveErrors(errors);
         setModalContext('save');
@@ -420,7 +423,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       await publishObject.mutateAsync(true);
       editor.setSavedStatus('published');
       setSaveErrors([]);
-      setStatusMessage('Fiche enregistrée et publiée.');
+      toast.success('Fiche enregistrée et publiée');
     } catch (error) {
       const issue = publishErrorToIssue(error);
       setSaveErrors([issue]);

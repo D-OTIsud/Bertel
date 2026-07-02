@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  useSaveObjectWorkspaceModuleMutation,
+  invalidateObjectWorkspaceCaches,
+  saveWorkspaceModule,
   type SaveWorkspaceModuleInput,
 } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../services/object-workspace';
@@ -101,9 +103,15 @@ function buildSaveArg(
  * Batched global save: persists every dirty, writable module via the existing per-module RPC, and
  * (P1.3) submits every contributor proposal via `api.submit_pending_change`. Partial success is
  * supported — a failed module keeps its error and stays dirty while the others commit/submit.
+ *
+ * The modules of a batch save IN PARALLEL: each module writes its own tables (the only shared
+ * RPC, `save_object_commercial`, receives disjoint payload keys from §07 and §13), so the batch
+ * costs one round-trip of wall-clock instead of N sequential ones. The caches refresh ONCE at
+ * the end, fire-and-forget — the old per-module await of the full workspace refetch was the
+ * main save latency, and the editor snapshot (init-once) never consumes that refetch.
  */
 export function useEditorSave(objectId: string) {
-  const mutation = useSaveObjectWorkspaceModuleMutation(objectId);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
   const save = useCallback(
@@ -121,28 +129,45 @@ export function useEditorSave(objectId: string) {
       const failed: { module: WorkspaceModuleId; message: string }[] = [];
       setSaving(true);
       try {
-        for (const module of plan.writable) {
-          try {
-            await mutation.mutateAsync(buildSaveArg(module, draft, permissions));
+        const writes = await Promise.allSettled(
+          plan.writable.map((module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions))),
+        );
+        writes.forEach((result, index) => {
+          const module = plan.writable[index];
+          if (result.status === 'fulfilled') {
             saved.push(module);
-          } catch (err) {
-            failed.push({ module, message: err instanceof Error ? err.message : 'Échec de sauvegarde.' });
+          } else {
+            failed.push({
+              module,
+              message: result.reason instanceof Error ? result.reason.message : 'Échec de sauvegarde.',
+            });
           }
-        }
-        for (const module of plan.proposals) {
-          try {
-            await submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft));
+        });
+
+        const submissions = await Promise.allSettled(
+          plan.proposals.map((module) => submitPendingChange(buildContributorSubmission(objectId, module, baseline, draft))),
+        );
+        submissions.forEach((result, index) => {
+          const module = plan.proposals[index];
+          if (result.status === 'fulfilled') {
             submitted.push(module);
-          } catch (err) {
-            failed.push({ module, message: err instanceof Error ? err.message : 'Échec de la soumission.' });
+          } else {
+            failed.push({
+              module,
+              message: result.reason instanceof Error ? result.reason.message : 'Échec de la soumission.',
+            });
           }
-        }
+        });
       } finally {
         setSaving(false);
       }
+      // Proposals don't touch the object's rows — only direct writes need the cache refresh.
+      if (saved.length > 0) {
+        invalidateObjectWorkspaceCaches(queryClient, objectId);
+      }
       return { saved, submitted, failed, blocked: plan.blocked };
     },
-    [mutation, objectId],
+    [queryClient, objectId],
   );
 
   return { save, saving };

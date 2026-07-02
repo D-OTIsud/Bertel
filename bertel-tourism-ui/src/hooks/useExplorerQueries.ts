@@ -1,4 +1,4 @@
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
@@ -238,129 +238,125 @@ export function useLocationReferenceOptionsQuery() {
   });
 }
 
-export function useSaveObjectWorkspaceModuleMutation(objectId: string | null) {
-  const queryClient = useQueryClient();
+/**
+ * Dispatches one workspace module save to its service writer. Plain function (no react-query
+ * mutation): the editor saves several dirty modules per batch and refreshes the caches ONCE at
+ * the end via `invalidateObjectWorkspaceCaches` — the previous per-module mutation awaited a
+ * full workspace refetch after EVERY module, which was the bulk of the save latency.
+ */
+export async function saveWorkspaceModule(objectId: string, input: SaveWorkspaceModuleInput): Promise<void> {
+  if (input.moduleId === 'general-info') {
+    if (input.value) {
+      await saveObjectWorkspaceGeneralInfo(objectId, input.value);
+    }
+    if (input.taxonomyValue) {
+      await saveObjectWorkspaceTaxonomy(objectId, input.taxonomyValue);
+    }
+    return;
+  }
 
-  return useMutation({
-    mutationFn: async (input: SaveWorkspaceModuleInput) => {
-      if (!objectId) {
-        throw new Error("Aucune fiche active pour enregistrer ce module.");
-      }
+  if (input.moduleId === 'taxonomy') {
+    return saveObjectWorkspaceTaxonomy(objectId, input.value);
+  }
 
-      if (input.moduleId === 'general-info') {
-        if (input.value) {
-          await saveObjectWorkspaceGeneralInfo(objectId, input.value);
-        }
-        if (input.taxonomyValue) {
-          await saveObjectWorkspaceTaxonomy(objectId, input.taxonomyValue);
-        }
-        return;
-      }
+  if (input.moduleId === 'distinctions') {
+    return saveObjectWorkspaceDistinctions(objectId, input.value);
+  }
 
-      if (input.moduleId === 'taxonomy') {
-        return saveObjectWorkspaceTaxonomy(objectId, input.value);
-      }
+  if (input.moduleId === 'location') {
+    return saveObjectWorkspaceLocation(objectId, input.value);
+  }
 
-      if (input.moduleId === 'distinctions') {
-        return saveObjectWorkspaceDistinctions(objectId, input.value);
-      }
+  if (input.moduleId === 'media') {
+    return saveObjectWorkspaceMedia(objectId, input.value, {
+      canEditPlaceMedia: input.canEditPlaceMedia,
+    });
+  }
 
-      if (input.moduleId === 'location') {
-        return saveObjectWorkspaceLocation(objectId, input.value);
-      }
+  if (input.moduleId === 'contacts') {
+    return saveObjectWorkspaceContacts(objectId, input.value);
+  }
 
-      if (input.moduleId === 'media') {
-        return saveObjectWorkspaceMedia(objectId, input.value, {
-          canEditPlaceMedia: input.canEditPlaceMedia,
-        });
-      }
+  if (input.moduleId === 'characteristics') {
+    return saveObjectWorkspaceCharacteristics(objectId, input.value);
+  }
 
-      if (input.moduleId === 'contacts') {
-        return saveObjectWorkspaceContacts(objectId, input.value);
-      }
+  if (input.moduleId === 'capacity-policies') {
+    return saveObjectWorkspaceCapacityPolicies(objectId, input.value);
+  }
 
-      if (input.moduleId === 'characteristics') {
-        return saveObjectWorkspaceCharacteristics(objectId, input.value);
-      }
+  if (input.moduleId === 'pricing') {
+    return saveObjectWorkspacePricing(objectId, input.value);
+  }
 
-      if (input.moduleId === 'capacity-policies') {
-        return saveObjectWorkspaceCapacityPolicies(objectId, input.value);
-      }
+  if (input.moduleId === 'rooms') {
+    return saveObjectWorkspaceRooms(objectId, input.value);
+  }
 
-      if (input.moduleId === 'pricing') {
-        return saveObjectWorkspacePricing(objectId, input.value);
-      }
+  if (input.moduleId === 'meeting-rooms') {
+    return saveObjectWorkspaceMeetingRooms(objectId, input.value);
+  }
 
-      if (input.moduleId === 'rooms') {
-        return saveObjectWorkspaceRooms(objectId, input.value);
-      }
+  if (input.moduleId === 'menus') {
+    return saveObjectWorkspaceMenus(objectId, input.value);
+  }
 
-      if (input.moduleId === 'meeting-rooms') {
-        return saveObjectWorkspaceMeetingRooms(objectId, input.value);
-      }
+  if (input.moduleId === 'cuisine') {
+    return saveObjectWorkspaceCuisine(objectId, input.value);
+  }
 
-      if (input.moduleId === 'menus') {
-        return saveObjectWorkspaceMenus(objectId, input.value);
-      }
+  if (input.moduleId === 'activity') {
+    return saveObjectWorkspaceActivity(objectId, input.value);
+  }
 
-      if (input.moduleId === 'cuisine') {
-        return saveObjectWorkspaceCuisine(objectId, input.value);
-      }
+  if (input.moduleId === 'event') {
+    return saveObjectWorkspaceEvent(objectId, input.value);
+  }
 
-      if (input.moduleId === 'activity') {
-        return saveObjectWorkspaceActivity(objectId, input.value);
-      }
+  if (input.moduleId === 'itinerary') {
+    return saveObjectWorkspaceItinerary(objectId, input.value);
+  }
 
-      if (input.moduleId === 'event') {
-        return saveObjectWorkspaceEvent(objectId, input.value);
-      }
+  if (input.moduleId === 'openings') {
+    return saveObjectWorkspaceOpenings(objectId, input.value);
+  }
 
-      if (input.moduleId === 'itinerary') {
-        return saveObjectWorkspaceItinerary(objectId, input.value);
-      }
+  if (input.moduleId === 'memberships') {
+    return saveObjectWorkspaceMemberships(objectId, input.value);
+  }
 
-      if (input.moduleId === 'openings') {
-        return saveObjectWorkspaceOpenings(objectId, input.value);
-      }
+  if (input.moduleId === 'relationships') {
+    return saveObjectWorkspaceRelationships(objectId, input.value);
+  }
 
-      if (input.moduleId === 'memberships') {
-        return saveObjectWorkspaceMemberships(objectId, input.value);
-      }
+  if (input.moduleId === 'legal') {
+    return saveObjectWorkspaceLegal(objectId, input.value);
+  }
 
-      if (input.moduleId === 'relationships') {
-        return saveObjectWorkspaceRelationships(objectId, input.value);
-      }
+  if (input.moduleId === 'sustainability') {
+    return saveObjectWorkspaceSustainability(objectId, input.value);
+  }
 
-      if (input.moduleId === 'legal') {
-        return saveObjectWorkspaceLegal(objectId, input.value);
-      }
+  if (input.moduleId === 'tags') {
+    return saveObjectWorkspaceTags(objectId, input.value);
+  }
 
-      if (input.moduleId === 'sustainability') {
-        return saveObjectWorkspaceSustainability(objectId, input.value);
-      }
-
-      if (input.moduleId === 'tags') {
-        return saveObjectWorkspaceTags(objectId, input.value);
-      }
-
-      return saveObjectWorkspaceDescriptions(objectId, input.value, {
-        canEditCanonical: input.canEditCanonical,
-        canEditOrgEnrichment: input.canEditOrgEnrichment,
-        canEditPlaceDescriptions: input.canEditPlaceDescriptions,
-      });
-    },
-    onSuccess: async () => {
-      if (!objectId) {
-        return;
-      }
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['location-reference-options'] }),
-      ]);
-    },
+  return saveObjectWorkspaceDescriptions(objectId, input.value, {
+    canEditCanonical: input.canEditCanonical,
+    canEditOrgEnrichment: input.canEditOrgEnrichment,
+    canEditPlaceDescriptions: input.canEditPlaceDescriptions,
   });
+}
+
+/**
+ * One post-save cache refresh for a whole save batch, fire-and-forget: the editor snapshot is
+ * init-once (it never consumes the refetch), so nothing should wait on the heavy workspace
+ * reload — it only re-warms the caches for the preview drawer and the next mount.
+ */
+export function invalidateObjectWorkspaceCaches(queryClient: QueryClient, objectId: string): void {
+  void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+  void queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
+  void queryClient.invalidateQueries({ queryKey: ['location-reference-options'] });
 }
 
 export function usePublishObjectWorkspaceMutation(objectId: string | null) {
@@ -374,15 +370,15 @@ export function usePublishObjectWorkspaceMutation(objectId: string | null) {
 
       return publishObjectWorkspace(objectId, publish);
     },
-    onSuccess: async () => {
+    onSuccess: () => {
       if (!objectId) {
         return;
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] }),
-        queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] }),
-      ]);
+      // Fire-and-forget: the editor updates its own status via setSavedStatus — don't hold
+      // the publish spinner on the heavy workspace refetch.
+      void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });
+      void queryClient.invalidateQueries({ queryKey: ['object-detail', objectId] });
     },
   });
 }

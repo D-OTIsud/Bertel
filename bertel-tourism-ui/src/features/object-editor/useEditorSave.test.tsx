@@ -1,20 +1,27 @@
 import { renderHook, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
-  useSaveObjectWorkspaceModuleMutation: jest.fn(),
+  saveWorkspaceModule: jest.fn(),
+  invalidateObjectWorkspaceCaches: jest.fn(),
 }));
 jest.mock('../../services/moderation', () => ({
   submitPendingChange: jest.fn(),
 }));
 
 import { planSaveBatch, useEditorSave } from './useEditorSave';
-import { useSaveObjectWorkspaceModuleMutation } from '../../hooks/useExplorerQueries';
+import { saveWorkspaceModule, invalidateObjectWorkspaceCaches } from '../../hooks/useExplorerQueries';
 import { submitPendingChange } from '../../services/moderation';
 import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 
-const mockUseMutation = useSaveObjectWorkspaceModuleMutation as jest.Mock;
+const mockSaveModule = saveWorkspaceModule as jest.Mock;
+const mockInvalidate = invalidateObjectWorkspaceCaches as jest.Mock;
 const mockSubmit = submitPendingChange as jest.Mock;
+
+function wrapper({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
+}
 
 function perm(canDirectWrite: boolean, canPrepareProposal = false) {
   return {
@@ -78,11 +85,10 @@ function makeModules(): ObjectWorkspaceModules {
 }
 
 describe('useEditorSave.save — fork routing', () => {
-  const mutateAsync = jest.fn();
   beforeEach(() => {
-    mutateAsync.mockReset().mockResolvedValue(undefined);
+    mockSaveModule.mockReset().mockResolvedValue(undefined);
+    mockInvalidate.mockReset();
     mockSubmit.mockReset().mockResolvedValue('pc-id');
-    mockUseMutation.mockReturnValue({ mutateAsync });
   });
 
   it('canonical writer writes directly and never submits a proposal', async () => {
@@ -91,7 +97,7 @@ describe('useEditorSave.save — fork routing', () => {
       characteristics: perm(true),
     } as unknown as ObjectWorkspacePermissions;
     const draft = makeModules();
-    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'));
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
 
     let outcome!: Awaited<ReturnType<typeof result.current.save>>;
     await act(async () => {
@@ -100,17 +106,44 @@ describe('useEditorSave.save — fork routing', () => {
       });
     });
 
-    expect(mutateAsync).toHaveBeenCalledTimes(2);
+    expect(mockSaveModule).toHaveBeenCalledTimes(2);
     expect(mockSubmit).not.toHaveBeenCalled();
     expect(outcome.saved).toEqual(['contacts', 'characteristics']);
     expect(outcome.submitted).toEqual([]);
+    // One cache refresh for the whole batch — not one per module.
+    expect(mockInvalidate).toHaveBeenCalledTimes(1);
+    expect(mockInvalidate.mock.calls[0][1]).toBe('HOTRUN0000000001');
+  });
+
+  it('a failed direct write stays in failed; the others still save (parallel partial success)', async () => {
+    mockSaveModule.mockImplementation((_objectId: string, input: { moduleId: string }) =>
+      input.moduleId === 'contacts' ? Promise.reject(new Error('réseau')) : Promise.resolve(undefined),
+    );
+    const permissions = {
+      contacts: perm(true),
+      characteristics: perm(true),
+    } as unknown as ObjectWorkspacePermissions;
+    const draft = makeModules();
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['contacts', 'characteristics'], permissions, draft, {
+        canWriteCanonicalDirect: true,
+      });
+    });
+
+    expect(outcome.saved).toEqual(['characteristics']);
+    expect(outcome.failed).toEqual([{ module: 'contacts', message: 'réseau' }]);
+    // Something reached the DB — the caches still refresh once.
+    expect(mockInvalidate).toHaveBeenCalledTimes(1);
   });
 
   it('contributor submits a proposal per dirty module and never writes directly', async () => {
     const permissions = {} as ObjectWorkspacePermissions;
     const draft = makeModules();
     const baseline = makeModules();
-    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'));
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
 
     let outcome!: Awaited<ReturnType<typeof result.current.save>>;
     await act(async () => {
@@ -120,10 +153,12 @@ describe('useEditorSave.save — fork routing', () => {
       });
     });
 
-    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(mockSaveModule).not.toHaveBeenCalled();
     expect(mockSubmit).toHaveBeenCalledTimes(2);
     expect(outcome.submitted).toEqual(['characteristics', 'contacts']);
     expect(outcome.saved).toEqual([]);
+    // Proposals are pending moderation — nothing changed on the object, no cache refresh.
+    expect(mockInvalidate).not.toHaveBeenCalled();
 
     // The auto-dispatch section carries its whitelisted RPC; the manual one carries a null rpc.
     const submittedRpcs = mockSubmit.mock.calls.map((call) => (call[0].metadata as Record<string, unknown>).rpc);
@@ -131,11 +166,11 @@ describe('useEditorSave.save — fork routing', () => {
   });
 
   it('a failed submission stays in failed; the others still submit (partial success)', async () => {
-    mockSubmit
-      .mockRejectedValueOnce(new Error('réseau'))
-      .mockResolvedValueOnce('pc-ok');
+    mockSubmit.mockImplementation((submission: { metadata: { section: string } }) =>
+      submission.metadata.section === 'characteristics' ? Promise.reject(new Error('réseau')) : Promise.resolve('pc-ok'),
+    );
     const draft = makeModules();
-    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'));
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
 
     let outcome!: Awaited<ReturnType<typeof result.current.save>>;
     await act(async () => {

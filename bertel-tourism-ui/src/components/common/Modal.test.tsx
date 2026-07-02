@@ -39,4 +39,54 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
     expect(onClose).toHaveBeenCalledTimes(3);
   });
+
+  it('D1 : verrouille le scroll du body à l’ouverture et le restaure à la fermeture', () => {
+    document.body.style.overflow = '';
+    const { unmount } = render(
+      <Modal title="T" onClose={jest.fn()}>
+        <input aria-label="C" />
+      </Modal>,
+    );
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('D1 : focus initial sur le premier champ, puis restauration au déclencheur à la fermeture', () => {
+    const trigger = document.createElement('button');
+    trigger.textContent = 'Ouvrir';
+    document.body.appendChild(trigger);
+    trigger.focus();
+
+    const { unmount } = render(
+      <Modal title="T" onClose={jest.fn()}>
+        <input aria-label="Premier champ" />
+      </Modal>,
+    );
+    expect(screen.getByLabelText('Premier champ')).toHaveFocus();
+
+    unmount();
+    expect(trigger).toHaveFocus();
+    trigger.remove();
+  });
+
+  it('D1 : le trap Tab compte les éléments à tabindex et boucle depuis un focus échappé', () => {
+    render(
+      <Modal title="T" onClose={jest.fn()}>
+        <div tabIndex={0} aria-label="Zone focusable" />
+        <input aria-label="Champ" />
+      </Modal>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'T' });
+
+    // Focus échappé (body) : Tab doit ramener sur le premier focusable de la carte.
+    (document.activeElement as HTMLElement | null)?.blur();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+
+    // Depuis le dernier focusable, Tab reboucle sur le premier.
+    screen.getByLabelText('Champ').focus();
+    fireEvent.keyDown(dialog, { key: 'Tab' });
+    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+  });
 });

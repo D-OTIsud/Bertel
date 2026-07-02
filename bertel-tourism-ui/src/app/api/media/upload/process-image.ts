@@ -8,6 +8,12 @@ export type AllowedMime = (typeof ALLOWED_MIME_TYPES)[number];
 export interface ProcessImageInput {
   buffer: Buffer;
   mimeType: string;
+  /**
+   * Max size (px) on both axes. Defaults to MAX_DIMENSION_PX (2000, object media).
+   * Avatars pass a smaller value (see /api/avatar/upload) — a 2000px profile
+   * picture is wasteful bandwidth in cards/emails.
+   */
+  maxDimension?: number;
 }
 
 export interface ProcessImageResult {
@@ -32,13 +38,14 @@ export class MediaProcessingError extends Error {
  * `withoutEnlargement: true` guarantees no upscaling.
  * Throws MediaProcessingError with `code` in {'mime','size','decode'}.
  */
-export async function processImage({ buffer, mimeType }: ProcessImageInput): Promise<ProcessImageResult> {
+export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENSION_PX }: ProcessImageInput): Promise<ProcessImageResult> {
   if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)) {
     throw new MediaProcessingError('mime', `Unsupported MIME type: ${mimeType}`);
   }
   if (buffer.byteLength > MAX_INPUT_BYTES) {
     throw new MediaProcessingError('size', `Input exceeds ${MAX_INPUT_BYTES} bytes`);
   }
+  const maxDim = Number.isFinite(maxDimension) && maxDimension > 0 ? Math.floor(maxDimension) : MAX_DIMENSION_PX;
 
   try {
     const pipeline = sharp(buffer).rotate(); // apply EXIF orientation before stripping
@@ -48,9 +55,9 @@ export async function processImage({ buffer, mimeType }: ProcessImageInput): Pro
       throw new MediaProcessingError('decode', 'Unable to read image dimensions.');
     }
 
-    const needsResize = meta.width > MAX_DIMENSION_PX || meta.height > MAX_DIMENSION_PX;
+    const needsResize = meta.width > maxDim || meta.height > maxDim;
     const finalPipeline = needsResize
-      ? pipeline.resize({ width: MAX_DIMENSION_PX, height: MAX_DIMENSION_PX, fit: 'inside', withoutEnlargement: true })
+      ? pipeline.resize({ width: maxDim, height: maxDim, fit: 'inside', withoutEnlargement: true })
       : pipeline;
 
     // METADATA STRIPPING — defense in depth.

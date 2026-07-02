@@ -7,6 +7,7 @@ import {
   Activity,
   BadgeCheck,
   Bot,
+  CircleUser,
   KeyRound,
   ListChecks,
   MapPin,
@@ -44,6 +45,7 @@ const ACCOUNT_GROUP: SettingsNavGroup = {
   label: 'Mon compte',
   scope: { label: 'tout le monde' },
   sections: [
+    { id: 'profile', label: 'Profil', icon: CircleUser },
     { id: 'preferences', label: 'Préférences', icon: SlidersHorizontal },
     { id: 'session', label: 'Session & rôle', icon: BadgeCheck },
   ],
@@ -96,7 +98,7 @@ export function settingsSectionIds(role: UserRole | null | undefined, options: S
 }
 
 /** Section par défaut (premier panneau de « Mon compte »). */
-export const DEFAULT_SETTINGS_SECTION = 'preferences';
+export const DEFAULT_SETTINGS_SECTION = 'profile';
 
 /** Résout la section active : le `?section=` demandé s'il est accessible, sinon le défaut. */
 export function resolveSettingsSection(

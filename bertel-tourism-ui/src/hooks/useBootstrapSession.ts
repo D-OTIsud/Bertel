@@ -212,6 +212,7 @@ export function useBootstrapSession() {
         email: String(user.email ?? ''),
         userName,
         avatar: initialsFromName(userName),
+        avatarUrl: typeof profile?.avatar_url === 'string' && profile.avatar_url.length > 0 ? profile.avatar_url : null,
         langPrefs,
         canEditObjects,
         canCreateObjects,

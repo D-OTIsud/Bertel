@@ -101,3 +101,33 @@ export async function updateCurrentUserProfile(
   }
 }
 
+/**
+ * Envoie une nouvelle photo de profil via /api/avatar/upload (redimensionnée +
+ * EXIF/GPS strippé serveur, écriture storage en service-role). La route persiste
+ * elle-même `avatar_url` (self-update RLS). Retourne l'URL publique (avec ?v= de
+ * cache-bust) à réappliquer sur la session.
+ */
+export async function uploadAvatar(file: File): Promise<string> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Supabase non configuré.');
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('Session expirée — reconnectez-vous.');
+
+  const body = new FormData();
+  body.append('file', file);
+  const res = await fetch('/api/avatar/upload', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+    body,
+  });
+  if (!res.ok) {
+    const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    if (res.status === 415) throw new Error("Format d'image non supporté (JPEG, PNG ou WebP, ≤ 5 Mo).");
+    throw new Error(j.detail || j.error || "Échec de l'envoi de l'avatar.");
+  }
+  const j = (await res.json()) as { url?: string };
+  if (!j.url) throw new Error("Réponse invalide du serveur d'avatar.");
+  return j.url;
+}
+

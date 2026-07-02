@@ -12,7 +12,7 @@ import { env } from '../lib/env';
 import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schemas';
 import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl, readFileAsDataUrl } from '../lib/theme';
 import { saveBrandingSettings } from '../services/branding';
-import { updateCurrentUserProfile } from '../services/user-profile';
+import { updateCurrentUserProfile, uploadAvatar } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
 import { SettingsRail } from './SettingsRail';
@@ -46,8 +46,12 @@ export default function SettingsPage() {
   const status = useSessionStore((state) => state.status);
   const errorMessage = useSessionStore((state) => state.errorMessage);
   const orgName = useSessionStore((state) => state.orgName);
+  const userName = useSessionStore((state) => state.userName);
+  const email = useSessionStore((state) => state.email);
+  const avatarUrl = useSessionStore((state) => state.avatarUrl);
   const setDemoRole = useSessionStore((state) => state.setDemoRole);
   const setLangPrefs = useSessionStore((state) => state.setLangPrefs);
+  const applyProfile = useSessionStore((state) => state.applyProfile);
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
   const markerStyles = useUiStore((state) => state.markerStyles);
@@ -94,6 +98,66 @@ export default function SettingsPage() {
   const [themeSaving, setThemeSaving] = useState(false);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [pendingLogoCleared, setPendingLogoCleared] = useState(false);
+
+  // « Mon compte » → Profil : nom affiché + photo. Le nom alimente la signature du « mot du
+  // conseiller » (OtiTemplate) et l'avatar de l'app. Écrit dans app_user_profile (self-update RLS).
+  const [nameDraft, setNameDraft] = useState<string>(userName);
+  const [nameSaving, setNameSaving] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  // Le nom peut arriver après le bootstrap (hydratation asynchrone) : resynchroniser le brouillon
+  // tant que l'utilisateur ne l'a pas modifié lui-même.
+  const [nameDirty, setNameDirty] = useState(false);
+  useEffect(() => {
+    if (!nameDirty) setNameDraft(userName);
+  }, [userName, nameDirty]);
+
+  // L'avatar affiché ne doit jamais être l'e-mail : si aucun nom réel n'est enregistré,
+  // le display_name retombe sur l'e-mail — on n'en tire pas d'initiales trompeuses.
+  const hasRealName = userName.trim() !== '' && userName.trim() !== email.trim();
+  const avatarInitials = hasRealName
+    ? userName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('')
+    : '?';
+
+  const handleSaveName = async () => {
+    const next = nameDraft.trim();
+    if (next === '') {
+      toast.error('Le nom ne peut pas être vide.');
+      return;
+    }
+    if (next === userName) {
+      setNameDirty(false);
+      return;
+    }
+    setNameSaving(true);
+    try {
+      if (!demoMode && status === 'ready') {
+        await updateCurrentUserProfile({ display_name: next });
+      }
+      applyProfile({ userName: next });
+      setNameDirty(false);
+      toast.success('Nom enregistré.');
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = ''; // permet de re-sélectionner le même fichier
+    if (!file) return;
+    setAvatarBusy(true);
+    try {
+      const url = await uploadAvatar(file);
+      applyProfile({ avatarUrl: url });
+      toast.success('Photo de profil mise à jour.');
+    } catch (error: unknown) {
+      toast.error((error as Error).message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
 
   const toggleLanguage = (lang: string) => {
     const nextLangPrefs = langPrefs.includes(lang) ? langPrefs.filter((item) => item !== lang) : [...langPrefs, lang];
@@ -618,6 +682,77 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      )}
+
+      {activeSection === 'profile' && (
+      <section className="settings-pane">
+        <div className="settings-pane__head">
+          <div>
+            <h2>Profil</h2>
+            <p>Votre nom et votre photo — visibles dans l’app et dans le « mot du conseiller » de vos sélections.</p>
+          </div>
+        </div>
+
+        <div className="settings-pane__demo">
+          <div className="inline-actions" style={{ alignItems: 'center', gap: 16 }}>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- avatar CDN Supabase, pas d'optimisation next/image requise
+              <img
+                src={avatarUrl}
+                alt="Votre photo de profil"
+                width={64}
+                height={64}
+                style={{ width: 64, height: 64, borderRadius: 999, objectFit: 'cover', flex: 'none' }}
+              />
+            ) : (
+              <span
+                aria-hidden
+                style={{ width: 64, height: 64, borderRadius: 999, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--accent, #1f7a6d)', color: '#fff', fontWeight: 700, fontSize: 22 }}
+              >
+                {avatarInitials}
+              </span>
+            )}
+            <div className="inline-actions">
+              <label className="ghost-button marker-upload-button cursor-pointer">
+                {avatarBusy ? 'Envoi…' : avatarUrl ? 'Changer la photo' : 'Ajouter une photo'}
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="sr-only"
+                  disabled={avatarBusy || demoMode}
+                  onChange={(event) => void handleAvatarChange(event)}
+                />
+              </label>
+            </div>
+          </div>
+          {demoMode && <p className="pref__hint">Photo indisponible en mode démo (aucune session réelle).</p>}
+          <p className="pref__hint">JPEG, PNG ou WebP — ≤ 5 Mo. Redimensionnée et nettoyée (métadonnées EXIF/GPS supprimées) automatiquement.</p>
+        </div>
+
+        <div className="settings-pane__demo">
+          <div className="field-block">
+            <label htmlFor="profileName">Nom affiché</label>
+            <input
+              id="profileName"
+              value={nameDraft}
+              onChange={(event) => { setNameDraft(event.target.value); setNameDirty(true); }}
+              placeholder="Prénom (ou prénom + nom)"
+              autoComplete="name"
+            />
+            <p className="pref__hint">Ex. « David » ou « David Philippe ». C’est ce nom qui signe le « mot du conseiller ».</p>
+          </div>
+          <div className="settings-pane__actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => void handleSaveName()}
+              disabled={nameSaving || nameDraft.trim() === '' || nameDraft.trim() === userName}
+            >
+              {nameSaving ? 'Enregistrement…' : 'Enregistrer le nom'}
+            </button>
+          </div>
+        </div>
+      </section>
       )}
 
       {activeSection === 'preferences' && (

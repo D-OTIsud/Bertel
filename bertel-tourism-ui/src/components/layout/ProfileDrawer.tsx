@@ -31,6 +31,7 @@ function initialsFromName(value: string | null | undefined): string {
 export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const role = useSessionStore((state) => state.role);
   const userName = useSessionStore((state) => state.userName);
+  const avatarUrl = useSessionStore((state) => state.avatarUrl);
   const sessionStatus = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
   const networkStatus = useUiStore((state) => state.networkStatus);
@@ -66,7 +67,10 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
           </div>
 
           <div className="profile-drawer__card">
-            <span className="profile-drawer__avatar">{initials}</span>
+            {avatarUrl
+              // eslint-disable-next-line @next/next/no-img-element -- avatar CDN Supabase
+              ? <img className="profile-drawer__avatar profile-drawer__avatar--photo" src={avatarUrl} alt="" />
+              : <span className="profile-drawer__avatar">{initials}</span>}
             <div>
               <strong>{userLabel}</strong>
               <span>{role ?? 'guest'} · {sessionStatus}</span>

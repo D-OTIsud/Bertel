@@ -41,6 +41,13 @@ describe('processImage — resize', () => {
     expect(result.width).toBe(2000);
     expect(result.height).toBe(2000);
   });
+
+  it('honours a smaller maxDimension (avatars use 512)', async () => {
+    const input = await makeImage(1200, 900);
+    const result = await processImage({ buffer: input, mimeType: 'image/jpeg', maxDimension: 512 });
+    expect(result.width).toBe(512);
+    expect(result.height).toBe(384);
+  });
 });
 
 describe('processImage — metadata stripping', () => {

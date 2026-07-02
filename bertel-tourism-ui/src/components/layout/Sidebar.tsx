@@ -36,6 +36,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
   const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
   const userName = useSessionStore((state) => state.userName);
+  const avatarUrl = useSessionStore((state) => state.avatarUrl);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const items = visibleNavItems(role, demoMode);
@@ -129,7 +130,10 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
             title={userLabel}
           >
             <span className="app-sidebar__avatarbox">
-              <span className="app-sidebar__avatar">{initials}</span>
+              {avatarUrl
+                // eslint-disable-next-line @next/next/no-img-element -- avatar CDN Supabase
+                ? <img className="app-sidebar__avatar app-sidebar__avatar--photo" src={avatarUrl} alt="" />
+                : <span className="app-sidebar__avatar">{initials}</span>}
             </span>
             <span className="app-sidebar__label app-sidebar__profile-name">{userLabel}</span>
           </button>

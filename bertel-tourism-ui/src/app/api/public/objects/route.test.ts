@@ -71,4 +71,65 @@ describe('GET /api/public/objects', () => {
     expect(json.meta.next_cursor).toBe('c2');
     expect(json.data).toEqual([{ id: 'X' }]);
   });
+
+  it('?format=datatourisme — ONE batch call for the page, doc merged under item.<profil> (I4c)', async () => {
+    const page = { info: { next_cursor: 'c2' }, data: [{ id: 'A1' }, { id: 'B2' }, { id: 'C3' }] };
+    const docs = { A1: { '@type': ['PointOfInterest'] }, C3: { '@type': ['PointOfInterest'] } }; // B2 unmapped
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_objects_interop_batch'
+        ? Promise.resolve({ ok: true, status: 200, body: docs })
+        : Promise.resolve({ ok: true, status: 200, body: page }),
+    );
+    const res = await GET(req('?format=datatourisme'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', {
+      p_object_ids: ['A1', 'B2', 'C3'],
+      p_profile: 'datatourisme',
+    });
+    const json = await res.json();
+    expect(json.data[0].datatourisme).toEqual(docs.A1);
+    expect(json.data[1].datatourisme).toBeUndefined(); // unmapped item: key absent, item intact
+    expect(json.data[1].id).toBe('B2');
+    expect(json.data[2].datatourisme).toEqual(docs.C3);
+    expect(json.meta.next_cursor).toBe('c2'); // pagination untouched
+  });
+
+  it('?format=jsonld — the list batch also serves the schema.org profile', async () => {
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_objects_interop_batch'
+        ? Promise.resolve({ ok: true, status: 200, body: { X: { '@type': 'Hotel' } } })
+        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
+    );
+    const res = await GET(req('?format=jsonld'));
+    const json = await res.json();
+    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', { p_object_ids: ['X'], p_profile: 'jsonld' });
+    expect(json.data[0].jsonld).toEqual({ '@type': 'Hotel' });
+  });
+
+  it('?format=apidae — degrades to the plain page if the batch fails (fail-open)', async () => {
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_objects_interop_batch'
+        ? Promise.resolve({ ok: false, status: 502, body: { error: 'upstream_error' } })
+        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
+    );
+    const res = await GET(req('?format=apidae'));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.data).toEqual([{ id: 'X' }]); // page intact, no apidae key
+  });
+
+  it('?format=<unknown> — ignored: batch RPC never called', async () => {
+    const res = await GET(req('?format=xml'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
+    const json = await res.json();
+    expect(json.data).toEqual([{ id: 'X' }]);
+  });
+
+  it('?format=tourinsoft — empty page: batch RPC not called', async () => {
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: {}, data: [] } });
+    const res = await GET(req('?format=tourinsoft'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
+  });
 });

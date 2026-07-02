@@ -77,7 +77,7 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
   it('résout nom + type depuis l annuaire et rend le lien éditeur', async () => {
     renderView();
     expect(await screen.findByText('Hotel Basalte & Lagon')).toBeInTheDocument();
-    expect(screen.getByText('Hotel')).toBeInTheDocument(); // TypeTag rend le libellé FR (résolveur §2)
+    expect(screen.getByText('Hôtel')).toBeInTheDocument(); // TypeTag rend le libellé FR (résolveur §2)
     const editorLink = screen.getByRole('link', { name: /ouvrir dans l.éditeur/i });
     expect(editorLink).toHaveAttribute('href', '/objects/obj-1/edit');
   });

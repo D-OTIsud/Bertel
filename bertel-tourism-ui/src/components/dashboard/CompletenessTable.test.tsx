@@ -39,7 +39,7 @@ describe('CompletenessTable', () => {
 
   it('clic sur la pastille de type filtre sur ce type (drill-down toggle)', () => {
     render(<CompletenessTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Hebergement loisir' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gîte & meublé' }));
     expect(useDashboardFilterStore.getState().filters.types).toEqual(['HLO']);
   });
 });

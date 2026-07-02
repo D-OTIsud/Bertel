@@ -29,30 +29,11 @@ import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
-  { code: 'published', label: 'Publie' },
+  { code: 'published', label: 'Publié' },
   { code: 'draft', label: 'Brouillon' },
 ];
-
-const hotSubtypeLabels: Record<BackendObjectTypeCode, string> = {
-  HOT: 'Hotels',
-  HPA: 'Hotellerie plein air',
-  HLO: 'Loisirs heberges',
-  CAMP: 'Campings',
-  RVA: 'Residences vacances',
-  RES: 'Restaurants',
-  ITI: 'Itineraires',
-  FMA: 'Evenements',
-  ACT: 'Activites encadrees',
-  LOI: 'Loisirs',
-  PCU: 'Culture',
-  PNA: 'Nature',
-  VIL: 'Villages',
-  COM: 'Commerces',
-  PSV: 'Prestataires',
-  ASC: 'Activites',
-  SPU: 'Services publics',
-  PRD: 'Producteurs',
-};
+// §153 : plus de map de libellés locale — resolveTypeLabel (TYPE_LABEL) est la
+// source unique, la même que les cartes résultats et le tiroir.
 
 interface FiltersPanelProps {
   compact?: boolean;
@@ -333,7 +314,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
       {visibleAccessibilityAmenities.length > 0 ? (
         <div>
-          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Amenagements precis</span>
+          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Aménagements précis</span>
           <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
             {visibleAccessibilityAmenities.map((amenity) => {
               const active = accessibilityAmenityCodesAny.includes(amenity.code);
@@ -356,9 +337,9 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
         <p className="text-[12px] leading-snug text-ink-3">
           {accessibilityAmenities.length > 0
             ? accessibilityDisabilityTypesAny.length > 0
-              ? 'Aucun amenagement du referentiel ne correspond a ce type.'
-              : 'Choisissez un type pour afficher les amenagements associes.'
-            : 'Les amenagements seront proposes des que le referentiel sera charge.'}
+              ? 'Aucun aménagement ne correspond à ce type.'
+              : 'Choisissez un type pour afficher les aménagements associés.'
+            : 'Chargement des aménagements…'}
         </p>
       )}
     </div>
@@ -388,12 +369,12 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           </div>
         </div>
       ) : (
-        <p className="text-[12px] leading-snug text-ink-3">Les axes durables seront proposes des que le referentiel sera charge.</p>
+        <p className="text-[12px] leading-snug text-ink-3">Chargement des axes durables…</p>
       )}
 
       {visibleSustainabilityActions.length > 0 ? (
         <div>
-          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Actions precises</span>
+          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Actions engagées</span>
           <div className={isColumn ? 'flex flex-wrap gap-2' : 'chip-grid'}>
             {visibleSustainabilityActions.map((action) => {
               const active = sustainabilityActionCodesAny.includes(action.code);
@@ -413,7 +394,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           </div>
         </div>
       ) : sustainabilityCategories.length > 0 ? (
-        <p className="text-[12px] leading-snug text-ink-3">Choisissez un axe pour afficher les actions associees.</p>
+        <p className="text-[12px] leading-snug text-ink-3">Choisissez un axe pour afficher les actions associées.</p>
       ) : null}
     </div>
   );
@@ -435,7 +416,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
             <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} actifs</span>
           </div>
           <button type="button" onClick={resetAll} className="text-[12px] font-semibold text-orange-2 hover:text-orange">
-            Reinitialiser
+            Réinitialiser
           </button>
         </div>
       ) : (
@@ -448,14 +429,14 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           </div>
 
           <Button type="button" variant="ghost" className="filters-panel__reset" onClick={resetAll}>
-            Reinitialiser
+            Réinitialiser
           </Button>
         </>
       )}
 
       {isColumn ? (
         <div className="flex-1 overflow-y-auto px-4 pb-6 pt-1">
-          <FilterColumnGroup label="Categorie">
+          <FilterColumnGroup label="Catégorie">
             <div className="flex flex-wrap gap-2">
               {EXPLORER_BUCKET_OPTIONS.map((option) => (
                 <button
@@ -532,7 +513,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           <FilterColumnGroup label="Labels & certifications" count={labelFilterCount > 0 ? labelFilterCount : undefined}>
             <div className="space-y-3">
               <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Label recherche</span>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Classement / label</span>
                 <FilterDropdown<string>
                   mode="single"
                   placeholder="Tous les labels"
@@ -560,7 +541,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                   </button>
                 </div>
               ) : (
-                <p className="text-[12px] leading-snug text-ink-3">Cliquez une etiquette dans la liste des resultats pour filtrer.</p>
+                <p className="text-[12px] leading-snug text-ink-3">Cliquez sur un label dans la liste des résultats pour filtrer.</p>
               )}
             </div>
           </FilterColumnGroup>
@@ -589,41 +570,41 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 </button>
               </div>
             ) : (
-              <p className="text-[12px] leading-snug text-ink-3">Cliquez un tag colore dans la liste des resultats pour filtrer.</p>
+              <p className="text-[12px] leading-snug text-ink-3">Cliquez sur un tag coloré dans la liste des résultats pour filtrer.</p>
             )}
           </FilterColumnGroup>
 
           <FilterColumnGroup
-            label="Accessibilite et services"
+            label="Accessibilité et services"
             count={accessibilityDetailCount + sustainabilityDetailCount > 0 ? accessibilityDetailCount + sustainabilityDetailCount : undefined}
           >
             <div className="flex flex-col gap-2">
               <label className="switch-row">
-                <span>PMR</span>
+                <span>Accessibilité (PMR)</span>
                 <input type="checkbox" checked={pmr} onChange={(event) => setPmr(event.target.checked)} />
               </label>
               {pmr ? renderAccessibilityDetails() : null}
               <label className="switch-row">
-                <span>Demarche durable</span>
+                <span>Démarche durable</span>
                 <input type="checkbox" checked={sustainable} onChange={(event) => setSustainable(event.target.checked)} />
               </label>
               {sustainable ? renderSustainabilityDetails() : null}
               <label className="switch-row">
-                <span>Animaux acceptes</span>
+                <span>Animaux acceptés</span>
                 <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
               </label>
               <label className="switch-row">
-                <span>Ouvert en ce moment</span>
+                <span>Ouvert maintenant</span>
                 <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
               </label>
             </div>
           </FilterColumnGroup>
 
           {showHot ? (
-            <FilterColumnGroup label="Hebergements" collapsible count={hotSectionCount || undefined}>
+            <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
               <div className="space-y-4">
                 <div>
-                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types hebergement</span>
+                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types hébergement</span>
                   <div className="flex flex-wrap gap-2">
                     {HOT_BUCKET_TYPES.map((type) => (
                       <button
@@ -632,7 +613,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                         className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
                         onClick={() => toggleHotSubtype(type)}
                       >
-                        {hotSubtypeLabels[type]}
+                        {resolveTypeLabel(type)}
                       </button>
                     ))}
                   </div>
@@ -699,7 +680,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 ) : null}
 
                 <div>
-                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Salles de reunion</span>
+                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Salles de réunion</span>
                   <div className="filters-panel__range-grid">
                     <Input
                       type="number"
@@ -722,7 +703,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                       onChange={(event) =>
                         setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })
                       }
-                      placeholder="Cap. theatre min"
+                      placeholder="Cap. théâtre min"
                     />
                     <Input
                       type="number"
@@ -818,7 +799,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showIti ? (
-            <FilterColumnGroup label="Itineraires" collapsible count={itiSectionCount || undefined}>
+            <FilterColumnGroup label="Itinéraires" collapsible count={itiSectionCount || undefined}>
               <div className="space-y-4">
                 <div>
                   <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de parcours</span>
@@ -826,7 +807,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                     {[
                       { label: 'Tous', value: null as boolean | null },
                       { label: 'Boucle', value: true },
-                      { label: 'Aller-retour', value: false },
+                      { label: 'Linéaire', value: false },
                     ].map((option) => (
                       <button
                         key={String(option.value)}
@@ -841,7 +822,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 </div>
 
                 <div className="facet-group">
-                  <span className="facet-title">Difficulte</span>
+                  <span className="facet-title">Difficulté</span>
                   <div className="filters-panel__range-grid">
                     <Input
                       type="number"
@@ -883,7 +864,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 </div>
 
                 <div className="facet-group">
-                  <span className="facet-title">Duree (h)</span>
+                  <span className="facet-title">Durée (h)</span>
                   <div className="filters-panel__range-grid">
                     <Input
                       type="number"
@@ -927,8 +908,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
         </div>
       ) : (
         <div className="filters-panel__content">
-          <FiltersSection eyebrow="Base" title="Filtres generaux">
-            <FiltersSubsection title="Categories">
+          <FiltersSection eyebrow="Base" title="Filtres généraux">
+            <FiltersSubsection title="Catégories">
               <div className="chip-grid">
                 {EXPLORER_BUCKET_OPTIONS.map((option) => (
                   <button
@@ -969,27 +950,27 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               </div>
             </FiltersSubsection>
 
-            <FiltersSubsection title="Accessibilite et services">
+            <FiltersSubsection title="Accessibilité et services">
               <div className="filters-panel__toggle-group">
                 <label className="switch-row">
-                  <span>PMR</span>
+                  <span>Accessibilité (PMR)</span>
                   <input type="checkbox" checked={pmr} onChange={(event) => setPmr(event.target.checked)} />
                 </label>
                 {pmr ? renderAccessibilityDetails() : null}
 
                 <label className="switch-row">
-                  <span>Demarche durable</span>
+                  <span>Démarche durable</span>
                   <input type="checkbox" checked={sustainable} onChange={(event) => setSustainable(event.target.checked)} />
                 </label>
                 {sustainable ? renderSustainabilityDetails() : null}
 
                 <label className="switch-row">
-                  <span>Animaux acceptes</span>
+                  <span>Animaux acceptés</span>
                   <input type="checkbox" checked={common.petsAccepted} onChange={(event) => setPetsAccepted(event.target.checked)} />
                 </label>
 
                 <label className="switch-row">
-                  <span>Ouvert en ce moment</span>
+                  <span>Ouvert maintenant</span>
                   <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
                 </label>
               </div>
@@ -1079,8 +1060,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           </FiltersSection>
 
           {showHot ? (
-            <FiltersSection eyebrow="Categorie active" title="Hebergements">
-              <FiltersSubsection title="Sous-types hebergement">
+            <FiltersSection eyebrow="Catégorie active" title="Hébergements">
+              <FiltersSubsection title="Sous-types hébergement">
                 <div className="chip-grid">
                   {HOT_BUCKET_TYPES.map((type) => (
                     <button
@@ -1089,7 +1070,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                       className={hot.subtypes.includes(type) ? 'chip chip--active' : 'chip'}
                       onClick={() => toggleHotSubtype(type)}
                     >
-                      {hotSubtypeLabels[type]}
+                      {resolveTypeLabel(type)}
                     </button>
                   ))}
                 </div>
@@ -1117,7 +1098,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
               ))}
 
               {references?.hotCapacityMetrics.length ? (
-                <FiltersSubsection title="Capacites hebergement">
+                <FiltersSubsection title="Capacités hébergement">
                   <div className="filters-panel__metric-stack">
                     {references.hotCapacityMetrics.map((metric) => (
                       <div key={metric.code} className="filters-panel__metric-row">
@@ -1156,7 +1137,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 </FiltersSubsection>
               ) : null}
 
-              <FiltersSubsection title="Salles de reunion">
+              <FiltersSubsection title="Salles de réunion">
                 <div className="filters-panel__range-grid">
                   <Input
                     type="number"
@@ -1179,7 +1160,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                     onChange={(event) =>
                       setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })
                     }
-                    placeholder="Cap. theatre min"
+                    placeholder="Cap. théâtre min"
                   />
                   <Input
                     type="number"
@@ -1196,8 +1177,8 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showRes && references?.resCapacityMetrics.length ? (
-            <FiltersSection eyebrow="Categorie active" title="Restaurants">
-              <FiltersSubsection title="Capacites restaurant">
+            <FiltersSection eyebrow="Catégorie active" title="Restaurants">
+              <FiltersSubsection title="Capacités restaurant">
                 <div className="filters-panel__metric-stack">
                   {references.resCapacityMetrics.map((metric) => (
                     <div key={metric.code} className="filters-panel__metric-row">
@@ -1238,13 +1219,13 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showIti ? (
-            <FiltersSection eyebrow="Categorie active" title="Itineraires">
+            <FiltersSection eyebrow="Catégorie active" title="Itinéraires">
               <FiltersSubsection title="Type de parcours">
                 <div className="chip-grid">
                   {[
                     { label: 'Tous', value: null },
                     { label: 'Boucle', value: true },
-                    { label: 'Aller-retour', value: false },
+                    { label: 'Linéaire', value: false },
                   ].map((option) => (
                     <button
                       key={String(option.value)}
@@ -1260,7 +1241,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
 
               <FiltersSubsection title="Effort et distance">
                 <div className="facet-group">
-                  <span className="facet-title">Difficulte</span>
+                  <span className="facet-title">Difficulté</span>
                   <div className="filters-panel__range-grid">
                     <Input
                       type="number"
@@ -1302,7 +1283,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 </div>
 
                 <div className="facet-group">
-                  <span className="facet-title">Duree (h)</span>
+                  <span className="facet-title">Durée (h)</span>
                   <div className="filters-panel__range-grid">
                     <Input
                       type="number"

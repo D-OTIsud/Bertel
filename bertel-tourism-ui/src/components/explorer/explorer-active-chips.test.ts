@@ -111,3 +111,10 @@ describe('buildExplorerActiveChips', () => {
     });
   });
 });
+
+describe('cadre & environnement (§154)', () => {
+  it('rend une chip compteur retirable pour les tags environnement', () => {
+    const chips = buildExplorerActiveChips(filters({ environmentTagsAny: ['volcan', 'foret'] }));
+    expect(chips.find((c) => c.group === 'environment')?.label).toBe('Cadre · 2 critères');
+  });
+});

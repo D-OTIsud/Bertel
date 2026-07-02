@@ -32,6 +32,8 @@ interface ExplorerState extends ExplorerFilters {
   toggleSustainabilityAction: (code: string) => void;
   setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
+  /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
+  setEnvironmentTags: (codes: string[]) => void;
   setRankedLabelScheme: (schemeCode: string | null) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
@@ -124,11 +126,6 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
       ...partial.iti,
       practicesAny: partial.iti?.practicesAny ?? currentBase.iti.practicesAny,
     },
-    act: {
-      ...currentBase.act,
-      ...partial.act,
-      environmentTagsAny: partial.act?.environmentTagsAny ?? currentBase.act.environmentTagsAny,
-    },
     vis: {
       ...currentBase.vis,
       ...partial.vis,
@@ -171,8 +168,6 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
           return { selectedBuckets, res: { capacityFilters: [] } };
         case 'ITI':
           return { selectedBuckets, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
-        case 'ACT':
-          return { selectedBuckets, act: { environmentTagsAny: [] } };
         case 'VIS':
           return { selectedBuckets, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
         case 'SRV':
@@ -182,6 +177,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       }
     }),
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
+  // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters).
+  setEnvironmentTags: (codes) => set((state) => ({ common: { ...state.common, environmentTagsAny: codes } })),
   setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
   setPmr: (value) =>

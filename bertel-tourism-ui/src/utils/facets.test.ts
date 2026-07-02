@@ -75,10 +75,6 @@ function buildFilters(overrides: Partial<ExplorerFilters> = {}): ExplorerFilters
       ...DEFAULT_EXPLORER_FILTERS.iti,
       ...overrides.iti,
     },
-    act: {
-      ...DEFAULT_EXPLORER_FILTERS.act,
-      ...overrides.act,
-    },
     selectedBuckets: overrides.selectedBuckets ?? DEFAULT_EXPLORER_FILTERS.selectedBuckets,
     vis: overrides.vis ?? DEFAULT_EXPLORER_FILTERS.vis,
     srv: overrides.srv ?? DEFAULT_EXPLORER_FILTERS.srv,
@@ -319,11 +315,11 @@ describe('hasServerOnlyFilters', () => {
     ).toBe(true);
   });
 
-  it('detects ACT environment tags', () => {
+  it('detects environment tags (transverse §154)', () => {
     expect(
       hasServerOnlyFilters(
         buildFilters({
-          act: { environmentTagsAny: ['forest'] },
+          common: { ...DEFAULT_EXPLORER_FILTERS.common, environmentTagsAny: ['foret'] },
         }),
       ),
     ).toBe(true);
@@ -532,5 +528,20 @@ describe('sortExplorerCards', () => {
     ];
 
     expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['certified', 'evidence']);
+  });
+});
+
+describe('buildBucketRpcFilters — cadre & environnement (§154, transverse)', () => {
+  it('émet environment_tags_any pour TOUS les buckets (plus de gating ACT)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, environmentTagsAny: ['volcan', 'bord_mer'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'RES').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+    expect(buildBucketRpcFilters(filters, 'HOT').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+    expect(buildBucketRpcFilters(filters, 'ACT').environment_tags_any).toEqual(['volcan', 'bord_mer']);
+  });
+
+  it("n'émet rien sans sélection", () => {
+    expect(buildBucketRpcFilters(buildFilters(), 'RES').environment_tags_any).toBeUndefined();
   });
 });

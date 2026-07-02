@@ -129,6 +129,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
   const selectCard = useExplorerStore((state) => state.selectCard);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
@@ -403,6 +404,8 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
   const handleMarkerEnter = useCallback(
     (card: ObjectCard, lng: number, lat: number) => {
       markerHoveredRef.current = true;
+      // D20 : survol croisé — la carte-résultat correspondante se surligne dans la liste.
+      useExplorerStore.getState().setHoveredCard(card.id);
       clearCloseTimer();
       clearOpenTimer();
       openTimerRef.current = window.setTimeout(() => {
@@ -425,6 +428,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
 
   const handleMarkerLeave = useCallback(() => {
     markerHoveredRef.current = false;
+    useExplorerStore.getState().setHoveredCard(null);
     clearOpenTimer();
     schedulePopupClose();
   }, [clearOpenTimer, schedulePopupClose]);
@@ -806,7 +810,11 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
               <Marker key={card.id} longitude={longitude} latitude={latitude} anchor="bottom">
                 <button
                   type="button"
-                  className={cn('map-marker-pin', selectedObjectIdSet.has(card.id) && 'map-marker-pin--selected')}
+                  className={cn(
+                    'map-marker-pin',
+                    selectedObjectIdSet.has(card.id) && 'map-marker-pin--selected',
+                    hoveredCardId === card.id && 'map-marker-pin--hovered',
+                  )}
                   onPointerEnter={() => handleMarkerEnter(card, longitude, latitude)}
                   onPointerLeave={() => handleMarkerLeave()}
                   onClick={() => handleMarkerClick(card.id)}

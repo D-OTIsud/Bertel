@@ -71,6 +71,8 @@ export function ResultsList({
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
+  const setHoveredCard = useExplorerStore((state) => state.setHoveredCard);
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
   const visibleCards = hasMounted ? cards : [];
   const showLoading = loading || !hasMounted;
@@ -212,8 +214,10 @@ export function ResultsList({
               card={card}
               domId={toResultCardDomId(card.id)}
               isSelected={isSelected}
+              isHovered={hoveredCardId === card.id}
               inSelection={inSelection}
               onOpen={() => openDrawer(card.id)}
+              onHoverChange={(hovered) => setHoveredCard(hovered ? card.id : null)}
               onToggleLabel={toggleLabel}
               onToggleTag={toggleTag}
               onToggleSelect={(event) => {

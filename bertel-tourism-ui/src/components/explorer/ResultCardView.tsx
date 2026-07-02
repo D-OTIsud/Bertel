@@ -238,8 +238,12 @@ interface ResultCardViewProps {
   /** When false (the §09 preview), the card is inert: no navigation, label filtering or star. */
   interactive?: boolean;
   isSelected?: boolean;
+  /** D20 : surbrillance croisée liste↔carte (survol du marqueur correspondant). */
+  isHovered?: boolean;
   inSelection?: boolean;
   onOpen?: () => void;
+  /** D20 : signale l'entrée/sortie du pointeur pour surligner le marqueur carte. */
+  onHoverChange?: (hovered: boolean) => void;
   onToggleLabel?: (label: string) => void;
   /** Click-to-filter for a colored §09 tag chip (cards + map). Inert when omitted or interactive=false. */
   onToggleTag?: (tag: ExplorerTagFilter) => void;
@@ -251,8 +255,10 @@ export function ResultCardView({
   domId,
   interactive = true,
   isSelected = false,
+  isHovered = false,
   inSelection = false,
   onOpen,
+  onHoverChange,
   onToggleLabel,
   onToggleTag,
   onToggleSelect,
@@ -283,7 +289,11 @@ export function ResultCardView({
   return (
     <div
       id={domId}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={() => onHoverChange?.(true)}
+      onMouseLeave={() => {
+        setExpanded(false);
+        onHoverChange?.(false);
+      }}
       {...(containerInteractive
         ? {
             role: 'button',
@@ -306,6 +316,7 @@ export function ResultCardView({
         expanded ? 'min-h-[116px]' : 'h-[116px]',
         containerInteractive && 'cursor-pointer transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
         isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
+        isHovered && !isSelected && 'border-lineStrong shadow-m',
       )}
     >
       {/* Miniature + signet « à cheval » (impl. 3.1) : cocarde de classement (HEB) en

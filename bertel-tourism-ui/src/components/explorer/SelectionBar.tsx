@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Download, ListPlus, Printer, ShoppingBag, Trash2 } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -127,7 +128,23 @@ export function SelectionBar() {
 
       <button
         type="button"
-        onClick={() => selectAllVisible()}
+        onClick={() => {
+          // D9 : « tout sélectionner » n'est plus silencieux — compte + Annuler
+          // (risqué à 500+ fiches : la sélection précédente est restaurable).
+          const previous = selectedObjectIds;
+          selectAllVisible();
+          const next = useExplorerStore.getState().selectedObjectIds.length;
+          if (next === 0) {
+            toast.warning('Aucune fiche visible à sélectionner.');
+            return;
+          }
+          toast.info(`${next} fiche${next > 1 ? 's' : ''} sélectionnée${next > 1 ? 's' : ''}`, {
+            action: {
+              label: 'Annuler',
+              onClick: () => useExplorerStore.getState().replaceSelection(previous),
+            },
+          });
+        }}
         className={enabledAction}
       >
         <ShoppingBag className="h-3.5 w-3.5 shrink-0" />

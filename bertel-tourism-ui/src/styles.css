@@ -447,6 +447,13 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Survol croisé liste↔carte (D20) : marqueur surligné quand sa carte est survolée ---- */
+.map-marker-pin--hovered {
+  transform: scale(1.18);
+  filter: drop-shadow(0 2px 6px rgba(24, 49, 59, 0.45));
+  z-index: 5;
+}
+
 /* ---- Modération : diff avant/après + métadonnées (D6) ---- */
 .mod-diff { margin: 0; font-size: 13.5px; line-height: 1.5; }
 .mod-diff del {

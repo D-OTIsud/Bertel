@@ -149,7 +149,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
             placeholder="ex. Hôtel des Cimes"
             autoComplete="off"
             autoFocus
-            className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow placeholder:text-ink-3/70 focus:border-ink-3 focus:ring-2 focus:ring-ink-3/25"
+            className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow focus:border-ink-3 focus:ring-2 focus:ring-lineStrong"
           />
 
           {showMatches ? (

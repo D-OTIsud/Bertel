@@ -59,7 +59,7 @@ export const SECTION_COMPONENTS: Record<string, ComponentType<SectionProps>> = {
   // §90 — §20 « Distribution & réseaux sociaux » retired: it projected the OPERATOR actor's
   // actor_channel (which cannot hold social/distribution kinds ⇒ always empty). Réseaux sociaux
   // + distribution now live on the OBJECT in §03 (object_web_channel). SectionDistribution.tsx
-  // is dead (kept for the PO to remove).
+  // removed in D5 (revue UX).
   '21': SectionPublication,
   '22': SectionSync,
 };

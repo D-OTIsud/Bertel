@@ -2,7 +2,7 @@ import type { ExplorerFilters } from '../types/domain';
 import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 import { itemsToOtiPois } from '../features/lists/OtiTemplate';
 import { webHref, webLabel } from '../features/lists/type-meta';
-import { buildDynamicListFilters, parseListCard, parseListDetail } from './lists';
+import { buildDynamicListFilters, moveListItem, parseListCard, parseListDetail } from './lists';
 
 const rawDetail = {
   id: 'L1',
@@ -147,6 +147,22 @@ describe('webHref / webLabel', () => {
   it('renders a short label without protocol nor trailing slash', () => {
     expect(webLabel('http://www.bellile.re/')).toBe('www.bellile.re');
     expect(webLabel('exemple-sud.re')).toBe('exemple-sud.re');
+  });
+});
+
+describe('moveListItem', () => {
+  it('moves an item forward and backward without mutating the source', () => {
+    const src = ['a', 'b', 'c', 'd'];
+    expect(moveListItem(src, 0, 2)).toEqual(['b', 'c', 'a', 'd']);
+    expect(moveListItem(src, 3, 0)).toEqual(['d', 'a', 'b', 'c']);
+    expect(src).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('is a no-op on same-index or out-of-bounds moves', () => {
+    const src = ['a', 'b'];
+    expect(moveListItem(src, 1, 1)).toEqual(src);
+    expect(moveListItem(src, -1, 0)).toEqual(src);
+    expect(moveListItem(src, 0, 5)).toEqual(src);
   });
 });
 

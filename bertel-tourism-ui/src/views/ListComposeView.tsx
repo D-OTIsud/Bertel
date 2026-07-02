@@ -3,23 +3,28 @@
 // Module Listes — composition d'une liste (éditeur à gauche + aperçu brandé live à droite).
 // Lecture/écriture via les RPC DEFINER. L'aperçu utilise OtiTemplate (le MÊME rendu que la
 // page publique), dans le canal choisi (email étroit / PDF A4 / lien web) et la langue choisie.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Check, Copy, Globe, Link2, Loader2, Mail, Printer, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Globe, GripVertical, Link2, Loader2, Mail, MapPin, Plus, Printer, Search, Trash2, X } from 'lucide-react';
 import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
 import ChannelFrame from '@/features/lists/ChannelFrame';
+import { ACCENT_INK } from '@/features/lists/type-meta';
+import { useObjectSearch, type ObjectSearchResult } from '@/features/object-editor/useObjectSearch';
 import { useSessionStore } from '@/store/session-store';
 import {
   deleteList,
   getList,
+  moveListItem,
   sendListByEmail,
   setListItems,
   shareList,
   updateList,
+  type ListAccent,
   type ListTemplate,
+  type ObjectListDetail,
   type ObjectListItem,
 } from '@/services/lists';
 import { cn } from '@/lib/utils';
@@ -29,6 +34,12 @@ const TEMPLATES: Array<{ k: ListTemplate; label: string }> = [
   { k: 'carnet', label: 'Carnet' },
   { k: 'grille', label: 'Grille' },
   { k: 'itineraire', label: 'Itinéraire' },
+];
+const ACCENTS: Array<{ k: ListAccent; label: string }> = [
+  { k: 'teal', label: 'Teal' },
+  { k: 'green', label: 'Vert' },
+  { k: 'gold', label: 'Or' },
+  { k: 'terra', label: 'Terracotta' },
 ];
 
 export default function ListComposeView({ listId }: { listId: string }) {
@@ -49,11 +60,17 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const [previewLang, setPreviewLang] = useState<'fr' | 'en'>('fr');
   const [mounted, setMounted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [drag, setDrag] = useState<{ from: number | null; over: number | null }>({ from: null, over: null });
+  const [addQuery, setAddQuery] = useState('');
+  const hydratedListId = useRef<string | null>(null);
 
   useEffect(() => setMounted(true), []);
 
+  // Hydrate l'état d'édition à l'arrivée de la liste (ou au changement de liste) UNIQUEMENT :
+  // re-hydrater à chaque refetch clobberait les notes/l'ordre non enregistrés (write-trap).
   useEffect(() => {
-    if (!detail) return;
+    if (!detail || hydratedListId.current === detail.id) return;
+    hydratedListId.current = detail.id;
     setName(detail.name);
     setRecipient(detail.recipientLabel ?? '');
     setIntro(detail.lang === 'en' ? (detail.introEn ?? '') : (detail.introFr ?? ''));
@@ -66,9 +83,16 @@ export default function ListComposeView({ listId }: { listId: string }) {
     void queryClient.invalidateQueries({ queryKey: ['list', listId] });
     void queryClient.invalidateQueries({ queryKey: ['my-lists'] });
   };
+  // Rafraîchit le cache depuis le détail renvoyé par la mutation (pas de refetch, pas de
+  // ré-hydratation des champs en cours d'édition).
+  const applyFresh = (fresh: ObjectListDetail | null) => {
+    if (fresh) queryClient.setQueryData(['list', listId], fresh);
+    else void queryClient.invalidateQueries({ queryKey: ['list', listId] });
+    void queryClient.invalidateQueries({ queryKey: ['my-lists'] });
+  };
   const updateMeta = useMutation({
     mutationFn: (patch: Parameters<typeof updateList>[1]) => updateList(listId, patch),
-    onSuccess: invalidate,
+    onSuccess: applyFresh,
   });
   const saveItems = useMutation({
     mutationFn: () =>
@@ -76,7 +100,11 @@ export default function ListComposeView({ listId }: { listId: string }) {
         listId,
         items.map((it, i) => ({ object_id: it.objectId, position: i, note_fr: it.noteFr, note_en: it.noteEn })),
       ),
-    onSuccess: invalidate,
+    onSuccess: (fresh) => {
+      applyFresh(fresh);
+      // resynchronise l'ordre/les cartes depuis le serveur (les ajouts reçoivent image + contacts)
+      if (fresh) setItems(fresh.items);
+    },
   });
   const share = useMutation({ mutationFn: (enable: boolean) => shareList(listId, enable), onSuccess: invalidate });
   const remove = useMutation({
@@ -86,6 +114,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
       router.push('/listes');
     },
   });
+
+  // Palette « Ajouter un lieu » (listes statiques) — même recherche nom/commune que les pickers §15/§19.
+  const objectSearch = useObjectSearch(addQuery, { enabled: detail?.kind === 'static' });
 
   if (detailQuery.isLoading) {
     return (
@@ -126,9 +157,48 @@ export default function ListComposeView({ listId }: { listId: string }) {
       ),
     );
   }
+  function addFromSearch(r: ObjectSearchResult) {
+    setAddQuery('');
+    setItems((prev) => {
+      if (prev.some((it) => it.objectId === r.id)) return prev;
+      // carte minimale (nom/commune/type) ; image + contacts arrivent du serveur après « Enregistrer »
+      return [
+        ...prev,
+        {
+          objectId: r.id,
+          position: prev.length,
+          noteFr: null,
+          noteEn: null,
+          card: { id: r.id, name: r.name, type: r.type, image: null, city: r.city || null, description: null, raw: {} },
+          phone: null,
+          web: null,
+        },
+      ];
+    });
+  }
+  function dropItem(to: number) {
+    const from = drag.from;
+    if (from !== null) setItems((prev) => moveListItem(prev, from, to));
+    setDrag({ from: null, over: null });
+  }
+  function changeListLang(l: 'fr' | 'en') {
+    if (!detail || detail.lang === l) return;
+    updateMeta.mutate(
+      { lang: l },
+      {
+        onSuccess: (fresh) => {
+          if (!fresh) return;
+          setPreviewLang(fresh.lang);
+          setIntro(fresh.lang === 'en' ? (fresh.introEn ?? '') : (fresh.introFr ?? ''));
+        },
+      },
+    );
+  }
   function chooseTemplate(k: ListTemplate) {
     setTemplate(k);
-    if (k !== detail?.template) updateMeta.mutate({ template: k });
+    if (!detail || k === detail.template) return;
+    // comme le mock : passer en Itinéraire active la carte récap si elle ne l'était pas
+    updateMeta.mutate(k === 'itineraire' && !detail.showMap ? { template: k, show_map: true } : { template: k });
   }
   async function handleSend() {
     const email = window.prompt('Adresse e-mail du destinataire :', '')?.trim();
@@ -313,12 +383,42 @@ export default function ListComposeView({ listId }: { listId: string }) {
 
               {items.length === 0 ? (
                 <p className="rounded-xl border border-dashed p-6 text-center text-[13px] text-ink/50">
-                  Aucun lieu. Ajoutez-en depuis l'explorateur (sélection → « Créer une liste »).
+                  {isDynamic
+                    ? 'Aucun lieu publié ne correspond aux filtres pour le moment.'
+                    : 'Aucun lieu. Ajoutez-en ci-dessous, ou depuis l’explorateur (sélection → « Créer une liste »).'}
                 </p>
               ) : (
                 <ul className="space-y-2">
                   {items.map((it, i) => (
-                    <li key={it.objectId} className="flex gap-3 rounded-xl border bg-white p-2.5">
+                    <li
+                      key={it.objectId}
+                      draggable={!isDynamic}
+                      onDragStart={() => setDrag({ from: i, over: i })}
+                      onDragOver={(e) => {
+                        if (drag.from === null) return;
+                        e.preventDefault();
+                        setDrag((d) => (d.over === i ? d : { ...d, over: i }));
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        dropItem(i);
+                      }}
+                      onDragEnd={() => setDrag({ from: null, over: null })}
+                      className={cn(
+                        'flex gap-3 rounded-xl border bg-white p-2.5 transition',
+                        drag.from === i && 'opacity-50',
+                        drag.from !== null && drag.from !== i && drag.over === i && 'border-orange ring-1 ring-orange/40',
+                      )}
+                    >
+                      {!isDynamic && (
+                        <span
+                          className="grid w-5 shrink-0 cursor-grab place-items-center self-center text-ink/30"
+                          title="Glisser pour réordonner"
+                          aria-hidden
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </span>
+                      )}
                       <span
                         className="h-12 w-14 shrink-0 rounded-lg bg-ink/10 bg-cover bg-center"
                         style={{ backgroundImage: it.card?.image ? `url("${it.card.image}")` : undefined }}
@@ -352,6 +452,125 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   ))}
                 </ul>
               )}
+
+              {/* Palette d'ajout (statique) — recherche nom/commune, clic = ajout en fin de liste */}
+              {!isDynamic && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-xl border px-3 py-2 focus-within:border-orange">
+                    <Search className="h-4 w-4 shrink-0 text-ink/40" />
+                    <input
+                      value={addQuery}
+                      onChange={(e) => setAddQuery(e.target.value)}
+                      placeholder="Ajouter un lieu (nom, commune…)"
+                      className="w-full bg-transparent text-[13.5px] outline-none"
+                    />
+                    {objectSearch.loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/40" />}
+                  </div>
+                  {addQuery.trim().length >= 2 && (
+                    <ul className="overflow-hidden rounded-xl border bg-white">
+                      {(() => {
+                        const candidates = objectSearch.results.filter((r) => !items.some((it) => it.objectId === r.id));
+                        if (candidates.length === 0) {
+                          return (
+                            <li className="px-3 py-2.5 text-[12.5px] text-ink/50">
+                              {objectSearch.loading ? 'Recherche…' : 'Aucun résultat.'}
+                            </li>
+                          );
+                        }
+                        return candidates.map((r) => (
+                          <li key={r.id}>
+                            <button
+                              type="button"
+                              onClick={() => addFromSearch(r)}
+                              className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-orange/5"
+                            >
+                              <Plus className="h-3.5 w-3.5 shrink-0 text-orange" />
+                              <span className="truncate text-[13px] font-semibold text-ink">{r.name}</span>
+                              <span className="ml-auto shrink-0 text-[11px] text-ink/45">
+                                {r.type}
+                                {r.city ? ` · ${r.city}` : ''}
+                              </span>
+                            </button>
+                          </li>
+                        ));
+                      })()}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Options du rendu — carte récap, accent, langue du message (persistés) */}
+            <section className="space-y-3">
+              <label className="block text-[11px] font-bold uppercase tracking-wide text-ink/50">Options du rendu</label>
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <span className="flex min-w-0 items-center gap-2.5 text-[13px] text-ink">
+                  <MapPin className="h-4 w-4 shrink-0 text-ink/50" />
+                  <span className="min-w-0">
+                    <b className="font-bold">Carte récap du parcours</b>
+                    <small className="block text-[11.5px] text-ink/55">Situe les lieux sur une carte du Sud</small>
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={detail.showMap}
+                  aria-label="Carte récap du parcours"
+                  disabled={updateMeta.isPending}
+                  onClick={() => updateMeta.mutate({ show_map: !detail.showMap })}
+                  className={cn('relative h-6 w-11 shrink-0 rounded-full transition', detail.showMap ? 'bg-orange' : 'bg-ink/20')}
+                >
+                  <span
+                    className={cn(
+                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
+                      detail.showMap ? 'left-[22px]' : 'left-0.5',
+                    )}
+                  />
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <span className="min-w-0 text-[13px] text-ink">
+                  <b className="font-bold">Couleur d'accent</b>
+                  <small className="block text-[11.5px] text-ink/55">Teinte du rendu OTI (hero, boutons, notes)</small>
+                </span>
+                <div className="flex shrink-0 gap-1.5">
+                  {ACCENTS.map((a) => (
+                    <button
+                      key={a.k}
+                      type="button"
+                      title={a.label}
+                      aria-label={`Accent ${a.label}`}
+                      aria-pressed={detail.accent === a.k}
+                      disabled={updateMeta.isPending}
+                      onClick={() => updateMeta.mutate({ accent: a.k })}
+                      className={cn(
+                        'h-6 w-6 rounded-full border-2 transition',
+                        detail.accent === a.k ? 'scale-110 border-ink' : 'border-transparent hover:scale-105',
+                      )}
+                      style={{ backgroundColor: ACCENT_INK[a.k] }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl border p-3">
+                <span className="min-w-0 text-[13px] text-ink">
+                  <b className="font-bold">Langue du message</b>
+                  <small className="block text-[11.5px] text-ink/55">Langue d'édition (intro, notes) et du rendu par défaut</small>
+                </span>
+                <div className="flex shrink-0 gap-0.5 rounded-lg bg-ink/5 p-0.5">
+                  {(['fr', 'en'] as const).map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      disabled={updateMeta.isPending}
+                      onClick={() => changeListLang(l)}
+                      className={cn(seg, detail.lang === l ? 'bg-white text-orange shadow-sm' : 'text-ink/60')}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </section>
           </div>
         </div>

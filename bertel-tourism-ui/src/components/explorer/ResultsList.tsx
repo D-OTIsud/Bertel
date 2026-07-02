@@ -192,6 +192,17 @@ export function ResultsList({
             {isLoadingMore ? <span className="text-xs text-ink-3">Chargement…</span> : null}
           </div>
         ) : null}
+        {/* D8 : la sentinelle IntersectionObserver est souris/molette-only — repli clavier
+            (et lecteur d'écran) : un bouton sr-only qui devient visible au focus. */}
+        {hasMore && !isLoadingMore && onLoadMore ? (
+          <button
+            type="button"
+            className="ghost-button sr-only text-xs focus:not-sr-only focus:static"
+            onClick={() => onLoadMore()}
+          >
+            Charger plus de résultats
+          </button>
+        ) : null}
       </div>
     </div>
   );

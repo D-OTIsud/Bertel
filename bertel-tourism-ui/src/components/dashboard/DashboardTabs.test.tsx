@@ -24,4 +24,42 @@ describe('DashboardTabs', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Offre du territoire' }));
     expect(useDashboardFilterStore.getState().activeTab).toBe('offer');
   });
+
+  it('D8 : roving tabindex — un seul arrêt Tab (l’onglet actif)', () => {
+    render(<DashboardTabs />);
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.map((t) => t.tabIndex)).toEqual([0, -1, -1]);
+  });
+
+  it('D8 : les flèches déplacent le focus SANS activer (activation manuelle : les panneaux fetchent)', () => {
+    render(<DashboardTabs />);
+    const tablist = screen.getByRole('tablist');
+    const tabs = screen.getAllByRole('tab');
+    tabs[0].focus();
+
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' });
+    expect(tabs[1]).toHaveFocus();
+    expect(tabs[1].tabIndex).toBe(0); // le roving suit le focus
+    expect(useDashboardFilterStore.getState().activeTab).toBe('quality'); // pas activé
+
+    // Entrée/Espace = clic natif du bouton → activation.
+    fireEvent.click(tabs[1]);
+    expect(useDashboardFilterStore.getState().activeTab).toBe('offer');
+  });
+
+  it('D8 : ArrowLeft boucle et Home/End vont aux extrémités', () => {
+    render(<DashboardTabs />);
+    const tablist = screen.getByRole('tablist');
+    const tabs = screen.getAllByRole('tab');
+    tabs[0].focus();
+
+    fireEvent.keyDown(tablist, { key: 'ArrowLeft' });
+    expect(tabs[2]).toHaveFocus(); // boucle depuis le premier
+
+    fireEvent.keyDown(tablist, { key: 'Home' });
+    expect(tabs[0]).toHaveFocus();
+
+    fireEvent.keyDown(tablist, { key: 'End' });
+    expect(tabs[2]).toHaveFocus();
+  });
 });

@@ -984,4 +984,50 @@ describe('ObjectDetailView', () => {
     expect(screen.getByRole('heading', { name: 'Titre vedette' })).toBeInTheDocument();
     expect(screen.queryByText('## Titre vedette')).not.toBeInTheDocument();
   });
+
+  it('horaires : la pastille est rouge quand le statut affiché est « Fermé » (open_now NULL, hors créneaux)', () => {
+    // 2026-07-02 est un jeudi ; 23:30 est après le dernier créneau → libellé « Fermé aujourd'hui ».
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-07-02T23:30:00'));
+    try {
+      const data: ObjectDetail = {
+        id: 'res-pulse',
+        name: 'Table du soir',
+        type: 'RES',
+        raw: {
+          // open_now absent → tri-state null : le libellé retombe sur le calcul local, la pastille doit suivre.
+          opening_periods: [
+            {
+              label: 'Année en cours',
+              date_start: '2026-01-01',
+              date_end: '2026-12-31',
+              opening_schedules: [
+                {
+                  schedule_type: { name: 'Hebdomadaire' },
+                  opening_time_periods: [
+                    {
+                      opening_time_period_weekdays: [{ weekday: { code: 'thu', name: 'Jeudi' } }],
+                      opening_time_frames: [
+                        { start_time: '11:30', end_time: '16:00' },
+                        { start_time: '17:30', end_time: '21:00' },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      } as ObjectDetail;
+
+      const { container } = renderDetail(data);
+
+      expect(screen.getByText(/Fermé aujourd/)).toBeInTheDocument();
+      expect(container.querySelector('.detail-opening-hero__pulse')).toHaveClass(
+        'detail-opening-hero__pulse--closed',
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

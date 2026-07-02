@@ -26,6 +26,7 @@ export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'get_object_i18n_all',        // C-5 i18n=all block (service-role only in DB)
   'get_object_jsonld',          // I4 schema.org JSON-LD block (service-role only in DB)
   'get_object_interop',         // I4b datatourisme/apidae/tourinsoft block (service-role only in DB)
+  'get_objects_interop_batch',  // I4c per-page pivot batch for the list route (service-role only in DB)
 ]);
 
 export interface PublicApiResult {

@@ -10,6 +10,8 @@
 --   * partage + lecture PUBLIQUE : objets PUBLIÉS uniquement (item draft EXCLU),
 --     AUCUNE clé recipient_label, aucune fuite du nom du destinataire.
 --   * liste DYNAMIQUE : resolved_from='filters', résolution live bornée.
+--   * contacts d'item (list_item_contacts) : phone public (repli mobile) + website,
+--     canal is_public=false JAMAIS émis (ni en owner, ni en public).
 --   * isolation cross-org : un membre d'une AUTRE org ne peut PAS lire la liste.
 -- Contre une base SANS la migration, les assertions structurelles échouent -> rouge.
 -- Self-contained + transactionnel (ROLLBACK ; rien ne persiste). Style test_object_web_channel_read_gate.sql.
@@ -25,6 +27,7 @@ DECLARE
   v_userA  uuid := '00000000-0000-4000-a000-0000000000e1';
   v_userB  uuid := '00000000-0000-4000-a000-0000000000e2';
   v_pub_role uuid;
+  v_kind_phone uuid; v_kind_mobile uuid; v_kind_web uuid;
   v_static uuid; v_dyn uuid; v_tok text;
   j jsonb; j_pub jsonb; v_n int; v_ok boolean;
 BEGIN
@@ -49,6 +52,8 @@ BEGIN
          'anon MUST be able to execute get_public_list_by_token';
   ASSERT NOT has_function_privilege('anon','api.list_effective_object_ids(uuid,boolean)','execute'),
          'LOCK: internal helper list_effective_object_ids exposed to anon';
+  ASSERT NOT has_function_privilege('anon','api.list_item_contacts(text[])','execute'),
+         'LOCK: internal helper list_item_contacts exposed to anon';
   ASSERT NOT has_table_privilege('anon','object_list','select'),
          'LOCK: anon has direct SELECT on object_list';
 
@@ -72,6 +77,20 @@ BEGIN
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);
 
+  -- contacts : pub1 = phone public + phone PRIVÉ (sonde de fuite) + website ;
+  --            pub2 = mobile public uniquement (sonde du repli phone→mobile).
+  SELECT id INTO v_kind_phone  FROM ref_code_contact_kind WHERE lower(code)='phone'   LIMIT 1;
+  SELECT id INTO v_kind_mobile FROM ref_code_contact_kind WHERE lower(code)='mobile'  LIMIT 1;
+  SELECT id INTO v_kind_web    FROM ref_code_contact_kind WHERE lower(code)='website' LIMIT 1;
+  IF v_kind_phone IS NULL OR v_kind_mobile IS NULL OR v_kind_web IS NULL THEN
+    RAISE EXCEPTION 'fixture: ref_code_contact_kind phone/mobile/website missing (seeds not applied)';
+  END IF;
+  INSERT INTO contact_channel (object_id, kind_id, value, is_public) VALUES
+    (v_pub1, v_kind_phone,  '+262 262 00 00 01', TRUE),
+    (v_pub1, v_kind_phone,  '+262 692 99 99 99', FALSE),
+    (v_pub1, v_kind_web,    'exemple-sud.re',    TRUE),
+    (v_pub2, v_kind_mobile, '+262 692 00 00 02', TRUE);
+
   -- ---------- USER A : create static list from a "selection" ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userA, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -80,6 +99,16 @@ BEGIN
   j := api.get_list(v_static)::jsonb;
   ASSERT jsonb_array_length(j->'items') = 3, 'static list should have 3 items, got '||jsonb_array_length(j->'items');
   ASSERT j->>'resolved_from' = 'items', 'static list resolved_from must be items';
+
+  -- contacts d'item : phone public + website sur pub1, repli mobile sur pub2, privé exclu
+  ASSERT (j->'items'->0->'contacts'->>'phone') = '+262 262 00 00 01',
+         'item contacts: public phone missing/wrong on pub1';
+  ASSERT (j->'items'->0->'contacts'->>'web') = 'exemple-sud.re',
+         'item contacts: website missing/wrong on pub1';
+  ASSERT (j->'items'->1->'contacts'->>'phone') = '+262 692 00 00 02',
+         'item contacts: phone→mobile fallback failed on pub2';
+  ASSERT NOT (j::text LIKE '%99 99 99%'),
+         'LEAK: non-public contact channel emitted to owner payload';
 
   -- reconcile : keep pub1+pub2, drop draft1, note on pub1
   PERFORM api.set_list_items(v_static, jsonb_build_array(
@@ -118,6 +147,10 @@ BEGIN
     ASSERT NOT (j_pub ? 'recipient_label'), 'PII LEAK: recipient_label key present on public payload';
     ASSERT NOT (j_pub::text ILIKE '%camille%'), 'PII LEAK: recipient name leaked in public payload';
     ASSERT j_pub->>'name' = 'Week-end dans le Sud', 'public list name mismatch';
+    ASSERT (j_pub->'items'->0->'contacts'->>'phone') = '+262 262 00 00 01',
+           'public item contacts: public phone missing';
+    ASSERT NOT (j_pub::text LIKE '%99 99 99%'),
+           'LEAK: non-public contact channel emitted on PUBLIC payload';
     -- wrong / disabled / short token => null
     ASSERT api.get_public_list_by_token('deadbeefdeadbeefdeadbeefdeadbeef') IS NULL, 'unknown token must return null';
     ASSERT api.get_public_list_by_token('short') IS NULL, 'short token must return null';
@@ -159,6 +192,6 @@ BEGIN
     ASSERT NOT v_ok, 'cross-org LEAK: user B deleted user A''s list';
   RESET ROLE;
 
-  RAISE NOTICE 'object_list module assertions passed (static, dynamic, share/public no-PII, cross-org isolation, lock).';
+  RAISE NOTICE 'object_list module assertions passed (static, dynamic, share/public no-PII, item contacts public-only, cross-org isolation, lock).';
 END$$;
 ROLLBACK;

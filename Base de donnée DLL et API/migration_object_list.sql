@@ -188,6 +188,43 @@ $$;
 REVOKE ALL ON FUNCTION api.list_effective_object_ids(uuid, boolean) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.list_effective_object_ids(uuid, boolean) TO service_role;
 
+-- ---------- 5b. Contacts publics des items (téléphone / site web) ----------
+-- Enrichissement des items de liste pour les templates OTI (boutons « appeler » /
+-- « site web » du design). PUBLICS uniquement (is_public — le flag champ §49 compose,
+-- jamais de canal interne) : phone (repli mobile) + website. Set-based sur le jeu
+-- d'ids (borné 200 par le résolveur) — pas de fonction par ligne (§125).
+-- Helper interne : jamais exposé (les RPCs DEFINER l'exécutent en tant qu'owner).
+CREATE OR REPLACE FUNCTION api.list_item_contacts(p_ids text[])
+RETURNS TABLE(object_id text, contacts jsonb)
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api AS $$
+  WITH ch AS (
+    SELECT c.object_id,
+           lower(ck.code) AS kind,
+           c.value,
+           row_number() OVER (
+             PARTITION BY c.object_id,
+                          CASE WHEN lower(ck.code) IN ('phone','mobile') THEN 'tel' ELSE lower(ck.code) END
+             -- phone avant mobile, puis primaire, puis position éditeur
+             ORDER BY (lower(ck.code) = 'mobile'), c.is_primary DESC NULLS LAST, c.position NULLS LAST, c.created_at
+           ) AS rn
+    FROM contact_channel c
+    JOIN ref_code_contact_kind ck ON ck.id = c.kind_id
+    WHERE c.object_id = ANY(COALESCE(p_ids, ARRAY[]::text[]))
+      AND c.is_public IS TRUE
+      AND lower(ck.code) IN ('phone','mobile','website')
+  )
+  SELECT ch.object_id,
+         jsonb_strip_nulls(jsonb_build_object(
+           'phone', max(ch.value) FILTER (WHERE ch.kind IN ('phone','mobile') AND ch.rn = 1),
+           'web',   max(ch.value) FILTER (WHERE ch.kind = 'website'           AND ch.rn = 1)
+         ))
+  FROM ch
+  GROUP BY ch.object_id;
+$$;
+REVOKE ALL ON FUNCTION api.list_item_contacts(text[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.list_item_contacts(text[]) TO service_role;
+
 -- ---------- 6. RPCs propriétaires (authenticated) ----------
 
 -- 6.1 Grille « Mes listes »
@@ -197,7 +234,7 @@ SET search_path = pg_catalog, public, api, auth AS $$
   SELECT COALESCE(json_agg(s ORDER BY s.updated_at DESC), '[]'::json)
   FROM (
     SELECT l.id, l.name, l.name_en, l.kind, l.status, l.lang, l.recipient_label,
-           l.cover_url, l.updated_at,
+           l.accent, l.cover_url, l.updated_at,
            cnt.item_count, tb.type_breakdown
     FROM object_list l
     CROSS JOIN LATERAL (
@@ -248,16 +285,20 @@ BEGIN
 
   WITH e AS (SELECT * FROM api.list_effective_object_ids(p_list_id, v_pub)),
        c AS (SELECT (elem->>'id') AS oid, elem AS card
-             FROM jsonb_array_elements(v_cards) elem)
+             FROM jsonb_array_elements(v_cards) elem),
+       ct AS (SELECT * FROM api.list_item_contacts(COALESCE(v_ids, ARRAY[]::text[])))
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
            'object_id', e.object_id,
            'position',  e.pos,
            'note_fr',   e.note_fr,
            'note_en',   e.note_en,
-           'card',      c.card
+           'card',      c.card,
+           'contacts',  COALESCE(ct.contacts, '{}'::jsonb)
          ) ORDER BY e.pos), '[]'::jsonb)
     INTO v_items
-  FROM e LEFT JOIN c ON c.oid = e.object_id;
+  FROM e
+  LEFT JOIN c  ON c.oid = e.object_id
+  LEFT JOIN ct ON ct.object_id = e.object_id;
 
   RETURN json_build_object(
     'id', v_list.id, 'kind', v_list.kind,
@@ -459,13 +500,17 @@ BEGIN
 
   WITH e AS (SELECT * FROM api.list_effective_object_ids(v_list.id, true)),
        c AS (SELECT (elem->>'id') AS oid, elem AS card
-             FROM jsonb_array_elements(v_cards) elem)
+             FROM jsonb_array_elements(v_cards) elem),
+       ct AS (SELECT * FROM api.list_item_contacts(COALESCE(v_ids, ARRAY[]::text[])))
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
            'object_id', e.object_id, 'position', e.pos,
-           'note_fr', e.note_fr, 'note_en', e.note_en, 'card', c.card
+           'note_fr', e.note_fr, 'note_en', e.note_en, 'card', c.card,
+           'contacts', COALESCE(ct.contacts, '{}'::jsonb)
          ) ORDER BY e.pos), '[]'::jsonb)
     INTO v_items
-  FROM e LEFT JOIN c ON c.oid = e.object_id;
+  FROM e
+  LEFT JOIN c  ON c.oid = e.object_id
+  LEFT JOIN ct ON ct.object_id = e.object_id;
 
   -- NB : pas de recipient_label, created_by, org_object_id, filters, share_token.
   RETURN json_build_object(

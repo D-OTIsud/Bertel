@@ -185,6 +185,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir migration_object_jsonld_schemaorg.sql
 \echo '== I4b    migration_interop_profiles.sql  (audit API Phase 2: datatourisme/apidae/tourinsoft crosswalk seeds + api.interop_object_core shared reader + api.get_object_interop dispatcher; needs I4 ref_interop_crosswalk + api_views strip_markdown/i18n_pick) =='
 \ir migration_interop_profiles.sql
+\echo '== I4c    migration_interop_batch.sql  (audit API Phase 2: api.get_objects_interop_batch — one-call per-page batch wrapping the I4/I4b serializers for the partner list ?format=; LANGUAGE sql so it MUST come after I4/I4b) =='
+\ir migration_interop_batch.sql
 
 \echo '== 16e    migration_partition_maintenance_hardening.sql  (§146 partitions born-gated: object_version + audit.audit_log creators re-assert RLS + wrapped policy at creation; ensure_object_version_partitions wired into audit.maintain_partitions (daily cron); repair pass re-gates existing partitions; re-homes stranded object_version_default rows into monthly partitions) =='
 \ir migration_partition_maintenance_hardening.sql

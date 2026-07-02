@@ -306,6 +306,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_profiles.sql"
 
+      - name: "interop batch test (I4c — get_objects_interop_batch: published-only map, draft/unknown absent, per-profile dispatch, dedup, 200-id clamp, NULL/empty/unmapped -> empty map, service-role-only)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_batch.sql"
+
       - name: "partition maintenance hardening test (16e §146 — born-gated creators: fresh object_version/audit partitions get RLS + wrapped policy; maintain_partitions covers both parents; no bare partition; default partition empty)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

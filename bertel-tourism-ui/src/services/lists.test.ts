@@ -1,8 +1,15 @@
-import type { ExplorerFilters } from '../types/domain';
+import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 import { itemsToOtiPois } from '../features/lists/OtiTemplate';
 import { webHref, webLabel } from '../features/lists/type-meta';
-import { buildDynamicListFilters, moveListItem, parseListCard, parseListDetail } from './lists';
+import {
+  buildDynamicListFilters,
+  listItemFromObjectCard,
+  mergeEnrichedListItems,
+  moveListItem,
+  parseListCard,
+  parseListDetail,
+} from './lists';
 
 const rawDetail = {
   id: 'L1',
@@ -155,6 +162,73 @@ describe('webHref / webLabel', () => {
     ).toBe('www.lejardindesbestioles.com');
     expect(webLabel('https://exemple.re/fr/hebergements?utm_source=nl#haut')).toBe('exemple.re');
     expect(webLabel('http://lemanapany.re/')).toBe('lemanapany.re');
+  });
+});
+
+describe('listItemFromObjectCard', () => {
+  const card: ObjectCard = {
+    id: 'O9',
+    type: 'HOT',
+    name: 'Grand Air',
+    image: 'https://img/grand-air.jpg',
+    description: 'Vue mer',
+    location: { city: 'Saint-Pierre', lat: -21.3, lon: 55.5 },
+  };
+
+  it('builds a list item enriched from the explorer card (image, description, city)', () => {
+    const item = listItemFromObjectCard(card, 3);
+    expect(item.objectId).toBe('O9');
+    expect(item.position).toBe(3);
+    expect(item.noteFr).toBeNull();
+    expect(item.card?.image).toBe('https://img/grand-air.jpg');
+    expect(item.card?.description).toBe('Vue mer');
+    expect(item.card?.city).toBe('Saint-Pierre');
+    // contacts publics : uniquement côté serveur (list_item_contacts) — arrivent au round-trip
+    expect(item.phone).toBeNull();
+    expect(item.web).toBeNull();
+  });
+
+  it('feeds the OTI template with image/subtitle/coords right away', () => {
+    const pois = itemsToOtiPois([listItemFromObjectCard(card, 0)], 'fr');
+    expect(pois[0].image).toBe('https://img/grand-air.jpg');
+    expect(pois[0].subtitle).toBe('Vue mer');
+    expect(pois[0].lat).toBeCloseTo(-21.3);
+    expect(pois[0].lon).toBeCloseTo(55.5);
+  });
+});
+
+describe('mergeEnrichedListItems', () => {
+  const local = parseListDetail({
+    id: 'L1', kind: 'static', name: 'S',
+    items: [
+      { object_id: 'A', position: 0, note_fr: 'note locale', card: null },
+      { object_id: 'B', position: 1, card: null },
+    ],
+  }).items;
+  const fresh = parseListDetail({
+    id: 'L1', kind: 'static', name: 'S',
+    items: [
+      {
+        object_id: 'A', position: 0, note_fr: 'note serveur',
+        card: { id: 'A', name: 'Alpha', type: 'RES', image: 'https://img/a.jpg', description: 'desc A', location: { city: 'Le Tampon' } },
+        contacts: { phone: '+262 1', web: 'https://a.re' },
+      },
+    ],
+  }).items;
+
+  it('adopts server enrichment (card + contacts) but keeps local membership, order and notes', () => {
+    const merged = mergeEnrichedListItems(local, fresh);
+    expect(merged.map((i) => i.objectId)).toEqual(['A', 'B']); // B (ajout en vol) préservé
+    expect(merged[0].card?.image).toBe('https://img/a.jpg');
+    expect(merged[0].phone).toBe('+262 1');
+    expect(merged[0].web).toBe('https://a.re');
+    expect(merged[0].noteFr).toBe('note locale'); // la frappe locale n'est pas écrasée
+    expect(merged[1].card).toBeNull(); // pas d'enrichissement serveur pour B → inchangé
+  });
+
+  it('does not resurrect items absent locally (retrait local en attente)', () => {
+    const merged = mergeEnrichedListItems([local[1]], fresh);
+    expect(merged.map((i) => i.objectId)).toEqual(['B']);
   });
 });
 

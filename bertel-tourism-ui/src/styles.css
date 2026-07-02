@@ -442,6 +442,22 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Étapes numérotées d'un tracé ITI actif (D18) ---- */
+.iti-stage-pin {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid #327090; /* couleur ITI par défaut ; la ligne suit markerStyles */
+  color: #18313b;
+  font-size: 10.5px;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(24, 49, 59, 0.3);
+  cursor: default;
+}
+
 /* ---- Sélecteur de vue Explorer (D16 : Liste / Table / Carte / Split) ---- */
 .view-switch {
   display: inline-flex;

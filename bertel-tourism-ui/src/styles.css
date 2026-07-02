@@ -442,6 +442,54 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Écran de repli des limites d'erreur (D4 : app/error.tsx + ErrorBoundary) ---- */
+.error-fallback {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.error-fallback__card {
+  max-width: 460px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.error-fallback__icon { color: var(--brand-red); }
+.error-fallback__title { font-family: var(--font-display), var(--font-sans), sans-serif; font-size: 19px; font-weight: 700; }
+.error-fallback__text { font-size: 14px; color: var(--text-muted); max-width: 42ch; }
+.error-fallback__ref { font-size: 12px; color: var(--text-muted); }
+.error-fallback__ref code { font-family: var(--font-mono), monospace; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+.error-fallback__actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.error-fallback__actions .ghost-button { text-decoration: none; }
+
+/* ---- Bandeau hors-ligne global (D4) : discret, bas d'écran, au-dessus du contenu ---- */
+.offline-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft);
+}
+
 /* ---- Squelettes : pas de spinner central, calqués sur la grille de la carte (impl. 3.1) ---- */
 .skel {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--bg-tint) 37%, var(--surface-2) 63%);

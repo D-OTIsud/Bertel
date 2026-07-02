@@ -75,6 +75,7 @@ export default function ChannelFrame({ channel, name, recipient, lang, shareUrl,
   }
 
   // pdf — feuille A4
+  const generatedOn = new Date().toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR');
   return (
     <div className="bg-white shadow-xl">
       <div>{children}</div>
@@ -82,7 +83,7 @@ export default function ChannelFrame({ channel, name, recipient, lang, shareUrl,
         <span>
           <b className="text-ink/70">OTI du Sud de la Réunion</b> · {name}
         </span>
-        <span>sud.reunion.fr · {t('document généré le', 'generated on', lang)} 01/07/2026</span>
+        <span>sud.reunion.fr · {t('document généré le', 'generated on', lang)} {generatedOn}</span>
       </div>
     </div>
   );

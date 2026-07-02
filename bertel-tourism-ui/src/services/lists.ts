@@ -294,6 +294,15 @@ export function buildDynamicListFilters(filters: ExplorerFilters): ListFilterBuc
   return { buckets };
 }
 
+/** Réordonnancement immuable d'un item (drag & drop de la composition). Indices hors bornes = no-op. */
+export function moveListItem<T>(items: readonly T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || to < 0 || from >= items.length || to >= items.length) return [...items];
+  const next = [...items];
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
+}
+
 /** Crée une liste DYNAMIQUE à partir des filtres Explorer courants (re-résolus à chaque accès). */
 export async function createDynamicList(
   name: string,

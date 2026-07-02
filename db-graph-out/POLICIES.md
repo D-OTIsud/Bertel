@@ -4,47 +4,59 @@
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_2026_03`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_2026_04`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_2026_05`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_2026_06`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_2026_07`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+
+## `audit.audit_log_2026_08`
+- **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
+  - `true`
+- **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+
+## `audit.audit_log_2026_09`
+- **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
+  - `true`
+- **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `audit.audit_log_default`
 - **INSERT** `Insertion via triggers` — roles ['postgres', 'service_role']
   - `true`
 - **SELECT** `Lecture audit (admin/service_role)` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `public.actor`
 - **ALL** `admin_actor_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_read` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR ( SELECT api.is_platform_superuser() AS is_platform_superuser) OR (id = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
    FROM (actor_object_role aor
@@ -53,15 +65,15 @@
 
 ## `public.actor_channel`
 - **ALL** `admin_actor_channel_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_channel_read` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (actor_id = auth.uid()))`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (actor_id = ( SELECT auth.uid() AS uid)))`
 
 ## `public.actor_consent`
 - **ALL** `own_actor_consent_write` — roles ['public']
-  - `(actor_id = auth.uid())`
+  - `(actor_id = ( SELECT auth.uid() AS uid))`
 - **SELECT** `own_actor_consent_read` — roles ['public']
-  - `(actor_id = auth.uid())`
+  - `(actor_id = ( SELECT auth.uid() AS uid))`
 
 ## `public.actor_object_role`
 - **DELETE** `canonical_del_actor_object_role` — roles ['public']
@@ -77,39 +89,39 @@
 - **ALL** `branding_settings_write_platform_admin` — roles ['public']
   - `api.is_platform_admin() | api.is_platform_admin()`
 - **SELECT** `branding_settings_read_authenticated` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['authenticated'::text, 'service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['authenticated'::text, 'service_role'::text, 'admin'::text]))`
 
 ## `public.app_user_profile`
 - **DELETE** `Administration des profils utilisateur` — roles ['public']
   - `api.is_platform_owner()`
 - **INSERT** `Insertion de son profil utilisateur` — roles ['public']
-  - `((id = auth.uid()) OR api.is_platform_owner())`
+  - `((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())`
 - **SELECT** `Lecture de son profil utilisateur` — roles ['public']
-  - `((id = auth.uid()) OR api.is_platform_owner())`
+  - `((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())`
 - **UPDATE** `Mise à jour de son profil utilisateur` — roles ['public']
-  - `((id = auth.uid()) OR api.is_platform_owner()) | ((id = auth.uid()) OR api.is_platform_owner())`
+  - `((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner()) | ((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())`
 
 ## `public.audit_criteria`
 - **ALL** `admin_audit_criteria_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_audit_criteria_read` — roles ['public']
   - `(EXISTS ( SELECT 1
    FROM audit_template t
-  WHERE ((t.id = audit_criteria.template_id) AND ((t.is_active = true) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))))))`
+  WHERE ((t.id = audit_criteria.template_id) AND ((t.is_active = true) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))))))`
 
 ## `public.audit_result`
 - **ALL** `admin_audit_result` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.audit_session`
 - **ALL** `admin_audit_session` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.audit_template`
 - **ALL** `admin_audit_template_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_audit_template_read` — roles ['public']
-  - `((is_active = true) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))`
+  - `((is_active = true) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])))`
 
 ## `public.contact_channel`
 - **DELETE** `canonical_del_contact_channel` — roles ['public']
@@ -149,13 +161,13 @@
 
 ## `public.i18n_translation`
 - **ALL** `Écriture admin des traductions` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des traductions` — roles ['public']
   - `true`
 
 ## `public.incident_report`
 - **ALL** `admin_incident_report` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.media`
 - **DELETE** `canonical_del_media` — roles ['public']
@@ -531,6 +543,14 @@
   - `api.can_read_extended(object_id)`
 - **UPDATE** `canonical_upd_object_legal` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+
+## `public.object_list`
+- **SELECT** `read_object_list` — roles ['public']
+  - `api.user_can_read_list(id)`
+
+## `public.object_list_item`
+- **SELECT** `read_object_list_item` — roles ['public']
+  - `api.user_can_read_list(list_id)`
 
 ## `public.object_location`
 - **DELETE** `canonical_del_object_location` — roles ['public']
@@ -1027,23 +1047,39 @@
 
 ## `public.object_version`
 - **ALL** `admin_object_version` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_version_2026_03`
 - **ALL** `admin_object_version` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_version_2026_04`
 - **ALL** `admin_object_version` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_version_2026_05`
 - **ALL** `admin_object_version` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_version_2026_06`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_version_2026_07`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_version_2026_08`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
+## `public.object_version_2026_09`
+- **ALL** `admin_object_version` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_version_default`
 - **ALL** `admin_object_version` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.object_web_channel`
 - **DELETE** `canonical_del_object_web_channel` — roles ['public']
@@ -1190,23 +1226,23 @@
 - **SELECT** `member_org_config_read` — roles ['public']
   - `(api.is_platform_superuser() OR (EXISTS ( SELECT 1
    FROM user_org_membership m
-  WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = auth.uid()) AND (m.is_active = true)))))`
+  WHERE ((m.org_object_id = org_config.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true)))))`
 
 ## `public.org_permission`
 - **ALL** `admin_org_permission_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_org_permission_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
    FROM user_org_membership m
-  WHERE ((m.org_object_id = org_permission.org_object_id) AND (m.user_id = auth.uid()) AND (m.is_active = true))))))`
+  WHERE ((m.org_object_id = org_permission.org_object_id) AND (m.user_id = ( SELECT auth.uid() AS uid)) AND (m.is_active = true))))))`
 
 ## `public.pending_change`
 - **ALL** `admin_pending_change` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.promotion`
 - **ALL** `Écriture admin des promotions` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des promotions` — roles ['public']
   - `((is_public = true) AND (is_active = true))`
 
@@ -1224,171 +1260,171 @@
 
 ## `public.promotion_usage`
 - **ALL** `Écriture admin des usages promotions` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture admin des usages promotions` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `public.publication`
 - **ALL** `admin_publication` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.publication_object`
 - **ALL** `admin_publication_object` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.ref_actor_role`
 - **ALL** `admin_actor_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_actor_role_read` — roles ['public']
   - `true`
 
 ## `public.ref_amenity`
 - **ALL** `Écriture admin des équipements` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des équipements` — roles ['public']
   - `true`
 
 ## `public.ref_capacity_applicability`
 - **ALL** `Écriture admin des applicabilités de capacité` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des applicabilités de capacité` — roles ['public']
   - `true`
 
 ## `public.ref_capacity_metric`
 - **ALL** `Écriture admin des métriques de capacité` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des métriques de capacité` — roles ['public']
   - `true`
 
 ## `public.ref_classification_equivalent_action`
 - **ALL** `admin_write_ref_classification_equivalent_action` — roles ['public']
-  - `((auth.role() = 'service_role'::text) OR (auth.role() = 'admin'::text) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())`
 - **SELECT** `pub_ref_classification_equivalent_action_read` — roles ['public']
   - `true`
 
 ## `public.ref_classification_equivalent_group`
 - **ALL** `admin_write_ref_classification_equivalent_group` — roles ['public']
-  - `((auth.role() = 'service_role'::text) OR (auth.role() = 'admin'::text) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())`
 - **SELECT** `pub_ref_classification_equivalent_group_read` — roles ['public']
   - `true`
 
 ## `public.ref_classification_scheme`
 - **ALL** `Écriture admin des schémas de classification` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des schémas de classification` — roles ['public']
   - `true`
 
 ## `public.ref_classification_value`
 - **ALL** `Écriture admin des valeurs de classification` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des valeurs de classification` — roles ['public']
   - `true`
 
 ## `public.ref_code`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_accommodation_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_activity_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_allergen`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_amenity_family`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_amenity_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_assistance_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_bed_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_booking_status`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_client_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_contact_kind`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_crm_sentiment`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_cuisine_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_demand_subtopic`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_demand_topic`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_destination_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_dietary_tag`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_document_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
@@ -1398,57 +1434,49 @@
 
 ## `public.ref_code_environment_tag`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **ALL** `Écriture admin des tags d'environnement` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
-- **SELECT** `Lecture publique des tags d'environnement` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_event_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_feedback_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_incident_category`
-- **ALL** `admin_incident_category_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **SELECT** `pub_incident_category_read` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_insurance_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_iti_difficulty`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_iti_open_status`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_iti_practice`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `Lecture publique des pratiques ITI` — roles ['public']
   - `true`
 - **SELECT** `pub_ref_code_read` — roles ['public']
@@ -1456,19 +1484,19 @@
 
 ## `public.ref_code_iti_stage_kind`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_language_level`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_media_tag`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `Lecture publique des tags média` — roles ['public']
   - `true`
 - **SELECT** `pub_ref_code_read` — roles ['public']
@@ -1476,133 +1504,121 @@
 
 ## `public.ref_code_media_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_meeting_equipment`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_membership_campaign`
-- **ALL** `admin_membership_campaign_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **SELECT** `pub_membership_campaign_read` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_membership_tier`
-- **ALL** `admin_membership_tier_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **SELECT** `pub_membership_tier_read` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_menu_category`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_mood`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_opening_period_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_opening_schedule_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_other`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_package_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_partnership_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_payment_method`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **ALL** `Écriture admin des moyens de paiement` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
-- **SELECT** `Lecture publique des moyens de paiement` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_price_kind`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_price_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_price_unit`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_promotion_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_room_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_season_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_service_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_social_network`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
@@ -1612,29 +1628,25 @@
 
 ## `public.ref_code_tourism_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_transport_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_view_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
-- **ALL** `Écriture admin des types de vue` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
-- **SELECT** `Lecture publique des types de vue` — roles ['public']
-  - `true`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
 ## `public.ref_code_weekday`
 - **ALL** `admin_ref_code_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
@@ -1646,13 +1658,13 @@
 
 ## `public.ref_contact_role`
 - **ALL** `admin_contact_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_contact_role_read` — roles ['public']
   - `true`
 
 ## `public.ref_document`
 - **ALL** `Écriture admin des documents de référence` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des documents de référence` — roles ['public']
   - `true`
 
@@ -1668,39 +1680,45 @@
 - **SELECT** `pub_ref_facet_registry_read` — roles ['public']
   - `true`
 
+## `public.ref_interop_crosswalk`
+- **ALL** `admin_write_ref_interop_crosswalk` — roles ['public']
+  - `((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())`
+- **SELECT** `pub_ref_interop_crosswalk_read` — roles ['public']
+  - `true`
+
 ## `public.ref_iti_assoc_role`
 - **SELECT** `Lecture publique des rôles ITI` — roles ['public']
   - `true`
 
 ## `public.ref_language`
 - **ALL** `Écriture admin des langues` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des langues` — roles ['public']
   - `true`
 
 ## `public.ref_legal_type`
 - **ALL** `admin_legal_type_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_legal_type_read` — roles ['public']
   - `true`
 
 ## `public.ref_object_relation_type`
 - **ALL** `admin_object_relation_type_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_object_relation_type_read` — roles ['public']
   - `true`
 
 ## `public.ref_org_admin_role`
 - **ALL** `admin_ref_org_admin_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `authed_ref_org_admin_role_read` — roles ['public']
-  - `((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))`
+  - `((( SELECT auth.uid() AS uid) IS NOT NULL) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])))`
 
 ## `public.ref_org_business_role`
 - **ALL** `admin_ref_org_business_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `authed_ref_org_business_role_read` — roles ['public']
-  - `((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))`
+  - `((( SELECT auth.uid() AS uid) IS NOT NULL) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])))`
 
 ## `public.ref_org_role`
 - **SELECT** `Lecture publique des rôles d'organisation` — roles ['public']
@@ -1708,37 +1726,37 @@
 
 ## `public.ref_permission`
 - **ALL** `admin_ref_permission_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `authed_ref_permission_read` — roles ['public']
-  - `((auth.uid() IS NOT NULL) OR (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])))`
+  - `((( SELECT auth.uid() AS uid) IS NOT NULL) OR (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])))`
 
 ## `public.ref_review_source`
 - **ALL** `Écriture admin des sources d'avis` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des sources d'avis` — roles ['public']
   - `true`
 
 ## `public.ref_sustainability_action`
 - **ALL** `Écriture admin des actions DD` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des actions DD` — roles ['public']
   - `true`
 
 ## `public.ref_sustainability_action_category`
 - **ALL** `Écriture admin des catégories DD` — roles ['public']
-  - `((auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des catégories DD` — roles ['public']
   - `true`
 
 ## `public.ref_sustainability_action_group`
 - **ALL** `admin_write_ref_sustainability_action_group` — roles ['public']
-  - `((auth.role() = 'service_role'::text) OR (auth.role() = 'admin'::text) OR api.is_platform_superuser())`
+  - `((( SELECT auth.role() AS role) = 'service_role'::text) OR (( SELECT auth.role() AS role) = 'admin'::text) OR api.is_platform_superuser())`
 - **SELECT** `pub_ref_sustainability_action_group_read` — roles ['public']
   - `true`
 
 ## `public.ref_tag`
 - **ALL** `admin_tag_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_tag_read` — roles ['public']
   - `true`
 
@@ -1754,37 +1772,41 @@
 
 ## `public.user_org_admin_role`
 - **ALL** `admin_user_org_admin_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_org_admin_role_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
    FROM user_org_membership m
-  WHERE ((m.id = user_org_admin_role.membership_id) AND (m.is_active = true) AND ((m.user_id = auth.uid()) OR (m.org_object_id = api.current_user_org_id())))))))`
+  WHERE ((m.id = user_org_admin_role.membership_id) AND (m.is_active = true) AND ((m.user_id = ( SELECT auth.uid() AS uid)) OR (m.org_object_id = api.current_user_org_id())))))))`
 
 ## `public.user_org_business_role`
 - **ALL** `admin_user_org_business_role_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_org_business_role_read` — roles ['public']
   - `(api.is_platform_superuser() OR ((is_active = true) AND (EXISTS ( SELECT 1
    FROM user_org_membership m
-  WHERE ((m.id = user_org_business_role.membership_id) AND (m.is_active = true) AND ((m.user_id = auth.uid()) OR (m.org_object_id = api.current_user_org_id())))))))`
+  WHERE ((m.id = user_org_business_role.membership_id) AND (m.is_active = true) AND ((m.user_id = ( SELECT auth.uid() AS uid)) OR (m.org_object_id = api.current_user_org_id())))))))`
 
 ## `public.user_org_membership`
 - **ALL** `admin_user_org_membership_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_org_membership_read` — roles ['public']
-  - `(api.is_platform_superuser() OR ((is_active = true) AND ((user_id = auth.uid()) OR (org_object_id = api.current_user_org_id()))))`
+  - `(api.is_platform_superuser() OR ((is_active = true) AND ((user_id = ( SELECT auth.uid() AS uid)) OR (org_object_id = api.current_user_org_id()))))`
 
 ## `public.user_permission`
 - **ALL** `admin_user_permission_write` — roles ['public']
-  - `(auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text])) | (auth.role() = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `member_user_permission_read` — roles ['public']
-  - `(api.is_platform_superuser() OR ((is_active = true) AND (user_id = auth.uid())) OR ((is_active = true) AND (EXISTS ( SELECT 1
+  - `(api.is_platform_superuser() OR ((is_active = true) AND (user_id = ( SELECT auth.uid() AS uid))) OR ((is_active = true) AND (EXISTS ( SELECT 1
    FROM user_org_membership m_target
   WHERE ((m_target.user_id = user_permission.user_id) AND (m_target.is_active = true) AND (m_target.org_object_id = api.current_user_org_id())))) AND (EXISTS ( SELECT 1
    FROM (user_org_membership m_caller
-     JOIN user_org_admin_role  …[truncated — full text in catalog_extra.json or live pg_policies]`
+     JOIN use …[truncated — full text in catalog_extra.json or live pg_policies]`
 
 ## `storage.objects`
+- **ALL RESTRICTIVE** `avatars_no_anon_write` — roles ['anon', 'authenticated']
+  - `(bucket_id <> 'avatars'::text) | (bucket_id <> 'avatars'::text)`
+- **ALL** `avatars_service_role_write` — roles ['service_role']
+  - `(bucket_id = 'avatars'::text) | (bucket_id = 'avatars'::text)`
 - **ALL RESTRICTIVE** `documents_no_anon_write` — roles ['anon', 'authenticated']
   - `(bucket_id <> 'documents'::text) | (bucket_id <> 'documents'::text)`
 - **ALL** `documents_service_role_write` — roles ['service_role']
@@ -1793,7 +1815,3 @@
   - `(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)`
 - **ALL** `media_service_role_write` — roles ['service_role']
   - `(bucket_id = 'media'::text) | (bucket_id = 'media'::text)`
-- **SELECT** `documents_public_read` — roles ['public']
-  - `(bucket_id = 'documents'::text)`
-- **SELECT** `media_public_read` — roles ['public']
-  - `(bucket_id = 'media'::text)`

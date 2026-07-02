@@ -5,7 +5,7 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 > ⚠️ **Reads are regex-inferred — false negatives exist** (e.g. `save_object_places` writes `object_zone` but the edge wasn't detected). A table flagged ‘no consumer detected’ is a **candidate** gap to verify in the function body or live, not a proven one. Confirmed exposure gaps belong in the decision log (§101/§103).
 
 ## Summary
-- authorable object-attached tables: **60** — emitted by a detected consumer read: **60** — candidate gaps: **0**
+- authorable object-attached tables: **62** — emitted by a detected consumer read: **62** — candidate gaps: **0**
 - system-ledger object-attached tables (out of §101 scope): **9** (`audit_session`, `incident_report`, `org_config`, `org_permission`, `pending_change`, `promotion_object`, `promotion_usage`, `publication_object`, `user_org_membership`)
 
 ## Candidate authorable gaps (verify before trusting)
@@ -15,7 +15,7 @@ _None — every authorable object-attached table has at least one detected consu
 ## Covered authorable tables
 
 - `actor_object_role` ← `current_user_crm_actor_ids`, `current_user_extended_object_ids`, `get_actor_data`, `get_object_resource`, `get_objects_with_deep_data`, `is_object_owner` …
-- `contact_channel` ← `get_dashboard_completeness`, `get_object_resource`, `get_object_resource_adapted`, `get_objects_with_deep_data`, `get_organization_data`, `list_object_contact_suggestions` …
+- `contact_channel` ← `get_dashboard_completeness`, `get_object_jsonld`, `get_object_resource`, `get_object_resource_adapted`, `get_objects_with_deep_data`, `get_organization_data` …
 - `crm_interaction` ← `capture_metric_snapshots`, `current_user_crm_actor_ids`, `delete_crm_interaction`, `list_actor_crm`, `list_crm_directory`, `list_crm_tasks` …
 - `crm_task` ← `list_crm_tasks`, `list_object_crm`, `save_crm_task`
 - `media` ← `commit_staging_to_public`, `export_publication_indesign`, `get_dashboard_completeness`, `get_filtered_object_ids`, `get_media_for_web`, `get_object_resource` …
@@ -25,7 +25,7 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_capacity` ← `get_dashboard_completeness`, `get_filtered_object_ids`, `get_object_resource`, `save_object_commercial`
 - `object_classification` ← `capture_metric_snapshots`, `commit_staging_to_public`, `enforce_classification_single_selection`, `get_dashboard_distinction_overview`, `get_dashboard_scorecards`, `get_filtered_object_ids` …
 - `object_cuisine_type` ← `get_object_resource`, `refresh_object_filter_caches`
-- `object_description` ← `export_itinerary_gpx`, `export_publication_indesign`, `get_dashboard_completeness`, `get_object_card`, `get_object_cards_batch`, `get_object_map_item` …
+- `object_description` ← `export_itinerary_gpx`, `export_publication_indesign`, `get_dashboard_completeness`, `get_object_card`, `get_object_cards_batch`, `get_object_i18n_all` …
 - `object_discount` ← `get_object_resource`, `save_object_commercial`
 - `object_document` ← `get_object_resource`, `rpc_delete_object`
 - `object_environment_tag` ← `get_object_cards_batch`, `get_object_environment_tags_compact`, `get_object_resource`, `refresh_object_filter_caches`, `save_object_commercial`
@@ -43,6 +43,8 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_iti_stage_media` ← `get_object_resource`
 - `object_language` ← `get_object_resource`, `refresh_object_filter_caches`, `save_object_commercial`
 - `object_legal` ← `audit_legal_compliance`, `check_object_legal_compliance`, `get_expiring_legal_records`, `get_object_legal_compliance`, `get_object_legal_data`, `get_object_legal_records` …
+- `object_list` ← `delete_list`, `get_list`, `get_public_list_by_token`, `list_effective_object_ids`, `list_my_lists`, `set_list_items` …
+- `object_list_item` ← `list_effective_object_ids`, `set_list_items`
 - `object_location` ← `capture_metric_snapshots`, `export_publication_indesign`, `get_dashboard_city_distribution`, `get_dashboard_city_options`, `get_dashboard_completeness`, `get_dashboard_filter_options` …
 - `object_meeting_room` ← `get_filtered_object_ids`, `get_object_resource`
 - `object_membership` ← `get_object_resource`, `handle_membership_status_transition`
@@ -52,7 +54,7 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_menu_item_cuisine_type` ← `get_object_resource`, `search_events_by_restaurant_cuisine`, `search_restaurants_by_cuisine`
 - `object_menu_item_dietary_tag` ← `get_object_resource`, `refresh_object_filter_caches`
 - `object_menu_item_media` ← `get_object_resource`
-- `object_org_link` ← `auto_attach_object_to_creator_org`, `current_user_crm_object_ids`, `current_user_extended_object_ids`, `get_object_resource`, `get_objects_with_deep_data`, `get_organization_data` …
+- `object_org_link` ← `auto_attach_object_to_creator_org`, `current_user_crm_object_ids`, `current_user_extended_object_ids`, `get_object_i18n_all`, `get_object_resource`, `get_objects_with_deep_data` …
 - `object_origin` ← `get_object_resource`
 - `object_payment_method` ← `get_object_resource`, `refresh_object_filter_caches`, `save_object_commercial`
 - `object_pet_policy` ← `get_filtered_object_ids`, `get_object_resource`, `save_object_commercial`
@@ -70,7 +72,7 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_sustainability_action` ← `capture_metric_snapshots`, `get_filtered_object_ids`, `get_object_badges_compact`, `get_object_cards_batch`, `get_object_resource`, `rpc_delete_object` …
 - `object_taxonomy` ← `get_dashboard_completeness`, `get_object_cards_batch`, `get_object_resource`, `get_object_taxonomy_compact`, `refresh_object_filter_caches`, `refresh_object_taxonomy_cache_for_domain`
 - `object_version` ← `get_object_version_snapshot`, `get_object_versions`, `rpc_restore_object_version`
-- `object_web_channel` ← `get_object_resource`
+- `object_web_channel` ← `get_object_jsonld`, `get_object_resource`, `interop_object_core`
 - `object_zone` ← `get_object_resource`, `save_object_places`
 - `opening_period` ← `build_opening_period_json`, `get_object_resource`, `is_object_open_now`, `refresh_open_status`, `save_object_openings`
 - `promotion` ← `get_object_resource`, `validate_promotion_code`

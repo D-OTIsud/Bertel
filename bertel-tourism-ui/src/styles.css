@@ -3136,8 +3136,12 @@ a {
 .app-modal__close {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  /* D1 : cible tactile 44px (WCAG 2.5.8) ; marges négatives = encombrement visuel inchangé (26px). */
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  flex-shrink: 0;
+  margin: -9px -12px -9px -9px;
   border: 0;
   border-radius: 8px;
   background: transparent;

@@ -8,25 +8,23 @@ officiel (icône itinéraire/repère) en en-tête, associé à la mention instit
 
 ## Logo
 
-- Source : logo officiel Bertel fourni par l'utilisateur (bucket Storage public `assets`,
-  `LogoOfficielBertel.png` — icône « B » multicolore en itinéraire + repère, wordmark BERTEL, fond
-  blanc opaque 1254×1254).
-- Fichier servi par l'app : `bertel-tourism-ui/public/Logo/logo-bertel-icon.png` — seule l'icône
-  (sans le wordmark) a été conservée, fond blanc détouré → transparent puis recadrée au plus près
-  (532×612), générée via sharp. Le wordmark n'est pas réutilisé tel quel : le texte « Bertel »
-  est recomposé en Poppins dans le gabarit pour rester net à petite taille et cohérent avec le
-  reste de la typo.
-- Les gabarits le chargent via **`{{ .SiteURL }}/Logo/logo-bertel-icon.png`** — même convention
-  que l'app elle-même (`theme.ts` sert son logo par défaut depuis `/Logo/...`) ; nécessite que la
-  **Site URL** (Authentication → URL Configuration) pointe vers l'app déployée **et** que le
-  fichier soit déployé (commit + build Coolify).
-- Repli : `alt="Bertel"` si l'image est bloquée par le client mail (le nom reste lisible en texte
-  à côté).
-- Alternative sans dépendance de déploiement : pointer directement vers l'URL Storage publique
-  fournie (`.../storage/v1/object/public/assets/LogoOfficielBertel.png`) — non retenu ici car cette
-  version a un fond blanc opaque (visible en petit carré sur le papier crème `#fbf9f4`) et inclut
-  le wordmark en plus, rendant l'en-tête plus large. À reconsidérer si le déploiement de
-  `logo-bertel-icon.png` n'est pas souhaité.
+- Source retenue : URL Storage publique fournie directement —
+  `https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/assets/LogoOfficielBertel.png`
+  (logo Bertel officiel complet : icône « B » multicolore en itinéraire + repère + wordmark BERTEL,
+  carré 1254×1254, fond blanc opaque). Chargé tel quel dans les 6 gabarits + `preview.html`, en
+  **52×52 px** (ratio 1:1 respecté — ne pas changer `width`/`height` indépendamment, l'image est
+  carrée et se déformerait sinon).
+- Aucune dépendance de déploiement : URL publique fixe, contrairement à un asset servi par l'app
+  via `{{ .SiteURL }}/...` (qui suppose Site URL correctement configurée + fichier déployé).
+- Compromis assumé : le fond blanc opaque de l'image forme un léger carré visible sur le papier
+  crème `#fbf9f4` de la carte (différence de blanc minime, non recherchée mais non corrigée ici) ;
+  à 52px le wordmark « BERTEL » intégré à l'image reste petit — le texte « Bertel · OTI du Sud »
+  du gabarit (en Poppins, à côté) porte la lisibilité du nom.
+- Repli : `alt="Bertel"` si l'image est bloquée par le client mail.
+- Assets locaux détourés (`bertel-tourism-ui/public/Logo/logo-bertel-icon.png` — icône seule,
+  fond transparent, 532×612 — et `logo-bertel-email.png` — logo complet transparent, 899×523)
+  restent dans le repo mais ne sont plus référencés par les gabarits ; à réutiliser si l'URL
+  Storage externe devient indisponible ou si l'en-tête doit repasser à un rendu détouré.
 
 ## Comment installer
 

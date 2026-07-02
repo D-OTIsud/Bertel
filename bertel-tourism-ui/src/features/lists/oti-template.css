@@ -205,4 +205,21 @@
     page-break-inside: avoid;
   }
   .oti-secthead { break-after: avoid; }
+
+  /* Pied de page imprimé : marque + pagination, dans la marge basse de chaque feuille.
+     PAGE NOMMÉE exprès : ce CSS est chargé globalement (layout racine), un Ctrl+P
+     ailleurs dans l'app ne doit pas hériter du pied OTI. Margin boxes = Chrome ≥ 131 ;
+     les variables scopées .oti sont hors de portée dans le contexte de marge → hex. */
+  .oti { page: oti; }
+  @page oti {
+    margin: 10mm;
+    @bottom-center {
+      content: 'OTI du Sud · ' counter(page) ' / ' counter(pages);
+      font-family: 'Manrope', system-ui, sans-serif;
+      font-size: 8px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #8a857f; /* = --oti-ink-3 */
+    }
+  }
 }

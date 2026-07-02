@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Pencil, Printer, Star, X } from 'lucide-react';
+import { Pencil, Printer, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
 import { useObjectWorkspaceQuery } from '../../hooks/useExplorerQueries';
@@ -73,7 +72,6 @@ function DrawerPreviewSkeleton() {
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
   const router = useRouter();
-  const [headerFavorite, setHeaderFavorite] = useState(false);
   const { data, isError, error, isLoading } = useObjectWorkspaceQuery(objectId);
   const { peers, typingUsers } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
@@ -116,15 +114,9 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         <div className="drawer-header__actions">
           <StatusPill tone="green">{peers.length} live</StatusPill>
           <AvatarStack people={peers} />
-          <button
-            type="button"
-            className={`drawer-header__icon-btn${headerFavorite ? ' drawer-header__icon-btn--active' : ''}`}
-            onClick={() => setHeaderFavorite((v) => !v)}
-            aria-label={headerFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-            aria-pressed={headerFavorite}
-          >
-            <Star className="h-4 w-4" strokeWidth={2} fill={headerFavorite ? 'currentColor' : 'none'} />
-          </button>
+          {/* D26 : l'étoile « favoris » (useState transitoire, jamais persistée) est retirée —
+              elle promettait un favori qui n'existait pas. Reviendra avec la table
+              workspace_user_favorites (backend, remonté à la session API). */}
           <button type="button" className="drawer-header__btn-secondary" onClick={() => window.print()}>
             <Printer className="h-4 w-4" strokeWidth={2} />
             <span>Imprimer</span>

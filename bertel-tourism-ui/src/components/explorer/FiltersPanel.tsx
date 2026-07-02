@@ -33,6 +33,13 @@ const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
   { code: 'draft', label: 'Brouillon' },
 ];
+
+/** §156 — l'échelle FFRandonnée 1-5 en trois segments parlants (bornes min/max du store). */
+const DIFFICULTY_SEGMENTS: Array<{ label: string; min?: number; max?: number }> = [
+  { label: 'Facile (1-2)', max: 2 },
+  { label: 'Moyen (3)', min: 3, max: 3 },
+  { label: 'Difficile (4-5)', min: 4 },
+];
 // §153 : plus de map de libellés locale — resolveTypeLabel (TYPE_LABEL) est la
 // source unique, la même que les cartes résultats et le tiroir.
 
@@ -826,25 +833,26 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 </div>
               </div>
 
+              {/* §156 — l'échelle ordinale 1-5 en segments nommés, plus des inputs
+                  numériques libres (affordance fausse, min>max possible, échelle
+                  inconnue de l'utilisateur). */}
               <div className="facet-group">
                 <span className="facet-title">Difficulté</span>
-                <div className="filters-panel__range-grid">
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={renderNumber(iti.difficultyMin)}
-                    onChange={(event) => setItiDifficulty(event.target.value ? Number(event.target.value) : undefined, iti.difficultyMax)}
-                    placeholder="Min"
-                  />
-                  <Input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={renderNumber(iti.difficultyMax)}
-                    onChange={(event) => setItiDifficulty(iti.difficultyMin, event.target.value ? Number(event.target.value) : undefined)}
-                    placeholder="Max"
-                  />
+                <div className="flex flex-wrap gap-2">
+                  {DIFFICULTY_SEGMENTS.map((segment) => {
+                    const active = iti.difficultyMin === segment.min && iti.difficultyMax === segment.max;
+                    return (
+                      <button
+                        key={segment.label}
+                        type="button"
+                        className={active ? 'chip chip--active' : 'chip'}
+                        onClick={() => (active ? setItiDifficulty(undefined, undefined) : setItiDifficulty(segment.min, segment.max))}
+                        aria-pressed={active}
+                      >
+                        {segment.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

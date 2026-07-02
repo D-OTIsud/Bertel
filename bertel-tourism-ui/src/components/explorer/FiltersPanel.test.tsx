@@ -76,3 +76,34 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.queryByRole('button', { name: /Accessibilité et services/ })).not.toBeInTheDocument();
   });
 });
+
+describe('FiltersPanel — difficulté ITI en segments (§156)', () => {
+  beforeEach(resetStore);
+
+  it('sélectionne un segment (bornes posées) et le re-clic le retire', () => {
+    act(() => useExplorerStore.getState().toggleBucket('ITI'));
+    render(<FiltersPanel />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Facile (1-2)' }));
+    expect(useExplorerStore.getState().iti.difficultyMax).toBe(2);
+    expect(useExplorerStore.getState().iti.difficultyMin).toBeUndefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Facile (1-2)' }));
+    expect(useExplorerStore.getState().iti.difficultyMax).toBeUndefined();
+  });
+});
+
+describe('explorer-store — garde min ≤ max (§156)', () => {
+  beforeEach(resetStore);
+
+  it('réordonne une plage inversée (distance)', () => {
+    act(() => useExplorerStore.getState().setItiDistance(12, 5));
+    expect(useExplorerStore.getState().iti.distanceMinKm).toBe(5);
+    expect(useExplorerStore.getState().iti.distanceMaxKm).toBe(12);
+  });
+
+  it('réordonne une plage de capacité inversée', () => {
+    act(() => useExplorerStore.getState().setResCapacityFilter('seats', 40, 10));
+    expect(useExplorerStore.getState().res.capacityFilters).toEqual([{ code: 'seats', min: 10, max: 40 }]);
+  });
+});

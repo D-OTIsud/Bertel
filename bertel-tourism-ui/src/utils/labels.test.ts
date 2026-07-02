@@ -22,10 +22,10 @@ describe('humanizeCode', () => {
 
 describe('resolveTypeLabel', () => {
   it('résout les codes de type DB en libellés FR', () => {
-    expect(resolveTypeLabel('HOT')).toBe('Hotel');
+    expect(resolveTypeLabel('HOT')).toBe('Hôtel');
     expect(resolveTypeLabel('RES')).toBe('Restaurant');
     expect(resolveTypeLabel('LOI')).toBe('Loisir');
-    expect(resolveTypeLabel('act')).toBe('Activite encadree'); // insensible à la casse
+    expect(resolveTypeLabel('act')).toBe('Activité encadrée'); // insensible à la casse
   });
   it('humanise un code inconnu plutôt que de l’afficher brut', () => {
     expect(resolveTypeLabel('UNKNOWN_TYPE')).toBe('Unknown type');

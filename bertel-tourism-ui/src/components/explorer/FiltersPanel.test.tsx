@@ -20,13 +20,13 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel variant="column" />);
 
-    expect(screen.getByText('Sous-types hebergement')).toBeInTheDocument();
-    fireEvent.click(sectionToggle(/Section Hebergements/, true));
-    expect(screen.queryByText('Sous-types hebergement')).not.toBeInTheDocument();
-    fireEvent.click(sectionToggle(/Section Hebergements/, false));
-    expect(screen.getByText('Sous-types hebergement')).toBeInTheDocument();
+    expect(screen.getByText('Sous-types hébergement')).toBeInTheDocument();
+    fireEvent.click(sectionToggle(/Section Hébergements/, true));
+    expect(screen.queryByText('Sous-types hébergement')).not.toBeInTheDocument();
+    fireEvent.click(sectionToggle(/Section Hébergements/, false));
+    expect(screen.getByText('Sous-types hébergement')).toBeInTheDocument();
     // La chip de bucket homonyme garde son nom nu : pas de collision de noms.
-    expect(screen.getByRole('button', { name: 'Hebergements' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hébergements' })).toBeInTheDocument();
   });
 
   it("l'en-tête Hébergements porte le compte des critères actifs (visible replié)", () => {
@@ -36,11 +36,11 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     });
     render(<FiltersPanel variant="column" />);
 
-    const toggle = sectionToggle(/Section Hebergements/, true);
+    const toggle = sectionToggle(/Section Hébergements/, true);
     expect(toggle).toHaveTextContent('1');
     fireEvent.click(toggle);
     // Replié, le badge reste — un filtre actif n'est jamais masqué par le pli.
-    expect(sectionToggle(/Section Hebergements/, false)).toHaveTextContent('1');
+    expect(sectionToggle(/Section Hébergements/, false)).toHaveTextContent('1');
   });
 
   it('la section Itinéraires est repliable et compte ses critères', () => {
@@ -51,7 +51,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     });
     render(<FiltersPanel variant="column" />);
 
-    const toggle = sectionToggle(/Section Itineraires/, true);
+    const toggle = sectionToggle(/Section Itinéraires/, true);
     expect(toggle).toHaveTextContent('2');
     fireEvent.click(toggle);
     expect(screen.queryByText('Type de parcours')).not.toBeInTheDocument();
@@ -73,6 +73,6 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
   it('les groupes transverses restent non repliables', () => {
     render(<FiltersPanel variant="column" />);
     expect(screen.queryByRole('button', { name: /Localisation/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Accessibilite et services/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Accessibilité et services/ })).not.toBeInTheDocument();
   });
 });

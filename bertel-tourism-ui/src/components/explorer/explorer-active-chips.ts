@@ -92,7 +92,7 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   }
 
   if (c.pmr) {
-    chips.push({ key: 'pmr', group: 'pmr', value: 'pmr', label: 'PMR / Accessibilité' });
+    chips.push({ key: 'pmr', group: 'pmr', value: 'pmr', label: 'Accessibilité (PMR)' });
   }
   if (c.petsAccepted) {
     chips.push({ key: 'pets', group: 'pets', value: 'pets', label: 'Animaux acceptés' });
@@ -198,7 +198,9 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       key: 'itiLoop',
       group: 'itiLoop',
       value: String(iti.isLoop),
-      label: iti.isLoop ? 'Itinéraire · Boucle' : 'Itinéraire · Aller simple',
+      // « Linéaire » = tracé non bouclé (l'éditeur dit « Tracé en boucle ») —
+      // ni « aller simple » ni « aller-retour », qui affirment plus que la donnée.
+      label: iti.isLoop ? 'Itinéraire · Boucle' : 'Itinéraire · Linéaire',
     });
   }
   if (iti.difficultyMin != null || iti.difficultyMax != null) {

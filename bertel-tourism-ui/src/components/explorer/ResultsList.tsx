@@ -156,9 +156,9 @@ export function ResultsList({
       <section className="results-panel">
         <div className="panel-heading">
           <div className="results-panel__title-row">
-            <span className="eyebrow">Resultats</span>
+            <span className="eyebrow">Résultats</span>
             <span className="results-count">{visibleCards.length} fiches</span>
-            {isRefreshing ? <span className="results-refreshing">Mise a jour...</span> : null}
+            {isRefreshing ? <span className="results-refreshing">Mise à jour…</span> : null}
           </div>
           {headerActions ? <div className="results-panel__meta">{headerActions}</div> : null}
         </div>
@@ -172,7 +172,7 @@ export function ResultsList({
     <div className="flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
       <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
-          <span className="truncate">Resultats</span>
+          <span className="truncate">Résultats</span>
           <span className="truncate font-sans text-xs font-medium text-ink-3">{visibleCards.length} fiches</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">

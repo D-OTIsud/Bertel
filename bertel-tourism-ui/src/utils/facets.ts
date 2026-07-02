@@ -13,11 +13,11 @@ import type {
 import { buildExplorerTypeFamilies } from './labels';
 
 export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: string }> = [
-  { code: 'HOT', label: 'Hebergements' },
+  { code: 'HOT', label: 'Hébergements' },
   { code: 'RES', label: 'Restaurants' },
-  { code: 'ITI', label: 'Itineraires' },
-  { code: 'ACT', label: 'Activites' },
-  { code: 'EVT', label: 'Evenements' },
+  { code: 'ITI', label: 'Itinéraires' },
+  { code: 'ACT', label: 'Activités' },
+  { code: 'EVT', label: 'Événements' },
   { code: 'VIS', label: 'Visites' },
   { code: 'SRV', label: 'Services' },
 ];
@@ -42,7 +42,7 @@ export const ACCESSIBILITY_DISABILITY_TYPE_OPTIONS: Array<{ code: AccessibilityD
   { code: 'motor', label: 'Moteur' },
   { code: 'hearing', label: 'Auditif' },
   { code: 'visual', label: 'Visuel' },
-  { code: 'cognitive', label: 'Mental / cognitif' },
+  { code: 'cognitive', label: 'Cognitif' },
 ];
 
 export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTypeCode[]> = {

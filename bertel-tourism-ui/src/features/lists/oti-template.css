@@ -197,4 +197,12 @@
   .oti-print-portal { display: block !important; position: static; }
   .oti-print-portal .oti { box-shadow: none; }
   @page { margin: 10mm; }
+
+  /* Pagination : une carte / étape / encart ne se coupe jamais entre deux pages
+     (s'applique aussi au Ctrl+P de la page publique /l/[token]). */
+  .oti-poi--carnet, .oti-card, .oti-stop, .oti-word, .oti-note, .oti-map {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .oti-secthead { break-after: avoid; }
 }

@@ -140,7 +140,7 @@ export function SubjectResolver({
         <span className="text-sm font-medium text-ink-2" id="rgpd-subject-label">
           Sujet à effacer
         </span>
-        <div className="flex items-center gap-2 rounded-shellLg border border-line bg-surface px-3">
+        <div className="flex items-center gap-2 rounded-shellLg border border-line bg-surface px-3 focus-within:border-ink-3">
           <Search size={15} className="shrink-0 text-ink-3" aria-hidden />
           <input
             value={query}
@@ -149,7 +149,7 @@ export function SubjectResolver({
             aria-labelledby="rgpd-subject-label"
             aria-describedby={HINT_ID}
             placeholder="Rechercher par nom ou e-mail…"
-            className="w-full bg-transparent py-2 text-sm text-ink outline-none"
+            className="w-full border-0 bg-transparent px-0 py-2 text-sm text-ink outline-none"
           />
         </div>
         {!tooShort && (

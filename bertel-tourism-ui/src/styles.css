@@ -187,8 +187,13 @@ textarea::placeholder {
    Les icônes sont fournies par lucide-react côté TSX (pas de police d'icônes).
    ========================================================================== */
 
-/* Anneau de focus visible — correctif central de l'audit (S1). */
-:focus-visible {
+/* Anneau de focus visible — correctif central de l'audit (S1).
+   :where() = spécificité nulle : la règle est un DÉFAUT que toute utilité
+   surclasse (`outline-none` d'un input à wrapper focus-within, `rounded-full`
+   d'une pill). Sans :where(), déclarée après @tailwind utilities elle gagnait
+   par ordre source et doublait l'indicateur des champs texte — qui matchent
+   :focus-visible même au clic souris. */
+:where(:focus-visible) {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: 4px;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { ResultsTableView } from '../components/explorer/ResultsTableView';
@@ -26,11 +26,12 @@ const GRID_BY_MODE: Record<ExplorerViewMode, string> = {
   carte: 'grid-cols-[296px_minmax(0,1fr)]',
 };
 
-function MapFallback() {
+function MapFallback({ headerActions }: { headerActions?: ReactNode }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col border-l border-line bg-surface">
-      <div className="flex h-14 flex-none items-center border-b border-line bg-surface px-4">
+      <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
+        {headerActions}
       </div>
       <div className="flex flex-1 items-center justify-center p-6 text-sm text-ink-3">Chargement de la carte...</div>
     </div>
@@ -183,52 +184,52 @@ export default function ExplorerPage() {
           </div>
         </section>
       ) : (
-        <>
-          <div className="flex flex-none items-center justify-end border-b border-line bg-surface px-4 py-1.5">
-            <ExplorerViewSwitch />
-          </div>
-          <div
-            className={cn(
-              'relative grid min-h-0 min-w-0 flex-1 gap-0 overflow-hidden',
-              GRID_BY_MODE[viewMode],
-            )}
-          >
-            <FiltersPanel references={referencesQuery.data} variant="column" />
-            {viewMode === 'split' || viewMode === 'liste' ? (
-              <ResultsList
-                cards={cards}
-                loading={isInitialLoading}
-                isRefreshing={isRefreshing}
+        /* Le switch de vue vit dans le header h-14 du panneau visible (liste, table
+           ou carte) au lieu d'une barre dédiée — une ligne verticale de gagnée. */
+        <div
+          className={cn(
+            'relative grid min-h-0 min-w-0 flex-1 gap-0 overflow-hidden',
+            GRID_BY_MODE[viewMode],
+          )}
+        >
+          <FiltersPanel references={referencesQuery.data} variant="column" />
+          {viewMode === 'split' || viewMode === 'liste' ? (
+            <ResultsList
+              cards={cards}
+              loading={isInitialLoading}
+              isRefreshing={isRefreshing}
+              variant="column"
+              hasMore={cardsQuery.hasNextPage}
+              isLoadingMore={cardsQuery.isFetchingNextPage}
+              onLoadMore={() => void cardsQuery.fetchNextPage()}
+              headerActions={<ExplorerViewSwitch />}
+            />
+          ) : null}
+          {viewMode === 'table' ? (
+            <ResultsTableView
+              cards={cards}
+              loading={isInitialLoading}
+              isRefreshing={isRefreshing}
+              hasMore={cardsQuery.hasNextPage}
+              isLoadingMore={cardsQuery.isFetchingNextPage}
+              onLoadMore={() => void cardsQuery.fetchNextPage()}
+              headerActions={<ExplorerViewSwitch />}
+            />
+          ) : null}
+          {viewMode === 'split' || viewMode === 'carte' ? (
+            <Suspense fallback={<MapFallback headerActions={viewMode === 'carte' ? <ExplorerViewSwitch /> : undefined} />}>
+              <MapPanel
+                objects={markers}
                 variant="column"
-                hasMore={cardsQuery.hasNextPage}
-                isLoadingMore={cardsQuery.isFetchingNextPage}
-                onLoadMore={() => void cardsQuery.fetchNextPage()}
+                onCollapse={viewMode === 'split' ? () => setViewMode('liste') : undefined}
+                headerActions={viewMode === 'carte' ? <ExplorerViewSwitch /> : undefined}
               />
-            ) : null}
-            {viewMode === 'table' ? (
-              <ResultsTableView
-                cards={cards}
-                loading={isInitialLoading}
-                isRefreshing={isRefreshing}
-                hasMore={cardsQuery.hasNextPage}
-                isLoadingMore={cardsQuery.isFetchingNextPage}
-                onLoadMore={() => void cardsQuery.fetchNextPage()}
-              />
-            ) : null}
-            {viewMode === 'split' || viewMode === 'carte' ? (
-              <Suspense fallback={<MapFallback />}>
-                <MapPanel
-                  objects={markers}
-                  variant="column"
-                  onCollapse={viewMode === 'split' ? () => setViewMode('liste') : undefined}
-                />
-              </Suspense>
-            ) : null}
-            {/* Sans carte, la barre de sélection (portée par MapPanel) doit rester : les
-                actions de masse suivent la sélection dans TOUTES les vues. */}
-            {viewMode === 'liste' || viewMode === 'table' ? <SelectionBar /> : null}
-          </div>
-        </>
+            </Suspense>
+          ) : null}
+          {/* Sans carte, la barre de sélection (portée par MapPanel) doit rester : les
+              actions de masse suivent la sélection dans TOUTES les vues. */}
+          {viewMode === 'liste' || viewMode === 'table' ? <SelectionBar /> : null}
+        </div>
       )}
     </section>
   );

@@ -605,6 +605,9 @@ textarea::placeholder {
   cursor: pointer;
   transition: background-color 140ms ease, color 140ms ease;
 }
+/* Variante icônes seules (ExplorerViewSwitch dans le header résultats) — la base
+   .view-switch reste partagée avec des groupes à libellés (fond de carte). */
+.view-switch--icons .view-switch__btn { padding: 0 8px; }
 .view-switch__btn:hover { color: var(--text); }
 .view-switch__btn.is-on {
   background: var(--surface);

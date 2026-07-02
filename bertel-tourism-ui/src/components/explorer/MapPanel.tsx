@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { ArrowUpRight, LassoSelect, Maximize, MapPin, PanelRightClose } from 'lucide-react';
 import { Layer, Map, Marker, NavigationControl, Popup, Source } from 'react-map-gl/maplibre';
 import {
@@ -140,9 +140,11 @@ interface MapPanelProps {
   variant?: 'panel' | 'column';
   /** D16 : rend un bouton « Replier » dans l'en-tête (mode split → vue liste). */
   onCollapse?: () => void;
+  /** Actions injectées dans l'en-tête colonne (ex. ExplorerViewSwitch en vue Carte). */
+  headerActions?: ReactNode;
 }
 
-export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelProps) {
+export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions }: MapPanelProps) {
   const markerStyles = useUiStore((state) => state.markerStyles);
   const openDrawer = useUiStore((state) => state.openDrawer);
 
@@ -701,6 +703,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
                 Replier
               </button>
             ) : null}
+            {headerActions}
           </div>
         </div>
       ) : null}

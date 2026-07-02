@@ -25,9 +25,15 @@ import { getObjectIdsInsidePolygon, type LngLatPoint } from '../../utils/explore
 import { cn } from '@/lib/utils';
 import { SelectionBar } from './SelectionBar';
 import { MapLegend } from './MapLegend';
+import { useItiTracks } from '../../hooks/useItiTracks';
+import { buildItiTrackFeatureCollection } from '../../services/iti-tracks';
 
 const OBJECT_SOURCE_ID = 'objects-source';
 const OBJECT_LABEL_LAYER_ID = 'objects-labels';
+// D18 : tracés ITI — visibles au zoom île par défaut (10.2), masqués très dézoomé.
+const ITI_TRACK_SOURCE_ID = 'iti-tracks-source';
+const ITI_TRACK_LAYER_ID = 'iti-tracks';
+const ITI_TRACK_MIN_ZOOM = 9;
 const LASSO_POINT_MIN_DISTANCE = 6;
 const DEFAULT_MAP_CENTER: [number, number] = [55.536384, -21.130568];
 const DEFAULT_MAP_ZOOM = 10.2;
@@ -122,6 +128,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
 
   const selectCard = useExplorerStore((state) => state.selectCard);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
+  const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
   const [hoverPopupState, setHoverPopupState] = useState<HoverPopupState | null>(null);
@@ -129,6 +136,17 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
   const [lassoDrawing, setLassoDrawing] = useState(false);
   const [lassoPoints, setLassoPoints] = useState<ScreenPoint[]>([]);
   const [lassoFeedback, setLassoFeedback] = useState<string | null>(null);
+  // D18 : tracés ITI — géométries chargées à la demande pour les ITI visibles.
+  const [hoveredTrackId, setHoveredTrackId] = useState<string | null>(null);
+  const itiObjectIds = useMemo(
+    () => objects.filter((o) => normalizeExplorerObjectType(o.type) === 'ITI').map((o) => o.id),
+    [objects],
+  );
+  const { tracks: itiTracks } = useItiTracks(itiObjectIds);
+  const itiTrackData = useMemo(() => buildItiTrackFeatureCollection(itiTracks), [itiTracks]);
+  // Tracé « actif » (survol prioritaire, sinon fiche sélectionnée) : surbrillance + étapes numérotées.
+  const activeTrackId = hoveredTrackId ?? (itiTracks.some((t) => t.id === selectedCardId) ? selectedCardId : null);
+  const activeTrack = itiTracks.find((t) => t.id === activeTrackId) ?? null;
   const isColumn = variant === 'column';
   const geoZoneCount = useMemo(
     () => objects.filter((o) => typeof o.location?.lat === 'number' && typeof o.location?.lon === 'number').length,
@@ -656,7 +674,23 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
             zoom: DEFAULT_MAP_ZOOM,
           }}
           attributionControl={false}
-          cursor={lassoArmed ? 'crosshair' : 'default'}
+          cursor={lassoArmed ? 'crosshair' : hoveredTrackId ? 'pointer' : 'default'}
+          interactiveLayerIds={itiTrackData.features.length > 0 ? [ITI_TRACK_LAYER_ID] : undefined}
+          onMouseMove={(e) => {
+            // D18 : survol d'un tracé ITI → surbrillance (les marqueurs restent des éléments DOM).
+            const feature = e.features?.[0];
+            const id = feature ? String(feature.properties?.id ?? '') : '';
+            setHoveredTrackId(id || null);
+          }}
+          onMouseOut={() => setHoveredTrackId(null)}
+          onClick={(e) => {
+            const feature = e.features?.[0];
+            const id = feature ? String(feature.properties?.id ?? '') : '';
+            if (id) {
+              selectCard(id);
+              openDrawer(id);
+            }
+          }}
           onLoad={(e) => {
             setMapLoaded(true);
             const b = e.target.getBounds().toArray().flat() as BBox;
@@ -671,6 +705,43 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
           style={{ width: '100%', height: '100%', position: 'absolute' }}
         >
           <NavigationControl position="top-right" showCompass={false} />
+          {/* D18 : tracés des itinéraires — casing blanc + ligne couleur ITI (celle des pins),
+              tracé actif (survol/sélection) plus épais et opaque. */}
+          {itiTrackData.features.length > 0 ? (
+            <Source id={ITI_TRACK_SOURCE_ID} type="geojson" data={itiTrackData}>
+              <Layer
+                id={`${ITI_TRACK_LAYER_ID}-casing`}
+                type="line"
+                minzoom={ITI_TRACK_MIN_ZOOM}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                paint={{ 'line-color': '#ffffff', 'line-width': 5.5, 'line-opacity': 0.75 }}
+              />
+              <Layer
+                id={ITI_TRACK_LAYER_ID}
+                type="line"
+                minzoom={ITI_TRACK_MIN_ZOOM}
+                layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+                paint={{
+                  'line-color': markerStyles.ITI?.color ?? defaultMarkerStyles.ITI.color,
+                  'line-width': ['case', ['==', ['get', 'id'], activeTrackId ?? ''], 4.5, 3],
+                  'line-opacity': ['case', ['==', ['get', 'id'], activeTrackId ?? ''], 1, 0.8],
+                }}
+              />
+            </Source>
+          ) : null}
+          {/* Étapes numérotées du tracé actif (§111 : lng/lat émis par le RPC). */}
+          {activeTrack?.stages.map((stage) => (
+            <Marker
+              key={`iti-stage-${activeTrack.id}-${stage.position}`}
+              longitude={stage.lng}
+              latitude={stage.lat}
+              anchor="center"
+            >
+              <span className="iti-stage-pin" title={stage.name || `Étape ${stage.position}`}>
+                {stage.position}
+              </span>
+            </Marker>
+          ))}
           {clusters.map((cluster) => {
             const [longitude, latitude] = cluster.geometry.coordinates;
             const props = cluster.properties as any;

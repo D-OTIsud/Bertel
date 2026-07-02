@@ -341,6 +341,44 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
       ],
     },
   },
+  // D18 — l'ITI de démo porte un tracé GeoJSON + étapes numérotées, comme le
+  // RPC réel (`itinerary.track` p_track_format:'geojson' ; stages lng/lat §111).
+  ITIRUN000000003: {
+    id: 'ITIRUN000000003',
+    name: 'Sentier des Trois Cascades',
+    type: 'ITI',
+    raw: {
+      description: 'Itineraire forestier avec denivele moyen et panorama volcanique.',
+      location: { lat: -21.12931941062737, lon: 55.455478307663036, address: 'Depart au belvedere, Cilaos' },
+      itinerary: {
+        distance_km: 8.4,
+        duration_min: 192,
+        is_loop: true,
+        track_format: 'geojson',
+        track: JSON.stringify({
+          type: 'LineString',
+          coordinates: [
+            [55.4555, -21.1293],
+            [55.4611, -21.1264],
+            [55.4682, -21.1289],
+            [55.4741, -21.1342],
+            [55.4718, -21.1408],
+            [55.4643, -21.1431],
+            [55.4574, -21.1389],
+            [55.4542, -21.1331],
+            [55.4555, -21.1293],
+          ],
+        }),
+      },
+      itinerary_details: {
+        stages: [
+          { id: 'stage-1', position: 1, name: 'Belvedere de depart', lat: -21.1293, lng: 55.4555 },
+          { id: 'stage-2', position: 2, name: 'Premiere cascade', lat: -21.1342, lng: 55.4741 },
+          { id: 'stage-3', position: 3, name: 'Retour par la foret', lat: -21.1431, lng: 55.4643 },
+        ],
+      },
+    },
+  },
 };
 
 export const mockPendingChanges: PendingChangeItem[] = [

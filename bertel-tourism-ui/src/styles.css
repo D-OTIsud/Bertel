@@ -447,6 +447,92 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Palette de commandes ⌘K (D24) ---- */
+.palette { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 78vw); }
+.palette__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-tint);
+  color: var(--text-muted);
+}
+.palette__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.palette__spinner { font-size: 11px; color: var(--text-muted); }
+.palette__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.palette__group {
+  margin: 8px 0 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.palette__empty { padding: 14px 4px; font-size: 13px; color: var(--text-muted); }
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.palette__item.is-highlighted { background: var(--surface-2); }
+.palette__item-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--teal-tint, rgba(23, 107, 106, 0.1));
+  color: var(--teal);
+  flex: none;
+}
+.palette__item-body { display: flex; flex-direction: column; min-width: 0; }
+.palette__item-label { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.palette__item-caption {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Feuille des raccourcis (D24) */
+.shortcut-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.shortcut-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+.shortcut-table td:first-child { width: 40%; }
+.shortcut-table kbd {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
 /* ---- Étapes numérotées d'un tracé ITI actif (D18) ---- */
 .iti-stage-pin {
   display: grid;

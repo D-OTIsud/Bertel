@@ -9,8 +9,11 @@ interface UiState {
   networkStatus: NetworkStatus;
   liveMembers: PresenceMember[];
   markerStyles: Record<ObjectTypeCode, MarkerStyle>;
+  /** D24 : palette de commandes ⌘K (état de session, non persisté). */
+  commandPaletteOpen: boolean;
   openDrawer: (objectId: string) => void;
   closeDrawer: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
   setMapLayer: (layer: MapLayerMode) => void;
   setNetworkStatus: (status: NetworkStatus) => void;
   setLivePresence: (members: PresenceMember[]) => void;
@@ -31,8 +34,10 @@ export const useUiStore = create<UiState>()(
       networkStatus: 'connected',
       liveMembers: [],
       markerStyles: defaultMarkerStyles,
+      commandPaletteOpen: false,
       openDrawer: (objectId) => set({ drawerObjectId: objectId }),
       closeDrawer: () => set({ drawerObjectId: null }),
+      setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
       setNetworkStatus: (status) => set({ networkStatus: status }),
       setLivePresence: (members) => set({ liveMembers: members }),

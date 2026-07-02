@@ -159,9 +159,17 @@
 
 .oti-map { max-width: 820px; margin: 0 auto 30px; position: relative; border-radius: 20px; overflow: hidden; background: linear-gradient(160deg, #d9e6dc 0%, #aac8c0 55%, #8fb6cf 100%); border: 1px solid var(--oti-line); aspect-ratio: 21 / 9; }
 .oti-map__pin { position: absolute; transform: translate(-50%, -50%); width: 28px; height: 28px; border-radius: 999px; background: var(--oti-accent); color: #fff; border: 2px solid #fff; display: grid; place-items: center; font-family: var(--oti-display); font-weight: 800; font-size: 12px; box-shadow: 0 4px 12px rgba(2,32,42,0.35); }
-.oti-map__cap { position: absolute; right: 18px; bottom: 16px; max-width: 46%; color: var(--oti-teal-d); text-align: right; }
+.oti-map__cap { position: absolute; right: 18px; bottom: 16px; max-width: 46%; color: var(--oti-teal-d); text-align: right; z-index: 2; pointer-events: none; }
 .oti-map__cap .s { font-family: var(--oti-script); font-size: 20px; color: var(--oti-teal-d); }
 .oti-map__cap .t { font-family: var(--oti-display); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: 0.02em; }
+/* Carte réelle (MapLibre) : le canvas remplit la boîte 21/9, pins/légende DOM au-dessus. */
+.oti-map__canvas { position: absolute; inset: 0; }
+.oti-map__pin--live { position: static; transform: none; }
+/* Cliché figé pour l'impression — un canvas WebGL ne se rend ni dans le portail print
+   (display:none) ni au Ctrl+P ; révélé par le bloc @media print ci-dessous. */
+.oti-map__printshot { display: none; position: absolute; inset: 0; }
+.oti-map__printshot img, .oti-map__shotimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.oti-map__attrib { position: absolute; left: 10px; bottom: 8px; z-index: 2; font-size: 10px; line-height: 1.4; color: rgba(2, 32, 42, 0.6); background: rgba(255, 255, 255, 0.65); padding: 1px 7px; border-radius: 999px; pointer-events: none; }
 
 /* ---------- Pied ---------- */
 .oti-foot { background: var(--oti-ink); color: rgba(255,255,255,0.8); padding: 30px 40px 34px; }
@@ -205,6 +213,10 @@
     page-break-inside: avoid;
   }
   .oti-secthead { break-after: avoid; }
+
+  /* Carte récap : à l'impression le canvas live laisse place au cliché figé (pins re-projetés). */
+  .oti-map__canvas { display: none !important; }
+  .oti-map__printshot { display: block !important; }
 
   /* Pied de page imprimé : marque + pagination, dans la marge basse de chaque feuille.
      PAGE NOMMÉE exprès : ce CSS est chargé globalement (layout racine), un Ctrl+P

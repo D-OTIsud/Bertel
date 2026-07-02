@@ -183,6 +183,15 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== I4b    migration_interop_profiles.sql  (audit API Phase 2: datatourisme/apidae/tourinsoft crosswalk seeds + api.interop_object_core shared reader + api.get_object_interop dispatcher; needs I4 ref_interop_crosswalk + api_views strip_markdown/i18n_pick) =='
 \ir migration_interop_profiles.sql
 
+\echo '== 16e    migration_partition_maintenance_hardening.sql  (§146 partitions born-gated: object_version + audit.audit_log creators re-assert RLS + wrapped policy at creation; ensure_object_version_partitions wired into audit.maintain_partitions (daily cron); repair pass re-gates existing partitions; re-homes stranded object_version_default rows into monthly partitions) =='
+\ir migration_partition_maintenance_hardening.sql
+\echo '== 16f    migration_ref_code_dup_policy_cleanup.sql  (§146 drops the 6 duplicate legacy policy pairs on ref_code partitions — the house pair pub_ref_code_read/admin_ref_code_write covers every partition via the rls_policies loop; asserts the house pair is present before finishing) =='
+\ir migration_ref_code_dup_policy_cleanup.sql
+\echo '== 16g    migration_fk_covering_indexes.sql  (§146 FK covering indexes on the worthwhile tables: object_taxonomy/object_web_channel composite ref_code-partition fan-out (53 constraint clones each) + object_relation.target_object_id + crm_interaction x8 + object_membership/object_menu_item/object_private_description x3; converges idx_crm_interaction_parent partial->full; drops the 3 staging idx_old_data_* duplicate twins, schema-guarded) =='
+\ir migration_fk_covering_indexes.sql
+\echo '== 16h    migration_rls_initplan_broad_sweep.sql  (§146 catalog-driven auth_rls_initplan sweep: rewrites every policy in public+audit whose USING/WITH CHECK carries an unwrapped auth.uid/role/jwt/email call to the (select auth.x()) InitPlan form via ALTER POLICY; self-asserts zero left; permanent CI guard = tests/test_rls_initplan_broad_sweep.sql) =='
+\ir migration_rls_initplan_broad_sweep.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

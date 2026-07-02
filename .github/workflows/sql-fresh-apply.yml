@@ -306,6 +306,26 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_interop_profiles.sql"
 
+      - name: "partition maintenance hardening test (16e §146 — born-gated creators: fresh object_version/audit partitions get RLS + wrapped policy; maintain_partitions covers both parents; no bare partition; default partition empty)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_partition_maintenance_hardening.sql"
+
+      - name: "ref_code duplicate-policy cleanup test (16f §146 — the 6 partitions carry EXACTLY the house pair; the 12 legacy duplicate policies are gone)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_code_dup_policy_cleanup.sql"
+
+      - name: "FK covering indexes test (16g §146 — every FK on object_taxonomy/object_web_channel/object_relation/crm_interaction/object_membership/object_menu_item/object_private_description has a covering index)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_fk_covering_indexes.sql"
+
+      - name: "RLS initplan guard (16h §146 — PERMANENT GATE: zero policies in public/audit with unwrapped auth.uid/role/jwt/email; any migration creating a raw-auth policy fails here — CLAUDE.md §39)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_rls_initplan_broad_sweep.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -22,6 +22,9 @@ function toResultCardDomId(cardId: string): string {
   return `result-card-${String(cardId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 }
 
+/** D25 : offset de scroll conservé par onglet (sessionStorage) — « ne plus perdre sa place ». */
+const SCROLL_STORAGE_KEY = 'bertel-explorer-scroll';
+
 function ResultsListSkeleton() {
   return (
     <div className="flex flex-col gap-2 p-3" aria-hidden="true">
@@ -93,6 +96,35 @@ export function ResultsList({
     if (!el) return;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [selectedCardId]);
+
+  // D25 — restauration du scroll : une seule fois, quand la liste a du contenu
+  // (revenir de l'éditeur ou d'un autre module ne perd plus la position).
+  const scrollRestoredRef = useRef(false);
+  useEffect(() => {
+    if (scrollRestoredRef.current || showLoading || visibleCards.length === 0) return;
+    scrollRestoredRef.current = true;
+    const saved = Number(sessionStorage.getItem(SCROLL_STORAGE_KEY) ?? '');
+    if (Number.isFinite(saved) && saved > 0 && scrollRef.current) {
+      scrollRef.current.scrollTop = saved;
+    }
+  }, [showLoading, visibleCards.length]);
+
+  // D25 — sauvegarde au fil du scroll (throttle par frame, listener passif).
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return undefined;
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        sessionStorage.setItem(SCROLL_STORAGE_KEY, String(node.scrollTop));
+        ticking = false;
+      });
+    };
+    node.addEventListener('scroll', handleScroll, { passive: true });
+    return () => node.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // §125 — infinite scroll: fetch the next server page when the bottom sentinel nears the
   // viewport (rootMargin prefetches before the user hits the end). Re-armed whenever the

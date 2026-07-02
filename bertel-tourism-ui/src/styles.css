@@ -447,6 +447,26 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Modération : diff avant/après + métadonnées (D6) ---- */
+.mod-diff { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.mod-diff del {
+  text-decoration: line-through;
+  background: rgba(200, 92, 72, 0.14);
+  color: #9a3322;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.mod-diff ins {
+  text-decoration: none;
+  background: rgba(47, 133, 90, 0.16);
+  color: #1f6b45;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.mod-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mod-meta__subject { font-size: 13px; color: var(--text); }
+.mod-meta__byline { font-size: 12px; color: var(--text-muted); }
+
 /* ---- Palette de commandes ⌘K (D24) ---- */
 .palette { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 78vw); }
 .palette__search {

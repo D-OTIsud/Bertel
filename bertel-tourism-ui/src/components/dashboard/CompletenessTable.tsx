@@ -2,6 +2,7 @@
 
 import type { DashboardCompleteness } from '../../types/dashboard';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { meterZone } from './meter-zone';
 import { TypePill } from './TypePill';
 
 /** Clés d'essentiels (api.get_dashboard_completeness) → libellés FR. */
@@ -20,15 +21,25 @@ function fieldLabel(key: string): string {
   return FIELD_LABELS[key] ?? key;
 }
 
-/** Jauge de complétude (richesse perçue visiteur 0–100) — couleur par seuil. */
+/** Jauge de complétude (richesse perçue visiteur 0–100) — D7 : couleur + zone écrite (WCAG 1.4.1). */
 function Meter({ score, completePct }: { score: number; completePct: number }) {
-  const color = score >= 80 ? 'var(--teal)' : score >= 50 ? 'var(--warn)' : 'var(--red)';
+  const zone = meterZone(score, 50);
   return (
-    <span className="meter-cell" title={`${completePct} % des fiches complètes`}>
-      <span className="meter">
-        <span className="meter__fill" style={{ width: `${score}%`, background: color }} />
+    <span
+      className="meter-cell"
+      role="img"
+      aria-label={`Complétude ${score} % — ${zone.label} ; ${completePct} % des fiches complètes`}
+      title={`${completePct} % des fiches complètes`}
+    >
+      <span className="meter" aria-hidden="true">
+        <span className="meter__fill" style={{ width: `${score}%`, background: zone.color }} />
       </span>
-      <span className="meter__pct">{score} %</span>
+      <span className="meter__pct" aria-hidden="true">
+        {score} %
+      </span>
+      <span className="meter__zone" style={{ color: zone.color }} aria-hidden="true">
+        {zone.label}
+      </span>
     </span>
   );
 }

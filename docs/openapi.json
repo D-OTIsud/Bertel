@@ -32,13 +32,14 @@
         "tags": ["Objets"],
         "operationId": "listObjects",
         "summary": "Lister les objets publiés (paginé)",
-        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé.",
         "parameters": [
           { "$ref": "#/components/parameters/Cursor" },
           { "$ref": "#/components/parameters/PageSize" },
           { "$ref": "#/components/parameters/Types" },
           { "$ref": "#/components/parameters/Lang" },
-          { "$ref": "#/components/parameters/Search" }
+          { "$ref": "#/components/parameters/Search" },
+          { "$ref": "#/components/parameters/Format" }
         ],
         "responses": {
           "200": {

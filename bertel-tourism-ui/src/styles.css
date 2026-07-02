@@ -11655,6 +11655,30 @@ a {
   z-index: 45;
 }
 
+/* D12 : < 768px le rail (64px) mangeait le viewport — masqué ; le bouton Menu
+   de la TopBar (md:hidden, même seuil) ouvre le tiroir MobileNavDrawer. */
+@media (max-width: 767px) {
+  .app-sidebar { display: none; }
+}
+
+/* D12 : items du tiroir de navigation mobile. */
+.mobile-nav { display: flex; flex-direction: column; gap: 2px; }
+.mobile-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.mobile-nav__item:hover { background: var(--surface-2); color: var(--ink); }
+.mobile-nav__item--active { background: var(--teal-tint, rgba(23, 107, 106, 0.1)); color: var(--teal); }
+.mobile-nav__body { display: flex; flex-direction: column; min-width: 0; }
+.mobile-nav__label { font-size: 14px; font-weight: 700; color: var(--text); }
+.mobile-nav__item--active .mobile-nav__label { color: var(--teal); }
+.mobile-nav__caption { font-size: 11.5px; color: var(--text-muted); }
+
 .app-sidebar__panel {
   position: absolute;
   top: 0;

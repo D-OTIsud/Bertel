@@ -2524,7 +2524,8 @@ function getCombinedWeekRows(openings: OpeningItem[]): OpeningWeekRow[] {
   }));
 }
 
-function getOpeningStatus(openNow: boolean | null, todaySlots: string[]): string {
+/** Single source of truth for the opening card: the pulse dot and the label must never disagree. */
+function getOpeningStatus(openNow: boolean | null, todaySlots: string[]): { open: boolean; label: string } {
   const now = new Date();
   const currentMinute = now.getHours() * 60 + now.getMinutes();
   const ranges = todaySlots.flatMap(getSlotRanges);
@@ -2536,22 +2537,22 @@ function getOpeningStatus(openNow: boolean | null, todaySlots: string[]): string
     .sort((left, right) => left.start - right.start)[0];
 
   if (openNow === true) {
-    return activeRange ? `Ouvert · ferme à ${activeRange.endLabel}` : 'Ouvert aujourd’hui';
+    return { open: true, label: activeRange ? `Ouvert · ferme à ${activeRange.endLabel}` : 'Ouvert aujourd’hui' };
   }
 
   if (openNow === false) {
-    return nextRange ? `Fermé · ouvre à ${nextRange.startLabel}` : 'Fermé aujourd’hui';
+    return { open: false, label: nextRange ? `Fermé · ouvre à ${nextRange.startLabel}` : 'Fermé aujourd’hui' };
   }
 
   if (activeRange) {
-    return `Ouvert · ferme à ${activeRange.endLabel}`;
+    return { open: true, label: `Ouvert · ferme à ${activeRange.endLabel}` };
   }
 
   if (nextRange) {
-    return `Fermé · ouvre à ${nextRange.startLabel}`;
+    return { open: false, label: `Fermé · ouvre à ${nextRange.startLabel}` };
   }
 
-  return 'Fermé aujourd’hui';
+  return { open: false, label: 'Fermé aujourd’hui' };
 }
 
 function getOpeningMeta(opening: OpeningItem): string {
@@ -2680,9 +2681,9 @@ function OpeningPeriodsCard({ openings, openNow }: { openings: OpeningItem[]; op
         onClick={() => setMode((current) => current === 'compact' ? 'week' : 'compact')}
         aria-expanded={mode !== 'compact'}
       >
-        <span className={cn('detail-opening-hero__pulse', openNow === false && 'detail-opening-hero__pulse--closed')} aria-hidden="true" />
+        <span className={cn('detail-opening-hero__pulse', !status.open && 'detail-opening-hero__pulse--closed')} aria-hidden="true" />
         <span className="detail-opening-hero__copy">
-          <span className="detail-opening-hero__status">{status}</span>
+          <span className="detail-opening-hero__status">{status.label}</span>
           <span className="detail-opening-hero__today">Aujourd'hui · <strong>{todayLabel}</strong></span>
         </span>
         <ChevronDown className={cn('detail-opening-hero__chevron', mode !== 'compact' && 'detail-opening-hero__chevron--open')} size={15} aria-hidden />

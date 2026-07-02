@@ -36,7 +36,22 @@ describe('useObjectSearch', () => {
       { id: 'o1', name: 'Grand Air', type: 'HOT', location: { city: 'Saint-Pierre' } },
     ], 'self');
 
-    expect(results).toEqual([{ id: 'o1', name: 'Grand Air', type: 'HOT', status: '', city: 'Saint-Pierre', code: 'o1' }]);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({ id: 'o1', name: 'Grand Air', type: 'HOT', status: '', city: 'Saint-Pierre', code: 'o1' });
+  });
+
+  it('carries the full explorer card so consumers can enrich without refetching', () => {
+    const card = {
+      id: 'o1',
+      name: 'Grand Air',
+      type: 'HOT',
+      image: 'https://img/grand-air.jpg',
+      description: 'Vue mer',
+      location: { city: 'Saint-Pierre', lat: -21.3, lon: 55.5 },
+    };
+    const results = normalizeObjectSearchResults([card]);
+
+    expect(results[0].card).toBe(card);
   });
 
   it('returns debounced search results', async () => {

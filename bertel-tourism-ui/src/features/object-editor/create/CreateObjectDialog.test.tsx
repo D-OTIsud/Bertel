@@ -53,7 +53,15 @@ it('surfaces a backend error and stays open (no onCreated)', async () => {
 it('warns about existing fiches with a close name and opens one on click', () => {
   mockUseObjectSearch.mockReturnValue({
     results: [
-      { id: 'LOIRUN0000000001', name: 'La Cité du Volcan', type: 'LOI', status: 'published', city: 'Le Tampon', code: 'LOIRUN0000000001' },
+      {
+        id: 'LOIRUN0000000001',
+        name: 'La Cité du Volcan',
+        type: 'LOI',
+        status: 'published',
+        city: 'Le Tampon',
+        code: 'LOIRUN0000000001',
+        card: { id: 'LOIRUN0000000001', type: 'LOI', name: 'La Cité du Volcan' },
+      },
     ],
     loading: false,
   });

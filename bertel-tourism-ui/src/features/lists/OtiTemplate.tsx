@@ -21,7 +21,7 @@ import {
   Wheat,
 } from 'lucide-react';
 import type { ListAccent, ListTemplate, ObjectListItem } from '@/services/lists';
-import { HUE_BY_TYPE, LABEL_BY_TYPE, webHref, webLabel, type ListHue } from './type-meta';
+import { HUE_BY_TYPE, LABEL_BY_TYPE, OTI_ACCENTS, webHref, webLabel, type ListHue } from './type-meta';
 
 type IconCmp = typeof MapPin;
 
@@ -39,14 +39,10 @@ export interface OtiPoi {
   web: string | null;
 }
 
-const ACCENT: Record<ListAccent, { ink: string; deep: string; soft: string }> = {
-  teal: { ink: '#006883', deep: '#024053', soft: '#e0eef1' },
-  green: { ink: '#4f9c72', deep: '#3f7d5c', soft: '#e7f2ec' },
-  gold: { ink: '#c69a26', deep: '#a07c18', soft: '#f7efd4' },
-  terra: { ink: '#b34b3d', deep: '#8f3a2e', soft: '#f6e3df' },
-};
+const ACCENT: Record<ListAccent, { ink: string; deep: string; soft: string }> =
+  OTI_ACCENTS as Record<ListAccent, { ink: string; deep: string; soft: string }>;
 
-const ICON_BY_TYPE: Record<string, IconCmp> = {
+export const ICON_BY_TYPE: Record<string, IconCmp> = {
   HOT: Bed, HLO: Bed, HPA: Bed, CAMP: Bed, RVA: Bed,
   RES: UtensilsCrossed, ACT: Compass, ASC: Compass, ITI: Navigation,
   VIS: Landmark, PCU: Landmark, PRD: Wheat, COM: ShoppingBag,

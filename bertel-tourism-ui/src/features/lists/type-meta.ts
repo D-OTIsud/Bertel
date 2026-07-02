@@ -22,10 +22,18 @@ export const HUE_BY_TYPE: Record<string, ListHue> = {
   VIS: 'gold', PCU: 'gold', PRD: 'gold', COM: 'gold', SPU: 'gold', LOI: 'gold',
 };
 
-/** Accent → teinte principale (ink) en hex, pour l'email inline-styled. */
-export const ACCENT_INK: Record<string, string> = {
-  teal: '#006883', green: '#4f9c72', gold: '#c69a26', terra: '#b34b3d',
+/** Palette OTI par accent (teinte principale / foncée / fond doux) — hex du design 019e20ac. */
+export const OTI_ACCENTS: Record<string, { ink: string; deep: string; soft: string }> = {
+  teal: { ink: '#006883', deep: '#024053', soft: '#e0eef1' },
+  green: { ink: '#4f9c72', deep: '#3f7d5c', soft: '#e7f2ec' },
+  gold: { ink: '#c69a26', deep: '#a07c18', soft: '#f7efd4' },
+  terra: { ink: '#b34b3d', deep: '#8f3a2e', soft: '#f6e3df' },
 };
+
+/** Accent → teinte principale (ink) en hex, pour l'email inline-styled. */
+export const ACCENT_INK: Record<string, string> = Object.fromEntries(
+  Object.entries(OTI_ACCENTS).map(([k, v]) => [k, v.ink]),
+);
 
 export function typeLabel(code: string, lang: 'fr' | 'en'): string {
   return LABEL_BY_TYPE[code]?.[lang] ?? code;

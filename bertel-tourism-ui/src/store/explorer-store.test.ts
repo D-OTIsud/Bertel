@@ -43,3 +43,38 @@ describe('explorer-store tag filter', () => {
     expect(useExplorerStore.getState().common.tagsAny).toEqual([]);
   });
 });
+
+describe('D23 — garde anti-combinaison invalide (cascade au retrait de bucket)', () => {
+  it('désélectionner ITI remet ses facettes à zéro', () => {
+    const s = useExplorerStore.getState();
+    s.toggleBucket('ITI');
+    s.setItiIsLoop(true);
+    s.setItiDifficulty(2, 4);
+    s.toggleItiPractice('walk');
+    s.toggleBucket('ITI'); // retrait
+    const iti = useExplorerStore.getState().iti;
+    expect(iti.isLoop).toBeNull();
+    expect(iti.practicesAny).toEqual([]);
+    expect(iti.difficultyMin).toBeUndefined();
+  });
+
+  it('désélectionner HOT vide taxonomie + capacités (subtypes par défaut)', () => {
+    const s = useExplorerStore.getState();
+    s.toggleBucket('HOT');
+    s.toggleHotTaxonomy('dom', 'code');
+    s.setHotCapacityFilter('bedrooms', 2, undefined);
+    s.toggleBucket('HOT');
+    const hot = useExplorerStore.getState().hot;
+    expect(hot.taxonomy).toEqual([]);
+    expect(hot.capacityFilters).toEqual([]);
+  });
+
+  it('ajouter un bucket ne touche pas ses facettes', () => {
+    const s = useExplorerStore.getState();
+    s.setResCapacityFilter('seats', undefined, 60);
+    s.toggleBucket('RES');
+    expect(useExplorerStore.getState().res.capacityFilters).toHaveLength(1);
+    useExplorerStore.getState().toggleBucket('RES');
+    expect(useExplorerStore.getState().res.capacityFilters).toEqual([]);
+  });
+});

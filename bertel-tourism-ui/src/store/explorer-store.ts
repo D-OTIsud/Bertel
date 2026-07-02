@@ -150,11 +150,37 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   hoveredCardId: null,
 
   toggleBucket: (bucket) =>
-    set((state) => ({
-      selectedBuckets: state.selectedBuckets.includes(bucket)
+    set((state) => {
+      const removing = state.selectedBuckets.includes(bucket);
+      const selectedBuckets = removing
         ? state.selectedBuckets.filter((item) => item !== bucket)
-        : [...state.selectedBuckets, bucket],
-    })),
+        : [...state.selectedBuckets, bucket];
+      if (!removing) {
+        return { selectedBuckets };
+      }
+      // D23 — garde anti-combinaison invalide : désélectionner un bucket emporte
+      // ses sous-filtres. Sinon ils restent actifs-mais-ignorés (chips mensongères)
+      // et se RÉACTIVENT dès que la sélection redevient vide (= tous les buckets).
+      switch (bucket) {
+        case 'HOT':
+          return {
+            selectedBuckets,
+            hot: { subtypes: [...DEFAULT_HOT_SUBTYPES], taxonomy: [], capacityFilters: [], meetingRoom: {} },
+          };
+        case 'RES':
+          return { selectedBuckets, res: { capacityFilters: [] } };
+        case 'ITI':
+          return { selectedBuckets, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
+        case 'ACT':
+          return { selectedBuckets, act: { environmentTagsAny: [] } };
+        case 'VIS':
+          return { selectedBuckets, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
+        case 'SRV':
+          return { selectedBuckets, srv: { subtypes: [...DEFAULT_SRV_SUBTYPES] } };
+        default:
+          return { selectedBuckets };
+      }
+    }),
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
   setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),

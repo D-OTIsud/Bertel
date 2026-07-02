@@ -3,17 +3,30 @@
 Six gabarits HTML transactionnels pour **Authentication → Emails** dans le dashboard Supabase.
 Charte **OTI du Sud** (celle du template de listes `oti-template.css`) : papier crème `#fbf9f4`,
 pétrole `#006883` / `#024053`, or `#dab848`, encre `#2d2a2a` ; typos **Poppins** (titres),
-**Kaushan Script** (accroche manuscrite), **Manrope** (texte) avec repli système. Logo OTI du Sud
-en en-tête.
+**Kaushan Script** (accroche manuscrite), **Manrope** (texte) avec repli système. Logo Bertel
+officiel (icône itinéraire/repère) en en-tête, associé à la mention institutionnelle « OTI du Sud ».
 
 ## Logo
 
-- Fichier servi par l'app : `bertel-tourism-ui/public/Logo/logo-email.png` (dérivé détouré de
-  `image.png`, fond gris → transparent, généré via sharp).
-- Les gabarits le chargent via **`{{ .SiteURL }}/Logo/logo-email.png`** → aucune URL en dur ;
-  nécessite que la **Site URL** (Authentication → URL Configuration) pointe vers l'app déployée
-  **et** que `logo-email.png` soit déployé (commit + build Coolify).
-- Repli : `alt="OTI du Sud"` si l'image est bloquée par le client mail.
+- Source : logo officiel Bertel fourni par l'utilisateur (bucket Storage public `assets`,
+  `LogoOfficielBertel.png` — icône « B » multicolore en itinéraire + repère, wordmark BERTEL, fond
+  blanc opaque 1254×1254).
+- Fichier servi par l'app : `bertel-tourism-ui/public/Logo/logo-bertel-icon.png` — seule l'icône
+  (sans le wordmark) a été conservée, fond blanc détouré → transparent puis recadrée au plus près
+  (532×612), générée via sharp. Le wordmark n'est pas réutilisé tel quel : le texte « Bertel »
+  est recomposé en Poppins dans le gabarit pour rester net à petite taille et cohérent avec le
+  reste de la typo.
+- Les gabarits le chargent via **`{{ .SiteURL }}/Logo/logo-bertel-icon.png`** — même convention
+  que l'app elle-même (`theme.ts` sert son logo par défaut depuis `/Logo/...`) ; nécessite que la
+  **Site URL** (Authentication → URL Configuration) pointe vers l'app déployée **et** que le
+  fichier soit déployé (commit + build Coolify).
+- Repli : `alt="Bertel"` si l'image est bloquée par le client mail (le nom reste lisible en texte
+  à côté).
+- Alternative sans dépendance de déploiement : pointer directement vers l'URL Storage publique
+  fournie (`.../storage/v1/object/public/assets/LogoOfficielBertel.png`) — non retenu ici car cette
+  version a un fond blanc opaque (visible en petit carré sur le papier crème `#fbf9f4`) et inclut
+  le wordmark en plus, rendant l'en-tête plus large. À reconsidérer si le déploiement de
+  `logo-bertel-icon.png` n'est pas souhaité.
 
 ## Comment installer
 

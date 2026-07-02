@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aperçu — Templates e-mail Bertel · OTI du Sud</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Kaushan+Script&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@600&display=swap" rel="stylesheet" />
+  <style>
+    body { margin: 0; background: #e8e2d6; font-family: 'Manrope', Arial, sans-serif; }
+    .caption { max-width: 600px; margin: 34px auto 0; padding: 0 16px; }
+    .caption .k { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #006883; }
+    .caption .t { font-family: 'Poppins', Arial, sans-serif; font-size: 15px; font-weight: 700; color: #2d2a2a; margin-top: 2px; }
+    .caption .s { font-size: 12px; color: #5b5754; margin-top: 2px; }
+    .card { width: 600px; max-width: 600px; background: #fbf9f4; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 48px rgba(2,32,42,0.12); }
+    .rule { height: 4px; background: #dab848; font-size: 0; line-height: 0; }
+    .hdr { padding: 24px 40px 20px; border-bottom: 1px solid #e7e1d6; }
+    .hdr .brand { font-family: 'Poppins', Arial, sans-serif; font-size: 14px; font-weight: 800; color: #2d2a2a; }
+    .hdr .sub { font-size: 11px; color: #8a857f; letter-spacing: 0.06em; }
+    .script { font-family: 'Kaushan Script', cursive; font-size: 24px; color: #006883; }
+    .h1 { margin: 8px 0 0; font-family: 'Poppins', Arial, sans-serif; font-size: 25px; line-height: 1.25; font-weight: 800; color: #2d2a2a; letter-spacing: -0.01em; }
+    .p { margin: 14px 0 0; font-size: 15px; line-height: 1.65; color: #5b5754; }
+    .cta { display: inline-block; padding: 15px 38px; font-size: 16px; font-weight: 700; line-height: 20px; color: #fff; background: #006883; border-radius: 999px; text-decoration: none; }
+    .fallback { margin: 0; font-size: 13px; line-height: 1.6; color: #5b5754; }
+    .fallback a { color: #006883; word-break: break-all; }
+    .sec { border-top: 1px solid #e7e1d6; padding-top: 16px; }
+    .sec p { margin: 0; font-size: 13px; line-height: 1.6; color: #5b5754; }
+    .sec strong { color: #2d2a2a; }
+    .foot { background: #2d2a2a; padding: 20px 40px; }
+    .foot .a { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.88); }
+    .foot .b { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 4px; line-height: 1.6; }
+    .foot .c { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 700; margin-top: 6px; }
+    .otpbox { background: #e0eef1; border: 1px solid rgba(0,104,131,0.28); border-radius: 12px; padding: 18px 16px; text-align: center; }
+    .otpbox .lbl { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #006883; }
+    .otpbox .code { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 36px; font-weight: 600; letter-spacing: 0.32em; color: #024053; margin-top: 8px; padding-left: 0.32em; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. CONFIRM SIGN UP -->
+  <div class="caption"><div class="k">Confirm sign up</div><div class="t">Sujet : Confirmez votre adresse e-mail · Bertel</div><div class="s">Variable : {{ .ConfirmationURL }}</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 4px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Bienvenue&nbsp;!</div>
+        <h1 class="h1">Confirmez votre adresse e-mail</h1>
+        <p class="p">Bienvenue sur <strong style="color:#2d2a2a;">Bertel</strong>, la plateforme tourisme &amp; CRM de l'Office de Tourisme Intercommunal du Sud. Confirmez votre adresse pour activer votre compte et accéder à votre espace.</p>
+      </div>
+      <div style="padding:26px 40px 4px;text-align:center;"><a href="#" class="cta">Confirmer mon adresse</a></div>
+      <div style="padding:22px 40px 0;"><p class="fallback">Le bouton ne s'affiche pas ? Copiez ce lien dans votre navigateur :<br /><a href="#">https://app.otisud.re/auth/v1/verify?token=8f3c…&amp;type=signup</a></p></div>
+      <div style="padding:24px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce lien est valable 24 heures et à usage unique. Si vous n'êtes pas à l'origine de cette inscription, ignorez cet e-mail : aucun compte ne sera activé.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+  <!-- 2. INVITE USER -->
+  <div class="caption"><div class="k">Invite user</div><div class="t">Sujet : Vous êtes invité·e à rejoindre Bertel</div><div class="s">Variables : {{ .ConfirmationURL }}, {{ .SiteURL }}</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 4px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Rejoignez-nous&nbsp;!</div>
+        <h1 class="h1">Vous avez été invité·e</h1>
+        <p class="p">Un compte vient d'être créé pour vous sur <strong style="color:#2d2a2a;">Bertel</strong>, la plateforme de l'OTI du Sud (<a href="#" style="color:#006883;text-decoration:underline;">https://app.otisud.re</a>). Acceptez l'invitation pour définir votre mot de passe et accéder à votre espace.</p>
+      </div>
+      <div style="padding:26px 40px 4px;text-align:center;"><a href="#" class="cta">Accepter l'invitation</a></div>
+      <div style="padding:22px 40px 0;"><p class="fallback">Le bouton ne s'affiche pas ? Copiez ce lien dans votre navigateur :<br /><a href="#">https://app.otisud.re/auth/v1/verify?token=1a9d…&amp;type=invite</a></p></div>
+      <div style="padding:24px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce lien est valable 24 heures et à usage unique. Si cette invitation ne vous concerne pas, vous pouvez ignorer cet e-mail.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+  <!-- 3. MAGIC LINK / OTP -->
+  <div class="caption"><div class="k">Magic link / OTP</div><div class="t">Sujet : Votre lien de connexion à Bertel</div><div class="s">Variables : {{ .ConfirmationURL }}, {{ .Token }}</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 4px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Bon retour&nbsp;!</div>
+        <h1 class="h1">Connectez-vous à Bertel</h1>
+        <p class="p">Utilisez le bouton ci-dessous pour vous connecter directement, ou saisissez le code à usage unique dans l'application.</p>
+      </div>
+      <div style="padding:26px 40px 4px;text-align:center;"><a href="#" class="cta">Me connecter</a></div>
+      <div style="padding:24px 40px 4px;"><div class="otpbox"><div class="lbl">Code à usage unique</div><div class="code">074219</div></div></div>
+      <div style="padding:22px 40px 0;"><p class="fallback">Le bouton ne s'affiche pas ? Copiez ce lien dans votre navigateur :<br /><a href="#">https://app.otisud.re/auth/v1/verify?token=6b2e…&amp;type=magiclink</a></p></div>
+      <div style="padding:24px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce lien et ce code sont valables 1 heure et à usage unique. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail et ne communiquez ce code à personne.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+  <!-- 4. CHANGE EMAIL -->
+  <div class="caption"><div class="k">Change email address</div><div class="t">Sujet : Confirmez votre nouvelle adresse e-mail</div><div class="s">Variables : {{ .ConfirmationURL }}, {{ .Email }}, {{ .NewEmail }}</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 4px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Mise à jour</div>
+        <h1 class="h1">Confirmez votre nouvelle adresse</h1>
+        <p class="p">Vous avez demandé à modifier l'adresse e-mail de votre compte Bertel. Confirmez le passage de&nbsp;:</p>
+        <div style="margin-top:14px;background:#f5f1e8;border-left:3px solid #006883;border-radius:0 10px 10px 0;padding:12px 16px;font-size:14px;line-height:1.7;color:#2d2a2a;">
+          <span style="color:#8a857f;">Ancienne&nbsp;:</span> f.dupont@otisud.com<br />
+          <span style="color:#8a857f;">Nouvelle&nbsp;:</span> <strong style="color:#006883;">florence.dupont@otisud.com</strong>
+        </div>
+      </div>
+      <div style="padding:24px 40px 4px;text-align:center;"><a href="#" class="cta">Confirmer le changement</a></div>
+      <div style="padding:22px 40px 0;"><p class="fallback">Le bouton ne s'affiche pas ? Copiez ce lien dans votre navigateur :<br /><a href="#">https://app.otisud.re/auth/v1/verify?token=c4f7…&amp;type=email_change</a></p></div>
+      <div style="padding:24px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce lien est valable 1 heure et à usage unique. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre adresse de connexion restera inchangée.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+  <!-- 5. RESET PASSWORD -->
+  <div class="caption"><div class="k">Reset password</div><div class="t">Sujet : Réinitialisation de votre mot de passe Bertel</div><div class="s">Variable : {{ .ConfirmationURL }}</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 4px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Pas de panique&nbsp;!</div>
+        <h1 class="h1">Réinitialisez votre mot de passe</h1>
+        <p class="p">Vous avez demandé à réinitialiser votre mot de passe. Cliquez ci-dessous pour en choisir un nouveau et sécuriser votre accès.</p>
+      </div>
+      <div style="padding:26px 40px 4px;text-align:center;"><a href="#" class="cta">Choisir un nouveau mot de passe</a></div>
+      <div style="padding:22px 40px 0;"><p class="fallback">Le bouton ne s'affiche pas ? Copiez ce lien dans votre navigateur :<br /><a href="#">https://app.otisud.re/auth/v1/verify?token=9e01…&amp;type=recovery</a></p></div>
+      <div style="padding:24px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce lien est valable 1 heure et à usage unique. Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail : votre mot de passe restera inchangé.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+  <!-- 6. REAUTHENTICATION -->
+  <div class="caption"><div class="k">Reauthentication</div><div class="t">Sujet : Votre code de vérification Bertel</div><div class="s">Variable : {{ .Token }} (code seul, sans lien)</div></div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:14px 16px 40px;">
+    <div class="card">
+      <div class="rule"></div>
+      <div class="hdr"><table width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td valign="middle"><img src="../../bertel-tourism-ui/public/Logo/logo-email.png" width="96" height="56" alt="OTI du Sud" style="display:block;" /></td>
+        <td valign="middle" align="right"><div class="brand">Bertel</div><div class="sub">Plateforme tourisme &amp; CRM</div></td>
+      </tr></table></div>
+      <div style="padding:32px 40px 8px;">
+        <div class="script">Un instant…</div>
+        <h1 class="h1">Confirmez votre identité</h1>
+        <p class="p">Pour des raisons de sécurité, saisissez le code ci-dessous dans l'application afin de confirmer l'opération en cours.</p>
+      </div>
+      <div style="padding:24px 40px 4px;"><div class="otpbox"><div class="lbl">Code de vérification</div><div class="code" style="font-size:38px;letter-spacing:0.34em;padding-left:0.34em;">508342</div></div></div>
+      <div style="padding:26px 40px 32px;"><div class="sec"><p><strong>Sécurité —</strong> ce code est valable quelques minutes et à usage unique. Si vous n'avez pas initié cette opération, ne communiquez ce code à personne et changez votre mot de passe sans tarder.</p></div></div>
+      <div class="foot"><div class="a">OTI du Sud de la Réunion</div><div class="b">E-mail automatique envoyé par la plateforme Bertel — merci de ne pas y répondre.</div><div class="c">sud.reunion.fr</div></div>
+    </div>
+  </td></tr></table>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 -- tests/test_interop_batch.sql
--- Pins the I4 §138 batch interop serializer:
+-- Pins the I4 §153 batch interop serializer:
 --   api.get_objects_interop_batch(text[], text) — {"<id>": <profile doc>} wrapping the tested
 --   per-object serializers (get_object_jsonld / get_object_interop).
 -- Structural (exists, SECURITY INVOKER, service_role-only) + behavioural (published-only map,

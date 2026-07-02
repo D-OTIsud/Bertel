@@ -4,7 +4,7 @@ import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib
 
 export const runtime = 'nodejs';
 
-/** Pivot formats servable per list item (I4/§138): one batch RPC call per page, merged as `item.<profil>`. */
+/** Pivot formats servable per list item (I4/§153): one batch RPC call per page, merged as `item.<profil>`. */
 const PIVOT_FORMATS = new Set(['jsonld', 'datatourisme', 'apidae', 'tourinsoft']);
 
 /**
@@ -12,7 +12,7 @@ const PIVOT_FORMATS = new Set(['jsonld', 'datatourisme', 'apidae', 'tourinsoft']
  * Auth: `Authorization: Bearer bk_live_…`. Status is FORCED to 'published' — a partner never sees drafts.
  * Query: cursor, page_size (1-200), types (csv of object_type), lang, search.
  *
- * Interop (I4c/§138): `?format=<profil>` (jsonld | datatourisme | apidae | tourinsoft) attaches the
+ * Interop (I4c/§153): `?format=<profil>` (jsonld | datatourisme | apidae | tourinsoft) attaches the
  * pivot document to EACH page item under an additive `item.<profil>` key — same cursor pagination,
  * ONE batch RPC per page (`get_objects_interop_batch`, 88 ms measured for a full 200-item page).
  * Best-effort: a batch failure degrades to the plain page; unmapped items simply lack the key.

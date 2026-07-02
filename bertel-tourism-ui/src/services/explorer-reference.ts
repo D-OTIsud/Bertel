@@ -301,7 +301,7 @@ function buildDemoReferences(): ExplorerReferences {
     ],
     cities: DEMO_CITIES,
     lieuDits: [],
-    hotTaxonomy: [
+    taxonomies: [
       {
         domain: 'taxonomy_hot',
         name: 'Taxonomie HOT',
@@ -311,6 +311,17 @@ function buildDemoReferences(): ExplorerReferences {
           { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2 },
           { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3 },
           { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4 },
+        ],
+      },
+      {
+        domain: 'taxonomy_res',
+        name: 'Taxonomie RES',
+        objectType: 'RES',
+        nodes: [
+          { code: 'restaurant', name: 'Restaurant', parentCode: null, depth: 0, isAssignable: true, position: 1 },
+          { code: 'table_d_hotes', name: "Table d'hôtes", parentCode: null, depth: 0, isAssignable: true, position: 2 },
+          { code: 'pizzeria', name: 'Pizzeria', parentCode: null, depth: 0, isAssignable: true, position: 3 },
+          { code: 'snack_bar', name: 'Snack-bar', parentCode: 'restaurant', depth: 1, isAssignable: true, position: 4 },
         ],
       },
     ],
@@ -361,11 +372,13 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
+    // §155 — TOUS les domaines de sous-catégories (un par type), plus seulement
+    // taxonomy_hot. ORG exclu (pas un bucket Explorer).
     client
       .from('ref_code_domain_registry')
       .select('domain,name,object_type,position')
       .eq('is_taxonomy', true)
-      .in('domain', ['taxonomy_hot'])
+      .neq('object_type', 'ORG')
       .order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
@@ -454,7 +467,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
     rankedLabelSchemes: toReferenceOptions(rankedLabelSchemes),
-    hotTaxonomy: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
+    taxonomies: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),

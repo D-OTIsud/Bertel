@@ -77,14 +77,13 @@ describe('buildExplorerActiveChips', () => {
       expect(chips.find((c) => c.group === 'sustActions')?.label).toBe('Durable · 3 actions');
     });
 
-    it('facettes par bucket : taxonomie/capacité HÉB, capacité RES, facettes ITI', () => {
+    it('facettes par bucket : sous-catégories, capacité HÉB, capacité RES, facettes ITI', () => {
       const chips = buildExplorerActiveChips(
         filters(
-          {},
+          { taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite_villa' }] },
           {
             hot: {
               subtypes: ['HOT'],
-              taxonomy: [{ domain: 'd', code: 'x' }],
               capacityFilters: [{ code: 'bedrooms', min: 2 }],
               meetingRoom: {},
             },
@@ -100,7 +99,7 @@ describe('buildExplorerActiveChips', () => {
           },
         ),
       );
-      expect(chips.find((c) => c.group === 'hotTaxonomy')?.label).toBe('Sous-catégorie héb. · 1');
+      expect(chips.find((c) => c.group === 'taxonomy')?.label).toBe('Sous-catégorie · 1');
       expect(chips.find((c) => c.group === 'hotCapacity')?.label).toBe('Capacité héb. · ≥ 2');
       expect(chips.find((c) => c.group === 'resCapacity')?.label).toBe('Capacité resto · ≤ 60');
       expect(chips.find((c) => c.group === 'itiLoop')?.label).toBe('Itinéraire · Boucle');

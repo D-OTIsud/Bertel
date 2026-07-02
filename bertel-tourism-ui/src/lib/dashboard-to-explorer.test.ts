@@ -34,7 +34,7 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
       labelsAny: ['famille-plus'],
       lieuDits: ['A', 'B'],
       status: ['archived'],
-      taxonomyAny: [{ domain: 'taxonomy_res', code: 'creole' }],
+      taxonomyAny: [{ domain: 'taxonomy_org', code: 'office' }],
     });
     expect(dropped).toEqual(
       expect.arrayContaining([
@@ -45,18 +45,22 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
         'tags',
         'lieux-dits supplémentaires',
         'statut archivé/masqué',
-        'catégories hors hébergement',
+        'catégories hors Explorer',
       ]),
     );
   });
 
-  it('transpose la taxonomie taxonomy_hot vers hotTaxonomy', () => {
-    const { url } = mapDashboardFiltersToExplorerUrl({
+  it('transpose la taxonomie de TOUS les domaines vers common.taxonomyAny (§155)', () => {
+    const { url, dropped } = mapDashboardFiltersToExplorerUrl({
       types: ['HOT'],
-      taxonomyAny: [{ domain: 'taxonomy_hot', code: 'hotel' }],
+      taxonomyAny: [
+        { domain: 'taxonomy_hot', code: 'hotel' },
+        { domain: 'taxonomy_res', code: 'pizzeria' },
+      ],
     });
     const params = new URLSearchParams(url.split('?')[1]);
-    expect(params.get('hotTaxonomy')).toBe('taxonomy_hot:hotel');
+    expect(params.get('taxonomy')).toBe('taxonomy_hot:hotel,taxonomy_res:pizzeria');
+    expect(dropped).toEqual(expect.not.arrayContaining(['catégories hors Explorer']));
   });
 
   it('sans filtre, renvoie /explorer nu', () => {

@@ -262,13 +262,13 @@ describe('hasServerOnlyFilters', () => {
     ).toBe(true);
   });
 
-  it('detects HOT taxonomy, capacity, and meeting room', () => {
+  it('detects taxonomy (§155), HOT capacity, and meeting room', () => {
     expect(
       hasServerOnlyFilters(
         buildFilters({
-          hot: {
-            ...DEFAULT_EXPLORER_FILTERS.hot,
-            taxonomy: [{ domain: 'taxonomy_hot', code: 'X' }],
+          common: {
+            ...DEFAULT_EXPLORER_FILTERS.common,
+            taxonomyAny: [{ domain: 'taxonomy_hot', code: 'X' }],
           },
         }),
       ),
@@ -543,5 +543,39 @@ describe('buildBucketRpcFilters — cadre & environnement (§154, transverse)', 
 
   it("n'émet rien sans sélection", () => {
     expect(buildBucketRpcFilters(buildFilters(), 'RES').environment_tags_any).toBeUndefined();
+  });
+});
+
+describe('buildBucketRpcFilters — sous-catégories (§155, partition par bucket)', () => {
+  const withTaxonomy = () =>
+    buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        taxonomyAny: [
+          { domain: 'taxonomy_res', code: 'pizzeria' },
+          { domain: 'taxonomy_hlo', code: 'gite_villa' },
+          { domain: 'taxonomy_hot', code: 'hotel' },
+        ],
+      },
+    });
+
+  it("chaque bucket ne reçoit QUE ses paires (une sélection RES ne contraint jamais HOT)", () => {
+    expect(buildBucketRpcFilters(withTaxonomy(), 'RES').taxonomy_any).toEqual([
+      { domain: 'taxonomy_res', code: 'pizzeria' },
+    ]);
+    expect(buildBucketRpcFilters(withTaxonomy(), 'HOT').taxonomy_any).toEqual([
+      { domain: 'taxonomy_hlo', code: 'gite_villa' },
+      { domain: 'taxonomy_hot', code: 'hotel' },
+    ]);
+    expect(buildBucketRpcFilters(withTaxonomy(), 'ITI').taxonomy_any).toBeUndefined();
+  });
+
+  it('taxonomy_org est ignoré (hors buckets Explorer)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, taxonomyAny: [{ domain: 'taxonomy_org', code: 'office' }] },
+    });
+    for (const bucket of ['HOT', 'RES', 'ITI', 'ACT', 'EVT', 'VIS', 'SRV'] as const) {
+      expect(buildBucketRpcFilters(filters, bucket).taxonomy_any).toBeUndefined();
+    }
   });
 });

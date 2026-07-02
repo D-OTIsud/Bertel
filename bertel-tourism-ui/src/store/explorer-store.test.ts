@@ -58,15 +58,26 @@ describe('D23 — garde anti-combinaison invalide (cascade au retrait de bucket)
     expect(iti.difficultyMin).toBeUndefined();
   });
 
-  it('désélectionner HOT vide taxonomie + capacités (subtypes par défaut)', () => {
+  it('désélectionner HOT vide ses sous-catégories + capacités (subtypes par défaut)', () => {
     const s = useExplorerStore.getState();
     s.toggleBucket('HOT');
-    s.toggleHotTaxonomy('dom', 'code');
+    s.toggleTaxonomy('taxonomy_hlo', 'gite_villa');
     s.setHotCapacityFilter('bedrooms', 2, undefined);
     s.toggleBucket('HOT');
-    const hot = useExplorerStore.getState().hot;
-    expect(hot.taxonomy).toEqual([]);
-    expect(hot.capacityFilters).toEqual([]);
+    expect(useExplorerStore.getState().common.taxonomyAny).toEqual([]);
+    expect(useExplorerStore.getState().hot.capacityFilters).toEqual([]);
+  });
+
+  it('désélectionner un bucket ne purge QUE ses sous-catégories (§155)', () => {
+    const s = useExplorerStore.getState();
+    s.toggleBucket('HOT');
+    s.toggleBucket('RES');
+    s.toggleTaxonomy('taxonomy_hlo', 'gite_villa');
+    s.toggleTaxonomy('taxonomy_res', 'pizzeria');
+    s.toggleBucket('HOT'); // retrait HOT
+    expect(useExplorerStore.getState().common.taxonomyAny).toEqual([{ domain: 'taxonomy_res', code: 'pizzeria' }]);
+    // Cette describe n'a pas de beforeEach : on rend l'état propre au suivant.
+    useExplorerStore.getState().resetAll();
   });
 
   it('ajouter un bucket ne touche pas ses facettes', () => {

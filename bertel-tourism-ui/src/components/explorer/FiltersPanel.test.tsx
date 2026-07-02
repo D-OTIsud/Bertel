@@ -20,11 +20,11 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel variant="column" />);
 
-    expect(screen.getByText('Sous-types hébergement')).toBeInTheDocument();
+    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, true));
-    expect(screen.queryByText('Sous-types hébergement')).not.toBeInTheDocument();
+    expect(screen.queryByText("Type d'hébergement")).not.toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, false));
-    expect(screen.getByText('Sous-types hébergement')).toBeInTheDocument();
+    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
     // La chip de bucket homonyme garde son nom nu : pas de collision de noms.
     expect(screen.getByRole('button', { name: 'Hébergements' })).toBeInTheDocument();
   });
@@ -32,7 +32,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
   it("l'en-tête Hébergements porte le compte des critères actifs (visible replié)", () => {
     act(() => {
       useExplorerStore.getState().toggleBucket('HOT');
-      useExplorerStore.getState().toggleHotTaxonomy('taxonomy_hot', 'hotel');
+      useExplorerStore.getState().toggleTaxonomy('taxonomy_hot', 'hotel');
     });
     render(<FiltersPanel variant="column" />);
 
@@ -65,9 +65,9 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     render(<FiltersPanel variant="column" />);
 
     fireEvent.click(sectionToggle(/Section Site & visite/, true));
-    expect(screen.queryByText('Sous-types de site')).not.toBeInTheDocument();
+    expect(screen.queryByText('Type de visite')).not.toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Services/, true));
-    expect(screen.queryByText('Sous-types de service')).not.toBeInTheDocument();
+    expect(screen.queryByText('Type de service')).not.toBeInTheDocument();
   });
 
   it('les groupes transverses restent non repliables', () => {

@@ -28,7 +28,7 @@ export type ActiveChipGroup =
   | 'accessAmenities'
   | 'sustCategories'
   | 'sustActions'
-  | 'hotTaxonomy'
+  | 'taxonomy'
   | 'hotCapacity'
   | 'resCapacity'
   | 'itiLoop'
@@ -179,13 +179,14 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
     });
   }
 
-  const taxonomyCount = (filters.hot.taxonomy ?? []).length;
+  // §155 — sous-catégories (tous buckets, état commun).
+  const taxonomyCount = (c.taxonomyAny ?? []).length;
   if (taxonomyCount > 0) {
     chips.push({
-      key: 'hotTaxonomy',
-      group: 'hotTaxonomy',
+      key: 'taxonomy',
+      group: 'taxonomy',
       value: '*',
-      label: `Sous-catégorie héb. · ${taxonomyCount}`,
+      label: `Sous-catégorie${taxonomyCount > 1 ? 's' : ''} · ${taxonomyCount}`,
     });
   }
   for (const capacity of filters.hot.capacityFilters ?? []) {

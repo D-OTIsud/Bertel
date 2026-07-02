@@ -4,6 +4,7 @@ import {
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   HOT_BUCKET_TYPES,
+  bucketForTaxonomyDomain,
   normalizeExplorerFilters,
 } from '@/utils/facets';
 import { buildSearchParams } from '@/lib/explorer-search-params';
@@ -31,8 +32,7 @@ export interface ExplorerBridgeResult {
  *   petsAccepted       → common.petsAccepted
  *   labelsAny[]        → DROP ('tags') — labelsAny Explorer est frontend-only sur labels
  *                         d'affichage ; les slugs ref_tag (tags_any serveur) n'ont pas de cible
- *   taxonomyAny[taxonomy_hot] → hot.taxonomy
- *   taxonomyAny[autre] → dropped ('catégories hors hébergement')
+ *   taxonomyAny[*]     → common.taxonomyAny (§155 — tous domaines ; taxonomy_org → dropped)
  *   updatedAtFrom/To   → dropped ('période de mise à jour')
  *   classificationsAny → dropped ('distinctions')
  *   languagesAny       → dropped ('langues')
@@ -84,10 +84,11 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
   }
 
   // ── Taxonomie ─────────────────────────────────────────────────────────────
-  // Seul le domaine taxonomy_hot est exprimable dans l'Explorer (hot.taxonomy).
-  const hotTaxonomy = (filters.taxonomyAny ?? []).filter((t) => t.domain === 'taxonomy_hot');
-  if ((filters.taxonomyAny ?? []).some((t) => t.domain !== 'taxonomy_hot')) {
-    dropped.push('catégories hors hébergement');
+  // §155 : TOUS les domaines sont exprimables (common.taxonomyAny, partitionné
+  // par bucket au payload). Seuls les domaines hors Explorer (taxonomy_org) tombent.
+  const taxonomyAny = (filters.taxonomyAny ?? []).filter((t) => bucketForTaxonomyDomain(t.domain) !== null);
+  if ((filters.taxonomyAny ?? []).length > taxonomyAny.length) {
+    dropped.push('catégories hors Explorer');
   }
 
   // ── Champs sans équivalent Explorer ──────────────────────────────────────
@@ -119,6 +120,7 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
       lieuDit: firstLieuDit ?? '',
       pmr: !!filters.pmr,
       petsAccepted: !!filters.petsAccepted,
+      taxonomyAny,
       statuses,
     },
     hot: {
@@ -128,7 +130,6 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
       // si des buckets non-HOT sont sélectionnés sans HOT → [] (idem).
       // On évite que normalizeExplorerFilters ne réinjecte DEFAULT_HOT_SUBTYPES.
       subtypes: hotSubtypes,
-      taxonomy: hotTaxonomy,
     },
   });
 

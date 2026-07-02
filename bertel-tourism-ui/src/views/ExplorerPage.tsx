@@ -98,7 +98,7 @@ export default function ExplorerPage() {
 
   const renderMobilePanel = (panel: ExplorerPanelKey) => {
     if (panel === 'filters') {
-      return <FiltersPanel compact={isCompactExplorer} references={referencesQuery.data} variant="column" />;
+      return <FiltersPanel references={referencesQuery.data} />;
     }
     if (panel === 'results') {
       return (
@@ -192,7 +192,7 @@ export default function ExplorerPage() {
             GRID_BY_MODE[viewMode],
           )}
         >
-          <FiltersPanel references={referencesQuery.data} variant="column" />
+          <FiltersPanel references={referencesQuery.data} />
           {viewMode === 'split' || viewMode === 'liste' ? (
             <ResultsList
               cards={cards}

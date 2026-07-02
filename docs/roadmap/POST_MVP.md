@@ -110,13 +110,49 @@ Afficher à droite de l’éditeur (et, à terme, du **créateur d’objet** `/o
 
 ---
 
+## PMV-002 — Listes de diffusion des documents officiels
+
+**Demandé :** 2026-07-03 (d.philippe@otisud.com)  
+**Priorité post-MVP :** à qualifier (forte valeur institutionnelle — flux OTI → partenaires)
+
+### Problème utilisateur
+
+Quand un document officiel est ajouté à une fiche (attestation d'assurance, certificat de classement, agrément…), des tiers institutionnels ont besoin d'en être informés — voire d'en recevoir une copie — sans surveiller la plateforme. Exemple concret : le **CRT d'une région** doit disposer des **attestations d'assurance** des hébergeurs et des prestataires d'activités de son territoire. Aujourd'hui rien ne sort de la plateforme : le document est stocké, lié à l'objet, et c'est tout.
+
+### Idée produit
+
+Des **listes de diffusion prédéfinies** : on abonne des destinataires à un croisement de critères, et l'ajout (ou le renouvellement) d'un document correspondant déclenche la notification.
+
+| Axe d'abonnement | Exemple |
+|------------------|---------|
+| Type de document (`ref_legal_type` / `ref_code_document_type`) | attestation d'assurance, classement préfectoral |
+| Type d'objet | HEB (hébergeurs), ACT/ASC (activités) |
+| Territoire (zone / commune) | périmètre du CRT, d'une intercommunalité |
+
+Déclencheur = l'écriture du document dans le modèle : lien `object_document` ou `object_legal.document_id` (§18 juridique — porte déjà `type_id`, `valid_from`/`valid_to`, `status`). Le renouvellement d'un document expirant est le même événement (nouvelle ligne / nouvelle validité).
+
+### Points à trancher en spec (rien de décidé)
+
+- **Destinataires :** acteurs du CRM (`actor_channel` kind email — réutilise l'existant) vs simple liste d'emails gérée par l'admin ; qui a le droit de créer/modifier une liste (superuser ? admin ORG ?).
+- **Mode de remise :** email immédiat vs digest périodique ; pièce jointe vs **lien signé à durée limitée** vers le bucket `documents` (RLS-verrouillé — ne jamais rendre le bucket public pour ça).
+- **RGPD :** une attestation d'assurance peut porter des données personnelles — la diffusion sortante doit être tracée (qui a reçu quoi, quand) et couverte par la base légale ; rejoint le chantier `actor_consent` différé.
+- **Mécanique :** trigger → table de file d'attente + cron d'envoi (pattern `metric_snapshot`/cron existant) plutôt qu'envoi synchrone dans la transaction d'écriture.
+- **Dépendance dure :** il n'y a **pas de SMTP câblé** aujourd'hui (déjà différé pour l'invitation email SP-4) — ce chantier le débloque ou en dépend.
+
+### Non-objectifs
+
+- Pas de diffusion automatique de documents **d'objets non publiés** sans décision explicite.
+- Pas de second writer Storage — la diffusion lit, elle n'écrit jamais dans les buckets (invariant single-writer §59).
+
+---
+
 ## Autres entrées post-MVP
 
 *(Ajouter ici les prochaines idées sous la forme PMV-00N.)*
 
 | ID | Sujet | Statut |
 |----|--------|--------|
-| — | *(vide — PMV-001 est la première entrée)* | — |
+| PMV-002 | Listes de diffusion des documents officiels | Idée notée 2026-07-03 |
 
 ---
 

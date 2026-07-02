@@ -3633,24 +3633,41 @@ BEGIN
   RETURN 'audit_log_' || to_char(partition_date, 'YYYY_MM');
 END; $$ LANGUAGE plpgsql STABLE;
 
+-- 16e (§146): born-gated + self-repairing — partitions do NOT inherit RLS/policies from the
+-- parent, so the creator ALWAYS re-asserts ENABLE RLS + the policy pair (wrapped §39 form).
+-- The api.is_platform_superuser() arm is added only when that function exists (it is created by
+-- rls_policies.sql, applied AFTER this file on a fresh build; the rls_policies partition loop
+-- re-creates the policy WITH the arm on the partitions created below).
 CREATE OR REPLACE FUNCTION audit.create_monthly_partition(partition_date TIMESTAMPTZ)
-RETURNS TEXT 
+RETURNS TEXT
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; sql_stmt TEXT;
+DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; v_created BOOLEAN := FALSE; v_super_arm TEXT;
 BEGIN
   partition_name := audit.get_month_partition_name(partition_date);
   start_date := date_trunc('month', partition_date);
   end_date := start_date + INTERVAL '1 month';
-  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='audit' AND tablename=partition_name) THEN
-    RETURN 'Partition ' || partition_name || ' already exists';
+  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='audit' AND tablename=partition_name) THEN
+    EXECUTE format('CREATE TABLE audit.%I PARTITION OF audit.audit_log FOR VALUES FROM (%L) TO (%L)', partition_name, start_date, end_date);
+    v_created := TRUE;
   END IF;
-  sql_stmt := format('CREATE TABLE audit.%I PARTITION OF audit.audit_log FOR VALUES FROM (%L) TO (%L)', partition_name, start_date, end_date);
-  EXECUTE sql_stmt;
   EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_table_name ON audit.%I (table_name)', partition_name, partition_name);
   EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_changed_at ON audit.%I (changed_at)', partition_name, partition_name);
   EXECUTE format('CREATE INDEX IF NOT EXISTS idx_%I_operation ON audit.%I (operation)', partition_name, partition_name);
-  RETURN 'Created partition ' || partition_name;
+  v_super_arm := CASE WHEN to_regproc('api.is_platform_superuser') IS NOT NULL
+                      THEN ' OR api.is_platform_superuser()' ELSE '' END;
+  EXECUTE format('ALTER TABLE audit.%I ENABLE ROW LEVEL SECURITY', partition_name);
+  EXECUTE format('DROP POLICY IF EXISTS "Lecture audit (admin/service_role)" ON audit.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "Lecture audit (admin/service_role)" ON audit.%I FOR SELECT USING ((select auth.role()) IN (''service_role'',''admin'')%s)',
+    partition_name, v_super_arm
+  );
+  EXECUTE format('DROP POLICY IF EXISTS "Insertion via triggers" ON audit.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "Insertion via triggers" ON audit.%I FOR INSERT TO service_role, postgres WITH CHECK (true)',
+    partition_name
+  );
+  RETURN CASE WHEN v_created THEN 'Created partition ' ELSE 'Ensured partition ' END || partition_name;
 END; $$ LANGUAGE plpgsql;
 
 SELECT audit.create_monthly_partition(date_trunc('month', CURRENT_DATE));
@@ -3712,16 +3729,22 @@ $$ LANGUAGE plpgsql;
 
 SELECT audit.ensure_future_partitions(3);
 
+-- 16e (§146): the daily cron entrypoint maintains BOTH partitioned parents — audit.audit_log AND
+-- public.object_version (whose creator was never wired anywhere: rows silently piled into
+-- object_version_default from 2026-06 until 16e re-homed them). Retention stays audit-only:
+-- object_version rows are product data (version restore §98/14r), never dropped here.
 CREATE OR REPLACE FUNCTION audit.maintain_partitions()
-RETURNS TEXT 
+RETURNS TEXT
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE result_text TEXT := '';
 BEGIN
-  result_text := result_text || '=== Creating future partitions ===' || E'\n' || audit.ensure_future_partitions(3) || E'\n';
-  result_text := result_text || '=== Cleaning old partitions ===' || E'\n' || audit.drop_old_partitions(12) || E'\n';
+  result_text := result_text || '=== Creating future partitions (audit.audit_log) ===' || E'\n' || audit.ensure_future_partitions(3) || E'\n';
+  result_text := result_text || '=== Ensuring object_version partitions ===' || E'\n' || public.ensure_object_version_partitions(3) || E'\n';
+  result_text := result_text || '=== Cleaning old partitions (audit) ===' || E'\n' || audit.drop_old_partitions(12) || E'\n';
   EXECUTE 'ANALYZE audit.audit_log';
-  result_text := result_text || 'Updated statistics for audit.audit_log' || E'\n';
+  EXECUTE 'ANALYZE public.object_version';
+  result_text := result_text || 'Updated statistics for audit.audit_log + public.object_version' || E'\n';
   RETURN result_text;
 END; $$ LANGUAGE plpgsql;
 
@@ -3823,27 +3846,51 @@ CREATE TABLE IF NOT EXISTS object_version (
   PRIMARY KEY (id, created_at)
 ) PARTITION BY RANGE (created_at);
 
+-- 16e (§146): born-gated + self-repairing — a partition does NOT inherit RLS/policies from the
+-- parent; a bare public partition would be anon-readable via direct PostgREST (full draft
+-- snapshots). The creator ALWAYS re-asserts ENABLE RLS + admin_object_version (wrapped §39 form).
 CREATE OR REPLACE FUNCTION create_object_version_monthly_partition(partition_date TIMESTAMPTZ)
-RETURNS TEXT 
+RETURNS TEXT
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
-DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; sql_stmt TEXT;
+DECLARE partition_name TEXT; start_date TIMESTAMPTZ; end_date TIMESTAMPTZ; v_created BOOLEAN := FALSE;
 BEGIN
   partition_name := 'object_version_' || to_char(partition_date, 'YYYY_MM');
   start_date := date_trunc('month', partition_date);
   end_date := start_date + INTERVAL '1 month';
-  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=partition_name) THEN
-    RETURN 'Partition ' || partition_name || ' already exists';
+  IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename=partition_name) THEN
+    EXECUTE format(
+      'CREATE TABLE public.%I PARTITION OF public.object_version FOR VALUES FROM (%L) TO (%L)',
+      partition_name, start_date, end_date
+    );
+    v_created := TRUE;
   END IF;
-  sql_stmt := format(
-    'CREATE TABLE public.%I PARTITION OF public.object_version FOR VALUES FROM (%L) TO (%L)',
-    partition_name,
-    start_date,
-    end_date
+  EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', partition_name);
+  EXECUTE format('DROP POLICY IF EXISTS "admin_object_version" ON public.%I', partition_name);
+  EXECUTE format(
+    'CREATE POLICY "admin_object_version" ON public.%I FOR ALL USING ((select auth.role()) IN (''service_role'',''admin''))',
+    partition_name
   );
-  EXECUTE sql_stmt;
-  RETURN 'Created partition: ' || partition_name;
+  RETURN CASE WHEN v_created THEN 'Created partition: ' ELSE 'Ensured partition: ' END || partition_name;
 END; $$ LANGUAGE plpgsql;
+
+-- 16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily
+-- cron), mirror of audit.ensure_future_partitions.
+CREATE OR REPLACE FUNCTION public.ensure_object_version_partitions(months_ahead INTEGER DEFAULT 3)
+RETURNS TEXT
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+DECLARE i INTEGER; result_text TEXT := ''; partition_date TIMESTAMPTZ;
+BEGIN
+  FOR i IN 0..months_ahead-1 LOOP
+    partition_date := date_trunc('month', CURRENT_DATE) + (i || ' months')::INTERVAL;
+    result_text := result_text || public.create_object_version_monthly_partition(partition_date) || E'\n';
+  END LOOP;
+  RETURN result_text;
+END; $$ LANGUAGE plpgsql;
+
+REVOKE EXECUTE ON FUNCTION public.ensure_object_version_partitions(integer) FROM PUBLIC, anon;
+GRANT  EXECUTE ON FUNCTION public.ensure_object_version_partitions(integer) TO service_role;
 
 SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE));
 SELECT create_object_version_monthly_partition(date_trunc('month', CURRENT_DATE) + INTERVAL '1 month');

@@ -68,6 +68,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   petsAccepted: false,
   openNow: false,
   environmentTagsAny: [],
+  taxonomyAny: [],
   labelsAny: [],
   tagsAny: [],
   rankedLabelSchemeCode: null,
@@ -83,7 +84,6 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
   common: DEFAULT_COMMON_FILTERS,
   hot: {
     subtypes: [...DEFAULT_HOT_SUBTYPES],
-    taxonomy: [],
     capacityFilters: [],
     meetingRoom: {},
   },
@@ -125,6 +125,7 @@ export function normalizeExplorerFilters(
       sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
       environmentTagsAny: common.environmentTagsAny ?? [],
+      taxonomyAny: common.taxonomyAny ?? [],
       labelsAny: common.labelsAny ?? [],
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
@@ -133,7 +134,6 @@ export function normalizeExplorerFilters(
     hot: {
       ...hot,
       subtypes: hot.subtypes ?? [...DEFAULT_HOT_SUBTYPES],
-      taxonomy: hot.taxonomy ?? [],
       capacityFilters: hot.capacityFilters ?? [],
       meetingRoom: hot.meetingRoom ?? {},
     },
@@ -230,7 +230,7 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   if (common.tagsAny.length > 0) {
     return true;
   }
-  if (hot.taxonomy.length > 0) {
+  if (common.taxonomyAny.length > 0) {
     return true;
   }
   if (normalizeCapacityFilters(hot.capacityFilters).length > 0) {
@@ -289,6 +289,22 @@ export function resolveExplorerStatuses(
 
 export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObjectTypeCode[] {
   return EXPLORER_BUCKET_TYPE_MAP[bucket];
+}
+
+/**
+ * §155 — bucket Explorer d'un domaine de sous-catégories (`taxonomy_res` → type
+ * RES → bucket RES). `null` pour un domaine hors Explorer (taxonomy_org) : la
+ * paire est ignorée partout. Ne PAS réutiliser normalizeExplorerObjectType ici
+ * (son repli inconnu→ACT rangerait taxonomy_org sous Activités).
+ */
+export function bucketForTaxonomyDomain(domain: string): ExplorerBucketKey | null {
+  const type = String(domain ?? '').replace(/^taxonomy_/, '').toUpperCase() as BackendObjectTypeCode;
+  for (const [family, codes] of Object.entries(EXPLORER_TYPE_CODE_FAMILIES) as Array<[ObjectTypeCode, BackendObjectTypeCode[]]>) {
+    if (codes.includes(type)) {
+      return family as ExplorerBucketKey;
+    }
+  }
+  return null;
 }
 
 /**
@@ -441,16 +457,16 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     payload.environment_tags_any = environmentTags;
   }
 
-  if (bucket === 'HOT') {
-    const taxonomy = normalizedFilters.hot.taxonomy.map((item) => ({
-      domain: item.domain,
-      code: item.code,
-    }));
-    const capacityFilters = normalizeCapacityFilters(normalizedFilters.hot.capacityFilters);
+  // §155 — sous-catégories : partition par bucket (une sélection « Pizzeria »
+  // contraint le bucket RES, jamais les autres — mêmes sémantiques que les
+  // sous-types). Le RPC matche cached_taxonomy_codes, descendants inclus.
+  const bucketTaxonomy = common.taxonomyAny.filter((item) => bucketForTaxonomyDomain(item.domain) === bucket);
+  if (bucketTaxonomy.length > 0) {
+    payload.taxonomy_any = bucketTaxonomy.map((item) => ({ domain: item.domain, code: item.code }));
+  }
 
-    if (taxonomy.length > 0) {
-      payload.taxonomy_any = taxonomy;
-    }
+  if (bucket === 'HOT') {
+    const capacityFilters = normalizeCapacityFilters(normalizedFilters.hot.capacityFilters);
 
     if (capacityFilters.length > 0) {
       payload.capacity_filters = capacityFilters;

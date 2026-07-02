@@ -8,6 +8,7 @@ import type { BackendObjectTypeCode } from '../../types/domain';
 import type { DashboardFilters } from '../../types/dashboard';
 import { FilterDropdown } from './FilterDropdown';
 import { FilterColumnGroup } from '../common/FilterColumnGroup';
+import { resolveTypeLabel } from '../../utils/labels';
 import type { DashboardAdvancedFilterOptions } from '../../services/dashboard-reference';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -15,16 +16,16 @@ import type { DashboardAdvancedFilterOptions } from '../../services/dashboard-re
 const OBJECT_TYPE_OPTIONS: { code: BackendObjectTypeCode; label: string }[] = [
   { code: 'HOT',  label: 'Hôtels' },
   { code: 'HPA',  label: 'Plein air' },
-  { code: 'HLO',  label: 'Lois. hbg.' },
+  { code: 'HLO',  label: 'Gîtes & meublés' },
   { code: 'CAMP', label: 'Campings' },
   { code: 'RVA',  label: 'Rés. vac.' },
   { code: 'RES',  label: 'Restaurants' },
   { code: 'ITI',  label: 'Itinéraires' },
   { code: 'FMA',  label: 'Événements' },
   { code: 'LOI',  label: 'Loisirs' },
-  { code: 'PCU',  label: 'Culture' },
-  { code: 'PNA',  label: 'Nature' },
-  { code: 'VIL',  label: 'Villages' },
+  { code: 'PCU',  label: 'Patrimoine' },
+  { code: 'PNA',  label: 'Sites naturels' },
+  { code: 'VIL',  label: 'Villes' },
   { code: 'COM',  label: 'Commerces' },
   { code: 'PSV',  label: 'Prestataires' },
   { code: 'ASC',  label: 'Activités' },
@@ -346,11 +347,16 @@ export function DashboardFiltersPanel({
           )}
           {advancedOpen && advancedOptions && (
             <div className="mt-3 space-y-3">
-              <FilterField label="Domaine de catégorie">
+              <FilterField label="Type de fiche">
                 <FilterDropdown<string>
                   mode="single"
-                  placeholder="Choisir un domaine"
-                  options={advancedOptions.taxonomyDomains.map((d) => ({ code: d.domain, label: d.name }))}
+                  placeholder="Choisir un type"
+                  options={advancedOptions.taxonomyDomains.map((d) => ({
+                    code: d.domain,
+                    // §155 — ne jamais rendre le nom brut du registre (« Taxonomie HOT ») :
+                    // le domaine encode le type, on affiche son libellé produit.
+                    label: resolveTypeLabel(d.domain.replace(/^taxonomy_/, '')) || d.name,
+                  }))}
                   selected={taxonomyDomain ? [taxonomyDomain] : []}
                   onChange={(vals) => {
                     const next = vals[0] ?? '';

@@ -166,6 +166,13 @@ export interface ExplorerCommonFilters {
    * RPC matche `cached_environment_tags` sans considération de bucket.
    */
   environmentTagsAny: string[];
+  /**
+   * §155 — sous-catégories (paires domaine:code, tous buckets). Le domaine
+   * encode le type (`taxonomy_res`…) : `buildBucketRpcFilters` PARTITIONNE par
+   * bucket au moment du payload (une sélection RES ne contraint jamais le
+   * bucket HOT — mêmes sémantiques que les sous-types).
+   */
+  taxonomyAny: TaxonomyRef[];
   labelsAny: string[];
   /** Active §09 tag filters (click-to-filter on a card/map tag). Sent to the RPC as `tags_any`. */
   tagsAny: ExplorerTagFilter[];
@@ -183,7 +190,6 @@ export interface ExplorerCommonFilters {
 
 export interface HotBucketFilters {
   subtypes: BackendObjectTypeCode[];
-  taxonomy: TaxonomyRef[];
   capacityFilters: CapacityFilter[];
   meetingRoom: MeetingRoomFilter;
 }
@@ -289,7 +295,8 @@ export interface ExplorerReferences {
   accessibilityAmenities: AccessibilityAmenityRef[];
   sustainabilityCategories: SustainabilityCategoryRef[];
   rankedLabelSchemes: ExplorerReferenceOption[];
-  hotTaxonomy: ExplorerTaxonomyDomain[];
+  /** §155 — TOUS les domaines de sous-catégories (un par type, hors ORG), chacun portant son objectType. */
+  taxonomies: ExplorerTaxonomyDomain[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
   itiPractices: ExplorerReferenceOption[];

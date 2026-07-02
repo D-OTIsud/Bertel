@@ -65,13 +65,19 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const visSubtypes = searchParams.get('visSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const srvSubtypes = searchParams.get('srvSubtypes')?.split(',').filter(Boolean) ?? undefined;
-  const hotTaxonomy = (searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))?.split(',').filter(Boolean).flatMap((value) => {
-    const [domain = '', code = ''] = value.split(':');
-    if (!domain || !code) {
-      return [];
-    }
-    return [{ domain: normalizeHotTaxonomyDomain(domain), code }];
-  }) ?? undefined;
+  // §155 — `taxonomy` (générique) + les params legacy hotTaxonomy/hotClassifications
+  // des anciens signets, tous fusionnés dans common.taxonomyAny.
+  const taxonomyAny =
+    (searchParams.get('taxonomy') ?? searchParams.get('hotTaxonomy') ?? searchParams.get('hotClassifications'))
+      ?.split(',')
+      .filter(Boolean)
+      .flatMap((value) => {
+        const [domain = '', code = ''] = value.split(':');
+        if (!domain || !code) {
+          return [];
+        }
+        return [{ domain: normalizeHotTaxonomyDomain(domain), code }];
+      }) ?? undefined;
 
   const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
   const commonPatch = {
@@ -105,6 +111,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('environment') != null && {
       environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
+    ...(taxonomyAny !== undefined && { taxonomyAny }),
     ...(labelsAny !== undefined && { labelsAny }),
     ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
     ...(statuses !== undefined && { statuses }),
@@ -143,12 +150,11 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
         ...commonPatch,
       },
     }),
-    ...(hotSubtypes !== undefined || hotTaxonomy !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
+    ...(hotSubtypes !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
       ? {
           hot: {
             ...DEFAULT_EXPLORER_FILTERS.hot,
             ...(hotSubtypes !== undefined && { subtypes: hotSubtypes as ExplorerFilters['hot']['subtypes'] }),
-            ...(hotTaxonomy !== undefined && { taxonomy: hotTaxonomy }),
             ...(parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined && {
               capacityFilters: parseCapacityFilters(searchParams.get('hotCapacity')),
             }),
@@ -251,8 +257,8 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   ) {
     p.set('srvSubtypes', normalizedFilters.srv.subtypes.join(','));
   }
-  if (normalizedFilters.hot.taxonomy.length > 0) {
-    p.set('hotTaxonomy', normalizedFilters.hot.taxonomy.map((item) => `${item.domain}:${item.code}`).join(','));
+  if (normalizedFilters.common.taxonomyAny.length > 0) {
+    p.set('taxonomy', normalizedFilters.common.taxonomyAny.map((item) => `${item.domain}:${item.code}`).join(','));
   }
   const hotCapacity = serializeCapacityFilters(normalizedFilters.hot.capacityFilters);
   if (hotCapacity) {

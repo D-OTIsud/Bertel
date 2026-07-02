@@ -132,9 +132,9 @@ export function ExplorerActiveFilters() {
           useExplorerStore.getState().toggleSustainabilityAction(code);
         }
         break;
-      case 'hotTaxonomy':
-        for (const item of useExplorerStore.getState().hot.taxonomy ?? []) {
-          useExplorerStore.getState().toggleHotTaxonomy(item.domain, item.code);
+      case 'taxonomy':
+        for (const item of useExplorerStore.getState().common.taxonomyAny ?? []) {
+          useExplorerStore.getState().toggleTaxonomy(item.domain, item.code);
         }
         break;
       case 'hotCapacity':

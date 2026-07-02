@@ -11,7 +11,14 @@ import type {
   MeetingRoomFilter,
 } from '../types/domain';
 import { mergeSelectedObjectIds } from '../utils/explorer-selection';
-import { DEFAULT_EXPLORER_FILTERS, DEFAULT_HOT_SUBTYPES, DEFAULT_SRV_SUBTYPES, DEFAULT_VIS_SUBTYPES, normalizeExplorerFilters } from '../utils/facets';
+import {
+  DEFAULT_EXPLORER_FILTERS,
+  DEFAULT_HOT_SUBTYPES,
+  DEFAULT_SRV_SUBTYPES,
+  DEFAULT_VIS_SUBTYPES,
+  bucketForTaxonomyDomain,
+  normalizeExplorerFilters,
+} from '../utils/facets';
 
 interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
@@ -62,7 +69,8 @@ interface ExplorerState extends ExplorerFilters {
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
   toggleVisSubtype: (type: BackendObjectTypeCode) => void;
   toggleSrvSubtype: (type: BackendObjectTypeCode) => void;
-  toggleHotTaxonomy: (domain: string, code: string) => void;
+  /** §155 — toggle d'une sous-catégorie (paire domaine:code, tout bucket). */
+  toggleTaxonomy: (domain: string, code: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
   setResCapacityFilter: (code: string, min?: number, max?: number) => void;
   setHotMeetingRoom: (patch: Partial<MeetingRoomFilter>) => void;
@@ -109,7 +117,6 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
     hot: {
       ...currentBase.hot,
       ...partial.hot,
-      taxonomy: partial.hot?.taxonomy ?? currentBase.hot.taxonomy,
       capacityFilters: partial.hot?.capacityFilters ?? currentBase.hot.capacityFilters,
       meetingRoom: {
         ...currentBase.hot.meetingRoom,
@@ -158,22 +165,29 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       // D23 — garde anti-combinaison invalide : désélectionner un bucket emporte
       // ses sous-filtres. Sinon ils restent actifs-mais-ignorés (chips mensongères)
       // et se RÉACTIVENT dès que la sélection redevient vide (= tous les buckets).
+      // §155 : les sous-catégories du bucket (paires domaine:code) sont purgées
+      // de l'état COMMUN dans tous les cas — y compris ACT/EVT sans slice dédié.
+      const taxonomyAny = (state.common.taxonomyAny ?? []).filter(
+        (item) => bucketForTaxonomyDomain(item.domain) !== bucket,
+      );
+      const common = { ...state.common, taxonomyAny };
       switch (bucket) {
         case 'HOT':
           return {
             selectedBuckets,
-            hot: { subtypes: [...DEFAULT_HOT_SUBTYPES], taxonomy: [], capacityFilters: [], meetingRoom: {} },
+            common,
+            hot: { subtypes: [...DEFAULT_HOT_SUBTYPES], capacityFilters: [], meetingRoom: {} },
           };
         case 'RES':
-          return { selectedBuckets, res: { capacityFilters: [] } };
+          return { selectedBuckets, common, res: { capacityFilters: [] } };
         case 'ITI':
-          return { selectedBuckets, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
+          return { selectedBuckets, common, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
         case 'VIS':
-          return { selectedBuckets, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
+          return { selectedBuckets, common, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
         case 'SRV':
-          return { selectedBuckets, srv: { subtypes: [...DEFAULT_SRV_SUBTYPES] } };
+          return { selectedBuckets, common, srv: { subtypes: [...DEFAULT_SRV_SUBTYPES] } };
         default:
-          return { selectedBuckets };
+          return { selectedBuckets, common };
       }
     }),
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
@@ -347,14 +361,15 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       const next = subtypes.includes(type) ? subtypes.filter((item) => item !== type) : [...subtypes, type];
       return { srv: { ...state.srv, subtypes: next.length > 0 ? next : [...DEFAULT_SRV_SUBTYPES] } };
     }),
-  toggleHotTaxonomy: (domain, code) =>
+  // §155 — sous-catégories : état commun, partitionné par bucket au payload.
+  toggleTaxonomy: (domain, code) =>
     set((state) => {
-      const taxonomy = state.hot.taxonomy ?? [];
+      const taxonomy = state.common.taxonomyAny ?? [];
       const exists = taxonomy.some((item) => item.domain === domain && item.code === code);
       return {
-        hot: {
-          ...state.hot,
-          taxonomy: exists
+        common: {
+          ...state.common,
+          taxonomyAny: exists
             ? taxonomy.filter((item) => !(item.domain === domain && item.code === code))
             : [...taxonomy, { domain, code }],
         },

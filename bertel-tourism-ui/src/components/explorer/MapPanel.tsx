@@ -7,7 +7,7 @@ import {
   defaultMarkerStyles,
   getMarkerImageId,
 } from '../../config/map-markers';
-import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
+import { getAppMapStyle, MAP_LAYER_OPTIONS } from '../../lib/map-style';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
@@ -173,7 +173,10 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
   const [mapLoaded, setMapLoaded] = useState(false);
 
   const geojsonData = useMemo(() => buildObjectFeatureCollection(objects), [objects]);
-  const mapStyle = DEFAULT_APP_MAP_STYLE;
+  // D19 : le fond suit la préférence persistée (ui-store.mapLayer) — l'état existait sans UI.
+  const mapLayer = useUiStore((state) => state.mapLayer);
+  const setMapLayer = useUiStore((state) => state.setMapLayer);
+  const mapStyle = getAppMapStyle(mapLayer);
   const markerPoints = useMemo(
     () =>
       objects.flatMap((card) => {
@@ -632,7 +635,13 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
         <div className="relative flex h-14 flex-none items-center border-b border-line bg-surface px-4">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
-            <span className="font-sans text-xs font-medium text-ink-3">{geoZoneCount} zones</span>
+            {/* D19 : divulgation honnête — seules les fiches géolocalisées sont épinglées. */}
+            <span
+              className="font-sans text-xs font-medium text-ink-3"
+              title="Les fiches sans coordonnées n'apparaissent pas sur la carte (badge « non localisé » dans la liste)."
+            >
+              {geoZoneCount} localisée{geoZoneCount > 1 ? 's' : ''}
+            </span>
           </div>
           <div
             className="map-panel__toolbar absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -642,17 +651,33 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
             {resetZoomButton}
             {lassoButton}
           </div>
-          {onCollapse ? (
-            <button
-              type="button"
-              className="ghost-button results-table__tool ml-auto"
-              title="Replier la carte (vue liste pleine largeur)"
-              onClick={onCollapse}
-            >
-              <PanelRightClose size={13} aria-hidden />
-              Replier
-            </button>
-          ) : null}
+          <div className="ml-auto flex items-center gap-2">
+            {/* D19 : sélecteur de fond visible (l'état mapLayer existait sans UI). */}
+            <div className="view-switch" role="group" aria-label="Fond de carte">
+              {MAP_LAYER_OPTIONS.map(({ mode, label }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={cn('view-switch__btn', mapLayer === mode && 'is-on')}
+                  aria-pressed={mapLayer === mode}
+                  onClick={() => setMapLayer(mode)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {onCollapse ? (
+              <button
+                type="button"
+                className="ghost-button results-table__tool"
+                title="Replier la carte (vue liste pleine largeur)"
+                onClick={onCollapse}
+              >
+                <PanelRightClose size={13} aria-hidden />
+                Replier
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {!isColumn ? (
@@ -664,7 +689,13 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
         </div>
       ) : null}
 
-      <div className={cn('map-canvas', isColumn && 'min-h-0 flex-1')}>
+      {/* D19 (WCAG 1.1.1) : région nommée — role=region (PAS img : la carte contient des
+          contrôles interactifs qu'un role=img aplatirait) ; la liste est l'équivalent accessible. */}
+      <div
+        className={cn('map-canvas', isColumn && 'min-h-0 flex-1')}
+        role="region"
+        aria-label="Carte interactive des résultats — la liste des résultats en est l'équivalent accessible"
+      >
         <Map
           ref={mapRef}
           mapStyle={mapStyle}

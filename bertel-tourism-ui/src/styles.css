@@ -442,6 +442,24 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Skip-link (D11, WCAG 2.4.1) : visible uniquement au focus clavier ---- */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  color: var(--theme-primary);
+  font-weight: 700;
+  text-decoration: none;
+  z-index: 9999;
+  border-radius: 0 0 6px 0;
+  box-shadow: var(--shadow-soft);
+}
+.skip-link:focus-visible { top: 0; }
+/* Le <main> reçoit le focus programmatique (tabIndex=-1) : pas d'anneau — la cible est la page. */
+.workspace:focus { outline: none; }
+
 /* ---- Écran de repli des limites d'erreur (D4 : app/error.tsx + ErrorBoundary) ---- */
 .error-fallback {
   min-height: 60vh;

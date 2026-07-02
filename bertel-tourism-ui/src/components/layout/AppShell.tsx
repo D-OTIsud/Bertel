@@ -18,10 +18,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="app-shell">
+      {/* D11 : premier élément tabbable — évite de traverser toute la sidebar à chaque page. */}
+      <a href="#main-content" className="skip-link">
+        Aller au contenu principal
+      </a>
       <Sidebar onOpenProfile={() => setProfileOpen(true)} />
       <div className={`app-shell__viewport${isObjectEdit ? ' app-shell__viewport--object-edit' : ''}`}>
         {!isObjectEdit ? <TopBar /> : null}
-        <main className={`workspace${isObjectEdit ? ' workspace--object-edit' : ''}`}>{children}</main>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`workspace${isObjectEdit ? ' workspace--object-edit' : ''}`}
+        >
+          {children}
+        </main>
       </div>
       <ProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />
       <Suspense fallback={null}>

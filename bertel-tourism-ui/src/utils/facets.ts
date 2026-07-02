@@ -67,6 +67,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   sustainabilityActionCodesAny: [],
   petsAccepted: false,
   openNow: false,
+  environmentTagsAny: [],
   labelsAny: [],
   tagsAny: [],
   rankedLabelSchemeCode: null,
@@ -93,9 +94,6 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
     isLoop: null,
     practicesAny: [],
   },
-  act: {
-    environmentTagsAny: [],
-  },
   vis: {
     subtypes: [...DEFAULT_VIS_SUBTYPES],
   },
@@ -116,7 +114,6 @@ export function normalizeExplorerFilters(
   const hot = { ...base.hot, ...filters.hot };
   const res = { ...base.res, ...filters.res };
   const iti = { ...base.iti, ...filters.iti };
-  const act = { ...base.act, ...filters.act };
 
   return {
     selectedBuckets: filters.selectedBuckets ?? base.selectedBuckets,
@@ -127,6 +124,7 @@ export function normalizeExplorerFilters(
       accessibilityAmenityCodesAny: common.accessibilityAmenityCodesAny ?? [],
       sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
+      environmentTagsAny: common.environmentTagsAny ?? [],
       labelsAny: common.labelsAny ?? [],
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
@@ -146,10 +144,6 @@ export function normalizeExplorerFilters(
     iti: {
       ...iti,
       practicesAny: iti.practicesAny ?? [],
-    },
-    act: {
-      ...act,
-      environmentTagsAny: act.environmentTagsAny ?? [],
     },
     vis: {
       ...base.vis,
@@ -221,7 +215,7 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
  * view with API ids once the filtered query returns.
  */
 export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
-  const { common, hot, res, iti, act } = normalizeExplorerFilters(filters);
+  const { common, hot, res, iti } = normalizeExplorerFilters(filters);
   const hasAccessibilityFilter =
     common.pmr ||
     common.accessibilityDisabilityTypesAny.length > 0 ||
@@ -263,7 +257,7 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   if (iti.practicesAny.length > 0) {
     return true;
   }
-  if (act.environmentTagsAny.length > 0) {
+  if (common.environmentTagsAny.length > 0) {
     return true;
   }
   return false;
@@ -440,6 +434,13 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     payload.tags_any = tagSlugs;
   }
 
+  // §154 — cadre & environnement, transverse (le RPC matche cached_environment_tags
+  // sur l'objet, tous types ; l'ancien gating au seul bucket ACT était un vestige).
+  const environmentTags = common.environmentTagsAny.map(cleanString).filter(Boolean);
+  if (environmentTags.length > 0) {
+    payload.environment_tags_any = environmentTags;
+  }
+
   if (bucket === 'HOT') {
     const taxonomy = normalizedFilters.hot.taxonomy.map((item) => ({
       domain: item.domain,
@@ -487,10 +488,6 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     if (Object.keys(itinerary).length > 0) {
       payload.itinerary = itinerary;
     }
-  }
-
-  if (bucket === 'ACT' && normalizedFilters.act.environmentTagsAny.length > 0) {
-    payload.environment_tags_any = normalizedFilters.act.environmentTagsAny;
   }
 
   return payload;

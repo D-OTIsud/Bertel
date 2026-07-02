@@ -159,6 +159,13 @@ export interface ExplorerCommonFilters {
   sustainabilityActionCodesAny: string[];
   petsAccepted: boolean;
   openNow: boolean;
+  /**
+   * §154 (P0-b audit filtres) — cadre & environnement (bord de mer, montagne,
+   * volcan…). TRANSVERSE : la donnée (`object_environment_tag`) couvre tous les
+   * types (531 rural, 439 vue panoramique…), pas seulement les activités — le
+   * RPC matche `cached_environment_tags` sans considération de bucket.
+   */
+  environmentTagsAny: string[];
   labelsAny: string[];
   /** Active §09 tag filters (click-to-filter on a card/map tag). Sent to the RPC as `tags_any`. */
   tagsAny: ExplorerTagFilter[];
@@ -194,10 +201,6 @@ export interface ItiBucketFilters {
   durationMinH?: number;
   durationMaxH?: number;
   practicesAny: string[];
-}
-
-export interface ActBucketFilters {
-  environmentTagsAny: string[];
 }
 
 /** Sous-types des buckets fourre-tout (impl. 3.2) : filtre client par type DB. */
@@ -256,7 +259,6 @@ export interface ExplorerFilters {
   hot: HotBucketFilters;
   res: ResBucketFilters;
   iti: ItiBucketFilters;
-  act: ActBucketFilters;
   vis: VisBucketFilters;
   srv: SrvBucketFilters;
 }
@@ -291,6 +293,8 @@ export interface ExplorerReferences {
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
   itiPractices: ExplorerReferenceOption[];
+  /** Cadre & environnement (ref_code domaine environment_tag) — filtre transverse §154. */
+  environmentTags: ExplorerReferenceOption[];
   /** Corpus-wide city list — from api.get_dashboard_filter_options */
   cities: string[];
   /** Corpus-wide lieu-dit list — from api.get_dashboard_filter_options */

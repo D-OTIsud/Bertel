@@ -158,6 +158,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const accessibilityDisabilityTypesAny = common.accessibilityDisabilityTypesAny ?? [];
   const accessibilityAmenityCodesAny = common.accessibilityAmenityCodesAny ?? [];
   const sustainable = common.sustainable === true;
+  const environmentTagsAny = common.environmentTagsAny ?? [];
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
   const sustainabilityActionCodesAny = common.sustainabilityActionCodesAny ?? [];
   const hot = useExplorerStore((state) => state.hot);
@@ -174,6 +175,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const toggleSustainabilityAction = useExplorerStore((state) => state.toggleSustainabilityAction);
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
+  const setEnvironmentTags = useExplorerStore((state) => state.setEnvironmentTags);
   const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
@@ -235,7 +237,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if (s.iti.isLoop !== null || s.iti.practicesAny.length || s.iti.difficultyMin != null || s.iti.difficultyMax != null) n += 1;
     if (s.iti.distanceMinKm != null || s.iti.distanceMaxKm != null) n += 1;
     if (s.iti.durationMinH != null || s.iti.durationMaxH != null) n += 1;
-    if (s.act.environmentTagsAny.length) n += 1;
+    if ((s.common.environmentTagsAny ?? []).length) n += 1;
     return n;
   });
 
@@ -598,6 +600,24 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
                 <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
               </label>
             </div>
+          </FilterColumnGroup>
+
+          {/* §154 — cadre & environnement : transverse (la donnée couvre tous les
+              types — rural, vue panoramique, volcan… — pas seulement les activités). */}
+          <FilterColumnGroup
+            label="Cadre & environnement"
+            count={environmentTagsAny.length > 0 ? environmentTagsAny.length : undefined}
+          >
+            <FilterDropdown<string>
+              mode="multi"
+              placeholder="Tous les cadres"
+              allLabel="Tous les cadres"
+              searchable
+              searchPlaceholder="Rechercher (mer, volcan, forêt…)"
+              options={(references?.environmentTags ?? []).map((option) => ({ code: option.code, label: option.name }))}
+              selected={environmentTagsAny}
+              onChange={(vals) => setEnvironmentTags(vals)}
+            />
           </FilterColumnGroup>
 
           {showHot ? (

@@ -329,6 +329,13 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'velo', name: 'Velo' },
       { code: 'patrimoine', name: 'Patrimoine' },
     ],
+    environmentTags: [
+      { code: 'bord_mer', name: 'Bord de mer' },
+      { code: 'montagne', name: 'Montagne' },
+      { code: 'volcan', name: 'Au pied du volcan' },
+      { code: 'foret', name: 'Forêt' },
+      { code: 'vue_panoramique', name: 'Vue panoramique' },
+    ],
   };
 }
 
@@ -345,6 +352,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     applicabilityResult,
     taxonomyDomainsResult,
     practicesResult,
+    environmentTagsResult,
     locationOptionsResult,
     accessibilityAmenitiesResult,
     sustainabilityCategoriesResult,
@@ -360,6 +368,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
       .in('domain', ['taxonomy_hot'])
       .order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
+    // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
+    client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
     client.schema('api').rpc('get_dashboard_filter_options'),
     client
       .from('ref_amenity')
@@ -393,6 +403,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   }
   if (practicesResult.error) {
     throw practicesResult.error;
+  }
+  if (environmentTagsResult.error) {
+    throw environmentTagsResult.error;
   }
   if (locationOptionsResult.error) {
     throw locationOptionsResult.error;
@@ -429,6 +442,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const applicability = (applicabilityResult.data ?? []) as CapacityApplicabilityRow[];
   const taxonomyNodes = (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
+  const environmentTags = (environmentTagsResult.data ?? []) as PracticeRow[];
   const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
   const accessibilityAmenities = (accessibilityAmenitiesResult.data ?? []) as AmenityRow[];
   const sustainabilityCategories = (sustainabilityCategoriesResult.data ?? []) as SustainabilityCategoryRow[];
@@ -444,6 +458,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
+    environmentTags: toReferenceOptions(environmentTags),
     cities: locationOptions?.cities ?? [],
     lieuDits: locationOptions?.lieu_dits ?? [],
   };

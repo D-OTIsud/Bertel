@@ -111,6 +111,9 @@ export function ExplorerActiveFilters() {
       case 'zone':
         useExplorerStore.getState().resetSpatialFilter();
         break;
+      case 'environment':
+        useExplorerStore.getState().setEnvironmentTags([]);
+        break;
       case 'accessDisability':
         useExplorerStore.getState().toggleAccessibilityDisabilityType(chip.value as AccessibilityDisabilityTypeCode);
         break;

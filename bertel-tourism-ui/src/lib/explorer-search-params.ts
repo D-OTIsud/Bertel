@@ -102,6 +102,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(sustainabilityActionCodesAny !== undefined && { sustainabilityActionCodesAny }),
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
     ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
+    ...(searchParams.get('environment') != null && {
+      environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
     ...(labelsAny !== undefined && { labelsAny }),
     ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
     ...(statuses !== undefined && { statuses }),
@@ -221,6 +224,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.openNow) {
     p.set('openNow', 'true');
+  }
+  if (normalizedFilters.common.environmentTagsAny.length > 0) {
+    p.set('environment', normalizedFilters.common.environmentTagsAny.join(','));
   }
   if (normalizedFilters.common.statuses.length > 0) {
     // Persist explicit status picks only. Empty array means "use the

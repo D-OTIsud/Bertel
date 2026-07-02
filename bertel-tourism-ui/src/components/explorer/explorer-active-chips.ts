@@ -23,6 +23,7 @@ export type ActiveChipGroup =
   | 'rankedLabel'
   // D23 — filtres jusqu'ici invisibles dans la barre :
   | 'zone'
+  | 'environment'
   | 'accessDisability'
   | 'accessAmenities'
   | 'sustCategories'
@@ -125,6 +126,18 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   // dans la barre (impossible à voir/retirer sans rouvrir chaque panneau).
   if (c.polygon) {
     chips.push({ key: 'zone', group: 'zone', value: 'zone', label: 'Zone dessinée sur la carte' });
+  }
+
+  // §154 — cadre & environnement (compteur : les libellés vivent dans le
+  // catalogue de références, pas ici — même pattern que les aménagements).
+  const envCount = (c.environmentTagsAny ?? []).length;
+  if (envCount > 0) {
+    chips.push({
+      key: 'environment',
+      group: 'environment',
+      value: '*',
+      label: `Cadre · ${envCount} critère${envCount > 1 ? 's' : ''}`,
+    });
   }
 
   for (const type of c.accessibilityDisabilityTypesAny ?? []) {

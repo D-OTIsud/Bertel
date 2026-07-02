@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ExplorerBucketKey, ExplorerFilters, ExplorerStatusFilter } from '../../types/domain';
+import type {
+  AccessibilityDisabilityTypeCode,
+  ExplorerBucketKey,
+  ExplorerFilters,
+  ExplorerStatusFilter,
+} from '../../types/domain';
 import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
 import { useExplorerStore } from '../../store/explorer-store';
 import { buildSearchParams } from '../../lib/explorer-search-params';
@@ -17,6 +22,10 @@ import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chi
 export function ExplorerActiveFilters() {
   const common = useExplorerStore((s) => s.common);
   const selectedBuckets = useExplorerStore((s) => s.selectedBuckets);
+  // D23 : les facettes par bucket alimentent désormais aussi la barre de chips.
+  const hot = useExplorerStore((s) => s.hot);
+  const res = useExplorerStore((s) => s.res);
+  const iti = useExplorerStore((s) => s.iti);
   const setSearch = useExplorerStore((s) => s.setSearch);
   const toggleBucket = useExplorerStore((s) => s.toggleBucket);
   const setCities = useExplorerStore((s) => s.setCities);
@@ -33,7 +42,7 @@ export function ExplorerActiveFilters() {
   const router = useRouter();
   const [savingDynamic, setSavingDynamic] = useState(false);
 
-  const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets };
+  const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets, hot, res, iti };
   const chips = buildExplorerActiveChips(filters);
 
   if (chips.length === 0) {
@@ -96,6 +105,57 @@ export function ExplorerActiveFilters() {
         break;
       case 'rankedLabel':
         setRankedLabelScheme(null);
+        break;
+      // D23 — retraits des filtres jusqu'ici invisibles. Les chips « compteur »
+      // (valeur '*') retirent l'ensemble de leur groupe via les toggles unitaires.
+      case 'zone':
+        useExplorerStore.getState().resetSpatialFilter();
+        break;
+      case 'accessDisability':
+        useExplorerStore.getState().toggleAccessibilityDisabilityType(chip.value as AccessibilityDisabilityTypeCode);
+        break;
+      case 'accessAmenities':
+        for (const code of useExplorerStore.getState().common.accessibilityAmenityCodesAny ?? []) {
+          useExplorerStore.getState().toggleAccessibilityAmenity(code);
+        }
+        break;
+      case 'sustCategories':
+        for (const code of useExplorerStore.getState().common.sustainabilityCategoryCodesAny ?? []) {
+          useExplorerStore.getState().toggleSustainabilityCategory(code);
+        }
+        break;
+      case 'sustActions':
+        for (const code of useExplorerStore.getState().common.sustainabilityActionCodesAny ?? []) {
+          useExplorerStore.getState().toggleSustainabilityAction(code);
+        }
+        break;
+      case 'hotTaxonomy':
+        for (const item of useExplorerStore.getState().hot.taxonomy ?? []) {
+          useExplorerStore.getState().toggleHotTaxonomy(item.domain, item.code);
+        }
+        break;
+      case 'hotCapacity':
+        useExplorerStore.getState().setHotCapacityFilter(chip.value, undefined, undefined);
+        break;
+      case 'resCapacity':
+        useExplorerStore.getState().setResCapacityFilter(chip.value, undefined, undefined);
+        break;
+      case 'itiLoop':
+        useExplorerStore.getState().setItiIsLoop(null);
+        break;
+      case 'itiDifficulty':
+        useExplorerStore.getState().setItiDifficulty(undefined, undefined);
+        break;
+      case 'itiDistance':
+        useExplorerStore.getState().setItiDistance(undefined, undefined);
+        break;
+      case 'itiDuration':
+        useExplorerStore.getState().setItiDuration(undefined, undefined);
+        break;
+      case 'itiPractices':
+        for (const code of useExplorerStore.getState().iti.practicesAny ?? []) {
+          useExplorerStore.getState().toggleItiPractice(code);
+        }
         break;
     }
   };

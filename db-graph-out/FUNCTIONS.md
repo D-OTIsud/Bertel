@@ -246,6 +246,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.incident_report` _(high)_
 - writes `public.object_iti` _(high)_
 
+## `api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
+
+> 6.3 Création (statique depuis une sélection, ou dynamique depuis des filtres)
+
 ## `api.create_membership_campaign(p_anchor_object_id text, p_name text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.ref_code` _(high)_
@@ -405,6 +413,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Suppression d'une interaction (même gate d'écriture ; arme objet si contexte, sinon arme
 > acteur — object_id nullable ⇒ existence par FOUND, pas par IS NULL).
+
+## `api.delete_list(p_list_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> 6.6 Suppression
 
 ## `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
 - returns: `boolean`
@@ -739,6 +754,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Simplified track for map display (lightweight GeoJSON)
 
+## `api.get_list(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> 6.2 Détail d'une liste (compose)
+
 ## `api.get_local_now_for_timezone(p_business_timezone text)`
 - returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
 
@@ -832,6 +853,33 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_environment_tag` _(high)_
 
 > Compact environment tag payload for cards, maps and LCP/list payloads.
+
+## `api.get_object_i18n_all(p_object_id text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_org_link` _(high)_
+
+> Partner i18n=all block (audit API C-5): object_description free-text family as {field:{lang:plain text}} (strip_markdown per language, public-visibility only, published-gated). service_role-only.
+
+## `api.get_object_interop(p_object_id text, p_profile text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+- reads `public.ref_interop_crosswalk` _(high)_
+
+> Partner interop serializer (audit API I4 §137): datatourisme/apidae/tourinsoft document for a PUBLISHED object; @type/class from ref_interop_crosswalk; service_role-only; core-fields subset.
+
+## `api.get_object_jsonld(p_object_id text, p_profile text DEFAULT 'jsonld'::text)`
+- returns: `jsonb`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_web_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_interop_crosswalk` _(high)_
+
+> Partner JSON-LD serializer (audit API I4): schema.org output for a PUBLISHED object, @type from ref_interop_crosswalk (table-driven), public-only contacts/media/web-channels, plain-text description (strip_markdown). service_role-only; unmapped/unpublished => NULL. §136.
 
 ## `api.get_object_legal_compliance(p_object_id text)`
 - returns: `json`
@@ -1232,6 +1280,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Returns public-safe brand settings for anonymous contexts such as the login page.
 
+## `api.get_public_list_by_token(p_token text)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+> ---------- 7. RPC PUBLIQUE (anon) : lecture par token ----------
+> Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
+> (NULL) si token invalide / désactivé / expiré.
+
 ## `api.guard_object_status_change()`
 - returns: `trigger` — SECURITY DEFINER
 
@@ -1279,6 +1335,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > I18N Helper (strict): Pick translation from JSONB without "any language" fallback
 > Returns NULL if both requested and fallback are missing/empty
+
+## `api.interop_object_core(p_object_id text)`
+- returns: `jsonb`
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_web_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> Shared interop core reader (audit API I4 §137): flat gated core of a PUBLISHED object (public-only) for the profile serializers.
 
 ## `api.is_object_open_now(p_object_id text)`
 - returns: `boolean`
@@ -1395,6 +1462,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, is_active boolean, extra jsonb, has_key boolean, created_at timestamp with time zone, updated_at timestamp with time zone)` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
 
+## `api.list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_language` _(high)_
+- reads `public.ref_sustainability_action` _(high)_
+- reads `public.ref_sustainability_action_category` _(high)_
+
+> Un référentiel public résolu i18n, forme {code,name,icon_url,parent_code,domain}. Audit API I1.
+
 ## `api.list_crm_assignees()`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
@@ -1434,6 +1513,42 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_crm_sentiment` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
+## `api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)`
+- returns: `jsonb`
+- reads `public.object_deletion_log` _(high)_
+
+> Flux tombstone partenaire (§108/C-4) : suppressions définitives depuis object_deletion_log, projeté {object_id,type,deleted_at} (jamais report/performed_by/object_name). service_role-only.
+
+## `api.list_effective_object_ids(p_list_id uuid, p_published_only boolean)`
+- returns: `TABLE(object_id text, pos integer, note_fr text, note_en text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+
+> ---------- 5. Membres effectifs d'une liste (statique OU dynamique) ----------
+> Helper interne : jamais exposé (les callers DEFINER l'exécutent en tant qu'owner).
+> Statique : object_list_item ordonné ; published_only filtre sur object.status.
+> Dynamique : résolveur ci-dessus (ordinalité = position), notes NULL.
+
+## `api.list_item_contacts(p_ids text[])`
+- returns: `TABLE(object_id text, contacts jsonb)` — SECURITY DEFINER
+- reads `public.contact_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> ---------- 5b. Contacts publics des items (téléphone / site web) ----------
+> Enrichissement des items de liste pour les templates OTI (boutons « appeler » /
+> « site web » du design). PUBLICS uniquement (is_public — le flag champ §49 compose,
+> jamais de canal interne) : phone (repli mobile) + website. Set-based sur le jeu
+> d'ids (borné 200 par le résolveur) — pas de fonction par ligne (§125).
+> Helper interne : jamais exposé (les RPCs DEFINER l'exécutent en tant qu'owner).
+
+## `api.list_my_lists()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+
+> 6.1 Grille « Mes listes »
+
 ## `api.list_object_contact_suggestions(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.actor_channel` _(high)_
@@ -1462,6 +1577,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Vue CRM d'un objet : interactions + tâches + répartition des sujets + acteurs liés
 > (navigation objet → acteurs du modèle acteur-centré ; cf. en-tête point 5).
+
+## `api.list_object_markers(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125.
 
 ## `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
@@ -1496,6 +1618,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at.
 
+## `api.list_partner_keys()`
+- returns: `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)` — SECURITY DEFINER
+- reads `internal.partner_api_key` _(high)_
+
+> Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé).
+
 ## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
@@ -1511,6 +1639,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Phase 7.5 — domaines ref_code éditables (non structurels) + compteurs, pour le maître de l'éditeur de référentiels.
 
+## `api.list_reference_bundle(p_domains text[] DEFAULT NULL::text[], p_lang text DEFAULT 'fr'::text)`
+- returns: `jsonb`
+
+> Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1.
+
 ## `api.lock_object_private_description_system_fields()`
 - returns: `trigger` — SECURITY DEFINER
 
@@ -1525,6 +1658,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger`
 
 > Mise à jour published_at
+
+## `api.mark_list_sent(p_list_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.object_list` _(high)_
+
+> ---------- 7b. Marquer une liste « envoyée » (route email /api/lists/send) ----------
 
 ## `api.norm_search(p text)`
 - returns: `text`
@@ -1550,6 +1689,25 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Cyclique : durée MM-JJ (approx. mois*31+jour, monotone) avec wrap. Fixe : date_end - date_start.
 > Base / sans dates : 100000 (∞, la plus large).
 
+## `api.partner_authenticate(p_key_hash text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `internal.partner_api_key` _(high)_
+- writes `internal.partner_api_key` _(high)_
+
+> Le route passe le SHA-256 hex (calculé en Node) — la clé brute ne touche jamais la DB.
+> Renvoie {ok, id, label, scopes} si la clé est active/non-expirée/non-révoquée, sinon {ok:false}.
+> ponytail: met à jour last_used_at à chaque appel (write par requête) — throttler si QPS élevé (R2).
+
+## `api.partner_log_call(p_key_id uuid, p_path text, p_status integer)`
+- returns: `void` — SECURITY DEFINER
+- writes `internal.partner_api_call` _(high)_
+
+## `api.partner_rate_check(p_key_id uuid, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_rate_bucket` _(high)_
+
+> Incrémente le compteur de la fenêtre courante et rend le verdict. service_role-only.
+
 ## `api.periods_partial_overlap(p_all_years boolean, a_s date, a_e date, b_s date, b_e date)`
 - returns: `boolean`
 
@@ -1562,6 +1720,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_contact_kind` _(high)_
 
 > Unicité email cross-actors
+
+## `api.public_catalog_domains()`
+- returns: `text[]`
+
+> Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1.
 
 ## `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1689,6 +1852,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Function to request a document for a legal record
 > =====================================================
+
+## `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
+- returns: `SETOF text` — SECURITY DEFINER
+
+> ---------- 4. Résolveur dynamique (wrapper du leaf de filtre) ----------
+> p_buckets : soit un tableau [{types,filters,search}], soit {buckets:[...]}.
 
 ## `api.resolve_staging_dependencies(p_batch_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1860,6 +2029,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Idempotent : réactive une permission révoquée si elle existe déjà.
 > -------------------------------------------------------
 
+## `api.rpc_issue_partner_key(p_label text, p_scopes text[] DEFAULT '{}'::text[], p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_api_key` _(high)_
+
+> Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable).
+
 ## `api.rpc_list_org_members(p_org_object_id text)`
 - returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])` — SECURITY DEFINER
 - reads `auth.users` _(high)_
@@ -1933,6 +2108,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Autorisation : org_admin (rank 30) de l'ORG cible, ou superuser plateforme.
 > No-op silencieux si la permission n'est pas active sur cette ORG.
 > -------------------------------------------------------
+
+## `api.rpc_revoke_partner_key(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `internal.partner_api_key` _(high)_
+
+> Révoque une clé (effet immédiat : partner_authenticate la refusera).
 
 ## `api.rpc_revoke_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -2260,6 +2441,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > SECURITY INVOKER + workspace_assert_can_write_object gate, like every canonical write.
 > =====================================================================
 
+## `api.set_list_items(p_list_id uuid, p_items jsonb)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
+
+> 6.5 Remplacement des items statiques (reconcile non-destructif — §40)
+
 ## `api.set_publication_workflow_timestamps()`
 - returns: `trigger`
 
@@ -2268,6 +2459,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.ref_tag` _(high)_
 
 > §09: set a tag's GLOBAL color (ref_tag.color, HEX #rrggbb), gated per-object. Color is global per tag (D3). SECURITY DEFINER.
+
+## `api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> 6.7 Partage : génère/rote le token, (dé)active le lien
 
 ## `api.strip_markdown(md text)`
 - returns: `text`
@@ -2278,6 +2476,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Consumers: get_object_card (card subtitle), get_object_resource (plain_description),
 > get_object_with_deep_data, ranked_label_search snippet.
 > Order is load-bearing: must be defined before get_object_card (~line 2006) in this file.
+
+## `api.strip_markdown_i18n(p_i18n jsonb)`
+- returns: `jsonb`
+
+> {lang: markdown} -> {lang: plain text}. Empty/whitespace values dropped, keys lowercased,
+> NULL / '{}' / all-empty -> NULL (jsonb_strip_nulls-friendly). Reuses api.strip_markdown.
 
 ## `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)`
 - returns: `uuid` — SECURITY DEFINER
@@ -2293,6 +2497,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger`
 - reads `public.audit_template` _(high)_
 - writes `public.object_classification` _(high)_
+
+## `api.tg_object_list_touch()`
+- returns: `trigger`
+
+> Tenue à jour de updated_at
 
 ## `api.to_base36(n bigint)`
 - returns: `text`
@@ -2332,6 +2541,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Function to update a legal record
 > =====================================================
+
+## `api.update_list(p_list_id uuid, p_patch jsonb)`
+- returns: `json` — SECURITY DEFINER
+- writes `public.object_list` _(high)_
+
+> 6.4 Mise à jour des métadonnées (patch whitelisté)
 
 ## `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)`
 - returns: `uuid` — SECURITY DEFINER
@@ -2398,6 +2613,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.user_can_read_crm_actor(p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 
+## `api.user_can_read_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
 ## `api.user_can_write_canonical(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_org_link` _(high)_
@@ -2442,10 +2661,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Conçu pour être appelé par les RPC d'enrichissement ORG (Phase 6).
 > -------------------------------------------------------
 
+## `api.user_can_write_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
 ## `api.user_can_write_object_canonical(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
-> 1) Single source of truth for canonical-write authorization (additive OR).
+> user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
+> AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /
+> USING validate at CREATE). Stub here; SP-1 CREATE OR REPLACEs it with the real DEFINER body.
 
 ## `api.user_has_permission(p_permission_code text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -2515,6 +2740,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `audit.create_monthly_partition(partition_date timestamp with time zone)`
 - returns: `text` — dynamic SQL
 
+> 16e (§146): born-gated + self-repairing — partitions do NOT inherit RLS/policies from the
+> parent, so the creator ALWAYS re-asserts ENABLE RLS + the policy pair (wrapped §39 form).
+> The api.is_platform_superuser() arm is added only when that function exists (it is created by
+> rls_policies.sql, applied AFTER this file on a fresh build; the rls_policies partition loop
+> re-creates the policy WITH the arm on the partitions created below).
+
 ## `audit.drop_old_partitions(months_to_keep integer DEFAULT 12)`
 - returns: `text` — dynamic SQL
 
@@ -2530,6 +2761,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `audit.maintain_partitions()`
 - returns: `text`
+
+> 16e (§146): the daily cron entrypoint maintains BOTH partitioned parents — audit.audit_log AND
+> public.object_version (whose creator was never wired anywhere: rows silently piled into
+> object_version_default from 2026-06 until 16e re-homed them). Retention stays audit-only:
+> object_version rows are product data (version restore §98/14r), never dropped here.
 
 ## `audit.redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])`
 - returns: `integer` — SECURITY DEFINER
@@ -2557,7 +2793,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `uuid`
 
 ## `public.create_object_version_monthly_partition(partition_date timestamp with time zone)`
-- returns: `text`
+- returns: `text` — dynamic SQL
+
+> ============================================================================
+> 1) object_version partition creator — born-gated + self-repairing
+> ============================================================================
 
 ## `public.enforce_classification_single_selection()`
 - returns: `trigger`
@@ -2568,6 +2808,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `public.enforce_single_main_media()`
 - returns: `trigger`
 - writes `public.media` _(high)_
+
+## `public.ensure_object_version_partitions(months_ahead integer DEFAULT 3)`
+- returns: `text`
+
+> 16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily
+> cron), mirror of audit.ensure_future_partitions.
 
 ## `public.immutable_unaccent(text)`
 - returns: `text`

@@ -174,6 +174,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 
+### `api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/create_list`
+- **object types served:** **all object types**
+- _6.3 Création (statique depuis une sélection, ou dynamique depuis des filtres)_
+
 ### `api.create_membership_campaign(p_anchor_object_id text, p_name text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_membership_campaign`
@@ -288,6 +294,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/delete_crm_interaction`
 - **object types served:** **all object types**
 - _Suppression d'une interaction (même gate d'écriture ; arme objet si contexte, sinon arme_
+
+### `api.delete_list(p_list_id uuid)` _(DEFINER)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/delete_list`
+- **object types served:** **all object types**
+- _6.6 Suppression_
 
 ### `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
 - **returns:** `boolean`
@@ -479,6 +491,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** `ITI`
 - _Simplified track for map display (lightweight GeoJSON)_
 
+### `api.get_list(p_list_id uuid)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_list`
+- **object types served:** **all object types**
+- _6.2 Détail d'une liste (compose)_
+
 ### `api.get_local_now_for_timezone(p_business_timezone text)`
 - **returns:** `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_local_now_for_timezone`
@@ -535,6 +553,24 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_environment_tags_compact`
 - **object types served:** **all object types**
 - _Compact environment tag payload for cards, maps and LCP/list payloads._
+
+### `api.get_object_i18n_all(p_object_id text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_i18n_all`
+- **object types served:** **all object types**
+- _Partner i18n=all block (audit API C-5): object_description free-text family as {field:{lang:plain text}} (strip_markdown per language, public-visibility only, published-gated). service_role-only._
+
+### `api.get_object_interop(p_object_id text, p_profile text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_interop`
+- **object types served:** **all object types**
+- _Partner interop serializer (audit API I4 §137): datatourisme/apidae/tourinsoft document for a PUBLISHED object; @type/class from ref_interop_crosswalk; service_role-only; core-fields subset._
+
+### `api.get_object_jsonld(p_object_id text, p_profile text DEFAULT 'jsonld'::text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_jsonld`
+- **object types served:** **all object types**
+- _Partner JSON-LD serializer (audit API I4): schema.org output for a PUBLISHED object, @type from ref_interop_crosswalk (table-driven), public-only contacts/media/web-channels, plain-text description (strip_markdown). service_role-only; unmapped/unpublished => NULL. §136._
 
 ### `api.get_object_legal_compliance(p_object_id text)`
 - **returns:** `json`
@@ -696,6 +732,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Returns public-safe brand settings for anonymous contexts such as the login page._
 
+### `api.get_public_list_by_token(p_token text)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_public_list_by_token`
+- **object types served:** **all object types**
+- _7. RPC PUBLIQUE (anon) : lecture par token_
+
 ### `api.guard_object_status_change()` _(DEFINER)_
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
@@ -735,6 +777,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/i18n_pick_strict`
 - **object types served:** —
 - _I18N Helper (strict): Pick translation from JSONB without "any language" fallback_
+
+### `api.interop_object_core(p_object_id text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/interop_object_core`
+- **object types served:** **all object types**
+- _Shared interop core reader (audit API I4 §137): flat gated core of a PUBLISHED object (public-only) for the profile serializers._
 
 ### `api.is_object_open_now(p_object_id text)`
 - **returns:** `boolean`
@@ -816,6 +864,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ai_providers`
 - **object types served:** —
 
+### `api.list_catalog(p_domain text, p_lang text DEFAULT 'fr'::text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_catalog`
+- **object types served:** —
+- _Un référentiel public résolu i18n, forme {code,name,icon_url,parent_code,domain}. Audit API I1._
+
 ### `api.list_crm_assignees()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_assignees`
@@ -838,6 +892,30 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_timeline`
 - **object types served:** **all object types**
 
+### `api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_deleted_objects_since`
+- **object types served:** —
+- _Flux tombstone partenaire (§108/C-4) : suppressions définitives depuis object_deletion_log, projeté {object_id,type,deleted_at} (jamais report/performed_by/object_name). service_role-only._
+
+### `api.list_effective_object_ids(p_list_id uuid, p_published_only boolean)` _(DEFINER)_
+- **returns:** `TABLE(object_id text, pos integer, note_fr text, note_en text)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_effective_object_ids`
+- **object types served:** **all object types**
+- _5. Membres effectifs d'une liste (statique OU dynamique)_
+
+### `api.list_item_contacts(p_ids text[])` _(DEFINER)_
+- **returns:** `TABLE(object_id text, contacts jsonb)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_item_contacts`
+- **object types served:** **all object types**
+- _5b. Contacts publics des items (téléphone / site web)_
+
+### `api.list_my_lists()` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_lists`
+- **object types served:** **all object types**
+- _6.1 Grille « Mes listes »_
+
 ### `api.list_object_contact_suggestions(p_object_id text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_contact_suggestions`
@@ -849,6 +927,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_crm`
 - **object types served:** **all object types**
 - _Vue CRM d'un objet : interactions + tâches + répartition des sujets + acteurs liés_
+
+### `api.list_object_markers(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_search text DEFAULT NULL::text)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_markers`
+- **object types served:** **all object types**
+- _Explorer map markers: lightweight {id,type,name,image,open_now,location{lat,lon,city}} for ALL matching geolocated objects in one call. Authorize-once SECURITY DEFINER (§36): filtered set ∩ current_user_readable_object_ids() then object_location read RLS-free. Replaces the per-page card fetch as the map data source; avoids the per-row can_read_object scalar (§35) and per-row enrichment (cf. list_objects_map_view). See decision log §125._
 
 ### `api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
@@ -891,6 +975,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at._
 
+### `api.list_partner_keys()` _(DEFINER)_
+- **returns:** `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_partner_keys`
+- **object types served:** —
+- _Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé)._
+
 ### `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)` _(DEFINER)_
 - **returns:** `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_pending_changes`
@@ -902,6 +992,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ref_code_domains`
 - **object types served:** —
 - _Phase 7.5 — domaines ref_code éditables (non structurels) + compteurs, pour le maître de l'éditeur de référentiels._
+
+### `api.list_reference_bundle(p_domains text[] DEFAULT NULL::text[], p_lang text DEFAULT 'fr'::text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_reference_bundle`
+- **object types served:** —
+- _Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1._
 
 ### `api.lock_object_private_description_system_fields()` _(DEFINER)_
 - **returns:** `trigger`
@@ -919,6 +1015,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
 - _Mise à jour published_at_
+
+### `api.mark_list_sent(p_list_id uuid)` _(DEFINER)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/mark_list_sent`
+- **object types served:** **all object types**
+- _7b. Marquer une liste « envoyée » (route email /api/lists/send)_
 
 ### `api.norm_search(p text)`
 - **returns:** `text`
@@ -943,6 +1045,23 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _3) Largeur de fenêtre en "jours" (à rang égal, la plus étroite gagne)._
 
+### `api.partner_authenticate(p_key_hash text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/partner_authenticate`
+- **object types served:** —
+- _Le route passe le SHA-256 hex (calculé en Node) — la clé brute ne touche jamais la DB._
+
+### `api.partner_log_call(p_key_id uuid, p_path text, p_status integer)` _(DEFINER)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/partner_log_call`
+- **object types served:** —
+
+### `api.partner_rate_check(p_key_id uuid, p_limit integer DEFAULT 120, p_window_seconds integer DEFAULT 60)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/partner_rate_check`
+- **object types served:** —
+- _Incrémente le compteur de la fenêtre courante et rend le verdict. service_role-only._
+
 ### `api.periods_partial_overlap(p_all_years boolean, a_s date, a_e date, b_s date, b_e date)`
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/periods_partial_overlap`
@@ -958,6 +1077,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
 - _Unicité email cross-actors_
+
+### `api.public_catalog_domains()`
+- **returns:** `text[]`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/public_catalog_domains`
+- **object types served:** —
+- _Liste des domaines de référentiel exposés publiquement par api.list_catalog (whitelist default-deny). Audit API I1._
 
 ### `api.purge_expired_staging_batches(p_limit integer DEFAULT 500)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1056,6 +1181,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/request_legal_document`
 - **object types served:** **all object types**
 - _Function to request a document for a legal record_
+
+### `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)` _(DEFINER)_
+- **returns:** `SETOF text`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/resolve_list_object_ids`
+- **object types served:** —
+- _4. Résolveur dynamique (wrapper du leaf de filtre)_
 
 ### `api.resolve_staging_dependencies(p_batch_id text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1170,6 +1301,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _D3. rpc_grant_user_permission_
 
+### `api.rpc_issue_partner_key(p_label text, p_scopes text[] DEFAULT '{}'::text[], p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_issue_partner_key`
+- **object types served:** —
+- _Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable)._
+
 ### `api.rpc_list_org_members(p_org_object_id text)` _(DEFINER)_
 - **returns:** `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_list_org_members`
@@ -1204,6 +1341,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_revoke_org_permission`
 - **object types served:** **all object types**
 - _D2. rpc_revoke_org_permission_
+
+### `api.rpc_revoke_partner_key(p_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_revoke_partner_key`
+- **object types served:** —
+- _Révoque une clé (effet immédiat : partner_authenticate la refusera)._
 
 ### `api.rpc_revoke_user_permission(p_target_user_id uuid, p_permission_code text)` _(DEFINER)_
 - **returns:** `void`
@@ -1362,6 +1505,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** `ITI`
 - _§111 Section 06 ITI editor — ingest the imported GPX/KML trace (client-parsed_
 
+### `api.set_list_items(p_list_id uuid, p_items jsonb)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/set_list_items`
+- **object types served:** **all object types**
+- _6.5 Remplacement des items statiques (reconcile non-destructif — §40)_
+
 ### `api.set_publication_workflow_timestamps()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
@@ -1373,11 +1522,23 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _§09: set a tag's GLOBAL color (ref_tag.color, HEX #rrggbb), gated per-object. Color is global per tag (D3). SECURITY DEFINER._
 
+### `api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/share_list`
+- **object types served:** **all object types**
+- _6.7 Partage : génère/rote le token, (dé)active le lien_
+
 ### `api.strip_markdown(md text)`
 - **returns:** `text`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/strip_markdown`
 - **object types served:** —
 - _Plain-text derivation for Markdown-canonical description columns (manifest 14w)._
+
+### `api.strip_markdown_i18n(p_i18n jsonb)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/strip_markdown_i18n`
+- **object types served:** —
+- _{lang: markdown} -> {lang: plain text}. Empty/whitespace values dropped, keys lowercased,_
 
 ### `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)` _(DEFINER)_
 - **returns:** `uuid`
@@ -1394,6 +1555,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
+
+### `api.tg_object_list_touch()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+- _Tenue à jour de updated_at_
 
 ### `api.to_base36(n bigint)`
 - **returns:** `text`
@@ -1434,6 +1601,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/update_legal_record`
 - **object types served:** **all object types**
 - _Function to update a legal record_
+
+### `api.update_list(p_list_id uuid, p_patch jsonb)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/update_list`
+- **object types served:** **all object types**
+- _6.4 Mise à jour des métadonnées (patch whitelisté)_
 
 ### `api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT '{}'::jsonb, p_api_key text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `uuid`
@@ -1486,6 +1659,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_read_crm_actor`
 - **object types served:** —
 
+### `api.user_can_read_list(p_list_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_read_list`
+- **object types served:** **all object types**
+
 ### `api.user_can_write_canonical(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_canonical`
@@ -1510,11 +1688,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _E4. api.user_can_write_enrichment(p_object_id text)_
 
+### `api.user_can_write_list(p_list_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_list`
+- **object types served:** **all object types**
+
 ### `api.user_can_write_object_canonical(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_object_canonical`
 - **object types served:** —
-- _1) Single source of truth for canonical-write authorization (additive OR)._
+- _user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd_
 
 ### `api.user_has_permission(p_permission_code text)` _(DEFINER)_
 - **returns:** `boolean`
@@ -1565,6 +1748,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `text`
 - **access:** audit schema — SQL-callable; reached via api/internal wrappers, not PostgREST
 - **object types served:** —
+- _16e (§146): born-gated + self-repairing — partitions do NOT inherit RLS/policies from the_
 
 ### `audit.drop_old_partitions(months_to_keep integer DEFAULT 12)` _(dyn-SQL)_
 - **returns:** `text`
@@ -1590,6 +1774,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `text`
 - **access:** audit schema — SQL-callable; reached via api/internal wrappers, not PostgREST
 - **object types served:** —
+- _16e (§146): the daily cron entrypoint maintains BOTH partitioned parents — audit.audit_log AND_
 
 ### `audit.redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])` _(DEFINER)_
 - **returns:** `integer`
@@ -1627,10 +1812,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ## schema `public`
 
-### `public.create_object_version_monthly_partition(partition_date timestamp with time zone)`
+### `public.create_object_version_monthly_partition(partition_date timestamp with time zone)` _(dyn-SQL)_
 - **returns:** `text`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_object_version_monthly_partition` (public schema, if exposed) / SQL-callable
 - **object types served:** —
+- _1) object_version partition creator — born-gated + self-repairing_
 
 ### `public.enforce_classification_single_selection()`
 - **returns:** `trigger`
@@ -1641,6 +1827,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
+
+### `public.ensure_object_version_partitions(months_ahead integer DEFAULT 3)`
+- **returns:** `text`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/ensure_object_version_partitions` (public schema, if exposed) / SQL-callable
+- **object types served:** —
+- _16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily_
 
 ### `public.immutable_unaccent(text)`
 - **returns:** `text`

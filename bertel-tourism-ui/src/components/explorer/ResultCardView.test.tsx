@@ -128,4 +128,27 @@ describe('ResultCardView', () => {
       expect(screen.getByTitle('Ouvert')).toBeInTheDocument();
     });
   });
+
+  describe('badge « non localisé » (D19 : les sans-coordonnées sont absents de la carte)', () => {
+    it('affiche le badge quand la fiche n’a pas de coordonnées', () => {
+      render(<ResultCardView card={makeCard()} domId="geo-none" onOpen={() => {}} />);
+      expect(screen.getByText('non localisé')).toBeInTheDocument();
+    });
+
+    it('pas de badge quand la fiche est géolocalisée', () => {
+      render(
+        <ResultCardView
+          card={makeCard({ location: { city: 'Cilaos', lat: -21.13, lon: 55.47 } })}
+          domId="geo-ok"
+          onOpen={() => {}}
+        />,
+      );
+      expect(screen.queryByText('non localisé')).toBeNull();
+    });
+
+    it('pas de badge en aperçu inerte (§09, interactive=false)', () => {
+      render(<ResultCardView card={makeCard()} domId="geo-preview" interactive={false} />);
+      expect(screen.queryByText('non localisé')).toBeNull();
+    });
+  });
 });

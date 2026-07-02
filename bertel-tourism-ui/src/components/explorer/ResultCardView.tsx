@@ -388,6 +388,13 @@ export function ResultCardView({
             <MapPin className="h-3 w-3 shrink-0 text-ink-4" aria-hidden />
             {city}
           </span>
+          {/* D19 : les fiches sans coordonnées sont silencieusement absentes de la carte —
+              on le dit sur la carte-résultat au lieu de laisser chercher l'épingle. */}
+          {interactive && (card.location?.lat == null || card.location?.lon == null) ? (
+            <span className="badge badge--muted shrink-0" title="Sans coordonnées — n'apparaît pas sur la carte">
+              non localisé
+            </span>
+          ) : null}
           {taxonomyLabel ? (
             <>
               <span className="text-ink-4">·</span>

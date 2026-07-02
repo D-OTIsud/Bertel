@@ -19,6 +19,8 @@ export interface ListEmailData {
   name: string;
   intro: string | null;
   advisorName: string | null;
+  advisorEmail: string | null;
+  advisorAvatarUrl: string | null;
   publicUrl: string;
   accentInk: string; // hex
   lang: 'fr' | 'en';
@@ -75,16 +77,31 @@ function itemRow(it: ListEmailItem, index: number, accent: string): string {
 }
 
 export function renderListEmailHtml(data: ListEmailData): string {
-  const { name, intro, advisorName, publicUrl, accentInk, lang, coverUrl, items, totalCount } = data;
+  const { name, intro, advisorName, advisorEmail, advisorAvatarUrl, publicUrl, accentInk, lang, coverUrl, items, totalCount } = data;
   const safeUrl = escapeHtml(publicUrl);
   const remaining = totalCount - items.length;
   const cover = coverUrl
     ? `<tr><td><img src="${escapeHtml(coverUrl)}" width="640" alt="" style="display:block;width:100%;max-width:640px;height:auto;border:0;" /></td></tr>`
     : '';
+  // Signature : le prénom/nom est l'élément principal ; l'e-mail s'affiche en dessous. Faute de nom
+  // enregistré (repli bootstrap = e-mail), on n'affiche pas l'e-mail deux fois. Cf. AgentWord (OtiTemplate).
+  const advisorNameTrim = (advisorName ?? '').trim();
+  const advisorMailTrim = (advisorEmail ?? '').trim();
+  const advisorPrimary = advisorNameTrim && advisorNameTrim !== advisorMailTrim ? advisorNameTrim : advisorMailTrim;
+  const showAdvisorMail = advisorMailTrim !== '' && advisorMailTrim !== advisorPrimary;
+  const avatarTrim = (advisorAvatarUrl ?? '').trim();
+  // Avatar rendu inline avant le nom (les clients modernes arrondissent via border-radius ;
+  // Outlook affichera un carré — dégradation acceptable).
+  const avatarImg = avatarTrim
+    ? `<img src="${escapeHtml(avatarTrim)}" width="32" height="32" alt="" style="width:32px;height:32px;border-radius:999px;object-fit:cover;vertical-align:middle;margin-right:8px;border:0;" />`
+    : '';
+  const signBlock = advisorPrimary
+    ? `<div style="margin-top:8px;font-size:12px;font-weight:700;color:#2d2a2a;">${avatarImg}${escapeHtml(advisorPrimary)}<span style="font-weight:400;color:#8a857f;"> · ${t('OTI du Sud', 'South Réunion Tourism Office', lang)}</span></div>${showAdvisorMail ? `<div style="margin-top:2px;font-size:11px;font-weight:400;color:#8a857f;"><a href="mailto:${escapeHtml(advisorMailTrim)}" style="color:#8a857f;text-decoration:none;">${escapeHtml(advisorMailTrim)}</a></div>` : ''}`
+    : '';
   const introBlock = intro
     ? `<tr><td style="padding:18px 28px 4px;">
          <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;color:#5b5754;line-height:1.6;">${escapeHtml(intro)}</div>
-         ${advisorName ? `<div style="margin-top:8px;font-size:12px;font-weight:700;color:#2d2a2a;">${escapeHtml(advisorName)}<span style="font-weight:400;color:#8a857f;"> · ${t('OTI du Sud', 'South Réunion Tourism Office', lang)}</span></div>` : ''}
+         ${signBlock}
        </td></tr>`
     : '';
   const rows = items.map((it, i) => itemRow(it, i, accentInk)).join('');

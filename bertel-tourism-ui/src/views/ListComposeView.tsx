@@ -50,6 +50,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const userName = useSessionStore((s) => s.userName);
+  const userEmail = useSessionStore((s) => s.email);
+  const userAvatarUrl = useSessionStore((s) => s.avatarUrl);
 
   const detailQuery = useQuery({ queryKey: ['list', listId], queryFn: () => getList(listId) });
   const detail = detailQuery.data ?? null;
@@ -624,6 +626,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   showMap={detail.showMap}
                   onMapSnapshot={setMapShot}
                   advisorName={userName}
+                  advisorEmail={userEmail}
+                  advisorAvatarUrl={userAvatarUrl}
                 />
               </ChannelFrame>
             </div>
@@ -702,6 +706,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
               staticMap
               mapSnapshot={mapShot}
               advisorName={userName}
+              advisorEmail={userEmail}
+              advisorAvatarUrl={userAvatarUrl}
             />
           </div>,
           document.body,

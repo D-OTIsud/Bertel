@@ -1,5 +1,5 @@
 -- migration_interop_batch.sql
--- Audit API — Phase 2, chantier I4 (suite §138) : sortie pivot PAR LOTS pour la liste partenaire.
+-- Audit API — Phase 2, chantier I4 (suite §153) : sortie pivot PAR LOTS pour la liste partenaire.
 --
 -- PROBLÈME : les 4 profils d'interop (§136 schema.org, §137 datatourisme/apidae/tourinsoft) ne
 -- sont servis que par le DÉTAIL `GET /api/public/objects/{id}?format=…`. Un partenaire qui
@@ -28,7 +28,7 @@
 -- PRÉREQUIS : migration_object_jsonld_schemaorg.sql (I4) + migration_interop_profiles.sql (I4b).
 --   APPLIQUER APRÈS I4b — manifest step I4c (ci_fresh_apply.sql).
 -- IDEMPOTENT : CREATE OR REPLACE + grants. REVERSIBLE : DROP FUNCTION.
--- Voir docs/api-audit/2026-06-30-api-fix-plan.md (I4) + lot1_mapping_decisions.md §138.
+-- Voir docs/api-audit/2026-06-30-api-fix-plan.md (I4) + lot1_mapping_decisions.md §153.
 
 BEGIN;
 
@@ -55,7 +55,7 @@ AS $fn$
 $fn$;
 
 COMMENT ON FUNCTION api.get_objects_interop_batch(text[], text) IS
-  'Partner batch interop serializer (audit API I4 §138): {"<object_id>": <profile document>} for up to '
+  'Partner batch interop serializer (audit API I4 §153): {"<object_id>": <profile document>} for up to '
   '200 PUBLISHED ids, wrapping get_object_jsonld (profile ''jsonld'') / get_object_interop (datatourisme/'
   'apidae/tourinsoft). Unpublished/unknown/unmapped ids are absent. service_role-only. Measured 200 docs = 88 ms.';
 

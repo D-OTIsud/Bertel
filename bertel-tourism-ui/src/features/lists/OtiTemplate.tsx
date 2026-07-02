@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import type { ListAccent, ListTemplate, ObjectListItem } from '@/services/lists';
 import { HUE_BY_TYPE, LABEL_BY_TYPE, OTI_ACCENTS, webHref, webLabel, type ListHue } from './type-meta';
+import OtiMapRecapLazy from './OtiMapRecapLazy';
+import { locatedPois, type OtiMapSnapshot } from './oti-map-utils';
 
 type IconCmp = typeof MapPin;
 
@@ -342,21 +344,41 @@ function TplGrille({ pois, ctx }: { pois: OtiPoi[]; ctx: RenderCtx }) {
   );
 }
 
-const MAP_POS = [
-  { x: 20, y: 30 }, { x: 34, y: 52 }, { x: 26, y: 72 }, { x: 46, y: 38 },
-  { x: 40, y: 66 }, { x: 30, y: 46 }, { x: 52, y: 58 },
-];
-function MapRecap({ pois, lang }: { pois: OtiPoi[]; lang: 'fr' | 'en' }) {
+function MapRecap({
+  pois,
+  lang,
+  staticMap,
+  snapshot,
+  onSnapshot,
+}: {
+  pois: OtiPoi[];
+  lang: 'fr' | 'en';
+  staticMap?: boolean;
+  snapshot?: OtiMapSnapshot | null;
+  onSnapshot?: (shot: OtiMapSnapshot) => void;
+}) {
+  // Carte MapLibre réelle dès qu'un lieu est géolocalisé. Le portail d'impression
+  // (display:none) ne peut pas monter de canvas WebGL : il passe staticMap et reçoit le
+  // cliché figé par l'aperçu via onSnapshot→mapSnapshot (ListComposeView).
+  if (!staticMap && locatedPois(pois).length > 0) {
+    return <OtiMapRecapLazy pois={pois} lang={lang} onSnapshot={onSnapshot} />;
+  }
+  // Statique (portail print) ou aucune coordonnée : cliché si disponible, sinon le bloc
+  // décoratif — sans pins factices (ils suggéraient une géographie fausse).
   return (
     <div className="oti-map">
-      {pois.map((p, i) => {
-        const pos = MAP_POS[i % MAP_POS.length];
-        return (
-          <span className="oti-map__pin" key={p.id} style={{ left: `${pos.x}%`, top: `${pos.y}%` }}>
-            {i + 1}
-          </span>
-        );
-      })}
+      {snapshot ? (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="oti-map__shotimg" src={snapshot.url} alt="" />
+          {snapshot.pins.map((p) => (
+            <span key={p.n} className="oti-map__pin" style={{ left: `${p.xPct}%`, top: `${p.yPct}%` }}>
+              {p.n}
+            </span>
+          ))}
+          <span className="oti-map__attrib">© OpenStreetMap</span>
+        </>
+      ) : null}
       <div className="oti-map__cap">
         <div className="s oti-script">{t('Votre parcours', 'Your route', lang)}</div>
         <div className="t">{t('dans le Sud', 'across the South', lang)}</div>
@@ -402,6 +424,12 @@ export interface OtiTemplateProps {
   items: OtiPoi[];
   narrow?: boolean;
   showMap?: boolean;
+  /** Instance du portail d'impression : jamais de carte WebGL, seulement le cliché reçu. */
+  staticMap?: boolean;
+  /** Cliché figé par l'instance aperçu (compose) — rendu par l'instance staticMap. */
+  mapSnapshot?: OtiMapSnapshot | null;
+  /** Remonte le cliché de la carte live vers le parent (pour le portail d'impression). */
+  onMapSnapshot?: (shot: OtiMapSnapshot) => void;
   advisorName?: string | null;
   brandName?: string;
   logoUrl?: string | null;
@@ -423,6 +451,9 @@ export default function OtiTemplate({
   items,
   narrow = false,
   showMap,
+  staticMap = false,
+  mapSnapshot = null,
+  onMapSnapshot,
   advisorName = null,
   brandName = 'OTI du Sud',
   logoUrl = null,
@@ -451,7 +482,7 @@ export default function OtiTemplate({
       <AgentWord intro={intro} lang={lang} advisorName={advisorName} advisorInitials={initials(advisorName, brandName)} />
       {withMap && items.length > 0 && (
         <div className="oti-body" style={{ paddingBottom: 0 }}>
-          <MapRecap pois={items} lang={lang} />
+          <MapRecap pois={items} lang={lang} staticMap={staticMap} snapshot={mapSnapshot} onSnapshot={onMapSnapshot} />
         </div>
       )}
       <Body pois={items} ctx={ctx} />

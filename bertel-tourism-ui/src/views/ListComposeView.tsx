@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Copy, Globe, GripVertical, Link2, Loader2, Mail, MapPin, Plus, Printer, Search, Trash2, X } from 'lucide-react';
 import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
+import type { OtiMapSnapshot } from '@/features/lists/oti-map-utils';
 import ChannelFrame from '@/features/lists/ChannelFrame';
 import { Modal } from '@/components/common/Modal';
 import { ACCENT_INK } from '@/features/lists/type-meta';
@@ -63,6 +64,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const [channel, setChannel] = useState<Channel>('email');
   const [previewLang, setPreviewLang] = useState<'fr' | 'en'>('fr');
   const [mounted, setMounted] = useState(false);
+  // Cliché de la carte récap figé par l'aperçu — rendu par l'instance du portail
+  // d'impression (display:none : un canvas WebGL ne peut pas s'y rendre).
+  const [mapShot, setMapShot] = useState<OtiMapSnapshot | null>(null);
   const [sending, setSending] = useState(false);
   const [drag, setDrag] = useState<{ from: number | null; over: number | null }>({ from: null, over: null });
   const [addQuery, setAddQuery] = useState('');
@@ -618,6 +622,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   items={itemsToOtiPois(items, previewLang)}
                   narrow={channel === 'email'}
                   showMap={detail.showMap}
+                  onMapSnapshot={setMapShot}
                   advisorName={userName}
                 />
               </ChannelFrame>
@@ -694,6 +699,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
               coverUrl={detail.coverUrl}
               items={itemsToOtiPois(items, previewLang)}
               showMap={detail.showMap}
+              staticMap
+              mapSnapshot={mapShot}
               advisorName={userName}
             />
           </div>,

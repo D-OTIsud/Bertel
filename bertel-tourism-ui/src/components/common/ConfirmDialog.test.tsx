@@ -33,9 +33,14 @@ describe('ConfirmDialog (maison)', () => {
     expect(base.onCancel).toHaveBeenCalledTimes(1);
   });
 
-  it('désactive les boutons quand busy', () => {
+  it('busy : confirmation bloquée en aria-disabled avec raison « en cours » reliée (D10/A4)', () => {
     render(<ConfirmDialog {...base} busy confirmLabel="Supprimer" />);
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeDisabled();
+    const confirm = screen.getByRole('button', { name: 'Supprimer' });
+    expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    expect(confirm).toHaveAccessibleDescription('Traitement en cours…');
+    fireEvent.click(confirm);
+    expect(base.onConfirm).not.toHaveBeenCalled();
+    // Annuler reste en disabled natif (état transitoire, pas de raison à porter).
     expect(screen.getByRole('button', { name: 'Annuler' })).toBeDisabled();
   });
 });
@@ -53,23 +58,23 @@ describe('ConfirmDialog — confirmGate (saisie-pour-confirmer)', () => {
   };
   afterEach(() => jest.clearAllMocks());
 
-  it('garde le bouton de confirmation désactivé tant que la saisie ne correspond pas', () => {
+  it('garde le bouton de confirmation bloqué (aria-disabled) tant que la saisie ne correspond pas', () => {
     render(<ConfirmDialog {...gated} />);
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute('aria-disabled', 'true');
     fireEvent.change(screen.getByLabelText(/identifiant ou SUPPRIMER/i), { target: { value: 'nope' } });
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('active le bouton sur correspondance exacte (identifiant ou mot-clé)', () => {
     render(<ConfirmDialog {...gated} />);
     const input = screen.getByLabelText(/identifiant ou SUPPRIMER/i);
     fireEvent.change(input, { target: { value: 'SUPPRIMER' } });
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Supprimer' })).not.toHaveAttribute('aria-disabled');
     fireEvent.change(input, { target: { value: '  abc-123  ' } });
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Supprimer' })).not.toHaveAttribute('aria-disabled');
   });
 
-  it('n\'appelle jamais onConfirm sans correspondance (bouton désactivé)', () => {
+  it('n\'appelle jamais onConfirm sans correspondance (clic gardé)', () => {
     render(<ConfirmDialog {...gated} />);
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
     expect(gated.onConfirm).not.toHaveBeenCalled();
@@ -78,6 +83,6 @@ describe('ConfirmDialog — confirmGate (saisie-pour-confirmer)', () => {
   it('est sensible à la casse pour le mot-clé SUPPRIMER', () => {
     render(<ConfirmDialog {...gated} />);
     fireEvent.change(screen.getByLabelText(/identifiant ou SUPPRIMER/i), { target: { value: 'supprimer' } });
-    expect(screen.getByRole('button', { name: 'Supprimer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute('aria-disabled', 'true');
   });
 });

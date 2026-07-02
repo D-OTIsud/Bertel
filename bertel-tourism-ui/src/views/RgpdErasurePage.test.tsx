@@ -74,10 +74,11 @@ describe('RgpdErasurePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Supprimer le sujet' }));
     const dialog = await screen.findByRole('dialog');
     const confirmBtn = within(dialog).getByRole('button', { name: 'Supprimer le sujet' });
-    expect(confirmBtn).toBeDisabled();
+    expect(confirmBtn).toHaveAttribute('aria-disabled', 'true'); // D10 : bloqué mais joignable
+    fireEvent.click(confirmBtn); // clic gardé tant que la saisie ne correspond pas
     expect(requestErasureMock).not.toHaveBeenCalled();
     fireEvent.change(within(dialog).getByLabelText(/SUPPRIMER/i), { target: { value: 'SUPPRIMER' } });
-    expect(confirmBtn).toBeEnabled();
+    expect(confirmBtn).not.toHaveAttribute('aria-disabled');
     fireEvent.click(confirmBtn);
     await waitFor(() => expect(requestErasureMock).toHaveBeenCalledTimes(1));
   });

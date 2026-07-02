@@ -55,7 +55,9 @@ export function ConfirmDialog({
       const trimmed = candidate.trim();
       return trimmed !== '' && trimmed === gateValue.trim();
     });
-  const confirmDisabled = busy || !gatePass;
+  const confirmBlocked = busy || !gatePass;
+  // D10/A4 : la raison du blocage reste joignable — « en cours » (sr-only) ou le hint du gate.
+  const confirmReasonId = busy ? 'confirm-busy-reason' : confirmGate && !gatePass ? 'confirm-gate-hint' : undefined;
 
   return (
     <Modal
@@ -66,11 +68,20 @@ export function ConfirmDialog({
           <button type="button" className="ghost-button" onClick={onCancel} disabled={busy}>
             {cancelLabel}
           </button>
+          {busy && (
+            <span id="confirm-busy-reason" className="sr-only">
+              Traitement en cours…
+            </span>
+          )}
           <button
             type="button"
             className={tone === 'danger' ? 'primary-button primary-button--danger' : 'primary-button'}
-            onClick={onConfirm}
-            disabled={confirmDisabled}
+            aria-disabled={confirmBlocked || undefined}
+            aria-describedby={confirmReasonId}
+            onClick={() => {
+              if (confirmBlocked) return;
+              onConfirm();
+            }}
           >
             {confirmLabel}
           </button>

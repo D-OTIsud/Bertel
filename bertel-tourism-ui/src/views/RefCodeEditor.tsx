@@ -219,13 +219,25 @@ export function RefCodeEditor() {
                           <button type="button" className="ghost-button refcode-icon-btn" aria-label="Descendre" disabled={index === values.length - 1 || reorderMutation.isPending} onClick={() => reorder(index, 1)}>
                             <ArrowDown size={13} aria-hidden />
                           </button>
+                          {/* D10 : aria-disabled garde le bouton atteignable (clavier/SR) et la
+                              raison est reliée par aria-describedby — un `disabled` natif sortait
+                              le motif « référencée par N fiches » de l'arbre d'accessibilité. */}
+                          {refs > 0 && (
+                            <span id={`delete-reason-${value.id}`} className="sr-only">
+                              {`Référencée par ${refs} fiche${refs > 1 ? 's' : ''} — désactivez-la plutôt`}
+                            </span>
+                          )}
                           <button
                             type="button"
                             className="ghost-button refcode-icon-btn refcode-delete-btn"
                             aria-label={`Supprimer ${value.code}`}
                             title={refs > 0 ? `Référencée par ${refs} fiche${refs > 1 ? 's' : ''} — désactivez-la plutôt` : 'Supprimer définitivement'}
-                            disabled={refs > 0 || usageQuery.isLoading || deleteMutation.isPending}
-                            onClick={() => setConfirmDelete(value)}
+                            aria-disabled={refs > 0 || usageQuery.isLoading || deleteMutation.isPending || undefined}
+                            aria-describedby={refs > 0 ? `delete-reason-${value.id}` : undefined}
+                            onClick={() => {
+                              if (refs > 0 || usageQuery.isLoading || deleteMutation.isPending) return;
+                              setConfirmDelete(value);
+                            }}
                           >
                             <Trash2 size={13} aria-hidden />
                           </button>

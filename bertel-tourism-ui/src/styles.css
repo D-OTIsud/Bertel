@@ -1188,6 +1188,19 @@ a {
   transform: translateY(-1px);
 }
 
+/* D10 : contrôles aria-disabled (raison accessible via aria-describedby) — même
+   apparence qu'un disabled natif, mais restent focusables et lisibles au SR. */
+.primary-button[aria-disabled='true'],
+.ghost-button[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.primary-button[aria-disabled='true']:hover,
+.ghost-button[aria-disabled='true']:hover {
+  transform: none;
+}
+
 .primary-button {
   padding-inline: 1.15rem;
 }

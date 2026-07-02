@@ -7909,15 +7909,17 @@ a {
   object-fit: contain;
 }
 
-/* Explorer map: clustered results — brand greens, denser = larger + deeper */
+/* Explorer map: clustered results — anneau de composition par type, plus grand = plus dense */
 .map-cluster-pin {
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: var(--theme-surface);
+  /* L'anneau de composition (conic-gradient) est posé EN LIGNE par cluster
+     (MapPanel). Ce fond plein n'est que le repli quand la composition n'est pas
+     résoluble (cluster sans type connu). La couleur encode le TYPE, plus le nombre. */
+  background: var(--theme-primary);
   border: 2px solid var(--theme-surface);
-  font-weight: 700;
   box-shadow: 0 4px 12px rgba(24, 49, 59, 0.18);
   cursor: pointer;
   transition:
@@ -7926,33 +7928,44 @@ a {
     filter 0.2s ease;
 }
 
+/* Densité → TAILLE seulement (le nombre de fiches groupées). */
 .map-cluster-pin--density-small {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   font-size: 0.82rem;
-  /* Softer than --theme-primary; still clearly “map / brand” not ink-black */
-  background-color: color-mix(in srgb, var(--theme-primary) 72%, white 28%);
 }
 
 .map-cluster-pin--density-medium {
-  width: 40px;
-  height: 40px;
-  font-size: 0.85rem;
-  background-color: var(--theme-primary);
+  width: 44px;
+  height: 44px;
+  font-size: 0.86rem;
 }
 
 .map-cluster-pin--density-large {
-  width: 46px;
-  height: 46px;
-  font-size: 0.9rem;
-  /* Deeper green for high-density clusters */
-  background-color: color-mix(in srgb, var(--theme-primary) 78%, black 22%);
+  width: 50px;
+  height: 50px;
+  font-size: 0.92rem;
+}
+
+/* Disque intérieur posé sur l'anneau — porte le compteur (mockup .cluster__inner).
+   L'écart (12px) laisse voir l'anneau de composition tout autour. */
+.map-cluster-pin__count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border-radius: 50%;
+  background: var(--theme-surface);
+  color: var(--ink);
+  font-weight: 800;
+  line-height: 1;
 }
 
 .map-cluster-pin:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(24, 49, 59, 0.22);
-  filter: brightness(1.08) saturate(1.05);
+  filter: brightness(1.04) saturate(1.03);
 }
 
 /* (.map-hover-card pointer-events lifted onto .map-hover-card-wrap.) */

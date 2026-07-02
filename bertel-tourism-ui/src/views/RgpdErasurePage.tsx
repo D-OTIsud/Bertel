@@ -8,12 +8,13 @@
 // refusé pédagogique, cible 44px. Le contrat backend (requestErasure) est inchangé.
 
 import { type FormEvent, useCallback, useState } from 'react';
-import { Info, Lock, UserX } from 'lucide-react';
+import { Info, UserX } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSessionStore } from '@/store/session-store';
 import { getSupabaseClient } from '@/lib/supabase';
 import { Callout } from '@/components/ui/Callout';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { PermissionDenied } from '@/components/common/PermissionDenied';
 import { ModeSelect } from './rgpd/ModeSelect';
 import { SubjectResolver } from './rgpd/SubjectResolver';
 import { ErasureResultPanel } from './rgpd/ErasureResultPanel';
@@ -52,16 +53,15 @@ export default function RgpdErasurePage() {
   if (!allowed) {
     return (
       <main aria-labelledby="rgpd-denied-title" className="mx-auto max-w-md p-6">
-        <div role="alert" className="space-y-2 rounded-shellXl border border-line bg-surface p-5 text-center">
-          <Lock size={28} className="mx-auto text-ink-3" aria-hidden />
-          <h1 id="rgpd-denied-title" className="text-lg font-semibold text-ink">
-            Accès réservé
-          </h1>
-          <p className="text-sm text-ink-2">
-            Cet outil d&apos;effacement RGPD est réservé au référent RGPD (administrateur plateforme). Pour
-            faire traiter une demande d&apos;effacement, contactez votre administrateur ou le DPO.
-          </p>
-        </div>
+        <PermissionDenied
+          headingId="rgpd-denied-title"
+          description={
+            <>
+              Cet outil d&apos;effacement RGPD est réservé au référent RGPD (administrateur plateforme). Pour
+              faire traiter une demande d&apos;effacement, contactez votre administrateur ou le DPO.
+            </>
+          }
+        />
       </main>
     );
   }

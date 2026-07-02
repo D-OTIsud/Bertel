@@ -30,3 +30,13 @@ export const ACCENT_INK: Record<string, string> = {
 export function typeLabel(code: string, lang: 'fr' | 'en'): string {
   return LABEL_BY_TYPE[code]?.[lang] ?? code;
 }
+
+/** URL cliquable d'un site web (les valeurs réelles mélangent domaines nus et http(s)://…). */
+export function webHref(web: string): string {
+  return /^https?:\/\//i.test(web) ? web : `https://${web}`;
+}
+
+/** Libellé court d'un site web : sans protocole ni slash final. */
+export function webLabel(web: string): string {
+  return web.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+}

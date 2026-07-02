@@ -1,6 +1,7 @@
 import type { ExplorerFilters } from '../types/domain';
 import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 import { itemsToOtiPois } from '../features/lists/OtiTemplate';
+import { webHref, webLabel } from '../features/lists/type-meta';
 import { buildDynamicListFilters, parseListCard, parseListDetail } from './lists';
 
 const rawDetail = {
@@ -38,6 +39,7 @@ const rawDetail = {
         description: 'Restaurant gastronomique',
         location: { city: 'Saint-Joseph', lat: -21.379, lon: 55.593 },
       },
+      contacts: { phone: '+262 262 56 30 30', web: 'http://lemanapany.re/' },
     },
   ],
 };
@@ -57,6 +59,8 @@ describe('parseListDetail', () => {
     expect(d.items[0].card?.name).toBe('Le Manapany');
     expect(d.items[0].card?.city).toBe('Saint-Joseph');
     expect(d.items[0].card?.type).toBe('RES');
+    expect(d.items[0].phone).toBe('+262 262 56 30 30');
+    expect(d.items[0].web).toBe('http://lemanapany.re/');
   });
 
   it('defaults enum-ish fields when absent', () => {
@@ -66,6 +70,15 @@ describe('parseListDetail', () => {
     expect(d.lang).toBe('fr');
     expect(d.resolvedFrom).toBe('items'); // default when field absent
     expect(d.items).toEqual([]);
+  });
+
+  it('tolerates items without contacts (older payloads / no public channel)', () => {
+    const d = parseListDetail({
+      id: 'L3', kind: 'static', name: 'S',
+      items: [{ object_id: 'O2', position: 0, card: null }],
+    });
+    expect(d.items[0].phone).toBeNull();
+    expect(d.items[0].web).toBeNull();
   });
 });
 
@@ -80,12 +93,19 @@ describe('parseListCard', () => {
       recipient_label: 'Famille Hoarau',
       cover_url: null,
       updated_at: '2026-07-01T00:00:00Z',
+      accent: 'gold',
       item_count: 5,
       type_breakdown: [{ code: 'RES', n: 2 }, { code: 'HOT', n: 1 }],
     });
     expect(c.itemCount).toBe(5);
     expect(c.status).toBe('sent');
+    expect(c.accent).toBe('gold');
     expect(c.typeBreakdown).toEqual([{ code: 'RES', n: 2 }, { code: 'HOT', n: 1 }]);
+  });
+
+  it('defaults accent to teal when absent (older payloads)', () => {
+    const c = parseListCard({ id: 'L9', name: 'X', kind: 'static', status: 'draft', lang: 'fr', item_count: 0, type_breakdown: [] });
+    expect(c.accent).toBe('teal');
   });
 });
 
@@ -107,6 +127,26 @@ describe('itemsToOtiPois', () => {
     const items = parseListDetail(rawDetail).items;
     const pois = itemsToOtiPois(items, 'en');
     expect(pois[0].note).toBeNull(); // note_en is null
+  });
+
+  it('passes the public contacts (phone/web) through to the POI', () => {
+    const items = parseListDetail(rawDetail).items;
+    const pois = itemsToOtiPois(items, 'fr');
+    expect(pois[0].phone).toBe('+262 262 56 30 30');
+    expect(pois[0].web).toBe('http://lemanapany.re/');
+  });
+});
+
+describe('webHref / webLabel', () => {
+  it('keeps full http(s) URLs and prefixes bare domains', () => {
+    expect(webHref('http://www.bellile.re/')).toBe('http://www.bellile.re/');
+    expect(webHref('https://exemple.re')).toBe('https://exemple.re');
+    expect(webHref('exemple-sud.re')).toBe('https://exemple-sud.re');
+  });
+
+  it('renders a short label without protocol nor trailing slash', () => {
+    expect(webLabel('http://www.bellile.re/')).toBe('www.bellile.re');
+    expect(webLabel('exemple-sud.re')).toBe('exemple-sud.re');
   });
 });
 

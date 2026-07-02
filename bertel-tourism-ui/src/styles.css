@@ -83,6 +83,10 @@
   --green-soft: var(--brand-green-soft);
   --warn: var(--brand-warn);
   --red: var(--brand-red);
+  /* D13 : fonds doux des pastilles de statut — mêmes valeurs que les rgba en dur
+     qu'ils remplacent (parité visuelle exacte), dérivés des couleurs de marque. */
+  --warn-soft: rgba(214, 147, 58, 0.14);
+  --red-soft: rgba(200, 92, 72, 0.14);
   /* Familles sémantiques (refonte RGPD §p2 — encart périmètre, alertes, chips).
      Dérivées des couleurs de marque ; contrastes texte/fond vérifiés AA. */
   --info-bg: #e9f0f7;
@@ -1887,8 +1891,8 @@ a {
 
 .open-pill--open,
 .status-pill--green {
-  color: #1e6e57;
-  background: rgba(44, 163, 111, 0.14);
+  color: #1e6e57; /* encre dérivée de --brand-green, contraste AA vérifié sur le fond doux */
+  background: var(--green-soft);
   border-color: rgba(44, 163, 111, 0.2);
 }
 
@@ -1909,14 +1913,14 @@ a {
 }
 
 .status-pill--orange {
-  color: #a05b1f;
-  background: rgba(214, 147, 58, 0.14);
+  color: #a05b1f; /* encre dérivée de --brand-warn, contraste AA vérifié sur le fond doux */
+  background: var(--warn-soft);
   border-color: rgba(214, 147, 58, 0.22);
 }
 
 .status-pill--red {
-  color: #a14532;
-  background: rgba(200, 92, 72, 0.14);
+  color: #a14532; /* encre dérivée de --brand-red, contraste AA vérifié sur le fond doux */
+  background: var(--red-soft);
   border-color: rgba(200, 92, 72, 0.2);
 }
 

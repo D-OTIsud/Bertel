@@ -407,7 +407,11 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       pill={{ tone: 'ok', label: 'OK' }}
     >
       <div className="grid-2-1" style={{ marginBottom: 12 }}>
-        <Field label="Nom commercial" required>
+        <Field
+          label="Nom commercial"
+          required
+          error={String(info.name ?? '').trim() ? undefined : 'Le nom commercial est obligatoire.'}
+        >
           <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
         </Field>
         <Field label="ID OTI" hint="Identifiant canonique, généré, non modifiable">

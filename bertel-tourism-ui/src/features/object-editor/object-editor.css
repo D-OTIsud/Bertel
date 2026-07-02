@@ -287,6 +287,12 @@
   font-size: 9px; font-weight: 700; color: var(--ink-4);
   cursor: help;
 }
+/* D2 : hint visible (plus seulement un title au survol) + erreur inline. */
+.object-editor .field__hint { margin: 0; font-size: 11px; line-height: 1.35; color: var(--ink-3); }
+.object-editor .field__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--red); }
+.object-editor .input[aria-invalid='true'],
+.object-editor .textarea[aria-invalid='true'],
+.object-editor .select[aria-invalid='true'] { border-color: var(--red); }
 
 .object-editor .input,
 .object-editor .textarea,

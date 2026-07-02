@@ -154,4 +154,9 @@ Phase 2 (interop sectorielle)   I4   ← décision PO sur la cible standard
 
 ## 4. Ce qui est déjà fait
 
+> **Statut 2026-07-03 : les trois phases sont LIVRÉES** (live + source + runbook + gate fresh-apply + tests + contrat OpenAPI/Postman). Ce plan reste la référence de conception ; le détail d'exécution vit dans les notes de livraison ci-dessous et le runbook (`docs/SQL_ROLLOUT_RUNBOOK.md`).
+
+- ✅ **Phase 0** (2026-06-30) — R3 vues `security_invoker` · Q2 drop listing buckets · Q1a denylist ops anon · B1 doc enum 19 types. *(Q3 « leaked password protection » = toggle Dashboard, action PO restante.)*
+- ✅ **Phase 1** (2026-07-01) — passerelle partenaire `/api/public/*` complète : R1 clés API (`internal.partner_api_key` + routes) · R2 rate-limit + CORS + headers + CSP (`2026-07-01-csp-origin-inventory.md`) · I1 catalogue référentiels · I2 versionnage (`meta.contract_version`) · I3 OpenAPI 3.1 (`docs/openapi.json`) · C-4 flux tombstone (`2026-07-01-c4-tombstone-feed.md`) · C-5 i18n `?lang=all` · Q1b denylist anon 180→123.
+- ✅ **Phase 2 / I4** (2026-07-01→03) — les **4 profils pivot** (`?format=jsonld|datatourisme|apidae|tourinsoft`) sur le **détail** ET la **liste paginée par curseur** (batch par page), crosswalk piloté par table `ref_interop_crosswalk` → **note de livraison : `2026-07-03-i4-interop-profiles.md`** (consommation partenaire, mapping des 19 types, recette d'ajout d'un profil, périmètre honnête).
 - ✅ **Config bucket `media`** corrigée (vidéos mp4/webm/mov + 100 Mo) — commit `e64a835`, live appliqué, source `media_bucket.sql` alignée. *(N'était pas un fix d'audit mais le même périmètre Storage.)*

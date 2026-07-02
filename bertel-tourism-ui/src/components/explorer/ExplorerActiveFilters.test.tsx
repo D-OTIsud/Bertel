@@ -3,6 +3,10 @@ import { ExplorerActiveFilters } from './ExplorerActiveFilters';
 import { useExplorerStore } from '../../store/explorer-store';
 import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
 
+// Le composant navigue vers la compose après « ★ Liste dynamique » (417397e).
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+
 function resetStore() {
   act(() => useExplorerStore.getState().resetAll());
 }

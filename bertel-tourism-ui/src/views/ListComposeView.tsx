@@ -17,6 +17,8 @@ import { useSessionStore } from '@/store/session-store';
 import {
   deleteList,
   getList,
+  listItemFromObjectCard,
+  mergeEnrichedListItems,
   moveListItem,
   sendListByEmail,
   setListItems,
@@ -95,16 +97,20 @@ export default function ListComposeView({ listId }: { listId: string }) {
     onSuccess: applyFresh,
   });
   const saveItems = useMutation({
-    mutationFn: () =>
+    // La liste à persister est passée en argument (pas lue de la closure) : l'auto-save
+    // d'un ajout fireant juste après setItems ne doit pas envoyer l'état précédent.
+    mutationFn: (list: ObjectListItem[]) =>
       setListItems(
         listId,
-        items.map((it, i) => ({ object_id: it.objectId, position: i, note_fr: it.noteFr, note_en: it.noteEn })),
+        list.map((it, i) => ({ object_id: it.objectId, position: i, note_fr: it.noteFr, note_en: it.noteEn })),
       ),
     onSuccess: (fresh) => {
       applyFresh(fresh);
-      // resynchronise l'ordre/les cartes depuis le serveur (les ajouts reçoivent image + contacts)
-      if (fresh) setItems(fresh.items);
+      // adopte l'enrichissement serveur (carte i18n + contacts publics) SANS écraser
+      // l'édition locale en vol (note en cours de frappe, second ajout pendant le round-trip)
+      if (fresh) setItems((prev) => mergeEnrichedListItems(prev, fresh.items));
     },
+    onError: (e) => window.alert(e instanceof Error ? e.message : 'Enregistrement des lieux impossible.'),
   });
   const share = useMutation({ mutationFn: (enable: boolean) => shareList(listId, enable), onSuccess: invalidate });
   const remove = useMutation({
@@ -159,22 +165,13 @@ export default function ListComposeView({ listId }: { listId: string }) {
   }
   function addFromSearch(r: ObjectSearchResult) {
     setAddQuery('');
-    setItems((prev) => {
-      if (prev.some((it) => it.objectId === r.id)) return prev;
-      // carte minimale (nom/commune/type) ; image + contacts arrivent du serveur après « Enregistrer »
-      return [
-        ...prev,
-        {
-          objectId: r.id,
-          position: prev.length,
-          noteFr: null,
-          noteEn: null,
-          card: { id: r.id, name: r.name, type: r.type, image: null, city: r.city || null, description: null, raw: {} },
-          phone: null,
-          web: null,
-        },
-      ];
-    });
+    if (items.some((it) => it.objectId === r.id)) return;
+    // Enrichi immédiatement depuis la carte Explorer déjà chargée par la recherche (image,
+    // description, coords), et persisté dans la foulée — parité avec le flux « sélection
+    // Explorer » ; le round-trip rapporte les contacts publics (phone/web, serveur-only).
+    const next = [...items, listItemFromObjectCard(r.card, items.length)];
+    setItems(next);
+    saveItems.mutate(next);
   }
   function dropItem(to: number) {
     const from = drag.from;
@@ -366,7 +363,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                   <button
                     type="button"
                     disabled={saveItems.isPending}
-                    onClick={() => saveItems.mutate()}
+                    onClick={() => saveItems.mutate(items)}
                     className="inline-flex items-center gap-1.5 rounded-lg bg-orange px-3 py-1.5 text-[12px] font-bold text-white hover:bg-orange/90 disabled:opacity-60"
                   >
                     {saveItems.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}

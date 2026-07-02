@@ -159,7 +159,7 @@ export default function ListsManageView() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher une liste…"
-              className="w-full bg-transparent text-[12.5px] outline-none"
+              className="w-full border-0 bg-transparent p-0 text-[12.5px] outline-none"
             />
           </div>
           <div className="flex gap-1 rounded-full bg-ink/5 p-1">

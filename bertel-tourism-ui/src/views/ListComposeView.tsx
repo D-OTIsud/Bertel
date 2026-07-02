@@ -462,7 +462,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
                       value={addQuery}
                       onChange={(e) => setAddQuery(e.target.value)}
                       placeholder="Ajouter un lieu (nom, commune…)"
-                      className="w-full bg-transparent text-[13.5px] outline-none"
+                      className="w-full border-0 bg-transparent p-0 text-[13.5px] outline-none"
                     />
                     {objectSearch.loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-ink/40" />}
                   </div>

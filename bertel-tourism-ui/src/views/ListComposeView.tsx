@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Copy, Globe, GripVertical, Link2, Loader2, Mail, MapPin, Plus, Printer, Search, Trash2, X } from 'lucide-react';
 import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
 import ChannelFrame from '@/features/lists/ChannelFrame';
+import { Modal } from '@/components/common/Modal';
 import { ACCENT_INK } from '@/features/lists/type-meta';
 import { useObjectSearch, type ObjectSearchResult } from '@/features/object-editor/useObjectSearch';
 import { useSessionStore } from '@/store/session-store';
@@ -57,6 +58,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const [intro, setIntro] = useState('');
   const [items, setItems] = useState<ObjectListItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [template, setTemplate] = useState<ListTemplate>('carnet');
   const [channel, setChannel] = useState<Channel>('email');
   const [previewLang, setPreviewLang] = useState<'fr' | 'en'>('fr');
@@ -112,7 +114,19 @@ export default function ListComposeView({ listId }: { listId: string }) {
     },
     onError: (e) => window.alert(e instanceof Error ? e.message : 'Enregistrement des lieux impossible.'),
   });
-  const share = useMutation({ mutationFn: (enable: boolean) => shareList(listId, enable), onSuccess: invalidate });
+  // Active/désactive le lien public. La réponse porte déjà le token : patch synchrone du
+  // cache pour que le modal affiche le lien sans attendre un refetch.
+  const share = useMutation({
+    mutationFn: (enable: boolean) => shareList(listId, enable),
+    onSuccess: (info) => {
+      queryClient.setQueryData<ObjectListDetail>(['list', listId], (old) =>
+        old
+          ? { ...old, shareToken: info.shareToken, shareEnabled: info.shareEnabled, shareExpiresAt: info.shareExpiresAt }
+          : old,
+      );
+      void queryClient.invalidateQueries({ queryKey: ['my-lists'] });
+    },
+  });
   const remove = useMutation({
     mutationFn: () => deleteList(listId),
     onSuccess: () => {
@@ -296,7 +310,13 @@ export default function ListComposeView({ listId }: { listId: string }) {
           <button
             type="button"
             disabled={share.isPending}
-            onClick={() => share.mutate(!detail.shareEnabled)}
+            onClick={() => {
+              // Ouvre toujours le modal de partage ; l'activation se fait au premier clic,
+              // la désactivation est un choix explicite DANS le modal (plus de toggle surprise).
+              if (!detail.shareEnabled) share.mutate(true);
+              setShareOpen(true);
+            }}
+            title={detail.shareEnabled ? 'Voir et copier le lien public' : 'Activer et copier le lien public'}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[12.5px] font-bold text-white transition disabled:opacity-60',
               detail.shareEnabled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange hover:bg-orange/90',
@@ -605,6 +625,59 @@ export default function ListComposeView({ listId }: { listId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Modal de partage : lien public à copier + désactivation explicite. */}
+      {shareOpen && (
+        <Modal title="Partager par lien" onClose={() => setShareOpen(false)}>
+          {shareUrl ? (
+            <div className="space-y-3">
+              <p className="text-[13px] leading-relaxed text-ink/70">
+                Toute personne disposant de ce lien peut consulter la liste — établissements publiés uniquement,
+                sans le nom du destinataire.
+              </p>
+              <div className="flex items-center gap-2 rounded-xl border bg-ink/5 px-3 py-2.5">
+                <Link2 className="h-4 w-4 shrink-0 text-ink/50" />
+                <code className="flex-1 truncate text-[12.5px] text-ink" title={shareUrl}>{shareUrl}</code>
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                  {copied ? 'Copié' : 'Copier'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <a
+                  href={shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-orange hover:underline"
+                >
+                  <Globe className="h-3.5 w-3.5" /> Ouvrir la page publique
+                </a>
+                <button
+                  type="button"
+                  disabled={share.isPending}
+                  onClick={() => {
+                    share.mutate(false);
+                    setShareOpen(false);
+                  }}
+                  className="text-[12.5px] font-semibold text-red-600 hover:underline disabled:opacity-60"
+                >
+                  Désactiver le lien
+                </button>
+              </div>
+            </div>
+          ) : share.isError ? (
+            <p className="text-[13px] text-red-600">Impossible d'activer le lien de partage. Fermez et réessayez.</p>
+          ) : (
+            <div className="flex items-center gap-2 text-[13px] text-ink/60">
+              <Loader2 className="h-4 w-4 animate-spin" /> Activation du lien de partage…
+            </div>
+          )}
+        </Modal>
+      )}
 
       {/* Portail d'impression : un OtiTemplate pleine largeur rendu sous <body>, révélé
           uniquement à l'impression (window.print) — cf. @media print dans oti-template.css. */}

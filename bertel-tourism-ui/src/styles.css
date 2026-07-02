@@ -815,6 +815,14 @@ textarea::placeholder {
   z-index: 5;
   width: 182px;
   padding: 10px 12px;
+  /* Fond blanc translucide + léger flou : la légende reste lisible sur tout
+     fond de carte (satellite/plan/topo) sans masquer la carte (demande PO). */
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  box-shadow: var(--shadow-s);
 }
 .map-legend__title {
   font-size: 11px;

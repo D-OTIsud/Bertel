@@ -4,6 +4,8 @@ const base: ListEmailData = {
   name: 'Immersion créole & saveurs',
   intro: 'Bonjour, préparez vos papilles !',
   advisorName: 'Delphine Grondin',
+  advisorEmail: 'delphine.grondin@otisud.com',
+  advisorAvatarUrl: null,
   publicUrl: 'https://sud.reunion.fr/l/tok123',
   accentInk: '#b34b3d',
   lang: 'fr',
@@ -55,6 +57,25 @@ describe('renderListEmailHtml', () => {
   it('omits the "+N" line when all items are embedded', () => {
     const html = renderListEmailHtml({ ...base, totalCount: 1 });
     expect(html).not.toMatch(/autres? lieux?/);
+  });
+
+  it('shows the advisor name as the signature and the e-mail below it', () => {
+    const html = renderListEmailHtml(base);
+    expect(html).toContain('Delphine Grondin');
+    expect(html).toContain('mailto:delphine.grondin@otisud.com');
+  });
+
+  it('embeds the advisor avatar image when set', () => {
+    const html = renderListEmailHtml({ ...base, advisorAvatarUrl: 'https://cdn/avatars/u1/avatar.jpg?v=9' });
+    expect(html).toContain('https://cdn/avatars/u1/avatar.jpg?v=9');
+    expect(html).toContain('border-radius:999px');
+  });
+
+  it('does not print the e-mail twice when no real name is set (fallback = e-mail)', () => {
+    const mail = 'd.philippe@otisud.com';
+    const html = renderListEmailHtml({ ...base, advisorName: mail, advisorEmail: mail });
+    // e-mail rendu comme identifiant unique, jamais dupliqué en ligne « nom » + ligne « e-mail »
+    expect(html.match(new RegExp(mail.replace(/[.]/g, '\\.'), 'g'))?.length).toBe(1);
   });
 });
 

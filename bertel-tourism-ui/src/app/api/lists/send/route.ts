@@ -89,10 +89,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     };
   });
 
+  // Nom du conseiller : même source que l'aperçu in-app (app_user_profile.display_name),
+  // avec repli sur user_metadata.full_name. L'e-mail s'affiche sous le nom (cf. ListEmail).
+  const { data: profData } = await asCaller.from('app_user_profile').select('display_name, avatar_url').eq('id', userData.user.id).maybeSingle();
+  const advisorName = nstr(asRec(profData)?.display_name) ?? nstr(asRec(userData.user.user_metadata)?.full_name);
+  const advisorEmail = nstr(userData.user.email);
+  const advisorAvatarUrl = nstr(asRec(profData)?.avatar_url);
+
   const html = renderListEmailHtml({
     name,
     intro,
-    advisorName: nstr(asRec(userData.user.user_metadata)?.full_name),
+    advisorName,
+    advisorEmail,
+    advisorAvatarUrl,
     publicUrl,
     accentInk: ACCENT_INK[str(list.accent)] ?? ACCENT_INK.teal,
     lang,

@@ -230,21 +230,34 @@ function Hero({ name, recipient, cover, pois, lang, logoUrl, brandName }: {
   );
 }
 
-function AgentWord({ intro, lang, advisorName, advisorInitials }: {
+function AgentWord({ intro, lang, advisorName, advisorEmail, advisorAvatarUrl, advisorInitials }: {
   intro: string | null;
   lang: 'fr' | 'en';
   advisorName: string | null;
+  advisorEmail: string | null;
+  advisorAvatarUrl: string | null;
   advisorInitials: string;
 }) {
   if (!intro) return null;
+  // Le prénom/nom est l'élément principal. On ne l'affiche que s'il s'agit d'un vrai nom :
+  // au bootstrap, faute de nom enregistré, `display_name` retombe sur l'e-mail — dans ce cas
+  // l'e-mail sert de nom (pas de doublon) plutôt que de l'afficher deux fois.
+  const trimmedName = advisorName?.trim() || '';
+  const trimmedMail = advisorEmail?.trim() || '';
+  const hasRealName = trimmedName !== '' && trimmedName !== trimmedMail;
+  const primary = hasRealName ? trimmedName : (trimmedMail || 'OTI du Sud');
+  const showEmail = trimmedMail !== '' && trimmedMail !== primary;
   return (
     <section className="oti-word">
-      <span className="oti-ava">{advisorInitials}</span>
+      {advisorAvatarUrl
+        ? <img className="oti-ava oti-ava--photo" src={advisorAvatarUrl} alt="" />
+        : <span className="oti-ava">{advisorInitials}</span>}
       <div className="oti-word__body">
         <div className="oti-word__lbl">{t('Un mot de votre conseiller', 'A word from your advisor', lang)}</div>
         <p className="oti-word__text">{intro}</p>
         <div className="oti-word__sign">
-          {advisorName ?? 'OTI du Sud'}
+          {primary}
+          {showEmail && <span className="oti-word__mail">{advisorEmail}</span>}
           <small>{t('Conseiller en séjour · OTI du Sud', 'Travel advisor · OTI du Sud', lang)}</small>
         </div>
       </div>
@@ -448,6 +461,8 @@ export interface OtiTemplateProps {
   /** Remonte le cliché de la carte live vers le parent (pour le portail d'impression). */
   onMapSnapshot?: (shot: OtiMapSnapshot) => void;
   advisorName?: string | null;
+  advisorEmail?: string | null;
+  advisorAvatarUrl?: string | null;
   brandName?: string;
   logoUrl?: string | null;
 }
@@ -472,6 +487,8 @@ export default function OtiTemplate({
   mapSnapshot = null,
   onMapSnapshot,
   advisorName = null,
+  advisorEmail = null,
+  advisorAvatarUrl = null,
   brandName = 'OTI du Sud',
   logoUrl = null,
 }: OtiTemplateProps) {
@@ -481,7 +498,10 @@ export default function OtiTemplate({
     '--oti-accent-d': acc.deep,
     '--oti-accent-soft': acc.soft,
   } as CSSProperties;
-  const ctx: RenderCtx = { lang, advisorFirst: advisorName ? advisorName.split(' ')[0] : '' };
+  // Prénom pour « Le coup de cœur de … » : uniquement si `advisorName` est un vrai nom
+  // (au bootstrap sans nom enregistré, il retombe sur l'e-mail — à ne pas utiliser ici).
+  const advisorFirst = advisorName && advisorName.trim() !== (advisorEmail ?? '').trim() ? advisorName.trim().split(' ')[0] : '';
+  const ctx: RenderCtx = { lang, advisorFirst };
   const withMap = showMap === undefined ? template === 'itineraire' : showMap;
   const Body = template === 'grille' ? TplGrille : template === 'itineraire' ? TplItineraire : TplCarnet;
 
@@ -496,7 +516,7 @@ export default function OtiTemplate({
         logoUrl={logoUrl}
         brandName={brandName}
       />
-      <AgentWord intro={intro} lang={lang} advisorName={advisorName} advisorInitials={initials(advisorName, brandName)} />
+      <AgentWord intro={intro} lang={lang} advisorName={advisorName} advisorEmail={advisorEmail} advisorAvatarUrl={advisorAvatarUrl} advisorInitials={initials(advisorName, brandName)} />
       {withMap && items.length > 0 && (
         <div className="oti-body" style={{ paddingBottom: 0 }}>
           <MapRecap pois={items} lang={lang} staticMap={staticMap} snapshot={mapSnapshot} onSnapshot={onMapSnapshot} />

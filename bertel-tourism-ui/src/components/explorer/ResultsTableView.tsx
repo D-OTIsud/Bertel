@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Download, Rows3, Settings2 } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import {
@@ -20,6 +20,8 @@ interface ResultsTableViewProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  /** Actions injectées dans le header (ex. ExplorerViewSwitch — plus de barre dédiée). */
+  headerActions?: ReactNode;
 }
 
 /** Gestionnaire de colonnes (visibilité + ordre) — popover maison, fermé à l'Escape / clic dehors. */
@@ -127,6 +129,7 @@ export function ResultsTableView({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  headerActions,
 }: ResultsTableViewProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
@@ -185,6 +188,7 @@ export function ResultsTableView({
             <Download size={13} aria-hidden />
             CSV
           </button>
+          {headerActions}
         </div>
       </div>
 

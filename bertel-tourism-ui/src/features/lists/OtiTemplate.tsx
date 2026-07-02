@@ -21,7 +21,7 @@ import {
   Wheat,
 } from 'lucide-react';
 import type { ListAccent, ListTemplate, ObjectListItem } from '@/services/lists';
-import { HUE_BY_TYPE, LABEL_BY_TYPE, type ListHue } from './type-meta';
+import { HUE_BY_TYPE, LABEL_BY_TYPE, webHref, webLabel, type ListHue } from './type-meta';
 
 type IconCmp = typeof MapPin;
 
@@ -77,8 +77,8 @@ export function itemsToOtiPois(items: ObjectListItem[], lang: 'fr' | 'en'): OtiP
       note: (lang === 'en' ? it.noteEn : it.noteFr) ?? null,
       lat: loc && typeof loc.lat === 'number' ? loc.lat : null,
       lon: loc && typeof loc.lon === 'number' ? loc.lon : null,
-      phone: null,
-      web: null,
+      phone: it.phone,
+      web: it.web,
     };
   });
 }
@@ -166,9 +166,9 @@ function Contacts({ poi, lang, solidMap, iconsOnly }: { poi: OtiPoi; lang: 'fr' 
   }
   if (poi.web) {
     items.push(
-      <a key="web" className={`oti-cbtn${iconsOnly ? ' oti-cbtn--ico' : ''}`} href={`https://${poi.web}`} target="_blank" rel="noreferrer">
+      <a key="web" className={`oti-cbtn${iconsOnly ? ' oti-cbtn--ico' : ''}`} href={webHref(poi.web)} target="_blank" rel="noreferrer">
         <Globe />
-        {!iconsOnly && poi.web}
+        {!iconsOnly && webLabel(poi.web)}
       </a>,
     );
   }

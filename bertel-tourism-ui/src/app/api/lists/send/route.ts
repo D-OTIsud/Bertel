@@ -77,12 +77,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const it = asRec(raw) ?? {};
     const card = asRec(it.card) ?? {};
     const loc = asRec(card.location);
+    const contacts = asRec(it.contacts);
     return {
       name: str(card.name) || str(it.object_id),
       typeLabel: typeLabel(str(card.type), lang),
       city: loc ? nstr(loc.city) : null,
       image: nstr(card.image),
       note: lang === 'en' ? nstr(it.note_en) : nstr(it.note_fr),
+      phone: contacts ? nstr(contacts.phone) : null,
+      web: contacts ? nstr(contacts.web) : null,
     };
   });
 

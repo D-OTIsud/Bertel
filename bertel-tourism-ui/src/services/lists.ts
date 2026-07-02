@@ -45,6 +45,9 @@ export interface ObjectListItem {
   noteFr: string | null;
   noteEn: string | null;
   card: ListItemCard | null;
+  /** Contacts PUBLICS de l'objet (api.list_item_contacts) : téléphone (repli mobile) + site web. */
+  phone: string | null;
+  web: string | null;
 }
 
 /** Résumé pour la grille « Mes listes ». */
@@ -55,6 +58,7 @@ export interface ObjectListCard {
   kind: ListKind;
   status: ListStatus;
   lang: 'fr' | 'en';
+  accent: ListAccent;
   recipientLabel: string | null;
   coverUrl: string | null;
   updatedAt: string | null;
@@ -164,12 +168,15 @@ function parseItemCard(value: unknown): ListItemCard | null {
 }
 
 function parseItem(row: GenericRecord): ObjectListItem {
+  const contacts = asRecord(row.contacts);
   return {
     objectId: readString(row.object_id),
     position: readNumber(row.position),
     noteFr: readNullableString(row.note_fr),
     noteEn: readNullableString(row.note_en),
     card: parseItemCard(row.card),
+    phone: contacts ? readNullableString(contacts.phone) : null,
+    web: contacts ? readNullableString(contacts.web) : null,
   };
 }
 
@@ -182,6 +189,7 @@ export function parseListCard(row: GenericRecord): ObjectListCard {
     kind: (readString(row.kind, 'static') as ListKind),
     status: (readString(row.status, 'draft') as ListStatus),
     lang: (readString(row.lang, 'fr') as 'fr' | 'en'),
+    accent: (readString(row.accent, 'teal') as ListAccent),
     recipientLabel: readNullableString(row.recipient_label),
     coverUrl: readNullableString(row.cover_url),
     updatedAt: readNullableString(row.updated_at),

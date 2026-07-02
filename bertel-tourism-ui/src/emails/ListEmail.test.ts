@@ -8,7 +8,10 @@ const base: ListEmailData = {
   accentInk: '#b34b3d',
   lang: 'fr',
   coverUrl: null,
-  items: [{ name: 'Le Manapany', typeLabel: 'Table', city: 'Saint-Joseph', image: 'https://img/x.jpg', note: 'Ma table préférée' }],
+  items: [{
+    name: 'Le Manapany', typeLabel: 'Table', city: 'Saint-Joseph', image: 'https://img/x.jpg',
+    note: 'Ma table préférée', phone: '+262 262 56 30 30', web: 'http://lemanapany.re/',
+  }],
   totalCount: 5,
 };
 
@@ -27,6 +30,21 @@ describe('renderListEmailHtml', () => {
     const html = renderListEmailHtml({ ...base, name: '<script>alert(1)</script>' });
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('renders public contacts as tel: and normalized web links', () => {
+    const html = renderListEmailHtml(base);
+    expect(html).toContain('tel:+262262563030');
+    expect(html).toContain('href="http://lemanapany.re/"'); // full URL kept as-is
+    expect(html).toContain('lemanapany.re'); // short label without protocol
+  });
+
+  it('omits the contact line when the item has no public channel', () => {
+    const html = renderListEmailHtml({
+      ...base,
+      items: [{ ...base.items[0], phone: null, web: null }],
+    });
+    expect(html).not.toContain('tel:');
   });
 
   it('shows a "+N" line when the full list has more items than embedded', () => {

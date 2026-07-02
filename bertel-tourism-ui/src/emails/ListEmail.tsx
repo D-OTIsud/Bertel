@@ -3,6 +3,7 @@
 // ici HTML basé sur des tableaux, styles 100 % inline, largeur ≤ 640px, images en URL absolue,
 // nombre de fiches limité + bouton vers la liste publique complète. Cf. décision PO 2026-07-01.
 import { escapeHtml } from '@/lib/safe-output';
+import { webHref, webLabel } from '@/features/lists/type-meta';
 
 export interface ListEmailItem {
   name: string;
@@ -10,6 +11,8 @@ export interface ListEmailItem {
   city: string | null;
   image: string | null;
   note: string | null;
+  phone: string | null;
+  web: string | null;
 }
 
 export interface ListEmailData {
@@ -41,6 +44,20 @@ function itemRow(it: ListEmailItem, index: number, accent: string): string {
   const note = it.note
     ? `<div style="margin-top:6px;font-size:13px;line-height:1.5;color:#5b5754;background:#f5f1e8;border-left:3px solid ${accent};border-radius:0 8px 8px 0;padding:8px 10px;">${escapeHtml(it.note)}</div>`
     : '';
+  const contactBits: string[] = [];
+  if (it.phone) {
+    contactBits.push(
+      `<a href="tel:${escapeHtml(it.phone.replace(/\s/g, ''))}" style="color:#5b5754;text-decoration:none;">☎ ${escapeHtml(it.phone)}</a>`,
+    );
+  }
+  if (it.web) {
+    contactBits.push(
+      `<a href="${escapeHtml(webHref(it.web))}" style="color:${accent};text-decoration:none;">${escapeHtml(webLabel(it.web))}</a>`,
+    );
+  }
+  const contacts = contactBits.length
+    ? `<div style="margin-top:5px;font-size:12px;color:#5b5754;">${contactBits.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>`
+    : '';
   return `
   <tr>
     <td style="padding:10px 0;border-bottom:1px solid #ece6db;">
@@ -50,6 +67,7 @@ function itemRow(it: ListEmailItem, index: number, accent: string): string {
           <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:${accent};">${escapeHtml(it.typeLabel)}${cityLine}</div>
           <div style="font-size:17px;font-weight:800;color:#2d2a2a;margin-top:2px;">${String(index + 1).padStart(2, '0')} · ${escapeHtml(it.name)}</div>
           ${note}
+          ${contacts}
         </td>
       </tr></table>
     </td>

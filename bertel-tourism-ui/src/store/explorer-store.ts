@@ -17,6 +17,8 @@ interface ExplorerState extends ExplorerFilters {
   selectedObjectIds: string[];
   visibleObjectIds: string[];
   selectedCardId: string | null;
+  /** D20 : survol transitoire (carte-résultat ↔ marqueur), jamais persisté. */
+  hoveredCardId: string | null;
 
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
@@ -46,7 +48,10 @@ interface ExplorerState extends ExplorerFilters {
   setStatuses: (statuses: ExplorerStatusFilter[]) => void;
   toggleSelectedObject: (objectId: string) => void;
   addSelectedObjects: (objectIds: string[]) => void;
+  /** D9 : restauration de la sélection précédente (« Annuler » du toast). */
+  replaceSelection: (objectIds: string[]) => void;
   clearSelection: () => void;
+  setHoveredCard: (id: string | null) => void;
   setVisibleObjectIds: (objectIds: string[]) => void;
   selectAllVisible: () => void;
   selectCard: (id: string) => void;
@@ -142,6 +147,7 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   selectedObjectIds: [],
   visibleObjectIds: [],
   selectedCardId: null,
+  hoveredCardId: null,
 
   toggleBucket: (bucket) =>
     set((state) => ({
@@ -272,7 +278,13 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       const selectedObjectIds = mergeSelectedObjectIds(state.selectedObjectIds, objectIds);
       return selectedObjectIds.length === state.selectedObjectIds.length ? state : { ...state, selectedObjectIds };
     }),
+  replaceSelection: (objectIds) =>
+    set((state) => ({
+      ...state,
+      selectedObjectIds: [...new Set(objectIds.map((id) => String(id).trim()).filter(Boolean))],
+    })),
   clearSelection: () => set((state) => ({ ...state, selectedObjectIds: [] })),
+  setHoveredCard: (id) => set({ hoveredCardId: id }),
   setVisibleObjectIds: (objectIds) =>
     set((state) => ({
       ...state,

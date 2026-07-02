@@ -1,10 +1,23 @@
-import { isAuthWeakPasswordError, type WeakPasswordReasons } from '@supabase/supabase-js';
+import { isAuthApiError, isAuthWeakPasswordError, type WeakPasswordReasons } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
 
 const weakPasswordReasonLabels: Readonly<Record<WeakPasswordReasons, string>> = {
   length: 'longueur minimale non respectee',
   characters: 'caracteres obligatoires manquants',
   pwned: 'mot de passe deja divulgue dans une fuite de donnees',
+};
+
+/** D14/D15 — codes AuthApiError (GoTrue v2) → messages FR actionnables. */
+const AUTH_ERROR_LABELS: Readonly<Record<string, string>> = {
+  invalid_credentials: 'Identifiants invalides — vérifiez l’e-mail et le mot de passe.',
+  email_not_confirmed: 'E-mail non confirmé — ouvrez le lien reçu dans votre boîte de réception.',
+  user_not_found: 'Aucun compte ne correspond à cet e-mail.',
+  user_banned: 'Ce compte est suspendu — contactez votre administrateur.',
+  over_request_rate_limit: 'Trop de tentatives — patientez quelques minutes puis réessayez.',
+  over_email_send_rate_limit: 'Trop d’e-mails envoyés — patientez quelques minutes puis réessayez.',
+  session_expired: 'Session expirée — reconnectez-vous.',
+  refresh_token_not_found: 'Session expirée — reconnectez-vous.',
+  same_password: 'Le nouveau mot de passe doit être différent de l’actuel.',
 };
 
 export function toFriendlyAuthError(error: unknown): Error {
@@ -18,6 +31,18 @@ export function toFriendlyAuthError(error: unknown): Error {
     return new Error(
       `Ce mot de passe n'est plus accepte par la politique de securite du projet${detail} Utilisez un mot de passe plus robuste ou demandez sa reinitialisation.`
     );
+  }
+
+  // D14/D15 — plus aucune chaîne EN brute du backend ne remonte au toast :
+  // code connu → FR dédié ; sinon repli FR générique (le brut part en console
+  // pour le diagnostic).
+  if (isAuthApiError(error)) {
+    const label = error.code ? AUTH_ERROR_LABELS[error.code] : undefined;
+    if (label) {
+      return new Error(label);
+    }
+    console.warn('[auth] erreur non mappée', error.code, error.message);
+    return new Error('Connexion impossible — réessayez ou contactez votre administrateur.');
   }
 
   if (error instanceof Error) {

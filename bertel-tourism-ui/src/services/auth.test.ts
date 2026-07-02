@@ -33,9 +33,27 @@ describe('auth service', () => {
     });
   });
 
-  it('keeps non-password-policy auth errors unchanged', () => {
+  it('D14 : mappe les codes AuthApiError connus en FR (plus de chaîne EN au toast)', () => {
     const error = new AuthApiError('Invalid login credentials', 400, 'invalid_credentials');
 
+    expect(toFriendlyAuthError(error).message).toBe(
+      'Identifiants invalides — vérifiez l’e-mail et le mot de passe.',
+    );
+  });
+
+  it('D14 : repli FR générique sur un code AuthApiError inconnu (brut en console)', () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = new AuthApiError('Something exotic happened', 500, 'exotic_code');
+
+    expect(toFriendlyAuthError(error).message).toBe(
+      'Connexion impossible — réessayez ou contactez votre administrateur.',
+    );
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('les erreurs non-auth (Error applicative) passent inchangées', () => {
+    const error = new Error('Erreur métier déjà en français');
     expect(toFriendlyAuthError(error)).toBe(error);
   });
 });

@@ -489,6 +489,14 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
           validation.blockers.length > 0 || validation.warnings.length > 0 ? showBlockers : undefined
         }
       />
+      {/* D14 : le mode contributeur était invisible (seul un message transitoire au save
+          le trahissait) — bandeau persistant expliquant le circuit de validation. */}
+      {contributorMode && (
+        <div className="contributor-banner" role="note">
+          <strong>Mode contributeur</strong> — vos modifications ne s’appliquent pas directement :
+          elles sont soumises à la modération de l’organisation avant publication.
+        </div>
+      )}
       <PeerSavedBanner
         notice={presence.savedNotice}
         onReload={handleReloadFromPeer}

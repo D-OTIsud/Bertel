@@ -15,6 +15,8 @@ import {
   EXPLORER_BUCKET_OPTIONS,
   EXPLORER_BUCKET_TYPE_MAP,
   DEFAULT_HOT_SUBTYPES,
+  DEFAULT_SRV_SUBTYPES,
+  DEFAULT_VIS_SUBTYPES,
   HOT_BUCKET_TYPES,
   resolveExplorerStatuses,
 } from '../../utils/facets';
@@ -73,6 +75,15 @@ interface FiltersSubsectionProps {
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
   return filters.find((filter) => filter.code === code)?.[key];
+}
+
+/** Sélection de sous-types rétrécie ? (vide ou complète = « tous », pas un critère actif) */
+function isSubtypeNarrowed(selected: BackendObjectTypeCode[], all: BackendObjectTypeCode[]): boolean {
+  return selected.length > 0 && !(selected.length === all.length && all.every((type) => selected.includes(type)));
+}
+
+function countActiveRanges(filters: Array<{ code: string; min?: number; max?: number }>): number {
+  return filters.filter((filter) => filter.min != null || filter.max != null).length;
 }
 
 function renderNumber(value?: number): string {
@@ -229,15 +240,17 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
     if ((s.common.labelsAny ?? []).length) n += 1;
     if ((s.common.tagsAny ?? []).length) n += 1;
     if ((s.common.statuses ?? []).length > 0) n += 1;
-    if (s.common.polygon) n += 1;
-    if (s.common.bbox) n += 1;
-    const subDefault =
-      s.hot.subtypes.length === DEFAULT_HOT_SUBTYPES.length && DEFAULT_HOT_SUBTYPES.every((t) => s.hot.subtypes.includes(t));
-    if (!subDefault) n += 1;
+    // Un dessin de zone pose polygon ET bbox : un seul geste, un seul actif.
+    if (s.common.polygon || s.common.bbox) n += 1;
+    // Mêmes primitives que les badges de section (§152) — sinon les deux
+    // compteurs co-visibles se contredisent (vide=tous, meetingRoom vidé…).
+    if (isSubtypeNarrowed(s.hot.subtypes, DEFAULT_HOT_SUBTYPES)) n += 1;
+    if (isSubtypeNarrowed(s.vis.subtypes, DEFAULT_VIS_SUBTYPES)) n += 1;
+    if (isSubtypeNarrowed(s.srv.subtypes, DEFAULT_SRV_SUBTYPES)) n += 1;
     if (s.hot.taxonomy.length) n += 1;
-    if (s.hot.capacityFilters.length) n += 1;
-    if (Object.keys(s.hot.meetingRoom).length) n += 1;
-    if (s.res.capacityFilters.length) n += 1;
+    if (countActiveRanges(s.hot.capacityFilters)) n += 1;
+    if (Object.values(s.hot.meetingRoom).some((value) => value != null)) n += 1;
+    if (countActiveRanges(s.res.capacityFilters)) n += 1;
     if (s.iti.isLoop !== null || s.iti.practicesAny.length || s.iti.difficultyMin != null || s.iti.difficultyMax != null) n += 1;
     if (s.iti.distanceMinKm != null || s.iti.distanceMaxKm != null) n += 1;
     if (s.iti.durationMinH != null || s.iti.durationMaxH != null) n += 1;
@@ -269,6 +282,24 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
   const sustainabilityDetailCount = sustainabilityCategoryCodesAny.length + sustainabilityActionCodesAny.length;
   const rankedLabelOptions = references?.rankedLabelSchemes ?? [];
   const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
+
+  // §152 — sections type-spécifiques repliables : le compte de critères actifs
+  // vit dans l'en-tête, visible section repliée (un filtre actif n'est jamais
+  // masqué par le pli — même exigence d'honnêteté que la barre de chips D23).
+  const hotSectionCount =
+    (isSubtypeNarrowed(hot.subtypes, DEFAULT_HOT_SUBTYPES) ? 1 : 0) +
+    hot.taxonomy.length +
+    countActiveRanges(hot.capacityFilters) +
+    (Object.values(hot.meetingRoom).some((value) => value != null) ? 1 : 0);
+  const resSectionCount = countActiveRanges(res.capacityFilters);
+  const itiSectionCount =
+    (iti.isLoop != null ? 1 : 0) +
+    (iti.difficultyMin != null || iti.difficultyMax != null ? 1 : 0) +
+    (iti.distanceMinKm != null || iti.distanceMaxKm != null ? 1 : 0) +
+    (iti.durationMinH != null || iti.durationMaxH != null ? 1 : 0) +
+    iti.practicesAny.length;
+  const visSectionCount = isSubtypeNarrowed(vis.subtypes, DEFAULT_VIS_SUBTYPES) ? 1 : 0;
+  const srvSectionCount = isSubtypeNarrowed(srv.subtypes, DEFAULT_SRV_SUBTYPES) ? 1 : 0;
 
   const bucketChipClass = (active: boolean) =>
     cn(
@@ -589,7 +620,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           </FilterColumnGroup>
 
           {showHot ? (
-            <FilterColumnGroup label="Hebergements">
+            <FilterColumnGroup label="Hebergements" collapsible count={hotSectionCount || undefined}>
               <div className="space-y-4">
                 <div>
                   <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types hebergement</span>
@@ -711,7 +742,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           {/* 3.2 — sous-types des buckets fourre-tout (fin du « plat » : un site naturel
               ≠ un site patrimonial ; un office de tourisme ≠ un commerce). */}
           {showVis ? (
-            <FilterColumnGroup label="Site & visite">
+            <FilterColumnGroup label="Site & visite" collapsible count={visSectionCount || undefined}>
               <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types de site</span>
               <div className="flex flex-wrap gap-2">
                 {EXPLORER_BUCKET_TYPE_MAP.VIS.map((type) => (
@@ -729,7 +760,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showSrv ? (
-            <FilterColumnGroup label="Services">
+            <FilterColumnGroup label="Services" collapsible count={srvSectionCount || undefined}>
               <span className="mb-2 block text-[12px] font-semibold text-ink-2">Sous-types de service</span>
               <div className="flex flex-wrap gap-2">
                 {EXPLORER_BUCKET_TYPE_MAP.SRV.map((type) => (
@@ -747,7 +778,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showRes && references?.resCapacityMetrics.length ? (
-            <FilterColumnGroup label="Restaurants">
+            <FilterColumnGroup label="Restaurants" collapsible count={resSectionCount || undefined}>
               <div className="filters-panel__metric-stack">
                 {references.resCapacityMetrics.map((metric) => (
                   <div key={metric.code} className="filters-panel__metric-row">
@@ -787,7 +818,7 @@ export function FiltersPanel({ compact = false, headerActions, references, varia
           ) : null}
 
           {showIti ? (
-            <FilterColumnGroup label="Itineraires">
+            <FilterColumnGroup label="Itineraires" collapsible count={itiSectionCount || undefined}>
               <div className="space-y-4">
                 <div>
                   <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de parcours</span>

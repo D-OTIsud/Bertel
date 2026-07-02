@@ -9,13 +9,15 @@
 
 Le panneau de filtres est **architecturé pour un catalogue qui n'est pas le vôtre**. Il expose en détail des facettes hôtelières (taxonomie HOT = 7 objets publiés, salles de réunion MICE) et ignore les facettes qui couvrent réellement le corpus : les sous-catégories HLO (171 gîtes/locations), le type de restauration (90/90 restaurants couverts), les équipements (parking 66, terrasse 28…). Le vocabulaire fuit le modèle de données (« Taxonomie HOT », « Sous-types », codes de domaine) alors que **le reste du produit a déjà tranché** : éditeur, dashboard et complétude disent « Sous-catégorie ».
 
+> **Principe directeur (PO, 2026-07-02, décision §150)** : *la surface de filtrage suit le modèle, pas les données du moment.* Un filtre existe parce que le concept existe dans Bertel — même si aucun objet publié ne le porte encore. On ne masque donc jamais un filtre pour cause de données vides ; on traite l'honnêteté par le **feedback** (comptes de résultats, mention « information pas encore saisie ») et par des **chantiers de saisie**. Le panneau applique déjà ce principe pour les Itinéraires (filtres complets, 0 ITI publié) ; il doit l'appliquer partout. Les recommandations ci-dessous sont écrites sous ce principe.
+
 Cinq faits saillants :
 
 1. **« Taxonomie » n'apparaît qu'ici.** Le titre de section vient brut de `ref_code_domain_registry.name` (« Taxonomie HOT »). Partout ailleurs (éditeur §01, dashboard, table de complétude, et même la chip active de l'Explorer !) le produit dit « Sous-catégorie ». Un seul écran est désaligné : celui-ci.
 2. **La sous-catégorie est le facet le MIEUX couvert en données** (100 % des objets publiés en portent) **et le moins filtrable** : un seul domaine sur 19 est exposé (`taxonomy_hot`, codé en dur dans `explorer-reference.ts:360`), alors que le RPC serveur accepte `taxonomy_any` pour **tous** les domaines, descendants inclus.
-3. **Filtre mort** : « Animaux acceptés » matche 0 objet publié (`object_pet_policy` vide en prod). Il renvoie toujours une liste vide et fait croire à l'utilisateur qu'il n'y a pas de résultats.
-4. **Filtre fantôme** : le filtre environnement des Activités (`act.environmentTagsAny`) est câblé store + RPC + compteur « N actifs », mais n'a **aucune UI ni chip** : activé via URL, il filtre les résultats sans aucun moyen de le voir ou de le retirer (hors « Réinitialiser »).
-5. **Le bucket Événements n'a aucun filtre de dates** alors que `object_fma` porte `event_start_date`/`event_end_date`/récurrence. Pour des événements, la date est LE filtre n° 1 ; le bucket sera inutilisable dès l'import FMA.
+3. **Filtre à vide non signalé** : « Animaux acceptés » matche 0 objet publié (`object_pet_policy` vide en prod). Le filtre doit exister (principe §150) — mais aujourd'hui rien ne distingue « aucun établissement n'accepte les animaux » de « l'information n'a pas encore été saisie » : il faut le feedback (compte, mention) et un chantier de saisie, pas un masquage.
+4. **Filtre fantôme** : le filtre environnement des Activités (`act.environmentTagsAny`) est câblé store + RPC + compteur « N actifs », mais n'a **aucune UI ni chip** : activé via URL, il filtre les résultats sans aucun moyen de le voir ou de le retirer (hors « Réinitialiser »). À doter d'une UI + chip.
+5. **Le bucket Événements n'a aucun filtre de dates** alors que `object_fma` porte `event_start_date`/`event_end_date`/récurrence. Pour des événements, la date est LE filtre n° 1 ; principe §150 : le groupe Dates se construit **maintenant**, sans attendre l'import FMA (comme les filtres ITI, déjà présents à 0 objet).
 
 ---
 
@@ -72,11 +74,13 @@ C'est la redondance que tu pointes — et elle est aggravée par les données : 
 
 19 domaines de taxonomie existent (un par type), 100 % des objets publiés portent au moins un nœud, le RPC filtre déjà descendants inclus. Distribution réelle côté restaurants (`taxonomy_res`, 90/90 couverts) : Restaurant 55 · Table d'hôte 10 · Snack-bar 7 · Restaurant de l'hôtel 5 · Ferme auberge 4 · Pizzeria 2 · Glacier 1… C'est le filtre « type de restauration » attendu, il est prêt, il n'est juste pas branché. Idem `taxonomy_loi` pour les 37 Loisirs du bucket Visites, `taxonomy_act/asc` pour les Activités, `taxonomy_prd` pour les 15 Producteurs.
 
-### 3.4 Filtres morts, fantômes et absents
+### 3.4 Filtres à vide, fantômes et absents
 
-- **« Animaux acceptés »** : 0 donnée publiée. À masquer (ou griser avec mention) tant que `object_pet_policy` est vide — un filtre qui renvoie systématiquement 0 résultat détruit la confiance dans tout le panneau.
-- **Filtre environnement ACT** (`environmentTagsAny`) : compté dans « N actifs », envoyé au RPC, **aucun contrôle ni chip**. Soit le rendre (chips mer/montagne/forêt…), soit le retirer du store et du compteur.
-- **Événements sans dates** : `object_fma` porte début/fin/heures/récurrence. Prévoir le groupe « Dates » (Ce week-end · 7 prochains jours · plage libre) avant l'import FMA, sinon le bucket naît inutilisable.
+Sous le principe §150 (la surface de filtrage suit le modèle), aucun de ces cas ne se règle en retirant le filtre — ils se règlent en le rendant **honnête et complet** :
+
+- **« Animaux acceptés »** : 0 donnée publiée. Le filtre reste — mais un filtre qui renvoie systématiquement 0 résultat sans explication détruit la confiance dans tout le panneau. Deux compléments : (a) du **feedback** — compte de résultats par option et, à 0, distinguer « aucun établissement ne correspond » de « information pas encore saisie sur les fiches » ; (b) un **chantier de saisie** `object_pet_policy` (le champ existe dans l'éditeur — groupes/animaux, §64 — c'est le corpus qui n'est pas rempli).
+- **Filtre environnement ACT** (`environmentTagsAny`) : compté dans « N actifs », envoyé au RPC, **aucun contrôle ni chip**. Le rendre (chips mer/montagne/forêt…) + émettre sa chip — le retirer serait réduire la surface, à l'inverse du principe.
+- **Événements sans dates** : `object_fma` porte début/fin/heures/récurrence. Construire le groupe « Dates » (Ce week-end · 7 prochains jours · plage libre) **maintenant** — le panneau le fait déjà pour les Itinéraires (filtres complets à 0 ITI publié) ; le bucket Événements a droit au même traitement.
 - **Équipements/services génériques absents** : le RPC accepte `amenities_any` (déjà utilisé pour l'accessibilité), et la donnée est là — RES publiés : Parking 66 · Bar 53 · Terrasse 28 · Jardin 27 · Wi-Fi 18 · Climatisation 12 · Piscine 10. Un groupe « Services » par bucket est un quick win à fort usage conseiller. (Au passage, signal qualité d'import : « Équipement randonnée » sur 48 restaurants.)
 
 ### 3.5 Pertinence métier : le cas Restaurants (ton exemple)
@@ -105,7 +109,7 @@ Légende : ✅ garder · ✏️ renommer/redessiner · ⬇️ rétrograder (divu
 | Ouvert maintenant | ✏️➕ | sortir d'« Accessibilité et services », toggle de premier niveau ; étape 2 : « ouvert le… » |
 | PMR + détails | ✅ | bon pattern de divulgation ; renommer « Accessibilité » (PMR = sigle) |
 | Démarche durable + axes/actions | ✅ | idem, « Actions précises » → « Actions engagées » |
-| Animaux acceptés | ❌ (temporaire) | 0 donnée publiée — masquer jusqu'à peuplement de `object_pet_policy` |
+| Animaux acceptés | ✏️ | garder (principe §150) ; ajouter le feedback « 0 = info pas encore saisie » + chantier de saisie `object_pet_policy` |
 | Label recherché (classés) | ✅ | libellé « Label recherché » → « Classement / label » |
 | Labels cliqués / Tags | ✏️ | ajouter un vrai picker ; garder le clic-pour-filtrer comme raccourci |
 | Statut (éditeurs) | ✅ | corriger le toggle silencieux |
@@ -117,8 +121,8 @@ Légende : ✅ garder · ✏️ renommer/redessiner · ⬇️ rétrograder (divu
 | **Hébergements (≈180)** | capacités (lits/chambres) ⬇️ en « Pour N personnes » | fusionner Sous-types + « Taxonomie HOT » → **Type d'hébergement** (union des 5 domaines HEB, dominé par `taxonomy_hlo` : Gîte, Chambre d'hôtes, Location…) ; Salles de réunion ⬇️ derrière « Groupes & séminaires » | Services (piscine, cuisine équipée… `amenities_any`) |
 | **Restaurants (90)** | — | Places assises/debout ⬇️ → un champ « Groupe d'au moins N » ; « Ouvert maintenant » promu | **Type de restauration** (`taxonomy_res`) ; Services (Parking 66, Terrasse 28, Clim 12…) |
 | **Itinéraires (0 publié)** | Boucle, Difficulté, Distance, Durée, Pratiques — bon set métier | Difficulté : 5 chips (pas des inputs Min/Max) ; Durée : presets (« < 2 h », « demi-journée », « journée ») ; incohérence « Aller-retour » (panneau) vs « Aller simple » (chip) à trancher | — |
-| **Activités (23)** | — | rendre OU retirer le filtre environnement fantôme | **Type d'activité** (`taxonomy_act`/`asc`) |
-| **Événements (0, import à venir)** | — | — | **Dates** (Ce week-end / 7 jours / plage) sur `object_fma` — à préparer avant l'import |
+| **Activités (23)** | — | rendre le filtre environnement fantôme (UI + chip) | **Type d'activité** (`taxonomy_act`/`asc`) |
+| **Événements (0, import à venir)** | — | — | **Dates** (Ce week-end / 7 jours / plage) sur `object_fma` — à construire **maintenant** (principe §150, comme ITI à 0 objet) |
 | **Visites (53)** | Sous-types (Loisir, Patrimoine, Site naturel, Producteur) | — | **Sous-catégories LOI** (37 objets) + PRD (dégustation, visite de ferme) |
 | **Services (16)** | Sous-types | — | rien de plus à ce volume |
 
@@ -174,15 +178,16 @@ _Note de vérification : la revue indépendante pensait le mot « Taxonomie » n
 ## 6. Plan d'action priorisé
 
 **P0 — confiance & honnêteté (petits diffs)**
-1. Masquer « Animaux acceptés » tant que la donnée est vide (ou l'assortir d'un compte).
-2. Supprimer le filtre fantôme environnement ACT du compteur/RPC **ou** lui donner une UI + chip.
+1. « Animaux acceptés » : garder (principe §150) mais rendre le vide honnête — compte de résultats et, à 0, mention « information pas encore saisie sur les fiches » ; ouvrir en parallèle le chantier de saisie `object_pet_policy`.
+2. Donner une UI + chip au filtre environnement ACT (aujourd'hui fantôme : compté et appliqué, invisible).
 3. Trancher la contradiction « Aller-retour » (panneau) / « Aller simple » (chip) pour `is_loop=false` avec le métier — c'est de la désinformation terrain sur un produit rando — et partager la constante.
 4. Passe d'accents + unification des libellés dupliqués : supprimer `hotSubtypeLabels`, dériver de `TYPE_LABEL`/`resolveTypeLabel` (source unique) ; « Ouvert maintenant » partout ; envisager de renommer HLO « Gîtes & meublés » dans `TYPE_LABEL` (validation métier) — « gîte » doit devenir trouvable.
 
-**P1 — le chantier demandé : sous-catégories par bucket**
+**P1 — le chantier demandé : sous-catégories par bucket + surface complète**
 5. Renommer « Taxonomie X » → « Type de … » (et corriger le dropdown Dashboard « Domaine de catégorie »).
-6. Élargir le chargement des domaines (`explorer-reference.ts`) à tous les buckets et rendre le groupe génériquement ; fusionner Sous-types + taxonomie dans Hébergements (§3.2). Backend prêt (`taxonomy_any`).
+6. Élargir le chargement des domaines (`explorer-reference.ts`) à **tous** les buckets — y compris ceux à 0 objet publié (principe §150) — et rendre le groupe génériquement ; fusionner Sous-types + taxonomie dans Hébergements (§3.2). Backend prêt (`taxonomy_any`).
 7. Ajouter « Type de restauration » (RES) et « Type d'activité » (ACT) — mêmes mécaniques.
+7bis. Construire le groupe **Dates Événements** (Ce week-end / 7 jours / plage libre) : UI + extension du RPC sur `object_fma` (le modèle est prêt) — sans attendre l'import FMA.
 8. Difficulté ITI : 5 chips ou segmenté Facile/Moyen/Difficile (l'échelle 1-5 en deux inputs numériques libres est une affordance fausse) ; garde min ≤ max sur les paires restantes.
 
 **P2 — pertinence métier & cohérence d'état**
@@ -192,8 +197,7 @@ _Note de vérification : la revue indépendante pensait le mot « Taxonomie » n
 12. Idiome de sélection des sous-types aligné sur les buckets (vide = tous, chips inactives par défaut) + chip « Sous-type · X » dans la barre + compter VIS/SRV ; ne compter le dessin de zone qu'une fois.
 
 **P3 — design & dette**
-13. Supprimer la variante `panel` morte (~420 lignes) ; presets de durée ITI ; indentation d'arbre réelle (liste, pas chips wrappées) ; groupes repliables ; `aria-pressed` sur toutes les chips ; câbler `loadError` des dropdowns ; facet counts (« Restaurants (127) », « Ouvert maintenant (43) ») — le markers RPC prouve que l'agrégat est abordable.
-14. Préparer le groupe Dates Événements avant l'import FMA (extension RPC ; le modèle est prêt).
+13. Supprimer la variante `panel` morte (~420 lignes) ; presets de durée ITI ; indentation d'arbre réelle (liste, pas chips wrappées) ; groupes repliables ; `aria-pressed` sur toutes les chips ; câbler `loadError` des dropdowns ; facet counts (« Restaurants (127) », « Ouvert maintenant (43) ») — le markers RPC prouve que l'agrégat est abordable, et c'est le mécanisme d'honnêteté du principe §150 (un filtre à 0 s'annonce au lieu de décevoir).
 
 ---
 

@@ -176,15 +176,6 @@ export function ResultsList({
           <span className="truncate font-sans text-xs font-medium text-ink-3">{visibleCards.length} fiches</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {/* S12 : plus de faux bouton « Trier » désactivé-en-permanence — un label
-              honnête de l'ordre courant (les résultats SONT triés par pertinence :
-              label_match puis ordre alphabétique, cf. sortExplorerCards). */}
-          <span
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-3"
-            title="Tri par pertinence (correspondance de label puis ordre alphabétique)"
-          >
-            Trié par pertinence
-          </span>
           {headerActions}
         </div>
       </div>

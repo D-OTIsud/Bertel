@@ -2,19 +2,25 @@
 
 import type { DashboardActualisation } from '../../types/dashboard';
 import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { meterZone } from './meter-zone';
 import { resolveTypeLabel } from '../../utils/labels';
 
 interface Props {
   data: DashboardActualisation;
 }
 
+/** D7 : couleur + zone écrite (WCAG 1.4.1) ; tokens à la place des hex. */
 function RateBar({ rate }: { rate: number }) {
-  const color =
-    rate >= 80 ? 'var(--teal)' : rate >= 60 ? 'var(--warning)' : '#c85c48';
+  const zone = meterZone(rate, 60);
   return (
-    <div className="rate-bar">
-      <div className="rate-bar__fill" style={{ width: `${rate}%`, background: color }} />
-      <span className="rate-bar__label">{rate} %</span>
+    <div className="rate-bar" role="img" aria-label={`Taux d'actualisation ${rate} % — ${zone.label}`}>
+      <div className="rate-bar__fill" style={{ width: `${rate}%`, background: zone.color }} aria-hidden="true" />
+      <span className="rate-bar__label" aria-hidden="true">
+        {rate} %
+      </span>
+      <span className="rate-bar__zone" style={{ color: zone.color }} aria-hidden="true">
+        {zone.label}
+      </span>
     </div>
   );
 }

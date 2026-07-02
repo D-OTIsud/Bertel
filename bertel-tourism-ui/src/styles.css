@@ -8601,6 +8601,16 @@ a {
   color: var(--text);
 }
 
+/* D7 : zone écrite (Bon/Moyen/Faible) à côté du % — la couleur n'est plus seule. */
+.rate-bar__zone {
+  position: relative;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding-left: 0.45rem;
+  text-transform: uppercase;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 900px) {
@@ -9543,6 +9553,8 @@ a {
 }
 .meter__fill { display: block; height: 100%; border-radius: 999px; background: var(--teal); }
 .meter__pct { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+/* D7 : zone écrite (Bon/Moyen/Faible) — la couleur de la jauge n'est plus le seul encodage. */
+.meter__zone { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
 .completeness-table__meter-col { min-width: 190px; }
 
 .actualisation-table__type-btn {

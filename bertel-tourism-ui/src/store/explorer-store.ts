@@ -86,7 +86,20 @@ interface ExplorerState extends ExplorerFilters {
   replaceFiltersFromUrl: (partial: Partial<ExplorerFilters>) => void;
 }
 
-function upsertCapacityFilter(filters: CapacityFilter[], code: string, min?: number, max?: number): CapacityFilter[] {
+/**
+ * §156 (P1-b audit filtres) — garde min ≤ max : une paire inversée est
+ * réordonnée (interprétation insensible à l'ordre de saisie) au lieu de
+ * produire silencieusement une plage vide côté serveur.
+ */
+function orderRange(min?: number, max?: number): [number | undefined, number | undefined] {
+  if (min != null && max != null && min > max) {
+    return [max, min];
+  }
+  return [min, max];
+}
+
+function upsertCapacityFilter(filters: CapacityFilter[], code: string, rawMin?: number, rawMax?: number): CapacityFilter[] {
+  const [min, max] = orderRange(rawMin, rawMax);
   const next = filters.filter((filter) => filter.code !== code);
   if (min == null && max == null) {
     return next;
@@ -400,9 +413,21 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       },
     })),
   setItiIsLoop: (value) => set((state) => ({ iti: { ...state.iti, isLoop: value } })),
-  setItiDifficulty: (min, max) => set((state) => ({ iti: { ...state.iti, difficultyMin: min, difficultyMax: max } })),
-  setItiDistance: (min, max) => set((state) => ({ iti: { ...state.iti, distanceMinKm: min, distanceMaxKm: max } })),
-  setItiDuration: (min, max) => set((state) => ({ iti: { ...state.iti, durationMinH: min, durationMaxH: max } })),
+  setItiDifficulty: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, difficultyMin: min, difficultyMax: max } };
+    }),
+  setItiDistance: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, distanceMinKm: min, distanceMaxKm: max } };
+    }),
+  setItiDuration: (rawMin, rawMax) =>
+    set((state) => {
+      const [min, max] = orderRange(rawMin, rawMax);
+      return { iti: { ...state.iti, durationMinH: min, durationMaxH: max } };
+    }),
   toggleItiPractice: (code) =>
     set((state) => {
       const practicesAny = state.iti.practicesAny ?? [];

@@ -4,6 +4,7 @@ import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
+import { EmptyState } from '../common/EmptyState';
 import { ResultCardView } from './ResultCardView';
 
 interface ResultsListProps {
@@ -70,6 +71,7 @@ export function ResultsList({
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  const resetAllFilters = useExplorerStore((state) => state.resetAll);
   const visibleCards = hasMounted ? cards : [];
   const showLoading = loading || !hasMounted;
 
@@ -188,9 +190,15 @@ export function ResultsList({
       {showLoading ? <ResultsListSkeleton /> : null}
 
       {!showLoading && !isRefreshing && visibleCards.length === 0 ? (
-        <div className="m-3 rounded-shellMd border border-dashed border-line bg-surface2 p-4 text-sm text-ink-3">
-          <strong className="text-ink">Aucun resultat pour ces filtres</strong>
-          <p className="mt-1">Essayez d elargir la recherche ou de relacher les contraintes sur la carte.</p>
+        /* D29 : l'EmptyState « filtered » existant (icône + CTA) remplace le bloc nu —
+           « Réinitialiser les filtres » remet l'Explorer à zéro en un clic. */
+        <div className="p-3">
+          <EmptyState
+            mode="filtered"
+            title="Aucun résultat pour ces filtres"
+            description="Essayez d'élargir la recherche ou de relâcher les contraintes (carte, statuts, équipements)."
+            action={{ label: 'Réinitialiser les filtres', onClick: () => resetAllFilters() }}
+          />
         </div>
       ) : null}
 

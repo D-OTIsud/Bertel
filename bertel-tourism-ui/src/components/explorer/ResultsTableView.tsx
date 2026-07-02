@@ -9,6 +9,7 @@ import {
 } from '../../store/explorer-view-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
+import { EmptyState } from '../common/EmptyState';
 import { buildTableCsv, sortCards, TABLE_COLUMNS } from './table-columns';
 import { cn } from '@/lib/utils';
 
@@ -132,6 +133,7 @@ export function ResultsTableView({
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
+  const resetAllFilters = useExplorerStore((state) => state.resetAll);
   const tableColumns = useExplorerViewStore((state) => state.tableColumns);
   const tableDensity = useExplorerViewStore((state) => state.tableDensity);
   const tableSort = useExplorerViewStore((state) => state.tableSort);
@@ -193,9 +195,14 @@ export function ResultsTableView({
       ) : null}
 
       {!loading && cards.length === 0 ? (
-        <div className="m-3 rounded-shellMd border border-dashed border-line bg-surface2 p-4 text-sm text-ink-3">
-          <strong className="text-ink">Aucun résultat pour ces filtres</strong>
-          <p className="mt-1">Essayez d’élargir la recherche ou de relâcher les contraintes.</p>
+        /* D29 : même EmptyState « filtered » que la vue cartes. */
+        <div className="p-3">
+          <EmptyState
+            mode="filtered"
+            title="Aucun résultat pour ces filtres"
+            description="Essayez d'élargir la recherche ou de relâcher les contraintes (carte, statuts, équipements)."
+            action={{ label: 'Réinitialiser les filtres', onClick: () => resetAllFilters() }}
+          />
         </div>
       ) : null}
 

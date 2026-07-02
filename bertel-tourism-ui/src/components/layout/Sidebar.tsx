@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Bell, CircleHelp, Settings2 } from 'lucide-react';
+import { CircleHelp, Settings2 } from 'lucide-react';
 import { NAV_ITEMS, visibleNavItems } from '../../config/nav-items';
 import { listPendingChanges } from '../../services/rpc';
 import { useSessionStore } from '../../store/session-store';
@@ -119,13 +119,8 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
             </span>
             <span className="app-sidebar__label">Aide</span>
           </button>
-          <button type="button" className="app-sidebar__item" aria-label="Notifications" title="Notifications">
-            <span className="app-sidebar__iconbox">
-              <Bell className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
-              <span className="app-sidebar__dot" aria-hidden />
-            </span>
-            <span className="app-sidebar__label">Notifications</span>
-          </button>
+          {/* D26 : la cloche « Notifications » (aucun handler, pastille factice) est retirée —
+              elle reviendra avec la table notification (D27, backend, remonté session API). */}
           <button
             type="button"
             onClick={onOpenProfile}

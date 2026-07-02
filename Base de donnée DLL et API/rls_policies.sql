@@ -722,11 +722,10 @@ CREATE POLICY "Lecture publique du registre ref_code" ON ref_code_domain_registr
 CREATE POLICY "Lecture publique de la clôture taxonomique" ON ref_code_taxonomy_closure
     FOR SELECT USING (true);
 
-CREATE POLICY "Lecture publique des moyens de paiement" ON ref_code_payment_method
-    FOR SELECT USING (true);
-
-CREATE POLICY "Lecture publique des tags d'environnement" ON ref_code_environment_tag
-    FOR SELECT USING (true);
+-- 16f (§146): ref_code_payment_method / ref_code_environment_tag / ref_code_view_type read+write
+-- policies removed — the ref_code partition loop below applies the house pair
+-- (pub_ref_code_read / admin_ref_code_write) to EVERY partition; the dedicated pairs were
+-- duplicates (advisor multiple_permissive_policies). See migration_ref_code_dup_policy_cleanup.sql.
 
 CREATE POLICY "Lecture publique des équipements" ON ref_amenity
     FOR SELECT USING (true);
@@ -752,28 +751,12 @@ CREATE POLICY "Lecture publique des rôles d'organisation" ON ref_org_role
     FOR SELECT USING (true);
 CREATE POLICY "Lecture publique des sources d'avis" ON ref_review_source
     FOR SELECT USING (true);
-CREATE POLICY "Lecture publique des types de vue" ON ref_code_view_type
-    FOR SELECT USING (true);
 
 CREATE POLICY "Lecture publique des tags média" ON ref_code_media_tag
     FOR SELECT USING (true);
 
 -- Écriture réservée aux rôles admin et service_role
 CREATE POLICY "Écriture admin des langues" ON ref_language
-    FOR ALL USING (
-        auth.role() = 'service_role' OR 
-        auth.role() = 'admin' OR
-        api.is_platform_superuser()
-    );
-
-CREATE POLICY "Écriture admin des moyens de paiement" ON ref_code_payment_method
-    FOR ALL USING (
-        auth.role() = 'service_role' OR 
-        auth.role() = 'admin' OR
-        api.is_platform_superuser()
-    );
-
-CREATE POLICY "Écriture admin des tags d'environnement" ON ref_code_environment_tag
     FOR ALL USING (
         auth.role() = 'service_role' OR 
         auth.role() = 'admin' OR
@@ -838,13 +821,7 @@ CREATE POLICY "Écriture admin des traductions" ON i18n_translation
     );
 CREATE POLICY "Écriture admin des sources d'avis" ON ref_review_source
     FOR ALL USING (
-        auth.role() = 'service_role' OR 
-        auth.role() = 'admin' OR
-        api.is_platform_superuser()
-    );
-CREATE POLICY "Écriture admin des types de vue" ON ref_code_view_type
-    FOR ALL USING (
-        auth.role() = 'service_role' OR 
+        auth.role() = 'service_role' OR
         auth.role() = 'admin' OR
         api.is_platform_superuser()
     );
@@ -1464,9 +1441,9 @@ ALTER TABLE pending_change ENABLE ROW LEVEL SECURITY;
 ALTER TABLE object_version ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "admin_pending_change" ON pending_change
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
+  FOR ALL USING ((select auth.role()) IN ('service_role','admin'));
 CREATE POLICY "admin_object_version" ON object_version
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
+  FOR ALL USING ((select auth.role()) IN ('service_role','admin'));
 
 -- ========== PUBLIC READ, OWNER/ADMIN WRITE ==========
 
@@ -1654,13 +1631,13 @@ CREATE POLICY "admin_tag_link_write" ON tag_link
 CREATE POLICY "pub_ref_code_read" ON ref_code
   FOR SELECT USING (true);
 CREATE POLICY "admin_ref_code_write" ON ref_code
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
+  FOR ALL USING ((select auth.role()) IN ('service_role','admin'));
 
 -- Policies explicites sur la partition default ref_code_other
 CREATE POLICY "pub_ref_code_read" ON ref_code_other
   FOR SELECT USING (true);
 CREATE POLICY "admin_ref_code_write" ON ref_code_other
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
+  FOR ALL USING ((select auth.role()) IN ('service_role','admin'));
 
 -- Supabase Table Editor affiche les partitions séparément.
 -- On applique explicitement RLS + policies sur toutes les partitions ref_code
@@ -1684,7 +1661,7 @@ BEGIN
     EXECUTE format('CREATE POLICY "pub_ref_code_read" ON %I.%I FOR SELECT USING (true)', v_part.schema_name, v_part.table_name);
     EXECUTE format('DROP POLICY IF EXISTS "admin_ref_code_write" ON %I.%I', v_part.schema_name, v_part.table_name);
     EXECUTE format(
-      'CREATE POLICY "admin_ref_code_write" ON %I.%I FOR ALL USING (auth.role() IN (''service_role'',''admin''))',
+      'CREATE POLICY "admin_ref_code_write" ON %I.%I FOR ALL USING ((select auth.role()) IN (''service_role'',''admin''))',
       v_part.schema_name, v_part.table_name
     );
   END LOOP;
@@ -1709,7 +1686,7 @@ BEGIN
     EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', v_part.schema_name, v_part.table_name);
     EXECUTE format('DROP POLICY IF EXISTS "admin_object_version" ON %I.%I', v_part.schema_name, v_part.table_name);
     EXECUTE format(
-      'CREATE POLICY "admin_object_version" ON %I.%I FOR ALL USING (auth.role() IN (''service_role'',''admin''))',
+      'CREATE POLICY "admin_object_version" ON %I.%I FOR ALL USING ((select auth.role()) IN (''service_role'',''admin''))',
       v_part.schema_name, v_part.table_name
     );
   END LOOP;
@@ -1734,7 +1711,7 @@ BEGIN
     EXECUTE format('ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY', v_part.schema_name, v_part.table_name);
     EXECUTE format('DROP POLICY IF EXISTS "Lecture audit (admin/service_role)" ON %I.%I', v_part.schema_name, v_part.table_name);
     EXECUTE format(
-      'CREATE POLICY "Lecture audit (admin/service_role)" ON %I.%I FOR SELECT USING (auth.role() IN (''service_role'',''admin'') OR api.is_platform_superuser())',
+      'CREATE POLICY "Lecture audit (admin/service_role)" ON %I.%I FOR SELECT USING ((select auth.role()) IN (''service_role'',''admin'') OR api.is_platform_superuser())',
       v_part.schema_name, v_part.table_name
     );
     EXECUTE format('DROP POLICY IF EXISTS "Insertion via triggers" ON %I.%I', v_part.schema_name, v_part.table_name);
@@ -1758,27 +1735,14 @@ ALTER TABLE audit_criteria ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_session ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_result ENABLE ROW LEVEL SECURITY;
 
--- Membership references
+-- Membership references — 16f (§146): the dedicated pairs were duplicates of the house pair
+-- applied to every ref_code partition by the loop above; retired (DROPs kept as belt).
 DROP POLICY IF EXISTS "pub_membership_tier_read" ON ref_code_membership_tier;
-CREATE POLICY "pub_membership_tier_read" ON ref_code_membership_tier
-  FOR SELECT USING (true);
 DROP POLICY IF EXISTS "admin_membership_tier_write" ON ref_code_membership_tier;
-CREATE POLICY "admin_membership_tier_write" ON ref_code_membership_tier
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
-
 DROP POLICY IF EXISTS "pub_membership_campaign_read" ON ref_code_membership_campaign;
-CREATE POLICY "pub_membership_campaign_read" ON ref_code_membership_campaign
-  FOR SELECT USING (true);
 DROP POLICY IF EXISTS "admin_membership_campaign_write" ON ref_code_membership_campaign;
-CREATE POLICY "admin_membership_campaign_write" ON ref_code_membership_campaign
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
-
 DROP POLICY IF EXISTS "pub_incident_category_read" ON ref_code_incident_category;
-CREATE POLICY "pub_incident_category_read" ON ref_code_incident_category
-  FOR SELECT USING (true);
 DROP POLICY IF EXISTS "admin_incident_category_write" ON ref_code_incident_category;
-CREATE POLICY "admin_incident_category_write" ON ref_code_incident_category
-  FOR ALL USING (auth.role() IN ('service_role','admin'));
 
 -- Memberships: public read only for active object-level listings
 DROP POLICY IF EXISTS "pub_object_membership_read" ON object_membership;

@@ -1145,10 +1145,11 @@
               "query": [
                 {"key": "page_size", "value": "20"},
                 {"key": "types", "value": "HOT,RES", "disabled": true},
-                {"key": "search", "value": "", "disabled": true}
+                {"key": "search", "value": "", "disabled": true},
+                {"key": "format", "value": "datatourisme", "disabled": true, "description": "jsonld | datatourisme | apidae | tourinsoft — chaque fiche de la page porte son document pivot sous data[i].<profil> (I4c)"}
               ]
             },
-            "description": "Page de fiches PUBLIÉES (curseur `cursor`, `page_size` 1–200, `types` csv, `search`, `lang`). Stocke automatiquement `object_id = data[0].id` pour les requêtes suivantes."
+            "description": "Page de fiches PUBLIÉES (curseur `cursor`, `page_size` 1–200, `types` csv, `search`, `lang`). Avec `format=<profil>` (jsonld/datatourisme/apidae/tourinsoft), chaque fiche de la page porte en plus son document pivot sous une clé additive `data[i].<profil>` — même pagination, un appel par page (I4c). Stocke automatiquement `object_id = data[0].id` pour les requêtes suivantes."
           }
         },
         {

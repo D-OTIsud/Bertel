@@ -88,7 +88,7 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 ### 13. API Publique Partenaire (`/api/public/*`)
 > Surface **tierce** dédiée : un prestataire externe passe par cette passerelle (jamais PostgREST direct). Auth par **clé partenaire** `Authorization: Bearer bk_live_…` (variable `partner_key`), base = `public_base_url`. Enveloppe `{ meta, data }`, `meta.contract_version` + header `X-Bertel-Api-Version`, fiches **publiées** uniquement. Lancer « Lister les fiches publiées » en premier (remplit `object_id`).
 
-- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang`)
+- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang` ; **`format=<profil>`** ajoute le document pivot par fiche sous `data[i].<profil>` — synchronisation par lots, même pagination)
 - **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
 - **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
 - **Fiche + DATAtourisme (I4b)** : `?format=datatourisme` → bloc additif `data.datatourisme` (JSON-LD ontologie nationale)

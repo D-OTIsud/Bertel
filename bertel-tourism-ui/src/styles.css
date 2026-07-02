@@ -442,6 +442,130 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Sélecteur de vue Explorer (D16 : Liste / Table / Carte / Split) ---- */
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.view-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+.view-switch__btn:hover { color: var(--text); }
+.view-switch__btn.is-on {
+  background: var(--surface);
+  color: var(--theme-primary);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
+}
+
+/* ---- Vue Table dense de l'Explorer (D17) ---- */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.results-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.results-table tbody td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 7px 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.results-table--compact tbody td { padding: 3px 10px; font-size: 12px; }
+.results-table tbody tr { cursor: pointer; }
+.results-table tbody tr:hover { background: var(--bg-tint); }
+.results-table tbody tr.is-selected { background: rgba(23, 107, 106, 0.07); }
+.results-table__check-col { width: 34px; text-align: center; }
+.results-table__num { text-align: right; }
+.results-table__dim { color: var(--text-muted); font-size: 11px; }
+.results-table__labels { display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.results-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.results-table__sort:hover { color: var(--text); }
+.results-table__open {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.results-table__open:hover { color: var(--theme-primary); text-decoration: underline; }
+.results-table__tool { font-size: 12px; padding: 0.25rem 0.55rem; }
+
+/* Gestionnaire de colonnes (popover maison, D17) */
+.column-manager {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: 230px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.column-manager__title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.column-manager__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.column-manager__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.column-manager__check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+.column-manager__order { display: inline-flex; gap: 2px; }
+.column-manager__reset { margin-top: 8px; font-size: 12px; width: 100%; justify-content: center; }
+
 /* ---- Anneaux de focus clavier des widgets custom (D8, WCAG 2.4.11) ---- */
 .result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
 .map-hover-card__tag[role='button']:focus-visible {

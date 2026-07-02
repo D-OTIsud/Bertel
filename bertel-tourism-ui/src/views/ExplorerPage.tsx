@@ -3,15 +3,28 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
+import { ResultsTableView } from '../components/explorer/ResultsTableView';
+import { ExplorerViewSwitch } from '../components/explorer/ExplorerViewSwitch';
+import { SelectionBar } from '../components/explorer/SelectionBar';
 import { useExplorerCardsQuery, useExplorerMarkersQuery, useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useExplorerStore } from '../store/explorer-store';
+import { useExplorerViewStore, type ExplorerViewMode } from '../store/explorer-view-store';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { EmptyState } from '../components/common/EmptyState';
 import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
 import { buildExplorerErrorBanner } from './explorer-error';
+import { cn } from '@/lib/utils';
 
 const MapPanel = lazy(async () => ({ default: (await import('../components/explorer/MapPanel')).MapPanel }));
+
+// D16 : colonnes de grille par mode (littéraux complets — requis par le JIT Tailwind).
+const GRID_BY_MODE: Record<ExplorerViewMode, string> = {
+  split: 'grid-cols-[296px_minmax(320px,0.8fr)_minmax(420px,1.4fr)]',
+  liste: 'grid-cols-[296px_minmax(0,1fr)]',
+  table: 'grid-cols-[296px_minmax(0,1fr)]',
+  carte: 'grid-cols-[296px_minmax(0,1fr)]',
+};
 
 function MapFallback() {
   return (
@@ -36,6 +49,10 @@ const panelLabels: Record<ExplorerPanelKey, string> = {
 export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
+  // D16 : mode de vue (Liste / Table / Carte / Split) — préférence persistée.
+  // Le mobile garde ses onglets (la table est un outil desktop, repli D17 <960px).
+  const viewMode = useExplorerViewStore((state) => state.viewMode);
+  const setViewMode = useExplorerViewStore((state) => state.setViewMode);
   const cardsQuery = useExplorerCardsQuery();
   const markersQuery = useExplorerMarkersQuery();
   const referencesQuery = useExplorerReferencesQuery();
@@ -169,21 +186,52 @@ export default function ExplorerPage() {
           </div>
         </section>
       ) : (
-        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-[296px_minmax(320px,0.8fr)_minmax(420px,1.4fr)] gap-0 overflow-hidden">
-          <FiltersPanel references={referencesQuery.data} variant="column" />
-          <ResultsList
-            cards={cards}
-            loading={isInitialLoading}
-            isRefreshing={isRefreshing}
-            variant="column"
-            hasMore={cardsQuery.hasNextPage}
-            isLoadingMore={cardsQuery.isFetchingNextPage}
-            onLoadMore={() => void cardsQuery.fetchNextPage()}
-          />
-          <Suspense fallback={<MapFallback />}>
-            <MapPanel objects={markers} variant="column" />
-          </Suspense>
-        </div>
+        <>
+          <div className="flex flex-none items-center justify-end border-b border-line bg-surface px-4 py-1.5">
+            <ExplorerViewSwitch />
+          </div>
+          <div
+            className={cn(
+              'relative grid min-h-0 min-w-0 flex-1 gap-0 overflow-hidden',
+              GRID_BY_MODE[viewMode],
+            )}
+          >
+            <FiltersPanel references={referencesQuery.data} variant="column" />
+            {viewMode === 'split' || viewMode === 'liste' ? (
+              <ResultsList
+                cards={cards}
+                loading={isInitialLoading}
+                isRefreshing={isRefreshing}
+                variant="column"
+                hasMore={cardsQuery.hasNextPage}
+                isLoadingMore={cardsQuery.isFetchingNextPage}
+                onLoadMore={() => void cardsQuery.fetchNextPage()}
+              />
+            ) : null}
+            {viewMode === 'table' ? (
+              <ResultsTableView
+                cards={cards}
+                loading={isInitialLoading}
+                isRefreshing={isRefreshing}
+                hasMore={cardsQuery.hasNextPage}
+                isLoadingMore={cardsQuery.isFetchingNextPage}
+                onLoadMore={() => void cardsQuery.fetchNextPage()}
+              />
+            ) : null}
+            {viewMode === 'split' || viewMode === 'carte' ? (
+              <Suspense fallback={<MapFallback />}>
+                <MapPanel
+                  objects={markers}
+                  variant="column"
+                  onCollapse={viewMode === 'split' ? () => setViewMode('liste') : undefined}
+                />
+              </Suspense>
+            ) : null}
+            {/* Sans carte, la barre de sélection (portée par MapPanel) doit rester : les
+                actions de masse suivent la sélection dans TOUTES les vues. */}
+            {viewMode === 'liste' || viewMode === 'table' ? <SelectionBar /> : null}
+          </div>
+        </>
       )}
     </section>
   );

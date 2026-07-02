@@ -442,6 +442,14 @@ textarea::placeholder {
 .ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
 .ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
 
+/* ---- Anneaux de focus clavier des widgets custom (D8, WCAG 2.4.11) ---- */
+.result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+.map-hover-card__tag[role='button']:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
 /* ---- Skip-link (D11, WCAG 2.4.1) : visible uniquement au focus clavier ---- */
 .skip-link {
   position: absolute;

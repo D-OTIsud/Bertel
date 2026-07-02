@@ -65,16 +65,27 @@ export function FilterDropdown<T extends string>({
   useEffect(() => { setMounted(true); }, []);
 
   // Position menu below trigger using fixed coordinates (portal approach).
+  // D8 : clampé au viewport — bord gauche/droit ramené dans l'écran, et bascule
+  // au-dessus du déclencheur quand la place manque dessous (menu ≤ 260px, cf. CSS).
+  const MENU_MAX_HEIGHT = 260;
+  const VIEWPORT_MARGIN = 8;
   const updateMenuPosition = useCallback(() => {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setMenuStyle({
-      position: 'fixed',
-      top: rect.bottom + 4,
-      left: rect.left,
-      minWidth: rect.width,
-      zIndex: 200,
-    });
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const menuWidth = menuRef.current?.offsetWidth ?? Math.max(180, rect.width);
+    const left = Math.min(
+      Math.max(VIEWPORT_MARGIN, rect.left),
+      Math.max(VIEWPORT_MARGIN, vw - menuWidth - VIEWPORT_MARGIN),
+    );
+    const spaceBelow = vh - rect.bottom;
+    const openUp = spaceBelow < MENU_MAX_HEIGHT + VIEWPORT_MARGIN && rect.top > spaceBelow;
+    setMenuStyle(
+      openUp
+        ? { position: 'fixed', bottom: vh - rect.top + 4, left, minWidth: rect.width, zIndex: 200 }
+        : { position: 'fixed', top: rect.bottom + 4, left, minWidth: rect.width, zIndex: 200 },
+    );
   }, []);
 
   useEffect(() => {
@@ -86,7 +97,8 @@ export function FilterDropdown<T extends string>({
       window.removeEventListener('scroll', updateMenuPosition, true);
       window.removeEventListener('resize', updateMenuPosition);
     };
-  }, [open, updateMenuPosition]);
+    // `query` : la recherche change la hauteur/largeur réelle du menu → re-clamp.
+  }, [open, query, updateMenuPosition]);
 
   // Close on click-outside.
   useEffect(() => {

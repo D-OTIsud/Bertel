@@ -44,7 +44,8 @@ export function webHref(web: string): string {
   return /^https?:\/\//i.test(web) ? web : `https://${web}`;
 }
 
-/** Libellé court d'un site web : sans protocole ni slash final. */
+/** Libellé court d'un site web : domaine seul — sans protocole, chemin, query ni hash
+    (les URLs réelles traînent des ?fbclid=… interminables qui cassent la mise en page). */
 export function webLabel(web: string): string {
-  return web.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+  return web.replace(/^https?:\/\//i, '').split(/[/?#]/, 1)[0];
 }

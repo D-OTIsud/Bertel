@@ -8,7 +8,7 @@
 //   * DYNAMIQUE — filtres Explorer sauvegardés (filters jsonb), ré-résolus live à chaque accès.
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
-import type { ExplorerFilters } from '../types/domain';
+import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import { buildBucketRpcFilters, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets } from '../utils/facets';
 
 type GenericRecord = Record<string, unknown>;
@@ -292,6 +292,48 @@ export function buildDynamicListFilters(filters: ExplorerFilters): ListFilterBuc
     })
     .filter((b): b is NonNullable<typeof b> => b !== null);
   return { buckets };
+}
+
+/**
+ * Item de liste construit depuis une carte Explorer déjà chargée (palette d'ajout de la
+ * composition) : l'objet ajouté est enrichi immédiatement (image, description, ville, coords
+ * via raw.location) sans re-fetch. Les contacts publics (phone/web) ne sont PAS dans la carte
+ * (api.list_item_contacts est service-role-only) : ils arrivent au round-trip set_list_items.
+ */
+export function listItemFromObjectCard(card: ObjectCard, position: number): ObjectListItem {
+  return {
+    objectId: card.id,
+    position,
+    noteFr: null,
+    noteEn: null,
+    card: {
+      id: card.id,
+      name: card.name,
+      type: card.type,
+      image: card.image ?? null,
+      city: card.location?.city ?? null,
+      description: card.description ?? null,
+      raw: card as unknown as GenericRecord,
+    },
+    phone: null,
+    web: null,
+  };
+}
+
+/**
+ * Adopte l'enrichissement serveur (carte + contacts) par objectId en préservant l'état local
+ * d'édition : appartenance, ordre et notes restent ceux du client (une frappe ou un ajout en
+ * vol pendant le round-trip n'est jamais écrasé — même classe de piège que §138 hydratedListId).
+ */
+export function mergeEnrichedListItems(
+  local: ObjectListItem[],
+  fresh: ObjectListItem[],
+): ObjectListItem[] {
+  const byId = new Map(fresh.map((it) => [it.objectId, it]));
+  return local.map((it) => {
+    const enriched = byId.get(it.objectId);
+    return enriched ? { ...it, card: enriched.card, phone: enriched.phone, web: enriched.web } : it;
+  });
 }
 
 /** Réordonnancement immuable d'un item (drag & drop de la composition). Indices hors bornes = no-op. */

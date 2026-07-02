@@ -2,7 +2,14 @@ import { normalizeName, splitDuplicateMatches } from './duplicate-hint';
 import type { ObjectSearchResult } from '../useObjectSearch';
 
 function res(partial: Partial<ObjectSearchResult> & { id: string; name: string }): ObjectSearchResult {
-  return { type: 'LOI', status: 'published', city: '', code: partial.id, ...partial };
+  return {
+    type: 'LOI',
+    status: 'published',
+    city: '',
+    code: partial.id,
+    card: { id: partial.id, type: 'LOI', name: partial.name },
+    ...partial,
+  };
 }
 
 describe('normalizeName', () => {

@@ -12,6 +12,9 @@ export interface ObjectSearchResult {
   status: string;
   city: string;
   code: string;
+  /** Carte Explorer complète (image, description, coords…) — déjà chargée par la recherche ;
+   *  portée telle quelle pour que les consommateurs enrichissent sans re-fetch (palette Listes). */
+  card: ObjectCard;
 }
 
 interface UseObjectSearchOptions {
@@ -68,6 +71,7 @@ export function normalizeObjectSearchResults(
       status: card.status ?? '',
       city: card.location?.city ?? '',
       code: card.id,
+      card,
     }));
 }
 

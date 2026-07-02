@@ -44,11 +44,22 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
               <td>{cells ? cells.business : (m.businessRoleCode ? resolveRoleLabel(m.businessRoleCode) : '—')}</td>
               <td>{cells ? cells.admin : (m.adminRoleCode ? resolveRoleLabel(m.adminRoleCode) : '—')}</td>
               <td>
+                {/* D10 : aria-disabled + raison reliée (un `disabled` natif rendait le motif
+                    « vos propres permissions » injoignable au clavier et au lecteur d'écran). */}
+                {isSelf && (
+                  <span id={`perm-reason-${m.membershipId}`} className="sr-only">
+                    Vous ne pouvez pas modifier vos propres permissions
+                  </span>
+                )}
                 <button
                   type="button"
                   className={count > 0 ? 'ghost-button members-perm-btn' : 'ghost-button members-perm-btn is-muted'}
-                  onClick={() => onManagePermissions(m)}
-                  disabled={isSelf}
+                  onClick={() => {
+                    if (isSelf) return;
+                    onManagePermissions(m);
+                  }}
+                  aria-disabled={isSelf || undefined}
+                  aria-describedby={isSelf ? `perm-reason-${m.membershipId}` : undefined}
                   title={isSelf ? 'Vous ne pouvez pas modifier vos propres permissions' : undefined}
                 >
                   <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}

@@ -94,9 +94,13 @@ describe('RefCodeEditor (Phase 7.5)', () => {
     await screen.findByText('adult');
     expect(await screen.findByText('3 fiches')).toBeInTheDocument();
     expect(screen.getByText('0 fiche')).toBeInTheDocument();
-    // v1 référencé ⇒ bouton supprimer désactivé ; v2 à 0 ⇒ activé.
-    expect(screen.getByRole('button', { name: 'Supprimer adult' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Supprimer child' })).toBeEnabled();
+    // v1 référencé ⇒ bouton bloqué (aria-disabled, raison reliée D10) ; v2 à 0 ⇒ actif.
+    const deleteAdult = screen.getByRole('button', { name: 'Supprimer adult' });
+    expect(deleteAdult).toHaveAttribute('aria-disabled', 'true');
+    expect(deleteAdult).toHaveAccessibleDescription(/Référencée par 3 fiches/);
+    fireEvent.click(deleteAdult); // le clic gardé n'ouvre pas la confirmation
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Supprimer child' })).not.toHaveAttribute('aria-disabled');
   });
 
   it('supprime une valeur à 0 référence après confirmation', async () => {

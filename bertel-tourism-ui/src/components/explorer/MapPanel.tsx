@@ -13,6 +13,7 @@ import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { buildObjectFeatureCollection } from './map-source';
+import { buildClusterCompositionGradient, type ClusterTypeCounts } from './cluster-composition';
 import useSupercluster from 'use-supercluster';
 import type { BBox } from 'geojson';
 import {
@@ -72,6 +73,25 @@ function getClusterDensityTier(pointCount: unknown): ClusterDensityTier {
   if (n >= 10) return 'medium';
   return 'small';
 }
+
+/**
+ * Agrégation supercluster (impl. 3.3) : chaque feuille sème son archétype, et le
+ * reducer fusionne les comptes → chaque cluster porte `typeCounts` (nombre de
+ * fiches par type), qui alimente l'anneau de composition (`buildClusterCompositionGradient`).
+ * Réf. de module stable ⇒ l'index n'est pas reconstruit à chaque rendu.
+ */
+const CLUSTER_MAP = (props: { type?: string }): { typeCounts: Record<string, number> } => ({
+  typeCounts: { [String(props.type ?? '')]: 1 },
+});
+const CLUSTER_REDUCE = (
+  accumulated: { typeCounts: Record<string, number> },
+  props: { typeCounts: Record<string, number> },
+): void => {
+  for (const key of Object.keys(props.typeCounts)) {
+    accumulated.typeCounts[key] = (accumulated.typeCounts[key] ?? 0) + props.typeCounts[key];
+  }
+};
+const CLUSTER_OPTIONS = { radius: 30, maxZoom: 12, map: CLUSTER_MAP, reduce: CLUSTER_REDUCE };
 
 type HoverPopupState = {
   lngLat: [number, number];
@@ -188,7 +208,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
         const type = normalizeExplorerObjectType(card.type);
         const imageId = getMarkerImageId(type);
         const color = (markerStyles[type] ?? defaultMarkerStyles[type]).color;
-        return [{ card, lat, lon, imageSrc: `/markers/${imageId}.png`, color }];
+        return [{ card, lat, lon, imageSrc: `/markers/${imageId}.png`, color, type }];
       }),
     [markerStyles, objects],
   );
@@ -196,7 +216,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
   const points = useMemo(() => {
     return markerPoints.map((mp) => ({
       type: 'Feature' as const,
-      properties: { cluster: false, cardId: mp.card.id, card: mp.card, imageSrc: mp.imageSrc, color: mp.color },
+      properties: { cluster: false, cardId: mp.card.id, card: mp.card, imageSrc: mp.imageSrc, color: mp.color, type: mp.type },
       geometry: { type: 'Point' as const, coordinates: [mp.lon, mp.lat] as [number, number] },
     }));
   }, [markerPoints]);
@@ -206,7 +226,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
     points,
     bounds: bounds || undefined,
     zoom,
-    options: { radius: 30, maxZoom: 12 },
+    options: CLUSTER_OPTIONS,
   });
   const selectedObjectIdSet = useMemo(() => new Set(selectedObjectIds), [selectedObjectIds]);
   const lassoSvgPoints = useMemo(() => toSvgPointString(lassoPoints), [lassoPoints]);
@@ -785,10 +805,15 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
 
             if (isCluster) {
               const densityTier = getClusterDensityTier(pointCount);
+              // Anneau de composition (impl. 3.3) : secteurs proportionnels aux types
+              // groupés (agrégés dans `typeCounts`). `null` ⇒ repli couleur pleine via CSS.
+              const gradient = buildClusterCompositionGradient((props.typeCounts as ClusterTypeCounts) ?? {});
               return (
                 <Marker key={`cluster-${cluster.id}`} longitude={longitude} latitude={latitude}>
                   <div
                     className={cn('map-cluster-pin', `map-cluster-pin--density-${densityTier}`)}
+                    style={gradient ? { background: gradient } : undefined}
+                    aria-label={`Groupe de ${pointCount} fiches — cliquer pour agrandir`}
                     onClick={(e) => {
                       e.stopPropagation();
                       const expansionZoom = Math.min(supercluster?.getClusterExpansionZoom(cluster.id as number) ?? 20, 20);
@@ -799,7 +824,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse }: MapPanelPro
                       });
                     }}
                   >
-                    {pointCount}
+                    <span className="map-cluster-pin__count">{pointCount}</span>
                   </div>
                 </Marker>
               );

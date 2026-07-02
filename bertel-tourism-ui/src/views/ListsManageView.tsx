@@ -6,7 +6,9 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ListChecks, Loader2, MapPin, Plus, Users } from 'lucide-react';
+import { Clock3, ListChecks, Loader2, MapPin, Plus, Search, Users } from 'lucide-react';
+import { ICON_BY_TYPE } from '@/features/lists/OtiTemplate';
+import { HUE_BY_TYPE, LABEL_BY_TYPE, OTI_ACCENTS } from '@/features/lists/type-meta';
 import { createListFromSelection, listMyLists, type ListStatus, type ObjectListCard } from '@/services/lists';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +25,38 @@ const STATUS_DOT: Record<ListStatus, string> = {
 
 type Tab = 'all' | ListStatus;
 
+/** « il y a … » compact pour le pied de carte (rendu uniquement côté client, après fetch). */
+function timeAgo(iso: string | null): string | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return null;
+  const min = Math.floor(ms / 60_000);
+  if (min < 1) return "à l'instant";
+  if (min < 60) return `il y a ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `il y a ${h} h`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `il y a ${d} j`;
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function TypeChip({ code, n }: { code: string; n: number }) {
+  const hue = OTI_ACCENTS[HUE_BY_TYPE[code] ?? 'teal'];
+  const Icon = ICON_BY_TYPE[code] ?? MapPin;
+  return (
+    <span
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-bold"
+      style={{ backgroundColor: hue.soft, color: hue.deep }}
+    >
+      <Icon className="h-3 w-3" />
+      {LABEL_BY_TYPE[code]?.fr ?? code}
+      {n > 1 ? ` ·${n}` : ''}
+    </span>
+  );
+}
+
 function ListCard({ list }: { list: ObjectListCard }) {
+  const updated = timeAgo(list.updatedAt);
   return (
     <Link
       href={`/listes/${list.id}`}
@@ -33,6 +66,7 @@ function ListCard({ list }: { list: ObjectListCard }) {
         className="relative h-32 bg-cover bg-center"
         style={{ backgroundImage: list.coverUrl ? `url("${list.coverUrl}")` : undefined, backgroundColor: '#cfc6b6' }}
       >
+        <span className="absolute inset-x-0 top-0 h-1" style={{ background: (OTI_ACCENTS[list.accent] ?? OTI_ACCENTS.teal).ink }} />
         <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold text-ink shadow-sm">
           <span className={cn('h-1.5 w-1.5 rounded-full', STATUS_DOT[list.status])} />
           {STATUS_LABEL[list.status]}
@@ -52,15 +86,19 @@ function ListCard({ list }: { list: ObjectListCard }) {
           </div>
         )}
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {list.typeBreakdown.slice(0, 5).map((t) => (
-            <span key={t.code} className="rounded-md bg-ink/5 px-2 py-1 text-[10.5px] font-bold text-ink/70">
-              {t.code}
-              {t.n > 1 ? ` ·${t.n}` : ''}
-            </span>
+          {list.typeBreakdown.slice(0, 4).map((t) => (
+            <TypeChip key={t.code} code={t.code} n={t.n} />
           ))}
         </div>
         <div className="mt-auto flex items-center justify-between border-t pt-3 text-[12px] text-ink/50">
-          <span className="rounded bg-ink/5 px-1.5 py-0.5 text-[10px] font-bold uppercase">{list.lang}</span>
+          <span className="flex items-center gap-2">
+            <span className="rounded bg-ink/5 px-1.5 py-0.5 text-[10px] font-bold uppercase">{list.lang}</span>
+            {updated && (
+              <span className="inline-flex items-center gap-1">
+                <Clock3 className="h-3 w-3" /> {updated}
+              </span>
+            )}
+          </span>
           <span className="font-semibold text-orange group-hover:underline">Ouvrir →</span>
         </div>
       </div>
@@ -72,6 +110,7 @@ export default function ListsManageView() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>('all');
+  const [query, setQuery] = useState('');
 
   const listsQuery = useQuery({ queryKey: ['my-lists'], queryFn: listMyLists, staleTime: 30_000 });
   const lists = listsQuery.data ?? [];
@@ -93,7 +132,10 @@ export default function ListsManageView() {
     }),
     [lists],
   );
-  const shown = tab === 'all' ? lists : lists.filter((l) => l.status === tab);
+  const q = query.trim().toLowerCase();
+  const shown = (tab === 'all' ? lists : lists.filter((l) => l.status === tab)).filter(
+    (l) => !q || `${l.name} ${l.recipientLabel ?? ''}`.toLowerCase().includes(q),
+  );
   const tabs: Array<{ k: Tab; label: string }> = [
     { k: 'all', label: 'Toutes' },
     { k: 'draft', label: 'Brouillons' },
@@ -110,7 +152,16 @@ export default function ListsManageView() {
           </h1>
           <p className="text-[12.5px] text-ink/60">Sélections prêtes à imprimer, envoyer ou partager</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex h-9 w-56 items-center gap-2 rounded-full border bg-white px-3 focus-within:border-orange">
+            <Search className="h-3.5 w-3.5 shrink-0 text-ink/40" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher une liste…"
+              className="w-full bg-transparent text-[12.5px] outline-none"
+            />
+          </div>
           <div className="flex gap-1 rounded-full bg-ink/5 p-1">
             {tabs.map((t) => (
               <button
@@ -150,9 +201,11 @@ export default function ListsManageView() {
         ) : shown.length === 0 ? (
           <div className="mx-auto max-w-md rounded-2xl border-2 border-dashed p-10 text-center">
             <ListChecks className="mx-auto h-10 w-10 text-ink/30" />
-            <p className="mt-3 font-bold text-ink">Aucune liste pour l'instant</p>
+            <p className="mt-3 font-bold text-ink">{q ? 'Aucune liste ne correspond' : "Aucune liste pour l'instant"}</p>
             <p className="mt-1 text-[13px] text-ink/60">
-              Partez d'une sélection dans l'explorateur (bouton « Créer une liste »), ou créez une liste vierge.
+              {q
+                ? 'Essayez un autre nom de liste ou de destinataire.'
+                : 'Partez d’une sélection dans l’explorateur (bouton « Créer une liste »), ou créez une liste vierge.'}
             </p>
           </div>
         ) : (
@@ -160,6 +213,20 @@ export default function ListsManageView() {
             {shown.map((l) => (
               <ListCard key={l.id} list={l} />
             ))}
+            <button
+              type="button"
+              disabled={createBlank.isPending}
+              onClick={() => createBlank.mutate()}
+              className="flex min-h-[230px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed text-ink/50 transition hover:border-orange hover:text-orange disabled:opacity-60"
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-ink/5">
+                <Plus className="h-5 w-5" />
+              </span>
+              <span className="text-[14px] font-bold">Nouvelle liste</span>
+              <span className="max-w-[220px] text-center text-[12px] text-ink/45">
+                Partez d'une sélection de l'explorateur ou d'une liste vierge
+              </span>
+            </button>
           </div>
         )}
       </div>

@@ -3,44 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Bell,
-  CircleHelp,
-  ClipboardList,
-  Files,
-  LayoutDashboard,
-  ListChecks,
-  MapPinned,
-  Settings2,
-  ShieldCheck,
-  UserX,
-  Users,
-} from 'lucide-react';
+import { Bell, CircleHelp, Settings2 } from 'lucide-react';
+import { NAV_ITEMS, visibleNavItems } from '../../config/nav-items';
 import { listPendingChanges } from '../../services/rpc';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
-import type { UserRole } from '../../types/domain';
-import { isDemoOnlyModule } from '../../utils/features';
 import { cn } from '@/lib/utils';
-
-const allItems: Array<{
-  to: string;
-  label: string;
-  caption: string;
-  roles: UserRole[];
-  icon: typeof MapPinned;
-}> = [
-  { to: '/explorer', label: 'Explorer', caption: 'Carte, filtres et fiches', roles: ['super_admin', 'tourism_agent'], icon: MapPinned },
-  { to: '/dashboard', label: 'Dashboard', caption: 'Vue globale du reseau', roles: ['owner', 'super_admin', 'tourism_agent'], icon: LayoutDashboard },
-  { to: '/crm', label: 'CRM', caption: 'Interactions et suivis', roles: ['super_admin', 'tourism_agent'], icon: Users },
-  { to: '/moderation', label: 'Moderation', caption: 'Validation editoriale', roles: ['super_admin', 'tourism_agent'], icon: ShieldCheck },
-  { to: '/audits', label: 'Audits', caption: 'Terrain et incidents', roles: ['super_admin', 'tourism_agent'], icon: ClipboardList },
-  { to: '/publications', label: 'Publications', caption: 'Exports et mises en page', roles: ['super_admin', 'tourism_agent'], icon: Files },
-  { to: '/listes', label: 'Listes', caption: 'Sélections à imprimer et envoyer', roles: ['super_admin', 'tourism_agent'], icon: ListChecks },
-  // 7.4 — Équipe emménage dans Paramètres → Mon organisation (plus d'entrée /team au sidebar).
-  { to: '/rgpd', label: 'RGPD', caption: 'Effacement & droits des personnes', roles: ['owner', 'super_admin'], icon: UserX },
-  { to: '/settings', label: 'Paramètres', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
-];
 
 function isActivePath(pathname: string | null, target: string): boolean {
   if (!pathname) {
@@ -70,9 +38,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
   const userName = useSessionStore((state) => state.userName);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
-  const items = role
-    ? allItems.filter((item) => item.roles.includes(role) && (demoMode || !isDemoOnlyModule(item.to)))
-    : [];
+  const items = visibleNavItems(role, demoMode);
   const navItems = items.filter((item) => item.to !== '/settings');
 
   // §120 — badge de modération : compte des suggestions en attente que l'appelant peut
@@ -91,7 +57,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
 
   const userLabel = userName || 'Equipe Bertel';
   const initials = initialsFromName(userLabel);
-  const settingsLabel = allItems.find((item) => item.to === '/settings')?.label ?? 'Paramètres';
+  const settingsLabel = NAV_ITEMS.find((item) => item.to === '/settings')?.label ?? 'Paramètres';
 
   return (
     <aside className="app-sidebar" aria-label="Navigation principale">

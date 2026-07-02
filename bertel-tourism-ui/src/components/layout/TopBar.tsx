@@ -33,6 +33,7 @@ export function TopBar() {
   const setSearch = useExplorerStore((state) => state.setSearch);
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
   const closeDrawer = useUiStore((state) => state.closeDrawer);
+  const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen);
   const drawerDirty = useObjectDrawerStore((state) =>
     drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
@@ -105,9 +106,16 @@ export function TopBar() {
             placeholder="Rechercher : nom, ville, équipement, plat, label..."
             className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
-          <kbd className="hidden shrink-0 rounded-[6px] border border-line bg-surface px-1.5 py-px font-sans text-[11px] text-ink-3 sm:inline-block">
+          {/* D24 : le raccourci affiché n'est plus décoratif — il ouvre la palette. */}
+          <button
+            type="button"
+            className="hidden shrink-0 rounded-[6px] border border-line bg-surface px-1.5 py-px font-sans text-[11px] text-ink-3 hover:bg-surface2 hover:text-ink sm:inline-block"
+            aria-label="Ouvrir la palette de commandes (Ctrl+K)"
+            title="Palette de commandes (Ctrl+K)"
+            onClick={() => setCommandPaletteOpen(true)}
+          >
             ⌘K
-          </kbd>
+          </button>
         </label>
 
         <div className="flex items-center gap-2">

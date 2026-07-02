@@ -7109,6 +7109,10 @@ a {
   background: rgba(var(--theme-primary-rgb), 0.1);
   border: 1px solid rgba(24, 49, 59, 0.08);
 }
+.profile-drawer__avatar--photo {
+  object-fit: cover;
+  background: none;
+}
 
 .topbar-brand__mark,
 .profile-drawer__avatar {
@@ -11934,6 +11938,10 @@ a {
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 700;
   font-size: 13px;
+}
+.app-sidebar__avatar--photo {
+  object-fit: cover;
+  background: none;
 }
 .app-sidebar__profile-name {
   color: var(--ink);

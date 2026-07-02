@@ -12,7 +12,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     for (const role of ['tourism_agent', 'owner'] as const) {
       const groups = buildSettingsNav(role);
       expect(groups.map((g) => g.id)).toEqual(['account']);
-      expect(groups[0].sections.map((s) => s.id)).toEqual(['preferences', 'session']);
+      expect(groups[0].sections.map((s) => s.id)).toEqual(['profile', 'preferences', 'session']);
     }
   });
 
@@ -21,8 +21,8 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
   });
 
   it('settingsSectionIds aplatit les sections accessibles', () => {
-    expect(settingsSectionIds('super_admin')).toEqual(['preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
-    expect(settingsSectionIds('owner')).toEqual(['preferences', 'session']);
+    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
+    expect(settingsSectionIds('owner')).toEqual(['profile', 'preferences', 'session']);
   });
 
   // 7.4 — « Mon organisation » (Équipe) apparaît quand canManageTeam, entre « Mon compte »

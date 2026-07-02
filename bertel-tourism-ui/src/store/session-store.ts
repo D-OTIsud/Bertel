@@ -4,13 +4,24 @@ import type { UserRole } from '../types/domain';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
 
+// Initiales (≤ 2) dérivées du nom — repli d'avatar quand aucune photo. Même logique que
+// useBootstrapSession/ProfileDrawer/Sidebar (dette pré-existante à consolider un jour).
+function initialsFromName(name: string): string {
+  const parts = name.split(' ').map((p) => p.trim()).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) return '--';
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('');
+}
+
 interface SessionState {
   status: SessionStatus;
   role: UserRole | null;
   userId: string | null;
   email: string;
   userName: string;
+  /** Initiales dérivées du nom (fallback quand aucune photo de profil). */
   avatar: string;
+  /** URL publique de la photo de profil (app_user_profile.avatar_url), null si aucune. */
+  avatarUrl: string | null;
   langPrefs: string[];
   demoMode: boolean;
   errorMessage: string | null;
@@ -55,12 +66,18 @@ interface SessionState {
   adminRoleCode: string | null;
   setDemoRole: (role: UserRole) => void;
   setLangPrefs: (langPrefs: string[]) => void;
+  /**
+   * Applique une mise à jour du profil courant (nom / photo) depuis « Mon compte »
+   * sans re-bootstrapper la session. Recalcule les initiales quand le nom change.
+   */
+  applyProfile: (patch: { userName?: string; avatarUrl?: string | null }) => void;
   hydrateFromAuth: (payload: {
     role: UserRole;
     userId: string;
     email: string;
     userName: string;
     avatar: string;
+    avatarUrl: string | null;
     langPrefs: string[];
     canEditObjects: boolean;
     canCreateObjects: boolean;
@@ -81,6 +98,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   email: env.demoMode ? 'marie@example.com' : '',
   userName: env.demoMode ? 'Marie D.' : '',
   avatar: env.demoMode ? 'MA' : '--',
+  avatarUrl: null,
   langPrefs: ['fr', 'en'],
   demoMode: env.demoMode,
   errorMessage: null,
@@ -107,7 +125,13 @@ export const useSessionStore = create<SessionState>((set) => ({
     });
   },
   setLangPrefs: (langPrefs) => set({ langPrefs }),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode }) =>
+  applyProfile: ({ userName, avatarUrl }) =>
+    set((state) => ({
+      userName: userName ?? state.userName,
+      avatar: userName ? initialsFromName(userName) : state.avatar,
+      avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
+    })),
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode }) =>
     set({
       status: 'ready',
       role,
@@ -115,6 +139,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       email,
       userName,
       avatar,
+      avatarUrl,
       langPrefs,
       canEditObjects,
       canCreateObjects,
@@ -134,6 +159,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       email: '',
       userName: '',
       avatar: '--',
+      avatarUrl: null,
       canEditObjects: false,
       canCreateObjects: false,
       orgId: null,
@@ -151,6 +177,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       email: '',
       userName: '',
       avatar: '--',
+      avatarUrl: null,
       canEditObjects: false,
       canCreateObjects: false,
       orgId: null,

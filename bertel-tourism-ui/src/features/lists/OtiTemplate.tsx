@@ -187,9 +187,12 @@ function Hero({ name, recipient, cover, pois, lang, logoUrl, brandName }: {
   brandName: string;
 }) {
   const typeSet = [...new Set(pois.map((p) => p.typeCode))];
+  // Fond du hero : cover_url explicite de la liste, sinon repli sur la photo du premier
+  // lieu (cover_url n'a pas encore de surface d'édition — sans repli le hero reste uni).
+  const bg = cover ?? pois.find((p) => p.image)?.image ?? null;
   return (
     <header className="oti-hero">
-      <div className="oti-hero__bg" style={{ backgroundImage: cover ? `url("${cover}")` : undefined }} />
+      <div className="oti-hero__bg" style={{ backgroundImage: bg ? `url("${bg}")` : undefined }} />
       <div className="oti-hero__inner">
         <div className="oti-hero__top">
           <span className="oti-logochip">

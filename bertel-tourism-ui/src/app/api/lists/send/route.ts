@@ -96,7 +96,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     publicUrl,
     accentInk: ACCENT_INK[str(list.accent)] ?? ACCENT_INK.teal,
     lang,
-    coverUrl: nstr(list.cover_url),
+    // Même repli que le hero web : à défaut de cover_url, la photo du premier lieu embarqué.
+    coverUrl: nstr(list.cover_url) ?? items.find((it) => it.image)?.image ?? null,
     items,
     totalCount: rawItems.length,
   });

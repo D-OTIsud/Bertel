@@ -704,8 +704,10 @@ textarea::placeholder {
 .column-manager__order { display: inline-flex; gap: 2px; }
 .column-manager__reset { margin-top: 8px; font-size: 12px; width: 100%; justify-content: center; }
 
-/* ---- Anneaux de focus clavier des widgets custom (D8, WCAG 2.4.11) ---- */
-.result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+/* ---- Anneaux de focus clavier des widgets custom (D8, WCAG 2.4.11) ----
+   NB `explorer-result-card`, PAS `.result-card` : cette dernière est une classe
+   legacy encore stylée plus bas (grille 160px/1fr…) — collision constatée. */
+.explorer-result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
 .map-hover-card__tag[role='button']:focus-visible {
   outline: 2px solid var(--theme-primary);
   outline-offset: 2px;

@@ -148,6 +148,14 @@ describe('webHref / webLabel', () => {
     expect(webLabel('http://www.bellile.re/')).toBe('www.bellile.re');
     expect(webLabel('exemple-sud.re')).toBe('exemple-sud.re');
   });
+
+  it('trims path, query and hash — the label is the domain only (fbclid & co)', () => {
+    expect(
+      webLabel('www.lejardindesbestioles.com/?fbclid=IwAR04jmA78U645PZ3zrIYXkoAKno2zD-017iGwEpd7hm2RlJisdlyT7P5Cs4'),
+    ).toBe('www.lejardindesbestioles.com');
+    expect(webLabel('https://exemple.re/fr/hebergements?utm_source=nl#haut')).toBe('exemple.re');
+    expect(webLabel('http://lemanapany.re/')).toBe('lemanapany.re');
+  });
 });
 
 describe('moveListItem', () => {

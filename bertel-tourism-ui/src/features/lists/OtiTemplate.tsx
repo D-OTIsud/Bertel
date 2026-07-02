@@ -288,29 +288,46 @@ function Footer({ lang, brandName }: { lang: 'fr' | 'en'; brandName: string }) {
   );
 }
 
+/**
+ * Carte « carnet » d'un lieu (média + corps ; l'alternance gauche/droite vient du CSS
+ * `.oti-poi--carnet:nth-child(even)`). Exportée : partagée entre le template Carnet des
+ * listes et l'impression de la sélection Explorer (SelectionBar) — une seule source de
+ * vérité pour le rendu carte.
+ */
+export function OtiCarnetCard({ poi, index, lang, advisorFirst }: {
+  poi: OtiPoi;
+  index: number;
+  lang: 'fr' | 'en';
+  advisorFirst: string;
+}) {
+  return (
+    <article className="oti-poi--carnet">
+      <div className="oti-poi__media" style={{ backgroundImage: poi.image ? `url("${poi.image}")` : undefined }}>
+        <span className="oti-poi__num">{String(index + 1).padStart(2, '0')}</span>
+        {poi.city && (
+          <span className="oti-poi__citychip">
+            <MapPin /> {poi.city}
+          </span>
+        )}
+      </div>
+      <div className="oti-poi__body">
+        <Eyebrow poi={poi} lang={lang} />
+        <h3 className="oti-poi__title">{poi.name}</h3>
+        {poi.subtitle && <div className="oti-poi__type">{poi.subtitle}</div>}
+        <CoupDeCoeur poi={poi} lang={lang} advisorFirst={advisorFirst} />
+        <Contacts poi={poi} lang={lang} solidMap />
+      </div>
+    </article>
+  );
+}
+
 function TplCarnet({ pois, ctx }: { pois: OtiPoi[]; ctx: RenderCtx }) {
   return (
     <div className="oti-body">
       <SectHead lang={ctx.lang} count={pois.length} />
       <div className="oti-carnet">
         {pois.map((p, i) => (
-          <article className="oti-poi--carnet" key={p.id}>
-            <div className="oti-poi__media" style={{ backgroundImage: p.image ? `url("${p.image}")` : undefined }}>
-              <span className="oti-poi__num">{String(i + 1).padStart(2, '0')}</span>
-              {p.city && (
-                <span className="oti-poi__citychip">
-                  <MapPin /> {p.city}
-                </span>
-              )}
-            </div>
-            <div className="oti-poi__body">
-              <Eyebrow poi={p} lang={ctx.lang} />
-              <h3 className="oti-poi__title">{p.name}</h3>
-              {p.subtitle && <div className="oti-poi__type">{p.subtitle}</div>}
-              <CoupDeCoeur poi={p} lang={ctx.lang} advisorFirst={ctx.advisorFirst} />
-              <Contacts poi={p} lang={ctx.lang} solidMap />
-            </div>
-          </article>
+          <OtiCarnetCard key={p.id} poi={p} index={i} lang={ctx.lang} advisorFirst={ctx.advisorFirst} />
         ))}
       </div>
     </div>

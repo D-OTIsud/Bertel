@@ -11,14 +11,17 @@ import { Input } from '@/components/ui/input';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-// Page d'atterrissage du lien d'invitation Supabase (redirectTo de inviteUserByEmail).
-// Le lien authentifie l'invité (tokens dans le hash, consommés par supabase-js via
+// Page d'atterrissage des liens authentifiants Supabase : invitation (redirectTo de
+// inviteUserByEmail) et réinitialisation (redirectTo de resetPasswordForEmail).
+// Le lien authentifie l'utilisateur (tokens dans le hash, consommés par supabase-js via
 // detectSessionInUrl) ; on attend cette session puis on lui fait choisir son mot de passe.
 export default function SetPasswordPage() {
   const router = useRouter();
 
   // 'waiting' = session pas encore détectée ; 'ready' = formulaire ; 'no-session' = lien invalide/expiré.
   const [phase, setPhase] = useState<'waiting' | 'ready' | 'no-session'>('waiting');
+  // PASSWORD_RECOVERY (flux « mot de passe oublié ») adapte la copie ; défaut = invitation.
+  const [isRecovery, setIsRecovery] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -38,8 +41,10 @@ export default function SetPasswordPage() {
     void client.auth.getSession().then(({ data }) => {
       if (!cancelled && data.session) setPhase('ready');
     });
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      if (!cancelled && session) setPhase('ready');
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return;
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true);
+      if (session) setPhase('ready');
     });
     const timer = setTimeout(() => {
       if (!cancelled) setPhase((current) => (current === 'waiting' ? 'no-session' : current));
@@ -69,7 +74,7 @@ export default function SetPasswordPage() {
     try {
       const { error } = await client.auth.updateUser({ password });
       if (error) throw error;
-      toast.success('Mot de passe enregistré — bienvenue !');
+      toast.success(isRecovery ? 'Mot de passe mis à jour.' : 'Mot de passe enregistré — bienvenue !');
       router.replace('/');
     } catch (error) {
       toast.error(toFriendlyAuthError(error).message);
@@ -81,17 +86,22 @@ export default function SetPasswordPage() {
   return (
     <AuthShell>
       <div className="auth-panel__head">
-        <h2>Bienvenue dans l’équipe</h2>
-        <p>Choisissez votre mot de passe pour activer votre compte.</p>
+        <h2>{isRecovery ? 'Réinitialisez votre mot de passe' : 'Bienvenue dans l’équipe'}</h2>
+        <p>
+          {isRecovery
+            ? 'Choisissez un nouveau mot de passe pour votre compte.'
+            : 'Choisissez votre mot de passe pour activer votre compte.'}
+        </p>
       </div>
 
-      {phase === 'waiting' && <p className="auth-field__hint">Vérification de votre invitation…</p>}
+      {phase === 'waiting' && <p className="auth-field__hint">Vérification de votre lien…</p>}
 
       {phase === 'no-session' && (
         <>
+          {/* Copie neutre : on ne sait pas si le lien mort venait d'une invitation ou d'une réinitialisation. */}
           <div className="notice notice--warn">
-            Ce lien d’invitation est invalide ou a expiré. Demandez à votre administrateur de
-            renvoyer une invitation.
+            Ce lien est invalide ou a expiré. Refaites une demande via « Mot de passe oublié ? »
+            sur la page de connexion, ou demandez à votre administrateur de renvoyer une invitation.
           </div>
           <Button type="button" className="w-full" onClick={() => router.replace('/login')}>
             Aller à la page de connexion

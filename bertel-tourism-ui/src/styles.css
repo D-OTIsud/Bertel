@@ -3260,6 +3260,28 @@ a {
   color: var(--text-muted);
 }
 
+/* Lien discret des cartes auth (« Mot de passe oublié ? », « Retour à la connexion »). */
+.auth-link {
+  justify-self: end;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link:hover:not(:disabled) {
+  color: var(--ink-2);
+}
+
+.auth-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .auth-divider {
   display: flex;
   align-items: center;

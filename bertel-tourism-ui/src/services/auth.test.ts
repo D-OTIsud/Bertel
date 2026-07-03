@@ -1,6 +1,6 @@
 import { AuthApiError, AuthWeakPasswordError } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
-import { signInWithEmailPassword, toFriendlyAuthError } from './auth';
+import { requestPasswordReset, signInWithEmailPassword, toFriendlyAuthError } from './auth';
 
 jest.mock('../lib/supabase', () => ({
   getSupabaseClient: jest.fn(),
@@ -55,5 +55,40 @@ describe('auth service', () => {
   it('les erreurs non-auth (Error applicative) passent inchangées', () => {
     const error = new Error('Erreur métier déjà en français');
     expect(toFriendlyAuthError(error)).toBe(error);
+  });
+
+  describe('requestPasswordReset', () => {
+    it('appelle resetPasswordForEmail avec la redirection vers /set-password', async () => {
+      const resetPasswordForEmail = jest.fn().mockResolvedValue({ data: {}, error: null });
+      mockedGetSupabaseClient.mockReturnValue({
+        auth: { resetPasswordForEmail },
+      } as never);
+
+      await requestPasswordReset('user@example.com');
+
+      expect(resetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
+        redirectTo: `${window.location.origin}/set-password`,
+      });
+    });
+
+    it('propage les erreurs API en FR (la neutralité du message est gérée par la page)', async () => {
+      const resetPasswordForEmail = jest.fn().mockResolvedValue({
+        data: null,
+        error: new AuthApiError('rate limit', 429, 'over_email_send_rate_limit'),
+      });
+      mockedGetSupabaseClient.mockReturnValue({
+        auth: { resetPasswordForEmail },
+      } as never);
+
+      await expect(requestPasswordReset('user@example.com')).rejects.toThrow(
+        'Trop d’e-mails envoyés — patientez quelques minutes puis réessayez.',
+      );
+    });
+
+    it('jette une erreur de configuration quand Supabase est absent', async () => {
+      mockedGetSupabaseClient.mockReturnValue(null as never);
+
+      await expect(requestPasswordReset('user@example.com')).rejects.toThrow('Supabase non configure.');
+    });
   });
 });

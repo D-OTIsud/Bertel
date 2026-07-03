@@ -106,13 +106,16 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
               </p>
             ) : null}
 
-            {operatorName ? (
-              <p className="auth-hero__operator">
-                <span className="auth-hero__operator-rule" aria-hidden="true" />
-                Édité par {operatorName}
-              </p>
-            ) : null}
           </div>
+          {operatorName ? (
+            // Attribution hors du flux centré : posée en absolu en bas du panneau ⇒ ne rallonge
+            // pas le bloc logo+titre+acronyme, donc le marqueur reste calé sur « Bertel » que le
+            // branding runtime porte un opérateur (prod) ou non (démo) — démo ≡ prod.
+            <p className="auth-hero__operator">
+              <span className="auth-hero__operator-rule" aria-hidden="true" />
+              Édité par {operatorName}
+            </p>
+          ) : null}
         </div>
         <div className="auth-panel">{children}</div>
       </div>

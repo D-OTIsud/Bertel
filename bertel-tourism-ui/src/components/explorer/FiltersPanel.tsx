@@ -604,31 +604,62 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
         </FilterColumnGroup>
 
         <FilterColumnGroup label="Tags" count={tagsAny.length > 0 ? tagsAny.length : undefined}>
-          {tagsAny.length > 0 ? (
-            <div className="space-y-2">
-              <div className="flex flex-wrap gap-1.5">
-                {tagsAny.map((tag) => (
-                  <button
-                    key={tag.slug}
-                    type="button"
-                    className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold transition hover:opacity-90"
-                    style={tag.color ? tagChipStyle(tag.color) : undefined}
-                    aria-label={`Retirer le tag ${tag.name}`}
-                    title={`Retirer le tag ${tag.name}`}
-                    onClick={() => toggleTag(tag)}
-                  >
-                    {tag.name}
-                    <span aria-hidden="true">×</span>
-                  </button>
-                ))}
-              </div>
-              <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearTags}>
-                Effacer les tags
-              </button>
-            </div>
-          ) : (
-            <p className="text-[12px] leading-snug text-ink-3">Cliquez sur un tag coloré dans la liste des résultats pour filtrer.</p>
-          )}
+          <div className="space-y-2">
+            {/* §160 — picker : les tags sont ajoutables depuis le panneau, plus
+                seulement par clic sur une carte de résultat (découvrabilité). */}
+            <FilterDropdown<string>
+              mode="multi"
+              placeholder="Tous les tags"
+              allLabel="Tous les tags"
+              searchable
+              searchPlaceholder="Rechercher un tag"
+              options={(references?.tags ?? []).map((tag) => ({ code: tag.slug, label: tag.name }))}
+              selected={tagsAny.map((tag) => tag.slug)}
+              onChange={(slugs) => {
+                const selectedSlugs = tagsAny.map((tag) => tag.slug);
+                for (const tag of tagsAny) {
+                  if (!slugs.includes(tag.slug)) {
+                    toggleTag(tag);
+                  }
+                }
+                for (const slug of slugs) {
+                  if (!selectedSlugs.includes(slug)) {
+                    const catalogTag = (references?.tags ?? []).find((tag) => tag.slug === slug);
+                    if (catalogTag) {
+                      toggleTag(catalogTag);
+                    }
+                  }
+                }
+              }}
+            />
+            {tagsAny.length > 0 ? (
+              <>
+                <div className="flex flex-wrap gap-1.5">
+                  {tagsAny.map((tag) => (
+                    <button
+                      key={tag.slug}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold transition hover:opacity-90"
+                      style={tag.color ? tagChipStyle(tag.color) : undefined}
+                      aria-label={`Retirer le tag ${tag.name}`}
+                      title={`Retirer le tag ${tag.name}`}
+                      onClick={() => toggleTag(tag)}
+                    >
+                      {tag.name}
+                      <span aria-hidden="true">×</span>
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearTags}>
+                  Effacer les tags
+                </button>
+              </>
+            ) : (
+              <p className="text-[12px] leading-snug text-ink-3">
+                Vous pouvez aussi cliquer sur un tag coloré dans la liste des résultats.
+              </p>
+            )}
+          </div>
         </FilterColumnGroup>
 
         <FilterColumnGroup

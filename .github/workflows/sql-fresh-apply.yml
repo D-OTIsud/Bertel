@@ -336,6 +336,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_filters_open_at_event.sql"
 
+      - name: "accessibility label filter test (16j §162 — accessibility_any = équipement OU label T&H granted ; disability_types_any bras label + couverture inconnue ; amenity_families_any reste équipement-pur ; bypass MV prouvé par fixtures en transaction)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_accessibility_label_filter.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

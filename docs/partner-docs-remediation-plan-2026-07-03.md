@@ -15,11 +15,18 @@ Compagnon de l'audit [`partner-docs-audit-2026-07-03.md`](partner-docs-audit-202
 - **Lot C gated** — C5 onboarding (délai indicatif + critères, PO‑6), C6 SLA (meilleur effort, PO‑5), C7 clé de démo lecture seule sur demande + renvoi à l'exemple réel (PO‑4).
 - *Nota* : les textes juridiques restent à **valider par l'OTI** (rédaction conforme à la direction donnée, pas un avis juridique).
 
+**LIVRÉ 3 (2026-07-03 ; commit `5c507ab` ; vérif : tsc 0, jest `src/app/api/public` 41/41, openapi valide, render-check OK)** :
+- **W1 réconcilié sur `master`** — le fix `types`→502 (`a77a78a`, worktree `mystifying-morse`) n'était pas sur master ; ses 5 hunks ré-appliqués par pathspec (`OBJECT_TYPE_CODES` source unique, validation au bord + 400, 3 surfaces alignées) + ses 3 tests. La branche `claude/mystifying-morse-325872` est désormais **superséée sur master** (peut être abandonnée).
+- **E4** (Lot E) — headers `X-RateLimit-Limit` / `X-RateLimit-Remaining` sur chaque réponse (le RPC `partner_rate_check` calculait déjà `remaining`) ; `checkPartnerRate` les expose, les 4 routes les émettent ; guide §2 + openapi (composants + réf 200 liste/détail) ; +1 test.
+
 **RESTE À FAIRE** :
-- **W1** (`types`→502) : session séparée (`task_f858f4ee`), worktree distinct — à réconcilier au merge (édite aussi openapi/guide).
-- **Lot E** — backlog features (i18n large, search large, scopes, headers rate-limit).
-- **D3** — vérif manuelle de la collection Postman publique.
+- **Lot E — DIFFÉRÉ avec raison** (pas de la timidité — chaque item est prématuré ou une décision produit) :
+  - **E1** (couverture i18n élargie à `name` + proses de facettes) : `object.name_i18n` existe, mais le **corpus est FR-only** (aucune traduction établissement en base — chantier post-MVP) ⇒ payoff nul aujourd'hui ; de plus `object_menu_item` n'a **pas** de colonnes i18n. Construire quand les traductions existent (même logique que les autres différés « quand la donnée existe »).
+  - **E2** (recherche large sur `object.search_document`) : **décision produit**, pas un bug — la recherche par **nom** précise convient à une API de sync (les partenaires synchronisent tout, ils ne full-text-cherchent pas), et c'est désormais correctement documenté (B5). L'élargir annulerait B5. À trancher par l'OTI si un besoin réel émerge.
+  - **E3** (respect des `scopes`) : **aucune taxonomie de scopes définie** (colonne `text[]` libre, `'{}'` par défaut, placeholder Phase 2 R2) ⇒ l'enforcement verrouillerait les clés existantes. Nécessite d'abord une conception de scopes.
+- **D3** — collection Postman publique : URL vivante mais **SPA** (contenu non lisible par fetch) ⇒ vérif navigateur manuelle recommandée.
 - **Déploiement** — redéployer l'app docs (Coolify) pour publier guide + nginx.
+- **Validation juridique OTI** — textes B2/B3 (licence, médias, RGPD) à valider.
 
 ## Principes
 

@@ -9,7 +9,7 @@ export interface ThemeSettings {
 }
 
 export const defaultThemeSettings: ThemeSettings = {
-  brandName: 'Bertel Tourism',
+  brandName: 'Bertel',
   // Version à fond transparent (logo-email) : tient sur n'importe quelle surface
   // (chip clair du hero /login, sidebar) ; image.png porte un fond gris opaque.
   logoUrl: '/Logo/logo-email.png',
@@ -83,37 +83,6 @@ function contrastText(background: string): string {
   return luminance(background) > 0.52 ? defaultThemeSettings.textColor : defaultThemeSettings.surfaceColor;
 }
 
-function dominantColorsFromPixels(pixels: Uint8ClampedArray): string[] {
-  const buckets = new Map<string, { count: number; r: number; g: number; b: number }>();
-
-  for (let index = 0; index < pixels.length; index += 16) {
-    const alpha = pixels[index + 3] ?? 0;
-    if (alpha < 128) {
-      continue;
-    }
-
-    const r = pixels[index] ?? 0;
-    const g = pixels[index + 1] ?? 0;
-    const b = pixels[index + 2] ?? 0;
-    const key = `${Math.round(r / 32)}-${Math.round(g / 32)}-${Math.round(b / 32)}`;
-    const current = buckets.get(key);
-
-    if (current) {
-      current.count += 1;
-      current.r += r;
-      current.g += g;
-      current.b += b;
-    } else {
-      buckets.set(key, { count: 1, r, g, b });
-    }
-  }
-
-  return [...buckets.values()]
-    .sort((left, right) => right.count - left.count)
-    .slice(0, 4)
-    .map((entry) => rgbToHex(Math.round(entry.r / entry.count), Math.round(entry.g / entry.count), Math.round(entry.b / entry.count)));
-}
-
 export async function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -121,47 +90,6 @@ export async function readFileAsDataUrl(file: File): Promise<string> {
     reader.onerror = () => reject(new Error('Lecture du logo impossible.'));
     reader.readAsDataURL(file);
   });
-}
-
-async function loadImage(dataUrl: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error('Chargement du logo impossible.'));
-    image.src = dataUrl;
-  });
-}
-
-export async function extractThemeFromLogoDataUrl(dataUrl: string): Promise<Partial<ThemeSettings>> {
-  const image = await loadImage(dataUrl);
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-
-  if (!context) {
-    throw new Error('Canvas indisponible pour extraire la palette du logo.');
-  }
-
-  const width = 96;
-  const height = Math.max(24, Math.round((image.naturalHeight / Math.max(image.naturalWidth, 1)) * width));
-  canvas.width = width;
-  canvas.height = height;
-  context.drawImage(image, 0, 0, width, height);
-
-  const pixels = context.getImageData(0, 0, width, height).data;
-  const palette = dominantColorsFromPixels(pixels);
-  const primaryColor = palette[0] ?? defaultThemeSettings.primaryColor;
-  const accentColor = palette[1] ?? mixColors(primaryColor, '#FFF6EE', 0.46);
-  const backgroundColor = mixColors(primaryColor, '#FFF8F1', 0.9);
-  const surfaceColor = mixColors(primaryColor, '#FFFFFF', 0.96);
-
-  return {
-    logoUrl: dataUrl,
-    primaryColor,
-    accentColor,
-    backgroundColor,
-    surfaceColor,
-    textColor: contrastText(backgroundColor),
-  };
 }
 
 export function applyThemeToDocument(theme: ThemeSettings): void {

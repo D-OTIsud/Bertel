@@ -10,7 +10,7 @@ import { resolveUserRoleLabel, resolveUserRoleTone } from '../utils/user-role-la
 import { buildMarkerDataUri, defaultMarkerStyles, markerIconCatalog, markerIconChoicesByType, objectTypeOptions, sanitizeCustomMarkerSvg } from '../config/map-markers';
 import { env } from '../lib/env';
 import { settingsThemeSchema, type SettingsThemeFormValues } from '../lib/schemas';
-import { coerceThemeSettings, defaultThemeSettings, extractThemeFromLogoDataUrl, readFileAsDataUrl } from '../lib/theme';
+import { coerceThemeSettings, defaultThemeSettings, readFileAsDataUrl } from '../lib/theme';
 import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile, uploadAvatar } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
@@ -307,13 +307,9 @@ export default function SettingsPage() {
     setThemeBusy(true);
     try {
       const dataUrl = await readFileAsDataUrl(file);
-      const extracted = await extractThemeFromLogoDataUrl(dataUrl);
       setPendingLogoFile(file);
       setPendingLogoCleared(false);
-      themeForm.setValue('logoUrl', dataUrl);
-      const current = themeForm.getValues();
-      const next = coerceThemeSettings({ ...current, ...extracted, logoUrl: dataUrl });
-      themeForm.reset({ ...next, logoUrl: next.logoUrl ?? dataUrl });
+      themeForm.setValue('logoUrl', dataUrl, { shouldDirty: true });
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -461,7 +457,7 @@ export default function SettingsPage() {
                 {canManageBrandTheme ? (
                   <div className="inline-actions">
                     <label className="ghost-button marker-upload-button cursor-pointer">
-                      {themeBusy ? 'Extraction…' : 'Importer un logo'}
+                      {themeBusy ? 'Import…' : 'Importer un logo'}
                       <input
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/svg+xml"

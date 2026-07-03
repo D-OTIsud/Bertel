@@ -1,9 +1,10 @@
 'use client';
-// Console admin — liste des organisations (superadmin). La création (CreateOrgDialog) arrive
-// à la tâche suivante ; ici le bouton est présent mais désactivé (« Bientôt disponible »).
+// Console admin — liste des organisations (superadmin). La création passe par
+// CreateOrgDialog (identité + périmètre, puis invitation optionnelle du premier admin).
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { listOrgs, type OrgSummary } from '../../services/orgs';
+import { CreateOrgDialog } from './CreateOrgDialog';
 
 const SCOPE_LABEL: Record<string, string> = {
   own_objects_only: 'Ses fiches uniquement',
@@ -32,8 +33,7 @@ export function OrgsPanel() {
           <p className="muted">Structures institutionnelles porteuses des fiches (ORG). La création est réservée au superadmin plateforme.</p>
         </div>
         <div className="settings-pane__actions">
-          {/* Remplacé par <CreateOrgDialog onDone={reload} /> à la tâche suivante */}
-          <button type="button" className="primary-button" disabled title="Bientôt disponible">Nouvelle organisation</button>
+          <CreateOrgDialog onDone={reload} />
         </div>
       </div>
 

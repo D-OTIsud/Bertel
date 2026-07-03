@@ -2,23 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { SessionScreen } from '@/components/auth/SessionScreen';
 import { getPostLoginPath } from '@/lib/auth-routing';
 import { useSessionStore } from '@/store/session-store';
-
-function SessionFallback() {
-  const status = useSessionStore((state) => state.status);
-  const errorMessage = useSessionStore((state) => state.errorMessage);
-  return (
-    <section className="page-grid">
-      <article className="panel-card panel-card--wide">
-        <div className="panel-heading">
-          <h2>{status === 'booting' ? 'Initialisation de la session' : 'Session invalide'}</h2>
-        </div>
-        <p>{status === 'booting' ? 'Chargement de la session Supabase...' : errorMessage}</p>
-      </article>
-    </section>
-  );
-}
 
 export default function HomePage() {
   const router = useRouter();
@@ -41,6 +27,6 @@ export default function HomePage() {
   }, [status, role, router]);
 
   if (status === 'guest') return null;
-  if (status !== 'ready') return <SessionFallback />;
+  if (status !== 'ready') return <SessionScreen />;
   return null;
 }

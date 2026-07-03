@@ -84,6 +84,22 @@ export async function signInWithEmailPassword(email: string, password: string) {
   if (error) throw toFriendlyAuthError(error);
 }
 
+// Envoie l'e-mail de réinitialisation ; le lien atterrit sur /set-password (même
+// mécanique que l'invitation §164 : tokens dans le hash, consommés par supabase-js).
+// L'appelant est responsable de la réponse neutre côté UI (ne pas révéler
+// l'existence d'un compte) ; ici on propage l'erreur pour le diagnostic.
+export async function requestPasswordReset(email: string) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase non configure.');
+  }
+
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/set-password`,
+  });
+  if (error) throw toFriendlyAuthError(error);
+}
+
 export async function signOut() {
   const client = getSupabaseClient();
   if (!client) {

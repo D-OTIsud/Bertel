@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getPostLoginPath, isSafeInternalPath } from '../lib/auth-routing';
 import { loginEmailSchema, type LoginFormValues } from '../lib/schemas';
-import { signInWithGoogle, signInWithEmailPassword } from '../services/auth';
+import { requestPasswordReset, signInWithGoogle, signInWithEmailPassword } from '../services/auth';
 import { useSessionStore } from '../store/session-store';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/button';
@@ -47,9 +47,17 @@ export default function LoginPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Panneau « mot de passe oublié » : même carte, bascule locale (pas de route dédiée).
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [sendingReset, setSendingReset] = useState(false);
+
   const {
     register,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginEmailSchema),
@@ -81,6 +89,34 @@ export default function LoginPage() {
     }
   }
 
+  function openForgotPanel() {
+    setResetEmail((getValues('email') ?? '').trim());
+    setResetSent(false);
+    setResetError(null);
+    setForgotMode(true);
+  }
+
+  async function onForgotSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    const email = resetEmail.trim();
+    if (!loginEmailSchema.shape.email.safeParse(email).success) {
+      setResetError('Saisissez une adresse e-mail valide.');
+      return;
+    }
+    setResetError(null);
+    setSendingReset(true);
+    try {
+      await requestPasswordReset(email);
+    } catch (error) {
+      // Réponse volontairement identique succès/échec : ne révèle ni l'existence
+      // d'un compte ni l'état de l'envoi ; le détail part en console pour le support.
+      console.warn('[auth] reset password', error);
+    } finally {
+      setSendingReset(false);
+      setResetSent(true);
+    }
+  }
+
   async function handleGoogleLogin() {
     const from = searchParams?.get('from');
     if (typeof window !== 'undefined') {
@@ -98,6 +134,59 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (forgotMode && !demoMode) {
+    return (
+      <AuthShell>
+        <div className="auth-panel__head">
+          <h2>Mot de passe oublié</h2>
+          <p>Recevez par e-mail un lien pour réinitialiser votre mot de passe.</p>
+        </div>
+
+        {/* Région live montée AVEC le panneau : un role="status" qui n'entre dans le
+            DOM qu'au moment du message n'est pas annoncé par tous les lecteurs d'écran ;
+            on injecte donc le contenu dans un nœud déjà présent. Copie volontairement
+            neutre : identique qu'un compte existe ou non. */}
+        <p className={resetSent ? 'auth-field__hint' : 'sr-only'} role="status">
+          {resetSent
+            ? 'Si un compte existe avec cette adresse, un e-mail de réinitialisation a été envoyé. Pensez à vérifier vos courriers indésirables.'
+            : null}
+        </p>
+        {resetSent ? (
+          <Button type="button" className="w-full" onClick={() => setForgotMode(false)}>
+            Retour à la connexion
+          </Button>
+        ) : (
+          <form onSubmit={(e) => void onForgotSubmit(e)} className="auth-form" noValidate>
+            <div className="auth-field">
+              <label htmlFor="reset-email">Adresse e-mail</label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="prenom.nom@exemple.com"
+                autoComplete="email"
+                disabled={sendingReset}
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+              />
+              {resetError && <p className="text-sm text-destructive">{resetError}</p>}
+            </div>
+            <Button type="submit" className="w-full" disabled={sendingReset}>
+              {sendingReset ? 'Envoi…' : 'Envoyer le lien'}
+            </Button>
+            <button
+              type="button"
+              className="auth-link"
+              onClick={() => setForgotMode(false)}
+              disabled={sendingReset}
+            >
+              Retour à la connexion
+            </button>
+          </form>
+        )}
+      </AuthShell>
+    );
   }
 
   return (
@@ -135,6 +224,14 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
+              <button
+                type="button"
+                className="auth-link"
+                onClick={openForgotPanel}
+                disabled={submitting}
+              >
+                Mot de passe oublié ?
+              </button>
             </div>
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Connexion...' : 'Se connecter'}

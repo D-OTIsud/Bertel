@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import type {
@@ -296,6 +297,18 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   );
 
   /**
+   * §161 — chip de sous-catégorie : plus petite que la rangée de catégorie et
+   * que les boutons de bucket (la classe globale `.chip` héritait du 16px du
+   * document — l'override compact `.filters-panel` est mort depuis la refonte
+   * du panneau ; on style en local comme le reste du panneau).
+   */
+  const taxonomyChipClass = (active: boolean) =>
+    cn(
+      'inline-flex min-h-[26px] items-center rounded-[8px] border px-2 py-0.5 text-[12px] font-medium transition',
+      active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink-2 hover:border-lineStrong hover:bg-surface2',
+    );
+
+  /**
    * §155 — chips de sous-catégories d'un type (union de ses domaines), en ordre
    * d'arbre (parents avant enfants), sans fausse indentation (l'ancien
    * margin-left par profondeur perdait tout sens au premier retour à la ligne).
@@ -308,7 +321,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
       return null;
     }
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {domains.flatMap((domain) =>
           domain.nodes.map((node) => {
             const active = isTaxonomyActive(domain.domain, node.code);
@@ -316,7 +329,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
               <button
                 key={`${domain.domain}:${node.code}`}
                 type="button"
-                className={active ? 'chip chip--active' : 'chip'}
+                className={taxonomyChipClass(active)}
                 onClick={() => {
                   if (!active) {
                     onActivate?.();
@@ -338,7 +351,18 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
    * §155 — bloc « Type de … » d'un bucket multi-types (HOT/VIS/SRV) : chaque
    * type est une ligne-titre TOGGLE (le sous-type) suivie de ses sous-catégories.
    * Fusionne les anciens « Sous-types » + « Taxonomie » en un seul étage lisible.
+   * §161 — la catégorie est une RANGÉE pleine largeur façon case à cocher
+   * (état lisible même quand tout est sélectionné par défaut), plus un gros
+   * bouton plein : trois niveaux distincts — bucket > catégorie > chips.
    */
+  const typeRowClass = (active: boolean) =>
+    cn(
+      'mb-1.5 flex w-full items-center gap-2 rounded-[8px] border px-2.5 py-1.5 text-left text-[12px] font-semibold transition',
+      active
+        ? 'border-line bg-surface2 text-ink hover:border-lineStrong'
+        : 'border-line bg-surface text-ink-3 hover:border-lineStrong hover:text-ink',
+    );
+
   const renderTypeTree = (
     types: BackendObjectTypeCode[],
     selectedSubtypes: BackendObjectTypeCode[],
@@ -347,23 +371,33 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
     <div className="space-y-3">
       {types.map((type) => {
         const active = selectedSubtypes.includes(type);
+        const chips = renderTaxonomyChips(type, () => {
+          // §155-bis : activer une sous-catégorie d'un type exclu ré-inclut
+          // le type — jamais de combinaison contradictoire silencieuse.
+          if (isSubtypeNarrowed(selectedSubtypes, types) && !selectedSubtypes.includes(type)) {
+            onToggleSubtype(type);
+          }
+        });
         return (
           <div key={type}>
             <button
               type="button"
-              className={cn('mb-1.5', bucketChipClass(active))}
+              className={typeRowClass(active)}
               onClick={() => onToggleSubtype(type)}
               aria-pressed={active}
             >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition',
+                  active ? 'border-teal bg-teal text-white' : 'border-lineStrong bg-surface',
+                )}
+              >
+                {active ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
+              </span>
               {resolveTypeLabel(type)}
             </button>
-            {renderTaxonomyChips(type, () => {
-              // §155-bis : activer une sous-catégorie d'un type exclu ré-inclut
-              // le type — jamais de combinaison contradictoire silencieuse.
-              if (isSubtypeNarrowed(selectedSubtypes, types) && !selectedSubtypes.includes(type)) {
-                onToggleSubtype(type);
-              }
-            })}
+            {chips ? <div className="pl-1.5">{chips}</div> : null}
           </div>
         );
       })}

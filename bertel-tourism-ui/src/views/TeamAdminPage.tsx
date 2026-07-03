@@ -15,11 +15,11 @@ import {
   deactivateMembership,
   deleteUserAccount,
   friendlyRbacError,
-  getDefaultOrgId,
   type OrgMember,
   type RefRole,
   type RefPermission,
 } from '@/services/rbac';
+import { listOrgs, type OrgSummary } from '@/services/orgs';
 import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
@@ -37,13 +37,26 @@ export default function TeamAdminPage() {
   // superusers/owners who have no active membership (e.g. platform admin with no org assignment).
   const [effectiveOrgId, setEffectiveOrgId] = useState<string | null>(null);
 
+  const isSuperuser = role === 'owner' || role === 'super_admin';
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+
   useEffect(() => {
-    if (orgId) {
-      setEffectiveOrgId(orgId);
-    } else if (allowed && (role === 'owner' || role === 'super_admin')) {
-      getDefaultOrgId().then(setEffectiveOrgId).catch(() => {});
+    if (!allowed) return;
+    if (!isSuperuser) {
+      if (orgId) setEffectiveOrgId(orgId);
+      return;
     }
-  }, [orgId, role, allowed]);
+    // Superadmin : liste complète + ciblage explicite (?org= > ORG de session > première).
+    // Lecture one-shot de l'URL (window) — TeamAdminPage est monté sous /settings, pas de
+    // useSearchParams (éviterait une Suspense boundary).
+    const urlOrg = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('org') : null;
+    listOrgs()
+      .then((rows) => {
+        setOrgs(rows);
+        setEffectiveOrgId((current) => current ?? urlOrg ?? orgId ?? rows[0]?.id ?? null);
+      })
+      .catch(() => { if (orgId) setEffectiveOrgId(orgId); });
+  }, [allowed, isSuperuser, orgId]);
 
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +183,15 @@ export default function TeamAdminPage() {
           )}
         </div>
       </div>
+
+      {isSuperuser && orgs.length > 1 && (
+        <label className="field-block" htmlFor="team-org">
+          <span>Organisation</span>
+          <select id="team-org" className="select" value={effectiveOrgId ?? ''} onChange={(e) => setEffectiveOrgId(e.target.value)}>
+            {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+        </label>
+      )}
 
       {error && <div className="inline-alert inline-alert--danger" role="alert">{error}</div>}
       {loading ? <p className="muted">Chargement…</p>

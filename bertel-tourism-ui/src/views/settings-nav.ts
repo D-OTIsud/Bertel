@@ -7,6 +7,7 @@ import {
   Activity,
   BadgeCheck,
   Bot,
+  Brush,
   Building2,
   CircleUser,
   KeyRound,
@@ -55,12 +56,16 @@ const ACCOUNT_GROUP: SettingsNavGroup = {
 // 7.4 — « Mon organisation » : Équipe (gated org-admin ≥ 10 via canAdministerTeam). Team
 // emménage ici depuis la route /team (retirée du sidebar). Le gating fin (inviter / défauts
 // ORG ≥ 30) + les contrôles serveur restent dans TeamAdminPage = la vraie frontière.
-const ORG_GROUP: SettingsNavGroup = {
-  id: 'org',
-  label: 'Mon organisation',
-  scope: { label: 'admin ORG', gated: true },
-  sections: [{ id: 'team', label: 'Équipe', icon: Users }],
-};
+// Task 11 — la section « Apparence de l'organisation » (branding par ORG, admin rang ≥ 30)
+// rejoint ce même groupe : le groupe est désormais construit dynamiquement selon les sections
+// réellement accessibles (jamais de section fantôme si aucune n'est gated true).
+function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
+  const sections: SettingsNavSection[] = [];
+  if (options.canManageTeam) sections.push({ id: 'team', label: 'Équipe', icon: Users });
+  if (options.canManageOrgBranding) sections.push({ id: 'org-branding', label: 'Apparence de l’organisation', icon: Brush, isNew: true });
+  if (sections.length === 0) return null;
+  return { id: 'org', label: 'Mon organisation', scope: { label: 'admin ORG', gated: true }, sections };
+}
 
 const PLATFORM_GROUP: SettingsNavGroup = {
   id: 'platform',
@@ -80,14 +85,15 @@ const PLATFORM_GROUP: SettingsNavGroup = {
 export interface SettingsNavOptions {
   /** L'utilisateur peut administrer l'équipe de son ORG (canAdministerTeam) ⇒ groupe « Mon organisation ». */
   canManageTeam?: boolean;
+  /** L'utilisateur peut gérer le branding de son ORG (admin rang ≥ 30) ⇒ section « Apparence de l'organisation ». */
+  canManageOrgBranding?: boolean;
 }
 
 /** Groupes du rail visibles pour ce rôle + périmètre (gating). Ordre : compte → organisation → plateforme. */
 export function buildSettingsNav(role: UserRole | null | undefined, options: SettingsNavOptions = {}): SettingsNavGroup[] {
   const groups: SettingsNavGroup[] = [ACCOUNT_GROUP];
-  if (options.canManageTeam) {
-    groups.push(ORG_GROUP);
-  }
+  const orgGroup = buildOrgGroup(options);
+  if (orgGroup) groups.push(orgGroup);
   if (role === 'super_admin') {
     groups.push(PLATFORM_GROUP);
   }

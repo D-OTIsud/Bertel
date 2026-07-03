@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { listOrgs, type OrgSummary } from '../../services/orgs';
 import { CreateOrgDialog } from './CreateOrgDialog';
+import { Modal } from '@/components/common/Modal';
+import { OrgBrandingForm } from './OrgBrandingForm';
 
 const SCOPE_LABEL: Record<string, string> = {
   own_objects_only: 'Ses fiches uniquement',
@@ -16,6 +18,9 @@ export function OrgsPanel() {
   const [orgs, setOrgs] = useState<OrgSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Task 11 — action « Branding » par ligne : ouvre le formulaire partagé OrgBrandingForm
+  // dans une modale (même composant que la section « Mon organisation » de /settings).
+  const [brandingOrg, setBrandingOrg] = useState<OrgSummary | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -59,11 +64,20 @@ export function OrgsPanel() {
                   <button type="button" className="ghost-button" onClick={() => router.push(`/settings?section=team&org=${encodeURIComponent(o.id)}`)}>
                     Gérer l’équipe
                   </button>
+                  <button type="button" className="ghost-button" onClick={() => setBrandingOrg(o)}>
+                    Branding
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {brandingOrg && (
+        <Modal title={`Branding — ${brandingOrg.name}`} onClose={() => setBrandingOrg(null)} footer={<button type="button" className="ghost-button" onClick={() => setBrandingOrg(null)}>Fermer</button>}>
+          <OrgBrandingForm orgId={brandingOrg.id} onSaved={reload} />
+        </Modal>
       )}
     </section>
   );

@@ -3208,7 +3208,6 @@ a {
 .auth-hero__brandrow { animation-delay: 40ms; }
 .auth-hero__title { animation-delay: 120ms; }
 .auth-hero__acronym { animation-delay: 180ms; }
-.auth-hero__operator { animation-delay: 240ms; }
 
 @keyframes auth-hero-rise {
   from { opacity: 0; transform: translateY(12px); }
@@ -3287,13 +3286,21 @@ a {
   font-weight: 700;
 }
 
+/* Attribution en absolu, ancrée en bas du panneau (au-dessus des vagues) : HORS du bloc
+   centré ⇒ n'affecte pas la position du titre/marqueur (démo ≡ prod, cf. AuthShell). */
 .auth-hero__operator {
+  position: absolute;
+  left: clamp(2.25rem, 1.4rem + 3vw, 3.75rem);
+  right: clamp(2.25rem, 1.4rem + 3vw, 3.75rem);
+  bottom: clamp(2.4rem, 1.4rem + 2.5vw, 3.6rem);
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  margin: clamp(1.4rem, 0.6rem + 2.5vw, 2.6rem) 0 0;
+  margin: 0;
   font-size: 0.76rem;
   opacity: 0.75;
+  animation: auth-hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) 360ms both;
 }
 
 .auth-hero__operator-rule {
@@ -3305,7 +3312,8 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-hero__content > * { animation: none; }
+  .auth-hero__content > *,
+  .auth-hero__operator { animation: none; }
 }
 
 /* Empilement mobile : hero compact au-dessus, formulaire en dessous. */

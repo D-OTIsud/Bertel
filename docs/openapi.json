@@ -6,7 +6,7 @@
     "summary": "Contrat de lecture pour les prestataires externes (passerelle /api/public/*).",
     "description": "Surface **partenaire** de la plateforme touristique Bertel (OTI du Sud). Elle ne renvoie que des objets **publiés** et n'expose **jamais** PostgREST ni le schéma interne : chaque endpoint est une route Next.js qui appelle en service-role une liste blanche de RPC de lecture.\n\n**Authentification** : clé API opaque `bk_live_…` en `Authorization: Bearer …` (jamais la clé anon Supabase, jamais un JWT). Clé émise, révocable et scopée par l'OTI.\n\n**Enveloppe** : toute réponse 200 a la forme `{ \"meta\": { \"contract_version\": \"1.0.0\", … }, \"data\": … }` et porte l'en-tête `X-Bertel-Api-Version`. Le versionnage vit dans l'enveloppe (additif dans une majeure ; une rupture sortirait sous `/api/public/v2/*`).\n\n**Texte** : les descriptions sont livrées en **texte propre** (le Markdown canonique est neutralisé). Les clés `*_md` portent la version Markdown brute pour un rendu riche.\n\nCet artefact est **statique** (servi par l'app docs). Il décrit le contrat HTTP de la passerelle, pas les signatures SQL brutes.",
     "contact": { "name": "OTI du Sud", "email": "d.philippe@otisud.com" },
-    "license": { "name": "Propriétaire — OTI du Sud" }
+    "license": { "name": "Licence Ouverte / Etalab 2.0", "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence" }
   },
   "servers": [
     {

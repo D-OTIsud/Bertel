@@ -977,7 +977,7 @@ a {
 .dashboard-object-card strong,
 .stat-card strong,
 .kanban-column h3,
-.auth-card h2,
+.auth-panel h2,
 .auth-hero h1,
 .drawer-header h2,
 .object-drawer-nav__item strong {
@@ -989,7 +989,6 @@ a {
 .panel-card p,
 .result-card p,
 .timeline-item p,
-.auth-note,
 .dashboard-brand-card span,
 .sidebar-brand p,
 .topbar-heading p,
@@ -1037,8 +1036,6 @@ a {
 .kanban-column,
 .split-card,
 .mobile-sheet,
-.auth-hero,
-.auth-card,
 .dashboard-brand-card,
 .dashboard-object-card,
 .timeline-item,
@@ -1061,9 +1058,7 @@ a {
 .hero-panel,
 .kanban-column,
 .split-card,
-.mobile-sheet,
-.auth-hero,
-.auth-card {
+.mobile-sheet {
   background: var(--surface);
 }
 
@@ -3146,37 +3141,168 @@ a {
   border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
+/* Auth (/login, /set-password) : une seule vitrine centrée — panneau de marque
+   trempé dans la couleur primaire du thème runtime (logo + nom, vagues écho du
+   logo OTI) accolé à la carte formulaire. Les couleurs passent par les tokens
+   (--teal / --primary-foreground) : un thème d'ORG re-colore la page sans CSS. */
 .auth-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 520px);
-  gap: 1.5rem;
-  align-items: center;
+  place-items: center;
   padding: 1.5rem;
 }
 
-.auth-hero,
-.auth-card {
-  border-radius: 10px;
-  padding: 1.5rem;
+.auth-frame {
+  width: min(1020px, 100%);
+  min-height: 580px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 440px);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-m);
+  overflow: hidden;
 }
 
-/* Login is full-screen with no app shell around it, so the hero needs a
-   deliberate surface of its own to still read as a "hero" panel against the
-   flat page background. A soft teal-tinted surface does that. */
 .auth-hero {
-  background: var(--surface-soft);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem 3rem 5.5rem;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 253, 248, 0.12), transparent 55%),
+    var(--teal);
+  color: var(--primary-foreground);
+  overflow: hidden;
 }
 
-.auth-google-button {
-  width: 100%;
+.auth-hero__logo {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1.75rem;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-s);
+}
+
+.auth-hero__logo img {
+  display: block;
+  height: 68px;
+  width: auto;
+  max-width: 230px;
+  object-fit: contain;
+}
+
+.auth-hero h1 {
+  font-size: 2rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.auth-hero__tagline {
+  margin: 0.65rem 0 0;
+  max-width: 40ch;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  opacity: 0.85;
+}
+
+/* Vagues décoratives (écho du blason OTI) — currentColor suit le thème. */
+.auth-hero__waves {
+  position: absolute;
+  left: -2%;
+  bottom: -10px;
+  width: 104%;
+  color: var(--primary-foreground);
+  pointer-events: none;
+}
+
+.auth-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 2.75rem 2.5rem;
+  background: var(--surface);
+}
+
+.auth-panel__head h2 {
+  font-size: 1.3rem;
+}
+
+.auth-panel__head p {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.auth-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.auth-field > label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.auth-field__hint {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .auth-divider {
-  text-align: center;
-  margin: 1rem 0;
-  color: var(--muted-foreground, #6b7280);
-  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.auth-fallback {
+  padding: 2rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 880px) {
+  .auth-frame {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .auth-hero {
+    padding: 2rem 1.75rem 4.5rem;
+  }
+
+  .auth-hero__logo {
+    margin-bottom: 1.1rem;
+  }
+
+  .auth-hero__logo img {
+    height: 52px;
+  }
+
+  .auth-panel {
+    padding: 2rem 1.5rem;
+  }
 }
 
 .quick-list {
@@ -6935,8 +7061,6 @@ a {
   .filters-panel,
   .results-panel,
   .panel-card,
-  .auth-hero,
-  .auth-card,
   .mobile-sheet {
     border-radius: 8px;
   }

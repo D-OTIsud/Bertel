@@ -10,7 +10,9 @@ export interface ThemeSettings {
 
 export const defaultThemeSettings: ThemeSettings = {
   brandName: 'Bertel Tourism',
-  logoUrl: '/Logo/image.png',
+  // Version à fond transparent (logo-email) : tient sur n'importe quelle surface
+  // (chip clair du hero /login, sidebar) ; image.png porte un fond gris opaque.
+  logoUrl: '/Logo/logo-email.png',
   primaryColor: '#176B6A',
   accentColor: '#F28B54',
   textColor: '#18313B',

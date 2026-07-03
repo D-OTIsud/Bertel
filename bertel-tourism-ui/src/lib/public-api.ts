@@ -62,7 +62,10 @@ export async function callPublicRpc(rpcName: string, params: Record<string, unkn
   }
   const { data, error } = await server.schema('api').rpc(rpcName, params);
   if (error) {
-    return { ok: false, status: 502, body: { error: 'upstream_error', detail: error.message } };
+    // Le message Postgres brut (noms de fonctions/enums/tables internes) est journalisé
+    // côté serveur pour le diagnostic mais JAMAIS renvoyé au partenaire (fuite de schéma).
+    console.error(`[public-api] upstream RPC error (${rpcName}):`, error.message);
+    return { ok: false, status: 502, body: { error: 'upstream_error', detail: 'upstream error' } };
   }
   return { ok: true, status: 200, body: data ?? null };
 }

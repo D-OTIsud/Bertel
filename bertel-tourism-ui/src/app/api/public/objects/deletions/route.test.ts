@@ -59,6 +59,22 @@ describe('GET /api/public/objects/deletions', () => {
     expect(rpcMock).not.toHaveBeenCalled();
   });
 
+  it('400 bad_request on a non-ISO but Date-parseable `since` (e.g. "July 3, 2026")', async () => {
+    const res = await GET(req('?since=' + encodeURIComponent('July 3, 2026')));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe('bad_request');
+    expect(json.detail).toBe('since must be an ISO 8601 timestamp');
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('200 on a strict ISO 8601 date-time `since` (behavior unchanged)', async () => {
+    const res = await GET(req('?since=2026-07-03T00:00:00Z'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalled();
+    expect(rpcMock.mock.calls[0][1].p_since).toBe('2026-07-03T00:00:00.000Z');
+  });
+
   it('passes a normalized ISO `since` and clamps `limit` to [1,1000]', async () => {
     await GET(req('?since=2026-05-01T12:00:00%2B02:00&limit=9999'));
     const [rpcName, params] = rpcMock.mock.calls[0];

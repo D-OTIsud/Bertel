@@ -12,7 +12,8 @@ Le tiroir actuel ([ProfileDrawer.tsx](../../../bertel-tourism-ui/src/components/
 rien à l'utilisateur :
 
 - codes bruts non traduits : `super_admin · ready`, pills `connected` / `N live`, « Demo/Secure workspace » (anglais) ;
-- **lien trompeur** : « Espace equipe » pointe vers `/crm` (le module CRM) alors que la page équipe est `/team` ;
+- **lien trompeur** : « Espace equipe » pointe vers `/crm` (le module CRM) alors que l'administration d'équipe
+  vit dans `/settings?section=team` (la route `/team` a été retirée en phase 7.4) ;
 - ni e-mail, ni organisation, ni rôle lisible, ni accès au profil éditable (§149) ;
 - aucune donnée personnelle vivante (tâches, présence, modération).
 
@@ -68,7 +69,10 @@ rien à l'utilisateur :
 
 ### 3.5 Pied
 
-- « **Mon équipe** » → `/team` (corrige le lien `/crm` actuel).
+- « **Mon équipe** » → `/settings?section=team` (corrige le lien `/crm` actuel ; la route `/team` n'existe
+  plus depuis 7.4). Visible seulement si `canAdministerTeam({ role, adminRank })`
+  ([session-selectors.ts](../../../bertel-tourism-ui/src/store/session-selectors.ts)) — le rail Réglages
+  applique le même gating.
 - « **Paramètres** » → `/settings`.
 - « **Se déconnecter** » (même garde qu'aujourd'hui : hors démo, session `ready`).
 
@@ -144,9 +148,9 @@ rien à l'utilisateur :
 
 | Sujet | Type | Contenu |
 |---|---|---|
-| `ProfileDrawer` | RTL (nouveau `ProfileDrawer.test.tsx`) | identité (nom/e-mail/org/rôle FR) ; « seul connecté » vs liste collègues ; « Mes tâches » filtre owner+statut, tri, badge retard, masqué si vide ; bloc modération conditionnel ; liens `/team`, `/settings`, `/crm?tab=taches` ; bandeau réseau seulement si dégradé |
-| `ProfileEditModal` | RTL | save nom (service mocké + `applyProfile`), upload avatar (succès/415), gardes démo |
-| `SettingsPage` | RTL existant ajusté | la section Profil affiche + ouvre la modale (plus de formulaire inline) |
+| `ProfileDrawer` | RTL (nouveau `ProfileDrawer.test.tsx`) | identité (nom/e-mail/org/rôle FR) ; « seul connecté » vs liste collègues ; « Mes tâches » filtre owner+statut, tri, badge retard, masqué si vide ; bloc modération conditionnel ; liens `/settings?section=team` (gated), `/settings`, `/crm?tab=taches` ; bandeau réseau seulement si dégradé |
+| `ProfileEditModal` | RTL (nouveau) | save nom (service mocké + `applyProfile`), upload avatar (succès/échec), gardes démo, nom vide refusé |
+| `SettingsPage` | tsc + suite globale | pas de test RTL SettingsPage existant ; la modale porte les tests, la page est vérifiée par typecheck + suite complète |
 | `parseCrmTask` | Jest | `owner_id` → `ownerId` (présent / absent) |
 | `CrmPage` | RTL | `?tab=taches` prime sur le nav persisté ; param invalide ignoré |
 | SQL | `test_crm_module.sql` | items `list_crm_tasks` portent `owner_id` |

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { AuthSessionMissingError } from '@supabase/supabase-js';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
@@ -147,7 +148,10 @@ export function useBootstrapSession() {
         return;
       }
 
-      if (error) {
+      // supabase-js v2 : un visiteur sans session recoit AuthSessionMissingError
+      // (et non user=null) — c'est l'etat invite normal, pas une panne. Le laisser
+      // tomber dans setGuest ci-dessous declenche la redirection /login des layouts.
+      if (error && !(error instanceof AuthSessionMissingError)) {
         setSessionError('Impossible de recuperer la session Supabase.');
         return;
       }

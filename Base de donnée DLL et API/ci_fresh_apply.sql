@@ -127,6 +127,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 13d    migration_loi_prd_cleanup_retype.sql  (LOI/RES -> PRD/PCU/COM/SPU re-route + retype + emptied-node cleanup + cache refresh; no-op fresh) =='
 \ir migration_loi_prd_cleanup_retype.sql
 
+\echo '== 13e    migration_taxonomy_label_hygiene.sql  (remove junk taxonomy_loi/loi node + humanize 19 taxonomy_*/root labels; live remediation, no-op on fresh — the taxo seed asserts the final state) =='
+\ir migration_taxonomy_label_hygiene.sql
+
 \echo '== 14a    migration_media_visibility_gate.sql  (media.visibility composed into read_media published arm + cover-cache pick; folded into rls_policies/schema/maintenance, no-op fresh) =='
 \ir migration_media_visibility_gate.sql
 

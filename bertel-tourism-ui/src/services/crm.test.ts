@@ -50,14 +50,14 @@ describe('crm parsers', () => {
     const task = parseCrmTask({
       id: 't1', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
-      due_at: '2026-06-12T09:00:00Z', owner_name: 'Marie', related_interaction_subject: null,
+      due_at: '2026-06-12T09:00:00Z', owner_id: 'u-42', owner_name: 'Marie', related_interaction_subject: null,
       related_interaction_id: null, related_interaction_status: null,
       actor_id: 'a1', actor_name: 'Mme Marie Hoarau',
     });
     expect(task).toEqual({
       id: 't1', objectId: 'HOT123', objectName: 'Hôtel Test', title: 'Rappeler',
       description: null, status: 'in_progress', priority: 'urgent',
-      dueAt: '2026-06-12T09:00:00Z', ownerName: 'Marie', relatedInteractionSubject: null,
+      dueAt: '2026-06-12T09:00:00Z', ownerId: 'u-42', ownerName: 'Marie', relatedInteractionSubject: null,
       relatedInteractionId: null, relatedInteractionStatus: null,
       actorId: 'a1', actorName: 'Mme Marie Hoarau',
     });
@@ -80,6 +80,7 @@ describe('crm parsers', () => {
     expect(task.relatedInteractionId).toBeNull();
     expect(task.relatedInteractionStatus).toBeNull();
     expect(task.relatedInteractionSubject).toBeNull();
+    expect(task.ownerId).toBeNull();
   });
 
   it('rattachement acteur optionnel : actor_id/actor_name absents → null', () => {

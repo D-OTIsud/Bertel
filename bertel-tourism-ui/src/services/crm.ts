@@ -46,6 +46,7 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     status: TASK_STATUSES.includes(status) ? status : 'todo',
     priority: TASK_PRIORITIES.includes(priority) ? priority : 'medium',
     dueAt: readNullableString(record.due_at),
+    ownerId: readNullableString(record.owner_id),
     ownerName: readNullableString(record.owner_name),
     // §66 — lien interaction de suivi : id + subject (badge) + status (gate du prompt de clôture).
     relatedInteractionId: readNullableString(record.related_interaction_id),

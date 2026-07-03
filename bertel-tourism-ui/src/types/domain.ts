@@ -386,6 +386,8 @@ export interface CrmTask {
   status: CrmTaskStatus;
   priority: CrmTaskPriority;
   dueAt: string | null;
+  /** Uuid de l'assigné (crm_task.owner) — filtre « mes tâches » du hub personnel. */
+  ownerId: string | null;
   ownerName: string | null;
   // §66 — lien optionnel vers l'interaction de suivi (related_interaction_id). Le `subject`
   // alimente le badge de la carte, le `status` décide du prompt de clôture (move→done).

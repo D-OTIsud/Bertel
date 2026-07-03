@@ -414,9 +414,9 @@ export const mockPendingChanges: PendingChangeItem[] = [
 
 export const mockCrmTasks: CrmTask[] = [
   // §66 — task-1 illustre une tâche LIÉE à une interaction encore ouverte (badge + prompt de clôture).
-  { id: 'task-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: null, status: 'todo', priority: 'high', dueAt: '2026-06-11T09:00:00Z', ownerName: 'Marie', relatedInteractionId: 'int-1', relatedInteractionSubject: 'Demande de visite guidée', relatedInteractionStatus: 'planned' },
-  { id: 'task-2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: '2026-06-12T09:00:00Z', ownerName: 'Jean', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
-  { id: 'task-3', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires d hiver', description: null, status: 'done', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: null, status: 'todo', priority: 'high', dueAt: '2026-06-11T09:00:00Z', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-1', relatedInteractionSubject: 'Demande de visite guidée', relatedInteractionStatus: 'planned' },
+  { id: 'task-2', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: '2026-06-12T09:00:00Z', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-3', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires d hiver', description: null, status: 'done', priority: 'low', dueAt: null, ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
 ];
 
 // Timeline CRM mock — topicCodes = vrais codes seedés (ref_code, domaine demand_topic) : demande_de_visite, modification_infos_bdd.

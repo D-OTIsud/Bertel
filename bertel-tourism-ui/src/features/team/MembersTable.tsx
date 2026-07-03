@@ -6,12 +6,14 @@ import { resolveRoleLabel } from '@/utils/labels';
 /** Shape returned by the `children` render-prop — controls both role cells. */
 export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
 
-export function MembersTable({ members, currentUserId, onManagePermissions, onDeactivate, children }: {
+export function MembersTable({ members, currentUserId, onManagePermissions, onDeactivate, onDelete, children }: {
   members: OrgMember[];
   currentUserId: string | null;
   onManagePermissions: (m: OrgMember) => void;
   /** Called when the admin clicks "Désactiver" on a non-self row. */
   onDeactivate?: (m: OrgMember) => void;
+  /** Called when the admin clicks "Supprimer" (hard delete) on a non-self row. */
+  onDelete?: (m: OrgMember) => void;
   /** When provided, renders interactive role selects in the Rôle métier + Rôle admin cells. */
   children?: (m: OrgMember, isSelf: boolean) => RoleCells;
 }) {
@@ -69,6 +71,16 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
                 {!isSelf && onDeactivate && (
                   <button type="button" className="ghost-button members-deactivate" onClick={() => onDeactivate(m)}>
                     Désactiver
+                  </button>
+                )}
+                {!isSelf && onDelete && (
+                  <button
+                    type="button"
+                    className="ghost-button members-delete"
+                    onClick={() => onDelete(m)}
+                    title="Supprimer définitivement le compte"
+                  >
+                    Supprimer
                   </button>
                 )}
               </td>

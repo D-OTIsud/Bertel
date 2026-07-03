@@ -13,6 +13,7 @@ import {
   setAdminRole,
   revokeAdminRole,
   deactivateMembership,
+  deleteUserAccount,
   friendlyRbacError,
   getDefaultOrgId,
   type OrgMember,
@@ -56,6 +57,9 @@ export default function TeamAdminPage() {
   // Membre en attente de confirmation de désactivation (null = aucune ; remplace window.confirm).
   const [confirmDeactivate, setConfirmDeactivate] = useState<OrgMember | null>(null);
   const [deactivateBusy, setDeactivateBusy] = useState(false);
+  // Membre en attente de confirmation de suppression DÉFINITIVE (compte auth + cascade).
+  const [confirmDelete, setConfirmDelete] = useState<OrgMember | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const reload = useCallback(async () => {
     if (!effectiveOrgId) { setLoading(false); return; }
@@ -111,6 +115,20 @@ export default function TeamAdminPage() {
     await reload();
   }
 
+  async function doDelete(m: OrgMember) {
+    setDeleteBusy(true);
+    try {
+      await deleteUserAccount(m.userId);
+      toast.success('Compte supprimé définitivement.');
+      setConfirmDelete(null);
+    } catch (e) {
+      toast.error(friendlyRbacError(e as { message?: string }));
+    } finally {
+      setDeleteBusy(false);
+    }
+    await reload();
+  }
+
   async function doDeactivate(m: OrgMember) {
     setDeactivateBusy(true);
     try {
@@ -161,6 +179,7 @@ export default function TeamAdminPage() {
             currentUserId={userId}
             onManagePermissions={(m) => setManagingId(m.membershipId)}
             onDeactivate={(m) => setConfirmDeactivate(m)}
+            onDelete={canManageOrgDefaults ? (m) => setConfirmDelete(m) : undefined}
           >
             {(m, isSelf) => ({
               business: (
@@ -210,6 +229,21 @@ export default function TeamAdminPage() {
         }
         onCancel={() => setConfirmDeactivate(null)}
         onConfirm={() => confirmDeactivate && void doDeactivate(confirmDeactivate)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        tone="danger"
+        title="Supprimer définitivement ce compte ?"
+        confirmLabel="Supprimer définitivement"
+        busy={deleteBusy}
+        message={
+          confirmDelete
+            ? `Le compte de ${confirmDelete.displayName ?? confirmDelete.email ?? 'ce membre'} sera supprimé définitivement : accès, profil, rattachement à l’organisation et permissions. Cette action est irréversible — pour un retrait temporaire, utilisez « Désactiver ».`
+            : ''
+        }
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => confirmDelete && void doDelete(confirmDelete)}
       />
     </section>
   );

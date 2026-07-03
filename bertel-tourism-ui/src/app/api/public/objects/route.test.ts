@@ -72,6 +72,55 @@ describe('GET /api/public/objects', () => {
     expect(json.data).toEqual([{ id: 'X' }]);
   });
 
+  it('meta = white-list : SEULES contract_version/page_size/total/next_cursor (aucune clé interne RPC)', async () => {
+    rpcMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        info: {
+          kind: 'list',
+          offset: 0,
+          schema_version: '3.0',
+          render_locale: 'fr',
+          render_tz: 'Indian/Reunion',
+          render_version: 7,
+          language: 'fr',
+          language_fallbacks: ['fr'],
+          cursor: null,
+          page_size: 50,
+          total: 200,
+          next_cursor: 'c2',
+        },
+        data: [{ id: 'X' }],
+      },
+    });
+    const res = await GET(req());
+    const json = await res.json();
+    expect(Object.keys(json.meta).sort()).toEqual(['contract_version', 'next_cursor', 'page_size', 'total']);
+    expect(json.meta.page_size).toBe(50);
+    expect(json.meta.total).toBe(200);
+    // Aucune fuite des clés internes du RPC
+    for (const leaked of ['kind', 'offset', 'schema_version', 'render_locale', 'render_tz', 'render_version', 'language', 'language_fallbacks', 'cursor']) {
+      expect(json.meta).not.toHaveProperty(leaked);
+    }
+  });
+
+  it('next_cursor forcé à null sur une dernière page pile pleine (offset+count === total)', async () => {
+    // Le RPC émet un curseur non-null alors que la page épuise le total ⇒ pointerait vers une page vide.
+    rpcMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: {
+        info: { offset: 8, page_size: 2, total: 10, next_cursor: 'c-should-be-dropped' },
+        data: [{ id: 'A' }, { id: 'B' }],
+      },
+    });
+    const res = await GET(req('?page_size=2'));
+    const json = await res.json();
+    expect(json.meta.next_cursor).toBeNull();
+    expect(json.meta.total).toBe(10);
+  });
+
   it('?format=datatourisme — ONE batch call for the page, doc merged under item.<profil> (I4c)', async () => {
     const page = { info: { next_cursor: 'c2' }, data: [{ id: 'A1' }, { id: 'B2' }, { id: 'C3' }] };
     const docs = { A1: { '@type': ['PointOfInterest'] }, C3: { '@type': ['PointOfInterest'] } }; // B2 unmapped

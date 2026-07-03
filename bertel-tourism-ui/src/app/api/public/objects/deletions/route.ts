@@ -36,13 +36,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const url = new URL(req.url);
 
-  // `since` — optional ISO 8601. Reject a malformed value at the boundary (fail-fast) rather than
-  // passing garbage to the RPC. Absent ⇒ null (full history, bounded by limit).
+  // `since` — optional ISO 8601 STRICT (date ou date-time). Le contrat annonce ISO 8601 : on rejette
+  // au bord (fail-fast) tout ce qui n'est pas conforme, plutôt que d'accepter les formats laxistes de
+  // `new Date` (ex. « July 3, 2026 ») et de passer une date reformatée arbitraire à la RPC.
+  // Ancrée : YYYY-MM-DD suivi optionnellement de [T ]HH:MM (secondes/fraction/offset optionnels).
+  // Absent/vide ⇒ null (historique complet, borné par limit).
+  const ISO_8601 = /^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
   const sinceParam = url.searchParams.get('since');
   let since: string | null = null;
   if (sinceParam !== null && sinceParam.trim() !== '') {
     const parsed = new Date(sinceParam);
-    if (Number.isNaN(parsed.getTime())) {
+    if (!ISO_8601.test(sinceParam.trim()) || Number.isNaN(parsed.getTime())) {
       return NextResponse.json(
         { error: 'bad_request', detail: 'since must be an ISO 8601 timestamp' },
         { status: 400, headers },

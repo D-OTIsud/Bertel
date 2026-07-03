@@ -70,8 +70,29 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Meta = white-list explicite : SEULES les 4 clés publiques contractuelles sortent ; les clés
+  // internes du RPC (kind, offset, schema_version, render_*, cursor, language*, …) sont écartées.
+  const data = Array.isArray(rpcBody.data) ? items : rpcBody.data ?? [];
+  const total = pageInfo.total;
+  const offset = pageInfo.offset;
+  // Correctif next_cursor : le RPC émet un curseur non-null même sur une dernière page pile pleine
+  // (il pointerait vers une page vide). Si l'offset+count couvre déjà le total, on force null.
+  const count = Array.isArray(data) ? data.length : 0;
+  const nextCursor =
+    typeof total === 'number' && typeof offset === 'number' && offset + count >= total
+      ? null
+      : pageInfo.next_cursor ?? null;
+
   return NextResponse.json(
-    { meta: { contract_version: PUBLIC_API_CONTRACT_VERSION, ...pageInfo }, data: Array.isArray(rpcBody.data) ? items : rpcBody.data ?? [] },
+    {
+      meta: {
+        contract_version: PUBLIC_API_CONTRACT_VERSION,
+        page_size: pageInfo.page_size ?? pageSize,
+        total,
+        next_cursor: nextCursor,
+      },
+      data,
+    },
     { status: 200, headers },
   );
 }

@@ -558,7 +558,9 @@ BEGIN
       'title', ct.title, 'description', ct.description,
       'status', ct.status, 'priority', ct.priority,
       'due_at', ct.due_at, 'created_at', ct.created_at,
-      'owner_name', p.display_name,
+      -- owner_id (hub personnel 2026-07-03) : uuid brut pour filtrer « mes tâches » côté
+      -- front par identité, jamais par nom affiché. Clé additive, aucun appelant cassé.
+      'owner_id', ct.owner, 'owner_name', p.display_name,
       'related_interaction_id', ct.related_interaction_id,
       'related_interaction_subject', ri.subject,
       'related_interaction_status', ri.status

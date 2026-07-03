@@ -10,12 +10,16 @@ Compagnon de l'audit [`partner-docs-audit-2026-07-03.md`](partner-docs-audit-202
 - **Lot B partiel (non-juridique)** — B1 (schéma `CardItem` corrigé + exemple réel *Ferme Lebon Papillon* dans openapi.json et Postman + lexique de blocs au guide), B4 (promesse `lang=all` + note Langues), B5 (portée `search`).
 - **Lot C** — C1/C2/C3/C4 (guide) + C8 (polish OpenAPI).
 
+**LIVRÉ 2 (2026-07-03, décisions PO reçues ; commit `4dca4a0`)** :
+- **Lot B juridique** — B2 licence : **Licence Ouverte / Etalab 2.0** (PO‑1 Open Data ; `info.license` OpenAPI aligné) + médias avec **crédit obligatoire** et URLs non stables (PO‑2) ; B3 **RGPD** : usage = information touristique, prospection/démarchage/revente interdits, propagation des suppressions (PO‑3).
+- **Lot C gated** — C5 onboarding (délai indicatif + critères, PO‑6), C6 SLA (meilleur effort, PO‑5), C7 clé de démo lecture seule sur demande + renvoi à l'exemple réel (PO‑4).
+- *Nota* : les textes juridiques restent à **valider par l'OTI** (rédaction conforme à la direction donnée, pas un avis juridique).
+
 **RESTE À FAIRE** :
-- **W1** (`types`→502) : session séparée (`task_f858f4ee`).
-- **Lot B juridique** — B2 (licence/médias), B3 (RGPD) : **bloqués sur les décisions PO‑1/2/3** ci-dessous.
-- **Lot C gated** — C5 (onboarding, PO‑6), C6 (SLA, PO‑5), C7 (sandbox — largement couvert par l'exemple réel de B1, PO‑4).
+- **W1** (`types`→502) : session séparée (`task_f858f4ee`), worktree distinct — à réconcilier au merge (édite aussi openapi/guide).
 - **Lot E** — backlog features (i18n large, search large, scopes, headers rate-limit).
 - **D3** — vérif manuelle de la collection Postman publique.
+- **Déploiement** — redéployer l'app docs (Coolify) pour publier guide + nginx.
 
 ## Principes
 

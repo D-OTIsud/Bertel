@@ -69,6 +69,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   openNow: false,
   openAt: null,
   environmentTagsAny: [],
+  amenityFamiliesAny: [],
   taxonomyAny: [],
   labelsAny: [],
   tagsAny: [],
@@ -132,6 +133,7 @@ export function normalizeExplorerFilters(
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
       openAt: common.openAt ?? null,
       environmentTagsAny: common.environmentTagsAny ?? [],
+      amenityFamiliesAny: common.amenityFamiliesAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
       labelsAny: common.labelsAny ?? [],
       tagsAny: common.tagsAny ?? [],
@@ -276,6 +278,9 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     return true;
   }
   if (common.environmentTagsAny.length > 0) {
+    return true;
+  }
+  if (common.amenityFamiliesAny.length > 0) {
     return true;
   }
   return false;
@@ -481,6 +486,12 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const bucketTaxonomy = common.taxonomyAny.filter((item) => bucketForTaxonomyDomain(item.domain) === bucket);
   if (bucketTaxonomy.length > 0) {
     payload.taxonomy_any = bucketTaxonomy.map((item) => ({ domain: item.domain, code: item.code }));
+  }
+
+  // §159 — services & équipements (familles d'aménités), transverse.
+  const amenityFamilies = common.amenityFamiliesAny.map(cleanString).filter(Boolean);
+  if (amenityFamilies.length > 0) {
+    payload.amenity_families_any = amenityFamilies;
   }
 
   // §157 — « ouvert à … » : datetime-local (heure Réunion) → timestamptz explicite.

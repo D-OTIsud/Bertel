@@ -137,6 +137,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const accessibilityAmenityCodesAny = common.accessibilityAmenityCodesAny ?? [];
   const sustainable = common.sustainable === true;
   const environmentTagsAny = common.environmentTagsAny ?? [];
+  const amenityFamiliesAny = common.amenityFamiliesAny ?? [];
   const taxonomyAny = common.taxonomyAny ?? [];
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
   const sustainabilityActionCodesAny = common.sustainabilityActionCodesAny ?? [];
@@ -160,6 +161,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const setEnvironmentTags = useExplorerStore((state) => state.setEnvironmentTags);
   const setOpenAt = useExplorerStore((state) => state.setOpenAt);
   const setEvtEventRange = useExplorerStore((state) => state.setEvtEventRange);
+  const setAmenityFamilies = useExplorerStore((state) => state.setAmenityFamilies);
   const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
@@ -224,6 +226,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
     if (s.iti.distanceMinKm != null || s.iti.distanceMaxKm != null) n += 1;
     if (s.iti.durationMinH != null || s.iti.durationMaxH != null) n += 1;
     if ((s.common.environmentTagsAny ?? []).length) n += 1;
+    if ((s.common.amenityFamiliesAny ?? []).length) n += 1;
     return n;
   });
 
@@ -695,6 +698,24 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           />
         </FilterColumnGroup>
 
+        {/* §159 — services & équipements : transverse (object_amenity est
+            trans-types — piscine d'un camping, parking d'un musée…). */}
+        <FilterColumnGroup
+          label="Services & équipements"
+          count={amenityFamiliesAny.length > 0 ? amenityFamiliesAny.length : undefined}
+        >
+          <FilterDropdown<string>
+            mode="multi"
+            placeholder="Tous les services"
+            allLabel="Tous les services"
+            searchable
+            searchPlaceholder="Rechercher (bien-être, parking…)"
+            options={(references?.amenityFamilies ?? []).map((option) => ({ code: option.code, label: option.name }))}
+            selected={amenityFamiliesAny}
+            onChange={(vals) => setAmenityFamilies(vals)}
+          />
+        </FilterColumnGroup>
+
         {showHot ? (
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
@@ -703,47 +724,73 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 {renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
               </div>
 
+              {/* §159 — l'idiome conseiller : « un gîte pour au moins 12 personnes »
+                  = max_capacity.min (métrique applicable à tous les types HEB).
+                  Réutilise capacityFilters ⇒ chips/URL/RPC déjà câblés. */}
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Groupe d'au moins… (personnes)</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={renderNumber(readCapacityValue(hot.capacityFilters, 'max_capacity', 'min'))}
+                  onChange={(event) =>
+                    setHotCapacityFilter(
+                      'max_capacity',
+                      event.target.value ? Number(event.target.value) : undefined,
+                      readCapacityValue(hot.capacityFilters, 'max_capacity', 'max'),
+                    )
+                  }
+                  placeholder="ex. 12"
+                  aria-label="Capacité d'accueil minimale en personnes"
+                />
+              </div>
+
               {references?.hotCapacityMetrics.length ? (
-                <div className="filters-panel__metric-stack">
-                  {references.hotCapacityMetrics.map((metric) => (
-                    <div key={metric.code} className="filters-panel__metric-row">
-                      <strong>{metric.name}</strong>
-                      <div className="filters-panel__range-grid">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
-                          onChange={(event) =>
-                            setHotCapacityFilter(
-                              metric.code,
-                              event.target.value ? Number(event.target.value) : undefined,
-                              readCapacityValue(hot.capacityFilters, metric.code, 'max'),
-                            )
-                          }
-                          placeholder="Min"
-                        />
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
-                          onChange={(event) =>
-                            setHotCapacityFilter(
-                              metric.code,
-                              readCapacityValue(hot.capacityFilters, metric.code, 'min'),
-                              event.target.value ? Number(event.target.value) : undefined,
-                            )
-                          }
-                          placeholder="Max"
-                        />
+                <details>
+                  <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Capacités détaillées</summary>
+                  <div className="filters-panel__metric-stack mt-2">
+                    {references.hotCapacityMetrics.map((metric) => (
+                      <div key={metric.code} className="filters-panel__metric-row">
+                        <strong>{metric.name}</strong>
+                        <div className="filters-panel__range-grid">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                event.target.value ? Number(event.target.value) : undefined,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'max'),
+                              )
+                            }
+                            placeholder="Min"
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
+                            onChange={(event) =>
+                              setHotCapacityFilter(
+                                metric.code,
+                                readCapacityValue(hot.capacityFilters, metric.code, 'min'),
+                                event.target.value ? Number(event.target.value) : undefined,
+                              )
+                            }
+                            placeholder="Max"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                </details>
               ) : null}
 
-              <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Salles de réunion</span>
-                <div className="filters-panel__range-grid">
+              {/* §159 — MICE = besoin expert, replié par défaut (le badge de la
+                  section garde tout critère actif visible, §152). */}
+              <details>
+                <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Séminaires & réunions (MICE)</summary>
+                <div className="filters-panel__range-grid mt-2">
                   <Input
                     type="number"
                     min={0}
@@ -777,7 +824,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                     placeholder="Cap. classe min"
                   />
                 </div>
-              </div>
+              </details>
             </div>
           </FilterColumnGroup>
         ) : null}
@@ -790,8 +837,29 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 {renderTaxonomyChips('RES') ?? taxonomyCatalogFallback}
               </div>
 
+              {/* §159 — même idiome que HEB : « une table pour au moins N ». */}
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Groupe d'au moins… (personnes)</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={renderNumber(readCapacityValue(res.capacityFilters, 'max_capacity', 'min'))}
+                  onChange={(event) =>
+                    setResCapacityFilter(
+                      'max_capacity',
+                      event.target.value ? Number(event.target.value) : undefined,
+                      readCapacityValue(res.capacityFilters, 'max_capacity', 'max'),
+                    )
+                  }
+                  placeholder="ex. 20"
+                  aria-label="Capacité d'accueil minimale en personnes"
+                />
+              </div>
+
               {references?.resCapacityMetrics.length ? (
-                <div className="filters-panel__metric-stack">
+                <details>
+                  <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Capacités détaillées</summary>
+                  <div className="filters-panel__metric-stack mt-2">
                   {references.resCapacityMetrics.map((metric) => (
                     <div key={metric.code} className="filters-panel__metric-row">
                       <strong>{metric.name}</strong>
@@ -825,7 +893,8 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                </details>
               ) : null}
             </div>
           </FilterColumnGroup>

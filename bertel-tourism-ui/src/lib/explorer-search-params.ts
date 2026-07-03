@@ -116,6 +116,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
     ...(taxonomyAny !== undefined && { taxonomyAny }),
+    ...(searchParams.get('amenityFamilies') != null && {
+      amenityFamiliesAny: (searchParams.get('amenityFamilies') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
     ...(labelsAny !== undefined && { labelsAny }),
     ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
     ...(statuses !== undefined && { statuses }),
@@ -246,6 +249,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.openAt) {
     p.set('openAt', normalizedFilters.common.openAt);
+  }
+  if (normalizedFilters.common.amenityFamiliesAny.length > 0) {
+    p.set('amenityFamilies', normalizedFilters.common.amenityFamiliesAny.join(','));
   }
   if (normalizedFilters.evt.eventFrom) {
     p.set('evtFrom', normalizedFilters.evt.eventFrom);

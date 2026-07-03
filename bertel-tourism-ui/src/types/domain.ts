@@ -173,6 +173,12 @@ export interface ExplorerCommonFilters {
    */
   environmentTagsAny: string[];
   /**
+   * §159 — services & équipements (familles d'aménités : piscine→outdoor,
+   * bien-être, parking…). Transverse (`object_amenity` est trans-types) ;
+   * envoyé au RPC comme `amenity_families_any`.
+   */
+  amenityFamiliesAny: string[];
+  /**
    * §155 — sous-catégories (paires domaine:code, tous buckets). Le domaine
    * encode le type (`taxonomy_res`…) : `buildBucketRpcFilters` PARTITIONNE par
    * bucket au moment du payload (une sélection RES ne contraint jamais le
@@ -315,6 +321,8 @@ export interface ExplorerReferences {
   itiPractices: ExplorerReferenceOption[];
   /** Cadre & environnement (ref_code domaine environment_tag) — filtre transverse §154. */
   environmentTags: ExplorerReferenceOption[];
+  /** Familles de services & équipements (ref_code domaine amenity_family) — filtre transverse §159. */
+  amenityFamilies: ExplorerReferenceOption[];
   /** Corpus-wide city list — from api.get_dashboard_filter_options */
   cities: string[];
   /** Corpus-wide lieu-dit list — from api.get_dashboard_filter_options */

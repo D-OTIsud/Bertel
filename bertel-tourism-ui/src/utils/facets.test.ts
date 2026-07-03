@@ -607,3 +607,13 @@ describe('buildBucketRpcFilters — ouvert à … + dates Événements (§157)',
     expect(buildBucketRpcFilters(filters, 'EVT').event).toEqual({ from: '2026-07-10', to: '2026-07-20' });
   });
 });
+
+describe('buildBucketRpcFilters — services & équipements (§159, transverse)', () => {
+  it('émet amenity_families_any pour tous les buckets', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, amenityFamiliesAny: ['wellness', 'parking'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT').amenity_families_any).toEqual(['wellness', 'parking']);
+    expect(buildBucketRpcFilters(filters, 'VIS').amenity_families_any).toEqual(['wellness', 'parking']);
+  });
+});

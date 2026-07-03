@@ -93,7 +93,7 @@ Ce lien fonctionne aussi bien pour un collègue connecté à l'application que d
     rubrique: 'explorer',
     question: 'Imprimer une sélection de fiches ?',
     keywords: ['imprimer', 'sélection', 'carnet', 'pdf'],
-    related: ['explorer-vues'],
+    related: ['explorer-vues', 'listes-creer'],
     answer: `Sélectionnez plusieurs fiches dans l'Explorer (cases à cocher de la liste ou du tableau) : une barre d'actions apparaît, avec le bouton **« Imprimer »**.
 
 **Ce que vous obtenez.** Chaque fiche sélectionnée devient une **carte « carnet »** (photo, accroche, coordonnées, contacts publics) prête à imprimer.

@@ -7,6 +7,10 @@ import { CHOISIR_TYPE_FAQ } from './choisir-type';
 import { EXPLORER_FAQ } from './explorer';
 import { EDITEUR_FAQ } from './editeur';
 import { PUBLICATION_FAQ } from './publication';
+import { LISTES_FAQ } from './listes';
+import { CRM_FAQ } from './crm';
+import { EQUIPE_FAQ } from './equipe';
+import { REGLAGES_FAQ } from './reglages';
 
 export const ALL_FAQ_ENTRIES: FaqEntry[] = [
   ...DEMARRER_FAQ,
@@ -15,4 +19,8 @@ export const ALL_FAQ_ENTRIES: FaqEntry[] = [
   ...EXPLORER_FAQ,
   ...EDITEUR_FAQ,
   ...PUBLICATION_FAQ,
+  ...LISTES_FAQ,
+  ...CRM_FAQ,
+  ...EQUIPE_FAQ,
+  ...REGLAGES_FAQ,
 ];

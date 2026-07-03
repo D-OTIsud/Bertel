@@ -4,8 +4,6 @@ import { coerceThemeSettings, type ThemeSettings } from '../lib/theme';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectTypeCode } from '../types/domain';
 
-const BRANDING_BUCKET = 'branding-assets';
-
 interface BrandingRpcPayload {
   brandName?: unknown;
   logoPublicUrl?: unknown;
@@ -84,26 +82,49 @@ function isBrandingPermissionError(error: unknown): boolean {
   return code === '42501' || /Only platform admins|permission denied|row-level security/i.test(message);
 }
 
+// Le logo passe par la route service-role /api/branding/logo/upload (autorisée
+// EN TANT QUE l'appelant via api.is_platform_admin, resize + strip EXIF, écriture
+// service-role) — JAMAIS d'upload direct depuis le client : le bucket branding-assets
+// interdit toute écriture anon/authenticated (RESTRICTIVE), même invariant single-writer
+// que media/avatars (CLAUDE.md §59).
 async function uploadBrandLogo(file: File, client: NonNullable<ReturnType<typeof getSupabaseClient>>) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
-  const path = `global/${timestamp}-${safeName}`;
-
-  const { error: uploadError } = await client.storage.from(BRANDING_BUCKET).upload(path, file, {
-    cacheControl: '3600',
-    upsert: true,
-    contentType: file.type || undefined,
-  });
-
-  if (uploadError) {
-    throw new Error(`Upload du logo impossible: ${uploadError.message}`);
+  const { data } = await client.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    throw new Error('Session expiree — reconnectez-vous pour modifier le branding.');
   }
 
-  const { data } = client.storage.from(BRANDING_BUCKET).getPublicUrl(path);
+  const body = new FormData();
+  body.append('file', file);
+  const res = await fetch('/api/branding/logo/upload', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}` },
+    body,
+  });
+
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+    if (res.status === 415) {
+      throw new Error('Format de logo non supporte (JPEG, PNG ou WebP, ≤ 5 Mo).');
+    }
+    if (res.status === 403) {
+      throw new Error('Seuls les super-admins peuvent modifier le branding.');
+    }
+    throw new Error(`Upload du logo impossible: ${payload.detail || payload.error || `HTTP ${res.status}`}`);
+  }
+
+  const uploaded = (await res.json()) as {
+    logoStoragePath?: string;
+    logoPublicUrl?: string;
+    logoMimeType?: string | null;
+  };
+  if (!uploaded.logoPublicUrl || !uploaded.logoStoragePath) {
+    throw new Error('Reponse invalide du serveur de branding.');
+  }
   return {
-    logoStoragePath: path,
-    logoPublicUrl: data.publicUrl,
-    logoMimeType: file.type || null,
+    logoStoragePath: uploaded.logoStoragePath,
+    logoPublicUrl: uploaded.logoPublicUrl,
+    logoMimeType: uploaded.logoMimeType ?? file.type ?? null,
   };
 }
 

@@ -50,6 +50,56 @@ describe('processImage — resize', () => {
   });
 });
 
+async function makePngWithAlpha(width: number, height: number): Promise<Buffer> {
+  return sharp({
+    create: { width, height, channels: 4, background: { r: 200, g: 100, b: 50, alpha: 0.5 } },
+  })
+    .png()
+    .toBuffer();
+}
+
+describe('processImage — outputFormat "preserve" (logo)', () => {
+  it('keeps a PNG as PNG and preserves the alpha channel (logo must not be flattened)', async () => {
+    const input = await makePngWithAlpha(400, 300);
+    const result = await processImage({ buffer: input, mimeType: 'image/png', outputFormat: 'preserve' });
+    expect(result.mimeType).toBe('image/png');
+    const meta = await sharp(result.buffer).metadata();
+    expect(meta.format).toBe('png');
+    expect(meta.hasAlpha).toBe(true);
+  });
+
+  it('keeps a WebP as WebP', async () => {
+    const input = await sharp({
+      create: { width: 300, height: 200, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+    })
+      .webp()
+      .toBuffer();
+    const result = await processImage({ buffer: input, mimeType: 'image/webp', outputFormat: 'preserve' });
+    expect(result.mimeType).toBe('image/webp');
+    expect((await sharp(result.buffer).metadata()).format).toBe('webp');
+  });
+
+  it('still resizes down in preserve mode (logo maxDimension 1024)', async () => {
+    const input = await makePngWithAlpha(2048, 1024);
+    const result = await processImage({
+      buffer: input,
+      mimeType: 'image/png',
+      outputFormat: 'preserve',
+      maxDimension: 1024,
+    });
+    expect(result.width).toBe(1024);
+    expect(result.height).toBe(512);
+    expect(result.mimeType).toBe('image/png');
+  });
+
+  it('still flattens to JPEG when outputFormat is omitted, even for a PNG (default unchanged)', async () => {
+    const input = await makePngWithAlpha(200, 200);
+    const result = await processImage({ buffer: input, mimeType: 'image/png' });
+    expect(result.mimeType).toBe('image/jpeg');
+    expect((await sharp(result.buffer).metadata()).format).toBe('jpeg');
+  });
+});
+
 describe('processImage — metadata stripping', () => {
   it('strips EXIF including GPS, Make/Model, and DateTimeOriginal', async () => {
     // Build a fixture with injected EXIF (IFD0 device tags, IFD2 GPS, IFD3 datetime).

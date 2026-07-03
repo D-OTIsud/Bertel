@@ -23,25 +23,25 @@ function AuthHeroScene() {
       aria-hidden="true"
       focusable="false"
     >
-      {/* Itinéraires convergents — quatre lignes arrivant DE LA DROITE (l'espace vide) vers le
-          point de repère posé juste après « Bertel ». Sens droite→gauche : le tracé reste hors
-          de la colonne de lecture (à gauche) et équilibre la composition. Faible opacité : décor. */}
+      {/* Itinéraires — stations ALIGNÉES (même x) et RÉPARTIES sur toute la hauteur du bord
+          droit, rejoignant le point de repère à l'horizontale, au niveau de « Bertel ». Le tracé
+          reste dans la moitié droite (hors texte) et se referme proprement. Faible opacité : décor. */}
       <g className="auth-hero__routes" stroke="currentColor" strokeLinecap="round" fill="none">
-        <path d="M572 108 C 470 122, 372 300, 294 380" strokeWidth="3" opacity="0.17" />
-        <path d="M578 182 C 494 192, 380 316, 292 384" strokeWidth="3" opacity="0.13" />
-        <path d="M578 264 C 500 274, 388 348, 290 386" strokeWidth="3" opacity="0.13" />
-        <path d="M572 346 C 500 352, 396 380, 288 390" strokeWidth="3" opacity="0.10" />
-        {/* Stations (à droite) */}
+        <path d="M558 110 C 480 150, 360 322, 268 324" strokeWidth="3" opacity="0.17" />
+        <path d="M558 240 C 476 250, 360 324, 268 324" strokeWidth="3" opacity="0.14" />
+        <path d="M558 375 C 476 372, 360 326, 268 324" strokeWidth="3" opacity="0.12" />
+        <path d="M558 510 C 470 486, 360 330, 268 324" strokeWidth="3" opacity="0.10" />
+        {/* Stations alignées sur x=558, réparties du haut vers le bas */}
         <g fill="var(--teal)" stroke="currentColor" strokeWidth="3">
-          <circle cx="572" cy="108" r="7" opacity="0.55" />
-          <circle cx="578" cy="182" r="7" opacity="0.5" />
-          <circle cx="578" cy="264" r="7" opacity="0.5" />
-          <circle cx="572" cy="346" r="7" opacity="0.42" />
+          <circle cx="558" cy="110" r="7" opacity="0.55" />
+          <circle cx="558" cy="240" r="7" opacity="0.5" />
+          <circle cx="558" cy="375" r="7" opacity="0.46" />
+          <circle cx="558" cy="510" r="7" opacity="0.4" />
         </g>
       </g>
-      {/* Le point de repère où tout converge — une seule source de vérité — posé juste après le
-          mot « Bertel ». Accent chaud (brique volcanique) pour le distinguer du drenched teal. */}
-      <g className="auth-hero__pin" transform="translate(290 386)">
+      {/* Le point de repère où convergent les itinéraires — une seule source de vérité — posé au
+          niveau du mot « Bertel ». Accent chaud (brique volcanique) pour le distinguer du teal. */}
+      <g className="auth-hero__pin" transform="translate(268 324)">
         <circle r="24" fill="currentColor" opacity="0.10" />
         <path
           d="M0 -13 C 8 -13, 13 -7, 13 0 C 13 8, 4 14, 0 20 C -4 14, -13 8, -13 0 C -13 -7, -8 -13, 0 -13 Z"
@@ -110,10 +110,6 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
                 <span className="ac">É</span>tablissements et <span className="ac">L</span>ieux
               </p>
             ) : null}
-
-            <p className="auth-hero__tagline">
-              Une source unique, du terrain à la publication.
-            </p>
 
             <p className="auth-hero__domains">
               {DATA_DOMAINS.map((domain, index) => (

@@ -2,11 +2,6 @@
 
 import { useThemeStore } from '../../store/theme-store';
 
-// Domaines de données de Bertel = les « lignes » qui convergent vers le point de repère
-// (métaphore du logo). Rendu en ligne pointée (voix éditoriale du template Listes),
-// pas en grille de cartes.
-const DATA_DOMAINS = ['Établissements', 'Horaires', 'Médias', 'Itinéraires', 'Partenaires'];
-
 /**
  * Décor institutionnel du hero : des itinéraires (écho du « B » Bertel : réseau de lignes
  * qui convergent vers un point de repère) posés sur des vagues (écho du blason OTI / du
@@ -27,10 +22,10 @@ function AuthHeroScene() {
           droit, rejoignant le point de repère à l'horizontale, au niveau de « Bertel ». Le tracé
           reste dans la moitié droite (hors texte) et se referme proprement. Faible opacité : décor. */}
       <g className="auth-hero__routes" stroke="currentColor" strokeLinecap="round" fill="none">
-        <path d="M558 110 C 480 150, 360 322, 268 324" strokeWidth="3" opacity="0.17" />
-        <path d="M558 240 C 476 250, 360 324, 268 324" strokeWidth="3" opacity="0.14" />
-        <path d="M558 375 C 476 372, 360 326, 268 324" strokeWidth="3" opacity="0.12" />
-        <path d="M558 510 C 470 486, 360 330, 268 324" strokeWidth="3" opacity="0.10" />
+        <path d="M558 110 C 470 164, 360 336, 268 338" strokeWidth="3" opacity="0.17" />
+        <path d="M558 240 C 470 268, 360 338, 268 338" strokeWidth="3" opacity="0.14" />
+        <path d="M558 375 C 470 380, 360 340, 268 338" strokeWidth="3" opacity="0.12" />
+        <path d="M558 510 C 470 500, 360 344, 268 338" strokeWidth="3" opacity="0.10" />
         {/* Stations alignées sur x=558, réparties du haut vers le bas */}
         <g fill="var(--teal)" stroke="currentColor" strokeWidth="3">
           <circle cx="558" cy="110" r="7" opacity="0.55" />
@@ -41,7 +36,7 @@ function AuthHeroScene() {
       </g>
       {/* Le point de repère où convergent les itinéraires — une seule source de vérité — posé au
           niveau du mot « Bertel ». Accent chaud (brique volcanique) pour le distinguer du teal. */}
-      <g className="auth-hero__pin" transform="translate(268 324)">
+      <g className="auth-hero__pin" transform="translate(268 338)">
         <circle r="24" fill="currentColor" opacity="0.10" />
         <path
           d="M0 -13 C 8 -13, 13 -7, 13 0 C 13 8, 4 14, 0 20 C -4 14, -13 8, -13 0 C -13 -7, -8 -13, 0 -13 Z"
@@ -110,15 +105,6 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
                 <span className="ac">É</span>tablissements et <span className="ac">L</span>ieux
               </p>
             ) : null}
-
-            <p className="auth-hero__domains">
-              {DATA_DOMAINS.map((domain, index) => (
-                <span key={domain} className="auth-hero__domain">
-                  {index > 0 ? <span className="auth-hero__domain-dot" aria-hidden="true">·</span> : null}
-                  {domain}
-                </span>
-              ))}
-            </p>
 
             {operatorName ? (
               <p className="auth-hero__operator">

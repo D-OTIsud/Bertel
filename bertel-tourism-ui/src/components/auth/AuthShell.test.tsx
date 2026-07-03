@@ -36,4 +36,31 @@ describe('AuthShell', () => {
 
     expect(container.querySelector('.auth-hero__logo')).not.toBeInTheDocument();
   });
+
+  it('affiche la signification EXACTE de l’acronyme quand la marque est « Bertel »', () => {
+    useThemeStore.setState({ theme: { ...defaultThemeSettings, brandName: 'Bertel' } });
+    const { container } = render(
+      <AuthShell>
+        <p>x</p>
+      </AuthShell>,
+    );
+
+    // Verbatim de l'infographie institutionnelle (docs/infographie-bertel.html).
+    expect(container).toHaveTextContent(
+      /Base d.Enregistrement et de Référentiel Touristique des Établissements et Lieux/,
+    );
+    // Les 6 initiales B-E-R-T-É-L sont mises en avant.
+    expect(container.querySelectorAll('.auth-hero__acronym .ac')).toHaveLength(6);
+  });
+
+  it('masque l’acronyme pour toute autre marque (white-label §167)', () => {
+    useThemeStore.setState({ theme: { ...defaultThemeSettings, brandName: 'Office de Tourisme XYZ' } });
+    const { container } = render(
+      <AuthShell>
+        <p>x</p>
+      </AuthShell>,
+    );
+
+    expect(container.querySelector('.auth-hero__acronym')).toBeNull();
+  });
 });

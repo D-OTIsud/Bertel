@@ -74,6 +74,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
   const operatorName = useThemeStore((state) => state.theme.operatorName);
   const territory = useThemeStore((state) => state.theme.territory);
   const islandTagline = useThemeStore((state) => state.theme.islandTagline);
+  // L'acronyme est propre à « Bertel » : on ne l'affiche pas pour un re-branding
+  // (§167 white-label) — gate sur le nom runtime, aucun texte institutionnel forcé.
+  const showBertelAcronym = brandName.trim().toLowerCase() === 'bertel';
 
   return (
     <section className="auth-page">
@@ -98,8 +101,18 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
             <h1 className="auth-hero__title">{brandName}</h1>
 
+            {showBertelAcronym ? (
+              // Signification de l'acronyme — verbatim de l'infographie institutionnelle
+              // (docs/infographie-bertel.html) ; initiales B-E-R-T-É-L mises en avant.
+              <p className="auth-hero__acronym">
+                <span className="ac">B</span>ase d’<span className="ac">E</span>nregistrement et de{' '}
+                <span className="ac">R</span>éférentiel <span className="ac">T</span>ouristique des{' '}
+                <span className="ac">É</span>tablissements et <span className="ac">L</span>ieux
+              </p>
+            ) : null}
+
             <p className="auth-hero__tagline">
-              Le référentiel de l’offre touristique : une source unique, du terrain à la publication.
+              Une source unique, du terrain à la publication.
             </p>
 
             <p className="auth-hero__domains">

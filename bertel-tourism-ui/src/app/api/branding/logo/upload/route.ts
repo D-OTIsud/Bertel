@@ -39,23 +39,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
-  // Autorisation EN TANT QUE l'appelant : seuls les super-admins plateforme peuvent
-  // toucher au branding (le storage tourne en service-role, cette garde EST la frontière).
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(supabaseUrl, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  // Fail-closed (précédent /api/actor-photo/upload) : une erreur de sonde => 403, jamais de passage.
-  const { data: isAdmin, error: adminErr } = await asCaller.schema('api').rpc('is_platform_admin');
-  if (adminErr || isAdmin !== true) {
-    return NextResponse.json(
-      { error: 'forbidden', detail: 'Only platform admins can update branding.' },
-      { status: 403 },
-    );
-  }
-
+  // Parse le multipart AVANT de choisir la garde : orgObjectId (optionnel) décide de
+  // l'autorisation (branding d'une ORG vs branding plateforme).
   let form: FormData;
   try {
     form = await req.formData();
@@ -65,6 +50,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const file = form.get('file');
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'missing_file' }, { status: 400 });
+  }
+  const orgObjectIdRaw = form.get('orgObjectId');
+  const orgObjectId = typeof orgObjectIdRaw === 'string' && orgObjectIdRaw.trim() !== '' ? orgObjectIdRaw.trim() : null;
+
+  // Autorisation EN TANT QUE l'appelant (le storage tourne en service-role — cette garde EST
+  // la frontière ; fail-closed : erreur de sonde => 403). Avec orgObjectId : admin de CETTE ORG
+  // (ou superuser). Sans : super-admin plateforme (branding global, inchangé).
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
+  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
+  const asCaller = createClient(supabaseUrl, anon, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const probe = orgObjectId
+    ? await asCaller.schema('api').rpc('user_can_manage_org_branding', { p_org_object_id: orgObjectId })
+    : await asCaller.schema('api').rpc('is_platform_admin');
+  if (probe.error || probe.data !== true) {
+    return NextResponse.json(
+      { error: 'forbidden', detail: orgObjectId ? 'Only a platform superuser or an admin of this organisation can update its branding.' : 'Only platform admins can update branding.' },
+      { status: 403 },
+    );
   }
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());
@@ -91,7 +97,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Chemin horodaté : chaque logo est une nouvelle URL (cache-bust CDN gratuit).
   // Extension dérivée du format RÉELLEMENT encodé, pas du nom de fichier appelant.
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const path = `global/${timestamp}.${extensionFor(processed.mimeType)}`;
+  const ext = extensionFor(processed.mimeType);
+  const path = orgObjectId ? `org/${orgObjectId}/${timestamp}.${ext}` : `global/${timestamp}.${ext}`;
   const { error: upErr } = await server.storage.from(BUCKET).upload(path, processed.buffer, {
     contentType: processed.mimeType,
     cacheControl: '3600',

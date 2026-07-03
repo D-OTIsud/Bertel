@@ -114,6 +114,12 @@ export function ExplorerActiveFilters() {
       case 'environment':
         useExplorerStore.getState().setEnvironmentTags([]);
         break;
+      case 'openAt':
+        useExplorerStore.getState().setOpenAt(null);
+        break;
+      case 'evtDates':
+        useExplorerStore.getState().setEvtEventRange(null, null);
+        break;
       case 'accessDisability':
         useExplorerStore.getState().toggleAccessibilityDisabilityType(chip.value as AccessibilityDisabilityTypeCode);
         break;

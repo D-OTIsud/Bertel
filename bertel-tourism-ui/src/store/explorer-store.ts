@@ -39,6 +39,10 @@ interface ExplorerState extends ExplorerFilters {
   toggleSustainabilityAction: (code: string) => void;
   setPetsAccepted: (value: boolean) => void;
   setOpenNow: (value: boolean) => void;
+  /** §157 — « ouvert à … » (datetime-local, heure Réunion). Exclusif avec openNow. */
+  setOpenAt: (value: string | null) => void;
+  /** §157 — plage de dates du bucket Événements. */
+  setEvtEventRange: (from: string | null, to: string | null) => void;
   /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
   setEnvironmentTags: (codes: string[]) => void;
   setRankedLabelScheme: (schemeCode: string | null) => void;
@@ -157,6 +161,10 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
       ...partial.iti,
       practicesAny: partial.iti?.practicesAny ?? currentBase.iti.practicesAny,
     },
+    evt: {
+      ...currentBase.evt,
+      ...partial.evt,
+    },
     vis: {
       ...currentBase.vis,
       ...partial.vis,
@@ -206,6 +214,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
           return { selectedBuckets, common, res: { capacityFilters: [] } };
         case 'ITI':
           return { selectedBuckets, common, iti: { ...DEFAULT_EXPLORER_FILTERS.iti } };
+        case 'EVT':
+          return { selectedBuckets, common, evt: { ...DEFAULT_EXPLORER_FILTERS.evt } };
         case 'VIS':
           return { selectedBuckets, common, vis: { subtypes: [...DEFAULT_VIS_SUBTYPES] } };
         case 'SRV':
@@ -217,6 +227,11 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
   // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters).
   setEnvironmentTags: (codes) => set((state) => ({ common: { ...state.common, environmentTagsAny: codes } })),
+  // §157 — « ouvert à … » exclusif avec « ouvert maintenant » (deux instants
+  // contradictoires ne doivent jamais s'ANDer silencieusement côté RPC).
+  setOpenAt: (value) =>
+    set((state) => ({ common: { ...state.common, openAt: value, ...(value ? { openNow: false } : {}) } })),
+  setEvtEventRange: (from, to) => set({ evt: { eventFrom: from, eventTo: to } }),
   setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
   setPmr: (value) =>
@@ -278,7 +293,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       },
     })),
   setPetsAccepted: (value) => set((state) => ({ common: { ...state.common, petsAccepted: value } })),
-  setOpenNow: (value) => set((state) => ({ common: { ...state.common, openNow: value } })),
+  setOpenNow: (value) =>
+    set((state) => ({ common: { ...state.common, openNow: value, ...(value ? { openAt: null } : {}) } })),
   setRankedLabelScheme: (schemeCode) =>
     set((state) => ({
       common: {

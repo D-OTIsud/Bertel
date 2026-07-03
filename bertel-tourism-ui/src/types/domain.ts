@@ -160,6 +160,12 @@ export interface ExplorerCommonFilters {
   petsAccepted: boolean;
   openNow: boolean;
   /**
+   * §157 — « ouvert à … » : instant futur/passé au format datetime-local
+   * (`YYYY-MM-DDTHH:mm`, heure de La Réunion). Exclusif avec openNow. Envoyé au
+   * RPC comme `open_at` timestamptz (+04:00 — pas de DST à La Réunion).
+   */
+  openAt: string | null;
+  /**
    * §154 (P0-b audit filtres) — cadre & environnement (bord de mer, montagne,
    * volcan…). TRANSVERSE : la donnée (`object_environment_tag`) couvre tous les
    * types (531 rural, 439 vue panoramique…), pas seulement les activités — le
@@ -207,6 +213,12 @@ export interface ItiBucketFilters {
   durationMinH?: number;
   durationMaxH?: number;
   practicesAny: string[];
+}
+
+/** §157 — dates du bucket Événements (payload `event:{from,to}`, EVT uniquement). */
+export interface EvtBucketFilters {
+  eventFrom: string | null;
+  eventTo: string | null;
 }
 
 /** Sous-types des buckets fourre-tout (impl. 3.2) : filtre client par type DB. */
@@ -265,6 +277,7 @@ export interface ExplorerFilters {
   hot: HotBucketFilters;
   res: ResBucketFilters;
   iti: ItiBucketFilters;
+  evt: EvtBucketFilters;
   vis: VisBucketFilters;
   srv: SrvBucketFilters;
 }

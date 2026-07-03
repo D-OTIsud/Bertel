@@ -108,6 +108,10 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(sustainabilityActionCodesAny !== undefined && { sustainabilityActionCodesAny }),
     ...(searchParams.get('pets') != null && { petsAccepted: searchParams.get('pets') === 'true' }),
     ...(searchParams.get('openNow') != null && { openNow: searchParams.get('openNow') === 'true' }),
+    ...(searchParams.get('openAt') != null && {
+      // §157 — garde de format (datetime-local) : un param trafiqué ne part jamais au RPC.
+      openAt: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(searchParams.get('openAt') ?? '') ? searchParams.get('openAt') : null,
+    }),
     ...(searchParams.get('environment') != null && {
       environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
@@ -175,6 +179,12 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
         ...itiPatch,
       },
     }),
+    ...((searchParams.get('evtFrom') != null || searchParams.get('evtTo') != null) && {
+      evt: {
+        eventFrom: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('evtFrom') ?? '') ? searchParams.get('evtFrom') : null,
+        eventTo: /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('evtTo') ?? '') ? searchParams.get('evtTo') : null,
+      },
+    }),
     ...(visSubtypes !== undefined && { vis: { subtypes: visSubtypes as ExplorerFilters['vis']['subtypes'] } }),
     ...(srvSubtypes !== undefined && { srv: { subtypes: srvSubtypes as ExplorerFilters['srv']['subtypes'] } }),
   };
@@ -233,6 +243,15 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.environmentTagsAny.length > 0) {
     p.set('environment', normalizedFilters.common.environmentTagsAny.join(','));
+  }
+  if (normalizedFilters.common.openAt) {
+    p.set('openAt', normalizedFilters.common.openAt);
+  }
+  if (normalizedFilters.evt.eventFrom) {
+    p.set('evtFrom', normalizedFilters.evt.eventFrom);
+  }
+  if (normalizedFilters.evt.eventTo) {
+    p.set('evtTo', normalizedFilters.evt.eventTo);
   }
   if (normalizedFilters.common.statuses.length > 0) {
     // Persist explicit status picks only. Empty array means "use the

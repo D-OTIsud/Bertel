@@ -105,6 +105,7 @@ function useExplorerFilters() {
   const hot = useExplorerStore((state) => state.hot);
   const res = useExplorerStore((state) => state.res);
   const iti = useExplorerStore((state) => state.iti);
+  const evt = useExplorerStore((state) => state.evt);
   const vis = useExplorerStore((state) => state.vis);
   const srv = useExplorerStore((state) => state.srv);
 
@@ -115,10 +116,11 @@ function useExplorerFilters() {
       hot,
       res,
       iti,
+      evt,
       vis,
       srv,
     }),
-    [common, hot, iti, res, selectedBuckets, srv, vis],
+    [common, evt, hot, iti, res, selectedBuckets, srv, vis],
   );
 }
 

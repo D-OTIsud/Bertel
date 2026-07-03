@@ -117,3 +117,17 @@ describe('cadre & environnement (§154)', () => {
     expect(chips.find((c) => c.group === 'environment')?.label).toBe('Cadre · 2 critères');
   });
 });
+
+describe('§157 — chips ouvert à … + dates événements', () => {
+  it('rend la chip « Ouvert le JJ/MM à HH:mm »', () => {
+    const chips = buildExplorerActiveChips(filters({ openAt: '2026-07-03T18:00' }));
+    expect(chips.find((c) => c.group === 'openAt')?.label).toBe('Ouvert le 03/07 à 18:00');
+  });
+
+  it('rend la chip de plage événements', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { evt: { eventFrom: '2026-07-10', eventTo: null } }),
+    );
+    expect(chips.find((c) => c.group === 'evtDates')?.label).toBe('Événements du 10/07/2026');
+  });
+});

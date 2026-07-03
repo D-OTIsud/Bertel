@@ -75,6 +75,10 @@ function buildFilters(overrides: Partial<ExplorerFilters> = {}): ExplorerFilters
       ...DEFAULT_EXPLORER_FILTERS.iti,
       ...overrides.iti,
     },
+    evt: {
+      ...DEFAULT_EXPLORER_FILTERS.evt,
+      ...overrides.evt,
+    },
     selectedBuckets: overrides.selectedBuckets ?? DEFAULT_EXPLORER_FILTERS.selectedBuckets,
     vis: overrides.vis ?? DEFAULT_EXPLORER_FILTERS.vis,
     srv: overrides.srv ?? DEFAULT_EXPLORER_FILTERS.srv,
@@ -577,5 +581,29 @@ describe('buildBucketRpcFilters — sous-catégories (§155, partition par bucke
     for (const bucket of ['HOT', 'RES', 'ITI', 'ACT', 'EVT', 'VIS', 'SRV'] as const) {
       expect(buildBucketRpcFilters(filters, bucket).taxonomy_any).toBeUndefined();
     }
+  });
+});
+
+describe('buildBucketRpcFilters — ouvert à … + dates Événements (§157)', () => {
+  it('émet open_at en timestamptz Réunion (+04:00) pour tous les buckets', () => {
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, openAt: '2026-07-03T18:00' } });
+    expect(buildBucketRpcFilters(filters, 'RES').open_at).toBe('2026-07-03T18:00:00+04:00');
+    expect(buildBucketRpcFilters(filters, 'HOT').open_at).toBe('2026-07-03T18:00:00+04:00');
+  });
+
+  it("n'émet jamais un open_at mal formé (garde URL trafiquée)", () => {
+    const filters = buildFilters({ common: { ...DEFAULT_EXPLORER_FILTERS.common, openAt: "1'; DROP--" } });
+    expect(buildBucketRpcFilters(filters, 'RES').open_at).toBeUndefined();
+  });
+
+  it("émet event UNIQUEMENT pour le bucket EVT (l'arm object_fma viderait les autres)", () => {
+    const filters = buildFilters({ evt: { eventFrom: '2026-07-10', eventTo: '2026-07-20' } });
+    expect(buildBucketRpcFilters(filters, 'EVT').event).toEqual({ from: '2026-07-10', to: '2026-07-20' });
+    expect(buildBucketRpcFilters(filters, 'RES').event).toBeUndefined();
+  });
+
+  it('réordonne une plage événement inversée (§156)', () => {
+    const filters = buildFilters({ evt: { eventFrom: '2026-07-20', eventTo: '2026-07-10' } });
+    expect(buildBucketRpcFilters(filters, 'EVT').event).toEqual({ from: '2026-07-10', to: '2026-07-20' });
   });
 });

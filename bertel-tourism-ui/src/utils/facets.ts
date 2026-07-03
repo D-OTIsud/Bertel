@@ -67,6 +67,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   sustainabilityActionCodesAny: [],
   petsAccepted: false,
   openNow: false,
+  openAt: null,
   environmentTagsAny: [],
   taxonomyAny: [],
   labelsAny: [],
@@ -94,6 +95,10 @@ export const DEFAULT_EXPLORER_FILTERS: ExplorerFilters = {
     isLoop: null,
     practicesAny: [],
   },
+  evt: {
+    eventFrom: null,
+    eventTo: null,
+  },
   vis: {
     subtypes: [...DEFAULT_VIS_SUBTYPES],
   },
@@ -114,6 +119,7 @@ export function normalizeExplorerFilters(
   const hot = { ...base.hot, ...filters.hot };
   const res = { ...base.res, ...filters.res };
   const iti = { ...base.iti, ...filters.iti };
+  const evt = { ...base.evt, ...filters.evt };
 
   return {
     selectedBuckets: filters.selectedBuckets ?? base.selectedBuckets,
@@ -124,6 +130,7 @@ export function normalizeExplorerFilters(
       accessibilityAmenityCodesAny: common.accessibilityAmenityCodesAny ?? [],
       sustainabilityCategoryCodesAny: common.sustainabilityCategoryCodesAny ?? [],
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
+      openAt: common.openAt ?? null,
       environmentTagsAny: common.environmentTagsAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
       labelsAny: common.labelsAny ?? [],
@@ -144,6 +151,11 @@ export function normalizeExplorerFilters(
     iti: {
       ...iti,
       practicesAny: iti.practicesAny ?? [],
+    },
+    evt: {
+      ...evt,
+      eventFrom: evt.eventFrom ?? null,
+      eventTo: evt.eventTo ?? null,
     },
     vis: {
       ...base.vis,
@@ -215,7 +227,10 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
  * view with API ids once the filtered query returns.
  */
 export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
-  const { common, hot, res, iti } = normalizeExplorerFilters(filters);
+  const { common, hot, res, iti, evt } = normalizeExplorerFilters(filters);
+  if (evt.eventFrom || evt.eventTo) {
+    return true;
+  }
   const hasAccessibilityFilter =
     common.pmr ||
     common.accessibilityDisabilityTypesAny.length > 0 ||
@@ -231,6 +246,9 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     return true;
   }
   if (common.taxonomyAny.length > 0) {
+    return true;
+  }
+  if (common.openAt) {
     return true;
   }
   if (normalizeCapacityFilters(hot.capacityFilters).length > 0) {
@@ -463,6 +481,31 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const bucketTaxonomy = common.taxonomyAny.filter((item) => bucketForTaxonomyDomain(item.domain) === bucket);
   if (bucketTaxonomy.length > 0) {
     payload.taxonomy_any = bucketTaxonomy.map((item) => ({ domain: item.domain, code: item.code }));
+  }
+
+  // §157 — « ouvert à … » : datetime-local (heure Réunion) → timestamptz explicite.
+  // +04:00 en dur : La Réunion n'a pas d'heure d'été, et c'est aussi le repli
+  // timezone du moteur côté DB (Indian/Reunion). Garde de format : jamais un
+  // cast 22007 serveur sur une URL trafiquée.
+  if (common.openAt && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(common.openAt)) {
+    payload.open_at = `${common.openAt}:00+04:00`;
+  }
+
+  // §157 — dates Événements : EVT uniquement (l'arm serveur est un EXISTS sur
+  // object_fma — envoyé à un autre bucket, il viderait ses résultats).
+  if (bucket === 'EVT') {
+    const { eventFrom, eventTo } = normalizedFilters.evt;
+    const isDate = (value: string | null): value is string => !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const from = isDate(eventFrom) ? eventFrom : null;
+    const to = isDate(eventTo) ? eventTo : null;
+    if (from || to) {
+      // Plage inversée réordonnée (même garde que §156 — jamais de plage vide muette).
+      const ordered = from && to && from > to ? { from: to, to: from } : { from, to };
+      payload.event = {
+        ...(ordered.from ? { from: ordered.from } : {}),
+        ...(ordered.to ? { to: ordered.to } : {}),
+      };
+    }
   }
 
   if (bucket === 'HOT') {

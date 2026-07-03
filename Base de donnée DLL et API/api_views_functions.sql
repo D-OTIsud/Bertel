@@ -1231,6 +1231,7 @@ AS $$
       (NOT (
         n.filters ? 'amenities_all'
         OR n.filters ? 'amenity_families_any'
+        OR n.filters ? 'accessibility_any'         -- §162: requires live join on object_classification (label not in cache)
         OR n.filters ? 'city_any'
         OR n.filters ? 'lieu_dit_any'
         OR n.filters ? 'pet_accepted'
@@ -1473,9 +1474,35 @@ AS $$
       JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
       WHERE oa.object_id = src.object_id AND fam.code = ANY(params.amenity_families_any)
     ))
+    -- accessibility_any (toggle PMR, §162) : équipement famille `accessibility` OU label
+    -- Tourisme & Handicap `granted` — le label certifié suffit même sans équipement saisi
+    -- (directive PO 2026-07-03). Clé DÉDIÉE : amenity_families_any reste équipement-pur
+    -- (filtre transverse Services & équipements §159) et le toggle PMR ne peut plus être
+    -- clobbé par lui côté payload. Bypasse le MV (labels non cachés).
+    AND (NOT COALESCE((params.filters->>'accessibility_any')::boolean, FALSE) OR (
+      EXISTS (
+        SELECT 1
+        FROM object_amenity oa
+        JOIN ref_amenity ra ON ra.id = oa.amenity_id
+        JOIN ref_code_amenity_family fam ON fam.id = ra.family_id
+        WHERE oa.object_id = src.object_id AND fam.code = 'accessibility'
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM object_classification oc
+        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+        WHERE oc.object_id = src.object_id
+          AND cs.code = 'LBL_TOURISME_HANDICAP'
+          AND oc.status = 'granted'
+      )
+    ))
     -- disability_types_any: retourne les objets avec ≥1 amenity acc_* dont extra.disability_types
-    -- contient au moins une des valeurs demandées. Tableau vide → aucun effet (cardinality guard).
-    -- Bypasse le MV (use_mv = FALSE) car ref_amenity.extra n'est pas dans cached_amenity_codes.
+    -- contient au moins une des valeurs demandées, OU (§162) un label T&H `granted` dont les
+    -- subvalue_ids couvrent un type demandé — subvalue_ids vides = couverture inconnue (état de
+    -- l'import) ⇒ le label seul matche n'importe quel type demandé (directive PO 2026-07-03 ;
+    -- à affiner via la saisie éditeur §10 des types couverts). Tableau vide → aucun effet
+    -- (cardinality guard). Bypasse le MV (use_mv = FALSE) car ref_amenity.extra n'est pas dans
+    -- cached_amenity_codes (ni les labels).
     AND (
       params.disability_types_any IS NULL
       OR cardinality(params.disability_types_any) = 0
@@ -1490,6 +1517,23 @@ AS $$
         WHERE oa.object_id = src.object_id
           AND ra.code LIKE 'acc_%'
           AND dt.val = ANY(params.disability_types_any)
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM object_classification oc
+        JOIN ref_classification_scheme cs ON cs.id = oc.scheme_id
+        WHERE oc.object_id = src.object_id
+          AND cs.code = 'LBL_TOURISME_HANDICAP'
+          AND oc.status = 'granted'
+          AND (
+            COALESCE(cardinality(oc.subvalue_ids), 0) = 0
+            OR EXISTS (
+              SELECT 1
+              FROM unnest(oc.subvalue_ids) AS sv(uid)
+              JOIN ref_classification_value cv ON cv.id = sv.uid
+              WHERE cv.metadata->>'disability_type' = ANY(params.disability_types_any)
+            )
+          )
       )
     )
     -- label_disability_types_any: retourne les objets avec un grant LBL_TOURISME_HANDICAP explicite

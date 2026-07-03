@@ -323,6 +323,8 @@ export interface ExplorerReferences {
   environmentTags: ExplorerReferenceOption[];
   /** Familles de services & équipements (ref_code domaine amenity_family) — filtre transverse §159. */
   amenityFamilies: ExplorerReferenceOption[];
+  /** Catalogue des tags §09 (ref_tag) — le picker du panneau complète le click-to-filter (§160). */
+  tags: ExplorerTagFilter[];
   /** Corpus-wide city list — from api.get_dashboard_filter_options */
   cities: string[];
   /** Corpus-wide lieu-dit list — from api.get_dashboard_filter_options */

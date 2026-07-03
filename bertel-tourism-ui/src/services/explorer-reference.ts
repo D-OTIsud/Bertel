@@ -6,6 +6,7 @@ import type {
   ExplorerReferenceOption,
   ExplorerReferences,
   ExplorerBucketKey,
+  ExplorerTagFilter,
   SustainabilityActionRef,
   SustainabilityCategoryRef,
   ExplorerTaxonomyDomain,
@@ -353,6 +354,11 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'parking', name: 'Parking' },
       { code: 'gastronomy', name: 'Gastronomie' },
     ],
+    tags: [
+      { slug: 'spa', name: 'Spa', color: '#176b6a' },
+      { slug: 'famille', name: 'Famille', color: '#8a5b12' },
+      { slug: 'vue-mer', name: 'Vue mer', color: '#1c4d8f' },
+    ],
   };
 }
 
@@ -371,6 +377,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     practicesResult,
     environmentTagsResult,
     amenityFamiliesResult,
+    tagsResult,
     locationOptionsResult,
     accessibilityAmenitiesResult,
     sustainabilityCategoriesResult,
@@ -392,6 +399,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
     // §159 — familles de services & équipements (transverse).
     client.from('ref_code').select('code,name,position').eq('domain', 'amenity_family').eq('is_active', true).order('position', { ascending: true }),
+    // §160 — catalogue des tags §09 (picker du panneau ; le click-to-filter reste l'autre voie).
+    client.from('ref_tag').select('slug,name,color').order('position', { ascending: true }),
     client.schema('api').rpc('get_dashboard_filter_options'),
     client
       .from('ref_amenity')
@@ -431,6 +440,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   }
   if (amenityFamiliesResult.error) {
     throw amenityFamiliesResult.error;
+  }
+  if (tagsResult.error) {
+    throw tagsResult.error;
   }
   if (locationOptionsResult.error) {
     throw locationOptionsResult.error;
@@ -486,6 +498,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     itiPractices: toReferenceOptions(practices),
     environmentTags: toReferenceOptions(environmentTags),
     amenityFamilies: toReferenceOptions(amenityFamilies),
+    tags: ((tagsResult.data ?? []) as ExplorerTagFilter[]).filter((tag) => tag.slug && tag.name),
     cities: locationOptions?.cities ?? [],
     lieuDits: locationOptions?.lieu_dits ?? [],
   };

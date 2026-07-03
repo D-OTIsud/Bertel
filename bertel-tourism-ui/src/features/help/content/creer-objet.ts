@@ -9,8 +9,9 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     rubrique: 'creer-objet',
     question: 'Comment créer une nouvelle fiche ?',
     keywords: ['créer', 'nouvelle fiche', 'ajouter', 'établissement', 'nouveau'],
-    // related inter-rubriques ajoutés quand leurs cibles existent : 'choisir-artisan' (Task 4),
-    // 'publier-fiche' (Task 6) — le test d'intégrité interdit un renvoi vers un id absent.
+    // related inter-rubriques : 'choisir-artisan' branché (Task 4) ; 'publier-fiche' (Task 6)
+    // — le test d'intégrité interdit un renvoi vers un id absent.
+    related: ['choisir-artisan'],
     answer: `**Où.** Bouton **Créer** de l'Explorer, ou palette de commandes (Ctrl/⌘ + K → « Créer une fiche »). Si le bouton n'apparaît pas, votre compte n'a pas le droit de création — voyez l'administrateur de votre organisation.
 
 **Comment.** 1. Choisissez le **type de fiche** (regroupés par famille : hébergement, restaurant, activité, itinéraire, visite, service, événement) — ce choix conditionne les sections de l'éditeur, prenez le temps de vérifier l'arbitrage dans la rubrique « Choisir le bon type ». 2. Saisissez le **nom exact** de l'établissement ou de l'offre. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.
@@ -23,7 +24,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer un gîte ou un meublé de tourisme ?',
     keywords: ['gîte', 'meublé', 'location saisonnière', 'kaz', 'villa', 'bungalow', 'location vacances'],
     types: ['HLO'],
-    related: ['creer-fiche'], // + 'choisir-hlo-rva' ajouté en Task 4 (cible pas encore créée ici)
+    related: ['creer-fiche', 'choisir-hlo-rva'],
     answer: `**C'est quoi.** Un logement entier loué à la semaine ou à la nuitée (gîte, meublé, villa, bungalow) — type **Gîte & meublé (HLO)**. C'est le type le plus courant du territoire.
 
 **Quand choisir ce type.** Le voyageur loue le logement complet, sans services hôteliers. **Pas ce type si** : chambres à la nuitée avec réception/services → Hôtel (HOT) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA) ; emplacements de plein air → Camping (CAMP) ou Hôtellerie de plein air (HPA).
@@ -128,7 +129,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer une fête ou une manifestation ?',
     keywords: ['fête', 'événement', 'manifestation', 'festival', 'concert'],
     types: ['FMA'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-fma-act'],
     answer: `**C'est quoi.** Un événement daté — fête, festival, concert, marché de Noël — type **Fête / manifestation (FMA)**.
 
 **Quand choisir ce type.** L'offre a une ou plusieurs dates précises (une édition, une série d'occurrences). **Pas ce type si** : l'activité est proposée en continu toute l'année, sans dates d'édition → Activité (ASC) ou Activité encadrée (ACT).
@@ -143,7 +144,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer une activité sportive ou culturelle ?',
     keywords: ['activité', 'sport', 'culture', 'initiation'],
     types: ['ASC'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-asc-act'],
     answer: `**C'est quoi.** Une activité pratiquée en autonomie ou avec un encadrement léger (randonnée aquatique, initiation, sortie découverte) — type **Activité (ASC)**.
 
 **Quand choisir ce type.** L'activité est disponible en continu (pas d'édition datée) et l'encadrement, s'il existe, reste léger. **Pas ce type si** : événement avec des dates précises → Fête / manifestation (FMA) ; prestation commerciale encadrée avec réservation (stage, sortie guidée) → Activité encadrée (ACT), voir la rubrique « Choisir le bon type ».
@@ -158,7 +159,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer une activité encadrée (atelier, sortie guidée) ?',
     keywords: ['atelier', 'stage', 'guide', 'sortie', 'encadrée', 'réservation'],
     types: ['ACT'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-artisan', 'choisir-org-actor'],
     answer: `**C'est quoi.** Une prestation commerciale encadrée (atelier, stage, sortie guidée, activité avec moniteur) — type **Activité encadrée (ACT)**.
 
 **Quand choisir ce type.** Un opérateur encadre et commercialise la prestation. **Pas ce type si** : pratique en autonomie ou encadrement léger → Activité (ASC).
@@ -190,7 +191,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer un site patrimonial ou culturel ?',
     keywords: ['patrimoine', 'musée', 'église', 'culture', 'monument'],
     types: ['PCU'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-pcu-loi'],
     answer: `**C'est quoi.** Un site patrimonial ou culturel bâti — musée, église, monument — type **Patrimoine (PCU)**.
 
 **Quand choisir ce type.** Le site a une valeur patrimoniale ou culturelle reconnue. **Pas ce type si** : équipement de loisir marchand sans valeur patrimoniale → Loisir (LOI).
@@ -205,7 +206,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer un site naturel ?',
     keywords: ['nature', 'cascade', 'point de vue', 'forêt', 'site naturel'],
     types: ['PNA'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-pna-loi'],
     answer: `**C'est quoi.** Un site naturel remarquable — cascade, point de vue, forêt, belvédère — type **Site naturel (PNA)**.
 
 **Quand choisir ce type.** Le site est un espace naturel, généralement en accès libre. **Pas ce type si** : équipement aménagé et marchand → Loisir (LOI).
@@ -220,7 +221,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer un producteur ?',
     keywords: ['producteur', 'ferme', 'vanille', 'distillerie', 'dégustation'],
     types: ['PRD'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-prd-com'],
     answer: `**C'est quoi.** Un producteur local visitable, avec vente directe ou dégustation (vanille, thé, miel, distillerie…) — type **Producteur (PRD)**.
 
 **Quand choisir ce type.** Production locale doublée d'un accueil du public (visite, dégustation, vente directe sur site). **Pas ce type si** : repas servis sur place comme activité principale → Restaurant (RES) ; revente seule sans lien avec la production → Commerce (COM) ; visite guidée commercialisée par un tiers → Activité encadrée (ACT).
@@ -265,7 +266,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     question: 'Comment créer un commerce ?',
     keywords: ['commerce', 'boutique', 'magasin', 'artisanat', 'souvenir'],
     types: ['COM'],
-    related: ['creer-fiche'],
+    related: ['creer-fiche', 'choisir-artisan'],
     answer: `**C'est quoi.** Un commerce utile au visiteur — boutique, magasin, atelier d'artisan — type **Commerce (COM)**.
 
 **Quand choisir ce type.** Vente de produits ou de créations, y compris l'**artisanat**. **Pas ce type si** : production visitable avec accueil du public → Producteur (PRD).

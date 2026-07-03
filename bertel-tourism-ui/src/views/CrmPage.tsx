@@ -71,7 +71,12 @@ export default function CrmPage() {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setNav(loadNav());
+    // Deep-link d'onglet (hub personnel 2026-07-03) : ?tab= prime sur le nav persisté —
+    // même esprit que ?fiche= (§142). Lu via window.location au mount (pas de
+    // useSearchParams : évite la contrainte Suspense, le nav est déjà hydraté client-only).
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    const isValidTab = tab === 'annuaire' || tab === 'taches' || tab === 'timeline';
+    setNav(isValidTab ? { view: tab as CrmView } : loadNav());
     setHydrated(true);
   }, []);
 

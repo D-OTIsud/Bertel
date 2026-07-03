@@ -181,3 +181,23 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
     expect(screen.queryByText(/chargement de la timeline/i)).not.toBeInTheDocument();
   });
 });
+
+describe('deep-link ?tab= (hub personnel)', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('?tab=taches prime sur le nav persisté (annuaire) et ouvre Tâches & relances', async () => {
+    localStorage.setItem('bertel-crm-nav-v2', JSON.stringify({ view: 'annuaire' }));
+    window.history.replaceState(null, '', '/crm?tab=taches');
+    renderPage();
+    // Carte kanban du mock ⇒ la vue Tâches est bien rendue.
+    expect(await screen.findByText('Rappeler le directeur')).toBeInTheDocument();
+  });
+
+  it('?tab= invalide → comportement actuel (annuaire par défaut)', async () => {
+    window.history.replaceState(null, '', '/crm?tab=nimporte');
+    renderPage();
+    expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
+  });
+});

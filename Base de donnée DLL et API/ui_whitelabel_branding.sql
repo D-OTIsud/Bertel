@@ -175,6 +175,13 @@ AS $$
     'textColor', s.text_color,
     'backgroundColor', s.background_color,
     'surfaceColor', s.surface_color,
+    -- Attribution institutionnelle « en appui » de la marque produit, servie au runtime
+    -- pour rester white-label (§167 : l'identité de l'écran d'auth ne se hardcode jamais).
+    -- Whitelist explicite de clés publiques de `extra` (jamais tout `extra` — il peut
+    -- porter de la config privée). NULL si absent ⇒ l'écran d'auth n'affiche rien.
+    'operatorName', s.extra->>'operatorName',
+    'territory', s.extra->>'territory',
+    'islandTagline', s.extra->>'islandTagline',
     'updatedAt', s.updated_at
   )
   FROM public.app_branding_settings s
@@ -182,7 +189,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION api.get_public_branding() IS
-'Returns public-safe brand settings for anonymous contexts such as the login page.';
+'Returns public-safe brand settings for anonymous contexts such as the login page, including the runtime-driven institutional operator attribution (operatorName/territory/islandTagline from extra).';
 
 -- -----------------------------------------------------
 -- 5) Authenticated RPC with marker styles and extra payload

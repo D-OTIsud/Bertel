@@ -15,6 +15,12 @@ interface BrandingRpcPayload {
   backgroundColor?: unknown;
   surfaceColor?: unknown;
   markerStyles?: unknown;
+  // Attribution institutionnelle : get_public_branding l'expose à plat (clés whitelistées),
+  // get_app_branding la porte dans `extra`. On lit les deux formes (§171).
+  operatorName?: unknown;
+  territory?: unknown;
+  islandTagline?: unknown;
+  extra?: unknown;
 }
 
 export interface BrandingSnapshot {
@@ -41,6 +47,9 @@ function assertBrandingPayload(data: unknown): BrandingRpcPayload {
 
 function normalizeBrandingSnapshot(data: unknown): BrandingSnapshot {
   const payload = assertBrandingPayload(data);
+  // extra n'est présent que dans get_app_branding (authentifié) ; get_public_branding
+  // aplatit déjà les clés. On lit les deux formes pour une seule normalisation.
+  const extra = payload.extra && typeof payload.extra === 'object' ? (payload.extra as Record<string, unknown>) : {};
 
   return {
     theme: coerceThemeSettings({
@@ -51,6 +60,9 @@ function normalizeBrandingSnapshot(data: unknown): BrandingSnapshot {
       textColor: payload.textColor,
       backgroundColor: payload.backgroundColor,
       surfaceColor: payload.surfaceColor,
+      operatorName: payload.operatorName ?? extra.operatorName,
+      territory: payload.territory ?? extra.territory,
+      islandTagline: payload.islandTagline ?? extra.islandTagline,
     }),
     markerStyles: coerceMarkerStyles(payload.markerStyles),
     logoStoragePath: typeof payload.logoStoragePath === 'string' && payload.logoStoragePath.trim() ? payload.logoStoragePath.trim() : null,
@@ -224,7 +236,9 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
       p_background_color: input.theme.backgroundColor,
       p_surface_color: input.theme.surfaceColor,
       p_marker_styles: input.markerStyles,
-      p_extra: {},
+      // null = « ne touche pas à extra » (upsert fait COALESCE(p_extra, s.extra)). L'écran
+      // Réglages ne gère pas `extra` (attribution institutionnelle §171) : envoyer {} l'écraserait.
+      p_extra: null,
       p_clear_logo: input.clearLogo ?? false,
     });
 

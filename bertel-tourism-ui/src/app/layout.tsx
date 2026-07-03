@@ -40,7 +40,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: 'Bertel Tourism UI',
+  title: 'Bertel — Gouvernance touristique',
   description: 'Plateforme de gestion touristique et CRM collaborative.',
 };
 

@@ -53,9 +53,13 @@
                   "properties": {
                     "meta": {
                       "allOf": [{ "$ref": "#/components/schemas/Meta" }],
-                      "description": "Contient aussi les champs de pagination émis par la source (ex. curseur suivant)."
+                      "description": "Métadonnées de l'enveloppe + pagination par curseur.",
+                      "properties": {
+                        "next_cursor": { "type": ["string", "null"], "description": "Curseur opaque de la page suivante (à repasser en `cursor`). `null` = dernière page." },
+                        "total": { "type": "integer", "description": "Nombre total d'objets correspondant à la requête (toutes pages confondues)." }
+                      }
                     },
-                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/ObjectResource" } }
+                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/CardItem" } }
                   }
                 }
               }
@@ -91,6 +95,451 @@
                   "properties": {
                     "meta": { "$ref": "#/components/schemas/Meta" },
                     "data": { "$ref": "#/components/schemas/ObjectResource" }
+                  }
+                },
+                "example": {
+                  "meta": {
+                    "contract_version": "1.0.0"
+                  },
+                  "data": {
+                    "id": "RESRUN00000000NQ",
+                    "fma": [],
+                    "name": "Ferme Lebon Papillon",
+                    "tags": [
+                      {
+                        "icon": "heart",
+                        "name": "Bien-être",
+                        "slug": "wellness",
+                        "color": "#ec4899",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "shopping-bag",
+                        "name": "Boutique",
+                        "slug": "shopping",
+                        "color": "#14b8a6",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "utensils",
+                        "name": "Cuisine",
+                        "slug": "food",
+                        "color": "#f97316",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "wheat",
+                        "name": "Ferme et agrotourisme",
+                        "slug": "farm",
+                        "color": "#65a30d",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "binoculars",
+                        "name": "Panorama",
+                        "slug": "panorama",
+                        "color": "#0ea5e9",
+                        "icon_url": null
+                      },
+                      {
+                        "icon": "mountain",
+                        "name": "Plein air",
+                        "slug": "outdoor",
+                        "color": "#16a34a",
+                        "icon_url": null
+                      }
+                    ],
+                    "type": "RES",
+                    "media": [
+                      {
+                        "id": "69165d0f-5c8e-4527-8847-0f88ca99c9f2",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/daa43f48.Path.112724.webp",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": true,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      },
+                      {
+                        "id": "16234d34-096e-4f36-a6d2-d095ad846a7c",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/f0bb6beb.Path.055711.jpg",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": false,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      },
+                      {
+                        "id": "1e000a40-2da7-4372-b3c6-fe8bd1fd47c5",
+                        "url": "https://ryycrdhlkmzpxwwwwupy.supabase.co/storage/v1/object/public/old_media/ab362207.Path.112625.webp",
+                        "tags": [],
+                        "title": null,
+                        "width": null,
+                        "credit": null,
+                        "height": null,
+                        "is_main": false,
+                        "icon_url": null,
+                        "position": 0,
+                        "type_code": "photo",
+                        "type_name": "Photo",
+                        "visibility": null,
+                        "description": null,
+                        "type_description": "Photographies officielles"
+                      }
+                    ],
+                    "menus": [],
+                    "actors": [],
+                    "places": [],
+                    "prices": [],
+                    "render": {
+                      "lang": "fr",
+                      "locale": "fr-FR",
+                      "version": "1.0",
+                      "timezone": "UTC",
+                      "actor_lines": [
+                        "Mme Murielle Lebon (Exploitant)"
+                      ],
+                      "event_lines": [],
+                      "legal_lines": [],
+                      "media_lines": [
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo",
+                        "Photo"
+                      ],
+                      "price_lines": [],
+                      "amenity_lines": [
+                        "Parking (Parking)",
+                        "Bar (Services)",
+                        "Restaurant (Services)"
+                      ],
+                      "contact_lines": [
+                        "Mobile : 0692 88 27 04",
+                        "Email : fermelebonpapillon@gmail.com",
+                        "Website : http://www.fermelebon.fr"
+                      ],
+                      "capacity_lines": [
+                        "20 seat Asientos"
+                      ],
+                      "discount_lines": [],
+                      "taxonomy_lines": [
+                        "Taxonomie RES : Table d'hôtes > Table d'hôte"
+                      ],
+                      "menu_item_lines": [],
+                      "meeting_room_lines": [],
+                      "classification_lines": [
+                        "Accueil Paysan : Restauration paysanne (granted)"
+                      ],
+                      "sustainability_lines": [],
+                      "event_occurrence_lines": []
+                    },
+                    "status": "published",
+                    "address": {
+                      "city": "Le Tampon",
+                      "address1": "90 Chemin des Papillons Pont d'Yves Tampon",
+                      "address2": null,
+                      "address3": null,
+                      "lieu_dit": "Bras de Pontho",
+                      "postcode": "97430",
+                      "direction": "De Saint-Pierre RN3 jusqu'au RP du 17ème km, prendre à gauche au petit RP, prendre le chemin de la Salette point de repère le champ d'agrume à droite, tourner au chemin Tiguet puis au radier le chemin Papillon, panneau Ferme Lebon Papillon à gauche, suivre le panneau. \nDepuis Saint-Benoît RN3 jusqu'au RP du 17ème km prendre à droite, même itinéraire.",
+                      "code_insee": null,
+                      "direction_md": "De Saint-Pierre RN3 jusqu'au RP du 17ème km, prendre à gauche au petit RP, prendre le chemin de la Salette point de repère le champ d'agrume à droite, tourner au chemin Tiguet puis au radier le chemin Papillon, panneau Ferme Lebon Papillon à gauche, suivre le panneau. \nDepuis Saint-Benoît RN3 jusqu'au RP du 17ème km prendre à droite, même itinéraire.",
+                      "address1_suite": null
+                    },
+                    "origins": [
+                      {
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "source_system": "berta_v2_csv_export",
+                        "import_batch_id": null,
+                        "source_object_id": "recR99OmSXnqpQRCv",
+                        "first_imported_at": "2026-05-01T09:24:21.93396+00:00"
+                      }
+                    ],
+                    "capacity": [
+                      {
+                        "unit": "seat",
+                        "value": 20,
+                        "icon_url": null,
+                        "metric_code": "seats",
+                        "metric_name": "Places assises",
+                        "metric_description": "Nombre de sièges assis"
+                      }
+                    ],
+                    "contacts": [
+                      {
+                        "role": null,
+                        "value": "0692 88 27 04",
+                        "icon_url": null,
+                        "position": 1,
+                        "is_public": true,
+                        "kind_code": "mobile",
+                        "kind_name": "Mobile",
+                        "is_primary": true,
+                        "kind_description": "Numéro de portable pour joindre l'établissement"
+                      },
+                      {
+                        "role": null,
+                        "value": "fermelebonpapillon@gmail.com",
+                        "icon_url": null,
+                        "position": 4,
+                        "is_public": true,
+                        "kind_code": "email",
+                        "kind_name": "Email",
+                        "is_primary": true,
+                        "kind_description": "Adresse électronique principale"
+                      },
+                      {
+                        "role": null,
+                        "value": "http://www.fermelebon.fr",
+                        "icon_url": null,
+                        "position": 5,
+                        "is_public": true,
+                        "kind_code": "website",
+                        "kind_name": "Site web",
+                        "is_primary": true,
+                        "kind_description": "URL du site officiel"
+                      }
+                    ],
+                    "location": {
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [
+                          55.516476,
+                          -21.230521
+                        ]
+                      },
+                      "latitude": -21.230521,
+                      "longitude": 55.516476,
+                      "altitude_m": null
+                    },
+                    "position": 0,
+                    "taxonomy": {
+                      "domains": [
+                        {
+                          "path": [
+                            {
+                              "id": "45071891-a299-4183-a673-e3d6dfb8b3eb",
+                              "code": "table_d_hotes",
+                              "name": "Table d'hôtes",
+                              "depth": 0,
+                              "description": "Table d'hôtes"
+                            },
+                            {
+                              "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
+                              "code": "table_d_hote",
+                              "name": "Table d'hôte",
+                              "depth": 1,
+                              "description": "Table d'hôte"
+                            }
+                          ],
+                          "domain": "taxonomy_res",
+                          "source": "old_data_enrichment_20260512",
+                          "updated_at": "2026-05-14T08:49:19.006951+00:00",
+                          "domain_name": "Taxonomie RES",
+                          "object_type": "RES",
+                          "assigned_node": {
+                            "id": "4b32363d-64d9-46b7-8098-44c9a1d09a2b",
+                            "code": "table_d_hote",
+                            "name": "Table d'hôte",
+                            "depth": 1,
+                            "description": "Table d'hôte"
+                          }
+                        }
+                      ]
+                    },
+                    "allergens": [],
+                    "amenities": [
+                      {
+                        "code": "parking",
+                        "name": "Parking",
+                        "family": {
+                          "code": "parking",
+                          "name": "Parking",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      },
+                      {
+                        "code": "bar",
+                        "name": "Bar",
+                        "family": {
+                          "code": "services",
+                          "name": "Services",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      },
+                      {
+                        "code": "restaurant",
+                        "name": "Restaurant",
+                        "family": {
+                          "code": "services",
+                          "name": "Services",
+                          "icon_url": null
+                        },
+                        "icon_url": null,
+                        "disability_types": null
+                      }
+                    ],
+                    "discounts": [],
+                    "languages": [
+                      {
+                        "code": "rcf",
+                        "name": "Créole réunionnais",
+                        "level": null
+                      },
+                      {
+                        "code": "fr",
+                        "name": "Français",
+                        "level": null
+                      }
+                    ],
+                    "org_links": [
+                      {
+                        "note": "Publisher link from Berta v2 Old_data import",
+                        "role_id": "8b0c1597-1bf7-4287-b764-2884a4e9b1a2",
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "is_primary": true,
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "org_object_id": "ORGRUN000000000B"
+                      }
+                    ],
+                    "created_at": "2026-05-01T09:24:21.93396+00:00",
+                    "is_editing": false,
+                    "promotions": [],
+                    "room_types": [],
+                    "updated_at": "2026-06-04T15:29:30.03687+00:00",
+                    "visibility": "public",
+                    "description": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                    "object_zone": [],
+                    "region_code": "RUN",
+                    "descriptions": [
+                      {
+                        "id": "719b7ee8-f3e2-4fc0-820c-6b158fa78d65",
+                        "position": 0,
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-06-04T15:29:30.03687+00:00",
+                        "visibility": "public",
+                        "description": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                        "description_md": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                        "description_chapo": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                        "sanitary_measures": null,
+                        "description_mobile": null,
+                        "description_adapted": null,
+                        "description_edition": null,
+                        "description_chapo_md": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                        "description_mobile_md": null,
+                        "description_adapted_md": null,
+                        "description_edition_md": null,
+                        "description_offre_hors_zone": null
+                      }
+                    ],
+                    "dietary_tags": [],
+                    "external_ids": [
+                      {
+                        "id": "766df472-c16a-4d1f-8748-0dd40a98c3a0",
+                        "created_at": "2026-05-01T09:24:21.93396+00:00",
+                        "updated_at": "2026-05-01T09:24:21.93396+00:00",
+                        "external_id": "recR99OmSXnqpQRCv",
+                        "source_system": "berta_v2_csv_export",
+                        "last_synced_at": "2026-05-01T09:24:21.93396+00:00",
+                        "organization_object_id": "ORGRUN000000000B"
+                      }
+                    ],
+                    "web_channels": [],
+                    "cuisine_types": [],
+                    "legal_records": [],
+                    "meeting_rooms": [],
+                    "opening_times": {
+                      "periods_current": [],
+                      "periods_next_year": []
+                    },
+                    "description_md": "Spécialités : poulet songe, poulet papaye sont proposés à la table paysanne. Découvrir ou redécouvrir les produits lontan avec Murielle et David.\nDans une ambiance calme et verdoyante, fraîcheur garantie avec les produits maraîchers cultivés sur place en agriculture bio.\nOuvert tous les jours midi et soir sur réservation 2 jours avant (min de 5 personnes).",
+                    "group_policies": [],
+                    "menu_documents": [],
+                    "classifications": [
+                      {
+                        "value": "restauration",
+                        "scheme": "accueil_paysan",
+                        "status": "granted",
+                        "awarded_at": null,
+                        "value_name": "Restauration paysanne",
+                        "scheme_name": "Accueil Paysan",
+                        "valid_until": null,
+                        "disability_types_covered": []
+                      }
+                    ],
+                    "fma_occurrences": [],
+                    "payment_methods": [
+                      {
+                        "code": "cheque",
+                        "name": "Chèque",
+                        "icon_url": null,
+                        "description": "Chèques bancaires"
+                      },
+                      {
+                        "code": "especes",
+                        "name": "Espèces",
+                        "icon_url": null,
+                        "description": "Paiement en liquide"
+                      }
+                    ],
+                    "environment_tags": [
+                      {
+                        "code": "calme",
+                        "name": "Calme",
+                        "icon_url": null,
+                        "description": "Environnement calme"
+                      },
+                      {
+                        "code": "rural",
+                        "name": "Rural",
+                        "icon_url": null,
+                        "description": "Village ou hameau rural"
+                      },
+                      {
+                        "code": "vue_panoramique",
+                        "name": "Vue panoramique",
+                        "icon_url": null,
+                        "description": "Vue panoramique exceptionnelle"
+                      }
+                    ],
+                    "description_chapo": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                    "incoming_relations": [],
+                    "outgoing_relations": [],
+                    "accessibility_labels": [],
+                    "description_chapo_md": "Située au Tampon, Ferme Lebon Papillon dispose d'une table d'hôte labellisée Accueil Paysan qui propose une cuisine créole traditionnelle.",
+                    "commercial_visibility": "active",
+                    "sustainability_labels": [],
+                    "sustainability_actions": [],
+                    "sustainability_action_labels": []
                   }
                 }
               }
@@ -235,7 +684,7 @@
       },
       "Search": {
         "name": "search", "in": "query", "required": false,
-        "description": "Recherche plein texte (nom, ville, aménités, tags, menus, cuisines, labels, taxonomie, description).",
+        "description": "Recherche par **nom de la fiche uniquement** (correspondance sur le nom de l'objet). Ne porte PAS sur la ville, les aménités, les tags, les menus, les cuisines, les labels, la taxonomie ni la description.",
         "schema": { "type": "string" }
       },
       "Lang": {
@@ -330,7 +779,7 @@
         "description": "Suppression définitive d'un objet.",
         "required": ["object_id", "type", "deleted_at"],
         "properties": {
-          "object_id": { "type": "string", "description": "Identifiant de l'objet supprimé." },
+          "object_id": { "type": "string", "pattern": "^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$", "description": "Identifiant de l'objet supprimé (16 caractères, même format que le paramètre `id`)." },
           "type": { "$ref": "#/components/schemas/ObjectType" },
           "deleted_at": { "type": "string", "format": "date-time", "description": "Horodatage de la suppression définitive." }
         },
@@ -412,6 +861,94 @@
           "sanitary_measures": { "$ref": "#/components/schemas/I18nFieldMap" }
         },
         "additionalProperties": false
+      },
+      "CardItem": {
+        "type": "object",
+        "description": "**Carte** d'objet renvoyée par la LISTE `GET /objects` — projection légère (RPC `get_object_cards_batch`), **pas** la ressource détail. Pour la fiche complète, appeler `GET /objects/{id}` (schéma `ObjectResource`). Additive : de nouvelles clés de carte peuvent apparaître sans rupture.",
+        "required": ["id", "type", "name"],
+        "properties": {
+          "id": { "type": "string", "description": "Identifiant stable (16 caractères)." },
+          "type": { "$ref": "#/components/schemas/ObjectType" },
+          "name": { "type": "string", "description": "Nom de la fiche." },
+          "status": { "$ref": "#/components/schemas/ObjectStatus" },
+          "commercial_visibility": { "type": ["string", "null"], "description": "Visibilité commerciale (ex. `active`) ou null." },
+          "image": { "type": ["string", "null"], "format": "uri", "description": "URL de l'image de couverture, ou null si aucune." },
+          "rating": { "type": ["number", "null"], "description": "Note moyenne, ou null si aucun avis." },
+          "review_count": { "type": "integer", "description": "Nombre d'avis pris en compte." },
+          "min_price": { "type": ["number", "null"], "description": "Tarif minimum affichable, ou null si non tarifé." },
+          "open_now": { "type": ["boolean", "null"], "description": "**Tri-état** : `true` = ouvert maintenant, `false` = fermé, `null` = indéterminé (horaires inconnus ou type sans horaires). Ne jamais présumer `false` sur `null`." },
+          "location": {
+            "type": ["object", "null"],
+            "description": "Localisation compacte de la carte.",
+            "properties": {
+              "lat": { "type": ["number", "null"], "description": "Latitude." },
+              "lon": { "type": ["number", "null"], "description": "Longitude." },
+              "city": { "type": ["string", "null"], "description": "Commune." },
+              "postcode": { "type": ["string", "null"], "description": "Code postal." },
+              "lieu_dit": { "type": ["string", "null"], "description": "Lieu-dit." },
+              "address": { "type": ["string", "null"], "description": "Adresse compacte." }
+            },
+            "additionalProperties": true
+          },
+          "description": { "type": ["string", "null"], "description": "Description tronquée (~200 caractères), texte propre (Markdown déjà retiré)." },
+          "taxonomy": {
+            "type": "array",
+            "description": "Nœuds de taxonomie assignés.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "domain": { "type": ["string", "null"], "description": "Domaine de taxonomie (ex. `taxonomy_res`)." },
+                "code": { "type": ["string", "null"], "description": "Code du nœud assigné." },
+                "name": { "type": ["string", "null"], "description": "Libellé du nœud assigné." },
+                "path": { "type": "array", "items": { "type": "string" }, "description": "Chemin de libellés de la racine au nœud." }
+              },
+              "additionalProperties": true
+            }
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags éditoriaux.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "slug": { "type": ["string", "null"] },
+                "name": { "type": ["string", "null"] },
+                "color": { "type": ["string", "null"] },
+                "icon": { "type": ["string", "null"] },
+                "icon_url": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "amenity_codes": { "type": "array", "items": { "type": "string" }, "description": "Codes d'aménités (référentiel `amenity`)." },
+          "environment_tags": {
+            "type": "array",
+            "description": "Tags d'environnement.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": ["string", "null"] },
+                "name": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "badges": {
+            "type": "array",
+            "description": "Badges dérivés (labels, distinctions, …).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": { "type": ["string", "null"], "description": "Famille de badge." },
+                "code": { "type": ["string", "null"] },
+                "label": { "type": ["string", "null"] }
+              },
+              "additionalProperties": true
+            }
+          },
+          "updated_at": { "type": ["string", "null"], "format": "date-time", "description": "Dernière modification." }
+        },
+        "additionalProperties": true
       },
       "ObjectResource": {
         "type": "object",

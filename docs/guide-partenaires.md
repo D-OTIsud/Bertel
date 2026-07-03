@@ -71,7 +71,7 @@ Clé absente, inconnue, révoquée ou expirée : réponse `401 {"error":"unautho
 
 ### Enveloppe et versionnage
 
-Toutes les réponses ont la forme `{ "meta": …, "data": … }`. Chaque réponse porte la version de contrat dans `meta.contract_version` **et** dans l'en-tête `X-Bertel-Api-Version`.
+Seule une réponse `200` a la forme `{ "meta": …, "data": … }` ; les erreurs sont des corps **plats** portant une clé `error` (voir la table des codes d'erreur). L'en-tête `X-Bertel-Api-Version` reste présent **partout**, y compris sur les erreurs, et la réponse `200` porte en plus la version de contrat dans `meta.contract_version`.
 
 Au sein d'une même version majeure, les évolutions sont **uniquement additives** : de nouvelles clés peuvent apparaître, les clés existantes ne changent jamais de sens. **Votre parseur doit donc ignorer les clés inconnues.** Une rupture de contrat serait publiée sous `/api/public/v2/*`, sans casser la v1.
 
@@ -96,11 +96,11 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `cursor` | string | — | Curseur opaque de pagination (voir ci-dessous) |
 | `page_size` | int 1–200 | 50 | Nombre de fiches par page |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
-| `search` | string | — | Recherche plein-texte |
+| `search` | string | — | Recherche sur le **nom** de la fiche uniquement |
 | `lang` | code | `fr` | Langue de résolution des textes |
 | `format` | profil | — | Ajoute un document pivot par fiche (voir section 5) |
 
-**Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais.
+**Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
 
 **Codes de type** (paramètre `types`, champ `type` des fiches) :
 
@@ -131,7 +131,7 @@ L'identifiant a la forme `RESRUN00000000XK` (3 lettres de type + territoire + 10
 | Paramètre | Description |
 |---|---|
 | `lang` | Langue de résolution (`fr` par défaut) |
-| `lang=all` | Résout en français **et** ajoute un bloc `data.i18n` = `{champ: {langue: texte}}` avec toutes les traductions disponibles, en un seul appel |
+| `lang=all` | Résout en français **et** ajoute un bloc `data.i18n` = `{champ: {langue: texte}}` avec toutes les traductions disponibles, en un seul appel. Ce bloc couvre **uniquement** les 7 champs de la famille description (`description`, `description_chapo`, `description_mobile`, `description_edition`, `description_adapted`, `description_offre_hors_zone`, `sanitary_measures`) — **pas** le nom (`name`) ni les proses de facettes (menus, chambres, étapes d'itinéraire) |
 | `format` | Ajoute un document pivot (section 5) |
 
 ```bash
@@ -140,6 +140,48 @@ curl -H "Authorization: Bearer bk_live_…" \
 ```
 
 La fiche `data` contient l'ensemble des données publiques : identité, descriptions (texte propre), localisation et géo, contacts publics, médias publiés, horaires d'ouverture, tarifs, capacités, classements et labels, etc.
+
+**Blocs de la fiche** — les blocs toujours présents décrivent l'identité commune à tous les types ; les blocs conditionnels n'apparaissent que pour les types qui les portent (colonne « Conditionnel »).
+
+| Bloc | Contenu | Conditionnel |
+|---|---|---|
+| `identite` | `id`, `type`, `name`, `status`, `region_code`, dates | toujours |
+| `address` | Adresse postale | toujours |
+| `location` | Latitude / longitude | toujours |
+| `description` + `descriptions[]` | Textes descriptifs (+ variantes `_md` en Markdown) | toujours |
+| `contacts` | Canaux de contact publics | toujours |
+| `web_channels` | Réseaux sociaux et canaux web publics | toujours |
+| `media` | Photos / vidéos publiées (champ `credit`) | toujours |
+| `capacity` | Capacités d'accueil | toujours |
+| `amenities` | Équipements | toujours |
+| `environment_tags` | Tags d'environnement | toujours |
+| `payment_methods` | Moyens de paiement | toujours |
+| `prices` | Tarifs | toujours |
+| `discounts` | Réductions | toujours |
+| `group_policies` | Conditions groupes | toujours |
+| `classifications` | Labels et classements | toujours |
+| `taxonomy` | Classement taxonomique | toujours |
+| `tags` | Étiquettes libres | toujours |
+| `languages` | Langues parlées | toujours |
+| `opening_times` | Périodes d'ouverture (`periods`) | toujours |
+| `org_links` | Organisations rattachées | toujours |
+| `actors` | Acteurs (opérateurs, contacts) | toujours |
+| `legal_records` | Mentions légales | toujours |
+| `sustainability_labels` / `sustainability_actions` | Labels et actions de durabilité | toujours |
+| `accessibility_labels` | Labels d'accessibilité | toujours |
+| `outgoing_relations` / `incoming_relations` | Relations entre fiches | toujours |
+| `render` | Lignes pré-formatées en français | toujours |
+| `activity` | Détail activité | ACT / ASC |
+| `itinerary` + `itinerary_details` | Détail itinéraire | ITI |
+| `menus` + `cuisine_types` + `dietary_tags` + `allergens` | Carte, types de cuisine, régimes, allergènes | RES / FMA |
+| `menu_documents` | Documents de carte | RES |
+| `fma_occurrences` | Dates d'occurrence de l'événement | FMA |
+| `room_types` + `meeting_rooms` | Chambres et salles de séminaire | Hébergement / MICE |
+| `places` | Sous-lieux | selon la fiche |
+
+Un exemple de réponse détail complet et réel est fourni dans le contrat OpenAPI (`openapi.json`) et la collection Postman.
+
+**Langues.** Le code de résolution par défaut est `fr`. Le corpus est aujourd'hui majoritairement francophone : la traduction du contenu des établissements est un chantier en cours. À défaut de traduction disponible pour un champ dans la langue demandée, c'est la valeur française qui est renvoyée.
 
 ### 3.3 `GET /objects/deletions` — flux des suppressions (tombstones)
 
@@ -203,6 +245,7 @@ Bonnes pratiques :
 - `page_size=200` minimise le nombre d'appels (la base compte moins de 1 000 fiches publiées : la synchro complète tient en quelques requêtes).
 - Restez sous la limite de débit ; sur `429` ou `5xx`, réessayez avec un backoff (attendre `Retry-After`, puis doubler).
 - L'ordre de la liste n'est pas contractuel : l'upsert par `id` est la seule stratégie fiable.
+- Les fiches sont mises à jour en continu par l'OTI : comparez le champ `updated_at` pour ne retraiter que les fiches réellement modifiées depuis votre dernier cycle.
 
 ---
 
@@ -243,6 +286,14 @@ Les documents pivot couvrent les **champs cœur** : type/classe correcte dans le
 Ne sont **pas** encore portés dans les pivots (chaque standard compte des centaines de champs) : horaires d'ouverture, tarifs, capacités, équipements, classements, **dates d'occurrence des événements** (FMA), tracés GPX des itinéraires, ainsi que le multilingue (pivots en français ; les traductions restent disponibles sur la ressource de base via `?lang=all`).
 
 **Avant tout branchement réel**, validez la conformité champ à champ contre l'importeur cible (validateur DATAtourisme, plateforme Apidae, SIT Tourinsoft régional). Si un champ vous manque dans un pivot, il est en général déjà présent dans la ressource de base `data` — et le profil peut être enrichi : parlez-en au contact ci-dessous.
+
+---
+
+## Historique des versions
+
+- **`1.0.0`** — première version publique du contrat.
+
+Au sein de la v1, les évolutions sont **additives** (de nouvelles clés peuvent apparaître, les clés existantes ne changent jamais de sens). Les ajouts sont notifiés par e-mail aux détenteurs de clés.
 
 ---
 

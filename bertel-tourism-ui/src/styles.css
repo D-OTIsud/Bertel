@@ -3208,8 +3208,7 @@ a {
 .auth-hero__brandrow { animation-delay: 40ms; }
 .auth-hero__title { animation-delay: 120ms; }
 .auth-hero__acronym { animation-delay: 180ms; }
-.auth-hero__domains { animation-delay: 240ms; }
-.auth-hero__operator { animation-delay: 300ms; }
+.auth-hero__operator { animation-delay: 240ms; }
 
 @keyframes auth-hero-rise {
   from { opacity: 0; transform: translateY(12px); }
@@ -3288,27 +3287,6 @@ a {
   color: var(--primary-foreground);
   font-weight: 700;
 }
-
-/* Domaines de données = les itinéraires qui convergent. Ligne pointée éditoriale, pas de cartes. */
-.auth-hero__domains {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.15rem 0.5rem;
-  margin: 0.85rem 0 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  opacity: 0.85;
-}
-
-.auth-hero__domain {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-}
-
-.auth-hero__domain-dot { opacity: 0.5; }
 
 .auth-hero__operator {
   display: flex;

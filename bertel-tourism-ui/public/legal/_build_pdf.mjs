@@ -11,6 +11,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const targets = [
   { html: 'rgpd.html', pdf: 'rgpd.pdf', title: 'Règlement RGPD — Bertel' },
   { html: 'dpia.html', pdf: 'dpia.pdf', title: "DPIA — Analyse d'Impact Bertel" },
+  { html: 'cgu.html', pdf: 'cgu.pdf', title: "Conditions d'utilisation — Bertel" },
 ];
 
 const browser = await chromium.launch();

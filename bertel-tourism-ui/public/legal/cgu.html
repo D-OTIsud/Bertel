@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Conditions d'utilisation — Bertel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --teal: #76B097;
+    --teal-2: #0d4f4e;
+    --teal-soft: #e8f3ee;
+    --teal-tint: #f5faf7;
+    --orange: #E08855;
+    --orange-soft: #fbeee4;
+    --ink: #14201c;
+    --ink-2: #43544f;
+    --ink-3: #6b7c77;
+    --ink-4: #97a5a1;
+    --bg: #ffffff;
+    --bg-tint: #fafbf9;
+    --line: #e3e8e6;
+    --line-soft: #eef1ef;
+    --warn-bg: #fef6e8;
+    --warn-border: #f0c884;
+    --info-bg: #eaf3ee;
+    --info-border: #c6e0d0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 56px 48px 80px;
+  }
+  header.doc-header {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    display: inline-block;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--teal-2);
+    background: var(--teal-soft);
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  h1 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 36px;
+    line-height: 1.15;
+    font-weight: 700;
+    margin: 16px 0 8px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--ink-2);
+    font-size: 16px;
+    font-weight: 500;
+    margin: 0 0 12px;
+  }
+  .meta {
+    color: var(--ink-3);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  h2 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 44px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--teal-soft);
+    letter-spacing: -0.005em;
+  }
+  h3 {
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--ink);
+    margin: 28px 0 10px;
+  }
+  p { margin: 0 0 12px; }
+  ul, ol { padding-left: 22px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--ink); font-weight: 600; }
+  a { color: var(--teal-2); text-decoration: none; border-bottom: 1px solid var(--teal-soft); }
+  a:hover { border-bottom-color: var(--teal); }
+  code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 13px; background: var(--teal-tint); padding: 1px 6px; border-radius: 4px; color: var(--teal-2); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 18px;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: left;
+    background: var(--teal-tint);
+    color: var(--ink);
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--teal-soft);
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .card {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+  .card.contact {
+    background: var(--teal-tint);
+    border-color: var(--teal-soft);
+  }
+
+  .callout {
+    border-left: 4px solid var(--teal);
+    background: var(--info-bg);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 14px 0;
+    font-size: 14px;
+  }
+  .callout strong { color: var(--teal-2); }
+  .callout.warn {
+    background: var(--warn-bg);
+    border-left-color: var(--orange);
+  }
+  .callout.warn strong { color: #8a5418; }
+
+  .toc {
+    background: var(--bg-tint);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin: 24px 0 32px;
+  }
+  .toc h4 {
+    margin: 0 0 10px;
+    font-family: 'Sora', system-ui, sans-serif;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    font-weight: 600;
+  }
+  .toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  .toc li { margin-bottom: 4px; font-size: 14px; }
+  .toc a { border-bottom: none; color: var(--ink-2); }
+  .toc a:hover { color: var(--teal-2); }
+
+  footer.doc-footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    color: var(--ink-3);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  @media print {
+    .page { padding: 32px 28px; max-width: none; }
+    h2 { page-break-after: avoid; }
+    table, .card, .callout { page-break-inside: avoid; }
+    .toc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="doc-header">
+    <span class="eyebrow">📜 Document légal · Bertel 3.0</span>
+    <h1>Conditions Générales d'Utilisation — Bertel</h1>
+    <p class="subtitle">Plateforme Bertel 3.0 — Système d'Information Touristique (SIT) &amp; CRM</p>
+    <p class="meta">Dernière mise à jour : 3 juillet 2026 — version provisoire</p>
+  </header>
+
+  <div class="callout warn">
+    <strong>⚠️ Version provisoire.</strong> Le présent document fournit un cadre d'utilisation dérivé de la documentation de la plateforme. Les sections marquées <strong>[À VALIDER]</strong> (régime de licence des contenus, limitation de responsabilité, suspension/résiliation, droit applicable et juridiction) doivent être confirmées par la direction / un conseil juridique avant d'être opposables. La <a href="rgpd.html">Politique de confidentialité</a> et l'<a href="dpia.html">analyse d'impact (DPIA)</a> complètent ces conditions.
+  </div>
+
+  <nav class="toc">
+    <h4>Sommaire</h4>
+    <ol>
+      <li><a href="#s1">Objet &amp; acceptation</a></li>
+      <li><a href="#s2">Éditeur de la plateforme</a></li>
+      <li><a href="#s3">Accès &amp; comptes</a></li>
+      <li><a href="#s4">Description du service</a></li>
+      <li><a href="#s5">Obligations de l'utilisateur</a></li>
+      <li><a href="#s6">Contenus &amp; propriété intellectuelle</a></li>
+      <li><a href="#s7">Données personnelles</a></li>
+      <li><a href="#s8">Disponibilité &amp; évolutions</a></li>
+      <li><a href="#s9">Responsabilité &amp; limitation</a></li>
+      <li><a href="#s10">Suspension &amp; résiliation</a></li>
+      <li><a href="#s11">Modification des CGU</a></li>
+      <li><a href="#s12">Droit applicable &amp; juridiction</a></li>
+      <li><a href="#s13">Contact</a></li>
+    </ol>
+  </nav>
+
+  <section id="s1">
+    <h2>1. Objet &amp; acceptation</h2>
+    <p>Les présentes Conditions Générales d'Utilisation (« CGU ») régissent l'accès et l'utilisation de la plateforme <strong>Bertel 3.0</strong> (« la Plateforme »), système d'information touristique (SIT) et outil de gestion de la relation (CRM) édité et opéré par SPL OTI DU SUD.</p>
+    <p>Elles s'appliquent à toute personne disposant d'un compte sur la Plateforme (« l'Utilisateur ») : agents de l'office de tourisme et membres des organisations (ORG) partenaires. La création et l'utilisation d'un compte valent acceptation pleine et entière des présentes CGU.</p>
+    <div class="callout">
+      <strong>Traitement des données personnelles :</strong> l'usage de vos données personnelles est décrit dans la <a href="rgpd.html">Politique de confidentialité</a>, qui fait partie intégrante du cadre contractuel.
+    </div>
+  </section>
+
+  <section id="s2">
+    <h2>2. Éditeur de la plateforme</h2>
+    <div class="card contact">
+      <p><strong>SPL OTI DU SUD</strong><br />
+      Office de Tourisme Intercommunal du Sud de La Réunion — éditeur et opérateur de la plateforme Bertel.</p>
+      <p style="margin: 6px 0;">
+        <strong>Adresse :</strong> 379 Rue Hubert Delisle, 97430 Le Tampon<br />
+        <strong>SIREN :</strong> 882 699 556
+      </p>
+      <p style="margin: 12px 0 0;"><strong>Contact / référent :</strong><br />
+      David Philippe — Manager SI<br />
+      Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a><br />
+      Téléphone : 06 93 41 92 91</p>
+    </div>
+    <p><strong>Hébergement.</strong> L'application web (frontend) est hébergée par OVHcloud, en France (Union européenne). Les données personnelles (base de données, authentification, stockage de fichiers, temps réel) sont hébergées par Supabase Inc. sur Amazon Web Services, région <code>eu-west-1</code> (Irlande, Union européenne). Le détail des sous-traitants figure dans la <a href="rgpd.html">Politique de confidentialité</a> (§6).</p>
+  </section>
+
+  <section id="s3">
+    <h2>3. Accès &amp; comptes</h2>
+    <p>L'accès à la Plateforme est réservé aux Utilisateurs autorisés disposant d'un <strong>compte nominatif</strong>. Les comptes sont créés <strong>sur invitation</strong> d'un administrateur ; il n'existe pas d'inscription libre.</p>
+    <ul>
+      <li><strong>Éligibilité</strong> : agents de SPL OTI DU SUD et membres des ORG partenaires (autres offices de tourisme, structures SIT) rattachés à une organisation.</li>
+      <li><strong>Authentification</strong> : par mot de passe ou, pour les utilisateurs internes de l'office, via Google OAuth. Le grand public et les visiteurs des sites touristiques ne disposent pas de compte et ne sont pas concernés par les présentes CGU.</li>
+      <li><strong>Confidentialité des identifiants</strong> : les identifiants sont strictement personnels. L'Utilisateur est responsable de leur confidentialité et de toute action réalisée sous son compte. Toute perte, vol ou utilisation non autorisée doit être signalée sans délai au référent (voir §13).</li>
+    </ul>
+    <div class="callout">
+      <strong>Rôles &amp; permissions :</strong> les droits d'accès dépendent du rôle et de l'organisation de rattachement de l'Utilisateur (contrôle d'accès RBAC + cloisonnement par organisation). L'Utilisateur n'accède qu'aux données de son périmètre et aux contenus publiés du réseau.
+    </div>
+  </section>
+
+  <section id="s4">
+    <h2>4. Description du service</h2>
+    <p>Bertel est un <strong>référentiel de l'offre touristique</strong> (établissements, activités, itinéraires, événements, restaurants…) doublé d'un outil de <strong>CRM</strong>. La Plateforme est <strong>mutualisée</strong> : plusieurs organisations y produisent et publient leurs contenus.</p>
+    <p>Les principales fonctions sont : la création, la qualification et la publication de fiches touristiques ; un workflow de modération et d'historisation des versions ; la gestion de la relation avec les opérateurs (CRM) ; des exports ; et une API publique de diffusion des contenus publiés vers des sites et applications tiers.</p>
+    <p>Le service est fourni « en l'état » et est susceptible d'évoluer (voir §8).</p>
+  </section>
+
+  <section id="s5">
+    <h2>5. Obligations de l'utilisateur</h2>
+    <p>L'Utilisateur s'engage à faire un usage professionnel et loyal de la Plateforme, conforme à la mission de service public de l'office de tourisme. Il s'engage notamment à :</p>
+    <ul>
+      <li><strong>Exactitude &amp; licéité</strong> : ne saisir que des informations exactes, à jour et dont il a le droit de disposer ;</li>
+      <li><strong>Respect des droits des tiers</strong> : s'assurer, pour tout contenu ou média téléversé (textes, photos, vidéos), qu'il détient les droits nécessaires (propriété intellectuelle, droit à l'image, données personnelles) et a recueilli les consentements requis, notamment pour l'image de personnes physiques ;</li>
+      <li><strong>Sécurité</strong> : ne pas tenter de contourner les contrôles d'accès (RBAC / RLS), ne pas accéder ou tenter d'accéder à des données hors de son périmètre, ne pas perturber le fonctionnement de la Plateforme.</li>
+    </ul>
+    <div class="callout warn">
+      <strong>⚠️ Champs libres — interdiction stricte de données sensibles.</strong> Les zones de texte libre (notes CRM, commentaires, comptes-rendus, descriptions) <strong>ne doivent en aucun cas contenir</strong> de données sensibles au sens de l'article 9 du RGPD : données de santé, opinions politiques / philosophiques / religieuses, appartenance syndicale, origine, orientation sexuelle, données biométriques ou génétiques, infractions ou condamnations pénales, ni appréciation subjective excessive sur une personne. Cette règle est rappelée dans la <a href="rgpd.html">Politique de confidentialité</a> (§4.3).
+    </div>
+  </section>
+
+  <section id="s6">
+    <h2>6. Contenus &amp; propriété intellectuelle</h2>
+    <p><strong>Responsabilité éditoriale.</strong> Bertel étant une plateforme mutualisée, chaque organisation demeure responsable des contenus qu'elle publie (responsabilité conjointe au sens de l'article 26 du RGPD pour les données personnelles). SPL OTI DU SUD fournit le cadre commun et opère la Plateforme.</p>
+    <p><strong>Propriété de la Plateforme.</strong> Le logiciel Bertel, la marque « Bertel », son interface et son design demeurent la propriété de SPL OTI DU SUD ou de ses concédants. Les présentes CGU ne confèrent à l'Utilisateur qu'un droit d'usage, non exclusif et non transférable, limité aux besoins de sa mission.</p>
+    <div class="callout warn">
+      <strong>[À VALIDER — régime de licence des contenus].</strong> Le régime des droits concédés sur les contenus et médias publiés (licence d'usage et de diffusion — y compris via l'API publique et les sites partenaires —, titularité des droits, durée, réutilisation) reste à préciser et à valider juridiquement avant que la présente clause ne soit opposable.
+    </div>
+  </section>
+
+  <section id="s7">
+    <h2>7. Données personnelles</h2>
+    <p>Le traitement des données personnelles réalisé dans le cadre de la Plateforme (responsable de traitement, finalités, bases légales, durées de conservation, destinataires et sous-traitants, sécurité, cookies) est décrit en détail dans la <a href="rgpd.html">Politique de confidentialité</a>, qui fait partie intégrante des présentes CGU.</p>
+    <div class="card contact">
+      <p style="margin: 0;"><strong>Exercice de vos droits (accès, rectification, effacement, opposition…)</strong><br />
+      Référent RGPD interne — David Philippe<br />
+      Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a> · Téléphone : 06 93 41 92 91</p>
+    </div>
+  </section>
+
+  <section id="s8">
+    <h2>8. Disponibilité &amp; évolutions</h2>
+    <p>SPL OTI DU SUD met en œuvre les moyens raisonnables pour assurer la disponibilité de la Plateforme, sans garantie d'accès ininterrompu. Des interruptions peuvent survenir (maintenance, incidents, ou indisponibilité des prestataires d'hébergement OVHcloud et Supabase).</p>
+    <p>L'éditeur peut faire évoluer, ajouter ou retirer des fonctionnalités à tout moment. Les données saisies font l'objet de sauvegardes régulières (rétention par défaut de 30 jours côté hébergeur) ; l'Utilisateur demeure néanmoins responsable de l'exactitude et de la qualité de ses saisies.</p>
+  </section>
+
+  <section id="s9">
+    <h2>9. Responsabilité &amp; limitation</h2>
+    <p>L'Utilisateur est responsable des contenus qu'il saisit et publie, ainsi que de l'usage qu'il fait de la Plateforme. SPL OTI DU SUD ne saurait être tenu responsable des contenus publiés par les organisations et les Utilisateurs, ni des dommages résultant d'un manquement de l'Utilisateur aux présentes CGU, d'une indisponibilité imputable à un sous-traitant, ou d'un cas de force majeure.</p>
+    <div class="callout warn">
+      <strong>[À VALIDER — clause de limitation de responsabilité].</strong> La portée exacte de la limitation de responsabilité (exclusion des dommages indirects, plafonds éventuels, articulation avec la responsabilité conjointe des organisations, force majeure, dépendances tierces) doit être arbitrée et validée juridiquement avant d'être opposable.
+    </div>
+  </section>
+
+  <section id="s10">
+    <h2>10. Suspension &amp; résiliation</h2>
+    <p>L'accès à un compte peut être suspendu ou supprimé : en cas de manquement de l'Utilisateur aux présentes CGU (notamment §5) ; au départ de l'agent ; ou à la fin du partenariat de son organisation. À la clôture du compte, l'accès à la Plateforme cesse ; le sort des données suit la <a href="rgpd.html">Politique de confidentialité</a> (durées de conservation) et, le cas échéant, les conventions de responsabilité conjointe (Art. 26 RGPD).</p>
+    <div class="callout warn">
+      <strong>[À VALIDER — modalités de suspension et de résiliation].</strong> Les modalités précises (préavis éventuel, procédure contradictoire, restitution ou suppression des données, effets sur les contenus déjà publiés) restent à confirmer.
+    </div>
+  </section>
+
+  <section id="s11">
+    <h2>11. Modification des CGU</h2>
+    <p>SPL OTI DU SUD peut modifier les présentes CGU pour tenir compte des évolutions de la Plateforme, légales ou réglementaires. La version applicable est celle publiée à la présente adresse, datée en tête de document. Les modifications substantielles sont portées à la connaissance des Utilisateurs par un moyen approprié (par exemple, une information à la connexion). La poursuite de l'utilisation après une modification vaut acceptation de la version à jour.</p>
+  </section>
+
+  <section id="s12">
+    <h2>12. Droit applicable &amp; juridiction</h2>
+    <p>Les présentes CGU sont soumises au droit français. En cas de différend relatif à leur interprétation ou à leur exécution, les parties s'efforceront de rechercher une solution amiable avant toute action contentieuse.</p>
+    <div class="callout warn">
+      <strong>[À VALIDER — juridiction compétente].</strong> La juridiction compétente à défaut de résolution amiable (ressort applicable à La Réunion) reste à préciser et à valider.
+    </div>
+  </section>
+
+  <section id="s13">
+    <h2>13. Contact</h2>
+    <div class="card contact">
+      <p style="margin: 0;"><strong>SPL OTI DU SUD — Bertel 3.0</strong><br />
+      David Philippe — Manager SI<br />
+      Email : <a href="mailto:d.philippe@otisud.com">d.philippe@otisud.com</a><br />
+      Téléphone : 06 93 41 92 91<br />
+      Adresse : 379 Rue Hubert Delisle, 97430 Le Tampon</p>
+    </div>
+  </section>
+
+  <footer class="doc-footer">
+    Version provisoire — 3 juillet 2026 · SPL OTI du SUD · Bertel 3.0
+  </footer>
+</div>
+</body>
+</html>

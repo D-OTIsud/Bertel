@@ -143,6 +143,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const hot = useExplorerStore((state) => state.hot);
   const res = useExplorerStore((state) => state.res);
   const iti = useExplorerStore((state) => state.iti);
+  const evt = useExplorerStore((state) => state.evt);
   const vis = useExplorerStore((state) => state.vis);
   const srv = useExplorerStore((state) => state.srv);
   const toggleBucket = useExplorerStore((state) => state.toggleBucket);
@@ -157,6 +158,8 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
   const setOpenNow = useExplorerStore((state) => state.setOpenNow);
   const setEnvironmentTags = useExplorerStore((state) => state.setEnvironmentTags);
+  const setOpenAt = useExplorerStore((state) => state.setOpenAt);
+  const setEvtEventRange = useExplorerStore((state) => state.setEvtEventRange);
   const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
@@ -200,6 +203,8 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
     if ((s.common.sustainabilityActionCodesAny ?? []).length) n += 1;
     if (s.common.petsAccepted) n += 1;
     if (s.common.openNow) n += 1;
+    if (s.common.openAt) n += 1;
+    if (s.evt.eventFrom || s.evt.eventTo) n += 1;
     if (s.common.rankedLabelSchemeCode) n += 1;
     if ((s.common.labelsAny ?? []).length) n += 1;
     if ((s.common.tagsAny ?? []).length) n += 1;
@@ -263,7 +268,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
     (iti.durationMinH != null || iti.durationMaxH != null ? 1 : 0) +
     iti.practicesAny.length;
   const actSectionCount = taxonomyCountForBucket(taxonomyAny, 'ACT');
-  const evtSectionCount = taxonomyCountForBucket(taxonomyAny, 'EVT');
+  const evtSectionCount = taxonomyCountForBucket(taxonomyAny, 'EVT') + (evt.eventFrom || evt.eventTo ? 1 : 0);
   const visSectionCount =
     (isSubtypeNarrowed(vis.subtypes, DEFAULT_VIS_SUBTYPES) ? 1 : 0) + taxonomyCountForBucket(taxonomyAny, 'VIS');
   const srvSectionCount =
@@ -646,6 +651,29 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
               <span>Ouvert maintenant</span>
               <input type="checkbox" checked={common.openNow} onChange={(event) => setOpenNow(event.target.checked)} />
             </label>
+            {/* §157 — « ouvert à … » : le moteur d'ouverture évalué à un instant
+                choisi (« les restaurants encore ouverts à 18 h »). Exclusif avec
+                « Ouvert maintenant » (le store gère l'exclusion). */}
+            <div>
+              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Ouvert à… (date et heure)</span>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="datetime-local"
+                  value={common.openAt ?? ''}
+                  onChange={(event) => setOpenAt(event.target.value || null)}
+                  aria-label="Ouvert à une date et heure donnée"
+                />
+                {common.openAt ? (
+                  <button
+                    type="button"
+                    className="text-[12px] font-semibold text-orange-2 hover:text-orange"
+                    onClick={() => setOpenAt(null)}
+                  >
+                    Effacer
+                  </button>
+                ) : null}
+              </div>
+            </div>
           </div>
         </FilterColumnGroup>
 
@@ -829,8 +857,30 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
 
         {showEvt ? (
           <FilterColumnGroup label="Événements" collapsible count={evtSectionCount || undefined}>
-            <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'événement</span>
-            {renderTaxonomyChips('FMA') ?? taxonomyCatalogFallback}
+            <div className="space-y-4">
+              <div>
+                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'événement</span>
+                {renderTaxonomyChips('FMA') ?? taxonomyCatalogFallback}
+              </div>
+              {/* §157 — plage de dates (recouvrement avec [début, fin] de l'événement). */}
+              <div>
+                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Dates</span>
+                <div className="filters-panel__range-grid">
+                  <Input
+                    type="date"
+                    value={evt.eventFrom ?? ''}
+                    onChange={(event) => setEvtEventRange(event.target.value || null, evt.eventTo)}
+                    aria-label="Événements à partir du"
+                  />
+                  <Input
+                    type="date"
+                    value={evt.eventTo ?? ''}
+                    onChange={(event) => setEvtEventRange(evt.eventFrom, event.target.value || null)}
+                    aria-label="Événements jusqu'au"
+                  />
+                </div>
+              </div>
+            </div>
           </FilterColumnGroup>
         ) : null}
 

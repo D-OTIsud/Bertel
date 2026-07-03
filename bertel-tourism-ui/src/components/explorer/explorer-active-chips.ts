@@ -24,6 +24,8 @@ export type ActiveChipGroup =
   // D23 — filtres jusqu'ici invisibles dans la barre :
   | 'zone'
   | 'environment'
+  | 'openAt'
+  | 'evtDates'
   | 'accessDisability'
   | 'accessAmenities'
   | 'sustCategories'
@@ -126,6 +128,27 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   // dans la barre (impossible à voir/retirer sans rouvrir chaque panneau).
   if (c.polygon) {
     chips.push({ key: 'zone', group: 'zone', value: 'zone', label: 'Zone dessinée sur la carte' });
+  }
+
+  // §157 — « ouvert à … » (datetime-local YYYY-MM-DDTHH:mm → JJ/MM à HH:mm).
+  if (c.openAt) {
+    const [datePart = '', timePart = ''] = c.openAt.split('T');
+    const [y = '', m = '', d = ''] = datePart.split('-');
+    const label = y ? `Ouvert le ${d}/${m} à ${timePart}` : 'Ouvert à…';
+    chips.push({ key: 'openAt', group: 'openAt', value: c.openAt, label });
+  }
+
+  // §157 — dates Événements.
+  const frDate = (iso: string) => iso.split('-').reverse().join('/');
+  if (filters.evt.eventFrom || filters.evt.eventTo) {
+    const from = filters.evt.eventFrom ? `du ${frDate(filters.evt.eventFrom)}` : '';
+    const to = filters.evt.eventTo ? `au ${frDate(filters.evt.eventTo)}` : '';
+    chips.push({
+      key: 'evtDates',
+      group: 'evtDates',
+      value: '*',
+      label: `Événements ${[from, to].filter(Boolean).join(' ')}`.trim(),
+    });
   }
 
   // §154 — cadre & environnement (compteur : les libellés vivent dans le

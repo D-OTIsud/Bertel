@@ -108,3 +108,16 @@ describe('§155-bis — retirer un type emporte ses sous-catégories', () => {
     useExplorerStore.getState().resetAll();
   });
 });
+
+describe('§157 — exclusion openNow ↔ openAt', () => {
+  it('poser openAt éteint openNow, et réciproquement', () => {
+    const s = useExplorerStore.getState();
+    s.setOpenNow(true);
+    s.setOpenAt('2026-07-03T18:00');
+    expect(useExplorerStore.getState().common.openNow).toBe(false);
+    expect(useExplorerStore.getState().common.openAt).toBe('2026-07-03T18:00');
+    useExplorerStore.getState().setOpenNow(true);
+    expect(useExplorerStore.getState().common.openAt).toBeNull();
+    useExplorerStore.getState().resetAll();
+  });
+});

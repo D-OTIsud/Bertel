@@ -200,6 +200,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16i    migration_filters_open_at_event_dates.sql  (§157 filtre « ouvert a ... » + dates FMA: api.get_local_time_for_timezone(tz,at) parametre (get_local_now devient son delegue), internal.compute_open_status(at) = LE moteur ouverture (refresh_open_status devient son write-back « maintenant »), get_filtered_object_ids cles open_at (evalue UNE fois en CTE, jamais LATERAL/ligne §37; NULL tri-etat jamais matche §133) + event{from,to} (recouvrement object_fma; recurrence texte-libre non evaluee); CI = tests/test_filters_open_at_event.sql) =='
 \ir migration_filters_open_at_event_dates.sql
 
+\echo '== 16j    migration_filters_accessibility_label.sql  (§162 filtre PMR: cle accessibility_any DEDIEE (equipement famille accessibility OU label LBL_TOURISME_HANDICAP granted; amenity_families_any reste equipement-pur §159), bras label de disability_types_any (subvalue_ids vides = couverture inconnue => le label seul matche), accessibility_any exclu du use_mv (labels non caches). APRES 16i: les deux portent un corps complet de get_filtered_object_ids, 16j est le plus recent (§157+§162); CI = tests/test_accessibility_label_filter.sql) =='
+\ir migration_filters_accessibility_label.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

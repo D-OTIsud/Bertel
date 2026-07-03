@@ -2,6 +2,21 @@
 
 Compagnon de l'audit [`partner-docs-audit-2026-07-03.md`](partner-docs-audit-2026-07-03.md). Couvre les **26 constats confirmés**. Objectif : rendre la doc partenaires exacte et suffisante pour une intégration de production sans rétro-ingénierie.
 
+## État d'exécution (2026-07-03)
+
+**LIVRÉ sur `master`** (commits `d3dddd4` code, `f58a8ea` contrat/doc, `c560d8d` nginx ; vérif : `tsc --noEmit` exit 0, `jest src/app/api/public` 37/37, openapi/postman JSON valides, render-check OK) :
+- **Lot A** — A2 (meta liste en liste blanche + `next_cursor` corrigé), A3 (`detail` 502 générique), A4 (`since` ISO strict). +4 tests.
+- **Lot D** — D1 (rendeur no-cache) + D2 (`.md` en `text/plain`). *Reste* : redéploiement de l'app docs Coolify + `docker build` de vérif (daemon absent en local).
+- **Lot B partiel (non-juridique)** — B1 (schéma `CardItem` corrigé + exemple réel *Ferme Lebon Papillon* dans openapi.json et Postman + lexique de blocs au guide), B4 (promesse `lang=all` + note Langues), B5 (portée `search`).
+- **Lot C** — C1/C2/C3/C4 (guide) + C8 (polish OpenAPI).
+
+**RESTE À FAIRE** :
+- **W1** (`types`→502) : session séparée (`task_f858f4ee`).
+- **Lot B juridique** — B2 (licence/médias), B3 (RGPD) : **bloqués sur les décisions PO‑1/2/3** ci-dessous.
+- **Lot C gated** — C5 (onboarding, PO‑6), C6 (SLA, PO‑5), C7 (sandbox — largement couvert par l'exemple réel de B1, PO‑4).
+- **Lot E** — backlog features (i18n large, search large, scopes, headers rate-limit).
+- **D3** — vérif manuelle de la collection Postman publique.
+
 ## Principes
 
 1. **Ne rien inventer de juridique.** Licence des données, régime des médias, posture RGPD, SLA, critères d'onboarding : ce sont des décisions de l'OTI, pas des textes à fabriquer. Le **Lot B** attend la section « Décisions PO » ci-dessous.

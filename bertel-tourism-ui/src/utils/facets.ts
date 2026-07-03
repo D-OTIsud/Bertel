@@ -425,7 +425,11 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     if (accessibilityAmenityCodes.length > 0) {
       payload.amenities_any = accessibilityAmenityCodes;
     } else if (accessibilityDisabilityTypes.length === 0) {
-      payload.amenity_families_any = ['accessibility'];
+      // §162 — clé dédiée : équipement famille accessibility OU label Tourisme & Handicap
+      // granted (le label certifié suffit sans équipement saisi, directive PO 2026-07-03).
+      // Plus amenity_families_any : cette clé est celle du filtre transverse Services &
+      // équipements (§159) et l'écraserait plus bas.
+      payload.accessibility_any = true;
     }
 
     if (accessibilityDisabilityTypes.length > 0) {

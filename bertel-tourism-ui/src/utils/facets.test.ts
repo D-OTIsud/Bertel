@@ -362,15 +362,31 @@ describe('buildBucketRpcFilters', () => {
     expect(buildBucketRpcFilters(filters, 'VIS')).not.toHaveProperty('search_mode');
   });
 
-  it('uses the canonical accessibility family for broad PMR filtering', () => {
+  it('émet accessibility_any pour le toggle PMR seul (équipements OU label T&H, §162)', () => {
     const filters = buildFilters({
       common: { ...DEFAULT_EXPLORER_FILTERS.common, pmr: true },
     });
 
     expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
-      amenity_families_any: ['accessibility'],
+      accessibility_any: true,
     });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('amenity_families_any');
     expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('amenities_any', ['wheelchair_access']);
+  });
+
+  it('PMR + familles Services & équipements ne se clobbent plus (clés séparées, §162)', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        pmr: true,
+        amenityFamiliesAny: ['wellness', 'parking'],
+      },
+    });
+
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      accessibility_any: true,
+      amenity_families_any: ['wellness', 'parking'],
+    });
   });
 
   it('adds disability types and precise amenities when selected', () => {

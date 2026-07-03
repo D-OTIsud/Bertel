@@ -13,7 +13,12 @@ export interface OrgMember {
 }
 export interface RefRole { code: string; name: string; rank: number | null; position: number | null; }
 export interface RefPermission { code: string; name: string; category: string; }
-export interface InviteResult { userId: string; alreadyExisted: boolean; }
+export interface InviteResult {
+  userId: string;
+  alreadyExisted: boolean;
+  /** Set on the 409 arm only: true when the existing account never signed in (resend possible). */
+  neverSignedIn?: boolean;
+}
 
 function requireClient() {
   const c = getApiClient();
@@ -88,18 +93,19 @@ export const grantOrgPermission = (orgObjectId: string, code: string) =>
 export const revokeOrgPermission = (orgObjectId: string, code: string) =>
   rpc('rpc_revoke_org_permission', { p_org_object_id: orgObjectId, p_permission_code: code });
 
-/** Invite via the server route (service-role) — envoie l'e-mail d'invitation Supabase. */
-export async function inviteUser(input: { email: string; orgObjectId: string; businessRoleCode: string }): Promise<InviteResult> {
+/** Invite via the server route (service-role) — envoie l'e-mail d'invitation Supabase.
+ *  `resend: true` = renvoyer l'invitation à un compte jamais connecté (delete + re-invite serveur). */
+export async function inviteUser(input: { email: string; orgObjectId: string; businessRoleCode: string; resend?: boolean }): Promise<InviteResult> {
   const client = getSupabaseClient();
   const token = (await client?.auth.getSession())?.data.session?.access_token;
   const res = await fetch('/api/admin/invite', {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: token ? `Bearer ${token}` : '' },
-    body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId }),
+    body: JSON.stringify({ email: input.email, orgObjectId: input.orgObjectId, resend: input.resend === true }),
   });
   const body = await res.json();
   if (res.status === 409 && body?.userId) {
-    return { userId: body.userId, alreadyExisted: true };
+    return { userId: body.userId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
   }
   if (!res.ok) throw new Error(body?.detail || body?.error || 'invite_failed');
   return { userId: body.userId, alreadyExisted: false };

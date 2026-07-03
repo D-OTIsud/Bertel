@@ -122,15 +122,16 @@ function useExplorerFilters() {
   );
 }
 
-// Shared, demo-/role-gated filter snapshot used by BOTH the lazy card list and the
+// Shared, role-gated filter snapshot used by BOTH the lazy card list and the
 // map markers query, so the two surfaces always show the same set. Embedding the
-// resolved statuses + demo-gated HOT subtypes in the object means the React-Query
-// cache key reflects the real query (a tourism_agent and an org_admin must NOT share
-// a cache entry). HOT subtypes are zeroed outside demo mode (legacy behaviour: HOT
-// subtype narrowing is a demo-only feature; VIS/SRV subtypes narrow in all modes).
+// resolved statuses in the object means the React-Query cache key reflects the
+// real query (a tourism_agent and an org_admin must NOT share a cache entry).
+// §155-bis : le zérotage des sous-types HOT hors démo (vestige d'une époque où
+// les types HLO/HPA/CAMP/RVA n'existaient pas en live) est SUPPRIMÉ — les
+// toggles « Type d'hébergement » du panneau §155 seraient des contrôles morts
+// en production (write-trap de lecture). HOT narrowe désormais comme VIS/SRV.
 function useExplorerQueryFilters() {
   const filters = useExplorerFilters();
-  const demoMode = useSessionStore((state) => state.demoMode);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
 
   return useMemo(() => {
@@ -141,12 +142,8 @@ function useExplorerQueryFilters() {
         ...filters.common,
         statuses: effectiveStatuses,
       },
-      hot: {
-        ...filters.hot,
-        subtypes: demoMode ? filters.hot.subtypes : [],
-      },
     };
-  }, [canEditObjects, demoMode, filters]);
+  }, [canEditObjects, filters]);
 }
 
 // §125 — lazy, server-paginated card list. Replaces the eager all-pages fetch +

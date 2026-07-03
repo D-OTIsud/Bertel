@@ -3207,9 +3207,10 @@ a {
 }
 .auth-hero__brandrow { animation-delay: 40ms; }
 .auth-hero__title { animation-delay: 120ms; }
-.auth-hero__tagline { animation-delay: 190ms; }
-.auth-hero__domains { animation-delay: 260ms; }
-.auth-hero__operator { animation-delay: 330ms; }
+.auth-hero__acronym { animation-delay: 180ms; }
+.auth-hero__tagline { animation-delay: 240ms; }
+.auth-hero__domains { animation-delay: 300ms; }
+.auth-hero__operator { animation-delay: 360ms; }
 
 @keyframes auth-hero-rise {
   from { opacity: 0; transform: translateY(12px); }
@@ -3271,6 +3272,22 @@ a {
   line-height: 1.01;
   letter-spacing: -0.022em;
   font-weight: 800;
+}
+
+/* Signification de l'acronyme BERTEL. Base atténuée (paper vers transparent, PAS opacity
+   qui plafonnerait les enfants) ; les initiales reprennent la pleine luminosité — highlight
+   par contraste (une teinte verte comme l'infographie virerait terne sur le teal). */
+.auth-hero__acronym {
+  margin: 0.55rem 0 0;
+  max-width: 42ch;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: color-mix(in oklab, var(--primary-foreground) 72%, transparent);
+}
+
+.auth-hero__acronym .ac {
+  color: var(--primary-foreground);
+  font-weight: 700;
 }
 
 .auth-hero__tagline {

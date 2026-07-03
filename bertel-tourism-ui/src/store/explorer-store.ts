@@ -41,6 +41,8 @@ interface ExplorerState extends ExplorerFilters {
   setOpenNow: (value: boolean) => void;
   /** §157 — « ouvert à … » (datetime-local, heure Réunion). Exclusif avec openNow. */
   setOpenAt: (value: string | null) => void;
+  /** §159 — familles de services & équipements (transverse). */
+  setAmenityFamilies: (codes: string[]) => void;
   /** §157 — plage de dates du bucket Événements. */
   setEvtEventRange: (from: string | null, to: string | null) => void;
   /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
@@ -232,6 +234,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setOpenAt: (value) =>
     set((state) => ({ common: { ...state.common, openAt: value, ...(value ? { openNow: false } : {}) } })),
   setEvtEventRange: (from, to) => set({ evt: { eventFrom: from, eventTo: to } }),
+  // §159 — services & équipements (transverse).
+  setAmenityFamilies: (codes) => set((state) => ({ common: { ...state.common, amenityFamiliesAny: codes } })),
   setCities: (cities) => set((state) => ({ common: { ...state.common, cities } })),
   setLieuDit: (lieuDit) => set((state) => ({ common: { ...state.common, lieuDit } })),
   setPmr: (value) =>

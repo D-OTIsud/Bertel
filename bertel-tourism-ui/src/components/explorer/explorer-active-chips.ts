@@ -26,6 +26,7 @@ export type ActiveChipGroup =
   | 'environment'
   | 'openAt'
   | 'evtDates'
+  | 'amenityFamilies'
   | 'accessDisability'
   | 'accessAmenities'
   | 'sustCategories'
@@ -148,6 +149,17 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       group: 'evtDates',
       value: '*',
       label: `Événements ${[from, to].filter(Boolean).join(' ')}`.trim(),
+    });
+  }
+
+  // §159 — services & équipements (compteur, même pattern que le cadre).
+  const familyCount = (c.amenityFamiliesAny ?? []).length;
+  if (familyCount > 0) {
+    chips.push({
+      key: 'amenityFamilies',
+      group: 'amenityFamilies',
+      value: '*',
+      label: `Services · ${familyCount} sélectionné${familyCount > 1 ? 's' : ''}`,
     });
   }
 

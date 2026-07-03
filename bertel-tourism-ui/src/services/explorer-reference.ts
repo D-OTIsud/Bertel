@@ -347,6 +347,12 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'foret', name: 'Forêt' },
       { code: 'vue_panoramique', name: 'Vue panoramique' },
     ],
+    amenityFamilies: [
+      { code: 'outdoor', name: 'Plein air' },
+      { code: 'wellness', name: 'Bien-être' },
+      { code: 'parking', name: 'Parking' },
+      { code: 'gastronomy', name: 'Gastronomie' },
+    ],
   };
 }
 
@@ -364,6 +370,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     taxonomyDomainsResult,
     practicesResult,
     environmentTagsResult,
+    amenityFamiliesResult,
     locationOptionsResult,
     accessibilityAmenitiesResult,
     sustainabilityCategoriesResult,
@@ -383,6 +390,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
+    // §159 — familles de services & équipements (transverse).
+    client.from('ref_code').select('code,name,position').eq('domain', 'amenity_family').eq('is_active', true).order('position', { ascending: true }),
     client.schema('api').rpc('get_dashboard_filter_options'),
     client
       .from('ref_amenity')
@@ -420,6 +429,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (environmentTagsResult.error) {
     throw environmentTagsResult.error;
   }
+  if (amenityFamiliesResult.error) {
+    throw amenityFamiliesResult.error;
+  }
   if (locationOptionsResult.error) {
     throw locationOptionsResult.error;
   }
@@ -456,6 +468,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const taxonomyNodes = (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
   const environmentTags = (environmentTagsResult.data ?? []) as PracticeRow[];
+  const amenityFamilies = (amenityFamiliesResult.data ?? []) as PracticeRow[];
   const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
   const accessibilityAmenities = (accessibilityAmenitiesResult.data ?? []) as AmenityRow[];
   const sustainabilityCategories = (sustainabilityCategoriesResult.data ?? []) as SustainabilityCategoryRow[];
@@ -472,6 +485,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
     environmentTags: toReferenceOptions(environmentTags),
+    amenityFamilies: toReferenceOptions(amenityFamilies),
     cities: locationOptions?.cities ?? [],
     lieuDits: locationOptions?.lieu_dits ?? [],
   };

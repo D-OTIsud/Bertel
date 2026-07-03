@@ -117,6 +117,9 @@ export function ExplorerActiveFilters() {
       case 'openAt':
         useExplorerStore.getState().setOpenAt(null);
         break;
+      case 'amenityFamilies':
+        useExplorerStore.getState().setAmenityFamilies([]);
+        break;
       case 'evtDates':
         useExplorerStore.getState().setEvtEventRange(null, null);
         break;

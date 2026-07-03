@@ -22,10 +22,10 @@ function AuthHeroScene() {
           droit, rejoignant le point de repère à l'horizontale, au niveau de « Bertel ». Le tracé
           reste dans la moitié droite (hors texte) et se referme proprement. Faible opacité : décor. */}
       <g className="auth-hero__routes" stroke="currentColor" strokeLinecap="round" fill="none">
-        <path d="M558 110 C 470 164, 360 336, 268 338" strokeWidth="3" opacity="0.17" />
-        <path d="M558 240 C 470 268, 360 338, 268 338" strokeWidth="3" opacity="0.14" />
-        <path d="M558 375 C 470 380, 360 340, 268 338" strokeWidth="3" opacity="0.12" />
-        <path d="M558 510 C 470 500, 360 344, 268 338" strokeWidth="3" opacity="0.10" />
+        <path d="M558 110 C 470 178, 360 350, 268 352" strokeWidth="3" opacity="0.17" />
+        <path d="M558 240 C 470 282, 360 352, 268 352" strokeWidth="3" opacity="0.14" />
+        <path d="M558 375 C 470 392, 360 354, 268 352" strokeWidth="3" opacity="0.12" />
+        <path d="M558 510 C 470 506, 360 356, 268 352" strokeWidth="3" opacity="0.10" />
         {/* Stations alignées sur x=558, réparties du haut vers le bas */}
         <g fill="var(--teal)" stroke="currentColor" strokeWidth="3">
           <circle cx="558" cy="110" r="7" opacity="0.55" />
@@ -36,7 +36,7 @@ function AuthHeroScene() {
       </g>
       {/* Le point de repère où convergent les itinéraires — une seule source de vérité — posé au
           niveau du mot « Bertel ». Accent chaud (brique volcanique) pour le distinguer du teal. */}
-      <g className="auth-hero__pin" transform="translate(268 338)">
+      <g className="auth-hero__pin" transform="translate(268 352)">
         <circle r="24" fill="currentColor" opacity="0.10" />
         <path
           d="M0 -13 C 8 -13, 13 -7, 13 0 C 13 8, 4 14, 0 20 C -4 14, -13 8, -13 0 C -13 -7, -8 -13, 0 -13 Z"

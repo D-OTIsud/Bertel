@@ -209,6 +209,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== ORG1   migration_org_onboarding.sql  (création d ORG par superadmin: api.rpc_create_org — objet ORG published direct + org_config, superuser-only, voie UNIQUE de création d ORG car un draft ORG serait impubliable; api.rpc_list_orgs pour la console admin + le sélecteur /team; dépend de rls_policies.sql is_platform_superuser + schema_unified.sql org_config/triggers; non foldé) =='
 \ir migration_org_onboarding.sql
 
+\echo '== ORG2   migration_org_branding.sql  (branding par ORG: table org_branding_settings — surcharges nullables héritant champ par champ du singleton app_branding_settings; get_app_branding résout selon le membership actif (current_user_org_id), signature/forme inchangées + clé orgObjectId, markerStyles reste plateforme; RPCs get/upsert gated user_can_manage_org_branding (superuser OU org_admin rang>=30); écritures via RPC uniquement; dépend de ui_whitelabel_branding.sql + migration_org_onboarding.sql; non foldé) =='
+\ir migration_org_branding.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

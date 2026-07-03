@@ -14,6 +14,9 @@ services:
       NEXT_PUBLIC_MAP_STYLE_CLASSIC: ${NEXT_PUBLIC_MAP_STYLE_CLASSIC:-https://demotiles.maplibre.org/style.json}
       NEXT_PUBLIC_MAP_STYLE_SATELLITE: ${NEXT_PUBLIC_MAP_STYLE_SATELLITE:-https://tiles.openfreemap.org/styles/liberty}
       NEXT_PUBLIC_MAP_STYLE_TOPO: ${NEXT_PUBLIC_MAP_STYLE_TOPO:-https://tiles.openfreemap.org/styles/bright}
+      # Server-only secret (service-role / sb_secret_*): runtime env ONLY — never a
+      # build ARG, which would bake the secret into the image layers.
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
     # No persistent volumes - Next.js app is stateless, data lives in Supabase
 
 volumes: {}

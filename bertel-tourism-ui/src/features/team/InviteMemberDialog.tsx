@@ -21,36 +21,37 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
   const [email, setEmail] = useState('');
   const [roleCode, setRoleCode] = useState('contributor');
   const [busy, setBusy] = useState(false);
-  // null = form view; non-null = password-reveal view (shown once after successful new invite)
-  const [temp, setTemp] = useState<string | null>(null);
+  // null = form view; non-null = confirmation view (email the invitation was sent to)
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   function resetState() {
-    setTemp(null);
+    setSentTo(null);
     setEmail('');
     setRoleCode('contributor');
   }
 
   function handleClose() {
-    // If closing while temp is shown, reset form so it's clean on next open.
-    if (temp !== null) resetState();
+    // If closing while the confirmation is shown, reset form so it's clean on next open.
+    if (sentTo !== null) resetState();
     setOpen(false);
   }
 
   async function submit() {
     setBusy(true);
     try {
-      const invited = await inviteUser({ email: email.trim().toLowerCase(), orgObjectId: orgId, businessRoleCode: roleCode });
+      const cleanEmail = email.trim().toLowerCase();
+      const invited = await inviteUser({ email: cleanEmail, orgObjectId: orgId, businessRoleCode: roleCode });
       await upsertMembership(invited.userId, orgId, roleCode);
       for (const code of presetPermissionsFor(roleCode)) {
         try { await grantUserPermission(invited.userId, code); } catch (e) { console.warn('preset grant failed', code, e); }
       }
       if (invited.alreadyExisted) {
         toast.success('Utilisateur déjà existant — rattaché à l’organisation.');
-        setTemp(null);
+        setSentTo(null);
         setOpen(false);
       } else {
-        setTemp(invited.tempPassword);
-        toast.success('Invitation créée.');
+        setSentTo(cleanEmail);
+        toast.success('Invitation envoyée.');
       }
       onDone();
     } catch (e) {
@@ -60,7 +61,7 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
     }
   }
 
-  const footer = temp === null ? (
+  const footer = sentTo === null ? (
     <>
       <button type="button" className="ghost-button" onClick={() => setOpen(false)} disabled={busy}>
         Annuler
@@ -83,7 +84,7 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
 
       {open && (
         <Modal title="Inviter un membre" onClose={handleClose} footer={footer}>
-          {temp === null ? (
+          {sentTo === null ? (
             <>
               <label className="field-block" htmlFor="invite-email">
                 <span>Adresse e-mail</span>
@@ -115,26 +116,11 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
             </>
           ) : (
             <>
-              <p className="invite-success-line"><CheckCircle2 size={16} aria-hidden /> Invitation créée.</p>
+              <p className="invite-success-line"><CheckCircle2 size={16} aria-hidden /> Invitation envoyée.</p>
               <p className="muted">
-                Communiquez ce mot de passe temporaire au nouveau membre ; il pourra le changer après connexion.
+                Un e-mail d’invitation a été envoyé à <strong>{sentTo}</strong>. Le nouveau membre
+                cliquera sur le lien reçu pour choisir son mot de passe et accéder à la plateforme.
               </p>
-              <div className="invite-temp-row">
-                <code className="invite-temp-code">{temp}</code>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(temp ?? '').then(() => {
-                      toast.success('Copié');
-                    }).catch(() => {
-                      toast.error('Échec de la copie.');
-                    });
-                  }}
-                >
-                  Copier
-                </button>
-              </div>
             </>
           )}
         </Modal>

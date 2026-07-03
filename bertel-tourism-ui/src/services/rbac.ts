@@ -13,7 +13,7 @@ export interface OrgMember {
 }
 export interface RefRole { code: string; name: string; rank: number | null; position: number | null; }
 export interface RefPermission { code: string; name: string; category: string; }
-export interface InviteResult { userId: string; tempPassword: string; alreadyExisted: boolean; }
+export interface InviteResult { userId: string; alreadyExisted: boolean; }
 
 function requireClient() {
   const c = getApiClient();
@@ -88,7 +88,7 @@ export const grantOrgPermission = (orgObjectId: string, code: string) =>
 export const revokeOrgPermission = (orgObjectId: string, code: string) =>
   rpc('rpc_revoke_org_permission', { p_org_object_id: orgObjectId, p_permission_code: code });
 
-/** Invite via the server route (service-role). Returns the temp password once. */
+/** Invite via the server route (service-role) — envoie l'e-mail d'invitation Supabase. */
 export async function inviteUser(input: { email: string; orgObjectId: string; businessRoleCode: string }): Promise<InviteResult> {
   const client = getSupabaseClient();
   const token = (await client?.auth.getSession())?.data.session?.access_token;
@@ -99,10 +99,26 @@ export async function inviteUser(input: { email: string; orgObjectId: string; bu
   });
   const body = await res.json();
   if (res.status === 409 && body?.userId) {
-    return { userId: body.userId, tempPassword: '', alreadyExisted: true };
+    return { userId: body.userId, alreadyExisted: true };
   }
   if (!res.ok) throw new Error(body?.detail || body?.error || 'invite_failed');
-  return { userId: body.userId, tempPassword: body.tempPassword, alreadyExisted: false };
+  return { userId: body.userId, alreadyExisted: false };
+}
+
+/** Suppression DÉFINITIVE du compte (auth + cascade profil/membership/permissions).
+ *  Pour un retrait d'accès réversible, utiliser deactivateMembership. */
+export async function deleteUserAccount(userId: string): Promise<void> {
+  const client = getSupabaseClient();
+  const token = (await client?.auth.getSession())?.data.session?.access_token;
+  const res = await fetch('/api/admin/delete-user', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: token ? `Bearer ${token}` : '' },
+    body: JSON.stringify({ userId }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body?.detail || body?.error || 'delete_failed');
+  }
 }
 
 const FRIENDLY: Array<[string, string]> = [

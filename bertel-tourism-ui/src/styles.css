@@ -12510,3 +12510,51 @@ a {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* ============================================================
+   /aide — centre d'aide (FAQ). Scopé .help-* (pattern .crm-app).
+   ============================================================ */
+.help-app { max-width: 860px; margin: 0 auto; padding: 24px 20px 64px; }
+.help-head h1 { font-size: 1.5rem; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+.help-head__sub { color: var(--ink-3); margin: 0 0 16px; font-size: 0.925rem; }
+.help-search { position: relative; margin-bottom: 20px; }
+.help-search__icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ink-3); pointer-events: none; }
+.help-search input {
+  width: 100%; padding: 12px 14px 12px 40px; font-size: 1rem;
+  border: 1px solid var(--line-strong); border-radius: 12px;
+  background: var(--surface); color: var(--ink);
+}
+.help-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.help-chip {
+  padding: 6px 12px; border-radius: 999px; font-size: 0.85rem;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
+  cursor: pointer;
+}
+.help-chip--on { background: var(--teal); border-color: var(--teal); color: #fff; }
+.help-section { margin-bottom: 24px; }
+.help-section__title { font-size: 1.05rem; font-weight: 600; color: var(--ink); margin: 0 0 10px; }
+.help-count { color: var(--ink-3); font-size: 0.875rem; margin: 0 0 12px; }
+.help-qa { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin-bottom: 8px; }
+.help-qa--open { border-color: var(--line-strong); }
+.help-qa__question {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 12px 14px; background: none; border: 0; cursor: pointer;
+  font-size: 0.95rem; font-weight: 600; color: var(--ink);
+}
+.help-qa__text { flex: 1; }
+.help-qa__rubrique { font-size: 0.75rem; font-weight: 500; color: var(--ink-3); white-space: nowrap; }
+.help-qa__badge {
+  font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  background: var(--teal-soft); color: var(--teal); white-space: nowrap;
+}
+.help-qa__chevron { width: 16px; height: 16px; color: var(--ink-3); flex-shrink: 0; transition: transform 150ms ease; }
+.help-qa--open .help-qa__chevron { transform: rotate(180deg); }
+.help-qa__answer { padding: 0 14px 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.help-qa__related { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 12px 0 0; font-size: 0.85rem; color: var(--ink-3); }
+.help-qa__related button {
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg-tint);
+  padding: 3px 10px; font-size: 0.8rem; color: var(--ink); cursor: pointer;
+}
+.help-qa__related button:hover { border-color: var(--line-strong); }
+.help-empty { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 24px; text-align: center; color: var(--ink-3); }
+.help-empty p { margin: 4px 0; }

@@ -12035,6 +12035,8 @@ a {
 .members-perm-btn { gap: 5px; padding: 5px 10px; min-height: 0; font-size: 13px; }
 .members-perm-btn.is-muted { color: var(--text-muted); }
 .members-deactivate { color: var(--destructive); padding: 5px 10px; min-height: 0; font-size: 13px; }
+.members-delete { color: var(--destructive); font-weight: 600; padding: 5px 10px; min-height: 0; font-size: 13px; }
+.members-delete:hover:not(:disabled) { border-color: var(--destructive); background: color-mix(in srgb, var(--destructive) 8%, transparent); }
 .invite-success-line { display: flex; align-items: center; gap: 6px; color: var(--brand-green); font-weight: 600; margin-bottom: 8px; }
 .invite-success-line > svg { color: var(--brand-green); flex: none; }
 

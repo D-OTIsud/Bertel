@@ -141,13 +141,3 @@ export function friendlyRbacError(err: { message?: string } | null | undefined):
   for (const [code, friendly] of FRIENDLY) if (msg.includes(code)) return friendly;
   return msg || 'Action impossible.';
 }
-
-/** Fallback ORG for a platform superuser with no active membership: the (currently sole) ORG.
- *  Multi-org superuser switching is deferred — returns the first ORG object.
- *  The OTI ORG is published so it is readable under RLS for any authenticated user. */
-export async function getDefaultOrgId(): Promise<string | null> {
-  const { data, error } = await getSupabaseClient()!
-    .from('object').select('id').eq('object_type', 'ORG').order('created_at').limit(1).maybeSingle();
-  if (error) throw error;
-  return (data?.id as string) ?? null;
-}

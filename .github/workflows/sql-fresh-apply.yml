@@ -346,6 +346,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_onboarding.sql"
 
+      - name: "org branding per-org test (ORG2 — get_app_branding résout la surcharge ORG selon le membership, héritage champ par champ + fallback plateforme, markerStyles plateforme, orgObjectId; gates upsert superuser|org_admin>=30, cross-org refusé; reset; get_public_branding inchangée; anon 0 ligne)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_branding.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

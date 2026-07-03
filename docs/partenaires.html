@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>API publique Bertel · Guide partenaires — OTI du Sud</title>
+  <meta name="description" content="Guide développeur de l'API publique Bertel (OTI du Sud) : authentification, endpoints, synchronisation, formats DATAtourisme / Apidae / Tourinsoft / schema.org." />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* Jetons partagés avec index.html — même thème #76B097, même bascule .dark. */
+    :root{
+      --brand:#76B097; --brand-700:#5A8B73; --brand-600:#6BA088; --brand-500:#76B097;
+      --brand-400:#8BC2A6; --brand-300:#A0D1B5; --brand-100:#CAEFD3; --brand-50:#DFF8E2;
+      --bg:#FAFCFA; --card:#FFFFFF; --text:#1F2937; --muted:#6B7280; --line:#E5E7EB;
+      --code-bg:#0B1020; --code:#EDEFF6;
+      --shadow:0 10px 25px rgba(118,176,151,.08),0 2px 6px rgba(118,176,151,.04);
+      --radius:18px;
+      --gradient:linear-gradient(135deg, var(--brand-400), var(--brand-600));
+    }
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg:#0B1117; --card:#0F1722; --text:#E5E7EB; --muted:#A3AAB5; --line:#1F2A37;
+        --code-bg:#0A0F1A; --code:#DDE1F2;
+        --shadow:0 10px 25px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.15);
+        --gradient:linear-gradient(135deg, var(--brand-500), var(--brand-700));
+      }
+    }
+    .dark{
+      --bg:#0B1117; --card:#0F1722; --text:#E5E7EB; --muted:#A3AAB5; --line:#1F2A37;
+      --code-bg:#0A0F1A; --code:#DDE1F2;
+      --shadow:0 10px 25px rgba(0,0,0,.25),0 2px 6px rgba(0,0,0,.15);
+      --gradient:linear-gradient(135deg, var(--brand-500), var(--brand-700));
+    }
+    .light{
+      --bg:#FAFCFA; --card:#FFFFFF; --text:#1F2937; --muted:#6B7280; --line:#E5E7EB;
+      --code-bg:#0B1020; --code:#EDEFF6;
+      --shadow:0 10px 25px rgba(118,176,151,.08),0 2px 6px rgba(118,176,151,.04);
+      --gradient:linear-gradient(135deg, var(--brand-400), var(--brand-600));
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;
+      color:var(--text); background:var(--bg); line-height:1.6;
+    }
+    a{color:var(--brand-600)} .dark a{color:var(--brand-400)}
+    a:hover{text-decoration:underline}
+
+    .topbar{
+      position:sticky; top:0; z-index:50; background:var(--gradient); color:#fff;
+      box-shadow:0 8px 32px rgba(118,176,151,.15);
+    }
+    .topbar-inner{
+      max-width:1100px; margin:0 auto; padding:14px 20px;
+      display:flex; align-items:center; gap:14px;
+    }
+    .topbar img{width:40px; height:40px; border-radius:10px; background:#fff; padding:3px}
+    .topbar .titles{flex:1; min-width:0}
+    .topbar h1{font-size:17px; margin:0; font-weight:800; letter-spacing:.2px}
+    .topbar .sub{font-size:12.5px; opacity:.9}
+    .topbar a{color:#fff}
+    .top-actions{display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600}
+    .top-actions .btn{
+      border:1px solid rgba(255,255,255,.4); border-radius:999px; padding:6px 12px;
+      background:rgba(255,255,255,.12); color:#fff; cursor:pointer; font:inherit;
+    }
+    .top-actions .btn:hover{background:rgba(255,255,255,.22)}
+
+    .layout{
+      max-width:1100px; margin:28px auto 80px; padding:0 20px;
+      display:grid; grid-template-columns:250px minmax(0,1fr); gap:32px;
+    }
+    @media (max-width: 860px){ .layout{grid-template-columns:minmax(0,1fr)} .toc{display:none} }
+
+    .toc{position:sticky; top:86px; align-self:start; max-height:calc(100vh - 110px); overflow:auto}
+    .toc h2{font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin:6px 0 10px}
+    .toc ul{list-style:none; margin:0; padding:0; font-size:13.5px}
+    .toc li{margin:2px 0}
+    .toc a{display:block; padding:5px 10px; border-radius:8px; color:var(--text); text-decoration:none}
+    .toc a:hover{background:var(--brand-50); text-decoration:none}
+    .dark .toc a:hover{background:rgba(118,176,151,.12)}
+    .toc .lvl3{padding-left:24px; color:var(--muted); font-size:12.5px}
+
+    .doc{
+      background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:36px 40px;
+    }
+    @media (max-width: 640px){ .doc{padding:24px 18px} }
+    .doc > :first-child{margin-top:0}
+    .doc h1{font-size:28px; line-height:1.25; letter-spacing:-.02em; margin:0 0 10px}
+    .doc h2{font-size:21px; margin:40px 0 12px; padding-top:18px; border-top:1px solid var(--line); letter-spacing:-.01em}
+    .doc h3{font-size:16.5px; margin:26px 0 8px}
+    .doc h4{font-size:14.5px; margin:20px 0 6px}
+    .doc h1 + p{color:var(--muted)}
+    .doc p{margin:10px 0}
+    .doc hr{border:0; border-top:1px solid var(--line); margin:30px 0}
+    .doc code{
+      font-family:ui-monospace,SFMono-Regular,'Cascadia Mono',Consolas,monospace;
+      font-size:.88em; background:var(--brand-50); color:var(--brand-700);
+      border-radius:6px; padding:2px 6px;
+    }
+    .dark .doc code{background:rgba(118,176,151,.14); color:var(--brand-300)}
+    .doc pre{
+      background:var(--code-bg); color:var(--code); border-radius:12px;
+      padding:16px 18px; overflow-x:auto; font-size:13px; line-height:1.55;
+    }
+    .doc pre code{background:none; color:inherit; padding:0; font-size:inherit}
+    .doc blockquote{
+      margin:16px 0; padding:12px 18px; border-left:4px solid var(--brand-500);
+      background:var(--brand-50); border-radius:0 12px 12px 0;
+    }
+    .dark .doc blockquote{background:rgba(118,176,151,.1)}
+    .doc blockquote p{margin:0}
+    .table-wrap{overflow-x:auto; margin:14px 0}
+    .doc table{border-collapse:collapse; width:100%; font-size:13.5px}
+    .doc th,.doc td{border:1px solid var(--line); padding:8px 12px; text-align:left; vertical-align:top}
+    .doc th{background:var(--brand-50); font-weight:700}
+    .dark .doc th{background:rgba(118,176,151,.12)}
+    .doc ul,.doc ol{margin:10px 0; padding-left:26px}
+    .doc li{margin:4px 0}
+
+    .state{padding:60px 20px; text-align:center; color:var(--muted); font-size:14.5px}
+    .footer{max-width:1100px; margin:0 auto; padding:0 20px 40px; color:var(--muted); font-size:12.5px; text-align:center}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <img alt="OTI du Sud" src="https://supabertel.otisud.re/storage/v1/object/public/logo//logo200X200.png">
+      <div class="titles">
+        <h1>API publique Bertel · Espace partenaires</h1>
+        <div class="sub">Office de Tourisme Intercommunal du Sud de La Réunion</div>
+      </div>
+      <nav class="top-actions" aria-label="Liens">
+        <a href="openapi.html">OpenAPI</a>
+        <button type="button" class="btn" id="theme-toggle" aria-pressed="false">Thème</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" id="toc" aria-label="Sommaire">
+      <h2>Sommaire</h2>
+      <ul id="toc-list"></ul>
+    </nav>
+    <main class="doc" id="doc" aria-live="polite">
+      <div class="state">Chargement du guide…</div>
+    </main>
+  </div>
+
+  <footer class="footer">
+    Guide rendu depuis <a href="guide-partenaires.md">guide-partenaires.md</a> (source unique) ·
+    <a href="openapi.json">openapi.json</a> · <a href="index.html">Documentation complète de l'API</a>
+  </footer>
+
+  <script src="partenaires-render.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      /* Bascule de thème — même convention .dark qu'index.html, mémorisée. */
+      var THEME_KEY = 'bertel-docs-theme';
+      var rootEl = document.documentElement;
+      var toggle = document.getElementById('theme-toggle');
+      function applyTheme(mode) {
+        rootEl.classList.remove('dark', 'light');
+        if (mode) rootEl.classList.add(mode);
+        toggle.setAttribute('aria-pressed', String(mode === 'dark'));
+      }
+      var saved = null;
+      try { saved = localStorage.getItem(THEME_KEY); } catch (e) { /* stockage bloqué : thème système */ }
+      applyTheme(saved === 'dark' || saved === 'light' ? saved : null);
+      toggle.addEventListener('click', function () {
+        var dark = rootEl.classList.contains('dark') ||
+          (!rootEl.classList.contains('light') && matchMedia('(prefers-color-scheme: dark)').matches);
+        var next = dark ? 'light' : 'dark';
+        applyTheme(next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* best-effort */ }
+      });
+
+      /* Chargement + rendu du guide (source unique : guide-partenaires.md). */
+      var doc = document.getElementById('doc');
+      var tocList = document.getElementById('toc-list');
+      fetch('guide-partenaires.md', { cache: 'no-cache' })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        })
+        .then(function (text) {
+          var rendered = BertelMd.render(text);
+          doc.innerHTML = rendered.html;
+          var frag = document.createDocumentFragment();
+          rendered.toc.forEach(function (entry) {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.href = '#' + entry.id;
+            a.textContent = entry.text;
+            if (entry.level === 3) a.className = 'lvl3';
+            li.appendChild(a);
+            frag.appendChild(li);
+          });
+          tocList.appendChild(frag);
+          if (location.hash) {
+            var target = document.getElementById(location.hash.slice(1));
+            if (target) target.scrollIntoView();
+          }
+        })
+        .catch(function () {
+          doc.innerHTML = '<div class="state">Impossible de charger le guide. ' +
+            'Consultez la <a href="guide-partenaires.md">version Markdown</a> ou réessayez plus tard.</div>';
+        });
+    })();
+  </script>
+</body>
+</html>

@@ -22,7 +22,24 @@ describe('theme helpers', () => {
       textColor: defaultThemeSettings.textColor,
       backgroundColor: defaultThemeSettings.backgroundColor,
       surfaceColor: defaultThemeSettings.surfaceColor,
+      // Attribution institutionnelle absente du payload ⇒ null (§171, white-label-safe).
+      operatorName: null,
+      territory: null,
+      islandTagline: null,
     });
+  });
+
+  it('coerces institutional operator attribution (trim, null when blank)', () => {
+    const theme = coerceThemeSettings({
+      brandName: 'Bertel',
+      operatorName: '  Office de Tourisme Intercommunal du Sud  ',
+      territory: 'Sud de La Réunion',
+      islandTagline: '   ',
+    });
+
+    expect(theme.operatorName).toBe('Office de Tourisme Intercommunal du Sud');
+    expect(theme.territory).toBe('Sud de La Réunion');
+    expect(theme.islandTagline).toBeNull();
   });
 
   it('applies CSS variables to the document root', () => {

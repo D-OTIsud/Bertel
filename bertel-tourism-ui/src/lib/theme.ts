@@ -6,18 +6,29 @@ export interface ThemeSettings {
   textColor: string;
   backgroundColor: string;
   surfaceColor: string;
+  // Attribution institutionnelle « en appui » de la marque produit (§171). Servie au
+  // runtime par get_public_branding (clés de `extra`) pour rester white-label (§167) :
+  // NULL par défaut ⇒ un déploiement sans opérateur n'affiche aucune attribution.
+  operatorName: string | null;
+  territory: string | null;
+  islandTagline: string | null;
 }
 
 export const defaultThemeSettings: ThemeSettings = {
-  brandName: 'Bertel Tourism',
-  // Version à fond transparent (logo-email) : tient sur n'importe quelle surface
-  // (chip clair du hero /login, sidebar) ; image.png porte un fond gris opaque.
-  logoUrl: '/Logo/logo-email.png',
+  brandName: 'Bertel',
+  // Marque produit = le « B » Bertel (réseau d'itinéraires → point de repère), icône seule
+  // (le wordmark est porté par le <h1>). Fond transparent ⇒ tient sur le chip clair du hero
+  // /login comme sur la sidebar. Le blason OTI reste l'attribution institutionnelle, pas le logo.
+  logoUrl: '/Logo/logo-bertel-icon.png',
   primaryColor: '#176B6A',
   accentColor: '#F28B54',
   textColor: '#18313B',
   backgroundColor: '#F4EEE5',
   surfaceColor: '#FFFDF8',
+  // Défauts vides : l'attribution vient du branding runtime, jamais codée en dur.
+  operatorName: null,
+  territory: null,
+  islandTagline: null,
 };
 
 function clamp(value: number, min = 0, max = 255): number {
@@ -172,6 +183,15 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
   root.style.colorScheme = 'light';
 }
 
+// Chaîne d'attribution : trim, null si vide (jamais de chaîne vide qui rendrait un nœud creux).
+function sanitizeOptionalText(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
+
 export function coerceThemeSettings(value: unknown): ThemeSettings {
   const raw = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 
@@ -183,6 +203,9 @@ export function coerceThemeSettings(value: unknown): ThemeSettings {
     textColor: sanitizeHexColor(String(raw.textColor ?? ''), defaultThemeSettings.textColor),
     backgroundColor: sanitizeHexColor(String(raw.backgroundColor ?? ''), defaultThemeSettings.backgroundColor),
     surfaceColor: sanitizeHexColor(String(raw.surfaceColor ?? ''), defaultThemeSettings.surfaceColor),
+    operatorName: sanitizeOptionalText(raw.operatorName),
+    territory: sanitizeOptionalText(raw.territory),
+    islandTagline: sanitizeOptionalText(raw.islandTagline),
   };
 }
 

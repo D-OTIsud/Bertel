@@ -23,33 +23,47 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
   const [busy, setBusy] = useState(false);
   // null = form view; non-null = confirmation view (email the invitation was sent to)
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // e-mail d'un compte déjà existant JAMAIS connecté → on propose « Renvoyer l'invitation ».
+  const [resendable, setResendable] = useState<string | null>(null);
 
   function resetState() {
     setSentTo(null);
+    setResendable(null);
     setEmail('');
     setRoleCode('contributor');
   }
 
   function handleClose() {
-    // If closing while the confirmation is shown, reset form so it's clean on next open.
-    if (sentTo !== null) resetState();
+    // If closing while a confirmation is shown, reset form so it's clean on next open.
+    if (sentTo !== null || resendable !== null) resetState();
     setOpen(false);
   }
 
-  async function submit() {
+  // Rattache membership + permissions du préréglage au userId (nouveau ou existant).
+  async function attach(userId: string) {
+    await upsertMembership(userId, orgId, roleCode);
+    for (const code of presetPermissionsFor(roleCode)) {
+      try { await grantUserPermission(userId, code); } catch (e) { console.warn('preset grant failed', code, e); }
+    }
+  }
+
+  async function submit(resend = false) {
     setBusy(true);
     try {
-      const cleanEmail = email.trim().toLowerCase();
-      const invited = await inviteUser({ email: cleanEmail, orgObjectId: orgId, businessRoleCode: roleCode });
-      await upsertMembership(invited.userId, orgId, roleCode);
-      for (const code of presetPermissionsFor(roleCode)) {
-        try { await grantUserPermission(invited.userId, code); } catch (e) { console.warn('preset grant failed', code, e); }
-      }
+      const cleanEmail = (resendable ?? email).trim().toLowerCase();
+      const invited = await inviteUser({ email: cleanEmail, orgObjectId: orgId, businessRoleCode: roleCode, resend });
+      await attach(invited.userId);
       if (invited.alreadyExisted) {
         toast.success('Utilisateur déjà existant — rattaché à l’organisation.');
-        setSentTo(null);
-        setOpen(false);
+        if (invited.neverSignedIn) {
+          // Compte invité mais jamais activé : proposer de renvoyer l'e-mail d'invitation.
+          setResendable(cleanEmail);
+        } else {
+          setResendable(null);
+          setOpen(false);
+        }
       } else {
+        setResendable(null);
         setSentTo(cleanEmail);
         toast.success('Invitation envoyée.');
       }
@@ -61,7 +75,20 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
     }
   }
 
-  const footer = sentTo === null ? (
+  const footer = sentTo !== null ? (
+    <button type="button" className="primary-button" onClick={handleClose}>
+      Fermer
+    </button>
+  ) : resendable !== null ? (
+    <>
+      <button type="button" className="ghost-button" onClick={handleClose} disabled={busy}>
+        Fermer
+      </button>
+      <button type="button" className="primary-button" onClick={() => { void submit(true); }} disabled={busy}>
+        {busy ? 'Envoi…' : 'Renvoyer l’invitation'}
+      </button>
+    </>
+  ) : (
     <>
       <button type="button" className="ghost-button" onClick={() => setOpen(false)} disabled={busy}>
         Annuler
@@ -70,10 +97,6 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
         {busy ? 'En cours…' : 'Inviter'}
       </button>
     </>
-  ) : (
-    <button type="button" className="primary-button" onClick={handleClose}>
-      Fermer
-    </button>
   );
 
   return (
@@ -84,7 +107,22 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
 
       {open && (
         <Modal title="Inviter un membre" onClose={handleClose} footer={footer}>
-          {sentTo === null ? (
+          {sentTo !== null ? (
+            <>
+              <p className="invite-success-line"><CheckCircle2 size={16} aria-hidden /> Invitation envoyée.</p>
+              <p className="muted">
+                Un e-mail d’invitation a été envoyé à <strong>{sentTo}</strong>. Le nouveau membre
+                cliquera sur le lien reçu pour choisir son mot de passe et accéder à la plateforme.
+              </p>
+            </>
+          ) : resendable !== null ? (
+            <>
+              <p className="muted">
+                Un compte existe déjà pour <strong>{resendable}</strong> mais il ne s’est jamais
+                connecté. Vous pouvez lui renvoyer un e-mail d’invitation — l’ancien lien sera invalidé.
+              </p>
+            </>
+          ) : (
             <>
               <label className="field-block" htmlFor="invite-email">
                 <span>Adresse e-mail</span>
@@ -113,14 +151,6 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
                 </select>
                 <span className="pref__hint">Le préréglage de permissions du rôle est appliqué automatiquement (additif).</span>
               </label>
-            </>
-          ) : (
-            <>
-              <p className="invite-success-line"><CheckCircle2 size={16} aria-hidden /> Invitation envoyée.</p>
-              <p className="muted">
-                Un e-mail d’invitation a été envoyé à <strong>{sentTo}</strong>. Le nouveau membre
-                cliquera sur le lien reçu pour choisir son mot de passe et accéder à la plateforme.
-              </p>
             </>
           )}
         </Modal>

@@ -331,6 +331,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_rls_initplan_broad_sweep.sql"
 
+      - name: "open_at + event filters test (16i §157 — compute_open_status(now) parity with cached_is_open_now, open_at(now)==open_now filter parity, tri-state NULL never matched, FMA event range overlap/disjoint via rollback fixture)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_filters_open_at_event.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

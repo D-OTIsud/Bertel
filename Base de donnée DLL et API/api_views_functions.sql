@@ -1204,6 +1204,10 @@ AS $$
           ARRAY[]::text[]
         )
       END AS label_disability_types_any,
+      -- §157 — « ouvert à … » : instant demandé (ISO timestamptz). NULL = filtre absent.
+      CASE WHEN n.filters ? 'open_at'
+        THEN NULLIF(n.filters->>'open_at', '')::timestamptz
+      END AS open_at,
       CASE WHEN n.filters ? 'sustainability_categories_any'
         THEN NULLIF(
           ARRAY(SELECT jsonb_array_elements_text(n.filters->'sustainability_categories_any')),
@@ -1247,6 +1251,18 @@ AS $$
         OR p_status <@ ARRAY['published']::object_status[]
       ) AS use_mv
     FROM normalized n
+  ),
+  -- §157 — « ouvert à … » : le moteur d'ouverture (internal.compute_open_status,
+  -- le MÊME que le cache open_now) évalué UNE SEULE FOIS à l'instant demandé —
+  -- jamais en LATERAL par ligne (leçon §37). Ensemble vide quand le filtre est
+  -- absent (garde interne p_at IS NULL ⇒ RETURN). MATERIALIZED est OBLIGATOIRE :
+  -- référencé une seule fois, le CTE serait inliné dans l'EXISTS par-ligne du
+  -- WHERE ⇒ le moteur re-tournerait par ligne scannée (mesuré 1,96 s vs 120 ms).
+  open_at_state AS MATERIALIZED (
+    SELECT s.object_id, s.is_open
+    FROM params
+    CROSS JOIN LATERAL internal.compute_open_status(params.open_at) s
+    WHERE params.open_at IS NOT NULL
   ),
   source_rows AS (
     SELECT
@@ -1651,6 +1667,26 @@ AS $$
       )
     ))
     AND (NOT (params.filters ? 'open_now') OR src.cached_is_open_now = TRUE)
+    -- §157 — « ouvert à … » : match uniquement is_open = TRUE (le tri-état NULL
+    -- « aucune donnée d'ouverture » n'est JAMAIS matché, invariant §133 — même
+    -- sémantique que open_now sur le cache).
+    AND (params.open_at IS NULL OR EXISTS (
+      SELECT 1 FROM open_at_state oas
+      WHERE oas.object_id = src.object_id AND oas.is_open = TRUE
+    ))
+    -- §157 — Événements : recouvrement de [event_start_date, COALESCE(end,start)]
+    -- avec la plage demandée `event:{from,to}` (dates ISO). La récurrence
+    -- (object_fma.recurrence_pattern, texte libre) n'est PAS évaluée — limite
+    -- documentée, à structurer quand les données FMA arriveront.
+    AND (NOT (params.filters ? 'event') OR EXISTS (
+      SELECT 1
+      FROM object_fma f
+      WHERE f.object_id = src.object_id
+        AND ( (params.filters->'event'->>'from') IS NULL
+              OR COALESCE(f.event_end_date, f.event_start_date) >= (params.filters->'event'->>'from')::date )
+        AND ( (params.filters->'event'->>'to') IS NULL
+              OR f.event_start_date <= (params.filters->'event'->>'to')::date )
+    ))
     -- label_scheme_ranked: admit rank-0 (exact granted classification) and rank-1 (equivalent evidence).
     -- rank-1a: sustainability actions/groups mapped through ref_classification_equivalent_*.
     -- rank-1b: accessibility amenity family evidence (LBL_TOURISME_HANDICAP only).

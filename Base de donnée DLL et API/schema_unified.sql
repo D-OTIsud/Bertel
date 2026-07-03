@@ -5042,8 +5042,15 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION api.get_local_now_for_timezone(
-  p_business_timezone TEXT
+-- §157 — variante paramétrée du résolveur d'heure locale : même validation
+-- « pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,
+-- cf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un
+-- instant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré
+-- (internal.compute_open_status) qui rend possible « ouvert à 18 h » alors
+-- qu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).
+CREATE OR REPLACE FUNCTION api.get_local_time_for_timezone(
+  p_business_timezone TEXT,
+  p_at TIMESTAMPTZ
 )
 RETURNS TABLE (
   local_date DATE,
@@ -5056,29 +5063,40 @@ STABLE
 SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
 DECLARE
-  v_zone TEXT := COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion');
-  v_now  TIMESTAMP;
+  v_zone  TEXT := COALESCE(NULLIF(btrim(p_business_timezone), ''), 'Indian/Reunion');
+  v_local TIMESTAMP;
 BEGIN
-  -- Validate the zone CHEAPLY: `AT TIME ZONE` raises 22023 (invalid_parameter_value) on an unknown
-  -- zone, caught to fall back to 'Indian/Reunion'. Replaces the previous
-  -- `EXISTS (SELECT 1 FROM pg_timezone_names ...)` membership test, which enumerated ~1200 zones
-  -- (~253 ms) on EVERY call — and this fn is CROSS JOIN LATERAL'd once per published object by
-  -- api.refresh_open_status (cron, every 15 min), so the scan was ~92% of all DB exec time.
-  -- Behaviour preserved (valid->that zone; empty/blank/NULL->Indian/Reunion; invalid->fallback).
-  -- See migration_open_status_timezone_perf.sql / lot1_mapping_decisions.md §37.
   BEGIN
-    v_now := CURRENT_TIMESTAMP AT TIME ZONE v_zone;
+    v_local := p_at AT TIME ZONE v_zone;
   EXCEPTION WHEN invalid_parameter_value THEN
-    v_zone := 'Indian/Reunion';
-    v_now  := CURRENT_TIMESTAMP AT TIME ZONE v_zone;
+    v_zone  := 'Indian/Reunion';
+    v_local := p_at AT TIME ZONE v_zone;
   END;
 
   RETURN QUERY SELECT
-    v_now::DATE                     AS local_date,
-    v_now::TIME                     AS local_time,
-    EXTRACT(ISODOW FROM v_now)::INT AS local_isodow,
-    v_zone                          AS business_timezone;
+    v_local::DATE                     AS local_date,
+    v_local::TIME                     AS local_time,
+    EXTRACT(ISODOW FROM v_local)::INT AS local_isodow,
+    v_zone                            AS business_timezone;
 END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_local_now_for_timezone(
+  p_business_timezone TEXT
+)
+RETURNS TABLE (
+  local_date DATE,
+  local_time TIME WITHOUT TIME ZONE,
+  local_isodow INT,
+  business_timezone TEXT
+)
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+  -- §157 : délégué au résolveur paramétré (une seule implémentation, cf. §37 pour
+  -- l'historique perf — la validation de zone reste le try/catch AT TIME ZONE).
+  SELECT * FROM api.get_local_time_for_timezone(p_business_timezone, CURRENT_TIMESTAMP);
 $$;
 
 CREATE OR REPLACE FUNCTION api.get_object_local_now(
@@ -5101,90 +5119,109 @@ AS $$
   WHERE o.id = p_object_id;
 $$;
 
+-- §157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :
+-- api.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »
+-- de get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive
+-- possible entre la pastille et le filtre. Publiés uniquement (parité stricte
+-- avec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).
+-- TRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,
+-- pas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;
+-- FALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).
+-- La récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.
+CREATE OR REPLACE FUNCTION internal.compute_open_status(p_at TIMESTAMPTZ)
+RETURNS TABLE (object_id TEXT, is_open BOOLEAN)
+LANGUAGE plpgsql
+STABLE
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF p_at IS NULL THEN
+    RETURN; -- filtre absent ⇒ ensemble vide, coût nul (garde ceinture-bretelles).
+  END IF;
+
+  RETURN QUERY
+  SELECT
+    o.id,
+    CASE
+      WHEN NOT EXISTS (
+        SELECT 1 FROM opening_period p2 WHERE p2.object_id = o.id
+      ) THEN NULL::boolean
+      ELSE (
+      EXISTS (
+        SELECT 1
+        FROM opening_period p
+        JOIN opening_schedule s ON s.period_id = p.id
+        JOIN opening_time_period tp ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        JOIN opening_time_frame tf ON tf.time_period_id = tp.id
+        JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+        CROSS JOIN LATERAL api.get_local_time_for_timezone(o.business_timezone, p_at) ln
+        WHERE p.object_id = o.id
+          AND tp.closed = FALSE
+          AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+          AND COALESCE(
+            wd.dow_number,
+            CASE wd.code
+              WHEN 'monday' THEN 1
+              WHEN 'tuesday' THEN 2
+              WHEN 'wednesday' THEN 3
+              WHEN 'thursday' THEN 4
+              WHEN 'friday' THEN 5
+              WHEN 'saturday' THEN 6
+              WHEN 'sunday' THEN 7
+              ELSE NULL
+            END
+          ) = ln.local_isodow
+          AND (tf.start_time IS NULL OR tf.start_time <= ln.local_time)
+          AND (tf.end_time IS NULL OR tf.end_time > ln.local_time)
+      )
+      OR EXISTS (
+        SELECT 1
+        FROM opening_period p
+        JOIN opening_schedule s ON s.period_id = p.id
+        JOIN opening_time_period tp ON tp.schedule_id = s.id
+        JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
+        JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
+        CROSS JOIN LATERAL api.get_local_time_for_timezone(o.business_timezone, p_at) ln
+        WHERE p.object_id = o.id
+          AND tp.closed = FALSE
+          AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
+          AND COALESCE(
+            wd.dow_number,
+            CASE wd.code
+              WHEN 'monday' THEN 1
+              WHEN 'tuesday' THEN 2
+              WHEN 'wednesday' THEN 3
+              WHEN 'thursday' THEN 4
+              WHEN 'friday' THEN 5
+              WHEN 'saturday' THEN 6
+              WHEN 'sunday' THEN 7
+              ELSE NULL
+            END
+          ) = ln.local_isodow
+          AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
+      )
+      )
+    END AS is_open
+  FROM object o
+  WHERE o.status = 'published';
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION api.refresh_open_status()
 RETURNS void
 LANGUAGE plpgsql
 
-SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
 AS $$
 BEGIN
-  WITH open_state AS (
-    SELECT
-      o.id,
-      -- TRI-ÉTAT (décision log §133, migration_open_status_tristate.sql) :
-      --   NULL  = aucune donnée d'ouverture (aucun opening_period) ⇒ l'Explorer n'affiche
-      --           PAS de pastille (un booléen FALSE était indistinct de « fermé »).
-      --   TRUE  = ouverte (dont « jour ouvert sans horaire », 2ᵉ EXISTS, §93).
-      --   FALSE = a des horaires mais actuellement fermée.
-      CASE
-        WHEN NOT EXISTS (
-          SELECT 1 FROM opening_period p2 WHERE p2.object_id = o.id
-        ) THEN NULL::boolean
-        ELSE (
-        EXISTS (
-          SELECT 1
-          FROM opening_period p
-          JOIN opening_schedule s ON s.period_id = p.id
-          JOIN opening_time_period tp ON tp.schedule_id = s.id
-          JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
-          JOIN opening_time_frame tf ON tf.time_period_id = tp.id
-          JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
-          CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
-          WHERE p.object_id = o.id
-            AND tp.closed = FALSE
-            AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
-            AND COALESCE(
-              wd.dow_number,
-              CASE wd.code
-                WHEN 'monday' THEN 1
-                WHEN 'tuesday' THEN 2
-                WHEN 'wednesday' THEN 3
-                WHEN 'thursday' THEN 4
-                WHEN 'friday' THEN 5
-                WHEN 'saturday' THEN 6
-                WHEN 'sunday' THEN 7
-                ELSE NULL
-              END
-            ) = ln.local_isodow
-            AND (tf.start_time IS NULL OR tf.start_time <= ln.local_time)
-            AND (tf.end_time IS NULL OR tf.end_time > ln.local_time)
-        )
-        OR EXISTS (
-          SELECT 1
-          FROM opening_period p
-          JOIN opening_schedule s ON s.period_id = p.id
-          JOIN opening_time_period tp ON tp.schedule_id = s.id
-          JOIN opening_time_period_weekday tpw ON tpw.time_period_id = tp.id
-          JOIN ref_code_weekday wd ON wd.id = tpw.weekday_id
-          CROSS JOIN LATERAL api.get_local_now_for_timezone(o.business_timezone) ln
-          WHERE p.object_id = o.id
-            AND tp.closed = FALSE
-            AND api.is_opening_period_active_on_date(p.all_years, p.date_start, p.date_end, ln.local_date)
-            AND COALESCE(
-              wd.dow_number,
-              CASE wd.code
-                WHEN 'monday' THEN 1
-                WHEN 'tuesday' THEN 2
-                WHEN 'wednesday' THEN 3
-                WHEN 'thursday' THEN 4
-                WHEN 'friday' THEN 5
-                WHEN 'saturday' THEN 6
-                WHEN 'sunday' THEN 7
-                ELSE NULL
-              END
-            ) = ln.local_isodow
-            AND NOT EXISTS (SELECT 1 FROM opening_time_frame tf WHERE tf.time_period_id = tp.id)
-        )
-        )
-      END AS new_is_open_now
-    FROM object o
-    WHERE o.status = 'published'
-  )
+  -- §157 : écriture-cache du moteur unique évalué à « maintenant ».
+  -- Sémantique inchangée (tri-état §133, « ouvert sans horaire » §93, perf §37).
   UPDATE object o
-  SET cached_is_open_now = s.new_is_open_now
-  FROM open_state s
-  WHERE o.id = s.id
-    AND o.cached_is_open_now IS DISTINCT FROM s.new_is_open_now;
+  SET cached_is_open_now = s.is_open
+  FROM internal.compute_open_status(now()) s
+  WHERE o.id = s.object_id
+    AND o.cached_is_open_now IS DISTINCT FROM s.is_open;
 END;
 $$;
 

@@ -197,6 +197,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16h    migration_rls_initplan_broad_sweep.sql  (§146 catalog-driven auth_rls_initplan sweep: rewrites every policy in public+audit whose USING/WITH CHECK carries an unwrapped auth.uid/role/jwt/email call to the (select auth.x()) InitPlan form via ALTER POLICY; self-asserts zero left; permanent CI guard = tests/test_rls_initplan_broad_sweep.sql) =='
 \ir migration_rls_initplan_broad_sweep.sql
 
+\echo '== 16i    migration_filters_open_at_event_dates.sql  (§157 filtre « ouvert a ... » + dates FMA: api.get_local_time_for_timezone(tz,at) parametre (get_local_now devient son delegue), internal.compute_open_status(at) = LE moteur ouverture (refresh_open_status devient son write-back « maintenant »), get_filtered_object_ids cles open_at (evalue UNE fois en CTE, jamais LATERAL/ligne §37; NULL tri-etat jamais matche §133) + event{from,to} (recouvrement object_fma; recurrence texte-libre non evaluee); CI = tests/test_filters_open_at_event.sql) =='
+\ir migration_filters_open_at_event_dates.sql
+
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)

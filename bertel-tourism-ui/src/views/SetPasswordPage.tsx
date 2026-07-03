@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
 import { toFriendlyAuthError } from '../services/auth';
-import { useThemeStore } from '../store/theme-store';
+import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -16,7 +16,6 @@ const MIN_PASSWORD_LENGTH = 8;
 // detectSessionInUrl) ; on attend cette session puis on lui fait choisir son mot de passe.
 export default function SetPasswordPage() {
   const router = useRouter();
-  const brandName = useThemeStore((state) => state.theme.brandName);
 
   // 'waiting' = session pas encore détectée ; 'ready' = formulaire ; 'no-session' = lien invalide/expiré.
   const [phase, setPhase] = useState<'waiting' | 'ready' | 'no-session'>('waiting');
@@ -80,67 +79,63 @@ export default function SetPasswordPage() {
   }
 
   return (
-    <section className="auth-page">
-      <div className="auth-hero">
-        <span className="eyebrow">{brandName}</span>
-        <h1>Bienvenue dans l’équipe</h1>
-        <p>Choisissez votre mot de passe pour activer votre compte et accéder à la plateforme.</p>
+    <AuthShell>
+      <div className="auth-panel__head">
+        <h2>Bienvenue dans l’équipe</h2>
+        <p>Choisissez votre mot de passe pour activer votre compte.</p>
       </div>
 
-      <article className="auth-card">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">Activation du compte</span>
-            <h2>Choisir votre mot de passe</h2>
+      {phase === 'waiting' && <p className="auth-field__hint">Vérification de votre invitation…</p>}
+
+      {phase === 'no-session' && (
+        <>
+          <div className="notice notice--warn">
+            Ce lien d’invitation est invalide ou a expiré. Demandez à votre administrateur de
+            renvoyer une invitation.
           </div>
-        </div>
+          <Button type="button" className="w-full" onClick={() => router.replace('/login')}>
+            Aller à la page de connexion
+          </Button>
+        </>
+      )}
 
-        {phase === 'waiting' && <p className="muted">Vérification de votre invitation…</p>}
-
-        {phase === 'no-session' && (
-          <>
-            <div className="notice notice--warn">
-              Ce lien d’invitation est invalide ou a expiré. Demandez à votre administrateur de renvoyer une invitation.
-            </div>
-            <Button type="button" className="w-full" onClick={() => router.replace('/login')}>
-              Aller à la page de connexion
-            </Button>
-          </>
-        )}
-
-        {phase === 'ready' && (
-          <form onSubmit={(e) => void submit(e)} className="stack-list" noValidate>
-            <div>
-              <label htmlFor="set-password" className="sr-only">Nouveau mot de passe</label>
-              <Input
-                id="set-password"
-                type="password"
-                placeholder="Nouveau mot de passe"
-                autoComplete="new-password"
-                disabled={submitting}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="set-password-confirm" className="sr-only">Confirmer le mot de passe</label>
-              <Input
-                id="set-password-confirm"
-                type="password"
-                placeholder="Confirmer le mot de passe"
-                autoComplete="new-password"
-                disabled={submitting}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
-              {fieldError && <p className="text-sm text-destructive mt-1">{fieldError}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting || password === '' || confirm === ''}>
-              {submitting ? 'Enregistrement…' : 'Enregistrer et accéder à la plateforme'}
-            </Button>
-          </form>
-        )}
-      </article>
-    </section>
+      {phase === 'ready' && (
+        <form onSubmit={(e) => void submit(e)} className="auth-form" noValidate>
+          <div className="auth-field">
+            <label htmlFor="set-password">Nouveau mot de passe</label>
+            <Input
+              id="set-password"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              disabled={submitting}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <p className="auth-field__hint">Au moins {MIN_PASSWORD_LENGTH} caractères.</p>
+          </div>
+          <div className="auth-field">
+            <label htmlFor="set-password-confirm">Confirmer le mot de passe</label>
+            <Input
+              id="set-password-confirm"
+              type="password"
+              placeholder="••••••••"
+              autoComplete="new-password"
+              disabled={submitting}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+            {fieldError && <p className="text-sm text-destructive">{fieldError}</p>}
+          </div>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || password === '' || confirm === ''}
+          >
+            {submitting ? 'Enregistrement…' : 'Enregistrer et accéder à la plateforme'}
+          </Button>
+        </form>
+      )}
+    </AuthShell>
   );
 }

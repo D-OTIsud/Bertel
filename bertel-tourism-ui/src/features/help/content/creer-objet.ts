@@ -9,9 +9,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     rubrique: 'creer-objet',
     question: 'Comment créer une nouvelle fiche ?',
     keywords: ['créer', 'nouvelle fiche', 'ajouter', 'établissement', 'nouveau'],
-    // related inter-rubriques : 'choisir-artisan' branché (Task 4) ; 'publier-fiche' (Task 6)
-    // — le test d'intégrité interdit un renvoi vers un id absent.
-    related: ['choisir-artisan'],
+    related: ['choisir-artisan', 'publier-fiche'],
     answer: `**Où.** Bouton **Créer** de l'Explorer, ou palette de commandes (Ctrl/⌘ + K → « Créer une fiche »). Si le bouton n'apparaît pas, votre compte n'a pas le droit de création — voyez l'administrateur de votre organisation.
 
 **Comment.** 1. Choisissez le **type de fiche** (regroupés par famille : hébergement, restaurant, activité, itinéraire, visite, service, événement) — ce choix conditionne les sections de l'éditeur, prenez le temps de vérifier l'arbitrage dans la rubrique « Choisir le bon type ». 2. Saisissez le **nom exact** de l'établissement ou de l'offre. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.

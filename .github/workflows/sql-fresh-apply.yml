@@ -341,6 +341,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_accessibility_label_filter.sql"
 
+      - name: "org onboarding test (ORG1 — rpc_create_org: superuser crée une ORG published + org_config, id ORGRUN…; gardes FORBIDDEN/MISSING_REQUIRED_FIELD/DUPLICATE_ORG/INVALID_ACCESS_SCOPE; rpc_list_orgs superuser-only avec memberCount)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_onboarding.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

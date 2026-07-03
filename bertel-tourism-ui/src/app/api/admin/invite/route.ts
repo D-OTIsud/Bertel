@@ -4,13 +4,6 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 export const runtime = 'nodejs';
 
-function genTempPassword(): string {
-  // 18 url-safe chars from the Web Crypto API (available in the Node runtime).
-  const bytes = new Uint8Array(18);
-  crypto.getRandomValues(bytes);
-  return Buffer.from(bytes).toString('base64url');
-}
-
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const server = getServerSupabaseClient();
   if (!server) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 });
@@ -42,9 +35,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return NextResponse.json({ error: 'invalid_email' }, { status: 422 });
 
-  const tempPassword = genTempPassword();
-  const { data: created, error: createErr } = await server.auth.admin.createUser({
-    email, password: tempPassword, email_confirm: true,
+  // Invitation e-mail (template Supabase « Invite user ») : l'invité clique le lien,
+  // arrive authentifié sur /set-password et choisit son mot de passe. Le domaine de
+  // redirection doit être dans l'allowlist Auth → URL Configuration du projet.
+  const origin = (req.headers.get('origin') ?? new URL(req.url).origin).replace(/\/$/, '');
+  const { data: created, error: createErr } = await server.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${origin}/set-password`,
   });
   if (createErr) {
     // perPage bound: fine at current scale; revisit with a getUserByEmail/paged scan if the user base grows past ~1000.
@@ -56,5 +52,5 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const userId = created.user!.id;
   await server.from('app_user_profile').upsert({ id: userId, role: 'tourism_agent' }, { onConflict: 'id' });
 
-  return NextResponse.json({ userId, tempPassword, alreadyExisted: false }, { status: 201 });
+  return NextResponse.json({ userId, alreadyExisted: false }, { status: 201 });
 }

@@ -15,8 +15,8 @@ describe('cardTypeDisplay', () => {
   it('ne porte plus de porte « pastille ouvert » par type (pilotée par la donnée open_now, §133)', () => {
     // La projection d'affichage ne décide plus de la pastille : c'est open_now (tri-état) qui la pilote,
     // pour TOUS les types (cf. ResultCardView.test.tsx). Le champ showOpenStatus a été retiré du contrat.
-    const d = cardTypeDisplay(card({ type: 'HOT' })) as Record<string, unknown>;
-    expect('showOpenStatus' in d).toBe(false);
+    const d = cardTypeDisplay(card({ type: 'HOT' }));
+    expect(d).not.toHaveProperty('showOpenStatus');
   });
 });
 

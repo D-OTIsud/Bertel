@@ -18,7 +18,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
 
   it('la section Hébergements se replie et se déplie', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
-    render(<FiltersPanel variant="column" />);
+    render(<FiltersPanel />);
 
     expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, true));
@@ -34,7 +34,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       useExplorerStore.getState().toggleBucket('HOT');
       useExplorerStore.getState().toggleTaxonomy('taxonomy_hot', 'hotel');
     });
-    render(<FiltersPanel variant="column" />);
+    render(<FiltersPanel />);
 
     const toggle = sectionToggle(/Section Hébergements/, true);
     expect(toggle).toHaveTextContent('1');
@@ -49,7 +49,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       useExplorerStore.getState().setItiIsLoop(true);
       useExplorerStore.getState().setItiDistance(5, undefined);
     });
-    render(<FiltersPanel variant="column" />);
+    render(<FiltersPanel />);
 
     const toggle = sectionToggle(/Section Itinéraires/, true);
     expect(toggle).toHaveTextContent('2');
@@ -62,7 +62,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       useExplorerStore.getState().toggleBucket('VIS');
       useExplorerStore.getState().toggleBucket('SRV');
     });
-    render(<FiltersPanel variant="column" />);
+    render(<FiltersPanel />);
 
     fireEvent.click(sectionToggle(/Section Site & visite/, true));
     expect(screen.queryByText('Type de visite')).not.toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
   });
 
   it('les groupes transverses restent non repliables', () => {
-    render(<FiltersPanel variant="column" />);
+    render(<FiltersPanel />);
     expect(screen.queryByRole('button', { name: /Localisation/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Accessibilité et services/ })).not.toBeInTheDocument();
   });

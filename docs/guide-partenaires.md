@@ -25,6 +25,10 @@ Elle est conçue pour la **synchronisation serveur-à-serveur** : alimenter votr
 - votre **clé API** au format `bk_live_` suivi de 48 caractères hexadécimaux ;
 - le **domaine de base** de l'API (noté `<domaine>` dans ce guide).
 
+**Délai et éligibilité.** L'accès est ouvert aux partenaires touristiques et institutionnels : offices de tourisme, plateformes SIT (DATAtourisme, Apidae, Tourinsoft), agences web mandatées, éditeurs de sites et d'applications valorisant le territoire. Comptez un délai indicatif de **quelques jours ouvrés** pour l'attribution.
+
+**Évaluer avant de brancher.** Un exemple de réponse détail complet et réel est publié dans le contrat OpenAPI et la collection Postman (section 7) : de quoi juger la richesse des données sans écrire une ligne de code. Une **clé de démonstration** (lecture seule, débit limité) peut être fournie sur simple demande pour tester l'API en conditions réelles.
+
 La base de toutes les URLs est :
 
 ```
@@ -289,6 +293,30 @@ Ne sont **pas** encore portés dans les pivots (chaque standard compte des centa
 
 ---
 
+## 6. Conditions de réutilisation, données personnelles et disponibilité
+
+### Licence des données
+
+Les données sont diffusées sous **Licence Ouverte / Etalab 2.0**. La réutilisation est **libre**, y compris à des fins commerciales, sous la seule réserve d'**attribution** : mentionnez la source **« Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud) »** et, idéalement, la date de dernière mise à jour de la donnée réutilisée. Cette licence est compatible avec les plateformes open data nationales (DATAtourisme).
+
+### Médias (photos, vidéos)
+
+La réutilisation des **médias publiés** est autorisée dans le cadre de la valorisation touristique du territoire. Le **crédit est obligatoire** lorsqu'il est fourni : chaque média porte un champ `credit` — reproduisez-le tel quel ; à défaut de crédit renseigné, citez l'OTI du Sud. Les URLs des médias sont **directes et publiques**, mais **non garanties stables** : un ré-upload d'une photo change son URL. Resynchronisez donc les médias via l'upsert (section 4) plutôt que de coder les URLs en dur, et si vous recopiez les fichiers chez vous, reprenez-les à chaque cycle.
+
+### Données personnelles (RGPD)
+
+Certaines fiches exposent des **coordonnées de contact** (téléphone, e-mail) qui peuvent constituer des **données à caractère personnel** lorsque l'exploitant est une personne physique (gîtes, tables d'hôtes, producteurs, guides). En réutilisant ces données, vous devenez **responsable de votre propre traitement**.
+
+- **Usage autorisé** : l'**information touristique** — afficher la fiche, permettre au public de contacter l'établissement.
+- **Usage interdit** : la prospection commerciale, le démarchage, la revente de fichiers de contacts, ou tout usage étranger à l'information touristique.
+- **Propagation des suppressions** : une fiche **supprimée** (flux `GET /objects/deletions`, section 3.3) ou **dépubliée** (réconciliation, section 4) doit être retirée de votre côté sans délai indu.
+
+### Disponibilité
+
+L'API est fournie en **meilleur effort**, sans engagement de niveau de service (SLA) ni fenêtre de maintenance planifiée. Le motif de synchronisation par lots avec backoff (section 4) absorbe les indisponibilités courtes. Signalez tout incident au contact ci-dessous.
+
+---
+
 ## Historique des versions
 
 - **`1.0.0`** — première version publique du contrat.
@@ -297,7 +325,7 @@ Au sein de la v1, les évolutions sont **additives** (de nouvelles clés peuvent
 
 ---
 
-## 6. Références
+## 7. Références
 
 - **OpenAPI 3.1** : [openapi.json](openapi.json) (importable dans Postman, Insomnia, ou un générateur de client) · [rendu lisible](openapi.html)
 - **Collection Postman publique** : [Bertel API v3.0](https://www.postman.com/docking-module-astronaut-45890211/oti-du-sud-bertel-v3/collection/61gyd5k/bertel-api-v3-0) — dossier « 13. API Publique Partenaire »

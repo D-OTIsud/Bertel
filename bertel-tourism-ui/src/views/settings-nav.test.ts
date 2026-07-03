@@ -12,7 +12,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     for (const role of ['tourism_agent', 'owner'] as const) {
       const groups = buildSettingsNav(role);
       expect(groups.map((g) => g.id)).toEqual(['account']);
-      expect(groups[0].sections.map((s) => s.id)).toEqual(['profile', 'preferences', 'session']);
+      expect(groups[0].sections.map((s) => s.id)).toEqual(['profile', 'preferences', 'session', 'legal']);
     }
   });
 
@@ -21,8 +21,8 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
   });
 
   it('settingsSectionIds aplatit les sections accessibles', () => {
-    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'organisations', 'diagnostic']);
-    expect(settingsSectionIds('owner')).toEqual(['profile', 'preferences', 'session']);
+    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'legal', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'organisations', 'diagnostic']);
+    expect(settingsSectionIds('owner')).toEqual(['profile', 'preferences', 'session', 'legal']);
   });
 
   // 7.4 — « Mon organisation » (Équipe) apparaît quand canManageTeam, entre « Mon compte »
@@ -54,5 +54,22 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
   test('la section organisations est exposée aux super-admins uniquement', () => {
     expect(settingsSectionIds('super_admin')).toContain('organisations');
     expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('organisations');
+  });
+
+  // Task 11 — branding par ORG : section « org-branding » gated par canManageOrgBranding
+  // (admin d'ORG rang ≥ 30), indépendamment de canManageTeam.
+  test('org-branding n’apparaît que pour un admin d’ORG (canManageOrgBranding)', () => {
+    expect(settingsSectionIds('tourism_agent', { canManageOrgBranding: true })).toContain('org-branding');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('org-branding');
+  });
+
+  // « Mentions légales » : section d'information non gated, foyer découvrable des pages
+  // légales publiques (confidentialité / CGU / DPIA). Visible sous TOUS les rôles.
+  test('la section « legal » (Mentions légales) est exposée à tous les rôles, dans « Mon compte »', () => {
+    for (const role of ['super_admin', 'tourism_agent', 'owner', null] as const) {
+      expect(settingsSectionIds(role)).toContain('legal');
+    }
+    const account = buildSettingsNav('tourism_agent').find((g) => g.id === 'account');
+    expect(account?.sections.map((s) => s.id)).toContain('legal');
   });
 });

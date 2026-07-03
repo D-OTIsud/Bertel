@@ -16,6 +16,7 @@ import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
+import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
@@ -71,14 +72,19 @@ export default function SettingsPage() {
   // l'URL (?section=). Le rail est gated par rôle (buildSettingsNav). Si le rôle change (switch
   // démo) et rend la section courante inaccessible, on retombe sur le défaut.
   const adminRank = useSessionStore((state) => state.adminRank);
+  const orgId = useSessionStore((state) => state.orgId);
   const canManageTeam = canAdministerTeam({ role, adminRank });
-  const settingsNav = useMemo(() => buildSettingsNav(role, { canManageTeam }), [role, canManageTeam]);
+  // Task 11 — branding par ORG : réservé à l'admin d'ORG de rang ≥ 30 (au-delà du seuil ≥ 10
+  // qui donne juste accès à l'équipe), et seulement si l'utilisateur est bien rattaché à une ORG.
+  const canManageOrgBranding = (adminRank ?? 0) >= 30 && !!orgId;
+  const settingsNavOptions = useMemo(() => ({ canManageTeam, canManageOrgBranding }), [canManageTeam, canManageOrgBranding]);
+  const settingsNav = useMemo(() => buildSettingsNav(role, settingsNavOptions), [role, settingsNavOptions]);
   const [activeSection, setActiveSection] = useState<string>(() =>
-    resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section'), { canManageTeam }),
+    resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section'), settingsNavOptions),
   );
   useEffect(() => {
-    setActiveSection((current) => resolveSettingsSection(role, current, { canManageTeam }));
-  }, [role, canManageTeam]);
+    setActiveSection((current) => resolveSettingsSection(role, current, settingsNavOptions));
+  }, [role, settingsNavOptions]);
   function selectSection(id: string) {
     setActiveSection(id);
     if (typeof window !== 'undefined') {
@@ -756,6 +762,22 @@ export default function SettingsPage() {
       {/* 7.4 — Équipe (Mon organisation) : Team emménage ici depuis /team (retiré du sidebar).
           TeamAdminPage porte son propre gating + chargement + contrôles serveur (vraie frontière). */}
       {activeSection === 'team' && canManageTeam && <TeamAdminPage />}
+
+      {/* Task 11 — Apparence de l'organisation (Mon organisation) : formulaire de branding
+          partagé avec l'action « Branding » du module Organisations (superadmin). */}
+      {activeSection === 'org-branding' && canManageOrgBranding && orgId && (
+        <article className="panel-card">
+          <section className="settings-pane">
+            <div className="settings-pane__head">
+              <div>
+                <h2>Apparence de l’organisation</h2>
+                <p className="muted">Personnalisez l’identité visuelle vue par les membres de votre organisation. Les champs vides héritent du thème plateforme.</p>
+              </div>
+            </div>
+            <OrgBrandingForm orgId={orgId} />
+          </section>
+        </article>
+      )}
 
         </div>
       </div>

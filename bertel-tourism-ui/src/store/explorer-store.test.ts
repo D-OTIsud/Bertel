@@ -89,3 +89,22 @@ describe('D23 — garde anti-combinaison invalide (cascade au retrait de bucket)
     expect(useExplorerStore.getState().res.capacityFilters).toEqual([]);
   });
 });
+
+describe('§155-bis — retirer un type emporte ses sous-catégories', () => {
+  it('décocher Hôtel purge les paires taxonomy_hot, pas les autres', () => {
+    const s = useExplorerStore.getState();
+    s.toggleTaxonomy('taxonomy_hot', 'hotel');
+    s.toggleTaxonomy('taxonomy_hlo', 'gite_villa');
+    s.toggleHotSubtype('HOT'); // retrait (défaut = tous sélectionnés)
+    expect(useExplorerStore.getState().common.taxonomyAny).toEqual([{ domain: 'taxonomy_hlo', code: 'gite_villa' }]);
+    useExplorerStore.getState().resetAll();
+  });
+
+  it('décocher un type VIS purge ses paires', () => {
+    const s = useExplorerStore.getState();
+    s.toggleTaxonomy('taxonomy_pna', 'viewpoint');
+    s.toggleVisSubtype('PNA'); // retrait
+    expect(useExplorerStore.getState().common.taxonomyAny).toEqual([]);
+    useExplorerStore.getState().resetAll();
+  });
+});

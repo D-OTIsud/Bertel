@@ -85,10 +85,20 @@ export function mapDashboardFiltersToExplorerUrl(filters: DashboardFilters): Exp
 
   // ── Taxonomie ─────────────────────────────────────────────────────────────
   // §155 : TOUS les domaines sont exprimables (common.taxonomyAny, partitionné
-  // par bucket au payload). Seuls les domaines hors Explorer (taxonomy_org) tombent.
-  const taxonomyAny = (filters.taxonomyAny ?? []).filter((t) => bucketForTaxonomyDomain(t.domain) !== null);
-  if ((filters.taxonomyAny ?? []).length > taxonomyAny.length) {
+  // par bucket au payload). Tombent : les domaines hors Explorer (taxonomy_org)
+  // et — §155-bis — les paires dont le bucket n'est PAS sélectionné (elles ne
+  // filtreraient rien : partition par bucket ⇒ paire inerte + chip mensongère).
+  // Aucune sélection de bucket = tous les buckets actifs ⇒ tout passe.
+  const mappable = (filters.taxonomyAny ?? []).filter((t) => bucketForTaxonomyDomain(t.domain) !== null);
+  if ((filters.taxonomyAny ?? []).length > mappable.length) {
     dropped.push('catégories hors Explorer');
+  }
+  const taxonomyAny =
+    buckets.length === 0
+      ? mappable
+      : mappable.filter((t) => buckets.includes(bucketForTaxonomyDomain(t.domain) as ExplorerBucketKey));
+  if (mappable.length > taxonomyAny.length) {
+    dropped.push("catégories dont le type n'est pas sélectionné");
   }
 
   // ── Champs sans équivalent Explorer ──────────────────────────────────────

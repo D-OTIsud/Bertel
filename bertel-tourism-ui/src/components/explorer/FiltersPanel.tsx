@@ -278,12 +278,23 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const isTaxonomyActive = (domain: string, code: string) =>
     taxonomyAny.some((item) => item.domain === domain && item.code === code);
 
+  // §155-bis — copy honnête : tant que les références ne sont pas chargées c'est
+  // un chargement ; une fois chargées, un domaine absent est « indisponible »
+  // (jamais un « Chargement… » menteur qui ne finit pas).
+  const taxonomyCatalogFallback = (
+    <p className="text-[12px] leading-snug text-ink-3">
+      {references ? 'Catalogue de sous-catégories indisponible.' : 'Chargement du catalogue…'}
+    </p>
+  );
+
   /**
    * §155 — chips de sous-catégories d'un type (union de ses domaines), en ordre
    * d'arbre (parents avant enfants), sans fausse indentation (l'ancien
    * margin-left par profondeur perdait tout sens au premier retour à la ligne).
+   * §155-bis — `onActivate` : sélectionner une sous-catégorie d'un type exclu
+   * ré-inclut le type (sinon types ∩ sous-catégorie = ∅ ⇒ 0 résultat muet).
    */
-  const renderTaxonomyChips = (type: BackendObjectTypeCode) => {
+  const renderTaxonomyChips = (type: BackendObjectTypeCode, onActivate?: () => void) => {
     const domains = domainsForType(references, type);
     if (domains.length === 0) {
       return null;
@@ -298,7 +309,12 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 key={`${domain.domain}:${node.code}`}
                 type="button"
                 className={active ? 'chip chip--active' : 'chip'}
-                onClick={() => toggleTaxonomy(domain.domain, node.code)}
+                onClick={() => {
+                  if (!active) {
+                    onActivate?.();
+                  }
+                  toggleTaxonomy(domain.domain, node.code);
+                }}
                 aria-pressed={active}
               >
                 {node.name}
@@ -333,7 +349,13 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
             >
               {resolveTypeLabel(type)}
             </button>
-            {renderTaxonomyChips(type)}
+            {renderTaxonomyChips(type, () => {
+              // §155-bis : activer une sous-catégorie d'un type exclu ré-inclut
+              // le type — jamais de combinaison contradictoire silencieuse.
+              if (isSubtypeNarrowed(selectedSubtypes, types) && !selectedSubtypes.includes(type)) {
+                onToggleSubtype(type);
+              }
+            })}
           </div>
         );
       })}
@@ -737,9 +759,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
             <div className="space-y-4">
               <div>
                 <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de restauration</span>
-                {renderTaxonomyChips('RES') ?? (
-                  <p className="text-[12px] leading-snug text-ink-3">Chargement des types de restauration…</p>
-                )}
+                {renderTaxonomyChips('RES') ?? taxonomyCatalogFallback}
               </div>
 
               {references?.resCapacityMetrics.length ? (
@@ -788,17 +808,29 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
         {showAct ? (
           <FilterColumnGroup label="Activités" collapsible count={actSectionCount || undefined}>
             <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'activité</span>
-            {renderTaxonomyChips('ASC') ?? null}
-            <div className="mt-2">{renderTaxonomyChips('ACT') ?? null}</div>
+            {domainsForType(references, 'ASC').length + domainsForType(references, 'ACT').length > 0 ? (
+              <div className="space-y-3">
+                {(['ASC', 'ACT'] as BackendObjectTypeCode[]).map((type) =>
+                  domainsForType(references, type).length > 0 ? (
+                    <div key={type}>
+                      {/* §155-bis : sous-titre par type — structures (ASC) et
+                          prestations encadrées (ACT) ne se mélangent pas. */}
+                      <span className="mb-1.5 block text-[11px] font-medium text-ink-3">{resolveTypeLabel(type)}</span>
+                      {renderTaxonomyChips(type)}
+                    </div>
+                  ) : null,
+                )}
+              </div>
+            ) : (
+              taxonomyCatalogFallback
+            )}
           </FilterColumnGroup>
         ) : null}
 
         {showEvt ? (
           <FilterColumnGroup label="Événements" collapsible count={evtSectionCount || undefined}>
             <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'événement</span>
-            {renderTaxonomyChips('FMA') ?? (
-              <p className="text-[12px] leading-snug text-ink-3">Chargement des types d'événement…</p>
-            )}
+            {renderTaxonomyChips('FMA') ?? taxonomyCatalogFallback}
           </FilterColumnGroup>
         ) : null}
 
@@ -807,9 +839,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
             <div className="space-y-4">
               <div>
                 <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'itinéraire</span>
-                {renderTaxonomyChips('ITI') ?? (
-                  <p className="text-[12px] leading-snug text-ink-3">Chargement des types d'itinéraire…</p>
-                )}
+                {renderTaxonomyChips('ITI') ?? taxonomyCatalogFallback}
               </div>
 
               <div>

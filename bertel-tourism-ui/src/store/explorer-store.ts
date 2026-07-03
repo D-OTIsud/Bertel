@@ -107,6 +107,17 @@ function upsertCapacityFilter(filters: CapacityFilter[], code: string, rawMin?: 
   return [...next, { code, min, max }];
 }
 
+/**
+ * §155-bis — retirer un TYPE emporte ses sous-catégories (même philosophie que
+ * la cascade D23 au niveau bucket) : sinon une paire taxonomy_hot survit au
+ * décochage d'« Hôtel » et le bucket entier tombe à 0 résultat (types ∩
+ * sous-catégorie = ∅) sans explication.
+ */
+function purgeTaxonomyForType(common: ExplorerFilters['common'], type: BackendObjectTypeCode): ExplorerFilters['common'] {
+  const domain = `taxonomy_${String(type).toLowerCase()}`;
+  return { ...common, taxonomyAny: (common.taxonomyAny ?? []).filter((item) => item.domain !== domain) };
+}
+
 function toggleListValue<T extends string>(values: T[], value: T): T[] {
   const needle = String(value).trim() as T;
   if (!needle) {
@@ -351,28 +362,35 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   toggleHotSubtype: (type) =>
     set((state) => {
       const subtypes = state.hot.subtypes ?? [...DEFAULT_HOT_SUBTYPES];
-      const nextSubtypes = subtypes.includes(type)
-        ? subtypes.filter((item) => item !== type)
-        : [...subtypes, type];
-
+      const removing = subtypes.includes(type);
+      const nextSubtypes = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
       return {
         hot: {
           ...state.hot,
           subtypes: nextSubtypes.length > 0 ? nextSubtypes : [...DEFAULT_HOT_SUBTYPES],
         },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
       };
     }),
   toggleVisSubtype: (type) =>
     set((state) => {
       const subtypes = state.vis.subtypes ?? [...DEFAULT_VIS_SUBTYPES];
-      const next = subtypes.includes(type) ? subtypes.filter((item) => item !== type) : [...subtypes, type];
-      return { vis: { ...state.vis, subtypes: next.length > 0 ? next : [...DEFAULT_VIS_SUBTYPES] } };
+      const removing = subtypes.includes(type);
+      const next = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return {
+        vis: { ...state.vis, subtypes: next.length > 0 ? next : [...DEFAULT_VIS_SUBTYPES] },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
+      };
     }),
   toggleSrvSubtype: (type) =>
     set((state) => {
       const subtypes = state.srv.subtypes ?? [...DEFAULT_SRV_SUBTYPES];
-      const next = subtypes.includes(type) ? subtypes.filter((item) => item !== type) : [...subtypes, type];
-      return { srv: { ...state.srv, subtypes: next.length > 0 ? next : [...DEFAULT_SRV_SUBTYPES] } };
+      const removing = subtypes.includes(type);
+      const next = removing ? subtypes.filter((item) => item !== type) : [...subtypes, type];
+      return {
+        srv: { ...state.srv, subtypes: next.length > 0 ? next : [...DEFAULT_SRV_SUBTYPES] },
+        ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
+      };
     }),
   // §155 — sous-catégories : état commun, partitionné par bucket au payload.
   toggleTaxonomy: (domain, code) =>

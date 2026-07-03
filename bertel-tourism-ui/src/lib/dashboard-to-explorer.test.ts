@@ -52,7 +52,7 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
 
   it('transpose la taxonomie de TOUS les domaines vers common.taxonomyAny (§155)', () => {
     const { url, dropped } = mapDashboardFiltersToExplorerUrl({
-      types: ['HOT'],
+      types: ['HOT', 'RES'],
       taxonomyAny: [
         { domain: 'taxonomy_hot', code: 'hotel' },
         { domain: 'taxonomy_res', code: 'pizzeria' },
@@ -88,5 +88,29 @@ describe('mapDashboardFiltersToExplorerUrl', () => {
     const { url, dropped } = mapDashboardFiltersToExplorerUrl({ labelsAny: ['famille-plus'] });
     expect(dropped).toEqual(['tags']);
     expect(url).toBe('/explorer');
+  });
+});
+
+describe("§155-bis — paires dont le bucket n'est pas sélectionné", () => {
+  it('les drop avec signalement (jamais de chip inerte côté Explorer)', () => {
+    const { url, dropped } = mapDashboardFiltersToExplorerUrl({
+      types: ['HOT'],
+      taxonomyAny: [
+        { domain: 'taxonomy_hot', code: 'hotel' },
+        { domain: 'taxonomy_res', code: 'pizzeria' }, // RES non sélectionné
+      ],
+    });
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('taxonomy')).toBe('taxonomy_hot:hotel');
+    expect(dropped).toEqual(expect.arrayContaining(["catégories dont le type n'est pas sélectionné"]));
+  });
+
+  it('sans sélection de type, tout passe (tous les buckets actifs)', () => {
+    const { url, dropped } = mapDashboardFiltersToExplorerUrl({
+      taxonomyAny: [{ domain: 'taxonomy_res', code: 'pizzeria' }],
+    });
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('taxonomy')).toBe('taxonomy_res:pizzeria');
+    expect(dropped).toEqual([]);
   });
 });

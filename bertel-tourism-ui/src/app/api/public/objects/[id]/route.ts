@@ -35,6 +35,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   if (!partner) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers });
 
   const rate = await checkPartnerRate(partner.keyId);
+  // Rate-limit headers on every subsequent response (partners self-throttle). remaining=0 on a 429.
+  headers['X-RateLimit-Limit'] = String(rate.limit);
+  headers['X-RateLimit-Remaining'] = String(rate.remaining);
   if (!rate.allowed) {
     await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 429);
     return NextResponse.json({ error: 'rate_limited', retry_after: rate.retryAfter }, {

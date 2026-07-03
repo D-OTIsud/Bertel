@@ -29,7 +29,7 @@ beforeEach(() => {
   checkMock.mockReset();
   rpcMock.mockReset();
   authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] });
-  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0 });
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 119 });
   rpcMock.mockResolvedValue({
     ok: true,
     status: 200,

@@ -73,6 +73,8 @@ Clé absente, inconnue, révoquée ou expirée : réponse `401 {"error":"unautho
 
 **120 requêtes par minute** et par clé (fenêtre fixe). Au-delà : `429 {"error":"rate_limited","retry_after":N}` avec l'en-tête `Retry-After` (secondes). Attendez ce délai avant de réessayer.
 
+Chaque réponse porte les en-têtes `X-RateLimit-Limit` (le plafond, 120) et `X-RateLimit-Remaining` (requêtes restantes dans la fenêtre courante, `0` sur un `429`) : surveillez `X-RateLimit-Remaining` pour vous auto-réguler avant d'atteindre la limite.
+
 ### Enveloppe et versionnage
 
 Seule une réponse `200` a la forme `{ "meta": …, "data": … }` ; les erreurs sont des corps **plats** portant une clé `error` (voir la table des codes d'erreur). L'en-tête `X-Bertel-Api-Version` reste présent **partout**, y compris sur les erreurs, et la réponse `200` porte en plus la version de contrat dans `meta.contract_version`.
@@ -83,7 +85,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 
 | Code | Corps | Signification |
 |---|---|---|
-| 400 | `invalid_object_id` / `bad_request` | Paramètre malformé (id hors format, `since` non ISO 8601) |
+| 400 | `invalid_object_id` / `bad_request` | Paramètre malformé (id hors format, `since` non ISO 8601, code `types` inconnu) |
 | 401 | `unauthorized` | Clé absente, invalide, révoquée ou expirée |
 | 404 | `not_found` | Fiche inconnue **ou non publiée** (indistinguable, par conception) |
 | 429 | `rate_limited` | Limite de débit atteinte — respecter `Retry-After` |
@@ -120,6 +122,8 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | ACT | Activité encadrée | PSV | Prestataire de services |
 | LOI | Loisir | SPU | Service public |
 | ORG | Organisation | | |
+
+Les codes sont **insensibles à la casse** (`res` équivaut à `RES`). Un code **inconnu** fait échouer toute la requête avec `400 {"error":"bad_request"}` (le champ `detail` nomme le ou les codes fautifs) — vérifiez l'orthographe contre la liste ci-dessus plutôt que de réessayer.
 
 Exemple — les restaurants et hôtels, 200 par page :
 

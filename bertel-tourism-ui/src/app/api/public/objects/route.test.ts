@@ -29,7 +29,7 @@ beforeEach(() => {
   checkMock.mockReset();
   rpcMock.mockReset();
   authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] });
-  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0 });
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 119 });
   rpcMock.mockResolvedValue({ ok: true, status: 200, body: { info: { next_cursor: 'c2' }, data: [{ id: 'X' }] } });
 });
 
@@ -58,9 +58,35 @@ describe('GET /api/public/objects', () => {
     expect(params.p_page_size).toBe(10);
   });
 
+  it('normalizes lowercase type codes to uppercase before the RPC (types=res → RES)', async () => {
+    await GET(req('?types=res,hot'));
+    expect(rpcMock.mock.calls[0][1].p_types).toEqual(['RES', 'HOT']);
+  });
+
+  it('400 bad_request for an unknown type code — RPC never called', async () => {
+    const res = await GET(req('?types=XXX'));
+    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe('bad_request');
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it('400 bad_request when a valid and an unknown code are mixed (one bad code fails the request)', async () => {
+    const res = await GET(req('?types=RES,XXX'));
+    expect(res.status).toBe(400);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
   it('clamps page_size into [1,200]', async () => {
     await GET(req('?page_size=9999'));
     expect(rpcMock.mock.calls[0][1].p_page_size).toBe(200);
+  });
+
+  it('emits X-RateLimit-Limit and X-RateLimit-Remaining headers (E4)', async () => {
+    checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 117 });
+    const res = await GET(req());
+    expect(res.headers.get('X-RateLimit-Limit')).toBe('120');
+    expect(res.headers.get('X-RateLimit-Remaining')).toBe('117');
   });
 
   it('wraps the RPC result under the contract envelope (pagination info in meta)', async () => {

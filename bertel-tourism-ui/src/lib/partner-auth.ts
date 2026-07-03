@@ -64,27 +64,38 @@ export async function authenticatePartner(authHeader: string | null | undefined)
 export interface RateVerdict {
   allowed: boolean;
   retryAfter: number;
+  limit: number;
+  remaining: number;
 }
 
 /**
  * Fixed-window rate check for a partner key (audit API R2). FAIL-OPEN: an abuse limiter must not
  * block legitimate traffic if the DB call fails — access is already gated by authenticatePartner
  * (which is fail-closed). Returns {allowed:true} on any infra error.
+ *
+ * Also surfaces `limit`/`remaining` so routes can emit `X-RateLimit-Limit`/`X-RateLimit-Remaining`
+ * (partners self-throttle before hitting the 429). On fail-open, `remaining` optimistically = limit.
  */
 export async function checkPartnerRate(keyId: string, limit = 120, windowSeconds = 60): Promise<RateVerdict> {
   try {
     const server = getServerSupabaseClient();
-    if (!server) return { allowed: true, retryAfter: 0 };
+    if (!server) return { allowed: true, retryAfter: 0, limit, remaining: limit };
     const { data, error } = await server.schema('api').rpc('partner_rate_check', {
       p_key_id: keyId,
       p_limit: limit,
       p_window_seconds: windowSeconds,
     });
-    if (error || !data || typeof data !== 'object') return { allowed: true, retryAfter: 0 };
-    const row = data as { allowed?: boolean; retry_after?: number };
-    return { allowed: row.allowed !== false, retryAfter: Number(row.retry_after ?? windowSeconds) };
+    if (error || !data || typeof data !== 'object') return { allowed: true, retryAfter: 0, limit, remaining: limit };
+    const row = data as { allowed?: boolean; retry_after?: number; remaining?: number };
+    const allowed = row.allowed !== false;
+    return {
+      allowed,
+      retryAfter: Number(row.retry_after ?? windowSeconds),
+      limit,
+      remaining: Math.max(0, Number(row.remaining ?? (allowed ? limit : 0))),
+    };
   } catch {
-    return { allowed: true, retryAfter: 0 };
+    return { allowed: true, retryAfter: 0, limit, remaining: limit };
   }
 }
 

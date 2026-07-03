@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
+import { OBJECT_TYPE_CODES } from '@/lib/object-types';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!partner) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers });
 
   const rate = await checkPartnerRate(partner.keyId);
+  // Rate-limit headers on every subsequent response (partners self-throttle). remaining=0 on a 429.
+  headers['X-RateLimit-Limit'] = String(rate.limit);
+  headers['X-RateLimit-Remaining'] = String(rate.remaining);
   if (!rate.allowed) {
     await logPartnerCall(partner.keyId, 'GET /api/public/objects', 429);
     return NextResponse.json({ error: 'rate_limited', retry_after: rate.retryAfter }, {
@@ -33,8 +37,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const url = new URL(req.url);
   const cursor = url.searchParams.get('cursor');
   const pageSize = Math.min(Math.max(Number(url.searchParams.get('page_size') ?? '50') || 50, 1), 200);
+  // `types` — optional CSV of object_type codes. Normalize case (the enum is upper-case) and reject
+  // any unknown code at the boundary (fail-fast) instead of letting the RPC cast it to the enum: an
+  // invalid value raises Postgres 22P02 and would surface as a misleading 502 (audit CRITICAL
+  // 2026-07-03). Absent ⇒ null (no type filter).
   const typesParam = url.searchParams.get('types');
-  const types = typesParam ? typesParam.split(',').map((s) => s.trim()).filter(Boolean) : null;
+  let types: string[] | null = null;
+  if (typesParam) {
+    types = typesParam.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+    const unknown = types.filter((code) => !OBJECT_TYPE_CODES.has(code));
+    if (unknown.length > 0) {
+      return NextResponse.json(
+        { error: 'bad_request', detail: `unknown object type code(s): ${unknown.join(', ')}` },
+        { status: 400, headers },
+      );
+    }
+  }
   const lang = (url.searchParams.get('lang') ?? 'fr').trim() || 'fr';
   const search = url.searchParams.get('search');
   const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
@@ -43,7 +61,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     p_cursor: cursor,
     p_lang_prefs: [lang],
     p_page_size: pageSize,
-    p_types: types, // text[] — invalid codes simply match nothing
+    p_types: types, // text[] — pre-validated upper-case object_type codes (unknown ⇒ 400 above)
     p_status: ['published'], // FORCED — partners see published only
     p_search: search,
     p_track_format: 'none',

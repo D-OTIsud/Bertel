@@ -44,7 +44,7 @@ beforeEach(() => {
   rpcMock.mockReset();
   serverMock.mockReset();
   authMock.mockResolvedValue({ keyId: 'k1', label: 'P', scopes: [] }); // authenticated + under rate by default
-  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0 });
+  checkMock.mockResolvedValue({ allowed: true, retryAfter: 0, limit: 120, remaining: 119 });
 });
 
 describe('GET /api/public/objects/[id]', () => {

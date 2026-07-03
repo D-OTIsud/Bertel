@@ -44,7 +44,7 @@
         "responses": {
           "200": {
             "description": "Page d'objets.",
-            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" }, "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" }, "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" } },
             "content": {
               "application/json": {
                 "schema": {
@@ -64,6 +64,11 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "Un code `types` est inconnu (hors enum `object_type`).",
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "bad_request", "detail": "unknown object type code(s): XXX" } } }
           },
           "401": { "$ref": "#/components/responses/Unauthorized" },
           "429": { "$ref": "#/components/responses/RateLimited" },
@@ -86,7 +91,7 @@
         "responses": {
           "200": {
             "description": "La fiche.",
-            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
+            "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" }, "X-RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" }, "X-RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" } },
             "content": {
               "application/json": {
                 "schema": {
@@ -659,6 +664,14 @@
       "RetryAfter": {
         "description": "Secondes à attendre avant de réessayer (rate-limit).",
         "schema": { "type": "integer" }
+      },
+      "RateLimitLimit": {
+        "description": "Plafond de requêtes par fenêtre pour la clé (présent sur chaque réponse).",
+        "schema": { "type": "integer", "example": 120 }
+      },
+      "RateLimitRemaining": {
+        "description": "Requêtes restantes dans la fenêtre courante (présent sur chaque réponse ; 0 sur un 429).",
+        "schema": { "type": "integer", "example": 117 }
       }
     },
     "parameters": {
@@ -679,7 +692,7 @@
       },
       "Types": {
         "name": "types", "in": "query", "required": false,
-        "description": "Liste de codes `object_type` séparés par des virgules. Un code invalide ne matche rien.",
+        "description": "Liste de codes `object_type` séparés par des virgules. Codes insensibles à la casse (`res` = `RES`). Un code inconnu fait échouer toute la requête avec `400 bad_request`.",
         "schema": { "type": "string", "example": "HOT,RES,ACT" }
       },
       "Search": {

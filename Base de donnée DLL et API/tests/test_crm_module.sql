@@ -250,6 +250,10 @@ BEGIN
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(api.list_crm_tasks()) AS t
                    WHERE (t->>'id')::uuid = v_task3_id AND t->>'title' = 'Tâche assignée PO'),
            'save_crm_task: la tâche assignée doit apparaître dans list_crm_tasks';
+    -- Hub personnel : list_crm_tasks expose owner_id (uuid brut) pour filtrer « mes tâches ».
+    ASSERT (SELECT t->>'owner_id' FROM jsonb_array_elements(api.list_crm_tasks()) AS t
+            WHERE (t->>'id')::uuid = v_task3_id) = v_userC::text,
+           'list_crm_tasks: owner_id doit exposer l''uuid de l''assigné (hub personnel)';
     -- save_crm_task avec owner = userB (membre de l'ORG B, hors ORG A) : refusé 22023.
     v_denied := false;
     BEGIN

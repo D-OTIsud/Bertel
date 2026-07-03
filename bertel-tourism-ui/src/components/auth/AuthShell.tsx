@@ -23,24 +23,25 @@ function AuthHeroScene() {
       aria-hidden="true"
       focusable="false"
     >
-      {/* Itinéraires convergents — quatre lignes partant de stations (à gauche) vers un
-          point de repère commun (à droite). Tonalité claire, faible opacité : décor, pas bruit. */}
+      {/* Itinéraires convergents — quatre lignes arrivant DE LA DROITE (l'espace vide) vers le
+          point de repère posé juste après « Bertel ». Sens droite→gauche : le tracé reste hors
+          de la colonne de lecture (à gauche) et équilibre la composition. Faible opacité : décor. */}
       <g className="auth-hero__routes" stroke="currentColor" strokeLinecap="round" fill="none">
-        <path d="M-40 96 C 150 96, 250 250, 452 286" strokeWidth="3" opacity="0.16" />
-        <path d="M-40 232 C 140 232, 260 276, 452 292" strokeWidth="3" opacity="0.13" />
-        <path d="M-40 372 C 150 372, 250 320, 452 298" strokeWidth="3" opacity="0.13" />
-        <path d="M-40 512 C 160 512, 250 336, 452 304" strokeWidth="3" opacity="0.10" />
-        {/* Stations */}
+        <path d="M572 108 C 470 122, 372 300, 294 380" strokeWidth="3" opacity="0.17" />
+        <path d="M578 182 C 494 192, 380 316, 292 384" strokeWidth="3" opacity="0.13" />
+        <path d="M578 264 C 500 274, 388 348, 290 386" strokeWidth="3" opacity="0.13" />
+        <path d="M572 346 C 500 352, 396 380, 288 390" strokeWidth="3" opacity="0.10" />
+        {/* Stations (à droite) */}
         <g fill="var(--teal)" stroke="currentColor" strokeWidth="3">
-          <circle cx="6" cy="96" r="7" opacity="0.55" />
-          <circle cx="6" cy="232" r="7" opacity="0.5" />
-          <circle cx="6" cy="372" r="7" opacity="0.5" />
-          <circle cx="6" cy="512" r="7" opacity="0.42" />
+          <circle cx="572" cy="108" r="7" opacity="0.55" />
+          <circle cx="578" cy="182" r="7" opacity="0.5" />
+          <circle cx="578" cy="264" r="7" opacity="0.5" />
+          <circle cx="572" cy="346" r="7" opacity="0.42" />
         </g>
       </g>
-      {/* Le point de repère où tout converge — une seule source de vérité. Accent chaud (brique
-          volcanique) pour le distinguer du drenched teal. */}
-      <g className="auth-hero__pin" transform="translate(452 295)">
+      {/* Le point de repère où tout converge — une seule source de vérité — posé juste après le
+          mot « Bertel ». Accent chaud (brique volcanique) pour le distinguer du drenched teal. */}
+      <g className="auth-hero__pin" transform="translate(290 386)">
         <circle r="24" fill="currentColor" opacity="0.10" />
         <path
           d="M0 -13 C 8 -13, 13 -7, 13 0 C 13 8, 4 14, 0 20 C -4 14, -13 8, -13 0 C -13 -7, -8 -13, 0 -13 Z"

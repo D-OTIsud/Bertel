@@ -23,10 +23,10 @@ const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).t
 // proposer la clôture ; task-doing est liée à une interaction DÉJÀ traitée (done) ⇒ pas de
 // prompt ; task-later/task-done sont NON liées ⇒ jamais de prompt.
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
-  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
-  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
-  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), ownerId: null, ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
+  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), ownerId: null, ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
+  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), ownerId: null, ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, ownerId: null, ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
 ];
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {
@@ -341,7 +341,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('Avancer in_progress→done (bouton) d une tâche liée OUVERTE → prompt sur le chemin bouton aussi', async () => {
     // Une tâche in_progress liée à une interaction encore ouverte.
     crmMock.listCrmTasks.mockResolvedValue([
-      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
+      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, ownerId: null, ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
     ]);
     renderTaches();
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Suivi médiation »' }));
@@ -400,7 +400,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {
     crmMock.listCrmTasks.mockResolvedValue([
       ...tasks,
-      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
     ]);
     renderTaches();
     await screen.findByText('Rappeler le directeur');

@@ -138,9 +138,10 @@ describe('ProfileDrawer (hub personnel)', () => {
   });
 
   it('pied : « Mon équipe » gated admin (/settings?section=team), Paramètres toujours là', async () => {
-    renderDrawer();
+    const { unmount } = renderDrawer();
     expect(await screen.findByRole('link', { name: /Paramètres/i })).toHaveAttribute('href', '/settings');
     expect(screen.queryByRole('link', { name: /Mon équipe/i })).not.toBeInTheDocument();
+    unmount();
 
     useSessionStore.setState({ adminRank: 12 } as never);
     renderDrawer();
@@ -148,9 +149,10 @@ describe('ProfileDrawer (hub personnel)', () => {
   });
 
   it('réseau : bandeau seulement si dégradé/hors-ligne', async () => {
-    renderDrawer();
+    const { unmount } = renderDrawer();
     expect(await screen.findByText('En ligne maintenant')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    unmount();
 
     useUiStore.setState({ networkStatus: 'degraded' } as never);
     renderDrawer();

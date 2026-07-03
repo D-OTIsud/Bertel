@@ -12241,6 +12241,21 @@ a {
 .invite-success-line { display: flex; align-items: center; gap: 6px; color: var(--brand-green); font-weight: 600; margin-bottom: 8px; }
 .invite-success-line > svg { color: var(--brand-green); flex: none; }
 
+/* §164 — récap multi-invitation : une ligne par adresse, icône + statut colorés. */
+.invite-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.invite-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); font-size: 13px; }
+.invite-row > svg { flex: none; }
+.invite-row__email { font-weight: 600; }
+.invite-row__label { margin-left: auto; color: var(--text-muted); text-align: right; }
+.invite-row--sent { border-color: color-mix(in srgb, var(--brand-green) 40%, var(--line)); }
+.invite-row--sent > svg { color: var(--brand-green); }
+.invite-row--attached > svg { color: var(--brand-green); }
+.invite-row--pending { border-color: color-mix(in srgb, var(--warn-strong) 40%, var(--line)); }
+.invite-row--pending > svg { color: var(--warn-strong); }
+.invite-row--error { border-color: color-mix(in srgb, var(--destructive) 40%, var(--line)); }
+.invite-row--error > svg { color: var(--destructive); }
+.invite-row--error .invite-row__label { color: var(--destructive); }
+
 .perm-drawer { display: flex; flex-direction: column; gap: 16px; }
 .perm-drawer__sub { font-size: 13px; color: var(--ink-2); }
 .perm-drawer__preset { display: flex; flex-direction: column; gap: 4px; }

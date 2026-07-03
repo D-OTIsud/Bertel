@@ -5,7 +5,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     const groups = buildSettingsNav('super_admin');
     expect(groups.map((g) => g.id)).toEqual(['account', 'platform']);
     const platform = groups.find((g) => g.id === 'platform');
-    expect(platform?.sections.map((s) => s.id)).toEqual(['appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
+    expect(platform?.sections.map((s) => s.id)).toEqual(['appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'organisations', 'diagnostic']);
   });
 
   it('un rôle non super-admin ne voit QUE « Mon compte » (pas de groupe plateforme)', () => {
@@ -21,7 +21,7 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
   });
 
   it('settingsSectionIds aplatit les sections accessibles', () => {
-    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'diagnostic']);
+    expect(settingsSectionIds('super_admin')).toEqual(['profile', 'preferences', 'session', 'appearance', 'markers', 'referentiels', 'ai', 'partner-keys', 'organisations', 'diagnostic']);
     expect(settingsSectionIds('owner')).toEqual(['profile', 'preferences', 'session']);
   });
 
@@ -49,5 +49,10 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     // un non super-admin demandant une section plateforme → repli sur le défaut (pas d'accès)
     expect(resolveSettingsSection('owner', 'markers')).toBe(DEFAULT_SETTINGS_SECTION);
     expect(resolveSettingsSection('owner', 'zzz')).toBe(DEFAULT_SETTINGS_SECTION);
+  });
+
+  test('la section organisations est exposée aux super-admins uniquement', () => {
+    expect(settingsSectionIds('super_admin')).toContain('organisations');
+    expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('organisations');
   });
 });

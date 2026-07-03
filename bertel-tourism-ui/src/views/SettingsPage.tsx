@@ -15,6 +15,7 @@ import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
+import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
@@ -743,6 +744,12 @@ export default function SettingsPage() {
       {activeSection === 'partner-keys' && role === 'super_admin' && (
         <article className="panel-card">
           <PartnerKeysSettings />
+        </article>
+      )}
+
+      {activeSection === 'organisations' && role === 'super_admin' && (
+        <article className="panel-card">
+          <OrgsPanel />
         </article>
       )}
 

@@ -3234,9 +3234,8 @@ a {
 
 .auth-hero__logo img {
   display: block;
-  height: 64px;
-  width: auto;
-  max-width: 210px;
+  width: 100px;
+  height: 100px;
   object-fit: contain;
 }
 

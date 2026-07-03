@@ -300,28 +300,15 @@ GRANT EXECUTE ON FUNCTION api.upsert_app_branding(TEXT, TEXT, TEXT, TEXT, TEXT, 
   TO authenticated, service_role;
 
 -- -----------------------------------------------------
--- 8) Optional: Supabase Storage bucket for logo files
+-- 8) Supabase Storage bucket for logo files
 -- -----------------------------------------------------
--- Recommended usage:
---   - upload the brand logo to a dedicated public bucket
---   - store the resulting public URL in app_branding_settings.logo_public_url
---   - store the storage path in app_branding_settings.logo_storage_path
---
--- If you want the database to create the bucket too, uncomment and adapt the
--- block below after checking your Supabase Storage policies.
---
--- INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
--- VALUES (
---   'branding-assets',
---   'branding-assets',
---   true,
---   5242880,
---   ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']
--- )
--- ON CONFLICT (id) DO UPDATE
--- SET
---   public = EXCLUDED.public,
---   file_size_limit = EXCLUDED.file_size_limit,
---   allowed_mime_types = EXCLUDED.allowed_mime_types;
+-- The `branding-assets` bucket is created by a DEDICATED file: `branding_assets_bucket.sql`
+-- (mirrors avatars_bucket.sql / media_bucket.sql — public read, service-role-only write
+-- with a RESTRICTIVE anon/authenticated deny). Uploads go through the single-writer route
+-- /api/branding/logo/upload (authorizes the caller via api.is_platform_admin, resize +
+-- EXIF-strip, service-role write). Do NOT create the bucket here with a bare public INSERT:
+-- a browser client cannot write to it (no permissive write policy exists on storage.objects),
+-- so a policy-less public bucket would only flip "Bucket not found" into an RLS violation.
+-- See docs/SQL_ROLLOUT_RUNBOOK.md step A2 and CLAUDE.md §59 (media single-writer invariant).
 
 COMMIT;

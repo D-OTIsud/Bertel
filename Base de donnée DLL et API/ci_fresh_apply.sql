@@ -145,6 +145,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== A1     avatars_bucket.sql  (user profile pictures: storage bucket `avatars`, image-only, service-role write via /api/avatar/upload; RESTRICTIVE anon/authenticated deny; idempotent) =='
 \ir avatars_bucket.sql
 
+\echo '== A2     branding_assets_bucket.sql  (white-label brand logo: storage bucket `branding-assets`, image-only, service-role write via /api/branding/logo/upload gated api.is_platform_admin; RESTRICTIVE anon/authenticated deny; idempotent) =='
+\ir branding_assets_bucket.sql
+
 \echo '== 14f    migration_amenity_popularity_order.sql  (§73 seed ref_amenity/ref_code_amenity_family.position from object_amenity usage; default « industry popularity » order for the room equipment picker; data fixup, usage-derived, after seeds) =='
 \ir migration_amenity_popularity_order.sql
 

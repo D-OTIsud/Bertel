@@ -14,6 +14,14 @@ export interface ProcessImageInput {
    * picture is wasteful bandwidth in cards/emails.
    */
   maxDimension?: number;
+  /**
+   * Output encoding. Defaults to 'jpeg' (object media, avatars, portraits — a
+   * flat photo). Pass 'preserve' to keep the source format (png→png, webp→webp,
+   * jpeg→jpeg) so images with an ALPHA CHANNEL survive — a brand logo
+   * (see /api/branding/logo/upload) must not be flattened onto an opaque JPEG
+   * background. Metadata is still stripped on re-encode in both modes.
+   */
+  outputFormat?: 'jpeg' | 'preserve';
 }
 
 export interface ProcessImageResult {
@@ -38,7 +46,7 @@ export class MediaProcessingError extends Error {
  * `withoutEnlargement: true` guarantees no upscaling.
  * Throws MediaProcessingError with `code` in {'mime','size','decode'}.
  */
-export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENSION_PX }: ProcessImageInput): Promise<ProcessImageResult> {
+export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENSION_PX, outputFormat = 'jpeg' }: ProcessImageInput): Promise<ProcessImageResult> {
   if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)) {
     throw new MediaProcessingError('mime', `Unsupported MIME type: ${mimeType}`);
   }
@@ -68,12 +76,25 @@ export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENS
     // The strip test (`processImage — metadata stripping`) is the regression guard:
     // if a future change ever adds `.withMetadata()` or upgrades sharp to a version
     // whose default keeps metadata, that test will fail loudly. See process-image.test.ts.
-    const out = await finalPipeline.jpeg({ quality: 85 }).toBuffer({ resolveWithObject: true });
+    // 'preserve' keeps the decoded source format so an alpha channel survives
+    // (a logo on a colored surface must stay transparent); 'jpeg' (default)
+    // flattens to an opaque photo. Either way sharp strips metadata on re-encode.
+    const encoded =
+      outputFormat === 'preserve'
+        ? meta.format === 'png'
+          ? finalPipeline.png()
+          : meta.format === 'webp'
+            ? finalPipeline.webp()
+            : finalPipeline.jpeg({ quality: 85 })
+        : finalPipeline.jpeg({ quality: 85 });
+    const out = await encoded.toBuffer({ resolveWithObject: true });
+    const outMime: AllowedMime =
+      out.info.format === 'png' ? 'image/png' : out.info.format === 'webp' ? 'image/webp' : 'image/jpeg';
     return {
       buffer: out.data,
       width: out.info.width,
       height: out.info.height,
-      mimeType: 'image/jpeg',
+      mimeType: outMime,
     };
   } catch (err) {
     if (err instanceof MediaProcessingError) throw err;

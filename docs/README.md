@@ -33,11 +33,17 @@ docker run -p 8080:80 bertel-api-docs
 ## 📁 Structure
 
 - `index.html` - Documentation principale
+- `partenaires.html` - **Espace partenaires** : page publique qui rend `guide-partenaires.md` côté client (via `partenaires-render.js`) — l'URL à communiquer aux prestataires externes avec leur clé API
+- `guide-partenaires.md` - Guide partenaires de l'API publique `/api/public/*` (**source unique** : modifier ce fichier met à jour la page au prochain déploiement ; auto-check : `node partenaires-render.check.js`)
 - `SQL_ROLLOUT_RUNBOOK.md` - Runbook équipe pour installation, mise à jour SQL, refresh MV et rollback
 - `SUPABASE_SETUP.md` - Configuration Supabase/PostgREST du schéma `api`
 - `Bertel_API_v3.postman_collection.json` - Collection Postman
 - `Bertel_API_v3.postman_environment.json` - Environnement Postman
 - `README_Postman.md` - Guide d'utilisation Postman
+
+> ⚠️ Le `Dockerfile` copie une liste **explicite** de fichiers (plus de `COPY *.md`) : les
+> documents internes du dossier (audits sécurité/DB, plans, specs, RGPD…) ne sont pas servis
+> par le site public. Publier un nouveau fichier = l'ajouter volontairement au `Dockerfile`.
 
 ## ✨ Fonctionnalités
 

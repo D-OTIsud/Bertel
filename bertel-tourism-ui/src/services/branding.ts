@@ -99,7 +99,11 @@ function isBrandingPermissionError(error: unknown): boolean {
 // service-role) — JAMAIS d'upload direct depuis le client : le bucket branding-assets
 // interdit toute écriture anon/authenticated (RESTRICTIVE), même invariant single-writer
 // que media/avatars (CLAUDE.md §59).
-async function uploadBrandLogo(file: File, client: NonNullable<ReturnType<typeof getSupabaseClient>>) {
+async function uploadBrandLogo(
+  file: File,
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  orgObjectId?: string,
+) {
   const { data } = await client.auth.getSession();
   const token = data.session?.access_token;
   if (!token) {
@@ -108,6 +112,9 @@ async function uploadBrandLogo(file: File, client: NonNullable<ReturnType<typeof
 
   const body = new FormData();
   body.append('file', file);
+  if (orgObjectId) {
+    body.append('orgObjectId', orgObjectId);
+  }
   const res = await fetch('/api/branding/logo/upload', {
     method: 'POST',
     headers: { authorization: `Bearer ${token}` },
@@ -256,4 +263,93 @@ export async function saveBrandingSettings(input: SaveBrandingInput): Promise<Br
     }
     throw error;
   }
+}
+
+// --- Branding par organisation (get_org_branding / upsert_org_branding) ---
+// Contrat full-state PUT : chaque upsert_org_branding remplace la ligne entiere
+// (NULL = herite du theme plateforme). Ne pas confondre avec le branding
+// plateforme ci-dessus (getPublicBranding/getAppBranding/saveBrandingSettings).
+
+export interface OrgBrandingRaw {
+  brandName: string | null;
+  logoStoragePath: string | null;
+  logoPublicUrl: string | null;
+  logoMimeType: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+  textColor: string | null;
+  backgroundColor: string | null;
+  surfaceColor: string | null;
+}
+
+export interface OrgBrandingSnapshot {
+  orgObjectId: string;
+  raw: OrgBrandingRaw;
+  resolved: Record<string, string | null>;
+}
+
+function readNullableString(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v : null;
+}
+
+function normalizeOrgRaw(data: unknown): OrgBrandingRaw {
+  const raw = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
+  return {
+    brandName: readNullableString(raw.brandName),
+    logoStoragePath: readNullableString(raw.logoStoragePath),
+    logoPublicUrl: readNullableString(raw.logoPublicUrl),
+    logoMimeType: readNullableString(raw.logoMimeType),
+    primaryColor: readNullableString(raw.primaryColor),
+    accentColor: readNullableString(raw.accentColor),
+    textColor: readNullableString(raw.textColor),
+    backgroundColor: readNullableString(raw.backgroundColor),
+    surfaceColor: readNullableString(raw.surfaceColor),
+  };
+}
+
+export async function getOrgBranding(orgObjectId: string): Promise<OrgBrandingSnapshot> {
+  const client = getApiClient();
+  if (!client) throw new Error('Supabase non configuré.');
+  const { data, error } = await client.schema('api').rpc('get_org_branding', { p_org_object_id: orgObjectId });
+  if (error) throw error;
+  const payload = (data ?? {}) as Record<string, unknown>;
+  return {
+    orgObjectId,
+    raw: normalizeOrgRaw(payload.raw),
+    resolved: (payload.resolved ?? {}) as Record<string, string | null>,
+  };
+}
+
+export async function saveOrgBranding(
+  orgObjectId: string,
+  input: { raw: OrgBrandingRaw; logoFile?: File | null; clearLogo?: boolean; reset?: boolean },
+): Promise<OrgBrandingSnapshot> {
+  const client = getApiClient();
+  const dbClient = getSupabaseClient();
+  if (!client || !dbClient) throw new Error('Supabase non configuré.');
+  let logo = {
+    logoStoragePath: input.clearLogo ? null : input.raw.logoStoragePath,
+    logoPublicUrl: input.clearLogo ? null : input.raw.logoPublicUrl,
+    logoMimeType: input.clearLogo ? null : input.raw.logoMimeType,
+  };
+  if (!input.reset && input.logoFile) {
+    const uploaded = await uploadBrandLogo(input.logoFile, dbClient, orgObjectId);
+    logo = { logoStoragePath: uploaded.logoStoragePath, logoPublicUrl: uploaded.logoPublicUrl, logoMimeType: uploaded.logoMimeType };
+  }
+  const { data, error } = await client.schema('api').rpc('upsert_org_branding', {
+    p_org_object_id: orgObjectId,
+    p_brand_name: input.raw.brandName,
+    p_logo_storage_path: logo.logoStoragePath,
+    p_logo_public_url: logo.logoPublicUrl,
+    p_logo_mime_type: logo.logoMimeType,
+    p_primary_color: input.raw.primaryColor,
+    p_accent_color: input.raw.accentColor,
+    p_text_color: input.raw.textColor,
+    p_background_color: input.raw.backgroundColor,
+    p_surface_color: input.raw.surfaceColor,
+    p_reset: input.reset === true,
+  });
+  if (error) throw error;
+  const payload = (data ?? {}) as Record<string, unknown>;
+  return { orgObjectId, raw: normalizeOrgRaw(payload.raw), resolved: (payload.resolved ?? {}) as Record<string, string | null> };
 }

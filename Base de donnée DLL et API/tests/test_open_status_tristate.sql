@@ -5,8 +5,9 @@
 --   * B : période « toute l'année », jour = aujourd'hui, SANS horaire   -> TRUE  (ouvert sans horaire, §93)
 --   * C : période « toute l'année », horaires un AUTRE jour             -> FALSE (a des données, fermé maintenant)
 -- Deux couches d'assertion :
---   * STRUCTURAL  — le corps de la fonction porte la garde tri-état (aucun opening_period → NULL).
---                   Contre une base SANS la migration, l'ASSERT est FALSE -> rouge.
+--   * STRUCTURAL  — le moteur internal.compute_open_status (§157) porte la garde tri-état
+--                   (aucun opening_period → NULL) et refresh_open_status lui délègue.
+--                   Contre une base SANS la migration, l'ASSERT est FALSE/NULL -> rouge.
 --   * BEHAVIOURAL — après refresh, A IS NULL, B IS TRUE, C IS FALSE.
 -- Cas B/C indépendants de l'heure (B = sans horaire ; C = mauvais jour de la semaine).
 -- Self-contained + transactionnel (ROLLBACK ; rien ne persiste). Miroir de test_open_status_timezone.sql.
@@ -29,11 +30,19 @@ DECLARE
   v_C_val  boolean;
 BEGIN
   -- ---------- STRUCTURAL : la branche tri-état NULL est présente (migration appliquée) ----------
+  -- §157 : le moteur d'ouverture est internal.compute_open_status(at) ; refresh_open_status
+  -- n'est plus que son write-back « maintenant ». La garde tri-état doit vivre dans le moteur,
+  -- et refresh doit bien lui déléguer (sinon la sémantique §133 est perdue).
   ASSERT (
     SELECT p.prosrc ILIKE '%p2.object_id = o.id%'
     FROM pg_proc p
+    WHERE p.proname = 'compute_open_status' AND p.pronamespace = 'internal'::regnamespace
+  ), 'compute_open_status doit porter la garde tri-état (aucun opening_period → NULL) — migration §157 non appliquée';
+  ASSERT (
+    SELECT p.prosrc ILIKE '%compute_open_status%'
+    FROM pg_proc p
     WHERE p.proname = 'refresh_open_status' AND p.pronamespace = 'api'::regnamespace
-  ), 'refresh_open_status doit porter la garde tri-état (aucun opening_period → NULL) — migration non appliquée';
+  ), 'refresh_open_status doit déléguer à internal.compute_open_status (§157) — migration non appliquée';
 
   -- ---------- Résolution des références (jour local, catalogue horaire) ----------
   v_today_dow := EXTRACT(ISODOW FROM (CURRENT_TIMESTAMP AT TIME ZONE 'Indian/Reunion'))::int;

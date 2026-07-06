@@ -4,6 +4,7 @@ import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
+import { buildResultSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
 import { ResultCardView } from './ResultCardView';
 
@@ -62,6 +63,7 @@ export function ResultsList({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  labelRankCounts,
 }: ResultsListProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +92,12 @@ export function ResultsList({
     const selectedSet = new Set(selectedCards.map((card) => card.id));
     return [...selectedCards, ...visibleCards.filter((card) => !selectedSet.has(card.id))];
   }, [selectedObjectIds, visibleCards]);
+
+  // §labelsect Task 10 : sections « labellisés / actions compatibles » quand le filtre
+  // label rank est actif ET les deux groupes sont non-vides (cf. buildResultSections).
+  // Une section forte et un float de sélection sont contradictoires — le float est
+  // suspendu tant que la vue est groupée (voir orderedCards ci-dessus, non consommé ici).
+  const sections = useMemo(() => buildResultSections(visibleCards, labelRankCounts), [visibleCards, labelRankCounts]);
 
   useEffect(() => {
     setHasMounted(true);
@@ -152,6 +160,33 @@ export function ResultsList({
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, onLoadMore, cards.length]);
 
+  const renderCard = (card: ObjectCard) => {
+    const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
+    const inSelection = selectedObjectIds.includes(card.id);
+    return (
+      <ResultCardView
+        key={card.id}
+        card={card}
+        domId={toResultCardDomId(card.id)}
+        isSelected={isSelected}
+        isHovered={hoveredCardId === card.id}
+        inSelection={inSelection}
+        onOpen={() => openDrawer(card.id)}
+        onHoverChange={(hovered) => setHoveredCard(hovered ? card.id : null)}
+        onToggleLabel={toggleLabel}
+        onToggleTag={toggleTag}
+        onToggleSelect={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!inSelection) {
+            flyStarToSelection(event.currentTarget);
+          }
+          toggleSelectedObject(card.id);
+        }}
+      />
+    );
+  };
+
   if (variant === 'panel') {
     return (
       <section className="results-panel">
@@ -197,32 +232,17 @@ export function ResultsList({
       ) : null}
 
       <div ref={scrollRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
-        {orderedCards.map((card) => {
-          const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
-          const inSelection = selectedObjectIds.includes(card.id);
-          return (
-            <ResultCardView
-              key={card.id}
-              card={card}
-              domId={toResultCardDomId(card.id)}
-              isSelected={isSelected}
-              isHovered={hoveredCardId === card.id}
-              inSelection={inSelection}
-              onOpen={() => openDrawer(card.id)}
-              onHoverChange={(hovered) => setHoveredCard(hovered ? card.id : null)}
-              onToggleLabel={toggleLabel}
-              onToggleTag={toggleTag}
-              onToggleSelect={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (!inSelection) {
-                  flyStarToSelection(event.currentTarget);
-                }
-                toggleSelectedObject(card.id);
-              }}
-            />
-          );
-        })}
+        {sections.grouped
+          ? sections.groups.map((grp) => (
+              <div key={grp.group} className="flex flex-col gap-2">
+                <div className="sticky top-0 z-[1] -mx-3 flex items-center justify-between gap-2 border-b border-line bg-surface2/95 px-3 py-1.5 backdrop-blur">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{grp.label}</span>
+                  <span className="rounded-[6px] bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-4">{grp.count}</span>
+                </div>
+                {grp.cards.map(renderCard)}
+              </div>
+            ))
+          : orderedCards.map(renderCard)}
         {hasMore ? (
           <div ref={sentinelRef} className="flex h-10 flex-none items-center justify-center" aria-hidden="true">
             {isLoadingMore ? <span className="text-xs text-ink-3">Chargement…</span> : null}

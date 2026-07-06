@@ -22,6 +22,7 @@ export type ActiveChipGroup =
   | 'status'
   | 'rankedLabel'
   | 'rankedLabelExact'
+  | 'rankedLabelValues'
   // D23 — filtres jusqu'ici invisibles dans la barre :
   | 'zone'
   | 'environment'
@@ -115,6 +116,10 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   }
   if (rankedScheme && !c.rankedLabelIncludeEquivalents) {
     chips.push({ key: 'rankedLabelExact', group: 'rankedLabelExact', value: rankedScheme, label: 'Label obtenu uniquement' });
+  }
+  const rankedValueCount = (c.rankedLabelValueCodes ?? []).length;
+  if (rankedScheme && rankedValueCount > 0) {
+    chips.push({ key: 'rankedLabelValues', group: 'rankedLabelValues', value: '*', label: `Niveau · ${rankedValueCount} sélectionné${rankedValueCount > 1 ? 's' : ''}` });
   }
 
   for (const label of c.labelsAny ?? []) {

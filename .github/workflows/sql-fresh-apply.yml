@@ -356,7 +356,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_label_filter_sections.sql"
 
-      - name: "classification regroup network labels test (16l §175 — gites_epics + clevacances_keys en quality_label, plus dans official_classification: labels réseau privés ≠ classement officiel Atout France)"
+      - name: "classification graded-label group test (16l§175→16m§176 — gites_epics + clevacances_keys + logis en graded_label « Labels notés », hors official_classification ET quality_label: distinctions notées de réseau privé ≠ classement officiel Atout France ≠ label binaire)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_classification_regroup_network_labels.sql"

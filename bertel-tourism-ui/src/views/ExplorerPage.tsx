@@ -229,6 +229,7 @@ export default function ExplorerPage() {
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
               labelRankCounts={labelRankCounts}
+              gradeSection={gradeSection}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}

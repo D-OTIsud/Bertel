@@ -49,6 +49,7 @@ interface ExplorerState extends ExplorerFilters {
   setEnvironmentTags: (codes: string[]) => void;
   setRankedLabelScheme: (schemeCode: string | null) => void;
   setRankedLabelIncludeEquivalents: (value: boolean) => void;
+  setRankedLabelValueCodes: (codes: string[]) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
   /** Toggle a §09 tag in the Explorer filter set (click a colored tag on a card/map). */
@@ -305,10 +306,13 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
       common: {
         ...state.common,
         rankedLabelSchemeCode: String(schemeCode ?? '').trim() || null,
+        rankedLabelValueCodes: [],
       },
     })),
   setRankedLabelIncludeEquivalents: (value) =>
     set((state) => ({ common: { ...state.common, rankedLabelIncludeEquivalents: value } })),
+  setRankedLabelValueCodes: (codes) =>
+    set((state) => ({ common: { ...state.common, rankedLabelValueCodes: codes } })),
   toggleLabel: (label) =>
     set((state) => {
       const needle = String(label).trim();

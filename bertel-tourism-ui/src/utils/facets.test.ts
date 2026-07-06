@@ -669,3 +669,34 @@ describe('buildBucketRpcFilters — label sections (§173, exact-only)', () => {
     expect(normalized.common.rankedLabelIncludeEquivalents).toBe(true);
   });
 });
+
+describe('buildBucketRpcFilters — classement levels (§174)', () => {
+  it('emits classifications_any for the selected scheme + value codes', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3', '4', '5'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'meuble_stars',
+      classifications_any: [
+        { scheme_code: 'meuble_stars', value_code: '3' },
+        { scheme_code: 'meuble_stars', value_code: '4' },
+        { scheme_code: 'meuble_stars', value_code: '5' },
+      ],
+    });
+  });
+  it('omits classifications_any when no level is selected', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'meuble_stars' },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('classifications_any');
+  });
+  it('omits classifications_any when levels set but no scheme', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelValueCodes: ['3'] },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('classifications_any');
+  });
+  it('defaults rankedLabelValueCodes to [] on normalize', () => {
+    expect(normalizeExplorerFilters(buildFilters({})).common.rankedLabelValueCodes).toEqual([]);
+  });
+});

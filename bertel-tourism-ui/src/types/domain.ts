@@ -195,6 +195,8 @@ export interface ExplorerCommonFilters {
    * (comportement historique). FALSE ⇒ `label_scheme_ranked_exact_only` au RPC.
    */
   rankedLabelIncludeEquivalents: boolean;
+  /** §174 — niveaux de classement sélectionnés (value_codes du scheme classé actif). Réinitialisé au changement de scheme. */
+  rankedLabelValueCodes: string[];
   /**
    * Active publication-status filter sent to api.list_object_resources_filtered_page
    * as p_status. An empty array means "use the server default" (= published only),
@@ -322,6 +324,12 @@ export interface ExplorerReferences {
   accessibilityAmenities: AccessibilityAmenityRef[];
   sustainabilityCategories: SustainabilityCategoryRef[];
   rankedLabelSchemes: ExplorerReferenceOption[];
+  /**
+   * §174 — pour chaque scheme classé (is_distinction), ses paliers de note
+   * (ref_classification_value : code, name), triés par grade croissant. Clé = code du scheme.
+   * value_code '1'..'5' (étoiles/épis/clés) ou 'cat_1..3' (ot_category).
+   */
+  rankedLabelSchemeValues: Record<string, ExplorerReferenceOption[]>;
   /** §155 — TOUS les domaines de sous-catégories (un par type, hors ORG), chacun portant son objectType. */
   taxonomies: ExplorerTaxonomyDomain[];
   hotCapacityMetrics: ExplorerReferenceOption[];

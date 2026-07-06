@@ -79,6 +79,7 @@ type LabelSchemeRow = {
   code: string;
   name: string;
   position: number | null;
+  display_group: string | null;
 };
 
 const ACCESSIBILITY_DISABILITY_CODES = new Set(ACCESSIBILITY_DISABILITY_TYPE_OPTIONS.map((option) => option.code));
@@ -99,6 +100,34 @@ function sortByPositionAndName<T extends { position?: number | null; name: strin
 
 function toReferenceOptions<T extends { code: string; name: string; position?: number | null }>(rows: T[]): ExplorerReferenceOption[] {
   return sortByPositionAndName(rows).map((row) => ({ code: row.code, name: row.name }));
+}
+
+// §173 — le filtre « Classement / label » de l'Explorer expose TOUTES les distinctions
+// (is_distinction), pas seulement durabilité/accessibilité : classements officiels (étoiles/
+// épis/clés) + labels qualité y compris. Regroupées par famille (`display_group`) pour les
+// en-têtes du menu déroulant. Ordre : Classements → Labels qualité → Durabilité → Accessibilité.
+const RANKED_LABEL_FAMILIES: Record<string, { label: string; order: number }> = {
+  official_classification: { label: 'Classements', order: 1 },
+  quality_label: { label: 'Labels qualité', order: 2 },
+  sustainability_labels: { label: 'Durabilité', order: 3 },
+  accessibility_labels: { label: 'Accessibilité', order: 4 },
+};
+
+function rankedLabelFamily(displayGroup: string | null): { label: string; order: number } {
+  return (displayGroup ? RANKED_LABEL_FAMILIES[displayGroup] : undefined) ?? { label: 'Autres', order: 9 };
+}
+
+function toRankedLabelOptions(rows: LabelSchemeRow[]): ExplorerReferenceOption[] {
+  return [...rows]
+    .map((row) => ({ row, family: rankedLabelFamily(row.display_group) }))
+    .sort((a, b) => {
+      if (a.family.order !== b.family.order) return a.family.order - b.family.order;
+      const positionCompare =
+        (a.row.position ?? Number.MAX_SAFE_INTEGER) - (b.row.position ?? Number.MAX_SAFE_INTEGER);
+      if (positionCompare !== 0) return positionCompare;
+      return a.row.name.localeCompare(b.row.name, 'fr', { sensitivity: 'base' });
+    })
+    .map(({ row, family }) => ({ code: row.code, name: row.name, group: family.label }));
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -258,9 +287,11 @@ function buildDemoReferences(): ExplorerReferences {
   return {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     rankedLabelSchemes: [
-      { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap' },
-      { code: 'LBL_CLEF_VERTE', name: 'Clef Verte' },
-      { code: 'LBL_ECO_LABEL_UE', name: 'Ecolabel europeen' },
+      { code: 'meuble_stars', name: 'Classement meublés', group: 'Classements' },
+      { code: 'gites_epics', name: 'Gîtes de France (épis)', group: 'Classements' },
+      { code: 'qualite_tourisme_reunion', name: 'Qualité Tourisme Île de La Réunion', group: 'Labels qualité' },
+      { code: 'LBL_CLEF_VERTE', name: 'Clef Verte', group: 'Durabilité' },
+      { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap', group: 'Accessibilité' },
     ],
     accessibilityAmenities: [
       { code: 'acc_pmr_parking', name: 'Places PMR', disabilityTypes: ['motor'] },
@@ -417,9 +448,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
       .order('position', { ascending: true }),
     client
       .from('ref_classification_scheme')
-      .select('code,name,position')
+      .select('code,name,position,display_group')
       .eq('is_distinction', true)
-      .in('display_group', ['accessibility_labels', 'sustainability_labels'])
       .order('position', { ascending: true }),
   ]);
 
@@ -491,7 +521,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
-    rankedLabelSchemes: toReferenceOptions(rankedLabelSchemes),
+    rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes),
     taxonomies: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),

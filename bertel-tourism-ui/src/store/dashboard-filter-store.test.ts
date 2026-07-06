@@ -1,28 +1,17 @@
 import { useDashboardFilterStore } from './dashboard-filter-store';
 
-describe('dashboard-filter-store — onglets', () => {
-  beforeEach(() => {
-    useDashboardFilterStore.setState({
-      filters: { status: ['published'] },
-      activeTab: 'quality',
-      sidebarCollapsed: false,
-    });
-  });
+beforeEach(() => useDashboardFilterStore.getState().clearPeriod());
 
-  it("démarre sur l'onglet Qualité", () => {
-    expect(useDashboardFilterStore.getState().activeTab).toBe('quality');
-  });
+it('setPeriod / clearPeriod', () => {
+  useDashboardFilterStore.getState().setPeriod('2026-01-01', '2026-02-01');
+  expect(useDashboardFilterStore.getState().updatedAtFrom).toBe('2026-01-01');
+  expect(useDashboardFilterStore.getState().updatedAtTo).toBe('2026-02-01');
+  useDashboardFilterStore.getState().clearPeriod();
+  expect(useDashboardFilterStore.getState().updatedAtFrom).toBeNull();
+});
 
-  it("change d'onglet via setActiveTab", () => {
-    useDashboardFilterStore.getState().setActiveTab('offer');
-    expect(useDashboardFilterStore.getState().activeTab).toBe('offer');
-  });
-
-  it("resetFilters ne touche pas l'onglet actif", () => {
-    useDashboardFilterStore.getState().setActiveTab('activity');
-    useDashboardFilterStore.getState().setFilters({ types: ['HOT'] });
-    useDashboardFilterStore.getState().resetFilters();
-    expect(useDashboardFilterStore.getState().activeTab).toBe('activity');
-    expect(useDashboardFilterStore.getState().filters).toEqual({ status: ['published'] });
-  });
+it('activeTab par défaut = quality et est modifiable', () => {
+  expect(useDashboardFilterStore.getState().activeTab).toBe('quality');
+  useDashboardFilterStore.getState().setActiveTab('offer');
+  expect(useDashboardFilterStore.getState().activeTab).toBe('offer');
 });

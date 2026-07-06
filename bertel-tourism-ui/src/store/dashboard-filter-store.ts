@@ -1,27 +1,25 @@
 import { create } from 'zustand';
-import type { DashboardFilters, DashboardTabKey } from '../types/dashboard';
+import type { DashboardTabKey } from '../types/dashboard';
 
 interface DashboardFilterState {
-  filters: DashboardFilters;
-  /** Onglet actif — survit à resetFilters (le reset porte sur les filtres, pas la navigation). */
+  /** Période (updated_at) — UNIQUE filtre propre au Dashboard (les autres = instance Explorer). */
+  updatedAtFrom: string | null;
+  updatedAtTo: string | null;
   activeTab: DashboardTabKey;
   sidebarCollapsed: boolean;
-  setFilters: (patch: Partial<DashboardFilters>) => void;
-  resetFilters: () => void;
+  setPeriod: (from: string | null, to: string | null) => void;
+  clearPeriod: () => void;
   setActiveTab: (tab: DashboardTabKey) => void;
   toggleSidebar: () => void;
 }
 
-const DEFAULT_FILTERS: DashboardFilters = { status: ['published'] };
-
 export const useDashboardFilterStore = create<DashboardFilterState>((set) => ({
-  filters: DEFAULT_FILTERS,
+  updatedAtFrom: null,
+  updatedAtTo: null,
   activeTab: 'quality',
   sidebarCollapsed: false,
-  setFilters: (patch) =>
-    set((state) => ({ filters: { ...state.filters, ...patch } })),
-  resetFilters: () => set({ filters: DEFAULT_FILTERS }),
+  setPeriod: (from, to) => set({ updatedAtFrom: from, updatedAtTo: to }),
+  clearPeriod: () => set({ updatedAtFrom: null, updatedAtTo: null }),
   setActiveTab: (tab) => set({ activeTab: tab }),
-  toggleSidebar: () =>
-    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 }));

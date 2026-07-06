@@ -93,6 +93,34 @@ describe('FiltersPanel — difficulté ITI en segments (§156)', () => {
   });
 });
 
+describe('FiltersPanel — toggle « Inclure les démarches équivalentes » (label classé)', () => {
+  beforeEach(resetStore);
+
+  it("n'affiche pas le toggle quand aucun label classé n'est sélectionné", () => {
+    render(<FiltersPanel />);
+    expect(screen.queryByText('Inclure les démarches équivalentes')).not.toBeInTheDocument();
+  });
+
+  it('affiche le toggle coché par défaut quand un label classé est sélectionné', () => {
+    act(() => useExplorerStore.getState().setRankedLabelScheme('LBL_CLEF_VERTE'));
+    render(<FiltersPanel />);
+
+    const toggle = screen.getByRole('checkbox', { name: /Inclure les démarches équivalentes/ });
+    expect(toggle).toBeChecked();
+  });
+
+  it('décocher le toggle bascule le store en mode exact-only', () => {
+    act(() => useExplorerStore.getState().setRankedLabelScheme('LBL_CLEF_VERTE'));
+    render(<FiltersPanel />);
+
+    const toggle = screen.getByRole('checkbox', { name: /Inclure les démarches équivalentes/ });
+    fireEvent.click(toggle);
+
+    expect(useExplorerStore.getState().common.rankedLabelIncludeEquivalents).toBe(false);
+    expect(toggle).not.toBeChecked();
+  });
+});
+
 describe('explorer-store — garde min ≤ max (§156)', () => {
   beforeEach(resetStore);
 

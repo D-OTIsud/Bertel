@@ -75,6 +75,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   tagsAny: [],
   rankedLabelSchemeCode: null,
   rankedLabelIncludeEquivalents: true,
+  rankedLabelValueCodes: [],
   // Empty = "use the server default" (published only). Editors get the default
   // broadened in `useExplorerFilters` once their canEditObjects flag is known.
   statuses: [],
@@ -140,6 +141,7 @@ export function normalizeExplorerFilters(
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
       rankedLabelIncludeEquivalents: common.rankedLabelIncludeEquivalents ?? true,
+      rankedLabelValueCodes: common.rankedLabelValueCodes ?? [],
       statuses: common.statuses ?? [],
     },
     hot: {
@@ -425,6 +427,14 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     // toggle est OFF ; défaut/true/undefined n'émet rien (payload inchangé vs aujourd'hui).
     if (common.rankedLabelIncludeEquivalents === false) {
       payload.label_scheme_ranked_exact_only = true;
+    }
+
+    const rankedLabelValueCodes = common.rankedLabelValueCodes.map(cleanString).filter(Boolean);
+    if (rankedLabelValueCodes.length > 0) {
+      payload.classifications_any = rankedLabelValueCodes.map((valueCode) => ({
+        scheme_code: rankedLabelSchemeCode,
+        value_code: valueCode,
+      }));
     }
   }
 

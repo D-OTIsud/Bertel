@@ -24,9 +24,11 @@ import {
   resolveExplorerStatuses,
 } from '../../utils/facets';
 import { resolveTypeLabel } from '../../utils/labels';
+import { schemeUnit } from '../../utils/explorer-card-display';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
 import { FilterColumnGroup } from '../common/FilterColumnGroup';
+import { GradeBar } from './GradeBar';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 
@@ -254,6 +256,9 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const accessibilityDetailCount = accessibilityDisabilityTypesAny.length + accessibilityAmenityCodesAny.length;
   const sustainabilityDetailCount = sustainabilityCategoryCodesAny.length + sustainabilityActionCodesAny.length;
   const rankedLabelOptions = references?.rankedLabelSchemes ?? [];
+  // §174 — niveaux du scheme classé actif (étoiles/épis/clés…), pour la barre GradeBar.
+  const rankedLabelValues = (rankedLabelSchemeCode && references?.rankedLabelSchemeValues?.[rankedLabelSchemeCode]) || [];
+  const setRankedLabelValueCodes = useExplorerStore((state) => state.setRankedLabelValueCodes);
   const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
 
   // §152 — sections type-spécifiques repliables : le compte de critères actifs
@@ -617,6 +622,18 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
               />
             </div>
+
+            {rankedLabelSchemeCode && rankedLabelValues.length >= 2 ? (
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Niveau</span>
+                <GradeBar
+                  values={rankedLabelValues}
+                  unit={schemeUnit(rankedLabelSchemeCode)}
+                  selected={common.rankedLabelValueCodes}
+                  onChange={setRankedLabelValueCodes}
+                />
+              </div>
+            ) : null}
 
             {rankedLabelSchemeCode ? (
               <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">

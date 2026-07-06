@@ -258,6 +258,10 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const rankedLabelOptions = references?.rankedLabelSchemes ?? [];
   // §174 — niveaux du scheme classé actif (étoiles/épis/clés…), pour la barre GradeBar.
   const rankedLabelValues = (rankedLabelSchemeCode && references?.rankedLabelSchemeValues?.[rankedLabelSchemeCode]) || [];
+  // « Gradué » = ≥2 niveaux (classement hôtelier, épis, clés…) — même gate que la GradeBar.
+  // Un scheme gradué est un classement, pas un label : les démarches équivalentes (§173)
+  // n'existent que pour les labels ⇒ le toggle « Inclure les démarches équivalentes » est masqué.
+  const rankedSchemeIsGraded = rankedLabelValues.length >= 2;
   const setRankedLabelValueCodes = useExplorerStore((state) => state.setRankedLabelValueCodes);
   const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
 
@@ -623,7 +627,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
               />
             </div>
 
-            {rankedLabelSchemeCode && rankedLabelValues.length >= 2 ? (
+            {rankedLabelSchemeCode && rankedSchemeIsGraded ? (
               <div>
                 <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Niveau</span>
                 <GradeBar
@@ -635,7 +639,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
               </div>
             ) : null}
 
-            {rankedLabelSchemeCode ? (
+            {rankedLabelSchemeCode && !rankedSchemeIsGraded ? (
               <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
                 <input
                   type="checkbox"

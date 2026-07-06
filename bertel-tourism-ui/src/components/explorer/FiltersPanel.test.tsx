@@ -1,6 +1,23 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FiltersPanel } from './FiltersPanel';
 import { useExplorerStore } from '../../store/explorer-store';
+import type { ExplorerReferences } from '../../types/domain';
+
+// Références minimales : seuls les schemes classés + leurs niveaux sont nécessaires ici,
+// tous les autres accès à `references` dans FiltersPanel sont optional-chained.
+const GRADED_REFERENCES = {
+  rankedLabelSchemes: [
+    { code: 'hot_stars', name: 'Classement hôtelier', group: 'Classements' },
+    { code: 'LBL_CLEF_VERTE', name: 'Clef Verte', group: 'Durabilité' },
+  ],
+  rankedLabelSchemeValues: {
+    hot_stars: [
+      { code: '1', name: '1 étoile' }, { code: '2', name: '2 étoiles' }, { code: '3', name: '3 étoiles' },
+      { code: '4', name: '4 étoiles' }, { code: '5', name: '5 étoiles' },
+    ],
+    LBL_CLEF_VERTE: [{ code: 'granted', name: 'Labellisé' }],
+  },
+} as unknown as ExplorerReferences;
 
 // Sections type-spécifiques repliables (décision §152) : l'en-tête disclosure
 // porte un nom accessible distinct (« Section X », préfixe sr-only) pour ne pas
@@ -118,6 +135,34 @@ describe('FiltersPanel — toggle « Inclure les démarches équivalentes » (la
 
     expect(useExplorerStore.getState().common.rankedLabelIncludeEquivalents).toBe(false);
     expect(toggle).not.toBeChecked();
+  });
+
+  it("masque le toggle pour un scheme GRADUÉ (classement, ≥2 niveaux) et affiche la barre de niveaux", () => {
+    act(() => useExplorerStore.getState().setRankedLabelScheme('hot_stars'));
+    render(<FiltersPanel references={GRADED_REFERENCES} />);
+
+    // Un classement n'a pas de démarches équivalentes (§173 = labels uniquement).
+    expect(screen.queryByText('Inclure les démarches équivalentes')).not.toBeInTheDocument();
+    // Le même gate ≥2 valeurs affiche la GradeBar, câblée sur setRankedLabelValueCodes.
+    fireEvent.click(screen.getByRole('button', { name: '3 étoiles' }));
+    expect(useExplorerStore.getState().common.rankedLabelValueCodes).toEqual(['3']);
+  });
+
+  it('affiche le toggle pour un label binaire (1 niveau) même avec les références chargées', () => {
+    act(() => useExplorerStore.getState().setRankedLabelScheme('LBL_CLEF_VERTE'));
+    render(<FiltersPanel references={GRADED_REFERENCES} />);
+
+    expect(screen.getByRole('checkbox', { name: /Inclure les démarches équivalentes/ })).toBeChecked();
+    expect(screen.queryByRole('button', { name: 'Labellisé' })).not.toBeInTheDocument();
+  });
+
+  it('changer de scheme réinitialise le toggle à « inclure » (pas d’exact-only caché)', () => {
+    act(() => {
+      useExplorerStore.getState().setRankedLabelScheme('LBL_CLEF_VERTE');
+      useExplorerStore.getState().setRankedLabelIncludeEquivalents(false);
+      useExplorerStore.getState().setRankedLabelScheme('hot_stars');
+    });
+    expect(useExplorerStore.getState().common.rankedLabelIncludeEquivalents).toBe(true);
   });
 });
 

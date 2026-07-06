@@ -41,6 +41,14 @@ function normalize(value: unknown): string {
 /** Unité de cocarde : étoiles (hôtels/campings…), épis (Gîtes de France), clés (Clévacances). */
 export type ClassementUnit = 'etoile' | 'epi' | 'cle';
 
+/** §174 — résout l'unité de classement (étoile/épi/clé) depuis le CODE du scheme. */
+export function schemeUnit(code: string): ClassementUnit {
+  const c = code.toLowerCase();
+  if (c.includes('epi') || c.includes('gites')) return 'epi';
+  if (c.includes('key') || c.includes('cle')) return 'cle';
+  return 'etoile';
+}
+
 export interface CardClassementRating {
   count: number;
   unit: ClassementUnit;

@@ -356,6 +356,18 @@ export interface ExplorerCardsPage {
   cursors: ExplorerBucketCursorMap;
   /** §NN — somme des comptes label par rang sur les buckets de CETTE page (corpus par bucket). */
   labelRankCounts: { labelled: number; equivalent: number };
+  /**
+   * Total CORPUS (COUNT(*) filtré côté serveur, avant pagination), sommé sur les buckets de
+   * CETTE page. Consommé depuis la PAGE 0 uniquement (cf. useExplorerCardsQuery) : la page 0
+   * interroge tous les buckets actifs, alors que les pages de scroll suivantes abandonnent les
+   * buckets épuisés et sous-compteraient. Sert de « N fiches » réel dans l'en-tête des résultats,
+   * découplé du nombre de cartes chargées.
+   * ponytail: quand le filtre polygone (dessin de zone) est actif, meta.total reflète la
+   * pré-sélection serveur par bounding box (surensemble) — le raffinement exact du polygone est
+   * client-only (refineCardsByPolygon), donc ce total peut légèrement surcompter. Même
+   * imprécision que le compteur « N localisées » de la carte, qui ignore aussi le polygone.
+   */
+  totalCount: number;
 }
 
 export async function fetchExplorerCardsPage(
@@ -401,7 +413,8 @@ export async function fetchExplorerCardsPage(
     }),
     { labelled: 0, equivalent: 0 },
   );
-  return { cards: results.flatMap((r) => r.page.data), cursors, labelRankCounts };
+  const totalCount = results.reduce((acc, { page }) => acc + (page.meta.total ?? 0), 0);
+  return { cards: results.flatMap((r) => r.page.data), cursors, labelRankCounts, totalCount };
 }
 
 export function explorerCardsHasNextPage(

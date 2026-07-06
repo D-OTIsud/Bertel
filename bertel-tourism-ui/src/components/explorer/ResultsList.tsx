@@ -22,6 +22,12 @@ interface ResultsListProps {
   onLoadMore?: () => void;
   labelRankCounts?: { labelled: number; equivalent: number };
   /**
+   * Vrai total du corpus (COUNT serveur, avant pagination) affiché comme « N fiches ». Découplé
+   * de `cards` (chargées paresseusement au scroll) : le header doit annoncer le total réel, pas
+   * le nombre de lignes chargées. Absent (undefined) ⇒ repli sur le nombre de cartes chargées.
+   */
+  totalCount?: number;
+  /**
    * §174 — quand un scheme de classement gradué est actif (≥2 valeurs résolues côté
    * ExplorerPage), les sections deviennent des niveaux de classement (buildGradeSections)
    * au lieu des sections §173 labellisés/équivalents. Mutuellement exclusif avec le
@@ -73,6 +79,7 @@ export function ResultsList({
   isLoadingMore = false,
   onLoadMore,
   labelRankCounts,
+  totalCount,
   gradeSection,
 }: ResultsListProps) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -89,6 +96,9 @@ export function ResultsList({
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
   const visibleCards = hasMounted ? cards : [];
   const showLoading = loading || !hasMounted;
+  // « N fiches » = total réel du corpus quand il est connu (page 0), sinon le nombre de cartes
+  // chargées. `?? ` (et non `||`) pour qu'un corpus légitimement vide affiche « 0 fiches ».
+  const resultCount = totalCount ?? visibleCards.length;
 
   const orderedCards = useMemo(() => {
     if (selectedObjectIds.length === 0) {
@@ -227,7 +237,7 @@ export function ResultsList({
         <div className="panel-heading">
           <div className="results-panel__title-row">
             <span className="eyebrow">Résultats</span>
-            <span className="results-count">{visibleCards.length} fiches</span>
+            <span className="results-count">{resultCount} fiches</span>
             {isRefreshing ? <span className="results-refreshing">Mise à jour…</span> : null}
           </div>
           {headerActions ? <div className="results-panel__meta">{headerActions}</div> : null}
@@ -243,7 +253,7 @@ export function ResultsList({
       <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           <span className="truncate">Résultats</span>
-          <span className="truncate font-sans text-xs font-medium text-ink-3">{visibleCards.length} fiches</span>
+          <span className="truncate font-sans text-xs font-medium text-ink-3">{resultCount} fiches</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {headerActions}

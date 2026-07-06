@@ -113,4 +113,33 @@ describe('fetchExplorerCardsPage + explorerCardsHasNextPage (§125 — composite
     expect(page.cursors.RES).toBe(EXPLORER_BUCKET_CURSOR_DONE);
     expect(explorerCardsHasNextPage(filters, page.cursors)).toBe(false);
   });
+
+  it('carries the corpus total (meta.total) so the header can show the real count, not the loaded page size', async () => {
+    // The server returns COUNT(*) of the whole filtered corpus in meta.total, while
+    // data[] is only one page. totalCount must reflect the corpus, never data.length.
+    rpc.mockResolvedValue({
+      data: {
+        meta: { next_cursor: 'cursor-2', total: 137 },
+        data: [{ id: 'RESRUN1', type: 'RES', name: 'A' }],
+      },
+      error: null,
+    });
+
+    const page = await fetchExplorerCardsPage(buildFilters({ selectedBuckets: ['RES'] }), ['fr'], {});
+
+    expect(page.cards).toHaveLength(1);
+    expect(page.totalCount).toBe(137);
+  });
+
+  it('sums the corpus total across every selected bucket (page 0 queries all buckets)', async () => {
+    rpc.mockResolvedValue({
+      data: { meta: { next_cursor: null, total: 20 }, data: [{ id: 'X', type: 'RES', name: 'A' }] },
+      error: null,
+    });
+
+    const page = await fetchExplorerCardsPage(buildFilters({ selectedBuckets: ['RES', 'HOT'] }), ['fr'], {});
+
+    // Two buckets, 20 each → 40 corpus-wide (independent of deduped card count).
+    expect(page.totalCount).toBe(40);
+  });
 });

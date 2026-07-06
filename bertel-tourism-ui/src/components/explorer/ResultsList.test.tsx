@@ -35,6 +35,19 @@ describe('ResultsList', () => {
     expect(screen.queryByText(/Établissements labellisés/)).toBeNull();
   });
 
+  it('shows the corpus total (totalCount) in the header, not just the loaded card count', () => {
+    // Infinite scroll: only 2 cards are loaded but the corpus has 137 — the header must
+    // announce the real total, matching the map, not the number of loaded rows.
+    renderResultsList({ cards: [makeCard({ id: 'a' }), makeCard({ id: 'b' })], totalCount: 137 });
+    expect(screen.getByText('137 fiches')).toBeInTheDocument();
+    expect(screen.queryByText('2 fiches')).toBeNull();
+  });
+
+  it('falls back to the loaded card count when no totalCount is provided', () => {
+    renderResultsList({ cards: [makeCard({ id: 'a' }), makeCard({ id: 'b' })] });
+    expect(screen.getByText('2 fiches')).toBeInTheDocument();
+  });
+
   it('renders labelled and equivalent section headers when the ranked-label filter surfaces both', () => {
     const cards = [
       makeCard({ id: 'lab', label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 } }),

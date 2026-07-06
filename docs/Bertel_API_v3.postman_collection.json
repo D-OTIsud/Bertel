@@ -1153,6 +1153,29 @@
           }
         },
         {
+          "name": "Lister les fiches publiées (fiches complètes, view=full)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}", "description": "Clé partenaire bk_live_…"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?view=full&page_size=100&track=gpx",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "view", "value": "full", "description": "Fiche complète par objet (identique au détail /objects/{id})"},
+                {"key": "page_size", "value": "100", "description": "Borné à 100 en mode full (défaut 25)"},
+                {"key": "track", "value": "gpx", "description": "Optionnel : blob GPX/KML des itinéraires (le GeoJSON est natif)"},
+                {"key": "types", "value": "ITI", "disabled": true},
+                {"key": "format", "value": "datatourisme", "disabled": true, "description": "Orthogonal : ajoute aussi le document pivot par fiche"}
+              ]
+            },
+            "description": "Comme « Lister les fiches publiées » mais chaque objet est la FICHE COMPLÈTE (photos, descriptions, équipements, classements, chambres, horaires, tracé GeoJSON natif) — même contenu que GET /objects/{id}, hors CRM. Mode `full` borné à 100/page. `track=gpx|kml` ajoute le blob de tracé des itinéraires."
+          }
+        },
+        {
           "name": "Récupérer une fiche publiée",
           "request": {
             "method": "GET",

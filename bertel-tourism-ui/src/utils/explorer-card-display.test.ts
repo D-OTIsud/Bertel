@@ -1,4 +1,4 @@
-import { cardTypeDisplay, cardClassementRating, cardLabelLogos } from './explorer-card-display';
+import { cardTypeDisplay, cardClassementRating, cardLabelLogos, schemeUnit } from './explorer-card-display';
 import type { ObjectCard } from '../types/domain';
 
 function card(partial: Partial<ObjectCard>): ObjectCard {
@@ -64,5 +64,15 @@ describe('cardLabelLogos (pastilles-logo de label)', () => {
   it('dédoublonne un label présent dans badges ET labels', () => {
     const c = card({ type: 'HOT', badges: [{ kind: 'label', label: 'Clef Verte' }], labels: ['Clef Verte'] });
     expect(cardLabelLogos(c)).toHaveLength(1);
+  });
+});
+
+describe('schemeUnit', () => {
+  it('maps scheme codes to their classement unit', () => {
+    expect(schemeUnit('hot_stars')).toBe('etoile');
+    expect(schemeUnit('meuble_stars')).toBe('etoile');
+    expect(schemeUnit('gites_epics')).toBe('epi');
+    expect(schemeUnit('clevacances_keys')).toBe('cle');
+    expect(schemeUnit('ot_category')).toBe('etoile');
   });
 });

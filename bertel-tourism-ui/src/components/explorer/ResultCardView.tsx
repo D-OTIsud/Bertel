@@ -2,11 +2,12 @@
 
 import type { ComponentType } from 'react';
 import { useLayoutEffect, useRef, useState } from 'react';
-import { Accessibility, Award, BadgeCheck, Key, Leaf, MapPin, Star, Wheat } from 'lucide-react';
+import { Accessibility, Award, BadgeCheck, Leaf, MapPin, Star } from 'lucide-react';
 import type { ExplorerTagFilter, ObjectCard } from '../../types/domain';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cardClassementRating, cardLabelLogos, cardTypeDisplay } from '../../utils/explorer-card-display';
 import type { ClassementUnit } from '../../utils/explorer-card-display';
+import { CLASSEMENT_ICON } from './classement-icons';
 import { defaultMarkerStyles, markerIconCatalog } from '../../config/map-markers';
 import { normalizeExplorerObjectType } from '../../utils/facets';
 import { cn } from '@/lib/utils';
@@ -20,12 +21,7 @@ const LABEL_LOGO_ICON: Record<string, ComponentType<{ 'aria-hidden'?: boolean }>
   'lbl-excellence': Award,
 };
 
-/** Picto + libellé FR (singulier, pluriel) de la cocarde par unité de classement. */
-const RATING_ICON: Record<ClassementUnit, ComponentType<{ 'aria-hidden'?: boolean }>> = {
-  etoile: Star,
-  epi: Wheat,
-  cle: Key,
-};
+/** Libellé FR (singulier, pluriel) de la cocarde par unité de classement. */
 const RATING_UNIT_LABEL: Record<ClassementUnit, readonly [string, string]> = {
   etoile: ['étoile', 'étoiles'],
   epi: ['épi', 'épis'],
@@ -37,7 +33,7 @@ const RATING_UNIT_LABEL: Record<ClassementUnit, readonly [string, string]> = {
  * (étoiles, épis Gîtes de France, clés Clévacances), jamais des étoiles par défaut.
  */
 function RatingCockade({ count, unit, typeLabel }: { count: number; unit: ClassementUnit; typeLabel: string }) {
-  const Icon = RATING_ICON[unit];
+  const Icon = CLASSEMENT_ICON[unit];
   const [singular, plural] = RATING_UNIT_LABEL[unit];
   return (
     <span className="thumb__rating" title={`${typeLabel} ${count} ${count > 1 ? plural : singular}`} aria-hidden>

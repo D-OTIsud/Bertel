@@ -48,6 +48,11 @@ const DIFFICULTY_SEGMENTS: Array<{ label: string; min?: number; max?: number }> 
 
 interface FiltersPanelProps {
   references?: ExplorerReferences;
+  /** Hook de store à piloter — défaut = singleton Explorer (Explorer & tests inchangés). */
+  useStore?: typeof useExplorerStore;
+  /** Rendre les sections de facettes SPÉCIFIQUES par type (capacité, ITI, EVT…). Défaut true.
+   *  Le Dashboard passe false hors mono-bucket (§7 : honnête seulement en 1 bucket). */
+  typeSpecificFacets?: boolean;
 }
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
@@ -127,9 +132,9 @@ function filterSustainabilityActions(
   );
 }
 
-export function FiltersPanel({ references }: FiltersPanelProps) {
-  const selectedBuckets = useExplorerStore((state) => state.selectedBuckets);
-  const common = useExplorerStore((state) => state.common);
+export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true }: FiltersPanelProps) {
+  const selectedBuckets = useStore((state) => state.selectedBuckets);
+  const common = useStore((state) => state.common);
   const cities = common.cities ?? [];
   const labelsAny = common.labelsAny ?? [];
   const tagsAny = common.tagsAny ?? [];
@@ -144,47 +149,47 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const taxonomyAny = common.taxonomyAny ?? [];
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
   const sustainabilityActionCodesAny = common.sustainabilityActionCodesAny ?? [];
-  const hot = useExplorerStore((state) => state.hot);
-  const res = useExplorerStore((state) => state.res);
-  const iti = useExplorerStore((state) => state.iti);
-  const evt = useExplorerStore((state) => state.evt);
-  const vis = useExplorerStore((state) => state.vis);
-  const srv = useExplorerStore((state) => state.srv);
-  const toggleBucket = useExplorerStore((state) => state.toggleBucket);
-  const setCities = useExplorerStore((state) => state.setCities);
-  const setLieuDit = useExplorerStore((state) => state.setLieuDit);
-  const setPmr = useExplorerStore((state) => state.setPmr);
-  const toggleAccessibilityDisabilityType = useExplorerStore((state) => state.toggleAccessibilityDisabilityType);
-  const toggleAccessibilityAmenity = useExplorerStore((state) => state.toggleAccessibilityAmenity);
-  const setSustainable = useExplorerStore((state) => state.setSustainable);
-  const toggleSustainabilityCategory = useExplorerStore((state) => state.toggleSustainabilityCategory);
-  const toggleSustainabilityAction = useExplorerStore((state) => state.toggleSustainabilityAction);
-  const setPetsAccepted = useExplorerStore((state) => state.setPetsAccepted);
-  const setOpenNow = useExplorerStore((state) => state.setOpenNow);
-  const setEnvironmentTags = useExplorerStore((state) => state.setEnvironmentTags);
-  const setOpenAt = useExplorerStore((state) => state.setOpenAt);
-  const setEvtEventRange = useExplorerStore((state) => state.setEvtEventRange);
-  const setAmenityFamilies = useExplorerStore((state) => state.setAmenityFamilies);
-  const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
-  const setRankedLabelIncludeEquivalents = useExplorerStore((state) => state.setRankedLabelIncludeEquivalents);
-  const toggleLabel = useExplorerStore((state) => state.toggleLabel);
-  const clearLabels = useExplorerStore((state) => state.clearLabels);
-  const toggleTag = useExplorerStore((state) => state.toggleTag);
-  const clearTags = useExplorerStore((state) => state.clearTags);
-  const toggleHotSubtype = useExplorerStore((state) => state.toggleHotSubtype);
-  const toggleVisSubtype = useExplorerStore((state) => state.toggleVisSubtype);
-  const toggleSrvSubtype = useExplorerStore((state) => state.toggleSrvSubtype);
-  const toggleTaxonomy = useExplorerStore((state) => state.toggleTaxonomy);
-  const setHotCapacityFilter = useExplorerStore((state) => state.setHotCapacityFilter);
-  const setResCapacityFilter = useExplorerStore((state) => state.setResCapacityFilter);
-  const setHotMeetingRoom = useExplorerStore((state) => state.setHotMeetingRoom);
-  const setItiIsLoop = useExplorerStore((state) => state.setItiIsLoop);
-  const setItiDifficulty = useExplorerStore((state) => state.setItiDifficulty);
-  const setItiDistance = useExplorerStore((state) => state.setItiDistance);
-  const setItiDuration = useExplorerStore((state) => state.setItiDuration);
-  const toggleItiPractice = useExplorerStore((state) => state.toggleItiPractice);
-  const resetAll = useExplorerStore((state) => state.resetAll);
-  const setStatuses = useExplorerStore((state) => state.setStatuses);
+  const hot = useStore((state) => state.hot);
+  const res = useStore((state) => state.res);
+  const iti = useStore((state) => state.iti);
+  const evt = useStore((state) => state.evt);
+  const vis = useStore((state) => state.vis);
+  const srv = useStore((state) => state.srv);
+  const toggleBucket = useStore((state) => state.toggleBucket);
+  const setCities = useStore((state) => state.setCities);
+  const setLieuDit = useStore((state) => state.setLieuDit);
+  const setPmr = useStore((state) => state.setPmr);
+  const toggleAccessibilityDisabilityType = useStore((state) => state.toggleAccessibilityDisabilityType);
+  const toggleAccessibilityAmenity = useStore((state) => state.toggleAccessibilityAmenity);
+  const setSustainable = useStore((state) => state.setSustainable);
+  const toggleSustainabilityCategory = useStore((state) => state.toggleSustainabilityCategory);
+  const toggleSustainabilityAction = useStore((state) => state.toggleSustainabilityAction);
+  const setPetsAccepted = useStore((state) => state.setPetsAccepted);
+  const setOpenNow = useStore((state) => state.setOpenNow);
+  const setEnvironmentTags = useStore((state) => state.setEnvironmentTags);
+  const setOpenAt = useStore((state) => state.setOpenAt);
+  const setEvtEventRange = useStore((state) => state.setEvtEventRange);
+  const setAmenityFamilies = useStore((state) => state.setAmenityFamilies);
+  const setRankedLabelScheme = useStore((state) => state.setRankedLabelScheme);
+  const setRankedLabelIncludeEquivalents = useStore((state) => state.setRankedLabelIncludeEquivalents);
+  const toggleLabel = useStore((state) => state.toggleLabel);
+  const clearLabels = useStore((state) => state.clearLabels);
+  const toggleTag = useStore((state) => state.toggleTag);
+  const clearTags = useStore((state) => state.clearTags);
+  const toggleHotSubtype = useStore((state) => state.toggleHotSubtype);
+  const toggleVisSubtype = useStore((state) => state.toggleVisSubtype);
+  const toggleSrvSubtype = useStore((state) => state.toggleSrvSubtype);
+  const toggleTaxonomy = useStore((state) => state.toggleTaxonomy);
+  const setHotCapacityFilter = useStore((state) => state.setHotCapacityFilter);
+  const setResCapacityFilter = useStore((state) => state.setResCapacityFilter);
+  const setHotMeetingRoom = useStore((state) => state.setHotMeetingRoom);
+  const setItiIsLoop = useStore((state) => state.setItiIsLoop);
+  const setItiDifficulty = useStore((state) => state.setItiDifficulty);
+  const setItiDistance = useStore((state) => state.setItiDistance);
+  const setItiDuration = useStore((state) => state.setItiDuration);
+  const toggleItiPractice = useStore((state) => state.toggleItiPractice);
+  const resetAll = useStore((state) => state.resetAll);
+  const setStatuses = useStore((state) => state.setStatuses);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
@@ -195,7 +200,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
   const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
 
-  const activeFilterCount = useExplorerStore((s) => {
+  const activeFilterCount = useStore((s) => {
     let n = 0;
     if (s.selectedBuckets.length) n += 1;
     if (s.common.search.trim()) n += 1;
@@ -262,7 +267,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   // Un scheme gradué est un classement, pas un label : les démarches équivalentes (§173)
   // n'existent que pour les labels ⇒ le toggle « Inclure les démarches équivalentes » est masqué.
   const rankedSchemeIsGraded = rankedLabelValues.length >= 2;
-  const setRankedLabelValueCodes = useExplorerStore((state) => state.setRankedLabelValueCodes);
+  const setRankedLabelValueCodes = useStore((state) => state.setRankedLabelValueCodes);
   const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
 
   // §152 — sections type-spécifiques repliables : le compte de critères actifs
@@ -825,7 +830,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           />
         </FilterColumnGroup>
 
-        {showHot ? (
+        {typeSpecificFacets && showHot ? (
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
               <div>
@@ -938,7 +943,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           </FilterColumnGroup>
         ) : null}
 
-        {showRes ? (
+        {typeSpecificFacets && showRes ? (
           <FilterColumnGroup label="Restaurants" collapsible count={resSectionCount || undefined}>
             <div className="space-y-4">
               <div>
@@ -1011,7 +1016,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
 
         {/* §155 — sections Activités / Événements : le filtre existe parce que le
             concept existe dans le modèle (principe §150), même à 0 objet publié. */}
-        {showAct ? (
+        {typeSpecificFacets && showAct ? (
           <FilterColumnGroup label="Activités" collapsible count={actSectionCount || undefined}>
             <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'activité</span>
             {domainsForType(references, 'ASC').length + domainsForType(references, 'ACT').length > 0 ? (
@@ -1033,7 +1038,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           </FilterColumnGroup>
         ) : null}
 
-        {showEvt ? (
+        {typeSpecificFacets && showEvt ? (
           <FilterColumnGroup label="Événements" collapsible count={evtSectionCount || undefined}>
             <div className="space-y-4">
               <div>
@@ -1062,7 +1067,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           </FilterColumnGroup>
         ) : null}
 
-        {showIti ? (
+        {typeSpecificFacets && showIti ? (
           <FilterColumnGroup label="Itinéraires" collapsible count={itiSectionCount || undefined}>
             <div className="space-y-4">
               <div>
@@ -1181,14 +1186,14 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
           </FilterColumnGroup>
         ) : null}
 
-        {showVis ? (
+        {typeSpecificFacets && showVis ? (
           <FilterColumnGroup label="Site & visite" collapsible count={visSectionCount || undefined}>
             <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de visite</span>
             {renderTypeTree(EXPLORER_BUCKET_TYPE_MAP.VIS, vis.subtypes, toggleVisSubtype)}
           </FilterColumnGroup>
         ) : null}
 
-        {showSrv ? (
+        {typeSpecificFacets && showSrv ? (
           <FilterColumnGroup label="Services" collapsible count={srvSectionCount || undefined}>
             <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de service</span>
             {renderTypeTree(EXPLORER_BUCKET_TYPE_MAP.SRV, srv.subtypes, toggleSrvSubtype)}

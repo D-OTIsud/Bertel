@@ -4,7 +4,6 @@ import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
 
-// ActiveFilterStrip appelle useRouter() — mock neutre requis dans tout test qui le rend.
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
 jest.mock('../services/explorer-reference', () => ({
@@ -52,7 +51,7 @@ function renderPage() {
 
 describe('DashboardPage — onglets', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'quality', sidebarCollapsed: false });
+    useDashboardFilterStore.setState({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'quality' });
     act(() => useDashboardExplorerStore.getState().resetAll());
   });
 

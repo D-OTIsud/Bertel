@@ -66,6 +66,16 @@ export default function ExplorerPage() {
   const isRefreshing = cardsQuery.isRefreshing;
   const labelRankCounts = cardsQuery.labelRankCounts;
 
+  // §174 — quand un scheme de classement gradué est actif, résoudre ses valeurs contre les
+  // références chargées ; « gradué » = au moins 2 valeurs (sinon un seul niveau ne vaut pas
+  // un regroupement — cf. buildGradeSections, flat en dessous de ce seuil côté vue liste).
+  const rankedLabelSchemeCode = useExplorerStore((state) => state.common.rankedLabelSchemeCode);
+  const gradeSection = useMemo(() => {
+    if (!rankedLabelSchemeCode) return null;
+    const values = referencesQuery.data?.rankedLabelSchemeValues?.[rankedLabelSchemeCode] ?? [];
+    return values.length >= 2 ? { schemeCode: rankedLabelSchemeCode, values } : null;
+  }, [rankedLabelSchemeCode, referencesQuery.data]);
+
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
   const clearSelectedCard = useExplorerStore((state) => state.clearSelectedCard);
@@ -112,6 +122,7 @@ export default function ExplorerPage() {
           isLoadingMore={cardsQuery.isFetchingNextPage}
           onLoadMore={() => void cardsQuery.fetchNextPage()}
           labelRankCounts={labelRankCounts}
+          gradeSection={gradeSection}
         />
       );
     }
@@ -205,6 +216,7 @@ export default function ExplorerPage() {
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
               labelRankCounts={labelRankCounts}
+              gradeSection={gradeSection}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}

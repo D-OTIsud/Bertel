@@ -54,19 +54,6 @@ describe('DashboardPage — onglets', () => {
   beforeEach(() => {
     useDashboardFilterStore.setState({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'quality', sidebarCollapsed: false });
     act(() => useDashboardExplorerStore.getState().resetAll());
-    // NOTE: TypeBreakdown/CompletenessTable/ActualisationTable/CommuneDistribution
-    // still read `s.filters.types`/`s.filters.cities` + call `s.setFilters` — a
-    // pre-existing drill-down API the store-slimming task (09a1eff) removed from
-    // the DashboardFilterState type, without updating these 4 widgets. Out of
-    // scope for Task 8 (main block must stay unchanged); seed the loose extra
-    // state + a no-op setter here (same workaround the pre-Task-8 test used) so
-    // these widgets render without crashing. See task-8-report.md concerns.
-    useDashboardFilterStore.setState({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      filters: {} as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setFilters: (() => {}) as any,
-    });
   });
 
   it("l'onglet Qualité (défaut) montre corpus + complétude + actualisation, pas les communes", async () => {

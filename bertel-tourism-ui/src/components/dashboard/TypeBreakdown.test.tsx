@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { TypeBreakdown } from './TypeBreakdown';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
+import { activeDrilldownTypes } from '../../lib/dashboard-type-drilldown';
 
 // HOT → archétype Hébergement, RES → archétype Restaurant : la barre replie les
 // types DB sur leurs archétypes ; le drill-down (dé)sélectionne les types de la famille.
@@ -14,7 +15,7 @@ const data = {
 
 describe('TypeBreakdown — barre empilée par archétype', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
+    act(() => useDashboardExplorerStore.getState().resetAll());
   });
 
   it('rend une légende par archétype (libellés FR, pas de codes)', () => {
@@ -26,13 +27,15 @@ describe('TypeBreakdown — barre empilée par archétype', () => {
   it('clic sur une famille ajoute ses types au filtre (toggle on)', () => {
     render(<TypeBreakdown data={data} />);
     fireEvent.click(screen.getByRole('button', { name: /Hébergement/ }));
-    expect(useDashboardFilterStore.getState().filters.types).toEqual(['HOT']);
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HOT');
   });
 
   it('re-clic retire la famille (toggle off)', () => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'], types: ['HOT'] }, activeTab: 'quality', sidebarCollapsed: false });
     render(<TypeBreakdown data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: /Hébergement/ }));
-    expect(useDashboardFilterStore.getState().filters.types).toBeUndefined();
+    const btn = screen.getByRole('button', { name: /Hébergement/ });
+    fireEvent.click(btn); // on
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HOT');
+    fireEvent.click(btn); // off
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).not.toContain('HOT');
   });
 });

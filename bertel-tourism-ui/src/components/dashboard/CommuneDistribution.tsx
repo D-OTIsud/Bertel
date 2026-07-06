@@ -1,7 +1,7 @@
 "use client";
 
 import type { DashboardCityDistribution } from '../../types/dashboard';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
 
 // Ordre fixe des communes OTI Sud. "Autres" agrège tout hors-territoire.
 const OTI_COMMUNES = ['Le Tampon', 'Entre-Deux', 'Saint-Joseph', 'Saint-Philippe', 'Autres'];
@@ -11,9 +11,9 @@ interface Props {
 }
 
 export function CommuneDistribution({ data }: Props) {
-  const setFilters = useDashboardFilterStore((s) => s.setFilters);
-  const cities = useDashboardFilterStore((s) => s.filters.cities);
-  const activeCommunes = cities ?? [];
+  const cities = useDashboardExplorerStore((s) => s.common.cities);
+  const setCities = useDashboardExplorerStore((s) => s.setCities);
+  const activeCommunes = cities;
 
   // Indexer les données reçues par commune
   const byCommune = Object.fromEntries(data.rows.map((r) => [r.city, r]));
@@ -21,10 +21,11 @@ export function CommuneDistribution({ data }: Props) {
 
   function handleCommune(name: string) {
     if (name === 'Autres') return; // "Autres" n'est pas filtrable
-    const next = activeCommunes.includes(name)
-      ? activeCommunes.filter((c) => c !== name)
-      : [...activeCommunes, name];
-    setFilters({ cities: next.length > 0 ? next : undefined });
+    setCities(
+      activeCommunes.includes(name)
+        ? activeCommunes.filter((c) => c !== name)
+        : [...activeCommunes, name],
+    );
   }
 
   return (

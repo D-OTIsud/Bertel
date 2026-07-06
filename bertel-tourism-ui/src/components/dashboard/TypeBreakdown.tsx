@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from 'react';
 import type { DashboardTypeBreakdown } from '../../types/dashboard';
 import type { BackendObjectTypeCode } from '../../types/domain';
 import type { ArchetypeCode } from '../../features/object-editor/archetypes';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
+import { activeDrilldownTypes, toggleDrilldownType } from '../../lib/dashboard-type-drilldown';
 import { resolveArchetype, archetypeLabel } from '../../utils/labels';
 
 interface Props {
@@ -59,18 +61,27 @@ function foldByArchetype(rows: DashboardTypeBreakdown['rows']): {
 }
 
 export function TypeBreakdown({ data }: Props) {
-  const setFilters = useDashboardFilterStore((s) => s.setFilters);
-  const activeTypes = useDashboardFilterStore((s) => s.filters.types) ?? [];
+  const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
+  const hot = useDashboardExplorerStore((s) => s.hot);
+  const vis = useDashboardExplorerStore((s) => s.vis);
+  const srv = useDashboardExplorerStore((s) => s.srv);
+  // `activeDrilldownTypes` only reads selectedBuckets + hot/vis/srv subtypes, so these deps are complete.
+  const activeTypes = useMemo(
+    () => activeDrilldownTypes(useDashboardExplorerStore.getState()),
+    [selectedBuckets, hot, vis, srv],
+  );
 
   const { segments, total } = foldByArchetype(data.rows);
 
   // Drill-down par archétype : (dé)sélectionne d'un coup tous les types DB de la famille.
   function toggleArchetype(seg: ArchetypeSegment) {
     const isActive = seg.types.some((t) => activeTypes.includes(t));
-    const next = isActive
-      ? activeTypes.filter((t) => !seg.types.includes(t))
-      : [...activeTypes, ...seg.types.filter((t) => !activeTypes.includes(t))];
-    setFilters({ types: next.length > 0 ? next : undefined });
+    for (const t of seg.types) {
+      const currentlyActive = activeDrilldownTypes(useDashboardExplorerStore.getState()).includes(t);
+      if (isActive === currentlyActive) {
+        toggleDrilldownType(useDashboardExplorerStore, t);
+      }
+    }
   }
 
   const distributionLabel = segments

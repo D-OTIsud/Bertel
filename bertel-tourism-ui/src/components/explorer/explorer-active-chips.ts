@@ -21,6 +21,7 @@ export type ActiveChipGroup =
   | 'tag'
   | 'status'
   | 'rankedLabel'
+  | 'rankedLabelExact'
   // D23 — filtres jusqu'ici invisibles dans la barre :
   | 'zone'
   | 'environment'
@@ -111,6 +112,9 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   const rankedScheme = String(c.rankedLabelSchemeCode ?? '').trim();
   if (rankedScheme) {
     chips.push({ key: 'rankedLabel', group: 'rankedLabel', value: rankedScheme, label: `Classé · ${resolveSchemeLabel(rankedScheme)}` });
+  }
+  if (rankedScheme && !c.rankedLabelIncludeEquivalents) {
+    chips.push({ key: 'rankedLabelExact', group: 'rankedLabelExact', value: rankedScheme, label: 'Label obtenu uniquement' });
   }
 
   for (const label of c.labelsAny ?? []) {

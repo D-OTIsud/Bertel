@@ -77,6 +77,11 @@ interface ExplorerState extends ExplorerFilters {
   toggleHotSubtype: (type: BackendObjectTypeCode) => void;
   toggleVisSubtype: (type: BackendObjectTypeCode) => void;
   toggleSrvSubtype: (type: BackendObjectTypeCode) => void;
+  /** Fixe l'ensemble exact des sous-types (vide → défaut du bucket). Cf. Task 8b : primitive de
+   *  drill-down (narrow-to-set), complémentaire du toggle un-à-un ci-dessus. */
+  setHotSubtypes: (types: BackendObjectTypeCode[]) => void;
+  setVisSubtypes: (types: BackendObjectTypeCode[]) => void;
+  setSrvSubtypes: (types: BackendObjectTypeCode[]) => void;
   /** §155 — toggle d'une sous-catégorie (paire domaine:code, tout bucket). */
   toggleTaxonomy: (domain: string, code: string) => void;
   setHotCapacityFilter: (code: string, min?: number, max?: number) => void;
@@ -423,6 +428,12 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
         ...(removing ? { common: purgeTaxonomyForType(state.common, type) } : {}),
       };
     }),
+  setHotSubtypes: (types) =>
+    set((state) => ({ hot: { ...state.hot, subtypes: types.length > 0 ? [...types] : [...DEFAULT_HOT_SUBTYPES] } })),
+  setVisSubtypes: (types) =>
+    set((state) => ({ vis: { ...state.vis, subtypes: types.length > 0 ? [...types] : [...DEFAULT_VIS_SUBTYPES] } })),
+  setSrvSubtypes: (types) =>
+    set((state) => ({ srv: { ...state.srv, subtypes: types.length > 0 ? [...types] : [...DEFAULT_SRV_SUBTYPES] } })),
   // §155 — sous-catégories : état commun, partitionné par bucket au payload.
   toggleTaxonomy: (domain, code) =>
     set((state) => {

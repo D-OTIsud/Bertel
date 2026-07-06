@@ -16,6 +16,7 @@ import type {
 // Category labels for the collapsible référentiel picker (SearchSelect groups).
 const DISPLAY_GROUP_LABELS: Record<string, string> = {
   official_classification: 'Classements officiels',
+  graded_label: 'Labels notés', // §176 — Gîtes de France / Clévacances / Logis (notés de réseau privé)
   quality_label: 'Labels qualité',
   sustainability_labels: 'Durabilité / environnement',
   accessibility_labels: 'Accessibilité',

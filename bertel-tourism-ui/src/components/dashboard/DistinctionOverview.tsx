@@ -8,6 +8,7 @@ interface Props {
 
 const GROUP_LABELS: Record<DistinctionDisplayGroup, string> = {
   official_classification: 'Classements officiels',
+  graded_label:            'Labels notés',
   quality_label:           'Labels et marques qualité',
   environmental_label:     'Labels environnementaux',
   accessibility_label:     'Accessibilité',
@@ -15,6 +16,7 @@ const GROUP_LABELS: Record<DistinctionDisplayGroup, string> = {
 
 const GROUP_ORDER: DistinctionDisplayGroup[] = [
   'official_classification',
+  'graded_label',
   'quality_label',
   'environmental_label',
   'accessibility_label',

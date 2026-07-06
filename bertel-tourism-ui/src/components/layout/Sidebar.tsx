@@ -40,7 +40,7 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const items = visibleNavItems(role, demoMode);
-  const navItems = items.filter((item) => item.to !== '/settings');
+  const navItems = items.filter((item) => item.to !== '/settings' && item.to !== '/aide');
 
   // §120 — badge de modération : compte des suggestions en attente que l'appelant peut
   // modérer. Même clé de cache que ModerationPage (invalidée par approve/reject) ⇒ le badge
@@ -114,12 +114,17 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
         </Link>
 
         <div className="app-sidebar__footer">
-          <button type="button" className="app-sidebar__item" aria-label="Aide" title="Aide">
+          <Link
+            href="/aide"
+            title="Aide"
+            aria-current={isActivePath(pathname, '/aide') ? 'page' : undefined}
+            className={cn('app-sidebar__item', isActivePath(pathname, '/aide') && 'app-sidebar__item--active')}
+          >
             <span className="app-sidebar__iconbox">
               <CircleHelp className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
             </span>
             <span className="app-sidebar__label">Aide</span>
-          </button>
+          </Link>
           {/* D26 : la cloche « Notifications » (aucun handler, pastille factice) est retirée —
               elle reviendra avec la table notification (D27, backend, remonté session API). */}
           <button

@@ -14,6 +14,7 @@ import {
   ListChecks,
   MapPin,
   Palette,
+  ShieldCheck,
   SlidersHorizontal,
   Users,
   type LucideIcon,
@@ -50,6 +51,10 @@ const ACCOUNT_GROUP: SettingsNavGroup = {
     { id: 'profile', label: 'Profil', icon: CircleUser },
     { id: 'preferences', label: 'Préférences', icon: SlidersHorizontal },
     { id: 'session', label: 'Session & rôle', icon: BadgeCheck },
+    // « Mentions légales » : section d'information NON gated (tous rôles, y compris session
+    // non chargée) — foyer découvrable des pages légales publiques (confidentialité / CGU /
+    // AIPD). Le pane SettingsPage pointe vers /legal/*.html + le module /rgpd (droits).
+    { id: 'legal', label: 'Mentions légales', icon: ShieldCheck },
   ],
 };
 

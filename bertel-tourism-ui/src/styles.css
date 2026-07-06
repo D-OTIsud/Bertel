@@ -3175,9 +3175,51 @@ a {
    (--teal / --primary-foreground) : un thème d'ORG re-colore la page sans CSS. */
 .auth-page {
   min-height: 100dvh;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
   padding: 1.5rem;
+}
+
+/* Pied légal discret des pages hors-shell (/login, /set-password) — ton --ink-3 (AA). */
+.auth-legal {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  color: var(--ink-3);
+}
+.auth-legal a {
+  color: var(--ink-3);
+  text-decoration: none;
+}
+.auth-legal a:hover,
+.auth-legal a:focus-visible {
+  text-decoration: underline;
+}
+.auth-legal__sep {
+  opacity: 0.5;
+}
+
+/* Liste des documents légaux dans Paramètres → Mentions légales. */
+.legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.legal-links li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.legal-links a {
+  font-weight: 600;
 }
 
 .auth-frame {

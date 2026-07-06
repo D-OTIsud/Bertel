@@ -9743,6 +9743,17 @@ a {
   cursor: default;
 }
 
+/* En-tête de famille dans un menu groupé (Classements · Labels qualité · …). Non cliquable. */
+.filter-dropdown__group {
+  padding: 0.4rem 0.75rem 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .filter-dropdown__icon {
   flex-shrink: 0;
   width: 0.75rem;

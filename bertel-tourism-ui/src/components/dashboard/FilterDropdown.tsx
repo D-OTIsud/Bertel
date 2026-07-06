@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
 interface FilterDropdownProps<T extends string> {
-  options: ReadonlyArray<{ code: T; label: string }>;
+  options: ReadonlyArray<{ code: T; label: string; group?: string }>;
   selected: T[];
   onChange: (selected: T[]) => void;
   mode: 'multi' | 'single';
@@ -239,26 +239,36 @@ export function FilterDropdown<T extends string>({
           {filteredOptions.map((opt, idx) => {
             const isSelected = selected.includes(opt.code);
             const isHighlighted = idx === highlight;
+            // Group header: rendered once before the first (filtered) option of each family.
+            // Options are pre-sorted by family, so same-group options are contiguous ⇒ one
+            // header per group. No header when options carry no `group` (flat, backward-compat).
+            const showGroupHeader = Boolean(opt.group) && opt.group !== filteredOptions[idx - 1]?.group;
             return (
-              <li
-                key={opt.code}
-                role="option"
-                aria-selected={isSelected}
-                data-code={opt.code}
-                className={[
-                  'filter-dropdown__item',
-                  isSelected ? 'filter-dropdown__item--selected' : '',
-                  isHighlighted ? 'filter-dropdown__item--highlight' : '',
-                ].filter(Boolean).join(' ')}
-                onClick={() => handleItem(opt.code)}
-              >
-                <span className="filter-dropdown__icon" aria-hidden>
-                  {mode === 'multi'
-                    ? (isSelected ? '✓' : '')
-                    : (isSelected ? '●' : '')}
-                </span>
-                {opt.label}
-              </li>
+              <Fragment key={opt.code}>
+                {showGroupHeader && (
+                  <li className="filter-dropdown__group" role="presentation">
+                    {opt.group}
+                  </li>
+                )}
+                <li
+                  role="option"
+                  aria-selected={isSelected}
+                  data-code={opt.code}
+                  className={[
+                    'filter-dropdown__item',
+                    isSelected ? 'filter-dropdown__item--selected' : '',
+                    isHighlighted ? 'filter-dropdown__item--highlight' : '',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => handleItem(opt.code)}
+                >
+                  <span className="filter-dropdown__icon" aria-hidden>
+                    {mode === 'multi'
+                      ? (isSelected ? '✓' : '')
+                      : (isSelected ? '●' : '')}
+                  </span>
+                  {opt.label}
+                </li>
+              </Fragment>
             );
           })}
         </ul>,

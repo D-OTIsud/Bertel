@@ -307,6 +307,10 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         ...state.common,
         rankedLabelSchemeCode: String(schemeCode ?? '').trim() || null,
         rankedLabelValueCodes: [],
+        // Le toggle « démarches équivalentes » (§173) est un affinage PAR scheme : changer de
+        // scheme repart du défaut (sinon un exact-only décoché survivrait, caché, quand le
+        // nouveau scheme est un classement gradué — dont le toggle n'est pas rendu).
+        rankedLabelIncludeEquivalents: true,
       },
     })),
   setRankedLabelIncludeEquivalents: (value) =>

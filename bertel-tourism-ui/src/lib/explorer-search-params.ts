@@ -121,6 +121,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     }),
     ...(labelsAny !== undefined && { labelsAny }),
     ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
+    ...(searchParams.get('rankedLabelExact') != null && {
+      rankedLabelIncludeEquivalents: searchParams.get('rankedLabelExact') !== 'true',
+    }),
     ...(statuses !== undefined && { statuses }),
   };
 
@@ -210,6 +213,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.rankedLabelSchemeCode) {
     p.set('rankedLabel', normalizedFilters.common.rankedLabelSchemeCode);
+  }
+  if (normalizedFilters.common.rankedLabelSchemeCode && !normalizedFilters.common.rankedLabelIncludeEquivalents) {
+    p.set('rankedLabelExact', 'true');
   }
   if (normalizedFilters.common.search) {
     p.set('search', normalizedFilters.common.search);

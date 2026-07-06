@@ -282,6 +282,8 @@ textarea::placeholder {
 .grade-star svg { width: 20px; height: 20px; display: block; }
 .grade-star:hover { transform: scale(1.25); color: var(--ink-3); }
 .grade-star.grade-on { color: var(--rating-star, var(--theme-primary)); }
+/* Sélectionné = picto PLEIN (fill, pas seulement le trait) — même rendu que la cocarde .thumb__rating. */
+.grade-star.grade-on svg { fill: currentColor; }
 .grade-star:active { transform: scale(.9); }
 .grade-cat { border: .5px solid var(--line); background: var(--surface); border-radius: 6px; padding: 3px 8px; font-size: 12px; color: var(--ink-2); cursor: pointer; transition: transform .14s ease; }
 .grade-cat:hover { transform: scale(1.06); }

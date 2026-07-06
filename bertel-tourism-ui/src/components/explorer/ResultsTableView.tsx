@@ -321,7 +321,7 @@ export function ResultsTableView({
                   </tr>,
                   ...sortCards(grp.cards, tableSort).map(renderRow),
                 ])
-              : sortCards(cards, tableSort).map(renderRow)}
+              : sortedCards.map(renderRow)}
           </tbody>
         </table>
 

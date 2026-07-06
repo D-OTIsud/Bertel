@@ -35,11 +35,12 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
   const pathname = usePathname();
   const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const userName = useSessionStore((state) => state.userName);
   const avatarUrl = useSessionStore((state) => state.avatarUrl);
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
-  const items = visibleNavItems(role, demoMode);
+  const items = visibleNavItems(role, demoMode, canEditObjects);
   const navItems = items.filter((item) => item.to !== '/settings' && item.to !== '/aide');
 
   // §120 — badge de modération : compte des suggestions en attente que l'appelant peut

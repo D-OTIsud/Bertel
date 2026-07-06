@@ -71,6 +71,7 @@ export function CommandPalette() {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const canCreateObjects = useSessionStore((state) => state.canCreateObjects);
   const router = useRouter();
 
@@ -117,7 +118,7 @@ export function CommandPalette() {
   const entries = useMemo<PaletteEntry[]>(() => {
     if (!open) return [];
     const needle = normalize(query);
-    const navEntries: PaletteEntry[] = visibleNavItems(role, demoMode)
+    const navEntries: PaletteEntry[] = visibleNavItems(role, demoMode, canEditObjects)
       .filter((item) => !needle || normalize(`${item.label} ${item.caption}`).includes(needle))
       .map((item) => ({
         key: `nav:${item.to}`,
@@ -168,7 +169,7 @@ export function CommandPalette() {
     }));
 
     return [...objectEntries, ...navEntries, ...actionEntries];
-  }, [open, query, role, demoMode, canCreateObjects, objectsQuery.data, router, setOpen, openDrawer]);
+  }, [open, query, role, demoMode, canEditObjects, canCreateObjects, objectsQuery.data, router, setOpen, openDrawer]);
 
   // Surbrillance re-clampée quand la liste change (résultats async).
   useEffect(() => {

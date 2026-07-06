@@ -75,6 +75,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   const avatarUrl = useSessionStore((state) => state.avatarUrl);
   const sessionStatus = useSessionStore((state) => state.status);
   const demoMode = useSessionStore((state) => state.demoMode);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const networkStatus = useUiStore((state) => state.networkStatus);
   const liveMembers = useUiStore((state) => state.liveMembers);
   const [editOpen, setEditOpen] = useState(false);
@@ -89,7 +90,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
   // Mêmes clés de cache que CrmPage / le badge Sidebar (aucune double charge réseau) ;
   // fetch uniquement panneau ouvert. Query en erreur ⇒ data undefined ⇒ bloc masqué.
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks, enabled: open, staleTime: 60_000 });
-  const moderationVisible = visibleNavItems(role, demoMode).some((item) => item.to === '/moderation');
+  const moderationVisible = visibleNavItems(role, demoMode, canEditObjects).some((item) => item.to === '/moderation');
   const pendingQuery = useQuery({
     queryKey: ['pending-changes', 'pending'],
     queryFn: () => listPendingChanges('pending'),

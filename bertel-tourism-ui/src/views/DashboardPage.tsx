@@ -1,7 +1,10 @@
 "use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../store/explorer-store';
+import { useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
+import { dashboardStatsParams } from '../lib/dashboard-stats-params';
 import {
   getDashboardScorecards,
   getDashboardTypeBreakdown,
@@ -9,63 +12,67 @@ import {
   getDashboardActualisation,
   getDashboardCompleteness,
   getDashboardDistinctionOverview,
-  getDashboardFilterOptions,
 } from '../services/dashboard-rpc';
-import { getDashboardAdvancedFilterOptions } from '../services/dashboard-reference';
-import { useDashboardQuery, DASHBOARD_STALE_TIME_MS } from '../hooks/useDashboardQuery';
+import { useDashboardQuery } from '../hooks/useDashboardQuery';
+import { FiltersPanel } from '../components/explorer/FiltersPanel';
+import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
+import { DashboardPeriodSection } from '../components/dashboard/DashboardPeriodSection';
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
 import { CommuneDistribution } from '../components/dashboard/CommuneDistribution';
 import { ActualisationTable } from '../components/dashboard/ActualisationTable';
 import { CompletenessTable } from '../components/dashboard/CompletenessTable';
 import { DistinctionOverview } from '../components/dashboard/DistinctionOverview';
-import { DashboardFiltersPanel } from '../components/dashboard/DashboardFiltersPanel';
-import { ActiveFilterStrip } from '../components/dashboard/ActiveFilterStrip';
 import { DashboardTabs } from '../components/dashboard/DashboardTabs';
 import { WidgetFrame } from '../components/dashboard/WidgetFrame';
 
 export default function DashboardPage() {
-  const filters = useDashboardFilterStore((s) => s.filters);
   const activeTab = useDashboardFilterStore((s) => s.activeTab);
+  const updatedAtFrom = useDashboardFilterStore((s) => s.updatedAtFrom);
+  const updatedAtTo = useDashboardFilterStore((s) => s.updatedAtTo);
 
-  // Options de filtre corpus-wide — indépendantes des filtres actifs.
-  const filterOptions = useQuery({
-    queryKey: ['dashboard', 'filter-options'],
-    queryFn: getDashboardFilterOptions,
-    staleTime: DASHBOARD_STALE_TIME_MS,
-  });
-  const filterOptionsError = filterOptions.error
-    ? 'Impossible de charger les options de filtre'
-    : null;
+  // État de filtre riche = instance Explorer indépendante du Dashboard.
+  const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
+  const common = useDashboardExplorerStore((s) => s.common);
+  const hot = useDashboardExplorerStore((s) => s.hot);
+  const iti = useDashboardExplorerStore((s) => s.iti);
+  const res = useDashboardExplorerStore((s) => s.res);
+  const evt = useDashboardExplorerStore((s) => s.evt);
+  const vis = useDashboardExplorerStore((s) => s.vis);
+  const srv = useDashboardExplorerStore((s) => s.srv);
 
-  const advancedOptions = useQuery({
-    queryKey: ['dashboard', 'advanced-filter-options'],
-    queryFn: getDashboardAdvancedFilterOptions,
-    staleTime: DASHBOARD_STALE_TIME_MS,
-  });
+  const references = useExplorerReferencesQuery();
+
+  const params = useMemo(
+    () => dashboardStatsParams(
+      { selectedBuckets, common, hot, iti, res, evt, vis, srv },
+      { updatedAtFrom: updatedAtFrom ?? undefined, updatedAtTo: updatedAtTo ?? undefined },
+    ),
+    [selectedBuckets, common, hot, iti, res, evt, vis, srv, updatedAtFrom, updatedAtTo],
+  );
 
   // Héro permanent ; les widgets d'onglet ne fetchent que quand leur onglet est visible.
-  const scorecards = useDashboardQuery('scorecards', filters, getDashboardScorecards);
-  const typeBreakdown = useDashboardQuery('type-breakdown', filters, getDashboardTypeBreakdown, activeTab === 'quality');
-  const actualisation = useDashboardQuery('actualisation', filters, getDashboardActualisation, activeTab === 'quality');
-  const completeness = useDashboardQuery('completeness', filters, getDashboardCompleteness, activeTab === 'quality');
-  const cityDistribution = useDashboardQuery('city-distribution', filters, getDashboardCityDistribution, activeTab === 'offer');
-  const distinctions = useDashboardQuery('distinctions', filters, getDashboardDistinctionOverview, activeTab === 'offer');
+  const scorecards = useDashboardQuery('scorecards', params, getDashboardScorecards);
+  const typeBreakdown = useDashboardQuery('type-breakdown', params, getDashboardTypeBreakdown, activeTab === 'quality');
+  const actualisation = useDashboardQuery('actualisation', params, getDashboardActualisation, activeTab === 'quality');
+  const completeness = useDashboardQuery('completeness', params, getDashboardCompleteness, activeTab === 'quality');
+  const cityDistribution = useDashboardQuery('city-distribution', params, getDashboardCityDistribution, activeTab === 'offer');
+  const distinctions = useDashboardQuery('distinctions', params, getDashboardDistinctionOverview, activeTab === 'offer');
 
   return (
     <div className="min-h-0 p-4">
       <div className="dashboard-layout">
-        <DashboardFiltersPanel
-          availableCities={filterOptions.data?.cities ?? []}
-          cityLoadError={filterOptionsError}
-          availableLieuDits={filterOptions.data?.lieuDits ?? []}
-          lieuDitLoadError={filterOptionsError}
-          advancedOptions={advancedOptions.data}
-          advancedLoadError={advancedOptions.error ? 'Impossible de charger les filtres avancés' : null}
-        />
+        <aside className="dashboard-filters-sidebar">
+          <DashboardPeriodSection />
+          <FiltersPanel
+            references={references.data}
+            useStore={useDashboardExplorerStore}
+            typeSpecificFacets={selectedBuckets.length === 1}
+          />
+        </aside>
 
         <main className="dashboard-main">
-          <ActiveFilterStrip />
+          <ExplorerActiveFilters useStore={useDashboardExplorerStore} />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
             {scorecards.data && <ScorecardStrip data={scorecards.data} />}

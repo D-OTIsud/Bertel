@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
-import { buildResultSections } from '../../utils/explorer-result-sections';
+import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
 import { ResultCardView } from './ResultCardView';
+import { cn } from '@/lib/utils';
 
 interface ResultsListProps {
   cards: ObjectCard[];
@@ -19,6 +21,13 @@ interface ResultsListProps {
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
   labelRankCounts?: { labelled: number; equivalent: number };
+  /**
+   * §174 — quand un scheme de classement gradué est actif (≥2 valeurs résolues côté
+   * ExplorerPage), les sections deviennent des niveaux de classement (buildGradeSections)
+   * au lieu des sections §173 labellisés/équivalents. Mutuellement exclusif avec le
+   * regroupement §173 : quand présent, il remplace entièrement `labelRankCounts`.
+   */
+  gradeSection?: { schemeCode: string; values: { code: string; name: string }[] } | null;
 }
 
 function toResultCardDomId(cardId: string): string {
@@ -64,6 +73,7 @@ export function ResultsList({
   isLoadingMore = false,
   onLoadMore,
   labelRankCounts,
+  gradeSection,
 }: ResultsListProps) {
   const [hasMounted, setHasMounted] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -97,7 +107,31 @@ export function ResultsList({
   // label rank est actif ET les deux groupes sont non-vides (cf. buildResultSections).
   // Une section forte et un float de sélection sont contradictoires — le float est
   // suspendu tant que la vue est groupée (voir orderedCards ci-dessus, non consommé ici).
-  const sections = useMemo(() => buildResultSections(visibleCards, labelRankCounts), [visibleCards, labelRankCounts]);
+  // §174 — quand un scheme classé est actif (gradeSection, résolu par ExplorerPage),
+  // les sections deviennent des niveaux de classement à la place des sections §173 ;
+  // les deux modes sont mutuellement exclusifs (jamais combinés).
+  const sections = useMemo(
+    () =>
+      gradeSection
+        ? buildGradeSections(visibleCards, gradeSection.schemeCode, gradeSection.values)
+        : buildResultSections(visibleCards, labelRankCounts),
+    [gradeSection, visibleCards, labelRankCounts],
+  );
+
+  // §174 — état de repli des sections, local à la vue (pas store/URL) : purement une
+  // préférence d'affichage temporaire. Les sections §173 partagent le même rendu
+  // d'en-tête et deviennent donc repliables elles aussi (cohérent, pas de régression).
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const toggleCollapsed = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
 
   useEffect(() => {
     setHasMounted(true);
@@ -235,11 +269,18 @@ export function ResultsList({
         {sections.grouped
           ? sections.groups.map((grp) => (
               <div key={grp.group} className="flex flex-col gap-2">
-                <div className="sticky top-0 z-[1] -mx-3 flex items-center justify-between gap-2 border-b border-line bg-surface2/95 px-3 py-1.5 backdrop-blur">
-                  <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{grp.label}</span>
+                <button
+                  type="button"
+                  onClick={() => toggleCollapsed(grp.group)}
+                  className="sticky top-0 z-[1] -mx-3 flex items-center justify-between gap-2 border-b border-line bg-surface2/95 px-3 py-1.5 backdrop-blur"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <ChevronDown className={cn('h-4 w-4 transition', collapsed.has(grp.group) && '-rotate-90')} />
+                    <span className="text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">{grp.label}</span>
+                  </span>
                   <span className="rounded-[6px] bg-surface px-2 py-0.5 text-[11px] font-semibold text-ink-4">{grp.count}</span>
-                </div>
-                {grp.cards.map(renderCard)}
+                </button>
+                {!collapsed.has(grp.group) && grp.cards.map(renderCard)}
               </div>
             ))
           : orderedCards.map(renderCard)}

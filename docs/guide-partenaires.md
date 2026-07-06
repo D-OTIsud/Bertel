@@ -100,13 +100,15 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | Paramètre | Type | Défaut | Description |
 |---|---|---|---|
 | `cursor` | string | — | Curseur opaque de pagination (voir ci-dessous) |
-| `page_size` | int 1–200 | 50 | Nombre de fiches par page |
+| `page_size` | int 1–200 | 50 | Nombre de fiches par page (borné à **100** en `view=full`) |
+| `view` | `card` \| `full` | `card` | `full` = fiche complète par objet (voir §3.1.1) |
+| `track` | `gpx` \| `kml` | — | En `view=full` : ajoute le blob GPX/KML des itinéraires |
 | `types` | csv | tous | Filtre par types de fiche (codes ci-dessous) |
 | `search` | string | — | Recherche sur le **nom** de la fiche uniquement |
 | `lang` | code | `fr` | Langue de résolution des textes |
 | `format` | profil | — | Ajoute un document pivot par fiche (voir section 5) |
 
-**Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
+**Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`, `view`, `track`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
 
 **Codes de type** (paramètre `types`, champ `type` des fiches) :
 
@@ -130,6 +132,24 @@ Exemple — les restaurants et hôtels, 200 par page :
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
   "https://<domaine>/api/public/objects?types=RES,HOT&page_size=200"
+```
+
+#### 3.1.1 Objets complets en liste — `view=full`
+
+Par défaut la liste renvoie une **carte allégée** par objet. Avec `view=full`, chaque objet
+de la page est la **fiche complète** — strictement le même contenu que `GET /objects/{id}`
+(photos, descriptions, équipements, classements/distinctions, chambres, horaires,
+`itinerary_details.track_geojson`…), **hors CRM et champs internes**.
+
+- La page est bornée à **100 objets** (défaut 25) : la fiche complète est ~15 kB et ~30 ms
+  par objet, donc une grande page reste volumineuse. Utilisez le curseur pour parcourir.
+- Pour les **itinéraires**, ajoutez `track=gpx` (ou `kml`) pour obtenir en plus le blob de
+  tracé au format demandé sous `itinerary_details.track`. Le tracé **GeoJSON** est de toute
+  façon inclus nativement (`itinerary_details.track_geojson`).
+
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://<domaine>/api/public/objects?view=full&page_size=100&track=gpx"
 ```
 
 ### 3.2 `GET /objects/{id}` — une fiche complète
@@ -247,6 +267,10 @@ retirer chez vous chaque d.data[i].object_id ; conserver d.meta.cursor
 tout id présent chez vous mais absent du parcours (1) ET du flux (2)
   ⇒ fiche dépubliée : la masquer ou la retirer chez vous
 ```
+
+> **Fiches complètes en une passe :** à l'étape 1, `GET /objects?view=full&page_size=100[&cursor=cursor]`
+> renvoie la fiche complète par objet (au lieu d'un appel détail par fiche). La page est bornée à
+> **100** en mode `full`. Ajoutez `&track=gpx` pour les tracés GPX des itinéraires.
 
 Bonnes pratiques :
 

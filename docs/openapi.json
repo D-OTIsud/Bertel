@@ -32,10 +32,12 @@
         "tags": ["Objets"],
         "operationId": "listObjects",
         "summary": "Lister les objets publiés (paginé)",
-        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé.",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).",
         "parameters": [
           { "$ref": "#/components/parameters/Cursor" },
           { "$ref": "#/components/parameters/PageSize" },
+          { "$ref": "#/components/parameters/View" },
+          { "$ref": "#/components/parameters/Track" },
           { "$ref": "#/components/parameters/Types" },
           { "$ref": "#/components/parameters/Lang" },
           { "$ref": "#/components/parameters/Search" },
@@ -59,7 +61,7 @@
                         "total": { "type": "integer", "description": "Nombre total d'objets correspondant à la requête (toutes pages confondues)." }
                       }
                     },
-                    "data": { "type": "array", "items": { "$ref": "#/components/schemas/CardItem" } }
+                    "data": { "type": "array", "items": { "oneOf": [ { "$ref": "#/components/schemas/CardItem" }, { "$ref": "#/components/schemas/ObjectResource" } ], "description": "Carte allégée (`view=card`, défaut) ou fiche complète (`view=full`, identique à `GET /objects/{id}`)." } }
                   }
                 }
               }
@@ -710,6 +712,16 @@
         "description": "Code langue de résolution (fallback FR). Valeur spéciale `all` : clés de base en FR + bloc additif `i18n` (texte propre par langue).",
         "schema": { "type": "string", "default": "fr" },
         "examples": { "français": { "value": "fr" }, "toutes les langues": { "value": "all" } }
+      },
+      "View": {
+        "name": "view", "in": "query", "required": false,
+        "description": "`card` (défaut) = carte allégée ; `full` = fiche complète par objet (photos, descriptions, équipements, classements/distinctions, chambres, horaires, tracé GeoJSON…). En `full`, `page_size` est borné à **100** (défaut 25).",
+        "schema": { "type": "string", "enum": ["card", "full"], "default": "card" }
+      },
+      "Track": {
+        "name": "track", "in": "query", "required": false,
+        "description": "En mode `view=full` uniquement : ajoute le blob `itinerary_details.track` au format demandé pour les itinéraires. Le tracé GeoJSON (`itinerary_details.track_geojson`) est natif et toujours présent, indépendamment de ce paramètre.",
+        "schema": { "type": "string", "enum": ["gpx", "kml"] }
       },
       "Format": {
         "name": "format", "in": "query", "required": false,

@@ -276,7 +276,7 @@ textarea::placeholder {
    Toggle par niveau : sélectionné = rempli/coloré + légèrement agrandi ; survol
    agrandit ; clic = pop bref. Anime `transform` uniquement (compositor-friendly).
    Couleur du niveau sélectionné alignée sur la cocarde réelle .thumb__rating
-   (var(--theme-primary), le même picto doré détouré que sur les cartes résultat). */
+   (var(--theme-primary) — le même remplissage d'étoile que sur les cartes résultat). */
 .grade-bar { display: inline-flex; align-items: center; gap: 2px; }
 .grade-star { background: none; border: 0; padding: 3px; line-height: 1; color: var(--ink-4); cursor: pointer; transition: transform .14s ease, color .14s ease; }
 .grade-star svg { width: 20px; height: 20px; display: block; }

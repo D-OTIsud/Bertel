@@ -1204,6 +1204,9 @@ AS $$
           ARRAY[]::text[]
         )
       END AS label_disability_types_any,
+      -- §173 — restrict a ranked-label filter to rank-0 (certified label) only, excluding
+      -- equivalent evidence. Only meaningful alongside label_scheme_ranked.
+      COALESCE((n.filters->>'label_scheme_ranked_exact_only')::boolean, false) AS exact_only,
       -- §157 — « ouvert à … » : instant demandé (ISO timestamptz). NULL = filtre absent.
       CASE WHEN n.filters ? 'open_at'
         THEN NULLIF(n.filters->>'open_at', '')::timestamptz
@@ -1734,10 +1737,13 @@ AS $$
     -- label_scheme_ranked: admit rank-0 (exact granted classification) and rank-1 (equivalent evidence).
     -- rank-1a: sustainability actions/groups mapped through ref_classification_equivalent_*.
     -- rank-1b: accessibility amenity family evidence (LBL_TOURISME_HANDICAP only).
+    -- §173 — exact_only: when TRUE, admit ONLY rank-0 (certified label); equivalent evidence excluded.
     AND (NOT (params.filters ? 'label_scheme_ranked') OR (
       exact_label.evidence_count > 0
-      OR sustainability_evidence.evidence_count > 0
-      OR accessibility_evidence.evidence_count > 0
+      OR (NOT params.exact_only AND (
+        sustainability_evidence.evidence_count > 0
+        OR accessibility_evidence.evidence_count > 0
+      ))
     ));
 $$;
 

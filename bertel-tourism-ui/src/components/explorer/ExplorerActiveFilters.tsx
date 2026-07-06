@@ -19,28 +19,33 @@ import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chi
  * par condition active (terme de recherche compris) + « Tout effacer ». Dérivée
  * du store ; chaque pastille ne retire que SON filtre via le setter approprié.
  */
-export function ExplorerActiveFilters() {
-  const common = useExplorerStore((s) => s.common);
-  const selectedBuckets = useExplorerStore((s) => s.selectedBuckets);
+interface ExplorerActiveFiltersProps {
+  /** Hook de store à piloter — défaut = singleton Explorer (Explorer & tests inchangés). */
+  useStore?: typeof useExplorerStore;
+}
+
+export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerActiveFiltersProps = {}) {
+  const common = useStore((s) => s.common);
+  const selectedBuckets = useStore((s) => s.selectedBuckets);
   // D23 : les facettes par bucket alimentent désormais aussi la barre de chips.
-  const hot = useExplorerStore((s) => s.hot);
-  const res = useExplorerStore((s) => s.res);
-  const iti = useExplorerStore((s) => s.iti);
-  const setSearch = useExplorerStore((s) => s.setSearch);
-  const toggleBucket = useExplorerStore((s) => s.toggleBucket);
-  const setCities = useExplorerStore((s) => s.setCities);
-  const setLieuDit = useExplorerStore((s) => s.setLieuDit);
-  const setPmr = useExplorerStore((s) => s.setPmr);
-  const setPetsAccepted = useExplorerStore((s) => s.setPetsAccepted);
-  const setOpenNow = useExplorerStore((s) => s.setOpenNow);
-  const setSustainable = useExplorerStore((s) => s.setSustainable);
-  const toggleLabel = useExplorerStore((s) => s.toggleLabel);
-  const toggleTag = useExplorerStore((s) => s.toggleTag);
-  const toggleStatus = useExplorerStore((s) => s.toggleStatus);
-  const setRankedLabelScheme = useExplorerStore((s) => s.setRankedLabelScheme);
-  const setRankedLabelIncludeEquivalents = useExplorerStore((s) => s.setRankedLabelIncludeEquivalents);
-  const setRankedLabelValueCodes = useExplorerStore((s) => s.setRankedLabelValueCodes);
-  const resetAll = useExplorerStore((s) => s.resetAll);
+  const hot = useStore((s) => s.hot);
+  const res = useStore((s) => s.res);
+  const iti = useStore((s) => s.iti);
+  const setSearch = useStore((s) => s.setSearch);
+  const toggleBucket = useStore((s) => s.toggleBucket);
+  const setCities = useStore((s) => s.setCities);
+  const setLieuDit = useStore((s) => s.setLieuDit);
+  const setPmr = useStore((s) => s.setPmr);
+  const setPetsAccepted = useStore((s) => s.setPetsAccepted);
+  const setOpenNow = useStore((s) => s.setOpenNow);
+  const setSustainable = useStore((s) => s.setSustainable);
+  const toggleLabel = useStore((s) => s.toggleLabel);
+  const toggleTag = useStore((s) => s.toggleTag);
+  const toggleStatus = useStore((s) => s.toggleStatus);
+  const setRankedLabelScheme = useStore((s) => s.setRankedLabelScheme);
+  const setRankedLabelIncludeEquivalents = useStore((s) => s.setRankedLabelIncludeEquivalents);
+  const setRankedLabelValueCodes = useStore((s) => s.setRankedLabelValueCodes);
+  const resetAll = useStore((s) => s.resetAll);
   const router = useRouter();
   const [savingDynamic, setSavingDynamic] = useState(false);
 
@@ -56,7 +61,7 @@ export function ExplorerActiveFilters() {
   // pour bâtir le payload de résolution, dans la même forme que le moteur DB.
   const saveDynamic = async () => {
     if (savingDynamic) return;
-    const snapshot = useExplorerStore.getState() as unknown as ExplorerFilters;
+    const snapshot = useStore.getState() as unknown as ExplorerFilters;
     const payload = buildDynamicListFilters(snapshot);
     if (payload.buckets.length === 0) return;
     setSavingDynamic(true);
@@ -117,64 +122,64 @@ export function ExplorerActiveFilters() {
       // D23 — retraits des filtres jusqu'ici invisibles. Les chips « compteur »
       // (valeur '*') retirent l'ensemble de leur groupe via les toggles unitaires.
       case 'zone':
-        useExplorerStore.getState().resetSpatialFilter();
+        useStore.getState().resetSpatialFilter();
         break;
       case 'environment':
-        useExplorerStore.getState().setEnvironmentTags([]);
+        useStore.getState().setEnvironmentTags([]);
         break;
       case 'openAt':
-        useExplorerStore.getState().setOpenAt(null);
+        useStore.getState().setOpenAt(null);
         break;
       case 'amenityFamilies':
-        useExplorerStore.getState().setAmenityFamilies([]);
+        useStore.getState().setAmenityFamilies([]);
         break;
       case 'evtDates':
-        useExplorerStore.getState().setEvtEventRange(null, null);
+        useStore.getState().setEvtEventRange(null, null);
         break;
       case 'accessDisability':
-        useExplorerStore.getState().toggleAccessibilityDisabilityType(chip.value as AccessibilityDisabilityTypeCode);
+        useStore.getState().toggleAccessibilityDisabilityType(chip.value as AccessibilityDisabilityTypeCode);
         break;
       case 'accessAmenities':
-        for (const code of useExplorerStore.getState().common.accessibilityAmenityCodesAny ?? []) {
-          useExplorerStore.getState().toggleAccessibilityAmenity(code);
+        for (const code of useStore.getState().common.accessibilityAmenityCodesAny ?? []) {
+          useStore.getState().toggleAccessibilityAmenity(code);
         }
         break;
       case 'sustCategories':
-        for (const code of useExplorerStore.getState().common.sustainabilityCategoryCodesAny ?? []) {
-          useExplorerStore.getState().toggleSustainabilityCategory(code);
+        for (const code of useStore.getState().common.sustainabilityCategoryCodesAny ?? []) {
+          useStore.getState().toggleSustainabilityCategory(code);
         }
         break;
       case 'sustActions':
-        for (const code of useExplorerStore.getState().common.sustainabilityActionCodesAny ?? []) {
-          useExplorerStore.getState().toggleSustainabilityAction(code);
+        for (const code of useStore.getState().common.sustainabilityActionCodesAny ?? []) {
+          useStore.getState().toggleSustainabilityAction(code);
         }
         break;
       case 'taxonomy':
-        for (const item of useExplorerStore.getState().common.taxonomyAny ?? []) {
-          useExplorerStore.getState().toggleTaxonomy(item.domain, item.code);
+        for (const item of useStore.getState().common.taxonomyAny ?? []) {
+          useStore.getState().toggleTaxonomy(item.domain, item.code);
         }
         break;
       case 'hotCapacity':
-        useExplorerStore.getState().setHotCapacityFilter(chip.value, undefined, undefined);
+        useStore.getState().setHotCapacityFilter(chip.value, undefined, undefined);
         break;
       case 'resCapacity':
-        useExplorerStore.getState().setResCapacityFilter(chip.value, undefined, undefined);
+        useStore.getState().setResCapacityFilter(chip.value, undefined, undefined);
         break;
       case 'itiLoop':
-        useExplorerStore.getState().setItiIsLoop(null);
+        useStore.getState().setItiIsLoop(null);
         break;
       case 'itiDifficulty':
-        useExplorerStore.getState().setItiDifficulty(undefined, undefined);
+        useStore.getState().setItiDifficulty(undefined, undefined);
         break;
       case 'itiDistance':
-        useExplorerStore.getState().setItiDistance(undefined, undefined);
+        useStore.getState().setItiDistance(undefined, undefined);
         break;
       case 'itiDuration':
-        useExplorerStore.getState().setItiDuration(undefined, undefined);
+        useStore.getState().setItiDuration(undefined, undefined);
         break;
       case 'itiPractices':
-        for (const code of useExplorerStore.getState().iti.practicesAny ?? []) {
-          useExplorerStore.getState().toggleItiPractice(code);
+        for (const code of useStore.getState().iti.practicesAny ?? []) {
+          useStore.getState().toggleItiPractice(code);
         }
         break;
     }

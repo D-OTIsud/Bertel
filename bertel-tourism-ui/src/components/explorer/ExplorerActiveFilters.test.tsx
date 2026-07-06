@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ExplorerActiveFilters } from './ExplorerActiveFilters';
-import { useExplorerStore } from '../../store/explorer-store';
+import { useExplorerStore, useDashboardExplorerStore } from '../../store/explorer-store';
 import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
 
 // Le composant navigue vers la compose après « ★ Liste dynamique » (417397e).
@@ -42,5 +42,14 @@ describe('ExplorerActiveFilters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Tout effacer' }));
     expect(useExplorerStore.getState().common.search).toBe(DEFAULT_EXPLORER_FILTERS.common.search);
     expect(useExplorerStore.getState().common.pmr).toBe(false);
+  });
+
+  it('affiche une chip depuis le store passé en prop', () => {
+    act(() => {
+      useDashboardExplorerStore.getState().resetAll();
+      useDashboardExplorerStore.getState().setCities(['Le Tampon']);
+    });
+    render(<ExplorerActiveFilters useStore={useDashboardExplorerStore} />);
+    expect(screen.getByText(/Le Tampon/)).toBeInTheDocument();
   });
 });

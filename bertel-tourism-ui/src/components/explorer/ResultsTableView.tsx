@@ -9,7 +9,7 @@ import {
 } from '../../store/explorer-view-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
-import { buildResultSections } from '../../utils/explorer-result-sections';
+import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
 import { buildTableCsv, sortCards, TABLE_COLUMNS } from './table-columns';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,13 @@ interface ResultsTableViewProps {
   labelRankCounts?: { labelled: number; equivalent: number };
   /** Actions injectées dans le header (ex. ExplorerViewSwitch — plus de barre dédiée). */
   headerActions?: ReactNode;
+  /**
+   * §174 — quand un scheme de classement gradué est actif (≥2 valeurs résolues côté
+   * ExplorerPage), les sections deviennent des niveaux de classement (buildGradeSections)
+   * au lieu des sections §173 labellisés/équivalents. Mutuellement exclusif avec le
+   * regroupement §173 : quand présent, il remplace entièrement `labelRankCounts`.
+   */
+  gradeSection?: { schemeCode: string; values: { code: string; name: string }[] } | null;
 }
 
 /** Gestionnaire de colonnes (visibilité + ordre) — popover maison, fermé à l'Escape / clic dehors. */
@@ -133,6 +140,7 @@ export function ResultsTableView({
   onLoadMore,
   labelRankCounts,
   headerActions,
+  gradeSection,
 }: ResultsTableViewProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
@@ -149,8 +157,28 @@ export function ResultsTableView({
   const columns = tableColumns.map((id) => TABLE_COLUMNS[id]).filter(Boolean);
   const sortedCards = useMemo(() => sortCards(cards, tableSort), [cards, tableSort]);
   const allLoadedSelected = cards.length > 0 && cards.every((card) => selectedObjectIds.includes(card.id));
-  const sections = buildResultSections(cards, labelRankCounts);
+  // §174 — quand un scheme classé est actif (gradeSection, résolu par ExplorerPage), les
+  // sections deviennent des niveaux de classement à la place des sections §173 ; les deux
+  // modes sont mutuellement exclusifs (jamais combinés).
+  const sections = gradeSection
+    ? buildGradeSections(cards, gradeSection.schemeCode, gradeSection.values)
+    : buildResultSections(cards, labelRankCounts);
   const colSpan = 1 + columns.length;
+
+  // §174 — état de repli des groupes, local à la vue (pas store/URL) : purement une
+  // préférence d'affichage temporaire. Les groupes §173 partagent le même rendu d'en-tête
+  // et deviennent donc repliables eux aussi (cohérent avec la vue liste, pas de régression).
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const toggleCollapsed = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
 
   function handleExportCsv() {
     const csv = buildTableCsv(sortedCards, tableColumns);
@@ -313,14 +341,25 @@ export function ResultsTableView({
           </thead>
           <tbody>
             {sections.grouped
-              ? sections.groups.flatMap((grp) => [
-                  <tr key={`grp-${grp.group}`} className="results-table__group-row">
-                    <td className="results-table__group-cell" colSpan={colSpan}>
-                      {grp.label} <span className="results-table__dim">· {grp.count}</span>
-                    </td>
-                  </tr>,
-                  ...sortCards(grp.cards, tableSort).map(renderRow),
-                ])
+              ? sections.groups.flatMap((grp) => {
+                  const isCollapsed = collapsed.has(grp.group);
+                  return [
+                    <tr key={`grp-${grp.group}`} className="results-table__group-row">
+                      <td className="results-table__group-cell" colSpan={colSpan}>
+                        <button
+                          type="button"
+                          className="results-table__sort"
+                          onClick={() => toggleCollapsed(grp.group)}
+                          aria-expanded={!isCollapsed}
+                        >
+                          {isCollapsed ? <ChevronUp size={12} aria-hidden /> : <ChevronDown size={12} aria-hidden />}
+                          {grp.label} <span className="results-table__dim">· {grp.count}</span>
+                        </button>
+                      </td>
+                    </tr>,
+                    ...(isCollapsed ? [] : sortCards(grp.cards, tableSort).map(renderRow)),
+                  ];
+                })
               : sortedCards.map(renderRow)}
           </tbody>
         </table>

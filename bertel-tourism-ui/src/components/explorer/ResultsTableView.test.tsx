@@ -154,4 +154,66 @@ describe('ResultsTableView (D17 — table dense Explorer)', () => {
     expect(screen.getByText('Établissements labellisés')).toBeInTheDocument();
     expect(screen.getByText(/Aussi pertinents/)).toBeInTheDocument();
   });
+
+  it('affiche les niveaux de classement (5 étoiles en premier) et replie une section au clic quand gradeSection est fourni', () => {
+    const gradedCards: ObjectCard[] = [
+      {
+        id: 'obj-3star',
+        type: 'HOT',
+        name: 'Trois Etoiles',
+        status: 'published',
+        rating: null,
+        location: { city: 'Le Tampon' },
+        updated_at: null,
+        labels: [],
+        badges: [{ code: 'meuble_stars:3' }],
+      },
+      {
+        id: 'obj-5star',
+        type: 'HOT',
+        name: 'Cinq Etoiles',
+        status: 'published',
+        rating: null,
+        location: { city: 'Cilaos' },
+        updated_at: null,
+        labels: [],
+        badges: [{ code: 'meuble_stars:5' }],
+      },
+    ];
+
+    renderTable({
+      cards: gradedCards,
+      gradeSection: {
+        schemeCode: 'meuble_stars',
+        values: [
+          { code: '1', name: '1 étoile' },
+          { code: '2', name: '2 étoiles' },
+          { code: '3', name: '3 étoiles' },
+          { code: '4', name: '4 étoiles' },
+          { code: '5', name: '5 étoiles' },
+        ],
+      },
+    });
+
+    const groupRows = document.querySelectorAll('tr.results-table__group-row');
+    expect(groupRows).toHaveLength(2);
+    const fiveStarHeader = screen.getByText('5 étoiles');
+    const threeStarHeader = screen.getByText('3 étoiles');
+    expect(fiveStarHeader).toBeInTheDocument();
+    expect(threeStarHeader).toBeInTheDocument();
+    // 5 étoiles (niveau le plus haut) doit précéder 3 étoiles dans l'ordre du document.
+    expect(fiveStarHeader.compareDocumentPosition(threeStarHeader) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    expect(screen.getByText('Cinq Etoiles')).toBeInTheDocument();
+    expect(screen.getByText('Trois Etoiles')).toBeInTheDocument();
+
+    // Clic sur l'en-tête « 5 étoiles » replie ses lignes.
+    const fiveStarHeaderButton = fiveStarHeader.closest('button');
+    expect(fiveStarHeaderButton).not.toBeNull();
+    fireEvent.click(fiveStarHeaderButton as HTMLButtonElement);
+
+    expect(screen.queryByText('Cinq Etoiles')).not.toBeInTheDocument();
+    // L'autre section reste dépliée.
+    expect(screen.getByText('Trois Etoiles')).toBeInTheDocument();
+  });
 });

@@ -24,12 +24,23 @@ it('multi-bucket → facettes spécifiques exclues (transverse only), taxonomie 
     ...base,
     selectedBuckets: ['HOT', 'ITI'],
     iti: { ...base.iti, difficultyMax: 2 },              // spécifique — doit disparaître
-    common: { ...base.common, cities: ['Le Tampon'] },   // transverse — doit rester
+    common: {
+      ...base.common,
+      cities: ['Le Tampon'],                             // transverse — doit rester
+      taxonomyAny: [                                     // deux domaines distincts — doit être ré-agrégé, pas bucket-scopé
+        { domain: 'hebergement', code: 'HOT_CHAMBRE' },
+        { domain: 'itineraire', code: 'ITI_RANDONNEE' },
+      ],
+    },
   };
   const p = dashboardStatsParams(filters as any, {});
   expect(p.p_filters).not.toHaveProperty('itinerary');
   expect(p.p_filters).not.toHaveProperty('capacity_filters');
   expect(p.p_filters).toHaveProperty('city_any', ['Le Tampon']); // cleanString ne lowercase pas ; unaccent/lowercase côté RPC
+  const taxonomyAny = p.p_filters.taxonomy_any as Array<{ domain: string; code: string }>;
+  expect(taxonomyAny).toHaveLength(2);
+  expect(taxonomyAny).toContainEqual({ domain: 'hebergement', code: 'HOT_CHAMBRE' });
+  expect(taxonomyAny).toContainEqual({ domain: 'itineraire', code: 'ITI_RANDONNEE' });
 });
 
 it('période → p_updated_at_from/to', () => {

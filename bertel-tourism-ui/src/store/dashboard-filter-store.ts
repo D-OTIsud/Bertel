@@ -6,20 +6,16 @@ interface DashboardFilterState {
   updatedAtFrom: string | null;
   updatedAtTo: string | null;
   activeTab: DashboardTabKey;
-  sidebarCollapsed: boolean;
   setPeriod: (from: string | null, to: string | null) => void;
   clearPeriod: () => void;
   setActiveTab: (tab: DashboardTabKey) => void;
-  toggleSidebar: () => void;
 }
 
 export const useDashboardFilterStore = create<DashboardFilterState>((set) => ({
   updatedAtFrom: null,
   updatedAtTo: null,
   activeTab: 'quality',
-  sidebarCollapsed: false,
   setPeriod: (from, to) => set({ updatedAtFrom: from, updatedAtTo: to }),
   clearPeriod: () => set({ updatedAtFrom: null, updatedAtTo: null }),
   setActiveTab: (tab) => set({ activeTab: tab }),
-  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
 }));

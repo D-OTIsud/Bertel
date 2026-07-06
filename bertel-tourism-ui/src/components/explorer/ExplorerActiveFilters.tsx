@@ -39,6 +39,7 @@ export function ExplorerActiveFilters() {
   const toggleStatus = useExplorerStore((s) => s.toggleStatus);
   const setRankedLabelScheme = useExplorerStore((s) => s.setRankedLabelScheme);
   const setRankedLabelIncludeEquivalents = useExplorerStore((s) => s.setRankedLabelIncludeEquivalents);
+  const setRankedLabelValueCodes = useExplorerStore((s) => s.setRankedLabelValueCodes);
   const resetAll = useExplorerStore((s) => s.resetAll);
   const router = useRouter();
   const [savingDynamic, setSavingDynamic] = useState(false);
@@ -109,6 +110,9 @@ export function ExplorerActiveFilters() {
         break;
       case 'rankedLabelExact':
         setRankedLabelIncludeEquivalents(true);
+        break;
+      case 'rankedLabelValues':
+        setRankedLabelValueCodes([]);
         break;
       // D23 — retraits des filtres jusqu'ici invisibles. Les chips « compteur »
       // (valeur '*') retirent l'ensemble de leur groupe via les toggles unitaires.

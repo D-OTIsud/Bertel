@@ -153,3 +153,31 @@ describe('chip « Label obtenu uniquement » (rankedLabelExact)', () => {
     expect(chips.find((c) => c.group === 'rankedLabelExact')).toBeUndefined();
   });
 });
+
+describe('chip « Niveau · N sélectionné(s) » (rankedLabelValues, §174)', () => {
+  it('rend la chip compteur quand un schéma est actif et des niveaux sont sélectionnés', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3', '5'] }),
+    );
+    const chip = chips.find((c) => c.group === 'rankedLabelValues');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toBe('Niveau · 2 sélectionnés');
+  });
+
+  it('utilise le singulier pour un seul niveau sélectionné', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3'] }),
+    );
+    expect(chips.find((c) => c.group === 'rankedLabelValues')?.label).toBe('Niveau · 1 sélectionné');
+  });
+
+  it('ne rend pas la chip sans schéma actif, même avec des niveaux sélectionnés', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelValueCodes: ['3'] }));
+    expect(chips.find((c) => c.group === 'rankedLabelValues')).toBeUndefined();
+  });
+
+  it('ne rend pas la chip quand aucun niveau n’est sélectionné', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelSchemeCode: 'meuble_stars' }));
+    expect(chips.find((c) => c.group === 'rankedLabelValues')).toBeUndefined();
+  });
+});

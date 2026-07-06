@@ -49,6 +49,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
 
   const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const rankedLabelSchemeCode = searchParams.get('rankedLabel')?.trim() || undefined;
+  const rankedLabelValueCodes = searchParams.get('rankedLabelValues')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const accessibilityDisabilityTypesAny =
     searchParams.get('accessibilityTypes')?.split(',').map((item) => item.trim()).filter(Boolean) as
       | ExplorerFilters['common']['accessibilityDisabilityTypesAny']
@@ -124,6 +125,7 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('rankedLabelExact') != null && {
       rankedLabelIncludeEquivalents: searchParams.get('rankedLabelExact') !== 'true',
     }),
+    ...(rankedLabelValueCodes !== undefined && { rankedLabelValueCodes }),
     ...(statuses !== undefined && { statuses }),
   };
 
@@ -216,6 +218,9 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.rankedLabelSchemeCode && !normalizedFilters.common.rankedLabelIncludeEquivalents) {
     p.set('rankedLabelExact', 'true');
+  }
+  if (normalizedFilters.common.rankedLabelSchemeCode && normalizedFilters.common.rankedLabelValueCodes.length > 0) {
+    p.set('rankedLabelValues', normalizedFilters.common.rankedLabelValueCodes.join(','));
   }
   if (normalizedFilters.common.search) {
     p.set('search', normalizedFilters.common.search);

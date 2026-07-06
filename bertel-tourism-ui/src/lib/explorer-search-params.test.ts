@@ -41,3 +41,23 @@ describe('explorer-search-params — rankedLabelExact', () => {
     expect(parsed.common?.rankedLabelIncludeEquivalents).toBe(true);
   });
 });
+
+describe('explorer-search-params — rankedLabelValues', () => {
+  it('writes rankedLabelValues CSV only when a scheme + levels are set', () => {
+    const filters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'meuble_stars', rankedLabelValueCodes: ['3', '5'] },
+    };
+    expect(buildSearchParams(filters).get('rankedLabelValues')).toBe('3,5');
+  });
+
+  it('omits rankedLabelValues when no scheme', () => {
+    const filters = { ...DEFAULT_EXPLORER_FILTERS, common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelValueCodes: ['3'] } };
+    expect(buildSearchParams(filters).get('rankedLabelValues')).toBeNull();
+  });
+
+  it('parses rankedLabelValues CSV into an array', () => {
+    const parsed = parseSearchParams(new URLSearchParams('rankedLabel=meuble_stars&rankedLabelValues=3,5'));
+    expect(parsed.common?.rankedLabelValueCodes).toEqual(['3', '5']);
+  });
+});

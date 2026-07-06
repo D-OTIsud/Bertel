@@ -63,4 +63,21 @@ describe('AuthShell', () => {
 
     expect(container.querySelector('.auth-hero__acronym')).toBeNull();
   });
+
+  it('affiche le pied légal (confidentialité + CGU) ouvert en nouvel onglet', () => {
+    render(
+      <AuthShell>
+        <p>x</p>
+      </AuthShell>,
+    );
+
+    const privacy = screen.getByRole('link', { name: 'Confidentialité' });
+    expect(privacy).toHaveAttribute('href', '/legal/rgpd.html');
+    expect(privacy).toHaveAttribute('target', '_blank');
+    expect(privacy).toHaveAttribute('rel', 'noopener noreferrer');
+
+    const terms = screen.getByRole('link', { name: /Conditions d.utilisation/ });
+    expect(terms).toHaveAttribute('href', '/legal/cgu.html');
+    expect(terms).toHaveAttribute('rel', 'noopener noreferrer');
+  });
 });

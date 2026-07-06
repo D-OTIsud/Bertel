@@ -119,6 +119,13 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="auth-panel">{children}</div>
       </div>
+      {/* Pied légal — couvre toutes les pages hors-shell (/login, /set-password). Les cibles
+          sont servies en clair depuis public/legal/*.html (middleware = /api/public/* only). */}
+      <footer className="auth-legal">
+        <a href="/legal/rgpd.html" target="_blank" rel="noopener noreferrer">Confidentialité</a>
+        <span className="auth-legal__sep" aria-hidden="true">·</span>
+        <a href="/legal/cgu.html" target="_blank" rel="noopener noreferrer">Conditions d’utilisation</a>
+      </footer>
     </section>
   );
 }

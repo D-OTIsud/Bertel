@@ -55,6 +55,30 @@ BEGIN
   ) f WHERE f.object_id IN (v_labelled, v_equiv);
   ASSERT v_rows = 2, format('default should return both objects, got %s', v_rows);
 
-  RAISE NOTICE 'Label filter sectioning (exact_only) assertions passed.';
+  -- Sort: with a search term that matches BOTH, the labelled (rank-0) card must come FIRST.
+  DECLARE
+    v_page   jsonb;
+    v_first  text;
+    v_counts jsonb;
+  BEGIN
+    v_page := api.list_object_resources_filtered_page(
+      NULL, ARRAY['fr']::text[], 50,
+      jsonb_build_object('label_scheme_ranked','LBL_CLEF_VERTE'),
+      ARRAY['HOT']::object_type[], ARRAY['published']::object_status[],
+      'Sect Test'
+    )::jsonb;
+    SELECT (elem->>'id') INTO v_first
+    FROM jsonb_array_elements(v_page->'data') WITH ORDINALITY AS t(elem, ord)
+    WHERE (elem->>'id') IN (v_labelled, v_equiv)
+    ORDER BY ord LIMIT 1;
+    ASSERT v_first = v_labelled, format('labelled card must sort first under search, got %s', v_first);
+
+    v_counts := v_page->'meta'->'label_rank_counts';
+    ASSERT v_counts IS NOT NULL, 'meta.label_rank_counts must be present when label filter active';
+    ASSERT (v_counts->>'labelled')::int >= 1, format('labelled count wrong: %s', v_counts);
+    ASSERT (v_counts->>'equivalent')::int >= 1, format('equivalent count wrong: %s', v_counts);
+  END;
+
+  RAISE NOTICE 'Label filter sectioning (exact_only + sort + counts) assertions passed.';
 END$$;
 ROLLBACK;

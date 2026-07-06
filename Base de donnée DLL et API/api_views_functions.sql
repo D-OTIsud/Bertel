@@ -6096,6 +6096,8 @@ DECLARE
   v_render_version TEXT := '1.0';
   v_view TEXT := lower(COALESCE(p_view, 'card'));
   v_current_cursor TEXT;
+  v_rank0 INT;
+  v_rank1 INT;
 BEGIN
   v_render_locale := CASE
     WHEN array_length(p_lang_prefs,1) >= 1 AND position('-' IN p_lang_prefs[1]) > 0 THEN p_lang_prefs[1]
@@ -6162,9 +6164,9 @@ BEGIN
     JOIN object o ON o.id = fids.object_id
   ),
   paged AS (
-    SELECT f.*, ROW_NUMBER() OVER (ORDER BY f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
+    SELECT f.*, ROW_NUMBER() OVER (ORDER BY CASE WHEN v_filters ? 'label_scheme_ranked' THEN f.label_rank END, f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
     FROM filt f
-    ORDER BY f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id
+    ORDER BY CASE WHEN v_filters ? 'label_scheme_ranked' THEN f.label_rank END, f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id
     OFFSET v_offset LIMIT v_limit
   ),
   raw_data AS (
@@ -6212,8 +6214,10 @@ BEGIN
   )
   SELECT
     (SELECT COUNT(*) FROM filt) AS total,
-    (SELECT data FROM decorated_data) AS data
-  INTO v_total, v_data;
+    (SELECT data FROM decorated_data) AS data,
+    (SELECT COUNT(*) FROM filt WHERE label_rank = 0) AS rank0,
+    (SELECT COUNT(*) FROM filt WHERE label_rank = 1) AS rank1
+  INTO v_total, v_data, v_rank0, v_rank1;
 
   v_cursor := jsonb_build_object(
     'kind','page',
@@ -6244,6 +6248,10 @@ BEGIN
       'page_size', v_limit,
       'offset', v_offset,
       'total', v_total,
+      -- §173 — comptes corpus par rang quand le filtre label est actif (sinon null).
+      'label_rank_counts', CASE WHEN v_filters ? 'label_scheme_ranked'
+        THEN json_build_object('labelled', v_rank0, 'equivalent', v_rank1)
+        ELSE NULL END,
       'schema_version', '3.0',
       'render_locale', v_render_locale,
       'render_tz', v_render_tz,

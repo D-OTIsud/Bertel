@@ -36,7 +36,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const url = new URL(req.url);
   const cursor = url.searchParams.get('cursor');
-  const pageSize = Math.min(Math.max(Number(url.searchParams.get('page_size') ?? '50') || 50, 1), 200);
+  // Mode d'affichage : 'full' = fiche complète get_object_resource par item (lourd, plafond bas),
+  // 'card' (défaut) = carte allégée. Toute valeur ≠ 'full' ⇒ 'card'.
+  const view = (url.searchParams.get('view') ?? 'card').trim().toLowerCase() === 'full' ? 'full' : 'card';
+  const isFull = view === 'full';
+  // Plafond perf (§125) : full borné à 100 (mesuré ~3 s / 1,6 Mo), défaut 25 ; card inchangé 50/200.
+  const defaultSize = isFull ? 25 : 50;
+  const maxSize = isFull ? 100 : 200;
+  const pageSize = Math.min(Math.max(Number(url.searchParams.get('page_size') ?? String(defaultSize)) || defaultSize, 1), maxSize);
   // `types` — optional CSV of object_type codes. Normalize case (the enum is upper-case) and reject
   // any unknown code at the boundary (fail-fast) instead of letting the RPC cast it to the enum: an
   // invalid value raises Postgres 22P02 and would surface as a misleading 502 (audit CRITICAL
@@ -56,6 +63,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const lang = (url.searchParams.get('lang') ?? 'fr').trim() || 'fr';
   const search = url.searchParams.get('search');
   const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
+  // Blob GPX/KML des itinéraires — honoré uniquement en mode full (les cartes ne portent pas
+  // itinerary_details). Le tracé GeoJSON est de toute façon natif (track_geojson).
+  const trackParam = (url.searchParams.get('track') ?? '').trim().toLowerCase();
+  const track = isFull && (trackParam === 'gpx' || trackParam === 'kml') ? trackParam : 'none';
 
   const result = await callPublicRpc('list_object_resources_page_text', {
     p_cursor: cursor,
@@ -64,7 +75,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     p_types: types, // text[] — pre-validated upper-case object_type codes (unknown ⇒ 400 above)
     p_status: ['published'], // FORCED — partners see published only
     p_search: search,
-    p_track_format: 'none',
+    p_track_format: track,
+    p_view: view, // 'full' ⇒ fiche complète par item ; 'card' (défaut) ⇒ carte allégée
   });
 
   await logPartnerCall(partner.keyId, 'GET /api/public/objects', result.status);
@@ -74,6 +86,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const rpcBody = (result.body ?? {}) as { info?: Record<string, unknown>; meta?: Record<string, unknown>; data?: unknown };
   const pageInfo = rpcBody.info ?? rpcBody.meta ?? {};
   let items = Array.isArray(rpcBody.data) ? (rpcBody.data as Record<string, unknown>[]) : [];
+
+  if (isFull) {
+    // Mode full : chaque item est la fiche complète get_object_resource — retirer les 2 legs
+    // éditeur (Markdown i18n brut), exactement comme la route détail /objects/{id} (§106/§112).
+    items = items.map((it) => {
+      if (!it || typeof it !== 'object') return it;
+      const copy = { ...it };
+      delete copy.canonical_description;
+      delete copy.org_description;
+      return copy;
+    });
+  }
 
   if (PIVOT_FORMATS.has(format) && items.length > 0) {
     // One batch call for the whole page; merge each pivot document under item.<profil> (additive,

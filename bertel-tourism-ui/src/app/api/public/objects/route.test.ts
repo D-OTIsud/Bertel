@@ -207,4 +207,63 @@ describe('GET /api/public/objects', () => {
     expect(res.status).toBe(200);
     expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
   });
+
+  it('view=full — passe p_view:full et page_size par défaut 25', async () => {
+    await GET(req('?view=full'));
+    const [rpcName, params] = rpcMock.mock.calls[0];
+    expect(rpcName).toBe('list_object_resources_page_text');
+    expect(params.p_view).toBe('full');
+    expect(params.p_page_size).toBe(25);
+  });
+
+  it('view absent — mode carte (p_view:card, défaut 50)', async () => {
+    await GET(req());
+    const params = rpcMock.mock.calls[0][1];
+    expect(params.p_view).toBe('card');
+    expect(params.p_page_size).toBe(50);
+  });
+
+  it('view=full — page_size plafonné à 100 (pas 200)', async () => {
+    await GET(req('?view=full&page_size=9999'));
+    expect(rpcMock.mock.calls[0][1].p_page_size).toBe(100);
+  });
+
+  it('view=full — retire canonical_description et org_description de CHAQUE item', async () => {
+    rpcMock.mockResolvedValue({
+      ok: true, status: 200,
+      body: { info: {}, data: [
+        { id: 'X', name: 'N', canonical_description: { fr: 'brut' }, org_description: { fr: 'brut' } },
+      ] },
+    });
+    const res = await GET(req('?view=full'));
+    const json = await res.json();
+    expect(json.data[0]).toEqual({ id: 'X', name: 'N' });
+    expect(json.data[0]).not.toHaveProperty('canonical_description');
+    expect(json.data[0]).not.toHaveProperty('org_description');
+  });
+
+  it('mode carte — n\'altère PAS les items (pas de strip appliqué)', async () => {
+    rpcMock.mockResolvedValue({
+      ok: true, status: 200,
+      body: { info: {}, data: [{ id: 'X', canonical_description: { fr: 'gardé-en-carte' } }] },
+    });
+    const res = await GET(req()); // pas de view
+    const json = await res.json();
+    expect(json.data[0]).toEqual({ id: 'X', canonical_description: { fr: 'gardé-en-carte' } });
+  });
+
+  it('track=gpx avec view=full — passe p_track_format:gpx', async () => {
+    await GET(req('?view=full&track=gpx'));
+    expect(rpcMock.mock.calls[0][1].p_track_format).toBe('gpx');
+  });
+
+  it('track=gpx SANS view=full — ignoré (p_track_format:none en mode carte)', async () => {
+    await GET(req('?track=gpx'));
+    expect(rpcMock.mock.calls[0][1].p_track_format).toBe('none');
+  });
+
+  it('track invalide (view=full) — ignoré (p_track_format:none)', async () => {
+    await GET(req('?view=full&track=shp'));
+    expect(rpcMock.mock.calls[0][1].p_track_format).toBe('none');
+  });
 });

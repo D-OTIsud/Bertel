@@ -351,6 +351,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_org_branding.sql"
 
+      - name: "label section filter test (16k §173 — exact_only exclut les équivalents + tri label_rank prioritaire sous recherche + meta.label_rank_counts présent)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_label_filter_sections.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

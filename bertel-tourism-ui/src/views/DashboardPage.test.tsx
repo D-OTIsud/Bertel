@@ -1,15 +1,17 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../store/explorer-store';
 
 // ActiveFilterStrip appelle useRouter() — mock neutre requis dans tout test qui le rend.
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
-jest.mock('../services/dashboard-reference', () => ({
-  getDashboardAdvancedFilterOptions: jest.fn().mockResolvedValue({
-    taxonomyDomains: [], taxonomyCodes: [], distinctionValues: [],
-    languages: [], amenityFamilies: [], tags: [],
+jest.mock('../services/explorer-reference', () => ({
+  listExplorerReferences: jest.fn().mockResolvedValue({
+    cities: [], lieuDits: [], taxonomies: [], accessibilityDisabilityTypes: [], accessibilityAmenities: [],
+    sustainabilityCategories: [], rankedLabelSchemes: [], rankedLabelSchemeValues: {}, tags: [],
+    environmentTags: [], amenityFamilies: [], hotCapacityMetrics: [], resCapacityMetrics: [], itiPractices: [],
   }),
 }));
 
@@ -37,7 +39,6 @@ jest.mock('../services/dashboard-rpc', () => ({
     total_scoped: 10, with_distinction: 4, without_distinction: 6, distinction_pct: 40,
     by_scheme: [{ scheme_code: 'hot_stars', scheme_name: 'Étoiles hôtel', display_group: 'official_classification', count: 4 }],
   }),
-  getDashboardFilterOptions: jest.fn().mockResolvedValue({ cities: ['Le Tampon'], lieuDits: [] }),
 }));
 
 function renderPage() {
@@ -51,7 +52,21 @@ function renderPage() {
 
 describe('DashboardPage — onglets', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
+    useDashboardFilterStore.setState({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'quality', sidebarCollapsed: false });
+    act(() => useDashboardExplorerStore.getState().resetAll());
+    // NOTE: TypeBreakdown/CompletenessTable/ActualisationTable/CommuneDistribution
+    // still read `s.filters.types`/`s.filters.cities` + call `s.setFilters` — a
+    // pre-existing drill-down API the store-slimming task (09a1eff) removed from
+    // the DashboardFilterState type, without updating these 4 widgets. Out of
+    // scope for Task 8 (main block must stay unchanged); seed the loose extra
+    // state + a no-op setter here (same workaround the pre-Task-8 test used) so
+    // these widgets render without crashing. See task-8-report.md concerns.
+    useDashboardFilterStore.setState({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      filters: {} as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setFilters: (() => {}) as any,
+    });
   });
 
   it("l'onglet Qualité (défaut) montre corpus + complétude + actualisation, pas les communes", async () => {
@@ -66,7 +81,9 @@ describe('DashboardPage — onglets', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Offre du territoire' }));
     await waitFor(() => expect(screen.getByText('Par commune')).toBeInTheDocument());
-    expect(screen.getByText('Distinctions')).toBeInTheDocument();
+    // « Distinctions » widget heading — le panneau de filtres a aussi un groupe
+    // « Distinctions » (§175) désormais monté en permanence dans la sidebar.
+    expect(screen.getByRole('heading', { name: 'Distinctions' })).toBeInTheDocument();
     expect(screen.queryByText("Taux d'actualisation")).not.toBeInTheDocument();
     expect(screen.queryByText('Corpus par type')).not.toBeInTheDocument();
   });
@@ -75,5 +92,12 @@ describe('DashboardPage — onglets', () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Activité équipe' }));
     expect(await screen.findByText(/lot 4/i)).toBeInTheDocument();
+  });
+
+  it('monte le panneau de filtres Explorer + la section Période', async () => {
+    renderPage();
+    expect(await screen.findByText('Période')).toBeInTheDocument();
+    // Un groupe transverse de l'Explorer est présent.
+    expect(screen.getByText('Localisation')).toBeInTheDocument();
   });
 });

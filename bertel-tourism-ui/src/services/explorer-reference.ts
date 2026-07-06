@@ -109,7 +109,7 @@ function toReferenceOptions<T extends { code: string; name: string; position?: n
   return sortByPositionAndName(rows).map((row) => ({ code: row.code, name: row.name }));
 }
 
-// §173 — le filtre « Classement / label » de l'Explorer expose TOUTES les distinctions
+// §173/§175 — le filtre « Distinctions » de l'Explorer expose TOUTES les distinctions
 // (is_distinction), pas seulement durabilité/accessibilité : classements officiels (étoiles/
 // épis/clés) + labels qualité y compris. Regroupées par famille (`display_group`) pour les
 // en-têtes du menu déroulant. Ordre : Classements → Labels qualité → Durabilité → Accessibilité.
@@ -322,7 +322,8 @@ function buildDemoReferences(): ExplorerReferences {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     rankedLabelSchemes: [
       { code: 'meuble_stars', name: 'Classement meublés', group: 'Classements' },
-      { code: 'gites_epics', name: 'Gîtes de France (épis)', group: 'Classements' },
+      // §175 — Gîtes de France est un label de réseau (épis), pas un classement officiel.
+      { code: 'gites_epics', name: 'Gîtes de France (épis)', group: 'Labels qualité' },
       { code: 'qualite_tourisme_reunion', name: 'Qualité Tourisme Île de La Réunion', group: 'Labels qualité' },
       { code: 'LBL_CLEF_VERTE', name: 'Clef Verte', group: 'Durabilité' },
       { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap', group: 'Accessibilité' },

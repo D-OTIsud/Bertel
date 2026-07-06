@@ -132,3 +132,11 @@ test('useDashboardExplorerStore est une instance indépendante du singleton Expl
   // Le singleton Explorer n'est pas affecté.
   expect(useExplorerStore.getState().selectedBuckets).not.toContain('HOT');
 });
+
+test('setHotSubtypes fixe exactement les sous-types (vide → défaut)', () => {
+  useDashboardExplorerStore.getState().resetAll();
+  useDashboardExplorerStore.getState().setHotSubtypes(['HLO']);
+  expect(useDashboardExplorerStore.getState().hot.subtypes).toEqual(['HLO']);
+  useDashboardExplorerStore.getState().setHotSubtypes([]);
+  expect(useDashboardExplorerStore.getState().hot.subtypes.length).toBeGreaterThan(1); // défaut = tous
+});

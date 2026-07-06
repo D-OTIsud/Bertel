@@ -65,6 +65,9 @@ export default function ExplorerPage() {
   const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;
   const isRefreshing = cardsQuery.isRefreshing;
   const labelRankCounts = cardsQuery.labelRankCounts;
+  // Vrai total du corpus (COUNT serveur, avant pagination) — l'en-tête « N fiches » l'affiche à
+  // la place du nombre de cartes chargées, pour rester cohérent avec la carte (§125).
+  const totalCount = cardsQuery.totalCount;
 
   // §174 — quand un scheme de classement gradué est actif, résoudre ses valeurs contre les
   // références chargées ; « gradué » = au moins 2 valeurs (sinon un seul niveau ne vaut pas
@@ -122,6 +125,7 @@ export default function ExplorerPage() {
           isLoadingMore={cardsQuery.isFetchingNextPage}
           onLoadMore={() => void cardsQuery.fetchNextPage()}
           labelRankCounts={labelRankCounts}
+          totalCount={totalCount}
           gradeSection={gradeSection}
         />
       );
@@ -216,6 +220,7 @@ export default function ExplorerPage() {
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
               labelRankCounts={labelRankCounts}
+              totalCount={totalCount}
               gradeSection={gradeSection}
               headerActions={<ExplorerViewSwitch />}
             />
@@ -229,6 +234,7 @@ export default function ExplorerPage() {
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
               labelRankCounts={labelRankCounts}
+              totalCount={totalCount}
               gradeSection={gradeSection}
               headerActions={<ExplorerViewSwitch />}
             />

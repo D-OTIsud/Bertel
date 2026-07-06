@@ -181,11 +181,17 @@ export function useExplorerCardsQuery() {
     [query.data],
   );
 
+  // Real corpus size (COUNT(*) filtré serveur), read from PAGE 0 for the same reason as
+  // labelRankCounts. Drives « N fiches » in the results header so it shows the true total —
+  // not just the lazily-loaded cards — and stays aligned with the map's full matching set.
+  const totalCount = useMemo(() => query.data?.pages?.[0]?.totalCount ?? 0, [query.data]);
+
   return {
     ...query,
     data,
     isRefreshing,
     labelRankCounts,
+    totalCount,
   };
 }
 

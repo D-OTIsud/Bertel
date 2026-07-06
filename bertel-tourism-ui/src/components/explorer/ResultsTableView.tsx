@@ -22,6 +22,11 @@ interface ResultsTableViewProps {
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
   labelRankCounts?: { labelled: number; equivalent: number };
+  /**
+   * Vrai total du corpus (COUNT serveur) affiché comme « N fiches » — découplé de `cards`
+   * (chargées au scroll). Absent ⇒ repli sur le nombre de lignes chargées. Cf. ResultsList.
+   */
+  totalCount?: number;
   /** Actions injectées dans le header (ex. ExplorerViewSwitch — plus de barre dédiée). */
   headerActions?: ReactNode;
   /**
@@ -139,6 +144,7 @@ export function ResultsTableView({
   isLoadingMore = false,
   onLoadMore,
   labelRankCounts,
+  totalCount,
   headerActions,
   gradeSection,
 }: ResultsTableViewProps) {
@@ -239,7 +245,7 @@ export function ResultsTableView({
         <div className="flex min-w-0 items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           <span className="truncate">Résultats</span>
           <span className="truncate font-sans text-xs font-medium text-ink-3">
-            {cards.length} fiches{isRefreshing ? ' · mise à jour…' : ''}
+            {totalCount ?? cards.length} fiches{isRefreshing ? ' · mise à jour…' : ''}
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">

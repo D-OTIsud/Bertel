@@ -56,6 +56,17 @@ describe('ResultsTableView (D17 — table dense Explorer)', () => {
     expect(screen.getAllByRole('row')).toHaveLength(3);
   });
 
+  it('affiche le total du corpus (totalCount) dans l’en-tête, pas seulement les lignes chargées', () => {
+    renderTable({ totalCount: 137 });
+    expect(screen.getByText('137 fiches')).toBeInTheDocument();
+    expect(screen.queryByText('2 fiches')).toBeNull();
+  });
+
+  it('retombe sur le nombre de lignes chargées quand aucun totalCount n’est fourni', () => {
+    renderTable();
+    expect(screen.getByText('2 fiches')).toBeInTheDocument();
+  });
+
   it('le clic sur l’en-tête Nom cycle asc → desc et réordonne les lignes', () => {
     renderTable();
     const sortByName = screen.getByRole('button', { name: 'Nom' });

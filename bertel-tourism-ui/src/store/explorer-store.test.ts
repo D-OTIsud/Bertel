@@ -1,4 +1,4 @@
-import { useExplorerStore } from './explorer-store';
+import { useExplorerStore, useDashboardExplorerStore } from './explorer-store';
 
 /**
  * Tag click-to-filter store contract (mirror of toggleLabel/clearLabels).
@@ -120,4 +120,15 @@ describe('§157 — exclusion openNow ↔ openAt', () => {
     expect(useExplorerStore.getState().common.openAt).toBeNull();
     useExplorerStore.getState().resetAll();
   });
+});
+
+test('useDashboardExplorerStore est une instance indépendante du singleton Explorer', () => {
+  useExplorerStore.getState().resetAll();
+  useDashboardExplorerStore.getState().resetAll();
+
+  useDashboardExplorerStore.getState().toggleBucket('HOT');
+
+  expect(useDashboardExplorerStore.getState().selectedBuckets).toContain('HOT');
+  // Le singleton Explorer n'est pas affecté.
+  expect(useExplorerStore.getState().selectedBuckets).not.toContain('HOT');
 });

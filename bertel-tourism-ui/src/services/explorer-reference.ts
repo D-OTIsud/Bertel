@@ -82,6 +82,13 @@ type LabelSchemeRow = {
   display_group: string | null;
 };
 
+type ClassificationValueRow = {
+  code: string;
+  name: string;
+  position: number | null;
+  scheme: { code?: string | null } | null;
+};
+
 const ACCESSIBILITY_DISABILITY_CODES = new Set(ACCESSIBILITY_DISABILITY_TYPE_OPTIONS.map((option) => option.code));
 const ACCESSIBILITY_DISABILITY_REFERENCES: ExplorerReferenceOption[] = ACCESSIBILITY_DISABILITY_TYPE_OPTIONS.map((option) => ({
   code: option.code,
@@ -128,6 +135,33 @@ function toRankedLabelOptions(rows: LabelSchemeRow[]): ExplorerReferenceOption[]
       return a.row.name.localeCompare(b.row.name, 'fr', { sensitivity: 'base' });
     })
     .map(({ row, family }) => ({ code: row.code, name: row.name, group: family.label }));
+}
+
+// §174 — paliers de note d'un scheme classé (ref_classification_value), groupés par code de
+// scheme et triés par grade croissant (position, puis code numérique, puis nom en repli).
+export function toRankedLabelSchemeValues(rows: ClassificationValueRow[]): Record<string, ExplorerReferenceOption[]> {
+  const bySchemeCode = new Map<string, ClassificationValueRow[]>();
+  for (const row of rows) {
+    const schemeCode = row.scheme?.code ?? '';
+    if (!schemeCode || !row.code) continue;
+    const current = bySchemeCode.get(schemeCode) ?? [];
+    current.push(row);
+    bySchemeCode.set(schemeCode, current);
+  }
+  const result: Record<string, ExplorerReferenceOption[]> = {};
+  for (const [schemeCode, values] of bySchemeCode) {
+    result[schemeCode] = [...values]
+      .sort((a, b) => {
+        const positionCompare = (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER);
+        if (positionCompare !== 0) return positionCompare;
+        const numA = Number(a.code);
+        const numB = Number(b.code);
+        if (!Number.isNaN(numA) && !Number.isNaN(numB) && numA !== numB) return numA - numB;
+        return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base', numeric: true });
+      })
+      .map((value) => ({ code: value.code, name: value.name }));
+  }
+  return result;
 }
 
 function readRecord(value: unknown): Record<string, unknown> {
@@ -293,6 +327,16 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'LBL_CLEF_VERTE', name: 'Clef Verte', group: 'Durabilité' },
       { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap', group: 'Accessibilité' },
     ],
+    rankedLabelSchemeValues: {
+      meuble_stars: [
+        { code: '1', name: '1 étoile' }, { code: '2', name: '2 étoiles' }, { code: '3', name: '3 étoiles' },
+        { code: '4', name: '4 étoiles' }, { code: '5', name: '5 étoiles' },
+      ],
+      gites_epics: [
+        { code: '1', name: '1 épi' }, { code: '2', name: '2 épis' }, { code: '3', name: '3 épis' },
+        { code: '4', name: '4 épis' }, { code: '5', name: '5 épis' },
+      ],
+    },
     accessibilityAmenities: [
       { code: 'acc_pmr_parking', name: 'Places PMR', disabilityTypes: ['motor'] },
       { code: 'acc_step_removal', name: 'Acces sans ressaut', disabilityTypes: ['motor'] },
@@ -414,6 +458,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     sustainabilityCategoriesResult,
     sustainabilityActionsResult,
     rankedLabelSchemesResult,
+    rankedLabelSchemeValuesResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
@@ -450,6 +495,10 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
       .from('ref_classification_scheme')
       .select('code,name,position,display_group')
       .eq('is_distinction', true)
+      .order('position', { ascending: true }),
+    client
+      .from('ref_classification_value')
+      .select('code,name,position,scheme:scheme_id(code,is_distinction)')
       .order('position', { ascending: true }),
   ]);
 
@@ -489,6 +538,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (rankedLabelSchemesResult.error) {
     throw rankedLabelSchemesResult.error;
   }
+  if (rankedLabelSchemeValuesResult.error) {
+    throw rankedLabelSchemeValuesResult.error;
+  }
 
   const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
   const domainCodes = taxonomyDomains.map((domain) => domain.domain);
@@ -516,12 +568,17 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const sustainabilityCategories = (sustainabilityCategoriesResult.data ?? []) as SustainabilityCategoryRow[];
   const sustainabilityActions = (sustainabilityActionsResult.data ?? []) as SustainabilityActionRow[];
   const rankedLabelSchemes = (rankedLabelSchemesResult.data ?? []) as LabelSchemeRow[];
+  // §174 — filtre JS aux schemes classés (is_distinction) : la table est petite, filtrer côté
+  // client après un select embarqué reste simple et robuste (pas besoin d'un second aller-retour).
+  const rankedLabelSchemeValues = ((rankedLabelSchemeValuesResult.data ?? []) as (ClassificationValueRow & { scheme: { code?: string | null; is_distinction?: boolean | null } | null })[])
+    .filter((row) => row.scheme?.is_distinction === true);
 
   return {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
     rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes),
+    rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),

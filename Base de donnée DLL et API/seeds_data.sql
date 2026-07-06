@@ -1151,17 +1151,11 @@ WHERE code IN (
 
 -- Affecter le groupe d'affichage dashboard aux schemes existants (idempotent).
 -- Classements OFFICIELS de l'État (étoiles Atout France) uniquement — cf. §175.
+-- Gîtes de France / Clévacances (labels notés de réseau privé) sont regroupés en
+-- `graded_label` APRÈS l'insertion de « Logis » ci-dessous (§176), pas ici.
 UPDATE ref_classification_scheme
 SET display_group = 'official_classification'
 WHERE code IN ('hot_stars', 'camp_stars', 'meuble_stars');
-
--- §175 — Gîtes de France (épis) et Clévacances (clés) sont des LABELS de réseau
--- privés, PAS des classements officiels : groupe `quality_label` (comme « Logis »).
--- Le mot « classement » (registre pro) reste réservé au classement officiel Atout
--- France. Voir migration_classification_regroup_network_labels.sql (converge le live).
-UPDATE ref_classification_scheme
-SET display_group = 'quality_label'
-WHERE code IN ('gites_epics', 'clevacances_keys');
 
 -- display_group UPDATEs for green_key/eu_ecolabel (environmental_label) and tourisme_handicap
 -- (accessibility_label) removed — these schemes are retired from the canonical seed path.
@@ -1317,6 +1311,16 @@ INSERT INTO ref_classification_scheme (code, name, description, selection, is_di
 ('tables_auberges',      'Tables & Auberges de France','Label restauration Tables & Auberges de France (catégories)',                                                  'single',  TRUE,'quality_label',24),
 ('logis',                'Logis',                     'Réseau Logis — classement cheminées (hébergement) et cocottes (restauration)',                                 'multiple',TRUE,'quality_label',25)
 ON CONFLICT (code) DO NOTHING;
+
+-- §176 — Distinctions NOTÉES de réseau privé (échelle numérique) → groupe dédié
+-- « Labels notés » (`graded_label`) : Gîtes de France (épis), Clévacances (clés),
+-- Logis (cheminées/cocottes). Ce sont des objets classés, mais pas par l'État —
+-- donc ni `official_classification` (Atout France) ni `quality_label` (labels
+-- binaires). Placé APRÈS l'insertion des trois. Voir
+-- migration_classification_graded_label_group.sql (converge le live). Idempotent.
+UPDATE ref_classification_scheme
+SET display_group = 'graded_label'
+WHERE code IN ('gites_epics', 'clevacances_keys', 'logis');
 
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, v.code, v.name, v.ordinal

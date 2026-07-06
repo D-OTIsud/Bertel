@@ -1,43 +1,48 @@
 -- test_classification_regroup_network_labels.sql
--- Garde permanente pour le reclassement §175 : Gîtes de France (`gites_epics`) et
--- Clévacances (`clevacances_keys`) sont des LABELS de réseau privés, pas des
--- classements officiels de l'État (étoiles Atout France). Ils doivent vivre dans
--- le groupe d'affichage `quality_label` (comme « Logis », label-réseau comparable),
--- jamais dans `official_classification`.
+-- Garde permanente pour le regroupement §175→§176 des distinctions de réseau privé.
 --
--- Contexte : retour métier OTI 2026-07-06 — « classement » (registre pro) = le
--- classement officiel Atout France uniquement. Le regroupement pilote les en-têtes
--- de menu (filtre Explorer, Dashboard DistinctionOverview, sélecteur éditeur §08).
--- Aucun RPC ne branche sur `official_classification` (seuls sustainability_labels /
--- accessibility_labels sont testés en dur) ⇒ reclassement inerte pour la logique.
+-- État final (§176) : Gîtes de France (`gites_epics`, épis 1-5), Clévacances
+-- (`clevacances_keys`, clés 1-5) et Logis (`logis`, cheminées/cocottes 1-3) sont des
+-- objets CLASSÉS (notés) par un réseau PRIVÉ — pas par l'État. Ils vivent dans le
+-- groupe dédié `graded_label` (« Labels notés »), JAMAIS dans `official_classification`
+-- (classement officiel Atout France) ni dans `quality_label` (labels binaires).
+--
+-- Contexte : retour métier OTI 2026-07-06. `display_group` pilote les en-têtes de
+-- regroupement (filtre Explorer « Distinctions », Dashboard DistinctionOverview,
+-- sélecteur éditeur §08). Aucun RPC ne branche sur ces groupes (seuls
+-- sustainability_labels / accessibility_labels sont testés en dur) ⇒ regroupement
+-- inerte pour la logique de filtrage/badge/cocarde/barre de niveaux.
 DO $$
 DECLARE
-  v_group_gites text;
-  v_group_cle   text;
-  v_leak        int;
+  v_graded int;
+  v_leak   int;
 BEGIN
-  -- (1) Les deux labels-réseau portent bien le groupe quality_label.
-  SELECT display_group INTO v_group_gites
-  FROM public.ref_classification_scheme WHERE code = 'gites_epics';
-  IF v_group_gites IS DISTINCT FROM 'quality_label' THEN
-    RAISE EXCEPTION 'gites_epics display_group attendu quality_label, obtenu %', v_group_gites;
+  -- (1) Les trois labels-réseau notés portent bien le groupe graded_label.
+  SELECT count(*) INTO v_graded
+  FROM public.ref_classification_scheme
+  WHERE display_group = 'graded_label'
+    AND code IN ('gites_epics', 'clevacances_keys', 'logis');
+  IF v_graded <> 3 THEN
+    RAISE EXCEPTION 'attendu 3 labels notés en graded_label (gites_epics/clevacances_keys/logis), obtenu %', v_graded;
   END IF;
 
-  SELECT display_group INTO v_group_cle
-  FROM public.ref_classification_scheme WHERE code = 'clevacances_keys';
-  IF v_group_cle IS DISTINCT FROM 'quality_label' THEN
-    RAISE EXCEPTION 'clevacances_keys display_group attendu quality_label, obtenu %', v_group_cle;
-  END IF;
-
-  -- (2) Aucun label-réseau privé connu ne subsiste dans official_classification :
-  --     ce groupe est réservé aux classements officiels de l'État (Atout France + OT).
+  -- (2) Aucun ne subsiste dans official_classification (réservé au classement
+  --     officiel de l'État) ni dans quality_label (labels binaires).
   SELECT count(*) INTO v_leak
   FROM public.ref_classification_scheme
-  WHERE display_group = 'official_classification'
-    AND code IN ('gites_epics', 'clevacances_keys');
+  WHERE display_group IN ('official_classification', 'quality_label')
+    AND code IN ('gites_epics', 'clevacances_keys', 'logis');
   IF v_leak <> 0 THEN
-    RAISE EXCEPTION 'un label-réseau (gites_epics/clevacances_keys) subsiste dans official_classification (% ligne(s))', v_leak;
+    RAISE EXCEPTION 'un label noté (gites_epics/clevacances_keys/logis) subsiste hors graded_label (% ligne(s))', v_leak;
   END IF;
 
-  RAISE NOTICE 'test_classification_regroup_network_labels: OK (gites_epics + clevacances_keys = quality_label)';
+  -- (3) official_classification reste les classements OFFICIELS gradués de l'État.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.ref_classification_scheme
+    WHERE code = 'hot_stars' AND display_group = 'official_classification'
+  ) THEN
+    RAISE EXCEPTION 'hot_stars devrait rester en official_classification';
+  END IF;
+
+  RAISE NOTICE 'test_classification_regroup_network_labels: OK (gites_epics + clevacances_keys + logis = graded_label)';
 END $$;

@@ -164,6 +164,7 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
   const setEvtEventRange = useExplorerStore((state) => state.setEvtEventRange);
   const setAmenityFamilies = useExplorerStore((state) => state.setAmenityFamilies);
   const setRankedLabelScheme = useExplorerStore((state) => state.setRankedLabelScheme);
+  const setRankedLabelIncludeEquivalents = useExplorerStore((state) => state.setRankedLabelIncludeEquivalents);
   const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const clearLabels = useExplorerStore((state) => state.clearLabels);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
@@ -614,6 +615,23 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
                 onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
               />
             </div>
+
+            {rankedLabelSchemeCode ? (
+              <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 accent-teal"
+                  checked={common.rankedLabelIncludeEquivalents}
+                  onChange={(event) => setRankedLabelIncludeEquivalents(event.target.checked)}
+                />
+                <span>
+                  <span className="font-medium">Inclure les démarches équivalentes</span>
+                  <span className="mt-0.5 block text-[12px] leading-snug text-ink-3">
+                    Affiche aussi les fiches sans le label mais avec des actions/équipements compatibles (2ᵉ section).
+                  </span>
+                </span>
+              </label>
+            ) : null}
 
             {labelsAny.length > 0 ? (
               <div className="space-y-2">

@@ -9,6 +9,7 @@ import {
 } from '../../store/explorer-view-store';
 import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
+import { buildResultSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
 import { buildTableCsv, sortCards, TABLE_COLUMNS } from './table-columns';
 import { cn } from '@/lib/utils';
@@ -130,6 +131,7 @@ export function ResultsTableView({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  labelRankCounts,
   headerActions,
 }: ResultsTableViewProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -147,6 +149,8 @@ export function ResultsTableView({
   const columns = tableColumns.map((id) => TABLE_COLUMNS[id]).filter(Boolean);
   const sortedCards = useMemo(() => sortCards(cards, tableSort), [cards, tableSort]);
   const allLoadedSelected = cards.length > 0 && cards.every((card) => selectedObjectIds.includes(card.id));
+  const sections = buildResultSections(cards, labelRankCounts);
+  const colSpan = 1 + columns.length;
 
   function handleExportCsv() {
     const csv = buildTableCsv(sortedCards, tableColumns);
@@ -158,6 +162,48 @@ export function ResultsTableView({
     anchor.click();
     URL.revokeObjectURL(url);
   }
+
+  const renderRow = (card: ObjectCard) => {
+    const inSelection = selectedObjectIds.includes(card.id);
+    return (
+      <tr
+        key={card.id}
+        className={cn(inSelection && 'is-selected')}
+        aria-selected={inSelection}
+        onClick={() => openDrawer(card.id)}
+      >
+        <td
+          className="results-table__check-col"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            aria-label={inSelection ? `Retirer ${card.name} de la sélection` : `Ajouter ${card.name} à la sélection`}
+            checked={inSelection}
+            onChange={() => toggleSelectedObject(card.id)}
+          />
+        </td>
+        {columns.map((column, columnIndex) => (
+          <td key={column.id} className={cn(column.numeric && 'results-table__num')}>
+            {columnIndex === 0 ? (
+              <button
+                type="button"
+                className="results-table__open"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openDrawer(card.id);
+                }}
+              >
+                {column.render(card)}
+              </button>
+            ) : (
+              column.render(card)
+            )}
+          </td>
+        ))}
+      </tr>
+    );
+  };
 
   return (
     <div className="flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
@@ -266,47 +312,16 @@ export function ResultsTableView({
             </tr>
           </thead>
           <tbody>
-            {sortedCards.map((card) => {
-              const inSelection = selectedObjectIds.includes(card.id);
-              return (
-                <tr
-                  key={card.id}
-                  className={cn(inSelection && 'is-selected')}
-                  aria-selected={inSelection}
-                  onClick={() => openDrawer(card.id)}
-                >
-                  <td
-                    className="results-table__check-col"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <input
-                      type="checkbox"
-                      aria-label={inSelection ? `Retirer ${card.name} de la sélection` : `Ajouter ${card.name} à la sélection`}
-                      checked={inSelection}
-                      onChange={() => toggleSelectedObject(card.id)}
-                    />
-                  </td>
-                  {columns.map((column, columnIndex) => (
-                    <td key={column.id} className={cn(column.numeric && 'results-table__num')}>
-                      {columnIndex === 0 ? (
-                        <button
-                          type="button"
-                          className="results-table__open"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openDrawer(card.id);
-                          }}
-                        >
-                          {column.render(card)}
-                        </button>
-                      ) : (
-                        column.render(card)
-                      )}
+            {sections.grouped
+              ? sections.groups.flatMap((grp) => [
+                  <tr key={`grp-${grp.group}`} className="results-table__group-row">
+                    <td className="results-table__group-cell" colSpan={colSpan}>
+                      {grp.label} <span className="results-table__dim">· {grp.count}</span>
                     </td>
-                  ))}
-                </tr>
-              );
-            })}
+                  </tr>,
+                  ...sortCards(grp.cards, tableSort).map(renderRow),
+                ])
+              : sortCards(cards, tableSort).map(renderRow)}
           </tbody>
         </table>
 

@@ -679,6 +679,16 @@ textarea::placeholder {
 }
 .results-table__open:hover { color: var(--theme-primary); text-decoration: underline; }
 .results-table__tool { font-size: 12px; padding: 0.25rem 0.55rem; }
+.results-table tbody tr.results-table__group-row { cursor: default; }
+.results-table tbody tr.results-table__group-row:hover { background: transparent; }
+.results-table__group-cell {
+  position: sticky; top: 33px; z-index: 1;
+  background: var(--bg-tint);
+  border-bottom: 1px solid var(--line);
+  padding: 5px 10px !important;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+}
 
 /* Gestionnaire de colonnes (popover maison, D17) */
 .column-manager {

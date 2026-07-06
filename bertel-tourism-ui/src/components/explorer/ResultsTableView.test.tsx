@@ -119,4 +119,39 @@ describe('ResultsTableView (D17 — table dense Explorer)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Charger plus de résultats' }));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
+
+  it('affiche deux lignes de groupe quand le filtre Label mélange labellisés et actions compatibles', () => {
+    const rankedCards: ObjectCard[] = [
+      {
+        id: 'obj-labelled',
+        type: 'HOT',
+        name: 'Auberge du Volcan',
+        status: 'published',
+        rating: 4.2,
+        review_count: 12,
+        location: { city: 'Le Tampon' },
+        updated_at: '2026-06-01T08:00:00Z',
+        labels: ['3 étoiles'],
+        label_match: { scheme_code: 'CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 },
+      },
+      {
+        id: 'obj-equivalent',
+        type: 'RES',
+        name: 'Zot Table',
+        status: 'published',
+        rating: null,
+        location: { city: 'Cilaos' },
+        updated_at: null,
+        labels: [],
+        label_match: { scheme_code: 'CLEF_VERTE', rank: 1, source: 'sustainability_action', evidence_count: 2 },
+      },
+    ];
+
+    renderTable({ cards: rankedCards, labelRankCounts: { labelled: 1, equivalent: 1 } });
+
+    const groupRows = document.querySelectorAll('tr.results-table__group-row');
+    expect(groupRows).toHaveLength(2);
+    expect(screen.getByText('Établissements labellisés')).toBeInTheDocument();
+    expect(screen.getByText(/Aussi pertinents/)).toBeInTheDocument();
+  });
 });

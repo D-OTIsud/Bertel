@@ -343,7 +343,7 @@ export interface ObjectWorkspaceDistinctionSchemeOption {
   label: string;
   selectionMode: 'single' | 'multiple';
   isAccessibility: boolean;
-  /** ref_classification_scheme.display_group — groups the §08 add-picker (official_classification / quality_label). */
+  /** ref_classification_scheme.display_group — groups the §08 add-picker (official_classification / graded_label / quality_label). */
   displayGroup: string;
   valueOptions: WorkspaceReferenceOption[];
 }

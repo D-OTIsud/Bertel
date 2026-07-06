@@ -115,9 +115,12 @@ function toReferenceOptions<T extends { code: string; name: string; position?: n
 // en-têtes du menu déroulant. Ordre : Classements → Labels qualité → Durabilité → Accessibilité.
 const RANKED_LABEL_FAMILIES: Record<string, { label: string; order: number }> = {
   official_classification: { label: 'Classements', order: 1 },
-  quality_label: { label: 'Labels qualité', order: 2 },
-  sustainability_labels: { label: 'Durabilité', order: 3 },
-  accessibility_labels: { label: 'Accessibilité', order: 4 },
+  // §176 — distinctions notées de réseau privé (Gîtes de France, Clévacances, Logis) :
+  // des objets classés (1→5), mais pas par l'État ⇒ groupe distinct des labels binaires.
+  graded_label: { label: 'Labels notés', order: 2 },
+  quality_label: { label: 'Labels qualité', order: 3 },
+  sustainability_labels: { label: 'Durabilité', order: 4 },
+  accessibility_labels: { label: 'Accessibilité', order: 5 },
 };
 
 function rankedLabelFamily(displayGroup: string | null): { label: string; order: number } {
@@ -322,8 +325,8 @@ function buildDemoReferences(): ExplorerReferences {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     rankedLabelSchemes: [
       { code: 'meuble_stars', name: 'Classement meublés', group: 'Classements' },
-      // §175 — Gîtes de France est un label de réseau (épis), pas un classement officiel.
-      { code: 'gites_epics', name: 'Gîtes de France (épis)', group: 'Labels qualité' },
+      // §176 — Gîtes de France = label noté de réseau (épis), groupe « Labels notés ».
+      { code: 'gites_epics', name: 'Gîtes de France (épis)', group: 'Labels notés' },
       { code: 'qualite_tourisme_reunion', name: 'Qualité Tourisme Île de La Réunion', group: 'Labels qualité' },
       { code: 'LBL_CLEF_VERTE', name: 'Clef Verte', group: 'Durabilité' },
       { code: 'LBL_TOURISME_HANDICAP', name: 'Tourisme & Handicap', group: 'Accessibilité' },

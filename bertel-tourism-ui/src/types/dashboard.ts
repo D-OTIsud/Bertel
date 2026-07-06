@@ -135,6 +135,7 @@ export interface DashboardActualisation {
 
 export type DistinctionDisplayGroup =
   | 'official_classification'
+  | 'graded_label'
   | 'quality_label'
   | 'environmental_label'
   | 'accessibility_label';

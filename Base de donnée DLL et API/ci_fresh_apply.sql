@@ -212,6 +212,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16k    migration_label_filter_sections.sql  (§173 resultats sectionnes filtre Label: cle label_scheme_ranked_exact_only (restreint aux labellises rank-0, equivalents exclus) + tri label_rank prioritaire sous filtre label meme avec recherche + meta.label_rank_counts; APRES 16j = le plus recent, corps complet get_filtered_object_ids §157+§162+§173; since_fast intact keyset; CI = tests/test_label_filter_sections.sql) =='
 \ir migration_label_filter_sections.sql
 
+\echo '== 16l    migration_classification_regroup_network_labels.sql  (§175 reclasse gites_epics + clevacances_keys de official_classification vers quality_label: labels de reseau prives, pas des classements officiels Atout France; DONNEE de reference seule, aucun DDL/RPC; official/quality partagent le meme bras dans les RPC donc inerte pour filtrage/badge/cocarde/barre niveaux; folde dans seeds_data.sql => no-op sur base fraiche; CI = tests/test_classification_regroup_network_labels.sql) =='
+\ir migration_classification_regroup_network_labels.sql
+
 \echo '== ORG1   migration_org_onboarding.sql  (création d ORG par superadmin: api.rpc_create_org — objet ORG published direct + org_config, superuser-only, voie UNIQUE de création d ORG car un draft ORG serait impubliable; api.rpc_list_orgs pour la console admin + le sélecteur /team; dépend de rls_policies.sql is_platform_superuser + schema_unified.sql org_config/triggers; non foldé) =='
 \ir migration_org_onboarding.sql
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OTI du Sud · API – Documentation</title>
+  <title>OTI du Sud · API interne (équipe) – Documentation</title>
   <meta name="color-scheme" content="light dark" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -802,8 +802,12 @@
 
     <!-- CONTENT -->
     <div id="content">
+      <div id="internal-doc-banner" role="note" style="margin:0 0 20px;padding:16px 20px;border:1px solid var(--brand-300);border-left:5px solid var(--brand-700);border-radius:10px;background:rgba(118,176,151,.10);">
+        <p style="margin:0 0 8px;"><span class="badge">Interne — équipe</span> Cette page décrit l’<strong>API brute</strong> (appels <code>/rpc/</code>, authentification Supabase, RPC de lecture <em>et d’écriture</em>) à l’usage de l’équipe projet. Ce n’est <strong>pas</strong> le contrat destiné aux prestataires externes.</p>
+        <p style="margin:0;"><strong>Vous êtes un prestataire externe&nbsp;?</strong> La surface qui vous concerne est la passerelle partenaire (clé <code>bk_live_…</code> sur <code>/api/public/*</code>) : → <a href="partenaires.html"><strong>Espace partenaires</strong></a> · <a href="openapi.html"><strong>Contrat OpenAPI</strong></a>.</p>
+      </div>
       <section class="card" id="intro">
-        <h1>Documentation de l’API</h1>
+        <h1>Documentation de l’API <span style="font-size:.5em;font-weight:600;color:var(--brand-600);vertical-align:middle;">· interne (équipe)</span></h1>
         <p class="lead">Une API structurée autour d'appels <code>/rpc/&lt;nom_fonction&gt;</code> via <b>POST</b>, avec pagination, filtres riches et extraction des tracés KML/GPX pour les itinéraires.</p>
       </section>
 

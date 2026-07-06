@@ -608,9 +608,11 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
               <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Classement / label</span>
               <FilterDropdown<string>
                 mode="single"
-                placeholder="Tous les labels"
-                allLabel="Tous les labels"
-                options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name }))}
+                placeholder="Tous les classements et labels"
+                allLabel="Tous les classements et labels"
+                searchable
+                searchPlaceholder="Rechercher un classement ou un label"
+                options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name, group: option.group }))}
                 selected={rankedLabelSchemeCode ? [rankedLabelSchemeCode] : []}
                 onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}
               />

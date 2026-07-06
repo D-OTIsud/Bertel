@@ -297,6 +297,8 @@ export interface ExplorerFilters {
 export interface ExplorerReferenceOption {
   code: string;
   name: string;
+  /** Optional family label for grouped filter dropdowns (e.g. « Classements », « Durabilité »). */
+  group?: string;
 }
 
 export interface ExplorerTaxonomyNode {

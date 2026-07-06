@@ -7,6 +7,35 @@ const OPTIONS = [
   { code: 'ITI', label: 'Itinéraires' },
 ] as const;
 
+const GROUPED_OPTIONS = [
+  { code: 'a', label: 'Alpha', group: 'Classements' },
+  { code: 'b', label: 'Bravo', group: 'Classements' },
+  { code: 'c', label: 'Charlie', group: 'Durabilité' },
+] as const;
+
+describe('grouped options', () => {
+  it('renders one presentational header per family (contiguous) when options carry a group', () => {
+    render(
+      <FilterDropdown options={GROUPED_OPTIONS} selected={[]} onChange={() => {}} mode="single" placeholder="Tous" />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+    // one « Classements » header for its two options, plus the « Durabilité » header
+    expect(screen.getAllByText('Classements')).toHaveLength(1);
+    expect(screen.getByText('Durabilité')).toBeInTheDocument();
+    // the header is not an option row
+    expect(screen.getByText('Classements').closest('[role="option"]')).toBeNull();
+  });
+
+  it('renders flat with no group headers when no option carries a group', () => {
+    render(
+      <FilterDropdown options={OPTIONS} selected={[]} onChange={() => {}} mode="single" placeholder="Tous" />,
+    );
+    fireEvent.click(screen.getByRole('button'));
+    expect(screen.queryByText('Classements')).not.toBeInTheDocument();
+    expect(screen.getByText('Hôtels')).toBeInTheDocument();
+  });
+});
+
 // ── Trigger label logic ────────────────────────────────────────────────────
 
 describe('trigger label', () => {

@@ -131,3 +131,25 @@ describe('§157 — chips ouvert à … + dates événements', () => {
     expect(chips.find((c) => c.group === 'evtDates')?.label).toBe('Événements du 10/07/2026');
   });
 });
+
+describe('chip « Label obtenu uniquement » (rankedLabelExact)', () => {
+  it('rend la chip quand un schéma est actif et includeEquivalents est désactivé', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ rankedLabelSchemeCode: 'LBL_CLEF_VERTE', rankedLabelIncludeEquivalents: false }),
+    );
+    const chip = chips.find((c) => c.group === 'rankedLabelExact');
+    expect(chip).toBeTruthy();
+    expect(chip!.value).toBe('LBL_CLEF_VERTE');
+    expect(chip!.label).toBe('Label obtenu uniquement');
+  });
+
+  it('ne rend pas la chip quand includeEquivalents est à sa valeur par défaut (true)', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelSchemeCode: 'LBL_CLEF_VERTE' }));
+    expect(chips.find((c) => c.group === 'rankedLabelExact')).toBeUndefined();
+  });
+
+  it('ne rend pas la chip en l’absence de schéma classé, même si includeEquivalents est false', () => {
+    const chips = buildExplorerActiveChips(filters({ rankedLabelIncludeEquivalents: false }));
+    expect(chips.find((c) => c.group === 'rankedLabelExact')).toBeUndefined();
+  });
+});

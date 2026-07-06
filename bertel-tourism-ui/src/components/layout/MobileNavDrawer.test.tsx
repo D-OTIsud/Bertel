@@ -9,7 +9,7 @@ jest.mock('next/navigation', () => ({
 
 describe('MobileNavDrawer (D12)', () => {
   beforeEach(() => {
-    useSessionStore.setState({ role: 'tourism_agent', demoMode: true });
+    useSessionStore.setState({ role: 'tourism_agent', demoMode: true, canEditObjects: true });
     useUiStore.setState({ mobileNavOpen: false });
   });
 

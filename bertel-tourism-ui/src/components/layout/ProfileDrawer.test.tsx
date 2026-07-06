@@ -49,6 +49,7 @@ beforeEach(() => {
   rpcMock.listPendingChanges.mockResolvedValue([]);
   useSessionStore.setState({
     status: 'ready', demoMode: false, role: 'tourism_agent', adminRank: null,
+    canEditObjects: true,
     userId: 'u-me', email: 'david@otisud.re', userName: 'David P.', avatarUrl: null,
     orgName: 'OTI du Sud',
   } as never);

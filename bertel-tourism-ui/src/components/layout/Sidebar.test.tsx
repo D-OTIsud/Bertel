@@ -42,6 +42,7 @@ beforeEach(() => {
     role: 'super_admin',
     adminRank: null,
     demoMode: true,
+    canEditObjects: true,
     userName: 'D. Philippe',
   } as never);
   useThemeStore.setState({
@@ -71,6 +72,29 @@ describe('Sidebar', () => {
     renderSidebar();
     expect(screen.queryByText('Équipe')).not.toBeInTheDocument();
     expect(screen.getByText('Paramètres')).toBeInTheDocument();
+  });
+
+  // Un membre d'ORG en lecture seule (canEditObjects=false) reste `tourism_agent`
+  // mais ne doit pas voir les surfaces « métier » : CRM, Modération, Listes sont
+  // masquées ; Explorer + Dashboard (consultation) + Paramètres restent visibles.
+  it('masque les surfaces métier (CRM/Modération/Listes) pour un lecteur seul', () => {
+    useSessionStore.setState({ role: 'tourism_agent', canEditObjects: false } as never);
+    renderSidebar();
+    expect(screen.queryByText('CRM')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Moderation/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Listes')).not.toBeInTheDocument();
+    // Consultation conservée.
+    expect(screen.getByText('Explorer')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Paramètres')).toBeInTheDocument();
+  });
+
+  it('rend les surfaces métier pour un profil éditeur (canEditObjects=true)', () => {
+    useSessionStore.setState({ role: 'tourism_agent', canEditObjects: true } as never);
+    renderSidebar();
+    expect(screen.getByText('CRM')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Moderation/i })).toBeInTheDocument();
+    expect(screen.getByText('Listes')).toBeInTheDocument();
   });
 
   it('calls onOpenProfile when the profile button is clicked', () => {

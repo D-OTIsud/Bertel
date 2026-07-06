@@ -32,7 +32,7 @@ describe('CommandPalette (D24)', () => {
   beforeEach(() => {
     pushMock.mockClear();
     useUiStore.setState({ commandPaletteOpen: false, drawerObjectId: null });
-    useSessionStore.setState({ role: 'tourism_agent', demoMode: true, canCreateObjects: true });
+    useSessionStore.setState({ role: 'tourism_agent', demoMode: true, canEditObjects: true, canCreateObjects: true });
   });
 
   it('reste fermée par défaut et s’ouvre sur Ctrl+K', () => {

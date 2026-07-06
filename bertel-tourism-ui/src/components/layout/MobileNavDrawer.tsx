@@ -18,13 +18,14 @@ export function MobileNavDrawer() {
   const setOpen = useUiStore((state) => state.setMobileNavOpen);
   const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const pathname = usePathname();
 
   if (!open) {
     return null;
   }
 
-  const items = visibleNavItems(role, demoMode);
+  const items = visibleNavItems(role, demoMode, canEditObjects);
 
   return (
     <Modal title="Navigation" variant="drawer" onClose={() => setOpen(false)}>

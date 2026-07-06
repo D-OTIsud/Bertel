@@ -174,10 +174,18 @@ export function useExplorerCardsQuery() {
   // keeps showing the old cards). NOT a scroll-driven next-page fetch.
   const isRefreshing = query.isFetching && !query.isFetchingNextPage && query.isPlaceholderData;
 
+  // §NN — corpus-wide label rank counts come from PAGE 0 only: it queries ALL active
+  // buckets, whereas later scroll pages drop exhausted buckets and would undercount.
+  const labelRankCounts = useMemo(
+    () => query.data?.pages?.[0]?.labelRankCounts ?? { labelled: 0, equivalent: 0 },
+    [query.data],
+  );
+
   return {
     ...query,
     data,
     isRefreshing,
+    labelRankCounts,
   };
 }
 

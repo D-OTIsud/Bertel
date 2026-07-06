@@ -346,6 +346,8 @@ export interface RpcPageMeta {
   total: number;
   cursor?: string | null;
   next_cursor?: string | null;
+  /** §NN — comptes corpus par rang quand le filtre label est actif (sinon null). */
+  label_rank_counts?: { labelled: number; equivalent: number } | null;
 }
 
 export interface RpcPageResponse<T> {

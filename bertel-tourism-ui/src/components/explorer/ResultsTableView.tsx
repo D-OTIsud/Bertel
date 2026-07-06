@@ -20,6 +20,7 @@ interface ResultsTableViewProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  labelRankCounts?: { labelled: number; equivalent: number };
   /** Actions injectées dans le header (ex. ExplorerViewSwitch — plus de barre dédiée). */
   headerActions?: ReactNode;
 }

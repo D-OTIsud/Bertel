@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { ActualisationTable } from './ActualisationTable';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
+import { activeDrilldownTypes } from '../../lib/dashboard-type-drilldown';
 
 const data = {
   threshold_days: 90,
@@ -11,19 +12,21 @@ const data = {
 
 describe('ActualisationTable — drill-down', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
+    act(() => useDashboardExplorerStore.getState().resetAll());
   });
 
   it('clic sur la cellule type filtre sur ce type', () => {
     render(<ActualisationTable data={data} />);
     fireEvent.click(screen.getByRole('button', { name: 'Hôtel' }));
-    expect(useDashboardFilterStore.getState().filters.types).toEqual(['HOT']);
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HOT');
   });
 
   it('re-clic retire le type (toggle off)', () => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'], types: ['HOT'] }, activeTab: 'quality', sidebarCollapsed: false });
     render(<ActualisationTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Hôtel' }));
-    expect(useDashboardFilterStore.getState().filters.types).toBeUndefined();
+    const btn = screen.getByRole('button', { name: 'Hôtel' });
+    fireEvent.click(btn); // on
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HOT');
+    fireEvent.click(btn); // off
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).not.toContain('HOT');
   });
 });

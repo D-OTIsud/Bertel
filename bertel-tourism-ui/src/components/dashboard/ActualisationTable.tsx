@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from 'react';
 import type { DashboardActualisation } from '../../types/dashboard';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
+import { activeDrilldownTypes, toggleDrilldownType } from '../../lib/dashboard-type-drilldown';
 import { meterZone } from './meter-zone';
 import { resolveTypeLabel } from '../../utils/labels';
 
@@ -26,15 +28,19 @@ function RateBar({ rate }: { rate: number }) {
 }
 
 export function ActualisationTable({ data }: Props) {
-  const setFilters = useDashboardFilterStore((s) => s.setFilters);
-  const activeTypes = useDashboardFilterStore((s) => s.filters.types) ?? [];
+  const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
+  const hot = useDashboardExplorerStore((s) => s.hot);
+  const vis = useDashboardExplorerStore((s) => s.vis);
+  const srv = useDashboardExplorerStore((s) => s.srv);
+  // `activeDrilldownTypes` only reads selectedBuckets + hot/vis/srv subtypes, so these deps are complete.
+  const activeTypes = useMemo(
+    () => activeDrilldownTypes(useDashboardExplorerStore.getState()),
+    [selectedBuckets, hot, vis, srv],
+  );
 
   // Drill-down en toggle — même pattern que CommuneDistribution (communes).
   function handleType(type: Props['data']['rows'][number]['type']) {
-    const next = activeTypes.includes(type)
-      ? activeTypes.filter((t) => t !== type)
-      : [...activeTypes, type];
-    setFilters({ types: next.length > 0 ? next : undefined });
+    toggleDrilldownType(useDashboardExplorerStore, type);
   }
 
   return (

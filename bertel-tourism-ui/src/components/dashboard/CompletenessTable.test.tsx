@@ -1,6 +1,7 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { CompletenessTable } from './CompletenessTable';
-import { useDashboardFilterStore } from '../../store/dashboard-filter-store';
+import { useDashboardExplorerStore } from '../../store/explorer-store';
+import { activeDrilldownTypes } from '../../lib/dashboard-type-drilldown';
 import type { DashboardCompleteness } from '../../types/dashboard';
 
 const data: DashboardCompleteness = {
@@ -26,7 +27,7 @@ const data: DashboardCompleteness = {
 
 describe('CompletenessTable', () => {
   beforeEach(() => {
-    useDashboardFilterStore.setState({ filters: { status: ['published'] }, activeTab: 'quality', sidebarCollapsed: false });
+    act(() => useDashboardExplorerStore.getState().resetAll());
   });
 
   it('rend la jauge de complétude (richesse moyenne) et le libellé FR de l’essentiel manquant', () => {
@@ -40,6 +41,6 @@ describe('CompletenessTable', () => {
   it('clic sur la pastille de type filtre sur ce type (drill-down toggle)', () => {
     render(<CompletenessTable data={data} />);
     fireEvent.click(screen.getByRole('button', { name: 'Gîte & meublé' }));
-    expect(useDashboardFilterStore.getState().filters.types).toEqual(['HLO']);
+    expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HLO');
   });
 });

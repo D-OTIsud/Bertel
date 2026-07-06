@@ -3,43 +3,6 @@ import type { BackendObjectTypeCode } from './domain';
 /** Onglets du dashboard — un par vocation (spec 2026-06-11 §3). */
 export type DashboardTabKey = 'quality' | 'offer' | 'activity';
 
-// ─── Shared filter input ──────────────────────────────────────────────────────
-// Serialised from dashboard-filter-store to every RPC call.
-// Mirrors the p_filters JSONB shape already understood by api.get_filtered_object_ids,
-// plus the separate DATE params that are dashboard-only.
-
-export interface DashboardFilters {
-  /** Maps to p_types object_type[] */
-  types?: BackendObjectTypeCode[];
-  /** Maps to p_status object_status[]. Default on the server: ['published'] */
-  status?: ('draft' | 'published' | 'archived' | 'hidden')[];
-  /** Maps to p_filters.city_any */
-  cities?: string[];
-  /** Maps to p_filters.lieu_dit_any */
-  lieuDits?: string[];
-  /** Maps to p_filters.tags_any */
-  labelsAny?: string[];
-  /** Maps to p_filters.taxonomy_any */
-  taxonomyAny?: { domain: string; code: string }[];
-  /** Maps to p_filters.pet_accepted */
-  petsAccepted?: boolean;
-  /** Maps to p_filters.amenities_any: ['wheelchair_access'] */
-  pmr?: boolean;
-  /** Maps to p_updated_at_from DATE (inclusive lower bound) */
-  updatedAtFrom?: string;
-  /** Maps to p_updated_at_to DATE (inclusive upper bound) */
-  updatedAtTo?: string;
-  /**
-   * Maps to p_filters.classifications_any — paires {schemeCode, valueCode} ;
-   * le résolveur SQL les joint en 'scheme:value' et matche cached_classification_codes.
-   */
-  classificationsAny?: { schemeCode: string; valueCode: string }[];
-  /** Maps to p_filters.amenity_families_any — codes famille d'équipements */
-  amenityFamiliesAny?: string[];
-  /** Maps to p_filters.languages_any — codes langue (cached_language_codes) */
-  languagesAny?: string[];
-}
-
 // ─── §1  Hero Scorecards  (LOCKED — Phase 2A) ────────────────────────────────
 
 export interface DashboardScorecards {

@@ -182,7 +182,7 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
   });
 }
 
-export const useExplorerStore = create<ExplorerState>((set) => ({
+const createExplorerStore = () => create<ExplorerState>((set) => ({
   ...DEFAULT_EXPLORER_FILTERS,
   selectedObjectIds: [],
   visibleObjectIds: [],
@@ -495,3 +495,16 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
   setFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, false)),
   replaceFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, true)),
 }));
+
+/**
+ * Instance Explorer (singleton) — inchangée, utilisée par la page Explorer,
+ * useExplorerUrlSync, les résultats/carte/sélection et tous leurs tests.
+ */
+export const useExplorerStore = createExplorerStore();
+
+/**
+ * Instance INDÉPENDANTE pour le Dashboard (§ align filtres). Même logique de
+ * filtre, état séparé : filtrer sur le Dashboard ne touche pas l'Explorer.
+ * Pas de branchement URL (useExplorerUrlSync ne cible que le singleton).
+ */
+export const useDashboardExplorerStore = createExplorerStore();

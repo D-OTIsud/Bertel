@@ -120,35 +120,6 @@ export async function getDashboardDistinctionOverview(
   return data as DashboardDistinctionOverview;
 }
 
-// ─── Filter options — corpus-wide, filter-independent ────────────────────────
-// Returns cities and lieux-dits in a single RPC call.
-// Both datasets share the same base table/JOIN/conditions and are always needed
-// together on dashboard mount — one round trip is cheaper than two.
-
-export async function getDashboardFilterOptions(): Promise<{ cities: string[]; lieuDits: string[] }> {
-  const { demoMode } = useSessionStore.getState();
-  if (demoMode) {
-    const { mockDashboardData } = await import('../data/mock-dashboard');
-    const cities = mockDashboardData.cityDistribution.rows
-      .map((r) => r.city)
-      .filter((c) => c && c !== 'Autres')
-      .sort((a, b) => a.localeCompare(b, 'fr'));
-    return { cities, lieuDits: [] };
-  }
-
-  const client = requireDashboardRpcClient();
-  const { data, error } = await client
-    .schema('api')
-    .rpc('get_dashboard_filter_options');
-
-  if (error) throw error;
-  const result = data as { cities: string[]; lieu_dits: string[] };
-  return {
-    cities:   result.cities    ?? [],
-    lieuDits: result.lieu_dits ?? [],
-  };
-}
-
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────
 // Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 

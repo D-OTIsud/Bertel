@@ -48,6 +48,7 @@ interface ExplorerState extends ExplorerFilters {
   /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
   setEnvironmentTags: (codes: string[]) => void;
   setRankedLabelScheme: (schemeCode: string | null) => void;
+  setRankedLabelIncludeEquivalents: (value: boolean) => void;
   toggleLabel: (label: string) => void;
   clearLabels: () => void;
   /** Toggle a §09 tag in the Explorer filter set (click a colored tag on a card/map). */
@@ -306,6 +307,8 @@ export const useExplorerStore = create<ExplorerState>((set) => ({
         rankedLabelSchemeCode: String(schemeCode ?? '').trim() || null,
       },
     })),
+  setRankedLabelIncludeEquivalents: (value) =>
+    set((state) => ({ common: { ...state.common, rankedLabelIncludeEquivalents: value } })),
   toggleLabel: (label) =>
     set((state) => {
       const needle = String(label).trim();

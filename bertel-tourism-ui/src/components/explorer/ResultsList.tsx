@@ -17,6 +17,7 @@ interface ResultsListProps {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  labelRankCounts?: { labelled: number; equivalent: number };
 }
 
 function toResultCardDomId(cardId: string): string {

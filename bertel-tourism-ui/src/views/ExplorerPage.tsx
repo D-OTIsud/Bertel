@@ -64,6 +64,7 @@ export default function ExplorerPage() {
   const markers = useMemo(() => markersQuery.data ?? [], [markersQuery.data]);
   const isInitialLoading = (cardsQuery.isLoading || referencesQuery.isLoading) && cards.length === 0;
   const isRefreshing = cardsQuery.isRefreshing;
+  const labelRankCounts = cardsQuery.labelRankCounts;
 
   const setVisibleObjectIds = useExplorerStore((state) => state.setVisibleObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
@@ -110,6 +111,7 @@ export default function ExplorerPage() {
           hasMore={cardsQuery.hasNextPage}
           isLoadingMore={cardsQuery.isFetchingNextPage}
           onLoadMore={() => void cardsQuery.fetchNextPage()}
+          labelRankCounts={labelRankCounts}
         />
       );
     }
@@ -202,6 +204,7 @@ export default function ExplorerPage() {
               hasMore={cardsQuery.hasNextPage}
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
+              labelRankCounts={labelRankCounts}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}
@@ -213,6 +216,7 @@ export default function ExplorerPage() {
               hasMore={cardsQuery.hasNextPage}
               isLoadingMore={cardsQuery.isFetchingNextPage}
               onLoadMore={() => void cardsQuery.fetchNextPage()}
+              labelRankCounts={labelRankCounts}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}

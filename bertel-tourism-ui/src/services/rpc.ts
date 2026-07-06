@@ -354,6 +354,8 @@ export type ExplorerBucketCursorMap = Partial<Record<ExplorerBucketKey, string |
 export interface ExplorerCardsPage {
   cards: ObjectCard[];
   cursors: ExplorerBucketCursorMap;
+  /** §NN — somme des comptes label par rang sur les buckets de CETTE page (corpus par bucket). */
+  labelRankCounts: { labelled: number; equivalent: number };
 }
 
 export async function fetchExplorerCardsPage(
@@ -392,7 +394,14 @@ export async function fetchExplorerCardsPage(
     cursors[bucket] = page.meta.next_cursor ?? EXPLORER_BUCKET_CURSOR_DONE;
   }
 
-  return { cards: results.flatMap((r) => r.page.data), cursors };
+  const labelRankCounts = results.reduce(
+    (acc, { page }) => ({
+      labelled: acc.labelled + (page.meta.label_rank_counts?.labelled ?? 0),
+      equivalent: acc.equivalent + (page.meta.label_rank_counts?.equivalent ?? 0),
+    }),
+    { labelled: 0, equivalent: 0 },
+  );
+  return { cards: results.flatMap((r) => r.page.data), cursors, labelRankCounts };
 }
 
 export function explorerCardsHasNextPage(

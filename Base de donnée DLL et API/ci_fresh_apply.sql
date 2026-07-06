@@ -209,6 +209,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16j    migration_filters_accessibility_label.sql  (§162 filtre PMR: cle accessibility_any DEDIEE (equipement famille accessibility OU label LBL_TOURISME_HANDICAP granted; amenity_families_any reste equipement-pur §159), bras label de disability_types_any (subvalue_ids vides = couverture inconnue => le label seul matche), accessibility_any exclu du use_mv (labels non caches). APRES 16i: les deux portent un corps complet de get_filtered_object_ids, 16j est le plus recent (§157+§162); CI = tests/test_accessibility_label_filter.sql) =='
 \ir migration_filters_accessibility_label.sql
 
+\echo '== 16k    migration_label_filter_sections.sql  (§173 resultats sectionnes filtre Label: cle label_scheme_ranked_exact_only (restreint aux labellises rank-0, equivalents exclus) + tri label_rank prioritaire sous filtre label meme avec recherche + meta.label_rank_counts; APRES 16j = le plus recent, corps complet get_filtered_object_ids §157+§162+§173; since_fast intact keyset; CI = tests/test_label_filter_sections.sql) =='
+\ir migration_label_filter_sections.sql
+
 \echo '== ORG1   migration_org_onboarding.sql  (création d ORG par superadmin: api.rpc_create_org — objet ORG published direct + org_config, superuser-only, voie UNIQUE de création d ORG car un draft ORG serait impubliable; api.rpc_list_orgs pour la console admin + le sélecteur /team; dépend de rls_policies.sql is_platform_superuser + schema_unified.sql org_config/triggers; non foldé) =='
 \ir migration_org_onboarding.sql
 

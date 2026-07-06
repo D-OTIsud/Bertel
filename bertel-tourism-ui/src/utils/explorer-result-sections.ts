@@ -1,4 +1,4 @@
-import type { ObjectCard } from '../types/domain';
+import type { ObjectCard, ExplorerReferenceOption } from '../types/domain';
 
 export interface LabelRankCounts {
   labelled: number;
@@ -6,7 +6,7 @@ export interface LabelRankCounts {
 }
 
 export interface ResultSectionGroup {
-  group: 'labelled' | 'equivalent';
+  group: string;
   label: string;
   count: number;
   cards: ObjectCard[];
@@ -45,4 +45,42 @@ export function buildResultSections(cards: ObjectCard[], counts?: LabelRankCount
       { group: 'equivalent', label: equivalentLabel(equivalent), count: counts?.equivalent ?? equivalent.length, cards: equivalent },
     ],
   };
+}
+
+const NON_CLASSE = 'Non classé';
+
+/**
+ * §174 — groupe les cartes par NIVEAU de classement pour le scheme gradué actif.
+ * Le niveau d'une carte = son badge dont le code est `<schemeCode>:<valueCode>`
+ * (émis par get_object_cards_batch). Sections triées par grade DÉCROISSANT (5★ d'abord),
+ * ordre/libellés depuis `values` (référence). Cartes sans badge du scheme → « Non classé » en fin.
+ * Flat si AUCUNE carte ne porte le scheme (défensif — ne devrait pas arriver sous ce filtre).
+ */
+export function buildGradeSections(cards: ObjectCard[], schemeCode: string, values: ExplorerReferenceOption[]): ResultSections {
+  const prefix = `${schemeCode}:`;
+  const cardValue = (c: ObjectCard): string | null => {
+    const badge = (c.badges ?? []).find((b) => typeof b?.code === 'string' && b.code.startsWith(prefix));
+    return badge?.code ? badge.code.slice(prefix.length) : null;
+  };
+  const byValue = new Map<string, ObjectCard[]>();
+  const unranked: ObjectCard[] = [];
+  for (const card of cards) {
+    const vc = cardValue(card);
+    if (vc == null) { unranked.push(card); continue; }
+    const arr = byValue.get(vc) ?? [];
+    arr.push(card);
+    byValue.set(vc, arr);
+  }
+  if (byValue.size === 0) return { grouped: false, cards };
+  const groups: ResultSectionGroup[] = [];
+  for (const value of [...values].reverse()) {           // highest grade first
+    const group = byValue.get(value.code);
+    if (group && group.length > 0) {
+      groups.push({ group: `grade:${value.code}`, label: value.name, count: group.length, cards: group });
+    }
+  }
+  if (unranked.length > 0) {
+    groups.push({ group: 'grade:__none__', label: NON_CLASSE, count: unranked.length, cards: unranked });
+  }
+  return { grouped: true, groups };
 }

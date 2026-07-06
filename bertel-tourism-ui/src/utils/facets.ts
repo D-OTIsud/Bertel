@@ -74,6 +74,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   labelsAny: [],
   tagsAny: [],
   rankedLabelSchemeCode: null,
+  rankedLabelIncludeEquivalents: true,
   // Empty = "use the server default" (published only). Editors get the default
   // broadened in `useExplorerFilters` once their canEditObjects flag is known.
   statuses: [],
@@ -138,6 +139,7 @@ export function normalizeExplorerFilters(
       labelsAny: common.labelsAny ?? [],
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
+      rankedLabelIncludeEquivalents: common.rankedLabelIncludeEquivalents ?? true,
       statuses: common.statuses ?? [],
     },
     hot: {
@@ -419,6 +421,11 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 
   if (rankedLabelSchemeCode) {
     payload.label_scheme_ranked = rankedLabelSchemeCode;
+    // §173 — exact-only : restreint aux labellisés (rank-0). Émis UNIQUEMENT quand le
+    // toggle est OFF ; défaut/true/undefined n'émet rien (payload inchangé vs aujourd'hui).
+    if (common.rankedLabelIncludeEquivalents === false) {
+      payload.label_scheme_ranked_exact_only = true;
+    }
   }
 
   if (hasAccessibilityFilter) {

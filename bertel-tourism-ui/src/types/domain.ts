@@ -190,6 +190,12 @@ export interface ExplorerCommonFilters {
   tagsAny: ExplorerTagFilter[];
   rankedLabelSchemeCode: string | null;
   /**
+   * §173 — quand un scheme classé est actif (`rankedLabelSchemeCode`), inclure les objets
+   * couverts par une démarche équivalente en plus des labellisés directs. Défaut TRUE
+   * (comportement historique). FALSE ⇒ `label_scheme_ranked_exact_only` au RPC.
+   */
+  rankedLabelIncludeEquivalents: boolean;
+  /**
    * Active publication-status filter sent to api.list_object_resources_filtered_page
    * as p_status. An empty array means "use the server default" (= published only),
    * which is the safe baseline for read-only personas. Editors broaden the default

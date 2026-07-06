@@ -633,3 +633,39 @@ describe('buildBucketRpcFilters — services & équipements (§159, transverse)'
     expect(buildBucketRpcFilters(filters, 'VIS').amenity_families_any).toEqual(['wellness', 'parking']);
   });
 });
+
+describe('buildBucketRpcFilters — label sections (§173, exact-only)', () => {
+  it('omits label_scheme_ranked_exact_only by default (equivalents included)', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelSchemeCode: 'LBL_CLEF_VERTE' },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({ label_scheme_ranked: 'LBL_CLEF_VERTE' });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('label_scheme_ranked_exact_only');
+  });
+
+  it('emits label_scheme_ranked_exact_only=true when equivalents are excluded', () => {
+    const filters = buildFilters({
+      common: {
+        ...DEFAULT_EXPLORER_FILTERS.common,
+        rankedLabelSchemeCode: 'LBL_CLEF_VERTE',
+        rankedLabelIncludeEquivalents: false,
+      },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).toMatchObject({
+      label_scheme_ranked: 'LBL_CLEF_VERTE',
+      label_scheme_ranked_exact_only: true,
+    });
+  });
+
+  it('does not emit exact-only when no scheme is selected', () => {
+    const filters = buildFilters({
+      common: { ...DEFAULT_EXPLORER_FILTERS.common, rankedLabelIncludeEquivalents: false },
+    });
+    expect(buildBucketRpcFilters(filters, 'HOT')).not.toHaveProperty('label_scheme_ranked_exact_only');
+  });
+
+  it('normalizes rankedLabelIncludeEquivalents to true by default', () => {
+    const normalized = normalizeExplorerFilters(buildFilters({}));
+    expect(normalized.common.rankedLabelIncludeEquivalents).toBe(true);
+  });
+});

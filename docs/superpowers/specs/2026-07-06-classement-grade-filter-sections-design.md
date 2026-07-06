@@ -25,8 +25,12 @@ Objectif (Phase A) :
 
 ## 3. Comportement cible
 
-### 3.1 Barre de niveaux (filtre)
-Sous le sélecteur « Classement / label », **quand le schéma choisi est gradué** (≥2 valeurs), afficher une barre cochable de ses niveaux, libellés depuis la référence (« 1 étoile »…« 5 étoiles » ; « Catégorie I »… pour OT). Multi-sélection (cocher un ou plusieurs). Rien coché = tout le schéma (comportement actuel). Cocher `[3,4,5]` = « 3★ et + » (sémantique OU). Masquée pour les schémas non gradués (labels).
+### 3.1 Barre de niveaux (filtre) — validée en maquette
+Sous le sélecteur « Classement / label », **quand le schéma choisi est gradué** (≥2 valeurs), afficher une **barre d'icônes de niveau interactive** — PAS de chips numérotées.
+- **Icône = l'unité réelle du schéma** via `RATING_ICON` de l'app (étoile → `Star`, épi → `Wheat`, clé → `Key`, lucide — le MÊME jeu que la cocarde `RatingCockade` / `.thumb__rating` de la carte). Le nombre d'icônes = les niveaux 1..N du schéma.
+- **Sélection = toggle indépendant par niveau** (cliquer l'icône du niveau 3 bascule le niveau 3 seul ; on peut prendre 3 et 5 en sautant 4 — multi-sélection OU, cohérent avec `classifications_any`). Sélectionné = icône « pleine » dorée (traitement classement de l'app) ; non sélectionné = contour atténué.
+- **Micro-interaction** : survol agrandit légèrement l'icône ; clic = petit « pop » (agrandissement bref). Uniquement `transform` (compositor-friendly, cf. règles perf). Rien coché = tout le schéma (comportement actuel).
+- **Repli non gradué** : `ot_category` (Catégorie I/II/III, non numérique, sans unité d'icône) → multi-sélection libellée simple (cases « Catégorie I/II/III »), pas de barre d'icônes. Masquée pour les schémas non gradués (labels binaires).
 
 ### 3.2 Sections par niveau (résultats)
 Quand le filtre actif est un classement gradué, les résultats (vue Liste **et** Tableau) se groupent en **sections par niveau**, niveau le plus haut d'abord : « 5 étoiles (12) », « 4 étoiles (8) »… Chaque section est **repliable** (chevron dans l'en-tête ; état local). Le niveau d'une carte vient de son badge `code` (`<scheme>:<value>`). Une carte sans badge du schéma va dans une section « Non classé » en dernier (défensif ; ne devrait pas arriver sous ce filtre).
@@ -75,6 +79,14 @@ Un sélecteur unique décide du mode dans chaque vue :
 ## 8. Découpage d'implémentation
 
 Frontend-only, réutilise §173. Fichiers : `explorer-reference.ts` (+valeurs), `domain.ts` (types), `explorer-store.ts` (setter+reset), `facets.ts` (payload+normalize), `explorer-search-params.ts` (URL), `explorer-active-chips.ts` (chip), `FiltersPanel.tsx` (barre), `explorer-result-sections.ts` (helper), `ResultsList.tsx` + `ResultsTableView.tsx` (rendu+repli). Aucun SQL.
+
+## 10. Fidélité au design maison (CONTRAINTE)
+
+La maquette (widget) sert **uniquement** à valider la disposition et l'interaction ; la réalisation DOIT coller au design global de l'Explorer, pas au style générique du widget. Concrètement :
+- **Cartes de résultat** = le composant réel `ResultCardView` (inchangé), pas une carte réinventée.
+- **En-têtes de section** (par niveau) = **exactement** le traitement des en-têtes §173 (`ResultsList` : sticky `-mx-3 border-b border-line bg-surface2/95 … text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3` + pastille de compte ; `ResultsTableView` : `results-table__group-row` / `results-table__group-cell`), + un chevron de repli et (Phase B, désactivé) la case carte.
+- **Barre d'étoiles** = tokens/pictos réels de l'app (lucide `Star`/`Wheat`/`Key` de `RATING_ICON`, couleur de classement de la cocarde, accent teal, `--ink`/`--line`/`--surface`) — jamais de couleurs en dur ni de style « widget ».
+- Vérifier le rendu réel (RTL + capture) contre l'Explorer existant avant de clore.
 
 ## 9. Hors périmètre — Phase B (toggle carte par section)
 

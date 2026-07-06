@@ -1,11 +1,11 @@
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
+import type { DashboardStatsParams } from '../lib/dashboard-stats-params';
 import type {
   DashboardActualisation,
   DashboardCityDistribution,
   DashboardCompleteness,
   DashboardDistinctionOverview,
-  DashboardFilters,
   DashboardScorecards,
   DashboardTypeBreakdown,
 } from '../types/dashboard';
@@ -20,70 +20,13 @@ function requireDashboardRpcClient() {
   return client;
 }
 
-// ─── Filter serialisation ─────────────────────────────────────────────────────
-// Converts the TypeScript DashboardFilters into the flat parameter shape
-// expected by all four Phase 2A SQL functions.
-
-interface RpcParams {
-  p_types?: string[] | null;
-  p_status?: string[] | null;
-  p_filters: Record<string, unknown>;
-  p_updated_at_from?: string | null;
-  p_updated_at_to?: string | null;
-}
-
-export function buildRpcParams(filters: DashboardFilters): RpcParams {
-  const p_filters: Record<string, unknown> = {};
-
-  if (filters.cities && filters.cities.length > 0) {
-    p_filters.city_any = filters.cities;
-  }
-  if (filters.lieuDits && filters.lieuDits.length > 0) {
-    p_filters.lieu_dit_any = filters.lieuDits;
-  }
-  if (filters.labelsAny && filters.labelsAny.length > 0) {
-    p_filters.tags_any = filters.labelsAny;
-  }
-  if (filters.taxonomyAny && filters.taxonomyAny.length > 0) {
-    p_filters.taxonomy_any = filters.taxonomyAny.map((c) => ({
-      domain: c.domain,
-      code: c.code,
-    }));
-  }
-  if (filters.petsAccepted) {
-    p_filters.pet_accepted = true;
-  }
-  // NOTE: p_filters.amenities_any est réservé au mapping PMR ci-dessous — ne pas ajouter
-  // de champ « équipement individuel » (il écraserait cette clé) ; utiliser amenityFamiliesAny (spec §5.1).
-  if (filters.pmr) {
-    p_filters.amenities_any = ['wheelchair_access'];
-  }
-  if (filters.classificationsAny && filters.classificationsAny.length > 0) {
-    p_filters.classifications_any = filters.classificationsAny.map((c) => ({
-      scheme_code: c.schemeCode,
-      value_code: c.valueCode,
-    }));
-  }
-  if (filters.amenityFamiliesAny && filters.amenityFamiliesAny.length > 0) {
-    p_filters.amenity_families_any = filters.amenityFamiliesAny;
-  }
-  if (filters.languagesAny && filters.languagesAny.length > 0) {
-    p_filters.languages_any = filters.languagesAny;
-  }
-
-  return {
-    p_types:            filters.types   ?? null,
-    p_status:           filters.status  ?? null,
-    p_filters,
-    p_updated_at_from:  filters.updatedAtFrom ?? null,
-    p_updated_at_to:    filters.updatedAtTo   ?? null,
-  };
-}
-
 // ─── Phase 2A — Live RPC functions ───────────────────────────────────────────
+// params est déjà la charge utile aplatie attendue par les fonctions SQL
+// (voir dashboardStatsParams dans lib/dashboard-stats-params.ts) — les getters
+// ne font que la transmettre au RPC, sans transformation supplémentaire.
 
 export async function getDashboardScorecards(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
 ): Promise<DashboardScorecards> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
@@ -94,14 +37,14 @@ export async function getDashboardScorecards(
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_scorecards', buildRpcParams(filters));
+    .rpc('get_dashboard_scorecards', params);
 
   if (error) throw error;
   return data as DashboardScorecards;
 }
 
 export async function getDashboardTypeBreakdown(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
 ): Promise<DashboardTypeBreakdown> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
@@ -112,14 +55,14 @@ export async function getDashboardTypeBreakdown(
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_type_breakdown', buildRpcParams(filters));
+    .rpc('get_dashboard_type_breakdown', params);
 
   if (error) throw error;
   return data as DashboardTypeBreakdown;
 }
 
 export async function getDashboardCityDistribution(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
   limit = 20,
 ): Promise<DashboardCityDistribution> {
   const { demoMode } = useSessionStore.getState();
@@ -131,14 +74,14 @@ export async function getDashboardCityDistribution(
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_city_distribution', { ...buildRpcParams(filters), p_limit: limit });
+    .rpc('get_dashboard_city_distribution', { ...params, p_limit: limit });
 
   if (error) throw error;
   return data as DashboardCityDistribution;
 }
 
 export async function getDashboardActualisation(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
   thresholdDays = 90,
 ): Promise<DashboardActualisation> {
   const { demoMode } = useSessionStore.getState();
@@ -151,7 +94,7 @@ export async function getDashboardActualisation(
   const { data, error } = await client
     .schema('api')
     .rpc('get_dashboard_actualisation', {
-      ...buildRpcParams(filters),
+      ...params,
       p_threshold_days: thresholdDays,
     });
 
@@ -160,7 +103,7 @@ export async function getDashboardActualisation(
 }
 
 export async function getDashboardDistinctionOverview(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
 ): Promise<DashboardDistinctionOverview> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
@@ -171,7 +114,7 @@ export async function getDashboardDistinctionOverview(
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_distinction_overview', buildRpcParams(filters));
+    .rpc('get_dashboard_distinction_overview', params);
 
   if (error) throw error;
   return data as DashboardDistinctionOverview;
@@ -210,7 +153,7 @@ export async function getDashboardFilterOptions(): Promise<{ cities: string[]; l
 // Pattern matches existing stubs in rpc.ts (listPendingChanges, listCrmTasks…).
 
 export async function getDashboardCompleteness(
-  filters: DashboardFilters,
+  params: DashboardStatsParams,
 ): Promise<DashboardCompleteness> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
@@ -221,49 +164,48 @@ export async function getDashboardCompleteness(
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_completeness', buildRpcParams(filters));
+    .rpc('get_dashboard_completeness', params);
 
   if (error) throw error;
   return data as DashboardCompleteness;
 }
 
-export async function getDashboardCapacity(filters: DashboardFilters): Promise<unknown> {
+export async function getDashboardCapacity(params: DashboardStatsParams): Promise<unknown> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
     return mockDashboardData.capacity;
   }
-  void filters;
+  void params;
   throw new Error('RPC get_dashboard_capacity à brancher sur le backend.');
 }
 
-export async function getDashboardVelocity(filters: DashboardFilters): Promise<unknown> {
+export async function getDashboardVelocity(params: DashboardStatsParams): Promise<unknown> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
     return mockDashboardData.velocity;
   }
-  void filters;
+  void params;
   throw new Error('RPC get_dashboard_velocity à brancher sur le backend.');
 }
 
-export async function getDashboardContributors(filters: DashboardFilters): Promise<unknown> {
+export async function getDashboardContributors(params: DashboardStatsParams): Promise<unknown> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
     return mockDashboardData.contributors;
   }
-  void filters;
+  void params;
   throw new Error('RPC get_dashboard_contributors à brancher sur le backend.');
 }
 
-export async function getDashboardSeasonality(filters: DashboardFilters): Promise<unknown> {
+export async function getDashboardSeasonality(params: DashboardStatsParams): Promise<unknown> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     const { mockDashboardData } = await import('../data/mock-dashboard');
     return mockDashboardData.seasonality;
   }
-  void filters;
+  void params;
   throw new Error('RPC get_dashboard_seasonality à brancher sur le backend.');
 }
-

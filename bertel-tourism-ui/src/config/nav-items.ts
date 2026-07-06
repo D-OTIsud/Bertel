@@ -1,4 +1,5 @@
 import {
+  CircleHelp,
   ClipboardList,
   Files,
   LayoutDashboard,
@@ -35,6 +36,9 @@ export const NAV_ITEMS: NavItem[] = [
   // 7.4 — Équipe emménage dans Paramètres → Mon organisation (plus d'entrée /team au sidebar).
   { to: '/rgpd', label: 'RGPD', caption: 'Effacement & droits des personnes', roles: ['owner', 'super_admin'], icon: UserX },
   { to: '/settings', label: 'Paramètres', caption: 'Branding et environnement', roles: ['owner', 'super_admin', 'tourism_agent'], icon: Settings2 },
+  // /aide est rendu par le FOOTER de la Sidebar (bouton Aide) — la boucle principale
+  // l'exclut (comme /settings) ; l'entrée existe ici pour la palette ⌘K (registre unique D24).
+  { to: '/aide', label: 'Aide', caption: 'FAQ et centre d’aide', roles: ['owner', 'super_admin', 'tourism_agent'], icon: CircleHelp },
 ];
 
 /** Modules visibles pour un rôle donné (mêmes règles que la Sidebar : rôle + demo-gating). */

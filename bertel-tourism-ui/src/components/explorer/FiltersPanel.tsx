@@ -614,13 +614,16 @@ export function FiltersPanel({ references }: FiltersPanelProps) {
         <FilterColumnGroup label="Labels & certifications" count={labelFilterCount > 0 ? labelFilterCount : undefined}>
           <div className="space-y-3">
             <div>
-              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Classement / label</span>
+              {/* §175 — « Distinctions » (et non « Classement / label ») : le mot « classement »
+                  est réservé au classement officiel de l'État. Les labels (Gîtes de France,
+                  Clévacances, durabilité, accessibilité…) sont des distinctions, pas des classements. */}
+              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Distinctions</span>
               <FilterDropdown<string>
                 mode="single"
-                placeholder="Tous les classements et labels"
-                allLabel="Tous les classements et labels"
+                placeholder="Toutes les distinctions"
+                allLabel="Toutes les distinctions"
                 searchable
-                searchPlaceholder="Rechercher un classement ou un label"
+                searchPlaceholder="Rechercher une distinction"
                 options={rankedLabelOptions.map((option) => ({ code: option.code, label: option.name, group: option.group }))}
                 selected={rankedLabelSchemeCode ? [rankedLabelSchemeCode] : []}
                 onChange={(vals) => setRankedLabelScheme(vals[0] ?? null)}

@@ -1115,7 +1115,7 @@
     },
     {
       "name": "13. API Publique Partenaire (/api/public/*)",
-      "description": "Passerelle TIERCE authentifiée par clé partenaire (`Authorization: Bearer bk_live_…`, émise par l'OTI). Contrat stable versionné (`meta.contract_version` + header `X-Bertel-Api-Version`), enveloppe `{ meta, data }`, fiches PUBLIÉES uniquement. NE PAS utiliser la clé anon/`apikey` ni PostgREST direct ici — c'est la surface partenaire dédiée. Variables : `public_base_url` (URL de l'app), `partner_key` (clé `bk_live_…`). Lancer « Lister les fiches publiées » en premier : il remplit `object_id` pour les requêtes de détail.",
+      "description": "Passerelle TIERCE authentifiée par clé partenaire (`Authorization: Bearer bk_live_…`, émise par l'OTI). Contrat stable versionné (`meta.contract_version` + header `X-Bertel-Api-Version`), enveloppe `{ meta, data }`, fiches PUBLIÉES uniquement. Utilisez uniquement votre clé partenaire `bk_live_…` — aucun autre identifiant n'est accepté. Variables : `public_base_url` (URL de l'app), `partner_key` (clé `bk_live_…`). Lancer « Lister les fiches publiées » en premier : il remplit `object_id` pour les requêtes de détail.",
       "item": [
         {
           "name": "Lister les fiches publiées",

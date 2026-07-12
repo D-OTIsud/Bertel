@@ -234,6 +234,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)
+\echo '== TRAIL1  migration_trail_referential.sql  (§181 Référentiel sentiers de randonnée : trail_* autonome hors modèle objet, vocabulaire iti_open_status étendu de 3 codes (not_managed/unknown/archived) + partition trail_link_role, consolidation internal.recompute_trail_status, diff idempotent internal.trail_sync_apply, frontière service_role-only trail_sync_begin/apply_service/finalize, RPC lecture admin + publique restreinte §17, 6 RPC écriture superuser ; dépend de ref_commune (8l) + is_platform_superuser (rls_policies.sql) + ref_code_iti_open_status (15e) + object (schema_unified) ; auto-contenu, RLS deny-all-direct sur toutes les tables trail_*/ref_trail_*) =='
+\ir migration_trail_referential.sql
+
 \echo '== taxo   migration_taxonomy_trees_seed.sql  (versions the FULL live taxonomy trees: 211 nodes / 192 parent links across 19 taxonomy_* domains — previously live-only/unversioned; idempotent upsert + parent_id resolved by code. LAST, after every taxonomy migration + seeds, so it converges each domain to the live state; before the MV refresh so the MVs include it) =='
 \ir migration_taxonomy_trees_seed.sql
 

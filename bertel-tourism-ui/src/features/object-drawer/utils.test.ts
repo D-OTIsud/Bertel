@@ -377,7 +377,7 @@ describe('object drawer utils', () => {
         info: { summary: 'Depart tres tot conseille' },
         sections: [{ id: 'section-1' }, { id: 'section-2' }],
         stages: [{ id: 'stage-1' }],
-        profiles: [{ id: 'profile-1' }],
+        profiles: [{ id: 'profile-1', position_m: 0, elevation_m: 100 }],
         associated_objects: [
           {
             id: 'poi-1',
@@ -538,5 +538,62 @@ describe('parseWebChannels (§90)', () => {
 
   it('returns an empty array when there are no web channels', () => {
     expect(parseWebChannels({} as Record<string, unknown>)).toEqual([]);
+  });
+});
+
+describe('parseItinerarySummary — profils & trace (PLAN 3.4)', () => {
+  function summaryOf(details: Record<string, unknown>) {
+    return parseItinerarySummary({ itinerary_details: details } as Record<string, unknown>);
+  }
+
+  it('parse et trie les points de profil par position_m croissante', () => {
+    const s = summaryOf({
+      profiles: [
+        { id: 'b', position_m: 200, elevation_m: 150 },
+        { id: 'a', position_m: 0, elevation_m: 100 },
+        { id: 'c', position_m: 100, elevation_m: 130 },
+      ],
+    });
+    expect(s?.profiles.map((p) => p.positionM)).toEqual([0, 100, 200]);
+    expect(s?.profiles.map((p) => p.elevationM)).toEqual([100, 130, 150]);
+    expect(s?.profilesCount).toBe(3);
+  });
+
+  it('rejette les points non finis', () => {
+    const s = summaryOf({
+      profiles: [
+        { position_m: 0, elevation_m: 100 },
+        { position_m: 'abc', elevation_m: 120 },
+        { position_m: 50 },
+      ],
+    });
+    expect(s?.profiles).toHaveLength(1);
+  });
+
+  it('dédoublonne les positions identiques (garde la première)', () => {
+    const s = summaryOf({
+      profiles: [
+        { position_m: 10, elevation_m: 100 },
+        { position_m: 10, elevation_m: 999 },
+      ],
+    });
+    expect(s?.profiles).toHaveLength(1);
+    expect(s?.profiles[0].elevationM).toBe(100);
+  });
+
+  it('accepte une LineString valide', () => {
+    const s = summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55.5, -21.1], [55.6, -21.2]] } });
+    expect(s?.trackGeojson).toEqual({ type: 'LineString', coordinates: [[55.5, -21.1], [55.6, -21.2]] });
+  });
+
+  it('rejette une géométrie invalide (non LineString / < 2 paires / coord non finie)', () => {
+    expect(summaryOf({ track_geojson: { type: 'Point', coordinates: [55, -21] } })?.trackGeojson ?? null).toBeNull();
+    expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55, -21]] } })?.trackGeojson ?? null).toBeNull();
+    expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55, -21], ['x', -22]] } })?.trackGeojson ?? null).toBeNull();
+  });
+
+  it('un profil OU une géométrie suffit à produire un résumé non nul', () => {
+    expect(summaryOf({ profiles: [{ position_m: 0, elevation_m: 100 }, { position_m: 1, elevation_m: 101 }] })).not.toBeNull();
+    expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[1, 2], [3, 4]] } })).not.toBeNull();
   });
 });

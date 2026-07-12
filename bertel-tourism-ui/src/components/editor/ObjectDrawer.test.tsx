@@ -347,4 +347,23 @@ describe('ObjectDrawer view-only shell', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/objects/obj-1/edit');
   });
+
+  it('PLAN 6 : rend le panneau ORG (pas d’éditeur, renvoi vers /team) pour une ORG', () => {
+    mockUseObjectWorkspaceQuery.mockReturnValue({
+      data: buildWorkspaceResource({ id: 'org-1', name: 'OTI du Sud', type: 'ORG' }),
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    render(<ObjectDrawer objectId="org-1" />);
+
+    // Panneau ORG explicite au lieu de la fiche touristique.
+    expect(screen.getByText(/administration des équipes/i)).toBeInTheDocument();
+    // Le bouton « Modifier » (éditeur d'objet) est masqué pour une ORG, même éditeur autorisé.
+    expect(screen.queryByRole('button', { name: /modifier/i })).not.toBeInTheDocument();
+    // « Ouvrir l'administration » ferme le drawer puis navigue vers /team.
+    fireEvent.click(screen.getByRole('button', { name: /ouvrir l.administration/i }));
+    expect(mockPush).toHaveBeenCalledWith('/team');
+  });
 });

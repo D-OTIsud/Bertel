@@ -8,17 +8,18 @@ describe('makeSections', () => {
     expect(flat.some((s) => s.num === '20')).toBe(false);
   });
 
-  it('omits sections 16 and 07 for HEB (capacity absorbed by §06)', () => {
+  it('includes section 16 for HEB (capacity absorbed by §06)', () => {
     const flat = makeSections('HEB').flatMap((g) => g.items);
-    expect(flat).toHaveLength(18);
-    expect(flat.some((s) => s.num === '16')).toBe(false);
+    expect(flat).toHaveLength(19);
+    expect(flat.some((s) => s.num === '16')).toBe(true);
     expect(flat.some((s) => s.num === '07')).toBe(false);
   });
 
   it('keeps section 07 for non-HEB archetypes', () => {
     const res = makeSections('RES').flatMap((g) => g.items);
-    expect(res).toHaveLength(19);
+    expect(res).toHaveLength(20);
     expect(res.some((s) => s.num === '07')).toBe(true);
+    expect(res.some((s) => s.num === '16')).toBe(true);
   });
 
   it('labels section 06 (type block) per archetype', () => {

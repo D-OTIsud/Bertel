@@ -2887,6 +2887,46 @@ a {
   padding-bottom: 0;
 }
 
+/* PLAN 6 — panneau « Organisation » (ORG non éditable comme une fiche). */
+.drawer-unsupported {
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 1rem);
+  background: var(--surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  max-width: 34rem;
+  padding: clamp(1.25rem, 1rem + 2vw, 2rem);
+}
+
+.drawer-unsupported__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.drawer-unsupported__message {
+  color: var(--muted, #555);
+  margin: 0;
+}
+
+.drawer-unsupported__action {
+  align-self: flex-start;
+}
+
+@media (max-width: 640px) {
+  .drawer-unsupported {
+    max-width: none;
+  }
+  .drawer-unsupported__action {
+    align-self: stretch;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
 .object-drawer-nav {
   align-content: start;
   display: grid;

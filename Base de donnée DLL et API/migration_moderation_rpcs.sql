@@ -207,6 +207,7 @@ DECLARE
     'save_object_itinerary_nested',
     'save_object_openings',
     'save_object_places',
+    'save_object_rooms',
     'save_object_relations'
   ];
   v_now timestamptz := now();

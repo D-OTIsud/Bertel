@@ -915,9 +915,67 @@ textarea::placeholder {
   font-weight: 600;
   color: var(--ink);
 }
-.detail-event-list__icon { color: var(--acc-fma); flex: none; }
-.detail-event-list__state { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--brand-red); }
+.detail-event-list__icon { color: var(--acc-fma); flex: none; align-self: flex-start; margin-top: 1px; }
+.detail-event-list__state { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--brand-red); align-self: flex-start; }
 .detail-event-list__row--cancelled .detail-event-list__date { text-decoration: line-through; color: var(--text-muted); }
+/* §4.1 : corps d'une ligne (date + note optionnelle) et sous-titre « Dates passées ». */
+.detail-event-list__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.detail-event-list__note { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.detail-event-list__subhead {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.detail-event-list--past .detail-event-list__date { color: var(--ink-2); }
+
+/* §4.1 : bloc « Prochaine date » (hero-ish, distinct de la liste complète). */
+.detail-event-next { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.detail-event-next__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.detail-event-next__icon { color: var(--acc-fma); flex: none; }
+.detail-event-next__end { font-weight: 600; color: var(--ink-2); }
+.detail-event-next__location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.detail-event-recurrence {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--acc-fma) 12%, white);
+  color: var(--acc-fma);
+}
+.detail-event-next__actions { margin-top: 2px; }
+.detail-event-next__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--acc-fma);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  transition: filter 0.14s ease;
+}
+.detail-event-next__cta:hover { filter: brightness(0.94); }
 
 /* ---- Bloc « Cuisine & carte » d'un restaurant (impl. 4.2) ---- */
 .detail-cuisine-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
@@ -933,6 +991,8 @@ textarea::placeholder {
 }
 .detail-menu { margin-bottom: 14px; }
 .detail-menu__title { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+/* §4.3 : description d'un menu (peut exister sans aucune section). */
+.detail-menu__description { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 .detail-menu__section { margin-bottom: 10px; }
 .detail-menu__section-name {
   display: block;
@@ -943,11 +1003,26 @@ textarea::placeholder {
   color: var(--text-muted);
   margin-bottom: 4px;
 }
-.detail-menu__dishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.detail-menu__dish { display: flex; align-items: baseline; gap: 8px; }
+.detail-menu__dishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* §4.3 : plat = colonne (nom+prix, puis description, puis puces régimes/allergènes). */
+.detail-menu__dish { display: flex; flex-direction: column; gap: 3px; }
+.detail-menu__dish-head { display: flex; align-items: baseline; gap: 8px; }
 .detail-menu__dish-name { font-size: 14px; color: var(--ink); }
-.detail-menu__dish-diet { font-size: 11px; color: var(--acc-iti); font-weight: 600; }
 .detail-menu__dish-price { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.detail-menu__dish-description { margin: 0; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+/* §4.3 : deux jeux de puces distincts (régimes ≠ allergènes). */
+.detail-menu__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.detail-menu__tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+}
+.detail-menu__tag--diet { color: var(--acc-iti); background: color-mix(in srgb, var(--acc-iti) 12%, white); }
+.detail-menu__tag--allergen { color: var(--brand-red); background: color-mix(in srgb, var(--brand-red) 10%, white); }
 
 /* ---- Faits d'activité (impl. 4.3) ---- */
 .detail-facts { margin: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -4568,6 +4643,16 @@ a {
   min-width: 0;
 }
 
+/* §4.6 : « Étape n » = métadonnée d'ordre (dim), au-dessus du nom réel. */
+.detail-waypoint__position {
+  display: block;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
 .detail-waypoint__name {
   font-family: var(--font-display), sans-serif;
   font-weight: 600;
@@ -4593,6 +4678,42 @@ a {
   white-space: nowrap;
   padding-top: 0.3rem;
 }
+
+/* §4.4 : profil altimétrique (SVG responsive + résumé texte accessible). */
+.detail-elevation-profile { display: flex; flex-direction: column; gap: 8px; }
+.detail-elevation-profile__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.detail-elevation-profile__area { fill: color-mix(in srgb, var(--acc-iti) 16%, transparent); }
+.detail-elevation-profile__line { stroke: var(--acc-iti); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.detail-elevation-profile__point { fill: var(--acc-iti); stroke: var(--surface); stroke-width: 1.5; }
+.detail-elevation-profile__axis { fill: var(--ink-3); font-size: 10px; font-family: var(--font-mono), monospace; }
+.detail-elevation-profile__summary { margin: 0; font-size: 12px; color: var(--ink-2); }
+
+/* §4.5 : téléchargement GPX (paresseux, un seul appel en vol). */
+.detail-gpx-action { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.detail-gpx-action__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+.detail-gpx-action__button:hover:not(:disabled) { background: var(--surface-2); border-color: var(--line-strong); }
+.detail-gpx-action__button:disabled { opacity: 0.6; cursor: progress; }
+.detail-gpx-action__error { font-size: 12px; font-weight: 600; color: var(--brand-red); }
 
 .detail-kpi__label {
   font-size: 0.69rem;

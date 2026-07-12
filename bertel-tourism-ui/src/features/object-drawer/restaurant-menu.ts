@@ -12,8 +12,6 @@ export interface MenuDish {
   name: string;
   description: string;
   formattedPrice: string;
-  /** @deprecated alias de formattedPrice, retiré à la bascule UI PLAN 4.3. */
-  price: string;
   dietary: string[];
   allergens: string[];
   available: boolean;
@@ -98,7 +96,6 @@ export function buildRestaurantMenuData(raw: Record<string, unknown>): Restauran
         name,
         description: str(item.description),
         formattedPrice,
-        price: formattedPrice,
         dietary: readNames(item.dietary_tags),
         allergens: readNames(item.allergens),
         available: true,

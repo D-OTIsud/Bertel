@@ -135,9 +135,11 @@ describe('BlockHEB — accueil rapatrié en §06 (§64, §07 masqué pour HEB)',
   it('hosts the environment picker (Cadre / environnement) in §06 as a modal', () => {
     mountHEB();
     expect(screen.getByText('Cadre / environnement')).toBeInTheDocument();
-    // Catalogue large ⇒ modal : l'option n'est PAS inline, on l'atteint via « Choisir… »
+    // Catalogue large ⇒ modal : l'option n'est PAS inline, on l'atteint via « Choisir… ».
+    // Exact name (not /Choisir/i): the establishment amenities ChipMultiSelect (fixture has
+    // selectedAmenityCodes=['wifi']) reads "Choisir / modifier" and would make the query ambiguous.
     expect(screen.queryByRole('button', { name: 'Jardin' })).toBeNull();
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Choisir/i })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir…' })); });
     expect(screen.getByRole('button', { name: 'Jardin' })).toBeInTheDocument(); // dans « Disponibles »
   });
 });

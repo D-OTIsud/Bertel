@@ -2,8 +2,9 @@ import type { ArchetypeCode } from './archetypes';
 
 /**
  * The 22-section definition that drives the editor's left nav and the order of
- * section cards in the main column. Section 16 (Lieux & étapes / Sous-lieux)
- * applies only to ITI and VIS archetypes.
+ * section cards in the main column. Section 16 (Lieux & étapes / Sites secondaires)
+ * is shown for every archetype (plan §182: sites secondaires are a general-purpose
+ * concept, not ITI/VIS-specific).
  */
 
 export interface SectionItem {
@@ -27,10 +28,6 @@ const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
 };
 
 export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
-  const hasPlaces = archetype === 'ITI' || archetype === 'VIS';
-  // §06 absorbe la capacité d'accueil pour les hébergements (audit live 2026-06-13 :
-  // 0 type de chambre en base, 496 HEB ne portent que max_capacity en §07 ; un seul
-  // bloc « fait foi »). §07 reste rendu pour tous les autres archétypes.
   const isHeb = archetype === 'HEB';
   return [
     {
@@ -69,9 +66,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
       group: 'Liens & territoire',
       items: [
         { num: '15', label: 'Liens vers fiches' },
-        ...(hasPlaces
-          ? [{ num: '16', label: archetype === 'ITI' ? 'Lieux & étapes' : 'Sous-lieux' }]
-          : []),
+        { num: '16', label: archetype === 'ITI' ? 'Lieux & étapes' : 'Sites secondaires' },
         { num: '17', label: 'Rattachements' },
       ],
     },

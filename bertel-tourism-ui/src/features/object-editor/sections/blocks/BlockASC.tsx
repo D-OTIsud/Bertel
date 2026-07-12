@@ -1,4 +1,4 @@
-import { ChipMultiSelect, Field, Fs, Input, Toggle } from '../../primitives';
+import { ChipMultiSelect, Field, Fs, Input, ReferenceSelect, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
 
@@ -28,8 +28,6 @@ export function BlockASC({ editor, folded }: SectionProps) {
             }
       }
     >
-      {/* §46 type-gated activity module — notice INSTEAD of controls when gated.
-          The notice renders only here; the other activity sites below are suppressed. */}
       {activity.unavailableReason ? (
         <ModuleUnavailableNotice reason={activity.unavailableReason} />
       ) : (
@@ -51,9 +49,6 @@ export function BlockASC({ editor, folded }: SectionProps) {
               <Input value={activity.minAge} mono suffix="ans" onChange={(minAge) => patch({ minAge })} />
             </Field>
           </div>
-          {/* 6.2 : un seul contrôle par champ. `equipmentProvided` (string) est édité
-              ICI uniquement en texte libre (vide = non fourni) — fin du clobber
-              toggle-sentinelle ↔ input-détail. `difficultyLevel` remonté ici aussi. */}
           <div className="grid-3" style={{ marginBottom: 14 }}>
             <Toggle
               label="Encadrement obligatoire"
@@ -62,16 +57,38 @@ export function BlockASC({ editor, folded }: SectionProps) {
               onChange={(guideRequired) => patch({ guideRequired })}
             />
             <Field label="Difficulté">
-              <Input value={activity.difficultyLevel} placeholder="Débutant → Expert" onChange={(difficultyLevel) => patch({ difficultyLevel })} />
+              <ReferenceSelect
+                value={activity.difficultyLevel}
+                options={activity.difficultyOptions}
+                placeholder="Niveau 1 à 5"
+                allowEmpty
+                onChange={(difficultyLevel) => patch({ difficultyLevel })}
+              />
             </Field>
-            <Field label="Équipement fourni" hint="Vide = non fourni ; sinon précisez le matériel">
-              <Input value={activity.equipmentProvided} placeholder="ex. casque, baudrier fournis" onChange={(equipmentProvided) => patch({ equipmentProvided })} />
-            </Field>
+            <Toggle
+              label="Équipement fourni"
+              sub="Matériel mis à disposition"
+              on={activity.equipmentProvided}
+              onChange={(equipmentProvided) =>
+                patch({
+                  equipmentProvided,
+                  equipmentProvidedDetails: equipmentProvided ? activity.equipmentProvidedDetails : '',
+                })
+              }
+            />
           </div>
+          {activity.equipmentProvided && (
+            <Field label="Détail de l'équipement fourni">
+              <Input
+                value={activity.equipmentProvidedDetails}
+                placeholder="ex. casque, baudrier"
+                onChange={(equipmentProvidedDetails) => patch({ equipmentProvidedDetails })}
+              />
+            </Field>
+          )}
         </>
       )}
 
-      {/* characteristics module — not type-gated; keep outside any activity.unavailableReason wrap (§46/§48) */}
       <div className="chip-group__label" style={{ marginTop: 14 }}>
         Prestations & équipements
       </div>
@@ -111,12 +128,7 @@ export function BlockASC({ editor, folded }: SectionProps) {
         </>
       )}
 
-      {/* §48 single-owner: pricing formulas are edited in §13 only (last-edit-wins trap otherwise) */}
       <OwnedElsewhereNote num="13" label="Tarifs & extras" summary={`${formulaCount} formule(s)`} />
-
-      {/* 6.2 : les anciens « sites secondaires » (grid-3 du bas + écho ChipSet) qui
-          ré-écrivaient durationMin / equipmentProvided / difficultyLevel ont été
-          retirés — ces champs ont désormais un contrôle unique dans le bloc primaire. */}
     </Fs>
   );
 }

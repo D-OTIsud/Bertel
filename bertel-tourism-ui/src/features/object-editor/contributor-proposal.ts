@@ -8,7 +8,7 @@
  *
  * Deux régimes (Option B = les 22 sections sont proposables) :
  *
- *  1. AUTO-DISPATCH (5 sections à writer uniforme `(p_object_id, p_payload)`) : on stocke l'enveloppe
+ *  1. AUTO-DISPATCH (7 sections à writer uniforme `(p_object_id, p_payload)`) : on stocke l'enveloppe
  *     EXACTE attendue par le writer whitelisté côté §120 (`metadata.rpc`), pour que l'approbation
  *     puisse la ré-invoquer telle quelle. `manual_apply = false`.
  *        characteristics → save_object_commercial
@@ -16,9 +16,11 @@
  *        sustainability  → save_object_workspace_sustainability
  *        tags            → save_object_workspace_tags
  *        relationships   → save_object_relations
- *     (NB : la whitelist backend contient aussi `save_object_itinerary_nested` et `save_object_places`,
- *      mais la décision PO range itinéraire + lieux/zones en `manual_apply` car leurs writers ne sont
- *      pas alimentables sans contexte additionnel — cf. registre ci-dessous.)
+ *        places          → save_object_places
+ *        rooms           → save_object_rooms
+ *     (NB : la whitelist backend contient aussi `save_object_itinerary_nested`, mais la décision PO
+ *      range l'itinéraire en `manual_apply` car son writer n'est pas alimentable sans contexte
+ *      additionnel — cf. registre ci-dessous.)
  *
  *  2. MANUAL_APPLY (toutes les autres sections) : payload informatif (la valeur de module brute),
  *     `metadata.rpc = null` ⇒ `approve_pending_change` REFUSE l'auto-application (anti-escalade :
@@ -32,6 +34,8 @@
 import type { SubmitPendingChangeInput } from '../../services/moderation';
 import {
   buildCharacteristicsRpcPayload,
+  buildPlacesRpcPayload,
+  buildRoomsRpcPayload,
   buildSustainabilityRpcPayload,
   buildTagsRpcPayload,
   buildOpeningsPayload,
@@ -79,6 +83,14 @@ export const AUTO_DISPATCH_ROUTES: Partial<Record<WorkspaceModuleId, AutoDispatc
     rpc: 'save_object_relations',
     buildPayload: (draft) => buildRelationshipsRpcPayload(draft.relationships),
   },
+  places: {
+    rpc: 'save_object_places',
+    buildPayload: (draft) => buildPlacesRpcPayload(draft.places),
+  },
+  rooms: {
+    rpc: 'save_object_rooms',
+    buildPayload: (draft) => buildRoomsRpcPayload(draft.rooms),
+  },
 };
 
 /**
@@ -92,6 +104,7 @@ export const MODULE_TARGET_TABLE: Record<WorkspaceModuleId, string> = {
   publication: 'object',
   'sync-identifiers': 'object_external_id',
   location: 'object_location',
+  places: 'object_place',
   descriptions: 'object_description',
   media: 'media',
   contacts: 'contact_channel',

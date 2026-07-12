@@ -7,6 +7,8 @@ import {
 import { MODULE_KEY_MAP } from './editor-state';
 import {
   buildCharacteristicsRpcPayload,
+  buildPlacesRpcPayload,
+  buildRoomsRpcPayload,
   buildSustainabilityRpcPayload,
   buildTagsRpcPayload,
   buildOpeningsPayload,
@@ -48,22 +50,26 @@ function makeModules(): ObjectWorkspaceModules {
     legal: { siret: '12345678900011' },
     itinerary: { stages: [] },
     location: { places: [] },
+    places: { unavailableReason: null, items: [] },
+    rooms: { unavailableReason: null, items: [], viewTypeOptions: [], amenityOptions: [], mediaOptions: [] },
   } as unknown as ObjectWorkspaceModules;
 }
 
 describe('contributor-proposal — auto-dispatch registry', () => {
-  it('the 5 auto-dispatch modules carry the exact §120-whitelisted RPC names', () => {
+  it('the 7 auto-dispatch modules carry the exact §120-whitelisted RPC names', () => {
     expect(AUTO_DISPATCH_ROUTES.characteristics?.rpc).toBe('save_object_commercial');
     expect(AUTO_DISPATCH_ROUTES.openings?.rpc).toBe('save_object_openings');
     expect(AUTO_DISPATCH_ROUTES.sustainability?.rpc).toBe('save_object_workspace_sustainability');
     expect(AUTO_DISPATCH_ROUTES.tags?.rpc).toBe('save_object_workspace_tags');
     expect(AUTO_DISPATCH_ROUTES.relationships?.rpc).toBe('save_object_relations');
+    expect(AUTO_DISPATCH_ROUTES.places?.rpc).toBe('save_object_places');
+    expect(AUTO_DISPATCH_ROUTES.rooms?.rpc).toBe('save_object_rooms');
   });
 
-  it('only those 5 modules are auto-dispatchable', () => {
+  it('only those 7 modules are auto-dispatchable', () => {
     const auto = (Object.keys(AUTO_DISPATCH_ROUTES) as WorkspaceModuleId[]).filter(isAutoDispatchModule);
     expect(new Set(auto)).toEqual(
-      new Set(['characteristics', 'openings', 'sustainability', 'tags', 'relationships']),
+      new Set(['characteristics', 'openings', 'sustainability', 'tags', 'relationships', 'places', 'rooms']),
     );
   });
 
@@ -89,6 +95,8 @@ describe('buildContributorSubmission — auto-dispatch sections', () => {
     ['sustainability', 'save_object_workspace_sustainability', buildSustainabilityRpcPayload(draft.sustainability)],
     ['tags', 'save_object_workspace_tags', buildTagsRpcPayload(draft.tags)],
     ['relationships', 'save_object_relations', buildRelationshipsRpcPayload(draft.relationships)],
+    ['places', 'save_object_places', buildPlacesRpcPayload(draft.places)],
+    ['rooms', 'save_object_rooms', buildRoomsRpcPayload(draft.rooms)],
   ];
 
   it.each(cases)('%s stores the exact RPC envelope (rpc=%s) with manual_apply=false', (module, rpc, payload) => {

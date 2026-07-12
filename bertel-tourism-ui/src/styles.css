@@ -4720,7 +4720,7 @@ a {
 }
 
 /* §4.4 : profil altimétrique (SVG responsive + résumé texte accessible). */
-.detail-elevation-profile { display: flex; flex-direction: column; gap: 8px; }
+.detail-elevation-profile { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
 .detail-elevation-profile__svg {
   width: 100%;
   height: auto;
@@ -4734,6 +4734,25 @@ a {
 .detail-elevation-profile__point { fill: var(--acc-iti); stroke: var(--surface); stroke-width: 1.5; }
 .detail-elevation-profile__axis { fill: var(--ink-3); font-size: 10px; font-family: var(--font-mono), monospace; }
 .detail-elevation-profile__summary { margin: 0; font-size: 12px; color: var(--ink-2); }
+
+/* PLAN 7 — polish responsive des cartes de fiche (aligné sur le breakpoint mobile du drawer). */
+@media (max-width: 640px) {
+  /* CTA événement : boutons pleine largeur empilés. */
+  .detail-event-next__actions { display: flex; flex-direction: column; align-items: stretch; }
+  .detail-event-next__cta { width: 100%; justify-content: center; }
+
+  /* Carte menu : le prix passe sous le nom du plat quand la largeur manque. */
+  .detail-menu__dish-head { flex-wrap: wrap; }
+
+  /* Résumé altimétrique : jamais de débordement horizontal (nombres longs). */
+  .detail-elevation-profile__summary { overflow-wrap: anywhere; }
+}
+
+/* Résumé stats itinéraire : 2 colonnes (≤720px) puis 1 colonne sur les écrans les plus étroits. */
+@media (max-width: 420px) {
+  .detail-kpi-strip,
+  .detail-kpi-strip--five { grid-template-columns: 1fr; }
+}
 
 /* §4.5 : téléchargement GPX (paresseux, un seul appel en vol). */
 .detail-gpx-action { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }

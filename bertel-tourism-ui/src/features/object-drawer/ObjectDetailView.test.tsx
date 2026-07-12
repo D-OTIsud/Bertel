@@ -57,6 +57,8 @@ function renderDetail(data: ObjectDetail) {
 
 describe('ObjectDetailView', () => {
   beforeEach(() => {
+    // jsdom n'implémente pas scrollIntoView — le clic d'onglet (§8.5) l'appelle.
+    Element.prototype.scrollIntoView = jest.fn();
     mockMutateAsync.mockReset();
     mockUpdateMutateAsync.mockReset();
     mockDeleteMutateAsync.mockReset();
@@ -106,7 +108,8 @@ describe('ObjectDetailView', () => {
       },
     } as ObjectDetail;
     renderDetail(data);
-    expect(screen.getByText('Cuisine & carte')).toBeInTheDocument();
+    // §5 : « Cuisine & carte » est désormais un onglet ET un titre de section ⇒ getAllByText.
+    expect(screen.getAllByText('Cuisine & carte').length).toBeGreaterThan(0);
     expect(screen.getByText('Créole')).toBeInTheDocument();
     expect(screen.getByText('Cari poulet')).toBeInTheDocument();
     // Prix conscient de la devise (Intl fr-FR) : « 14,00 » + € — l'espace peut être une NBSP fine.
@@ -146,7 +149,8 @@ describe('ObjectDetailView', () => {
       raw: { activity: { duration_min: '180', min_participants: '2', max_participants: '6', guide_required: true } },
     } as ObjectDetail;
     renderDetail(data);
-    expect(screen.getByText('Fiche activité')).toBeInTheDocument();
+    // §5 : « Fiche activité » est désormais un onglet ET un titre de section ⇒ getAllByText.
+    expect(screen.getAllByText('Fiche activité').length).toBeGreaterThan(0);
     expect(screen.getByText('180 min')).toBeInTheDocument();
     expect(screen.getByText('De 2 à 6 personnes')).toBeInTheDocument();
   });
@@ -192,16 +196,20 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Fiche activité')).not.toBeInTheDocument();
   });
 
-  // Phase 4 — onglets = sections réellement rendues : un objet sans tarifs/équipements/médias/
-  // légal/notes ne doit afficher QUE l'onglet « Aperçu » (fini les onglets « Tarifs (0) » qui
-  // mentent et défilent vers une ancre inexistante).
+  // PLAN 5 — onglets = sections réellement rendues : un objet sans tarifs/horaires/équipements/
+  // médias/légal/notes ne doit afficher QUE l'onglet « Aperçu » (fini les onglets « Tarifs (0) »
+  // qui mentent et défilent vers une ancre inexistante). L'onglet « Tarifs & horaires » est
+  // désormais scindé en « Tarifs » et « Horaires » — les deux absents ici.
   it('omet les onglets vides : un objet sans donnée ne montre que « Aperçu »', () => {
+    mockPrivateNoteAccess.data = false; // pas de droit d'écriture → pas d'onglet Notes internes
     const data: ObjectDetail = { id: 'srv-empty', name: 'Bureau d’information', type: 'SRV', raw: {} } as ObjectDetail;
     renderDetail(data);
     expect(screen.getByRole('button', { name: 'Aperçu' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Tarifs & horaires/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tarifs/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Horaires/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Équipements/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Médias/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Notes internes/ })).not.toBeInTheDocument();
   });
 
   it('renders sustainability actions as compact chips and reveals cleaned prose in a modal (no raw tokens inline)', () => {
@@ -438,8 +446,12 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('resa@horizon.re')).toBeInTheDocument();
     expect(screen.getByText('Chambres')).toBeInTheDocument();
     expect(screen.getByText('Reunions et evenements')).toBeInTheDocument();
-    expect(screen.getByText('Tarifs & horaires')).toBeInTheDocument();
-    expect(screen.getByText('Horaires')).toBeInTheDocument();
+    // §5 : l'onglet combiné « Tarifs & horaires » est scindé en deux — chaque libellé
+    // apparaît désormais à la fois comme onglet ET comme titre de section (d'où getAllByText).
+    expect(screen.getByRole('button', { name: /Tarifs/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Horaires/ })).toBeInTheDocument();
+    expect(screen.getAllByText('Tarifs').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Horaires').length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /voir la semaine/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /voir la semaine/i }));
     expect(screen.getAllByText(/07:00/).length).toBeGreaterThan(0);
@@ -825,7 +837,8 @@ describe('ObjectDetailView', () => {
     renderDetail(data);
 
     expect(screen.getByRole('heading', { name: 'Sentier des trois remparts' })).toBeInTheDocument();
-    expect(screen.getByText('Avant de partir')).toBeInTheDocument();
+    // §5 : « Avant de partir » est désormais un onglet ET un titre de section ⇒ getAllByText.
+    expect(screen.getAllByText('Avant de partir').length).toBeGreaterThan(0);
     const distanceKpi = screen.getByText('Distance').closest('.detail-kpi');
     expect(distanceKpi).toHaveTextContent('12.5km');
     expect(screen.getByText('Duree')).toBeInTheDocument();
@@ -1032,5 +1045,141 @@ describe('ObjectDetailView', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  const makeObject = (id: string, name: string, type: string, raw: Record<string, unknown>): ObjectDetail =>
+    ({ id, name, type, raw } as ObjectDetail);
+
+  // ── PLAN 8.5 — intégrité des onglets : chaque onglet visible expose sa cible via
+  //    aria-controls, il existe EXACTEMENT un élément portant cet id, et cliquer
+  //    l'onglet appelle scrollIntoView sur cette cible (aucune ancre cassée). ──
+  function expectEveryDetailTabToHaveTarget() {
+    const nav = screen.getByRole('navigation', { name: /sections de la fiche/i });
+    const tabs = within(nav).getAllByRole('button');
+    expect(tabs.length).toBeGreaterThan(0);
+    const scrollSpy = Element.prototype.scrollIntoView as jest.Mock;
+    for (const tab of tabs) {
+      const targetId = tab.getAttribute('aria-controls');
+      expect(targetId).toBeTruthy();
+      const targets = document.querySelectorAll(`[id="${targetId}"]`);
+      expect(targets).toHaveLength(1); // une cible unique, jamais d'ancre cassée
+      scrollSpy.mockClear();
+      fireEvent.click(tab);
+      expect(scrollSpy).toHaveBeenCalled();
+      expect(scrollSpy.mock.instances).toContain(targets[0]);
+    }
+  }
+
+  describe('§8.5 intégrité des onglets — chaque onglet visible a exactement une cible', () => {
+    const hoursRaw = {
+      opening_times: {
+        periods_current: [
+          {
+            label: 'Toute l’année',
+            date_start: '2026-01-01',
+            date_end: '2026-12-31',
+            weekday_slots: {
+              monday: [{ start: '09:00', end: '18:00' }],
+              tuesday: [{ start: '09:00', end: '18:00' }],
+            },
+          },
+        ],
+      },
+    };
+
+    const cases: Array<{ name: string; data: ObjectDetail }> = [
+      { name: 'objet générique vide', data: makeObject('empty-1', 'Bureau', 'SRV', {}) },
+      { name: 'horaires seuls (sans tarifs)', data: makeObject('hours-1', 'Point info', 'SRV', hoursRaw) },
+      { name: 'tarifs seuls (sans horaires)', data: makeObject('prices-1', 'Musée', 'SRV', { prices: [{ label: 'Adulte', amount: 12, currency: 'EUR' }] }) },
+      { name: 'objet avec médias', data: makeObject('media-1', 'Hôtel', 'HOT', { media: [{ id: 'm1', url: 'https://example.com/a.jpg', title: 'A', is_main: true }, { id: 'm2', url: 'https://example.com/b.jpg', title: 'B' }] }) },
+      { name: 'FMA date canonique seule', data: makeObject('fma-canon', 'Fête', 'FMA', { fma: [{ event_start_date: '2099-07-14', event_end_date: '2099-07-18' }] }) },
+      { name: 'FMA avec occurrences', data: makeObject('fma-occ', 'Fête', 'FMA', { fma_occurrences: [{ id: 'o1', start_at: '2099-07-14', end_at: '2099-07-18', state: 'scheduled' }] }) },
+      { name: 'RES cuisines seules', data: makeObject('res-cui', 'Table', 'RES', { cuisine_types: [{ code: 'creole', name: 'Créole' }] }) },
+      { name: 'RES carte complète', data: makeObject('res-menu', 'Table', 'RES', { menus: [{ name: 'Carte', items: [{ name: 'Cari poulet', price: '14', section: { name: 'Plats', position: 1 } }] }] }) },
+      { name: 'ASC faits activité', data: makeObject('asc-1', 'Canyoning', 'ASC', { activity: { duration_min: '180', min_participants: '2', max_participants: '6', guide_required: true } }) },
+      {
+        name: 'ITI étapes + profil + géométrie',
+        data: makeObject('iti-1', 'Boucle du Piton', 'ITI', {
+          itinerary_details: {
+            stages: [{ id: 's1', name: 'Belvédère', description: 'Vue panoramique', extra: { kind: 'viewpoint' } }],
+            profiles: [
+              { id: 'p1', position_m: 0, elevation_m: 100 },
+              { id: 'p2', position_m: 500, elevation_m: 180 },
+              { id: 'p3', position_m: 1000, elevation_m: 260 },
+            ],
+            track_geojson: { type: 'LineString', coordinates: [[55.4, -21.1], [55.5, -21.2]] },
+          },
+        }),
+      },
+      { name: 'objet avec notes internes', data: makeObject('notes-1', 'Hôtel Notes', 'HOT', { private_notes: [{ id: 'n1', body: 'Note interne', created_at: '2026-01-05T08:00:00.000Z', audience: 'private', category: 'general', created_by: { id: 'usr-1', display_name: 'Alice', avatar_url: null } }] }) },
+    ];
+
+    it.each(cases)('aucune ancre cassée — $name', ({ data }) => {
+      renderDetail(data);
+      expectEveryDetailTabToHaveTarget();
+    });
+  });
+
+  // ── PLAN 8.6 — matrice type→sections : chaque fixture reçoit des données ÉTRANGÈRES
+  //    (menu + activité + occurrences FMA + étapes ITI) et l'on prouve que seul
+  //    l'archétype du type rend ses sections — jamais celles d'un autre. ──
+  describe('§8.6 matrice type→sections — la config d’archétype empêche toute fuite inter-type', () => {
+    const foreignRaw = {
+      cuisine_types: [{ code: 'creole', name: 'Créole' }],
+      menus: [{ name: 'Carte', items: [{ name: 'Cari poulet', price: '14', section: { name: 'Plats', position: 1 } }] }],
+      activity: { duration_min: '180', min_participants: '2', max_participants: '6', guide_required: true },
+      fma_occurrences: [{ id: 'o1', start_at: '2099-07-14', end_at: '2099-07-18', state: 'scheduled' }],
+      itinerary_details: { stages: [{ id: 's1', name: 'Cascade', description: 'Belvédère', extra: { kind: 'viewpoint' } }] },
+    };
+
+    type SectionExpect = { menu: boolean; activity: boolean; event: boolean; itinerary: boolean };
+    const NONE: SectionExpect = { menu: false, activity: false, event: false, itinerary: false };
+    const matrix: Array<[string, SectionExpect]> = [
+      ['HOT', NONE], ['HPA', NONE], ['HLO', NONE], ['CAMP', NONE], ['RVA', NONE],
+      ['RES', { menu: true, activity: false, event: false, itinerary: false }],
+      ['ASC', { menu: false, activity: true, event: false, itinerary: false }],
+      ['ACT', { menu: false, activity: true, event: false, itinerary: false }],
+      ['ITI', { menu: false, activity: false, event: false, itinerary: true }],
+      ['FMA', { menu: false, activity: false, event: true, itinerary: false }],
+      ['LOI', NONE], ['PCU', NONE], ['PNA', NONE], ['PRD', NONE],
+      ['PSV', NONE], ['VIL', NONE], ['COM', NONE], ['SPU', NONE],
+    ];
+
+    it.each(matrix)('%s : ne rend que les sections de son archétype', (code, expected) => {
+      renderDetail(makeObject(`obj-${code}`, `Fiche ${code}`, code, foreignRaw));
+
+      // L'aperçu (conteneur d'ancre) est toujours présent, quel que soit le type.
+      expect(document.getElementById('detail-section-overview')).not.toBeNull();
+
+      // Cuisine & carte (RES uniquement) — libellé partagé onglet + titre ⇒ getAllByText.
+      if (expected.menu) {
+        expect(screen.getAllByText('Cuisine & carte').length).toBeGreaterThan(0);
+      } else {
+        expect(screen.queryByText('Cuisine & carte')).not.toBeInTheDocument();
+      }
+
+      // Fiche activité (ASC/ACT uniquement).
+      if (expected.activity) {
+        expect(screen.getAllByText('Fiche activité').length).toBeGreaterThan(0);
+      } else {
+        expect(screen.queryByText('Fiche activité')).not.toBeInTheDocument();
+      }
+
+      // Section de dates (FMA uniquement) — « Prochaine date » et/ou « Toutes les dates ».
+      if (expected.event) {
+        // « Toutes les dates » n'est qu'un titre de section (l'onglet s'appelle « Dates ») ⇒ 1 seul.
+        expect(screen.queryByText('Toutes les dates')).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText('Toutes les dates')).not.toBeInTheDocument();
+        expect(screen.queryByText('Prochaine date')).not.toBeInTheDocument();
+      }
+
+      // Étapes de l'itinéraire (ITI uniquement) — titre de section (l'onglet s'appelle « Étapes »).
+      if (expected.itinerary) {
+        expect(screen.getByText("Étapes de l'itinéraire")).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
+      }
+    });
   });
 });

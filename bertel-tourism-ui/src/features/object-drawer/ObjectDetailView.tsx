@@ -35,7 +35,7 @@ import {
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { buildEventOccurrenceRows } from './event-occurrences';
+import { buildEventDisplayData, type EventDateRange, type EventDisplayData } from './event-occurrences';
 import { buildRestaurantMenuData } from './restaurant-menu';
 import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
 import { buildActivityFacts } from './activity-facts';
@@ -56,6 +56,7 @@ import {
   type ParsedObjectDetail,
 } from '../../services/object-detail-parser';
 import { useSessionStore } from '../../store/session-store';
+import { getObjectItineraryGpx } from '../../services/rpc';
 import type { ObjectDetail } from '../../types/domain';
 import {
   getNoteAuthorDisplayName,
@@ -67,6 +68,7 @@ import {
   type ActorItem,
   type CapacityItem,
   type ContactItem,
+  type ItineraryProfilePoint,
   type ItinerarySummary,
   type MediaItem,
   type LegalItem,
@@ -2863,7 +2865,9 @@ function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
               {idx + 1}
             </span>
             <div className="detail-waypoint__body">
-              <strong className="detail-waypoint__name">{stage.name}</strong>
+              {/* §4.6 : « Étape n » = métadonnée d'ordre (dim) ; le nom réel n'est rendu que s'il existe. */}
+              <span className="detail-waypoint__position">{stage.positionLabel}</span>
+              {stage.name ? <strong className="detail-waypoint__name">{stage.name}</strong> : null}
               {stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
             </div>
             {stage.kindLabel ? <span className="detail-waypoint__meta">{stage.kindLabel}</span> : null}
@@ -3258,17 +3262,38 @@ function RestaurantMenuSection({ raw }: { raw: Record<string, unknown> }) {
       {menus.map((menu) => (
         <div key={menu.key} className="detail-menu">
           {menus.length > 1 ? <h4 className="detail-menu__title">{menu.title}</h4> : null}
+          {/* §4.3 : un menu peut n'avoir qu'une description (aucune section) — on la rend quand même. */}
+          {menu.description ? <p className="detail-menu__description">{menu.description}</p> : null}
           {menu.sections.map((section) => (
             <div key={section.name} className="detail-menu__section">
               <span className="detail-menu__section-name">{section.name}</span>
               <ul className="detail-menu__dishes">
                 {section.dishes.map((dish) => (
                   <li key={dish.key} className="detail-menu__dish">
-                    <span className="detail-menu__dish-name">{dish.name}</span>
-                    {dish.dietary.length > 0 ? (
-                      <span className="detail-menu__dish-diet">{dish.dietary.join(' · ')}</span>
+                    <div className="detail-menu__dish-head">
+                      <span className="detail-menu__dish-name">{dish.name}</span>
+                      {dish.formattedPrice ? (
+                        <span className="detail-menu__dish-price">{dish.formattedPrice}</span>
+                      ) : null}
+                    </div>
+                    {dish.description ? (
+                      <p className="detail-menu__dish-description">{dish.description}</p>
                     ) : null}
-                    {dish.price ? <span className="detail-menu__dish-price">{dish.price}</span> : null}
+                    {/* §4.3 : régimes ET allergènes = deux jeux de puces distincts (jamais fusionnés). */}
+                    {dish.dietary.length > 0 || dish.allergens.length > 0 ? (
+                      <div className="detail-menu__tags">
+                        {dish.dietary.map((tag) => (
+                          <span key={`diet-${tag}`} className="detail-menu__tag detail-menu__tag--diet">
+                            {tag}
+                          </span>
+                        ))}
+                        {dish.allergens.map((tag) => (
+                          <span key={`allergen-${tag}`} className="detail-menu__tag detail-menu__tag--allergen">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -3305,27 +3330,314 @@ function ActivityFactsSection({ raw }: { raw: Record<string, unknown> }) {
 }
 
 /**
- * Bloc « Prochaines dates » d'un événement (impl. 4.1). Rendu UNIQUEMENT quand des
- * occurrences existent (FMA) — donc null pour les autres types qui partagent
- * GenericDetailView. Comble « un événement sans dates nulle part » (audit FMA).
+ * Formate une valeur ISO-like en date FR SANS décalage UTC (impl. 4.1). Une
+ * date-only (`YYYY-MM-DD`) n'est JAMAIS passée à `new Date(iso)` (qui la lirait en
+ * UTC et pourrait la décaler d'un jour) : on extrait les composantes et on
+ * construit une date LOCALE. L'heure n'est ajoutée que si elle est présente.
  */
-function EventOccurrencesSection({ occurrences }: { occurrences: Array<Record<string, unknown>> }) {
-  const rows = useMemo(() => buildEventOccurrenceRows(occurrences), [occurrences]);
-  if (rows.length === 0) {
+function formatEventDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(value);
+  if (!match) {
+    return value;
+  }
+  const [, y, mo, d, hh, mm] = match;
+  const hasTime = hh !== undefined && mm !== undefined;
+  const date = new Date(Number(y), Number(mo) - 1, Number(d), hasTime ? Number(hh) : 0, hasTime ? Number(mm) : 0);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  }).format(date);
+}
+
+/** Deux valeurs ISO-like tombent-elles le même jour civil (comparaison sur la partie date). */
+function isSameCalendarDay(a: string, b: string): boolean {
+  return Boolean(a) && Boolean(b) && a.slice(0, 10) === b.slice(0, 10);
+}
+
+/** Libellé d'une plage d'occurrence : « Du … au … » quand les jours diffèrent, sinon la date seule. */
+function formatEventRangeLabel(range: EventDateRange): string {
+  const start = range.start ? formatEventDate(range.start) : '';
+  const end = range.end ? formatEventDate(range.end) : '';
+  if (start && end && !isSameCalendarDay(range.start, range.end)) {
+    return `Du ${start} au ${end}`;
+  }
+  return start || end;
+}
+
+/**
+ * Bloc « Prochaine date » d'un événement (impl. 4.1). Rendu UNIQUEMENT quand une
+ * prochaine date existe (occurrence future la plus proche, sinon date canonique non
+ * passée). Récurrence + bouton réservation (uniquement un canal public
+ * `booking_engine` — pas de repli site générique).
+ */
+function EventNextDateSection({
+  next,
+  recurring,
+  recurrencePattern,
+  location,
+  reservationHref,
+}: {
+  next: EventDateRange;
+  recurring: boolean;
+  recurrencePattern: string;
+  location: DetailLocation | null;
+  reservationHref: string;
+}) {
+  const startLabel = next.start ? formatEventDate(next.start) : '';
+  // Fin affichée seulement si elle diffère du début (autre jour OU autre heure).
+  const endLabel =
+    next.end && (!isSameCalendarDay(next.start, next.end) || next.end !== next.start)
+      ? formatEventDate(next.end)
+      : '';
+  const locationLine = location
+    ? [location.city, location.lieuDit].filter(Boolean).join(' · ') || location.label
+    : '';
+  const recurrenceLabel = recurrencePattern
+    ? `Événement récurrent · ${recurrencePattern}`
+    : 'Événement récurrent';
+
+  return (
+    <Section id="detail-section-events-next" kicker="À venir" title="Prochaine date">
+      <div className="detail-event-next">
+        <p className="detail-event-next__date">
+          <CalendarDays size={16} className="detail-event-next__icon" aria-hidden />
+          <span>
+            {startLabel}
+            {endLabel ? <span className="detail-event-next__end"> → {endLabel}</span> : null}
+          </span>
+        </p>
+        {locationLine ? (
+          <p className="detail-event-next__location">
+            <MapPin size={14} aria-hidden /> {locationLine}
+          </p>
+        ) : null}
+        {recurring ? <span className="detail-event-recurrence">{recurrenceLabel}</span> : null}
+        {reservationHref ? (
+          <div className="detail-event-next__actions">
+            <a
+              className="detail-event-next__cta"
+              href={reservationHref}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Réserver / Billetterie
+            </a>
+          </div>
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Bloc « Toutes les dates » d'un événement (impl. 4.1). Occurrences à venir d'abord,
+ * puis passées sous « Dates passées », puis annulées (barrées + badge « Annulé »).
+ * La note d'occurrence s'affiche sous la date. Une date canonique SEULE (sans
+ * occurrence) n'est PAS dupliquée ici — le bloc « Prochaine date » la montre déjà.
+ * Rendu null si upcoming + past + cancelled sont tous vides.
+ */
+function EventOccurrencesSection({ eventData }: { eventData: EventDisplayData }) {
+  const { upcoming, past, cancelled } = eventData;
+  if (upcoming.length === 0 && past.length === 0 && cancelled.length === 0) {
     return null;
   }
+
+  const renderRow = (range: EventDateRange) => (
+    <li
+      key={range.key}
+      className={cn('detail-event-list__row', range.cancelled && 'detail-event-list__row--cancelled')}
+    >
+      <CalendarDays size={15} className="detail-event-list__icon" aria-hidden />
+      <span className="detail-event-list__body">
+        <span className="detail-event-list__date">{formatEventRangeLabel(range)}</span>
+        {range.note ? <span className="detail-event-list__note">{range.note}</span> : null}
+      </span>
+      {range.cancelled ? <span className="detail-event-list__state">Annulé</span> : null}
+    </li>
+  );
+
   return (
-    <Section id="detail-section-events" title="Prochaines dates" kicker="Quand">
-      <ul className="detail-event-list">
-        {rows.map((row) => (
-          <li key={row.key} className={cn('detail-event-list__row', row.cancelled && 'detail-event-list__row--cancelled')}>
-            <CalendarDays size={15} className="detail-event-list__icon" aria-hidden />
-            <span className="detail-event-list__date">{row.label}</span>
-            {row.cancelled ? <span className="detail-event-list__state">Annulé</span> : null}
-          </li>
-        ))}
-      </ul>
+    <Section id="detail-section-events" title="Toutes les dates" kicker="Quand">
+      {upcoming.length > 0 ? <ul className="detail-event-list">{upcoming.map(renderRow)}</ul> : null}
+      {past.length > 0 ? (
+        <>
+          <p className="detail-event-list__subhead">Dates passées</p>
+          <ul className="detail-event-list detail-event-list--past">{past.map(renderRow)}</ul>
+        </>
+      ) : null}
+      {cancelled.length > 0 ? (
+        <ul className="detail-event-list detail-event-list--cancelled">{cancelled.map(renderRow)}</ul>
+      ) : null}
     </Section>
+  );
+}
+
+/**
+ * Profil altimétrique d'un itinéraire (impl. 4.4). SVG responsive tracé à partir des
+ * points de profil RÉELS (`object_iti` profiles) — aucune interpolation, aucun point
+ * fabriqué. Rendu seulement quand ≥ 2 points existent. Un résumé texte double l'info
+ * (distance / alt. min-max / dénivelé) pour l'accessibilité — l'info n'est pas
+ * seulement dans le SVG.
+ */
+function ItineraryElevationProfileSection({ profiles }: { profiles: ItineraryProfilePoint[] }) {
+  const geometry = useMemo(() => {
+    if (profiles.length < 2) {
+      return null;
+    }
+    const width = 600;
+    const height = 180;
+    const padLeft = 36;
+    const padRight = 16;
+    const padTop = 16;
+    const padBottom = 28;
+    const innerW = width - padLeft - padRight;
+    const innerH = height - padTop - padBottom;
+    const positions = profiles.map((point) => point.positionM);
+    const elevations = profiles.map((point) => point.elevationM);
+    const minPos = Math.min(...positions);
+    const maxPos = Math.max(...positions);
+    const minEle = Math.min(...elevations);
+    const maxEle = Math.max(...elevations);
+    const posSpan = maxPos - minPos || 1;
+    // Toutes les altitudes égales : plage d'affichage ±1 m pour éviter la division par zéro.
+    const flat = maxEle - minEle === 0;
+    const eleSpan = flat ? 2 : maxEle - minEle;
+    const eleBase = flat ? minEle - 1 : minEle;
+    const baseY = padTop + innerH;
+    const x = (pos: number) => padLeft + ((pos - minPos) / posSpan) * innerW;
+    const y = (ele: number) => padTop + innerH - ((ele - eleBase) / eleSpan) * innerH;
+    const coords = profiles.map((point) => `${x(point.positionM).toFixed(1)},${y(point.elevationM).toFixed(1)}`);
+    const linePath = `M ${coords.join(' L ')}`;
+    const areaPath = `M ${x(minPos).toFixed(1)},${baseY.toFixed(1)} L ${coords.join(' L ')} L ${x(maxPos).toFixed(1)},${baseY.toFixed(1)} Z`;
+    const firstPoint = profiles[0];
+    const lastPoint = profiles[profiles.length - 1];
+    return {
+      width,
+      height,
+      linePath,
+      areaPath,
+      minEle,
+      maxEle,
+      distanceKm: maxPos / 1000,
+      start: { x: x(firstPoint.positionM), y: y(firstPoint.elevationM) },
+      end: { x: x(lastPoint.positionM), y: y(lastPoint.elevationM) },
+      maxLabelY: y(maxEle),
+      minLabelY: y(minEle),
+    };
+  }, [profiles]);
+
+  if (!geometry) {
+    return null;
+  }
+
+  const range = geometry.maxEle - geometry.minEle;
+  const distanceKm = geometry.distanceKm.toFixed(1);
+  const minEle = Math.round(geometry.minEle);
+  const maxEle = Math.round(geometry.maxEle);
+  const ariaLabel = `Profil altimétrique sur ${distanceKm} km : altitude de ${minEle} à ${maxEle} mètres, dénivelé ${Math.round(range)} mètres.`;
+
+  return (
+    <Section id="detail-section-profile" title="Profil altimétrique">
+      <div className="detail-elevation-profile">
+        <svg
+          className="detail-elevation-profile__svg"
+          viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+          style={{ width: '100%' }}
+          role="img"
+          aria-label={ariaLabel}
+        >
+          <path className="detail-elevation-profile__area" d={geometry.areaPath} />
+          <path className="detail-elevation-profile__line" d={geometry.linePath} fill="none" />
+          <circle className="detail-elevation-profile__point" cx={geometry.start.x} cy={geometry.start.y} r={4} />
+          <circle className="detail-elevation-profile__point" cx={geometry.end.x} cy={geometry.end.y} r={4} />
+          <text className="detail-elevation-profile__axis" x={4} y={geometry.maxLabelY} dy="0.32em">
+            {maxEle} m
+          </text>
+          <text className="detail-elevation-profile__axis" x={4} y={geometry.minLabelY} dy="0.32em">
+            {minEle} m
+          </text>
+        </svg>
+        <p className="detail-elevation-profile__summary">
+          Distance {distanceKm} km · Altitude {minEle}–{maxEle} m · Dénivelé {Math.round(range)} m
+        </p>
+      </div>
+    </Section>
+  );
+}
+
+/** Slug pour nom de fichier GPX : minuscules, accents retirés, non-alphanum → '-', repli « itineraire ». */
+function slugForFilename(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'itineraire';
+}
+
+/**
+ * Téléchargement PARESSEUX de la trace GPX (impl. 4.5) — jamais préchargé à
+ * l'ouverture du drawer, uniquement au clic. Un seul appel en vol (les clics
+ * concurrents sont ignorés pendant le chargement). Rendu par l'appelant seulement
+ * quand une trace existe (gate `trackGeojson` non nul).
+ */
+function ItineraryGpxDownload({
+  objectId,
+  name,
+  langPrefs,
+}: {
+  objectId: string;
+  name: string;
+  langPrefs: string[];
+}) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  const handleDownload = async () => {
+    if (status === 'loading') {
+      return; // un seul appel en vol
+    }
+    setStatus('loading');
+    try {
+      const track = await getObjectItineraryGpx(objectId, langPrefs);
+      if (typeof window !== 'undefined') {
+        const blob = new Blob([track], { type: 'application/gpx+xml;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${slugForFilename(name)}.gpx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+      setStatus('idle');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="detail-gpx-action">
+      <button
+        type="button"
+        className="detail-gpx-action__button"
+        onClick={handleDownload}
+        disabled={status === 'loading'}
+      >
+        <Download size={16} aria-hidden />
+        {status === 'loading'
+          ? 'Préparation du GPX…'
+          : status === 'error'
+            ? 'Réessayer'
+            : 'Télécharger le GPX'}
+      </button>
+      {status === 'error' ? (
+        <span className="detail-gpx-action__error">Impossible de générer le GPX.</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -3347,11 +3659,13 @@ export
 type DrawerSectionKind =
   | 'apercu'
   | 'apercu-iti'
+  | 'eventsNext'
   | 'events'
   | 'rooms'
   | 'meetingRooms'
   | 'restaurantMenu'
   | 'waypoints'
+  | 'profile'
   | 'itineraryPractical'
   | 'activityFacts'
   | 'amenities'
@@ -3368,11 +3682,11 @@ const TAIL_NO_SCHEDULE: DrawerSectionKind[] = ['amenities', 'pricing', 'legal', 
 const ARCHETYPE_SECTIONS: Record<ArchetypeCode, DrawerSectionKind[]> = {
   HEB: ['apercu', 'amenities', 'rooms', 'meetingRooms', 'pricing', 'legal', 'notes'],
   RES: ['apercu', 'restaurantMenu', ...TAIL_WITH_SCHEDULE],
-  ITI: ['apercu-iti', 'waypoints', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
+  ITI: ['apercu-iti', 'waypoints', 'profile', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
   ASC: ['apercu', 'activityFacts', ...TAIL_NO_SCHEDULE],
   VIS: ['apercu', ...TAIL_WITH_SCHEDULE],
   SRV: ['apercu', ...TAIL_WITH_SCHEDULE],
-  FMA: ['events', 'apercu', ...TAIL_WITH_SCHEDULE],
+  FMA: ['eventsNext', 'events', 'apercu', ...TAIL_WITH_SCHEDULE],
 };
 
 // Type sans archétype résolu (chaîne vide / inconnue) : disposition générique.
@@ -3389,6 +3703,17 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   );
   const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
   const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+  // §4.1 : projection now-relative des dates FMA (canonique + occurrences) — une seule source.
+  const eventData = useMemo(
+    () => buildEventDisplayData(parsed.itinerary.fma, parsed.itinerary.fmaOccurrences),
+    [parsed.itinerary.fma, parsed.itinerary.fmaOccurrences],
+  );
+  // §4.1 : réservation = premier canal web public de type booking_engine (pas de repli site).
+  const reservationHref = useMemo(
+    () => preview.webChannels.find((channel) => channel.kindCode === 'booking_engine')?.href ?? '',
+    [preview.webChannels],
+  );
 
   const archetype = getArchetypeMeta(data.type);
   const kinds = (archetype && ARCHETYPE_SECTIONS[archetype.archetype]) ?? FALLBACK_DRAWER_SECTIONS;
@@ -3411,8 +3736,19 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
             <TaxonomySection groups={taxonomyGroups} />
           </ApercuRegion>
         );
+      case 'eventsNext':
+        return eventData.next ? (
+          <EventNextDateSection
+            key="events-next"
+            next={eventData.next}
+            recurring={eventData.recurring}
+            recurrencePattern={eventData.recurrencePattern}
+            location={preview.location}
+            reservationHref={reservationHref}
+          />
+        ) : null;
       case 'events':
-        return <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />;
+        return <EventOccurrencesSection key="events" eventData={eventData} />;
       case 'rooms':
         return <RoomList key="rooms" rooms={preview.roomTypes} />;
       case 'meetingRooms':
@@ -3421,8 +3757,17 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
         return <RestaurantMenuSection key="menu" raw={raw} />;
       case 'waypoints':
         return <WaypointListSection key="waypoints" stages={buildItineraryStages(parsed.itinerary.details)} />;
+      case 'profile':
+        return <ItineraryElevationProfileSection key="profile" profiles={preview.itinerary?.profiles ?? []} />;
       case 'itineraryPractical':
-        return <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />;
+        return (
+          <Fragment key="iti-practical">
+            <ItineraryPracticalSection itinerary={preview.itinerary} />
+            {preview.itinerary?.trackGeojson ? (
+              <ItineraryGpxDownload objectId={data.id} name={data.name} langPrefs={langPrefs} />
+            ) : null}
+          </Fragment>
+        );
       case 'activityFacts':
         return <ActivityFactsSection key="activity" raw={raw} />;
       case 'amenities':

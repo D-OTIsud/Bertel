@@ -83,7 +83,9 @@ describe('ObjectDetailView', () => {
       raw: { fma_occurrences: [{ id: 'o1', start_at: '2026-07-14', end_at: '2026-07-18', state: 'scheduled' }] },
     } as ObjectDetail;
     renderDetail(data);
-    expect(screen.getByText('Prochaines dates')).toBeInTheDocument();
+    // §4.1 : la liste complète des dates (occurrences à venir/passées) — le bloc
+    // « Prochaine date » séparé (EventNextDateSection) ne s'affiche que si la date est future.
+    expect(screen.getByText('Toutes les dates')).toBeInTheDocument();
     expect(screen.getByText(/Du .* au /)).toBeInTheDocument();
   });
 
@@ -107,7 +109,8 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Cuisine & carte')).toBeInTheDocument();
     expect(screen.getByText('Créole')).toBeInTheDocument();
     expect(screen.getByText('Cari poulet')).toBeInTheDocument();
-    expect(screen.getByText('14 €')).toBeInTheDocument();
+    // Prix conscient de la devise (Intl fr-FR) : « 14,00 » + € — l'espace peut être une NBSP fine.
+    expect(screen.getByText(/14[.,]00/)).toBeInTheDocument();
   });
 
   it('4.2 : pas de bloc menu pour un restaurant sans carte', () => {
@@ -145,7 +148,7 @@ describe('ObjectDetailView', () => {
     renderDetail(data);
     expect(screen.getByText('Fiche activité')).toBeInTheDocument();
     expect(screen.getByText('180 min')).toBeInTheDocument();
-    expect(screen.getByText('de 2 à 6')).toBeInTheDocument();
+    expect(screen.getByText('De 2 à 6 personnes')).toBeInTheDocument();
   });
 
   // Phase 4 — vue pilotée par configuration (ARCHETYPE_SECTIONS) : la dispatch est dérivée

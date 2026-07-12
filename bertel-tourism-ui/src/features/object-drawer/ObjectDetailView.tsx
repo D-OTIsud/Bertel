@@ -221,6 +221,7 @@ function DetailTabs({ items, objectId }: { items: DetailTabItem[]; objectId: str
             type="button"
             className={cn('drawer-detail-tab', activeId === item.id && 'drawer-detail-tab--active')}
             aria-controls={item.id}
+            aria-current={activeId === item.id ? 'true' : undefined}
             data-target={item.id}
             onClick={() => scrollTo(item.id)}
           >
@@ -3426,6 +3427,10 @@ function EventNextDateSection({
     next.end && (!isSameCalendarDay(next.start, next.end) || next.end !== next.start)
       ? formatEventDate(next.end)
       : '';
+  // Un événement « jusqu'au … » (start NULL, end futur — état DB valide) : pas de flèche
+  // orpheline. Repli sur la seule date présente ; la flèche n'apparaît qu'avec les deux.
+  const primaryDateLabel = startLabel || endLabel;
+  const trailingDateLabel = startLabel && endLabel ? endLabel : '';
   const locationLine = location
     ? [location.city, location.lieuDit].filter(Boolean).join(' · ') || location.label
     : '';
@@ -3439,8 +3444,8 @@ function EventNextDateSection({
         <p className="detail-event-next__date">
           <CalendarDays size={16} className="detail-event-next__icon" aria-hidden />
           <span>
-            {startLabel}
-            {endLabel ? <span className="detail-event-next__end"> → {endLabel}</span> : null}
+            {primaryDateLabel}
+            {trailingDateLabel ? <span className="detail-event-next__end"> → {trailingDateLabel}</span> : null}
           </span>
         </p>
         {locationLine ? (
@@ -3670,7 +3675,7 @@ function ItineraryGpxDownload({
             : 'Télécharger le GPX'}
       </button>
       {status === 'error' ? (
-        <span className="detail-gpx-action__error">Impossible de générer le GPX.</span>
+        <span className="detail-gpx-action__error" role="alert">Impossible de générer le GPX.</span>
       ) : null}
     </div>
   );

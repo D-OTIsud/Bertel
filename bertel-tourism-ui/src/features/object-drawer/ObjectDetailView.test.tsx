@@ -97,6 +97,21 @@ describe('ObjectDetailView', () => {
     expect(screen.queryByText('Prochaines dates')).not.toBeInTheDocument();
   });
 
+  it('4.1 : événement « jusqu’au … » (fin seule, sans début) — pas de flèche orpheline', () => {
+    const data: ObjectDetail = {
+      id: 'fma-end',
+      name: 'Exposition permanente',
+      type: 'FMA',
+      raw: { fma: [{ event_end_date: '2099-08-01' }] },
+    } as ObjectDetail;
+    renderDetail(data);
+    const nextSection = document.getElementById('detail-section-events-next');
+    expect(nextSection).not.toBeNull();
+    // La date de fin s'affiche seule ; aucune flèche « → » orpheline (start vide).
+    expect(nextSection?.textContent).not.toContain('→');
+    expect(nextSection?.textContent).toMatch(/2099/);
+  });
+
   it('4.2 : affiche le bloc « Cuisine & carte » d’un restaurant (RES)', () => {
     const data: ObjectDetail = {
       id: 'res-1',

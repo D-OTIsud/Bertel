@@ -23,6 +23,7 @@ import {
 } from './CrmFilterBar';
 import { CrmActorNewModal } from './CrmActorModals';
 import { EmptyState } from '../../components/common/EmptyState';
+import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf, topicTintOf } from './crm-view-utils';
 
 function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
@@ -104,7 +105,19 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   const followedActorsValue = hasFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
 
   if (directoryQuery.isLoading) {
-    return <div className="crm-loading">Chargement de l&apos;annuaire…</div>;
+    return (
+      <div role="status" aria-busy="true" aria-label="Chargement de l'annuaire" className="crm-loading-skeleton">
+        <div className="crm-loading-skeleton__row" aria-hidden="true">
+          <SkeletonBlock className="h-16 flex-1 rounded-shellMd" />
+          <SkeletonBlock className="h-16 flex-1 rounded-shellMd" />
+          <SkeletonBlock className="h-16 flex-1 rounded-shellMd" />
+        </div>
+        <SkeletonBlock className="h-10 w-full rounded-shellMd" />
+        {Array.from({ length: 6 }, (_, index) => (
+          <SkeletonBlock key={index} className="h-10 w-full rounded-shellSm" />
+        ))}
+      </div>
+    );
   }
   if (directoryQuery.isError) {
     return <div className="inline-alert">Échec du chargement de l&apos;annuaire : {(directoryQuery.error as Error).message}</div>;

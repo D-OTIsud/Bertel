@@ -1571,6 +1571,24 @@ a {
   transform: translateY(-1px);
 }
 
+.chip:active,
+.ghost-button:active,
+.primary-button:active,
+.open-pill:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: var(--motion-instant);
+}
+.chip:disabled:active,
+.ghost-button:disabled:active,
+.primary-button:disabled:active,
+.open-pill:disabled:active,
+.chip[aria-disabled='true']:active,
+.ghost-button[aria-disabled='true']:active,
+.primary-button[aria-disabled='true']:active,
+.open-pill[aria-disabled='true']:active {
+  transform: none;
+}
+
 /* D10 : contrôles aria-disabled (raison accessible via aria-describedby) — même
    apparence qu'un disabled natif, mais restent focusables et lisibles au SR. */
 .primary-button[aria-disabled='true'],
@@ -8271,6 +8289,10 @@ a {
 .map-panel__tool-button:hover {
   background: var(--surface-2);
   border-color: var(--line-strong);
+}
+
+.map-panel__tool-button:active {
+  transform: scale(0.98);
 }
 
 .map-panel__tool-button:disabled {

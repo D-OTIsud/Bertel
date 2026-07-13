@@ -127,6 +127,18 @@
   --lbl-qualite:    #b3373b;
   --lbl-excellence: #b9892f;
   --orange-soft: var(--accent-soft);   /* audit S6 : doublon exact de --accent-soft, aliasé */
+
+  /* Motion foundations (premium UI motion pass) — one timing/easing system for
+     modals, drawers, status banners, button feedback, and skeleton reveals. */
+  --motion-instant: 90ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-surface: 280ms;
+  --motion-exit: 180ms;
+  --ease-premium-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-premium-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 10px;
 }
 
 * {
@@ -212,6 +224,79 @@ textarea::placeholder {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Motion primitives (premium UI motion pass) — shared entrance/exit/feedback
+   animations. Consumed by RouteMotion, status banners, chips/badges, and the
+   editor's success pulse. `usePresence`-driven exits use the sibling
+   `[data-motion-phase]` selectors defined next to each consumer (Modal,
+   OfflineBanner, PeerSavedBanner) rather than a generic exit class here,
+   since each surface's exit transform differs (fade vs. slide vs. scale). */
+.motion-page-enter {
+  animation: motion-page-enter-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-page-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-sm)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-status-enter {
+  animation: motion-status-enter-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-status-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-md)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-pop {
+  animation: motion-pop-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-pop-keyframes {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.motion-content-reveal {
+  animation: motion-content-reveal-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-content-reveal-keyframes {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* One restrained pulse — no bounce, no color change (color is carried by the
+   caller's own success icon/text, e.g. EditorTopbar's check icon). */
+.motion-success {
+  animation: motion-success-keyframes var(--motion-base) var(--ease-premium-out);
+}
+@keyframes motion-success-keyframes {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.motion-spin {
+  animation: motion-spin-keyframes 0.9s linear infinite;
+}
+@keyframes motion-spin-keyframes {
+  to { transform: rotate(360deg); }
+}
+
+/* D1 (writing-plans spec): transforms/animations must be REMOVED under
+   reduced motion, not merely shortened by the blanket .01ms duration above —
+   a translateY/scale animation at .01ms still paints one transformed frame.
+   Spinners/shimmer stop too (matches the manual QA acceptance criterion). */
+@media (prefers-reduced-motion: reduce) {
+  .motion-page-enter,
+  .motion-status-enter,
+  .motion-pop,
+  .motion-content-reveal,
+  .motion-success,
+  .motion-spin {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

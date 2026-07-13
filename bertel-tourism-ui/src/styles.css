@@ -2865,6 +2865,10 @@ a {
   }
 }
 
+.page-skeleton { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+.page-skeleton__row { display: flex; gap: 16px; }
+.page-skeleton__col { display: flex; flex: 1; flex-direction: column; gap: 8px; justify-content: center; }
+
 .drawer-header p {
   margin: 0.35rem 0 0;
   color: var(--text-muted);

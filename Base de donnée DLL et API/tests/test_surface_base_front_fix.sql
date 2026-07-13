@@ -24,7 +24,7 @@ BEGIN
 
   INSERT INTO object (id, object_type, name, status, created_by) VALUES
     (v_obj, 'ASC', 'Surface fix ASC', 'published', v_owner),
-    (v_other, 'HEB', 'Surface fix HEB', 'published', v_owner);
+    (v_other, 'HOT', 'Surface fix HOT', 'published', v_owner);
 
   -- Activity: difficulty 1 and 5 accepted
   INSERT INTO object_act (object_id, duration_min, difficulty_level, guide_required, equipment_provided)
@@ -118,7 +118,7 @@ BEGIN
   ASSERT (SELECT label FROM object_place WHERE id = v_place) = 'Depart renomme',
          'invalid coordinates must not partially update the place';
 
-  -- Rooms on HEB object: full column round-trip (SURF3)
+  -- Rooms on a HEB-family object: full column round-trip (SURF3)
   v_result := api.save_object_rooms(v_other, jsonb_build_object('rooms', jsonb_build_array(
     jsonb_build_object(
       'code', 'dbl-1', 'name', 'Double', 'name_i18n', jsonb_build_object('en', 'Double room'),

@@ -41,7 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CommandPalette />
       {/* D12 : tiroir de navigation mobile (rail masqué < 768px). */}
       <MobileNavDrawer />
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          drawerObjectId ? (
+            <div className="drawer-panel-fallback" role="status" aria-busy="true" aria-label="Chargement de la fiche" />
+          ) : null
+        }
+      >
         <ObjectDrawer objectId={drawerObjectId} />
       </Suspense>
     </div>

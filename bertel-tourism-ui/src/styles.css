@@ -4028,6 +4028,18 @@ a {
   }
 }
 
+/* D12 — drawer panel fallback shell (while lazy JS chunk loads). */
+.drawer-panel-fallback {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 100%;
+  max-width: 1180px;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  z-index: 50;
+}
+
 /* 7.4 — révélation du mot de passe temporaire d'invitation (vocabulaire maison). */
 .invite-temp-row { display: flex; align-items: center; gap: 8px; }
 .invite-temp-code {

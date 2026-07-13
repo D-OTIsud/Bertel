@@ -81,6 +81,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
 
   const validation = validateCreateObjectInput({ type, name });
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
@@ -116,6 +117,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     try {
       const id = await createObject({ type, name: name.trim() });
       reset();
+      setJustCreated(true);
       onCreated(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Création impossible pour le moment.');
@@ -306,8 +308,12 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                   : { backgroundColor: '#dcd8d1', color: '#8a857c' }
               }
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {busy ? 'Création…' : 'Créer la fiche'}
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : justCreated ? (
+                <Check className="h-4 w-4 motion-pop" aria-hidden />
+              ) : null}
+              {busy ? 'Création…' : justCreated ? 'Créée' : 'Créer la fiche'}
             </button>
           </div>
         </div>

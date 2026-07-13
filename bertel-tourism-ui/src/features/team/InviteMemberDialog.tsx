@@ -154,7 +154,7 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
               const meta = STATUS_META[row.status];
               const Icon = meta.icon;
               return (
-                <li key={row.email} className={`invite-row ${meta.className}`}>
+                <li key={row.email} className={`invite-row ${meta.className} motion-status-enter`}>
                   <Icon size={15} aria-hidden />
                   <span className="invite-row__email">{row.email}</span>
                   <span className="invite-row__label">{row.detail ?? meta.label}</span>

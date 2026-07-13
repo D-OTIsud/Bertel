@@ -10571,7 +10571,7 @@ a {
   align-items: center;
   gap: 7px;
   white-space: nowrap;
-  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 .crm-app .crm-tabs button:hover { color: var(--ink); }
 /* Contraste (rectif PO point 2) : onglet actif PLEIN accent, texte blanc. */
@@ -10619,7 +10619,7 @@ a {
   color: var(--ink-2);
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .crm-btn:hover { border-color: var(--line-strong); color: var(--ink); }
@@ -10774,7 +10774,7 @@ a {
   font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
-  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .crm-chip:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
@@ -10861,7 +10861,7 @@ a {
 .crm-app .crm-row:last-child { border-bottom: 0; }
 .crm-app .crm-row:hover { background: var(--surface-2); }
 .crm-app .crm-row:hover .crm-row__go { color: var(--accent-deep); transform: translateX(2px); }
-.crm-app .crm-row__go { color: var(--ink-4); transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease; }
+.crm-app .crm-row__go { color: var(--ink-4); transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease; }
 
 .crm-app .crm-row__id { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .crm-app .crm-row__name { min-width: 0; }
@@ -11220,7 +11220,7 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   cursor: pointer;
-  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .kind-chip:hover { border-color: var(--line-strong); color: var(--ink); }
@@ -11681,7 +11681,7 @@ a {
   border-radius: var(--r-md);
   box-shadow: var(--shadow-s);
   padding: 13px 14px;
-  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 .crm-app .ticket:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-m); }
 /* Carte saisie pendant le glisser : estompée à 40 % (fantôme) — affordance « en mouvement ». */

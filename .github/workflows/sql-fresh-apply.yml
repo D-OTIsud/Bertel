@@ -361,6 +361,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_classification_regroup_network_labels.sql"
 
+      - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch incl. save_object_rooms)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_moderation_rpcs.sql"
+
+      - name: "SURF1-3 test (§182 — activity equipment-details contract, save_object_places reconcile incl. coordinate range, save_object_rooms full-column round-trip + atomicity)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_surface_base_front_fix.sql"
+
       - name: Stop Supabase
         if: always()
         run: supabase stop

@@ -278,6 +278,21 @@ export interface RelatedObjectItem {
   distanceM: string;
 }
 
+/** Point du profil altimétrique d'un itinéraire (PLAN 3.4). */
+export interface ItineraryProfilePoint {
+  id: string;
+  /** Distance cumulée en mètres (`position_m`). */
+  positionM: number;
+  /** Altitude en mètres (`elevation_m`). */
+  elevationM: number;
+}
+
+/** Géométrie de trace validée (PLAN 3.4) — LineString uniquement. */
+export interface ItineraryTrackGeoJson {
+  type: 'LineString';
+  coordinates: number[][];
+}
+
 export interface ItinerarySummary {
   distanceKm: string;
   durationHours: string;
@@ -290,7 +305,12 @@ export interface ItinerarySummary {
   info: string[];
   sectionsCount: number;
   stagesCount: number;
+  /** Points de profil validés + triés (PLAN 3.4). */
+  profiles: ItineraryProfilePoint[];
+  /** @deprecated dérivé de `profiles.length` (compat). */
   profilesCount: number;
+  /** Trace GeoJSON validée, sinon null (PLAN 3.4). */
+  trackGeojson: ItineraryTrackGeoJson | null;
 }
 
 function isRecord(value: unknown): value is GenericRecord {
@@ -1391,6 +1411,54 @@ export function parseRelatedObjects(raw: Record<string, unknown>): RelatedObject
   );
 }
 
+function finiteNum(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/**
+ * Parse les points de profil altimétrique (PLAN 3.4) : rejette les valeurs non
+ * finies, dédoublonne les positions identiques (garde la première rencontrée),
+ * puis trie par distance croissante.
+ */
+function parseItineraryProfiles(rawProfiles: unknown): ItineraryProfilePoint[] {
+  const points: ItineraryProfilePoint[] = [];
+  const seen = new Set<number>();
+  readArray(rawProfiles).forEach((row, index) => {
+    const positionM = finiteNum(row.position_m);
+    const elevationM = finiteNum(row.elevation_m);
+    if (positionM === null || elevationM === null) return;
+    if (seen.has(positionM)) return;
+    seen.add(positionM);
+    points.push({ id: readString(row.id) || `profile-${index}`, positionM, elevationM });
+  });
+  points.sort((a, b) => a.positionM - b.positionM);
+  return points;
+}
+
+/**
+ * Valide une trace GeoJSON (PLAN 3.4) : uniquement LineString avec ≥ 2 paires de
+ * coordonnées finies. Toute anomalie ⇒ null.
+ */
+function parseItineraryTrackGeojson(rawGeo: unknown): ItineraryTrackGeoJson | null {
+  if (!isRecord(rawGeo) || rawGeo.type !== 'LineString') return null;
+  const coords = rawGeo.coordinates;
+  if (!Array.isArray(coords) || coords.length < 2) return null;
+  const coordinates: number[][] = [];
+  for (const pair of coords) {
+    if (!Array.isArray(pair) || pair.length < 2) return null;
+    const lon = finiteNum(pair[0]);
+    const lat = finiteNum(pair[1]);
+    if (lon === null || lat === null) return null;
+    coordinates.push([lon, lat]);
+  }
+  return { type: 'LineString', coordinates };
+}
+
 export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySummary | null {
   const itinerary = readRecord(raw.itinerary);
   const details = readRecord(raw.itinerary_details);
@@ -1407,6 +1475,9 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
     ].filter(Boolean),
     (item) => item.toLowerCase(),
   );
+
+  const profiles = parseItineraryProfiles(details.profiles);
+  const trackGeojson = parseItineraryTrackGeojson(details.track_geojson);
 
   const summary: ItinerarySummary = {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
@@ -1426,7 +1497,9 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
     info,
     sectionsCount: readList(details.sections).length,
     stagesCount: readList(details.stages).length,
-    profilesCount: readList(details.profiles).length,
+    profiles,
+    profilesCount: profiles.length,
+    trackGeojson,
   };
 
   const hasData = [
@@ -1442,7 +1515,8 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
     || summary.info.length > 0
     || summary.sectionsCount > 0
     || summary.stagesCount > 0
-    || summary.profilesCount > 0;
+    || summary.profiles.length > 0
+    || summary.trackGeojson !== null;
 
   return hasData ? summary : null;
 }

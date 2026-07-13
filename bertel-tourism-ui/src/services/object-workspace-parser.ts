@@ -5,7 +5,7 @@ interface GenericRecord {
   [key: string]: unknown;
 }
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider' | 'places';
 
 export interface WorkspaceTranslatableField {
   baseValue: string;
@@ -107,6 +107,7 @@ export interface ObjectWorkspaceZoneOption {
 
 export interface ObjectWorkspaceLocationModule {
   main: ObjectWorkspaceLocationForm;
+  /** @deprecated Secondary sites live in the `places` module — kept empty at parse time. */
   places: ObjectWorkspacePlaceSummary[];
   /** Selected INSEE commune codes (object_zone). */
   zoneCodes: string[];
@@ -136,7 +137,23 @@ export interface ObjectWorkspaceDescriptionsModule {
   object: ObjectWorkspaceDescriptionScope;
   /** Current user's organisation overlay (null when none / not enrichable). */
   orgOverlay: ObjectWorkspaceDescriptionScope | null;
+  /** @deprecated Secondary sites live in the `places` module — kept empty at parse time. */
   places: ObjectWorkspaceDescriptionScope[];
+}
+
+export interface ObjectWorkspacePlaceItem {
+  recordId: string | null;
+  label: string;
+  position: number;
+  descriptionRecordId: string | null;
+  description: WorkspaceTranslatableField;
+  visibility: 'public' | 'private' | 'partners';
+  location: ObjectWorkspaceLocationForm;
+}
+
+export interface ObjectWorkspacePlacesModule {
+  items: ObjectWorkspacePlaceItem[];
+  unavailableReason: string | null;
 }
 
 export type ObjectWorkspaceModuleAvailability = 'available' | 'unavailable';
@@ -566,7 +583,10 @@ export interface ObjectWorkspaceActivityModule {
   difficultyLevel: string;
   guideRequired: boolean;
   minAge: string;
-  equipmentProvided: string;
+  equipmentProvided: boolean;
+  equipmentProvidedDetails: string;
+  /** ref_code domain iti_difficulty (codes 1–5). */
+  difficultyOptions: WorkspaceReferenceOption[];
   unavailableReason: string | null;
 }
 
@@ -1096,6 +1116,7 @@ export interface ObjectWorkspaceModules {
   syncIdentifiers: ObjectWorkspaceSyncIdentifiersModule;
   location: ObjectWorkspaceLocationModule;
   descriptions: ObjectWorkspaceDescriptionsModule;
+  places: ObjectWorkspacePlacesModule;
   media: ObjectWorkspaceMediaModule;
   contacts: ObjectWorkspaceContactsModule;
   characteristics: ObjectWorkspaceCharacteristicsModule;
@@ -1263,12 +1284,6 @@ function parseLocationRecord(value: unknown): ObjectWorkspaceLocationForm {
   };
 }
 
-function buildLocationLabel(location: ObjectWorkspaceLocationForm): string {
-  const streetLine = [location.address1, location.address1Suite, location.address2].filter(Boolean).join(' ').trim();
-  const cityLine = [location.postcode, location.city].filter(Boolean).join(' ');
-  return [streetLine, location.address3, location.lieuDit, cityLine].filter(Boolean).join(' · ');
-}
-
 export function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspaceLocationForm {
   const addressRecord = readRecord(raw.address);
   const locationRecord = readRecord(raw.location);
@@ -1342,16 +1357,67 @@ export function parseMainLocation(raw: Record<string, unknown>): ObjectWorkspace
   };
 }
 
-function parsePlaceSummary(place: GenericRecord, index: number): ObjectWorkspacePlaceSummary {
-  const location = parseLocationRecord(place.location ?? place.object_location);
+function normalizePlaceVisibilityCode(value: string): 'public' | 'private' | 'partners' {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'partner' || normalized === 'partners') return 'partners';
+  if (normalized === 'internal' || normalized === 'private') return 'private';
+  return 'public';
+}
 
+export function createEmptyPlaceItem(position = 0): ObjectWorkspacePlaceItem {
   return {
-    id: readString(place.id, `place-${index}`),
-    label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
-    isPrimary: readBoolean(place.is_primary),
-    position: readPosition(place.position, index),
-    locationLabel: buildLocationLabel(location),
+    recordId: null,
+    label: '',
+    position,
+    descriptionRecordId: null,
+    description: { baseValue: '', values: {} },
+    visibility: 'public',
+    location: {
+      recordId: null,
+      address1: '',
+      address1Suite: '',
+      address2: '',
+      address3: '',
+      postcode: '',
+      city: '',
+      codeInsee: '',
+      lieuDit: '',
+      direction: '',
+      latitude: '',
+      longitude: '',
+      zoneTouristique: '',
+    },
   };
+}
+
+function parseWorkspacePlacesModule(raw: Record<string, unknown>): ObjectWorkspacePlacesModule {
+  const items = readArray(raw.places).map((place, index) => {
+    const descriptions = readArray(place.descriptions);
+    const source = descriptions[0] ?? readRecord(place.object_place_description);
+    const locationRecord = readRecord(place.location ?? place.object_location);
+    const descriptionScope = parseDescriptionScope({
+      record: source,
+      scope: 'place',
+      placeId: readString(place.id, `place-${index}`),
+      label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
+    });
+    const location = parseLocationRecord(locationRecord);
+    return {
+      recordId: readString(place.id) || null,
+      label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
+      position: readPosition(place.position, index),
+      descriptionRecordId: readString(source.id) || null,
+      description: descriptionScope.description,
+      visibility: normalizePlaceVisibilityCode(readString(source.visibility, 'public')),
+      location: {
+        ...location,
+        recordId: readString(locationRecord.id) || null,
+        direction: readString(locationRecord.direction_md, readString(locationRecord.direction)),
+      },
+    } satisfies ObjectWorkspacePlaceItem;
+  });
+
+  return { items, unavailableReason: null };
 }
 
 function parseDescriptionScope(params: {
@@ -2160,7 +2226,9 @@ function parseWorkspaceActivityModule(raw: Record<string, unknown>): ObjectWorks
     difficultyLevel: readString(record.difficulty_level, readString(raw.difficulty_level)),
     guideRequired: readBoolean(record.guide_required ?? raw.guide_required),
     minAge: readString(record.min_age, readString(raw.min_age)),
-    equipmentProvided: readString(record.equipment_provided, readString(raw.equipment_provided)),
+    equipmentProvided: readBoolean(record.equipment_provided ?? raw.equipment_provided),
+    equipmentProvidedDetails: readString(record.equipment_provided_details, readString(raw.equipment_provided_details)),
+    difficultyOptions: [],
     unavailableReason: null,
   };
 }
@@ -3298,7 +3366,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
   const raw = (detail.raw ?? {}) as Record<string, unknown>;
   const nameTranslations = readTextMap(raw.name_i18n);
   const mainLocation = parseMainLocation(raw);
-  const places = readArray(raw.places).map(parsePlaceSummary);
+  const placesModule = parseWorkspacePlacesModule(raw);
   const canonicalRecord = readRecord(raw.canonical_description);
   const objectDescription = parseDescriptionScope({
     record: Object.keys(canonicalRecord).length > 0 ? canonicalRecord : pickDescriptionSource(raw),
@@ -3309,16 +3377,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
   const orgOverlay = Object.keys(orgRecord).length > 0
     ? parseDescriptionScope({ record: orgRecord, scope: 'object', label: 'Mon organisation' })
     : null;
-  const placeDescriptions = readArray(raw.places).map((place, index) => {
-    const descriptions = readArray(place.descriptions);
-    const source = descriptions[0] ?? readRecord(place.object_place_description);
-    return parseDescriptionScope({
-      record: source,
-      scope: 'place',
-      placeId: readString(place.id, `place-${index}`),
-      label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
-    });
-  });
+  const placeDescriptions: ObjectWorkspaceDescriptionScope[] = [];
   const objectMedia = readArray(raw.media).map((item, index) =>
     parseWorkspaceMediaItem({
       record: item,
@@ -3383,7 +3442,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
     syncIdentifiers: parseWorkspaceSyncIdentifiersModule(raw),
     location: {
       main: mainLocation,
-      places,
+      places: [],
       zoneCodes: [
         ...readArray(raw.object_zones),
         ...readArray(raw.object_zone),
@@ -3391,6 +3450,7 @@ export function parseObjectWorkspace(detail: ObjectDetail, langPrefs: string[]):
       zoneOptions: [],
       zonesUnavailableReason: null,
     },
+    places: placesModule,
     descriptions: {
       localLanguage,
       activeLanguage: localLanguage,

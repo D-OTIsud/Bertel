@@ -65,7 +65,8 @@ CREATE INDEX IF NOT EXISTS idx_room_type_bed_bed_type_id ON object_room_type_bed
 
 ALTER TABLE object_room_type_bed ENABLE ROW LEVEL SECURITY;
 
--- §38 split read gate (mirror read_object_room_type_amenity); outer column table-qualified (§55).
+-- §38 split read gate (mirror read_object_room_type_amenity), including canonical writers so
+-- unpublished child rows remain readable during editor saves; outer column table-qualified (§55).
 DROP POLICY IF EXISTS "read_object_room_type_bed" ON object_room_type_bed;
 CREATE POLICY "read_object_room_type_bed" ON object_room_type_bed
   FOR SELECT USING (
@@ -77,6 +78,9 @@ CREATE POLICY "read_object_room_type_bed" ON object_room_type_bed
     OR room_type_id IN (
       SELECT rt.id FROM object_room_type rt
       WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+    OR room_type_id IN (
+      SELECT rt.id FROM object_room_type rt
+      WHERE api.user_can_write_object_canonical(rt.object_id))
   );
 
 -- Per-command canonical write (mirror canonical_*_object_room_type_amenity): canonical-write OR

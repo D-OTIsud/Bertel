@@ -71,6 +71,7 @@ export const MODULE_KEY_MAP: Record<WorkspaceModuleId, keyof ObjectWorkspaceModu
   publication: 'publication',
   'sync-identifiers': 'syncIdentifiers',
   location: 'location',
+  places: 'places',
   descriptions: 'descriptions',
   media: 'media',
   contacts: 'contacts',

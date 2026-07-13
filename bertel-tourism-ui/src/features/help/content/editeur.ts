@@ -126,8 +126,21 @@ export const EDITEUR_FAQ: FaqEntry[] = [
     question: 'Comment déclarer les communes desservies pour un prestataire sans adresse fixe ?',
     keywords: ['commune', 'zone', 'desservie', 'secteur'],
     related: ['editeur-ouvrir'],
-    answer: `Dans la section **Sous-lieux**, ouvrez le bloc **« Communes desservies »** : une **sélection multiple** de communes couvertes par votre activité (utile pour un prestataire itinérant, sans site fixe unique).
+    answer: `Dans la section **Sites secondaires** (§16), ouvrez le bloc **« Communes desservies »** : une **sélection multiple** de communes couvertes par votre activité (utile pour un prestataire itinérant, sans site fixe unique).
 
 **Cette zone d'intervention** complète ou remplace l'adresse selon la nature de l'activité, et alimente les filtres géographiques de l'Explorer.`,
+  },
+  {
+    id: 'editeur-lieux-services',
+    rubrique: 'editeur',
+    question: 'Adresse principale, sites secondaires, prestations établissement et équipements de chambre : quelle différence ?',
+    keywords: ['adresse', 'site', 'lieu', 'chambre', 'équipement', 'prestation'],
+    related: ['editeur-ouvrir', 'editeur-zones'],
+    answer: `Quatre niveaux distincts :
+
+- **Adresse principale (§02 Localisation)** : le point d'accueil ou le siège de la fiche, enregistré dans \`object_location\` avec \`is_main_location=true\` sur l'objet.
+- **Sites secondaires (§16)** : points complémentaires (départ d'activité, annexe, belvédère…) avec leur propre adresse ou GPS, description et visibilité. Ils passent par \`object_place\` + localisation rattachée au lieu.
+- **Prestations de l'établissement (§06 HEB)** : services communs à tout l'hébergement (piscine, parking…), enregistrés dans \`object_amenity\` au niveau objet — distincts des équipements d'accessibilité gérés en §09.
+- **Équipements de chambre** : choisis dans la modale de chaque type de chambre (\`object_room_type_amenity\`), sans mélanger avec les prestations établissement.`,
   },
 ];

@@ -44,7 +44,7 @@ export const DEMARRER_FAQ: FaqEntry[] = [
     question: 'Changer mon nom affiché ou ma photo ?',
     keywords: ['profil', 'photo', 'avatar', 'nom'],
     related: ['connexion'],
-    answer: `Rendez-vous dans **Réglages → Mon compte → Profil**. Vous y modifiez votre **nom affiché** et votre **photo de profil** (JPEG, PNG ou WebP).
+    answer: `Rendez-vous dans **Paramètres → Mon compte → Profil**. Vous y modifiez votre **nom affiché** et votre **photo de profil** (JPEG, PNG ou WebP).
 
 **À quoi ça sert.** Ce nom et cette photo apparaissent dans l'application et dans le « mot du conseiller » de vos sélections imprimées — pas seulement un réglage cosmétique.
 

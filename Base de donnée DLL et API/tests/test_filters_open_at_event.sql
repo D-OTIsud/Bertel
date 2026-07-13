@@ -55,18 +55,23 @@ END $$;
 
 BEGIN;
 
+-- The published-only path reads internal.mv_filtered_objects. Seed the fixture at
+-- top level, then refresh the MV before entering the assertion block (REFRESH is
+-- not allowed inside a DO block). The surrounding transaction rolls back both.
+INSERT INTO object (id, object_type, name, status, created_by)
+VALUES ('FMATESTOPENAT001', 'FMA', 'Test événement §157', 'published', NULL);
+
+INSERT INTO object_fma (object_id, event_start_date, event_end_date)
+VALUES ('FMATESTOPENAT001', DATE '2030-07-10', DATE '2030-07-12');
+
+REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;
+
 DO $$
 DECLARE
   v_id TEXT := 'FMATESTOPENAT001';
   v_in_range INT;
   v_out_range INT;
 BEGIN
-  INSERT INTO object (id, object_type, name, status, created_by)
-  VALUES (v_id, 'FMA', 'Test événement §157', 'published', NULL);
-
-  INSERT INTO object_fma (object_id, event_start_date, event_end_date)
-  VALUES (v_id, DATE '2030-07-10', DATE '2030-07-12');
-
   -- Plage demandée recouvrant l'événement → il matche.
   SELECT count(*) INTO v_in_range
   FROM api.get_filtered_object_ids(

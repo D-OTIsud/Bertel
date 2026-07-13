@@ -30,9 +30,11 @@ import {
   type ObjectWorkspacePublicationModule,
   type ObjectWorkspacePublicationSelectionItem,
   type ObjectWorkspacePricingModule,
-  type ObjectWorkspaceOpeningsModule,
+  type ObjectWorkspacePlaceItem,
+  type ObjectWorkspacePlacesModule,
   type ObjectWorkspaceOpeningPeriod,
   type ObjectWorkspaceOpeningPeriodTypeOption,
+  type ObjectWorkspaceOpeningsModule,
   type ObjectWorkspaceSyncIdentifiersModule,
   type ObjectWorkspaceMembershipItem,
   type ObjectWorkspaceMembershipModule,
@@ -69,14 +71,13 @@ import {
   normalizeTagColor,
 } from './object-workspace-parser';
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
-import { buildBedRows } from '../features/object-editor/sections/blocks/rooms-utils';
 import { listObjectCrm } from './crm';
 
 // Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
 export { normalizeTagColor } from './object-workspace-parser';
 
-export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'cuisine' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider';
+export type WorkspaceModuleId = 'general-info' | 'taxonomy' | 'publication' | 'sync-identifiers' | 'location' | 'descriptions' | 'media' | 'contacts' | 'characteristics' | 'distinctions' | 'capacity-policies' | 'pricing' | 'rooms' | 'meeting-rooms' | 'menus' | 'cuisine' | 'activity' | 'event' | 'itinerary' | 'openings' | 'provider-follow-up' | 'relationships' | 'memberships' | 'legal' | 'tags' | 'sustainability' | 'distribution' | 'provider' | 'places';
 
 export interface ObjectWorkspaceModuleAccess {
   canDirectWrite: boolean;
@@ -93,11 +94,10 @@ export interface ObjectWorkspacePermissions {
   /** §108 — suppression définitive : superuser plateforme uniquement. */
   delete: ObjectWorkspaceModuleAccess;
   location: ObjectWorkspaceModuleAccess & {
-    canEditPlaces: boolean;
     canEditZones: boolean;
   };
+  places: ObjectWorkspaceModuleAccess;
   descriptions: ObjectWorkspaceModuleAccess & {
-    canEditPlaceDescriptions: boolean;
     canEditCanonical: boolean;
     canEditOrgEnrichment: boolean;
   };
@@ -3010,24 +3010,31 @@ async function getObjectWorkspaceActivityModule(
     return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger le detail activite.' };
   }
 
-  const { data, error } = await client
-    .from('object_act')
-    .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided')
-    .eq('object_id', objectId)
-    .maybeSingle();
+  const [dataResult, difficultyRefsResult] = await Promise.all([
+    client
+      .from('object_act')
+      .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided, equipment_provided_details')
+      .eq('object_id', objectId)
+      .maybeSingle(),
+    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
+  ]);
 
-  if (error) {
+  if (dataResult.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore le detail activite pour ce profil.',
     };
   }
 
-  if (!data) {
-    return baseModule;
+  const difficultyOptions = difficultyRefsResult.error
+    ? baseModule.difficultyOptions
+    : dedupeReferenceOptions((difficultyRefsResult.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)));
+
+  if (!dataResult.data) {
+    return { ...baseModule, difficultyOptions, unavailableReason: null };
   }
 
-  const row = readRecord(data);
+  const row = readRecord(dataResult.data);
   return {
     durationMin: readString(row.duration_min),
     minParticipants: readString(row.min_participants),
@@ -3035,7 +3042,9 @@ async function getObjectWorkspaceActivityModule(
     difficultyLevel: readString(row.difficulty_level),
     guideRequired: readBoolean(row.guide_required),
     minAge: readString(row.min_age),
-    equipmentProvided: readString(row.equipment_provided),
+    equipmentProvided: readBoolean(row.equipment_provided),
+    equipmentProvidedDetails: readString(row.equipment_provided_details),
+    difficultyOptions,
     unavailableReason: null,
   };
 }
@@ -3650,14 +3659,11 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
     },
     location: {
       ...directOrBlocked(),
-      canEditPlaces: false,
-      // §41: zones (communes desservies) authoring — mirror canEditPlaceDescriptions (superuser/demo;
-      // canonical-write enforced by object_zone RLS + save_object_places). Broaden to canonical later.
-      canEditZones: session.demoMode || session.role === 'super_admin',
+      canEditZones: canDirectCanonical || session.demoMode,
     },
+    places: directOrBlocked(),
     descriptions: {
       ...directOrBlocked(),
-      canEditPlaceDescriptions: session.demoMode || session.role === 'super_admin',
       ...describeDescriptionsAccess({ directWrite, canonical, enrichment }),
     },
     media: {
@@ -4319,6 +4325,76 @@ export async function saveObjectWorkspaceDistinctions(objectId: string, input: O
   }
 }
 
+/** Strict integer literal (optional leading '-'), no decimals, no trailing garbage. */
+const STRICT_INTEGER_PATTERN = /^-?\d+$/;
+
+function isStrictInteger(trimmed: string): boolean {
+  return STRICT_INTEGER_PATTERN.test(trimmed);
+}
+
+/** Pure validation before persisting object_act (activity facet). */
+export function validateActivityModule(input: ObjectWorkspaceActivityModule): void {
+  const difficulty = input.difficultyLevel.trim();
+  if (difficulty) {
+    if (!isStrictInteger(difficulty) || Number.parseInt(difficulty, 10) < 1 || Number.parseInt(difficulty, 10) > 5) {
+      throw new Error('La difficulté doit être un niveau entre 1 et 5.');
+    }
+  }
+  const duration = input.durationMin.trim();
+  if (duration && (!isStrictInteger(duration) || Number.parseInt(duration, 10) <= 0)) {
+    throw new Error('La durée doit être strictement positive.');
+  }
+  const minParticipants = input.minParticipants.trim();
+  if (minParticipants && (!isStrictInteger(minParticipants) || Number.parseInt(minParticipants, 10) < 1)) {
+    throw new Error('Le nombre minimum de participants doit être au moins 1.');
+  }
+  const maxParticipants = input.maxParticipants.trim();
+  if (maxParticipants && !isStrictInteger(maxParticipants)) {
+    throw new Error('Le nombre maximum de participants doit être un entier valide.');
+  }
+  if (
+    maxParticipants && minParticipants &&
+    isStrictInteger(maxParticipants) && isStrictInteger(minParticipants) &&
+    Number.parseInt(maxParticipants, 10) < Number.parseInt(minParticipants, 10)
+  ) {
+    throw new Error('Le maximum de participants doit être supérieur ou égal au minimum.');
+  }
+  const minAge = input.minAge.trim();
+  if (minAge && (!isStrictInteger(minAge) || Number.parseInt(minAge, 10) < 0)) {
+    throw new Error("L'âge minimum doit être positif ou nul.");
+  }
+}
+
+export const ACCESSIBILITY_AMENITY_FAMILY = 'accessibility';
+
+/** Establishment-level amenity groups for HEB (object/both scope, excluding accessibility). */
+export function filterEstablishmentAmenityGroups(groups: ObjectWorkspaceAmenityGroup[]): ObjectWorkspaceAmenityGroup[] {
+  return groups.filter((group) => group.familyCode !== ACCESSIBILITY_AMENITY_FAMILY);
+}
+
+/** Preserve amenity codes hidden from the establishment selector (PMR, etc.). */
+export function mergeEstablishmentAmenitySelection(
+  selectedCodes: string[],
+  visibleSelection: string[],
+  visibleOptionCodes: Set<string>,
+): string[] {
+  const hidden = selectedCodes.filter((code) => !visibleOptionCodes.has(code));
+  return Array.from(new Set([...hidden, ...visibleSelection]));
+}
+
+export function buildEstablishmentAmenityPayload(
+  characteristics: ObjectWorkspaceCharacteristicsModule,
+  visibleOptionCodes: Set<string>,
+  visibleSelectedCodes: string[],
+): Record<string, unknown> {
+  const merged = mergeEstablishmentAmenitySelection(
+    characteristics.selectedAmenityCodes,
+    visibleSelectedCodes,
+    visibleOptionCodes,
+  );
+  return buildCharacteristicsRpcPayload({ ...characteristics, selectedAmenityCodes: merged });
+}
+
 /** Pure builder for the api.save_object_commercial characteristics arm (P1.3 contributor fork
  *  reuses this so a proposal carries the exact RPC payload the moderator re-dispatches). */
 export function buildCharacteristicsRpcPayload(input: ObjectWorkspaceCharacteristicsModule): Record<string, unknown> {
@@ -4696,132 +4772,57 @@ function ensureKnownCodes(codes: string[], idByCode: Map<string, string>, label:
   }
 }
 
-export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWorkspaceRoomsModule): Promise<void> {
-  const session = useSessionStore.getState();
-  if (session.demoMode) {
-    return;
-  }
-  // §46: a type-gated module loads disabled and can't go dirty — this is unreachable in the normal
-  // flow; throw (don't silently return) so a stray invocation routes to useEditorSave's `failed`
-  // path with the reason visible, never a silent write-trap.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
-
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les chambres et unites.');
-  }
-
-  const [viewRefsResult, amenityRefsResult, existingRoomsResult, bedTypeRefsResult] = await Promise.all([
-    client.from('ref_code').select('id, code').eq('domain', 'view_type'),
-    client.from('ref_amenity').select('id, code'),
-    client.from('object_room_type').select('id').eq('object_id', objectId),
-    client.from('ref_code').select('id, code').eq('domain', 'bed_type'),
-  ]);
-
-  if (viewRefsResult.error) {
-    throw mapMutationError(viewRefsResult.error, 'Impossible de charger les types de vue.');
-  }
-  if (amenityRefsResult.error) {
-    throw mapMutationError(amenityRefsResult.error, 'Impossible de charger les equipements.');
-  }
-  if (existingRoomsResult.error) {
-    throw mapMutationError(existingRoomsResult.error, 'Impossible de charger les chambres existantes.');
-  }
-  if (bedTypeRefsResult.error) {
-    throw mapMutationError(bedTypeRefsResult.error, 'Impossible de charger les types de lit.');
-  }
-
-  const viewIdByCode = buildCodeIdMap(viewRefsResult.data ?? []);
-  const amenityIdByCode = buildCodeIdMap(amenityRefsResult.data ?? []);
-  const bedTypeIdByCode = buildCodeIdMap(bedTypeRefsResult.data ?? []);
-  const viewCodes = input.items.map((item) => item.viewTypeCode).filter(Boolean);
-  ensureKnownCodes(viewCodes, viewIdByCode, 'Type de vue');
-  ensureKnownCodes(input.items.flatMap((item) => item.amenityCodes), amenityIdByCode, 'Equipement');
-
-  const existingRoomIds = (existingRoomsResult.data ?? [])
-    .map((row) => readString((row as Record<string, unknown>).id))
-    .filter(Boolean);
-  if (existingRoomIds.length > 0) {
-    const [deleteAmenityLinks, deleteMediaLinks, deleteBedLinks] = await Promise.all([
-      client.from('object_room_type_amenity').delete().in('room_type_id', existingRoomIds),
-      client.from('object_room_type_media').delete().in('room_type_id', existingRoomIds),
-      client.from('object_room_type_bed').delete().in('room_type_id', existingRoomIds),
-    ]);
-    if (deleteAmenityLinks.error) {
-      throw mapMutationError(deleteAmenityLinks.error, 'Impossible de reinitialiser les equipements de chambre.');
-    }
-    if (deleteMediaLinks.error) {
-      throw mapMutationError(deleteMediaLinks.error, 'Impossible de reinitialiser les medias lies aux chambres.');
-    }
-    if (deleteBedLinks.error) {
-      throw mapMutationError(deleteBedLinks.error, 'Impossible de reinitialiser la configuration des lits.');
-    }
-  }
-
-  const { error: deleteRoomsError } = await client.from('object_room_type').delete().eq('object_id', objectId);
-  if (deleteRoomsError) {
-    throw mapMutationError(deleteRoomsError, 'Impossible de reinitialiser les chambres.');
-  }
-
-  for (const item of input.items) {
-    const payload = {
-      object_id: objectId,
-      code: toNullableText(item.code),
-      name: toNullableText(item.name) ?? 'Unite',
-      name_i18n: item.nameTranslations,
+/** Pure payload for api.save_object_rooms — one atomic reconcile per save. */
+export function buildRoomsRpcPayload(input: ObjectWorkspaceRoomsModule): Record<string, unknown> {
+  return {
+    rooms: input.items.map((item, index) => ({
+      id: toRpcUuid(item.recordId),
+      code: item.code,
+      name: item.name || null,
+      name_i18n: Object.keys(item.nameTranslations).length > 0 ? item.nameTranslations : null,
       description: toNullableText(item.description),
-      description_i18n: item.descriptionTranslations,
+      description_i18n: Object.keys(item.descriptionTranslations).length > 0 ? item.descriptionTranslations : null,
+      room_type_code: item.roomTypeCode || null,
+      view_type_code: item.viewTypeCode || null,
       capacity_adults: toNullableInteger(item.capacityAdults),
       capacity_children: toNullableInteger(item.capacityChildren),
       capacity_total: toNullableInteger(item.capacityTotal),
       size_sqm: toNullableNumber(item.sizeSqm),
       bed_config: toNullableText(item.bedConfig),
-      bed_config_i18n: item.bedConfigTranslations,
+      bed_config_i18n: Object.keys(item.bedConfigTranslations).length > 0 ? item.bedConfigTranslations : null,
       total_rooms: toNullableInteger(item.quantity),
-      floor_level: toNullableText(item.floorLevel),
-      view_type_id: item.viewTypeCode ? viewIdByCode.get(item.viewTypeCode.toLowerCase()) ?? null : null,
-      room_type_id: item.roomTypeId || null,
+      floor_level: toNullableInteger(item.floorLevel),
       base_price: toNullableNumber(item.basePrice),
-      currency: toNullableText(item.currency) ?? 'EUR',
+      currency: item.currency || null,
       is_accessible: item.accessible,
       is_published: item.published,
-      position: toNullableInteger(item.position),
-    };
-    const { data, error } = await client.from('object_room_type').insert(payload).select('id').single();
-    if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder une chambre ou unite.');
-    }
-    const roomId = readString((data as Record<string, unknown>).id);
-    const amenityRows = Array.from(new Set(item.amenityCodes))
-      .map((code) => ({
-        room_type_id: roomId,
-        amenity_id: amenityIdByCode.get(code.toLowerCase()) as string,
-      }));
-    if (amenityRows.length > 0) {
-      const { error: amenityError } = await client.from('object_room_type_amenity').insert(amenityRows);
-      if (amenityError) {
-        throw mapMutationError(amenityError, 'Impossible de sauvegarder les equipements de chambre.');
-      }
-    }
-    const bedRows = buildBedRows(item.beds, bedTypeIdByCode).map((row) => ({ ...row, room_type_id: roomId }));
-    if (bedRows.length > 0) {
-      const { error: bedError } = await client.from('object_room_type_bed').insert(bedRows);
-      if (bedError) {
-        throw mapMutationError(bedError, 'Impossible de sauvegarder la configuration des lits.');
-      }
-    }
-    const mediaRows = Array.from(new Set(item.mediaIds))
-      .filter((mediaId) => isUuid(mediaId))
-      .map((mediaId) => ({ room_type_id: roomId, media_id: mediaId }));
-    if (mediaRows.length > 0) {
-      const { error: mediaError } = await client.from('object_room_type_media').insert(mediaRows);
-      if (mediaError) {
-        throw mapMutationError(mediaError, 'Impossible de sauvegarder les medias de chambre.');
-      }
-    }
+      position: toNullableInteger(item.position) ?? index,
+      amenity_codes: Array.from(new Set(item.amenityCodes)),
+      media_ids: Array.from(new Set(item.mediaIds.filter((id) => isUuid(id)))),
+      beds: item.beds.map((bed, bedIndex) => ({
+        bed_type_code: bed.bedTypeCode,
+        quantity: toNullableInteger(bed.quantity) ?? 1,
+        position: bedIndex + 1,
+      })),
+    })),
+  };
+}
+
+export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWorkspaceRoomsModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
   }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+
+  await callObjectWorkspaceRpc(
+    'save_object_rooms',
+    objectId,
+    buildRoomsRpcPayload(input),
+    'Impossible de sauvegarder les chambres.',
+  );
 }
 
 export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: ObjectWorkspaceMeetingRoomsModule): Promise<void> {
@@ -5143,25 +5144,28 @@ export async function saveObjectWorkspaceActivity(objectId: string, input: Objec
   if (session.demoMode) {
     return;
   }
-  // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
   if (input.unavailableReason) {
     throw new Error(input.unavailableReason);
   }
+
+  validateActivityModule(input);
 
   const client = getSupabaseClient();
   if (!client) {
     throw new Error('Connexion backend indisponible pour enregistrer le detail activite.');
   }
 
+  const difficulty = input.difficultyLevel.trim();
   const { error } = await client.from('object_act').upsert({
     object_id: objectId,
     duration_min: toNullableInteger(input.durationMin),
     min_participants: toNullableInteger(input.minParticipants),
     max_participants: toNullableInteger(input.maxParticipants),
-    difficulty_level: toNullableText(input.difficultyLevel),
+    difficulty_level: difficulty ? Number.parseInt(difficulty, 10) : null,
     guide_required: input.guideRequired,
     min_age: toNullableInteger(input.minAge),
-    equipment_provided: toNullableText(input.equipmentProvided),
+    equipment_provided: input.equipmentProvided,
+    equipment_provided_details: input.equipmentProvided ? toNullableText(input.equipmentProvidedDetails) : null,
   }, { onConflict: 'object_id' });
 
   if (error) {
@@ -5896,6 +5900,67 @@ export function buildZonesPayload(zoneCodes: string[]): { insee_commune: string;
   return rows;
 }
 
+function assertPlaceCoordsPaired(items: ObjectWorkspacePlaceItem[]): void {
+  for (const item of items) {
+    const hasLat = Boolean(item.location.latitude.trim());
+    const hasLng = Boolean(item.location.longitude.trim());
+    if (hasLat !== hasLng) {
+      throw new Error(`Coordonnées incomplètes pour le site « ${item.label || 'sans nom'} ».`);
+    }
+  }
+}
+
+/** Pure payload for api.save_object_places (secondary sites only — zones use buildZonesPayload). */
+export function buildPlacesRpcPayload(input: ObjectWorkspacePlacesModule): Record<string, unknown> {
+  assertPlaceCoordsPaired(input.items);
+  return {
+    places: input.items.map((item, index) => ({
+      id: toRpcUuid(item.recordId),
+      label: item.label,
+      position: index,
+      locations: [{
+        id: toRpcUuid(item.location.recordId),
+        address1: toNullableText(item.location.address1),
+        address1_suite: toNullableText(item.location.address1Suite),
+        address2: toNullableText(item.location.address2),
+        address3: toNullableText(item.location.address3),
+        postcode: toNullableText(item.location.postcode),
+        city: toNullableText(item.location.city),
+        code_insee: toNullableText(item.location.codeInsee),
+        lieu_dit: toNullableText(item.location.lieuDit),
+        direction: toNullableText(item.location.direction),
+        latitude: toNullableNumber(item.location.latitude),
+        longitude: toNullableNumber(item.location.longitude),
+        is_main_location: true,
+        position: 0,
+      }],
+      descriptions: [{
+        id: toRpcUuid(item.descriptionRecordId),
+        description: toNullableText(item.description.baseValue),
+        description_i18n: Object.keys(item.description.values).length > 0 ? item.description.values : null,
+        visibility: item.visibility,
+        position: 0,
+      }],
+    })),
+  };
+}
+
+export async function saveObjectWorkspacePlaces(objectId: string, input: ObjectWorkspacePlacesModule): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+  if (input.unavailableReason) {
+    throw new Error(input.unavailableReason);
+  }
+  await callObjectWorkspaceRpc(
+    'save_object_places',
+    objectId,
+    buildPlacesRpcPayload(input),
+    'Impossible de sauvegarder les sites secondaires.',
+  );
+}
+
 /**
  * §41: enrich the location module with the commune catalog (`ref_commune`, public read) and the
  * object's selected zones (`object_zone`, gated by `can_read_object`). Mirrors the §32 characteristics
@@ -6356,53 +6421,6 @@ async function upsertObjectDescription(
   }
 }
 
-async function upsertPlaceDescription(scope: ObjectWorkspaceDescriptionsModule['places'][number]): Promise<void> {
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les descriptions de sous-lieu.');
-  }
-
-  if (!scope.placeId) {
-    return;
-  }
-
-  const payload = {
-    place_id: scope.placeId,
-    ...buildDescriptionPayload(scope),
-  };
-
-  const existingId = scope.recordId || await (async () => {
-    const { data, error } = await client
-      .from('object_place_description')
-      .select('id')
-      .eq('place_id', scope.placeId)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      throw mapMutationError(error, "Impossible de charger la description du sous-lieu.");
-    }
-
-    return data?.id ?? null;
-  })();
-
-  if (existingId) {
-    const { error } = await client.from('object_place_description').update(payload).eq('id', existingId);
-    if (error) {
-      throw mapMutationError(error, "Impossible d'enregistrer la description du sous-lieu.");
-    }
-    return;
-  }
-
-  const { error } = await client
-    .from('object_place_description')
-    .insert({ ...payload, visibility: payload.visibility ?? 'public' });
-  if (error) {
-    throw mapMutationError(error, "Impossible de creer la description du sous-lieu.");
-  }
-}
-
 async function writeOrgDescription(objectId: string, overlay: ObjectWorkspaceDescriptionScope | null): Promise<void> {
   const apiClient = getApiClient();
   if (!apiClient) {
@@ -6443,69 +6461,10 @@ export function computePlacesReconcile(
   return { toInsert, toUpdate, toDelete };
 }
 
-/**
- * Apply the §16 sub-place reconcile via direct PostgREST as the canonical writer (mirrors
- * `upsertPlaceDescription`). `object_place` / `object_place_description` are directly
- * writable under SP-1's `owner_write_place` (`FOR ALL USING user_can_write_object_canonical`).
- */
-async function reconcilePlaces(objectId: string, places: ObjectWorkspaceDescriptionScope[]): Promise<void> {
-  const client = getSupabaseClient();
-  if (!client) {
-    throw new Error('Connexion backend indisponible pour enregistrer les sous-lieux.');
-  }
-
-  const { data: existing, error: fetchError } = await client
-    .from('object_place')
-    .select('id')
-    .eq('object_id', objectId);
-  if (fetchError) {
-    throw mapMutationError(fetchError, 'Impossible de charger les sous-lieux existants.');
-  }
-
-  const plan = computePlacesReconcile((existing ?? []).map((row) => String(row.id)), places);
-
-  if (plan.toDelete.length > 0) {
-    const { error } = await client.from('object_place').delete().in('id', plan.toDelete);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de supprimer un sous-lieu.');
-    }
-  }
-
-  for (const place of plan.toUpdate) {
-    const { error } = await client
-      .from('object_place')
-      .update({ label: toNullableText(place.label) })
-      .eq('id', place.placeId as string);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de renommer un sous-lieu.');
-    }
-    await upsertPlaceDescription(place);
-  }
-
-  let position = plan.toUpdate.length;
-  for (const place of plan.toInsert) {
-    const { data: created, error } = await client
-      .from('object_place')
-      .insert({ object_id: objectId, label: toNullableText(place.label), position })
-      .select('id')
-      .single();
-    if (error || !created) {
-      throw mapMutationError(error, 'Impossible de créer un sous-lieu.');
-    }
-    const { error: descError } = await client
-      .from('object_place_description')
-      .insert({ place_id: String(created.id), ...buildDescriptionPayload(place) });
-    if (descError) {
-      throw mapMutationError(descError, 'Impossible de créer la description du sous-lieu.');
-    }
-    position += 1;
-  }
-}
-
 export async function saveObjectWorkspaceDescriptions(
   objectId: string,
   input: ObjectWorkspaceDescriptionsModule,
-  options: { canEditCanonical: boolean; canEditOrgEnrichment: boolean; canEditPlaceDescriptions: boolean },
+  options: { canEditCanonical: boolean; canEditOrgEnrichment: boolean },
 ): Promise<void> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -6519,10 +6478,4 @@ export async function saveObjectWorkspaceDescriptions(
   if (options.canEditOrgEnrichment) {
     await writeOrgDescription(objectId, input.orgOverlay);
   }
-
-  if (!options.canEditPlaceDescriptions) {
-    return;
-  }
-
-  await reconcilePlaces(objectId, input.places);
 }

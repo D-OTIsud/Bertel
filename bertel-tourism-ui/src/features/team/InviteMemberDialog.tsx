@@ -142,57 +142,60 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
         Inviter
       </button>
 
-      {open && (
-        <Modal title="Inviter des membres" onClose={handleClose} footer={footer}>
-          {results !== null ? (
-            <ul className="invite-results">
-              {results.map((row) => {
-                const meta = STATUS_META[row.status];
-                const Icon = meta.icon;
-                return (
-                  <li key={row.email} className={`invite-row ${meta.className}`}>
-                    <Icon size={15} aria-hidden />
-                    <span className="invite-row__email">{row.email}</span>
-                    <span className="invite-row__label">{row.detail ?? meta.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <>
-              <label className="field-block" htmlFor="invite-emails">
-                <span>Adresses e-mail</span>
-                <textarea
-                  id="invite-emails"
-                  className="textarea"
-                  rows={4}
-                  value={emails}
-                  onChange={(e) => setEmails(e.target.value)}
-                  placeholder={'prenom.nom@example.com\nautre.membre@example.com'}
-                  disabled={busy}
-                />
-                <span className="pref__hint">Une adresse par ligne (ou séparées par une virgule). Le même rôle est appliqué à toutes.</span>
-              </label>
+      <Modal
+        title="Inviter des membres"
+        open={open}
+        onOpenChange={(next) => { if (!next) handleClose(); }}
+        footer={footer}
+      >
+        {results !== null ? (
+          <ul className="invite-results">
+            {results.map((row) => {
+              const meta = STATUS_META[row.status];
+              const Icon = meta.icon;
+              return (
+                <li key={row.email} className={`invite-row ${meta.className}`}>
+                  <Icon size={15} aria-hidden />
+                  <span className="invite-row__email">{row.email}</span>
+                  <span className="invite-row__label">{row.detail ?? meta.label}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <>
+            <label className="field-block" htmlFor="invite-emails">
+              <span>Adresses e-mail</span>
+              <textarea
+                id="invite-emails"
+                className="textarea"
+                rows={4}
+                value={emails}
+                onChange={(e) => setEmails(e.target.value)}
+                placeholder={'prenom.nom@example.com\nautre.membre@example.com'}
+                disabled={busy}
+              />
+              <span className="pref__hint">Une adresse par ligne (ou séparées par une virgule). Le même rôle est appliqué à toutes.</span>
+            </label>
 
-              <label className="field-block" htmlFor="invite-role">
-                <span>Rôle métier</span>
-                <select
-                  id="invite-role"
-                  className="select"
-                  value={roleCode}
-                  onChange={(e) => setRoleCode(e.target.value)}
-                  disabled={busy}
-                >
-                  {BUSINESS_ROLE_CODES.map((code) => (
-                    <option key={code} value={code}>{businessRoleLabel(code)}</option>
-                  ))}
-                </select>
-                <span className="pref__hint">Le préréglage de permissions du rôle est appliqué automatiquement (additif).</span>
-              </label>
-            </>
-          )}
-        </Modal>
-      )}
+            <label className="field-block" htmlFor="invite-role">
+              <span>Rôle métier</span>
+              <select
+                id="invite-role"
+                className="select"
+                value={roleCode}
+                onChange={(e) => setRoleCode(e.target.value)}
+                disabled={busy}
+              >
+                {BUSINESS_ROLE_CODES.map((code) => (
+                  <option key={code} value={code}>{businessRoleLabel(code)}</option>
+                ))}
+              </select>
+              <span className="pref__hint">Le préréglage de permissions du rôle est appliqué automatiquement (additif).</span>
+            </label>
+          </>
+        )}
+      </Modal>
     </>
   );
 }

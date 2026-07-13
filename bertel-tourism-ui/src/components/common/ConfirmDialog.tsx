@@ -47,8 +47,6 @@ export function ConfirmDialog({
     if (!open) setGateValue('');
   }, [open]);
 
-  if (!open) return null;
-
   const gatePass =
     !confirmGate ||
     confirmGate.expected.some((candidate) => {
@@ -62,7 +60,8 @@ export function ConfirmDialog({
   return (
     <Modal
       title={title}
-      onClose={onCancel}
+      open={open}
+      onOpenChange={(next) => { if (!next) onCancel(); }}
       footer={
         <>
           <button type="button" className="ghost-button" onClick={onCancel} disabled={busy}>

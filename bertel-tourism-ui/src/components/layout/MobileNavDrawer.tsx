@@ -21,14 +21,10 @@ export function MobileNavDrawer() {
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const pathname = usePathname();
 
-  if (!open) {
-    return null;
-  }
-
   const items = visibleNavItems(role, demoMode, canEditObjects);
 
   return (
-    <Modal title="Navigation" variant="drawer" onClose={() => setOpen(false)}>
+    <Modal title="Navigation" variant="drawer" open={open} onOpenChange={setOpen}>
       <nav aria-label="Modules" className="mobile-nav">
         {items.map((item) => {
           const Icon = item.icon;

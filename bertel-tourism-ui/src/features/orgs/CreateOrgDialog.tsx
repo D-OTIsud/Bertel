@@ -71,41 +71,44 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
   return (
     <>
       <button type="button" className="primary-button" onClick={() => setOpen(true)}>Nouvelle organisation</button>
-      {open && (
-        <Modal title={step === 'infos' ? 'Nouvelle organisation' : 'Premier administrateur'} onClose={close} footer={footer}>
-          {step === 'infos' ? (
-            <>
-              <label className="field-block" htmlFor="org-name">
-                <span>Nom de l’organisation</span>
-                <input id="org-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="OTI de l’Ouest" disabled={busy} />
-              </label>
-              <label className="field-block" htmlFor="org-scope">
-                <span>Périmètre d’accès aux fiches</span>
-                <select id="org-scope" className="select" value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} disabled={busy}>
-                  <option value="own_objects_only">Ses fiches uniquement</option>
-                  <option value="all_published">Tout le publié</option>
-                </select>
-                <span className="muted">Région : RUN (La Réunion) — immuable une fois posée.</span>
-              </label>
-            </>
-          ) : (
-            <>
-              <p className="muted">L’organisation est créée. Invitez son premier administrateur : il recevra un e-mail et choisira son mot de passe, puis pourra gérer son équipe en autonomie.</p>
-              <label className="field-block" htmlFor="org-admin-email">
-                <span>Adresse e-mail</span>
-                <input id="org-admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="direction@oti-ouest.re" disabled={busy} />
-              </label>
-              <label className="field-block" htmlFor="org-admin-role">
-                <span>Rôle métier</span>
-                <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy}>
-                  {BUSINESS_ROLE_CODES.map((code) => <option key={code} value={code}>{businessRoleLabel(code)}</option>)}
-                </select>
-                <span className="muted">Le rôle d’administration « org_admin » (gestion d’équipe) est ajouté automatiquement.</span>
-              </label>
-            </>
-          )}
-        </Modal>
-      )}
+      <Modal
+        title={step === 'infos' ? 'Nouvelle organisation' : 'Premier administrateur'}
+        open={open}
+        onOpenChange={(next) => { if (!next) close(); }}
+        footer={footer}
+      >
+        {step === 'infos' ? (
+          <>
+            <label className="field-block" htmlFor="org-name">
+              <span>Nom de l’organisation</span>
+              <input id="org-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="OTI de l’Ouest" disabled={busy} />
+            </label>
+            <label className="field-block" htmlFor="org-scope">
+              <span>Périmètre d’accès aux fiches</span>
+              <select id="org-scope" className="select" value={scope} onChange={(e) => setScope(e.target.value as typeof scope)} disabled={busy}>
+                <option value="own_objects_only">Ses fiches uniquement</option>
+                <option value="all_published">Tout le publié</option>
+              </select>
+              <span className="muted">Région : RUN (La Réunion) — immuable une fois posée.</span>
+            </label>
+          </>
+        ) : (
+          <>
+            <p className="muted">L’organisation est créée. Invitez son premier administrateur : il recevra un e-mail et choisira son mot de passe, puis pourra gérer son équipe en autonomie.</p>
+            <label className="field-block" htmlFor="org-admin-email">
+              <span>Adresse e-mail</span>
+              <input id="org-admin-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="direction@oti-ouest.re" disabled={busy} />
+            </label>
+            <label className="field-block" htmlFor="org-admin-role">
+              <span>Rôle métier</span>
+              <select id="org-admin-role" className="select" value={roleCode} onChange={(e) => setRoleCode(e.target.value)} disabled={busy}>
+                {BUSINESS_ROLE_CODES.map((code) => <option key={code} value={code}>{businessRoleLabel(code)}</option>)}
+              </select>
+              <span className="muted">Le rôle d’administration « org_admin » (gestion d’équipe) est ajouté automatiquement.</span>
+            </label>
+          </>
+        )}
+      </Modal>
     </>
   );
 }

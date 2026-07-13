@@ -74,11 +74,14 @@ export function OrgsPanel() {
         </table>
       )}
 
-      {brandingOrg && (
-        <Modal title={`Branding — ${brandingOrg.name}`} onClose={() => setBrandingOrg(null)} footer={<button type="button" className="ghost-button" onClick={() => setBrandingOrg(null)}>Fermer</button>}>
-          <OrgBrandingForm orgId={brandingOrg.id} onSaved={reload} />
-        </Modal>
-      )}
+      <Modal
+        title={`Branding — ${brandingOrg?.name ?? ''}`}
+        open={!!brandingOrg}
+        onOpenChange={(next) => { if (!next) setBrandingOrg(null); }}
+        footer={<button type="button" className="ghost-button" onClick={() => setBrandingOrg(null)}>Fermer</button>}
+      >
+        {brandingOrg && <OrgBrandingForm orgId={brandingOrg.id} onSaved={reload} />}
+      </Modal>
     </section>
   );
 }

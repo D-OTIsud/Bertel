@@ -28,8 +28,11 @@ payante (mode explicite).
 - **Date d'adhésion** (`since`) = `object.created_at`. Limitation assumée : pour le corpus
   importé, c'est la date d'import, pas l'ancienneté réelle de la relation — conforme à la
   règle énoncée (« à partir du moment où un objet est rajouté en base »).
-- **Rattachement** : l'objet doit être lié à l'ORG via `object_org_link`. Un objet
-  prestataire sans lien vers l'ORG n'est pas adhérent de cette ORG (voir audit §7).
+- **Rattachement** : l'objet doit être lié à l'ORG via `object_org_link` avec le rôle
+  **`publisher`** (`ref_org_role.code = 'publisher'`) — cohérent avec le périmètre CRM et
+  l'auto-rattachement (`trg_auto_attach_object_to_creator_org` insère un lien publisher
+  `is_primary`). Un lien `contributor`/`reader` ne confère PAS l'adhésion. Un objet
+  prestataire sans lien publisher vers l'ORG n'est pas adhérent de cette ORG (voir audit §7).
 
 ## 3. Modèle — table `org_membership_policy`
 
@@ -44,8 +47,12 @@ Table dédiée (PAS un flag dans `org_config`, qui reste cantonnée au périmèt
 **Absence de ligne = mode `explicit`** (comportement actuel inchangé) : les ORGs futures
 ne changent pas de sémantique par défaut.
 
-Seed : une ligne pour `ORGRUN000000000B` (OTI du Sud), mode `implicit_by_presence`,
-les 13 types ci-dessus.
+Seed : une ligne pour l'OTI du Sud, mode `implicit_by_presence`, les 13 types ci-dessus.
+**Pas d'ID codé en dur** : en base vierge, l'ORG est créée sans id explicite
+(`seeds_data.sql` §PRODUCTION ORGANIZATIONS) — son id dépend de la séquence. La migration
+retrouve l'ORG par identité stable (`object_type='ORG' AND name='OTI du Sud' AND
+region_code='RUN'`), **vérifie qu'il y en a exactement une** (0 ou >1 ⇒ RAISE, fail-closed)
+et utilise son id réel. Idem pour le test fresh-apply (aucun `ORGRUN…` en dur).
 
 RLS : lecture publique (donnée de configuration non sensible, patron `ref_*`) ; écriture
 superuser plateforme OU admin d'ORG rang ≥ 30 (même gate que le branding §172), policies
@@ -58,8 +65,8 @@ Deux fonctions, une seule logique (patron set-based §35) :
 
 - **`api.org_adherent_object_ids(p_org_object_id TEXT) RETURNS SETOF TEXT`** — set-based,
   pour les surfaces liste (CRM annuaire, agrégats). Mode-aware : en mode implicite,
-  objets liés à l'ORG (`object_org_link`) × type ∈ `eligible_types` × statut ∈
-  (`draft`,`published`) ; en mode explicite, objets portant une ligne `object_membership`
+  objets liés à l'ORG en **publisher** (`object_org_link`) × type ∈ `eligible_types` ×
+  statut ∈ (`draft`,`published`) ; en mode explicite, objets portant une ligne `object_membership`
   courante (`paid`/`invoiced` dans la fenêtre de dates) — le filtre CRM reste donc
   correct pour une future ORG payante.
 - **`api.resolve_object_membership(p_object_id TEXT, p_org_object_id TEXT) RETURNS JSONB`**
@@ -76,30 +83,69 @@ Deux fonctions, une seule logique (patron set-based §35) :
 ```
 
 Sémantique :
-- ORG en mode **implicite** → règle de présence (jamais de lecture `object_membership`).
-- ORG en mode **explicite** (ou sans ligne de politique) → logique `current_membership`
-  actuelle (`object_membership` statut `paid`/`invoiced` dans la fenêtre de dates),
-  enrichie campagne/palier comme aujourd'hui.
+- ORG en mode **implicite** → règle de présence : lien **publisher** vers l'ORG + type ∈
+  `eligible_types` + statut ∈ (`draft`,`published`). Jamais de lecture `object_membership`.
+- ORG en mode **explicite** (ou sans ligne de politique) → **parité stricte avec la logique
+  `current_membership` actuelle**, y compris les adhésions globales d'ORG
+  (`object_membership.object_id IS NULL` attribuées via les liens de l'objet — sans filtre
+  de rôle, comme aujourd'hui). Aucun changement de comportement pour les ORGs explicites.
+- **Multiples adhésions explicites courantes** — ordre de priorité = **exactement le
+  classement existant** de `current_membership` (parité, vérifié dans
+  `api_views_functions.sql`) : `paid` avant `invoiced`, puis portée objet avant portée ORG
+  (`object_id NULLS LAST`), puis `ends_at DESC NULLS LAST`, puis `updated_at DESC`,
+  `LIMIT 1`. `since` = `starts_at` de la ligne gagnante (fallback `created_at` de la ligne).
 - **Jamais de fallback hybride pour une même ORG.**
 - `is_member: false` porte quand même `mode` et `org_object_id` (résultat toujours
-  auto-descriptif) ; objet non lié à l'ORG → `is_member: false`.
+  auto-descriptif) ; objet non lié (implicite : non lié en publisher) → `is_member: false`.
 
-**Découplage `commercial_visibility`** : le calcul implicite n'écrit JAMAIS
-`commercial_visibility`. Le trigger existant `trg_membership_status_transition` reste
-réservé aux lignes `object_membership` (mode explicite). Aucun trigger nouveau.
+**Sécurité des résolveurs** (les deux fonctions) :
+- `SECURITY DEFINER`, `SET search_path` restreint (forme maison, `gen_random_uuid` si
+  besoin d'UUID) ;
+- `REVOKE ALL … FROM PUBLIC, anon, authenticated` ; `GRANT EXECUTE` à `service_role`
+  uniquement. `org_adherent_object_ids` retourne des ids `draft` — il ne doit JAMAIS être
+  appelable en direct via PostgREST par `anon`/`authenticated` ;
+- consommation exclusivement à l'intérieur des RPCs DEFINER existants (`get_object_resource`,
+  RPCs CRM), qui portent déjà leur propre autorisation (§36).
+
+**Découplage `commercial_visibility` — garanti en base, pas seulement en UI.** L'éditeur
+écrit aujourd'hui `object_membership` en PostgREST direct (`saveObjectWorkspaceMemberships`,
+`object-workspace.ts`) : masquer l'UI ne suffit pas, une écriture résiduelle déclencherait
+encore le trigger de visibilité. Trois verrous :
+1. **Écritures interdites pour une ORG implicite** — trigger fail-closed BEFORE
+   INSERT/UPDATE sur `object_membership` (patron `trg_assert_facet_applicable`) : RAISE si
+   la politique de `org_object_id` est `implicit_by_presence`. Bloque tous les écrivains
+   (PostgREST direct, RPC, service_role — les triggers ne sont pas contournés par le
+   bypass RLS).
+2. **Sortie immédiate du trigger de visibilité** — `handle_membership_status_transition`
+   commence par un early-exit si l'ORG de la ligne est en mode implicite
+   (défense en profondeur si une ligne préexiste à un basculement de mode).
+3. Le calcul implicite lui-même n'écrit JAMAIS `commercial_visibility` ; aucun trigger
+   nouveau côté `object`.
 
 ## 5. Cohérence avec l'existant (pas de double définition)
 
 - **`api.get_object_resource` — clé `current_membership`** : évolue pour émettre la sortie
-  du résolveur (ORG résolue = ORG éditrice principale : `object_org_link.is_primary`,
-  fallback premier lien). La forme porte une clé `details` nullable : `null` en mode
-  implicite ; en mode explicite, l'objet campagne/palier/statut/dates actuel. Une seule
-  clé, pas de champ concurrent. Sweep des consommateurs : `object-workspace-parser.ts`,
-  `object-detail-parser.ts`, tests associés.
-- **Éditeur §17 (SectionAttachments + MembershipEditModal)** : si l'ORG de l'objet est en
+  du résolveur. **Une seule clé de contrat : `membership`** — `current_membership` est
+  **supprimée de façon contrôlée** dans la même livraison : `get_object_resource` émet
+  `membership` (forme §4), `v_fields` accepte `membership` (ancien nom traité en synonyme
+  le temps du basculement, retiré en fin de chantier). La forme porte une clé `details`
+  nullable : `null` en mode implicite ; en mode explicite, l'objet
+  campagne/palier/statut/dates actuel. Pas de champ concurrent.
+  **ORG de résolution côté surfaces objet** (fiche, API, éditeur) — ordre déterministe :
+  lien **publisher** `is_primary = TRUE` d'abord ; sinon lien publisher le plus ancien
+  (`created_at ASC`, tie-break `org_object_id ASC`) ; aucun lien publisher →
+  `{is_member: false, org_object_id: null, mode: null, details: null}`.
+  Sweep de TOUS les consommateurs — pas seulement les parsers : `object-workspace.ts`
+  (`getObjectWorkspaceMembershipModule` **chargement** + `saveObjectWorkspaceMemberships`
+  **sauvegarde**, tous deux en PostgREST direct aujourd'hui), `object-workspace-parser.ts`,
+  `object-detail-parser.ts`, tests associés, docs API.
+- **Éditeur §17 (SectionAttachments + MembershipEditModal)** : contexte **centré objet**,
+  pas utilisateur — l'ORG résolue est l'éditrice principale ci-dessus, y compris pour un
+  superuser sans ORG active ou un membre d'une ORG non principale. Si cette ORG est en
   mode implicite → résumé **lecture seule** (« Adhérent — présence en base depuis {date} »),
   authoring campagne/palier/paiement masqué (pas de write-trap : contrôles retirés, pas
-  désactivés silencieusement). ORGs en mode explicite : UI actuelle inchangée.
+  désactivés silencieusement) ; le saver refuse côté client (garde miroir du trigger §4,
+  le trigger restant le verrou dur). ORGs en mode explicite : UI actuelle inchangée.
 - **Drawer (mini-cartes adhésions)** : suit la nouvelle forme parsée ; pas de badge
   supplémentaire (surface non retenue).
 - Pas de champ « adhérent » sur l'Explorer ni le dashboard (non retenus — aujourd'hui
@@ -110,6 +156,11 @@ réservé aux lignes `object_membership` (mode explicite). Aucun trigger nouveau
 ### CRM (fiche acteur + annuaire)
 - `list_crm_directory(filters)` : `is_adherent` par établissement lié + **filtre serveur**
   `is_adherent` + agrégat acteur « N établissements adhérents sur M ».
+- **Agrégat** : M = établissements liés de **type éligible** uniquement (les objets non
+  éligibles ne comptent ni dans N ni dans M) ; agrégat masqué quand M = 0.
+- **Filtre** : `is_adherent=true` → acteurs ayant ≥ 1 établissement adhérent ;
+  `is_adherent=false` → acteurs n'en ayant aucun (y compris les acteurs sans
+  établissement) ; absent → pas de filtre. Partition totale, pas de troisième état.
 - `list_actor_crm` (fiche acteur) : badge par établissement lié.
 - L'ORG de résolution = l'ORG du membership actif de l'utilisateur
   (`api.current_user_org_id()`), cohérent avec le périmètre CRM (§61).
@@ -129,8 +180,9 @@ réservé aux lignes `object_membership` (mode explicite). Aucun trigger nouveau
 
 Avant de seeder la politique :
 1. comptes par type × statut × ORG (corpus attendu ≈ 846 objets, 13 types éligibles) ;
-2. objets de type éligible **sans `object_org_link`** vers l'OTI (l'auto-rattachement
-   ignore les imports et créations sans auteur) — liste à corriger AVANT activation ;
+2. objets de type éligible **sans lien publisher** (`object_org_link` rôle `publisher`)
+   vers l'OTI (l'auto-rattachement ignore les imports et créations sans auteur) — liste à
+   corriger AVANT activation ;
 3. l'unique objet `commercial_visibility='lapsed'` existant : identifier, comprendre,
    corriger si résidu de test.
 
@@ -152,10 +204,16 @@ Résultat consigné dans `docs/research/` + décisions dans le decision log.
   évolution `get_object_resource` — inscrite au manifest/runbook (invariant deploy
   integrity, fresh-apply gate).
 - Tests SQL (`tests/test_org_membership_policy.sql`, CI fresh-apply) :
-  - type éligible vs exclu ; les 4 statuts objet ; objet non lié ; multi-ORG
-    (implicite vs explicite côte à côte) ;
-  - mode explicite = parité avec l'actuel `current_membership` ;
-  - le résolveur implicite ne modifie pas `commercial_visibility`.
+  - type éligible vs exclu ; les 4 statuts objet ; objet non lié en publisher (lien
+    `contributor` seul ⇒ non-adhérent) ; multi-ORG (implicite vs explicite côte à côte) ;
+  - mode explicite = parité avec l'actuel `current_membership`, y compris les adhésions
+    org-globales (`object_id IS NULL`) et l'ordre de priorité multi-lignes ;
+  - trigger fail-closed : INSERT/UPDATE `object_membership` vers une ORG implicite ⇒ RAISE
+    (y compris en service_role) ;
+  - `handle_membership_status_transition` : early-exit ORG implicite ⇒
+    `commercial_visibility` inchangé ;
+  - grants : `anon`/`authenticated` ne peuvent PAS exécuter les deux résolveurs ;
+  - seed : politique résolue par identité stable, aucun id en dur (vert en base vierge).
 - Tests FE : parsers (nouvelle forme), §17 lecture seule en mode implicite, CRM
   (badge, filtre, agrégat).
 - Contrat : openapi.json + guide + Postman mis à jour ensemble.
@@ -167,5 +225,9 @@ Résultat consigné dans `docs/research/` + décisions dans le decision log.
 > `api.org_adherent_object_ids(org)` — jamais `object_membership` en direct dans une
 > nouvelle surface. Le mode (`implicit_by_presence` | `explicit`) vit dans
 > `org_membership_policy` (absence de ligne = explicite) ; jamais d'hybride pour une même
-> ORG. Le mode implicite n'écrit JAMAIS `commercial_visibility` (trigger réservé aux
-> lignes explicites).
+> ORG. Règle implicite = lien **publisher** + type éligible + statut draft/published.
+> Les écritures `object_membership` vers une ORG implicite sont interdites en base
+> (trigger fail-closed) et le mode implicite n'écrit JAMAIS `commercial_visibility`
+> (trigger de visibilité réservé aux lignes explicites, early-exit sinon). La clé de
+> contrat est `membership` (unique) ; les résolveurs sont DEFINER, non exécutables par
+> `anon`/`authenticated`.

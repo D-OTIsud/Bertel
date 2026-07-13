@@ -1,10 +1,29 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Modal } from './Modal';
+
+// Modal now mounts via usePresence -> useMediaQuery('(prefers-reduced-motion: reduce)'),
+// which reads window.matchMedia — unimplemented in jsdom. Stub it so the presence hook
+// resolves to "no reduced motion" (matches: false), matching real-browser default behavior.
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+});
 
 describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
   it('rend un dialog nommé (aria-modal) avec corps + footer', () => {
     render(
-      <Modal title="Inviter un membre" onClose={jest.fn()} footer={<button type="button">Valider</button>}>
+      <Modal title="Inviter un membre" open onOpenChange={jest.fn()} footer={<button type="button">Valider</button>}>
         <input aria-label="Champ" />
       </Modal>,
     );
@@ -17,7 +36,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
 
   it('variant="drawer" applique les classes tiroir en restant un dialog', () => {
     const { container } = render(
-      <Modal title="Permissions" variant="drawer" onClose={jest.fn()}>
+      <Modal title="Permissions" variant="drawer" open onOpenChange={jest.fn()}>
         <p>x</p>
       </Modal>,
     );
@@ -25,25 +44,26 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     expect(container.querySelector('.app-modal-overlay')).toHaveClass('app-modal-overlay--drawer');
   });
 
-  it('Escape, clic overlay et bouton Fermer appellent onClose', () => {
-    const onClose = jest.fn();
+  it('Escape, clic overlay et bouton Fermer appellent onOpenChange(false)', () => {
+    const onOpenChange = jest.fn();
     const { container } = render(
-      <Modal title="T" onClose={onClose}>
+      <Modal title="T" open onOpenChange={onOpenChange}>
         <input aria-label="C" />
       </Modal>,
     );
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'T' }), { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
     fireEvent.mouseDown(container.querySelector('.app-modal-overlay') as HTMLElement);
-    expect(onClose).toHaveBeenCalledTimes(2);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
-    expect(onClose).toHaveBeenCalledTimes(3);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onOpenChange).toHaveBeenCalledTimes(3);
   });
 
   it('D1 : verrouille le scroll du body à l’ouverture et le restaure à la fermeture', () => {
     document.body.style.overflow = '';
     const { unmount } = render(
-      <Modal title="T" onClose={jest.fn()}>
+      <Modal title="T" open onOpenChange={jest.fn()}>
         <input aria-label="C" />
       </Modal>,
     );
@@ -59,7 +79,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     trigger.focus();
 
     const { unmount } = render(
-      <Modal title="T" onClose={jest.fn()}>
+      <Modal title="T" open onOpenChange={jest.fn()}>
         <input aria-label="Premier champ" />
       </Modal>,
     );
@@ -72,7 +92,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
 
   it('D1 : le trap Tab compte les éléments à tabindex et boucle depuis un focus échappé', () => {
     render(
-      <Modal title="T" onClose={jest.fn()}>
+      <Modal title="T" open onOpenChange={jest.fn()}>
         <div tabIndex={0} aria-label="Zone focusable" />
         <input aria-label="Champ" />
       </Modal>,
@@ -88,5 +108,41 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     screen.getByLabelText('Champ').focus();
     fireEvent.keyDown(dialog, { key: 'Tab' });
     expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+  });
+
+  it('does not render when open is false', () => {
+    render(
+      <Modal title="Test" open={false} onOpenChange={() => {}}>
+        content
+      </Modal>,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('stays in the DOM with data-motion-phase="exiting" during the exit window, then unmounts', () => {
+    jest.useFakeTimers();
+    const { rerender } = render(
+      <Modal title="Test" open onOpenChange={() => {}}>
+        content
+      </Modal>,
+    );
+    act(() => {
+      jest.advanceTimersByTime(20);
+    });
+    expect(screen.getByRole('dialog').closest('[data-motion-phase]')).toHaveAttribute('data-motion-phase', 'open');
+
+    rerender(
+      <Modal title="Test" open={false} onOpenChange={() => {}}>
+        content
+      </Modal>,
+    );
+    expect(screen.getByRole('dialog').closest('[data-motion-phase]')).toHaveAttribute('data-motion-phase', 'exiting');
+
+    // default variant="modal" exits over 220ms (matches --motion-base / the .app-modal CSS transition).
+    act(() => {
+      jest.advanceTimersByTime(220);
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 });

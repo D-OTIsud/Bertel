@@ -57,4 +57,12 @@ describe('recherche métier sur le corpus réel', () => {
     expect(ids).toContain('publier-fiche');
     expect(ids).toContain('modules-audits-publications');
   });
+
+  test('« intégrateur » trouve le guide partenaires API', () => {
+    expect(topIds('intégrateur')).toContain('aide-partenaires');
+  });
+
+  test('« api partenaire » trouve le guide partenaires API', () => {
+    expect(topIds('api partenaire', 5)).toContain('aide-partenaires');
+  });
 });

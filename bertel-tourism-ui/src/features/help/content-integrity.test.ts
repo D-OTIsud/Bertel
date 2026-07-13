@@ -3,6 +3,7 @@ import { NAV_ITEMS } from '../../config/nav-items';
 import { isDemoOnlyModule } from '../../utils/features';
 import { ALL_FAQ_ENTRIES } from './content';
 import { FAQ_RUBRIQUES } from './content/types';
+import { BERTEL_PARTNER_GUIDE_URL, BERTEL_SUPPORT_URL } from './content/links';
 
 function entryById(id: string) {
   const entry = ALL_FAQ_ENTRIES.find((e) => e.id === id);
@@ -79,13 +80,18 @@ describe('intégrité du contenu FAQ', () => {
     }
   });
 
-  test('aide-contact contient un lien mailto: ou https://', () => {
+  test('aide-contact pointe vers la destination de support approuvée', () => {
     const answer = entryById('aide-contact').answer;
-    expect(answer).toMatch(/mailto:|https:\/\//);
+    expect(answer).toContain(BERTEL_SUPPORT_URL);
+    expect(BERTEL_SUPPORT_URL).toMatch(/^(mailto:|https:\/\/)/);
+    expect(BERTEL_SUPPORT_URL).not.toMatch(/^https:\/\/(www\.)?otisud\.re\/?$/);
   });
 
-  test('aide-partenaires contient un lien https://', () => {
+  test('aide-partenaires pointe vers l\'URL canonique du guide partenaires', () => {
     const answer = entryById('aide-partenaires').answer;
-    expect(answer).toMatch(/https:\/\//);
+    expect(answer).toContain(BERTEL_PARTNER_GUIDE_URL);
+    expect(BERTEL_PARTNER_GUIDE_URL).toMatch(/^https:\/\//);
+    const guideUrl = new URL(BERTEL_PARTNER_GUIDE_URL);
+    expect(guideUrl.pathname).not.toBe('/');
   });
 });

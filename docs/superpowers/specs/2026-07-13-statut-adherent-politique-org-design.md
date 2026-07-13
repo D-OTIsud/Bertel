@@ -82,13 +82,21 @@ Deux fonctions, une seule logique (patron set-based §35) :
 }
 ```
 
+**Type de `since` : toujours ISO `date-time` (timestamptz), jamais une date nue.**
+Implicite : `object.created_at` tel quel. Explicite : `starts_at::timestamptz`
+(DATE → minuit UTC, règle documentée dans le contrat) ; `starts_at` NULL →
+`created_at` de la ligne (déjà timestamptz).
+
 Sémantique :
 - ORG en mode **implicite** → règle de présence : lien **publisher** vers l'ORG + type ∈
   `eligible_types` + statut ∈ (`draft`,`published`). Jamais de lecture `object_membership`.
-- ORG en mode **explicite** (ou sans ligne de politique) → **parité stricte avec la logique
-  `current_membership` actuelle**, y compris les adhésions globales d'ORG
-  (`object_membership.object_id IS NULL` attribuées via les liens de l'objet — sans filtre
-  de rôle, comme aujourd'hui). Aucun changement de comportement pour les ORGs explicites.
+- ORG en mode **explicite** (ou sans ligne de politique) → lecture `object_membership`
+  **impérativement filtrée par l'ORG demandée** : chaque branche (portée objet ET
+  adhésions globales d'ORG `object_id IS NULL`) impose `m.org_object_id =
+  p_org_object_id`. `resolve_object_membership(object, orgA)` ne retourne JAMAIS une
+  adhésion appartenant à orgB. La « parité » avec l'ancien `current_membership` conserve
+  son **classement** et sa fenêtre de validité, PAS son ambiguïté multi-ORG (l'ancien
+  calcul agrégeait toutes les ORGs liées).
 - **Multiples adhésions explicites courantes** — ordre de priorité = **exactement le
   classement existant** de `current_membership` (parité, vérifié dans
   `api_views_functions.sql`) : `paid` avant `invoiced`, puis portée objet avant portée ORG
@@ -146,6 +154,12 @@ encore le trigger de visibilité. Trois verrous :
   authoring campagne/palier/paiement masqué (pas de write-trap : contrôles retirés, pas
   désactivés silencieusement) ; le saver refuse côté client (garde miroir du trigger §4,
   le trigger restant le verrou dur). ORGs en mode explicite : UI actuelle inchangée.
+  **Invariant saver §17** : le module charge, modifie et supprime UNIQUEMENT les lignes
+  `object_membership` dont `org_object_id` = l'ORG résolue. Aujourd'hui
+  `saveObjectWorkspaceMemberships` collecte les lignes de TOUTES les ORGs liées puis
+  supprime les ids absents du formulaire — avec le nouveau contexte mono-ORG, il
+  effacerait les adhésions explicites d'une autre ORG. Le reconcile devient scopé
+  `org_object_id` (chargement, `existingIds`, delete).
 - **Drawer (mini-cartes adhésions)** : suit la nouvelle forme parsée ; pas de badge
   supplémentaire (surface non retenue).
 - Pas de champ « adhérent » sur l'Explorer ni le dashboard (non retenus — aujourd'hui
@@ -164,6 +178,11 @@ encore le trigger de visibilité. Trois verrous :
 - `list_actor_crm` (fiche acteur) : badge par établissement lié.
 - L'ORG de résolution = l'ORG du membership actif de l'utilisateur
   (`api.current_user_org_id()`), cohérent avec le périmètre CRM (§61).
+- **Superuser sans ORG active** (`current_user_org_id()` NULL) : le statut adhérent est
+  `null` (indéterminé, PAS « non-adhérent ») — badge absent, agrégat absent — et le
+  filtre `is_adherent` est **indisponible** (contrôle masqué ; s'il est passé quand même,
+  le RPC l'ignore). Pas de paramètre d'ORG explicite dans ce chantier (différé avec le
+  switcher multi-org).
 - Le statut est porté par chaque **objet**, jamais par la personne (modèle acteur-centré).
 - UI : badge/chip dans l'annuaire et la fiche acteur, filtre dans la barre de filtres
   serveur existante.
@@ -206,16 +225,21 @@ Résultat consigné dans `docs/research/` + décisions dans le decision log.
 - Tests SQL (`tests/test_org_membership_policy.sql`, CI fresh-apply) :
   - type éligible vs exclu ; les 4 statuts objet ; objet non lié en publisher (lien
     `contributor` seul ⇒ non-adhérent) ; multi-ORG (implicite vs explicite côte à côte) ;
-  - mode explicite = parité avec l'actuel `current_membership`, y compris les adhésions
-    org-globales (`object_id IS NULL`) et l'ordre de priorité multi-lignes ;
+  - mode explicite = parité de classement avec l'actuel `current_membership`, y compris
+    les adhésions org-globales (`object_id IS NULL`) et l'ordre de priorité multi-lignes ;
+  - **isolation multi-ORG** : `resolve_object_membership(object, orgA)` avec une adhésion
+    orgB courante ⇒ `is_member: false` pour orgA (jamais la ligne d'orgB) ;
+  - `since` : toujours timestamptz (implicite `created_at` ; explicite `starts_at` DATE →
+    minuit UTC ; `starts_at` NULL → `created_at` de la ligne) ;
   - trigger fail-closed : INSERT/UPDATE `object_membership` vers une ORG implicite ⇒ RAISE
     (y compris en service_role) ;
   - `handle_membership_status_transition` : early-exit ORG implicite ⇒
     `commercial_visibility` inchangé ;
   - grants : `anon`/`authenticated` ne peuvent PAS exécuter les deux résolveurs ;
   - seed : politique résolue par identité stable, aucun id en dur (vert en base vierge).
-- Tests FE : parsers (nouvelle forme), §17 lecture seule en mode implicite, CRM
-  (badge, filtre, agrégat).
+- Tests FE : parsers (nouvelle forme), §17 lecture seule en mode implicite, saver §17
+  scopé à l'ORG résolue (ne touche jamais les lignes d'une autre ORG), CRM
+  (badge, filtre, agrégat, superuser sans ORG ⇒ statut null + filtre masqué).
 - Contrat : openapi.json + guide + Postman mis à jour ensemble.
 
 ## 10. Invariant proposé pour CLAUDE.md (à l'issue du chantier)

@@ -23,7 +23,7 @@ Elle est conçue pour la **synchronisation serveur-à-serveur** : alimenter votr
 Écrivez à **d.philippe@otisud.com** en précisant : qui vous êtes, l'usage prévu des données et le nom de votre service. Vous recevrez :
 
 - votre **clé API** au format `bk_live_` suivi de 48 caractères hexadécimaux ;
-- le **domaine de base** de l'API (noté `<domaine>` dans ce guide).
+- le **domaine de base** de l'API (noté `VOTRE_DOMAINE` dans ce guide).
 
 **Délai et éligibilité.** L'accès est ouvert aux partenaires touristiques et institutionnels : offices de tourisme, plateformes SIT (DATAtourisme, Apidae, Tourinsoft), agences web mandatées, éditeurs de sites et d'applications valorisant le territoire. Comptez un délai indicatif de **quelques jours ouvrés** pour l'attribution.
 
@@ -32,14 +32,14 @@ Elle est conçue pour la **synchronisation serveur-à-serveur** : alimenter votr
 La base de toutes les URLs est :
 
 ```
-https://<domaine>/api/public
+https://VOTRE_DOMAINE/api/public
 ```
 
 ### Premier appel
 
 ```bash
 curl -H "Authorization: Bearer bk_live_votre_cle" \
-  "https://<domaine>/api/public/objects?page_size=5"
+  "https://VOTRE_DOMAINE/api/public/objects?page_size=5"
 ```
 
 Réponse (abrégée) :
@@ -131,7 +131,7 @@ Exemple — les restaurants et hôtels, 200 par page :
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
-  "https://<domaine>/api/public/objects?types=RES,HOT&page_size=200"
+  "https://VOTRE_DOMAINE/api/public/objects?types=RES,HOT&page_size=200"
 ```
 
 #### 3.1.1 Objets complets en liste — `view=full`
@@ -149,7 +149,7 @@ de la page est la **fiche complète** — strictement le même contenu que `GET 
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
-  "https://<domaine>/api/public/objects?view=full&page_size=100&track=gpx"
+  "https://VOTRE_DOMAINE/api/public/objects?view=full&page_size=100&track=gpx"
 ```
 
 ### 3.2 `GET /objects/{id}` — une fiche complète
@@ -164,7 +164,7 @@ L'identifiant a la forme `RESRUN00000000XK` (3 lettres de type + territoire + 10
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
-  "https://<domaine>/api/public/objects/RESRUN00000000XK?lang=all"
+  "https://VOTRE_DOMAINE/api/public/objects/RESRUN00000000XK?lang=all"
 ```
 
 La fiche `data` contient l'ensemble des données publiques : identité, descriptions (texte propre), localisation et géo, contacts publics, médias publiés, horaires d'ouverture, tarifs, capacités, classements et labels, etc.
@@ -242,7 +242,7 @@ Les fiches référencent des codes (équipements, types de cuisine, labels…). 
 | `domains` | csv de domaines ; absent = **tous** les catalogues publics (les clés de la réponse = liste des domaines disponibles) |
 | `lang` | Langue des libellés (`fr` par défaut) |
 
-Réponse : `data` = `{ "<domaine>": [{ "code", "name", "icon_url", "parent_code", "domain" }] }`. Un domaine inconnu est ignoré silencieusement.
+Réponse : `data` = `{ "domaine": [{ "code", "name", "icon_url", "parent_code", "domain" }] }`. Un domaine inconnu est ignoré silencieusement.
 
 ---
 

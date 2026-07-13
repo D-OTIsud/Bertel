@@ -260,7 +260,7 @@ export function CrmInteractionModal({
         <>
           {/* Phase 5.2 — état de confirmation : l'interaction est consignée. On propose la
               relance comme une affordance SÉPARÉE (plus de formulaire imbriqué). */}
-          <div className="crm-saved-banner" role="status">
+          <div className="crm-saved-banner motion-status-enter" role="status">
             <Check size={15} aria-hidden /> Interaction enregistrée.
           </div>
 

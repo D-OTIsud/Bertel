@@ -643,7 +643,7 @@ export function CrmActorEditModal({
           />
         ))}
         {invalidAddressEntries.length > 0 && (
-          <p className="crm-field__hint" role="status">
+          <p className="crm-field__hint motion-status-enter" role="status">
             Standardisez chaque adresse modifiée avec la Base Adresse Nationale avant d&apos;enregistrer.
           </p>
         )}
@@ -659,7 +659,7 @@ export function CrmActorEditModal({
       </div>
 
       {saveMutation.isError && (
-        <div className="inline-alert" role="alert">
+        <div className="inline-alert motion-status-enter" role="alert">
           Échec de l&apos;enregistrement : {(saveMutation.error as Error).message}
         </div>
       )}

@@ -104,7 +104,7 @@ export function PartnerKeysSettings() {
 
       {/* Clé émise — affichée UNE SEULE FOIS */}
       {issued && (
-        <div className="inline-alert inline-alert--ok" role="status">
+        <div className="inline-alert inline-alert--ok motion-status-enter" role="status">
           <div>
             <strong>Clé pour « {issued.label} » — copiez-la maintenant.</strong>
             <p className="muted" style={{ margin: '4px 0' }}>

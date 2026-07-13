@@ -139,3 +139,51 @@ Volume cible : ~70-90 entrées (18 création + ~8 arbitrages + le reste de l'app
   `?question=<id>` le prépare déjà.
 - Captures d'écran/illustrations dans les réponses.
 - i18n du contenu d'aide (FR uniquement, comme le reste du contenu éditorial au MVP).
+
+---
+
+## Implementation update (2026-07-12)
+
+### Rubrique « Dashboard & modules » (`pilotage.ts`)
+
+Nouvelle rubrique insérée après « Explorer & filtres » avec quatre entrées :
+`dashboard-comprendre`, `dashboard-filtrer`, `dashboard-activite`, `modules-audits-publications`.
+Les modules Audits et Publications sont documentés comme aperçus démo, pas produits finis.
+
+### Métadonnées `routes` sur `FaqEntry`
+
+Champ interne optionnel `routes?: string[]` (non rendu). Couverture minimale par module
+navigable (hors `/aide` et modules `isDemoOnlyModule`). Vérifié par `content-integrity.test.ts`.
+
+### Synchronisation URL bidirectionnelle
+
+Helper pur `buildHelpUrl({ query, question })` — ordre stable `q` puis `question`, encodage
+via `URLSearchParams`. La page synchronise :
+
+- recherche → URL après debounce 150 ms (`router.replace`, pas `push`) ;
+- URL → état (`query`, `debouncedQuery`, `openId`) sur changement de `useSearchParams` ;
+- ouverture/fermeture d'une réponse en recherche préserve `q` ;
+- `?question=` invalide : pas d'accordéon ouvert, nettoyage de l'URL.
+
+### Liens « Voir aussi » avec filtre/recherche actifs
+
+`openRelated` : valide l'id, efface recherche + filtre rubrique, `?question=<id>` seul,
+scroll différé via `scrollTargetId` + `scrollIntoView` (respect `prefers-reduced-motion`).
+
+### Accessibilité
+
+- Chips rubrique : `aria-pressed` sur « Toutes » et chaque rubrique.
+- Accordéon : `faq-question-<id>`, `faq-answer-<id>`, `aria-controls`, `role="region"`,
+  `aria-labelledby`.
+
+### Contenu Paramètres / branding / RGPD
+
+- Libellé menu **Paramètres** (plus « Réglages ») dans les chemins utilisateur.
+- `reglages-branding` = branding ORG (`Paramètres → Mon organisation → Apparence de l'organisation`).
+- `reglages-branding-plateforme` = branding plateforme (super-admin).
+- `rgpd-droits` = module RGPD du menu principal ; Mentions légales ≠ parcours d'effacement.
+
+### Support et guide partenaires
+
+`aide-contact` et `aide-partenaires` contiennent des liens actionnables (`https://`) ;
+confirmation PO recommandée pour l'URL canonique du guide et l'e-mail support définitif.

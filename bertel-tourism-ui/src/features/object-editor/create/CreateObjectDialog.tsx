@@ -233,7 +233,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                         <label
                           key={option.code}
                           className={[
-                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow] duration-150 will-change-transform active:scale-[0.98]',
+                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
                             selected
                               ? 'shadow-sm'
                               : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
@@ -299,7 +299,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
               type="button"
               onClick={handleCreate}
               disabled={!validation.ok || busy}
-              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-[transform,box-shadow] duration-150 hover:-translate-y-px hover:shadow-md active:scale-[0.98] active:translate-y-0 disabled:cursor-not-allowed"
+              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-[transform,box-shadow,background-color,color] duration-150 hover:-translate-y-px hover:shadow-md active:scale-[0.98] active:translate-y-0 disabled:cursor-not-allowed"
               style={
                 validation.ok && accent
                   ? { backgroundColor: accent.color }

@@ -3,12 +3,13 @@
 // Centre d'aide /aide (spec 2026-07-03-faq-aide-design.md) : recherche métier instantanée
 // (searchFaq — accents/préfixes/keywords), rubriques en chips, questions en accordéon,
 // deep-links ?question=<id> (ouvre + scrolle) et ?q=<texte> (préremplit la recherche).
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, Search } from 'lucide-react';
 import { MarkdownContent } from '../components/markdown/MarkdownContent';
 import { ALL_FAQ_ENTRIES } from '../features/help/content';
 import { FAQ_RUBRIQUES, type FaqEntry, type FaqRubriqueId } from '../features/help/content/types';
+import { buildHelpUrl, helpUrlMatches } from '../features/help/help-url';
 import { searchFaq } from '../features/help/faq-search';
 import { createTypeLabel } from '../features/object-editor/create/create-object-options';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,11 @@ const SEARCH_DEBOUNCE_MS = 150;
 
 const RUBRIQUE_LABEL = new Map<string, string>(FAQ_RUBRIQUES.map((r) => [r.id, r.label]));
 const ENTRY_BY_ID = new Map(ALL_FAQ_ENTRIES.map((e) => [e.id, e]));
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
 function FaqEntryCard({
   entry,
@@ -31,12 +37,21 @@ function FaqEntryCard({
   onToggle: () => void;
   onOpenRelated: (id: string) => void;
 }) {
+  const questionId = `faq-question-${entry.id}`;
+  const answerId = `faq-answer-${entry.id}`;
   const related = (entry.related ?? [])
     .map((id) => ENTRY_BY_ID.get(id))
     .filter((e): e is FaqEntry => Boolean(e));
   return (
     <article id={`faq-${entry.id}`} className={cn('help-qa', open && 'help-qa--open')}>
-      <button type="button" className="help-qa__question" aria-expanded={open} onClick={onToggle}>
+      <button
+        type="button"
+        id={questionId}
+        className="help-qa__question"
+        aria-expanded={open}
+        aria-controls={answerId}
+        onClick={onToggle}
+      >
         <span className="help-qa__text">{entry.question}</span>
         {showRubrique && (
           <span className="help-qa__rubrique">{RUBRIQUE_LABEL.get(entry.rubrique)}</span>
@@ -47,7 +62,12 @@ function FaqEntryCard({
         <ChevronDown className="help-qa__chevron" aria-hidden />
       </button>
       {open && (
-        <div className="help-qa__answer">
+        <div
+          id={answerId}
+          role="region"
+          aria-labelledby={questionId}
+          className="help-qa__answer"
+        >
           <MarkdownContent markdown={entry.answer} />
           {related.length > 0 && (
             <p className="help-qa__related">
@@ -65,38 +85,104 @@ function FaqEntryCard({
   );
 }
 
+function questionInSearchResults(questionId: string | null, debouncedQuery: string): boolean {
+  if (!questionId || !debouncedQuery.trim()) return false;
+  return searchFaq(ALL_FAQ_ENTRIES, debouncedQuery).some((e) => e.id === questionId);
+}
+
 export default function HelpPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialQuestion = searchParams.get('question');
+  const validInitialQuestion =
+    initialQuestion && ENTRY_BY_ID.has(initialQuestion) ? initialQuestion : null;
+
   const [query, setQuery] = useState(() => searchParams.get('q') ?? '');
   const [debouncedQuery, setDebouncedQuery] = useState(query);
-  const [openId, setOpenId] = useState<string | null>(() => searchParams.get('question'));
+  const [openId, setOpenId] = useState<string | null>(validInitialQuestion);
   const [rubrique, setRubrique] = useState<FaqRubriqueId | 'all'>('all');
-  const didInitialScroll = useRef(false);
+  const [scrollTargetId, setScrollTargetId] = useState<string | null>(validInitialQuestion);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(id);
   }, [query]);
 
-  // Deep-link entrant : scroller UNE fois vers l'entrée ouverte par ?question=.
+  // URL → state : navigation navigateur, liens internes, historique.
+  const qParam = searchParams.get('q') ?? '';
+  const questionParam = searchParams.get('question');
   useEffect(() => {
-    if (didInitialScroll.current || !openId) return;
-    didInitialScroll.current = true;
-    document.getElementById(`faq-${openId}`)?.scrollIntoView?.({ block: 'start' });
-  }, [openId]);
+    setQuery(qParam);
+    setDebouncedQuery(qParam);
+
+    if (questionParam && ENTRY_BY_ID.has(questionParam)) {
+      setOpenId(questionParam);
+    } else {
+      setOpenId(null);
+      if (questionParam) {
+        router.replace(buildHelpUrl({ query: qParam.trim() || null, question: null }));
+      }
+    }
+    // router.replace is stable for our navigation mock; omit router object from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync from URL params only
+  }, [qParam, questionParam]);
+
+  // Recherche → URL (après debounce) : préserve question si encore dans les résultats.
+  useEffect(() => {
+    const trimmed = debouncedQuery.trim();
+    let questionForUrl: string | null = null;
+    if (openId && ENTRY_BY_ID.has(openId)) {
+      if (trimmed) {
+        if (questionInSearchResults(openId, debouncedQuery)) questionForUrl = openId;
+      } else {
+        questionForUrl = openId;
+      }
+    }
+    const desired: { query?: string | null; question?: string | null } = {
+      query: trimmed || null,
+      question: questionForUrl,
+    };
+    if (!helpUrlMatches(searchParams, desired)) {
+      router.replace(buildHelpUrl(desired));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- compare semantic URL params only
+  }, [debouncedQuery, openId, qParam, questionParam]);
+
+  // Scroll différé : la cible peut ne pas exister avant le prochain rendu.
+  useEffect(() => {
+    if (!scrollTargetId) return;
+    const el = document.getElementById(`faq-${scrollTargetId}`);
+    if (!el) return;
+    el.scrollIntoView({
+      block: 'start',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    });
+    setScrollTargetId(null);
+  }, [scrollTargetId, openId, debouncedQuery, rubrique]);
+
+  function replaceHelpUrl(state: { query?: string | null; question?: string | null }) {
+    if (!helpUrlMatches(searchParams, state)) {
+      router.replace(buildHelpUrl(state));
+    }
+  }
 
   function toggleEntry(id: string) {
     const next = openId === id ? null : id;
     setOpenId(next);
-    // URL partageable, sans empiler l'historique.
-    router.replace(next ? `/aide?question=${next}` : '/aide');
+    replaceHelpUrl({
+      query: debouncedQuery.trim() || null,
+      question: next,
+    });
   }
 
   function openRelated(id: string) {
+    if (!ENTRY_BY_ID.has(id)) return;
+    setQuery('');
+    setDebouncedQuery('');
+    setRubrique('all');
     setOpenId(id);
-    router.replace(`/aide?question=${id}`);
-    document.getElementById(`faq-${id}`)?.scrollIntoView?.({ block: 'start' });
+    setScrollTargetId(id);
+    replaceHelpUrl({ question: id });
   }
 
   const results = useMemo(
@@ -153,11 +239,11 @@ export default function HelpPage() {
         </section>
       ) : (
         <>
-          {/* Chips de filtre (pas des onglets ARIA : pas de role tablist sans tabs) */}
           <div className="help-chips" aria-label="Rubriques">
             <button
               type="button"
               className={cn('help-chip', rubrique === 'all' && 'help-chip--on')}
+              aria-pressed={rubrique === 'all'}
               onClick={() => setRubrique('all')}
             >
               Toutes
@@ -167,6 +253,7 @@ export default function HelpPage() {
                 key={r.id}
                 type="button"
                 className={cn('help-chip', rubrique === r.id && 'help-chip--on')}
+                aria-pressed={rubrique === r.id}
                 onClick={() => setRubrique(rubrique === r.id ? 'all' : r.id)}
               >
                 {r.label}

@@ -10,9 +10,9 @@ describe('registre des rubriques FAQ', () => {
     }
   });
 
-  test('les 10 rubriques de la spec, dans l\'ordre de lecture', () => {
+  test('les 11 rubriques de la spec, dans l\'ordre de lecture', () => {
     expect(FAQ_RUBRIQUES.map((r) => r.id)).toEqual([
-      'demarrer', 'creer-objet', 'choisir-type', 'explorer', 'editeur',
+      'demarrer', 'creer-objet', 'choisir-type', 'explorer', 'pilotage', 'editeur',
       'publication', 'listes', 'crm', 'equipe', 'reglages',
     ]);
   });

@@ -88,6 +88,10 @@ BEGIN
   )));
   SELECT count(*) INTO v_count FROM media WHERE place_id = v_place;
   ASSERT v_count = 1, 'place media must survive reconcile without media key';
+  SELECT count(*) INTO v_count FROM object_location WHERE place_id = v_place;
+  ASSERT v_count = 1, 'place reconcile without child ids must not duplicate the main location';
+  SELECT count(*) INTO v_count FROM object_place_description WHERE place_id = v_place;
+  ASSERT v_count = 1, 'place reconcile without child ids must not duplicate the description';
 
   BEGIN
     v_result := api.save_object_places(v_obj, jsonb_build_object('places', jsonb_build_array(

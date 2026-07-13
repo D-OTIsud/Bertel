@@ -170,8 +170,27 @@ BEGIN
                  COALESCE(NULLIF(value->>'position', '')::integer, 0)
         LIMIT 1
       LOOP
-        v_id := internal.workspace_uuid(v_row->>'id');
-        IF v_id IS NOT NULL THEN
+        v_loc_id := internal.workspace_uuid(v_row->>'id');
+        IF v_loc_id IS NULL THEN
+          SELECT ol.id
+            INTO v_loc_id
+            FROM public.object_location ol
+           WHERE ol.place_id = v_place_id
+           ORDER BY ol.is_main_location DESC NULLS LAST, ol.position NULLS LAST, ol.id
+           LIMIT 1;
+        END IF;
+
+        IF v_loc_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.object_location ol
+           WHERE ol.id = v_loc_id AND ol.place_id = v_place_id
+        ) THEN
+          UPDATE public.object_location
+             SET is_main_location = false,
+                 updated_at = now()
+           WHERE place_id = v_place_id
+             AND id <> v_loc_id
+             AND is_main_location;
+
           UPDATE public.object_location
              SET address1 = NULLIF(v_row->>'address1', ''),
                  address1_suite = NULLIF(v_row->>'address1_suite', ''),
@@ -188,14 +207,14 @@ BEGIN
                  is_main_location = true,
                  position = COALESCE(NULLIF(v_row->>'position', '')::integer, 0),
                  updated_at = now()
-           WHERE id = v_id AND place_id = v_place_id;
+           WHERE id = v_loc_id AND place_id = v_place_id;
         ELSE
           INSERT INTO public.object_location (
             id, place_id, address1, address1_suite, address2, address3, postcode, city, code_insee,
             lieu_dit, direction, latitude, longitude, altitude_m, is_main_location, position
           )
           VALUES (
-            gen_random_uuid(),
+            COALESCE(v_loc_id, gen_random_uuid()),
             v_place_id,
             NULLIF(v_row->>'address1', ''),
             NULLIF(v_row->>'address1_suite', ''),
@@ -222,7 +241,19 @@ BEGIN
         LIMIT 1
       LOOP
         v_desc_id := internal.workspace_uuid(v_row->>'id');
-        IF v_desc_id IS NOT NULL THEN
+        IF v_desc_id IS NULL THEN
+          SELECT pd.id
+            INTO v_desc_id
+            FROM public.object_place_description pd
+           WHERE pd.place_id = v_place_id
+           ORDER BY pd.position NULLS LAST, pd.id
+           LIMIT 1;
+        END IF;
+
+        IF v_desc_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.object_place_description pd
+           WHERE pd.id = v_desc_id AND pd.place_id = v_place_id
+        ) THEN
           UPDATE public.object_place_description
              SET description = NULLIF(v_row->>'description', ''),
                  visibility = NULLIF(v_row->>'visibility', ''),
@@ -236,7 +267,7 @@ BEGIN
             id, place_id, description, visibility, position, description_i18n, extra
           )
           VALUES (
-            gen_random_uuid(),
+            COALESCE(v_desc_id, gen_random_uuid()),
             v_place_id,
             NULLIF(v_row->>'description', ''),
             NULLIF(v_row->>'visibility', ''),

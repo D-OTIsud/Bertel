@@ -87,7 +87,8 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
                   <Icon className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
                   {item.to === '/moderation' && pendingModerationCount > 0 && (
                     <span
-                      className="app-sidebar__badge"
+                      key={pendingModerationCount}
+                      className={cn('app-sidebar__badge', 'motion-pop')}
                       aria-label={`${pendingModerationCount} suggestion${pendingModerationCount > 1 ? 's' : ''} en attente de modération`}
                     >
                       {pendingModerationCount > 99 ? '99+' : pendingModerationCount}

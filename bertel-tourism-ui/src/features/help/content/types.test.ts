@@ -16,4 +16,10 @@ describe('registre des rubriques FAQ', () => {
       'publication', 'listes', 'crm', 'equipe', 'reglages',
     ]);
   });
+
+  test('la rubrique réglages utilise le libellé visible Paramètres', () => {
+    expect(
+      FAQ_RUBRIQUES.find((rubrique) => rubrique.id === 'reglages')?.label,
+    ).toBe('Paramètres & RGPD');
+  });
 });

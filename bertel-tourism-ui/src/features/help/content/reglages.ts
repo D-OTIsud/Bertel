@@ -4,6 +4,7 @@
  *  `RgpdErasurePage.tsx` (garde owner/super_admin), mémoire §166 / §149 / §172,
  *  et `docs/guide-partenaires.md` (guide partenaires API). */
 import type { FaqEntry } from './types';
+import { BERTEL_PARTNER_GUIDE_URL, BERTEL_SUPPORT_URL } from './links';
 
 export const REGLAGES_FAQ: FaqEntry[] = [
   {
@@ -76,12 +77,24 @@ Cette section porte le **branding par défaut de toute l'application** (logo, co
   {
     id: 'aide-partenaires',
     rubrique: 'reglages',
-    question: 'Un guide pour nos partenaires socio-pros ?',
-    keywords: ['guide', 'partenaire', 'documentation', 'socio-pro', 'api'],
+    question: 'Un guide pour les partenaires techniques et intégrateurs ?',
+    keywords: [
+      'guide',
+      'partenaire',
+      'documentation',
+      'api',
+      'intégrateur',
+      'agence web',
+      'datatourisme',
+      'apidae',
+      'tourinsoft',
+    ],
     related: ['aide-contact'],
-    answer: `Un **guide partenaires** dédié à l'API publique Bertel est publié sur le **site documentaire de l'OTI** (page **Espace partenaires**, déployée avec la documentation API). Les ressources publiques de l'OTI sont accessibles sur [otisud.re](https://www.otisud.re).
+    answer: `Le **guide partenaires** documente l'**API publique** de Bertel (accès en lecture seule aux fiches publiées) : authentification par clé \`bk_live_…\`, endpoints, pagination et synchronisation.
 
-**À transmettre.** Partagez ce guide aux gérants et exploitants qui vous demandent comment leur fiche fonctionne côté visiteur ou intégrateur, plutôt que de leur donner accès à Bertel lui-même.`,
+**Public.** Il s'adresse aux **intégrateurs techniques, agences web mandatées et plateformes SIT** (DATAtourisme, Apidae, Tourinsoft) qui branchent leur propre site ou application sur les données de l'OTI — **ce n'est pas** un guide utilisateur pour les gérants ou exploitants.
+
+[Ouvrir le guide partenaires](${BERTEL_PARTNER_GUIDE_URL}).`,
   },
   {
     id: 'aide-contact',
@@ -92,7 +105,7 @@ Cette section porte le **branding par défaut de toute l'application** (logo, co
     answer: `Deux relais possibles :
 
 - **L'administrateur de votre organisation**, pour tout ce qui touche à vos droits, votre équipe ou vos paramètres.
-- **L'équipe Bertel de l'OTI du Sud**, pour un bug ou une question qui dépasse votre organisation : [contactez le support](https://www.otisud.re).
+- **L'équipe Bertel de l'OTI du Sud**, pour un bug ou une question qui dépasse votre organisation : écrivez au [support Bertel](${BERTEL_SUPPORT_URL}).
 
 **Pour un signalement de bug**, précisez : la **page** concernée, l'**action** tentée, le **message d'erreur exact** et, si possible, une **capture d'écran** sans données personnelles sensibles.
 

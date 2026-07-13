@@ -3961,6 +3961,63 @@ a {
 @media (max-width: 760px) {
   .app-modal--drawer { width: 100%; max-width: 100%; }
 }
+
+/* Motion pass — presence-phase transitions (usePresence via Modal.tsx). Overlay
+   fades; centered modal fades+lifts+scales; drawer fades+slides from the right.
+   Exit uses --ease-premium-in, enter uses --ease-premium-out (D1). */
+.app-modal-overlay {
+  opacity: 1;
+  transition: opacity 160ms var(--ease-premium-out);
+}
+.app-modal-overlay[data-motion-phase='entering'] {
+  opacity: 0;
+}
+.app-modal-overlay[data-motion-phase='exiting'] {
+  opacity: 0;
+  transition-duration: 140ms;
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity var(--motion-base) var(--ease-premium-out), transform var(--motion-base) var(--ease-premium-out);
+}
+.app-modal[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+}
+.app-modal[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal--drawer {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--motion-surface) var(--ease-premium-out), transform var(--motion-surface) var(--ease-premium-out);
+}
+.app-modal--drawer[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateX(18px);
+}
+.app-modal--drawer[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateX(18px);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-modal-overlay,
+  .app-modal,
+  .app-modal--drawer {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
 /* 7.4 — révélation du mot de passe temporaire d'invitation (vocabulaire maison). */
 .invite-temp-row { display: flex; align-items: center; gap: 8px; }
 .invite-temp-code {

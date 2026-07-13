@@ -929,6 +929,11 @@ textarea::placeholder {
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-soft);
 }
+.offline-banner[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: opacity 140ms var(--ease-premium-in), transform 140ms var(--ease-premium-in);
+}
 
 /* ---- Squelettes : pas de spinner central, calqués sur la grille de la carte (impl. 3.1) ---- */
 .skel {

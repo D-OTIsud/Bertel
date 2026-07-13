@@ -2791,3 +2791,8 @@
 }
 .object-editor .peer-saved-banner__text { flex: 1 1 320px; font-size: .85rem; line-height: 1.4; }
 .object-editor .peer-saved-banner__actions { display: inline-flex; gap: 8px; }
+.object-editor .peer-saved-banner[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: opacity 140ms var(--ease-premium-in), transform 140ms var(--ease-premium-in);
+}

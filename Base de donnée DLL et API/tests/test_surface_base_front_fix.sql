@@ -19,7 +19,7 @@ DECLARE
 BEGIN
   INSERT INTO auth.users (id, email) VALUES (v_owner, 'surface_fix_owner@test.local')
     ON CONFLICT (id) DO NOTHING;
-  INSERT INTO app_user_profile (id, role) VALUES (v_owner, 'platform_superuser')
+  INSERT INTO app_user_profile (id, role) VALUES (v_owner, 'super_admin')
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
   INSERT INTO object (id, object_type, name, status, created_by) VALUES

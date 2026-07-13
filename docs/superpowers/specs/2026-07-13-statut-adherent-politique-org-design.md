@@ -83,9 +83,11 @@ Deux fonctions, une seule logique (patron set-based §35) :
 ```
 
 **Type de `since` : toujours ISO `date-time` (timestamptz), jamais une date nue.**
-Implicite : `object.created_at` tel quel. Explicite : `starts_at::timestamptz`
-(DATE → minuit UTC, règle documentée dans le contrat) ; `starts_at` NULL →
-`created_at` de la ligne (déjà timestamptz).
+Implicite : `object.created_at` tel quel. Explicite :
+`starts_at::timestamp AT TIME ZONE 'UTC'` (DATE → minuit UTC **indépendamment du fuseau
+de session** — un cast `::timestamptz` direct dépendrait du `TimeZone` de la session ;
+règle documentée dans le contrat) ; `starts_at` NULL → `created_at` de la ligne (déjà
+timestamptz).
 
 Sémantique :
 - ORG en mode **implicite** → règle de présence : lien **publisher** vers l'ORG + type ∈
@@ -229,8 +231,9 @@ Résultat consigné dans `docs/research/` + décisions dans le decision log.
     les adhésions org-globales (`object_id IS NULL`) et l'ordre de priorité multi-lignes ;
   - **isolation multi-ORG** : `resolve_object_membership(object, orgA)` avec une adhésion
     orgB courante ⇒ `is_member: false` pour orgA (jamais la ligne d'orgB) ;
-  - `since` : toujours timestamptz (implicite `created_at` ; explicite `starts_at` DATE →
-    minuit UTC ; `starts_at` NULL → `created_at` de la ligne) ;
+  - `since` : toujours timestamptz (implicite `created_at` ; explicite
+    `starts_at::timestamp AT TIME ZONE 'UTC'` = minuit UTC quel que soit le fuseau de
+    session ; `starts_at` NULL → `created_at` de la ligne) ;
   - trigger fail-closed : INSERT/UPDATE `object_membership` vers une ORG implicite ⇒ RAISE
     (y compris en service_role) ;
   - `handle_membership_status_transition` : early-exit ORG implicite ⇒

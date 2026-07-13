@@ -11,6 +11,7 @@ export const FAQ_RUBRIQUES = [
   { id: 'creer-objet', label: 'Créer une fiche' },
   { id: 'choisir-type', label: 'Choisir le bon type' },
   { id: 'explorer', label: 'Explorer & filtres' },
+  { id: 'pilotage', label: 'Dashboard & modules' },
   { id: 'editeur', label: 'Éditer une fiche' },
   { id: 'publication', label: 'Publication & modération' },
   { id: 'listes', label: 'Listes & impression' },
@@ -35,4 +36,6 @@ export interface FaqEntry {
   types?: string[];
   /** « Voir aussi » : ids d'autres entrées, rendus par la page comme boutons. */
   related?: string[];
+  /** Application routes covered by this help entry; not rendered in the UI. */
+  routes?: string[];
 }

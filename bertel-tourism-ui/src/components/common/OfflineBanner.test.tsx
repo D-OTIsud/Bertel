@@ -19,6 +19,7 @@ describe('OfflineBanner', () => {
     render(<OfflineBanner />);
     act(() => setOnline(false));
     expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Hors ligne');
 
     act(() => setOnline(true));
     expect(screen.getByRole('status')).toBeInTheDocument(); // still mounted, exiting

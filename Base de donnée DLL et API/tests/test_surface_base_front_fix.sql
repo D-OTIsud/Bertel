@@ -178,7 +178,7 @@ BEGIN
       )
     )));
     RAISE EXCEPTION 'invalid bed should rollback entire save_object_rooms';
-  EXCEPTION WHEN raise_exception THEN
+  EXCEPTION WHEN foreign_key_violation THEN
     IF SQLERRM NOT LIKE '%bed_type_code%' AND SQLERRM NOT LIKE '%Unknown bed_type_code%' THEN
       RAISE;
     END IF;

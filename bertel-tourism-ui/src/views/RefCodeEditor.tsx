@@ -274,40 +274,43 @@ export function RefCodeEditor() {
         )}
       </div>
 
-      {i18nTarget && (
-        <Modal
-          title={`Traductions — ${i18nTarget.name}`}
-          onClose={() => setI18nTarget(null)}
-          footer={
-            <>
-              <button type="button" className="ghost-button" onClick={() => setI18nTarget(null)}>Annuler</button>
-              <button
-                type="button"
-                className="primary-button"
-                disabled={i18nMutation.isPending}
-                onClick={() => i18nMutation.mutate({ value: i18nTarget, nameI18n: i18nDraft })}
-              >
-                Enregistrer les traductions
-              </button>
-            </>
-          }
-        >
-          <p className="confirm-message" style={{ marginBottom: 12 }}>
-            Libellé canonique (FR) : <strong>{i18nTarget.name}</strong>. Renseignez les traductions ; les champs vides sont ignorés.
-          </p>
-          {I18N_LANGS.map((lang) => (
-            <div key={lang.code} className="field-block">
-              <label htmlFor={`i18n-${lang.code}`}>{lang.label}</label>
-              <input
-                id={`i18n-${lang.code}`}
-                value={i18nDraft[lang.code] ?? ''}
-                onChange={(event) => setI18nDraft((current) => ({ ...current, [lang.code]: event.target.value }))}
-                placeholder={i18nTarget.name}
-              />
-            </div>
-          ))}
-        </Modal>
-      )}
+      <Modal
+        title={`Traductions — ${i18nTarget?.name ?? ''}`}
+        open={!!i18nTarget}
+        onOpenChange={(next) => { if (!next) setI18nTarget(null); }}
+        footer={
+          <>
+            <button type="button" className="ghost-button" onClick={() => setI18nTarget(null)}>Annuler</button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={i18nMutation.isPending}
+              onClick={() => { if (i18nTarget) i18nMutation.mutate({ value: i18nTarget, nameI18n: i18nDraft }); }}
+            >
+              Enregistrer les traductions
+            </button>
+          </>
+        }
+      >
+        {i18nTarget && (
+          <>
+            <p className="confirm-message" style={{ marginBottom: 12 }}>
+              Libellé canonique (FR) : <strong>{i18nTarget.name}</strong>. Renseignez les traductions ; les champs vides sont ignorés.
+            </p>
+            {I18N_LANGS.map((lang) => (
+              <div key={lang.code} className="field-block">
+                <label htmlFor={`i18n-${lang.code}`}>{lang.label}</label>
+                <input
+                  id={`i18n-${lang.code}`}
+                  value={i18nDraft[lang.code] ?? ''}
+                  onChange={(event) => setI18nDraft((current) => ({ ...current, [lang.code]: event.target.value }))}
+                  placeholder={i18nTarget.name}
+                />
+              </div>
+            ))}
+          </>
+        )}
+      </Modal>
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}

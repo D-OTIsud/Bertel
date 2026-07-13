@@ -32,7 +32,7 @@ function normalize(value: string): string {
 }
 
 /** Feuille des raccourcis (D24) — dresse ce que l'app écoute réellement. */
-function ShortcutHelpModal({ onClose }: { onClose: () => void }) {
+function ShortcutHelpModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const rows: Array<[string, string]> = [
     ['Ctrl/⌘ + K', 'Ouvrir la palette de commandes'],
     ['↑ / ↓', 'Naviguer dans la palette'],
@@ -42,7 +42,7 @@ function ShortcutHelpModal({ onClose }: { onClose: () => void }) {
     ['← / → · Début / Fin', 'Changer d’onglet (Dashboard)'],
   ];
   return (
-    <Modal title="Raccourcis clavier" onClose={onClose}>
+    <Modal title="Raccourcis clavier" open={open} onOpenChange={onOpenChange}>
       <table className="shortcut-table">
         <tbody>
           {rows.map(([keys, action]) => (
@@ -206,75 +206,73 @@ export function CommandPalette() {
 
   return (
     <>
-      {open ? (
-        <Modal title="Palette de commandes" onClose={() => setOpen(false)}>
-          <div className="palette">
-            <label className="palette__search">
-              <Search size={14} aria-hidden />
-              <input
-                type="search"
-                role="combobox"
-                aria-expanded="true"
-                aria-controls="palette-list"
-                aria-activedescendant={entries[highlight] ? `palette-item-${entries[highlight].key}` : undefined}
-                aria-label="Rechercher une fiche, un module ou une action"
-                placeholder="Rechercher une fiche, un module, une action…"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setHighlight(0);
-                }}
-                onKeyDown={handleInputKeyDown}
-              />
-              {searching ? <span className="palette__spinner">Recherche…</span> : null}
-            </label>
-            <ul id="palette-list" role="listbox" aria-label="Résultats de la palette" ref={listRef} className="palette__list">
-              {entries.length === 0 ? (
-                <li className="palette__empty" role="presentation">
-                  {query.trim().length >= PALETTE_SEARCH_MIN_CHARS
-                    ? 'Aucun résultat — essayez un autre terme.'
-                    : 'Tapez pour chercher une fiche, un module ou une action.'}
+      <Modal title="Palette de commandes" open={open} onOpenChange={setOpen}>
+        <div className="palette">
+          <label className="palette__search">
+            <Search size={14} aria-hidden />
+            <input
+              type="search"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls="palette-list"
+              aria-activedescendant={entries[highlight] ? `palette-item-${entries[highlight].key}` : undefined}
+              aria-label="Rechercher une fiche, un module ou une action"
+              placeholder="Rechercher une fiche, un module, une action…"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setHighlight(0);
+              }}
+              onKeyDown={handleInputKeyDown}
+            />
+            {searching ? <span className="palette__spinner">Recherche…</span> : null}
+          </label>
+          <ul id="palette-list" role="listbox" aria-label="Résultats de la palette" ref={listRef} className="palette__list">
+            {entries.length === 0 ? (
+              <li className="palette__empty" role="presentation">
+                {query.trim().length >= PALETTE_SEARCH_MIN_CHARS
+                  ? 'Aucun résultat — essayez un autre terme.'
+                  : 'Tapez pour chercher une fiche, un module ou une action.'}
+              </li>
+            ) : null}
+            {entries.map((entry, index) => {
+              const previous = entries[index - 1];
+              const showGroup = !previous || previous.group !== entry.group;
+              return (
+                <li key={entry.key} role="presentation">
+                  {showGroup ? (
+                    <p className="palette__group" role="presentation">
+                      {groupLabels[entry.group]}
+                    </p>
+                  ) : null}
+                  <button
+                    type="button"
+                    id={`palette-item-${entry.key}`}
+                    role="option"
+                    aria-selected={index === highlight}
+                    data-highlighted={index === highlight || undefined}
+                    className={cn('palette__item', index === highlight && 'is-highlighted')}
+                    onMouseEnter={() => setHighlight(index)}
+                    onClick={() => entry.run()}
+                  >
+                    <span className="palette__item-icon" aria-hidden>
+                      {entry.group === 'object' ? <MapPin size={13} /> : entry.group === 'action' ? (
+                        entry.key === 'action:shortcuts' ? <Keyboard size={13} /> : <Plus size={13} />
+                      ) : (
+                        <CornerDownLeft size={13} />
+                      )}
+                    </span>
+                    <span className="palette__item-body">
+                      <span className="palette__item-label">{entry.label}</span>
+                      {entry.caption ? <span className="palette__item-caption">{entry.caption}</span> : null}
+                    </span>
+                  </button>
                 </li>
-              ) : null}
-              {entries.map((entry, index) => {
-                const previous = entries[index - 1];
-                const showGroup = !previous || previous.group !== entry.group;
-                return (
-                  <li key={entry.key} role="presentation">
-                    {showGroup ? (
-                      <p className="palette__group" role="presentation">
-                        {groupLabels[entry.group]}
-                      </p>
-                    ) : null}
-                    <button
-                      type="button"
-                      id={`palette-item-${entry.key}`}
-                      role="option"
-                      aria-selected={index === highlight}
-                      data-highlighted={index === highlight || undefined}
-                      className={cn('palette__item', index === highlight && 'is-highlighted')}
-                      onMouseEnter={() => setHighlight(index)}
-                      onClick={() => entry.run()}
-                    >
-                      <span className="palette__item-icon" aria-hidden>
-                        {entry.group === 'object' ? <MapPin size={13} /> : entry.group === 'action' ? (
-                          entry.key === 'action:shortcuts' ? <Keyboard size={13} /> : <Plus size={13} />
-                        ) : (
-                          <CornerDownLeft size={13} />
-                        )}
-                      </span>
-                      <span className="palette__item-body">
-                        <span className="palette__item-label">{entry.label}</span>
-                        {entry.caption ? <span className="palette__item-caption">{entry.caption}</span> : null}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </Modal>
-      ) : null}
+              );
+            })}
+          </ul>
+        </div>
+      </Modal>
 
       <CreateObjectDialog
         open={createOpen}
@@ -288,7 +286,7 @@ export function CommandPalette() {
           router.push(`/objects/${id}/edit`);
         }}
       />
-      {shortcutsOpen ? <ShortcutHelpModal onClose={() => setShortcutsOpen(false)} /> : null}
+      <ShortcutHelpModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </>
   );
 }

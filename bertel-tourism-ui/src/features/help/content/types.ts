@@ -17,7 +17,7 @@ export const FAQ_RUBRIQUES = [
   { id: 'listes', label: 'Listes & impression' },
   { id: 'crm', label: 'CRM' },
   { id: 'equipe', label: 'Équipe & rôles' },
-  { id: 'reglages', label: 'Réglages & RGPD' },
+  { id: 'reglages', label: 'Paramètres & RGPD' },
 ] as const;
 
 export type FaqRubriqueId = (typeof FAQ_RUBRIQUES)[number]['id'];

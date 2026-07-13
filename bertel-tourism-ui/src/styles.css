@@ -2869,6 +2869,12 @@ a {
 .page-skeleton__row { display: flex; gap: 16px; }
 .page-skeleton__col { display: flex; flex: 1; flex-direction: column; gap: 8px; justify-content: center; }
 
+.editor-loading { display: flex; flex-direction: column; gap: 20px; padding: 20px; }
+.editor-loading__topbar { display: flex; align-items: center; justify-content: space-between; }
+.editor-loading__body { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+.editor-loading__rail { display: flex; flex-direction: column; gap: 8px; }
+.editor-loading__form { display: flex; flex-direction: column; gap: 16px; }
+
 .drawer-header p {
   margin: 0.35rem 0 0;
   color: var(--text-muted);

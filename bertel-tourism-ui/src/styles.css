@@ -10683,6 +10683,10 @@ a {
   font-size: 13px;
   color: var(--ink-3);
 }
+.crm-app .crm-loading-skeleton { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.crm-app .crm-loading-skeleton__row { display: flex; gap: 12px; }
+.crm-app .crm-loading-skeleton--kanban { flex-direction: row; }
+.crm-app .crm-loading-skeleton__column { display: flex; flex: 1; flex-direction: column; gap: 10px; }
 
 /* ---------- Boutons maison (le .btn du prototype, scopé) ---------- */
 .crm-app .crm-btn {

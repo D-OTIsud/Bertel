@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
 import { deleteCrmInteraction, listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
+import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 
 export function CrmObjectView({
@@ -109,7 +110,13 @@ export function CrmObjectView({
   };
 
   if (objectQuery.isLoading) {
-    return <div className="crm-loading">Chargement de la vue établissement…</div>;
+    return (
+      <div role="status" aria-busy="true" aria-label="Chargement de la fiche" className="crm-loading-skeleton">
+        <SkeletonBlock className="h-8 w-1/2 rounded-shellSm" />
+        <SkeletonBlock className="h-32 w-full rounded-shellLg" />
+        <SkeletonBlock className="h-32 w-full rounded-shellLg" />
+      </div>
+    );
   }
   if (objectQuery.isError || !snapshot) {
     return (

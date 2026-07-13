@@ -35,6 +35,7 @@ import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
+import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
 
 const YEAR_MS = 365 * 86_400_000;
@@ -386,7 +387,13 @@ export function CrmActorFiche({
   };
 
   if (actorQuery.isLoading) {
-    return <div className="crm-loading">Chargement de la fiche acteur…</div>;
+    return (
+      <div role="status" aria-busy="true" aria-label="Chargement de la fiche" className="crm-loading-skeleton">
+        <SkeletonBlock className="h-8 w-1/2 rounded-shellSm" />
+        <SkeletonBlock className="h-32 w-full rounded-shellLg" />
+        <SkeletonBlock className="h-32 w-full rounded-shellLg" />
+      </div>
+    );
   }
   if (actorQuery.isError || !snapshot) {
     return (

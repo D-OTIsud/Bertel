@@ -407,6 +407,7 @@
   color: var(--ink-3); letter-spacing: 0.04em;
   display: inline-flex; align-items: center; gap: 5px;
   background: transparent;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 .object-editor .lang-tabs button.is-on {
   background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);
@@ -426,6 +427,7 @@
   font-size: 12px; font-weight: 600;
   color: var(--ink-3); letter-spacing: 0.01em;
   background: transparent; border: 0; cursor: pointer;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 .object-editor .scope-tabs button.is-on {
   background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s);

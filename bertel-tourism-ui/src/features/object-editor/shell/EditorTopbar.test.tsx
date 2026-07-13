@@ -75,4 +75,26 @@ describe('EditorTopbar', () => {
     fireEvent.click(screen.getByRole('button', { name: /2 blocages/ }));
     expect(onShowBlockers).toHaveBeenCalledTimes(1);
   });
+
+  it('shows a spinner and "Enregistrement…" while saveFeedback is pending', () => {
+    render(<EditorTopbar {...baseProps} saveFeedback="pending" onSaveDraft={() => {}} />);
+    expect(screen.getByRole('button', { name: /Enregistrement…/ })).toBeInTheDocument();
+  });
+
+  it('shows a check and "Enregistré" for success, never alongside the spinner', () => {
+    render(<EditorTopbar {...baseProps} saveFeedback="success" onSaveDraft={() => {}} />);
+    const button = screen.getByRole('button', { name: /Enregistré/ });
+    expect(button).toBeInTheDocument();
+    expect(button.querySelector('[data-icon="spinner"]')).not.toBeInTheDocument();
+  });
+
+  it('shows an alert and "Échec — réessayer" for error', () => {
+    render(<EditorTopbar {...baseProps} saveFeedback="error" onSaveDraft={() => {}} />);
+    expect(screen.getByRole('button', { name: /Échec — réessayer/ })).toBeInTheDocument();
+  });
+
+  it('applies the same pending/success/error treatment to Publier via publishFeedback', () => {
+    render(<EditorTopbar {...baseProps} publishFeedback="success" />);
+    expect(screen.getByRole('button', { name: /Publié/ })).toBeInTheDocument();
+  });
 });

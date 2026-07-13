@@ -173,21 +173,30 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
   const [saveFeedback, setSaveFeedback] = useState<EditorActionFeedback>('idle');
   const [publishFeedback, setPublishFeedback] = useState<EditorActionFeedback>('idle');
-  const feedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Independent timer refs per channel: a shared ref would let a publish flash's clearTimeout
+  // cancel the save flash's pending revert-to-idle timer (or vice versa) when save→publish (or
+  // the reverse) happens within the 1.2s flash window, stranding that channel on "success".
+  const saveFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publishFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
-      if (feedbackTimerRef.current !== null) clearTimeout(feedbackTimerRef.current);
+      if (saveFeedbackTimerRef.current !== null) clearTimeout(saveFeedbackTimerRef.current);
+      if (publishFeedbackTimerRef.current !== null) clearTimeout(publishFeedbackTimerRef.current);
     };
   }, []);
 
-  /** Flash the topbar action feedback to "success" for 1.2s, then back to idle. Clears
-   *  any prior pending timer so rapid save→save-again doesn't leave two competing timeouts,
-   *  and the unmount cleanup above guards against a setState-after-unmount during the flash. */
-  function flashSuccess(setFeedback: (value: EditorActionFeedback) => void) {
+  /** Flash the topbar action feedback to "success" for 1.2s, then back to idle. Clears any
+   *  prior pending timer on the SAME channel's ref so rapid save→save-again (or publish→
+   *  publish-again) doesn't leave two competing timeouts; the unmount cleanup above guards
+   *  against a setState-after-unmount during the flash. */
+  function flashSuccess(
+    setFeedback: (value: EditorActionFeedback) => void,
+    timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  ) {
     setFeedback('success');
-    if (feedbackTimerRef.current !== null) clearTimeout(feedbackTimerRef.current);
-    feedbackTimerRef.current = setTimeout(() => setFeedback('idle'), 1200);
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setFeedback('idle'), 1200);
   }
 
   const setObjectStatus = useSetObjectStatusMutation(objectId);
@@ -410,7 +419,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         setSaveErrors([]);
         // Confirmation en snackbar (D4 useToast) — le libellé topbar revient à son état « à jour ».
         toast.success(contributorMode ? 'Modification soumise pour validation' : 'Brouillon enregistré');
-        flashSuccess(setSaveFeedback);
+        flashSuccess(setSaveFeedback, saveFeedbackTimerRef);
       } else {
         setSaveErrors(errors);
         setModalContext('save');
@@ -447,7 +456,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       editor.setSavedStatus('published');
       setSaveErrors([]);
       toast.success('Fiche enregistrée et publiée');
-      flashSuccess(setPublishFeedback);
+      flashSuccess(setPublishFeedback, publishFeedbackTimerRef);
     } catch (error) {
       const issue = publishErrorToIssue(error);
       setSaveErrors([issue]);

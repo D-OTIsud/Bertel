@@ -10455,6 +10455,7 @@ a {
 }
 .dashboard-widget-state { color: var(--ink-3); font-size: 0.8rem; }
 .dashboard-widget-state--error { color: var(--destructive); }
+.dashboard-widget-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
 
 /* ── Dashboard — onglets par vocation ──────────────────────────────────────── */
 .dashboard-tabs {

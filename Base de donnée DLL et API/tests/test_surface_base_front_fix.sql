@@ -9,8 +9,8 @@ BEGIN;
 DO $$
 DECLARE
   v_owner uuid := '00000000-0000-4000-a000-000000000001';
-  v_obj   text := 'SURFRUN9999999901';
-  v_other text := 'SURFRUN9999999902';
+  v_obj   text := 'ASCRUN9999999901';
+  v_other text := 'HOTRUN9999999902';
   v_place uuid;
   v_media uuid;
   v_room  uuid;

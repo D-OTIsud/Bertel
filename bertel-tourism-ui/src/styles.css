@@ -718,6 +718,40 @@ textarea::placeholder {
   box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
 }
 
+/* Indicateur glissant — opt-in via .view-switch--indicator, mesuré en JS
+   (largeur des boutons dérivée du padding, pas une hypothèse 25%/bouton). */
+.view-switch--indicator {
+  position: relative;
+}
+.view-switch--indicator .view-switch__btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  box-shadow: none;
+  transition: color 140ms ease;
+}
+.view-switch--indicator .view-switch__btn.is-on {
+  background: transparent;
+  box-shadow: none;
+}
+.view-switch__indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
+  transition: transform 180ms var(--ease-premium-out), width 180ms var(--ease-premium-out);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-switch__indicator {
+    transition: none !important;
+  }
+}
+
 /* ---- Vue Table dense de l'Explorer (D17) ---- */
 .results-table {
   width: 100%;

@@ -187,3 +187,38 @@ scroll différé via `scrollTargetId` + `scrollIntoView` (respect `prefers-reduc
 
 `aide-contact` et `aide-partenaires` contiennent des liens actionnables (`https://`) ;
 confirmation PO recommandée pour l'URL canonique du guide et l'e-mail support définitif.
+
+### Correctifs de revue — 2026-07-13
+
+- **Scroll routeur.** Tous les `router.replace` de `HelpPage` passent par l'unique
+  fonction `replaceWithoutScroll` (`router.replace(url, { scroll: false })`) : ces
+  navigations ne changent jamais de page, elles synchronisent l'état de l'aide dans
+  l'URL — sans cette option Next.js peut repositionner la page et concurrencer le
+  `scrollIntoView` explicite des liens « Voir aussi ».
+- **Scroll différé sur changement d'URL.** L'effet URL → état pose désormais
+  `setScrollTargetId(questionParam)` en plus de `setOpenId`, donc un `?question=`
+  qui change après le montage (deep-link externe, navigateur) ouvre **et** fait
+  défiler la cible, via le même mécanisme différé que le deep-link initial.
+- **Libellé « Paramètres ».** La rubrique `reglages` affiche « Paramètres & RGPD »
+  (l'identifiant interne `reglages` est inchangé — seul le libellé visible change).
+- **Destinations approuvées centralisées** dans `content/links.ts` :
+  - `BERTEL_SUPPORT_URL` = `mailto:d.philippe@otisud.com` — seul contact documenté
+    dans le dépôt (référent RGPD/DPO publié dans `public/legal/cgu.md` et
+    `public/legal/rgpd.md`, même contact que l'attribution des clés API dans
+    `docs/guide-partenaires.md`). Remplace le lien générique vers la page d'accueil
+    `https://www.otisud.re`.
+  - `BERTEL_PARTNER_GUIDE_URL` = `https://doc.bertel.otisud.re/partenaires.html` —
+    domaine du site docs déployé (Coolify, app « Docs site », voir mémoire
+    `bertel-deploy-coolify`), page qui rend `docs/guide-partenaires.md` (§158).
+  - Sources consignées ici faute de canal PO dédié dans ce dépôt ; à re-valider
+    explicitement si un référent support distinct est désigné.
+- **Public du guide partenaires clarifié.** `guide-partenaires.md` est sans ambiguïté
+  un guide d'intégration API (clés `bk_live_…`, endpoints, DATAtourisme/Apidae/
+  Tourinsoft) — aucun second guide socio-pro n'existe dans le dépôt. L'entrée
+  `aide-partenaires` est reformulée pour cibler explicitement les intégrateurs
+  techniques et agences web, et ne recommande plus de la transmettre aux gérants.
+- **Tests renforcés.** `content-integrity.test.ts` vérifie désormais la présence de
+  la valeur exacte de `BERTEL_SUPPORT_URL`/`BERTEL_PARTNER_GUIDE_URL` (et rejette
+  explicitement `https://www.otisud.re` comme destination de support), plus la
+  présence d'un chemin non racine pour le guide — la simple présence de `https://`
+  ne suffit plus.

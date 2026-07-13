@@ -1,4 +1,4 @@
-/** Rubrique « Réglages & RGPD » — branding ORG/plateforme, compte, référentiels, effacement RGPD,
+/** Rubrique « Paramètres & RGPD » — branding ORG/plateforme, compte, référentiels, effacement RGPD,
  *  documentation partenaires. Vérifié contre `SettingsPage.tsx`, `settings-nav.ts`
  *  (Paramètres → Mon compte / Mon organisation / Plateforme), `RefCodeEditor.tsx`,
  *  `RgpdErasurePage.tsx` (garde owner/super_admin), mémoire §166 / §149 / §172,

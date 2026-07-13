@@ -1,25 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Modal } from './Modal';
 
-// Modal now mounts via usePresence -> useMediaQuery('(prefers-reduced-motion: reduce)'),
-// which reads window.matchMedia — unimplemented in jsdom. Stub it so the presence hook
-// resolves to "no reduced motion" (matches: false), matching real-browser default behavior.
-beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: jest.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: jest.fn(),
-      removeListener: jest.fn(),
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-    })),
-  });
-});
-
 describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
   it('rend un dialog nommé (aria-modal) avec corps + footer', () => {
     render(

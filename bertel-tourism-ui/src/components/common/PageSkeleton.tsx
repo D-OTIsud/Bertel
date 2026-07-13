@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import { SkeletonBlock } from './SkeletonBlock';
 
 type PageSkeletonVariant = 'dashboard' | 'list' | 'form';
@@ -53,7 +54,7 @@ function FormSkeletonBody() {
   );
 }
 
-const VARIANT_BODY: Record<PageSkeletonVariant, () => JSX.Element> = {
+const VARIANT_BODY: Record<PageSkeletonVariant, () => ReactElement> = {
   dashboard: DashboardSkeletonBody,
   list: ListSkeletonBody,
   form: FormSkeletonBody,

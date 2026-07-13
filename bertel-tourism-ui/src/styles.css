@@ -719,7 +719,13 @@ textarea::placeholder {
 }
 
 /* Indicateur glissant — opt-in via .view-switch--indicator, mesuré en JS
-   (largeur des boutons dérivée du padding, pas une hypothèse 25%/bouton). */
+   (largeur des boutons dérivée du padding, pas une hypothèse 25%/bouton).
+   Task 23 audit: `width` retiré de la transition (icon-only buttons de même
+   classe/padding ⇒ offsetWidth identique pour les 4 boutons, donc `width`
+   n'anime jamais réellement — seul `transform` doit être animé ; la valeur
+   `width` posée en style inline reste appliquée instantanément, sans
+   transition, ce qui respecte l'invariant « pas de transition sur
+   width/height/top/left » du plan). */
 .view-switch--indicator {
   position: relative;
 }
@@ -742,7 +748,7 @@ textarea::placeholder {
   border-radius: 7px;
   background: var(--surface);
   box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
-  transition: transform 180ms var(--ease-premium-out), width 180ms var(--ease-premium-out);
+  transition: transform 180ms var(--ease-premium-out);
   pointer-events: none;
 }
 

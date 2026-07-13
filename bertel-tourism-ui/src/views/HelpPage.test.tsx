@@ -90,7 +90,7 @@ describe('HelpPage', () => {
       target: { value: 'artisan' },
     });
     advanceDebounce();
-    expect(replace).toHaveBeenCalledWith('/aide?q=artisan');
+    expect(replace).toHaveBeenCalledWith('/aide?q=artisan', { scroll: false });
   });
 
   test('état vide : message + suggestion', async () => {
@@ -121,7 +121,7 @@ describe('HelpPage', () => {
   test('ouvrir une entrée sans recherche synchronise l’URL (replace)', () => {
     render(<HelpPage />);
     fireEvent.click(screen.getByRole('button', { name: /Je veux créer un artisan/ }));
-    expect(replace).toHaveBeenCalledWith('/aide?question=choisir-artisan');
+    expect(replace).toHaveBeenCalledWith('/aide?question=choisir-artisan', { scroll: false });
   });
 
   test('ouvrir un résultat de recherche préserve q', () => {
@@ -130,7 +130,7 @@ describe('HelpPage', () => {
     advanceDebounce();
     replace.mockClear();
     fireEvent.click(screen.getByRole('button', { name: /Je veux créer un artisan/ }));
-    expect(replace).toHaveBeenCalledWith('/aide?q=artisan&question=choisir-artisan');
+    expect(replace).toHaveBeenCalledWith('/aide?q=artisan&question=choisir-artisan', { scroll: false });
   });
 
   test('fermer un résultat de recherche préserve q et retire question', () => {
@@ -139,7 +139,7 @@ describe('HelpPage', () => {
     advanceDebounce();
     replace.mockClear();
     fireEvent.click(screen.getByRole('button', { name: /Je veux créer un artisan/ }));
-    expect(replace).toHaveBeenCalledWith('/aide?q=artisan');
+    expect(replace).toHaveBeenCalledWith('/aide?q=artisan', { scroll: false });
   });
 
   test('un changement de useSearchParams resynchronise input et réponse ouverte', () => {
@@ -156,7 +156,7 @@ describe('HelpPage', () => {
     render(<HelpPage />);
     const artisan = screen.getByRole('button', { name: /Je veux créer un artisan/ });
     expect(artisan).toHaveAttribute('aria-expanded', 'false');
-    expect(replace).toHaveBeenCalledWith('/aide');
+    expect(replace).toHaveBeenCalledWith('/aide', { scroll: false });
   });
 
   test('navigation « Voir aussi » depuis une rubrique filtrée', () => {
@@ -170,7 +170,7 @@ describe('HelpPage', () => {
     expect(screen.getByRole('button', { name: 'Toutes' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /Comment créer un commerce/ }))
       .toHaveAttribute('aria-expanded', 'true');
-    expect(replace).toHaveBeenCalledWith('/aide?question=creer-com');
+    expect(replace).toHaveBeenCalledWith('/aide?question=creer-com', { scroll: false });
     expect(scrollIntoView).toHaveBeenCalled();
   });
 
@@ -188,7 +188,23 @@ describe('HelpPage', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Comment créer un commerce/ }))
       .toHaveAttribute('aria-expanded', 'true');
-    expect(replace).toHaveBeenCalledWith('/aide?question=creer-com');
+    expect(replace).toHaveBeenCalledWith('/aide?question=creer-com', { scroll: false });
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  test('un changement URL vers une autre question ouvre et scrolle la cible', () => {
+    searchParams = new URLSearchParams('question=choisir-artisan');
+    const { rerender } = render(<HelpPage />);
+
+    scrollIntoView.mockClear();
+
+    searchParams = new URLSearchParams('question=creer-com');
+    act(() => {
+      rerender(<HelpPage />);
+    });
+
+    expect(screen.getByRole('button', { name: /Comment créer un commerce/ }))
+      .toHaveAttribute('aria-expanded', 'true');
     expect(scrollIntoView).toHaveBeenCalled();
   });
 });

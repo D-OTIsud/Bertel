@@ -108,6 +108,13 @@ export default function HelpPage() {
     return () => clearTimeout(id);
   }, [query]);
 
+  // Unique point d'appel du routeur : ces navigations ne changent jamais de page,
+  // elles synchronisent seulement l'état de l'aide dans l'URL — { scroll: false }
+  // évite que Next.js repositionne la page et concurrence le scrollIntoView explicite.
+  function replaceWithoutScroll(url: string) {
+    router.replace(url, { scroll: false });
+  }
+
   // URL → state : navigation navigateur, liens internes, historique.
   const qParam = searchParams.get('q') ?? '';
   const questionParam = searchParams.get('question');
@@ -117,10 +124,11 @@ export default function HelpPage() {
 
     if (questionParam && ENTRY_BY_ID.has(questionParam)) {
       setOpenId(questionParam);
+      setScrollTargetId(questionParam);
     } else {
       setOpenId(null);
       if (questionParam) {
-        router.replace(buildHelpUrl({ query: qParam.trim() || null, question: null }));
+        replaceWithoutScroll(buildHelpUrl({ query: qParam.trim() || null, question: null }));
       }
     }
     // router.replace is stable for our navigation mock; omit router object from deps.
@@ -143,7 +151,7 @@ export default function HelpPage() {
       question: questionForUrl,
     };
     if (!helpUrlMatches(searchParams, desired)) {
-      router.replace(buildHelpUrl(desired));
+      replaceWithoutScroll(buildHelpUrl(desired));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- compare semantic URL params only
   }, [debouncedQuery, openId, qParam, questionParam]);
@@ -162,7 +170,7 @@ export default function HelpPage() {
 
   function replaceHelpUrl(state: { query?: string | null; question?: string | null }) {
     if (!helpUrlMatches(searchParams, state)) {
-      router.replace(buildHelpUrl(state));
+      replaceWithoutScroll(buildHelpUrl(state));
     }
   }
 

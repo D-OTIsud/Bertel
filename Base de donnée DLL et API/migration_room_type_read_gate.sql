@@ -17,12 +17,14 @@
 --    field-level flag (CLAUDE.md §49: flags compose, never substitute):
 --      read_object_room_type:        (is_published IS TRUE AND EXISTS(parent published))
 --                                    OR object_id IN (SELECT api.current_user_extended_object_ids())
+--                                    OR api.user_can_write_object_canonical(object_id)
 --      read_object_room_type_amenity / _media (follow through the parent room):
 --                                    EXISTS(rt: is_published flag AND parent published)   [anon arm]
 --                                    OR room_type_id IN (rooms of the extended set)       [ext arm]
+--                                    OR room_type_id IN (rooms writable by the caller)    [writer arm]
 --    The rt probes additionally ride read_object_room_type itself (policy subqueries are
 --    RLS-checked) — coherent: anon resolves exactly the flag+published rooms.
---    is_published = NULL rows are extended-only (IS TRUE), same treatment as media (§51).
+--    is_published = NULL rows are extended/writer-only (IS TRUE), same treatment as media (§51).
 --
 -- B) WRITE-BINDING REPAIR (deny-all bug found during this pass). 8o
 --    (migration_write_policy_percommand.sql §§43–44) wrote the link-table predicates as
@@ -52,8 +54,9 @@
 --   * Editor §05 loader/saver (direct PostgREST on the trio, authenticated org member) —
 --     reads ride the extended arm (incl. is_published=FALSE rows, the under-exposure fix);
 --     link writes are un-broken by (B).
--- No new EXECUTE grants needed (P0.3 gotcha): the SELECT arms call only
--- api.current_user_extended_object_ids (already granted to anon/authenticated, §35/8p);
+-- No new EXECUTE grants needed (P0.3 gotcha): the SELECT arms call
+-- api.current_user_extended_object_ids and api.user_can_write_object_canonical (both already
+-- granted to anon/authenticated by §35/8d; the write predicate is false for anon);
 -- per-command write policies never apply to SELECT (8o). §39 holds: the only auth.*()
 -- reference stays wrapped as (select auth.uid()).
 --
@@ -79,6 +82,7 @@ CREATE POLICY "read_object_room_type" ON object_room_type FOR SELECT USING (
     SELECT 1 FROM object o
     WHERE o.id = object_room_type.object_id AND o.status = 'published'))
   OR object_id IN (SELECT api.current_user_extended_object_ids())
+  OR api.user_can_write_object_canonical(object_room_type.object_id)
 );
 
 DROP POLICY IF EXISTS "Lecture publique amenities chambre" ON object_room_type_amenity;
@@ -92,6 +96,9 @@ CREATE POLICY "read_object_room_type_amenity" ON object_room_type_amenity FOR SE
   OR room_type_id IN (
     SELECT rt.id FROM object_room_type rt
     WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE api.user_can_write_object_canonical(rt.object_id))
 );
 
 DROP POLICY IF EXISTS "Lecture publique médias chambre" ON object_room_type_media;
@@ -105,6 +112,9 @@ CREATE POLICY "read_object_room_type_media" ON object_room_type_media FOR SELECT
   OR room_type_id IN (
     SELECT rt.id FROM object_room_type rt
     WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE api.user_can_write_object_canonical(rt.object_id))
 );
 
 -- ============ B) 8o §§43–44 re-created with the outer column QUALIFIED ============

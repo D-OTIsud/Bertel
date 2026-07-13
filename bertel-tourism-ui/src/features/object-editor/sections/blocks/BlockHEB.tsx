@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import { Field, Fs, Input, Repeater, SortableList, StatCard } from '../../primitives';
+import { Field, Fs, Input, Repeater, SortableList, StatCard, ChipMultiSelect } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
@@ -21,6 +21,10 @@ import {
   unitCountMetricCode,
   upsertMaxCapacity,
 } from './rooms-utils';
+import {
+  filterEstablishmentAmenityGroups,
+  mergeEstablishmentAmenitySelection,
+} from '../../../../services/object-workspace';
 
 // Dernière piste = actions, en LARGEUR FIXE — un `auto` vaut 0px dans l'en-tête (vide) et
 // ~90px dans les lignes (boutons), donc le `1.4fr` partagé se résout différemment et désaligne
@@ -167,6 +171,11 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
   const unitLabel = unitCountMetricCode(type) === 'pitches' ? 'Emplacements' : 'Chambres';
   const roomsCapacitySum = computeRoomsCapacitySum(rooms.items);
   const hasRooms = rooms.items.length > 0;
+  const establishmentGroups = filterEstablishmentAmenityGroups(characteristics.amenityGroups);
+  const establishmentOptionCodes = new Set(
+    establishmentGroups.flatMap((group) => group.options.map((option) => option.code)),
+  );
+  const establishmentSelected = characteristics.selectedAmenityCodes.filter((code) => establishmentOptionCodes.has(code));
 
   return (
     <Fs
@@ -194,6 +203,25 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
           </button>
         )}
       </div>
+      <div className="chip-group__label" style={{ marginTop: 14 }}>
+        Services et équipements de l'établissement
+      </div>
+      <ChipMultiSelect
+        options={establishmentGroups.flatMap((group) => group.options)}
+        selected={establishmentSelected}
+        modalTitle="Prestations de l'établissement"
+        searchPlaceholder="Rechercher un service…"
+        onChange={(visibleCodes) =>
+          editor.replaceModule('characteristics', {
+            ...characteristics,
+            selectedAmenityCodes: mergeEstablishmentAmenitySelection(
+              characteristics.selectedAmenityCodes,
+              visibleCodes,
+              establishmentOptionCodes,
+            ),
+          })
+        }
+      />
       {(hasRooms || meetingRooms.items.length > 0) && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 6 }}>
           {hasRooms && <StatCard label="Capacité totale calculée" value={String(roomsCapacitySum)} suffix="couchages" />}

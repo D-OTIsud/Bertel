@@ -37,6 +37,7 @@ import {
   saveObjectWorkspaceMenus,
   saveObjectWorkspaceCuisine,
   saveObjectWorkspaceOpenings,
+  saveObjectWorkspacePlaces,
   saveObjectWorkspacePricing,
   saveObjectWorkspaceRelationships,
   saveObjectWorkspaceRooms,
@@ -65,6 +66,7 @@ import type {
   ObjectWorkspaceMediaModule,
   ObjectWorkspaceMenusModule,
   ObjectWorkspaceCuisineModule,
+  ObjectWorkspacePlacesModule,
   ObjectWorkspaceOpeningsModule,
   ObjectWorkspacePricingModule,
   ObjectWorkspaceRelationshipsModule,
@@ -79,7 +81,8 @@ export type SaveWorkspaceModuleInput =
   | { moduleId: 'taxonomy'; value: ObjectWorkspaceTaxonomyModule }
   | { moduleId: 'distinctions'; value: ObjectWorkspaceDistinctionsModule }
   | { moduleId: 'location'; value: ObjectWorkspaceLocationModule }
-  | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditCanonical: boolean; canEditOrgEnrichment: boolean; canEditPlaceDescriptions: boolean }
+  | { moduleId: 'places'; value: ObjectWorkspacePlacesModule }
+  | { moduleId: 'descriptions'; value: ObjectWorkspaceDescriptionsModule; canEditCanonical: boolean; canEditOrgEnrichment: boolean }
   | { moduleId: 'media'; value: ObjectWorkspaceMediaModule; canEditPlaceMedia: boolean }
   | { moduleId: 'contacts'; value: ObjectWorkspaceContactsModule }
   | { moduleId: 'characteristics'; value: ObjectWorkspaceCharacteristicsModule }
@@ -278,6 +281,10 @@ export async function saveWorkspaceModule(objectId: string, input: SaveWorkspace
     return saveObjectWorkspaceLocation(objectId, input.value);
   }
 
+  if (input.moduleId === 'places') {
+    return saveObjectWorkspacePlaces(objectId, input.value);
+  }
+
   if (input.moduleId === 'media') {
     return saveObjectWorkspaceMedia(objectId, input.value, {
       canEditPlaceMedia: input.canEditPlaceMedia,
@@ -355,7 +362,6 @@ export async function saveWorkspaceModule(objectId: string, input: SaveWorkspace
   return saveObjectWorkspaceDescriptions(objectId, input.value, {
     canEditCanonical: input.canEditCanonical,
     canEditOrgEnrichment: input.canEditOrgEnrichment,
-    canEditPlaceDescriptions: input.canEditPlaceDescriptions,
   });
 }
 

@@ -1,6 +1,6 @@
 /** Rubrique « Équipe & rôles » — gestion des membres d'organisation, invitations,
  *  rôles métier/admin. Vérifié contre `TeamAdminPage.tsx` (accessible depuis
- *  Réglages → Mon organisation → Équipe, plus de route dédiée), `InviteMemberDialog.tsx`
+ *  Paramètres → Mon organisation → Équipe, plus de route dédiée), `InviteMemberDialog.tsx`
  *  (invitation multi-adresses, un seul rôle appliqué au lot, récap par adresse, bouton
  *  Renvoyer), `permission-presets.ts` (rôles métier : Lecteur/Contributeur/Éditeur),
  *  `seeds_data.sql` (rôles admin ORG : Référent équipe/Gestionnaire ORG/Administrateur
@@ -15,7 +15,7 @@ export const EQUIPE_FAQ: FaqEntry[] = [
     question: 'Où gérer mon équipe ?',
     keywords: ['équipe', 'membres', 'organisation', 'gérer'],
     related: ['equipe-inviter', 'equipe-roles'],
-    answer: `Rendez-vous dans **Réglages → Mon organisation → Équipe**. Il n'y a plus d'entrée dédiée dans le menu principal : la gestion d'équipe vit désormais dans les Réglages, au même endroit que le reste de la configuration de votre organisation.
+    answer: `Rendez-vous dans **Paramètres → Mon organisation → Équipe**. Il n'y a plus d'entrée dédiée dans le menu principal : la gestion d'équipe vit désormais dans les Paramètres, au même endroit que le reste de la configuration de votre organisation.
 
 **Accès réservé.** Cette section n'apparaît que pour les comptes ayant un rôle d'administration d'organisation — un membre simple ne la voit pas.`,
   },

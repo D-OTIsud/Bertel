@@ -1,57 +1,154 @@
 /**
- * Projection d'AFFICHAGE des occurrences d'un événement (FMA) pour le drawer
- * public (impl. 4.1). Pure. Lit les champs réels du payload `fma_occurrences`
- * (mêmes noms que le parser éditeur : `start_at`/`end_at`/`state`/`id`, avec
- * repli `start`/`end`). Aucune donnée fabriquée : une occurrence sans date est
- * ignorée.
+ * Projection d'AFFICHAGE des dates d'un événement (FMA) pour le drawer public.
+ * Pure. Combine les dates canoniques (première ligne `object_fma` : start/end
+ * date+time, récurrence) et les occurrences (`fma_occurrences`) en une vue
+ * now-relative {next, upcoming, past, cancelled, canonical} — PLAN 3.1.
+ *
+ * Le formatage LOCALE reste dans la vue : ce module ne renvoie que des valeurs
+ * ISO-like BRUTES. Une date-only (`YYYY-MM-DD`) n'est JAMAIS convertie en UTC —
+ * la comparaison au « maintenant » se fait sur des composantes locales. Aucune
+ * donnée fabriquée : une plage sans date valide est ignorée.
  */
-export interface EventOccurrenceRow {
+export interface EventDateRange {
   key: string;
-  label: string;
+  /** Valeur ISO-like brute (`YYYY-MM-DD` ou `YYYY-MM-DDTHH:MM[:SS]`), '' si absente. */
+  start: string;
+  end: string;
+  /** État normalisé (minuscule), '' si absent. */
+  state: string;
+  note: string;
   cancelled: boolean;
+  source: 'occurrence' | 'canonical';
+}
+
+export interface EventDisplayData {
+  next: EventDateRange | null;
+  upcoming: EventDateRange[];
+  past: EventDateRange[];
+  cancelled: EventDateRange[];
+  canonical: EventDateRange | null;
+  recurring: boolean;
+  recurrencePattern: string;
 }
 
 function str(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return '';
 }
 
-function formatOne(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
+function bool(value: unknown): boolean {
+  return value === true || value === 'true' || value === 't';
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/;
+
+/**
+ * Epoch LOCAL d'une valeur ISO-like — sans décalage UTC pour une date-only.
+ * `endOfDay` borne une date-only à 23:59:59.999 (« la journée entière est-elle
+ * encore à venir »). Renvoie NaN si non parsable.
+ */
+function toEpoch(value: string, endOfDay: boolean): number {
+  if (!value) return NaN;
+  if (DATE_ONLY.test(value)) {
+    const [y, m, d] = value.split('-').map(Number);
+    return endOfDay
+      ? new Date(y, m - 1, d, 23, 59, 59, 999).getTime()
+      : new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
   }
-  const hasTime = /T\d\d:\d\d/.test(iso) && !/T00:00(:00)?/.test(iso);
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
-  }).format(date);
+  const match = DATE_TIME.exec(value);
+  if (match) {
+    const [, y, m, d, hh, mm, ss] = match;
+    return new Date(Number(y), Number(m) - 1, Number(d), Number(hh), Number(mm), Number(ss ?? '0')).getTime();
+  }
+  const fallback = new Date(value).getTime();
+  return Number.isNaN(fallback) ? NaN : fallback;
 }
 
-function sameDay(a: string, b: string): boolean {
-  return a.slice(0, 10) === b.slice(0, 10);
+/** Epoch de tri : début (repli fin), début de journée si date-only. */
+function startEpoch(range: EventDateRange): number {
+  const s = toEpoch(range.start, false);
+  return Number.isNaN(s) ? toEpoch(range.end, false) : s;
 }
 
-export function buildEventOccurrenceRows(
+/** Borne « encore à venir » : fin (repli début), fin de journée si date-only. */
+function endBoundaryEpoch(range: EventDateRange): number {
+  const e = toEpoch(range.end, true);
+  return Number.isNaN(e) ? toEpoch(range.start, true) : e;
+}
+
+function hasValidDate(range: EventDateRange): boolean {
+  return !Number.isNaN(toEpoch(range.start, false)) || !Number.isNaN(toEpoch(range.end, true));
+}
+
+function buildCanonical(fmaRows: Array<Record<string, unknown>>): {
+  canonical: EventDateRange | null;
+  recurring: boolean;
+  recurrencePattern: string;
+} {
+  const first = fmaRows.find((row) => typeof row === 'object' && row !== null);
+  if (!first) return { canonical: null, recurring: false, recurrencePattern: '' };
+  const startDate = str(first.event_start_date);
+  const endDate = str(first.event_end_date);
+  const startTime = str(first.event_start_time);
+  const endTime = str(first.event_end_time);
+  // Concatène date + heure SANS 'Z' — date-only conservée telle quelle (pas d'UTC).
+  const start = startDate ? (startTime ? `${startDate}T${startTime}` : startDate) : '';
+  const end = endDate ? (endTime ? `${endDate}T${endTime}` : endDate) : '';
+  const canonical: EventDateRange | null = start || end
+    ? { key: 'canonical', start, end, state: '', note: '', cancelled: false, source: 'canonical' }
+    : null;
+  return { canonical, recurring: bool(first.is_recurring), recurrencePattern: str(first.recurrence_pattern) };
+}
+
+/**
+ * Vue now-relative des dates d'un événement. `now` injectable pour les tests.
+ * - `upcoming` : occurrences non annulées dont la borne de fin ≥ now, triées ASC.
+ * - `past`     : occurrences non annulées dont la borne de fin < now, triées DESC.
+ * - `cancelled`: occurrences annulées, conservées à part.
+ * - `next`     : première `upcoming`, sinon la date canonique si elle n'est pas passée.
+ */
+export function buildEventDisplayData(
+  fmaRows: Array<Record<string, unknown>>,
   occurrences: Array<Record<string, unknown>>,
-): EventOccurrenceRow[] {
-  const rows: EventOccurrenceRow[] = [];
-  occurrences.forEach((occ, index) => {
-    const start = str(occ.start_at) || str(occ.start);
-    const end = str(occ.end_at) || str(occ.end);
-    if (!start && !end) {
-      return;
-    }
-    const state = (str(occ.state)).toLowerCase();
-    const cancelled = state.includes('annul') || state.includes('cancel');
-    let label: string;
-    if (start && end && !sameDay(start, end)) {
-      label = `Du ${formatOne(start)} au ${formatOne(end)}`;
-    } else {
-      label = formatOne(start || end);
-    }
-    rows.push({ key: str(occ.id) || `occ-${index}`, label, cancelled });
+  now: Date = new Date(),
+): EventDisplayData {
+  const nowMs = now.getTime();
+  const { canonical, recurring, recurrencePattern } = buildCanonical(Array.isArray(fmaRows) ? fmaRows : []);
+
+  const ranges: EventDateRange[] = [];
+  (Array.isArray(occurrences) ? occurrences : []).forEach((occ, index) => {
+    if (typeof occ !== 'object' || occ === null) return;
+    const state = str(occ.state).toLowerCase();
+    const range: EventDateRange = {
+      key: str(occ.id) || `occ-${index}`,
+      start: str(occ.start_at) || str(occ.start),
+      end: str(occ.end_at) || str(occ.end),
+      state,
+      note: str(occ.note),
+      cancelled: state.includes('annul') || state.includes('cancel'),
+      source: 'occurrence',
+    };
+    if (!hasValidDate(range)) return; // pas de plage sans date valide
+    ranges.push(range);
   });
-  return rows;
+
+  const cancelled = ranges.filter((r) => r.cancelled);
+  const active = ranges.filter((r) => !r.cancelled);
+
+  const upcoming = active
+    .filter((r) => { const b = endBoundaryEpoch(r); return !Number.isNaN(b) && b >= nowMs; })
+    .sort((a, b) => startEpoch(a) - startEpoch(b));
+  const past = active
+    .filter((r) => { const b = endBoundaryEpoch(r); return Number.isNaN(b) || b < nowMs; })
+    .sort((a, b) => startEpoch(b) - startEpoch(a));
+
+  let next: EventDateRange | null = upcoming[0] ?? null;
+  if (!next && canonical) {
+    const b = endBoundaryEpoch(canonical);
+    if (!Number.isNaN(b) && b >= nowMs) next = canonical;
+  }
+
+  return { next, upcoming, past, cancelled, canonical, recurring, recurrencePattern };
 }

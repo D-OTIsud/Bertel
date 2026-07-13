@@ -35,7 +35,7 @@ import {
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { buildEventOccurrenceRows } from './event-occurrences';
+import { buildEventDisplayData, type EventDateRange, type EventDisplayData } from './event-occurrences';
 import { buildRestaurantMenuData } from './restaurant-menu';
 import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
 import { buildActivityFacts } from './activity-facts';
@@ -56,6 +56,7 @@ import {
   type ParsedObjectDetail,
 } from '../../services/object-detail-parser';
 import { useSessionStore } from '../../store/session-store';
+import { getObjectItineraryGpx } from '../../services/rpc';
 import type { ObjectDetail } from '../../types/domain';
 import {
   getNoteAuthorDisplayName,
@@ -67,6 +68,7 @@ import {
   type ActorItem,
   type CapacityItem,
   type ContactItem,
+  type ItineraryProfilePoint,
   type ItinerarySummary,
   type MediaItem,
   type LegalItem,
@@ -142,34 +144,44 @@ export interface DetailTabItem {
   count?: number;
 }
 
-export function buildDetailTabItems(preview: PreviewData, parsed: ParsedObjectDetail): DetailTabItem[] {
-  const amenitiesCount = preview.amenities.length;
-  const pricingCount = preview.prices.length + preview.openings.length;
-  const mediaCount = preview.media.length;
-  const legalCount = parsed.internal.legalRecords.filter(
-    (r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim()),
-  ).length;
-  const notesCount = preview.privateNotes.length;
+/** Where a resolved section renders. */
+type DrawerSectionPlacement = 'main' | 'aside';
 
-  // Onglets = sections réellement rendues (Phase 4) : « Aperçu » est toujours présent
-  // (l'aperçu se rend toujours) ; les autres n'apparaissent QUE si leur section a du
-  // contenu — fini l'onglet « Tarifs (0) » qui défile vers une ancre inexistante. Les
-  // sections de type (menu/dates/étapes/faits) sont data-gated en amont et n'ont pas
-  // d'onglet propre, par parité avec le comportement historique.
-  return [
-    { id: 'detail-section-overview', label: 'Aperçu' },
-    { id: 'detail-section-amenities', label: 'Équipements', count: amenitiesCount },
-    { id: 'detail-section-pricing', label: 'Tarifs & horaires', count: pricingCount },
-    { id: 'detail-section-hero', label: 'Médias', count: mediaCount },
-    { id: 'detail-section-legal', label: 'Légal', count: legalCount },
-    { id: 'detail-section-notes', label: 'Activité', count: notesCount },
-  ].filter((tab) => tab.count === undefined || tab.count > 0);
+/**
+ * PLAN 5 — ONE resolved descriptor per drawer section. A single ordered
+ * `ResolvedDrawerSection[]` (built in ConfigDrivenDetailView) is the single source
+ * for BOTH the tab bar AND the rendered sections — no independent count-inference.
+ * A descriptor with a non-empty `label` contributes a tab whose `aria-controls`
+ * equals its `id`; that `id` is the id of exactly one rendered element (the §8.5
+ * integrity contract). Descriptors with an empty `label`/`id` render as untabbed
+ * content (rooms, contact, map, …). `placement` decides the column.
+ */
+interface ResolvedDrawerSection {
+  key: string;
+  id: string;
+  label: string;
+  placement: DrawerSectionPlacement;
+  count?: number;
+  render: () => ReactNode;
 }
 
-function DetailTabs({ items }: { items: DetailTabItem[] }) {
+function DetailTabs({ items, objectId }: { items: DetailTabItem[]; objectId: string }) {
   const [activeId, setActiveId] = useState(items[0]?.id ?? '');
+  const itemsKey = items.map((it) => it.id).join('|');
+
+  // §9 : ré-amorce l'onglet actif quand l'objet OU la liste d'onglets change
+  // (l'ancien useState ne s'amorçait qu'au montage → onglet actif obsolète après
+  // un changement d'objet). L'IntersectionObserver le re-cale ensuite au défilement.
+  useEffect(() => {
+    setActiveId(items[0]?.id ?? '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objectId, itemsKey]);
 
   useEffect(() => {
+    // §10 : SSR / jsdom n'expose pas IntersectionObserver — ne pas planter.
+    if (typeof IntersectionObserver === 'undefined') {
+      return undefined;
+    }
     const previewRoot = document.getElementById(DRAWER_PREVIEW_ROOT_ID);
     const scrollRoot = previewRoot?.closest('.drawer__content') as HTMLElement | null;
     if (!previewRoot || !scrollRoot || items.length === 0) {
@@ -208,6 +220,9 @@ function DetailTabs({ items }: { items: DetailTabItem[] }) {
             key={item.id}
             type="button"
             className={cn('drawer-detail-tab', activeId === item.id && 'drawer-detail-tab--active')}
+            aria-controls={item.id}
+            aria-current={activeId === item.id ? 'true' : undefined}
+            data-target={item.id}
             onClick={() => scrollTo(item.id)}
           >
             <span>{item.label}</span>
@@ -2646,13 +2661,23 @@ function OpeningTimeline({
   );
 }
 
-function OpeningsAsideSection({ openings, openNow }: { openings: OpeningItem[]; openNow: boolean | null }) {
+function OpeningsAsideSection({
+  id,
+  openings,
+  openNow,
+}: {
+  id?: string;
+  openings: OpeningItem[];
+  openNow: boolean | null;
+}) {
   if (!openings.length) {
     return null;
   }
 
+  // §5 : reste dans l'aside, mais porte désormais l'ancre `detail-section-hours`
+  // vers laquelle pointe l'onglet « Horaires ».
   return (
-    <Section title="Horaires" aside>
+    <Section id={id} title="Horaires" aside>
       <OpeningPeriodsCard openings={openings} openNow={openNow} />
     </Section>
   );
@@ -2863,7 +2888,9 @@ function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
               {idx + 1}
             </span>
             <div className="detail-waypoint__body">
-              <strong className="detail-waypoint__name">{stage.name}</strong>
+              {/* §4.6 : « Étape n » = métadonnée d'ordre (dim) ; le nom réel n'est rendu que s'il existe. */}
+              <span className="detail-waypoint__position">{stage.positionLabel}</span>
+              {stage.name ? <strong className="detail-waypoint__name">{stage.name}</strong> : null}
               {stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
             </div>
             {stage.kindLabel ? <span className="detail-waypoint__meta">{stage.kindLabel}</span> : null}
@@ -3119,12 +3146,14 @@ function NetworkSection({
   );
 }
 
-function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary | null }) {
+/** Pure — faits « Avant de partir » d'un itinéraire. Réutilisé par le prédicat de
+ *  disponibilité (§5) ET par le rendu, pour éviter toute dérive onglet↔section. */
+function buildItineraryPracticalNotes(itinerary: ItinerarySummary | null): PracticalFact[] {
   if (!itinerary) {
-    return null;
+    return [];
   }
 
-  const notes = ([
+  return ([
     itinerary.practices.length > 0 ? { label: 'Pratiques', value: itinerary.practices.join(' · ') } : null,
     itinerary.info.length > 0 ? { label: 'Conseils', value: itinerary.info.join(' · ') } : null,
     itinerary.track
@@ -3134,36 +3163,47 @@ function ItineraryPracticalSection({ itinerary }: { itinerary: ItinerarySummary 
     itinerary.stagesCount > 0 ? { label: 'Etapes', value: String(itinerary.stagesCount) } : null,
     itinerary.profilesCount > 0 ? { label: 'Profils', value: `${itinerary.profilesCount} profil(s)` } : null,
   ] as Array<PracticalFact | null>).filter((item): item is PracticalFact => item !== null);
+}
 
-  if (!notes.length) {
+/**
+ * §5 : porte l'ancre `detail-section-practical` (onglet « Avant de partir ») et
+ * héberge désormais le bouton de téléchargement GPX (paresseux). Rendu dès qu'il y
+ * a des notes OU une trace GeoJSON — pour que l'ancre existe toujours quand l'onglet
+ * existe (contrat §8.5), même quand seules les traces sont présentes.
+ */
+function ItineraryPracticalSection({
+  itinerary,
+  objectId,
+  name,
+  langPrefs,
+}: {
+  itinerary: ItinerarySummary | null;
+  objectId: string;
+  name: string;
+  langPrefs: string[];
+}) {
+  const notes = buildItineraryPracticalNotes(itinerary);
+  const hasTrack = Boolean(itinerary?.trackGeojson);
+
+  if (!itinerary || (notes.length === 0 && !hasTrack)) {
     return null;
   }
 
   return (
-    <Section title="Avant de partir">
-      <div className="detail-columns">
-        {notes.map((note) => (
-          <div key={`${note.label}-${note.value}`} className="detail-inline-note">
-            <span className="detail-fact-label">{note.label}</span>
-            <strong>{note.value}</strong>
-          </div>
-        ))}
-      </div>
+    <Section id="detail-section-practical" title="Avant de partir">
+      {notes.length > 0 ? (
+        <div className="detail-columns">
+          {notes.map((note) => (
+            <div key={`${note.label}-${note.value}`} className="detail-inline-note">
+              <span className="detail-fact-label">{note.label}</span>
+              <strong>{note.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {hasTrack ? <ItineraryGpxDownload objectId={objectId} name={name} langPrefs={langPrefs} /> : null}
     </Section>
   );
-}
-
-function buildAsideSections(preview: PreviewData, facts: PracticalFact[], canSeeActors: boolean): ReactNode[] {
-  return [
-    LocationMapSection({ preview }),
-    OpeningsAsideSection({ openings: preview.openings, openNow: preview.openNow }),
-    ContactSection({ contacts: preview.contacts }),
-    WebChannelsSection({ channels: preview.webChannels }),
-    PracticalSection({ facts, openings: preview.openings }),
-    RelatedObjectsSection({ items: preview.relatedObjects }),
-    TeamSection({ actors: canSeeActors ? preview.actors : [] }),
-    NetworkSection({ organizations: preview.organizations, memberships: preview.memberships }),
-  ];
 }
 
 function ApercuRegion({ children }: { children: ReactNode }) {
@@ -3209,7 +3249,7 @@ function DetailScaffold({
         onOpenChange={setLightboxOpen}
         onChange={setActiveMediaIndex}
       />
-      <DetailTabs items={tabItems} />
+      <DetailTabs items={tabItems} objectId={data.id} />
       {archetype && <TypeRibbon meta={archetype} />}
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
@@ -3258,17 +3298,38 @@ function RestaurantMenuSection({ raw }: { raw: Record<string, unknown> }) {
       {menus.map((menu) => (
         <div key={menu.key} className="detail-menu">
           {menus.length > 1 ? <h4 className="detail-menu__title">{menu.title}</h4> : null}
+          {/* §4.3 : un menu peut n'avoir qu'une description (aucune section) — on la rend quand même. */}
+          {menu.description ? <p className="detail-menu__description">{menu.description}</p> : null}
           {menu.sections.map((section) => (
             <div key={section.name} className="detail-menu__section">
               <span className="detail-menu__section-name">{section.name}</span>
               <ul className="detail-menu__dishes">
                 {section.dishes.map((dish) => (
                   <li key={dish.key} className="detail-menu__dish">
-                    <span className="detail-menu__dish-name">{dish.name}</span>
-                    {dish.dietary.length > 0 ? (
-                      <span className="detail-menu__dish-diet">{dish.dietary.join(' · ')}</span>
+                    <div className="detail-menu__dish-head">
+                      <span className="detail-menu__dish-name">{dish.name}</span>
+                      {dish.formattedPrice ? (
+                        <span className="detail-menu__dish-price">{dish.formattedPrice}</span>
+                      ) : null}
+                    </div>
+                    {dish.description ? (
+                      <p className="detail-menu__dish-description">{dish.description}</p>
                     ) : null}
-                    {dish.price ? <span className="detail-menu__dish-price">{dish.price}</span> : null}
+                    {/* §4.3 : régimes ET allergènes = deux jeux de puces distincts (jamais fusionnés). */}
+                    {dish.dietary.length > 0 || dish.allergens.length > 0 ? (
+                      <div className="detail-menu__tags">
+                        {dish.dietary.map((tag) => (
+                          <span key={`diet-${tag}`} className="detail-menu__tag detail-menu__tag--diet">
+                            {tag}
+                          </span>
+                        ))}
+                        {dish.allergens.map((tag) => (
+                          <span key={`allergen-${tag}`} className="detail-menu__tag detail-menu__tag--allergen">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -3305,27 +3366,318 @@ function ActivityFactsSection({ raw }: { raw: Record<string, unknown> }) {
 }
 
 /**
- * Bloc « Prochaines dates » d'un événement (impl. 4.1). Rendu UNIQUEMENT quand des
- * occurrences existent (FMA) — donc null pour les autres types qui partagent
- * GenericDetailView. Comble « un événement sans dates nulle part » (audit FMA).
+ * Formate une valeur ISO-like en date FR SANS décalage UTC (impl. 4.1). Une
+ * date-only (`YYYY-MM-DD`) n'est JAMAIS passée à `new Date(iso)` (qui la lirait en
+ * UTC et pourrait la décaler d'un jour) : on extrait les composantes et on
+ * construit une date LOCALE. L'heure n'est ajoutée que si elle est présente.
  */
-function EventOccurrencesSection({ occurrences }: { occurrences: Array<Record<string, unknown>> }) {
-  const rows = useMemo(() => buildEventOccurrenceRows(occurrences), [occurrences]);
-  if (rows.length === 0) {
+function formatEventDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(value);
+  if (!match) {
+    return value;
+  }
+  const [, y, mo, d, hh, mm] = match;
+  const hasTime = hh !== undefined && mm !== undefined;
+  const date = new Date(Number(y), Number(mo) - 1, Number(d), hasTime ? Number(hh) : 0, hasTime ? Number(mm) : 0);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    ...(hasTime ? { hour: '2-digit', minute: '2-digit' } : {}),
+  }).format(date);
+}
+
+/** Deux valeurs ISO-like tombent-elles le même jour civil (comparaison sur la partie date). */
+function isSameCalendarDay(a: string, b: string): boolean {
+  return Boolean(a) && Boolean(b) && a.slice(0, 10) === b.slice(0, 10);
+}
+
+/** Libellé d'une plage d'occurrence : « Du … au … » quand les jours diffèrent, sinon la date seule. */
+function formatEventRangeLabel(range: EventDateRange): string {
+  const start = range.start ? formatEventDate(range.start) : '';
+  const end = range.end ? formatEventDate(range.end) : '';
+  if (start && end && !isSameCalendarDay(range.start, range.end)) {
+    return `Du ${start} au ${end}`;
+  }
+  return start || end;
+}
+
+/**
+ * Bloc « Prochaine date » d'un événement (impl. 4.1). Rendu UNIQUEMENT quand une
+ * prochaine date existe (occurrence future la plus proche, sinon date canonique non
+ * passée). Récurrence + bouton réservation (uniquement un canal public
+ * `booking_engine` — pas de repli site générique).
+ */
+function EventNextDateSection({
+  next,
+  recurring,
+  recurrencePattern,
+  location,
+  reservationHref,
+}: {
+  next: EventDateRange;
+  recurring: boolean;
+  recurrencePattern: string;
+  location: DetailLocation | null;
+  reservationHref: string;
+}) {
+  const startLabel = next.start ? formatEventDate(next.start) : '';
+  // Fin affichée seulement si elle diffère du début (autre jour OU autre heure).
+  const endLabel =
+    next.end && (!isSameCalendarDay(next.start, next.end) || next.end !== next.start)
+      ? formatEventDate(next.end)
+      : '';
+  // Un événement « jusqu'au … » (start NULL, end futur — état DB valide) : pas de flèche
+  // orpheline. Repli sur la seule date présente ; la flèche n'apparaît qu'avec les deux.
+  const primaryDateLabel = startLabel || endLabel;
+  const trailingDateLabel = startLabel && endLabel ? endLabel : '';
+  const locationLine = location
+    ? [location.city, location.lieuDit].filter(Boolean).join(' · ') || location.label
+    : '';
+  const recurrenceLabel = recurrencePattern
+    ? `Événement récurrent · ${recurrencePattern}`
+    : 'Événement récurrent';
+
+  return (
+    <Section id="detail-section-events-next" kicker="À venir" title="Prochaine date">
+      <div className="detail-event-next">
+        <p className="detail-event-next__date">
+          <CalendarDays size={16} className="detail-event-next__icon" aria-hidden />
+          <span>
+            {primaryDateLabel}
+            {trailingDateLabel ? <span className="detail-event-next__end"> → {trailingDateLabel}</span> : null}
+          </span>
+        </p>
+        {locationLine ? (
+          <p className="detail-event-next__location">
+            <MapPin size={14} aria-hidden /> {locationLine}
+          </p>
+        ) : null}
+        {recurring ? <span className="detail-event-recurrence">{recurrenceLabel}</span> : null}
+        {reservationHref ? (
+          <div className="detail-event-next__actions">
+            <a
+              className="detail-event-next__cta"
+              href={reservationHref}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Réserver / Billetterie
+            </a>
+          </div>
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
+/**
+ * Bloc « Toutes les dates » d'un événement (impl. 4.1). Occurrences à venir d'abord,
+ * puis passées sous « Dates passées », puis annulées (barrées + badge « Annulé »).
+ * La note d'occurrence s'affiche sous la date. Une date canonique SEULE (sans
+ * occurrence) n'est PAS dupliquée ici — le bloc « Prochaine date » la montre déjà.
+ * Rendu null si upcoming + past + cancelled sont tous vides.
+ */
+function EventOccurrencesSection({ eventData }: { eventData: EventDisplayData }) {
+  const { upcoming, past, cancelled } = eventData;
+  if (upcoming.length === 0 && past.length === 0 && cancelled.length === 0) {
     return null;
   }
+
+  const renderRow = (range: EventDateRange) => (
+    <li
+      key={range.key}
+      className={cn('detail-event-list__row', range.cancelled && 'detail-event-list__row--cancelled')}
+    >
+      <CalendarDays size={15} className="detail-event-list__icon" aria-hidden />
+      <span className="detail-event-list__body">
+        <span className="detail-event-list__date">{formatEventRangeLabel(range)}</span>
+        {range.note ? <span className="detail-event-list__note">{range.note}</span> : null}
+      </span>
+      {range.cancelled ? <span className="detail-event-list__state">Annulé</span> : null}
+    </li>
+  );
+
   return (
-    <Section id="detail-section-events" title="Prochaines dates" kicker="Quand">
-      <ul className="detail-event-list">
-        {rows.map((row) => (
-          <li key={row.key} className={cn('detail-event-list__row', row.cancelled && 'detail-event-list__row--cancelled')}>
-            <CalendarDays size={15} className="detail-event-list__icon" aria-hidden />
-            <span className="detail-event-list__date">{row.label}</span>
-            {row.cancelled ? <span className="detail-event-list__state">Annulé</span> : null}
-          </li>
-        ))}
-      </ul>
+    <Section id="detail-section-events" title="Toutes les dates" kicker="Quand">
+      {upcoming.length > 0 ? <ul className="detail-event-list">{upcoming.map(renderRow)}</ul> : null}
+      {past.length > 0 ? (
+        <>
+          <p className="detail-event-list__subhead">Dates passées</p>
+          <ul className="detail-event-list detail-event-list--past">{past.map(renderRow)}</ul>
+        </>
+      ) : null}
+      {cancelled.length > 0 ? (
+        <ul className="detail-event-list detail-event-list--cancelled">{cancelled.map(renderRow)}</ul>
+      ) : null}
     </Section>
+  );
+}
+
+/**
+ * Profil altimétrique d'un itinéraire (impl. 4.4). SVG responsive tracé à partir des
+ * points de profil RÉELS (`object_iti` profiles) — aucune interpolation, aucun point
+ * fabriqué. Rendu seulement quand ≥ 2 points existent. Un résumé texte double l'info
+ * (distance / alt. min-max / dénivelé) pour l'accessibilité — l'info n'est pas
+ * seulement dans le SVG.
+ */
+function ItineraryElevationProfileSection({ profiles }: { profiles: ItineraryProfilePoint[] }) {
+  const geometry = useMemo(() => {
+    if (profiles.length < 2) {
+      return null;
+    }
+    const width = 600;
+    const height = 180;
+    const padLeft = 36;
+    const padRight = 16;
+    const padTop = 16;
+    const padBottom = 28;
+    const innerW = width - padLeft - padRight;
+    const innerH = height - padTop - padBottom;
+    const positions = profiles.map((point) => point.positionM);
+    const elevations = profiles.map((point) => point.elevationM);
+    const minPos = Math.min(...positions);
+    const maxPos = Math.max(...positions);
+    const minEle = Math.min(...elevations);
+    const maxEle = Math.max(...elevations);
+    const posSpan = maxPos - minPos || 1;
+    // Toutes les altitudes égales : plage d'affichage ±1 m pour éviter la division par zéro.
+    const flat = maxEle - minEle === 0;
+    const eleSpan = flat ? 2 : maxEle - minEle;
+    const eleBase = flat ? minEle - 1 : minEle;
+    const baseY = padTop + innerH;
+    const x = (pos: number) => padLeft + ((pos - minPos) / posSpan) * innerW;
+    const y = (ele: number) => padTop + innerH - ((ele - eleBase) / eleSpan) * innerH;
+    const coords = profiles.map((point) => `${x(point.positionM).toFixed(1)},${y(point.elevationM).toFixed(1)}`);
+    const linePath = `M ${coords.join(' L ')}`;
+    const areaPath = `M ${x(minPos).toFixed(1)},${baseY.toFixed(1)} L ${coords.join(' L ')} L ${x(maxPos).toFixed(1)},${baseY.toFixed(1)} Z`;
+    const firstPoint = profiles[0];
+    const lastPoint = profiles[profiles.length - 1];
+    return {
+      width,
+      height,
+      linePath,
+      areaPath,
+      minEle,
+      maxEle,
+      distanceKm: maxPos / 1000,
+      start: { x: x(firstPoint.positionM), y: y(firstPoint.elevationM) },
+      end: { x: x(lastPoint.positionM), y: y(lastPoint.elevationM) },
+      maxLabelY: y(maxEle),
+      minLabelY: y(minEle),
+    };
+  }, [profiles]);
+
+  if (!geometry) {
+    return null;
+  }
+
+  const range = geometry.maxEle - geometry.minEle;
+  const distanceKm = geometry.distanceKm.toFixed(1);
+  const minEle = Math.round(geometry.minEle);
+  const maxEle = Math.round(geometry.maxEle);
+  const ariaLabel = `Profil altimétrique sur ${distanceKm} km : altitude de ${minEle} à ${maxEle} mètres, dénivelé ${Math.round(range)} mètres.`;
+
+  return (
+    <Section id="detail-section-profile" title="Profil altimétrique">
+      <div className="detail-elevation-profile">
+        <svg
+          className="detail-elevation-profile__svg"
+          viewBox={`0 0 ${geometry.width} ${geometry.height}`}
+          style={{ width: '100%' }}
+          role="img"
+          aria-label={ariaLabel}
+        >
+          <path className="detail-elevation-profile__area" d={geometry.areaPath} />
+          <path className="detail-elevation-profile__line" d={geometry.linePath} fill="none" />
+          <circle className="detail-elevation-profile__point" cx={geometry.start.x} cy={geometry.start.y} r={4} />
+          <circle className="detail-elevation-profile__point" cx={geometry.end.x} cy={geometry.end.y} r={4} />
+          <text className="detail-elevation-profile__axis" x={4} y={geometry.maxLabelY} dy="0.32em">
+            {maxEle} m
+          </text>
+          <text className="detail-elevation-profile__axis" x={4} y={geometry.minLabelY} dy="0.32em">
+            {minEle} m
+          </text>
+        </svg>
+        <p className="detail-elevation-profile__summary">
+          Distance {distanceKm} km · Altitude {minEle}–{maxEle} m · Dénivelé {Math.round(range)} m
+        </p>
+      </div>
+    </Section>
+  );
+}
+
+/** Slug pour nom de fichier GPX : minuscules, accents retirés, non-alphanum → '-', repli « itineraire ». */
+function slugForFilename(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'itineraire';
+}
+
+/**
+ * Téléchargement PARESSEUX de la trace GPX (impl. 4.5) — jamais préchargé à
+ * l'ouverture du drawer, uniquement au clic. Un seul appel en vol (les clics
+ * concurrents sont ignorés pendant le chargement). Rendu par l'appelant seulement
+ * quand une trace existe (gate `trackGeojson` non nul).
+ */
+function ItineraryGpxDownload({
+  objectId,
+  name,
+  langPrefs,
+}: {
+  objectId: string;
+  name: string;
+  langPrefs: string[];
+}) {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  const handleDownload = async () => {
+    if (status === 'loading') {
+      return; // un seul appel en vol
+    }
+    setStatus('loading');
+    try {
+      const track = await getObjectItineraryGpx(objectId, langPrefs);
+      if (typeof window !== 'undefined') {
+        const blob = new Blob([track], { type: 'application/gpx+xml;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${slugForFilename(name)}.gpx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+      setStatus('idle');
+    } catch {
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div className="detail-gpx-action">
+      <button
+        type="button"
+        className="detail-gpx-action__button"
+        onClick={handleDownload}
+        disabled={status === 'loading'}
+      >
+        <Download size={16} aria-hidden />
+        {status === 'loading'
+          ? 'Préparation du GPX…'
+          : status === 'error'
+            ? 'Réessayer'
+            : 'Télécharger le GPX'}
+      </button>
+      {status === 'error' ? (
+        <span className="detail-gpx-action__error" role="alert">Impossible de générer le GPX.</span>
+      ) : null}
+    </div>
   );
 }
 
@@ -3335,8 +3687,9 @@ export
  * Phase 4 — vue de fiche pilotée par configuration. Remplace les 7 gabarits clonés
  * (un par type) par UNE vue + une table `ARCHETYPE_SECTIONS` keyée par archétype
  * (registre unique `TYPE_ARCHETYPES`). Chaque clone ne différait QUE par sa liste
- * `mainSections` ; on l'exprime ici en tokens de section. L'aside est invariant
- * (`buildAsideSections`), tout comme la chaîne de hooks/memos de préparation.
+ * `mainSections` ; on l'exprime ici en tokens de section. PLAN 5 : ces tokens et
+ * l'aside sont résolus en UN seul `ResolvedDrawerSection[]` (voir ConfigDrivenDetailView)
+ * qui pilote à la fois les onglets ET le rendu — plus de comptage d'onglets indépendant.
  *
  * Alignements sur le registre d'archétypes (déjà actés §48/§57, plus de dérive de
  * gabarits) : ACT → archétype ASC ⇒ disposition Activité (faits object_act) ; PNA →
@@ -3347,11 +3700,13 @@ export
 type DrawerSectionKind =
   | 'apercu'
   | 'apercu-iti'
+  | 'eventsNext'
   | 'events'
   | 'rooms'
   | 'meetingRooms'
   | 'restaurantMenu'
   | 'waypoints'
+  | 'profile'
   | 'itineraryPractical'
   | 'activityFacts'
   | 'amenities'
@@ -3368,11 +3723,11 @@ const TAIL_NO_SCHEDULE: DrawerSectionKind[] = ['amenities', 'pricing', 'legal', 
 const ARCHETYPE_SECTIONS: Record<ArchetypeCode, DrawerSectionKind[]> = {
   HEB: ['apercu', 'amenities', 'rooms', 'meetingRooms', 'pricing', 'legal', 'notes'],
   RES: ['apercu', 'restaurantMenu', ...TAIL_WITH_SCHEDULE],
-  ITI: ['apercu-iti', 'waypoints', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
+  ITI: ['apercu-iti', 'waypoints', 'profile', 'itineraryPractical', ...TAIL_NO_SCHEDULE],
   ASC: ['apercu', 'activityFacts', ...TAIL_NO_SCHEDULE],
   VIS: ['apercu', ...TAIL_WITH_SCHEDULE],
   SRV: ['apercu', ...TAIL_WITH_SCHEDULE],
-  FMA: ['events', 'apercu', ...TAIL_WITH_SCHEDULE],
+  FMA: ['eventsNext', 'events', 'apercu', ...TAIL_WITH_SCHEDULE],
 };
 
 // Type sans archétype résolu (chaîne vide / inconnue) : disposition générique.
@@ -3381,7 +3736,6 @@ const FALLBACK_DRAWER_SECTIONS = ARCHETYPE_SECTIONS.SRV;
 function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
-  const tabItems = useMemo(() => buildDetailTabItems(preview, parsed), [preview, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
   const taxonomyGroups = useMemo(
     () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
@@ -3389,64 +3743,240 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   );
   const practicalFacts = useMemo(() => buildPracticalFacts(preview), [preview]);
   const environmentGroup = useMemo(() => getGroup(preview.taxonomyGroups, 'environment'), [preview.taxonomyGroups]);
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+  // §4.1 : projection now-relative des dates FMA (canonique + occurrences) — une seule source.
+  const eventData = useMemo(
+    () => buildEventDisplayData(parsed.itinerary.fma, parsed.itinerary.fmaOccurrences),
+    [parsed.itinerary.fma, parsed.itinerary.fmaOccurrences],
+  );
+  // §4.1 : réservation = premier canal web public de type booking_engine (pas de repli site).
+  const reservationHref = useMemo(
+    () => preview.webChannels.find((channel) => channel.kindCode === 'booking_engine')?.href ?? '',
+    [preview.webChannels],
+  );
+  // §5 : les données de type sont mémoïsées UNE fois et réutilisées par le prédicat
+  // de disponibilité (onglet) ET par le rendu (section) — pas de dérive possible.
+  const restaurantMenu = useMemo(() => buildRestaurantMenuData(raw), [raw]);
+  const activityFacts = useMemo(() => buildActivityFacts(raw), [raw]);
+  const itineraryStages = useMemo(() => buildItineraryStages(parsed.itinerary.details), [parsed.itinerary.details]);
+  const itineraryPracticalNotes = useMemo(
+    () => buildItineraryPracticalNotes(preview.itinerary),
+    [preview.itinerary],
+  );
+  const publicLegalRecords = useMemo(
+    () => parsed.internal.legalRecords.filter((r) => r.isPublic && Boolean(r.label?.trim() || r.status?.trim())),
+    [parsed.internal.legalRecords],
+  );
+  // §5 : gate de l'onglet « Notes internes » = notes existantes OU droit d'écriture
+  // (même signal que TeamNotesSection, qui se re-garde en défense en profondeur).
+  const noteWriteAccess = useObjectPrivateNoteWriteAccessQuery(data.id);
+  const canAddNotes = noteWriteAccess.data === true;
 
   const archetype = getArchetypeMeta(data.type);
   const kinds = (archetype && ARCHETYPE_SECTIONS[archetype.archetype]) ?? FALLBACK_DRAWER_SECTIONS;
 
-  const renderKind = (kind: DrawerSectionKind): ReactNode => {
+  // Descripteur d'un kind d'archétype (colonne PRINCIPALE) : onglet + rendu, OU null
+  // quand son data-gate est vide. Les kinds sans onglet (rooms/meetingRooms/weekSchedule)
+  // portent id/label vides — ils rendent leur contenu mais n'ajoutent pas d'onglet.
+  const mainSectionFor = (kind: DrawerSectionKind): ResolvedDrawerSection | null => {
     switch (kind) {
       case 'apercu':
-        return (
-          <ApercuRegion key="apercu">
-            <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
-            <OverviewSection preview={preview} />
-            <TaxonomySection groups={taxonomyGroups} />
-          </ApercuRegion>
-        );
+        return {
+          key: 'apercu', id: 'detail-section-overview', label: 'Aperçu', placement: 'main',
+          render: () => (
+            <ApercuRegion key="apercu">
+              <CapacitySection capacities={preview.capacities} openNow={preview.openNow} />
+              <OverviewSection preview={preview} />
+              <TaxonomySection groups={taxonomyGroups} />
+            </ApercuRegion>
+          ),
+        };
       case 'apercu-iti':
-        return (
-          <ApercuRegion key="apercu">
-            <ItineraryStatsSection itinerary={preview.itinerary} />
-            <OverviewSection preview={preview} />
-            <TaxonomySection groups={taxonomyGroups} />
-          </ApercuRegion>
-        );
+        return {
+          key: 'apercu', id: 'detail-section-overview', label: 'Aperçu', placement: 'main',
+          render: () => (
+            <ApercuRegion key="apercu">
+              <ItineraryStatsSection itinerary={preview.itinerary} />
+              <OverviewSection preview={preview} />
+              <TaxonomySection groups={taxonomyGroups} />
+            </ApercuRegion>
+          ),
+        };
+      case 'eventsNext':
+        return eventData.next
+          ? {
+              key: 'events-next', id: 'detail-section-events-next', label: 'Prochaine date', placement: 'main',
+              render: () => (
+                <EventNextDateSection
+                  key="events-next"
+                  next={eventData.next!}
+                  recurring={eventData.recurring}
+                  recurrencePattern={eventData.recurrencePattern}
+                  location={preview.location}
+                  reservationHref={reservationHref}
+                />
+              ),
+            }
+          : null;
       case 'events':
-        return <EventOccurrencesSection key="events" occurrences={parsed.itinerary.fmaOccurrences} />;
-      case 'rooms':
-        return <RoomList key="rooms" rooms={preview.roomTypes} />;
-      case 'meetingRooms':
-        return <MeetingRoomList key="meetings" rooms={preview.meetingRooms} />;
+        return eventData.upcoming.length > 0 || eventData.past.length > 0 || eventData.cancelled.length > 0
+          ? {
+              key: 'events', id: 'detail-section-events', label: 'Dates', placement: 'main',
+              render: () => <EventOccurrencesSection key="events" eventData={eventData} />,
+            }
+          : null;
       case 'restaurantMenu':
-        return <RestaurantMenuSection key="menu" raw={raw} />;
-      case 'waypoints':
-        return <WaypointListSection key="waypoints" stages={buildItineraryStages(parsed.itinerary.details)} />;
-      case 'itineraryPractical':
-        return <ItineraryPracticalSection key="iti-practical" itinerary={preview.itinerary} />;
+        return restaurantMenu.cuisines.length > 0 || restaurantMenu.menus.length > 0
+          ? {
+              key: 'menu', id: 'detail-section-menu', label: 'Cuisine & carte', placement: 'main',
+              render: () => <RestaurantMenuSection key="menu" raw={raw} />,
+            }
+          : null;
       case 'activityFacts':
-        return <ActivityFactsSection key="activity" raw={raw} />;
+        return activityFacts.length > 0
+          ? {
+              key: 'activity', id: 'detail-section-activity', label: 'Fiche activité', placement: 'main',
+              render: () => <ActivityFactsSection key="activity" raw={raw} />,
+            }
+          : null;
+      case 'waypoints':
+        return itineraryStages.length > 0
+          ? {
+              key: 'stages', id: 'detail-section-stages', label: 'Étapes', placement: 'main',
+              render: () => <WaypointListSection key="waypoints" stages={itineraryStages} />,
+            }
+          : null;
+      case 'profile':
+        return (preview.itinerary?.profiles.length ?? 0) >= 2
+          ? {
+              key: 'profile', id: 'detail-section-profile', label: 'Profil altimétrique', placement: 'main',
+              render: () => <ItineraryElevationProfileSection key="profile" profiles={preview.itinerary?.profiles ?? []} />,
+            }
+          : null;
+      case 'itineraryPractical':
+        return itineraryPracticalNotes.length > 0 || Boolean(preview.itinerary?.trackGeojson)
+          ? {
+              key: 'iti-practical', id: 'detail-section-practical', label: 'Avant de partir', placement: 'main',
+              render: () => (
+                <ItineraryPracticalSection
+                  key="iti-practical"
+                  itinerary={preview.itinerary}
+                  objectId={data.id}
+                  name={data.name}
+                  langPrefs={langPrefs}
+                />
+              ),
+            }
+          : null;
       case 'amenities':
-        return <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />;
-      case 'weekSchedule':
-        return <WeekScheduleSection key="schedule" openings={preview.openings} />;
+        return preview.amenities.length > 0 || Boolean(environmentGroup?.items.length)
+          ? {
+              key: 'amenities', id: 'detail-section-amenities', label: 'Équipements', placement: 'main',
+              count: preview.amenities.length,
+              render: () => <AmenitiesSection key="amenities" amenities={preview.amenities} environmentGroup={environmentGroup} />,
+            }
+          : null;
       case 'pricing':
-        return <PricingAndOpeningsSection key="pricing" prices={preview.prices} sectionId="detail-section-pricing" />;
+        return preview.prices.length > 0
+          ? {
+              key: 'pricing', id: 'detail-section-pricing', label: 'Tarifs', placement: 'main',
+              count: preview.prices.length,
+              render: () => <PricingAndOpeningsSection key="pricing" prices={preview.prices} sectionId="detail-section-pricing" />,
+            }
+          : null;
       case 'legal':
-        return <LegalSection key="legal" records={parsed.internal.legalRecords} />;
+        return publicLegalRecords.length > 0
+          ? {
+              key: 'legal', id: 'detail-section-legal', label: 'Légal', placement: 'main',
+              count: publicLegalRecords.length,
+              render: () => <LegalSection key="legal" records={parsed.internal.legalRecords} />,
+            }
+          : null;
       case 'notes':
-        return <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />;
+        return preview.privateNotes.length > 0 || canAddNotes
+          ? {
+              key: 'notes', id: 'detail-section-notes', label: 'Notes internes', placement: 'main',
+              count: preview.privateNotes.length,
+              render: () => <TeamNotesSection key="notes" objectId={data.id} notes={preview.privateNotes} />,
+            }
+          : null;
+      // Sections principales SANS onglet — rendues telles quelles (auto-gate à null si vide).
+      case 'rooms':
+        return { key: 'rooms', id: '', label: '', placement: 'main', render: () => <RoomList key="rooms" rooms={preview.roomTypes} /> };
+      case 'meetingRooms':
+        return { key: 'meetings', id: '', label: '', placement: 'main', render: () => <MeetingRoomList key="meetings" rooms={preview.meetingRooms} /> };
+      case 'weekSchedule':
+        return { key: 'schedule', id: '', label: '', placement: 'main', render: () => <WeekScheduleSection key="schedule" openings={preview.openings} /> };
       default:
         return null;
     }
   };
+
+  const mainDescriptors = kinds
+    .map((kind) => mainSectionFor(kind))
+    .filter((section): section is ResolvedDrawerSection => section !== null);
+
+  // Médias : onglet SEUL (cible = le hero rendu par DetailScaffold) — pas de 2e section.
+  const mediaSection: ResolvedDrawerSection | null = preview.media.length > 0
+    ? { key: 'media', id: 'detail-section-hero', label: 'Médias', placement: 'main', count: preview.media.length, render: () => null }
+    : null;
+  // Horaires : reste dans l'ASIDE (OpeningsAsideSection porte l'ancre) ; l'onglet y pointe.
+  const hoursSection: ResolvedDrawerSection | null = preview.openings.length > 0
+    ? {
+        key: 'hours', id: 'detail-section-hours', label: 'Horaires', placement: 'aside',
+        render: () => <OpeningsAsideSection key="hours" id="detail-section-hours" openings={preview.openings} openNow={preview.openNow} />,
+      }
+    : null;
+  // Sections d'aside sans onglet (ordre historique de buildAsideSections, moins la carte
+  // horaires devenue `hoursSection`).
+  const asideExtras: ResolvedDrawerSection[] = [
+    { key: 'map', id: '', label: '', placement: 'aside', render: () => <LocationMapSection preview={preview} /> },
+    { key: 'contact', id: '', label: '', placement: 'aside', render: () => <ContactSection contacts={preview.contacts} /> },
+    { key: 'web-channels', id: '', label: '', placement: 'aside', render: () => <WebChannelsSection channels={preview.webChannels} /> },
+    { key: 'practical', id: '', label: '', placement: 'aside', render: () => <PracticalSection facts={practicalFacts} openings={preview.openings} /> },
+    { key: 'related', id: '', label: '', placement: 'aside', render: () => <RelatedObjectsSection items={preview.relatedObjects} /> },
+    { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} /> },
+    { key: 'network', id: '', label: '', placement: 'aside', render: () => <NetworkSection organizations={preview.organizations} memberships={preview.memberships} /> },
+  ];
+
+  // Ordre du tableau (= ordre des onglets ET du rendu) : Médias suit Aperçu (le hero
+  // qu'il cible est en tête de colonne) ; Horaires précède Tarifs (l'ancien onglet
+  // combiné « Tarifs & horaires », désormais scindé).
+  const sections: ResolvedDrawerSection[] = [];
+  for (const descriptor of mainDescriptors) {
+    if (descriptor.id === 'detail-section-pricing' && hoursSection) {
+      sections.push(hoursSection);
+    }
+    sections.push(descriptor);
+    if (descriptor.id === 'detail-section-overview' && mediaSection) {
+      sections.push(mediaSection);
+    }
+  }
+  if (hoursSection && !sections.includes(hoursSection)) {
+    // Pas d'onglet Tarifs comme ancre — placer Horaires avant Légal/Notes, sinon en fin.
+    const idx = sections.findIndex((s) => s.id === 'detail-section-legal' || s.id === 'detail-section-notes');
+    if (idx === -1) sections.push(hoursSection);
+    else sections.splice(idx, 0, hoursSection);
+  }
+  if (mediaSection && !sections.includes(mediaSection)) {
+    sections.unshift(mediaSection);
+  }
+  sections.push(...asideExtras);
+
+  // UNE source → onglets + rendu principal + rendu aside.
+  const tabItems: DetailTabItem[] = sections
+    .filter((section) => Boolean(section.label))
+    .map((section) => ({ id: section.id, label: section.label, count: section.count }));
+  const mainSections = sections.filter((section) => section.placement === 'main').map((section) => section.render());
+  const asideSections = sections.filter((section) => section.placement === 'aside').map((section) => section.render());
 
   return (
     <DetailScaffold
       data={data}
       preview={preview}
       tabItems={tabItems}
-      mainSections={kinds.map(renderKind)}
-      asideSections={buildAsideSections(preview, practicalFacts, canSeeActors)}
+      mainSections={mainSections}
+      asideSections={asideSections}
     />
   );
 }

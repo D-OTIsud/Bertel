@@ -633,7 +633,7 @@
                     "meta": { "$ref": "#/components/schemas/Meta" },
                     "data": {
                       "type": "object",
-                      "description": "Objet `{ <domaine>: [entrées] }`.",
+                      "description": "Objet `{ \"domaine\": [entrées] }`, où chaque clé est un domaine de référentiel public.",
                       "additionalProperties": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogEntry" } }
                     }
                   }
@@ -770,7 +770,7 @@
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "not_found" } } }
       },
       "ServerError": {
-        "description": "Passerelle mal configurée (clé service manquante côté serveur).",
+        "description": "Passerelle mal configurée côté serveur.",
         "headers": { "X-Bertel-Api-Version": { "$ref": "#/components/headers/ApiVersion" } },
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "server_misconfigured" } } }
       },

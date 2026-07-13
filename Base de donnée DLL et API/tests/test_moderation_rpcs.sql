@@ -17,6 +17,10 @@
 --    pending). Double-résolution refusée. rpc hors whitelist ⇒ refus (jamais d'EXECUTE arbitraire).
 -- E) REJECT gated : note vide ⇒ refus (note obligatoire) ; viewer ⇒ 42501 ; editor rejette avec
 --    note ⇒ status='rejected' + review_note ; is_editing retombe à FALSE ; double-résolution refusée.
+-- F) APPROVE re-dispatch via save_object_rooms (SURF3) : preuve que le whitelist member
+--    save_object_rooms (pas seulement save_object_commercial) re-dispatch réellement — contributeur
+--    propose une maj de capacity_total sur une chambre fixture, editor approuve, la ligne
+--    object_room_type reflète le changement (capacity_total 2 → 4).
 --
 -- Contre une base sans la migration : échec immédiat (api.user_can_moderate_object / submit /
 -- list / approve / reject absentes) — état rouge attendu (TDD).
@@ -42,9 +46,11 @@ DECLARE
   v_perm_validate uuid;
   v_perm_canonical uuid;
   v_pm_ref uuid;          -- une référence de moyen de paiement (fixture object_payment_method)
+  v_room_id uuid := '00000000-0000-4000-a000-000000000906'; -- fixture object_room_type (section F)
   v_id1 uuid;             -- pending_change #1 (approuvé)
   v_id2 uuid;             -- pending_change #2 (rejeté)
   v_id_evil uuid;         -- pending_change rpc hors whitelist
+  v_id3 uuid;             -- pending_change #3 (save_object_rooms, section F)
   v_meta jsonb;
   v_payload jsonb;
   v_res jsonb;
@@ -89,6 +95,9 @@ BEGIN
     ON CONFLICT DO NOTHING;
   INSERT INTO object_payment_method (object_id, payment_method_id) VALUES (v_objA, v_pm_ref)
     ON CONFLICT DO NOTHING;
+  INSERT INTO object_room_type (id, object_id, code, name, capacity_total, total_rooms) VALUES
+    (v_room_id, v_objA, 'std', 'Chambre standard', 2, 1)
+    ON CONFLICT (id) DO NOTHING;
 
   v_meta := jsonb_build_object('rpc', 'save_object_commercial', 'field', 'payment_methods',
                                'before', '1 moyen', 'after', '0 moyen');
@@ -263,6 +272,28 @@ BEGIN
   EXCEPTION WHEN others THEN v_denied := true; END;
   ASSERT v_denied, 'E: re-rejeter une suggestion déjà résolue doit être refusé';
   RESET ROLE;
+
+  -- ============================================================
+  -- F) APPROVE re-dispatch via save_object_rooms (SURF3 whitelist member)
+  -- ============================================================
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_contrib, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_id3 := api.submit_pending_change(
+    v_objA, 'object_room_type', v_room_id::text, 'update',
+    jsonb_build_object('rooms', jsonb_build_array(jsonb_build_object(
+      'id', v_room_id, 'code', 'std', 'name', 'Chambre standard', 'capacity_total', 4, 'total_rooms', 1
+    ))),
+    jsonb_build_object('rpc', 'save_object_rooms', 'field', 'capacity_total', 'before', '2 pers', 'after', '4 pers'));
+  RESET ROLE;
+  ASSERT v_id3 IS NOT NULL, 'F: submit (rooms proposal) doit retourner un id';
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_editor, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_res := api.approve_pending_change(v_id3, 'Capacite mise a jour');
+  RESET ROLE;
+  ASSERT v_res->>'status' = 'applied', 'F: approve (save_object_rooms) doit retourner status=applied';
+  ASSERT (SELECT capacity_total FROM object_room_type WHERE id = v_room_id) = 4,
+         'F: le writer structuré (save_object_rooms) doit avoir RÉELLEMENT tourné (capacity_total=4)';
 
   RAISE NOTICE 'test_moderation_rpcs: TOUS LES ASSERTS PASSENT';
 END $$;

@@ -16,7 +16,7 @@ export const PUBLICATION_FAQ: FaqEntry[] = [
     id: 'publier-fiche',
     rubrique: 'publication',
     question: 'Comment publier une fiche ?',
-    keywords: ['publier', 'en ligne', 'visible', 'diffuser'],
+    keywords: ['publier', 'en ligne', 'visible', 'diffuser', 'publication'],
     related: ['editeur-blocages', 'statuts-fiche'],
     answer: `Dans l'éditeur, la section **Publication** (fin de la fiche) affiche le statut courant et les actions possibles. Cliquez sur **« Publier »** : une **confirmation explicite** s'affiche avant que la fiche devienne visible publiquement sur le site et dans l'Explorer.
 
@@ -80,6 +80,7 @@ export const PUBLICATION_FAQ: FaqEntry[] = [
     rubrique: 'publication',
     question: 'Comment approuver ou rejeter des suggestions de modification ?',
     keywords: ['modérer', 'approuver', 'rejeter', 'suggestions'],
+    routes: ['/moderation'],
     related: ['moderation-suggestions'],
     answer: `Le module **Modération** affiche chaque suggestion en **vue avant / après** (diff), fiche et champ concernés, auteur et date.
 

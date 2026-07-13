@@ -1218,12 +1218,14 @@ CREATE POLICY "pub_opening_time_frame_read" ON opening_time_frame
 -- Types de chambres (§54 / 8v — migration_room_type_read_gate.sql, folded here per the 8s/8t
 -- precedent): ONE §38 split-form SELECT policy per table. The published arm COMPOSES the row's
 -- is_published flag with the parent-object publication gate (the old bare-flag pair let anon
--- read room types of DRAFT objects); the extended arm is set-based (§35, one InitPlan).
+-- read room types of DRAFT objects); the extended arm is set-based (§35, one InitPlan), and
+-- canonical writers can read unpublished rows needed by INSERT ... RETURNING and the editor.
 CREATE POLICY "read_object_room_type" ON object_room_type FOR SELECT USING (
   (is_published IS TRUE AND EXISTS (
     SELECT 1 FROM object o
     WHERE o.id = object_room_type.object_id AND o.status = 'published'))
   OR object_id IN (SELECT api.current_user_extended_object_ids())
+  OR api.user_can_write_object_canonical(object_room_type.object_id)
 );
 CREATE POLICY "Écriture types de chambre par propriétaire" ON object_room_type
   FOR ALL USING (
@@ -1242,10 +1244,13 @@ CREATE POLICY "read_object_room_type_amenity" ON object_room_type_amenity
       JOIN object o ON o.id = rt.object_id
       WHERE rt.id = object_room_type_amenity.room_type_id
         AND rt.is_published IS TRUE AND o.status = 'published')
-    OR room_type_id IN (
-      SELECT rt.id FROM object_room_type rt
-      WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
-  );
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE api.user_can_write_object_canonical(rt.object_id))
+);
 CREATE POLICY "Écriture amenities chambre par propriétaire" ON object_room_type_amenity
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR
@@ -1270,6 +1275,9 @@ CREATE POLICY "read_object_room_type_bed" ON object_room_type_bed
     OR room_type_id IN (
       SELECT rt.id FROM object_room_type rt
       WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+    OR room_type_id IN (
+      SELECT rt.id FROM object_room_type rt
+      WHERE api.user_can_write_object_canonical(rt.object_id))
   );
 
 CREATE POLICY "read_object_room_type_media" ON object_room_type_media
@@ -1279,10 +1287,13 @@ CREATE POLICY "read_object_room_type_media" ON object_room_type_media
       JOIN object o ON o.id = rt.object_id
       WHERE rt.id = object_room_type_media.room_type_id
         AND rt.is_published IS TRUE AND o.status = 'published')
-    OR room_type_id IN (
-      SELECT rt.id FROM object_room_type rt
-      WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
-  );
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE rt.object_id IN (SELECT api.current_user_extended_object_ids()))
+  OR room_type_id IN (
+    SELECT rt.id FROM object_room_type rt
+    WHERE api.user_can_write_object_canonical(rt.object_id))
+);
 CREATE POLICY "Écriture médias chambre par propriétaire" ON object_room_type_media
   FOR ALL USING (
     auth.role() IN ('service_role','admin') OR

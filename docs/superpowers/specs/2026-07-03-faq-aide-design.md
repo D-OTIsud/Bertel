@@ -139,3 +139,86 @@ Volume cible : ~70-90 entrées (18 création + ~8 arbitrages + le reste de l'app
   `?question=<id>` le prépare déjà.
 - Captures d'écran/illustrations dans les réponses.
 - i18n du contenu d'aide (FR uniquement, comme le reste du contenu éditorial au MVP).
+
+---
+
+## Implementation update (2026-07-12)
+
+### Rubrique « Dashboard & modules » (`pilotage.ts`)
+
+Nouvelle rubrique insérée après « Explorer & filtres » avec quatre entrées :
+`dashboard-comprendre`, `dashboard-filtrer`, `dashboard-activite`, `modules-audits-publications`.
+Les modules Audits et Publications sont documentés comme aperçus démo, pas produits finis.
+
+### Métadonnées `routes` sur `FaqEntry`
+
+Champ interne optionnel `routes?: string[]` (non rendu). Couverture minimale par module
+navigable (hors `/aide` et modules `isDemoOnlyModule`). Vérifié par `content-integrity.test.ts`.
+
+### Synchronisation URL bidirectionnelle
+
+Helper pur `buildHelpUrl({ query, question })` — ordre stable `q` puis `question`, encodage
+via `URLSearchParams`. La page synchronise :
+
+- recherche → URL après debounce 150 ms (`router.replace`, pas `push`) ;
+- URL → état (`query`, `debouncedQuery`, `openId`) sur changement de `useSearchParams` ;
+- ouverture/fermeture d'une réponse en recherche préserve `q` ;
+- `?question=` invalide : pas d'accordéon ouvert, nettoyage de l'URL.
+
+### Liens « Voir aussi » avec filtre/recherche actifs
+
+`openRelated` : valide l'id, efface recherche + filtre rubrique, `?question=<id>` seul,
+scroll différé via `scrollTargetId` + `scrollIntoView` (respect `prefers-reduced-motion`).
+
+### Accessibilité
+
+- Chips rubrique : `aria-pressed` sur « Toutes » et chaque rubrique.
+- Accordéon : `faq-question-<id>`, `faq-answer-<id>`, `aria-controls`, `role="region"`,
+  `aria-labelledby`.
+
+### Contenu Paramètres / branding / RGPD
+
+- Libellé menu **Paramètres** (plus « Réglages ») dans les chemins utilisateur.
+- `reglages-branding` = branding ORG (`Paramètres → Mon organisation → Apparence de l'organisation`).
+- `reglages-branding-plateforme` = branding plateforme (super-admin).
+- `rgpd-droits` = module RGPD du menu principal ; Mentions légales ≠ parcours d'effacement.
+
+### Support et guide partenaires
+
+`aide-contact` et `aide-partenaires` contiennent des liens actionnables (`https://`) ;
+confirmation PO recommandée pour l'URL canonique du guide et l'e-mail support définitif.
+
+### Correctifs de revue — 2026-07-13
+
+- **Scroll routeur.** Tous les `router.replace` de `HelpPage` passent par l'unique
+  fonction `replaceWithoutScroll` (`router.replace(url, { scroll: false })`) : ces
+  navigations ne changent jamais de page, elles synchronisent l'état de l'aide dans
+  l'URL — sans cette option Next.js peut repositionner la page et concurrencer le
+  `scrollIntoView` explicite des liens « Voir aussi ».
+- **Scroll différé sur changement d'URL.** L'effet URL → état pose désormais
+  `setScrollTargetId(questionParam)` en plus de `setOpenId`, donc un `?question=`
+  qui change après le montage (deep-link externe, navigateur) ouvre **et** fait
+  défiler la cible, via le même mécanisme différé que le deep-link initial.
+- **Libellé « Paramètres ».** La rubrique `reglages` affiche « Paramètres & RGPD »
+  (l'identifiant interne `reglages` est inchangé — seul le libellé visible change).
+- **Destinations approuvées centralisées** dans `content/links.ts` :
+  - `BERTEL_SUPPORT_URL` = `mailto:d.philippe@otisud.com` — seul contact documenté
+    dans le dépôt (référent RGPD/DPO publié dans `public/legal/cgu.md` et
+    `public/legal/rgpd.md`, même contact que l'attribution des clés API dans
+    `docs/guide-partenaires.md`). Remplace le lien générique vers la page d'accueil
+    `https://www.otisud.re`.
+  - `BERTEL_PARTNER_GUIDE_URL` = `https://doc.bertel.otisud.re/partenaires.html` —
+    domaine du site docs déployé (Coolify, app « Docs site », voir mémoire
+    `bertel-deploy-coolify`), page qui rend `docs/guide-partenaires.md` (§158).
+  - Sources consignées ici faute de canal PO dédié dans ce dépôt ; à re-valider
+    explicitement si un référent support distinct est désigné.
+- **Public du guide partenaires clarifié.** `guide-partenaires.md` est sans ambiguïté
+  un guide d'intégration API (clés `bk_live_…`, endpoints, DATAtourisme/Apidae/
+  Tourinsoft) — aucun second guide socio-pro n'existe dans le dépôt. L'entrée
+  `aide-partenaires` est reformulée pour cibler explicitement les intégrateurs
+  techniques et agences web, et ne recommande plus de la transmettre aux gérants.
+- **Tests renforcés.** `content-integrity.test.ts` vérifie désormais la présence de
+  la valeur exacte de `BERTEL_SUPPORT_URL`/`BERTEL_PARTNER_GUIDE_URL` (et rejette
+  explicitement `https://www.otisud.re` comme destination de support), plus la
+  présence d'un chemin non racine pour le guide — la simple présence de `https://`
+  ne suffit plus.

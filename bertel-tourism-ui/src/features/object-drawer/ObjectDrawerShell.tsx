@@ -36,6 +36,26 @@ const DRAWER_TYPE_LABELS: Record<string, string> = {
   COM: 'Commerce',
 };
 
+/**
+ * Panneau ORG (PLAN 6). Une organisation n'est pas une fiche touristique
+ * (structure institutionnelle) : le drawer n'affiche ni ruban de type ni
+ * sections génériques, mais un renvoi explicite vers l'administration des
+ * équipes. Rendu à la place d'ObjectDetailView quand `type === 'ORG'`.
+ */
+function OrgUnsupportedPanel({ onOpenAdmin }: { onOpenAdmin: () => void }) {
+  return (
+    <div className="drawer-unsupported">
+      <h3 className="drawer-unsupported__title">Organisation</h3>
+      <p className="drawer-unsupported__message">
+        Les organisations sont gérées depuis l’administration des équipes.
+      </p>
+      <button type="button" className="drawer-header__btn-primary drawer-unsupported__action" onClick={onOpenAdmin}>
+        Ouvrir l’administration
+      </button>
+    </div>
+  );
+}
+
 function DrawerHeaderSkeleton() {
   return (
     <div className="drawer-loading-heading" aria-hidden="true">
@@ -84,6 +104,10 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const isShellLoading = isLoading || !resolvedData;
   const previewRaw = resolvedData?.detail.raw ?? {};
 
+  // PLAN 6 : une ORG n'est pas une fiche touristique — pas d'éditeur d'objet,
+  // pas de ruban/sections génériques ; on renvoie vers /team.
+  const isOrg = resolvedData?.type === 'ORG';
+
   const typeLabel = resolvedData?.type ? DRAWER_TYPE_LABELS[resolvedData.type] ?? resolvedData.type : '';
   const typeLineUpper = typeLabel ? typeLabel.toUpperCase() : '';
   const title = resolvedData?.name ?? 'Chargement…';
@@ -94,6 +118,11 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     }
     onClose();
     router.push(`/objects/${objectId}/edit`);
+  }
+
+  function openTeamAdmin() {
+    onClose(); // ferme le drawer AVANT de naviguer
+    router.push('/team');
   }
 
   return (
@@ -121,7 +150,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
             <Printer className="h-4 w-4" strokeWidth={2} />
             <span>Imprimer</span>
           </button>
-          {canEdit && (
+          {canEdit && !isOrg && (
             <button type="button" className="drawer-header__btn-primary" onClick={openFullPageEditor}>
               <Pencil className="h-4 w-4" strokeWidth={2} />
               Modifier
@@ -142,7 +171,11 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         {isShellLoading && <DrawerPreviewSkeleton />}
         {resolvedData && (
           <section id="object-drawer-preview" className="drawer__preview-area">
-            <ObjectDetailView data={resolvedData.detail} raw={previewRaw as Record<string, unknown>} />
+            {isOrg ? (
+              <OrgUnsupportedPanel onOpenAdmin={openTeamAdmin} />
+            ) : (
+              <ObjectDetailView data={resolvedData.detail} raw={previewRaw as Record<string, unknown>} />
+            )}
           </section>
         )}
       </div>

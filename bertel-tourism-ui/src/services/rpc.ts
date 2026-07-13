@@ -464,6 +464,55 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
   return normalizeObjectDetailPayload(payload, objectId);
 }
 
+/** Lit `payload.itinerary.track` — chaîne non vide, sinon ''. */
+function readItineraryTrackFromPayload(payload: unknown): string {
+  if (!payload || typeof payload !== 'object') return '';
+  const itinerary = (payload as Record<string, unknown>).itinerary;
+  if (!itinerary || typeof itinerary !== 'object') return '';
+  const track = (itinerary as Record<string, unknown>).track;
+  return typeof track === 'string' && track.trim() !== '' ? track : '';
+}
+
+/**
+ * Charge PARESSEUSEMENT la trace GPX d'un itinéraire (PLAN 4.5) — jamais au
+ * chargement du drawer, uniquement sur action utilisateur. Appelle
+ * `get_object_resource` en `p_track_format:'gpx'` (le bloc `itinerary.track`
+ * n'est émis que pour un objet ITI portant une géométrie) et renvoie la trace.
+ * Lève une erreur explicite si la trace est absente/vide.
+ */
+export async function getObjectItineraryGpx(objectId: string, langPrefs: string[]): Promise<string> {
+  const session = useSessionStore.getState();
+  const client = requireRpcClient();
+
+  if (session.demoMode || !client) {
+    const mockTrack = readItineraryTrackFromPayload(mockObjectDetails[objectId]?.raw);
+    if (mockTrack) return mockTrack;
+    throw new Error('Trace GPX indisponible pour cet itinéraire.');
+  }
+
+  const { data, error } = await client.schema('api').rpc('get_object_resource', {
+    p_object_id: objectId,
+    p_lang_prefs: langPrefs,
+    p_track_format: 'gpx',
+    p_options: {
+      fields: [],
+      include_stages: true,
+      render: false,
+      include_private: true,
+    },
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const track = readItineraryTrackFromPayload(data);
+  if (!track) {
+    throw new Error('Trace GPX indisponible pour cet itinéraire.');
+  }
+  return track;
+}
+
 export async function createObjectPrivateNote(input: {
   objectId: string;
   body: string;

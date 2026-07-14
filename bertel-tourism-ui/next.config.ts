@@ -1,6 +1,35 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 const isDev = process.env.NODE_ENV === 'development';
+
+// Turbopack refuses to follow a node_modules symlink/junction that points outside
+// its configured root. In a git worktree, node_modules is a junction into the main
+// checkout (see docs — avoids a full reinstall per worktree), so the root must be
+// the common ancestor of cwd (the worktree) AND node_modules' real target (the main
+// checkout) — computed dynamically so this works from any checkout/worktree without
+// hardcoding a relative depth.
+function commonAncestor(a: string, b: string): string {
+  const segsA = path.resolve(a).split(path.sep);
+  const segsB = path.resolve(b).split(path.sep);
+  const shared: string[] = [];
+  for (let i = 0; i < Math.min(segsA.length, segsB.length); i += 1) {
+    if (segsA[i] !== segsB[i]) break;
+    shared.push(segsA[i]);
+  }
+  return shared.join(path.sep) || path.sep;
+}
+
+function resolveTurbopackRoot(): string {
+  const cwd = process.cwd();
+  try {
+    const nodeModulesReal = fs.realpathSync(path.join(cwd, 'node_modules'));
+    return commonAncestor(cwd, nodeModulesReal);
+  } catch {
+    return cwd;
+  }
+}
 
 // Content-Security-Policy (audit API R2, last tranche). Origins inventoried against the
 // front's ACTUAL runtime usage and verified in the running app — see
@@ -66,6 +95,15 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: [],
   productionBrowserSourceMaps: false,
+  // Pins the workspace root explicitly. Without this, Turbopack's nearest-lockfile
+  // inference gets confused by git worktrees (each worktree checks out its own copy
+  // of the tracked package-lock.json) combined with a symlinked/junctioned
+  // node_modules, and can misdetect the workspace root — which has previously
+  // triggered a stray `npm install` that corrupted a worktree's node_modules link.
+  // See resolveTurbopackRoot() above for why this must be computed dynamically.
+  turbopack: {
+    root: resolveTurbopackRoot(),
+  },
   experimental: {
     serverSourceMaps: false,
     webpackMemoryOptimizations: true,

@@ -14,9 +14,11 @@ jest.mock('next/navigation', () => ({
 describe('section registry', () => {
   it('returns the full ordered section list by archetype', () => {
     // §90: §20 « Distribution & réseaux sociaux » retired (réseaux/distribution moved to §03).
-    expect(getRegisteredSections('HEB')).toHaveLength(18);
+    // §182: section 16 (Sites secondaires) is shown for every archetype, not just ITI/VIS —
+    // HEB and RES gain one section each versus their pre-§182 counts (18/19 → 19/20).
+    expect(getRegisteredSections('HEB')).toHaveLength(19);
     expect(getRegisteredSections('ITI')).toHaveLength(20);
-    expect(getRegisteredSections('RES')).toHaveLength(19);
+    expect(getRegisteredSections('RES')).toHaveLength(20);
   });
 
   it('omits §07 for HEB (capacity merged into §06) but keeps it elsewhere', () => {

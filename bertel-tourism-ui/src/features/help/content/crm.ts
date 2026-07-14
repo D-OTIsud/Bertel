@@ -13,6 +13,7 @@ export const CRM_FAQ: FaqEntry[] = [
     rubrique: 'crm',
     question: 'À quoi sert le module CRM ?',
     keywords: ['crm', 'suivi', 'relation', 'socio-pro'],
+    routes: ['/crm'],
     related: ['crm-acteur-vs-fiche', 'crm-annuaire'],
     answer: `Le CRM assure le **suivi relationnel** avec les socio-professionnels du territoire — interactions, tâches de relance, annuaire des contacts. Il est **centré sur les personnes** (les acteurs), pas sur les fiches établissement.
 

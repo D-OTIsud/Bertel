@@ -82,7 +82,6 @@ function buildSaveArg(
         value: draft.descriptions,
         canEditCanonical: permissions.descriptions.canEditCanonical,
         canEditOrgEnrichment: permissions.descriptions.canEditOrgEnrichment,
-        canEditPlaceDescriptions: permissions.descriptions.canEditPlaceDescriptions,
       };
     case 'media':
       return {

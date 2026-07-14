@@ -12,6 +12,7 @@ export const LISTES_FAQ: FaqEntry[] = [
     rubrique: 'listes',
     question: 'Créer une liste de fiches à réutiliser ?',
     keywords: ['liste', 'sélection', 'créer', 'regrouper'],
+    routes: ['/listes'],
     related: ['listes-ajouter', 'explorer-imprimer'],
     answer: `Le module **Listes** sert à construire des **sélections durables** de fiches — à la différence d'une sélection ponctuelle dans l'Explorer, une liste garde son contenu d'une visite à l'autre.
 

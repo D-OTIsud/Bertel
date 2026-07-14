@@ -411,7 +411,7 @@ describe('parseObjectDetail', () => {
         practices: [{ id: 'practice-2', name: 'Pedestre' }],
         sections: [{ id: 'section-1' }],
         stages: [{ id: 'stage-1' }],
-        profiles: [{ id: 'profile-1' }],
+        profiles: [{ id: 'profile-1', position_m: 0, elevation_m: 120 }],
         associated_objects: [
           {
             id: 'assoc-2',

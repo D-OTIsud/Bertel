@@ -14,6 +14,7 @@ export const MODULE_LABEL: Record<WorkspaceModuleId, string> = {
   publication: 'Publication',
   'sync-identifiers': 'Identifiants externes',
   location: 'Localisation',
+  places: 'Sites secondaires',
   descriptions: 'Descriptions & langues parlées',
   media: 'Médias',
   contacts: 'Contacts',

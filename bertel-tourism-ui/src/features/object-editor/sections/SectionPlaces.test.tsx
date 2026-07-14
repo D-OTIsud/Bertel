@@ -1,125 +1,78 @@
+import type { ReactElement } from 'react';
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionPlaces } from './SectionPlaces';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import type { ObjectWorkspacePermissions } from '../../../services/object-workspace';
 
-/**
- * T1b sub-places (§16). The "kind" Selects (sub-place + ITI stage) have no backing
- * column on object_place / object_iti_stage — the sub-place one corrupted `chapo`,
- * the stage one was inert (onChange = no-op). Both are removed. The genuine controls
- * (label, description, visibility, add, remove) stay editable and now persist via the
- * descriptions-saver place reconcile.
- */
-describe('SectionPlaces — honest controls (T1b)', () => {
-  it('renders no inert place/stage "kind" selects', () => {
+// PlaceEditModal reads location reference options via react-query, so any test that opens
+// it must render inside a QueryClientProvider (see section-registry.test.tsx).
+function renderSection(ui: ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
+const readOnlyPermissions = new Proxy(
+  {},
+  {
+    get: () => ({
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: 'Lecture seule',
+      canEditPlaceMedia: false,
+      canEditZones: false,
+      canEditCanonical: false,
+      canEditOrgEnrichment: false,
+    }),
+  },
+) as ObjectWorkspacePermissions;
+
+describe('SectionPlaces — multi-place module', () => {
+  it('lists secondary sites and opens the edit modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    // Both kind selects defaulted to 'start' → "Départ / Entrée"; none should remain.
-    expect(screen.queryAllByDisplayValue('Départ / Entrée')).toHaveLength(0);
+    renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Belvédère' })); });
+    expect(screen.getByText('Modifier le site')).toBeInTheDocument();
   });
 
-  it('labels the sub-place visibility select as read audience, not PMR accessibility', () => {
+  it('adds a site and marks the places module dirty', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    // visibility drives WHO CAN READ the description (8t gate) — the old
-    // « ♿ Accessible / ✕ Non accessible » labels misrepresented it.
-    expect(screen.getByDisplayValue('Publique')).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('♿ Accessible')).not.toBeInTheDocument();
+    const view = renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un site/i })); });
+    view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="HEB" />);
+    expect(result.current.draft.places.items.length).toBeGreaterThan(1);
+    expect(result.current.dirtySections.places).toBe(true);
   });
 
-  it('offers an explicit option for an undefined visibility instead of faking public', () => {
-    const modules = fullModulesFixture();
-    modules.descriptions.places[0].visibility = '';
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(screen.getByDisplayValue('Visibilité non définie')).toBeInTheDocument();
+  it('disables add/remove controls for read-only users', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPlaces editor={result.current} permissions={readOnlyPermissions} archetype="HEB" />);
+    expect(screen.queryByRole('button', { name: /Ajouter un site/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Lecture seule/)).toBeInTheDocument();
   });
 
-  it('keeps the sub-place label editable and marks descriptions dirty', () => {
+  it('blocks save on out-of-range coordinates and shows an error', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    act(() => { fireEvent.change(screen.getByDisplayValue('Belvédère'), { target: { value: 'Belvédère haut' } }); });
-    view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(result.current.dirtySections.descriptions).toBe(true);
-    expect(result.current.draft.descriptions.places[0].label).toBe('Belvédère haut');
-  });
+    renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="HEB" />);
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Belvédère' })); });
 
-  it('adds a sub-place (placeId null) and marks descriptions dirty', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un sous-lieu/i })); });
-    view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(result.current.draft.descriptions.places).toHaveLength(2);
-    expect(result.current.draft.descriptions.places[1].placeId).toBeNull();
-    expect(result.current.dirtySections.descriptions).toBe(true);
-  });
+    // Belvédère's location starts with empty lat/lng (section-fixture.test-utils) — set both so
+    // only the range check (not the pairing check) is exercised.
+    fireEvent.change(screen.getByPlaceholderText('Latitude'), { target: { value: '200' } });
+    fireEvent.change(screen.getByPlaceholderText('Longitude'), { target: { value: '55.4' } });
 
-  it('removes a sub-place and marks descriptions dirty', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Supprimer' })); });
-    view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    expect(result.current.draft.descriptions.places).toHaveLength(0);
-    expect(result.current.dirtySections.descriptions).toBe(true);
-  });
-
-  // §41 zones: the "communes desservies" multi-select (object_zone), sourced from ref_commune.
-  it('renders the communes-desservies multi-select reflecting the selected zones', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    // fixture: zoneOptions = [Le Tampon (selected via zoneCodes ['97422']), Saint-Joseph (not)].
-    expect(screen.getByRole('button', { name: 'Le Tampon' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Saint-Joseph' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/hors plage/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
   });
 
   it('toggles a commune and marks the location module dirty', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    const view = render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    const view = renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Saint-Joseph' })); });
     view.rerender(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
     expect(result.current.dirtySections.location).toBe(true);
     expect(result.current.draft.location.zoneCodes).toContain('97412');
-  });
-});
-
-// 6.2 — divulgation progressive §16 : les deux blocs denses restants (étapes ITI +
-// communes desservies) se replient via la primitive Disclosure, comme les sous-lieux.
-describe('SectionPlaces — divulgation progressive §16 (6.2)', () => {
-  it('wraps the itinerary stages in an « Étapes d itinéraire » disclosure, open when stages exist', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    const head = screen.getByRole('button', { name: /Étapes d.itinéraire/ });
-    expect(head).toHaveAttribute('aria-expanded', 'true');
-    // the real stage-name input (fixture stage[0].name = 'Belvédère du Maïdo') stays visible when open
-    expect(screen.getByDisplayValue('Belvédère du Maïdo')).toBeInTheDocument();
-  });
-
-  it('wraps the communes-desservies block in a « Communes desservies » disclosure, open when zones selected', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    const head = screen.getByRole('button', { name: /Communes desservies/ });
-    expect(head).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: 'Le Tampon' })).toBeInTheDocument();
-  });
-
-  it('collapsing the communes disclosure drops the commune chips from the accessibility tree', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-    act(() => { fireEvent.click(screen.getByRole('button', { name: /Communes desservies/ })); });
-    // body becomes [hidden] → chips leave the a11y tree (getByRole excludes hidden)
-    expect(screen.queryByRole('button', { name: 'Le Tampon' })).not.toBeInTheDocument();
-  });
-});
-
-describe('SectionPlaces — §46 gated itinerary module (§48)', () => {
-  it('hides the stage editor and shows the notice when the itinerary module is gated', () => {
-    const modules = fullModulesFixture();
-    modules.itinerary.unavailableReason = 'Module non applicable au type FMA (référentiel ref_facet_applicability).';
-    const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    render(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
-
-    expect(screen.getByText(/Module non applicable au type FMA/)).toBeInTheDocument();
-    expect(screen.queryByDisplayValue('Départ')).not.toBeInTheDocument(); // stage name input gone
-    expect(screen.getByDisplayValue('Belvédère')).toBeInTheDocument(); // sub-place label (descriptions module) stays
   });
 });

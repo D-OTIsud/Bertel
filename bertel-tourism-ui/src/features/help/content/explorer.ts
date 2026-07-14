@@ -14,6 +14,7 @@ export const EXPLORER_FAQ: FaqEntry[] = [
     rubrique: 'explorer',
     question: 'Retrouver une fiche par son nom ?',
     keywords: ['chercher', 'retrouver', 'nom', 'recherche'],
+    routes: ['/explorer'],
     related: ['palette-commandes', 'explorer-filtres'],
     answer: `Deux façons de chercher une fiche par son nom :
 

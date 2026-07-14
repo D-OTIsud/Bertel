@@ -67,13 +67,15 @@ describe('BlockASC — un seul contrôle par champ (6.2, fin du clobber)', () =>
     expect(screen.getAllByText('Équipement fourni')).toHaveLength(1);
   });
 
-  it('édite equipmentProvided via l’unique champ texte et persiste', () => {
+  it('rend un toggle équipement et un détail conditionnel', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockASC editor={result.current} permissions={allowAll} />);
+    expect(screen.getByLabelText('Équipement fourni')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/casque/i)).toBeInTheDocument();
     act(() => { fireEvent.change(screen.getByPlaceholderText(/casque/i), { target: { value: 'casque fourni' } }); });
     view.rerender(<BlockASC editor={result.current} permissions={allowAll} />);
     expect(result.current.dirtySections.activity).toBe(true);
-    expect(result.current.draft.activity.equipmentProvided).toBe('casque fourni');
+    expect(result.current.draft.activity.equipmentProvidedDetails).toBe('casque fourni');
   });
 });
 

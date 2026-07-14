@@ -218,6 +218,13 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16m    migration_classification_graded_label_group.sql  (§176 groupe dedie graded_label « Labels notes »: gites_epics + clevacances_keys + logis = distinctions NOTEES de reseau prive (echelle numerique), ni classement officiel Etat ni label binaire; supersede le placement 16l; DONNEE de reference seule; inerte pour les RPC; folde dans seeds_data.sql => no-op sur base fraiche; CI = tests/test_classification_regroup_network_labels.sql assert graded_label) =='
 \ir migration_classification_graded_label_group.sql
 
+\echo '== SURF1  migration_activity_contract_fix.sql  (object_act.equipment_provided_details + CHECK detail only when boolean true; get_object_resource activity block unchanged shape) =='
+\ir migration_activity_contract_fix.sql
+\echo '== SURF2  migration_save_object_places_reconcile.sql  (save_object_places places arm: reconcile by id, preserve media unless explicit media key; zones arm unchanged) =='
+\ir migration_save_object_places_reconcile.sql
+\echo '== SURF3  migration_save_object_rooms.sql  (api.save_object_rooms atomic room reconcile; whitelist in moderation approve) =='
+\ir migration_save_object_rooms.sql
+
 \echo '== ORG1   migration_org_onboarding.sql  (création d ORG par superadmin: api.rpc_create_org — objet ORG published direct + org_config, superuser-only, voie UNIQUE de création d ORG car un draft ORG serait impubliable; api.rpc_list_orgs pour la console admin + le sélecteur /team; dépend de rls_policies.sql is_platform_superuser + schema_unified.sql org_config/triggers; non foldé) =='
 \ir migration_org_onboarding.sql
 
@@ -227,6 +234,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 -- Materialized views are created WITH DATA in schema_unified.sql; refresh
 -- NON-concurrently here so this also works on a never-yet-populated MV.
 -- (Production scheduling uses REFRESH ... CONCURRENTLY via pg_cron — see runbook.)
+\echo '== TRAIL1  migration_trail_referential.sql  (§181 Référentiel sentiers de randonnée : trail_* autonome hors modèle objet, vocabulaire iti_open_status étendu de 3 codes (not_managed/unknown/archived) + partition trail_link_role, consolidation internal.recompute_trail_status, diff idempotent internal.trail_sync_apply, frontière service_role-only trail_sync_begin/apply_service/finalize, RPC lecture admin + publique restreinte §17, 6 RPC écriture superuser ; dépend de ref_commune (8l) + is_platform_superuser (rls_policies.sql) + ref_code_iti_open_status (15e) + object (schema_unified) ; auto-contenu, RLS deny-all-direct sur toutes les tables trail_*/ref_trail_*) =='
+\ir migration_trail_referential.sql
+
 \echo '== taxo   migration_taxonomy_trees_seed.sql  (versions the FULL live taxonomy trees: 211 nodes / 192 parent links across 19 taxonomy_* domains — previously live-only/unversioned; idempotent upsert + parent_id resolved by code. LAST, after every taxonomy migration + seeds, so it converges each domain to the live state; before the MV refresh so the MVs include it) =='
 \ir migration_taxonomy_trees_seed.sql
 

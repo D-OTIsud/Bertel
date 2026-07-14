@@ -462,14 +462,13 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.descriptions.object.description.baseValue).toBe('Description principale FR');
     expect(parsed.descriptions.object.description.values.en).toBe('Main description EN');
 
-    expect(parsed.descriptions.places).toHaveLength(1);
-    expect(parsed.descriptions.places[0]).toMatchObject({
-      scope: 'place',
-      placeId: 'place-1',
+    expect(parsed.places.items).toHaveLength(1);
+    expect(parsed.places.items[0]).toMatchObject({
+      recordId: 'place-1',
       label: 'Spa lagon',
     });
-    expect(parsed.descriptions.places[0].description.baseValue).toBe('Texte spa FR');
-    expect(parsed.descriptions.places[0].description.values.en).toBe('Spa text EN');
+    expect(parsed.places.items[0].description.baseValue).toBe('Texte spa FR');
+    expect(parsed.places.items[0].description.values.en).toBe('Spa text EN');
     expect(parsed.media.objectItems[0]).toMatchObject({
       title: 'Facade',
       typeCode: 'photo',
@@ -858,7 +857,7 @@ describe('descriptions org overlay', () => {
       description_md: 'Voir le **volcan** actif.', description_i18n: null, visibility: 'public',
     }] }] } } as unknown as import('../types/domain').ObjectDetail;
     const modules = parseObjectWorkspace(detail, ['fr']);
-    expect(modules.descriptions.places[0].description.baseValue).toBe('Voir le **volcan** actif.');
+    expect(modules.places.items[0].description.baseValue).toBe('Voir le **volcan** actif.');
   });
 
   it('parses place description i18n translations into values (§110 C1 editor leg survives)', () => {
@@ -871,6 +870,18 @@ describe('descriptions org overlay', () => {
     const modules = parseObjectWorkspace(detail, ['fr']);
     // The raw *_i18n map is the editor's per-language leg — its EN translation must survive raw
     // (the subtract-*_i18n form NULLed it on the next §16 save).
-    expect(modules.descriptions.places[0].description.values.en).toBe('See the **active** volcano.');
+    expect(modules.places.items[0].description.values.en).toBe('See the **active** volcano.');
+  });
+
+  it('normalizes legacy place visibility aliases at parse time (partner→partners, internal→private)', () => {
+    const detail = { raw: { places: [
+      { id: 'p1', name: 'Site A', descriptions: [{ id: 'd1', visibility: 'partner' }] },
+      { id: 'p2', name: 'Site B', descriptions: [{ id: 'd2', visibility: 'internal' }] },
+      { id: 'p3', name: 'Site C', descriptions: [{ id: 'd3', visibility: 'public' }] },
+    ] } } as unknown as import('../types/domain').ObjectDetail;
+    const modules = parseObjectWorkspace(detail, ['fr']);
+    expect(modules.places.items[0].visibility).toBe('partners');
+    expect(modules.places.items[1].visibility).toBe('private');
+    expect(modules.places.items[2].visibility).toBe('public');
   });
 });

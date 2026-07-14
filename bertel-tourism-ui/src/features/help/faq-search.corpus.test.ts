@@ -38,4 +38,31 @@ describe('recherche métier sur le corpus réel', () => {
   test('« marché » → l’arbitrage marché dans le top 3', () => {
     expect(topIds('marché')).toContain('choisir-marche');
   });
+
+  test('« dashboard » → dashboard-comprendre dans le top 3', () => {
+    expect(topIds('dashboard')).toContain('dashboard-comprendre');
+  });
+
+  test('« qualité » → une entrée Dashboard pertinente dans le top 3', () => {
+    const ids = topIds('qualité');
+    expect(ids.some((id) => id.startsWith('dashboard-'))).toBe(true);
+  });
+
+  test('« audit » → modules-audits-publications', () => {
+    expect(topIds('audit')).toContain('modules-audits-publications');
+  });
+
+  test('« publication » → publier-fiche et modules-audits-publications restent découvrables', () => {
+    const ids = topIds('publication', 5);
+    expect(ids).toContain('publier-fiche');
+    expect(ids).toContain('modules-audits-publications');
+  });
+
+  test('« intégrateur » trouve le guide partenaires API', () => {
+    expect(topIds('intégrateur')).toContain('aide-partenaires');
+  });
+
+  test('« api partenaire » trouve le guide partenaires API', () => {
+    expect(topIds('api partenaire', 5)).toContain('aide-partenaires');
+  });
 });

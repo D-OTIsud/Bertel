@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { Modal } from './Modal';
 
@@ -124,6 +125,64 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
       jest.advanceTimersByTime(220);
     });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    jest.useRealTimers();
+  });
+
+  it('does not unlock scroll or steal focus from a second modal opened while the first is still exiting', () => {
+    // Regression: usePresence keeps a closing Modal mounted through its exit
+    // animation, so a second Modal can mount while the first is still exiting
+    // (e.g. CommandPalette closes itself and opens ShortcutHelpModal in the same
+    // click handler). The first modal's delayed cleanup must not clobber the
+    // second, still-open modal's scroll lock / focus.
+    jest.useFakeTimers();
+    document.body.style.overflow = '';
+
+    function Harness() {
+      const [aOpen, setAOpen] = useState(true);
+      const [bOpen, setBOpen] = useState(false);
+      return (
+        <>
+          <Modal title="A" open={aOpen} onOpenChange={() => {}}>
+            <button
+              type="button"
+              onClick={() => {
+                setAOpen(false);
+                setBOpen(true);
+              }}
+            >
+              Fermer A, ouvrir B
+            </button>
+          </Modal>
+          <Modal title="B" open={bOpen} onOpenChange={() => {}}>
+            <input aria-label="Champ B" />
+          </Modal>
+        </>
+      );
+    }
+
+    render(<Harness />);
+    act(() => {
+      jest.advanceTimersByTime(20);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer A, ouvrir B' }));
+    // B mounts and takes the lock/focus while A is still in its exit window.
+    act(() => {
+      jest.advanceTimersByTime(20);
+    });
+    expect(screen.getByLabelText('Champ B')).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    // A's exit timer fires and it unmounts — its delayed cleanup must not steal
+    // focus back to its own trigger or unlock scroll while B is still open.
+    act(() => {
+      jest.advanceTimersByTime(220);
+    });
+    expect(screen.queryByRole('dialog', { name: 'A' })).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'B' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Champ B')).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
+
     jest.useRealTimers();
   });
 });

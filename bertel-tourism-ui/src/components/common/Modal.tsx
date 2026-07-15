@@ -40,6 +40,31 @@ function getFocusables(root: HTMLElement): HTMLElement[] {
   return visible.length > 0 ? visible : all;
 }
 
+// Motion pass gotcha: usePresence keeps a closing Modal mounted through its exit
+// animation, so a second Modal can now mount WHILE the first is still exiting (e.g.
+// CommandPalette closes itself and opens ShortcutHelpModal in the same handler).
+// Both instances' effects touch shared global state (body scroll, focus) — a naive
+// per-instance lock/restore lets the first modal's DELAYED cleanup unlock scroll and
+// steal focus out from under the second, still-open modal. Reference-count the lock
+// so only the last modal to close actually restores it.
+let scrollLockCount = 0;
+let scrollLockPrevOverflow = '';
+
+function lockBodyScroll() {
+  if (scrollLockCount === 0) {
+    scrollLockPrevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLockCount += 1;
+}
+
+function unlockBodyScroll() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    document.body.style.overflow = scrollLockPrevOverflow;
+  }
+}
+
 export function Modal({
   open,
   title,
@@ -61,11 +86,11 @@ export function Modal({
 
   useEffect(() => {
     if (!shouldRender) return;
-    // D1 : mémorise le déclencheur + verrouille le scroll du body (sauve/restaure ⇒
-    // les modales empilées se déverrouillent dans le bon ordre).
+    // D1 : mémorise le déclencheur + verrouille le scroll du body (compteur partagé ⇒
+    // les modales empilées/qui se chevauchent pendant l'animation de sortie se
+    // déverrouillent dans le bon ordre — voir le commentaire sur scrollLockCount).
     returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
 
     const card = cardRef.current;
     if (card) {
@@ -74,8 +99,19 @@ export function Modal({
     }
 
     return () => {
-      document.body.style.overflow = prevOverflow;
-      returnFocusRef.current?.focus();
+      unlockBodyScroll();
+      // React's passive-effect cleanup runs AFTER the DOM subtree is already
+      // detached, so by the time we get here `card` no longer contains anything —
+      // even in the normal single-modal case, `document.activeElement` has already
+      // reverted to `document.body`. That reversion (nothing else has claimed
+      // focus) is exactly the signal to restore focus to the trigger. If instead
+      // activeElement is some OTHER, real element, a second modal opened while
+      // this one was still exiting and has already taken focus — don't steal it
+      // back.
+      const nothingElseClaimedFocus = !document.activeElement || document.activeElement === document.body;
+      if (nothingElseClaimedFocus) {
+        returnFocusRef.current?.focus();
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount (shouldRender false->true transition), not per phase change.
   }, [shouldRender]);

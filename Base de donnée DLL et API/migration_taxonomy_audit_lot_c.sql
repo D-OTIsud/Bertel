@@ -54,6 +54,7 @@ BEGIN
 
   SELECT string_agg(DISTINCT m.domain || '/' || m.new_code, ', ') INTO v
   FROM _lot_c m
+  JOIN object o ON o.id = m.object_id
   LEFT JOIN ref_code rc ON rc.domain = m.domain AND rc.code = m.new_code
   WHERE rc.id IS NULL;
   IF v IS NOT NULL THEN

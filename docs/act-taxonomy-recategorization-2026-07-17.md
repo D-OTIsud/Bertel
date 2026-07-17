@@ -101,11 +101,21 @@ Allon Bat A Pat Rando.
 - **Chez I&S / DIMITILE BIKE** (location VTTAE, non guidée) : conservés en
   `guided_mountain_biking` — le code le plus proche et le plus trouvable pour l'usager.
 
-## Anomalies relevées (non corrigées ici)
+## Anomalies relevées
 
-- **`ORGRUN00000000Z9` « Destination Bien Être »** : `object_type='ACT'` avec un id préfixé ORG
-  (retypé par `old_data_type_correction_20260514`). Le type est correct (prestataire de massages),
-  l'id est immuable — anomalie cosmétique du préfixe, documentée seulement.
+- **`ORGRUN00000000Z9` « Destination Bien Être » → `ACTRUN00000001BK`** (RÉSOLU, même jour, demande
+  PO) : la fiche était typée ACT avec un id préfixé ORG (retype `old_data_type_correction_20260514`).
+  Migration d'id exécutée live en une transaction atomique : nouvel id via
+  `api.generate_object_id('ACT','RUN')` → copie de la ligne `object` (colonnes générées exclues) →
+  **re-parentage dynamique** des 53 lignes enfants sur les 16 tables occupées (toutes les pattes FK
+  vers `object(id)` balayées par le catalogue — 17 interactions CRM, 8 médias, 3 contacts, lien
+  publisher OTI, mapping Berta `object_origin` `6e009b41`, versions, etc.) → asserts fail-closed
+  (0 référence restante sur l'ancien id, aucun compte en perte) → archivage → suppression par la
+  voie officielle `api.rpc_delete_object` (journalisée dans `object_deletion_log`, rapport propre :
+  `media_to_delete=[]` car les médias avaient été re-parentés avant). Choix d'implémentation : le
+  re-parentage FK par FK remplace la « copie profonde » — même résultat, zéro duplication/perte.
+  Reste cosmétique : les 8 fichiers Storage restent sous le préfixe `ORGRUN00000000Z9/` (URLs
+  toujours valides ; déplacer les blobs = passe Storage dédiée, non justifiée).
 - **Le même enrichissement d'import a peuplé les autres domaines** (`taxonomy_loi`, `taxonomy_res`,
   `taxonomy_hlo`…) : un audit du même type y est probablement justifié — **différé**, voir le
   tracker `.claude/WORKFLOW.md`.

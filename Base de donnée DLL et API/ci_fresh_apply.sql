@@ -139,6 +139,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 13h    migration_loi_type_boundary_retype.sql  (§187 lot B: 18 retypes LOI->ACT(11)/PRD(5)/PSV(2) methode 13d + nouveau noeud taxonomy_act guided_tour; ids gardent le prefixe LOIRUN; no-op fresh) =='
 \ir migration_loi_type_boundary_retype.sql
 
+\echo '== 13i    migration_taxonomy_catalog_hygiene.sql  (§187 lot D: desactivation des codes 0-usage — dupes RES table_d_hotes/chambre_d_hote, codes LOI prestation doublonnant ACT, HLO gite_d_etape/auberge, domaine taxonomy_org entier; fusion ZAMPONE artisanat->art_artisanat; garde 0-usage fail-closed; APRES 13g+13h) =='
+\ir migration_taxonomy_catalog_hygiene.sql
+
 \echo '== 14a    migration_media_visibility_gate.sql  (media.visibility composed into read_media published arm + cover-cache pick; folded into rls_policies/schema/maintenance, no-op fresh) =='
 \ir migration_media_visibility_gate.sql
 

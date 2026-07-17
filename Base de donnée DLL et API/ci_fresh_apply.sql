@@ -133,6 +133,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 13f    migration_act_taxonomy_recategorization.sql  (§186 recatégorisation ACT: +7 nœuds taxonomy_act (wellness_massage/nature_discovery/motorized_excursion/caving/fishing/boat_excursion/craft_workshop, « Autre » -> 99) + 33 corrections object_taxonomy (heuristique d import 20260512 défaillante); data part no-op fresh; nodes aussi convergés par le taxo seed) =='
 \ir migration_act_taxonomy_recategorization.sql
 
+\echo '== 13g    migration_taxonomy_audit_lot_a.sql  (§187 lot A: 23 corrections intra-domaine RES/LOI/PRD/PSV/HLO issues de l audit tous domaines; data-only, no-op fresh) =='
+\ir migration_taxonomy_audit_lot_a.sql
+
 \echo '== 14a    migration_media_visibility_gate.sql  (media.visibility composed into read_media published arm + cover-cache pick; folded into rls_policies/schema/maintenance, no-op fresh) =='
 \ir migration_media_visibility_gate.sql
 
@@ -147,6 +150,12 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
 \echo '== 14e    documents_bucket.sql  (§71 C: storage bucket `documents` for §08 justificatifs, PDF+image, service-role write; idempotent) =='
 \ir documents_bucket.sql
+
+\echo '== 14e2   legal_documents_bucket.sql  (private legal/administrative documents; service-route access only) =='
+\ir legal_documents_bucket.sql
+
+\echo '== A-LEGAL migration_unblock_team_legal_access.sql  (dedicated legal permission + private-document metadata + role hardening) =='
+\ir migration_unblock_team_legal_access.sql
 
 \echo '== A1     avatars_bucket.sql  (user profile pictures: storage bucket `avatars`, image-only, service-role write via /api/avatar/upload; RESTRICTIVE anon/authenticated deny; idempotent) =='
 \ir avatars_bucket.sql

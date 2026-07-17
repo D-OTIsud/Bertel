@@ -14,6 +14,17 @@ describe('RouteMotion', () => {
     expect(screen.getByText('Explorer content').closest('.motion-page-enter')).toBeInTheDocument();
   });
 
+  it('preserves the full-height flex chain required by routed workspaces', () => {
+    render(
+      <RouteMotion>
+        <div>Full-height content</div>
+      </RouteMotion>,
+    );
+
+    const wrapper = screen.getByText('Full-height content').closest('.motion-page-enter');
+    expect(wrapper).toHaveClass('flex', 'h-full', 'min-h-0', 'w-full', 'min-w-0', 'flex-col');
+  });
+
   it('renders new content when the pathname changes (remount, not a stale wrapper)', () => {
     const { rerender } = render(
       <RouteMotion>

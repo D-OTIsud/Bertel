@@ -13,7 +13,10 @@ import { usePathname } from 'next/navigation';
 export function RouteMotion({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
-    <div key={pathname} className="motion-page-enter">
+    <div
+      key={pathname}
+      className="motion-page-enter flex h-full min-h-0 w-full min-w-0 flex-col"
+    >
       {children}
     </div>
   );

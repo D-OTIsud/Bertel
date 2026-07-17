@@ -11,7 +11,7 @@
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- 1. Nouveau nœud ACT `guided_tour` (7 porteurs immédiats : guides/accompagnateurs)
+-- 1. Nouveau nœud ACT `guided_tour` (8 porteurs immédiats : guides/accompagnateurs)
 -- ---------------------------------------------------------------------------
 WITH act_root AS (
   SELECT id FROM ref_code WHERE domain = 'taxonomy_act' AND code = 'root'

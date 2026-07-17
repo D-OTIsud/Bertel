@@ -1,6 +1,6 @@
 -- migration_taxonomy_trees_seed.sql
--- Versions the FULL live taxonomy trees (219 ref_code nodes across all taxonomy_* domains,
--- 200 parent links — 211/192 + the 7 taxonomy_act nodes of §186/13f + the guided_tour node of §187/13h). These trees were built ad-hoc on live and were NOT versioned anywhere in
+-- Versions the FULL live taxonomy trees (218 ref_code nodes across all taxonomy_* domains,
+-- 199 parent links — 210/191 after 13e + the 7 taxonomy_act nodes of §186/13f + the guided_tour node of §187/13h). These trees were built ad-hoc on live and were NOT versioned anywhere in
 -- the manifest, so a fresh DB could not reproduce them — the fresh-apply gate (2026-07-01) caught
 -- this via the reference-catalog hierarchy test (taxonomy_res parent_code never resolved).
 --

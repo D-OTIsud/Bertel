@@ -51,3 +51,31 @@ interdit) — elle est mise `status='archived'` ; une suppression définitive pa
 
 À réception des réponses, les décisions seront appliquées avec le même pattern que le lot A
 (migration `migration_taxonomy_audit_lot_c.sql`, idempotente, gardes fail-closed).
+
+---
+
+## ✅ RÉSOLU — Arbitrages rendus en session par le PO le 2026-07-17
+
+Le tableau n'a finalement pas circulé : le PO (OTI du Sud) a arbitré les 20 cas en session,
+et les décisions ont été appliquées le jour même (`migration_taxonomy_audit_lot_c.sql`,
+manifest 13j, MCP `taxonomy_audit_lot_c` ; décision log §189).
+
+**Recodages (8)** : NANA BARKET & FASTFOOD → traiteur (« traiteur qui fait de la livraison ») ·
+Irise Traiteur → traiteur · Snack Le Boi Zoly → snack_bar · Couleurs du Sud Sauvage -
+EXCURSIONS → tourist_excursion_transport · Zévi sur Mer → chambre_d_hotes · Bouillon
+d'Aventure → divertissement (reste LOI) · L'Or du Temps → gite_villa · La Kaz Bon Dimanche →
+gite_villa.
+
+**Archivages (3)** : Le Tinto (`RESRUN00000000PR`) — **établissement fermé** · Auberge de
+campagne Les 4 Saisons `HLORUN000000019T` (doublon vide de `WW`) · La Caverne des Hirondelles
+`HLORUN00000000PX` (doublon de `PD`).
+
+**Confirmées inchangées (9)** : Ti Macaron PéÏ (salon de thé) · Pizzeria La Gondole +
+L'Impériale Pirun (restaurant) · Dolly La Fêe (atelier cuisine) · Les Crins de Bel Air
+(centre d'équitation) · Association Aster Lontan (art & artisanat) · Sucette péï (atelier) ·
+Austral Taxis (excursion touristique) · Bungalow Ti Kaz Misouk (studio).
+
+**La Rose du Sud ×2** : deux unités légitimes (chambres d'hôtes + bungalow) — pas un doublon.
+
+**Codes libérés et désactivés** : `taxonomy_loi/terre`, `taxonomy_hlo/chambre`.
+Résultat final : **0 fiche publiée sans sous-catégorie** (couverture 100 %).

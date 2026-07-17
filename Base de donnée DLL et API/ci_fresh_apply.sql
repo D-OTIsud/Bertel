@@ -142,6 +142,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 13i    migration_taxonomy_catalog_hygiene.sql  (§187 lot D: desactivation des codes 0-usage — dupes RES table_d_hotes/chambre_d_hote, codes LOI prestation doublonnant ACT, HLO gite_d_etape/auberge, domaine taxonomy_org entier; fusion ZAMPONE artisanat->art_artisanat; garde 0-usage fail-closed; APRES 13g+13h) =='
 \ir migration_taxonomy_catalog_hygiene.sql
 
+\echo '== 13j    migration_taxonomy_audit_lot_c.sql  (§187 lot C: 20 arbitrages PO rendus en session — 8 recodages (NANA BARKET/Irise->traiteur, Bouillon->divertissement, 2 HLO recentes->gite_villa...), 3 archivages (Le Tinto FERME + 2 doublons HLO), terre/chambre desactives; data-only, no-op fresh) =='
+\ir migration_taxonomy_audit_lot_c.sql
+
 \echo '== 14a    migration_media_visibility_gate.sql  (media.visibility composed into read_media published arm + cover-cache pick; folded into rls_policies/schema/maintenance, no-op fresh) =='
 \ir migration_media_visibility_gate.sql
 

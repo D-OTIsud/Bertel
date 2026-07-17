@@ -103,7 +103,7 @@ sont PAS des artefacts d'import — c'est le nom commercial réel (chalets en ro
 | Au Coeur de La Réunion (`LOIRUN000000015J`) | visite_guidee | guided_tour* (circuits accompagnés, visitemonile.re) |
 
 \* **`guided_tour` = nouveau nœud `taxonomy_act` à créer** (« Visite guidée / accompagnement
-touristique ») — 7 porteurs immédiats ; le catalogue ACT n'a pas de foyer pour les guides
+touristique ») — 8 porteurs immédiats ; le catalogue ACT n'a pas de foyer pour les guides
 non-montagne.
 
 ### LOI → PRD (5 : production + accueil, règle §57)

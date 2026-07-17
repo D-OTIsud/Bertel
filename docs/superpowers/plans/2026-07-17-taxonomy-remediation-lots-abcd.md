@@ -307,7 +307,7 @@ git add "Base de donnée DLL et API/migration_taxonomy_audit_lot_a.sql" "Base de
 BEGIN;
 
 -- ---------------------------------------------------------------------------
--- 1. Nouveau nœud ACT `guided_tour` (7 porteurs immédiats : guides/accompagnateurs)
+-- 1. Nouveau nœud ACT `guided_tour` (8 porteurs immédiats : guides/accompagnateurs)
 -- ---------------------------------------------------------------------------
 WITH act_root AS (
   SELECT id FROM ref_code WHERE domain = 'taxonomy_act' AND code = 'root'
@@ -448,7 +448,7 @@ SELECT
   (SELECT count(*) FROM object_taxonomy WHERE source='loi_type_boundary_20260717') AS retypes;
 ```
 
-Attendu (si l'état de départ est celui de l'audit) : `act_pub = 63` (52+11), `loi_pub = 85` (103−18), `prd_pub = 41` (36+5), `psv_pub = 20` (18+2), `guided_tour_usage = 7`, `retypes = 18`.
+Attendu (si l'état de départ est celui de l'audit) : `act_pub = 63` (52+11), `loi_pub = 85` (103−18), `prd_pub = 41` (36+5), `psv_pub = 20` (18+2), `guided_tour_usage = 8`, `retypes = 18`.
 
 ```sql
 -- Aucun résidu taxonomy_loi sur les retypés :
@@ -486,7 +486,7 @@ INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i
   ('taxonomy_act','guided_tour','root'),
 ```
 
-- [ ] **Step 3 : Mettre à jour les compteurs du header du snapshot** — `218 ref_code nodes` → `219`, `199 parent links` → `200` (deux occurrences : header du fichier ET l'écho `taxo` de `ci_fresh_apply.sql` + l'entrée `taxo.` du runbook).
+- [ ] **Step 3 : Mettre à jour les compteurs du header du snapshot** — `217 ref_code nodes` → `218`, `198 parent links` → `199` (deux occurrences : header du fichier ET l'écho `taxo` de `ci_fresh_apply.sql` + l'entrée `taxo.` du runbook).
 
 - [ ] **Step 4 : Ajouter le bloc 13h dans `ci_fresh_apply.sql`** (après 13g) :
 
@@ -498,7 +498,7 @@ INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i
 - [ ] **Step 5 : Ajouter l'entrée 13h dans le runbook** (après 13g) :
 
 ```
-13h. `migration_loi_type_boundary_retype.sql` — **§187 lot B (2026-07-17 ; catalogue + retypes)** : 18 fiches typées LOI étaient des prestations encadrées, des producteurs ou des loueurs/transporteurs (audit §B) — 11 → ACT (dont 7 sous le NOUVEAU nœud `taxonomy_act/guided_tour` « Visite guidée / accompagnement touristique », position 20 ; les accompagnateurs montagne → `guided_hiking`, Ricaric → `caving`), 5 → PRD (règle §57 production+accueil), 2 → PSV. Ordre 13d FORCÉ par `validate_object_taxonomy_assignment` (delete liens → retype → re-insert, une transaction) ; idempotent (les objets déjà migrés sortent du mapping) ; gardes fail-closed ; `refresh_object_filter_caches` par objet ; les ids gardent leur préfixe LOIRUN (classe cosmétique §186). `guided_tour` est AUSSI dans le snapshot `taxo` (219 nœuds / 200 liens). Après 13g. Sur live : rafraîchir ensuite les 2 MV CONCURRENTLY. Live-applied 2026-07-XX (MCP `loi_type_boundary_retype`).
+13h. `migration_loi_type_boundary_retype.sql` — **§187 lot B (2026-07-17 ; catalogue + retypes)** : 18 fiches typées LOI étaient des prestations encadrées, des producteurs ou des loueurs/transporteurs (audit §B) — 11 → ACT (dont 8 sous le NOUVEAU nœud `taxonomy_act/guided_tour` « Visite guidée / accompagnement touristique », position 20 ; les accompagnateurs montagne → `guided_hiking`, Ricaric → `caving`), 5 → PRD (règle §57 production+accueil), 2 → PSV. Ordre 13d FORCÉ par `validate_object_taxonomy_assignment` (delete liens → retype → re-insert, une transaction) ; idempotent (les objets déjà migrés sortent du mapping) ; gardes fail-closed ; `refresh_object_filter_caches` par objet ; les ids gardent leur préfixe LOIRUN (classe cosmétique §186). `guided_tour` est AUSSI dans le snapshot `taxo` (218 nœuds / 199 liens). Après 13g. Sur live : rafraîchir ensuite les 2 MV CONCURRENTLY. Live-applied 2026-07-XX (MCP `loi_type_boundary_retype`).
 ```
 
 - [ ] **Step 6 : Commit**
@@ -686,7 +686,7 @@ git add "Base de donnée DLL et API/migration_taxonomy_catalog_hygiene.sql" "Bas
 ```markdown
 ## §<n> — Remédiation taxonomique lots A/B/D exécutés (2026-07-XX)
 
-Exécution du plan `docs/superpowers/plans/2026-07-17-taxonomy-remediation-lots-abcd.md` (audit §187) : lot A = 23 corrections intra-domaine (migrations 13g, source `taxonomy_audit_lot_a_20260717`) ; lot B = 18 retypes LOI→ACT(11)/PRD(5)/PSV(2) méthode 13d + nouveau nœud `taxonomy_act/guided_tour` (13h, 7 porteurs) ; lot D = désactivation des codes 0-usage + fusion `artisanat`→`art_artisanat` + domaine `taxonomy_org` désactivé (13i). Compteurs post-lot B vérifiés : ACT publiés 63, LOI 85, PRD 41, PSV 20. Lot C (16 arbitrages + 3 paires de doublons HLO + Bouillon d'Aventure) transmis à l'OTI le <date>, en attente de réponses. [Adapter si un écart a été rencontré — le documenter ici.]
+Exécution du plan `docs/superpowers/plans/2026-07-17-taxonomy-remediation-lots-abcd.md` (audit §187) : lot A = 23 corrections intra-domaine (migrations 13g, source `taxonomy_audit_lot_a_20260717`) ; lot B = 18 retypes LOI→ACT(11)/PRD(5)/PSV(2) méthode 13d + nouveau nœud `taxonomy_act/guided_tour` (13h, 8 porteurs) ; lot D = désactivation des codes 0-usage + fusion `artisanat`→`art_artisanat` + domaine `taxonomy_org` désactivé (13i). Compteurs post-lot B vérifiés : ACT publiés 63, LOI 85, PRD 41, PSV 20. Lot C (16 arbitrages + 3 paires de doublons HLO + Bouillon d'Aventure) transmis à l'OTI le <date>, en attente de réponses. [Adapter si un écart a été rencontré — le documenter ici.]
 ```
 
 - [ ] **Step 2 : Tracker** — dans `.claude/WORKFLOW.md`, mettre à jour la ligne « Audit taxonomique tous domaines » : lots A/B/D → DONE avec la date ; lot C → en attente OTI.

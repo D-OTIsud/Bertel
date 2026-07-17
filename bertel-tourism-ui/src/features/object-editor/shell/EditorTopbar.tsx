@@ -1,10 +1,32 @@
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import type { EditorMode } from './EditorTopbar.types';
 import { buildEditTopSaveLabel } from './format-last-object-update';
 import { EditorPresenceRoster } from '../widgets/EditorPresenceRoster';
 import type { RosterEntry } from '../presence/editor-presence';
 
 export type { EditorMode } from './EditorTopbar.types';
+
+export type EditorActionFeedback = 'idle' | 'pending' | 'success' | 'error';
+
+/** Single source of truth for the icon+label pair of a feedback state — never renders a spinner and a success icon at once. */
+function feedbackContent(
+  feedback: EditorActionFeedback,
+  idleLabel: string,
+  pendingLabel: string,
+  successLabel: string,
+  errorLabel: string,
+) {
+  switch (feedback) {
+    case 'pending':
+      return { label: pendingLabel, icon: <Loader2 size={13} className="motion-spin" aria-hidden data-icon="spinner" /> };
+    case 'success':
+      return { label: successLabel, icon: <Check size={13} className="motion-success" aria-hidden /> };
+    case 'error':
+      return { label: errorLabel, icon: <AlertTriangle size={13} aria-hidden /> };
+    default:
+      return { label: idleLabel, icon: null };
+  }
+}
 
 interface EditorTopbarProps {
   objectName: string;
@@ -21,6 +43,10 @@ interface EditorTopbarProps {
   publishDisabled?: boolean;
   /** P1.3 — contributor (no direct canonical write): the save action submits a moderation proposal. */
   contributorMode?: boolean;
+  /** Visual feedback layer on top of `saving`/`savingDraft` — additive, defaults to 'idle' (no behavior change). */
+  saveFeedback?: EditorActionFeedback;
+  /** Visual feedback layer on top of `publishing` — additive, defaults to 'idle' (no behavior change). */
+  publishFeedback?: EditorActionFeedback;
   statusMessage?: string | null;
   /** Live presence roster (everyone on the fiche) for the save-bar band. */
   roster?: RosterEntry[];
@@ -46,6 +72,8 @@ export function EditorTopbar({
   savingDraft = false,
   publishDisabled = false,
   contributorMode = false,
+  saveFeedback = 'idle',
+  publishFeedback = 'idle',
   statusMessage = null,
   roster = [],
   onModeChange,
@@ -130,7 +158,16 @@ export function EditorTopbar({
           disabled={publishDisabled || publishing || saving}
           onClick={onPublish}
         >
-          {publishing ? 'Publication…' : 'Publier'}
+          {(() => {
+            const { label, icon } = feedbackContent(
+              publishFeedback,
+              publishing ? 'Publication…' : 'Publier',
+              'Publication…',
+              'Publié',
+              'Échec — réessayer',
+            );
+            return icon ? <>{icon} {label}</> : label;
+          })()}
         </button>
         {/* …et « Enregistrer » redevient l'action primaire (teal + anneau de focus global). */}
         {onSaveDraft && (
@@ -140,13 +177,18 @@ export function EditorTopbar({
             disabled={savingDraft || saving || publishing || dirtyCount === 0}
             onClick={onSaveDraft}
           >
-            {contributorMode
-              ? savingDraft
-                ? 'Soumission…'
-                : 'Proposer une modification'
-              : savingDraft
-                ? 'Enregistrement…'
-                : 'Enregistrer'}
+            {(() => {
+              const idleLabel = contributorMode ? 'Proposer une modification' : 'Enregistrer';
+              const pendingLabel = contributorMode ? 'Soumission…' : 'Enregistrement…';
+              const { label, icon } = feedbackContent(
+                saveFeedback,
+                savingDraft ? pendingLabel : idleLabel,
+                pendingLabel,
+                'Enregistré',
+                'Échec — réessayer',
+              );
+              return icon ? <>{icon} {label}</> : label;
+            })()}
           </button>
         )}
       </div>

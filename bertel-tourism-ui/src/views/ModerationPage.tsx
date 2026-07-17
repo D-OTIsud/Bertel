@@ -229,48 +229,49 @@ export default function ModerationPage() {
         }}
       />
 
-      {rejectTarget && (
-        <Modal
-          title="Refuser la suggestion"
-          onClose={closeReject}
-          footer={
-            <>
-              <button type="button" className="ghost-button" onClick={closeReject}>
-                Annuler
-              </button>
-              <button
-                type="button"
-                className="primary-button"
-                disabled={rejectMutation.isPending}
-                onClick={submitReject}
-              >
-                Confirmer le refus
-              </button>
-            </>
-          }
-        >
+      <Modal
+        title="Refuser la suggestion"
+        open={!!rejectTarget}
+        onOpenChange={(next) => { if (!next) closeReject(); }}
+        footer={
+          <>
+            <button type="button" className="ghost-button" onClick={closeReject}>
+              Annuler
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={rejectMutation.isPending}
+              onClick={submitReject}
+            >
+              Confirmer le refus
+            </button>
+          </>
+        }
+      >
+        {rejectTarget && (
           <p>
             Refuser la modification soumise sur <strong>{rejectTarget.objectName}</strong>. Le motif est communiqué et
             tracé.
           </p>
-          <label htmlFor="mod-reject-note">Motif du refus</label>
-          <textarea
-            id="mod-reject-note"
-            value={rejectNote}
-            onChange={(event) => {
-              setRejectNote(event.target.value);
-              if (noteError) setNoteError(null);
-            }}
-            rows={3}
-            className="text-input"
-          />
-          {noteError && (
-            <p role="alert" className="form-error">
-              {noteError}
-            </p>
-          )}
-        </Modal>
-      )}
+        )}
+        <label htmlFor="mod-reject-note">Motif du refus</label>
+        <textarea
+          id="mod-reject-note"
+          value={rejectNote}
+          onChange={(event) => {
+            setRejectNote(event.target.value);
+            if (noteError) setNoteError(null);
+          }}
+          rows={3}
+          className="text-input"
+        />
+        {noteError && (
+          <p role="alert" className="form-error">
+            {noteError}
+          </p>
+        )}
+      </Modal>
     </section>
   );
 }

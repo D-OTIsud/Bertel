@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
@@ -36,7 +36,7 @@ import {
 } from './io/object-io-serialize';
 import { downloadTextFile, readFileText, triggerPrint } from './io/object-io-effects';
 import { getRegisteredSections, MODE_ESSENTIAL } from './sections/section-registry';
-import { EditorTopbar, type EditorMode } from './shell/EditorTopbar';
+import { EditorTopbar, type EditorMode, type EditorActionFeedback } from './shell/EditorTopbar';
 import { EditorNav, type EditorNavSectionState } from './shell/EditorNav';
 import { EditorRail } from './shell/EditorRail';
 import { useEditorPresence } from './presence/useEditorPresence';
@@ -171,6 +171,33 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const [blockersModalOpen, setBlockersModalOpen] = useState(false);
   const [modalContext, setModalContext] = useState<'publish' | 'save'>('publish');
   const [saveErrors, setSaveErrors] = useState<Issue[]>([]);
+  const [saveFeedback, setSaveFeedback] = useState<EditorActionFeedback>('idle');
+  const [publishFeedback, setPublishFeedback] = useState<EditorActionFeedback>('idle');
+  // Independent timer refs per channel: a shared ref would let a publish flash's clearTimeout
+  // cancel the save flash's pending revert-to-idle timer (or vice versa) when save→publish (or
+  // the reverse) happens within the 1.2s flash window, stranding that channel on "success".
+  const saveFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publishFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (saveFeedbackTimerRef.current !== null) clearTimeout(saveFeedbackTimerRef.current);
+      if (publishFeedbackTimerRef.current !== null) clearTimeout(publishFeedbackTimerRef.current);
+    };
+  }, []);
+
+  /** Flash the topbar action feedback to "success" for 1.2s, then back to idle. Clears any
+   *  prior pending timer on the SAME channel's ref so rapid save→save-again (or publish→
+   *  publish-again) doesn't leave two competing timeouts; the unmount cleanup above guards
+   *  against a setState-after-unmount during the flash. */
+  function flashSuccess(
+    setFeedback: (value: EditorActionFeedback) => void,
+    timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
+  ) {
+    setFeedback('success');
+    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setFeedback('idle'), 1200);
+  }
 
   const setObjectStatus = useSetObjectStatusMutation(objectId);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -385,16 +412,19 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   async function handleSaveDraft() {
     setStatusMessage(null);
     setSavingDraft(true);
+    setSaveFeedback('pending');
     try {
       const { ok, saveErrors: errors } = await persistDirtyModules();
       if (ok) {
         setSaveErrors([]);
         // Confirmation en snackbar (D4 useToast) — le libellé topbar revient à son état « à jour ».
         toast.success(contributorMode ? 'Modification soumise pour validation' : 'Brouillon enregistré');
+        flashSuccess(setSaveFeedback, saveFeedbackTimerRef);
       } else {
         setSaveErrors(errors);
         setModalContext('save');
         setBlockersModalOpen(true);
+        setSaveFeedback('error');
       }
     } finally {
       setSavingDraft(false);
@@ -411,11 +441,13 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     }
 
     setStatusMessage(null);
+    setPublishFeedback('pending');
     const { ok, saveErrors: errors } = await persistDirtyModules();
     if (!ok) {
       setSaveErrors(errors);
       setModalContext('save');
       setBlockersModalOpen(true);
+      setPublishFeedback('error');
       return;
     }
 
@@ -424,9 +456,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       editor.setSavedStatus('published');
       setSaveErrors([]);
       toast.success('Fiche enregistrée et publiée');
+      flashSuccess(setPublishFeedback, publishFeedbackTimerRef);
     } catch (error) {
       const issue = publishErrorToIssue(error);
       setSaveErrors([issue]);
+      setPublishFeedback('error');
       setModalContext('save');
       setBlockersModalOpen(true);
       setStatusMessage(issue.message);
@@ -480,6 +514,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         publishing={publishObject.isPending}
         saving={saving}
         savingDraft={savingDraft}
+        saveFeedback={saveFeedback}
+        publishFeedback={publishFeedback}
         contributorMode={contributorMode}
         statusMessage={statusMessage}
         roster={presence.roster}

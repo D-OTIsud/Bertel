@@ -5,8 +5,9 @@
 // Reprend la mécanique §149 : updateCurrentUserProfile / uploadAvatar (route serveur,
 // EXIF strippé) + applyProfile (session mise à jour sans re-bootstrap).
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import { Check } from 'lucide-react';
 import { updateCurrentUserProfile, uploadAvatar } from '../../services/user-profile';
 import { useSessionStore } from '../../store/session-store';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -27,11 +28,29 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
   const [nameDraft, setNameDraft] = useState<string>(userName);
   const [nameSaving, setNameSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarJustUploaded, setAvatarJustUploaded] = useState(false);
+  // Timer for the avatar success flash — cleared on unmount so a setState never fires after
+  // the modal has closed (same pattern as ObjectEditPage's flashSuccess/feedbackTimerRef).
+  const avatarFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Resynchronise le brouillon à chaque ouverture (le nom peut avoir changé entre deux passages).
   useEffect(() => {
     if (open) setNameDraft(userName);
   }, [open, userName]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarFlashTimerRef.current !== null) clearTimeout(avatarFlashTimerRef.current);
+    };
+  }, []);
+
+  /** Flash the avatar label to "just uploaded" for 1.2s, then back to idle. Clears any prior
+   *  pending timer so rapid re-upload doesn't strand the label on success. */
+  function flashAvatarUploaded() {
+    setAvatarJustUploaded(true);
+    if (avatarFlashTimerRef.current !== null) clearTimeout(avatarFlashTimerRef.current);
+    avatarFlashTimerRef.current = setTimeout(() => setAvatarJustUploaded(false), 1200);
+  }
 
   // L'avatar affiché ne doit jamais être l'e-mail : si aucun nom réel n'est enregistré,
   // le display_name retombe sur l'e-mail — on n'en tire pas d'initiales trompeuses (§149).
@@ -74,6 +93,7 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
       const url = await uploadAvatar(file);
       applyProfile({ avatarUrl: url });
       toast.success('Photo de profil mise à jour.');
+      flashAvatarUploaded();
     } catch (error: unknown) {
       toast.error((error as Error).message);
     } finally {
@@ -110,7 +130,17 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
             </span>
           )}
           <label className="ghost-button marker-upload-button cursor-pointer">
-            {avatarBusy ? 'Envoi…' : avatarUrl ? 'Changer la photo' : 'Ajouter une photo'}
+            {avatarBusy ? (
+              'Envoi…'
+            ) : avatarJustUploaded ? (
+              <>
+                <Check size={14} className="motion-success" aria-hidden /> Photo mise à jour
+              </>
+            ) : avatarUrl ? (
+              'Changer la photo'
+            ) : (
+              'Ajouter une photo'
+            )}
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"

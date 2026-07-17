@@ -545,8 +545,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
                 >
                   <span
                     className={cn(
-                      'absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all',
-                      detail.showMap ? 'left-[22px]' : 'left-0.5',
+                      'absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform',
+                      detail.showMap ? 'translate-x-[20px]' : 'translate-x-0',
                     )}
                   />
                 </button>
@@ -636,57 +636,55 @@ export default function ListComposeView({ listId }: { listId: string }) {
       </div>
 
       {/* Modal de partage : lien public à copier + désactivation explicite. */}
-      {shareOpen && (
-        <Modal title="Partager par lien" onClose={() => setShareOpen(false)}>
-          {shareUrl ? (
-            <div className="space-y-3">
-              <p className="text-[13px] leading-relaxed text-ink/70">
-                Toute personne disposant de ce lien peut consulter la liste — établissements publiés uniquement,
-                sans le nom du destinataire.
-              </p>
-              <div className="flex items-center gap-2 rounded-xl border bg-ink/5 px-3 py-2.5">
-                <Link2 className="h-4 w-4 shrink-0 text-ink/50" />
-                <code className="flex-1 truncate text-[12.5px] text-ink" title={shareUrl}>{shareUrl}</code>
-                <button
-                  type="button"
-                  onClick={copyLink}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700"
-                >
-                  {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? 'Copié' : 'Copier'}
-                </button>
-              </div>
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <a
-                  href={shareUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-orange hover:underline"
-                >
-                  <Globe className="h-3.5 w-3.5" /> Ouvrir la page publique
-                </a>
-                <button
-                  type="button"
-                  disabled={share.isPending}
-                  onClick={() => {
-                    share.mutate(false);
-                    setShareOpen(false);
-                  }}
-                  className="text-[12.5px] font-semibold text-red-600 hover:underline disabled:opacity-60"
-                >
-                  Désactiver le lien
-                </button>
-              </div>
+      <Modal title="Partager par lien" open={shareOpen} onOpenChange={setShareOpen}>
+        {shareUrl ? (
+          <div className="space-y-3">
+            <p className="text-[13px] leading-relaxed text-ink/70">
+              Toute personne disposant de ce lien peut consulter la liste — établissements publiés uniquement,
+              sans le nom du destinataire.
+            </p>
+            <div className="flex items-center gap-2 rounded-xl border bg-ink/5 px-3 py-2.5">
+              <Link2 className="h-4 w-4 shrink-0 text-ink/50" />
+              <code className="flex-1 truncate text-[12.5px] text-ink" title={shareUrl}>{shareUrl}</code>
+              <button
+                type="button"
+                onClick={copyLink}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[12px] font-semibold text-white hover:bg-emerald-700"
+              >
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? 'Copié' : 'Copier'}
+              </button>
             </div>
-          ) : share.isError ? (
-            <p className="text-[13px] text-red-600">Impossible d'activer le lien de partage. Fermez et réessayez.</p>
-          ) : (
-            <div className="flex items-center gap-2 text-[13px] text-ink/60">
-              <Loader2 className="h-4 w-4 animate-spin" /> Activation du lien de partage…
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <a
+                href={shareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-orange hover:underline"
+              >
+                <Globe className="h-3.5 w-3.5" /> Ouvrir la page publique
+              </a>
+              <button
+                type="button"
+                disabled={share.isPending}
+                onClick={() => {
+                  share.mutate(false);
+                  setShareOpen(false);
+                }}
+                className="text-[12.5px] font-semibold text-red-600 hover:underline disabled:opacity-60"
+              >
+                Désactiver le lien
+              </button>
             </div>
-          )}
-        </Modal>
-      )}
+          </div>
+        ) : share.isError ? (
+          <p className="text-[13px] text-red-600">Impossible d'activer le lien de partage. Fermez et réessayez.</p>
+        ) : (
+          <div className="flex items-center gap-2 text-[13px] text-ink/60">
+            <Loader2 className="h-4 w-4 animate-spin" /> Activation du lien de partage…
+          </div>
+        )}
+      </Modal>
 
       {/* Portail d'impression : un OtiTemplate pleine largeur rendu sous <body>, révélé
           uniquement à l'impression (window.print) — cf. @media print dans oti-template.css. */}

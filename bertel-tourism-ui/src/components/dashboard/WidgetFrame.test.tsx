@@ -2,10 +2,26 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { WidgetFrame } from './WidgetFrame';
 
 describe('WidgetFrame', () => {
-  it('affiche le chargement', () => {
-    render(<WidgetFrame isPending error={null}><p>contenu</p></WidgetFrame>);
-    expect(screen.getByRole('status')).toHaveTextContent('Chargement');
-    expect(screen.queryByText('contenu')).not.toBeInTheDocument();
+  it('renders a skeleton (not bare text) while pending, with aria-busy status semantics', () => {
+    render(<WidgetFrame isPending error={null}>content</WidgetFrame>);
+    const region = screen.getByRole('status');
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(region).toHaveAccessibleName();
+    expect(screen.queryByText('Chargement…')).not.toBeInTheDocument();
+  });
+
+  it('renders the provided custom skeleton when pending', () => {
+    render(
+      <WidgetFrame isPending error={null} skeleton={<div data-testid="custom-skel" />}>
+        content
+      </WidgetFrame>,
+    );
+    expect(screen.getByTestId('custom-skel')).toBeInTheDocument();
+  });
+
+  it('reveals loaded content with the motion-content-reveal class', () => {
+    render(<WidgetFrame isPending={false} error={null}>content</WidgetFrame>);
+    expect(screen.getByText('content').closest('.motion-content-reveal')).toBeInTheDocument();
   });
 
   it("affiche l'erreur avec bouton réessayer", () => {

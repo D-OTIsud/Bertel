@@ -81,6 +81,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
 
   const validation = validateCreateObjectInput({ type, name });
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
@@ -116,6 +117,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     try {
       const id = await createObject({ type, name: name.trim() });
       reset();
+      setJustCreated(true);
       onCreated(id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Création impossible pour le moment.');
@@ -233,7 +235,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                         <label
                           key={option.code}
                           className={[
-                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-all duration-150 will-change-transform',
+                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
                             selected
                               ? 'shadow-sm'
                               : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
@@ -299,15 +301,19 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
               type="button"
               onClick={handleCreate}
               disabled={!validation.ok || busy}
-              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-md disabled:cursor-not-allowed"
+              className="inline-flex h-10 items-center gap-2 rounded-xl px-5 text-[13.5px] font-semibold text-white shadow-sm transition-[transform,box-shadow,background-color,color] duration-150 hover:-translate-y-px hover:shadow-md active:scale-[0.98] active:translate-y-0 disabled:cursor-not-allowed"
               style={
                 validation.ok && accent
                   ? { backgroundColor: accent.color }
                   : { backgroundColor: '#dcd8d1', color: '#8a857c' }
               }
             >
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {busy ? 'Création…' : 'Créer la fiche'}
+              {busy ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : justCreated ? (
+                <Check className="h-4 w-4 motion-pop" aria-hidden />
+              ) : null}
+              {busy ? 'Création…' : justCreated ? 'Créée' : 'Créer la fiche'}
             </button>
           </div>
         </div>

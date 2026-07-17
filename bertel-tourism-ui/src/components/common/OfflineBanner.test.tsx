@@ -1,42 +1,30 @@
-import { render, screen, act } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { OfflineBanner } from './OfflineBanner';
 
-function setNavigatorOnline(value: boolean) {
+function setOnline(value: boolean) {
   Object.defineProperty(window.navigator, 'onLine', { configurable: true, value });
+  window.dispatchEvent(new Event(value ? 'online' : 'offline'));
 }
 
 describe('OfflineBanner', () => {
-  afterEach(() => {
-    setNavigatorOnline(true);
-  });
+  beforeEach(() => setOnline(true));
 
-  it('ne rend rien quand le navigateur est en ligne', () => {
-    setNavigatorOnline(true);
+  it('renders nothing while online', () => {
     render(<OfflineBanner />);
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('affiche le bandeau quand le navigateur est hors ligne', () => {
-    setNavigatorOnline(false);
+  it('stays mounted through the exit window after coming back online', () => {
+    jest.useFakeTimers();
     render(<OfflineBanner />);
-    expect(screen.getByRole('status')).toHaveTextContent('Hors ligne');
-  });
-
-  it('réagit aux événements online/offline', () => {
-    setNavigatorOnline(true);
-    render(<OfflineBanner />);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-
-    act(() => {
-      setNavigatorOnline(false);
-      window.dispatchEvent(new Event('offline'));
-    });
+    act(() => setOnline(false));
     expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Hors ligne');
 
-    act(() => {
-      setNavigatorOnline(true);
-      window.dispatchEvent(new Event('online'));
-    });
+    act(() => setOnline(true));
+    expect(screen.getByRole('status')).toBeInTheDocument(); // still mounted, exiting
+    act(() => { jest.advanceTimersByTime(140); });
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    jest.useRealTimers();
   });
 });

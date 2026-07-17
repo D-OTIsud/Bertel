@@ -19,4 +19,17 @@ if (typeof window !== 'undefined') {
   }
   (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;
   (window as unknown as { IntersectionObserver: unknown }).IntersectionObserver = IntersectionObserverStub;
+
+  // jsdom does not implement matchMedia (used by useMediaQuery, e.g. for prefers-reduced-motion).
+  // Stub it globally so usePresence and other motion consumers resolve correctly in tests.
+  window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  }));
 }

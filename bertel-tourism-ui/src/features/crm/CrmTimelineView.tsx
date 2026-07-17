@@ -14,6 +14,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { deleteCrmInteraction, listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
+import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 import {
   CrmFilterBar,
@@ -172,7 +173,11 @@ export function CrmTimelineView({
           {/* Garde plein-écran sur le chargement INITIAL uniquement : une page 2 (cursor non
               nul) en chargement/erreur ne remplace pas la liste (erreur inline près du bouton). */}
           {timelineQuery.isLoading && cursor === null ? (
-            <div className="crm-loading">Chargement de la timeline…</div>
+            <div role="status" aria-busy="true" aria-label="Chargement de la timeline" className="crm-loading-skeleton">
+              {Array.from({ length: 4 }, (_, index) => (
+                <SkeletonBlock key={index} className="h-20 w-full rounded-shellMd" />
+              ))}
+            </div>
           ) : timelineQuery.isError && cursor === null ? (
             <div className="inline-alert">Échec du chargement : {(timelineQuery.error as Error).message}</div>
           ) : (

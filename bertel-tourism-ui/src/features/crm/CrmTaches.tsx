@@ -15,6 +15,7 @@ import type { CrmTask, CrmTaskStatus } from '../../types/domain';
 import { AgAv, Seg } from './crm-primitives';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
+import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, dueBadgeClassOf, formatShort } from './crm-view-utils';
 
 // §66 — une interaction « clôturable » : ni déjà traitée ni annulée. Le prompt de clôture ne
@@ -139,7 +140,17 @@ export function CrmTaches({
   }, [directoryQuery.data]);
 
   if (tasksQuery.isLoading) {
-    return <div className="crm-loading">Chargement des tâches…</div>;
+    return (
+      <div role="status" aria-busy="true" aria-label="Chargement des tâches" className="crm-loading-skeleton crm-loading-skeleton--kanban">
+        {['A faire', 'En cours', 'Fait'].map((column) => (
+          <div key={column} className="crm-loading-skeleton__column" aria-hidden="true">
+            <SkeletonBlock className="h-4 w-1/2 rounded-shellSm" />
+            <SkeletonBlock className="h-16 w-full rounded-shellMd" />
+            <SkeletonBlock className="h-16 w-full rounded-shellMd" />
+          </div>
+        ))}
+      </div>
+    );
   }
   if (tasksQuery.isError) {
     return <div className="inline-alert">Échec du chargement des tâches : {(tasksQuery.error as Error).message}</div>;

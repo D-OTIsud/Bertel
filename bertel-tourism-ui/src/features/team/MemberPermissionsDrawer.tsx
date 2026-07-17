@@ -58,14 +58,11 @@ export function MemberPermissionsDrawer({
   onClose,
   onChanged,
 }: MemberPermissionsDrawerProps) {
-  // Guard: nothing to render when no member is selected (the Modal mounts only when open).
-  if (!member) {
-    return null;
-  }
-
   const groups = groupByCategory(catalog);
-  const displayName = member.displayName ?? member.email ?? member.userId;
-  const roleLabel = businessRoleLabel(member.businessRoleCode);
+  // `member` can be null while the Modal is still mounted and animating out (open=false but
+  // usePresence keeps it rendered) — every member-dependent read below stays guarded.
+  const displayName = member?.displayName ?? member?.email ?? member?.userId ?? '';
+  const roleLabel = businessRoleLabel(member?.businessRoleCode);
 
   async function applyPreset() {
     if (!member) return;
@@ -111,88 +108,95 @@ export function MemberPermissionsDrawer({
   }
 
   return (
-    <Modal variant="drawer" title={displayName} onClose={onClose}>
-      <div className="perm-drawer">
-        <p className="perm-drawer__sub">
-          Permissions individuelles de ce membre. Rôle métier : <strong>{roleLabel}</strong>.
-        </p>
+    <Modal
+      variant="drawer"
+      title={displayName}
+      open={!!member}
+      onOpenChange={(next) => { if (!next) onClose(); }}
+    >
+      {member && (
+        <div className="perm-drawer">
+          <p className="perm-drawer__sub">
+            Permissions individuelles de ce membre. Rôle métier : <strong>{roleLabel}</strong>.
+          </p>
 
-        <div className="perm-drawer__preset">
-          <button
-            type="button"
-            className="ghost-button"
-            disabled={!member.businessRoleCode}
-            onClick={() => void applyPreset()}
-            title={!member.businessRoleCode ? 'Aucun rôle métier défini pour ce membre' : undefined}
-          >
-            <Wand2 size={14} aria-hidden /> Appliquer le préréglage {roleLabel}
-          </button>
-          <p className="pref__hint">Accorde les permissions standard pour ce rôle (additif — ne révoque rien).</p>
-        </div>
-
-        <div className="perm-groups">
-          {groups.map(({ category, label, perms }) => (
-            <section key={category} className="perm-group">
-              <h3 className="perm-group__head">{label}</h3>
-              <ul className="perm-list">
-                {perms.map((p) => {
-                  const userHas = member.permissionCodes.includes(p.code);
-                  const orgHas = orgPermissions.includes(p.code);
-                  return (
-                    <li key={p.code} className="perm-row">
-                      <input
-                        type="checkbox"
-                        id={`perm-user-${p.code}`}
-                        checked={userHas}
-                        onChange={() => void toggleUserPermission(p.code, userHas)}
-                        className="perm-check"
-                      />
-                      <label htmlFor={`perm-user-${p.code}`} className="perm-row__label">
-                        {p.name}
-                        {orgHas && <span className="perm-inherit">héritée de l’ORG</span>}
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          ))}
-        </div>
-
-        {canManageOrgDefaults && (
-          <div className="perm-drawer__org">
-            <div className="perm-drawer__org-head">
-              <h2>Permissions par défaut de l’organisation</h2>
-              <span className="badge badge--info badge--xs" title="Réservé aux administrateurs de rang ≥ 30">rang ≥ 30</span>
-            </div>
-            <p className="pref__hint">Ces permissions sont héritées par tous les membres de l’ORG.</p>
-            <div className="perm-groups">
-              {groups.map(({ category, label, perms }) => (
-                <section key={`org-${category}`} className="perm-group">
-                  <h3 className="perm-group__head">{label}</h3>
-                  <ul className="perm-list">
-                    {perms.map((p) => {
-                      const orgHas = orgPermissions.includes(p.code);
-                      return (
-                        <li key={p.code} className="perm-row">
-                          <input
-                            type="checkbox"
-                            id={`perm-org-${p.code}`}
-                            checked={orgHas}
-                            onChange={() => void toggleOrgPermission(p.code, orgHas)}
-                            className="perm-check"
-                          />
-                          <label htmlFor={`perm-org-${p.code}`} className="perm-row__label">{p.name}</label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
+          <div className="perm-drawer__preset">
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!member.businessRoleCode}
+              onClick={() => void applyPreset()}
+              title={!member.businessRoleCode ? 'Aucun rôle métier défini pour ce membre' : undefined}
+            >
+              <Wand2 size={14} aria-hidden /> Appliquer le préréglage {roleLabel}
+            </button>
+            <p className="pref__hint">Accorde les permissions standard pour ce rôle (additif — ne révoque rien).</p>
           </div>
-        )}
-      </div>
+
+          <div className="perm-groups">
+            {groups.map(({ category, label, perms }) => (
+              <section key={category} className="perm-group">
+                <h3 className="perm-group__head">{label}</h3>
+                <ul className="perm-list">
+                  {perms.map((p) => {
+                    const userHas = member.permissionCodes.includes(p.code);
+                    const orgHas = orgPermissions.includes(p.code);
+                    return (
+                      <li key={p.code} className="perm-row">
+                        <input
+                          type="checkbox"
+                          id={`perm-user-${p.code}`}
+                          checked={userHas}
+                          onChange={() => void toggleUserPermission(p.code, userHas)}
+                          className="perm-check"
+                        />
+                        <label htmlFor={`perm-user-${p.code}`} className="perm-row__label">
+                          {p.name}
+                          {orgHas && <span className="perm-inherit">héritée de l’ORG</span>}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+
+          {canManageOrgDefaults && (
+            <div className="perm-drawer__org">
+              <div className="perm-drawer__org-head">
+                <h2>Permissions par défaut de l’organisation</h2>
+                <span className="badge badge--info badge--xs" title="Réservé aux administrateurs de rang ≥ 30">rang ≥ 30</span>
+              </div>
+              <p className="pref__hint">Ces permissions sont héritées par tous les membres de l’ORG.</p>
+              <div className="perm-groups">
+                {groups.map(({ category, label, perms }) => (
+                  <section key={`org-${category}`} className="perm-group">
+                    <h3 className="perm-group__head">{label}</h3>
+                    <ul className="perm-list">
+                      {perms.map((p) => {
+                        const orgHas = orgPermissions.includes(p.code);
+                        return (
+                          <li key={p.code} className="perm-row">
+                            <input
+                              type="checkbox"
+                              id={`perm-org-${p.code}`}
+                              checked={orgHas}
+                              onChange={() => void toggleOrgPermission(p.code, orgHas)}
+                              className="perm-check"
+                            />
+                            <label htmlFor={`perm-org-${p.code}`} className="perm-row__label">{p.name}</label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

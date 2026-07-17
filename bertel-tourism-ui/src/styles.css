@@ -127,6 +127,18 @@
   --lbl-qualite:    #b3373b;
   --lbl-excellence: #b9892f;
   --orange-soft: var(--accent-soft);   /* audit S6 : doublon exact de --accent-soft, aliasé */
+
+  /* Motion foundations (premium UI motion pass) — one timing/easing system for
+     modals, drawers, status banners, button feedback, and skeleton reveals. */
+  --motion-instant: 90ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-surface: 280ms;
+  --motion-exit: 180ms;
+  --ease-premium-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-premium-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 10px;
 }
 
 * {
@@ -212,6 +224,79 @@ textarea::placeholder {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Motion primitives (premium UI motion pass) — shared entrance/exit/feedback
+   animations. Consumed by RouteMotion, status banners, chips/badges, and the
+   editor's success pulse. `usePresence`-driven exits use the sibling
+   `[data-motion-phase]` selectors defined next to each consumer (Modal,
+   OfflineBanner, PeerSavedBanner) rather than a generic exit class here,
+   since each surface's exit transform differs (fade vs. slide vs. scale). */
+.motion-page-enter {
+  animation: motion-page-enter-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-page-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-sm)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-status-enter {
+  animation: motion-status-enter-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-status-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-md)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-pop {
+  animation: motion-pop-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-pop-keyframes {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.motion-content-reveal {
+  animation: motion-content-reveal-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-content-reveal-keyframes {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* One restrained pulse — no bounce, no color change (color is carried by the
+   caller's own success icon/text, e.g. EditorTopbar's check icon). */
+.motion-success {
+  animation: motion-success-keyframes var(--motion-base) var(--ease-premium-out);
+}
+@keyframes motion-success-keyframes {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.motion-spin {
+  animation: motion-spin-keyframes 0.9s linear infinite;
+}
+@keyframes motion-spin-keyframes {
+  to { transform: rotate(360deg); }
+}
+
+/* D1 (writing-plans spec): transforms/animations must be REMOVED under
+   reduced motion, not merely shortened by the blanket .01ms duration above —
+   a translateY/scale animation at .01ms still paints one transformed frame.
+   Spinners/shimmer stop too (matches the manual QA acceptance criterion). */
+@media (prefers-reduced-motion: reduce) {
+  .motion-page-enter,
+  .motion-status-enter,
+  .motion-pop,
+  .motion-content-reveal,
+  .motion-success,
+  .motion-spin {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -633,6 +718,46 @@ textarea::placeholder {
   box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
 }
 
+/* Indicateur glissant — opt-in via .view-switch--indicator, mesuré en JS
+   (largeur des boutons dérivée du padding, pas une hypothèse 25%/bouton).
+   Task 23 audit: `width` retiré de la transition (icon-only buttons de même
+   classe/padding ⇒ offsetWidth identique pour les 4 boutons, donc `width`
+   n'anime jamais réellement — seul `transform` doit être animé ; la valeur
+   `width` posée en style inline reste appliquée instantanément, sans
+   transition, ce qui respecte l'invariant « pas de transition sur
+   width/height/top/left » du plan). */
+.view-switch--indicator {
+  position: relative;
+}
+.view-switch--indicator .view-switch__btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  box-shadow: none;
+  transition: color 140ms ease;
+}
+.view-switch--indicator .view-switch__btn.is-on {
+  background: transparent;
+  box-shadow: none;
+}
+.view-switch__indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
+  transition: transform 180ms var(--ease-premium-out);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-switch__indicator {
+    transition: none !important;
+  }
+}
+
 /* ---- Vue Table dense de l'Explorer (D17) ---- */
 .results-table {
   width: 100%;
@@ -809,6 +934,11 @@ textarea::placeholder {
   border: 1px solid var(--warn-border);
   border-radius: var(--radius-pill);
   box-shadow: var(--shadow-soft);
+}
+.offline-banner[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: opacity 140ms var(--ease-premium-in), transform 140ms var(--ease-premium-in);
 }
 
 /* ---- Squelettes : pas de spinner central, calqués sur la grille de la carte (impl. 3.1) ---- */
@@ -1559,6 +1689,24 @@ a {
 .primary-button:hover,
 .open-pill:hover {
   transform: translateY(-1px);
+}
+
+.chip:active,
+.ghost-button:active,
+.primary-button:active,
+.open-pill:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: var(--motion-instant);
+}
+.chip:disabled:active,
+.ghost-button:disabled:active,
+.primary-button:disabled:active,
+.open-pill:disabled:active,
+.chip[aria-disabled='true']:active,
+.ghost-button[aria-disabled='true']:active,
+.primary-button[aria-disabled='true']:active,
+.open-pill[aria-disabled='true']:active {
+  transform: none;
 }
 
 /* D10 : contrôles aria-disabled (raison accessible via aria-describedby) — même
@@ -2855,6 +3003,16 @@ a {
   }
 }
 
+.page-skeleton { display: flex; flex-direction: column; gap: 16px; padding: 24px; }
+.page-skeleton__row { display: flex; gap: 16px; }
+.page-skeleton__col { display: flex; flex: 1; flex-direction: column; gap: 8px; justify-content: center; }
+
+.editor-loading { display: flex; flex-direction: column; gap: 20px; padding: 20px; }
+.editor-loading__topbar { display: flex; align-items: center; justify-content: space-between; }
+.editor-loading__body { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+.editor-loading__rail { display: flex; flex-direction: column; gap: 8px; }
+.editor-loading__form { display: flex; flex-direction: column; gap: 16px; }
+
 .drawer-header p {
   margin: 0.35rem 0 0;
   color: var(--text-muted);
@@ -3991,6 +4149,75 @@ a {
 @media (max-width: 760px) {
   .app-modal--drawer { width: 100%; max-width: 100%; }
 }
+
+/* Motion pass — presence-phase transitions (usePresence via Modal.tsx). Overlay
+   fades; centered modal fades+lifts+scales; drawer fades+slides from the right.
+   Exit uses --ease-premium-in, enter uses --ease-premium-out (D1). */
+.app-modal-overlay {
+  opacity: 1;
+  transition: opacity 160ms var(--ease-premium-out);
+}
+.app-modal-overlay[data-motion-phase='entering'] {
+  opacity: 0;
+}
+.app-modal-overlay[data-motion-phase='exiting'] {
+  opacity: 0;
+  transition-duration: 140ms;
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity var(--motion-base) var(--ease-premium-out), transform var(--motion-base) var(--ease-premium-out);
+}
+.app-modal[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+}
+.app-modal[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal--drawer {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--motion-surface) var(--ease-premium-out), transform var(--motion-surface) var(--ease-premium-out);
+}
+.app-modal--drawer[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateX(18px);
+}
+.app-modal--drawer[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateX(18px);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-modal-overlay,
+  .app-modal,
+  .app-modal--drawer {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* D12 — drawer panel fallback shell (while lazy JS chunk loads). */
+.drawer-panel-fallback {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 100%;
+  max-width: 1180px;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  z-index: 50;
+}
+
 /* 7.4 — révélation du mot de passe temporaire d'invitation (vocabulaire maison). */
 .invite-temp-row { display: flex; align-items: center; gap: 8px; }
 .invite-temp-code {
@@ -8289,6 +8516,10 @@ a {
   border-color: var(--line-strong);
 }
 
+.map-panel__tool-button:active {
+  transform: scale(0.98);
+}
+
 .map-panel__tool-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -10489,6 +10720,7 @@ a {
 }
 .dashboard-widget-state { color: var(--ink-3); font-size: 0.8rem; }
 .dashboard-widget-state--error { color: var(--destructive); }
+.dashboard-widget-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
 
 /* ── Dashboard — onglets par vocation ──────────────────────────────────────── */
 .dashboard-tabs {
@@ -10506,6 +10738,7 @@ a {
   border-bottom: 2px solid transparent;
   background: none;
   cursor: pointer;
+  transition: color var(--motion-fast) ease, border-bottom-color var(--motion-fast) ease;
 }
 .dashboard-tab:hover { color: var(--ink-1); }
 .dashboard-tab--active {
@@ -10666,7 +10899,7 @@ a {
   align-items: center;
   gap: 7px;
   white-space: nowrap;
-  transition: all 0.14s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 .crm-app .crm-tabs button:hover { color: var(--ink); }
 /* Contraste (rectif PO point 2) : onglet actif PLEIN accent, texte blanc. */
@@ -10698,6 +10931,10 @@ a {
   font-size: 13px;
   color: var(--ink-3);
 }
+.crm-app .crm-loading-skeleton { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.crm-app .crm-loading-skeleton__row { display: flex; gap: 12px; }
+.crm-app .crm-loading-skeleton--kanban { flex-direction: row; }
+.crm-app .crm-loading-skeleton__column { display: flex; flex: 1; flex-direction: column; gap: 10px; }
 
 /* ---------- Boutons maison (le .btn du prototype, scopé) ---------- */
 .crm-app .crm-btn {
@@ -10714,7 +10951,7 @@ a {
   color: var(--ink-2);
   cursor: pointer;
   text-decoration: none;
-  transition: all 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .crm-btn:hover { border-color: var(--line-strong); color: var(--ink); }
@@ -10725,6 +10962,9 @@ a {
 }
 .crm-app .crm-btn.primary:hover { filter: brightness(1.06); }
 .crm-app .crm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.crm-app .crm-btn:active { transform: scale(0.98); }
+.crm-app .crm-btn:disabled:active,
+.crm-app .crm-btn[aria-disabled='true']:active { transform: none; }
 .crm-app .crm-load-more { margin-top: 12px; }
 
 /* ---------- KPI strip ---------- */
@@ -10866,7 +11106,7 @@ a {
   font-weight: 600;
   color: var(--ink-3);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .crm-chip:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
@@ -10953,7 +11193,7 @@ a {
 .crm-app .crm-row:last-child { border-bottom: 0; }
 .crm-app .crm-row:hover { background: var(--surface-2); }
 .crm-app .crm-row:hover .crm-row__go { color: var(--accent-deep); transform: translateX(2px); }
-.crm-app .crm-row__go { color: var(--ink-4); transition: all 0.12s ease; }
+.crm-app .crm-row__go { color: var(--ink-4); transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease; }
 
 .crm-app .crm-row__id { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .crm-app .crm-row__name { min-width: 0; }
@@ -11312,7 +11552,7 @@ a {
   background: var(--surface);
   border: 1px solid var(--line);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   font-family: inherit;
 }
 .crm-app .kind-chip:hover { border-color: var(--line-strong); color: var(--ink); }
@@ -11773,7 +12013,7 @@ a {
   border-radius: var(--r-md);
   box-shadow: var(--shadow-s);
   padding: 13px 14px;
-  transition: all 0.14s ease;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 .crm-app .ticket:hover { border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-m); }
 /* Carte saisie pendant le glisser : estompée à 40 % (fantôme) — affordance « en mouvement ». */

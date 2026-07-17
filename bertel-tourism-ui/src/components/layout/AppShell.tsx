@@ -6,6 +6,7 @@ import { useUiStore } from '../../store/ui-store';
 import { CommandPalette } from './CommandPalette';
 import { MobileNavDrawer } from './MobileNavDrawer';
 import { ProfileDrawer } from './ProfileDrawer';
+import { RouteMotion } from './RouteMotion';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -32,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           tabIndex={-1}
           className={`workspace${isObjectEdit ? ' workspace--object-edit' : ''}`}
         >
-          {children}
+          <RouteMotion>{children}</RouteMotion>
         </main>
       </div>
       <ProfileDrawer open={profileOpen} onOpenChange={setProfileOpen} />
@@ -40,7 +41,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <CommandPalette />
       {/* D12 : tiroir de navigation mobile (rail masqué < 768px). */}
       <MobileNavDrawer />
-      <Suspense fallback={null}>
+      <Suspense
+        fallback={
+          drawerObjectId ? (
+            <div className="drawer-panel-fallback" role="status" aria-busy="true" aria-label="Chargement de la fiche" />
+          ) : null
+        }
+      >
         <ObjectDrawer objectId={drawerObjectId} />
       </Suspense>
     </div>

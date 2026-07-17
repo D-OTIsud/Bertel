@@ -13,6 +13,7 @@ import { useExplorerStore } from '../../store/explorer-store';
 import { buildSearchParams } from '../../lib/explorer-search-params';
 import { buildDynamicListFilters, createDynamicList } from '../../services/lists';
 import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chips';
+import { cn } from '@/lib/utils';
 
 /**
  * Barre de filtres actifs de l'Explorateur (impl. 3.2) : une pastille retirable
@@ -192,7 +193,7 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
         <button
           key={chip.key}
           type="button"
-          className="active-filter-chip"
+          className={cn('active-filter-chip', 'motion-pop')}
           onClick={() => remove(chip)}
           aria-label={`Retirer le filtre : ${chip.label}`}
         >

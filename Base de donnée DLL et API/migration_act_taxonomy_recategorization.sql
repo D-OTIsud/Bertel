@@ -157,6 +157,7 @@ SELECT m.object_id, 'taxonomy_act', rc.id,
        'act_taxonomy_recat_20260717',
        'Recatégorisation §186 — fiche sans sous-catégorie avant la passe'
 FROM _act_recat m
+JOIN object o ON o.id = m.object_id AND o.object_type = 'ACT'
 JOIN ref_code rc ON rc.domain = 'taxonomy_act' AND rc.code = m.new_code
 WHERE NOT EXISTS (
   SELECT 1 FROM object_taxonomy ot
@@ -170,7 +171,10 @@ ON CONFLICT (object_id, domain) DO NOTHING;
 DO $$
 DECLARE v_id text;
 BEGIN
-  FOR v_id IN SELECT object_id FROM _act_recat
+  FOR v_id IN
+    SELECT m.object_id
+    FROM _act_recat m
+    JOIN object o ON o.id = m.object_id AND o.object_type = 'ACT'
   LOOP
     PERFORM api.refresh_object_filter_caches(v_id);
   END LOOP;

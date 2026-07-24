@@ -2,7 +2,7 @@
 -- Pins the I4 §137 interop profiles (datatourisme / apidae / tourinsoft):
 --   api.interop_object_core(text)          — shared gated core reader
 --   api.get_object_interop(text, text)     — per-profile serializer dispatcher
--- Structural (functions exist, SECURITY INVOKER, service_role-only; 19 crosswalk rows per profile)
+-- Structural (functions exist, SECURITY INVOKER, service_role-only; 19 type-level rows per profile)
 -- + behavioural (each profile's shape + type/class from the crosswalk, address/geo, public-only
 -- contacts, published gate, unknown id / unknown profile -> NULL).
 -- Self-cleaning: seeds a published + draft fixture in a sub-transaction always rolled back
@@ -32,10 +32,10 @@ BEGIN
   IF NOT has_function_privilege('service_role','api.get_object_interop(text,text)','EXECUTE') THEN
     RAISE EXCEPTION 'get_object_interop must be service_role-executable';
   END IF;
-  IF (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='datatourisme') <> 19
-     OR (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='apidae') <> 19
-     OR (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='tourinsoft') <> 19 THEN
-    RAISE EXCEPTION 'expected 19 crosswalk rows per profile (datatourisme/apidae/tourinsoft)';
+  IF (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='datatourisme' AND taxonomy_code IS NULL) <> 19
+     OR (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='apidae' AND taxonomy_code IS NULL) <> 19
+     OR (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='tourinsoft' AND taxonomy_code IS NULL) <> 19 THEN
+    RAISE EXCEPTION 'expected 19 type-level crosswalk rows per profile (datatourisme/apidae/tourinsoft)';
   END IF;
 
   -- ---------- Fixture ----------

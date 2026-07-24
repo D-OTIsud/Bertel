@@ -925,7 +925,19 @@
                 "domain": { "type": ["string", "null"], "description": "Domaine de taxonomie (ex. `taxonomy_res`)." },
                 "code": { "type": ["string", "null"], "description": "Code du nœud assigné." },
                 "name": { "type": ["string", "null"], "description": "Libellé du nœud assigné." },
-                "path": { "type": "array", "items": { "type": "string" }, "description": "Chemin de libellés de la racine au nœud." }
+                "path": {
+                  "type": "array",
+                  "description": "Chemin structuré de la racine au nœud assigné.",
+                  "items": {
+                    "type": "object",
+                    "required": ["code", "name"],
+                    "properties": {
+                      "code": { "type": "string", "description": "Code stable du nœud dans le chemin." },
+                      "name": { "type": "string", "description": "Libellé d’affichage du nœud." }
+                    },
+                    "additionalProperties": false
+                  }
+                }
               },
               "additionalProperties": true
             }
@@ -1018,7 +1030,7 @@
           "datatourisme": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Présent uniquement avec `?format=datatourisme`. Document JSON-LD ontologie DATAtourisme (`@context` @vocab, `@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`)."
+            "description": "Présent uniquement avec `?format=datatourisme`. Document JSON-LD ontologie DATAtourisme (`@context` @vocab, `@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`). Pour HLO, la classe est résolue par le nœud taxonomique mappé le plus proche : Chambre d’hôtes → `Guesthouse`, Meublé de tourisme / gîte → `SelfCateringAccommodation`, Hébergement collectif → `GroupLodging`, Refuge et gîte d’étape → `StopOverOrGroupLodge`; sinon repli type HLO → `Accommodation`."
           },
           "apidae": {
             "type": "object",

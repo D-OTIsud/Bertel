@@ -1,7 +1,7 @@
 # Refonte nature/forme de la taxonomie hébergement (§190) — audit croisé Berta, arbre cible, rapport d'arbitrage
 
 **Date** : 2026-07-24 · **Périmètre** : `taxonomy_hlo` (476 HLO publiés) + `taxonomy_rva` (0 publié) + libellés frontend + export DATAtourisme
-**État** : audit DONE (chiffres live vérifiés à l'unité) · plan READY · exécution PENDING arbitrages PO
+**État** : audit DONE · décisions PO VALIDÉES sans exception · artefacts repo + dry-runs cloud DONE · application cloud PENDING fenêtre partenaires/CI
 **Référence** : prolonge la remédiation §186→§189 (close 2026-07-17) ; même méthode (proposition nominative → arbitrage PO en session → recodage tracé).
 
 ---

@@ -220,7 +220,9 @@ BEGIN
   v_locale := NULLIF(COALESCE(v_user_meta->>'locale', v_app_meta->>'locale'), '');
   v_timezone := NULLIF(COALESCE(v_user_meta->>'timezone', v_app_meta->>'timezone'), '');
   v_role := NULLIF(v_app_meta->>'role', '');
-  IF v_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN v_role := 'tourism_agent'; END IF;
+  IF v_role IS NULL OR v_role NOT IN ('owner', 'super_admin', 'tourism_agent') THEN
+    v_role := 'tourism_agent';
+  END IF;
 
   v_lang_source := COALESCE(
     v_user_meta->'lang_prefs', v_user_meta->'langPrefs',

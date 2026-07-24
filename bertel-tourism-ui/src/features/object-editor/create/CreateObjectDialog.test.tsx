@@ -30,15 +30,18 @@ it('disables create until a type and a non-empty name are chosen', () => {
   expect(create).toBeEnabled();
 });
 
-it('explains the difference between a classified campsite and other open-air accommodation', () => {
+it('keeps CAMP/HPA cards compact and exposes their subcategories in tooltips', () => {
   render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
 
-  expect(screen.getByRole('radio', { name: /Camping classé — Terrain classé, avec ou sans locatifs/i }))
-    .toBeInTheDocument();
-  expect(screen.getByRole('radio', { name: /Aire ou hébergement de plein air — Aire naturelle/i }))
-    .toBeInTheDocument();
-  expect(screen.getByText('Terrain classé, avec ou sans locatifs.')).toBeVisible();
-  expect(screen.getByText('Aire naturelle, camping à la ferme, aire camping-car ou glamping.')).toBeVisible();
+  const camp = screen.getByRole('radio', { name: /^Camping classé$/i });
+  const hpa = screen.getByRole('radio', { name: /^Hébergement de plein air$/i });
+  expect(camp).toHaveAttribute('aria-describedby', 'create-type-CAMP-tooltip');
+  expect(hpa).toHaveAttribute('aria-describedby', 'create-type-HPA-tooltip');
+
+  expect(screen.getByText('Camping · Camping chez l’habitant')).toBeInTheDocument();
+  expect(screen.getByText(
+    'Aire naturelle de camping · Camping à la ferme · Hébergement insolite de plein air · Aire d’accueil camping-car',
+  )).toBeInTheDocument();
 });
 
 it('calls createObject with the chosen type+name and forwards the new id', async () => {

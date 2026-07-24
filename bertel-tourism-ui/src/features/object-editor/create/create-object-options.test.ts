@@ -22,15 +22,20 @@ describe('buildCreateTypeOptions', () => {
     expect(heb?.types.find((t) => t.code === 'HOT')?.label).toBe('Hôtel');
   });
 
-  it('explains the CAMP/HPA boundary directly in the picker', () => {
+  it('exposes the CAMP/HPA taxonomy choices without lengthening their labels', () => {
     const heb = buildCreateTypeOptions().find((g) => g.archetype === 'HEB');
     expect(heb?.types.find((t) => t.code === 'CAMP')).toMatchObject({
       label: 'Camping classé',
-      description: 'Terrain classé, avec ou sans locatifs.',
+      subcategories: ['Camping', 'Camping chez l’habitant'],
     });
     expect(heb?.types.find((t) => t.code === 'HPA')).toMatchObject({
-      label: 'Aire ou hébergement de plein air',
-      description: 'Aire naturelle, camping à la ferme, aire camping-car ou glamping.',
+      label: 'Hébergement de plein air',
+      subcategories: [
+        'Aire naturelle de camping',
+        'Camping à la ferme',
+        'Hébergement insolite de plein air',
+        'Aire d’accueil camping-car',
+      ],
     });
   });
 });

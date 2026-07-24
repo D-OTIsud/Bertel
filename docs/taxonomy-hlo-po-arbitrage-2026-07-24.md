@@ -43,11 +43,11 @@ Recommandation en bloc : `gite_de_randonnee` (« Refuge et gîte d’étape »).
 
 ### Nature contradictoire (1)
 
-Cette fiche exige une vérification métier : `chambre_d_hotes` si accueil chez l’habitant avec petit-déjeuner, `location_saisonniere` si logement entier autonome.
+La copie canonique cloud la décrit comme « charmantes chambres d’hôtes » avec deux chambres, salle de bains/toilettes indépendantes et cuisine extérieure. Recommandation : conserver `chambre_d_hotes`, sous réserve de validation PO/OTI (la présence du petit-déjeuner n’est pas documentée).
 
 | ID | Fiche | Berta | Actuel | Recommandation | Décision PO |
 |---|---|---|---|---|---|
-| HLORUN000000016B | Entr’Deux Gones | Location saisonnière / Chambre d’hôte | `chambre_d_hotes` | Vérifier le fonctionnement réel | À DÉCIDER |
+| HLORUN000000016B | Entr’Deux Gones | Location saisonnière / Chambre d’hôte | `chambre_d_hotes` | conserver `chambre_d_hotes` | À DÉCIDER |
 
 ### Insolites présumés chambres d’hôtes (3)
 

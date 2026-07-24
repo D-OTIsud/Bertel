@@ -30,6 +30,17 @@ it('disables create until a type and a non-empty name are chosen', () => {
   expect(create).toBeEnabled();
 });
 
+it('explains the difference between a classified campsite and other open-air accommodation', () => {
+  render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+
+  expect(screen.getByRole('radio', { name: /Camping classé — Terrain classé, avec ou sans locatifs/i }))
+    .toBeInTheDocument();
+  expect(screen.getByRole('radio', { name: /Aire ou hébergement de plein air — Aire naturelle/i }))
+    .toBeInTheDocument();
+  expect(screen.getByText('Terrain classé, avec ou sans locatifs.')).toBeVisible();
+  expect(screen.getByText('Aire naturelle, camping à la ferme, aire camping-car ou glamping.')).toBeVisible();
+});
+
 it('calls createObject with the chosen type+name and forwards the new id', async () => {
   mockCreateObject.mockResolvedValue('HOTRUN0000000001');
   const onCreated = jest.fn();

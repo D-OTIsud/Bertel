@@ -16,8 +16,8 @@ export const MAX_OBJECT_NAME_LENGTH = 200;
  */
 const CREATE_TYPE_LABELS: Record<string, string> = {
   HOT: 'Hôtel',
-  HPA: 'Hébergement plein air',
-  CAMP: 'Camping',
+  HPA: 'Aire ou hébergement de plein air',
+  CAMP: 'Camping classé',
   RVA: 'Résidence vacances',
   RES: 'Restaurant',
   ITI: 'Itinéraire',
@@ -34,6 +34,15 @@ const CREATE_TYPE_LABELS: Record<string, string> = {
   SPU: 'Service public',
 };
 
+/**
+ * Short decision aids shown directly in the picker when two object types are
+ * easy to confuse. They explain the business boundary, not the technical code.
+ */
+const CREATE_TYPE_DESCRIPTIONS: Record<string, string> = {
+  CAMP: 'Terrain classé, avec ou sans locatifs.',
+  HPA: 'Aire naturelle, camping à la ferme, aire camping-car ou glamping.',
+};
+
 /** Accented French label for a single object-type code (picker + duplicate hint). */
 export function createTypeLabel(code: string): string {
   return CREATE_TYPE_LABELS[code] ?? TYPE_LABEL[code] ?? code;
@@ -42,6 +51,7 @@ export function createTypeLabel(code: string): string {
 export interface CreateTypeOption {
   code: string;
   label: string;
+  description?: string;
 }
 
 export interface CreateTypeGroup {
@@ -56,7 +66,7 @@ export function buildCreateTypeOptions(): CreateTypeGroup[] {
   const byArchetype = new Map<ArchetypeCode, CreateTypeOption[]>();
   for (const [code, meta] of Object.entries(TYPE_ARCHETYPES)) {
     const list = byArchetype.get(meta.archetype) ?? [];
-    list.push({ code, label: createTypeLabel(code) });
+    list.push({ code, label: createTypeLabel(code), description: CREATE_TYPE_DESCRIPTIONS[code] });
     byArchetype.set(meta.archetype, list);
   }
   return [...byArchetype.entries()]

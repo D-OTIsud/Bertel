@@ -235,7 +235,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                         <label
                           key={option.code}
                           className={[
-                            'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
+                            'relative flex cursor-pointer items-start rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
                             selected
                               ? 'shadow-sm'
                               : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
@@ -257,12 +257,19 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                             value={option.code}
                             checked={selected}
                             onChange={() => setType(option.code)}
-                            aria-label={option.label}
+                            aria-label={option.description ? `${option.label} — ${option.description}` : option.label}
                             className="sr-only"
                           />
-                          <span className="truncate">{option.label}</span>
+                          <span className="min-w-0">
+                            <span className="block leading-5">{option.label}</span>
+                            {option.description ? (
+                              <span className="mt-0.5 block text-[11px] font-normal leading-[1.35] opacity-75">
+                                {option.description}
+                              </span>
+                            ) : null}
+                          </span>
                           {selected ? (
-                            <Check className="ml-auto h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
+                            <Check className="ml-auto mt-0.5 h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
                           ) : null}
                         </label>
                       );

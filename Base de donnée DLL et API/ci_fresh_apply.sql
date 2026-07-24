@@ -268,6 +268,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 BEGIN;
 \ir taxonomy_nature_forme_manifest_20260724.sql
 \ir tests/test_taxonomy_nature_forme_target.sql
+\ir tests/test_taxonomy_nature_forme_guard.sql
 ROLLBACK;
 
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='

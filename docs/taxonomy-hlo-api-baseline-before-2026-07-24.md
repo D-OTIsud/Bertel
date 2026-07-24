@@ -58,3 +58,9 @@ Les projections retirent uniquement `taxonomy` et `updated_at` de la carte, `tax
 | témoin non-HLO | `f323e60d290ad0f31501243bab57fecd` | `78801da09ec886b260b254ddb4354f90` | `61e10a8502e52a0e0b685701dab823f3` |
 
 Le contrôle exécutable correspondant est `Base de donnée DLL et API/tests/test_taxonomy_nature_forme_live_api.sql`. Il est volontairement hors fresh-apply : il cible ces huit identifiants cloud réels.
+
+## Validation de déploiement
+
+- **F1 post-taxonomie, pré-crosswalk** : PASS le 2026-07-24. Les huit empreintes schema.org, DATAtourisme, Apidae et Tourinsoft sont restées strictement identiques à la capture initiale ; les projections normalisées card/full sont conformes.
+- **T10 post-crosswalk** : PASS le 2026-07-24 à 16 h 43 RUN. Seul le second `@type` DATAtourisme varie comme prévu ; schema.org, Apidae et Tourinsoft restent identiques à l'octet.
+- Preuve consolidée : `docs/taxonomy-hlo-deployment-evidence-2026-07-24.md`.

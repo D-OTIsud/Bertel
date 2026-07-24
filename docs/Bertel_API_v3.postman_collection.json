@@ -1299,7 +1299,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "const d = pm.response.json();",
-                  "pm.test('bloc data.datatourisme (JSON-LD)', function () { pm.expect(d.data).to.have.property('datatourisme'); pm.expect(d.data.datatourisme['@type']).to.include('PointOfInterest'); });"
+                  "pm.test('bloc data.datatourisme (JSON-LD)', function () { pm.expect(d.data).to.have.property('datatourisme'); pm.expect(d.data.datatourisme['@type']).to.include('PointOfInterest'); });",
+                  "pm.test('classe DATAtourisme résolue', function () { const types = d.data.datatourisme['@type']; pm.expect(types).to.be.an('array').with.lengthOf(2); pm.expect(types[1]).to.be.a('string').and.not.empty; });"
                 ]
               }
             }
@@ -1316,7 +1317,7 @@
               "path": ["api", "public", "objects", "{{object_id}}"],
               "query": [{"key": "format", "value": "datatourisme"}]
             },
-            "description": "Ajoute un bloc ADDITIF `data.datatourisme` = document JSON-LD de l'ontologie nationale DATAtourisme (`@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`). Socle cœur — valider contre l'importeur DATAtourisme avant synchro de prod."
+            "description": "Ajoute un bloc ADDITIF `data.datatourisme` = document JSON-LD de l'ontologie nationale DATAtourisme (`@type [\"PointOfInterest\", <classe>]`, `rdfs:label`, `hasDescription`, `isLocatedAt`, `hasContact`). Pour HLO : Chambre d'hôtes → `Guesthouse`, Meublé de tourisme / gîte → `SelfCateringAccommodation`, Hébergement collectif → `GroupLodging`, Refuge et gîte d'étape → `StopOverOrGroupLodge`, puis fallback `Accommodation`. Socle cœur — valider contre l'importeur DATAtourisme avant synchro de prod."
           }
         },
         {

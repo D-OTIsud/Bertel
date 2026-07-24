@@ -270,6 +270,12 @@ BEGIN;
 \ir tests/test_taxonomy_nature_forme_target.sql
 ROLLBACK;
 
+\echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
+\ir migration_interop_crosswalk_leafaware.sql
+
+\echo '== I4d-test leaf-aware interop assertions =='
+\ir tests/test_interop_crosswalk_leafaware.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

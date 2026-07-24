@@ -23,9 +23,9 @@ BEGIN
       WHERE n.nspname='public' AND c.relname='ref_interop_crosswalk' AND c.relrowsecurity) <> 1 THEN
     RAISE EXCEPTION 'ref_interop_crosswalk missing or RLS disabled';
   END IF;
-  IF (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='jsonld') <> 19 THEN
+  IF (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='jsonld' AND taxonomy_code IS NULL) <> 19 THEN
     RAISE EXCEPTION 'expected 19 jsonld crosswalk rows, got %',
-      (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='jsonld');
+      (SELECT count(*) FROM public.ref_interop_crosswalk WHERE profile='jsonld' AND taxonomy_code IS NULL);
   END IF;
 
   -- 2. RPC exists, is SECURITY INVOKER (least privilege), service_role-ONLY.

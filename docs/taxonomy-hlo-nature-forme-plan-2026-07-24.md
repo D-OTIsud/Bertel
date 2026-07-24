@@ -1,6 +1,6 @@
 # Plan d'exécution — Refonte nature/forme de la taxonomie hébergement HLO (§190, v4)
 
-**Statut : PLAN — à valider par le PO avant toute exécution. Aucune écriture (fichier de migration, commit, base) tant que ce document n'est pas approuvé.**
+**Statut : EXÉCUTION EN COURS — plan et PO-1→PO-8 validés sans exception. Frontend, manifeste, migration/rollback taxonomie et migration crosswalk sont écrits ; les dry-runs cloud sont verts et n'ont rien persisté. Application cloud suspendue jusqu'à la fenêtre partenaires et au gate CI.**
 **Compagnon de** : `docs/taxonomy-hlo-nature-forme-2026-07-24.md` (le rapport d'audit §190 — listes nominatives des 40 arbitrages, arbre justifié, garde SQL). Ce plan est autonome : un interne peut l'exécuter sans l'historique de conversation.
 **Historique** : v1 2026-07-24 (plan initial) → v2 (9 corrections PO : atomicité, repo-first, population complète, manifeste déterministe) → v3 (7 corrections PO : idempotence tri-état, garde de dérive, ceinture closure, rollback des nœuds neufs, FK crosswalk, fiches du pool nominatives, checklist en fichier) → **v4 (2 corrections bloquantes PO : détection de mode fresh/live/RAISE dans la garde de dérive ; ordre du rollback — réactiver les anciens nœuds AVANT de restaurer les affectations, le trigger d'assignation refusant les nœuds non assignables ; + dry-run aller-retour migration+rollback, CHECK de complétude sur le crosswalk, 476 chemins impactés).**
 
@@ -265,24 +265,24 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 > Interdits absolus : `DELETE` (jamais) ; heuristique exécutée en production (jamais) ; apply cloud d'un fichier non committé (jamais) ; réactiver `auberge` / `chambre` / `gite_d_etape_et_de_randonnee` (jamais) ; Docker ou base locale (jamais — cloud uniquement).
 
 ### Phase A — Préparation (aucune écriture)
-- [ ] A1. Rejouer les comptages cloud : 476 HLO publiés ; 14 nature ; 16 gite_villa ; 10 split ; 199 auto publiés ; 1 porteur `gite_villa` archivé technique. Écart ⇒ régénérer les listes du rapport, STOP → PO.
-- [ ] A2. Patch frontend (§5bis, 6 points) ; jest + tsc verts ; grep libellés legacy = 0 ; commit.
-- [ ] A3. Préparer le support de session : tableaux 14/16/10 nominatifs + fiches PO-1→PO-8 + les 3 fiches du pool (Gîte du Malmany, Cap Vanisa, Manapany Lodge → `bungalow` ; survoler Manapany Lodge).
+- [x] A1. Rejouer les comptages cloud : 476 HLO publiés ; 14 nature ; 16 gite_villa ; 10 split ; 199 auto publiés ; 1 porteur `gite_villa` archivé technique. Écart ⇒ régénérer les listes du rapport, STOP → PO.
+- [x] A2. Patch frontend (§5bis, 6 points) ; jest + tsc verts ; grep libellés legacy = 0 ; commit.
+- [x] A3. Préparer le support de session : tableaux 14/16/10 nominatifs + fiches PO-1→PO-8 + les 3 fiches du pool (Gîte du Malmany, Cap Vanisa, Manapany Lodge → `bungalow` ; survoler Manapany Lodge).
 
 ### Phase B — Décisions
-- [ ] B1. Tenir la session PO (4 séries, §6) ; consigner chaque décision dans le support en séance.
-- [ ] B2. Annexer le support complété au rapport §190.
+- [x] B1. Tenir la session PO (4 séries, §6) ; consigner chaque décision dans le support en séance.
+- [x] B2. Annexer le support complété au rapport §190.
 
 ### Phase C — Gel et écriture (repo-first, zéro écriture cloud)
-- [ ] C1. Générer le **manifeste de recodage** (lecture seule) : `object_id | expected_old_code | target_code | source | motif` — 199 auto publiés + 1 archive technique + 40 PO nominatives + 3 fusions PO-4 = 243 lignes.
-- [ ] C2. Générer `rollback/taxonomy_nature_forme_before_state.csv` + `rollback/taxonomy_nature_forme_rollback.sql` (contrat §7c, **ordre v4** : réactiver les anciens nœuds D'ABORD [le trigger refuse une affectation vers un nœud non assignable] → restaurer affectations → parents + libellés → closure → désactiver les 7 nœuds créés [garde 0-porteur] → caches → **re-bump 476** → MV, vérifs). Relire les trois artefacts.
-- [ ] C3. Écrire `migration_taxonomy_nature_forme.sql` (12 étapes internes §7b : **détection de mode fresh/live/RAISE** + garde de dérive → comptages bi-état → 7 nœuds → 4 re-parentages → **ceinture closure** → 5 relibellés → recodage tri-état → fusions PO-4 → désactivations 0-porteur → bump 476 → boucle refresh porteurs → garde finale).
-- [ ] C4. Éditer à la main `migration_taxonomy_trees_seed.sql` vers l'arbre cible (7 créations, 4 re-parentages, 5 relibellés, flips is_active/is_assignable). **Jamais régénéré depuis la prod.**
-- [ ] C5. Écrire `tests/test_taxonomy_nature_forme_guard.sql` (DO-block, exemptions par source, `COALESCE(ot.source,'')`).
-- [ ] C6. Manifest `ci_fresh_apply.sql` : étape 13k (bloc 13*, avant l'étape `taxo`) + test en fin ; entrée runbook au format maison.
-- [ ] C7. Dry-run cloud **aller-retour** (v4) : `BEGIN → migration → assertions cible (T1/T2/T3 en requêtes) → logique de rollback (étapes 1-7 du §7c) → assertions état initial → ROLLBACK`. Prouve la migration ET le rollback sans rien écrire. Comptes conformes au gel.
+- [x] C1. Générer le **manifeste de recodage** (lecture seule) : `object_id | expected_old_code | target_code | source | motif` — 199 auto publiés + 1 archive technique + 40 PO nominatives + 3 fusions PO-4 = 243 lignes.
+- [x] C2. Générer `rollback/taxonomy_nature_forme_before_state.csv` + `rollback/taxonomy_nature_forme_rollback.sql` (contrat §7c, **ordre v4** : réactiver les anciens nœuds D'ABORD [le trigger refuse une affectation vers un nœud non assignable] → restaurer affectations → parents + libellés → closure → désactiver les 7 nœuds créés [garde 0-porteur] → caches → **re-bump 476** → MV, vérifs). Relire les trois artefacts.
+- [x] C3. Écrire `migration_taxonomy_nature_forme.sql` (12 étapes internes §7b : **détection de mode fresh/live/RAISE** + garde de dérive → comptages bi-état → 7 nœuds → 4 re-parentages → **ceinture closure** → 5 relibellés → recodage tri-état → fusions PO-4 → désactivations 0-porteur → bump 476 → boucle refresh porteurs → garde finale).
+- [x] C4. Éditer à la main `migration_taxonomy_trees_seed.sql` vers l'arbre cible (7 créations, 4 re-parentages, 5 relibellés, flips is_active/is_assignable). **Jamais régénéré depuis la prod.**
+- [x] C5. Écrire `tests/test_taxonomy_nature_forme_guard.sql` (DO-block, exemptions par source, `COALESCE(ot.source,'')`).
+- [x] C6. Manifest `ci_fresh_apply.sql` : étape 13k (bloc 13*, avant l'étape `taxo`) + test en fin ; entrée runbook au format maison.
+- [x] C7. Dry-run cloud **aller-retour** (v4) : `BEGIN → migration → assertions cible (T1/T2/T3 en requêtes) → logique de rollback (étapes 1-7 du §7c) → assertions état initial → ROLLBACK`. Prouve la migration ET le rollback sans rien écrire. Comptes conformes au gel.
 - [ ] C8. Gate fresh-apply CI verte (migration + snapshot convergent au même arbre).
-- [ ] C9. Relecture (PO ou pair) → **commit versionné de l'ensemble**. C'est cette version exacte qui sera appliquée.
+- [x] C9. Relecture (PO ou pair) → **commit versionné de l'ensemble**. C'est cette version exacte qui sera appliquée (`0a263df`).
 
 ### Phase D — Fenêtre cloud
 - [ ] D1. Pré-annonce partenaires (fenêtre prévue ; re-pull `/catalog` attendu ; incrémental couvert par le bump).
@@ -305,10 +305,10 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 
 ### Phase F — Crosswalk DATAtourisme (fenêtre séparée)
 - [ ] F1. Capturer la **baseline POST-TAXO** : apidae + tourinsoft + jsonld sur les 8 échantillons (référence octet).
-- [ ] F2. Écrire `migration_interop_crosswalk_leafaware.sql` selon PO-8 (recommandé : colonnes `taxonomy_domain`+`taxonomy_code`, **FK composite → ref_code(domain, code)** + **`CHECK ((taxonomy_domain IS NULL) = (taxonomy_code IS NULL))`**) : DDL + 2 index uniques partiels (défaut `WHERE taxonomy_code IS NULL` = sémantique de l'ancien PK ; leaf sinon) ; re-cibler les `ON CONFLICT` des seeds jsonld/interop existants ; résolution ancêtre-mappé-le-plus-proche (`ORDER BY cl.depth ASC LIMIT 1`, jointure par domaine) + fallback type-level ; seeds feuille **datatourisme uniquement** (PO-6).
+- [x] F2. Écrire `migration_interop_crosswalk_leafaware.sql` selon PO-8 (recommandé : colonnes `taxonomy_domain`+`taxonomy_code`, **FK composite → ref_code(domain, code)** + **`CHECK ((taxonomy_domain IS NULL) = (taxonomy_code IS NULL))`**) : DDL + 2 index uniques partiels (défaut `WHERE taxonomy_code IS NULL` = sémantique de l'ancien PK ; leaf sinon) ; re-cibler les `ON CONFLICT` des seeds jsonld/interop existants ; résolution ancêtre-mappé-le-plus-proche (`ORDER BY cl.depth ASC LIMIT 1`, jointure par domaine) + fallback type-level ; seeds feuille **datatourisme uniquement** (PO-6).
 - [ ] F3. Dry-run + CI + relecture + commit ; apply cloud.
 - [ ] F4. T10 : datatourisme CdH → `['PointOfInterest','Guesthouse']` ; apidae/tourinsoft/jsonld identiques à l'octet à la baseline F1.
-- [ ] F5. OpenAPI + Postman : @type affiné + correction de la dérive `path` (`string[]` → `[{code,name}]`).
+- [x] F5. OpenAPI + Postman : @type affiné + correction de la dérive `path` (`string[]` → `[{code,name}]`).
 
 ### Phase G — Clôture
 - [ ] G1. Rapport §190 : totaux 199, corrections §2c, décisions PO, 3 fiches du pool, preuves.

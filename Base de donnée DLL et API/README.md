@@ -260,6 +260,8 @@ Pour tout import d hebergement HLO, la categorie source et la sous-categorie son
 
 La synchronisation Berta vivante ne cree actuellement aucune affectation `object_taxonomy`. Tout futur ingesteur qui le fera doit appliquer cette regle et executer la garde rejouable documentee dans `docs/taxonomy-hlo-nature-forme-2026-07-24.md`.
 
+Le crosswalk DATAtourisme peut affiner la classe HLO sans changer le contrat de l API prestataire : `migration_interop_crosswalk_leafaware.sql` choisit le noeud taxonomique mappe le plus proche via la closure (`depth ASC`), puis retombe sur le mapping generique de l `object_type`. Les profils schema.org, Apidae et Tourinsoft restent sur leur mapping de type.
+
 ## Note de deploiement `ref_code`
 
 Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.

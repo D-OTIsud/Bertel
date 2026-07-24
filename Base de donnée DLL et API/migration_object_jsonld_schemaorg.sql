@@ -45,14 +45,57 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS public.ref_interop_crosswalk (
   profile      TEXT        NOT NULL,      -- 'jsonld' (schema.org) | future 'datatourisme'|'apidae'|'tourinsoft'
   object_type  object_type NOT NULL,
+  taxonomy_domain TEXT,
+  taxonomy_code   TEXT,
   target_class TEXT        NOT NULL,      -- target vocabulary class, e.g. schema.org 'Hotel'
   context_url  TEXT,                      -- profile @context (schema.org: 'https://schema.org'); NULL for non-JSON-LD profiles
-  is_active    BOOLEAN     NOT NULL DEFAULT true,
-  PRIMARY KEY (profile, object_type)
+  is_active    BOOLEAN     NOT NULL DEFAULT true
 );
 
+ALTER TABLE public.ref_interop_crosswalk
+  ADD COLUMN IF NOT EXISTS taxonomy_domain TEXT,
+  ADD COLUMN IF NOT EXISTS taxonomy_code TEXT;
+
+-- §190: one type-level fallback plus optional taxonomy-aware refinements.
+ALTER TABLE public.ref_interop_crosswalk
+  DROP CONSTRAINT IF EXISTS ref_interop_crosswalk_pkey;
+
+DO $crosswalk_constraints$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.ref_interop_crosswalk'::regclass
+      AND conname = 'chk_ref_interop_crosswalk_taxonomy_pair'
+  ) THEN
+    ALTER TABLE public.ref_interop_crosswalk
+      ADD CONSTRAINT chk_ref_interop_crosswalk_taxonomy_pair
+      CHECK ((taxonomy_domain IS NULL) = (taxonomy_code IS NULL));
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.ref_interop_crosswalk'::regclass
+      AND conname = 'fk_ref_interop_crosswalk_taxonomy_code'
+  ) THEN
+    ALTER TABLE public.ref_interop_crosswalk
+      ADD CONSTRAINT fk_ref_interop_crosswalk_taxonomy_code
+      FOREIGN KEY (taxonomy_domain, taxonomy_code)
+      REFERENCES public.ref_code(domain, code)
+      ON DELETE RESTRICT;
+  END IF;
+END
+$crosswalk_constraints$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_interop_crosswalk_type_default
+  ON public.ref_interop_crosswalk(profile, object_type)
+  WHERE taxonomy_code IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_interop_crosswalk_taxonomy
+  ON public.ref_interop_crosswalk(profile, object_type, taxonomy_domain, taxonomy_code)
+  WHERE taxonomy_code IS NOT NULL;
+
 COMMENT ON TABLE public.ref_interop_crosswalk IS
-  'Interop crosswalk (audit API I4): object_type -> target vocabulary class per export profile. '
+  'Interop crosswalk (audit API I4/§190): object_type fallback plus optional taxonomy ancestor -> target class per export profile. '
   'Table-driven so a new type mapping / a new profile is a seed, never a code change. Consumed by '
   'api.get_object_jsonld. Values are PO-tunable business/SEO choices. See lot1_mapping_decisions.md §136.';
 
@@ -77,7 +120,7 @@ INSERT INTO public.ref_interop_crosswalk (profile, object_type, target_class, co
   ('jsonld', 'COM',  'Store',              'https://schema.org'),
   ('jsonld', 'SPU',  'CivicStructure',     'https://schema.org'),
   ('jsonld', 'ORG',  'Organization',       'https://schema.org')
-ON CONFLICT (profile, object_type) DO UPDATE
+ON CONFLICT (profile, object_type) WHERE taxonomy_code IS NULL DO UPDATE
   SET target_class = EXCLUDED.target_class,
       context_url  = EXCLUDED.context_url,
       is_active    = true;
@@ -132,7 +175,10 @@ BEGIN
   SELECT x.target_class, x.context_url
     INTO v_class, v_context
   FROM public.ref_interop_crosswalk x
-  WHERE x.profile = p_profile AND x.object_type = v_type AND x.is_active
+  WHERE x.profile = p_profile
+    AND x.object_type = v_type
+    AND x.taxonomy_code IS NULL
+    AND x.is_active
   LIMIT 1;
   IF v_class IS NULL THEN
     RETURN NULL;

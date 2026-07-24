@@ -9,6 +9,7 @@ DECLARE
   v_def      text;
   v_secdef   boolean;
   v_n        int;
+  v_bad      text;
   v_row      jsonb;
   v_bundle   jsonb;
 BEGIN
@@ -56,6 +57,40 @@ BEGIN
   END IF;
   IF (SELECT count(*) FROM jsonb_array_elements(api.list_catalog('payment_method')) e WHERE e->>'name' IS NULL) <> 0 THEN
     RAISE EXCEPTION 'payment_method has null names (i18n fallback to plain name failed)';
+  END IF;
+
+  -- 3b. Every versioned taxonomy tree has a registered, type-bound taxonomy domain.
+  WITH expected(domain, object_type, is_active) AS (VALUES
+    ('taxonomy_act',  'ACT'::object_type,  TRUE),
+    ('taxonomy_asc',  'ASC'::object_type,  TRUE),
+    ('taxonomy_camp', 'CAMP'::object_type, TRUE),
+    ('taxonomy_com',  'COM'::object_type,  TRUE),
+    ('taxonomy_fma',  'FMA'::object_type,  TRUE),
+    ('taxonomy_hlo',  'HLO'::object_type,  TRUE),
+    ('taxonomy_hot',  'HOT'::object_type,  TRUE),
+    ('taxonomy_hpa',  'HPA'::object_type,  TRUE),
+    ('taxonomy_iti',  'ITI'::object_type,  TRUE),
+    ('taxonomy_loi',  'LOI'::object_type,  TRUE),
+    ('taxonomy_org',  'ORG'::object_type,  FALSE),
+    ('taxonomy_pcu',  'PCU'::object_type,  TRUE),
+    ('taxonomy_pna',  'PNA'::object_type,  TRUE),
+    ('taxonomy_prd',  'PRD'::object_type,  TRUE),
+    ('taxonomy_psv',  'PSV'::object_type,  TRUE),
+    ('taxonomy_res',  'RES'::object_type,  TRUE),
+    ('taxonomy_rva',  'RVA'::object_type,  TRUE),
+    ('taxonomy_spu',  'SPU'::object_type,  TRUE),
+    ('taxonomy_vil',  'VIL'::object_type,  TRUE)
+  )
+  SELECT string_agg(e.domain, ', ' ORDER BY e.domain) INTO v_bad
+  FROM expected e
+  LEFT JOIN ref_code_domain_registry d ON d.domain = e.domain
+  WHERE d.domain IS NULL
+     OR d.object_type IS DISTINCT FROM e.object_type
+     OR NOT d.is_hierarchical
+     OR NOT d.is_taxonomy
+     OR d.is_active IS DISTINCT FROM e.is_active;
+  IF v_bad IS NOT NULL THEN
+    RAISE EXCEPTION 'taxonomy registry missing or invalid for: %', v_bad;
   END IF;
 
   -- 4. Hierarchy resolved: a taxonomy domain has parent_code on its child nodes.

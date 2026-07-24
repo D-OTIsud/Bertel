@@ -1,5 +1,5 @@
 -- migration_taxonomy_trees_seed.sql
--- Versions the FULL target taxonomy trees (225 ref_code nodes across all taxonomy_* domains,
+-- Versions the FULL target taxonomy registry + trees (19 domains, 225 ref_code nodes,
 -- 206 parent links — includes the 7 HLO nature/form nodes of §190). These trees were built ad-hoc on live and were NOT versioned anywhere in
 -- the manifest, so a fresh DB could not reproduce them — the fresh-apply gate (2026-07-01) caught
 -- this via the reference-catalog hierarchy test (taxonomy_res parent_code never resolved).
@@ -13,6 +13,63 @@
 -- .tmp_pgapply/gen_taxonomy_seed.cjs (read-only export). Runbook: fresh manifest, after seeds.
 
 BEGIN;
+
+-- Phase 0 — converge the complete taxonomy registry before any assignment test.
+-- Six historical domains (HLO/LOI/ORG/PSV/RES/CAMP) used to exist only because
+-- old-data imports had created them on live. A fresh apply therefore had their
+-- ref_code trees but no registry row, so object_taxonomy rejected valid HLO rows.
+INSERT INTO ref_code_domain_registry (
+  domain, name, description, object_type,
+  is_hierarchical, is_taxonomy, position, is_active,
+  name_i18n, description_i18n, metadata
+) VALUES
+  ('taxonomy_hot',  'Taxonomie HOT',  'Sous-catégories métier pour les hôtels.',                                      'HOT'::object_type,  TRUE, TRUE, 10, TRUE,  jsonb_build_object('fr','Taxonomie HOT'),  jsonb_build_object('fr','Sous-catégories métier pour les hôtels.'),                                      jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_act',  'Taxonomie ACT',  'Sous-catégories métier pour les activités encadrées.',                         'ACT'::object_type,  TRUE, TRUE, 20, TRUE,  jsonb_build_object('fr','Taxonomie ACT'),  jsonb_build_object('fr','Sous-catégories métier pour les activités encadrées.'),                         jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_prd',  'Taxonomie PRD',  'Sous-catégories pour les producteurs ouverts au public (agritourisme, dégustation, vente directe).', 'PRD'::object_type, TRUE, TRUE, 22, TRUE, jsonb_build_object('fr','Taxonomie PRD'), jsonb_build_object('fr','Sous-catégories pour les producteurs ouverts au public (agritourisme, dégustation, vente directe).'), jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_com',  'Taxonomie COM',  'Sous-catégories métier pour les commerces.',                                   'COM'::object_type,  TRUE, TRUE, 30, TRUE,  jsonb_build_object('fr','Taxonomie COM'),  jsonb_build_object('fr','Sous-catégories métier pour les commerces.'),                                   jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_hlo',  'Taxonomie HLO',  'Sous-catégories métier pour les hébergements locatifs.',                       'HLO'::object_type,  TRUE, TRUE, 40, TRUE,  jsonb_build_object('fr','Taxonomie HLO'),  jsonb_build_object('fr','Sous-catégories métier pour les hébergements locatifs.'),                       jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_pna',  'Taxonomie PNA',  'Sous-catégories des sites naturels.',                                          'PNA'::object_type,  TRUE, TRUE, 40, TRUE,  jsonb_build_object('fr','Taxonomie PNA'),  jsonb_build_object('fr','Sous-catégories des sites naturels.'),                                          jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_pcu',  'Taxonomie PCU',  'Sous-catégories du patrimoine culturel.',                                      'PCU'::object_type,  TRUE, TRUE, 42, TRUE,  jsonb_build_object('fr','Taxonomie PCU'),  jsonb_build_object('fr','Sous-catégories du patrimoine culturel.'),                                      jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_vil',  'Taxonomie VIL',  'Sous-catégories des villes et villages.',                                      'VIL'::object_type,  TRUE, TRUE, 44, TRUE,  jsonb_build_object('fr','Taxonomie VIL'),  jsonb_build_object('fr','Sous-catégories des villes et villages.'),                                      jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_iti',  'Taxonomie ITI',  'Sous-catégories des itinéraires.',                                             'ITI'::object_type,  TRUE, TRUE, 46, TRUE,  jsonb_build_object('fr','Taxonomie ITI'),  jsonb_build_object('fr','Sous-catégories des itinéraires.'),                                             jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_fma',  'Taxonomie FMA',  'Sous-catégories des fêtes et manifestations.',                                 'FMA'::object_type,  TRUE, TRUE, 48, TRUE,  jsonb_build_object('fr','Taxonomie FMA'),  jsonb_build_object('fr','Sous-catégories des fêtes et manifestations.'),                                 jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_hpa',  'Taxonomie HPA',  'Sous-catégories de l''hébergement de plein air.',                              'HPA'::object_type,  TRUE, TRUE, 50, TRUE,  jsonb_build_object('fr','Taxonomie HPA'),  jsonb_build_object('fr','Sous-catégories de l''hébergement de plein air.'),                              jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_res',  'Taxonomie RES',  'Sous-catégories métier pour la restauration.',                                 'RES'::object_type,  TRUE, TRUE, 50, TRUE,  jsonb_build_object('fr','Taxonomie RES'),  jsonb_build_object('fr','Sous-catégories métier pour la restauration.'),                                 jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_rva',  'Taxonomie RVA',  'Sous-catégories des résidences de vacances.',                                  'RVA'::object_type,  TRUE, TRUE, 52, TRUE,  jsonb_build_object('fr','Taxonomie RVA'),  jsonb_build_object('fr','Sous-catégories des résidences de vacances.'),                                  jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_asc',  'Taxonomie ASC',  'Sous-catégories des structures d''activités sportives et culturelles.',        'ASC'::object_type,  TRUE, TRUE, 54, TRUE,  jsonb_build_object('fr','Taxonomie ASC'),  jsonb_build_object('fr','Sous-catégories des structures d''activités.'),                                 jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_loi',  'Taxonomie LOI',  'Sous-catégories métier pour loisirs, visites et découvertes.',                 'LOI'::object_type,  TRUE, TRUE, 60, TRUE,  jsonb_build_object('fr','Taxonomie LOI'),  jsonb_build_object('fr','Sous-catégories métier pour loisirs, visites et découvertes.'),                 jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_org',  'Taxonomie ORG',  'Sous-catégories métier pour organisations et services.',                       'ORG'::object_type,  TRUE, TRUE, 70, FALSE, jsonb_build_object('fr','Taxonomie ORG'),  jsonb_build_object('fr','Sous-catégories métier pour organisations et services.'),                       jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_psv',  'Taxonomie PSV',  'Sous-catégories métier pour prestations de services.',                         'PSV'::object_type,  TRUE, TRUE, 80, TRUE,  jsonb_build_object('fr','Taxonomie PSV'),  jsonb_build_object('fr','Sous-catégories métier pour prestations de services.'),                         jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_spu',  'Taxonomie SPU',  'Sous-catégories pour les services publics autonomes (toilettes, eau potable, recharge électrique).', 'SPU'::object_type, TRUE, TRUE, 85, TRUE, jsonb_build_object('fr','Taxonomie SPU'), jsonb_build_object('fr','Sous-catégories pour les services publics autonomes (toilettes, eau potable, recharge électrique).'), jsonb_build_object('source','taxonomy_trees_seed_20260724')),
+  ('taxonomy_camp', 'Taxonomie CAMP', 'Sous-catégories métier pour campings.',                                         'CAMP'::object_type, TRUE, TRUE, 90, TRUE,  jsonb_build_object('fr','Taxonomie CAMP'), jsonb_build_object('fr','Sous-catégories métier pour campings.'),                                         jsonb_build_object('source','taxonomy_trees_seed_20260724'))
+ON CONFLICT (domain) DO UPDATE
+SET name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    object_type = EXCLUDED.object_type,
+    is_hierarchical = EXCLUDED.is_hierarchical,
+    is_taxonomy = EXCLUDED.is_taxonomy,
+    position = EXCLUDED.position,
+    is_active = EXCLUDED.is_active,
+    name_i18n = COALESCE(ref_code_domain_registry.name_i18n, '{}'::jsonb) || EXCLUDED.name_i18n,
+    description_i18n = COALESCE(ref_code_domain_registry.description_i18n, '{}'::jsonb) || EXCLUDED.description_i18n,
+    updated_at = NOW()
+WHERE (ref_code_domain_registry.name,
+       ref_code_domain_registry.description,
+       ref_code_domain_registry.object_type,
+       ref_code_domain_registry.is_hierarchical,
+       ref_code_domain_registry.is_taxonomy,
+       ref_code_domain_registry.position,
+       ref_code_domain_registry.is_active)
+      IS DISTINCT FROM
+      (EXCLUDED.name,
+       EXCLUDED.description,
+       EXCLUDED.object_type,
+       EXCLUDED.is_hierarchical,
+       EXCLUDED.is_taxonomy,
+       EXCLUDED.position,
+       EXCLUDED.is_active)
+   OR NOT (COALESCE(ref_code_domain_registry.name_i18n, '{}'::jsonb) @> EXCLUDED.name_i18n)
+   OR NOT (COALESCE(ref_code_domain_registry.description_i18n, '{}'::jsonb) @> EXCLUDED.description_i18n);
 
 -- Phase 1 — upsert nodes (parent_id set in phase 2)
 INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i18n,description_i18n,icon_url) VALUES ('taxonomy_act','root','Activité encadrée','Racine technique — Activité encadrée','0','f','{"fr": "Activité encadrée"}'::jsonb,'{"fr": "Racine technique — Activité encadrée"}'::jsonb,NULL) ON CONFLICT (domain,code) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,position=EXCLUDED.position,is_assignable=EXCLUDED.is_assignable,name_i18n=EXCLUDED.name_i18n,description_i18n=EXCLUDED.description_i18n,icon_url=EXCLUDED.icon_url;

@@ -135,7 +135,24 @@ Défaut proposé pour ces 16 : **rester sur le nœud de nature** « Meublé de t
 
 ## 5. Split des `bungalow_chalet` : 49 (= 52 − 3 fiches du lot nature §2 : Le Chalet Co Gite, Tit Caze Gilbert François [collectif] ET Trésor d'Ange [CdH])
 
-Même heuristique sur les 49 : **22 → `chalet`**, **17 → `bungalow`**, **0 mobil-home**, **10 → arbitrage PO** (liste nominative à générer en session, requête rejouable). Les 3 transferts venant de `gite_villa` (§4) passent par le même test bungalow-vs-chalet ; ambiguïté → arbitrage.
+Même heuristique sur les 49, en lisant le nom, la description **et le chapo** canoniques : **22 → `chalet`**, **17 → `bungalow`**, **0 mobil-home**, **10 → arbitrage PO**. En cas de mention simultanée de bungalow et chalet, la cible `bungalow` est prioritaire (un cas : La Roche Kas'Kou). Les 3 transferts venant de `gite_villa` (§4) passent par le même test bungalow-vs-chalet ; ambiguïté → arbitrage.
+
+**Les 10 en arbitrage PO** (aucun signal nom, description ou chapo) :
+
+| id | Fiche |
+|---|---|
+| HLORUN00000000P2 | L'Instant d'Évasion 1 |
+| HLORUN00000000RK | L'Antre du Fouquet |
+| HLORUN00000000V4 | Vel'Hauts Run |
+| HLORUN00000000VT | Le Niaouli |
+| HLORUN00000000ZI | Lilie Location saisonnière Langevin |
+| HLORUN000000011S | Lodge Bel Air |
+| HLORUN000000011Y | Le Bismarckia |
+| HLORUN000000013D | L'Écrin Péi |
+| HLORUN0000000172 | Chez Rodolphe |
+| HLORUN000000017Y | Le Nid House |
+
+Défaut proposé : rester sur `location_saisonniere` tant que la forme n'est pas connue. Le support de séance complet est `docs/taxonomy-hlo-po-arbitrage-2026-07-24.md`.
 
 ## 6. Les 7 HLO sans provenance Berta (créés post-import — contrôle « fonctionnement réel »)
 

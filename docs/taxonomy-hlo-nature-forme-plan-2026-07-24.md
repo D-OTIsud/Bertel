@@ -28,7 +28,8 @@ Stratégie : **aucune refonte de modèle**. **Une migration atomique unique** (a
 | Arbitrages `gite_villa` (sur 176 = 178 − 2 fiches du lot nature) | **16** |
 | Arbitrages split (sur 49 = 52 − 3 fiches du lot nature, Trésor d'Ange compris) | **10** |
 | **Total arbitrages nominatifs** | **40** |
-| **Recodages automatiques** | **199** = 150 maison + 2 appartement + 5 nœud-de-nature + 3 transferts→bungalow + 22 chalet + 17 bungalow |
+| **Recodages automatiques publiés** | **199** = 150 maison + 2 appartement + 5 nœud-de-nature + 3 transferts→bungalow + 22 chalet + 17 bungalow |
+| Porteur legacy archivé technique | **1** (`HLORUN00000000PX`, doublon archivé §189, `gite_villa`→`location_saisonniere`) |
 | Questions de structure | 3 (`gite_rural`, `cottage`, `rez_de_chaussee_d_une_maison`) |
 | `taxonomy_rva` | déjà conforme (3 nœuds assignables, 0 fiche publiée) → zéro travail |
 | Signal de nature Berta (`object.extra.source_category`) | 469/476 |
@@ -181,7 +182,7 @@ Durée estimée : 45–60 min.
 
 ### 7a. Artefacts gelés AVANT toute écriture (étape 4)
 
-1. **Manifeste de recodage** (committé avec la migration) : `object_id | expected_old_code | target_code | source | motif` — 199 lignes auto (`taxonomy_nature_forme_20260724`) + ≤40 lignes PO (`taxonomy_nature_forme_arbitrage_20260724`). L'heuristique ne tourne **jamais** en production.
+1. **Manifeste de recodage** (committé avec la migration) : `object_id | expected_old_code | target_code | source | motif` — 199 lignes auto publiées + 1 archive technique (`taxonomy_nature_forme_20260724`) + 40 lignes PO nominatives + 3 fusions PO-4 (`taxonomy_nature_forme_arbitrage_20260724`) = **243 objets uniques**. L'heuristique ne tourne **jamais** en production.
 2. **`rollback/taxonomy_nature_forme_before_state.csv`** : pour chaque fiche du manifeste — `object_id, domain, old_ref_code_id, old_code, old_source, old_note, target_code`.
 3. **`rollback/taxonomy_nature_forme_rollback.sql`** : script inverse généré et **relu avant le déploiement** (contrat §7c).
 
@@ -264,7 +265,7 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 > Interdits absolus : `DELETE` (jamais) ; heuristique exécutée en production (jamais) ; apply cloud d'un fichier non committé (jamais) ; réactiver `auberge` / `chambre` / `gite_d_etape_et_de_randonnee` (jamais) ; Docker ou base locale (jamais — cloud uniquement).
 
 ### Phase A — Préparation (aucune écriture)
-- [ ] A1. Rejouer les comptages cloud : 476 HLO publiés ; 14 nature ; 16 gite_villa ; 10 split ; 199 auto. Écart ⇒ régénérer les listes du rapport, STOP → PO.
+- [ ] A1. Rejouer les comptages cloud : 476 HLO publiés ; 14 nature ; 16 gite_villa ; 10 split ; 199 auto publiés ; 1 porteur `gite_villa` archivé technique. Écart ⇒ régénérer les listes du rapport, STOP → PO.
 - [ ] A2. Patch frontend (§5bis, 6 points) ; jest + tsc verts ; grep libellés legacy = 0 ; commit.
 - [ ] A3. Préparer le support de session : tableaux 14/16/10 nominatifs + fiches PO-1→PO-8 + les 3 fiches du pool (Gîte du Malmany, Cap Vanisa, Manapany Lodge → `bungalow` ; survoler Manapany Lodge).
 
@@ -273,7 +274,7 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 - [ ] B2. Annexer le support complété au rapport §190.
 
 ### Phase C — Gel et écriture (repo-first, zéro écriture cloud)
-- [ ] C1. Générer le **manifeste de recodage** (lecture seule) : `object_id | expected_old_code | target_code | source | motif` — 199 auto + ≤40 PO.
+- [ ] C1. Générer le **manifeste de recodage** (lecture seule) : `object_id | expected_old_code | target_code | source | motif` — 199 auto publiés + 1 archive technique + 40 PO nominatives + 3 fusions PO-4 = 243 lignes.
 - [ ] C2. Générer `rollback/taxonomy_nature_forme_before_state.csv` + `rollback/taxonomy_nature_forme_rollback.sql` (contrat §7c, **ordre v4** : réactiver les anciens nœuds D'ABORD [le trigger refuse une affectation vers un nœud non assignable] → restaurer affectations → parents + libellés → closure → désactiver les 7 nœuds créés [garde 0-porteur] → caches → **re-bump 476** → MV, vérifs). Relire les trois artefacts.
 - [ ] C3. Écrire `migration_taxonomy_nature_forme.sql` (12 étapes internes §7b : **détection de mode fresh/live/RAISE** + garde de dérive → comptages bi-état → 7 nœuds → 4 re-parentages → **ceinture closure** → 5 relibellés → recodage tri-état → fusions PO-4 → désactivations 0-porteur → bump 476 → boucle refresh porteurs → garde finale).
 - [ ] C4. Éditer à la main `migration_taxonomy_trees_seed.sql` vers l'arbre cible (7 créations, 4 re-parentages, 5 relibellés, flips is_active/is_assignable). **Jamais régénéré depuis la prod.**

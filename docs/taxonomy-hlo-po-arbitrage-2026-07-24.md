@@ -3,7 +3,8 @@
 **Date du gel de lecture** : 2026-07-24  
 **Base consultée** : cloud, lecture seule  
 **Périmètre** : 40 décisions nominatives, 3 décisions de structure et PO-5 à PO-8  
-**Règle de séance** : la nature métier prime sur la forme du logement. Une décision vide n’est jamais interprétée comme un accord.
+**Décision** : VALIDÉE sans exception — voir `docs/taxonomy-hlo-po-decision-2026-07-24.md`. Toutes les cellules « À DÉCIDER » ci-dessous sont résolues par validation de leur recommandation.
+**Règle de séance** : la nature métier prime sur la forme du logement.
 
 ## Mode d’emploi
 

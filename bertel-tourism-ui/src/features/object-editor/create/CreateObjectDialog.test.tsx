@@ -2,6 +2,11 @@ import type { ObjectSearchResult } from '../useObjectSearch';
 
 jest.mock('../../../services/rpc', () => ({ createObject: jest.fn() }));
 
+const mockListTaxonomyReferences = jest.fn();
+jest.mock('../../../services/explorer-reference', () => ({
+  listTaxonomyReferences: () => mockListTaxonomyReferences(),
+}));
+
 type SearchReturn = { results: ObjectSearchResult[]; loading: boolean };
 const mockUseObjectSearch = jest.fn((): SearchReturn => ({ results: [], loading: false }));
 jest.mock('../useObjectSearch', () => ({ useObjectSearch: () => mockUseObjectSearch() }));
@@ -9,12 +14,32 @@ jest.mock('../useObjectSearch', () => ({ useObjectSearch: () => mockUseObjectSea
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateObjectDialog } from './CreateObjectDialog';
 import { createObject } from '../../../services/rpc';
+import { TYPE_ARCHETYPES } from '../archetypes';
+import type { ExplorerTaxonomyDomain } from '../../../types/domain';
 
 const mockCreateObject = createObject as jest.Mock;
+
+const MOCK_TAXONOMIES: ExplorerTaxonomyDomain[] = Object.keys(TYPE_ARCHETYPES).map((objectType) => ({
+  domain: `taxonomy_${objectType.toLowerCase()}`,
+  name: `Taxonomie ${objectType}`,
+  objectType,
+  nodes: [{
+    code: `${objectType.toLowerCase()}_option`,
+    name: objectType === 'CAMP' ? 'Camping chez l’habitant' : `${objectType} — sous-catégorie`,
+    parentCode: null,
+    depth: 0,
+    isAssignable: true,
+    position: 1,
+  }],
+}));
 
 beforeEach(() => {
   mockCreateObject.mockReset();
   mockUseObjectSearch.mockReturnValue({ results: [], loading: false });
+  mockListTaxonomyReferences.mockReset();
+  // Most dialog tests do not concern the catalogue. Keeping the request pending
+  // avoids unrelated async state updates after their assertions/unmount.
+  mockListTaxonomyReferences.mockImplementation(() => new Promise(() => {}));
 });
 
 function selectTypeAndName(name: string) {
@@ -30,18 +55,25 @@ it('disables create until a type and a non-empty name are chosen', () => {
   expect(create).toBeEnabled();
 });
 
-it('keeps CAMP/HPA cards compact and exposes their subcategories in tooltips', () => {
+it('gives all 18 type cards a taxonomy tooltip sourced from the shared catalogue', async () => {
+  mockListTaxonomyReferences.mockResolvedValueOnce(MOCK_TAXONOMIES);
   render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
 
-  const camp = screen.getByRole('radio', { name: /^Camping classé$/i });
-  const hpa = screen.getByRole('radio', { name: /^Hébergement de plein air$/i });
-  expect(camp).toHaveAttribute('aria-describedby', 'create-type-CAMP-tooltip');
-  expect(hpa).toHaveAttribute('aria-describedby', 'create-type-HPA-tooltip');
+  await waitFor(() => expect(mockListTaxonomyReferences).toHaveBeenCalledTimes(1));
+  const radios = screen.getAllByRole('radio');
+  expect(radios).toHaveLength(Object.keys(TYPE_ARCHETYPES).length);
+  for (const radio of radios) {
+    expect(radio).toHaveAttribute('aria-describedby');
+  }
 
-  expect(screen.getByText('Camping · Camping chez l’habitant')).toBeInTheDocument();
-  expect(screen.getByText(
-    'Aire naturelle de camping · Camping à la ferme · Hébergement insolite de plein air · Aire d’accueil camping-car',
-  )).toBeInTheDocument();
+  const camp = screen.getByRole('radio', { name: /^Camping classé$/i });
+  expect(camp).toHaveAttribute('aria-describedby', 'create-type-CAMP-tooltip');
+  fireEvent.mouseEnter(camp.closest('label') as HTMLLabelElement);
+
+  const tooltip = await screen.findByRole('tooltip');
+  expect(tooltip).toHaveTextContent('Camping chez l’habitant');
+  expect(tooltip).toHaveClass('fixed', 'z-[1000]');
+  expect(screen.getByRole('dialog')).not.toContainElement(tooltip);
 });
 
 it('calls createObject with the chosen type+name and forwards the new id', async () => {

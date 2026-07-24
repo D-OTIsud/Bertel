@@ -1,5 +1,11 @@
-import { buildCreateTypeOptions, validateCreateObjectInput, MAX_OBJECT_NAME_LENGTH } from './create-object-options';
+import {
+  buildCreateTypeOptions,
+  buildCreateTypeTaxonomyLabels,
+  validateCreateObjectInput,
+  MAX_OBJECT_NAME_LENGTH,
+} from './create-object-options';
 import { TYPE_ARCHETYPES } from '../archetypes';
+import type { ExplorerTaxonomyDomain } from '../../../types/domain';
 
 describe('buildCreateTypeOptions', () => {
   it('covers exactly the creatable types (enum minus ORG) with no duplicates', () => {
@@ -22,21 +28,32 @@ describe('buildCreateTypeOptions', () => {
     expect(heb?.types.find((t) => t.code === 'HOT')?.label).toBe('Hôtel');
   });
 
-  it('exposes the CAMP/HPA taxonomy choices without lengthening their labels', () => {
+  it('uses the canonical labels shared with filters and the rest of the application', () => {
     const heb = buildCreateTypeOptions().find((g) => g.archetype === 'HEB');
-    expect(heb?.types.find((t) => t.code === 'CAMP')).toMatchObject({
-      label: 'Camping classé',
-      subcategories: ['Camping', 'Camping chez l’habitant'],
-    });
-    expect(heb?.types.find((t) => t.code === 'HPA')).toMatchObject({
-      label: 'Hébergement de plein air',
-      subcategories: [
-        'Aire naturelle de camping',
-        'Camping à la ferme',
-        'Hébergement insolite de plein air',
-        'Aire d’accueil camping-car',
+    expect(heb?.types.find((t) => t.code === 'CAMP')?.label).toBe('Camping classé');
+    expect(heb?.types.find((t) => t.code === 'HPA')?.label).toBe('Hébergement de plein air');
+    expect(heb?.types.find((t) => t.code === 'RVA')?.label).toBe('Résidence de vacances');
+  });
+});
+
+describe('buildCreateTypeTaxonomyLabels', () => {
+  it('uses assignable nodes from the Explorer taxonomy and prefixes descendants with their path', () => {
+    const taxonomies: ExplorerTaxonomyDomain[] = [{
+      domain: 'taxonomy_hlo',
+      name: 'Hébergement locatif',
+      objectType: 'HLO',
+      nodes: [
+        { code: 'chambre_d_hotes', name: 'Chambre d’hôtes', parentCode: null, depth: 0, isAssignable: true, position: 1 },
+        { code: 'cdh_maison', name: 'Maison d’hôtes', parentCode: 'chambre_d_hotes', depth: 1, isAssignable: true, position: 2 },
+        { code: 'legacy', name: 'Ancien code', parentCode: null, depth: 0, isAssignable: false, position: 3 },
       ],
-    });
+    }];
+
+    expect(buildCreateTypeTaxonomyLabels(taxonomies, 'HLO')).toEqual([
+      'Chambre d’hôtes',
+      'Chambre d’hôtes › Maison d’hôtes',
+    ]);
+    expect(buildCreateTypeTaxonomyLabels(taxonomies, 'HOT')).toEqual([]);
   });
 });
 

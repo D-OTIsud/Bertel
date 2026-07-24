@@ -23,6 +23,8 @@ describe('humanizeCode', () => {
 describe('resolveTypeLabel', () => {
   it('résout les codes de type DB en libellés FR', () => {
     expect(resolveTypeLabel('HOT')).toBe('Hôtel');
+    expect(resolveTypeLabel('HPA')).toBe('Hébergement de plein air');
+    expect(resolveTypeLabel('CAMP')).toBe('Camping classé');
     expect(resolveTypeLabel('RES')).toBe('Restaurant');
     expect(resolveTypeLabel('LOI')).toBe('Loisir');
     expect(resolveTypeLabel('act')).toBe('Activité encadrée'); // insensible à la casse

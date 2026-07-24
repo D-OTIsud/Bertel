@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Dialog,
   DialogContent,
@@ -27,11 +28,15 @@ import { useObjectSearch } from '../useObjectSearch';
 import { createObject } from '../../../services/rpc';
 import {
   buildCreateTypeOptions,
+  buildCreateTypeTaxonomyLabels,
   validateCreateObjectInput,
   createTypeLabel,
   MAX_OBJECT_NAME_LENGTH,
+  type CreateTypeOption,
 } from './create-object-options';
 import { splitDuplicateMatches } from './duplicate-hint';
+import { listTaxonomyReferences } from '../../../services/explorer-reference';
+import type { ExplorerTaxonomyDomain } from '../../../types/domain';
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -68,6 +73,169 @@ function typeColor(typeCode: string): string {
   return archetype ? ARCHETYPE_VISUAL[archetype].color : NEUTRAL_ACCENT;
 }
 
+type TooltipPosition = { left: number; top: number };
+
+interface CreateTypeTileProps {
+  option: CreateTypeOption;
+  selected: boolean;
+  visual: ArchetypeVisual;
+  subcategories: string[];
+  taxonomyLoading: boolean;
+  taxonomyError: boolean;
+  onSelect: () => void;
+}
+
+/**
+ * A type tile whose tooltip is portalled to document.body. `position: fixed`
+ * escapes both the scrollable type list and Radix Dialog stacking contexts, so
+ * neighbouring cards can never paint over the taxonomy catalogue.
+ */
+function CreateTypeTile({
+  option,
+  selected,
+  visual,
+  subcategories,
+  taxonomyLoading,
+  taxonomyError,
+  onSelect,
+}: CreateTypeTileProps) {
+  const anchorRef = useRef<HTMLLabelElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const [position, setPosition] = useState<TooltipPosition | null>(null);
+  const tooltipId = `create-type-${option.code}-tooltip`;
+
+  useLayoutEffect(() => {
+    if (!tooltipOpen) {
+      setPosition(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const anchor = anchorRef.current;
+      const tooltip = tooltipRef.current;
+      if (!anchor || !tooltip) return;
+
+      const margin = 12;
+      const gap = 8;
+      const anchorRect = anchor.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      const maxLeft = Math.max(margin, window.innerWidth - tooltipRect.width - margin);
+      const left = Math.min(
+        Math.max(anchorRect.left + (anchorRect.width - tooltipRect.width) / 2, margin),
+        maxLeft,
+      );
+      const below = anchorRect.bottom + gap;
+      const above = anchorRect.top - gap - tooltipRect.height;
+      const top = below + tooltipRect.height <= window.innerHeight - margin
+        ? below
+        : Math.max(margin, above);
+
+      setPosition({ left, top });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [tooltipOpen, subcategories]);
+
+  const tooltip = tooltipOpen && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          ref={tooltipRef}
+          id={tooltipId}
+          role="tooltip"
+          className="pointer-events-none fixed z-[1000] w-[460px] max-w-[calc(100vw-24px)] rounded-xl bg-ink px-3.5 py-3 text-left text-[11.5px] font-normal leading-[1.45] text-white shadow-2xl"
+          style={{
+            left: position?.left ?? 0,
+            top: position?.top ?? 0,
+            visibility: position ? 'visible' : 'hidden',
+          }}
+        >
+          <span className="block text-[12px] font-semibold">
+            {subcategories.length > 0
+              ? `${subcategories.length} sous-catégorie${subcategories.length > 1 ? 's' : ''} disponible${subcategories.length > 1 ? 's' : ''}`
+              : 'Sous-catégories disponibles'}
+          </span>
+          {taxonomyLoading ? (
+            <span className="mt-1 block text-white/75">Chargement du catalogue…</span>
+          ) : taxonomyError ? (
+            <span className="mt-1 block text-white/75">Catalogue momentanément indisponible.</span>
+          ) : subcategories.length > 0 ? (
+            <ul className="mt-1.5 grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2">
+              {subcategories.map((subcategory) => (
+                <li key={subcategory} className="flex gap-1.5">
+                  <span aria-hidden="true" className="text-white/50">•</span>
+                  <span>{subcategory}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <span className="mt-1 block text-white/75">Aucune sous-catégorie active.</span>
+          )}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <label
+        ref={anchorRef}
+        onMouseEnter={() => setTooltipOpen(true)}
+        onMouseLeave={() => setTooltipOpen(false)}
+        onFocusCapture={(event) => {
+          if ((event.target as HTMLElement).matches(':focus-visible')) {
+            setTooltipOpen(true);
+          }
+        }}
+        onBlurCapture={() => setTooltipOpen(false)}
+        className={[
+          'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
+          selected
+            ? 'shadow-sm'
+            : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
+        ].join(' ')}
+        style={
+          selected
+            ? {
+                borderColor: visual.color,
+                backgroundColor: `${visual.color}14`,
+                color: visual.deep,
+                boxShadow: `0 0 0 3px ${visual.color}24`,
+              }
+            : undefined
+        }
+      >
+        <input
+          type="radio"
+          name="create-object-type"
+          value={option.code}
+          checked={selected}
+          onChange={onSelect}
+          aria-label={option.label}
+          aria-describedby={tooltipId}
+          className="sr-only"
+        />
+        <span className="min-w-0 leading-5">{option.label}</span>
+        <Info className="ml-auto h-3.5 w-3.5 flex-none opacity-55" aria-hidden />
+        {selected ? (
+          <Check
+            className="ml-1.5 h-4 w-4 flex-none"
+            strokeWidth={3}
+            style={{ color: visual.color }}
+          />
+        ) : null}
+      </label>
+      {tooltip}
+    </>
+  );
+}
+
 /**
  * Object-creation dialog (B1, §107): name the fiche, pick a type, then `createObject`
  * over the live RPC. It deliberately collects ONLY the two fields the RPC requires;
@@ -82,6 +250,36 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState(false);
+  const [taxonomies, setTaxonomies] = useState<ExplorerTaxonomyDomain[] | null>(null);
+  const [taxonomyError, setTaxonomyError] = useState(false);
+
+  useEffect(() => {
+    if (!open || taxonomies || taxonomyError) return;
+    let cancelled = false;
+
+    listTaxonomyReferences()
+      .then((catalog) => {
+        if (!cancelled) setTaxonomies(catalog);
+      })
+      .catch(() => {
+        if (!cancelled) setTaxonomyError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, taxonomies, taxonomyError]);
+
+  const subcategoriesByType = useMemo(() => {
+    const result: Record<string, string[]> = {};
+    if (!taxonomies) return result;
+    for (const group of groups) {
+      for (const option of group.types) {
+        result[option.code] = buildCreateTypeTaxonomyLabels(taxonomies, option.code);
+      }
+    }
+    return result;
+  }, [groups, taxonomies]);
 
   const validation = validateCreateObjectInput({ type, name });
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
@@ -232,57 +430,16 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                     {group.types.map((option) => {
                       const selected = type === option.code;
                       return (
-                        <label
+                        <CreateTypeTile
                           key={option.code}
-                          className={[
-                            'group/create-type relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
-                            selected
-                              ? 'shadow-sm'
-                              : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
-                          ].join(' ')}
-                          style={
-                            selected
-                              ? {
-                                  borderColor: v.color,
-                                  backgroundColor: `${v.color}14`,
-                                  color: v.deep,
-                                  boxShadow: `0 0 0 3px ${v.color}24`,
-                                }
-                              : undefined
-                          }
-                        >
-                          <input
-                            type="radio"
-                            name="create-object-type"
-                            value={option.code}
-                            checked={selected}
-                            onChange={() => setType(option.code)}
-                            aria-label={option.label}
-                            aria-describedby={option.subcategories ? `create-type-${option.code}-tooltip` : undefined}
-                            className="sr-only"
-                          />
-                          <span className="min-w-0 leading-5">{option.label}</span>
-                          {option.subcategories ? (
-                            <>
-                              <Info className="ml-auto h-3.5 w-3.5 flex-none opacity-55" aria-hidden />
-                              <div
-                                id={`create-type-${option.code}-tooltip`}
-                                role="tooltip"
-                                className="pointer-events-none invisible absolute left-1/2 top-[calc(100%+8px)] z-30 w-max max-w-[260px] -translate-x-1/2 rounded-lg bg-ink px-3 py-2 text-left text-[11.5px] font-normal leading-5 text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover/create-type:visible group-hover/create-type:opacity-100 group-focus-within/create-type:visible group-focus-within/create-type:opacity-100"
-                              >
-                                <span className="block font-semibold">Sous-catégories disponibles</span>
-                                <span className="block">{option.subcategories.join(' · ')}</span>
-                              </div>
-                            </>
-                          ) : null}
-                          {selected ? (
-                            <Check
-                              className={option.subcategories ? 'ml-1.5 h-4 w-4 flex-none' : 'ml-auto h-4 w-4 flex-none'}
-                              strokeWidth={3}
-                              style={{ color: v.color }}
-                            />
-                          ) : null}
-                        </label>
+                          option={option}
+                          selected={selected}
+                          visual={v}
+                          subcategories={subcategoriesByType[option.code] ?? []}
+                          taxonomyLoading={!taxonomies && !taxonomyError}
+                          taxonomyError={taxonomyError}
+                          onSelect={() => setType(option.code)}
+                        />
                       );
                     })}
                   </div>

@@ -36,9 +36,9 @@ export interface ArchetypeMeta {
 // libellé doit rendre visibles les deux familles majoritaires sans servir de code.
 export const TYPE_LABEL: Record<string, string> = {
   HOT: 'Hôtel',
-  HPA: 'Hôtellerie de plein air',
+  HPA: 'Hébergement de plein air',
   HLO: 'Gîtes, meublés & chambres d’hôtes',
-  CAMP: 'Camping',
+  CAMP: 'Camping classé',
   RVA: 'Résidence de vacances',
   RES: 'Restaurant',
   ITI: 'Itinéraire',

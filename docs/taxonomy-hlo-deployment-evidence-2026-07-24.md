@@ -4,8 +4,9 @@
 
 **Fenêtre** : 2026-07-24, 16 h 33–16 h 43 RUN (12:33–12:43 UTC).
 
-**Branche / HEAD validé** : `codex/restore-taxonomy-remediation` / `132d57ae24d9b65823c9ed00f8cd112fd0fbddb8`.
-**CI de référence** : GitHub Actions `30091502744`, toutes les suites fresh-apply SQL vertes.
+**Branche / HEAD SQL déployé** : `codex/restore-taxonomy-remediation` / `132d57ae24d9b65823c9ed00f8cd112fd0fbddb8`.
+
+**CI finale de référence** : GitHub Actions `30094714885` sur `69d0b9e`, garde rejouable incluse et toutes les suites fresh-apply SQL vertes.
 
 ## Artefacts appliqués
 

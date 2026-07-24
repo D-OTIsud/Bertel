@@ -2,6 +2,8 @@
 
 **Capture** : 2026-07-24, base cloud, lecture seule, avant toute application persistante de `migration_taxonomy_nature_forme.sql` et `migration_interop_crosswalk_leafaware.sql`.
 
+**Répétition intégrale** : PASS le 2026-07-24 via `tests/dry_run_taxonomy_nature_forme_full_api.sql` (migration taxonomie + migration crosswalk + assertions arbre/crosswalk/panier réel, puis `ROLLBACK`). Contrôle indépendant après la transaction : 476 HLO publiés, 231 porteurs legacy, 0 nouveau nœud et 0 colonne crosswalk persistés.
+
 Cette baseline matérialise le panier T8/F1 du plan. Les empreintes sont calculées sur la représentation canonique PostgreSQL `jsonb::text` avec `md5`; la longueur est en octets UTF-8. Les fonctions interrogées sont `api.get_object_cards_batch`, `api.get_object_resource`, `api.get_object_jsonld` et `api.get_object_interop` pour les trois profils.
 
 ## Panier témoin
@@ -40,3 +42,19 @@ Format de chaque cellule : `md5 / octets`.
 - Le témoin RES doit conserver les six empreintes à l’identique.
 - Toute divergence supplémentaire déclenche le rollback et l’analyse avant communication partenaire.
 
+### Empreintes normalisées attendues après
+
+Les projections retirent uniquement `taxonomy` et `updated_at` de la carte, `taxonomy`, `updated_at` et `render.taxonomy_lines` de la fiche complète, et `@type` du pivot DATAtourisme. Elles doivent rester strictement identiques après les deux migrations.
+
+| Rôle | card normalisée | full normalisée | DATAtourisme sans `@type` |
+|---|---|---|---|
+| CdH directe | `4e3a8b97a9772a4fd61064e23c1c3c77` | `22e764e96db1feeafdf1c639def4bbcb` | `b0ff8f48e7c4d4b33f0bfb3c5e2de3b5` |
+| future maison d’hôtes | `d24f4f9bbfac346a27d38209c93dcd0b` | `542de0e70a249705026d0208f8eced24` | `d2bc51cbecb6577cb94e01ac601940c4` |
+| meublé maison | `802f8e441f8574068286ca5cc4ea2ab0` | `ac6587fdfae2a754d21070d2bb37658a` | `4de93a12d46cda0211b667e4e99d913a` |
+| meublé appartement | `9a1660d460dd051e45824d623ddfcba4` | `cc1e988141dfcdd383ab53f7d27158c8` | `e0447fa84838409c3b57636a32abb7d8` |
+| affectation nature | `e7fc27dd9ba2e9e7d62109fc917330eb` | `9e256c546ac4e705c3adff322ea1ea8c` | `6c525d7bf756af8c70b1a70407828559` |
+| collectif / étape | `0d4d16776d9b280764d07b629c64af57` | `65a806608ce6247ed785f40017a0d91f` | `6006b60f20e3e479b2277dfb7a59c029` |
+| chemin seul / bulle | `88acf2a3731a0b6a0ef0aa9bda93f6ca` | `e1e2e5a3ba591c59a334a05d0e30ae1d` | `3e5deb78f06f0736ae7ea4adb2e2aece` |
+| témoin non-HLO | `f323e60d290ad0f31501243bab57fecd` | `78801da09ec886b260b254ddb4354f90` | `61e10a8502e52a0e0b685701dab823f3` |
+
+Le contrôle exécutable correspondant est `Base de donnée DLL et API/tests/test_taxonomy_nature_forme_live_api.sql`. Il est volontairement hors fresh-apply : il cible ces huit identifiants cloud réels.

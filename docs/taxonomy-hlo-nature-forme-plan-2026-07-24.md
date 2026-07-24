@@ -281,7 +281,7 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 - [x] C5. Écrire `tests/test_taxonomy_nature_forme_guard.sql` (DO-block, exemptions par source, `COALESCE(ot.source,'')`).
 - [x] C6. Manifest `ci_fresh_apply.sql` : étape 13k (bloc 13*, avant l'étape `taxo`) + test en fin ; entrée runbook au format maison.
 - [x] C7. Dry-run cloud **aller-retour** (v4) : `BEGIN → migration → assertions cible (T1/T2/T3 en requêtes) → logique de rollback (étapes 1-7 du §7c) → assertions état initial → ROLLBACK`. Prouve la migration ET le rollback sans rien écrire. Comptes conformes au gel.
-- [x] C8. Gate fresh-apply CI verte (run GitHub Actions `30091502744`, SHA `132d57a`, toutes les suites SQL vertes).
+- [x] C8. Gate fresh-apply CI final vert (run GitHub Actions `30094714885`, SHA `69d0b9e`, garde rejouable incluse ; toutes les suites SQL vertes).
 - [x] C9. Relecture (PO ou pair) → **commit versionné de l'ensemble**. Migrations appliquées depuis `0a263df` (taxonomie) et `d2a48ec` (crosswalk), sur le HEAD validé `132d57a`.
 
 ### Phase D — Fenêtre cloud

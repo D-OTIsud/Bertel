@@ -19,17 +19,17 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
   {
     id: 'creer-hlo',
     rubrique: 'creer-objet',
-    question: 'Comment créer un gîte ou un meublé de tourisme ?',
-    keywords: ['gîte', 'meublé', 'location saisonnière', 'kaz', 'villa', 'bungalow', 'location vacances'],
+    question: 'Comment créer un gîte, un meublé ou une chambre d’hôtes ?',
+    keywords: ['gîte', 'meublé', 'chambre d’hôtes', 'maison d’hôtes', 'location saisonnière', 'kaz', 'villa', 'bungalow', 'location vacances', 'gîte de groupe', 'refuge'],
     types: ['HLO'],
     related: ['creer-fiche', 'choisir-hlo-rva'],
-    answer: `**C'est quoi.** Un logement entier loué à la semaine ou à la nuitée (gîte, meublé, villa, bungalow) — type **Gîte & meublé (HLO)**. C'est le type le plus courant du territoire.
+    answer: `**C'est quoi.** Un hébergement locatif non hôtelier : logement entier autonome (gîte, meublé, villa, bungalow), chambre d'hôtes chez l'habitant, ou hébergement collectif de type gîte de groupe/refuge — type **Gîtes, meublés & chambres d'hôtes (HLO)**.
 
-**Quand choisir ce type.** Le voyageur loue le logement complet, sans services hôteliers. **Pas ce type si** : chambres à la nuitée avec réception/services → Hôtel (HOT) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA) ; emplacements de plein air → Camping (CAMP) ou Hôtellerie de plein air (HPA).
+**Quand choisir ce type.** Le voyageur loue un logement autonome, séjourne chez l'habitant avec petit-déjeuner, ou réserve un hébergement collectif sans fonctionnement hôtelier. **Pas ce type si** : chambres exploitées comme un hôtel avec réception et services hôteliers → Hôtel (HOT) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA) ; emplacements de plein air → Camping (CAMP) ou Hôtellerie de plein air (HPA).
 
-**Étapes.** Créer → type « Gîte & meublé » → nom exact. Dans l'éditeur, renseignez en priorité : localisation, contacts, description, photos, la **capacité** (section Chambres, capacité & séminaire) et les tarifs.
+**Étapes.** Créer → type « Gîtes, meublés & chambres d'hôtes » → nom exact. Dans l'éditeur, choisissez d'abord la nature puis la forme dans la taxonomie, et renseignez en priorité : localisation, contacts, description, photos, **capacité** et tarifs.
 
-**Pièges.** Le classement en étoiles (meublé de tourisme) se saisit dans Classement & labels — jamais dans le nom de la fiche.`,
+**Pièges.** Une maison d'hôtes reste une chambre d'hôtes : « maison » décrit la forme et ne doit pas la faire basculer dans les meublés. Le classement en étoiles d'un meublé de tourisme se saisit dans Classement & labels — jamais dans le nom.`,
   },
   {
     id: 'creer-hot',
@@ -40,7 +40,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     related: ['creer-fiche'],
     answer: `**C'est quoi.** Un établissement proposant des chambres à la nuitée avec des services hôteliers (réception, ménage…) — type **Hôtel (HOT)**.
 
-**Quand choisir ce type.** Réception et services hôteliers, chambres louées à la nuitée. **Pas ce type si** : logement entier loué sans services → Gîte & meublé (HLO) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA).
+**Quand choisir ce type.** Réception et services hôteliers, chambres louées à la nuitée. **Pas ce type si** : logement entier autonome ou chambre chez l'habitant avec petit-déjeuner → Gîtes, meublés & chambres d'hôtes (HLO) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA).
 
 **Étapes.** Créer → type « Hôtel » → nom exact. Dans l'éditeur, renseignez la **capacité et les chambres** (section Chambres, capacité & séminaire) et le **classement en étoiles** (section Classifications & distinctions).
 
@@ -85,11 +85,11 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     related: ['creer-fiche'],
     answer: `**C'est quoi.** Un ensemble locatif (appartements, studios) avec des services collectifs (accueil, ménage, parfois piscine ou animation) — type **Résidence de vacances (RVA)**.
 
-**Quand choisir ce type.** Plusieurs logements gérés par un même exploitant, avec des services partagés. **Pas ce type si** : un seul logement loué indépendamment, sans services collectifs → Gîte & meublé (HLO).
+**Quand choisir ce type.** Plusieurs logements gérés par un même exploitant, avec des services partagés. **Pas ce type si** : logement autonome, chambre d'hôtes ou gîte collectif sans services de résidence → Gîtes, meublés & chambres d'hôtes (HLO).
 
 **Étapes.** Créer → type « Résidence de vacances » → nom exact. Renseignez la **capacité et les logements** (section Chambres, capacité & séminaire).
 
-**Pièges.** La frontière avec le Gîte & meublé (HLO) tient aux services collectifs, pas au nombre de logements — un exploitant avec plusieurs gîtes indépendants reste en HLO (une fiche par logement).`,
+**Pièges.** La frontière avec HLO tient au fonctionnement en résidence et aux services collectifs, pas au seul nombre de logements — un exploitant avec plusieurs gîtes indépendants reste en HLO (une fiche par logement).`,
   },
   {
     id: 'creer-res',

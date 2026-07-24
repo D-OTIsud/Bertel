@@ -26,17 +26,20 @@ export const CHOISIR_TYPE_FAQ: FaqEntry[] = [
   {
     id: 'choisir-hlo-rva',
     rubrique: 'choisir-type',
-    question: 'Gîte, meublé ou résidence de vacances : quel type choisir ?',
-    keywords: ['gîte', 'meublé', 'résidence', 'appartement', 'location', 'services collectifs', 'villa'],
-    types: ['HLO', 'RVA'],
-    related: ['creer-hlo', 'creer-rva'],
-    answer: `La question à trancher : **un logement isolé, ou un ensemble avec services collectifs ?**
+    question: 'Gîte, chambre d’hôtes, hôtel ou résidence : quel type choisir ?',
+    keywords: ['gîte', 'meublé', 'chambre d’hôtes', 'maison d’hôtes', 'hôtel', 'résidence', 'appartement', 'location', 'services collectifs', 'villa', 'gîte de groupe', 'refuge'],
+    types: ['HLO', 'HOT', 'RVA'],
+    related: ['creer-hlo', 'creer-hot', 'creer-rva'],
+    answer: `La question à trancher : **quel est le fonctionnement réel de l'hébergement ?**
 
-- **Un logement entier, loué seul, sans réception ni service partagé** (gîte, meublé, villa, bungalow) → **Gîte & meublé (HLO)**. C'est le type le plus courant du territoire.
+- **Un logement entier autonome, loué sans réception ni service partagé** (gîte, meublé, villa, bungalow) → **Gîtes, meublés & chambres d'hôtes (HLO)**, branche « Meublé de tourisme / gîte ».
+- **Une chambre chez l'habitant avec accueil et petit-déjeuner** → **HLO**, branche « Chambre d'hôtes » — même si le bâtiment est présenté comme une maison, une villa, une bulle ou un lodge.
+- **Un gîte de groupe, refuge ou gîte d'étape sans fonctionnement hôtelier** → **HLO**, branche « Hébergement collectif ».
+- **Des chambres exploitées avec réception et services hôteliers** → **Hôtel (HOT)**.
 - **Plusieurs logements gérés par le même exploitant, avec des services collectifs** (accueil, ménage, parfois piscine ou animation) → **Résidence de vacances (RVA)**.
 - **Un exploitant avec plusieurs gîtes indépendants, sans service collectif** → toujours HLO, **une fiche par logement** — le nombre de logements ne fait pas basculer en RVA, seuls les services collectifs le font.
 
-**Piège.** Ce doublon existe réellement dans l'import historique : plusieurs fiches créées en HLO ont dû être requalifiées en RVA une fois les services collectifs identifiés. Si vous hésitez, cherchez s'il y a un accueil ou un service partagé — s'il n'y en a pas, restez en HLO.`,
+**Piège.** La forme physique ne détermine jamais la nature : une « maison d'hôtes » n'est pas un meublé parce que c'est une maison. En cas de doute, vérifiez qui occupe les lieux, quels services sont fournis et si le voyageur dispose du logement entier.`,
   },
   {
     id: 'choisir-pcu-loi',

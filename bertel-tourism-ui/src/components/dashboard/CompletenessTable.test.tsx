@@ -40,7 +40,7 @@ describe('CompletenessTable', () => {
 
   it('clic sur la pastille de type filtre sur ce type (drill-down toggle)', () => {
     render(<CompletenessTable data={data} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Gîte & meublé' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Gîtes, meublés & chambres d’hôtes' }));
     expect(activeDrilldownTypes(useDashboardExplorerStore.getState())).toContain('HLO');
   });
 });

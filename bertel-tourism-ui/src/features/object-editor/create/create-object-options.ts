@@ -10,14 +10,13 @@ import { TYPE_ARCHETYPES, TYPE_LABEL, ARCHETYPE_META, type ArchetypeCode } from 
 export const MAX_OBJECT_NAME_LENGTH = 200;
 
 /**
- * Properly-accented French display labels for the picker. The shared `TYPE_LABEL`
- * is intentionally unaccented (used as stable codes across the app); the create
- * picker is a user-facing surface, so it shows real French. Falls back to TYPE_LABEL.
+ * Picker-specific French labels kept only where the creation vocabulary is
+ * intentionally shorter than the canonical `TYPE_LABEL`. Falls back to the
+ * canonical display label; neither map is an identifier or a stable code.
  */
 const CREATE_TYPE_LABELS: Record<string, string> = {
   HOT: 'Hôtel',
   HPA: 'Hébergement plein air',
-  HLO: 'Hébergement loisir',
   CAMP: 'Camping',
   RVA: 'Résidence vacances',
   RES: 'Restaurant',

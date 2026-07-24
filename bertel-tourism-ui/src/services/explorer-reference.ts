@@ -275,7 +275,7 @@ function computeTaxonomyDepth(nodeId: string, parentIdByNodeId: Map<string, stri
   return depth;
 }
 
-function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: TaxonomyNodeRow[]): ExplorerTaxonomyDomain[] {
+export function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: TaxonomyNodeRow[]): ExplorerTaxonomyDomain[] {
   const nodesByDomain = new Map<string, TaxonomyNodeRow[]>();
   for (const node of nodeRows) {
     const current = nodesByDomain.get(node.domain) ?? [];
@@ -441,6 +441,51 @@ function buildDemoReferences(): ExplorerReferences {
   };
 }
 
+/**
+ * Source taxonomique unique des filtres Explorer et du sélecteur de création.
+ * Les deux surfaces voient ainsi exactement les mêmes domaines, nœuds actifs,
+ * niveaux et libellés issus de ref_code.
+ */
+export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]> {
+  const session = useSessionStore.getState();
+  const client = getSupabaseClient();
+
+  if (session.demoMode || !client) {
+    return buildDemoReferences().taxonomies;
+  }
+
+  const taxonomyDomainsResult = await client
+    .from('ref_code_domain_registry')
+    .select('domain,name,object_type,position')
+    .eq('is_taxonomy', true)
+    .neq('object_type', 'ORG')
+    .order('position', { ascending: true });
+
+  if (taxonomyDomainsResult.error) {
+    throw taxonomyDomainsResult.error;
+  }
+
+  const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
+  const domainCodes = taxonomyDomains.map((domain) => domain.domain);
+  const taxonomyNodesResult = domainCodes.length > 0
+    ? await client
+        .from('ref_code')
+        .select('id,domain,code,name,parent_id,is_assignable,position')
+        .in('domain', domainCodes)
+        .eq('is_active', true)
+        .order('position', { ascending: true })
+    : { data: [], error: null };
+
+  if (taxonomyNodesResult.error) {
+    throw taxonomyNodesResult.error;
+  }
+
+  return buildTaxonomyDomains(
+    taxonomyDomains,
+    (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[],
+  );
+}
+
 export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const session = useSessionStore.getState();
   const client = getSupabaseClient();
@@ -452,7 +497,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const [
     metricsResult,
     applicabilityResult,
-    taxonomyDomainsResult,
+    taxonomies,
     practicesResult,
     environmentTagsResult,
     amenityFamiliesResult,
@@ -466,14 +511,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
-    // §155 — TOUS les domaines de sous-catégories (un par type), plus seulement
-    // taxonomy_hot. ORG exclu (pas un bucket Explorer).
-    client
-      .from('ref_code_domain_registry')
-      .select('domain,name,object_type,position')
-      .eq('is_taxonomy', true)
-      .neq('object_type', 'ORG')
-      .order('position', { ascending: true }),
+    listTaxonomyReferences(),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
@@ -512,9 +550,6 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   if (applicabilityResult.error) {
     throw applicabilityResult.error;
   }
-  if (taxonomyDomainsResult.error) {
-    throw taxonomyDomainsResult.error;
-  }
   if (practicesResult.error) {
     throw practicesResult.error;
   }
@@ -546,24 +581,8 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     throw rankedLabelSchemeValuesResult.error;
   }
 
-  const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
-  const domainCodes = taxonomyDomains.map((domain) => domain.domain);
-  const taxonomyNodesResult = domainCodes.length > 0
-    ? await client
-        .from('ref_code')
-        .select('id,domain,code,name,parent_id,is_assignable,position')
-        .in('domain', domainCodes)
-        .eq('is_active', true)
-        .order('position', { ascending: true })
-    : { data: [], error: null };
-
-  if (taxonomyNodesResult.error) {
-    throw taxonomyNodesResult.error;
-  }
-
   const metrics = (metricsResult.data ?? []) as CapacityMetricRow[];
   const applicability = (applicabilityResult.data ?? []) as CapacityApplicabilityRow[];
-  const taxonomyNodes = (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
   const environmentTags = (environmentTagsResult.data ?? []) as PracticeRow[];
   const amenityFamilies = (amenityFamiliesResult.data ?? []) as PracticeRow[];
@@ -583,7 +602,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
     rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes),
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
-    taxonomies: buildTaxonomyDomains(taxonomyDomains, taxonomyNodes),
+    taxonomies,
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),

@@ -6,58 +6,18 @@
  * added there automatically appears in the picker — no hardcoded type list here.
  */
 import { TYPE_ARCHETYPES, TYPE_LABEL, ARCHETYPE_META, type ArchetypeCode } from '../archetypes';
+import type { ExplorerTaxonomyDomain, ExplorerTaxonomyNode } from '../../../types/domain';
 
 export const MAX_OBJECT_NAME_LENGTH = 200;
 
-/**
- * Picker-specific French labels kept only where the creation vocabulary is
- * intentionally shorter than the canonical `TYPE_LABEL`. Falls back to the
- * canonical display label; neither map is an identifier or a stable code.
- */
-const CREATE_TYPE_LABELS: Record<string, string> = {
-  HOT: 'Hôtel',
-  HPA: 'Hébergement de plein air',
-  CAMP: 'Camping classé',
-  RVA: 'Résidence vacances',
-  RES: 'Restaurant',
-  ITI: 'Itinéraire',
-  FMA: 'Fête / manifestation',
-  ASC: 'Activité',
-  ACT: 'Activité encadrée',
-  LOI: 'Loisir',
-  PCU: 'Patrimoine',
-  PNA: 'Site naturel',
-  PRD: 'Producteur',
-  PSV: 'Prestataire',
-  VIL: 'Ville',
-  COM: 'Commerce',
-  SPU: 'Service public',
-};
-
-/**
- * Taxonomy choices shown on hover/focus when two object types are easy to
- * confuse. Keep these labels aligned with the assignable nodes seeded in
- * `taxonomy_camp` and `taxonomy_hpa`.
- */
-const CREATE_TYPE_SUBCATEGORIES: Record<string, string[]> = {
-  CAMP: ['Camping', 'Camping chez l’habitant'],
-  HPA: [
-    'Aire naturelle de camping',
-    'Camping à la ferme',
-    'Hébergement insolite de plein air',
-    'Aire d’accueil camping-car',
-  ],
-};
-
 /** Accented French label for a single object-type code (picker + duplicate hint). */
 export function createTypeLabel(code: string): string {
-  return CREATE_TYPE_LABELS[code] ?? TYPE_LABEL[code] ?? code;
+  return TYPE_LABEL[code] ?? code;
 }
 
 export interface CreateTypeOption {
   code: string;
   label: string;
-  subcategories?: string[];
 }
 
 export interface CreateTypeGroup {
@@ -67,12 +27,50 @@ export interface CreateTypeGroup {
   types: CreateTypeOption[];
 }
 
+/**
+ * Libellés d'infobulle dérivés du même arbre que les filtres Explorer.
+ * Le chemin désambiguïse les feuilles homonymes (par exemple une « Maison »
+ * sous Chambre d'hôtes ou sous Meublé de tourisme) sans inventer un second
+ * vocabulaire côté création.
+ */
+export function buildCreateTypeTaxonomyLabels(
+  taxonomies: ExplorerTaxonomyDomain[],
+  typeCode: string,
+): string[] {
+  const labels: string[] = [];
+
+  for (const domain of taxonomies.filter((item) => item.objectType === typeCode)) {
+    const nodesByCode = new Map(domain.nodes.map((node) => [node.code, node]));
+
+    const buildPath = (node: ExplorerTaxonomyNode, visited: Set<string>): string => {
+      if (!node.parentCode || visited.has(node.code)) {
+        return node.name;
+      }
+      const parent = nodesByCode.get(node.parentCode);
+      if (!parent) {
+        return node.name;
+      }
+      const nextVisited = new Set(visited).add(node.code);
+      const parentPath = buildPath(parent, nextVisited);
+      return `${parentPath} › ${node.name}`;
+    };
+
+    for (const node of domain.nodes) {
+      if (node.isAssignable) {
+        labels.push(buildPath(node, new Set()));
+      }
+    }
+  }
+
+  return [...new Set(labels)];
+}
+
 /** Grouped, stably-sorted creatable types for the picker (enum minus ORG). */
 export function buildCreateTypeOptions(): CreateTypeGroup[] {
   const byArchetype = new Map<ArchetypeCode, CreateTypeOption[]>();
   for (const [code, meta] of Object.entries(TYPE_ARCHETYPES)) {
     const list = byArchetype.get(meta.archetype) ?? [];
-    list.push({ code, label: createTypeLabel(code), subcategories: CREATE_TYPE_SUBCATEGORIES[code] });
+    list.push({ code, label: createTypeLabel(code) });
     byArchetype.set(meta.archetype, list);
   }
   return [...byArchetype.entries()]

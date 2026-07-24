@@ -19,6 +19,24 @@ const GRADED_REFERENCES = {
   },
 } as unknown as ExplorerReferences;
 
+const HOT_TAXONOMY_REFERENCES = {
+  hotCapacityMetrics: [],
+  taxonomies: [
+    {
+      domain: 'taxonomy_camp',
+      name: 'Camping classé',
+      objectType: 'CAMP',
+      nodes: [{ code: 'camping_chez_habitant', name: 'Camping chez l’habitant', parentCode: null, depth: 0, isAssignable: true, position: 1 }],
+    },
+    {
+      domain: 'taxonomy_hpa',
+      name: 'Hébergement de plein air',
+      objectType: 'HPA',
+      nodes: [{ code: 'camping_ferme', name: 'Camping à la ferme', parentCode: null, depth: 0, isAssignable: true, position: 1 }],
+    },
+  ],
+} as unknown as ExplorerReferences;
+
 // Sections type-spécifiques repliables (décision §152) : l'en-tête disclosure
 // porte un nom accessible distinct (« Section X », préfixe sr-only) pour ne pas
 // collisionner avec la chip de bucket homonyme au comportement destructif.
@@ -58,6 +76,16 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     fireEvent.click(toggle);
     // Replié, le badge reste — un filtre actif n'est jamais masqué par le pli.
     expect(sectionToggle(/Section Hébergements/, false)).toHaveTextContent('1');
+  });
+
+  it('affiche les mêmes libellés canoniques et nœuds taxonomiques que la création', () => {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+    render(<FiltersPanel references={HOT_TAXONOMY_REFERENCES} />);
+
+    expect(screen.getByRole('button', { name: 'Camping classé' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hébergement de plein air' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Camping chez l’habitant' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toBeInTheDocument();
   });
 
   it('la section Itinéraires est repliable et compte ses critères', () => {

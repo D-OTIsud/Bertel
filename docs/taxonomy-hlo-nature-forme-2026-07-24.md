@@ -254,3 +254,11 @@ Badge HLO unifié : **« Gîtes, meublés & chambres d'hôtes »** via une map d
 - Berta n'est **pas** une autorité absolue (il mélange lui-même les axes — les 2 mouvements inverses §2c le prouvent) : c'est un signal d'arbitrage, le critère final est le fonctionnement réel (chez l'habitant + petit-déjeuner vs logement autonome).
 - Les 63 CdH concordantes et les autres feuilles cohérentes ne sont pas re-auditées.
 - La garde §9 dépend de `object.extra` : les fiches créées dans Bertel (sans extra Berta) ne sont couvertes que par la règle d'import §8 et le contrôle éditeur.
+
+## 14. Bilan de déploiement cloud
+
+Le plan a été appliqué sur la base cloud le **2026-07-24 entre 16 h 33 et 16 h 43 RUN**, sans Docker ni base locale. La migration taxonomie a validé et committé les 243 lignes du manifeste, puis rafraîchi les deux vues matérialisées. Le crosswalk DATAtourisme leaf-aware a ensuite été appliqué uniquement après la réussite des preuves post-taxonomie.
+
+Résultat live : **476/476 HLO** possèdent un ancêtre de nature et un cache conforme ; **0 porteur legacy** ; filtre sous-arbre = **456 locatifs + 20 collectifs** ; pagination = 476 ids uniques, 0 doublon, 0 trou ; garde Berta/nature = 0 écart non arbitré. Le total collectif final est 20, et non 16 : il inclut les quatre fiches Berta « Gîte d'étape et de randonnée » corrigées depuis la branche meublé.
+
+Les quatre classes DATAtourisme attendues sont actives par ancêtre le plus proche. Les sorties schema.org, Apidae et Tourinsoft sont restées identiques à l'octet sur le panier témoin. Les preuves, hashes, tests et premier point de surveillance sont consignés dans `docs/taxonomy-hlo-deployment-evidence-2026-07-24.md`.

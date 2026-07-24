@@ -1,6 +1,6 @@
 # Plan d'exécution — Refonte nature/forme de la taxonomie hébergement HLO (§190, v4)
 
-**Statut : EXÉCUTION EN COURS — plan et PO-1→PO-8 validés sans exception. Frontend, manifeste, migration/rollback taxonomie et migration crosswalk sont écrits ; les dry-runs cloud sont verts et n'ont rien persisté. Application cloud suspendue jusqu'à la fenêtre partenaires et au gate CI.**
+**Statut : DÉPLOYÉ SUR LA BASE CLOUD le 2026-07-24 entre 16 h 33 et 16 h 43 (La Réunion). T1–T10 et T11-bis sont verts ; surveillance 24 h en cours. Restent la validation visuelle V-app et l'envoi par le PO de la confirmation partenaires.**
 **Compagnon de** : `docs/taxonomy-hlo-nature-forme-2026-07-24.md` (le rapport d'audit §190 — listes nominatives des 40 arbitrages, arbre justifié, garde SQL). Ce plan est autonome : un interne peut l'exécuter sans l'historique de conversation.
 **Historique** : v1 2026-07-24 (plan initial) → v2 (9 corrections PO : atomicité, repo-first, population complète, manifeste déterministe) → v3 (7 corrections PO : idempotence tri-état, garde de dérive, ceinture closure, rollback des nœuds neufs, FK crosswalk, fiches du pool nominatives, checklist en fichier) → **v4 (2 corrections bloquantes PO : détection de mode fresh/live/RAISE dans la garde de dérive ; ordre du rollback — réactiver les anciens nœuds AVANT de restaurer les affectations, le trigger d'assignation refusant les nœuds non assignables ; + dry-run aller-retour migration+rollback, CHECK de complétude sur le crosswalk, 476 chemins impactés).**
 
@@ -99,7 +99,7 @@ Les deux MV et leurs modes de refresh ; TYPE_LABEL = affichage pur ; picker §01
 
 | Code | Libellé cible | État actuel | Opération | Assignable | Fiches (après) | API |
 |---|---|---|---|---|---|---|
-| `hebergement_locatif` | Hébergement locatif | n'existe pas | **CRÉER** (parent : root) | ✅ | 0 directe | C, P (~460) |
+| `hebergement_locatif` | Hébergement locatif | n'existe pas | **CRÉER** (parent : root) | ✅ | 0 directe | C, P (456 live) |
 | `chambre_d_hotes` | Chambre d'hôtes | racine, 71 | **re-parenter** → hebergement_locatif | ✅ | 71 + arbitrages | C, P |
 | `cdh_maison` | Maison d'hôtes | n'existe pas | **CRÉER** (parent : chambre_d_hotes) | ✅ | ~5 (PO-1) | C, F |
 | `cdh_bungalow` | Bungalow | n'existe pas | **CRÉER** (parent : chambre_d_hotes) | ✅ | ~1 (PO-1) | C, F |
@@ -247,7 +247,7 @@ Le rollback est un **apply**, pas une reconstruction sous stress. **Ordre impér
 
 ## 9. Impacts partenaires et communication
 
-**Change** : valeurs `taxonomy[].code/name/path` des ~239 fiches recodées ; chemins enrichis d'un niveau pour **les 476 HLO publiés** (les ~460 locatifs ET les 16 collectifs changent tous de chemin avec les nouvelles branches) ; `updated_at` des 476 publiés (voulu — c'est le signal de resynchronisation) ; l'arbre `/catalog` ; le `@type` DATAtourisme (phase F). **Ne change pas** : ids, `object_type`, clés/formes JSON (contrat additif respecté — ce sont des valeurs), blocs non-taxonomie, pagination, pivots apidae/tourinsoft/jsonld (jusqu'à la phase F, puis seuls les seeds datatourisme changent), tombstones (aucune suppression). **Actions partenaires** : re-pull `/catalog` (pas d'etag — le re-fetch est la seule détection) ; la synchro incrémentale `updated_at` rattrape les fiches automatiquement. **Quand** : pré-annonce de la fenêtre (étape 8) ; confirmation après T1–T9 verts (étape 12) ; jamais d'annonce avant vérification.
+**Change** : valeurs `taxonomy[].code/name/path` des ~239 fiches recodées ; chemins enrichis d'un niveau pour **les 476 HLO publiés** (les **456 locatifs et 20 collectifs** changent tous de chemin avec les nouvelles branches) ; `updated_at` des 476 publiés (voulu — c'est le signal de resynchronisation) ; l'arbre `/catalog` ; le `@type` DATAtourisme (phase F). **Ne change pas** : ids, `object_type`, clés/formes JSON (contrat additif respecté — ce sont des valeurs), blocs non-taxonomie, pagination, pivots apidae/tourinsoft/jsonld (jusqu'à la phase F, puis seuls les seeds datatourisme changent), tombstones (aucune suppression). **Actions partenaires** : re-pull `/catalog` (pas d'etag — le re-fetch est la seule détection) ; la synchro incrémentale `updated_at` rattrape les fiches automatiquement. **Quand** : pré-annonce de la fenêtre (étape 8) ; confirmation après T1–T9 verts (étape 12) ; jamais d'annonce avant vérification.
 
 ## 10. Calendrier et chemin critique
 
@@ -281,40 +281,40 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 - [x] C5. Écrire `tests/test_taxonomy_nature_forme_guard.sql` (DO-block, exemptions par source, `COALESCE(ot.source,'')`).
 - [x] C6. Manifest `ci_fresh_apply.sql` : étape 13k (bloc 13*, avant l'étape `taxo`) + test en fin ; entrée runbook au format maison.
 - [x] C7. Dry-run cloud **aller-retour** (v4) : `BEGIN → migration → assertions cible (T1/T2/T3 en requêtes) → logique de rollback (étapes 1-7 du §7c) → assertions état initial → ROLLBACK`. Prouve la migration ET le rollback sans rien écrire. Comptes conformes au gel.
-- [ ] C8. Gate fresh-apply CI verte (migration + snapshot convergent au même arbre).
-- [x] C9. Relecture (PO ou pair) → **commit versionné de l'ensemble**. C'est cette version exacte qui sera appliquée (`0a263df`).
+- [x] C8. Gate fresh-apply CI verte (run GitHub Actions `30091502744`, SHA `132d57a`, toutes les suites SQL vertes).
+- [x] C9. Relecture (PO ou pair) → **commit versionné de l'ensemble**. Migrations appliquées depuis `0a263df` (taxonomie) et `d2a48ec` (crosswalk), sur le HEAD validé `132d57a`.
 
 ### Phase D — Fenêtre cloud
-- [ ] D1. Pré-annonce partenaires (fenêtre prévue ; re-pull `/catalog` attendu ; incrémental couvert par le bump).
-- [ ] D2. Capturer le panier « avant » : 8 échantillons (§8-T8) × card + full + 3 formats interop.
-- [ ] D3. Heures calmes : apply de la version committée (MCP `apply_migration`). En cas de RAISE (dérive/garde) : rien n'est écrit ; re-geler (C1) et reprogrammer.
-- [ ] D4. Hors transaction : `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;` puis `internal.mv_ref_data_json;`.
+- [x] D1. Pré-annonce partenaires confirmée envoyée par le PO avant l'ouverture de la fenêtre.
+- [x] D2. Panier « avant » capturé : 8 échantillons (§8-T8) × card + full + 4 formats interop, empreintes versionnées.
+- [x] D3. Apply de la version committée sur la base cloud, sans Docker ni base locale : transaction taxonomie COMMIT, 243 recodages, gardes vertes.
+- [x] D4. Hors transaction : refresh des deux MV exécuté par le wrapper ; le cron `refresh-mv-filtered-objects` a ensuite réussi à 12:35 et 12:40 UTC.
 
 ### Phase E — Preuves
-- [ ] E1. T1 : arbre == tableau §4 (codes, parents, libellés, flags).
-- [ ] E2. T2 : 0 fiche publiée sous un nœud `is_active=false`.
-- [ ] E3. T3 : garde nature/forme = 0 ligne hors sources d'arbitrage.
-- [ ] E4. T4/T5 : 476/476 avec ancêtre de nature ; caches sans code désactivé.
-- [ ] E5. T6/T7 : filtre « Hébergement locatif » = corpus ; recherche « chambre d'hôtes » remonte les maisons d'hôtes recodées.
-- [ ] E6. T8 : diff des 8 échantillons — seuls `taxonomy`/`path`/`taxonomy_lines`/`updated_at` bougent ; non-recodées = chemin neuf + `updated_at` bumpé ; témoin non-HLO intact.
-- [ ] E7. T9 : `/catalog?domains=taxonomy_hlo` — nouveaux nœuds, bons `parent_code`, désactivés absents.
-- [ ] E8. T11-bis : pagination complète `types=HLO` = 476 ids uniques, 0 doublon, 0 trou.
+- [x] E1. T1 : arbre == tableau §4 (codes, parents, libellés, flags).
+- [x] E2. T2 : 0 fiche publiée sous un nœud `is_active=false`.
+- [x] E3. T3 : garde nature/forme = 0 ligne hors sources d'arbitrage.
+- [x] E4. T4/T5 : 476/476 avec ancêtre de nature ; caches sans code désactivé.
+- [x] E5. T6/T7 : filtres sous-arbre conformes (456 locatifs + 20 collectifs) ; recherche « chambre d'hôtes » remonte toutes les maisons d'hôtes recodées.
+- [x] E6. T8 : diff des 8 échantillons conforme ; seuls taxonomie/chemins/rendu taxonomique/`updated_at` changent ; témoin non-HLO intact.
+- [x] E7. T9 : `/catalog?domains=taxonomy_hlo` — nouveaux nœuds, bons `parent_code`, désactivés absents.
+- [x] E8. T11-bis : pagination complète `types=HLO` = 476 ids uniques, 0 doublon, 0 trou (7 pages de 73/dernière partielle).
 - [ ] E9. V-app : Explorer (chips + fil d'Ariane 3 niveaux), recherche, éditeur §01 (arbre cible visible, désactivés absents).
-- [ ] E10. Coller toutes les preuves au doc chantier.
+- [x] E10. Preuves consolidées dans `docs/taxonomy-hlo-deployment-evidence-2026-07-24.md`.
 - [ ] E11. Confirmation partenaires : livraison effective.
 
 ### Phase F — Crosswalk DATAtourisme (fenêtre séparée)
-- [ ] F1. Capturer la **baseline POST-TAXO** : apidae + tourinsoft + jsonld sur les 8 échantillons (référence octet).
+- [x] F1. Baseline **POST-TAXO** capturée et validée à l'octet sur les 8 échantillons avant le crosswalk.
 - [x] F2. Écrire `migration_interop_crosswalk_leafaware.sql` selon PO-8 (recommandé : colonnes `taxonomy_domain`+`taxonomy_code`, **FK composite → ref_code(domain, code)** + **`CHECK ((taxonomy_domain IS NULL) = (taxonomy_code IS NULL))`**) : DDL + 2 index uniques partiels (défaut `WHERE taxonomy_code IS NULL` = sémantique de l'ancien PK ; leaf sinon) ; re-cibler les `ON CONFLICT` des seeds jsonld/interop existants ; résolution ancêtre-mappé-le-plus-proche (`ORDER BY cl.depth ASC LIMIT 1`, jointure par domaine) + fallback type-level ; seeds feuille **datatourisme uniquement** (PO-6).
-- [ ] F3. Dry-run + CI + relecture + commit ; apply cloud.
-- [ ] F4. T10 : datatourisme CdH → `['PointOfInterest','Guesthouse']` ; apidae/tourinsoft/jsonld identiques à l'octet à la baseline F1.
+- [x] F3. Dry-run + CI + relecture + commit ; apply cloud effectué (SHA-256 migration `49bbf88c3a886b95c6b7db7b9c6c9968595b61f457c6db0782193e11c319647a`).
+- [x] F4. T10 : DATAtourisme affine les quatre classes prévues ; apidae/tourinsoft/jsonld identiques à l'octet à la baseline F1.
 - [x] F5. OpenAPI + Postman : @type affiné + correction de la dérive `path` (`string[]` → `[{code,name}]`).
 
 ### Phase G — Clôture
-- [ ] G1. Rapport §190 : totaux 199, corrections §2c, décisions PO, 3 fiches du pool, preuves.
-- [ ] G2. Règle d'import gravée au runbook + README SQL (catégorie→branche ; sous-catégorie→feuille SOUS la branche ; inconnu→nature ; contradiction→arbitrage) + note « la sync Berta n'écrit pas de taxonomie ».
+- [x] G1. Rapport §190 complété avec le bilan de déploiement et le lien vers les preuves.
+- [x] G2. Règle d'import gravée au runbook + README SQL (catégorie→branche ; sous-catégorie→feuille SOUS la branche ; inconnu→nature ; contradiction→arbitrage) + note « la sync Berta n'écrit pas de taxonomie ».
 - [ ] G3. Decision log + mémoire + proposition CLAUDE.md (invariant nature-avant-forme + règle d'import).
-- [ ] G4. Surveillance 24 h : cron MV en succès, logs sans 23514, garde = 0, temps Explorer stables.
+- [ ] G4. Surveillance 24 h **EN COURS depuis 16 h 43 RUN** : premier point vert (cron MV réussi, garde = 0, aucun 5xx partenaire depuis l'ouverture).
 - [ ] G5. Clôturer le chantier au journal.
 
 ### Rollback (à tout moment après D3)

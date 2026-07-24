@@ -1,6 +1,6 @@
 # Communication partenaires — fenêtre taxonomie HLO §190
 
-**Statut** : modèles prêts, envoi à effectuer par le PO avant/après la fenêtre cloud conformément à PO-7.
+**Statut** : pré-annonce envoyée ; déploiement et preuves terminés le 2026-07-24 à 16 h 43 RUN ; confirmation ci-dessous prête à être envoyée par le PO.
 
 ## 1. Pré-annonce à envoyer avant la fenêtre
 
@@ -26,7 +26,7 @@ Cordialement,
 
 Bonjour,
 
-L’évolution de la taxonomie des hébergements HLO a été livrée le **[date et heure, heure de La Réunion]**.
+L’évolution de la taxonomie des hébergements HLO a été livrée le **24 juillet 2026 à 16 h 43, heure de La Réunion**.
 
 Les contrôles post-livraison sont conformes : arbre et chemins taxonomiques, 476 fiches HLO, filtres par sous-arbre, pagination, recherche et profils d’interopérabilité. Les sorties schema.org, Apidae et Tourinsoft restent identiques ; DATAtourisme distingue désormais notamment `Guesthouse`, `SelfCateringAccommodation`, `GroupLodging` et `StopOverOrGroupLodge` selon la taxonomie de la fiche.
 
@@ -58,11 +58,10 @@ Cordialement,
 
 | Action | Responsable | Horodatage RUN | Preuve |
 |---|---|---|---|
-| Pré-annonce envoyée | PO | À compléter | lien/message-id |
-| Fenêtre ouverte | Dev/DBA | À compléter | journal de déploiement |
-| T1–T10 et API live verts | Dev/DBA | À compléter | rapport §190 |
+| Pré-annonce envoyée | PO | Confirmé avant 2026-07-24 16:33 RUN | confirmation PO dans la tâche |
+| Fenêtre ouverte | Dev/DBA | 2026-07-24 16:33 RUN | `taxonomy-hlo-deployment-evidence-2026-07-24.md` |
+| T1–T10 et API live verts | Dev/DBA | 2026-07-24 16:43 RUN | `taxonomy-hlo-deployment-evidence-2026-07-24.md` |
 | Confirmation envoyée | PO | À compléter | lien/message-id |
 | Surveillance 24 h terminée | Dev/DBA | À compléter | métriques/logs |
 
 La confirmation ne doit jamais être envoyée avant la réussite des preuves post-application. En cas de rollback, utiliser exclusivement le troisième modèle.
-

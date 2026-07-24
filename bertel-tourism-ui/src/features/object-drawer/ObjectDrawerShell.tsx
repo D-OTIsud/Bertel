@@ -7,34 +7,13 @@ import { StatusPill } from '../../components/common/StatusPill';
 import { useObjectWorkspaceQuery } from '../../hooks/useExplorerQueries';
 import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useSessionStore } from '../../store/session-store';
+import { resolveTypeLabel } from '../../utils/labels';
 import { ObjectDetailView } from './ObjectDetailView';
 
 interface ObjectDrawerShellProps {
   objectId: string | null;
   onClose: () => void;
 }
-
-const DRAWER_TYPE_LABELS: Record<string, string> = {
-  HOT: 'Hotel',
-  HPA: 'Hebergement plein air',
-  HLO: 'Hebergement loisir',
-  CAMP: 'Camping',
-  RVA: 'Residence vacances',
-  RES: 'Restaurant',
-  ITI: 'Itineraire',
-  FMA: 'Manifestation',
-  ASC: 'Activite',
-  ACT: 'Activite',
-  LOI: 'Loisir',
-  PCU: 'Patrimoine',
-  PNA: 'Site naturel',
-  PSV: 'Prestataire',
-  SPU: 'Service public',
-  PRD: 'Producteur',
-  SRV: 'Service',
-  VIL: 'Ville',
-  COM: 'Commerce',
-};
 
 /**
  * Panneau ORG (PLAN 6). Une organisation n'est pas une fiche touristique
@@ -108,7 +87,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   // pas de ruban/sections génériques ; on renvoie vers /team.
   const isOrg = resolvedData?.type === 'ORG';
 
-  const typeLabel = resolvedData?.type ? DRAWER_TYPE_LABELS[resolvedData.type] ?? resolvedData.type : '';
+  const typeLabel = resolveTypeLabel(resolvedData?.type);
   const typeLineUpper = typeLabel ? typeLabel.toUpperCase() : '';
   const title = resolvedData?.name ?? 'Chargement…';
 

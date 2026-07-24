@@ -31,13 +31,13 @@ export interface ArchetypeMeta {
   covers: string;
 }
 
-// §153 (P0-a audit filtres) : libellés accentués, vocabulaire conseiller.
-// HLO « Gîte & meublé » : 171/180 hébergements publiés sont des HLO et « gîte »
-// était introuvable dans l'UI (l'ancien « Hébergement loisir » ne parle à personne).
+// §153/§190 : libellés accentués, vocabulaire conseiller. HLO couvre les
+// meublés et gîtes, les chambres d'hôtes et les hébergements collectifs ; le
+// libellé doit rendre visibles les deux familles majoritaires sans servir de code.
 export const TYPE_LABEL: Record<string, string> = {
   HOT: 'Hôtel',
   HPA: 'Hôtellerie de plein air',
-  HLO: 'Gîte & meublé',
+  HLO: 'Gîtes, meublés & chambres d’hôtes',
   CAMP: 'Camping',
   RVA: 'Résidence de vacances',
   RES: 'Restaurant',
@@ -60,7 +60,7 @@ const HEB_ARCHETYPE: ArchetypeMeta = {
   archetype: 'HEB',
   accent: 'acc-teal',
   codeName: 'Hébergement',
-  family: 'Hôtel · Hébergement loisir · Camping · Résidence',
+  family: 'Hôtel · Gîtes, meublés & chambres d’hôtes · Camping · Résidence',
   covers: 'HOT · HPA · HLO · CAMP · RVA',
 };
 

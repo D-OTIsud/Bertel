@@ -1,6 +1,6 @@
 # Plan d'exécution — Refonte nature/forme de la taxonomie hébergement HLO (§190, v4)
 
-**Statut : DÉPLOYÉ SUR LA BASE CLOUD le 2026-07-24 entre 16 h 33 et 16 h 43 (La Réunion). T1–T10 et T11-bis sont verts ; surveillance 24 h en cours. Restent la validation visuelle V-app et l'envoi par le PO de la confirmation partenaires.**
+**Statut : DÉPLOYÉ SUR LA BASE CLOUD le 2026-07-24 entre 16 h 33 et 16 h 43 (La Réunion). T1–T10, T11-bis et la validation visuelle V-app sont verts ; surveillance 24 h en cours. Restent le contrôle de clôture à 24 h et l'envoi par le PO de la confirmation partenaires.**
 **Compagnon de** : `docs/taxonomy-hlo-nature-forme-2026-07-24.md` (le rapport d'audit §190 — listes nominatives des 40 arbitrages, arbre justifié, garde SQL). Ce plan est autonome : un interne peut l'exécuter sans l'historique de conversation.
 **Historique** : v1 2026-07-24 (plan initial) → v2 (9 corrections PO : atomicité, repo-first, population complète, manifeste déterministe) → v3 (7 corrections PO : idempotence tri-état, garde de dérive, ceinture closure, rollback des nœuds neufs, FK crosswalk, fiches du pool nominatives, checklist en fichier) → **v4 (2 corrections bloquantes PO : détection de mode fresh/live/RAISE dans la garde de dérive ; ordre du rollback — réactiver les anciens nœuds AVANT de restaurer les affectations, le trigger d'assignation refusant les nœuds non assignables ; + dry-run aller-retour migration+rollback, CHECK de complétude sur le crosswalk, 476 chemins impactés).**
 
@@ -299,7 +299,7 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 - [x] E6. T8 : diff des 8 échantillons conforme ; seuls taxonomie/chemins/rendu taxonomique/`updated_at` changent ; témoin non-HLO intact.
 - [x] E7. T9 : `/catalog?domains=taxonomy_hlo` — nouveaux nœuds, bons `parent_code`, désactivés absents.
 - [x] E8. T11-bis : pagination complète `types=HLO` = 476 ids uniques, 0 doublon, 0 trou (7 pages de 73/dernière partielle).
-- [ ] E9. V-app : Explorer (chips + fil d'Ariane 3 niveaux), recherche, éditeur §01 (arbre cible visible, désactivés absents).
+- [x] E9. V-app : Explorer (chips + fil d'Ariane 3 niveaux), recherche, éditeur §01 (arbre cible visible, désactivés absents). Recherche « chambre d'hôtes » vérifiée le 2026-07-24 : les cinq `cdh_maison` recodées apparaissent comme « Maison d'hôtes ».
 - [x] E10. Preuves consolidées dans `docs/taxonomy-hlo-deployment-evidence-2026-07-24.md`.
 - [ ] E11. Confirmation partenaires : livraison effective.
 

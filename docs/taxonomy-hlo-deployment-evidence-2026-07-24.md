@@ -70,6 +70,18 @@ La migration a ajouté la paire FK `taxonomy_domain`/`taxonomy_code`, ses contra
 
 Suites exécutées : `test_interop_crosswalk_leafaware.sql`, `test_taxonomy_nature_forme_live_api.sql`, `test_interop_profiles.sql`, `test_object_jsonld_schemaorg.sql` — toutes PASS.
 
+## Validation visuelle de l'application — E9
+
+Vérification effectuée sur `https://bertel.otisud.re` avec une session authentifiée, sans aucune sauvegarde de fiche :
+
+- les cartes HLO portent le badge « Gîtes, meublés & chambres d'hôtes » ; l'ancien badge « Gîte & meublé » est absent ;
+- l'Explorer affiche les branches `Hébergement locatif`, `Chambre d'hôtes`, `Meublé de tourisme / gîte` et `Hébergement collectif`, ainsi que les feuilles `Maison / villa`, `Maison d'hôtes`, `Auberge collective` et `Refuge et gîte d'étape` ; `Gîte & villa` et `Bungalow & chalet` sont absents ;
+- le filtre `taxonomy_hlo:cdh_maison` affiche exactement cinq fiches : La Belle du Sud, La Maison Verte, Le Bougainvillier, Le Clos Gentil et Villa Ti MoOn ;
+- la fiche La Belle du Sud affiche dans le drawer puis dans l'éditeur §01 le chemin à trois niveaux `Hébergement locatif ▸ Chambre d'hôtes ▸ Maison d'hôtes` ; le sélecteur de sous-catégorie expose l'arbre cible et masque les nœuds legacy ;
+- la recherche globale « chambre d'hôtes » active le chip `Recherche · chambre d'hôtes` et remonte les cinq fiches ci-dessus, chacune catégorisée « Maison d'hôtes ».
+
+Le correctif UI ultérieur `1076b14` compacte les choix CAMP/HPA et déplace leurs sous-catégories dans des infobulles. Il est présent dans `master` (HEAD documentaire `c9d732c`) mais attend encore un redéploiement Coolify manuel ; ce suivi n'invalide pas E9, qui porte sur l'arbre HLO §190.
+
 ## Premier point de surveillance
 
 À 16 h 43 RUN :

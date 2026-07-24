@@ -313,8 +313,8 @@ Interventions PO indispensables : validation du plan (J0), session d'arbitrage (
 ### Phase G — Clôture
 - [x] G1. Rapport §190 complété avec le bilan de déploiement et le lien vers les preuves.
 - [x] G2. Règle d'import gravée au runbook + README SQL (catégorie→branche ; sous-catégorie→feuille SOUS la branche ; inconnu→nature ; contradiction→arbitrage) + note « la sync Berta n'écrit pas de taxonomie ».
-- [ ] G3. Decision log + mémoire + proposition CLAUDE.md (invariant nature-avant-forme + règle d'import).
-- [ ] G4. Surveillance 24 h **EN COURS depuis 16 h 43 RUN** : premier point vert (cron MV réussi, garde = 0, aucun 5xx partenaire depuis l'ouverture).
+- [x] G3. Decision log + mémoire + proposition CLAUDE.md (invariant nature-avant-forme + règle d'import). Journal local §190 passé à « DÉPLOYÉ, PREUVES VERTES » ; invariant ajouté au `CLAUDE.md` local-only conformément au design du dépôt.
+- [ ] G4. Surveillance 24 h **EN COURS depuis 16 h 43 RUN** : points de 16 h 43 et 17 h 55 verts (garde = 0, 476/476 caches, 0 legacy, 4 mappings, cron MV réussi, aucun HTTP partenaire `>= 429`). Clôture attendue le 2026-07-25 à 16 h 43 RUN.
 - [ ] G5. Clôturer le chantier au journal.
 
 ### Rollback (à tout moment après D3)

@@ -80,3 +80,15 @@ Suites exécutées : `test_interop_crosswalk_leafaware.sql`, `test_taxonomy_natu
 - garde nature/forme toujours verte.
 
 La surveillance 24 h reste ouverte jusqu'au 2026-07-25 à 16 h 43 RUN. La confirmation partenaires peut être envoyée dès maintenant ; elle ne dépendait que de T1–T10 verts.
+
+## Point intermédiaire — 17 h 55 RUN
+
+Contrôle rejoué en lecture seule sur la base cloud, SSL requis, sans Docker ni base locale :
+
+- garde `test_taxonomy_nature_forme_guard.sql` : **PASS** ;
+- HLO publiés : **476** ; caches portant `hebergement_locatif` ou `hebergement_collectif` : **476** ;
+- porteurs `gite_villa` / `bungalow_chalet` : **0** ; mappings DATAtourisme HLO leaf-aware : **4** ;
+- les cinq derniers runs `refresh-mv-filtered-objects` (13:35–13:55 UTC) sont tous `succeeded`, entre 0,223 s et 0,385 s ;
+- appels partenaires depuis l'ouverture : **0** ; erreurs HTTP `>= 429` : **0**.
+
+Ce point confirme la stabilité à environ 1 h 12 après livraison. Il ne remplace pas le contrôle de clôture attendu le 2026-07-25 à 16 h 43 RUN.

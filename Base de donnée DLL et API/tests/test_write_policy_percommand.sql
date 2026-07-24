@@ -16,6 +16,7 @@ DECLARE
   t text;
   v_missing text := '';
   v_read_missing text := '';
+  v_legal_cmds text[];
   read_tables text[] := ARRAY[
     'object_place','object_price','object_capacity','object_zone','object_org_link','object_origin',
     'object_fma_occurrence','object_pet_policy','object_menu','object_meeting_room','object_iti_practice',
@@ -30,7 +31,7 @@ DECLARE
     'object_iti_stage','object_iti_section','object_iti_profile','object_iti_associated_object',
     'object_iti_stage_media','object_relation','object_org_link','object_place','object_zone',
     'object_location','object_place_description','media','media_tag','contact_channel',
-    'object_legal','object_menu','object_menu_item','object_menu_item_dietary_tag',
+    'object_menu','object_menu_item','object_menu_item_dietary_tag',
     'object_menu_item_allergen','object_menu_item_cuisine_type','object_menu_item_media',
     'object_meeting_room','meeting_room_equipment','object_room_type','object_room_type_amenity',
     'object_room_type_media','object_fma','object_fma_occurrence','object_membership',
@@ -56,6 +57,24 @@ BEGIN
     END IF;
   END LOOP;
   ASSERT v_missing = '', 'per-command coverage gaps (§47 8o not applied / incomplete): ' || v_missing;
+
+  -- Section A intentionally replaces object_legal's canonical triple with a
+  -- narrower manage_legal_compliance triple. It remains per-command and must
+  -- cover INSERT, UPDATE (USING + WITH CHECK) and DELETE.
+  SELECT array_agg(cmd ORDER BY cmd) INTO v_legal_cmds
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename = 'object_legal'
+    AND CASE cmd
+      WHEN 'INSERT' THEN COALESCE(with_check, '') ILIKE '%user_can_manage_object_legal%'
+      WHEN 'UPDATE' THEN COALESCE(qual, '') ILIKE '%user_can_manage_object_legal%'
+                     AND COALESCE(with_check, '') ILIKE '%user_can_manage_object_legal%'
+      WHEN 'DELETE' THEN COALESCE(qual, '') ILIKE '%user_can_manage_object_legal%'
+      ELSE FALSE
+    END;
+  ASSERT v_legal_cmds IS NOT DISTINCT FROM ARRAY['DELETE','INSERT','UPDATE']::text[],
+         'object_legal specialist per-command coverage invalid: ' || COALESCE(v_legal_cmds::text, '<NULL>');
+
   ASSERT has_function_privilege('anon','api.user_can_write_object_canonical(text)','EXECUTE'),
          'P0.3 heritage: anon must keep EXECUTE on api.user_can_write_object_canonical(text)';
   -- §47/§38 (8p): the 25 flat child read policies use the set-based form (current_user_extended_object_ids),
@@ -69,7 +88,7 @@ BEGIN
     END IF;
   END LOOP;
   ASSERT v_read_missing = '', 'set-based read gate missing/old-form (§38 8p not applied): ' || v_read_missing;
-  RAISE NOTICE 'structural per-command coverage OK (58 tables, 0 FOR ALL) + 25 set-based read gates.';
+  RAISE NOTICE 'structural per-command coverage OK (57 canonical tables + object_legal specialist, 0 FOR ALL) + 25 set-based read gates.';
 END$$;
 
 -- ============ DO #2 — personas (INVARIANT behaviour; the Task 12 pre/post probe) ============

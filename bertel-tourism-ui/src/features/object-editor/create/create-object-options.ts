@@ -16,7 +16,7 @@ export const MAX_OBJECT_NAME_LENGTH = 200;
  */
 const CREATE_TYPE_LABELS: Record<string, string> = {
   HOT: 'Hôtel',
-  HPA: 'Aire ou hébergement de plein air',
+  HPA: 'Hébergement de plein air',
   CAMP: 'Camping classé',
   RVA: 'Résidence vacances',
   RES: 'Restaurant',
@@ -35,12 +35,18 @@ const CREATE_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
- * Short decision aids shown directly in the picker when two object types are
- * easy to confuse. They explain the business boundary, not the technical code.
+ * Taxonomy choices shown on hover/focus when two object types are easy to
+ * confuse. Keep these labels aligned with the assignable nodes seeded in
+ * `taxonomy_camp` and `taxonomy_hpa`.
  */
-const CREATE_TYPE_DESCRIPTIONS: Record<string, string> = {
-  CAMP: 'Terrain classé, avec ou sans locatifs.',
-  HPA: 'Aire naturelle, camping à la ferme, aire camping-car ou glamping.',
+const CREATE_TYPE_SUBCATEGORIES: Record<string, string[]> = {
+  CAMP: ['Camping', 'Camping chez l’habitant'],
+  HPA: [
+    'Aire naturelle de camping',
+    'Camping à la ferme',
+    'Hébergement insolite de plein air',
+    'Aire d’accueil camping-car',
+  ],
 };
 
 /** Accented French label for a single object-type code (picker + duplicate hint). */
@@ -51,7 +57,7 @@ export function createTypeLabel(code: string): string {
 export interface CreateTypeOption {
   code: string;
   label: string;
-  description?: string;
+  subcategories?: string[];
 }
 
 export interface CreateTypeGroup {
@@ -66,7 +72,7 @@ export function buildCreateTypeOptions(): CreateTypeGroup[] {
   const byArchetype = new Map<ArchetypeCode, CreateTypeOption[]>();
   for (const [code, meta] of Object.entries(TYPE_ARCHETYPES)) {
     const list = byArchetype.get(meta.archetype) ?? [];
-    list.push({ code, label: createTypeLabel(code), description: CREATE_TYPE_DESCRIPTIONS[code] });
+    list.push({ code, label: createTypeLabel(code), subcategories: CREATE_TYPE_SUBCATEGORIES[code] });
     byArchetype.set(meta.archetype, list);
   }
   return [...byArchetype.entries()]

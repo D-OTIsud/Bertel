@@ -235,7 +235,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                         <label
                           key={option.code}
                           className={[
-                            'relative flex cursor-pointer items-start rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
+                            'group/create-type relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
                             selected
                               ? 'shadow-sm'
                               : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
@@ -257,19 +257,30 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                             value={option.code}
                             checked={selected}
                             onChange={() => setType(option.code)}
-                            aria-label={option.description ? `${option.label} — ${option.description}` : option.label}
+                            aria-label={option.label}
+                            aria-describedby={option.subcategories ? `create-type-${option.code}-tooltip` : undefined}
                             className="sr-only"
                           />
-                          <span className="min-w-0">
-                            <span className="block leading-5">{option.label}</span>
-                            {option.description ? (
-                              <span className="mt-0.5 block text-[11px] font-normal leading-[1.35] opacity-75">
-                                {option.description}
-                              </span>
-                            ) : null}
-                          </span>
+                          <span className="min-w-0 leading-5">{option.label}</span>
+                          {option.subcategories ? (
+                            <>
+                              <Info className="ml-auto h-3.5 w-3.5 flex-none opacity-55" aria-hidden />
+                              <div
+                                id={`create-type-${option.code}-tooltip`}
+                                role="tooltip"
+                                className="pointer-events-none invisible absolute left-1/2 top-[calc(100%+8px)] z-30 w-max max-w-[260px] -translate-x-1/2 rounded-lg bg-ink px-3 py-2 text-left text-[11.5px] font-normal leading-5 text-white opacity-0 shadow-lg transition-opacity delay-150 group-hover/create-type:visible group-hover/create-type:opacity-100 group-focus-within/create-type:visible group-focus-within/create-type:opacity-100"
+                              >
+                                <span className="block font-semibold">Sous-catégories disponibles</span>
+                                <span className="block">{option.subcategories.join(' · ')}</span>
+                              </div>
+                            </>
+                          ) : null}
                           {selected ? (
-                            <Check className="ml-auto mt-0.5 h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} />
+                            <Check
+                              className={option.subcategories ? 'ml-1.5 h-4 w-4 flex-none' : 'ml-auto h-4 w-4 flex-none'}
+                              strokeWidth={3}
+                              style={{ color: v.color }}
+                            />
                           ) : null}
                         </label>
                       );

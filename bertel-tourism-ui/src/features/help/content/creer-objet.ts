@@ -53,11 +53,11 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     keywords: ['plein air', 'aire naturelle', 'camping à la ferme', 'camping-car', 'glamping', 'insolite'],
     types: ['HPA'],
     related: ['creer-fiche'],
-    answer: `**C'est quoi.** Une offre de plein air qui n'est pas un terrain de camping classé : aire naturelle, camping à la ferme, aire d'accueil camping-car ou hébergement insolite de plein air (glamping, tipi, lodge toilé) — type **Aire ou hébergement de plein air (HPA)**.
+    answer: `**C'est quoi.** Une offre de plein air qui n'est pas un terrain de camping classé : aire naturelle, camping à la ferme, aire d'accueil camping-car ou hébergement insolite de plein air (glamping, tipi, lodge toilé) — type **Hébergement de plein air (HPA)**.
 
 **Quand choisir ce type.** L'offre relève d'une des formes ci-dessus et n'a pas le statut de terrain de camping classé. **Pas ce type si** : le terrain est classé, qu'il propose des emplacements nus, des mobil-homes ou les deux → Camping classé (CAMP).
 
-**Étapes.** Créer → type « Aire ou hébergement de plein air » → nom exact. Dans l'éditeur, précisez ensuite la forme exacte dans la taxonomie et renseignez la **capacité et les emplacements** (section Chambres, capacité & séminaire).
+**Étapes.** Créer → type « Hébergement de plein air » → nom exact. Dans l'éditeur, précisez ensuite la forme exacte dans la taxonomie et renseignez la **capacité et les emplacements** (section Chambres, capacité & séminaire).
 
 **Pièges.** La présence d'un mobil-home ne suffit pas à choisir HPA : un camping classé peut proposer des locatifs. La frontière est le classement du terrain, pas l'équipement apporté par le client.`,
   },
@@ -70,7 +70,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     related: ['creer-fiche'],
     answer: `**C'est quoi.** Un terrain de camping classé, avec son classement officiel et ses étoiles — type **Camping classé (CAMP)**. Il peut proposer des emplacements nus, des mobil-homes ou les deux.
 
-**Quand choisir ce type.** L'établissement relève du classement officiel des terrains de camping. **Pas ce type si** : aire naturelle, camping à la ferme, aire d'accueil camping-car ou glamping/insolite hors camping classé → Aire ou hébergement de plein air (HPA).
+**Quand choisir ce type.** L'établissement relève du classement officiel des terrains de camping. **Pas ce type si** : aire naturelle, camping à la ferme, aire d'accueil camping-car ou glamping/insolite hors camping classé → Hébergement de plein air (HPA).
 
 **Étapes.** Créer → type « Camping classé » → nom exact. Renseignez son classement dans Classement & labels, puis la **capacité et les emplacements** (section Chambres, capacité & séminaire).
 

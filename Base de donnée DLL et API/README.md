@@ -249,6 +249,17 @@ Impacts API:
 - Le bloc `classifications` est qualification-only.
 - Les filtres de listing peuvent utiliser `taxonomy_any` pour filtrer sur les noeuds et leurs descendants.
 
+### Regle d import HLO : nature avant forme
+
+Pour tout import d hebergement HLO, la categorie source et la sous-categorie sont deux axes differents :
+
+1. la categorie source choisit d abord la branche de **nature** (`chambre_d_hotes`, `location_saisonniere`, `hebergement_collectif`) ;
+2. la sous-categorie ne choisit ensuite qu une feuille de **forme sous cette branche** ;
+3. si la forme est inconnue ou absente, conserver le noeud de nature ;
+4. si nature et forme se contredisent, envoyer la fiche en arbitrage PO et ne jamais laisser la forme ecraser silencieusement la nature.
+
+La synchronisation Berta vivante ne cree actuellement aucune affectation `object_taxonomy`. Tout futur ingesteur qui le fera doit appliquer cette regle et executer la garde rejouable documentee dans `docs/taxonomy-hlo-nature-forme-2026-07-24.md`.
+
 ## Note de deploiement `ref_code`
 
 Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.

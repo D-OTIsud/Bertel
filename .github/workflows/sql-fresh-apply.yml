@@ -96,6 +96,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_sp2_permission_behavior.sql"
 
+      - name: Section A legal access and role hardening
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_unblock_team_legal_access.sql"
+
       - name: P0.3 coverage assertions (read-gate; no residual USING(true); nested FKs indexed)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

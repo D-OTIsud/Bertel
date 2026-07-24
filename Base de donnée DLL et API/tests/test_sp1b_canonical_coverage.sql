@@ -3,8 +3,8 @@
 -- write policy (ALL/INSERT/UPDATE) whose predicate references api.user_can_write_object_canonical.
 -- Run AFTER the full manifest (incl. migration_permission_write_paths.sql + _b.sql).
 -- This is the regression guard: if a new editor-write table is added without canonical coverage,
--- or an existing one regresses, CI goes red. (object_description is intentionally excluded — it uses
--- the §20 carve-out api.user_can_write_canonical + org_object_id IS NULL.)
+-- or an existing one regresses, CI goes red. Two intentional specialist carve-outs are checked
+-- separately: object_description (§20) and object_legal (manage_legal_compliance, Section A).
 \set ON_ERROR_STOP on
 DO $$
 DECLARE
@@ -17,11 +17,12 @@ DECLARE
     'object_sustainability_action','object_sustainability_action_label','object_room_type',
     'object_room_type_amenity','object_room_type_media','object_classification','object_taxonomy',
     -- SP-1 (already covered)
-    'object_location','object_place','contact_channel','media','object_legal','object_discount',
+    'object_location','object_place','contact_channel','media','object_discount',
     'object_group_policy','object_price','object_price_period','object_menu','object_meeting_room',
     'meeting_room_equipment','object_pet_policy','object_fma_occurrence','object_iti_stage_media','object_membership'
   ];
   v_missing text[] := ARRAY[]::text[];
+  v_legal_cmds text[];
   v_t text;
 BEGIN
   FOREACH v_t IN ARRAY v_expected LOOP
@@ -38,5 +39,24 @@ BEGIN
     RAISE EXCEPTION 'SP-1b: editor-write tables WITHOUT a canonical-write policy: %', array_to_string(v_missing, ', ');
   END IF;
 
-  RAISE NOTICE 'SP-1b coverage passed: % editor-write tables are canonical-covered.', array_length(v_expected, 1);
+  -- object_legal is intentionally not a canonical-editor surface: a publisher may
+  -- manage legal records only with the dedicated manage_legal_compliance permission.
+  -- Pin the complete per-command specialist policy triple instead of weakening it
+  -- to the broader canonical-write permission.
+  SELECT array_agg(cmd ORDER BY cmd) INTO v_legal_cmds
+  FROM pg_policies
+  WHERE schemaname = 'public'
+    AND tablename = 'object_legal'
+    AND CASE cmd
+      WHEN 'INSERT' THEN COALESCE(with_check, '') ILIKE '%user_can_manage_object_legal%'
+      WHEN 'UPDATE' THEN COALESCE(qual, '') ILIKE '%user_can_manage_object_legal%'
+                     AND COALESCE(with_check, '') ILIKE '%user_can_manage_object_legal%'
+      WHEN 'DELETE' THEN COALESCE(qual, '') ILIKE '%user_can_manage_object_legal%'
+      ELSE FALSE
+    END;
+  IF v_legal_cmds IS DISTINCT FROM ARRAY['DELETE','INSERT','UPDATE']::text[] THEN
+    RAISE EXCEPTION 'SP-1b: object_legal specialist policy triple invalid: %', v_legal_cmds;
+  END IF;
+
+  RAISE NOTICE 'SP-1b coverage passed: % canonical tables + object_legal specialist triple.', array_length(v_expected, 1);
 END$$;

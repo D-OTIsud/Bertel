@@ -934,6 +934,11 @@ ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS cached_taxonomy_codes TEXT
 -- §109 — aggregated weighted full-text search document (child-sourced; maintained by
 -- api.refresh_object_filter_caches). Powers the Explorer global search (search_mode='global').
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document tsvector;
+-- §197 — même contenu public agrégé, en TEXTE BRUT normalisé (minuscules, sans accents,
+-- espaces compactés) : source des trigrammes pg_trgm de la recherche tolérante aux fautes.
+-- Un tsvector ne conserve que des lexèmes racinisés — la forme réelle des mots, seule
+-- exploitable par word_similarity(), y est perdue. Rempli par le MÊME CTE que ci-dessus.
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document_text TEXT;
 
 -- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
 -- TRANSITOIRE / NON-CANONIQUE / OPT-IN
@@ -4278,7 +4283,12 @@ SELECT
   o.cached_language_codes,
   o.cached_classification_codes,
   o.cached_taxonomy_codes,
-  o.search_document
+  o.search_document,
+  -- §197 — source des trigrammes de la recherche tolérante aux fautes. Sans ces deux
+  -- colonnes ici, le flou serait muet sur le chemin publié (visiteurs anonymes) SANS
+  -- aucune erreur : le MV est le cache chaud de get_filtered_object_ids.
+  o.search_document_text,
+  public.immutable_unaccent(lower(ol.city)) AS city_normalized
 FROM object o
 LEFT JOIN object_location ol
   ON ol.object_id = o.id
@@ -4588,6 +4598,7 @@ DECLARE
   v_cached_classification_codes TEXT[];
   v_cached_taxonomy_codes TEXT[];
   v_search_document tsvector;
+  v_search_document_text TEXT;
 BEGIN
   IF p_object_id IS NULL THEN
     RETURN;
@@ -4659,6 +4670,9 @@ BEGIN
   --   B = taxonomy + classification/label names
   --   C = amenities + tags + environment + cuisines + menus + dishes + dietary + allergens
   --   D = canonical public description prose (markdown-stripped) + dish descriptions
+  -- §197 : ce MÊME CTE alimente aussi search_document_text (texte brut normalisé).
+  -- Ne JAMAIS dupliquer ces sous-requêtes pour la variante texte : les deux
+  -- représentations dériveraient silencieusement l'une de l'autre.
   WITH doc AS (
     SELECT
       (
@@ -4732,8 +4746,13 @@ BEGIN
   SELECT
        setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_b))), 'B')
     || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_c))), 'C')
-    || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_d))), 'D')
-  INTO v_search_document
+    || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_d))), 'D'),
+       -- §197 — même contenu, forme brute. NULLIF('') : une fiche sans contenu
+       -- enfant porte NULL, pas une chaîne vide (les lecteurs COALESCE de toute façon).
+       NULLIF(btrim(regexp_replace(
+         immutable_unaccent(lower(doc.doc_b || ' ' || doc.doc_c || ' ' || doc.doc_d)),
+         '\s+', ' ', 'g')), '')
+  INTO v_search_document, v_search_document_text
   FROM doc;
 
   UPDATE object o
@@ -4744,7 +4763,8 @@ BEGIN
     cached_language_codes = v_cached_language_codes,
     cached_classification_codes = v_cached_classification_codes,
     cached_taxonomy_codes = v_cached_taxonomy_codes,
-    search_document = v_search_document
+    search_document = v_search_document,
+    search_document_text = v_search_document_text
   WHERE o.id = p_object_id
     AND (
       o.cached_amenity_codes IS DISTINCT FROM v_cached_amenity_codes
@@ -4754,6 +4774,7 @@ BEGIN
       OR o.cached_classification_codes IS DISTINCT FROM v_cached_classification_codes
       OR o.cached_taxonomy_codes IS DISTINCT FROM v_cached_taxonomy_codes
       OR o.search_document IS DISTINCT FROM v_search_document
+      OR o.search_document_text IS DISTINCT FROM v_search_document_text
     );
 END;
 $$;

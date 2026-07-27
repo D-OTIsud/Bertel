@@ -58,6 +58,25 @@ export const EXPLORER_BUCKET_TYPE_MAP: Record<ExplorerBucketKey, BackendObjectTy
   SRV: [...EXPLORER_TYPE_CODE_FAMILIES.SRV],
 };
 
+/**
+ * Métrique de capacité mise en VEDETTE par bucket : le contrôle « Capacité d'accueil »
+ * rendu en clair au-dessus du tiroir détaillé, parce que c'est la question que se pose
+ * un conseiller en séjour (« de la place pour un groupe de 12 ? »).
+ *
+ * Le choix suit la métrique que le type RENSEIGNE réellement, pas celle qui porte le
+ * nom le plus générique : les restaurants ne remplissent **jamais** `max_capacity`
+ * (0 ligne en base) mais renseignent `seats` (89 fiches publiées, 2–350). Le contrôle
+ * de la section Restaurants pointait sur `max_capacity` et ne renvoyait donc rien,
+ * quoi qu'on y saisisse.
+ *
+ * Source unique : le chargeur de références l'exclut du tiroir détaillé (une commande
+ * par filtre) et le panneau la rend en vedette. Les deux DOIVENT lire la même table.
+ */
+export const HEADLINE_CAPACITY_METRIC: Partial<Record<ExplorerBucketKey, string>> = {
+  HOT: 'max_capacity',
+  RES: 'seats',
+};
+
 export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   search: '',
   cities: [],

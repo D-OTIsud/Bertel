@@ -295,7 +295,10 @@ const CAPACITY_REFERENCES = {
     { code: 'bedrooms', name: 'Chambres', objectTypes: ['HOT', 'HLO', 'RVA'] },
     { code: 'pitches', name: 'Emplacements', objectTypes: ['CAMP', 'HPA'] },
   ],
-  capacityBounds: { bedrooms: { HOT: { min: 2, max: 60, sampleSize: 8 } } },
+  capacityBounds: {
+    bedrooms: { HOT: { min: 2, max: 60, sampleSize: 8 } },
+    max_capacity: { HOT: { min: 20, max: 87, sampleSize: 8 }, HLO: { min: 2, max: 44, sampleSize: 473 } },
+  },
   taxonomies: [],
 } as unknown as ExplorerReferences;
 
@@ -357,8 +360,44 @@ describe('FiltersPanel — capacités détaillées par sous-type (16o)', () => {
     render(<FiltersPanel references={CAPACITY_REFERENCES} />);
 
     expect(screen.queryByLabelText('Lits — minimum')).toBeInTheDocument();
-    expect(screen.getByText(/Aucune valeur saisie pour l'instant/)).toBeInTheDocument();
-    // bedrooms a des bornes, beds n'en a pas : seul le second porte la mention.
-    expect(screen.queryAllByRole('slider')).toHaveLength(0);
+    // beds n'a pas de bornes : la mention le dit, et lui seul la porte (la vedette
+    // « Capacité d'accueil » en a, elle, et affiche donc ses curseurs).
+    expect(screen.getAllByText(/Aucune valeur saisie pour l'instant/)).toHaveLength(1);
+    expect(screen.queryByLabelText('Lits — minimum')).toBeInTheDocument();
+  });
+});
+
+/**
+ * Contrôle vedette « Capacité d'accueil » : min ET max (demande PO — « au moins N » ne
+ * suffit pas, on cherche aussi « un gîte de 4 à 6 »), sur la métrique que le type
+ * renseigne réellement.
+ */
+describe('FiltersPanel — capacité d’accueil bornée des deux côtés', () => {
+  beforeEach(resetStore);
+
+  it('écrit un minimum ET un maximum sur max_capacity pour les hébergements', () => {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+
+    fireEvent.change(screen.getByLabelText("Capacité d'accueil — minimum", { selector: 'input[type="number"]' }), {
+      target: { value: '4' },
+    });
+    fireEvent.change(screen.getByLabelText("Capacité d'accueil — maximum", { selector: 'input[type="number"]' }), {
+      target: { value: '6' },
+    });
+
+    expect(useExplorerStore.getState().hot.capacityFilters).toEqual([{ code: 'max_capacity', min: 4, max: 6 }]);
+  });
+
+  it('cible `seats` pour les restaurants, la seule métrique qu’ils renseignent', () => {
+    act(() => useExplorerStore.getState().toggleBucket('RES'));
+    render(<FiltersPanel references={{ ...CAPACITY_REFERENCES, resCapacityMetrics: [] } as never} />);
+
+    fireEvent.change(screen.getByLabelText("Capacité d'accueil — minimum", { selector: 'input[type="number"]' }), {
+      target: { value: '20' },
+    });
+
+    // `max_capacity` serait mort ici : aucune fiche RES n'en porte (0 ligne en base).
+    expect(useExplorerStore.getState().res.capacityFilters).toEqual([{ code: 'seats', min: 20, max: undefined }]);
   });
 });

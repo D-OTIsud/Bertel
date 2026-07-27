@@ -4662,7 +4662,18 @@ BEGIN
   WITH doc AS (
     SELECT
       (
-        COALESCE((SELECT string_agg(DISTINCT anc.name, ' ')
+        -- §192 — les alias de vocabulaire source (Berta) sont indexés AVEC le
+        -- libellé canonique. Sans cela, renommer un nœud fait disparaître
+        -- l'ancien terme de la recherche : retirer « / gîte » de
+        -- `location_saisonniere` retirerait le token `git` du doc_b de ses 376
+        -- porteurs. Le renommage et l'alias searchable sont indissociables.
+        -- Le CASE protège d'un `aliases` mal typé (jsonb_array_elements est
+        -- évalué en FROM, donc avant tout WHERE : le garde doit être sur l'argument).
+        COALESCE((SELECT string_agg(DISTINCT anc.name || COALESCE(
+              (SELECT ' ' || string_agg(al.value #>> '{}', ' ')
+                 FROM jsonb_array_elements(
+                        CASE WHEN jsonb_typeof(anc.metadata -> 'aliases') = 'array'
+                             THEN anc.metadata -> 'aliases' ELSE '[]'::jsonb END) al), ''), ' ')
           FROM object_taxonomy ot
           JOIN ref_code_taxonomy_closure cl ON cl.domain = ot.domain AND cl.descendant_id = ot.ref_code_id
           JOIN ref_code anc ON anc.id = cl.ancestor_id AND anc.domain = cl.domain

@@ -1061,12 +1061,18 @@ STABLE
 -- on schema `internal` by design — the internal schema is a private performance layer.
 -- Running as the function owner (postgres) is safe here: the function is read-only
 -- (STABLE), returns only filtered object IDs, and has a fixed search_path.
+-- §197: `extensions` (déjà présent) porte pg_trgm ⇒ word_similarity() résout. NE PAS
+-- le retirer du search_path : la panne serait à l'exécution, pas au déploiement (§29).
 SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
 AS $$
   -- Extract JSON arrays once into SQL arrays to avoid per-row JSON parsing.
   WITH normalized AS (
-    SELECT COALESCE(p_filters, '{}'::jsonb) AS filters
+    SELECT
+      COALESCE(p_filters, '{}'::jsonb) AS filters,
+      -- §197 — la saisie normalisée UNE fois (minuscules + sans accents, bords rognés).
+      -- Sert au bras approximatif ; le bras plein texte garde son appel d'origine.
+      btrim(api.norm_search(p_search)) AS search_norm
   ),
   params AS (
     -- Each *_any array is normalized so that an empty parse (either an empty
@@ -1079,6 +1085,24 @@ AS $$
     -- compared with `= ANY()` / `&&` and dropped every row.
     SELECT
       n.filters,
+      n.search_norm,
+      -- §197 — le flou est-il armé ? Trois gardes, chacune justifiée :
+      --   * mode `global` seul : le mode `name` sert les sélecteurs d'objets de
+      --     l'éditeur, qui doivent rester exacts (sinon on propose la mauvaise fiche).
+      --   * un seul mot : une saisie multi-mots reste plein texte (précision).
+      --   * >= 4 caractères : en dessous, les trigrammes n'ont plus de pouvoir
+      --     discriminant (mesuré) et le balayage coûterait pour du bruit.
+      (
+        p_search IS NOT NULL
+        AND (n.filters->>'search_mode') = 'global'
+        AND length(n.search_norm) >= 4
+        AND n.search_norm !~ '\s'
+      ) AS fuzzy_enabled,
+      -- §197 — seuil DÉPENDANT DE LA LONGUEUR (calibré live, cf. en-tête) : une requête
+      -- de L caractères ne porte que L+1 trigrammes, donc à L petit un recouvrement
+      -- accidentel pèse lourd. 4 car. → bruit mesuré à 0.400 ⇒ 0.45.
+      -- >= 5 car. → bruit pur plafonné à 0.333 ⇒ 0.35 (et jaccusy→jacuzzi vaut 0.375).
+      CASE WHEN length(n.search_norm) >= 5 THEN 0.35::real ELSE 0.45::real END AS fuzzy_threshold,
       CASE WHEN n.filters ? 'commercial_visibility_any'
         THEN NULLIF(
           ARRAY(SELECT jsonb_array_elements_text(n.filters->'commercial_visibility_any')),
@@ -1231,6 +1255,9 @@ AS $$
       -- use the `<@` containment operator. NULL p_status means "no status
       -- filter" at this layer (the wrapper functions already default it to
       -- ['published']), so the MV stays safe.
+      -- §197 : la recherche floue N'EST PAS une exclusion — le MV porte désormais
+      -- search_document_text et city_normalized, donc le chemin publié (le seul que
+      -- voient les visiteurs anonymes) reste sur le cache chaud.
       (NOT (
         n.filters ? 'amenities_all'
         OR n.filters ? 'amenity_families_any'
@@ -1268,7 +1295,13 @@ AS $$
     CROSS JOIN LATERAL internal.compute_open_status(params.open_at) s
     WHERE params.open_at IS NOT NULL
   ),
-  source_rows AS (
+  -- NOT MATERIALIZED : ce CTE est désormais référencé DEUX fois (ici et par
+  -- `fuzzy_gate`). Sans cette clause, PostgreSQL le matérialiserait d'office
+  -- (règle « référencé plusieurs fois ») et les prédicats de type/statut/facette
+  -- ne pourraient plus descendre dans le balayage du MV — régression silencieuse
+  -- sur TOUS les chemins, y compris ceux sans recherche. Deux inlinings, chacun
+  -- optimisable, coûtent moins qu'une matérialisation opaque.
+  source_rows AS NOT MATERIALIZED (
     SELECT
       m.id AS object_id,
       m.object_type,
@@ -1276,7 +1309,7 @@ AS $$
       m.commercial_visibility,
       m.name_search_vector,
       m.city_search_vector,
-      NULL::TEXT AS city_normalized,
+      m.city_normalized,
       NULL::TEXT AS lieu_dit_normalized,
       m.geog2,
       m.cached_is_open_now,
@@ -1286,7 +1319,9 @@ AS $$
       m.cached_language_codes,
       m.cached_classification_codes,
       m.cached_taxonomy_codes,
-      m.search_document
+      m.search_document,
+      m.name_normalized,
+      m.search_document_text
     FROM internal.mv_filtered_objects m
     CROSS JOIN params
     WHERE params.use_mv
@@ -1310,7 +1345,9 @@ AS $$
       o.cached_language_codes,
       o.cached_classification_codes,
       o.cached_taxonomy_codes,
-      o.search_document
+      o.search_document,
+      o.name_normalized,
+      o.search_document_text
     FROM object o
     CROSS JOIN params
     LEFT JOIN LATERAL (
@@ -1322,6 +1359,43 @@ AS $$
       LIMIT 1
     ) ol ON TRUE
     WHERE NOT params.use_mv
+  ),
+  -- §197 — LE REPLI. Le flou ne s'ajoute pas au plein texte : il le REMPLACE, et
+  -- seulement quand le plein texte ne trouve RIEN. Une saisie correcte garde donc
+  -- exactement son résultat et exactement son coût d'aujourd'hui ; les trigrammes
+  -- ne se paient que sur les recherches qui, sans eux, renverraient une page vide.
+  --
+  -- Portée de la sonde : le corpus (type + statut), PAS les filtres de facette.
+  -- Volontaire : si une commune ou un équipement vide le résultat, c'est le FILTRE
+  -- qui décide, pas l'orthographe — relâcher la recherche à ce moment-là ferait
+  -- réapparaître des fiches que l'utilisateur vient d'exclure.
+  --
+  -- MATERIALIZED est OBLIGATOIRE (corollaire §157) : référencé une seule fois, ce
+  -- CTE serait inliné dans un prédicat évalué PAR LIGNE, et la sonde repartirait à
+  -- chaque ligne scannée. Même piège que `open_at_state`.
+  -- `AND NOT EXISTS(...)` court-circuite : quand le flou n'est pas armé (pas de
+  -- recherche, mode `name`, multi-mots, < 4 caractères), la sonde ne s'exécute pas.
+  -- Et l'EXISTS s'arrête au PREMIER résultat exact : sur une recherche qui marche —
+  -- le cas courant — la sonde est quasi gratuite.
+  fuzzy_gate AS MATERIALIZED (
+    SELECT (
+      params.fuzzy_enabled
+      AND NOT EXISTS (
+        SELECT 1
+        FROM source_rows s2
+        WHERE (p_types IS NULL OR s2.object_type = ANY(p_types))
+          AND (p_status IS NULL OR s2.status = ANY(p_status))
+          AND (
+            s2.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search))
+            OR (s2.city_search_vector IS NOT NULL
+                AND s2.city_search_vector @@ plainto_tsquery('french', api.norm_search(p_search)))
+            OR ((params.filters->>'search_mode') = 'global'
+                AND s2.search_document IS NOT NULL
+                AND s2.search_document @@ plainto_tsquery('french', api.norm_search(p_search)))
+          )
+      )
+    ) AS armed
+    FROM params
   )
   SELECT
     src.object_id,
@@ -1354,22 +1428,66 @@ AS $$
       )
       ELSE NULL::jsonb
     END AS label_match,
-    -- relevance (§109): weighted ts_rank over name/city (A) + the global search_document
-    -- (B/C/D) when search_mode='global'. 0 when no search term ⇒ callers' ORDER BY relevance
-    -- becomes a no-op tiebreaker and the legacy ordering is preserved.
+    -- relevance (§109 + §197): deux étages qui ne se croisent JAMAIS.
+    --   exact (plein texte)  → 2.0 + ts_rank(...)   ∈ [2, 3)
+    --   approximatif (trgm)  → score brut pondéré   ∈ [0, 1]  (nom > commune > contenu)
+    -- Le socle 2.0 garantit l'exigence produit « un résultat exact passe toujours
+    -- devant un résultat approximatif », sans dépendre d'un tri applicatif. Avec le
+    -- repli les deux étages ne cohabitent pas dans une même page ; le socle est
+    -- conservé pour que l'invariant reste posé dans le code (cf. en-tête).
+    -- Sans terme de recherche : 0 ⇒ l'ORDER BY relevance des appelants redevient
+    -- un départage neutre et l'ordre historique est préservé (contrat §109).
+    -- Le tsvector composé est construit UNE fois par ligne survivante (sous-requête
+    -- scalaire) : la liste SELECT est évaluée après filtrage, donc jamais sur le
+    -- corpus entier — et rien n'est calculé du tout quand p_search est NULL.
     CASE
       WHEN p_search IS NULL THEN 0::real
-      ELSE ts_rank(
-        setweight(src.name_search_vector, 'A')
-        || setweight(COALESCE(src.city_search_vector, ''::tsvector), 'A')
-        || CASE WHEN (params.filters->>'search_mode') = 'global'
-                THEN COALESCE(src.search_document, ''::tsvector)
-                ELSE ''::tsvector END,
-        plainto_tsquery('french', api.norm_search(p_search))
+      ELSE (
+        SELECT GREATEST(
+          CASE WHEN t.v @@ t.q THEN 2.0::real + ts_rank(t.v, t.q) ELSE 0::real END,
+          COALESCE(GREATEST(
+            fz.name_score,
+            fz.city_score * 0.90::real,
+            fz.doc_score * 0.75::real
+          ), 0::real)
+        )
+        FROM (
+          SELECT
+            setweight(src.name_search_vector, 'A')
+            || setweight(COALESCE(src.city_search_vector, ''::tsvector), 'A')
+            || CASE WHEN (params.filters->>'search_mode') = 'global'
+                    THEN COALESCE(src.search_document, ''::tsvector)
+                    ELSE ''::tsvector END AS v,
+            plainto_tsquery('french', api.norm_search(p_search)) AS q
+        ) t
       )
     END AS relevance
   FROM source_rows src
   CROSS JOIN params
+  CROSS JOIN fuzzy_gate gate
+  -- §197 — les trois scores de proximité, calculés UNE SEULE FOIS par ligne source
+  -- (ils servent au filtre ET au classement).
+  --
+  -- LE `CASE` EST OBLIGATOIRE, PAS COSMÉTIQUE. Une première version portait
+  -- `WHERE gate.armed` sur ce LATERAL : le planificateur aplatit une sous-requête
+  -- sans FROM et évalue alors la liste SELECT AVANT le prédicat, donc
+  -- word_similarity tournait sur les 846 documents même le flou désarmé — mesuré :
+  -- le chemin chaud SANS recherche passait de 16 ms à 162 ms. `CASE` court-circuite
+  -- réellement (PostgreSQL n'évalue pas les sous-expressions inutiles), et le coût
+  -- des trigrammes redevient nul hors repli.
+  -- Ne pas « simplifier » en remettant un WHERE.
+  LEFT JOIN LATERAL (
+    SELECT
+      CASE WHEN gate.armed
+           THEN word_similarity(params.search_norm, COALESCE(src.name_normalized, ''))
+           ELSE 0::real END AS name_score,
+      CASE WHEN gate.armed
+           THEN word_similarity(params.search_norm, COALESCE(src.city_normalized, ''))
+           ELSE 0::real END AS city_score,
+      CASE WHEN gate.armed
+           THEN word_similarity(params.search_norm, COALESCE(src.search_document_text, ''))
+           ELSE 0::real END AS doc_score
+  ) fz ON TRUE
   LEFT JOIN LATERAL (
     SELECT COUNT(DISTINCT oc.id)::integer AS evidence_count
     FROM object_classification oc
@@ -1455,6 +1573,17 @@ AS $$
         (params.filters->>'search_mode') = 'global'
         AND src.search_document IS NOT NULL
         AND src.search_document @@ plainto_tsquery('french', api.norm_search(p_search))
+      ) OR
+      -- §197 — bras APPROXIMATIF, armé UNIQUEMENT en repli (gate.armed = le plein
+      -- texte n'a rien trouvé dans le corpus). Une saisie sans faute ne l'atteint
+      -- jamais : elle garde son résultat et son coût d'avant, au bit près.
+      (
+        gate.armed
+        AND (
+          fz.name_score >= params.fuzzy_threshold
+          OR fz.city_score >= params.fuzzy_threshold
+          OR fz.doc_score >= params.fuzzy_threshold
+        )
       )
     )
     AND (params.city_any IS NULL OR COALESCE(src.city_normalized, '') = ANY(params.city_any))

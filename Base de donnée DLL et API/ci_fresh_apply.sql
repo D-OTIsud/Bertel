@@ -235,6 +235,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16k    migration_label_filter_sections.sql  (§173 resultats sectionnes filtre Label: cle label_scheme_ranked_exact_only (restreint aux labellises rank-0, equivalents exclus) + tri label_rank prioritaire sous filtre label meme avec recherche + meta.label_rank_counts; APRES 16j = le plus recent, corps complet get_filtered_object_ids §157+§162+§173; since_fast intact keyset; CI = tests/test_label_filter_sections.sql) =='
 \ir migration_label_filter_sections.sql
 
+\echo '== 16k2   migration_explorer_fuzzy_search.sql  (§197 recherche tolerante aux fautes: object.search_document_text = MEME agregation que search_document mais en TEXTE BRUT normalise (un tsvector ne garde que des lexemes racinises, inexploitables par les trigrammes), remplie par le MEME CTE dans refresh_object_filter_caches; mv_filtered_objects porte search_document_text + city_normalized sinon le flou est muet sur le chemin publie; get_filtered_object_ids gagne un bras trigrammes EN REPLI (arme seulement si le plein texte ne trouve rien dans le corpus) + seuil dependant de la longueur 0.45 a 4 car. / 0.35 au-dela, calibre live; APRES 16k = le plus recent, corps complet get_filtered_object_ids §157+§162+§173+§197; signature inchangee donc pas de NOTIFY pgrst; CI = tests/test_global_search.sql) =='
+\ir migration_explorer_fuzzy_search.sql
+
 \echo '== 16l    migration_classification_regroup_network_labels.sql  (§175 reclasse gites_epics + clevacances_keys de official_classification vers quality_label: labels de reseau prives, pas des classements officiels Atout France; DONNEE de reference seule, aucun DDL/RPC; official/quality partagent le meme bras dans les RPC donc inerte pour filtrage/badge/cocarde/barre niveaux; folde dans seeds_data.sql; SUPERSEDE par 16m qui les place en graded_label) =='
 \ir migration_classification_regroup_network_labels.sql
 
@@ -287,10 +290,10 @@ ROLLBACK;
 \echo '== I4d-test leaf-aware interop assertions =='
 \ir tests/test_interop_crosswalk_leafaware.sql
 
-\echo '== pets1  migration_pet_policy_single_source.sql  (§196 « Animaux acceptés » source unique : retire l equipement doublon ref_amenity.pet_friendly, backfille object_pet_policy depuis l amenity + la revue manuelle des descriptions; auto-assertive et fresh-safe) =='
+\echo '== pets1  migration_pet_policy_single_source.sql  (§197 « Animaux acceptés » source unique : retire l equipement doublon ref_amenity.pet_friendly, backfille object_pet_policy depuis l amenity + la revue manuelle des descriptions; auto-assertive et fresh-safe) =='
 \ir migration_pet_policy_single_source.sql
 
-\echo '== pets1-test garde permanente §196 (doublon absent, famille pets preservee, filtre pet_accepted non vacant) =='
+\echo '== pets1-test garde permanente §197 (doublon absent, famille pets preservee, filtre pet_accepted non vacant) =='
 \ir tests/test_pet_policy_single_source.sql
 
 \echo '== MV refresh (non-concurrent) =='

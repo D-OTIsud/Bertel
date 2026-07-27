@@ -86,11 +86,11 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel />);
 
-    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, true));
-    expect(screen.queryByText("Nature d'hébergement")).not.toBeInTheDocument();
+    expect(screen.queryByText("Type d'hébergement")).not.toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, false));
-    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
     // La chip de bucket homonyme garde son nom nu : pas de collision de noms.
     expect(screen.getByRole('button', { name: 'Hébergements' })).toBeInTheDocument();
   });
@@ -119,19 +119,48 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toBeInTheDocument();
   });
 
-  it('garde le sélecteur compact quand le catalogue contient les axes sémantiques', () => {
+  it('affiche le nouveau modèle sémantique sous forme compacte et progressive', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
 
-    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
-    expect(screen.queryByLabelText('Rechercher dans le vocabulaire')).not.toBeInTheDocument();
+    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Famille d'hébergement")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hôtellerie', expanded: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hébergement locatif', expanded: true })).toBeInTheDocument();
     expect(screen.queryByText('Locations touristiques.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Location saisonnière')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Meublé de tourisme' }));
     expect(useExplorerStore.getState().common.taxonomyAny).toContainEqual({
       domain: 'taxonomy_hlo',
       code: 'location_saisonniere',
     });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Hébergement locatif/, expanded: true }));
+    expect(screen.queryByRole('button', { name: 'Meublé de tourisme' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Hébergement locatif/, expanded: false })).toHaveTextContent('1');
+  });
+
+  it('retrouve les anciens termes Berta sans les afficher comme second libellé', () => {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+    render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
+
+    const search = screen.getByRole('textbox', { name: "Rechercher un type d'hébergement" });
+    fireEvent.change(search, { target: { value: 'Gîte de randonnée' } });
+
+    expect(screen.getByRole('button', { name: "Refuge et gîte d'étape" })).toBeInTheDocument();
+    expect(screen.queryByText('Berta :')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Effacer la recherche d'hébergement" })).toBeInTheDocument();
+  });
+
+  it("range le type d'unité dans les critères complémentaires", () => {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+    render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
+
+    expect(screen.queryByRole('button', { name: 'Maison / villa' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Critères complémentaires', expanded: false }));
+    expect(screen.getByText("Type d'unité d'hébergement")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Maison / villa' })).toBeInTheDocument();
   });
 
   it('la section Itinéraires est repliable et compte ses critères', () => {

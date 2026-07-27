@@ -104,12 +104,16 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_object_act_asc_applicability.sql
 -- 5o) §48 chemin d'ecriture acteurs: actor_object_role en politiques par commande (canonical_ins/upd/del) + branche actors de save_object_relations + RPC api.search_actors (gate editeurs, perimetre acteurs lisibles + echappement des jokers LIKE)
 \i migration_actor_links_editor.sql
+-- 5p) §193 conformite juridique: permission dediee + retroattribution aux editeurs + RLS object_legal
+\i migration_unblock_team_legal_access.sql
 
 -- 6) Branding UI white-label (fichier complet pour une install neuve)
 \i ui_whitelabel_branding.sql
 
 -- 7) Bucket de stockage media
 \i media_bucket.sql
+-- 7b) Bucket prive des justificatifs juridiques
+\i legal_documents_bucket.sql
 
 -- 8) Donnees de seed (necessite migration_sustainability_v5)
 \i seeds_data.sql

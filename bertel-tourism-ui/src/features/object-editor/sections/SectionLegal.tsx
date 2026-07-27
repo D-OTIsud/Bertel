@@ -27,7 +27,8 @@ import {
  * Édite l'identité juridique de l'OBJET via le module `legal` (object_legal), ENREGISTRABLE
  * (`saveObjectWorkspaceLegal` réconcilie les lignes sous la policy `owner_write_legal`). Deux
  * familles de lignes :
- *  - Identité (SIRET, SIREN, raison sociale, n° TVA) : champs plats, valeur scalaire, sans expiration.
+ *  - Identité (SIRET, SIREN, raison sociale, n° TVA, n° taxe de séjour pour HEB) : champs plats,
+ *    valeur scalaire, sans expiration.
  *  - Documents légaux (licences, assurances, certificats…) : affichage compact + modale d'édition
  *    (type, référence, validité, statut, note et un JUSTIFICATIF uploadé — `document_id` →
  *    ref_document via /api/document/upload, comme la §08). Un document OBLIGATOIRE (type
@@ -66,10 +67,11 @@ function docListHeader(showActions: boolean) {
   );
 }
 
-export function SectionLegal({ editor, permissions, folded }: SectionProps) {
+export function SectionLegal({ editor, permissions, archetype, folded }: SectionProps) {
   const legal = editor.draft.legal;
   const access = permissions.legal;
   const canWrite = Boolean(access?.canDirectWrite) && !legal.unavailableReason;
+  const isAccommodation = archetype === 'HEB';
   const today = new Date().toISOString().slice(0, 10);
 
   const siret = readLegalScalar(legal.records, 'siret');
@@ -187,22 +189,44 @@ export function SectionLegal({ editor, permissions, folded }: SectionProps) {
               />
             </Field>
           </div>
+          {isAccommodation && (
+            <div className="grid-2" style={{ marginTop: 10 }}>
+              <Field label="N° de taxe de séjour" hint="Numéro d'enregistrement ou d'autorisation de collecte.">
+                <Input
+                  value={readLegalScalar(legal.records, 'tourist_tax')}
+                  placeholder="Numéro de taxe de séjour"
+                  mono
+                  aria-label="N° de taxe de séjour"
+                  onChange={(value) => setScalar('tourist_tax', value)}
+                />
+              </Field>
+            </div>
+          )}
         </>
       ) : (
-        <div className="grid-2">
-          <Field label="SIRET">
-            <Readout value={siret} mono placeholder="—" />
-          </Field>
-          <Field label="SIREN">
-            <Readout value={readLegalScalar(legal.records, 'siren')} mono placeholder="—" />
-          </Field>
-          <Field label="Raison sociale">
-            <Readout value={readLegalScalar(legal.records, 'raison_sociale')} placeholder="—" />
-          </Field>
-          <Field label="Numéro de TVA">
-            <Readout value={readLegalScalar(legal.records, 'vat_number')} mono placeholder="—" />
-          </Field>
-        </div>
+        <>
+          <div className="grid-2">
+            <Field label="SIRET">
+              <Readout value={siret} mono placeholder="—" />
+            </Field>
+            <Field label="SIREN">
+              <Readout value={readLegalScalar(legal.records, 'siren')} mono placeholder="—" />
+            </Field>
+            <Field label="Raison sociale">
+              <Readout value={readLegalScalar(legal.records, 'raison_sociale')} placeholder="—" />
+            </Field>
+            <Field label="Numéro de TVA">
+              <Readout value={readLegalScalar(legal.records, 'vat_number')} mono placeholder="—" />
+            </Field>
+          </div>
+          {isAccommodation && (
+            <div className="grid-2" style={{ marginTop: 10 }}>
+              <Field label="N° de taxe de séjour">
+                <Readout value={readLegalScalar(legal.records, 'tourist_tax')} mono placeholder="—" />
+              </Field>
+            </div>
+          )}
+        </>
       )}
 
       <div className="chip-group__label" style={{ marginTop: 16 }}>Documents légaux</div>

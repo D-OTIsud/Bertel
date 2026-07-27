@@ -10,11 +10,13 @@ describe('presetPermissionsFor', () => {
       'edit_gallery','edit_hours','edit_org_enrichment','edit_pricing',
     ]);
   });
-  it('editor gets contributor set plus publish/validate/team', () => {
+  it('editor gets contributor set plus publish/validate/team/legal', () => {
     const editor = presetPermissionsFor('editor');
     expect(editor).toEqual(expect.arrayContaining(presetPermissionsFor('contributor')));
-    expect(editor).toEqual(expect.arrayContaining(['publish_object','validate_changes','manage_team_messages']));
-    expect(editor).toHaveLength(10);
+    expect(editor).toEqual(expect.arrayContaining([
+      'publish_object','validate_changes','manage_team_messages','manage_legal_compliance',
+    ]));
+    expect(editor).toHaveLength(11);
   });
   it('unknown role → empty', () => {
     expect(presetPermissionsFor('nope')).toEqual([]);

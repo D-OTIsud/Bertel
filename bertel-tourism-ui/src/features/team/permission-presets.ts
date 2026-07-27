@@ -21,7 +21,9 @@ const CONTRIBUTOR_PERMISSIONS = [
   'edit_hours', 'edit_pricing', 'edit_gallery', 'attach_documents',
 ] as const;
 
-const EDITOR_EXTRA = ['publish_object', 'validate_changes', 'manage_team_messages'] as const;
+const EDITOR_EXTRA = [
+  'publish_object', 'validate_changes', 'manage_team_messages', 'manage_legal_compliance',
+] as const;
 
 const PRESETS: Record<string, string[]> = {
   viewer: [],

@@ -2,7 +2,7 @@
  * Pure helpers for §18 "Juridique" — editing the writable `legal` module (object_legal rows).
  *
  * The section surfaces two families of object_legal rows:
- *  - IDENTITY scalars (SIRET, SIREN, raison sociale, n° TVA): one row per type, a single text value,
+ *  - IDENTITY scalars (SIRET, SIREN, raison sociale, n° TVA, n° taxe de séjour): one row per type, a single text value,
  *    no expiry (validity_mode = 'forever'). Edited as flat fields.
  *  - DOCUMENTS (licences, assurances, certificats…): everything else — a repeater with validity dates,
  *    a status lifecycle and an optional reference. Persisted by {@link saveObjectWorkspaceLegal}.
@@ -24,7 +24,9 @@ export const SIREN_LENGTH = 9;
 export const SIRET_LENGTH = 14;
 
 /** `ref_legal_type` codes rendered as flat identity fields (rest are "documents"). */
-export const LEGAL_IDENTITY_TYPE_CODES = ['siret', 'siren', 'raison_sociale', 'vat_number'] as const;
+export const LEGAL_IDENTITY_TYPE_CODES = [
+  'siret', 'siren', 'raison_sociale', 'vat_number', 'tourist_tax',
+] as const;
 
 const IDENTITY_SET = new Set<string>(LEGAL_IDENTITY_TYPE_CODES);
 

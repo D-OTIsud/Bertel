@@ -63,6 +63,7 @@ function module(partial: Partial<ObjectWorkspaceLegalModule> = {}): ObjectWorksp
       option({ code: 'siren', label: 'SIREN' }),
       option({ code: 'raison_sociale', label: 'Raison sociale' }),
       option({ code: 'vat_number', label: 'Numéro TVA' }),
+      option({ code: 'tourist_tax', label: 'Taxe de séjour', category: 'accommodation', isRequired: true }),
       option({ code: 'liability_insurance', label: 'Assurance RC', category: 'insurance' }),
     ],
     records: [],
@@ -73,7 +74,7 @@ function module(partial: Partial<ObjectWorkspaceLegalModule> = {}): ObjectWorksp
 }
 
 describe('isIdentityLegalType', () => {
-  test('siret/siren/raison_sociale/vat_number are identity types', () => {
+  test('business identifiers and tourist_tax are identity types', () => {
     for (const code of LEGAL_IDENTITY_TYPE_CODES) {
       expect(isIdentityLegalType(code)).toBe(true);
     }

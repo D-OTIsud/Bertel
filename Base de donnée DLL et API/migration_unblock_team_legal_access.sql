@@ -42,6 +42,26 @@ SET name = EXCLUDED.name,
     is_active = TRUE,
     updated_at = NOW();
 
+-- Preserve the product contract during rollout: every currently active editor
+-- receives the new explicit permission before object_legal policies switch to
+-- the dedicated predicate. Future editors receive it from the UI role preset.
+INSERT INTO user_permission (user_id, permission_id, is_active)
+SELECT DISTINCT membership.user_id, permission.id, TRUE
+FROM user_org_membership membership
+JOIN user_org_business_role business_role
+  ON business_role.membership_id = membership.id
+ AND business_role.is_active IS TRUE
+JOIN ref_org_business_role role_ref
+  ON role_ref.id = business_role.role_id
+ AND role_ref.code = 'editor'
+CROSS JOIN LATERAL (
+  SELECT id FROM ref_permission WHERE code = 'manage_legal_compliance'
+) permission
+WHERE membership.is_active IS TRUE
+ON CONFLICT (user_id, permission_id) DO UPDATE
+SET is_active = TRUE,
+    updated_at = NOW();
+
 CREATE OR REPLACE FUNCTION api.user_can_manage_object_legal(p_object_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql

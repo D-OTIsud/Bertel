@@ -283,3 +283,82 @@ describe('explorer-store — garde min ≤ max (§156)', () => {
     expect(useExplorerStore.getState().res.capacityFilters).toEqual([{ code: 'seats', min: 10, max: 40 }]);
   });
 });
+
+/**
+ * Capacités détaillées (16o) — la liste des métriques suit les SOUS-TYPES cochés,
+ * pas le bucket. C'est le signalement PO : chercher un hôtel proposait
+ * « Emplacements », « Camping-cars » et « Tentes », applicables à CAMP/HPA seulement.
+ */
+const CAPACITY_REFERENCES = {
+  hotCapacityMetrics: [
+    { code: 'beds', name: 'Lits', objectTypes: ['HOT', 'HLO', 'HPA', 'CAMP', 'RVA'] },
+    { code: 'bedrooms', name: 'Chambres', objectTypes: ['HOT', 'HLO', 'RVA'] },
+    { code: 'pitches', name: 'Emplacements', objectTypes: ['CAMP', 'HPA'] },
+  ],
+  capacityBounds: { bedrooms: { HOT: { min: 2, max: 60, sampleSize: 8 } } },
+  taxonomies: [],
+} as unknown as ExplorerReferences;
+
+describe('FiltersPanel — capacités détaillées par sous-type (16o)', () => {
+  beforeEach(resetStore);
+
+  function openHot() {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+  }
+
+  function metricOptions(): string[] {
+    const select = screen.getByLabelText('Ajouter un critère de capacité') as HTMLSelectElement;
+    return [...select.options].map((option) => option.value).filter(Boolean);
+  }
+
+  it('propose les métriques de tous les types du bucket quand rien n’est resserré', () => {
+    openHot();
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+    expect(metricOptions()).toEqual(['beds', 'bedrooms', 'pitches']);
+  });
+
+  it('retire « Emplacements » quand seul Hôtel reste coché', () => {
+    openHot();
+    act(() => useExplorerStore.getState().setHotSubtypes(['HOT']));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+    expect(metricOptions()).toEqual(['beds', 'bedrooms']);
+  });
+
+  it('ne propose que les métriques du plein air quand seul Camping reste coché', () => {
+    openHot();
+    act(() => useExplorerStore.getState().setHotSubtypes(['CAMP']));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+    expect(metricOptions()).toEqual(['beds', 'pitches']);
+  });
+
+  it('ajouter un critère l’amorce sur la borne basse observée et le sort de la liste', () => {
+    openHot();
+    act(() => useExplorerStore.getState().setHotSubtypes(['HOT']));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+
+    fireEvent.change(screen.getByLabelText('Ajouter un critère de capacité'), { target: { value: 'bedrooms' } });
+
+    expect(useExplorerStore.getState().hot.capacityFilters).toEqual([{ code: 'bedrooms', min: 2, max: undefined }]);
+    expect(metricOptions()).toEqual(['beds']);
+  });
+
+  it('la croix retire le critère', () => {
+    openHot();
+    act(() => useExplorerStore.getState().setHotCapacityFilter('bedrooms', 4, undefined));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retirer le critère Chambres' }));
+    expect(useExplorerStore.getState().hot.capacityFilters).toEqual([]);
+  });
+
+  it('sans bornes connues, pas de curseur — la saisie numérique reste offerte (§150)', () => {
+    openHot();
+    act(() => useExplorerStore.getState().setHotCapacityFilter('beds', 3, undefined));
+    render(<FiltersPanel references={CAPACITY_REFERENCES} />);
+
+    expect(screen.queryByLabelText('Lits — minimum')).toBeInTheDocument();
+    expect(screen.getByText(/Aucune valeur saisie pour l'instant/)).toBeInTheDocument();
+    // bedrooms a des bornes, beds n'en a pas : seul le second porte la mention.
+    expect(screen.queryAllByRole('slider')).toHaveLength(0);
+  });
+});

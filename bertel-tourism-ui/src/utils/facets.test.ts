@@ -3,6 +3,7 @@ import {
   applyClientPreviewFilters,
   buildBucketRpcFilters,
   filterOptionsBySelectedBuckets,
+  resolveCapacityBounds,
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   EXPLORER_TYPE_CODE_FAMILIES,
@@ -815,5 +816,32 @@ describe('filterOptionsBySelectedBuckets (16n — applicabilité des distinction
   it('unionne les types de plusieurs buckets', () => {
     const codes = filterOptionsBySelectedBuckets(OPTIONS, ['HOT', 'VIS']).map((o) => o.code);
     expect(codes).toEqual(['hot_stars', 'monument_historique', 'LBL_QUALITE_TOURISME']);
+  });
+});
+
+describe('resolveCapacityBounds (16o)', () => {
+  const BOUNDS = {
+    beds: {
+      HOT: { min: 4, max: 120, sampleSize: 6 },
+      HLO: { min: 2, max: 14, sampleSize: 22 },
+    },
+  };
+
+  it('unionne les bornes des types visés et somme les effectifs', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['HOT', 'HLO'])).toEqual({ min: 2, max: 120, sampleSize: 28 });
+  });
+
+  it('se restreint au type visé', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['HOT'])).toEqual({ min: 4, max: 120, sampleSize: 6 });
+  });
+
+  it('sans type visé, prend tout le corpus connu de la métrique', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', [])).toEqual({ min: 2, max: 120, sampleSize: 28 });
+  });
+
+  it('renvoie null quand aucun type visé ne porte de valeur — bornes inconnues, pas filtre absent', () => {
+    expect(resolveCapacityBounds(BOUNDS, 'beds', ['CAMP'])).toBeNull();
+    expect(resolveCapacityBounds(BOUNDS, 'pitches', ['CAMP'])).toBeNull();
+    expect(resolveCapacityBounds(undefined, 'beds', ['HOT'])).toBeNull();
   });
 });

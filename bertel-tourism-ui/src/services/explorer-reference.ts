@@ -4,6 +4,7 @@ import type {
   AccessibilityAmenityRef,
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
+  CapacityBoundsByMetric,
   ExplorerReferenceOption,
   ExplorerReferences,
   ExplorerBucketKey,
@@ -84,6 +85,14 @@ type LabelSchemeRow = {
   name: string;
   position: number | null;
   display_group: string | null;
+};
+
+type CapacityBoundsRow = {
+  metric_code: string;
+  object_type: string;
+  value_min: number | null;
+  value_max: number | null;
+  sample_size: number | null;
 };
 
 type LabelApplicabilityRow = {
@@ -276,21 +285,58 @@ function buildSustainabilityCategories(
     .filter((category) => category.code && category.name && category.actions.length > 0);
 }
 
+/**
+ * Métriques de capacité d'un bucket, **chacune porteuse de ses types applicables**.
+ *
+ * Le panneau resserre ensuite la liste sur les SOUS-TYPES cochés (`objectTypes`) : sans
+ * cela, chercher un hôtel proposait « Emplacements », « Camping-cars » et « Tentes »,
+ * parce que le bucket HOT unionne HOT∪HLO∪HPA∪CAMP∪RVA (signalement PO 2026-07-27).
+ *
+ * Deux exclusions :
+ *   - `meeting_rooms` : le bloc MICE a ses propres contrôles ;
+ *   - `max_capacity`  : c'est le contrôle principal « Groupe d'au moins… » rendu
+ *     juste au-dessus. La proposer aussi dans le tiroir détaillé, c'est deux
+ *     commandes pour un seul filtre.
+ */
+const CAPACITY_METRICS_OWNED_ELSEWHERE = new Set(['meeting_rooms', 'max_capacity']);
+
 function bucketCapacityOptions(
   bucket: ExplorerBucketKey,
   metrics: CapacityMetricRow[],
   applicability: CapacityApplicabilityRow[],
 ): ExplorerReferenceOption[] {
   const allowedTypes = new Set(EXPLORER_BUCKET_TYPE_MAP[bucket]);
-  const metricIds = new Set(
-    applicability
-      .filter((row) => allowedTypes.has(row.object_type as never))
-      .map((row) => row.metric_id),
-  );
+  const typesByMetricId = new Map<string, BackendObjectTypeCode[]>();
+  for (const row of applicability) {
+    if (!allowedTypes.has(row.object_type as never)) continue;
+    const current = typesByMetricId.get(row.metric_id) ?? [];
+    current.push(String(row.object_type).toUpperCase() as BackendObjectTypeCode);
+    typesByMetricId.set(row.metric_id, current);
+  }
 
-  return toReferenceOptions(
-    metrics.filter((metric) => metricIds.has(metric.id) && metric.code !== 'meeting_rooms'),
-  );
+  return metrics
+    .filter((metric) => typesByMetricId.has(metric.id) && !CAPACITY_METRICS_OWNED_ELSEWHERE.has(metric.code))
+    .map((metric) => ({
+      code: metric.code,
+      name: metric.name,
+      objectTypes: typesByMetricId.get(metric.id),
+    }));
+}
+
+/** `v_capacity_metric_bounds` (16o) → `metric_code → object_type → bornes`. */
+function toCapacityBounds(rows: CapacityBoundsRow[]): CapacityBoundsByMetric {
+  const result: CapacityBoundsByMetric = {};
+  for (const row of rows) {
+    if (!row.metric_code || !row.object_type) continue;
+    const byType = result[row.metric_code] ?? {};
+    byType[String(row.object_type).toUpperCase()] = {
+      min: Number(row.value_min),
+      max: Number(row.value_max),
+      sampleSize: Number(row.sample_size),
+    };
+    result[row.metric_code] = byType;
+  }
+  return result;
 }
 
 function computeTaxonomyDepth(nodeId: string, parentIdByNodeId: Map<string, string | null>, cache: Map<string, number>): number {
@@ -453,16 +499,22 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'collectif', name: 'Hébergement collectif', position: 3 },
       { code: 'plein_air', name: 'Hôtellerie de plein air', position: 4 },
     ],
+    // Démo : les métriques portent leurs types applicables comme en live, sinon le
+    // scoping par sous-type (16o) ne serait pas exerçable dans ce mode.
     hotCapacityMetrics: [
-      { code: 'beds', name: 'Lits' },
-      { code: 'bedrooms', name: 'Chambres' },
-      { code: 'pitches', name: 'Emplacements' },
-      { code: 'meeting_rooms', name: 'Salles de reunion' },
+      { code: 'beds', name: 'Lits', objectTypes: ['HOT', 'HLO', 'HPA', 'CAMP', 'RVA'] },
+      { code: 'bedrooms', name: 'Chambres', objectTypes: ['HOT', 'HLO', 'RVA'] },
+      { code: 'pitches', name: 'Emplacements', objectTypes: ['CAMP', 'HPA'] },
     ],
     resCapacityMetrics: [
-      { code: 'seats', name: 'Places assises' },
-      { code: 'standing_places', name: 'Places debout' },
+      { code: 'seats', name: 'Places assises', objectTypes: ['RES'] },
+      { code: 'standing_places', name: 'Places debout', objectTypes: ['RES'] },
     ],
+    capacityBounds: {
+      beds: { HOT: { min: 4, max: 120, sampleSize: 6 }, HLO: { min: 2, max: 14, sampleSize: 22 } },
+      bedrooms: { HOT: { min: 2, max: 60, sampleSize: 6 } },
+      seats: { RES: { min: 12, max: 180, sampleSize: 14 } },
+    },
     itiPractices: [
       { code: 'randonnee', name: 'Randonnee' },
       { code: 'velo', name: 'Velo' },
@@ -557,6 +609,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     sustainabilityActionsResult,
     rankedLabelSchemesResult,
     rankedLabelApplicabilityResult,
+    capacityBoundsResult,
     rankedLabelSchemeValuesResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
@@ -594,6 +647,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     // sur « aucune restriction », c'est-à-dire le comportement d'avant. Un embed
     // PostgREST ferait au contraire échouer TOUT le chargement des références.
     client.from('ref_classification_scheme_applicability').select('scheme_id,object_type'),
+    // 16o — bornes observées des métriques de capacité. Échec TOLÉRÉ comme ci-dessus :
+    // sans la vue, les curseurs retombent sur une saisie numérique libre.
+    client.from('v_capacity_metric_bounds').select('metric_code,object_type,value_min,value_max,sample_size'),
     client
       .from('ref_classification_value')
       .select('code,name,position,scheme:scheme_id(code,is_distinction)')
@@ -669,6 +725,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies,
     accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{ code: string; name: string; description: string | null; position: number | null }>),
+    capacityBounds: toCapacityBounds(capacityBoundsResult.error ? [] : ((capacityBoundsResult.data ?? []) as CapacityBoundsRow[])),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),

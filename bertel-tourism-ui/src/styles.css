@@ -8446,6 +8446,58 @@ a {
   gap: 0.55rem;
 }
 
+/* Plage min/max : deux input[range] natifs superposés (RangeSlider). La piste est
+   dessinée par le composant ; ici on ne garde QUE la poignée, pour que les deux
+   contrôles restent focusables et pilotables au clavier sans se masquer l'un l'autre.
+   `pointer-events: none` sur la piste + `auto` sur la poignée = chaque poignée reste
+   saisissable même là où les deux inputs se recouvrent. */
+.range-slider__thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+
+.range-slider__thumb:focus-visible {
+  outline: none;
+}
+
+.range-slider__thumb::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.range-slider__thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.range-slider__thumb:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+
+.range-slider__thumb:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+
 @media (max-width: 760px) {
   .filters-panel__range-grid {
     grid-template-columns: 1fr;

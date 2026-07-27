@@ -151,12 +151,16 @@ psql -d votre_database -f "Base de donnée DLL et API/migration_object_fma_write
 psql -d votre_database -f "Base de donnée DLL et API/migration_write_policy_percommand.sql"
 # 5m. §38 lectures: 25 politiques de lecture plates passent au gabarit ensembliste (InitPlan unique au lieu d'un scalaire par ligne)
 psql -d votre_database -f "Base de donnée DLL et API/migration_child_read_gate_setbased.sql"
+# 5n. §193 conformité juridique : permission dédiée + rétroattribution aux éditeurs + RLS object_legal
+psql -d votre_database -f "Base de donnée DLL et API/migration_unblock_team_legal_access.sql"
 
 # 6. Branding UI white-label (fichier complet pour une installation neuve)
 psql -d votre_database -f "Base de donnée DLL et API/ui_whitelabel_branding.sql"
 
 # 7. Bucket de stockage media (+ RLS d'écriture restrictive)
 psql -d votre_database -f "Base de donnée DLL et API/media_bucket.sql"
+# 7b. Bucket privé des justificatifs juridiques
+psql -d votre_database -f "Base de donnée DLL et API/legal_documents_bucket.sql"
 
 # 8. Peupler avec les données de seed (nécessite migration_sustainability_v5 ci-dessus)
 psql -d votre_database -f "Base de donnée DLL et API/seeds_data.sql"

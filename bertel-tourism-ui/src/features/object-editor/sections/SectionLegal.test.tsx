@@ -12,6 +12,7 @@ function legalModule(overrides: Partial<ObjectWorkspaceLegalModule> = {}): Objec
       { id: 'id-siren', code: 'siren', label: 'SIREN', category: 'business', isPublic: true, isRequired: false },
       { id: 'id-rs', code: 'raison_sociale', label: 'Raison sociale', category: 'business', isPublic: false, isRequired: false },
       { id: 'id-vat', code: 'vat_number', label: 'Numéro TVA', category: 'business', isPublic: false, isRequired: false },
+      { id: 'id-tax', code: 'tourist_tax', label: 'Taxe de séjour', category: 'accommodation', isPublic: true, isRequired: true },
       { id: 'id-li', code: 'liability_insurance', label: 'Assurance RC', category: 'insurance', isPublic: false, isRequired: true },
     ],
     records: [
@@ -63,6 +64,19 @@ describe('SectionLegal', () => {
 
     expect(readLegalScalar(result.current.draft.legal.records, 'siret')).toBe('44851998300012');
     expect(readLegalScalar(result.current.draft.legal.records, 'siren')).toBe('448519983');
+  });
+
+  it('shows and saves the tourist-tax number for accommodation objects only', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal({ records: [] })));
+    const view = render(<SectionLegal editor={result.current} permissions={allowAll} archetype="HEB" />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText('N° de taxe de séjour'), { target: { value: 'TAX-RUN-2026-42' } });
+    });
+    expect(readLegalScalar(result.current.draft.legal.records, 'tourist_tax')).toBe('TAX-RUN-2026-42');
+
+    view.rerender(<SectionLegal editor={result.current} permissions={allowAll} archetype="RES" />);
+    expect(screen.queryByLabelText('N° de taxe de séjour')).toBeNull();
   });
 
   it('adds a legal document via the modal ("Ajouter un document" → "Enregistrer")', () => {

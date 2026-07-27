@@ -276,6 +276,9 @@ ROLLBACK;
 \echo '== taxo4  migration_taxonomy_accommodation_vocabulary.sql  (§192 canonical accommodation vocabulary; semantic axes, Berta aliases, no object reassignment; self-asserting and fresh-safe) =='
 \ir migration_taxonomy_accommodation_vocabulary.sql
 
+\echo '== taxo4-test permanent §192 guards (axes declared, family resolves, canonical labels held, alias indexing wired) =='
+\ir tests/test_taxonomy_accommodation_vocabulary.sql
+
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
 \ir migration_interop_crosswalk_leafaware.sql
 

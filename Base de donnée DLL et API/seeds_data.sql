@@ -568,7 +568,10 @@ FROM (
     ('playground','Aire de jeux','kids','Aire de jeux pour enfants'),
     
     -- Équipements pour animaux
-    ('pet_friendly','Animaux acceptés','pets','Animaux de compagnie acceptés'),
+    -- §196 : PAS de code « animaux acceptés » ici. La politique d'accueil des animaux vit
+    -- dans object_pet_policy (seule source lue par le filtre Explorer `pet_accepted`) ;
+    -- un équipement homonyme recréerait la double saisie corrigée par
+    -- migration_pet_policy_single_source.sql. Ci-dessous : de vrais équipements.
     ('pet_bowls','Gamelles animaux','pets','Gamelles pour animaux'),
     ('pet_bed','Panier animaux','pets','Panier pour animaux'),
     
@@ -1921,7 +1924,7 @@ WITH amenity_translations(code, name_en, name_es, description_en, description_es
     ('baby_sitting','Babysitting','Servicio de canguro','Babysitting service','Servicio de niñera'),
     ('kids_club','Kids club','Club infantil','Kids club','Club para niños'),
     ('playground','Playground','Zona de juegos','Children''s playground','Zona de juegos infantil'),
-    ('pet_friendly','Pet friendly','Admite mascotas','Pets allowed','Se admiten mascotas'),
+    -- §196 : pas de 'pet_friendly' (cf. bloc de seed des amenities) — object_pet_policy fait foi.
     ('pet_bowls','Pet bowls','Cuencos para mascotas','Pet bowls provided','Cuencos para mascotas disponibles'),
     ('pet_bed','Pet bed','Cama para mascotas','Pet bed available','Cama para mascotas disponible'),
     ('hairdryer','Hairdryer','Secador de pelo','Hairdryer','Secador de pelo'),

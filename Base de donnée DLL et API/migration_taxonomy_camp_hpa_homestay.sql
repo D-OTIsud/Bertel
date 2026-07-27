@@ -108,8 +108,17 @@ ON CONFLICT (object_id, domain) DO UPDATE
 -- 3. Retrait du nœud de la branche « classé »
 --    Désactivation (pas de DELETE) : conserve la closure et l'historique d'audit.
 --    GOTCHA §187 : le même flip doit être reporté dans le snapshot
---    `migration_taxonomy_trees_seed.sql`, qui converge en FIN de manifest —
---    sinon le nœud est ré-armé assignable sur une base fraîche.
+--    `migration_taxonomy_trees_seed.sql` — sinon le nœud est ré-armé assignable
+--    sur une base fraîche.
+--    PRÉCISION (audit §192, 2026-07-27) : le snapshot ne converge PAS « en fin de
+--    manifest » comme l'affirmait la version initiale de ce commentaire. Il est
+--    `\ir` UNE seule fois, à l'étape `taxo` (ci_fresh_apply.sql l. 262), donc
+--    AVANT taxo2/taxo3/taxo4. Conséquence pratique inverse de ce qu'on croyait :
+--    ce sont les migrations qui écrasent le snapshot, pas l'inverse. Reporter le
+--    flip reste nécessaire (le snapshot doit décrire la cible), mais l'ordre
+--    actuel protège déjà. Ne pas déplacer le seed après les taxo* sans rejouer
+--    `tests/test_taxonomy_accommodation_vocabulary.sql`, qui échoue bruyamment si
+--    un libellé canonique est réverti.
 -- -----------------------------------------------------------------------------
 UPDATE ref_code
    SET is_assignable = FALSE

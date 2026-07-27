@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/session-store';
 import type {
   AccessibilityAmenityRef,
   AccessibilityDisabilityTypeCode,
+  BackendObjectTypeCode,
   ExplorerReferenceOption,
   ExplorerReferences,
   ExplorerBucketKey,
@@ -78,10 +79,16 @@ type SustainabilityActionRow = {
 };
 
 type LabelSchemeRow = {
+  id: string;
   code: string;
   name: string;
   position: number | null;
   display_group: string | null;
+};
+
+type LabelApplicabilityRow = {
+  scheme_id: string;
+  object_type: string;
 };
 
 type ClassificationValueRow = {
@@ -129,7 +136,23 @@ function rankedLabelFamily(displayGroup: string | null): { label: string; order:
   return (displayGroup ? RANKED_LABEL_FAMILIES[displayGroup] : undefined) ?? { label: 'Autres', order: 9 };
 }
 
-function toRankedLabelOptions(rows: LabelSchemeRow[]): ExplorerReferenceOption[] {
+/**
+ * Manifest 16n — attache à chaque distinction ses types applicables.
+ * `objectTypes` reste **undefined** quand le registre ne dit rien du scheme : c'est le
+ * défaut fail-open (« applicable partout »), pas un tableau vide qui voudrait dire
+ * « applicable à rien ». Les deux ne doivent jamais être confondus.
+ */
+function toRankedLabelOptions(
+  rows: LabelSchemeRow[],
+  applicability: LabelApplicabilityRow[],
+): ExplorerReferenceOption[] {
+  const typesBySchemeId = new Map<string, BackendObjectTypeCode[]>();
+  for (const row of applicability) {
+    const current = typesBySchemeId.get(row.scheme_id) ?? [];
+    current.push(String(row.object_type).toUpperCase() as BackendObjectTypeCode);
+    typesBySchemeId.set(row.scheme_id, current);
+  }
+
   return [...rows]
     .map((row) => ({ row, family: rankedLabelFamily(row.display_group) }))
     .sort((a, b) => {
@@ -139,7 +162,12 @@ function toRankedLabelOptions(rows: LabelSchemeRow[]): ExplorerReferenceOption[]
       if (positionCompare !== 0) return positionCompare;
       return a.row.name.localeCompare(b.row.name, 'fr', { sensitivity: 'base' });
     })
-    .map(({ row, family }) => ({ code: row.code, name: row.name, group: family.label }));
+    .map(({ row, family }) => ({
+      code: row.code,
+      name: row.name,
+      group: family.label,
+      objectTypes: typesBySchemeId.get(row.id),
+    }));
 }
 
 // §174 — paliers de note d'un scheme classé (ref_classification_value), groupés par code de
@@ -528,6 +556,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     sustainabilityCategoriesResult,
     sustainabilityActionsResult,
     rankedLabelSchemesResult,
+    rankedLabelApplicabilityResult,
     rankedLabelSchemeValuesResult,
   ] = await Promise.all([
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
@@ -557,9 +586,14 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
       .order('position', { ascending: true }),
     client
       .from('ref_classification_scheme')
-      .select('code,name,position,display_group')
+      .select('id,code,name,position,display_group')
       .eq('is_distinction', true)
       .order('position', { ascending: true }),
+    // Applicabilité par type (manifest 16n). Requête SÉPARÉE et son échec est TOLÉRÉ
+    // (cf. plus bas) : sur une base où la migration n'est pas encore passée, on retombe
+    // sur « aucune restriction », c'est-à-dire le comportement d'avant. Un embed
+    // PostgREST ferait au contraire échouer TOUT le chargement des références.
+    client.from('ref_classification_scheme_applicability').select('scheme_id,object_type'),
     client
       .from('ref_classification_value')
       .select('code,name,position,scheme:scheme_id(code,is_distinction)')
@@ -616,6 +650,12 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const sustainabilityCategories = (sustainabilityCategoriesResult.data ?? []) as SustainabilityCategoryRow[];
   const sustainabilityActions = (sustainabilityActionsResult.data ?? []) as SustainabilityActionRow[];
   const rankedLabelSchemes = (rankedLabelSchemesResult.data ?? []) as LabelSchemeRow[];
+  // 16n — échec TOLÉRÉ (pas de `throw`) : une base sans la table 16n retombe sur
+  // « aucune restriction », le comportement historique. Un throw ici priverait
+  // l'Explorer de TOUTES ses références pour une donnée d'affinage.
+  const rankedLabelApplicability = rankedLabelApplicabilityResult.error
+    ? []
+    : ((rankedLabelApplicabilityResult.data ?? []) as LabelApplicabilityRow[]);
   // §174 — filtre JS aux schemes classés (is_distinction) : la table est petite, filtrer côté
   // client après un select embarqué reste simple et robuste (pas besoin d'un second aller-retour).
   const rankedLabelSchemeValues = ((rankedLabelSchemeValuesResult.data ?? []) as (ClassificationValueRow & { scheme: { code?: string | null; is_distinction?: boolean | null } | null })[])
@@ -625,7 +665,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     accessibilityDisabilityTypes: ACCESSIBILITY_DISABILITY_REFERENCES,
     accessibilityAmenities: buildAccessibilityAmenities(accessibilityAmenities),
     sustainabilityCategories: buildSustainabilityCategories(sustainabilityCategories, sustainabilityActions),
-    rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes),
+    rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes, rankedLabelApplicability),
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies,
     accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{ code: string; name: string; description: string | null; position: number | null }>),

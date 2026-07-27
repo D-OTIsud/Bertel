@@ -5,6 +5,7 @@ import type {
   ExplorerBucketKey,
   ExplorerCommonFilters,
   ExplorerFilters,
+  ExplorerReferenceOption,
   ExplorerStatusFilter,
   MeetingRoomFilter,
   ObjectCard,
@@ -314,6 +315,39 @@ export function resolveExplorerStatuses(
 
 export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObjectTypeCode[] {
   return EXPLORER_BUCKET_TYPE_MAP[bucket];
+}
+
+/**
+ * Manifest 16n — restreint une liste de distinctions aux buckets sélectionnés.
+ *
+ * Motif : sans registre d'applicabilité, le sélecteur « Distinctions » proposait les
+ * 33 schemes quel que soit le contexte — « Classement hôtelier » et « Classement camping »
+ * s'affichaient avec la seule catégorie Visites cochée, où aucun ne peut sortir un résultat.
+ *
+ * Trois règles, dans cet ordre :
+ *  1. Aucun bucket sélectionné = aucune contrainte ⇒ liste complète (cohérent avec le reste
+ *     du panneau, où « rien de coché » vaut « tout »).
+ *  2. `objectTypes` absent ou vide ⇒ l'option est conservée. C'est le défaut **fail-open** du
+ *     registre : une distinction non seedée reste visible plutôt que de disparaître sans trace.
+ *  3. `keepCode` (le scheme actuellement sélectionné) est TOUJOURS conservé, même devenu
+ *     inapplicable : il reste actif dans le store et dans la barre de chips ; le retirer de la
+ *     liste laisserait un filtre agissant sans contrôle pour l'annuler.
+ */
+export function filterOptionsBySelectedBuckets(
+  options: ExplorerReferenceOption[],
+  selectedBuckets: ExplorerBucketKey[],
+  keepCode?: string | null,
+): ExplorerReferenceOption[] {
+  if (selectedBuckets.length === 0) {
+    return options;
+  }
+  const allowed = new Set<string>(selectedBuckets.flatMap((bucket) => EXPLORER_BUCKET_TYPE_MAP[bucket] ?? []));
+  return options.filter(
+    (option) =>
+      option.code === keepCode ||
+      !option.objectTypes?.length ||
+      option.objectTypes.some((type) => allowed.has(type)),
+  );
 }
 
 /**

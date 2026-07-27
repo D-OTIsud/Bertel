@@ -24,6 +24,7 @@ import {
   DEFAULT_VIS_SUBTYPES,
   HOT_BUCKET_TYPES,
   bucketForTaxonomyDomain,
+  filterOptionsBySelectedBuckets,
   resolveExplorerStatuses,
 } from '../../utils/facets';
 import { resolveTypeLabel } from '../../utils/labels';
@@ -296,7 +297,15 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   );
   const accessibilityDetailCount = accessibilityDisabilityTypesAny.length + accessibilityAmenityCodesAny.length;
   const sustainabilityDetailCount = sustainabilityCategoryCodesAny.length + sustainabilityActionCodesAny.length;
-  const rankedLabelOptions = references?.rankedLabelSchemes ?? [];
+  // 16n — la liste suit les catégories cochées : proposer « Classement hôtelier » avec le
+  // seul bucket Visites était une promesse vide (aucun résultat possible). Le scheme
+  // sélectionné reste dans la liste même s'il devient inapplicable, sinon on afficherait
+  // un sélecteur vide pour un filtre pourtant actif.
+  const rankedLabelOptions = filterOptionsBySelectedBuckets(
+    references?.rankedLabelSchemes ?? [],
+    selectedBuckets,
+    rankedLabelSchemeCode,
+  );
   // §174 — niveaux du scheme classé actif (étoiles/épis/clés…), pour la barre GradeBar.
   const rankedLabelValues = (rankedLabelSchemeCode && references?.rankedLabelSchemeValues?.[rankedLabelSchemeCode]) || [];
   // « Gradué » = ≥2 niveaux (classement hôtelier, épis, clés…) — même gate que la GradeBar.
@@ -910,6 +919,10 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         </FilterColumnGroup>
 
+        {/* 16n — groupe masqué quand AUCUNE distinction ne s'applique aux catégories cochées
+            (et qu'aucune n'est active) : un sélecteur « Toutes les distinctions » sur une liste
+            vide ne dit rien. Une section de moins dans la colonne. */}
+        {rankedLabelOptions.length > 0 || rankedLabelSchemeCode ? (
         <FilterColumnGroup label="Labels & certifications" count={labelFilterCount > 0 ? labelFilterCount : undefined}>
           <div className="space-y-3">
             <div>
@@ -960,6 +973,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
           </div>
         </FilterColumnGroup>
+        ) : null}
 
         <FilterColumnGroup label="Tags" count={tagsAny.length > 0 ? tagsAny.length : undefined}>
           <div className="space-y-2">

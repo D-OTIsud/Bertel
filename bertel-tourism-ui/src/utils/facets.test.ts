@@ -2,6 +2,7 @@ import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import {
   applyClientPreviewFilters,
   buildBucketRpcFilters,
+  filterOptionsBySelectedBuckets,
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
   EXPLORER_TYPE_CODE_FAMILIES,
@@ -778,5 +779,41 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
 
   it('hasServerOnlyFilters voit tous les critères communs actifs', () => {
     expect(hasServerOnlyFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON })).toBe(true);
+  });
+});
+
+describe('filterOptionsBySelectedBuckets (16n — applicabilité des distinctions)', () => {
+  const HOTEL = { code: 'hot_stars', name: 'Classement hôtelier', objectTypes: ['HOT'] as const };
+  const PATRIMOINE = { code: 'monument_historique', name: 'Monument Historique', objectTypes: ['PCU'] as const };
+  const TRANSVERSE = { code: 'LBL_QUALITE_TOURISME', name: 'Qualité Tourisme' }; // pas de objectTypes
+  const OPTIONS = [HOTEL, PATRIMOINE, TRANSVERSE].map((o) => ({ ...o, objectTypes: o.objectTypes ? [...o.objectTypes] : undefined }));
+
+  it('ne restreint rien quand aucun bucket n’est sélectionné', () => {
+    expect(filterOptionsBySelectedBuckets(OPTIONS, []).map((o) => o.code)).toEqual([
+      'hot_stars', 'monument_historique', 'LBL_QUALITE_TOURISME',
+    ]);
+  });
+
+  it('retire les distinctions d’hébergement quand seul VIS est coché (le signalement PO)', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['VIS']).map((o) => o.code);
+    expect(codes).not.toContain('hot_stars');
+    expect(codes).toContain('monument_historique'); // PCU appartient au bucket VIS
+  });
+
+  it('garde une distinction sans applicabilité déclarée (fail-open du registre)', () => {
+    expect(filterOptionsBySelectedBuckets(OPTIONS, ['VIS']).map((o) => o.code)).toContain('LBL_QUALITE_TOURISME');
+    // Un tableau VIDE se comporte comme l'absence : jamais « applicable à rien ».
+    const vide = [{ code: 'x', name: 'X', objectTypes: [] }];
+    expect(filterOptionsBySelectedBuckets(vide, ['VIS'])).toHaveLength(1);
+  });
+
+  it('garde le scheme SÉLECTIONNÉ même devenu inapplicable (sinon filtre actif sans contrôle)', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['VIS'], 'hot_stars').map((o) => o.code);
+    expect(codes).toContain('hot_stars');
+  });
+
+  it('unionne les types de plusieurs buckets', () => {
+    const codes = filterOptionsBySelectedBuckets(OPTIONS, ['HOT', 'VIS']).map((o) => o.code);
+    expect(codes).toEqual(['hot_stars', 'monument_historique', 'LBL_QUALITE_TOURISME']);
   });
 });

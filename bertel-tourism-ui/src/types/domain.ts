@@ -300,6 +300,13 @@ export interface ExplorerReferenceOption {
   name: string;
   /** Optional family label for grouped filter dropdowns (e.g. « Classements », « Durabilité »). */
   group?: string;
+  /**
+   * Types d'objet auxquels l'option s'applique (`ref_classification_scheme_applicability`).
+   * **`undefined` ou vide = applicable à TOUS les types** — l'absence de restriction est le
+   * défaut fail-open du registre : une distinction non seedée reste proposée partout plutôt
+   * que de disparaître silencieusement. Voir `migration_classification_scheme_applicability.sql`.
+   */
+  objectTypes?: BackendObjectTypeCode[];
 }
 
 export interface ExplorerTaxonomyNode {

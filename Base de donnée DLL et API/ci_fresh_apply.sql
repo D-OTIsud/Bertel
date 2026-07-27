@@ -107,6 +107,8 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir migration_taxonomy_seeds_coverage.sql
 \echo '== 8z     migration_crm_module.sql  (CRM P2.2 acteur-centre: fusion sujets OTI -> demand_topic + domaine crm_sentiment + helpers/RPCs DEFINER authorize-once + RLS par commande; merge/backfills guarded no-op fresh) =='
 \ir migration_crm_module.sql
+\echo '== 8z2    migration_crm_directory_search.sql  (recherche acteurs de l annuaire CRM: p_search sur list_crm_directory (4->5 args, DROP de l arite 4 = ambiguite PostgREST); nom/prenom/nom de famille/etablissement rattache en sous-chaine + trigrammes pg_trgm seuil 0.45 calibre live, telephone/e-mail structures sans flou; classement pertinence puis recence; search_path etendu a `extensions` (pg_trgm) — depend de 8z) =='
+\ir migration_crm_directory_search.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='

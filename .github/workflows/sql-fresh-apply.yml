@@ -231,6 +231,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_crm_module.sql"
 
+      - name: CRM directory search test (p_search — perimetre nom/prenom/etablissement/tel/e-mail, flou trgm calibre 0.45, classement exact avant flou, echappement LIKE, ordre par defaut non regresse, persona cross-ORG)
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_crm_directory_search.sql"
+
       - name: room-type bed test (§70 14c — bed_type vocab + i18n + object_room_type_bed RLS per-command + qualified)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

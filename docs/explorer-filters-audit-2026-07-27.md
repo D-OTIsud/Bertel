@@ -23,6 +23,7 @@ Données live vérifiées sur la base de prod OTI le 2026-07-27 (840 fiches publ
 | §3.5 CSS `.filters-panel` mort | **CORRIGÉ (partiellement)** — bloc §3.5 supprimé, pastilles ITI passées au système local ; *reste* un ensemble plus large de règles `.filters-panel*` également inertes (voir la note en fin de §3.5) |
 | §3.6 compteur « N actifs » ≠ barre de chips | **CORRIGÉ** — compteur dérivé de `buildExplorerActiveChips`, et la barre complétée des 3 critères qui y manquaient (sous-types HOT/VIS/SRV, MICE) |
 | §3.13 « Capacités détaillées » (remonté par le PO après coup) | **CORRIGÉ** — liste resserrée aux sous-types cochés + « ajouter un critère » à curseur borné par le corpus (manifest 16o) |
+| §3.14 « Groupe d'au moins » (remonté par le PO) | **CORRIGÉ** — min ET max bornés par le corpus ; côté RES, bascule de `max_capacity` (0 ligne) vers `seats` |
 | §3.7 à §3.12 | **OUVERTS** |
 
 ---
@@ -481,3 +482,34 @@ la lecture des résultats : l'arme serveur exige une ligne `object_capacity`, do
 critère écarte les fiches qui ne renseignent pas cette capacité — ce qui, sur ces 10 métriques,
 donne aujourd'hui 0 résultat. C'est le comportement juste, et il est désormais lisible au lieu
 d'être une surprise.
+
+### 3.14 [P1] « Groupe d'au moins… » : une seule borne, et une métrique morte côté Restaurants
+
+**Localisation** : `FiltersPanel.tsx` (contrôle vedette des sections HÉB et RES).
+**Catégorie** : correctness + pertinence — remonté par le PO.
+**État** : **CORRIGÉ**.
+
+Deux problèmes, l'un signalé, l'autre trouvé en vérifiant les données du premier.
+
+**a) Une seule borne.** Le contrôle n'écrivait que `min`. « Un gîte pour au moins 12 » est un
+besoin réel, mais « un gîte de 4 à 6 personnes » l'est tout autant, et c'est même le cas
+courant : la capacité médiane des meublés est 6, pour une étendue de 2 à 44. Le contrôle
+devient un curseur min/max borné par le corpus et resserré sur les sous-types cochés — chercher
+un hôtel affiche l'étendue des hôtels (20–87), pas celle de tout l'hébergement. Le libellé passe
+à « Capacité d'accueil » : « au moins » ne décrivait plus ce que fait le contrôle.
+
+**b) Côté Restaurants, le contrôle était mort.** Il pointait sur la métrique `max_capacity`,
+dont **aucune fiche RES ne porte la moindre valeur** — 0 ligne, tous statuts confondus. Il ne
+renvoyait donc jamais rien, quoi qu'on y saisisse : même classe que le filtre Label du §3.1.
+Les restaurants renseignent `seats` (89 fiches publiées, 2 à 350 places). Le contrôle y pointe
+désormais, et `seats` sort du tiroir détaillé pour ne pas devenir un doublon.
+
+Le couple bucket → métrique vedette vit dans une table unique, `HEADLINE_CAPACITY_METRIC`
+(`utils/facets.ts`) : le chargeur de références s'en sert pour exclure la métrique du tiroir
+détaillé, le panneau pour la rendre en vedette. Les deux appliquaient la même intention sans
+partager de source — c'est ce qui avait laissé `max_capacity` en place côté RES.
+
+**Leçon transposable** : choisir une métrique par son nom générique (`max_capacity` « capacité
+maximale ») plutôt que par ce que le type renseigne effectivement produit un contrôle
+silencieusement vide. Avant d'exposer une métrique, vérifier qu'elle est portée par les fiches
+du type visé.

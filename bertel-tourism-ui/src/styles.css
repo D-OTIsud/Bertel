@@ -11035,28 +11035,8 @@ a {
   .crm-app .crm-fab { right: 16px; bottom: 16px; height: 52px; width: 52px; padding: 0; justify-content: center; }
   .crm-app .crm-fab__label { display: none; }
 }
-.crm-app .crm-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 36px;
-  width: 290px;
-  padding: 0 12px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  color: var(--ink-4);
-}
-.crm-app .crm-search input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 13px;
-  color: var(--ink);
-}
-.crm-app .crm-search input::placeholder { color: var(--ink-4); }
+/* .crm-search retiré (PO 2026-07-27) : la recherche acteurs vit dans le champ de la TopBar,
+   il n'y a plus de champ local dans l'annuaire — 0 consommateur restant. */
 .crm-app .crm-toolbar__sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
 .crm-app .crm-toolbar__right {
   margin-left: auto;

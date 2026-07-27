@@ -8,6 +8,7 @@ import {
   listCrmTimeline,
   listDemandTopics,
   listObjectContactSuggestions,
+  matchesCrmDirectorySearch,
   parseActorCrmSnapshot,
   parseContactSuggestion,
   parseCrmAssignee,
@@ -374,6 +375,25 @@ describe('listCrmDirectory / listActorCrm — chemins démo', () => {
     expect(mockCrmDirectory).toHaveLength(3);
   });
 
+  // Recherche (PO 2026-07-27) : sujet/statut/période restent non simulés en démo, mais la
+  // RECHERCHE doit rester vivante — sinon le champ du header serait inerte hors connexion
+  // (l'ancien champ local de l'annuaire, lui, filtrait bien les fixtures).
+  it('mode démo : listCrmDirectory filtre les fixtures sur le terme recherché', async () => {
+    useSessionStore.setState({ demoMode: true });
+    const byActorName = await listCrmDirectory({ search: 'Técher' });
+    expect(byActorName.map((entry) => entry.displayName)).toEqual(['M. Paul Técher']);
+
+    const byObjectName = await listCrmDirectory({ search: 'comptoir' });
+    expect(byObjectName.map((entry) => entry.displayName)).toEqual(['Mme Marie Hoarau']);
+
+    await expect(listCrmDirectory({ search: 'zzzintrouvable' })).resolves.toEqual([]);
+  });
+
+  it('mode démo : sans recherche, l annuaire complet est rendu', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listCrmDirectory({ topicCode: 'boutique' })).resolves.toEqual(mockCrmDirectory);
+  });
+
   it('mode démo : listActorCrm renvoie un snapshot cohérent avec l annuaire mock', async () => {
     useSessionStore.setState({ demoMode: true });
     const snapshot = await listActorCrm(mockCrmDirectory[0].actorId);
@@ -425,6 +445,7 @@ describe('listCrmDirectory — filtres serveur (sujet / statut / période, KPIs 
       p_status: 'active',
       p_from: '2026-03-14T00:00:00.000Z',
       p_to: null,
+      p_search: null,
     });
   });
 
@@ -433,8 +454,36 @@ describe('listCrmDirectory — filtres serveur (sujet / statut / période, KPIs 
     const rpc = fakeRpcClient([]);
     await listCrmDirectory();
     expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
-      p_topic_code: null, p_status: null, p_from: null, p_to: null,
+      p_topic_code: null, p_status: null, p_from: null, p_to: null, p_search: null,
     });
+  });
+
+  // Recherche acteurs (PO 2026-07-27) : le terme part au SERVEUR — téléphone et e-mail vivent
+  // dans actor_channel et ne sont pas dans le payload, aucun tamis client ne pourrait les voir.
+  it('passe le terme de recherche en p_search', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient([]);
+    await listCrmDirectory({ search: 'hoareau' });
+    expect(rpc).toHaveBeenCalledWith('list_crm_directory', {
+      p_topic_code: null, p_status: null, p_from: null, p_to: null, p_search: 'hoareau',
+    });
+  });
+});
+
+// Le match de démo n'est PAS le match serveur (pas de flou, ni téléphone ni e-mail dans les
+// fixtures) : il couvre ce que les fixtures portent réellement.
+describe('matchesCrmDirectorySearch (mode démo)', () => {
+  const entry = mockCrmDirectory[0];
+
+  it('matche le nom de l acteur, le nom d établissement et le rôle, sans casse', () => {
+    expect(matchesCrmDirectorySearch(entry, entry.displayName.toUpperCase())).toBe(true);
+    expect(matchesCrmDirectorySearch(entry, 'comptoir')).toBe(true);
+    expect(matchesCrmDirectorySearch(entry, 'gérante')).toBe(true);
+  });
+
+  it('ne matche pas un terme absent, et un terme vide laisse tout passer', () => {
+    expect(matchesCrmDirectorySearch(entry, 'zzzintrouvable')).toBe(false);
+    expect(matchesCrmDirectorySearch(entry, '   ')).toBe(true);
   });
 });
 

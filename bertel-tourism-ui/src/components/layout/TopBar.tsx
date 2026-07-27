@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, Search } from 'lucide-react';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useCrmSearchStore } from '../../store/crm-search-store';
 import { useUiStore } from '../../store/ui-store';
 import { Input } from '@/components/ui/input';
 import { LivePresenceIndicator } from './LivePresenceIndicator';
@@ -26,11 +27,27 @@ function pageLabelFromPath(pathname: string | null): string {
   return map[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1);
 }
 
+// Le champ du header change de CIBLE selon la page (PO 2026-07-27) : sur /crm il pilotait
+// l'Explorer, donc il n'y servait à rien. Il y devient la recherche ACTEURS de l'annuaire.
+// Deux états distincts, jamais fusionnés : la recherche Explorer est conservée au retour sur
+// l'Explorer, la recherche CRM ne doit pas l'écraser (et réciproquement).
+const CRM_SEARCH_PLACEHOLDER = 'Rechercher un acteur : nom, prénom, établissement, téléphone, e-mail…';
+const EXPLORER_SEARCH_PLACEHOLDER = 'Rechercher : nom, ville, équipement, plat, label...';
+
+function isCrmPath(pathname: string | null): boolean {
+  return pathname === '/crm' || Boolean(pathname?.startsWith('/crm/'));
+}
+
 export function TopBar() {
   const pathname = usePathname();
   const pageLabel = pageLabelFromPath(pathname);
-  const search = useExplorerStore((state) => state.common.search);
-  const setSearch = useExplorerStore((state) => state.setSearch);
+  const isCrm = isCrmPath(pathname);
+  const explorerSearch = useExplorerStore((state) => state.common.search);
+  const setExplorerSearch = useExplorerStore((state) => state.setSearch);
+  const crmSearch = useCrmSearchStore((state) => state.search);
+  const setCrmSearch = useCrmSearchStore((state) => state.setSearch);
+  const search = isCrm ? crmSearch : explorerSearch;
+  const setSearch = isCrm ? setCrmSearch : setExplorerSearch;
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen);
@@ -106,7 +123,8 @@ export function TopBar() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Rechercher : nom, ville, équipement, plat, label..."
+            placeholder={isCrm ? CRM_SEARCH_PLACEHOLDER : EXPLORER_SEARCH_PLACEHOLDER}
+            aria-label={isCrm ? 'Rechercher un acteur' : 'Rechercher une fiche'}
             className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           {/* D24 : le raccourci affiché n'est plus décoratif — il ouvre la palette. */}

@@ -291,19 +291,46 @@ export interface CrmDirectoryFilters {
   /** Bornes ISO — `occurred_at >= from` et `< to`. */
   from?: string;
   to?: string;
+  /**
+   * Recherche acteurs (PO 2026-07-27) — appliquée SERVEUR sur nom / prénom / nom de famille /
+   * établissement rattaché / téléphone / e-mail. Téléphone et e-mail ne sont volontairement pas
+   * dans le payload de l'annuaire (PII) : ils ne sont interrogeables que côté serveur.
+   */
+  search?: string;
+}
+
+/**
+ * Match de recherche sur une entrée d'annuaire — utilisé UNIQUEMENT par le mode démo, où il
+ * n'y a pas de serveur pour appliquer `p_search`. Sans lui, la recherche serait totalement
+ * inerte en démo (l'ancien champ local de l'annuaire filtrait bien les fixtures).
+ * Périmètre volontairement réduit à ce que les fixtures portent : nom + établissement + rôle.
+ * Téléphone et e-mail ne sont pas simulés (absents des mocks) — écart assumé et documenté.
+ */
+export function matchesCrmDirectorySearch(entry: CrmDirectoryEntry, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const haystack = [entry.displayName, ...entry.objects.map((object) => `${object.objectName} ${object.roleName ?? ''}`)]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(needle);
 }
 
 /** RPC `api.list_crm_directory` — l'annuaire acteurs (filtres serveur optionnels). */
 export async function listCrmDirectory(filters: CrmDirectoryFilters = {}): Promise<CrmDirectoryEntry[]> {
   const client = requireCrmClient();
   if (!client) {
-    return mockCrmDirectory; // mode démo : fixtures non filtrées (pas de simulation serveur)
+    // Mode démo : sujet/statut/période restent non simulés, mais la RECHERCHE est appliquée
+    // aux fixtures — sinon le champ du header serait inerte en démo (régression du champ local).
+    return filters.search
+      ? mockCrmDirectory.filter((entry) => matchesCrmDirectorySearch(entry, filters.search as string))
+      : mockCrmDirectory;
   }
   const { data, error } = await client.schema('api').rpc('list_crm_directory', {
     p_topic_code: filters.topicCode ?? null,
     p_status: filters.status ?? null,
     p_from: filters.from ?? null,
     p_to: filters.to ?? null,
+    p_search: filters.search ?? null,
   });
   if (error) {
     throw error;

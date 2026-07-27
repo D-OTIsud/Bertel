@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check, ChevronDown, Info, Search, X } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import type {
@@ -53,11 +53,9 @@ const ACCOMMODATION_AXIS_LABELS = {
   positionnement: 'Positionnement',
 } as const;
 
-// Incident UX 2026-07-27 : le catalogue sémantique reste disponible dans les
-// références, mais son rendu en cartes verbeuses est désactivé. L'Explorer
-// conserve le sélecteur compact historique tant qu'une nouvelle composition
-// n'a pas été validée visuellement.
-const ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT = false;
+// Le catalogue sémantique est la projection utilisateur de référence. Les
+// partitions techniques HOT/HLO/HPA/CAMP/RVA ne doivent plus être exposées.
+const ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT = true;
 
 function foldAccommodationTerm(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[’']/g, ' ').trim();
@@ -173,6 +171,8 @@ function filterSustainabilityActions(
 
 export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true }: FiltersPanelProps) {
   const [accommodationQuery, setAccommodationQuery] = useState('');
+  const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
+  const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
   const selectedBuckets = useStore((state) => state.selectedBuckets);
   const common = useStore((state) => state.common);
   const cities = common.cities ?? [];
@@ -519,12 +519,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           {Array.from(groups.values()).map((group) => {
             const representative = group[0];
             const active = group.some((entry) => isTaxonomyActive(entry.domain, entry.node.code));
-            const aliases = Array.from(new Set(group.flatMap((entry) => entry.node.aliases ?? [])));
             return (
               <button
                 key={group.map((entry) => `${entry.domain}:${entry.node.code}`).join('|')}
                 type="button"
-                className={cn(taxonomyChipClass(active), 'h-auto flex-col items-start')}
+                className={taxonomyChipClass(active)}
                 onClick={() => {
                   const nextActive = !active;
                   for (const entry of group) {
@@ -538,12 +537,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 aria-pressed={active}
                 title={group.map((entry) => nodeTitle(entry.node)).filter(Boolean).join('\n\n') || undefined}
               >
-                <span>{representative.node.name}</span>
-                {aliases.length > 0 ? (
-                  <span className={cn('text-[9px] font-normal', active ? 'text-white/80' : 'text-ink-3')}>
-                    Berta : {aliases.join(', ')}
-                  </span>
-                ) : null}
+                {representative.node.name}
               </button>
             );
           })}
@@ -565,26 +559,56 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       const natures = visible.filter((entry) => entry.node.axis === 'nature');
       const subtypes = visible.filter((entry) => entry.node.axis === 'sous_type');
       if (natures.length === 0 && subtypes.length === 0) return null;
+      const selectedCount = familyEntries.filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
+      const expanded = Boolean(query) || openAccommodationFamily === familyCode;
       return (
-        <div key={familyCode} className="rounded-[9px] border border-line bg-surface px-2.5 py-2">
-          <div className="mb-2">
-            <span className="block text-[12px] font-semibold text-ink">{familyLabel}</span>
-            {family?.description ? <span className="block text-[10px] leading-snug text-ink-3">{family.description}</span> : null}
-          </div>
-          {natures.length > 0 ? (
-            <div>
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                {ACCOMMODATION_AXIS_LABELS.nature}
+        <div key={familyCode} className="border-b border-line last:border-b-0">
+          <button
+            type="button"
+            className="group flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+            onClick={() => setOpenAccommodationFamily((current) => current === familyCode ? null : familyCode)}
+            aria-expanded={expanded}
+            aria-controls={`accommodation-family-${familyCode}`}
+            aria-description={family?.description || undefined}
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className={cn('h-3.5 w-3.5 shrink-0 text-ink-3 transition-transform', expanded && 'rotate-180')}
+            />
+            <span className="min-w-0 flex-1 text-[12px] font-semibold text-ink">{familyLabel}</span>
+            {selectedCount > 0 ? (
+              <span className="rounded-full bg-teal/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal">
+                {selectedCount}
               </span>
-              {renderSemanticEntries(natures)}
-            </div>
-          ) : null}
-          {subtypes.length > 0 ? (
-            <div className={natures.length > 0 ? 'mt-2' : ''}>
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                {ACCOMMODATION_AXIS_LABELS.sous_type}
+            ) : null}
+            {family?.description ? (
+              <span
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 group-hover:text-ink-2"
+                title={family.description}
+                aria-hidden="true"
+              >
+                <Info className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
-              {renderSemanticEntries(subtypes)}
+            ) : null}
+          </button>
+          {expanded ? (
+            <div id={`accommodation-family-${familyCode}`} className="space-y-2 px-2 pb-2.5 pl-7">
+              {natures.length > 0 ? (
+                <div>
+                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                    Nature
+                  </span>
+                  {renderSemanticEntries(natures)}
+                </div>
+              ) : null}
+              {subtypes.length > 0 ? (
+                <div>
+                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                    Sous-type
+                  </span>
+                  {renderSemanticEntries(subtypes)}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -598,41 +622,87 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       entry.node.axis === 'positionnement' && accommodationNodeMatches(entry.node, query),
     );
     const hasResults = familyBlocks.length > 0 || unitEntries.length > 0 || positioningEntries.length > 0;
+    const complementarySelectedCount = [...unitEntries, ...positioningEntries]
+      .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
+    const showComplements = Boolean(query) || showAccommodationComplements;
 
     return (
-      <div className="space-y-3">
-        <div>
-          <label htmlFor="accommodation-taxonomy-search" className="mb-1 block text-[11px] font-medium text-ink-2">
-            Rechercher dans le vocabulaire
+      <div className="space-y-2.5">
+        <div className="relative">
+          <label htmlFor="accommodation-taxonomy-search" className="sr-only">
+            Rechercher un type d'hébergement
           </label>
+          <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-3" />
           <Input
             id="accommodation-taxonomy-search"
+            className="h-8 pl-8 pr-8 text-[12px]"
             value={accommodationQuery}
             onChange={(event) => setAccommodationQuery(event.target.value)}
-            placeholder="Ex. location saisonnière, gîte, hôtel…"
+            placeholder="Rechercher un type ou un ancien terme…"
           />
-          <p className="mt-1 text-[10px] leading-snug text-ink-3">
-            Les anciens termes Berta restent recherchables ; le filtre affiche le terme canonique.
-          </p>
+          {accommodationQuery ? (
+            <button
+              type="button"
+              className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-3 hover:bg-surface2 hover:text-ink"
+              onClick={() => setAccommodationQuery('')}
+              aria-label="Effacer la recherche d'hébergement"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
 
-        {familyBlocks}
-
-        {unitEntries.length > 0 ? (
+        {familyBlocks.length > 0 ? (
           <div>
-            <span className="mb-1.5 block text-[11px] font-semibold text-ink-2">
-              {ACCOMMODATION_AXIS_LABELS.type_unite}
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+              Famille d'hébergement
             </span>
-            {renderSemanticEntries(unitEntries, true)}
+            <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
+              {familyBlocks}
+            </div>
           </div>
         ) : null}
 
-        {positioningEntries.length > 0 ? (
-          <div>
-            <span className="mb-1.5 block text-[11px] font-semibold text-ink-2">
-              {ACCOMMODATION_AXIS_LABELS.positionnement}
-            </span>
-            {renderSemanticEntries(positioningEntries)}
+        {unitEntries.length > 0 || positioningEntries.length > 0 ? (
+          <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
+            <button
+              type="button"
+              className="flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+              onClick={() => setShowAccommodationComplements((current) => !current)}
+              aria-expanded={showComplements}
+              aria-controls="accommodation-complementary-filters"
+            >
+              <ChevronDown
+                aria-hidden="true"
+                className={cn('h-3.5 w-3.5 shrink-0 text-ink-3 transition-transform', showComplements && 'rotate-180')}
+              />
+              <span className="flex-1 text-[12px] font-semibold text-ink-2">Critères complémentaires</span>
+              {complementarySelectedCount > 0 ? (
+                <span className="rounded-full bg-teal/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal">
+                  {complementarySelectedCount}
+                </span>
+              ) : null}
+            </button>
+            {showComplements ? (
+              <div id="accommodation-complementary-filters" className="space-y-2 border-t border-line px-2 pb-2.5 pt-2">
+                {unitEntries.length > 0 ? (
+                  <div>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                      {ACCOMMODATION_AXIS_LABELS.type_unite}
+                    </span>
+                    {renderSemanticEntries(unitEntries, true)}
+                  </div>
+                ) : null}
+                {positioningEntries.length > 0 ? (
+                  <div>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                      {ACCOMMODATION_AXIS_LABELS.positionnement}
+                    </span>
+                    {renderSemanticEntries(positioningEntries)}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -1062,7 +1132,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Nature d'hébergement</span>
+                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'hébergement</span>
                 {ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT
                   ? (renderAccommodationTaxonomy() ?? renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype))
                   : renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}

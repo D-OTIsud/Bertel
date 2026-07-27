@@ -1,6 +1,8 @@
 import type {
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
+  CapacityBounds,
+  CapacityBoundsByMetric,
   CapacityFilter,
   ExplorerBucketKey,
   ExplorerCommonFilters,
@@ -350,13 +352,68 @@ export function filterOptionsBySelectedBuckets(
   if (selectedBuckets.length === 0) {
     return options;
   }
-  const allowed = new Set<string>(selectedBuckets.flatMap((bucket) => EXPLORER_BUCKET_TYPE_MAP[bucket] ?? []));
+  return filterOptionsByObjectTypes(
+    options,
+    selectedBuckets.flatMap((bucket) => EXPLORER_BUCKET_TYPE_MAP[bucket] ?? []),
+    keepCode,
+  );
+}
+
+/**
+ * Même contrat que `filterOptionsBySelectedBuckets`, mais sur un ensemble de TYPES —
+ * pour resserrer sur les sous-types réellement cochés plutôt que sur tout le bucket.
+ *
+ * C'est ce qui manquait aux métriques de capacité : le bucket HOT unionne
+ * HOT∪HLO∪HPA∪CAMP∪RVA, donc « Emplacements », « Camping-cars » et « Tentes »
+ * (applicables à CAMP/HPA) s'affichaient en cherchant un hôtel (signalement PO).
+ *
+ * Mêmes trois règles : aucun type = aucune contrainte ; `objectTypes` absent ou vide =
+ * conservé (fail-open) ; `keepCode` toujours conservé.
+ */
+export function filterOptionsByObjectTypes(
+  options: ExplorerReferenceOption[],
+  allowedTypes: readonly BackendObjectTypeCode[],
+  keepCode?: string | null,
+): ExplorerReferenceOption[] {
+  if (allowedTypes.length === 0) {
+    return options;
+  }
+  const allowed = new Set<string>(allowedTypes);
   return options.filter(
     (option) =>
       option.code === keepCode ||
       !option.objectTypes?.length ||
       option.objectTypes.some((type) => allowed.has(type)),
   );
+}
+
+/**
+ * Bornes à donner au curseur d'une métrique, pour l'ensemble de types visé (16o).
+ *
+ * Union des bornes observées type par type : chercher « hôtel ou meublé » doit couvrir
+ * l'étendue des deux. `null` quand AUCUN type visé ne porte de valeur lisible — ce qui
+ * est le cas de 10 métriques sur 12 aujourd'hui : le consommateur doit alors offrir une
+ * saisie numérique libre, PAS masquer la métrique (§150, la surface suit le modèle).
+ */
+export function resolveCapacityBounds(
+  bounds: CapacityBoundsByMetric | undefined,
+  metricCode: string,
+  types: readonly BackendObjectTypeCode[],
+): CapacityBounds | null {
+  const byType = bounds?.[metricCode];
+  if (!byType) {
+    return null;
+  }
+  const scoped = types.length > 0 ? types.map((type) => byType[type]) : Object.values(byType);
+  const present = scoped.filter((entry): entry is CapacityBounds => Boolean(entry));
+  if (present.length === 0) {
+    return null;
+  }
+  return {
+    min: Math.min(...present.map((entry) => entry.min)),
+    max: Math.max(...present.map((entry) => entry.max)),
+    sampleSize: present.reduce((total, entry) => total + entry.sampleSize, 0),
+  };
 }
 
 /**

@@ -341,6 +341,17 @@ export interface ExplorerTaxonomyDomain {
   nodes: ExplorerTaxonomyNode[];
 }
 
+/** Bornes observées d'une métrique de capacité pour UN type d'objet (16o). */
+export interface CapacityBounds {
+  min: number;
+  max: number;
+  /** Nombre de fiches lisibles portant la valeur — sert à dire « observé sur N fiches ». */
+  sampleSize: number;
+}
+
+/** `metric_code → object_type → bornes`. Absence d'entrée = bornes inconnues. */
+export type CapacityBoundsByMetric = Record<string, Record<string, CapacityBounds>>;
+
 export interface ExplorerReferences {
   accessibilityDisabilityTypes: ExplorerReferenceOption[];
   accessibilityAmenities: AccessibilityAmenityRef[];
@@ -358,6 +369,16 @@ export interface ExplorerReferences {
   accommodationFamilies?: ExplorerAccommodationFamily[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
+  /**
+   * Bornes OBSERVÉES des métriques de capacité (`public.v_capacity_metric_bounds`,
+   * manifest 16o), indexées `metric_code → object_type`. Elles bornent les curseurs
+   * min/max du filtre « Capacités détaillées ».
+   *
+   * Une métrique ABSENTE = aucune borne connue (aucune fiche lisible ne porte la
+   * valeur), **pas** une métrique à masquer : la surface de filtre suit le modèle,
+   * jamais les données (§150). Le consommateur retombe sur une saisie numérique libre.
+   */
+  capacityBounds: CapacityBoundsByMetric;
   itiPractices: ExplorerReferenceOption[];
   /** Cadre & environnement (ref_code domaine environment_tag) — filtre transverse §154. */
   environmentTags: ExplorerReferenceOption[];

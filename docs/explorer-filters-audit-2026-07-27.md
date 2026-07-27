@@ -22,6 +22,7 @@ Données live vérifiées sur la base de prod OTI le 2026-07-27 (840 fiches publ
 | §3.4 encadré ambre hors tokens | **CORRIGÉ** — famille `warn`, 12 px |
 | §3.5 CSS `.filters-panel` mort | **CORRIGÉ (partiellement)** — bloc §3.5 supprimé, pastilles ITI passées au système local ; *reste* un ensemble plus large de règles `.filters-panel*` également inertes (voir la note en fin de §3.5) |
 | §3.6 compteur « N actifs » ≠ barre de chips | **CORRIGÉ** — compteur dérivé de `buildExplorerActiveChips`, et la barre complétée des 3 critères qui y manquaient (sous-types HOT/VIS/SRV, MICE) |
+| §3.13 « Capacités détaillées » (remonté par le PO après coup) | **CORRIGÉ** — liste resserrée aux sous-types cochés + « ajouter un critère » à curseur borné par le corpus (manifest 16o) |
 | §3.7 à §3.12 | **OUVERTS** |
 
 ---
@@ -439,3 +440,44 @@ un état vide qui mérite sa copy (« Aucun itinéraire publié pour l'instant �
 
 L'action 5 et l'action 6 se recouvrent : faire 5 en premier fait disparaître un système de
 pastille sur cinq presque gratuitement.
+
+### 3.13 [P1] « Capacités détaillées » : liste au périmètre du bucket, et 6 métriques sans donnée
+
+**Localisation** : `services/explorer-reference.ts` (`bucketCapacityOptions`), `FiltersPanel.tsx`
+(les deux blocs `<details>` HÉB et RES).
+**Catégorie** : Anti-pattern / pertinence — remonté par le PO après la première passe.
+**État** : **CORRIGÉ** (manifest 16o).
+
+Le tiroir empilait une paire Min/Max par métrique, avec deux défauts superposés.
+
+**a) La liste était calculée pour le BUCKET, pas pour les types cochés.** `ref_capacity_applicability`
+porte pourtant la donnée par type — `pitches`/`campers`/`tents` → CAMP, HPA ; `bedrooms` → HOT,
+HLO, RVA. Mais `bucketCapacityOptions('HOT', …)` unionne HOT∪HLO∪HPA∪CAMP∪RVA, donc chercher un
+hôtel proposait « Emplacements », « Camping-cars », « Tentes » et « Véhicules ».
+
+**b) Dix des douze métriques n'ont aucune donnée.** Vérifié sur la prod : seules `max_capacity`
+(551 fiches) et `seats` (89) portent des lignes. `beds`, `bedrooms`, `standing_places`, `pitches`,
+`campers`, `tents`, `vehicles`, `bikes`, `meeting_rooms`, `floor_area_m2` sont à **zéro ligne**,
+tous statuts confondus. Et `max_capacity` est déjà le contrôle principal rendu juste au-dessus
+(« Groupe d'au moins… »). Pour un hôtel, le tiroir affichait donc 6 contrôles sans effet possible
+plus un doublon.
+
+**Correctif livré :**
+
+- la liste suit les **sous-types cochés** (`filterOptionsByObjectTypes`, la primitive de 16n
+  généralisée aux types) — Hôtel seul ⇒ Lits, Chambres, Surface ; Camping ⇒ Emplacements,
+  Camping-cars, Tentes, Véhicules ;
+- on **ajoute un critère** au lieu de tous les afficher : la colonne ne porte que ce qui est
+  demandé ;
+- chaque critère est un **curseur min/max borné par le corpus** (`v_capacity_metric_bounds`,
+  vue `security_invoker`, manifest 16o) doublé de deux champs numériques étiquetés — le curseur
+  pour explorer, les champs pour préciser et pour rester utilisable au clavier ;
+- `max_capacity` sort du tiroir : une seule commande par filtre.
+
+**Ce qui n'a délibérément PAS été fait** : masquer les métriques sans donnée. Le principe §150
+tient — la surface de filtre suit le modèle, jamais les données. Une métrique sans bornes reste
+proposée, sans curseur, avec la mention « aucune valeur saisie pour l'instant ». À noter pour
+la lecture des résultats : l'arme serveur exige une ligne `object_capacity`, donc ajouter un
+critère écarte les fiches qui ne renseignent pas cette capacité — ce qui, sur ces 10 métriques,
+donne aujourd'hui 0 résultat. C'est le comportement juste, et il est désormais lisible au lieu
+d'être une surprise.

@@ -38,6 +38,11 @@ import { GradeBar } from './GradeBar';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 import { buildExplorerActiveChips } from './explorer-active-chips';
+import { CapacityCriteria } from './CapacityCriteria';
+
+/** Unités affichées à côté des valeurs de capacité — seulement là où elles éclairent. */
+const HOT_CAPACITY_UNITS: Record<string, string> = { beds: 'lits', bedrooms: 'ch.', pitches: 'empl.', floor_area_m2: 'm²' };
+const RES_CAPACITY_UNITS: Record<string, string> = { seats: 'places', standing_places: 'places' };
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
@@ -1125,46 +1130,19 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               </div>
 
               {references?.hotCapacityMetrics.length ? (
-                <details>
-                  <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Capacités détaillées</summary>
-                  <div className="filters-panel__metric-stack mt-2">
-                    {references.hotCapacityMetrics.map((metric) => (
-                      <div key={metric.code} className="filters-panel__metric-row">
-                        <strong>{metric.name}</strong>
-                        <div className="filters-panel__range-grid">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'min'))}
-                            onChange={(event) =>
-                              setHotCapacityFilter(
-                                metric.code,
-                                event.target.value ? Number(event.target.value) : undefined,
-                                readCapacityValue(hot.capacityFilters, metric.code, 'max'),
-                              )
-                            }
-                            placeholder="Min"
-                            aria-label={`${metric.name} — minimum`}
-                          />
-                          <Input
-                            type="number"
-                            min={0}
-                            value={renderNumber(readCapacityValue(hot.capacityFilters, metric.code, 'max'))}
-                            onChange={(event) =>
-                              setHotCapacityFilter(
-                                metric.code,
-                                readCapacityValue(hot.capacityFilters, metric.code, 'min'),
-                                event.target.value ? Number(event.target.value) : undefined,
-                              )
-                            }
-                            placeholder="Max"
-                            aria-label={`${metric.name} — maximum`}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                <div>
+                  <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Capacités détaillées</span>
+                  <CapacityCriteria
+                    metrics={references.hotCapacityMetrics}
+                    filters={hot.capacityFilters}
+                    // Les SOUS-TYPES cochés, pas le bucket : c'est ce qui écarte
+                    // « Emplacements / Camping-cars / Tentes » quand on cherche un hôtel.
+                    selectedTypes={hot.subtypes}
+                    bounds={references.capacityBounds}
+                    onChange={setHotCapacityFilter}
+                    unitByMetric={HOT_CAPACITY_UNITS}
+                  />
+                </div>
               ) : null}
 
               {/* §159 — MICE = besoin expert, replié par défaut (le badge de la
@@ -1242,46 +1220,19 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               </div>
 
               {references?.resCapacityMetrics.length ? (
-                <details>
-                  <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Capacités détaillées</summary>
-                  <div className="filters-panel__metric-stack mt-2">
-                  {references.resCapacityMetrics.map((metric) => (
-                    <div key={metric.code} className="filters-panel__metric-row">
-                      <strong>{metric.name}</strong>
-                      <div className="filters-panel__range-grid">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'min'))}
-                          onChange={(event) =>
-                            setResCapacityFilter(
-                              metric.code,
-                              event.target.value ? Number(event.target.value) : undefined,
-                              readCapacityValue(res.capacityFilters, metric.code, 'max'),
-                            )
-                          }
-                          placeholder="Min"
-                            aria-label={`${metric.name} — minimum`}
-                        />
-                        <Input
-                          type="number"
-                          min={0}
-                          value={renderNumber(readCapacityValue(res.capacityFilters, metric.code, 'max'))}
-                          onChange={(event) =>
-                            setResCapacityFilter(
-                              metric.code,
-                              readCapacityValue(res.capacityFilters, metric.code, 'min'),
-                              event.target.value ? Number(event.target.value) : undefined,
-                            )
-                          }
-                          placeholder="Max"
-                            aria-label={`${metric.name} — maximum`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  </div>
-                </details>
+                <div>
+                  <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Capacités détaillées</span>
+                  <CapacityCriteria
+                    metrics={references.resCapacityMetrics}
+                    filters={res.capacityFilters}
+                    // Le bucket RES n'a qu'un type : la portée vaut le bucket, mais on
+                    // passe la même primitive pour ne pas avoir deux chemins à maintenir.
+                    selectedTypes={EXPLORER_BUCKET_TYPE_MAP.RES}
+                    bounds={references.capacityBounds}
+                    onChange={setResCapacityFilter}
+                    unitByMetric={RES_CAPACITY_UNITS}
+                  />
+                </div>
               ) : null}
             </div>
           </FilterColumnGroup>

@@ -32,6 +32,11 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
   const hot = useStore((s) => s.hot);
   const res = useStore((s) => s.res);
   const iti = useStore((s) => s.iti);
+  // Sans ces deux-là, `filters` retombait sur les défauts et les sous-types VIS/SRV
+  // rétrécis restaient invisibles dans la barre.
+  const vis = useStore((s) => s.vis);
+  const srv = useStore((s) => s.srv);
+  const evt = useStore((s) => s.evt);
   const setSearch = useStore((s) => s.setSearch);
   const toggleBucket = useStore((s) => s.toggleBucket);
   const setCities = useStore((s) => s.setCities);
@@ -49,7 +54,7 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
   const router = useRouter();
   const [savingDynamic, setSavingDynamic] = useState(false);
 
-  const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets, hot, res, iti };
+  const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets, hot, res, iti, vis, srv, evt };
   const chips = buildExplorerActiveChips(filters);
 
   if (chips.length === 0) {
@@ -155,6 +160,24 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
         for (const item of useStore.getState().common.taxonomyAny ?? []) {
           useStore.getState().toggleTaxonomy(item.domain, item.code);
         }
+        break;
+      // Un set vide remet le bucket sur « tous ses types » (cf. setXxxSubtypes).
+      case 'hotSubtypes':
+        useStore.getState().setHotSubtypes([]);
+        break;
+      case 'visSubtypes':
+        useStore.getState().setVisSubtypes([]);
+        break;
+      case 'srvSubtypes':
+        useStore.getState().setSrvSubtypes([]);
+        break;
+      case 'meetingRoom':
+        useStore.getState().setHotMeetingRoom({
+          minCount: undefined,
+          minAreaM2: undefined,
+          minCapTheatre: undefined,
+          minCapClassroom: undefined,
+        });
         break;
       case 'hotCapacity':
         useStore.getState().setHotCapacityFilter(chip.value, undefined, undefined);

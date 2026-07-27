@@ -12,6 +12,20 @@ Données live vérifiées sur la base de prod OTI le 2026-07-27 (840 fiches publ
 
 ---
 
+## 0. État d'avancement (mis à jour en fin de passe)
+
+| Constat | État |
+|---|---|
+| §3.1 filtre Label inopérant | **CORRIGÉ** — surface retirée, garde de régression `facets.test.ts` (commit `4672e47`) |
+| §3.2 distinctions non applicables aux catégories cochées | **CORRIGÉ** — registre 16n + filtrage front (commit `0606128`) |
+| §3.3 champs numériques sans étiquette | **CORRIGÉ** — 8 `aria-label` statiques + 4 dynamiques par métrique |
+| §3.4 encadré ambre hors tokens | **CORRIGÉ** — famille `warn`, 12 px |
+| §3.5 CSS `.filters-panel` mort | **CORRIGÉ (partiellement)** — bloc §3.5 supprimé, pastilles ITI passées au système local ; *reste* un ensemble plus large de règles `.filters-panel*` également inertes (voir la note en fin de §3.5) |
+| §3.6 compteur « N actifs » ≠ barre de chips | **CORRIGÉ** — compteur dérivé de `buildExplorerActiveChips`, et la barre complétée des 3 critères qui y manquaient (sous-types HOT/VIS/SRV, MICE) |
+| §3.7 à §3.12 | **OUVERTS** |
+
+---
+
 ## 1. Score
 
 | # | Dimension | Score | Constat principal |
@@ -237,6 +251,20 @@ sont, eux, bien vivants : le nettoyage doit être chirurgical, pas un `DELETE` d
 (la section ITI passe de `.chip` à `taxonomyChipClass` / `bucketChipClass`), ce qui résout du
 même geste le 4ᵉ système de pastille du §2. Une pastille de moins, ~30 lignes de CSS en moins.
 **Commande suggérée** : `/impeccable distill`.
+
+> **Fait le 2026-07-27**, chirurgicalement : bloc `styles.css:8419-8452` supprimé (avec un
+> commentaire qui dit pourquoi), les 3 groupes ITI passés à `bucketChipClass`, et les enfants
+> BEM autonomes réellement utilisés (`__metric-stack`, `__metric-row`, `__range-grid`)
+> conservés.
+>
+> **Reste à traiter (même cause, périmètre plus large)** : `.filters-panel` n'étant posée nulle
+> part, d'AUTRES règles sont également inertes — `styles.css:1863-1935`
+> (`__section`, `__section-header`, `__section-heading`, `__section-body`, `__subsection`,
+> `__toggle-group`…), plus les occurrences aux lignes ~1265, 1288, 1565, 1857, 7671, 7725,
+> 8053, 8339, 8571, 8757, et les descendants `.dashboard-filters-sidebar .filters-panel__*`
+> (~9985-10007). Non touchées ici parce qu'un balayage en bloc sort du périmètre de ce
+> constat et demande de vérifier surface par surface qu'aucune n'est réellement appliquée
+> ailleurs. À faire dans une passe `/impeccable distill` dédiée.
 
 ### 3.6 [P1] Le compteur « N actifs » contredit la barre de chips
 

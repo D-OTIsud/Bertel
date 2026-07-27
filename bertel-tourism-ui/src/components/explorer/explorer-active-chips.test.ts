@@ -179,3 +179,41 @@ describe('chip « Niveau · N sélectionné(s) » (rankedLabelValues, §174)', (
     expect(chips.find((c) => c.group === 'rankedLabelValues')).toBeUndefined();
   });
 });
+
+/**
+ * Complétude de la barre (audit filtres 2026-07-27 §3.6). Ces trois critères restaient
+ * actifs SANS pastille : invisibles, non retirables depuis la barre, et absents du
+ * compteur « N actifs » qui en dérive désormais.
+ */
+describe('buildExplorerActiveChips — sous-types et MICE', () => {
+  it('rend une pastille quand la sélection de sous-types est rétrécie', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot, subtypes: ['HOT', 'HLO'] } }),
+    );
+    const chip = chips.find((c) => c.group === 'hotSubtypes');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toMatch(/2 types sur/);
+  });
+
+  it('ne rend rien quand tous les sous-types sont cochés (« tous » n’est pas un critère)', () => {
+    const chips = buildExplorerActiveChips(filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot } }));
+    expect(chips.find((c) => c.group === 'hotSubtypes')).toBeUndefined();
+  });
+
+  it('couvre aussi les sous-types VIS et SRV', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { vis: { subtypes: ['PCU'] }, srv: { subtypes: ['COM'] } }),
+    );
+    expect(chips.find((c) => c.group === 'visSubtypes')).toBeTruthy();
+    expect(chips.find((c) => c.group === 'srvSubtypes')).toBeTruthy();
+  });
+
+  it('rend une pastille pour les critères MICE', () => {
+    const chips = buildExplorerActiveChips(
+      filters({}, { hot: { ...DEFAULT_EXPLORER_FILTERS.hot, meetingRoom: { minCount: 2, minCapTheatre: 80 } } }),
+    );
+    const chip = chips.find((c) => c.group === 'meetingRoom');
+    expect(chip).toBeTruthy();
+    expect(chip!.label).toMatch(/2 critères/);
+  });
+});

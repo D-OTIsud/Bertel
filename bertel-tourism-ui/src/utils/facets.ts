@@ -289,6 +289,15 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   return false;
 }
 
+/**
+ * Une sélection de sous-types est-elle RÉTRÉCIE ? Vide ou complète = « tous », donc pas un
+ * critère actif. Source unique du panneau (badges de section, compteur) ET de la barre de
+ * chips : les deux surfaces sont co-visibles et se contrediraient au moindre écart.
+ */
+export function isSubtypeNarrowed(selected: BackendObjectTypeCode[], all: BackendObjectTypeCode[]): boolean {
+  return selected.length > 0 && !(selected.length === all.length && all.every((type) => selected.includes(type)));
+}
+
 export function getEffectiveSelectedBuckets(selectedBuckets: ExplorerBucketKey[]): ExplorerBucketKey[] {
   return selectedBuckets.length > 0 ? selectedBuckets : EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
 }

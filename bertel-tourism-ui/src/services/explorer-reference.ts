@@ -38,9 +38,11 @@ type TaxonomyNodeRow = {
   domain: string;
   code: string;
   name: string;
+  description: string | null;
   parent_id: string | null;
   is_assignable: boolean | null;
   position: number | null;
+  metadata: unknown;
 };
 
 type PracticeRow = {
@@ -291,14 +293,26 @@ export function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: 
 
     const nodes: ExplorerTaxonomyNode[] = domainNodes
       .filter((node) => node.code !== 'root')
-      .map((node) => ({
-        code: node.code,
-        name: node.name,
-        parentCode: node.parent_id ? (nodeById.get(node.parent_id)?.code ?? null) : null,
-        depth: Math.max(0, computeTaxonomyDepth(node.id, parentIdByNodeId, depthCache) - 1),
-        isAssignable: node.is_assignable !== false,
-        position: node.position,
-      }))
+      .map((node) => {
+        const metadata = readRecord(node.metadata);
+        const axis = typeof metadata.axis === 'string' ? metadata.axis : null;
+        const resolvedAxis: ExplorerTaxonomyNode['axis'] =
+          axis === 'famille' || axis === 'nature' || axis === 'sous_type'
+            || axis === 'type_unite' || axis === 'positionnement' ? axis : null;
+        return {
+          code: node.code,
+          name: node.name,
+          description: node.description ?? null,
+          parentCode: node.parent_id ? (nodeById.get(node.parent_id)?.code ?? null) : null,
+          depth: Math.max(0, computeTaxonomyDepth(node.id, parentIdByNodeId, depthCache) - 1),
+          isAssignable: node.is_assignable !== false,
+          position: node.position,
+          axis: resolvedAxis,
+          family: typeof metadata.famille === 'string' ? metadata.famille : null,
+          aliases: readStringList(metadata.aliases),
+          sourceRef: typeof metadata.source_ref === 'string' ? metadata.source_ref : null,
+        };
+      })
       .sort((left, right) => {
         const positionCompare = (left.position ?? Number.MAX_SAFE_INTEGER) - (right.position ?? Number.MAX_SAFE_INTEGER);
         if (positionCompare !== 0) {
@@ -387,10 +401,10 @@ function buildDemoReferences(): ExplorerReferences {
         name: 'Taxonomie HOT',
         objectType: 'HOT',
         nodes: [
-          { code: 'hotel', name: 'Hôtel', parentCode: null, depth: 0, isAssignable: true, position: 1 },
-          { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2 },
-          { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3 },
-          { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4 },
+          { code: 'hotel', name: 'Hôtel', description: 'Établissement hôtelier.', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [], sourceRef: 'Code du tourisme art. D311-4' },
+          { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
+          { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3, axis: 'positionnement', family: 'hotellerie', aliases: [] },
+          { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4, axis: 'positionnement', family: 'hotellerie', aliases: [] },
         ],
       },
       {
@@ -404,6 +418,12 @@ function buildDemoReferences(): ExplorerReferences {
           { code: 'snack_bar', name: 'Snack-bar', parentCode: 'restaurant', depth: 1, isAssignable: true, position: 4 },
         ],
       },
+    ],
+    accommodationFamilies: [
+      { code: 'hotellerie', name: 'Hôtellerie', position: 1 },
+      { code: 'locatif', name: 'Hébergement locatif', position: 2 },
+      { code: 'collectif', name: 'Hébergement collectif', position: 3 },
+      { code: 'plein_air', name: 'Hôtellerie de plein air', position: 4 },
     ],
     hotCapacityMetrics: [
       { code: 'beds', name: 'Lits' },
@@ -468,9 +488,9 @@ export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]
   const taxonomyDomains = (taxonomyDomainsResult.data ?? []) as TaxonomyDomainRow[];
   const domainCodes = taxonomyDomains.map((domain) => domain.domain);
   const taxonomyNodesResult = domainCodes.length > 0
-    ? await client
+      ? await client
         .from('ref_code')
-        .select('id,domain,code,name,parent_id,is_assignable,position')
+        .select('id,domain,code,name,description,parent_id,is_assignable,position,metadata')
         .in('domain', domainCodes)
         .eq('is_active', true)
         .order('position', { ascending: true })
@@ -498,6 +518,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     metricsResult,
     applicabilityResult,
     taxonomies,
+    accommodationFamiliesResult,
     practicesResult,
     environmentTagsResult,
     amenityFamiliesResult,
@@ -512,6 +533,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
     listTaxonomyReferences(),
+    client.from('ref_code').select('code,name,description,position').eq('domain', 'accommodation_family').eq('is_active', true).order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
@@ -549,6 +571,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   }
   if (applicabilityResult.error) {
     throw applicabilityResult.error;
+  }
+  if (accommodationFamiliesResult.error) {
+    throw accommodationFamiliesResult.error;
   }
   if (practicesResult.error) {
     throw practicesResult.error;
@@ -603,6 +628,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes),
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies,
+    accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{ code: string; name: string; description: string | null; position: number | null }>),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),

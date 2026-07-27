@@ -37,6 +37,37 @@ const HOT_TAXONOMY_REFERENCES = {
   ],
 } as unknown as ExplorerReferences;
 
+const SEMANTIC_ACCOMMODATION_REFERENCES = {
+  hotCapacityMetrics: [],
+  accommodationFamilies: [
+    { code: 'hotellerie', name: 'Hôtellerie', description: 'Établissements hôteliers.', position: 1 },
+    { code: 'locatif', name: 'Hébergement locatif', description: 'Locations touristiques.', position: 2 },
+    { code: 'collectif', name: 'Hébergement collectif', description: 'Accueil de groupes.', position: 3 },
+  ],
+  taxonomies: [
+    {
+      domain: 'taxonomy_hot',
+      name: 'Nature d’hébergement — hôtellerie',
+      objectType: 'HOT',
+      nodes: [
+        { code: 'hotel', name: 'Hôtel', description: 'Établissement hôtelier.', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [], sourceRef: 'Code du tourisme art. D311-4' },
+      ],
+    },
+    {
+      domain: 'taxonomy_hlo',
+      name: 'Nature d’hébergement — locatif',
+      objectType: 'HLO',
+      nodes: [
+        { code: 'location_saisonniere', name: 'Meublé de tourisme', description: 'Villa, appartement ou studio meublé.', parentCode: 'hebergement_locatif', depth: 1, isAssignable: true, position: 1, axis: 'nature', family: 'locatif', aliases: ['Location saisonnière', 'Gîte'], sourceRef: 'Code du tourisme art. D324-1' },
+        { code: 'maison', name: 'Maison / villa', description: 'Logement individuel entier.', parentCode: 'location_saisonniere', depth: 2, isAssignable: true, position: 2, axis: 'type_unite', family: 'locatif', aliases: ['Gîte & Villa'] },
+        { code: 'hebergement_collectif', name: 'Hébergement collectif', description: 'Accueil de groupes.', parentCode: null, depth: 0, isAssignable: true, position: 3, axis: 'famille', family: 'collectif', aliases: ["Gîte d'étape et de randonnée"] },
+        { code: 'gite_de_randonnee', name: "Refuge et gîte d'étape", description: 'Accueil à l’étape.', parentCode: 'hebergement_collectif', depth: 1, isAssignable: true, position: 4, axis: 'sous_type', family: 'collectif', aliases: ['Gîte de randonnée'] },
+        { code: 'gite_de_groupe', name: 'Gîte de groupe', description: 'Accueil de groupes constitués.', parentCode: 'hebergement_collectif', depth: 1, isAssignable: true, position: 5, axis: 'sous_type', family: 'collectif', aliases: [] },
+      ],
+    },
+  ],
+} as unknown as ExplorerReferences;
+
 // Sections type-spécifiques repliables (décision §152) : l'en-tête disclosure
 // porte un nom accessible distinct (« Section X », préfixe sr-only) pour ne pas
 // collisionner avec la chip de bucket homonyme au comportement destructif.
@@ -55,11 +86,11 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel />);
 
-    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Vocabulaire de l'hébergement")).toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, true));
-    expect(screen.queryByText("Type d'hébergement")).not.toBeInTheDocument();
+    expect(screen.queryByText("Vocabulaire de l'hébergement")).not.toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, false));
-    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Vocabulaire de l'hébergement")).toBeInTheDocument();
     // La chip de bucket homonyme garde son nom nu : pas de collision de noms.
     expect(screen.getByRole('button', { name: 'Hébergements' })).toBeInTheDocument();
   });
@@ -86,6 +117,33 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: 'Hébergement de plein air' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Camping chez l’habitant' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toBeInTheDocument();
+  });
+
+  it('regroupe les hébergements par axe et retrouve le terme canonique via un alias Berta', () => {
+    act(() => useExplorerStore.getState().toggleBucket('HOT'));
+    render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
+
+    expect(screen.getByText('Hébergement locatif')).toBeInTheDocument();
+    expect(screen.getAllByText("Nature d'hébergement")).toHaveLength(2);
+    expect(screen.getByText("Type d'unité d'hébergement")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Rechercher dans le vocabulaire'), {
+      target: { value: 'location saisonnière' },
+    });
+
+    expect(screen.getByRole('button', { name: /Meublé de tourisme/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Hôtel$/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Meublé de tourisme/ }));
+    expect(useExplorerStore.getState().common.taxonomyAny).toContainEqual({
+      domain: 'taxonomy_hlo',
+      code: 'location_saisonniere',
+    });
+
+    fireEvent.change(screen.getByLabelText('Rechercher dans le vocabulaire'), {
+      target: { value: "gîte d'étape et de randonnée" },
+    });
+    expect(screen.getByRole('button', { name: /Refuge et gîte d'étape/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Gîte de groupe$/ })).toBeInTheDocument();
   });
 
   it('la section Itinéraires est repliable et compte ses critères', () => {

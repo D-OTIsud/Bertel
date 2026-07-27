@@ -46,6 +46,10 @@ export interface ObjectWorkspaceTaxonomyNodeOption {
   depth: number;
   isAssignable: boolean;
   position: number;
+  axis?: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
+  family?: string | null;
+  aliases?: string[];
+  sourceRef?: string | null;
 }
 
 export interface ObjectWorkspaceTaxonomyAssignment {

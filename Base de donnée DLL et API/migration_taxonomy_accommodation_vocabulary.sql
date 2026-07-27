@@ -23,7 +23,8 @@
 --   2. 3 renommages de libellés (les `code` sont inchangés ⇒ neutre partenaires).
 --   3. Définitions normatives (alimentent les infobulles du filtre).
 --   4. `metadata` : axis / famille / aliases / source_ref sur les nœuds hébergement.
---   5. Désactivation du référentiel orphelin `accommodation_type`.
+--   5. Retraite du nœud CAMP historique déplacé en HPA par §191, puis
+--      désactivation du référentiel orphelin `accommodation_type`.
 --   6. Nettoyage des descriptions du registry (le terme « sous-catégorie » est retiré).
 --
 -- DÉPENDANCE DURE (garde §0 ci-dessous)
@@ -158,13 +159,13 @@ WITH v(domain, code, axis, famille, aliases, source_ref, descr) AS (
 
     -- Natures
     ('taxonomy_hot','hotel','nature','hotellerie','[]','Code du tourisme art. D311-4',
-     'Établissement commercial d''hébergement qui offre des chambres ou des appartements meublés en location à une clientèle de passage.'),
+     'L''hôtel de tourisme est un établissement commercial d''hébergement classé qui offre des chambres ou des appartements meublés à une clientèle de passage. Le niveau de classement se filtre séparément.'),
     ('taxonomy_hlo','chambre_d_hotes','nature','locatif','["Chambre d''hôte"]',
-     'Code du tourisme art. D324-13 · DATAtourisme:Guesthouse',
-     'Chambre meublée située chez l''habitant, louée à la nuitée avec petit-déjeuner, l''accueil étant assuré par l''habitant.'),
+     'Code du tourisme art. L324-3 et D324-13 · DATAtourisme:Guesthouse',
+     'Chambre meublée située chez l''habitant, proposée à une clientèle de passage avec fourniture groupée de la nuitée et du petit-déjeuner ; l''accueil est assuré par l''habitant.'),
     ('taxonomy_hlo','location_saisonniere','nature','locatif','["Location saisonnière","Gîte","Gîte rural","Meublé"]',
      'Code du tourisme art. D324-1 · DATAtourisme:SelfCateringAccommodation',
-     'Villa, appartement ou studio meublé, à l''usage exclusif du locataire, offert en location à une clientèle de passage qui n''y élit pas domicile. Anciennement « Location saisonnière » chez Berta ; « gîte » est une appellation commerciale, pas une catégorie réglementaire (DGCCRF).'),
+     'Villa, appartement ou studio meublé, à l''usage exclusif du locataire, offert à une clientèle de passage pour une location à la journée, à la semaine ou au mois, sans élection de domicile. Anciennement « Location saisonnière » chez Berta ; « gîte » est une appellation commerciale soumise au régime des locations saisonnières en meublé (DGCCRF).'),
     ('taxonomy_camp','camping','nature','plein_air','["Camping"]',NULL,
      'Terrain aménagé pour l''accueil de tentes, caravanes ou résidences mobiles de loisirs. Le niveau de classement se filtre séparément.'),
     ('taxonomy_hpa','natural_camp_area','nature','plein_air','[]',NULL,
@@ -178,7 +179,7 @@ WITH v(domain, code, axis, famille, aliases, source_ref, descr) AS (
     ('taxonomy_hpa','homestay_camping','nature','plein_air','["Camping chez l''habitant"]',NULL,
      'Emplacements de camping chez un particulier, hors classement officiel. Appellation locale : à requalifier au cas par cas en camping à la ferme (si exploitation agricole) ou en aire naturelle — arbitrage L3.'),
     ('taxonomy_rva','tourism_residence','nature','collectif','[]','Code du tourisme art. D321-1',
-     'Établissement commercial d''hébergement constitué d''un ensemble homogène de locaux meublés, doté de services. Le niveau de classement se filtre séparément.'),
+     'Établissement commercial d''hébergement classé, exploité de façon permanente ou saisonnière, regroupant un ensemble homogène de locaux meublés et des locaux collectifs, doté d''équipements et de services communs et géré par une seule personne. Le niveau de classement se filtre séparément.'),
     ('taxonomy_rva','holiday_village','nature','collectif','[]','DATAtourisme:HolidayVillage',
      'Village de vacances : ensemble d''hébergements avec services et animations collectives.'),
     ('taxonomy_rva','aparthotel','nature','collectif','["Apparthôtel"]',NULL,
@@ -242,6 +243,26 @@ UPDATE ref_code rc
                           || jsonb_build_object('fr', v.descr)
   FROM v
  WHERE rc.domain = v.domain AND rc.code = v.code;
+
+-- -----------------------------------------------------------------------------
+-- 3b. §191 a déplacé « Camping chez l'habitant » vers
+--     `taxonomy_hpa/homestay_camping`, mais le nœud source CAMP est resté actif
+--     et non assignable. Le conserver actif avec un axe le ferait réapparaître
+--     en doublon dans le filtre L2. Retraite gardée : aucun porteur ne doit rester.
+-- -----------------------------------------------------------------------------
+UPDATE ref_code rc
+   SET is_active = FALSE,
+       is_assignable = FALSE,
+       metadata = (COALESCE(rc.metadata, '{}'::jsonb) - 'level')
+                  || jsonb_build_object(
+                       'retired', 'taxonomy_camp_hpa_20260727',
+                       'replacement', 'taxonomy_hpa:homestay_camping',
+                       'reason', 'nœud source déplacé vers HPA par §191')
+ WHERE rc.domain = 'taxonomy_camp'
+   AND rc.code = 'camping_chez_l_habitant'
+   AND NOT EXISTS (
+     SELECT 1 FROM object_taxonomy ot WHERE ot.ref_code_id = rc.id
+   );
 
 -- -----------------------------------------------------------------------------
 -- 4. Désactivation du référentiel orphelin `accommodation_type`.
@@ -327,6 +348,17 @@ BEGIN
    WHERE rc.domain = 'accommodation_type';
   IF v_n > 0 THEN
     RAISE EXCEPTION '§192: % objet(s) pointent sur accommodation_type — ne pas desactiver', v_n;
+  END IF;
+
+  -- 6g. Le nœud source déplacé par §191 ne doit plus être exposé par le
+  --     catalogue actif ; sa cible HPA porte désormais le vocabulaire canonique.
+  IF EXISTS (
+    SELECT 1 FROM ref_code
+     WHERE domain = 'taxonomy_camp'
+       AND code = 'camping_chez_l_habitant'
+       AND is_active
+  ) THEN
+    RAISE EXCEPTION '§192: taxonomy_camp/camping_chez_l_habitant est encore actif après son déplacement vers HPA';
   END IF;
 END $$;
 

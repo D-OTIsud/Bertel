@@ -287,6 +287,12 @@ ROLLBACK;
 \echo '== I4d-test leaf-aware interop assertions =='
 \ir tests/test_interop_crosswalk_leafaware.sql
 
+\echo '== pets1  migration_pet_policy_single_source.sql  (§196 « Animaux acceptés » source unique : retire l equipement doublon ref_amenity.pet_friendly, backfille object_pet_policy depuis l amenity + la revue manuelle des descriptions; auto-assertive et fresh-safe) =='
+\ir migration_pet_policy_single_source.sql
+
+\echo '== pets1-test garde permanente §196 (doublon absent, famille pets preservee, filtre pet_accepted non vacant) =='
+\ir tests/test_pet_policy_single_source.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

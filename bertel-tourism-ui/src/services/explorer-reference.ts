@@ -14,7 +14,7 @@ import type {
   ExplorerTaxonomyDomain,
   ExplorerTaxonomyNode,
 } from '../types/domain';
-import { ACCESSIBILITY_DISABILITY_TYPE_OPTIONS, EXPLORER_BUCKET_TYPE_MAP } from '../utils/facets';
+import { ACCESSIBILITY_DISABILITY_TYPE_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, HEADLINE_CAPACITY_METRIC } from '../utils/facets';
 
 type CapacityMetricRow = {
   id: string;
@@ -294,17 +294,18 @@ function buildSustainabilityCategories(
  *
  * Deux exclusions :
  *   - `meeting_rooms` : le bloc MICE a ses propres contrôles ;
- *   - `max_capacity`  : c'est le contrôle principal « Groupe d'au moins… » rendu
- *     juste au-dessus. La proposer aussi dans le tiroir détaillé, c'est deux
- *     commandes pour un seul filtre.
+ *   - la métrique VEDETTE du bucket (cf. `HEADLINE_CAPACITY_METRIC`), rendue juste
+ *     au-dessus en contrôle principal. La proposer aussi dans le tiroir détaillé,
+ *     c'est deux commandes pour un seul filtre.
  */
-const CAPACITY_METRICS_OWNED_ELSEWHERE = new Set(['meeting_rooms', 'max_capacity']);
-
 function bucketCapacityOptions(
   bucket: ExplorerBucketKey,
   metrics: CapacityMetricRow[],
   applicability: CapacityApplicabilityRow[],
 ): ExplorerReferenceOption[] {
+  const ownedElsewhere = new Set(
+    ['meeting_rooms', HEADLINE_CAPACITY_METRIC[bucket]].filter(Boolean) as string[],
+  );
   const allowedTypes = new Set(EXPLORER_BUCKET_TYPE_MAP[bucket]);
   const typesByMetricId = new Map<string, BackendObjectTypeCode[]>();
   for (const row of applicability) {
@@ -315,7 +316,7 @@ function bucketCapacityOptions(
   }
 
   return metrics
-    .filter((metric) => typesByMetricId.has(metric.id) && !CAPACITY_METRICS_OWNED_ELSEWHERE.has(metric.code))
+    .filter((metric) => typesByMetricId.has(metric.id) && !ownedElsewhere.has(metric.code))
     .map((metric) => ({
       code: metric.code,
       name: metric.name,

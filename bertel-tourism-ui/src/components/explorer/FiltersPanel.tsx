@@ -24,9 +24,11 @@ import {
   DEFAULT_SRV_SUBTYPES,
   DEFAULT_VIS_SUBTYPES,
   HOT_BUCKET_TYPES,
+  HEADLINE_CAPACITY_METRIC,
   bucketForTaxonomyDomain,
   filterOptionsBySelectedBuckets,
   isSubtypeNarrowed,
+  resolveCapacityBounds,
   resolveExplorerStatuses,
 } from '../../utils/facets';
 import { resolveTypeLabel } from '../../utils/labels';
@@ -37,6 +39,7 @@ import { FilterColumnGroup } from '../common/FilterColumnGroup';
 import { GradeBar } from './GradeBar';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
+import { RangeSlider } from '@/components/ui/range-slider';
 import { buildExplorerActiveChips } from './explorer-active-chips';
 import { CapacityCriteria } from './CapacityCriteria';
 
@@ -701,6 +704,34 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     );
   };
 
+  /**
+   * Contrôle de capacité VEDETTE d'un bucket (« Capacité d'accueil »), min ET max.
+   *
+   * Le libellé de la métrique vient du catalogue quand il est disponible ; à défaut on
+   * garde un intitulé métier plutôt qu'un code brut. Les bornes viennent du corpus
+   * (16o) et sont resserrées sur les sous-types cochés, donc chercher un hôtel affiche
+   * l'étendue des hôtels, pas celle de tout l'hébergement.
+   */
+  const renderHeadlineCapacity = (
+    bucket: ExplorerBucketKey,
+    types: readonly BackendObjectTypeCode[],
+    capacityFilters: Array<{ code: string; min?: number; max?: number }>,
+    setFilter: (code: string, min?: number, max?: number) => void,
+  ) => {
+    const code = HEADLINE_CAPACITY_METRIC[bucket];
+    if (!code) return null;
+    return (
+      <RangeSlider
+        label="Capacité d'accueil"
+        unit="pers."
+        min={readCapacityValue(capacityFilters, code, 'min')}
+        max={readCapacityValue(capacityFilters, code, 'max')}
+        bounds={resolveCapacityBounds(references?.capacityBounds, code, types)}
+        onChange={(min, max) => setFilter(code, min, max)}
+      />
+    );
+  };
+
   const renderAccessibilityDetails = () => (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
       <div>
@@ -1108,26 +1139,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   : renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
               </div>
 
-              {/* §159 — l'idiome conseiller : « un gîte pour au moins 12 personnes »
-                  = max_capacity.min (métrique applicable à tous les types HEB).
-                  Réutilise capacityFilters ⇒ chips/URL/RPC déjà câblés. */}
-              <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Groupe d'au moins… (personnes)</span>
-                <Input
-                  type="number"
-                  min={1}
-                  value={renderNumber(readCapacityValue(hot.capacityFilters, 'max_capacity', 'min'))}
-                  onChange={(event) =>
-                    setHotCapacityFilter(
-                      'max_capacity',
-                      event.target.value ? Number(event.target.value) : undefined,
-                      readCapacityValue(hot.capacityFilters, 'max_capacity', 'max'),
-                    )
-                  }
-                  placeholder="ex. 12"
-                  aria-label="Capacité d'accueil minimale en personnes"
-                />
-              </div>
+              {/* §159 — l'idiome conseiller (« un gîte pour 12 personnes »), désormais
+                  BORNÉ DES DEUX CÔTÉS : chercher « 4 à 6 personnes » est aussi légitime
+                  que « au moins 12 » — c'est même le cas courant sur les meublés, dont
+                  la capacité médiane est 6. Réutilise capacityFilters ⇒ chips/URL/RPC
+                  déjà câblés. */}
+              {renderHeadlineCapacity('HOT', hot.subtypes, hot.capacityFilters, setHotCapacityFilter)}
 
               {references?.hotCapacityMetrics.length ? (
                 <div>
@@ -1200,24 +1217,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 {renderTaxonomyChips('RES') ?? taxonomyCatalogFallback}
               </div>
 
-              {/* §159 — même idiome que HEB : « une table pour au moins N ». */}
-              <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Groupe d'au moins… (personnes)</span>
-                <Input
-                  type="number"
-                  min={1}
-                  value={renderNumber(readCapacityValue(res.capacityFilters, 'max_capacity', 'min'))}
-                  onChange={(event) =>
-                    setResCapacityFilter(
-                      'max_capacity',
-                      event.target.value ? Number(event.target.value) : undefined,
-                      readCapacityValue(res.capacityFilters, 'max_capacity', 'max'),
-                    )
-                  }
-                  placeholder="ex. 20"
-                  aria-label="Capacité d'accueil minimale en personnes"
-                />
-              </div>
+              {/* §159 — même idiome que HEB, sur la métrique que les restaurants
+                  RENSEIGNENT vraiment : `seats`. Le contrôle pointait sur
+                  `max_capacity`, dont aucune fiche RES ne porte la moindre valeur
+                  (0 ligne en base) — il ne renvoyait donc jamais rien. */}
+              {renderHeadlineCapacity('RES', EXPLORER_BUCKET_TYPE_MAP.RES, res.capacityFilters, setResCapacityFilter)}
 
               {references?.resCapacityMetrics.length ? (
                 <div>

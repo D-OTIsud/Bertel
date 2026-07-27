@@ -42,6 +42,15 @@ BEGIN
     RAISE EXCEPTION 'T1 target: wrong parents: %', v_bad;
   END IF;
 
+  -- ⚠️ CE TEST N'EST PLUS LIVE-AWARE POUR UN LIBELLÉ (audit §192, 2026-07-27).
+  -- `location_saisonniere` attend ici le libellé posé par §190. C'est correct DANS
+  -- LE MANIFEST — le test s'exécute juste après taxo2, avant que taxo4 (§192) ne
+  -- renomme le nœud en « Meublé de tourisme » (« gîte » = appellation commerciale,
+  -- pas une catégorie réglementaire — DGCCRF). Mais rejoué SEUL contre le live
+  -- post-§192, il échouera sur cette ligne, et l'échec sera trompeur : le live est
+  -- correct, c'est l'attente qui est dépassée.
+  -- Le libellé courant est gardé par `tests/test_taxonomy_accommodation_vocabulary.sql`.
+  -- Ne pas « corriger » cette valeur ici : elle assert l'état intermédiaire de §190.
   WITH expected(code, name) AS (VALUES
     ('lodges', 'Lodge'),
     ('hebergement_insolite', 'Autre hébergement insolite'),

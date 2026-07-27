@@ -53,6 +53,12 @@ const ACCOMMODATION_AXIS_LABELS = {
   positionnement: 'Positionnement',
 } as const;
 
+// Incident UX 2026-07-27 : le catalogue sémantique reste disponible dans les
+// références, mais son rendu en cartes verbeuses est désactivé. L'Explorer
+// conserve le sélecteur compact historique tant qu'une nouvelle composition
+// n'a pas été validée visuellement.
+const ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT = false;
+
 function foldAccommodationTerm(value: string): string {
   return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[’']/g, ' ').trim();
 }
@@ -1056,8 +1062,10 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Vocabulaire de l'hébergement</span>
-                {renderAccommodationTaxonomy() ?? renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
+                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Nature d'hébergement</span>
+                {ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT
+                  ? (renderAccommodationTaxonomy() ?? renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype))
+                  : renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
               </div>
 
               {/* §159 — l'idiome conseiller : « un gîte pour au moins 12 personnes »

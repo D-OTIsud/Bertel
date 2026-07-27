@@ -86,11 +86,11 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel />);
 
-    expect(screen.getByText("Vocabulaire de l'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, true));
-    expect(screen.queryByText("Vocabulaire de l'hébergement")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nature d'hébergement")).not.toBeInTheDocument();
     fireEvent.click(sectionToggle(/Section Hébergements/, false));
-    expect(screen.getByText("Vocabulaire de l'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
     // La chip de bucket homonyme garde son nom nu : pas de collision de noms.
     expect(screen.getByRole('button', { name: 'Hébergements' })).toBeInTheDocument();
   });
@@ -119,31 +119,19 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toBeInTheDocument();
   });
 
-  it('regroupe les hébergements par axe et retrouve le terme canonique via un alias Berta', () => {
+  it('garde le sélecteur compact quand le catalogue contient les axes sémantiques', () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
 
-    expect(screen.getByText('Hébergement locatif')).toBeInTheDocument();
-    expect(screen.getAllByText("Nature d'hébergement")).toHaveLength(2);
-    expect(screen.getByText("Type d'unité d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
+    expect(screen.queryByLabelText('Rechercher dans le vocabulaire')).not.toBeInTheDocument();
+    expect(screen.queryByText('Locations touristiques.')).not.toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Rechercher dans le vocabulaire'), {
-      target: { value: 'location saisonnière' },
-    });
-
-    expect(screen.getByRole('button', { name: /Meublé de tourisme/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Hôtel$/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Meublé de tourisme/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Meublé de tourisme' }));
     expect(useExplorerStore.getState().common.taxonomyAny).toContainEqual({
       domain: 'taxonomy_hlo',
       code: 'location_saisonniere',
     });
-
-    fireEvent.change(screen.getByLabelText('Rechercher dans le vocabulaire'), {
-      target: { value: "gîte d'étape et de randonnée" },
-    });
-    expect(screen.getByRole('button', { name: /Refuge et gîte d'étape/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Gîte de groupe$/ })).toBeInTheDocument();
   });
 
   it('la section Itinéraires est repliable et compte ses critères', () => {

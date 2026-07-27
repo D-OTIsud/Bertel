@@ -13,7 +13,7 @@ describe('FiltersPanel — instance Dashboard', () => {
     act(() => useDashboardExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel useStore={useDashboardExplorerStore} typeSpecificFacets />);
     // La section type-spécifique Hébergements est visible en mono-bucket.
-    expect(screen.getByText("Type d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
   });
 
   it('masque les sections spécifiques par type quand typeSpecificFacets=false', () => {

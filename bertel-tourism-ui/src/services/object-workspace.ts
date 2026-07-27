@@ -976,6 +976,10 @@ interface TaxonomyNodeRef {
   parentId: string | null;
   isAssignable: boolean;
   position: number;
+  axis: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
+  family: string | null;
+  aliases: string[];
+  sourceRef: string | null;
 }
 
 function normalizeTaxonomyDomainRef(row: Record<string, unknown>): TaxonomyDomainRef {
@@ -989,6 +993,8 @@ function normalizeTaxonomyDomainRef(row: Record<string, unknown>): TaxonomyDomai
 }
 
 function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef {
+  const metadata = readRecord(row.metadata);
+  const axis = readString(metadata.axis);
   return {
     id: readString(row.id),
     domain: readString(row.domain),
@@ -998,6 +1004,11 @@ function normalizeTaxonomyNodeRef(row: Record<string, unknown>): TaxonomyNodeRef
     parentId: readString(row.parent_id) || null,
     isAssignable: row.is_assignable == null ? true : readBoolean(row.is_assignable),
     position: toNullableInteger(readString(row.position)) ?? Number.MAX_SAFE_INTEGER,
+    axis: axis === 'famille' || axis === 'nature' || axis === 'sous_type'
+      || axis === 'type_unite' || axis === 'positionnement' ? axis : null,
+    family: readString(metadata.famille) || null,
+    aliases: readStringList(metadata.aliases),
+    sourceRef: readString(metadata.source_ref) || null,
   };
 }
 
@@ -1066,6 +1077,10 @@ function buildTaxonomyNodeOptions(domainNodes: TaxonomyNodeRef[]): ObjectWorkspa
         depth: Math.max(0, computeTaxonomyDepth(node.id, nodeById, depthCache) - 1),
         isAssignable: node.isAssignable,
         position: node.position,
+        axis: node.axis,
+        family: node.family,
+        aliases: node.aliases,
+        sourceRef: node.sourceRef,
       };
     })
     .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
@@ -1110,6 +1125,10 @@ function reconcileTaxonomyAssignment(params: {
     parentId: node.parentId,
     isAssignable: node.isAssignable,
     position: node.position,
+    axis: node.axis ?? null,
+    family: node.family ?? null,
+    aliases: node.aliases ?? [],
+    sourceRef: node.sourceRef ?? null,
   }));
   const nodeById = new Map(liveNodeRefs.map((node) => [node.id, node]));
   const nodeByCode = new Map(liveNodeRefs.map((node) => [node.code.toLowerCase(), node]));
@@ -1209,7 +1228,7 @@ async function getObjectWorkspaceTaxonomyModule(
     domainCodes.length > 0
       ? client
           .from('ref_code')
-          .select('id, domain, code, name, description, parent_id, is_assignable, position, is_active')
+          .select('id, domain, code, name, description, parent_id, is_assignable, position, is_active, metadata')
           .in('domain', domainCodes)
           .eq('is_active', true)
           .order('position', { ascending: true })

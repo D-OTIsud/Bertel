@@ -75,12 +75,14 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
     id: 'n-gite-rural',
     code: 'rural_gite',
     label: 'Gîte rural',
-    description: '',
+    description: 'Meublé proposé à une clientèle de passage.',
     parentId: 'n-hotel',
     parentCode: 'hotel',
     depth: 1,
     isAssignable: true,
     position: 3,
+    aliases: ['Location saisonnière'],
+    sourceRef: 'Code du tourisme art. D324-1',
   },
 ];
 
@@ -118,12 +120,12 @@ describe('SectionIdentity', () => {
     expect(screen.queryByDisplayValue('SARL Domaine du Bel Air')).not.toBeInTheDocument();
   });
 
-  it('titles the section "Identité & catégorie" with no "taxonomie" jargon', () => {
+  it('uses the canonical accommodation vocabulary with no "taxonomie" jargon', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText(/taxonomie/i)).not.toBeInTheDocument();
-    expect(screen.getByText('Sous-catégorie')).toBeInTheDocument();
+    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
   });
 
   it('renders a single bullet on the object type (no doubled prefix)', () => {
@@ -146,7 +148,7 @@ describe('SectionIdentity', () => {
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
@@ -154,7 +156,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getAllByText('Hôtel').length).toBeGreaterThan(0);
     expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
@@ -164,7 +166,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
     const parentRow = within(dialog).getByRole('button', { name: /^Hôtel$/ }).closest('.taxo2-row');
     const selectedRow = within(dialog).getByRole('radio', { name: /Hôtel familial/i }).closest('.taxo2-row');
@@ -179,9 +181,9 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/options de sous-catégorie ne sont pas disponibles/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/options de nature d.hébergement ne sont pas disponibles/i)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).toBeDisabled();
   });
 
@@ -189,7 +191,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).toBeDisabled();
 
@@ -203,19 +205,19 @@ describe('SectionIdentity', () => {
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
   });
 
-  it('titles the redesigned modal "Choisir une sous-catégorie"', () => {
+  it('titles the redesigned modal "Choisir la nature d’hébergement"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
-    expect(screen.getByText('Choisir une sous-catégorie')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
+    expect(screen.getByText('Choisir la nature d’hébergement')).toBeInTheDocument();
   });
 
   it('badges the saved assignment as "Actuelle"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(within(screen.getByRole('dialog')).getByText('Actuelle')).toBeInTheDocument();
   });
 
@@ -223,9 +225,9 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
-    fireEvent.change(within(dialog).getByLabelText('Rechercher une sous-catégorie'), {
+    fireEvent.change(within(dialog).getByLabelText('Rechercher une nature d’hébergement'), {
       target: { value: 'rural' },
     });
 
@@ -233,11 +235,25 @@ describe('SectionIdentity', () => {
     expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
   });
 
+  it('retrouve un libellé canonique avec son ancien terme Berta', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
+    const dialog = screen.getByRole('dialog');
+    fireEvent.change(within(dialog).getByLabelText('Rechercher une nature d’hébergement'), {
+      target: { value: 'location saisonnière' },
+    });
+
+    expect(within(dialog).getByRole('radio', { name: /Gîte rural/i })).toBeInTheDocument();
+    expect(within(dialog).getByText(/Berta : Location saisonnière/)).toBeInTheDocument();
+  });
+
   it('checks the parent radio when a child is selected (the whole path reads as selected)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByRole('radio', { name: /Catégorie mère/ })).toBeChecked();
     expect(within(dialog).getByRole('radio', { name: /Sous-catégorie/ })).toBeChecked();
@@ -247,7 +263,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
     fireEvent.click(within(dialog).getByRole('radio', { name: /Catégorie mère/ }));
     expect(within(dialog).getByRole('radio', { name: /Catégorie mère/ })).toBeChecked();
@@ -258,7 +274,7 @@ describe('SectionIdentity', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /sous-catégorie/i }));
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Modifier/i })).not.toBeInTheDocument();
   });
 });

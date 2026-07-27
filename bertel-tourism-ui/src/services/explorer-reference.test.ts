@@ -1,4 +1,4 @@
-import { toRankedLabelSchemeValues } from './explorer-reference';
+import { buildTaxonomyDomains, toRankedLabelSchemeValues } from './explorer-reference';
 
 describe('toRankedLabelSchemeValues', () => {
   it('groups grade values by scheme code, sorted ascending, numeric-aware', () => {
@@ -20,5 +20,33 @@ describe('toRankedLabelSchemeValues', () => {
       { code: '2', name: '2 étoiles', position: null, scheme: null },
     ]);
     expect(out).toEqual({});
+  });
+});
+
+describe('buildTaxonomyDomains — vocabulaire hébergement §192', () => {
+  it('expose l’axe, la famille, les alias Berta et la référence normative', () => {
+    const domains = buildTaxonomyDomains(
+      [{ domain: 'taxonomy_hlo', name: 'Hébergement', object_type: 'HLO', position: 1 }],
+      [{
+        id: 'root', domain: 'taxonomy_hlo', code: 'root', name: 'Racine', description: null,
+        parent_id: null, is_assignable: false, position: 0, metadata: {},
+      }, {
+        id: 'meuble', domain: 'taxonomy_hlo', code: 'location_saisonniere', name: 'Meublé de tourisme',
+        description: 'Villa, appartement ou studio meublé.', parent_id: 'root', is_assignable: true, position: 1,
+        metadata: {
+          axis: 'nature', famille: 'locatif', aliases: ['Location saisonnière', 'Gîte'],
+          source_ref: 'Code du tourisme art. D324-1',
+        },
+      }],
+    );
+
+    expect(domains[0].nodes[0]).toMatchObject({
+      code: 'location_saisonniere',
+      axis: 'nature',
+      family: 'locatif',
+      aliases: ['Location saisonnière', 'Gîte'],
+      sourceRef: 'Code du tourisme art. D324-1',
+      description: 'Villa, appartement ou studio meublé.',
+    });
   });
 });

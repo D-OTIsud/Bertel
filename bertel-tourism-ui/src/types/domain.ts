@@ -306,9 +306,25 @@ export interface ExplorerReferenceOption {
 export interface ExplorerTaxonomyNode {
   code: string;
   name: string;
+  description?: string | null;
   parentCode: string | null;
   depth: number;
   isAssignable: boolean;
+  position?: number | null;
+  /** §192 — rôle sémantique déclaré ; la profondeur technique n'est pas un axe métier. */
+  axis?: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
+  /** §192 — famille ontologique dérivée, indépendante du type d'objet technique. */
+  family?: string | null;
+  /** Termes Berta et synonymes conservés pour la recherche de transition. */
+  aliases?: string[];
+  /** Référence normative courte affichable avec la définition. */
+  sourceRef?: string | null;
+}
+
+export interface ExplorerAccommodationFamily {
+  code: string;
+  name: string;
+  description?: string | null;
   position?: number | null;
 }
 
@@ -332,6 +348,8 @@ export interface ExplorerReferences {
   rankedLabelSchemeValues: Record<string, ExplorerReferenceOption[]>;
   /** §155 — TOUS les domaines de sous-catégories (un par type, hors ORG), chacun portant son objectType. */
   taxonomies: ExplorerTaxonomyDomain[];
+  /** §192 — regroupements ontologiques non assignables des natures d'hébergement. */
+  accommodationFamilies?: ExplorerAccommodationFamily[];
   hotCapacityMetrics: ExplorerReferenceOption[];
   resCapacityMetrics: ExplorerReferenceOption[];
   itiPractices: ExplorerReferenceOption[];

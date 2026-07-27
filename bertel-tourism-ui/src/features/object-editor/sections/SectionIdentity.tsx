@@ -158,7 +158,13 @@ function computeSearchVisibleIds(
     }
   }
   for (const node of nodes) {
-    if (!foldText(node.label).includes(foldedQuery)) {
+    const searchableText = [
+      node.label,
+      node.description,
+      node.sourceRef ?? '',
+      ...(node.aliases ?? []),
+    ].map(foldText).join(' ');
+    if (!searchableText.includes(foldedQuery)) {
       continue;
     }
     visible.add(node.id);
@@ -270,6 +276,7 @@ function TaxonomyModal({
         <div
           className={`taxo2-row${isSelectedPath ? ' is-selected-path' : ''}${isSelected ? ' is-selected' : ''}`}
           style={{ paddingLeft: 10 + depth * 18 }}
+          title={[node.description, node.sourceRef].filter(Boolean).join(' — ') || undefined}
         >
           {node.isAssignable ? (
             <label className="taxo2-opt">
@@ -283,7 +290,14 @@ function TaxonomyModal({
                 readOnly
                 onClick={() => setSelectedId(node.id)}
               />
-              <span className="taxo2-label">{node.label}</span>
+              <span className="taxo2-label">
+                {node.label}
+                {(node.aliases?.length ?? 0) > 0 ? (
+                  <small className="block text-[10px] font-normal text-ink-3">
+                    Berta : {node.aliases?.join(', ')}
+                  </small>
+                ) : null}
+              </span>
               {isCurrent && <span className="taxo2-badge">Actuelle</span>}
             </label>
           ) : (
@@ -293,7 +307,14 @@ function TaxonomyModal({
               aria-expanded={hasChildren ? expanded : undefined}
               onClick={() => hasChildren && toggleExpand(node.id)}
             >
-              <span className="taxo2-label">{node.label}</span>
+              <span className="taxo2-label">
+                {node.label}
+                {(node.aliases?.length ?? 0) > 0 ? (
+                  <small className="block text-[10px] font-normal text-ink-3">
+                    Berta : {node.aliases?.join(', ')}
+                  </small>
+                ) : null}
+              </span>
               {isCurrent && <span className="taxo2-badge">Actuelle</span>}
             </button>
           )}
@@ -319,7 +340,7 @@ function TaxonomyModal({
   return (
     <EditorModal
       open={open}
-      title="Choisir une sous-catégorie"
+      title="Choisir la nature d’hébergement"
       onClose={onClose}
       onSave={handleSave}
       saveLabel="Valider la sélection"
@@ -328,7 +349,7 @@ function TaxonomyModal({
       <div className="object-editor taxo2">
         {!domain ? (
           <p className="identity-taxo__notice">
-            Aucune sous-catégorie n'est définie pour ce type de fiche.
+            Aucune nature d’hébergement n'est définie pour ce type de fiche.
           </p>
         ) : (
           <>
@@ -337,7 +358,7 @@ function TaxonomyModal({
               {selectedPath.length > 0 ? (
                 <TaxonomyCrumbs path={selectedPath} />
               ) : (
-                <em className="identity-taxo__none">Aucune sous-catégorie sélectionnée</em>
+                <em className="identity-taxo__none">Aucune nature sélectionnée</em>
               )}
             </div>
 
@@ -348,20 +369,20 @@ function TaxonomyModal({
                   <input
                     type="text"
                     className="taxo2-search__input"
-                    placeholder="Rechercher une sous-catégorie…"
-                    aria-label="Rechercher une sous-catégorie"
+                    placeholder="Rechercher une nature ou un ancien terme Berta…"
+                    aria-label="Rechercher une nature d’hébergement"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
                 </div>
                 <ul className="taxo2-tree">{roots.map((root) => renderNode(root, 0))}</ul>
                 {Boolean(foldedQuery) && (visibleIds?.size ?? 0) === 0 && (
-                  <p className="taxo2-empty">Aucune sous-catégorie ne correspond à votre recherche.</p>
+                  <p className="taxo2-empty">Aucune nature ne correspond à votre recherche.</p>
                 )}
               </>
             ) : (
               <p className="identity-taxo__notice">
-                Les options de sous-catégorie ne sont pas disponibles pour ce type de fiche.
+                Les options de nature d’hébergement ne sont pas disponibles pour ce type de fiche.
                 La valeur actuelle reste affichée en lecture seule.
               </p>
             )}
@@ -372,7 +393,7 @@ function TaxonomyModal({
   );
 }
 
-/** Section 01 — commercial name, object type and sub-category (design: edit-primitives).
+/** Section 01 — commercial name, technical object type and accommodation nature.
  *  Publication status moved to the editor rail; legal name is edited in §18 Fournisseur. */
 export function SectionIdentity({ editor, objectId, typeCode, archetype, folded }: SectionProps) {
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
@@ -401,8 +422,8 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
   return (
     <Fs
       num="01"
-      title="Identité & catégorie"
-      sub="Nom commercial, type principal, sous-catégorie"
+      title="Identité de l’hébergement"
+      sub="Nom commercial, type de fiche et nature d’hébergement"
       folded={folded}
       pill={{ tone: 'ok', label: 'OK' }}
     >
@@ -420,22 +441,22 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       </div>
 
       <div className="grid-1-2" style={{ marginBottom: 12 }}>
-        <Field label="Type d'objet (famille)" required hint="Famille canonique — détermine les sections obligatoires">
+        <Field label="Type de fiche Bertel" required hint="Code technique — détermine les sections obligatoires">
           <Readout value={typeDisplay} mono prefix="●" />
         </Field>
-        <Field label="Sous-catégorie" hint="Positionnement précis dans la famille métier">
+        <Field label="Nature d'hébergement" hint="Nature canonique ; les précisions existantes restent visibles jusqu’au lot 3">
           <button
             type="button"
             className="identity-taxo-trigger"
             aria-label={
               taxonomyPath
-                ? `Modifier la sous-catégorie (actuelle : ${taxonomyPath})`
-                : 'Modifier la sous-catégorie'
+                ? `Modifier la nature d’hébergement (actuelle : ${taxonomyPath})`
+                : 'Modifier la nature d’hébergement'
             }
             onClick={() => setTaxonomyOpen(true)}
           >
             <span className={`identity-taxo-trigger__value${taxonomyPath ? '' : ' is-empty'}`}>
-              {taxonomyPath || 'Définir la sous-catégorie…'}
+              {taxonomyPath || 'Définir la nature d’hébergement…'}
             </span>
             <span className="identity-taxo-trigger__caret" aria-hidden="true">▾</span>
           </button>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Check } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -6,9 +7,11 @@ import type {
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   ExplorerBucketKey,
+  ExplorerAccommodationFamily,
   ExplorerReferences,
   ExplorerStatusFilter,
   ExplorerTaxonomyDomain,
+  ExplorerTaxonomyNode,
   SustainabilityActionRef,
   TaxonomyRef,
 } from '../../types/domain';
@@ -36,6 +39,36 @@ const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
   { code: 'draft', label: 'Brouillon' },
 ];
+
+type AccommodationCatalogNode = {
+  domain: string;
+  objectType: BackendObjectTypeCode;
+  node: ExplorerTaxonomyNode;
+};
+
+const ACCOMMODATION_AXIS_LABELS = {
+  nature: "Nature d'hébergement",
+  sous_type: "Sous-type d'hébergement",
+  type_unite: "Type d'unité d'hébergement",
+  positionnement: 'Positionnement',
+} as const;
+
+function foldAccommodationTerm(value: string): string {
+  return value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/[’']/g, ' ').trim();
+}
+
+function accommodationNodeMatches(node: ExplorerTaxonomyNode, query: string): boolean {
+  if (!query) return true;
+  return [node.name, node.description ?? '', node.sourceRef ?? '', ...(node.aliases ?? [])]
+    .some((value) => foldAccommodationTerm(value).includes(query));
+}
+
+function sortAccommodationNodes(entries: AccommodationCatalogNode[]): AccommodationCatalogNode[] {
+  return [...entries].sort((left, right) => (
+    (left.node.position ?? Number.MAX_SAFE_INTEGER) - (right.node.position ?? Number.MAX_SAFE_INTEGER)
+    || left.node.name.localeCompare(right.node.name, 'fr', { sensitivity: 'base' })
+  ));
+}
 
 /** §156 — l'échelle FFRandonnée 1-5 en trois segments parlants (bornes min/max du store). */
 const DIFFICULTY_SEGMENTS: Array<{ label: string; min?: number; max?: number }> = [
@@ -133,6 +166,7 @@ function filterSustainabilityActions(
 }
 
 export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true }: FiltersPanelProps) {
+  const [accommodationQuery, setAccommodationQuery] = useState('');
   const selectedBuckets = useStore((state) => state.selectedBuckets);
   const common = useStore((state) => state.common);
   const cities = common.cities ?? [];
@@ -418,6 +452,194 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       })}
     </div>
   );
+
+  /**
+   * §192 L2 — projection sémantique de l'hébergement. Les types HOT/HLO/HPA/
+   * CAMP/RVA restent des partitions techniques : l'utilisateur navigue par
+   * famille, nature, sous-type et type d'unité déclarés dans ref_code.metadata.
+   * Repli automatique sur le rendu historique tant que L1 n'est pas déployé.
+   */
+  const renderAccommodationTaxonomy = () => {
+    const domains = (references?.taxonomies ?? []).filter((domain) =>
+      HOT_BUCKET_TYPES.includes(domain.objectType as BackendObjectTypeCode),
+    );
+    const entries: AccommodationCatalogNode[] = domains.flatMap((domain) =>
+      domain.nodes
+        .filter((node) => Boolean(node.axis))
+        .map((node) => ({
+          domain: domain.domain,
+          objectType: domain.objectType as BackendObjectTypeCode,
+          node,
+        })),
+    );
+    if (!entries.some((entry) => entry.node.axis === 'nature')) {
+      return null;
+    }
+
+    const query = foldAccommodationTerm(accommodationQuery);
+    const familyRefs = references?.accommodationFamilies ?? [];
+    const familyByCode = new Map(familyRefs.map((family) => [family.code, family]));
+    const familyCodes = Array.from(new Set([
+      ...familyRefs.map((family) => family.code),
+      ...entries.map((entry) => entry.node.family).filter((code): code is string => Boolean(code)),
+    ])).sort((left, right) => {
+      const a = familyByCode.get(left)?.position ?? Number.MAX_SAFE_INTEGER;
+      const b = familyByCode.get(right)?.position ?? Number.MAX_SAFE_INTEGER;
+      return a - b || left.localeCompare(right, 'fr');
+    });
+
+    const activateType = (type: BackendObjectTypeCode) => {
+      if (isSubtypeNarrowed(hot.subtypes, HOT_BUCKET_TYPES) && !hot.subtypes.includes(type)) {
+        toggleHotSubtype(type);
+      }
+    };
+
+    const nodeTitle = (node: ExplorerTaxonomyNode) => [
+      node.description,
+      node.sourceRef ? `Source : ${node.sourceRef}` : null,
+      node.aliases?.length ? `Ancien vocabulaire Berta : ${node.aliases.join(', ')}` : null,
+    ].filter(Boolean).join('\n');
+
+    const renderSemanticEntries = (axisEntries: AccommodationCatalogNode[], dedupe = false) => {
+      const groups = new Map<string, AccommodationCatalogNode[]>();
+      for (const entry of sortAccommodationNodes(axisEntries)) {
+        const key = dedupe ? foldAccommodationTerm(entry.node.name) : `${entry.domain}:${entry.node.code}`;
+        const current = groups.get(key) ?? [];
+        current.push(entry);
+        groups.set(key, current);
+      }
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {Array.from(groups.values()).map((group) => {
+            const representative = group[0];
+            const active = group.some((entry) => isTaxonomyActive(entry.domain, entry.node.code));
+            const aliases = Array.from(new Set(group.flatMap((entry) => entry.node.aliases ?? [])));
+            return (
+              <button
+                key={group.map((entry) => `${entry.domain}:${entry.node.code}`).join('|')}
+                type="button"
+                className={cn(taxonomyChipClass(active), 'h-auto flex-col items-start')}
+                onClick={() => {
+                  const nextActive = !active;
+                  for (const entry of group) {
+                    const entryActive = isTaxonomyActive(entry.domain, entry.node.code);
+                    if (entryActive !== nextActive) {
+                      if (nextActive) activateType(entry.objectType);
+                      toggleTaxonomy(entry.domain, entry.node.code);
+                    }
+                  }
+                }}
+                aria-pressed={active}
+                title={group.map((entry) => nodeTitle(entry.node)).filter(Boolean).join('\n\n') || undefined}
+              >
+                <span>{representative.node.name}</span>
+                {aliases.length > 0 ? (
+                  <span className={cn('text-[9px] font-normal', active ? 'text-white/80' : 'text-ink-3')}>
+                    Berta : {aliases.join(', ')}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      );
+    };
+
+    const familyBlocks = familyCodes.map((familyCode) => {
+      const family = familyByCode.get(familyCode) as ExplorerAccommodationFamily | undefined;
+      const familyLabel = family?.name ?? familyCode.replace(/_/g, ' ');
+      const familyEntries = entries.filter((entry) => entry.node.family === familyCode);
+      const familyMatches = Boolean(query) && (
+        foldAccommodationTerm([familyLabel, family?.description ?? ''].join(' ')).includes(query)
+        || familyEntries.some((entry) => entry.node.axis === 'famille' && accommodationNodeMatches(entry.node, query))
+      );
+      const visible = familyMatches
+        ? familyEntries
+        : familyEntries.filter((entry) => accommodationNodeMatches(entry.node, query));
+      const natures = visible.filter((entry) => entry.node.axis === 'nature');
+      const subtypes = visible.filter((entry) => entry.node.axis === 'sous_type');
+      if (natures.length === 0 && subtypes.length === 0) return null;
+      return (
+        <div key={familyCode} className="rounded-[9px] border border-line bg-surface px-2.5 py-2">
+          <div className="mb-2">
+            <span className="block text-[12px] font-semibold text-ink">{familyLabel}</span>
+            {family?.description ? <span className="block text-[10px] leading-snug text-ink-3">{family.description}</span> : null}
+          </div>
+          {natures.length > 0 ? (
+            <div>
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                {ACCOMMODATION_AXIS_LABELS.nature}
+              </span>
+              {renderSemanticEntries(natures)}
+            </div>
+          ) : null}
+          {subtypes.length > 0 ? (
+            <div className={natures.length > 0 ? 'mt-2' : ''}>
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                {ACCOMMODATION_AXIS_LABELS.sous_type}
+              </span>
+              {renderSemanticEntries(subtypes)}
+            </div>
+          ) : null}
+        </div>
+      );
+    }).filter(Boolean);
+
+    const unitEntries = entries.filter((entry) =>
+      entry.node.axis === 'type_unite' && accommodationNodeMatches(entry.node, query),
+    );
+    const positioningEntries = entries.filter((entry) =>
+      entry.node.axis === 'positionnement' && accommodationNodeMatches(entry.node, query),
+    );
+    const hasResults = familyBlocks.length > 0 || unitEntries.length > 0 || positioningEntries.length > 0;
+
+    return (
+      <div className="space-y-3">
+        <div>
+          <label htmlFor="accommodation-taxonomy-search" className="mb-1 block text-[11px] font-medium text-ink-2">
+            Rechercher dans le vocabulaire
+          </label>
+          <Input
+            id="accommodation-taxonomy-search"
+            value={accommodationQuery}
+            onChange={(event) => setAccommodationQuery(event.target.value)}
+            placeholder="Ex. location saisonnière, gîte, hôtel…"
+          />
+          <p className="mt-1 text-[10px] leading-snug text-ink-3">
+            Les anciens termes Berta restent recherchables ; le filtre affiche le terme canonique.
+          </p>
+        </div>
+
+        {familyBlocks}
+
+        {unitEntries.length > 0 ? (
+          <div>
+            <span className="mb-1.5 block text-[11px] font-semibold text-ink-2">
+              {ACCOMMODATION_AXIS_LABELS.type_unite}
+            </span>
+            {renderSemanticEntries(unitEntries, true)}
+          </div>
+        ) : null}
+
+        {positioningEntries.length > 0 ? (
+          <div>
+            <span className="mb-1.5 block text-[11px] font-semibold text-ink-2">
+              {ACCOMMODATION_AXIS_LABELS.positionnement}
+            </span>
+            {renderSemanticEntries(positioningEntries)}
+          </div>
+        ) : null}
+
+        {!hasResults ? <p className="text-[12px] text-ink-3">Aucun terme ne correspond à cette recherche.</p> : null}
+
+        {isSubtypeNarrowed(hot.subtypes, HOT_BUCKET_TYPES) ? (
+          <div className="rounded-[8px] border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] text-amber-900">
+            Un ancien filtre de type de fiche est actif. Utilisez les filtres actifs pour le retirer si les résultats semblent incomplets.
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   const renderAccessibilityDetails = () => (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
@@ -834,8 +1056,8 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'hébergement</span>
-                {renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
+                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Vocabulaire de l'hébergement</span>
+                {renderAccommodationTaxonomy() ?? renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
               </div>
 
               {/* §159 — l'idiome conseiller : « un gîte pour au moins 12 personnes »

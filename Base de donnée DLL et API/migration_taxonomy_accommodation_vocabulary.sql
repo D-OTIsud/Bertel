@@ -158,16 +158,25 @@ WITH v(domain, code, axis, famille, aliases, source_ref, descr) AS (
      'Hébergement orienté vers l''accueil de groupes (sens DATAtourisme, plus restrictif que l''Insee). Regroupait chez Berta la catégorie « Gîte d''étape et de randonnée ».'),
 
     -- Natures
-    ('taxonomy_hot','hotel','nature','hotellerie','[]','Code du tourisme art. D311-4',
-     'L''hôtel de tourisme est un établissement commercial d''hébergement classé qui offre des chambres ou des appartements meublés à une clientèle de passage. Le niveau de classement se filtre séparément.'),
+    -- Arbitrage PO 2026-07-27 : description SIMPLIFIÉE et NEUTRE sur le classement.
+    -- D311-4 définit l'« hôtel de tourisme » comme un établissement *classé* ; or
+    -- §192 a précisément sorti le classement de l'identité de la nature pour lui
+    -- donner son propre filtre. Reprendre « classé » ici faisait affirmer à
+    -- l'infobulle un caractère que 4 des 8 hôtels publiés n'ont pas (mesuré le
+    -- 2026-07-27). `source_ref` reste le renvoi d'autorité ; la description n'est
+    -- plus une citation littérale.
+    ('taxonomy_hot','hotel','nature','hotellerie','[]','cf. Code du tourisme art. D311-4',
+     'Établissement commercial proposant des chambres ou appartements meublés à une clientèle de passage. Le classement se filtre séparément.'),
     ('taxonomy_hlo','chambre_d_hotes','nature','locatif','["Chambre d''hôte"]',
      'Code du tourisme art. L324-3 et D324-13 · DATAtourisme:Guesthouse',
-     'Chambre meublée située chez l''habitant, proposée à une clientèle de passage avec fourniture groupée de la nuitée et du petit-déjeuner ; l''accueil est assuré par l''habitant.'),
+     'Chambre meublée chez l''habitant, louée à la nuitée avec petit-déjeuner ; l''accueil est assuré par l''habitant.'),
     ('taxonomy_hlo','location_saisonniere','nature','locatif','["Location saisonnière","Gîte","Gîte rural","Meublé"]',
      'Code du tourisme art. D324-1 · DATAtourisme:SelfCateringAccommodation',
-     'Villa, appartement ou studio meublé, à l''usage exclusif du locataire, offert à une clientèle de passage pour une location à la journée, à la semaine ou au mois, sans élection de domicile. Anciennement « Location saisonnière » chez Berta ; « gîte » est une appellation commerciale soumise au régime des locations saisonnières en meublé (DGCCRF).'),
+     -- Le renvoi Berta n'est plus répété ici : l'alias vit dans `metadata.aliases`
+     -- et L2 l'affiche en badge « Berta : Location saisonnière ». Une seule source.
+     'Villa, appartement ou studio meublé loué à une clientèle de passage, à l''usage exclusif du locataire. « Gîte » est une appellation commerciale, pas une nature (DGCCRF).'),
     ('taxonomy_camp','camping','nature','plein_air','["Camping"]',NULL,
-     'Terrain aménagé pour l''accueil de tentes, caravanes ou résidences mobiles de loisirs. Le niveau de classement se filtre séparément.'),
+     'Terrain aménagé pour l''accueil de tentes, caravanes ou résidences mobiles de loisirs. Le classement se filtre séparément.'),
     ('taxonomy_hpa','natural_camp_area','nature','plein_air','[]',NULL,
      'Aire naturelle de camping, hors classement de terrain aménagé.'),
     ('taxonomy_hpa','farm_camping','nature','plein_air','[]','DATAtourisme:FarmCamping',
@@ -178,8 +187,9 @@ WITH v(domain, code, axis, famille, aliases, source_ref, descr) AS (
      'Aire de stationnement et de nuitée pour camping-cars.'),
     ('taxonomy_hpa','homestay_camping','nature','plein_air','["Camping chez l''habitant"]',NULL,
      'Emplacements de camping chez un particulier, hors classement officiel. Appellation locale : à requalifier au cas par cas en camping à la ferme (si exploitation agricole) ou en aire naturelle — arbitrage L3.'),
-    ('taxonomy_rva','tourism_residence','nature','collectif','[]','Code du tourisme art. D321-1',
-     'Établissement commercial d''hébergement classé, exploité de façon permanente ou saisonnière, regroupant un ensemble homogène de locaux meublés et des locaux collectifs, doté d''équipements et de services communs et géré par une seule personne. Le niveau de classement se filtre séparément.'),
+    -- Même règle que `hotel` (arbitrage PO : une seule règle sur tout l'axe nature).
+    ('taxonomy_rva','tourism_residence','nature','collectif','[]','cf. Code du tourisme art. D321-1',
+     'Ensemble homogène de locaux meublés avec équipements et services communs, sous gestion unique. Le classement se filtre séparément.'),
     ('taxonomy_rva','holiday_village','nature','collectif','[]','DATAtourisme:HolidayVillage',
      'Village de vacances : ensemble d''hébergements avec services et animations collectives.'),
     ('taxonomy_rva','aparthotel','nature','collectif','["Apparthôtel"]',NULL,

@@ -7,6 +7,7 @@ import type {
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   ExplorerBucketKey,
+  ExplorerFilters,
   ExplorerAccommodationFamily,
   ExplorerReferences,
   ExplorerStatusFilter,
@@ -25,6 +26,7 @@ import {
   HOT_BUCKET_TYPES,
   bucketForTaxonomyDomain,
   filterOptionsBySelectedBuckets,
+  isSubtypeNarrowed,
   resolveExplorerStatuses,
 } from '../../utils/facets';
 import { resolveTypeLabel } from '../../utils/labels';
@@ -35,6 +37,7 @@ import { FilterColumnGroup } from '../common/FilterColumnGroup';
 import { GradeBar } from './GradeBar';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
+import { buildExplorerActiveChips } from './explorer-active-chips';
 
 const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
@@ -95,11 +98,6 @@ interface FiltersPanelProps {
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
   return filters.find((filter) => filter.code === code)?.[key];
-}
-
-/** Sélection de sous-types rétrécie ? (vide ou complète = « tous », pas un critère actif) */
-function isSubtypeNarrowed(selected: BackendObjectTypeCode[], all: BackendObjectTypeCode[]): boolean {
-  return selected.length > 0 && !(selected.length === all.length && all.every((type) => selected.includes(type)));
 }
 
 function countActiveRanges(filters: Array<{ code: string; min?: number; max?: number }>): number {
@@ -238,43 +236,19 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
   const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
 
-  const activeFilterCount = useStore((s) => {
-    let n = 0;
-    if (s.selectedBuckets.length) n += 1;
-    if (s.common.search.trim()) n += 1;
-    if ((s.common.cities ?? []).length) n += 1;
-    if (s.common.lieuDit.trim()) n += 1;
-    if (s.common.pmr) n += 1;
-    if ((s.common.accessibilityDisabilityTypesAny ?? []).length) n += 1;
-    if ((s.common.accessibilityAmenityCodesAny ?? []).length) n += 1;
-    if (s.common.sustainable) n += 1;
-    if ((s.common.sustainabilityCategoryCodesAny ?? []).length) n += 1;
-    if ((s.common.sustainabilityActionCodesAny ?? []).length) n += 1;
-    if (s.common.petsAccepted) n += 1;
-    if (s.common.openNow) n += 1;
-    if (s.common.openAt) n += 1;
-    if (s.evt.eventFrom || s.evt.eventTo) n += 1;
-    if (s.common.rankedLabelSchemeCode) n += 1;
-    if ((s.common.tagsAny ?? []).length) n += 1;
-    if ((s.common.statuses ?? []).length > 0) n += 1;
-    // Un dessin de zone pose polygon ET bbox : un seul geste, un seul actif.
-    if (s.common.polygon || s.common.bbox) n += 1;
-    // Mêmes primitives que les badges de section (§152) — sinon les deux
-    // compteurs co-visibles se contredisent (vide=tous, meetingRoom vidé…).
-    if (isSubtypeNarrowed(s.hot.subtypes, DEFAULT_HOT_SUBTYPES)) n += 1;
-    if (isSubtypeNarrowed(s.vis.subtypes, DEFAULT_VIS_SUBTYPES)) n += 1;
-    if (isSubtypeNarrowed(s.srv.subtypes, DEFAULT_SRV_SUBTYPES)) n += 1;
-    if ((s.common.taxonomyAny ?? []).length) n += 1;
-    if (countActiveRanges(s.hot.capacityFilters)) n += 1;
-    if (Object.values(s.hot.meetingRoom).some((value) => value != null)) n += 1;
-    if (countActiveRanges(s.res.capacityFilters)) n += 1;
-    if (s.iti.isLoop !== null || s.iti.practicesAny.length || s.iti.difficultyMin != null || s.iti.difficultyMax != null) n += 1;
-    if (s.iti.distanceMinKm != null || s.iti.distanceMaxKm != null) n += 1;
-    if (s.iti.durationMinH != null || s.iti.durationMaxH != null) n += 1;
-    if ((s.common.environmentTagsAny ?? []).length) n += 1;
-    if ((s.common.amenityFamiliesAny ?? []).length) n += 1;
-    return n;
-  });
+  /**
+   * « N actifs » = le nombre exact de pastilles de la barre de filtres actifs.
+   *
+   * L'ancienne implémentation ré-énumérait les critères à la main et divergeait de la
+   * barre sur quatre points (buckets et statuts comptés 1 quel qu'en soit le nombre,
+   * niveaux de classement et « label obtenu uniquement » non comptés) : trois buckets +
+   * deux statuts + un niveau affichaient « 2 actifs » au-dessus de 6 pastilles. Deux
+   * compteurs co-visibles ne peuvent pas avoir deux implémentations — c'est l'exigence
+   * §152 appliquée jusqu'au bout.
+   *
+   * Le sélecteur renvoie un NOMBRE : pas de nouvelle référence à chaque rendu.
+   */
+  const activeFilterCount = useStore((s) => buildExplorerActiveChips(s as unknown as ExplorerFilters).length);
 
   const accessibilityDisabilityTypes: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> =
     references?.accessibilityDisabilityTypes?.length
@@ -714,7 +688,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         {!hasResults ? <p className="text-[12px] text-ink-3">Aucun terme ne correspond à cette recherche.</p> : null}
 
         {isSubtypeNarrowed(hot.subtypes, HOT_BUCKET_TYPES) ? (
-          <div className="rounded-[8px] border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] text-amber-900">
+          <div className="rounded-[8px] border border-warn-border bg-warn-bg px-2 py-1.5 text-[12px] leading-snug text-warn-ink">
             Un ancien filtre de type de fiche est actif. Utilisez les filtres actifs pour le retirer si les résultats semblent incomplets.
           </div>
         ) : null}
@@ -1170,6 +1144,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                               )
                             }
                             placeholder="Min"
+                            aria-label={`${metric.name} — minimum`}
                           />
                           <Input
                             type="number"
@@ -1183,6 +1158,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                               )
                             }
                             placeholder="Max"
+                            aria-label={`${metric.name} — maximum`}
                           />
                         </div>
                       </div>
@@ -1202,6 +1178,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(hot.meetingRoom.minCount)}
                     onChange={(event) => setHotMeetingRoom({ minCount: event.target.value ? Number(event.target.value) : undefined })}
                     placeholder="Nb. salles min"
+                    aria-label="Nombre minimal de salles de réunion"
                   />
                   <Input
                     type="number"
@@ -1209,6 +1186,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(hot.meetingRoom.minAreaM2)}
                     onChange={(event) => setHotMeetingRoom({ minAreaM2: event.target.value ? Number(event.target.value) : undefined })}
                     placeholder="Surface min m2"
+                    aria-label="Surface minimale de salle en mètres carrés"
                   />
                   <Input
                     type="number"
@@ -1218,6 +1196,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                       setHotMeetingRoom({ minCapTheatre: event.target.value ? Number(event.target.value) : undefined })
                     }
                     placeholder="Cap. théâtre min"
+                    aria-label="Capacité minimale en configuration théâtre"
                   />
                   <Input
                     type="number"
@@ -1227,6 +1206,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                       setHotMeetingRoom({ minCapClassroom: event.target.value ? Number(event.target.value) : undefined })
                     }
                     placeholder="Cap. classe min"
+                    aria-label="Capacité minimale en configuration classe"
                   />
                 </div>
               </details>
@@ -1281,6 +1261,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                             )
                           }
                           placeholder="Min"
+                            aria-label={`${metric.name} — minimum`}
                         />
                         <Input
                           type="number"
@@ -1294,6 +1275,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                             )
                           }
                           placeholder="Max"
+                            aria-label={`${metric.name} — maximum`}
                         />
                       </div>
                     </div>
@@ -1377,7 +1359,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     <button
                       key={String(option.value)}
                       type="button"
-                      className={iti.isLoop === option.value ? 'chip chip--active' : 'chip'}
+                      className={bucketChipClass(iti.isLoop === option.value)}
                       onClick={() => setItiIsLoop(option.value)}
                       aria-pressed={iti.isLoop === option.value}
                     >
@@ -1399,7 +1381,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                       <button
                         key={segment.label}
                         type="button"
-                        className={active ? 'chip chip--active' : 'chip'}
+                        className={bucketChipClass(active)}
                         onClick={() => (active ? setItiDifficulty(undefined, undefined) : setItiDifficulty(segment.min, segment.max))}
                         aria-pressed={active}
                       >
@@ -1419,6 +1401,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(iti.distanceMinKm)}
                     onChange={(event) => setItiDistance(event.target.value ? Number(event.target.value) : undefined, iti.distanceMaxKm)}
                     placeholder="Min"
+                    aria-label="Distance minimale en kilomètres"
                   />
                   <Input
                     type="number"
@@ -1426,6 +1409,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(iti.distanceMaxKm)}
                     onChange={(event) => setItiDistance(iti.distanceMinKm, event.target.value ? Number(event.target.value) : undefined)}
                     placeholder="Max"
+                    aria-label="Distance maximale en kilomètres"
                   />
                 </div>
               </div>
@@ -1440,6 +1424,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(iti.durationMinH)}
                     onChange={(event) => setItiDuration(event.target.value ? Number(event.target.value) : undefined, iti.durationMaxH)}
                     placeholder="Min"
+                    aria-label="Durée minimale en heures"
                   />
                   <Input
                     type="number"
@@ -1448,6 +1433,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     value={renderNumber(iti.durationMaxH)}
                     onChange={(event) => setItiDuration(iti.durationMinH, event.target.value ? Number(event.target.value) : undefined)}
                     placeholder="Max"
+                    aria-label="Durée maximale en heures"
                   />
                 </div>
               </div>
@@ -1462,7 +1448,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                         <button
                           key={practice.code}
                           type="button"
-                          className={active ? 'chip chip--active' : 'chip'}
+                          className={bucketChipClass(active)}
                           onClick={() => toggleItiPractice(practice.code)}
                           aria-pressed={active}
                         >

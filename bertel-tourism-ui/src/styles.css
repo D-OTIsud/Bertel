@@ -8412,44 +8412,19 @@ a {
   row-gap: 0.25rem;
 }
 
-.explorer-workspace .filters-panel .chip-grid {
-  gap: 0.55rem;
-}
-
-.explorer-workspace .filters-panel .chip,
-.explorer-workspace .filters-panel .ghost-button {
-  padding: 0.34rem 0.6rem;
-  min-height: 28px;
-  font-size: 0.85rem;
-}
-
-.explorer-workspace .filters-panel__content {
-  gap: 1rem;
-}
-
-.explorer-workspace .filters-panel__subsection .facet-group + .facet-group {
-  padding-top: 0.85rem;
-  border-top: 1px dashed rgba(24, 49, 59, 0.1);
-}
-
-.explorer-workspace .filters-panel .switch-row {
-  align-items: center;
-  gap: 0.85rem;
-}
-
-.filters-panel__reset {
-  align-self: flex-start;
-  margin-bottom: 0.5rem;
-  color: #fffdf8;
-  background: #b34b3d;
-  border-color: #b34b3d;
-}
-
-.filters-panel__reset:hover {
-  color: #fffdf8;
-  background: #9d4135;
-  border-color: #9d4135;
-}
+/* CSS MORT SUPPRIMÉ (audit filtres 2026-07-27 §3.5).
+   `.explorer-workspace` est bien posée (ExplorerPage), mais `.filters-panel` ne l'est plus
+   depuis la refonte §142 : toutes les règles descendantes étaient inertes. Elles ont
+   longtemps expliqué un symptôme visible — la compaction des `.chip` ne s'appliquant pas,
+   la section Itinéraires affichait des pastilles nettement plus grosses que le reste du
+   panneau. Les trois groupes ITI sont passés au système local (`bucketChipClass`) et
+   l'intention de compaction vit maintenant dans le composant.
+   Retirées ici : `.filters-panel .chip-grid`, `.filters-panel .chip/.ghost-button`,
+   `.filters-panel__content`, `.filters-panel__subsection .facet-group`,
+   `.filters-panel .switch-row`, `.filters-panel__reset` (+`:hover`, qui codait en dur
+   #b34b3d hors tokens).
+   CONSERVÉES ci-dessous : les classes BEM AUTONOMES, réellement appliquées par le
+   composant (`filters-panel__metric-stack`, `__metric-row`, `__range-grid`). */
 
 .filters-panel__metric-stack {
   display: grid;

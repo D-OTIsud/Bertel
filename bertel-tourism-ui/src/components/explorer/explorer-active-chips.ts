@@ -4,8 +4,14 @@
  * `group`/`value` permet au composant de câbler le bon setter du store pour le
  * retrait individuel.
  */
-import type { ExplorerFilters } from '../../types/domain';
-import { EXPLORER_BUCKET_OPTIONS } from '../../utils/facets';
+import type { BackendObjectTypeCode, ExplorerFilters } from '../../types/domain';
+import {
+  DEFAULT_HOT_SUBTYPES,
+  DEFAULT_SRV_SUBTYPES,
+  DEFAULT_VIS_SUBTYPES,
+  EXPLORER_BUCKET_OPTIONS,
+  isSubtypeNarrowed,
+} from '../../utils/facets';
 import { resolveSchemeLabel } from '../../utils/labels';
 
 export type ActiveChipGroup =
@@ -33,6 +39,12 @@ export type ActiveChipGroup =
   | 'sustCategories'
   | 'sustActions'
   | 'taxonomy'
+  // Complétude 2026-07-27 : trois critères restaient actifs SANS chip — donc invisibles
+  // et non retirables depuis la barre, et absents de tout compteur dérivé d'elle.
+  | 'hotSubtypes'
+  | 'visSubtypes'
+  | 'srvSubtypes'
+  | 'meetingRoom'
   | 'hotCapacity'
   | 'resCapacity'
   | 'itiLoop'
@@ -228,6 +240,37 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       label: `Sous-catégorie${taxonomyCount > 1 ? 's' : ''} · ${taxonomyCount}`,
     });
   }
+  // Sous-types rétrécis (HOT/VIS/SRV) : « 2 types sur 5 » est un critère à part entière,
+  // qui vidait pourtant la liste sans laisser de trace dans la barre.
+  const subtypeChip = (
+    group: 'hotSubtypes' | 'visSubtypes' | 'srvSubtypes',
+    bucketLabelText: string,
+    selected: BackendObjectTypeCode[] | undefined,
+    all: BackendObjectTypeCode[],
+  ) => {
+    const codes = selected ?? [];
+    if (!isSubtypeNarrowed(codes, all)) return;
+    chips.push({
+      key: group,
+      group,
+      value: '*',
+      label: `${bucketLabelText} · ${codes.length} type${codes.length > 1 ? 's' : ''} sur ${all.length}`,
+    });
+  };
+  subtypeChip('hotSubtypes', 'Hébergements', filters.hot.subtypes, DEFAULT_HOT_SUBTYPES);
+  subtypeChip('visSubtypes', 'Visites', filters.vis?.subtypes, DEFAULT_VIS_SUBTYPES);
+  subtypeChip('srvSubtypes', 'Services', filters.srv?.subtypes, DEFAULT_SRV_SUBTYPES);
+
+  const meetingRoomCount = Object.values(filters.hot.meetingRoom ?? {}).filter((value) => value != null).length;
+  if (meetingRoomCount > 0) {
+    chips.push({
+      key: 'meetingRoom',
+      group: 'meetingRoom',
+      value: '*',
+      label: `Séminaires · ${meetingRoomCount} critère${meetingRoomCount > 1 ? 's' : ''}`,
+    });
+  }
+
   for (const capacity of filters.hot.capacityFilters ?? []) {
     chips.push({
       key: `hotCapacity:${capacity.code}`,

@@ -258,7 +258,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== TRAIL1  migration_trail_referential.sql  (§181 Référentiel sentiers de randonnée : trail_* autonome hors modèle objet, vocabulaire iti_open_status étendu de 3 codes (not_managed/unknown/archived) + partition trail_link_role, consolidation internal.recompute_trail_status, diff idempotent internal.trail_sync_apply, frontière service_role-only trail_sync_begin/apply_service/finalize, RPC lecture admin + publique restreinte §17, 6 RPC écriture superuser ; dépend de ref_commune (8l) + is_platform_superuser (rls_policies.sql) + ref_code_iti_open_status (15e) + object (schema_unified) ; auto-contenu, RLS deny-all-direct sur toutes les tables trail_*/ref_trail_*) =='
 \ir migration_trail_referential.sql
 
-\echo '== taxo   migration_taxonomy_trees_seed.sql  (versions the target taxonomy registry + trees: 19 domains / 225 nodes / 206 parent links, including §190 HLO nature/form; idempotent upsert + parent_id resolved by code) =='
+\echo '== taxo   migration_taxonomy_trees_seed.sql  (versions the target taxonomy registry + trees: 19 domains / 226 nodes / 207 parent links, including §190 HLO nature/form + §191 HPA homestay camping; idempotent upsert + parent_id resolved by code) =='
 \ir migration_taxonomy_trees_seed.sql
 
 \echo '== taxo2  migration_taxonomy_nature_forme.sql  (§190 HLO: 7 nodes, 4 re-parentings, 5 relabels, live manifest recoding; fresh data part no-op; idempotent tri-state guards) =='
@@ -270,6 +270,11 @@ BEGIN;
 \ir tests/test_taxonomy_nature_forme_target.sql
 \ir tests/test_taxonomy_nature_forme_guard.sql
 ROLLBACK;
+
+\echo '== taxo3  migration_taxonomy_camp_hpa_homestay.sql  (§191 CAMP→HPA: Camping chez l habitant; creates taxonomy_hpa.homestay_camping, retypes the 2 live carriers when present, disables the legacy CAMP leaf; self-asserting and fresh-safe) =='
+\ir migration_taxonomy_camp_hpa_homestay.sql
+\echo '== taxo4  migration_taxonomy_accommodation_vocabulary.sql  (§192 canonical accommodation vocabulary; semantic axes, Berta aliases, no object reassignment; self-asserting and fresh-safe) =='
+\ir migration_taxonomy_accommodation_vocabulary.sql
 
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
 \ir migration_interop_crosswalk_leafaware.sql

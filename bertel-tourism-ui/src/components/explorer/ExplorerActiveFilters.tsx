@@ -40,7 +40,6 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
   const setPetsAccepted = useStore((s) => s.setPetsAccepted);
   const setOpenNow = useStore((s) => s.setOpenNow);
   const setSustainable = useStore((s) => s.setSustainable);
-  const toggleLabel = useStore((s) => s.toggleLabel);
   const toggleTag = useStore((s) => s.toggleTag);
   const toggleStatus = useStore((s) => s.toggleStatus);
   const setRankedLabelScheme = useStore((s) => s.setRankedLabelScheme);
@@ -101,9 +100,6 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
         break;
       case 'sustainable':
         setSustainable(false);
-        break;
-      case 'label':
-        toggleLabel(chip.value);
         break;
       case 'tag':
         toggleTag({ slug: chip.value, name: chip.value });

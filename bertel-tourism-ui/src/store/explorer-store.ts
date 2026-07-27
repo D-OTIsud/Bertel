@@ -50,8 +50,6 @@ interface ExplorerState extends ExplorerFilters {
   setRankedLabelScheme: (schemeCode: string | null) => void;
   setRankedLabelIncludeEquivalents: (value: boolean) => void;
   setRankedLabelValueCodes: (codes: string[]) => void;
-  toggleLabel: (label: string) => void;
-  clearLabels: () => void;
   /** Toggle a §09 tag in the Explorer filter set (click a colored tag on a card/map). */
   toggleTag: (tag: ExplorerTagFilter) => void;
   clearTags: () => void;
@@ -322,20 +320,6 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
     set((state) => ({ common: { ...state.common, rankedLabelIncludeEquivalents: value } })),
   setRankedLabelValueCodes: (codes) =>
     set((state) => ({ common: { ...state.common, rankedLabelValueCodes: codes } })),
-  toggleLabel: (label) =>
-    set((state) => {
-      const needle = String(label).trim();
-      if (!needle) return state;
-      const labelsAny = state.common.labelsAny ?? [];
-      const exists = labelsAny.includes(needle);
-      return {
-        common: {
-          ...state.common,
-          labelsAny: exists ? labelsAny.filter((item) => item !== needle) : [...labelsAny, needle],
-        },
-      };
-    }),
-  clearLabels: () => set((state) => ({ common: { ...state.common, labelsAny: [] } })),
   toggleTag: (tag) =>
     set((state) => {
       const slug = String(tag?.slug ?? '').trim();

@@ -47,7 +47,6 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       ? bucketsParam.split(',').filter((bucket): bucket is ExplorerBucketKey => EXPLORER_BUCKETS.includes(bucket as ExplorerBucketKey))
       : undefined;
 
-  const labelsAny = searchParams.get('labels')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const rankedLabelSchemeCode = searchParams.get('rankedLabel')?.trim() || undefined;
   const rankedLabelValueCodes = searchParams.get('rankedLabelValues')?.split(',').map((item) => item.trim()).filter(Boolean) ?? undefined;
   const accessibilityDisabilityTypesAny =
@@ -120,7 +119,6 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('amenityFamilies') != null && {
       amenityFamiliesAny: (searchParams.get('amenityFamilies') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
-    ...(labelsAny !== undefined && { labelsAny }),
     ...(rankedLabelSchemeCode !== undefined && { rankedLabelSchemeCode }),
     ...(searchParams.get('rankedLabelExact') != null && {
       rankedLabelIncludeEquivalents: searchParams.get('rankedLabelExact') !== 'true',
@@ -209,9 +207,6 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   const p = new URLSearchParams();
   if (normalizedFilters.selectedBuckets.length > 0) {
     p.set('buckets', normalizedFilters.selectedBuckets.join(','));
-  }
-  if (normalizedFilters.common.labelsAny.length > 0) {
-    p.set('labels', normalizedFilters.common.labelsAny.join(','));
   }
   if (normalizedFilters.common.rankedLabelSchemeCode) {
     p.set('rankedLabel', normalizedFilters.common.rankedLabelSchemeCode);

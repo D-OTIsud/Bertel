@@ -71,7 +71,6 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   environmentTagsAny: [],
   amenityFamiliesAny: [],
   taxonomyAny: [],
-  labelsAny: [],
   tagsAny: [],
   rankedLabelSchemeCode: null,
   rankedLabelIncludeEquivalents: true,
@@ -137,7 +136,6 @@ export function normalizeExplorerFilters(
       environmentTagsAny: common.environmentTagsAny ?? [],
       amenityFamiliesAny: common.amenityFamiliesAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
-      labelsAny: common.labelsAny ?? [],
       tagsAny: common.tagsAny ?? [],
       rankedLabelSchemeCode: cleanString(common.rankedLabelSchemeCode) || null,
       rankedLabelIncludeEquivalents: common.rankedLabelIncludeEquivalents ?? true,
@@ -592,8 +590,6 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
   const allowedVisSubtypes = new Set(effectiveVisSubtypes);
   const effectiveSrvSubtypes = normalizedFilters.srv.subtypes.length > 0 ? normalizedFilters.srv.subtypes : DEFAULT_SRV_SUBTYPES;
   const allowedSrvSubtypes = new Set(effectiveSrvSubtypes);
-  const labelNeedles = normalizedFilters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
-  const requireLabelMatch = labelNeedles.length > 0;
   // When the caller resolves statuses (cf. resolveExplorerStatuses) the array
   // is non-empty and we apply it here too. Empty array = "no client-side
   // filter": we defer to whatever the backend already filtered.
@@ -602,13 +598,6 @@ export function applyFrontendOnlyExplorerFilters(cards: ObjectCard[], filters: E
   return cards.filter((card) => {
     if (allowedStatuses && card.status && !allowedStatuses.has(card.status)) {
       return false;
-    }
-    if (requireLabelMatch) {
-      const hay = Array.isArray(card.labels) ? card.labels.map((label) => String(label).toLowerCase()) : [];
-      const matches = labelNeedles.some((needle) => hay.includes(needle));
-      if (!matches) {
-        return false;
-      }
     }
     const bucket = normalizeExplorerObjectType(card.type);
     const upperType = String(card.type).toUpperCase() as BackendObjectTypeCode;

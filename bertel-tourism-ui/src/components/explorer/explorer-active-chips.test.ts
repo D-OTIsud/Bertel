@@ -30,16 +30,14 @@ describe('buildExplorerActiveChips', () => {
     expect(buckets.every((c) => !/^(HOT|VIS)$/.test(c.label))).toBe(true); // libellé, pas code brut
   });
 
-  it('rend une pastille par commune et par label/tag', () => {
+  it('rend une pastille par commune et par tag', () => {
     const chips = buildExplorerActiveChips(
       filters({
         cities: ['Saint-Paul', 'Salazie'],
-        labelsAny: ['Clef Verte'],
         tagsAny: [{ slug: 'spa', name: 'Spa', color: '#176b6a' }],
       }),
     );
     expect(chips.filter((c) => c.group === 'city')).toHaveLength(2);
-    expect(chips.find((c) => c.group === 'label')?.value).toBe('Clef Verte');
     expect(chips.find((c) => c.group === 'tag')?.value).toBe('spa');
   });
 

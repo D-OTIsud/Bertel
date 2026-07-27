@@ -176,7 +176,6 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const selectedBuckets = useStore((state) => state.selectedBuckets);
   const common = useStore((state) => state.common);
   const cities = common.cities ?? [];
-  const labelsAny = common.labelsAny ?? [];
   const tagsAny = common.tagsAny ?? [];
   const rankedLabelSchemeCode = common.rankedLabelSchemeCode ?? null;
   const statuses = common.statuses ?? [];
@@ -212,8 +211,6 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const setAmenityFamilies = useStore((state) => state.setAmenityFamilies);
   const setRankedLabelScheme = useStore((state) => state.setRankedLabelScheme);
   const setRankedLabelIncludeEquivalents = useStore((state) => state.setRankedLabelIncludeEquivalents);
-  const toggleLabel = useStore((state) => state.toggleLabel);
-  const clearLabels = useStore((state) => state.clearLabels);
   const toggleTag = useStore((state) => state.toggleTag);
   const clearTags = useStore((state) => state.clearTags);
   const toggleHotSubtype = useStore((state) => state.toggleHotSubtype);
@@ -257,7 +254,6 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     if (s.common.openAt) n += 1;
     if (s.evt.eventFrom || s.evt.eventTo) n += 1;
     if (s.common.rankedLabelSchemeCode) n += 1;
-    if ((s.common.labelsAny ?? []).length) n += 1;
     if ((s.common.tagsAny ?? []).length) n += 1;
     if ((s.common.statuses ?? []).length > 0) n += 1;
     // Un dessin de zone pose polygon ET bbox : un seul geste, un seul actif.
@@ -308,7 +304,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   // n'existent que pour les labels ⇒ le toggle « Inclure les démarches équivalentes » est masqué.
   const rankedSchemeIsGraded = rankedLabelValues.length >= 2;
   const setRankedLabelValueCodes = useStore((state) => state.setRankedLabelValueCodes);
-  const labelFilterCount = (rankedLabelSchemeCode ? 1 : 0) + labelsAny.length;
+  const labelFilterCount = rankedLabelSchemeCode ? 1 : 0;
 
   // §152 — sections type-spécifiques repliables : le compte de critères actifs
   // vit dans l'en-tête, visible section repliée (un filtre actif n'est jamais
@@ -962,25 +958,6 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               </label>
             ) : null}
 
-            {labelsAny.length > 0 ? (
-              <div className="space-y-2">
-                <ul className="grid gap-2">
-                  {labelsAny.map((label) => (
-                    <li key={label}>
-                      <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink">
-                        <input type="checkbox" className="accent-teal" checked onChange={() => toggleLabel(label)} />
-                        <span className="font-medium">{label}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearLabels}>
-                  Effacer les labels
-                </button>
-              </div>
-            ) : (
-              <p className="text-[12px] leading-snug text-ink-3">Cliquez sur un label dans la liste des résultats pour filtrer.</p>
-            )}
           </div>
         </FilterColumnGroup>
 

@@ -700,3 +700,83 @@ describe('buildBucketRpcFilters — classement levels (§174)', () => {
     expect(normalizeExplorerFilters(buildFilters({})).common.rankedLabelValueCodes).toEqual([]);
   });
 });
+
+/**
+ * Garde de contrat : tout critère de `ExplorerCommonFilters` doit être CONSOMMÉ quelque part.
+ *
+ * Le bug qu'elle attrape : `labelsAny` a vécu des mois avec une UI complète (pastilles
+ * cliquables, chips, compteur, paramètre d'URL) alors que `buildBucketRpcFilters` n'émettait
+ * aucune clé pour lui et que son seul consommateur client vivait dans le chemin démo — un
+ * filtre visible qui ne filtrait rien en production. Toute nouvelle clé de filtre doit donc
+ * soit produire une clé de payload RPC, soit être inscrite ici comme volontairement
+ * client/query-level, avec sa raison.
+ */
+describe('buildBucketRpcFilters — aucun critère muet', () => {
+  /** Critères NON portés par le payload de `buildBucketRpcFilters`, par construction. */
+  const CONSUMED_ELSEWHERE: Record<string, string> = {
+    search: 'passé en p_search par listExplorerPage (buildBucketRpcFilters ne pose que search_mode)',
+    searchScope: 'commute search_mode, ne produit pas de clé propre',
+    statuses: 'passé en p_status par listExplorerPage',
+    polygon: 'raffinement client exact (refineCardsByPolygon) — la bbox porte la part serveur',
+    rankedLabelIncludeEquivalents: 'affine label_scheme_ranked, émis seulement à false',
+    rankedLabelValueCodes: 'émis en classifications_any avec le scheme actif',
+  };
+
+  /** Une valeur non-défaut, plausible, pour chaque critère commun. */
+  const ACTIVE_COMMON: ExplorerFilters['common'] = {
+    ...DEFAULT_EXPLORER_FILTERS.common,
+    search: 'gite',
+    cities: ['Saint-Paul'],
+    lieuDit: 'Bois-Rouge',
+    pmr: true,
+    accessibilityDisabilityTypesAny: ['motor'],
+    accessibilityAmenityCodesAny: ['acc_pmr_parking'],
+    sustainable: true,
+    sustainabilityCategoryCodesAny: ['CAT_ENERGY'],
+    sustainabilityActionCodesAny: ['SA_ONSITE_RENEWABLE_ENERGY'],
+    petsAccepted: true,
+    openNow: true,
+    openAt: '2026-07-27T18:00',
+    environmentTagsAny: ['bord_de_mer'],
+    amenityFamiliesAny: ['wellness'],
+    taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }],
+    tagsAny: [{ slug: 'spa', name: 'Spa' }],
+    rankedLabelSchemeCode: 'hot_stars',
+    rankedLabelIncludeEquivalents: false,
+    rankedLabelValueCodes: ['3'],
+    statuses: ['draft'],
+    bbox: [55.2, -21.4, 55.6, -20.9],
+    polygon: { type: 'Polygon', coordinates: [[[55.2, -21.4], [55.6, -21.4], [55.6, -20.9], [55.2, -21.4]]] },
+  };
+
+  // Un critère commun est transverse : il doit peser sur CHAQUE bucket, pas seulement HOT.
+  const BUCKETS = Object.keys(EXPLORER_BUCKET_TYPE_MAP) as Array<keyof typeof EXPLORER_BUCKET_TYPE_MAP>;
+
+  it.each(BUCKETS)('émet un payload non vide pour le bucket %s', (bucket) => {
+    const payload = buildBucketRpcFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON }, bucket);
+    expect(Object.keys(payload).length).toBeGreaterThan(0);
+  });
+
+  it('chaque critère commun actif produit une clé de payload, ou est déclaré consommé ailleurs', () => {
+    const base = buildBucketRpcFilters({ ...DEFAULT_EXPLORER_FILTERS, common: DEFAULT_EXPLORER_FILTERS.common }, 'HOT');
+    const muets: string[] = [];
+
+    for (const key of Object.keys(ACTIVE_COMMON) as Array<keyof ExplorerFilters['common']>) {
+      if (key in CONSUMED_ELSEWHERE) continue;
+      const filters: ExplorerFilters = {
+        ...DEFAULT_EXPLORER_FILTERS,
+        common: { ...DEFAULT_EXPLORER_FILTERS.common, [key]: ACTIVE_COMMON[key] },
+      };
+      // taxonomy_hlo appartient au bucket HOT : on interroge le bucket qui porte le critère.
+      const payload = buildBucketRpcFilters(filters, 'HOT');
+      const added = Object.keys(payload).filter((payloadKey) => !(payloadKey in base));
+      if (added.length === 0) muets.push(String(key));
+    }
+
+    expect(muets).toEqual([]);
+  });
+
+  it('hasServerOnlyFilters voit tous les critères communs actifs', () => {
+    expect(hasServerOnlyFilters({ ...DEFAULT_EXPLORER_FILTERS, common: ACTIVE_COMMON })).toBe(true);
+  });
+});

@@ -17,7 +17,6 @@ export type ActiveChipGroup =
   | 'pets'
   | 'openNow'
   | 'sustainable'
-  | 'label'
   | 'tag'
   | 'status'
   | 'rankedLabel'
@@ -120,10 +119,6 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
   const rankedValueCount = (c.rankedLabelValueCodes ?? []).length;
   if (rankedScheme && rankedValueCount > 0) {
     chips.push({ key: 'rankedLabelValues', group: 'rankedLabelValues', value: '*', label: `Niveau · ${rankedValueCount} sélectionné${rankedValueCount > 1 ? 's' : ''}` });
-  }
-
-  for (const label of c.labelsAny ?? []) {
-    chips.push({ key: `label:${label}`, group: 'label', value: label, label: `Label · ${label}` });
   }
 
   for (const tag of c.tagsAny ?? []) {

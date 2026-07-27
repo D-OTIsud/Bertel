@@ -514,7 +514,6 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
   const search = normalizedFilters.common.search.trim().toLowerCase();
   const cities = normalizedFilters.common.cities.map((c) => c.trim().toLowerCase()).filter(Boolean);
   const lieuDit = normalizedFilters.common.lieuDit.trim().toLowerCase();
-  const labelsAny = normalizedFilters.common.labelsAny.map((label) => String(label).toLowerCase()).filter(Boolean);
   const accessibilityByObject: Record<string, { types: ExplorerFilters['common']['accessibilityDisabilityTypesAny']; amenities: string[] }> = {
     HOTRUN0000000001: { types: ['motor', 'hearing'], amenities: ['acc_pmr_parking', 'acc_step_removal', 'acc_magnetic_loop'] },
     RESRUN0000000002: { types: ['motor', 'cognitive'], amenities: ['acc_step_removal', 'acc_falc_docs'] },
@@ -569,10 +568,6 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
           sustainability.categories.some((code) => normalizedFilters.common.sustainabilityCategoryCodesAny.includes(code))) &&
         (normalizedFilters.common.sustainabilityActionCodesAny.length === 0 ||
           sustainability.actions.some((code) => normalizedFilters.common.sustainabilityActionCodesAny.includes(code))));
-    const labelsMatches =
-      labelsAny.length === 0 ||
-      (Array.isArray(card.labels) && card.labels.some((label) => labelsAny.includes(String(label).toLowerCase())));
-
     if (
       !bucketMatches ||
       !searchMatches ||
@@ -581,8 +576,7 @@ export function filterMockCards(filters: ExplorerFilters, bucket?: ExplorerBucke
       !openMatches ||
       !petsMatches ||
       !pmrMatches ||
-      !sustainabilityMatches ||
-      !labelsMatches
+      !sustainabilityMatches
     ) {
       return false;
     }

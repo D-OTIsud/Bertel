@@ -74,12 +74,10 @@ const NEUTRAL_CHIP = cn(CHIP_BASE, 'border border-line bg-surface2 text-ink-2');
 function ChipPill({
   chip,
   interactive,
-  onToggleLabel,
   onToggleTag,
 }: {
   chip: DisplayChip;
   interactive: boolean;
-  onToggleLabel?: (label: string) => void;
   onToggleTag?: (tag: ExplorerTagFilter) => void;
 }) {
   if (chip.color) {
@@ -111,23 +109,10 @@ function ChipPill({
       </span>
     );
   }
-  if (interactive && onToggleLabel) {
-    return (
-      <button
-        type="button"
-        data-chip="1"
-        title={chip.label}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          onToggleLabel(chip.label);
-        }}
-        className={NEUTRAL_CHIP}
-      >
-        {chip.label}
-      </button>
-    );
-  }
+  // Pastille neutre (classement, label, taxonomie) : INERTE. Elle a longtemps été un bouton
+  // qui alimentait `common.labelsAny` — un filtre que ni le RPC ni le client n'ont jamais
+  // appliqué en production (seul le chemin démo le lisait). Le filtrage par label passe par
+  // « Distinctions » (`label_scheme_ranked`), qui porte le rang et les équivalences.
   return (
     <span data-chip="1" className={NEUTRAL_CHIP} title={chip.label}>
       {chip.label}
@@ -147,14 +132,12 @@ function CardChipRow({
   expanded,
   onRequestExpand,
   interactive,
-  onToggleLabel,
   onToggleTag,
 }: {
   chips: DisplayChip[];
   expanded: boolean;
   onRequestExpand: () => void;
   interactive: boolean;
-  onToggleLabel?: (label: string) => void;
   onToggleTag?: (tag: ExplorerTagFilter) => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
@@ -204,7 +187,7 @@ function CardChipRow({
       className={cn('flex min-w-0 items-center gap-1', expanded ? 'flex-wrap' : 'flex-nowrap overflow-hidden')}
     >
       {visible.map((chip) => (
-        <ChipPill key={chip.key} chip={chip} interactive={interactive} onToggleLabel={onToggleLabel} onToggleTag={onToggleTag} />
+        <ChipPill key={chip.key} chip={chip} interactive={interactive} onToggleTag={onToggleTag} />
       ))}
       {overflow > 0 ? (
         <button
@@ -240,7 +223,6 @@ interface ResultCardViewProps {
   onOpen?: () => void;
   /** D20 : signale l'entrée/sortie du pointeur pour surligner le marqueur carte. */
   onHoverChange?: (hovered: boolean) => void;
-  onToggleLabel?: (label: string) => void;
   /** Click-to-filter for a colored §09 tag chip (cards + map). Inert when omitted or interactive=false. */
   onToggleTag?: (tag: ExplorerTagFilter) => void;
   onToggleSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
@@ -255,7 +237,6 @@ export function ResultCardView({
   inSelection = false,
   onOpen,
   onHoverChange,
-  onToggleLabel,
   onToggleTag,
   onToggleSelect,
 }: ResultCardViewProps) {
@@ -425,7 +406,7 @@ export function ResultCardView({
           expanded={expanded}
           onRequestExpand={() => setExpanded(true)}
           interactive={containerInteractive}
-          onToggleLabel={onToggleLabel}
+         
           onToggleTag={onToggleTag}
         />
       </div>

@@ -185,7 +185,6 @@ export interface ExplorerCommonFilters {
    * bucket HOT — mêmes sémantiques que les sous-types).
    */
   taxonomyAny: TaxonomyRef[];
-  labelsAny: string[];
   /** Active §09 tag filters (click-to-filter on a card/map tag). Sent to the RPC as `tags_any`. */
   tagsAny: ExplorerTagFilter[];
   rankedLabelSchemeCode: string | null;

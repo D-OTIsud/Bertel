@@ -86,7 +86,6 @@ export function ResultsList({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const openDrawer = useUiStore((state) => state.openDrawer);
-  const toggleLabel = useExplorerStore((state) => state.toggleLabel);
   const toggleTag = useExplorerStore((state) => state.toggleTag);
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
@@ -217,7 +216,6 @@ export function ResultsList({
         inSelection={inSelection}
         onOpen={() => openDrawer(card.id)}
         onHoverChange={(hovered) => setHoveredCard(hovered ? card.id : null)}
-        onToggleLabel={toggleLabel}
         onToggleTag={toggleTag}
         onToggleSelect={(event) => {
           event.preventDefault();

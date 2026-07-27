@@ -22,6 +22,7 @@ import { CrmObjectView } from '../features/crm/CrmObjectView';
 import { CrmTaches } from '../features/crm/CrmTaches';
 import { CrmTimelineView } from '../features/crm/CrmTimelineView';
 import { CRM_READ_ONLY_REASON } from '../features/crm/crm-view-utils';
+import { effectiveCrmSearch, useCrmSearchStore } from '../store/crm-search-store';
 
 const NAV_KEY = 'bertel-crm-nav-v2';
 
@@ -88,6 +89,18 @@ export default function CrmPage() {
       /* stockage indisponible : la navigation reste fonctionnelle, juste non persistée */
     }
   }, [nav, hydrated]);
+
+  // Portée de la recherche du header (PO 2026-07-27) : elle ne s'applique qu'à l'annuaire.
+  // Taper depuis Tâches / Timeline / un drill-in y ramène — mais SEULEMENT quand le terme
+  // franchit le seuil serveur (2 caractères) : sinon un simple « M » éjecterait l'utilisateur
+  // alors qu'aucune recherche n'est encore appliquée.
+  const searchIsActive = effectiveCrmSearch(useCrmSearchStore((state) => state.search)) !== undefined;
+  useEffect(() => {
+    if (!hydrated || !searchIsActive) return;
+    setNav((current) =>
+      current.actorId || current.objectId || current.view !== 'annuaire' ? { view: 'annuaire' } : current,
+    );
+  }, [hydrated, searchIsActive]);
 
   // Requêtes partagées (mêmes clés que les vues → une seule charge réseau) :
   // compteurs d'onglets + résolution du libellé de retour de la vue établissement.

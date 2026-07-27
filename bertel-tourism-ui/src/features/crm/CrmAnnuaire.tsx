@@ -5,12 +5,25 @@
 // sont appliqués CÔTÉ SERVEUR par api.list_crm_directory : tous les agrégats
 // (compteurs, dernière interaction, top sujets) reviennent filtrés, donc les KPI
 // du bandeau se recalculent d'eux-mêmes. Les ex-chips « type d'objet » (jugées
-// inutiles par le PO) sont supprimées. La recherche par nom reste client-side.
+// inutiles par le PO) sont supprimées.
+//
+// RECHERCHE (PO 2026-07-27) : elle vient du champ du HEADER (crm-search-store) — il n'y a
+// plus de champ local ici, une seule surface possède la recherche. Elle est SERVEUR (p_search)
+// car téléphone et e-mail vivent dans actor_channel et n'entrent pas dans le payload (PII).
+//
+// TROIS notions de filtre, volontairement distinctes — les confondre rend des libellés faux :
+//   effectiveSearch        → le paramètre p_search (rien n'est envoyé sous 2 caractères)
+//   hasServerFilters       → la clé React Query, le ratio « X / Y », le choix d'état vide
+//   hasInteractionFilters  → « X sur la sélection » et la note « acteurs masqués ». La
+//                            recherche restreint les ACTEURS, elle ne filtre pas leurs
+//                            INTERACTIONS : elle ne doit donc pas allumer ces libellés.
 
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, CircleHelp, Search, UserPlus } from 'lucide-react';
-import { listCrmDirectory, listDemandTopics, type CrmDirectoryEntry, type CrmDirectoryFilters } from '../../services/crm';
+import { ChevronRight, CircleHelp, UserPlus } from 'lucide-react';
+import { listCrmDirectory, listDemandTopics, type CrmDirectoryFilters } from '../../services/crm';
+import { effectiveCrmSearch, useCrmSearchStore } from '../../store/crm-search-store';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { Kpi, Pav } from './crm-primitives';
 import {
   CrmFilterBar,
@@ -26,16 +39,15 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, formatRelative, interactionTypeLabelOf, topicTintOf } from './crm-view-utils';
 
-function matchesSearch(entry: CrmDirectoryEntry, query: string): boolean {
-  const haystack = [entry.displayName, ...entry.objects.map((object) => `${object.objectName} ${object.roleName ?? ''}`)]
-    .join(' ')
-    .toLowerCase();
-  return haystack.includes(query);
-}
+/** Pause avant d'interroger le serveur — la frappe reste fluide, le réseau ne suit pas lettre à lettre. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOpenActor: (actorId: string) => void }) {
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
+  // La recherche est possédée par la TopBar (elle vit hors de l'arbre /crm) — ici on la lit.
+  const rawSearch = useCrmSearchStore((state) => state.search);
+  const debouncedSearch = useDebouncedValue(rawSearch, SEARCH_DEBOUNCE_MS);
+  const effectiveSearch = effectiveCrmSearch(debouncedSearch);
   // Filtres partagés (PO points 6+7) — défaut Toutes + Tout = ensemble complet (fix point 7).
   const [topicCode, setTopicCode] = useState('');
   const [statusItem, setStatusItem] = useState<StatusItem>(STATUS_DEFAULT);
@@ -49,22 +61,27 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   const from = useMemo(() => periodFromOf(periodItem), [periodItem]);
 
   const status = statusValueOf(statusItem);
-  const hasFilters = Boolean(topicCode) || status !== undefined || from !== undefined;
+  // Filtres d'INTERACTIONS : eux seuls restreignent les interactions comptées (et font donc
+  // disparaître les acteurs « lien seul »). La recherche n'en fait PAS partie.
+  const hasInteractionFilters = Boolean(topicCode) || status !== undefined || from !== undefined;
+  // Tout ce qui part au serveur — pilote la clé de cache et les libellés de volumétrie.
+  const hasServerFilters = hasInteractionFilters || effectiveSearch !== undefined;
   const filters = useMemo<CrmDirectoryFilters>(
     () => ({
       ...(topicCode ? { topicCode } : {}),
       ...(status ? { status } : {}),
       ...(from ? { from } : {}),
+      ...(effectiveSearch ? { search: effectiveSearch } : {}),
     }),
-    [topicCode, status, from],
+    [topicCode, status, from, effectiveSearch],
   );
 
   // Sans filtre : MÊME clé que le shell (['crm-directory']) → cache réseau partagé.
   // Avec filtres : clé dédiée — les consommateurs partagés du shell (résolution de noms
   // de la vue établissement, datalists des tâches) restent sur la liste NON filtrée.
   const directoryQuery = useQuery({
-    queryKey: hasFilters ? ['crm-directory', filters] : ['crm-directory'],
-    queryFn: () => listCrmDirectory(hasFilters ? filters : undefined),
+    queryKey: hasServerFilters ? ['crm-directory', filters] : ['crm-directory'],
+    queryFn: () => listCrmDirectory(hasServerFilters ? filters : undefined),
     // Changer un filtre garde la liste précédente affichée pendant le fetch (pas de collapse).
     placeholderData: keepPreviousData,
   });
@@ -83,10 +100,9 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
     return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
   }, [baseDirectoryQuery.data]);
 
-  const rows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return entries.filter((entry) => !query || matchesSearch(entry, query));
-  }, [entries, search]);
+  // Le filtrage est intégralement serveur — plus de tamis client (il ne verrait de toute
+  // façon ni les téléphones ni les e-mails, absents du payload).
+  const rows = entries;
 
   // KPI Interactions réactif (PO point 7) : le SERVEUR filtre tous les agrégats (sujet/statut/
   // période appliqués à interaction_count). Quand une période est bornée (`from`), le KPI lit
@@ -102,7 +118,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   // le filtré = l'annuaire courant (entries). Sous filtre on affiche « X / Y » + un sous-libellé ;
   // sans filtre, juste le global (pas de fraction redondante Y / Y).
   const globalActorCount = baseDirectoryQuery.data?.length ?? entries.length;
-  const followedActorsValue = hasFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
+  const followedActorsValue = hasServerFilters ? `${entries.length} / ${globalActorCount}` : String(globalActorCount);
 
   if (directoryQuery.isLoading) {
     return (
@@ -136,14 +152,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
       </div>
 
       <div className="crm-toolbar">
-        <label className="crm-search">
-          <Search size={14} aria-hidden />
-          <input
-            placeholder="Filtrer par nom, établissement, rôle…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </label>
+        {/* Pas de champ de recherche ici : il vit dans la TopBar (une seule surface le possède). */}
         <CrmFilterBar
           topicCode={topicCode}
           status={statusItem}
@@ -170,9 +179,17 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
           </button>
         </div>
       </div>
-      {hasFilters && (
+      {/* Note réservée aux filtres d'INTERACTIONS : eux seuls masquent les acteurs sans
+          interaction correspondante. Une recherche seule ne le fait pas — l'afficher alors
+          annoncerait un comportement qui n'a pas lieu. */}
+      {hasInteractionFilters && (
         <div className="crm-filter-note">
           Filtres appliqués aux compteurs — les acteurs sans interaction correspondante sont masqués.
+        </div>
+      )}
+      {effectiveSearch && !hasInteractionFilters && (
+        <div className="crm-filter-note">
+          Recherche « {effectiveSearch} » — nom, prénom, établissement rattaché, téléphone et e-mail.
         </div>
       )}
 
@@ -215,7 +232,9 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
                 </small>
               </span>
               <span className="crm-cell">
-                {hasFilters ? (
+                {/* « sur la sélection » ne vaut que sous filtre d'INTERACTIONS : c'est lui qui
+                    restreint le compte. Sous simple recherche, interactionCount reste le total. */}
+                {hasInteractionFilters ? (
                   <>
                     {entry.interactionCount} sur la sélection
                     <small>dernière : {formatRelative(entry.lastInteractionAt)}</small>
@@ -246,7 +265,7 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
         {rows.length === 0 && (
           // Phase 5.2 — états vides qui enseignent : « aucune donnée » (annuaire vide, CTA
           // « Ajouter un acteur » si droit d'écriture) distinct de l'état « filtré » (pas de CTA).
-          entries.length === 0 && !hasFilters && !search.trim() ? (
+          entries.length === 0 && !hasServerFilters ? (
             <EmptyState
               mode="no-data"
               title="Aucun acteur"
@@ -260,8 +279,12 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
           ) : (
             <EmptyState
               mode="filtered"
-              title="Aucun acteur pour ces filtres"
-              description="Aucun acteur ne correspond à ces filtres. Élargissez la recherche ou changez les critères."
+              title={effectiveSearch ? `Aucun acteur pour « ${effectiveSearch} »` : 'Aucun acteur pour ces filtres'}
+              description={
+                effectiveSearch
+                  ? 'La recherche couvre le nom, le prénom, l’établissement rattaché, le téléphone et l’e-mail. Vérifiez l’orthographe ou raccourcissez le terme.'
+                  : 'Aucun acteur ne correspond à ces filtres. Élargissez la recherche ou changez les critères.'
+              }
             />
           )
         )}

@@ -1,9 +1,10 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CrmPage from './CrmPage';
 import * as crm from '../services/crm';
 import type { ActorCrmSnapshot } from '../services/crm';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
+import { useCrmSearchStore } from '../store/crm-search-store';
 
 jest.mock('../services/crm');
 jest.mock('../hooks/usePresenceRoom', () => ({
@@ -198,6 +199,47 @@ describe('deep-link ?tab= (hub personnel)', () => {
   it('?tab= invalide → comportement actuel (annuaire par défaut)', async () => {
     window.history.replaceState(null, '', '/crm?tab=nimporte');
     renderPage();
+    expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
+  });
+});
+
+// Portée de la recherche du header (PO 2026-07-27) : elle ne concerne que l'annuaire, donc
+// taper depuis un autre onglet ou un drill-in y ramène — mais seulement quand le terme est
+// réellement appliqué (2 caractères), sinon on éjecterait l'utilisateur pour rien.
+describe('CrmPage — portée de la recherche du header', () => {
+  beforeEach(() => {
+    useCrmSearchStore.setState({ search: '' });
+    window.history.replaceState(null, '', '/crm');
+  });
+
+  it('1 caractère depuis Tâches : on RESTE sur Tâches (aucune recherche appliquée)', async () => {
+    window.history.replaceState(null, '', '/crm?tab=taches');
+    renderPage();
+    await screen.findByText('Rappeler le directeur');
+
+    act(() => useCrmSearchStore.getState().setSearch('h'));
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    expect(screen.getByText('Rappeler le directeur')).toBeInTheDocument();
+  });
+
+  it('2 caractères depuis Tâches : retour à l onglet Acteurs', async () => {
+    window.history.replaceState(null, '', '/crm?tab=taches');
+    renderPage();
+    await screen.findByText('Rappeler le directeur');
+
+    act(() => useCrmSearchStore.getState().setSearch('ho'));
+
+    expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
+  });
+
+  it('depuis une fiche acteur (drill-in) : la recherche ramène à l annuaire', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByText('Mme Marie Hoarau'));
+    await screen.findByText('Appel tarifs');
+
+    act(() => useCrmSearchStore.getState().setSearch('payet'));
+
     expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
   });
 });

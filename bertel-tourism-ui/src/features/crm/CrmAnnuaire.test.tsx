@@ -1,13 +1,17 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmAnnuaire } from './CrmAnnuaire';
 import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
+import { useCrmSearchStore } from '../../store/crm-search-store';
 import { topicTintOf } from './crm-view-utils';
 
 jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
+// L'automock remplace AUSSI les helpers purs (ils rendraient undefined) : on récupère la vraie
+// implémentation pour faire jouer au mock de service le rôle du serveur.
+const { matchesCrmDirectorySearch } = jest.requireActual<typeof crm>('../../services/crm');
 
 function renderAnnuaire(onOpenActor = jest.fn(), canWrite = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -21,6 +25,9 @@ function renderAnnuaire(onOpenActor = jest.fn(), canWrite = true) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // Le store de recherche est GLOBAL au module : sans reset, un test qui laisse un terme
+  // contamine tous les suivants (l'annuaire s'y rend filtré).
+  useCrmSearchStore.setState({ search: '' });
   crmMock.listCrmDirectory.mockResolvedValue(mockCrmDirectory);
   crmMock.listDemandTopics.mockResolvedValue([
     { code: 'demande_de_visite', name: 'Demande de visite' },
@@ -81,15 +88,27 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(chip).toHaveClass(`topic--${topicTintOf('demande_de_visite')}`);
   });
 
-  it('filtre par recherche sur le nom de l acteur ET le nom d établissement', async () => {
+  // Le filtrage est SERVEUR depuis 2026-07-27 (le tamis client ne verrait ni les téléphones
+  // ni les e-mails). Le mock se comporte donc comme le serveur, et l'assertion porte sur ce
+  // qui reste vrai côté UI : l'annuaire rend le résultat filtré, nom d'acteur ET établissement.
+  it('affiche le résultat filtré par le serveur (nom d acteur ET nom d établissement)', async () => {
+    // Le mock se comporte comme le serveur. `keepPreviousData` garde la liste précédente
+    // affichée pendant le fetch ⇒ on attend la convergence (waitFor) plutôt qu'un tick fixe.
+    crmMock.listCrmDirectory.mockImplementation(async (filters) =>
+      filters?.search
+        ? mockCrmDirectory.filter((entry) => matchesCrmDirectorySearch(entry, filters.search as string))
+        : mockCrmDirectory,
+    );
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.change(screen.getByPlaceholderText(/filtrer/i), { target: { value: 'comptoir' } });
+
+    act(() => useCrmSearchStore.getState().setSearch('comptoir'));
+    await waitFor(() => expect(screen.queryByText('M. Paul Técher')).not.toBeInTheDocument());
     expect(screen.getByText('Mme Marie Hoarau')).toBeInTheDocument();
-    expect(screen.queryByText('M. Paul Técher')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText(/filtrer/i), { target: { value: 'Técher' } });
+
+    act(() => useCrmSearchStore.getState().setSearch('Técher'));
+    await waitFor(() => expect(screen.queryByText('Mme Marie Hoarau')).not.toBeInTheDocument());
     expect(screen.getByText('M. Paul Técher')).toBeInTheDocument();
-    expect(screen.queryByText('Mme Marie Hoarau')).not.toBeInTheDocument();
   });
 
   // Rectif PO point 6 : les chips de type d'objet (jugées inutiles) sont supprimées.
@@ -178,10 +197,13 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
   });
 
   it('état vide quand aucun acteur ne correspond aux filtres', async () => {
+    // Filtre d'INTERACTIONS (sujet) — l'état vide de la RECHERCHE a son propre test, avec un
+    // libellé distinct qui nomme le terme cherché.
+    crmMock.listCrmDirectory.mockImplementation(async (filters) => (filters?.topicCode ? [] : mockCrmDirectory));
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
-    fireEvent.change(screen.getByPlaceholderText(/filtrer/i), { target: { value: 'zzzz-aucun' } });
-    expect(screen.getByText(/aucun acteur ne correspond/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Sujet'), { target: { value: 'demande_de_visite' } });
+    expect(await screen.findByText(/aucun acteur ne correspond/i)).toBeInTheDocument();
   });
 
   it('échec de chargement → erreur visible (pas d écran vide silencieux)', async () => {
@@ -378,5 +400,64 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     renderAnnuaire(jest.fn(), false);
     await screen.findByText('Mme Marie Hoarau');
     expect(document.querySelector('.crm-fab')).toBeNull();
+  });
+});
+
+// Recherche acteurs (PO 2026-07-27) — elle vient du champ de la TopBar (crm-search-store) et
+// part au SERVEUR (p_search) : téléphone et e-mail ne sont pas dans le payload de l'annuaire.
+describe('CrmAnnuaire — recherche depuis le header', () => {
+  beforeEach(() => useCrmSearchStore.setState({ search: '' }));
+
+  it('n’a plus de champ de recherche local (une seule surface possède la recherche)', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    expect(document.querySelector('.crm-search')).toBeNull();
+    expect(screen.queryByPlaceholderText(/filtrer par nom/i)).toBeNull();
+  });
+
+  it('envoie le terme du store en p_search après le debounce', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    act(() => useCrmSearchStore.getState().setSearch('hoareau'));
+
+    await waitFor(() =>
+      expect(crmMock.listCrmDirectory).toHaveBeenCalledWith(expect.objectContaining({ search: 'hoareau' })),
+    );
+  });
+
+  it('n’envoie AUCUNE recherche sous 2 caractères (pas d’aller-retour inutile)', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    crmMock.listCrmDirectory.mockClear();
+    act(() => useCrmSearchStore.getState().setSearch('h'));
+    // On laisse largement passer le debounce : l'absence d'appel doit être STABLE, pas
+    // simplement pas-encore-arrivée.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    for (const call of crmMock.listCrmDirectory.mock.calls) {
+      expect(call[0] ?? {}).not.toHaveProperty('search');
+    }
+  });
+
+  // Le cœur de la séparation des états : une recherche restreint les ACTEURS, elle ne filtre
+  // pas leurs INTERACTIONS. Afficher « sur la sélection » / « acteurs masqués » mentirait.
+  it('sous simple recherche : ni « sur la sélection », ni la note « acteurs masqués »', async () => {
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    act(() => useCrmSearchStore.getState().setSearch('hoarau'));
+
+    expect(await screen.findByText(/Recherche « hoarau »/)).toBeInTheDocument();
+    expect(screen.queryByText(/sur la sélection/i)).toBeNull();
+    expect(screen.queryByText(/acteurs sans interaction correspondante sont masqués/i)).toBeNull();
+  });
+
+  it('état vide de recherche : nomme le terme cherché et ne propose pas de créer un acteur', async () => {
+    crmMock.listCrmDirectory.mockImplementation(async (filters) => (filters?.search ? [] : mockCrmDirectory));
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    act(() => useCrmSearchStore.getState().setSearch('zzzintrouvable'));
+
+    expect(await screen.findByText(/Aucun acteur pour « zzzintrouvable »/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ajouter un acteur' })).toBeNull();
   });
 });

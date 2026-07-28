@@ -11,7 +11,7 @@ import { exportSelectedObjectsCsv } from '@/services/selection-export';
 import { createListFromSelection } from '@/services/lists';
 import { getObjectResource } from '../../services/rpc';
 import { OtiCarnetCard, type OtiPoi } from '@/features/lists/OtiTemplate';
-import { preloadImages, selectionDetailToOtiPoi } from './selection-print';
+import { MAX_PRINT_SELECTION, preloadImages, selectionDetailToOtiPoi } from './selection-print';
 import { cn } from '@/lib/utils';
 
 /**
@@ -37,6 +37,9 @@ export function SelectionBar() {
   const router = useRouter();
   const count = selectedObjectIds.length;
   const empty = count === 0;
+  // Au-delà du plafond, « Imprimer » est désactivé AVEC sa raison (label + title) plutôt
+  // que de lancer une préparation interminable ; « Créer une liste » reste la voie.
+  const overPrintCap = count > MAX_PRINT_SELECTION;
 
   // « Créer une liste » : la sélection active devient une liste STATIQUE (figée), puis on
   // ouvre la composition où le conseiller la nomme, l'annote, l'imprime, l'envoie ou la partage.
@@ -57,7 +60,7 @@ export function SelectionBar() {
   // @media print d'oti-template.css, pagination insécable + pied « OTI du Sud · n/N »),
   // puis window.print(). Données : la ressource complète de chaque fiche sélectionnée.
   async function handlePrintSelection() {
-    if (empty || printing) return;
+    if (empty || printing || overPrintCap) return;
     setPrinting(true);
     try {
       const details = await Promise.all(selectedObjectIds.map((id) => getObjectResource(id, langPrefs)));
@@ -151,13 +154,17 @@ export function SelectionBar() {
         <>
           <button
             type="button"
-            disabled={printing}
+            disabled={printing || overPrintCap}
             onClick={() => void handlePrintSelection()}
-            title="Imprimer les fiches sélectionnées (cartes du carnet OTI)"
-            className={printing ? disabledAction : enabledAction}
+            title={
+              overPrintCap
+                ? `Impression limitée à ${MAX_PRINT_SELECTION} fiches (${count} sélectionnées) — réduisez la sélection ou créez une liste.`
+                : 'Imprimer les fiches sélectionnées (cartes du carnet OTI)'
+            }
+            className={printing || overPrintCap ? disabledAction : enabledAction}
           >
             <Printer className="h-3.5 w-3.5 shrink-0" />
-            {printing ? 'Préparation…' : 'Imprimer'}
+            {printing ? 'Préparation…' : overPrintCap ? `Imprimer (max ${MAX_PRINT_SELECTION})` : 'Imprimer'}
           </button>
           <button
             type="button"

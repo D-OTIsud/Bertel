@@ -7,6 +7,16 @@ import type { OtiPoi } from '@/features/lists/OtiTemplate';
 import { parseObjectDetail } from '@/services/object-detail-parser';
 
 /**
+ * Plafond d'impression de la sélection. La préparation charge la ressource COMPLÈTE de
+ * chaque fiche (un aller-retour `get_object_resource` par objet) puis précharge les
+ * visuels : au-delà de ce seuil l'attente devient longue et l'aperçu d'impression du
+ * navigateur peine sur le portail monté d'un coup. Au-delà, la voie prévue est
+ * « Créer une liste » (le module Listes pagine et compose l'impression).
+ * ponytail: plafond fixe, pas d'impression par lots — à revoir si l'usage réel le demande.
+ */
+export const MAX_PRINT_SELECTION = 50;
+
+/**
  * Ressource objet → OtiPoi. Les contacts miroitent le contrat DB `api.list_item_contacts`
  * (celui des listes) : téléphone fixe avec repli mobile + site web, PUBLICS uniquement.
  */

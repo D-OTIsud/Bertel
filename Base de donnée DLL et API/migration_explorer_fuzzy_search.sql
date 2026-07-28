@@ -1304,3 +1304,9 @@ END
 $assert$;
 
 COMMIT;
+
+-- `api.get_filtered_object_ids` garde sa signature (pas de re-GRANT), MAIS
+-- `object.search_document_text` est une colonne NEUVE d'une table exposée via
+-- PostgREST : son cache de schéma doit être rechargé, sinon il continue d'ignorer
+-- la colonne. Hors transaction (NOTIFY ne part qu'au COMMIT).
+NOTIFY pgrst, 'reload schema';

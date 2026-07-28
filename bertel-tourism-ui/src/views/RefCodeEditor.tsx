@@ -9,6 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { REFERENCE_CATALOGS_QUERY_KEY } from '../hooks/useReferenceCatalogsQuery';
 import { ArrowDown, ArrowUp, Languages, Plus, Trash2 } from 'lucide-react';
 import {
   deleteRefCode,
@@ -65,6 +66,12 @@ export function RefCodeEditor() {
     void queryClient.invalidateQueries({ queryKey: ['ref-values', activeDomain] });
     void queryClient.invalidateQueries({ queryKey: ['ref-usage', activeDomain] });
     void queryClient.invalidateQueries({ queryKey: ['ref-domains'] });
+    // Les codes de reference sont mis en cache une heure cote redacteurs
+    // (useReferenceCatalogsQuery) et persistes en localStorage. Sans cette
+    // invalidation, un code fraichement cree resterait invisible de l editeur
+    // pendant une heure, et un enregistrement pourrait ne pas reussir a le
+    // resoudre (les savers resolvent code -> identifiant depuis ce catalogue).
+    void queryClient.invalidateQueries({ queryKey: [...REFERENCE_CATALOGS_QUERY_KEY] });
   }
 
   const renameMutation = useMutation({

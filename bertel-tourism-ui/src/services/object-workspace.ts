@@ -3852,9 +3852,20 @@ export async function getObjectWorkspaceResource(
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
 
-  // The API workspace payload already carries the editable snapshot. Avoid probing
-  // optional/type-specific REST tables on page load because many live schemas do
-  // not expose those partitions through PostgREST.
+  // §42: catalog enrichment for the type-specific / optional modules — moved OUT of the old
+  // `ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT` gate so empty/new objects can ADD catalog values
+  // (room types, price kinds/units, menu categories, capacity metrics, …), not just display
+  // existing ones. Each fn degrades gracefully (base + `unavailableReason`, or Promise.allSettled
+  // with per-result fallback) ⇒ a table not exposed via PostgREST shows "unavailable" for that
+  // module, never breaks the load. Extends the §32 (characteristics) / §41 (zones) precedent.
+  const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
+
+  // UN SEUL point de synchronisation. Les 26 enrichissements etaient repartis en
+  // DEUX vagues awaitees l une apres l autre, alors qu aucun argument de la
+  // seconde ne provenait de la premiere : ils ne consomment que `parsedModules`,
+  // `detail`, `objectId`, `catalogs` et `placeLabelById` — tous produits avant.
+  // C etait une latence reseau complete (220-310 ms depuis La Reunion) payee pour
+  // rien. `object-workspace.waves.test.ts` garde cet invariant.
   const [
     taxonomyModule,
     distinctionsModule,
@@ -3869,6 +3880,18 @@ export async function getObjectWorkspaceResource(
     characteristicsModule,
     locationModule,
     permissions,
+    mediaModule,
+    capacityPoliciesModule,
+    pricingModule,
+    roomsModule,
+    meetingRoomsModule,
+    menusModule,
+    cuisineModule,
+    activityModule,
+    eventModule,
+    itineraryModule,
+    membershipsModule,
+    crmFollowUpModule,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs, detail.type ?? ''),
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs),
@@ -3895,7 +3918,21 @@ export async function getObjectWorkspaceResource(
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
     getObjectWorkspaceZonesModule(objectId, parsedModules.location),
     getObjectWorkspacePermissions(objectId),
+    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
+    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? '', catalogs),
+    getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
+    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
+    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),
+    getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
+    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine, catalogs),
+    getObjectWorkspaceActivityModule(objectId, parsedModules.activity, catalogs),
+    getObjectWorkspaceEventModule(objectId, parsedModules.event),
+    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
+    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships, catalogs),
+    getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
   ]);
+
+  const facetRows = getFacetApplicabilityRows(catalogs);
 
   const modules: ObjectWorkspaceModules = {
     ...parsedModules,
@@ -3914,43 +3951,6 @@ export async function getObjectWorkspaceResource(
     distribution: parsedModules.distribution,
     provider: parsedModules.provider,
   };
-
-  // §42: catalog enrichment for the type-specific / optional modules — moved OUT of the old
-  // `ENABLE_OPTIONAL_WORKSPACE_REST_ENRICHMENT` gate so empty/new objects can ADD catalog values
-  // (room types, price kinds/units, menu categories, capacity metrics, …), not just display
-  // existing ones. Each fn degrades gracefully (base + `unavailableReason`, or Promise.allSettled
-  // with per-result fallback) ⇒ a table not exposed via PostgREST shows "unavailable" for that
-  // module, never breaks the load. Extends the §32 (characteristics) / §41 (zones) precedent.
-  const placeLabelById = new Map(parsedModules.location.places.map((place) => [place.id, place.label]));
-  const [
-    mediaModule,
-    capacityPoliciesModule,
-    pricingModule,
-    roomsModule,
-    meetingRoomsModule,
-    menusModule,
-    cuisineModule,
-    activityModule,
-    eventModule,
-    itineraryModule,
-    membershipsModule,
-    crmFollowUpModule,
-    facetRows,
-  ] = await Promise.all([
-    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
-    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? '', catalogs),
-    getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
-    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
-    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),
-    getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
-    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine, catalogs),
-    getObjectWorkspaceActivityModule(objectId, parsedModules.activity, catalogs),
-    getObjectWorkspaceEventModule(objectId, parsedModules.event),
-    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
-    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships, catalogs),
-    getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
-    Promise.resolve(getFacetApplicabilityRows(catalogs)),
-  ]);
 
   Object.assign(modules, {
     media: mediaModule,

@@ -110,12 +110,28 @@ function apiClientCapturingRpc() {
  * object's type (the known deferred item) — fail-open on probe failure, and a
  * non-applicable metric ALREADY used by the object stays selectable (no data loss).
  */
+// Catalogues injectes : ref_capacity_metric et ref_capacity_applicability ne
+// sont plus des requetes du module, elles viennent du cache de session
+// (fetchReferenceCatalogs). Le filtre par object_type se fait en memoire, d ou
+// la colonne object_type portee par les lignes d applicabilite.
+function capacityCatalogs(applicableMetricIds: string[] = []) {
+  return {
+    refCodeByDomain: {},
+    tables: {
+      ref_capacity_metric: METRICS,
+      ref_capacity_applicability: applicableMetricIds.map((id) => ({ metric_id: id, object_type: 'RES' })),
+    },
+  };
+}
+
 describe('capacity metric options filtered by type applicability', () => {
   it('keeps only the applicable metrics for the object type', async () => {
     const { client } = makeMockClient({ applicableMetricIds: ['m-max', 'm-seats'] });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES');
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule(
+      'o1', baseModule(), 'RES', capacityCatalogs(['m-max', 'm-seats']),
+    );
 
     expect(moduleResult.metricOptions.map((option) => option.code)).toEqual(['max_capacity', 'seats']);
   });
@@ -127,7 +143,9 @@ describe('capacity metric options filtered by type applicability', () => {
     });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES');
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule(
+      'o1', baseModule(), 'RES', capacityCatalogs(['m-max']),
+    );
 
     expect(moduleResult.metricOptions.map((option) => option.code)).toEqual(
       expect.arrayContaining(['max_capacity', 'beds']),
@@ -135,11 +153,14 @@ describe('capacity metric options filtered by type applicability', () => {
     expect(moduleResult.capacityItems[0].metricCode).toBe('beds');
   });
 
-  it('fails open (no filtering) when the applicability probe errors', async () => {
-    const { client } = makeMockClient({ applicableMetricIds: 'error' });
+  it('fails open (no filtering) when the applicability catalog is empty', async () => {
+    // Ancien cas « la sonde d applicabilite echoue » : depuis le cache de session,
+    // une table de reference en erreur se presente comme un catalogue vide
+    // (fetchReferenceCatalogs degrade table par table). Meme fail-open attendu.
+    const { client } = makeMockClient({ applicableMetricIds: [] });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES');
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES', capacityCatalogs());
 
     expect(moduleResult.metricOptions).toHaveLength(METRICS.length);
     expect(moduleResult.unavailableReason).toBeNull();
@@ -149,7 +170,9 @@ describe('capacity metric options filtered by type applicability', () => {
     const { client } = makeMockClient({ applicableMetricIds: [] });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), '');
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule(
+      'o1', baseModule(), '', capacityCatalogs(['m-max']),
+    );
 
     expect(moduleResult.metricOptions).toHaveLength(METRICS.length);
   });
@@ -165,7 +188,9 @@ describe('pet policy tri-state (null = non renseigné)', () => {
     const { client } = makeMockClient({ applicableMetricIds: ['m-max'] });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule('o1', baseModule(), 'RES');
+    const moduleResult = await getObjectWorkspaceCapacityPoliciesModule(
+      'o1', baseModule(), 'RES', capacityCatalogs(['m-max']),
+    );
 
     expect(moduleResult.petPolicy.accepted).toBeNull();
   });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { mockPresence } from '../data/mock';
 import { getSupabaseClient } from '../lib/supabase';
+import { createResilientChannel } from '../lib/realtime-recovery';
 import { useSessionStore } from '../store/session-store';
 import type { FieldLock, PresenceMember } from '../types/domain';
 
@@ -156,93 +157,100 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
       };
     }
 
-    const channel = client.channel(roomKey, {
-      config: {
-        presence: { key: userId },
-        broadcast: { self: false },
-      },
-    });
+    // Canal auto-réparant : un canal realtime mort (CLOSED) n'est jamais ranimé par
+    // realtime-js, il faut en reconstruire un neuf — sinon la présence, les verrous de
+    // champ et l'indicateur de frappe s'éteignent silencieusement au milieu d'une
+    // session d'édition. Voir `lib/realtime-recovery.ts`.
+    const bindRoom = (channel: RealtimeChannel) => {
+      channelRef.current = channel;
 
-    channelRef.current = channel;
+      channel.on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState<TrackPayload & Partial<TExtra>>();
+        const nextPeers = Object.values(state)
+          .flat()
+          .map((item, index) => ({
+            ...item,
+            color: item.color || demoPalette[index % demoPalette.length],
+          })) as (PresenceMember & Partial<TExtra>)[];
 
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState<TrackPayload & Partial<TExtra>>();
-      const nextPeers = Object.values(state)
-        .flat()
-        .map((item, index) => ({
-          ...item,
-          color: item.color || demoPalette[index % demoPalette.length],
-        })) as (PresenceMember & Partial<TExtra>)[];
-
-      setPeers(nextPeers);
-      let nextLocksToSweep: Record<string, LockEntry> | null = null;
-      setLockedFieldEntries((current) => {
-        const liveUserIds = new Set(nextPeers.map((peer) => peer.userId));
-        const nextEntries = Object.entries(current).filter(([, entry]) => liveUserIds.has(entry.userId));
-        const nextLocks = Object.fromEntries(nextEntries) as Record<string, LockEntry>;
-        nextLocksToSweep = nextLocks;
-        return nextLocks;
+        setPeers(nextPeers);
+        let nextLocksToSweep: Record<string, LockEntry> | null = null;
+        setLockedFieldEntries((current) => {
+          const liveUserIds = new Set(nextPeers.map((peer) => peer.userId));
+          const nextEntries = Object.entries(current).filter(([, entry]) => liveUserIds.has(entry.userId));
+          const nextLocks = Object.fromEntries(nextEntries) as Record<string, LockEntry>;
+          nextLocksToSweep = nextLocks;
+          return nextLocks;
+        });
+        if (nextLocksToSweep !== null) {
+          scheduleLockSweep(nextLocksToSweep);
+        }
       });
-      if (nextLocksToSweep !== null) {
-        scheduleLockSweep(nextLocksToSweep);
-      }
-    });
 
-    channel.on('broadcast', { event: 'field:lock' }, ({ payload }) => {
-      const nextLock = payload as FieldLock;
-      let nextLocksToSweep: Record<string, LockEntry> | null = null;
-      setLockedFieldEntries((current) => {
-        const nextLocks = {
-          ...current,
-          [nextLock.field]: {
-            ...nextLock,
-            expiresAt: Date.now() + PRESENCE_LOCK_TTL_MS,
-          },
-        };
-        nextLocksToSweep = nextLocks;
-        return nextLocks;
+      channel.on('broadcast', { event: 'field:lock' }, ({ payload }) => {
+        const nextLock = payload as FieldLock;
+        let nextLocksToSweep: Record<string, LockEntry> | null = null;
+        setLockedFieldEntries((current) => {
+          const nextLocks = {
+            ...current,
+            [nextLock.field]: {
+              ...nextLock,
+              expiresAt: Date.now() + PRESENCE_LOCK_TTL_MS,
+            },
+          };
+          nextLocksToSweep = nextLocks;
+          return nextLocks;
+        });
+        if (nextLocksToSweep !== null) {
+          scheduleLockSweep(nextLocksToSweep);
+        }
       });
-      if (nextLocksToSweep !== null) {
-        scheduleLockSweep(nextLocksToSweep);
-      }
-    });
 
-    channel.on('broadcast', { event: 'field:unlock' }, ({ payload }) => {
-      const field = String((payload as { field?: string }).field ?? '');
-      let nextLocksToSweep: Record<string, LockEntry> | null = null;
-      setLockedFieldEntries((current) => {
-        const copy = { ...current };
-        delete copy[field];
-        nextLocksToSweep = copy;
-        return copy;
+      channel.on('broadcast', { event: 'field:unlock' }, ({ payload }) => {
+        const field = String((payload as { field?: string }).field ?? '');
+        let nextLocksToSweep: Record<string, LockEntry> | null = null;
+        setLockedFieldEntries((current) => {
+          const copy = { ...current };
+          delete copy[field];
+          nextLocksToSweep = copy;
+          return copy;
+        });
+        if (nextLocksToSweep !== null) {
+          scheduleLockSweep(nextLocksToSweep);
+        }
       });
-      if (nextLocksToSweep !== null) {
-        scheduleLockSweep(nextLocksToSweep);
-      }
-    });
 
-    channel.on('broadcast', { event: 'typing' }, ({ payload }) => {
-      const nextUser = String((payload as { name?: string }).name ?? 'Quelqu un');
-      setTypingUsers((current) => Array.from(new Set([...current, nextUser])));
-      window.clearTimeout(typingTimers.current[nextUser]);
-      typingTimers.current[nextUser] = window.setTimeout(() => {
-        setTypingUsers((current) => current.filter((item) => item !== nextUser));
-      }, 1600);
-    });
-
-    // Caller-registered custom broadcast events (e.g. 'object:saved'). The handler is read
-    // from a ref so a changing onEvent identity never resubscribes the channel.
-    (subscribeEventsRef.current ?? []).forEach((eventName) => {
-      channel.on('broadcast', { event: eventName }, ({ payload }) => {
-        onEventRef.current?.(eventName, payload);
+      channel.on('broadcast', { event: 'typing' }, ({ payload }) => {
+        const nextUser = String((payload as { name?: string }).name ?? 'Quelqu un');
+        setTypingUsers((current) => Array.from(new Set([...current, nextUser])));
+        window.clearTimeout(typingTimers.current[nextUser]);
+        typingTimers.current[nextUser] = window.setTimeout(() => {
+          setTypingUsers((current) => current.filter((item) => item !== nextUser));
+        }, 1600);
       });
-    });
 
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
+      // Caller-registered custom broadcast events (e.g. 'object:saved'). The handler is read
+      // from a ref so a changing onEvent identity never resubscribes the channel.
+      (subscribeEventsRef.current ?? []).forEach((eventName) => {
+        channel.on('broadcast', { event: eventName }, ({ payload }) => {
+          onEventRef.current?.(eventName, payload);
+        });
+      });
+    };
+
+    const handle = createResilientChannel(client, {
+      topic: roomKey,
+      config: { config: { presence: { key: userId }, broadcast: { self: false } } },
+      bind: bindRoom,
+      onSubscribed: async (channel) => {
         subscribedRef.current = true;
         await channel.track(mePayloadRef.current);
-      }
+      },
+      // Un canal reconstruit repart sans abonné : les envois (verrou, frappe) sont
+      // suspendus jusqu'au prochain SUBSCRIBED, qui re-track la présence.
+      onState: (state) => {
+        if (state !== 'subscribed') subscribedRef.current = false;
+      },
     });
 
     return () => {
@@ -250,9 +258,7 @@ export function usePresenceRoom<TExtra extends Record<string, unknown> = Record<
       clearLockExpiryTimer();
       clearDemoLockTimers();
       subscribedRef.current = false;
-      void channel.untrack();
-      void channel.unsubscribe();
-      void client.removeChannel(channel);
+      handle.dispose();
       channelRef.current = null;
     };
   }, [demoMode, enabled, meIdentity, roomKey, userId]);

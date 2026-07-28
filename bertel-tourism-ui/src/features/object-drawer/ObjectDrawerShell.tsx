@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Pencil, Printer, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
-import { useObjectWorkspaceQuery } from '../../hooks/useExplorerQueries';
+import { useObjectDetailQuery } from '../../hooks/useExplorerQueries';
 import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useSessionStore } from '../../store/session-store';
 import { resolveTypeLabel } from '../../utils/labels';
@@ -71,7 +71,12 @@ function DrawerPreviewSkeleton() {
 
 export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps) {
   const router = useRouter();
-  const { data, isError, error, isLoading } = useObjectWorkspaceQuery(objectId);
+  // Le tiroir est en LECTURE SEULE : il ne consomme que `detail`, jamais
+  // `modules` ni `permissions`. Il charge donc le RPC seul (1 aller-retour) au
+  // lieu du chargeur d'espace de travail (~85 requetes dont aucune n'etait lue).
+  // L'invariant §103 (« l'objet editable complet = getObjectWorkspaceResource »)
+  // ne s'applique pas ici : il protege l'editeur, pas le tiroir.
+  const { data, isError, error, isLoading } = useObjectDetailQuery(objectId);
   const { peers, typingUsers } = usePresenceRoom(
     objectId ? `room:${objectId}` : 'room:empty',
     { enabled: Boolean(objectId) },
@@ -81,7 +86,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
 
   const resolvedData = data ?? null;
   const isShellLoading = isLoading || !resolvedData;
-  const previewRaw = resolvedData?.detail.raw ?? {};
+  const previewRaw = resolvedData?.raw ?? {};
 
   // PLAN 6 : une ORG n'est pas une fiche touristique — pas d'éditeur d'objet,
   // pas de ruban/sections génériques ; on renvoie vers /team.
@@ -153,7 +158,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
             {isOrg ? (
               <OrgUnsupportedPanel onOpenAdmin={openTeamAdmin} />
             ) : (
-              <ObjectDetailView data={resolvedData.detail} raw={previewRaw as Record<string, unknown>} />
+              <ObjectDetailView data={resolvedData} raw={previewRaw as Record<string, unknown>} />
             )}
           </section>
         )}

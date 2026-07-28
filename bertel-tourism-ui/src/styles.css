@@ -2171,6 +2171,39 @@ a {
   background: currentColor;
 }
 
+/* Bouton « recharger » logé dans la pastille d'état dégradé (temps réel interrompu / hors ligne). */
+.status-pill__refresh {
+  display: inline-grid;
+  place-items: center;
+  margin: -0.2rem -0.25rem -0.2rem 0.1rem;
+  padding: 0.2rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity var(--duration-fast, 150ms) ease, background-color var(--duration-fast, 150ms) ease;
+}
+
+.status-pill__refresh:hover,
+.status-pill__refresh:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.status-pill__refresh:active svg {
+  transform: rotate(180deg);
+}
+
+.status-pill__refresh svg {
+  transition: transform 240ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pill__refresh svg { transition: none; }
+}
+
 .status-pill--orange {
   color: #a05b1f; /* encre dérivée de --brand-warn, contraste AA vérifié sur le fond doux */
   background: var(--warn-soft);

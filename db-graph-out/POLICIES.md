@@ -535,14 +535,14 @@
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_legal`
-- **DELETE** `canonical_del_object_legal` — roles ['public']
-  - `api.user_can_write_object_canonical(object_id)`
-- **INSERT** `canonical_ins_object_legal` — roles ['public']
-  - `api.user_can_write_object_canonical(object_id)`
+- **DELETE** `legal_delete_authorized` — roles ['authenticated']
+  - `( SELECT api.user_can_manage_object_legal(object_legal.object_id) AS user_can_manage_object_legal)`
+- **INSERT** `legal_insert_authorized` — roles ['authenticated']
+  - `( SELECT api.user_can_manage_object_legal(object_legal.object_id) AS user_can_manage_object_legal)`
 - **SELECT** `ext_legal_org_actor` — roles ['public']
   - `api.can_read_extended(object_id)`
-- **UPDATE** `canonical_upd_object_legal` — roles ['public']
-  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+- **UPDATE** `legal_update_authorized` — roles ['authenticated']
+  - `( SELECT api.user_can_manage_object_legal(object_legal.object_id) AS user_can_manage_object_legal) | ( SELECT api.user_can_manage_object_legal(object_legal.object_id) AS user_can_manage_object_legal)`
 
 ## `public.object_list`
 - **SELECT** `read_object_list` — roles ['public']
@@ -1220,6 +1220,10 @@
      JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
      …[truncated — full text in catalog_extra.json or live pg_policies]`
 
+## `public.org_branding_settings`
+- **SELECT** `read_org_branding` — roles ['authenticated']
+  - `true`
+
 ## `public.org_config`
 - **ALL** `superuser_org_config_write` — roles ['public']
   - `api.is_platform_superuser() | api.is_platform_superuser()`
@@ -1312,6 +1316,12 @@
 - **ALL** `Écriture admin des schémas de classification` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 - **SELECT** `Lecture publique des schémas de classification` — roles ['public']
+  - `true`
+
+## `public.ref_classification_scheme_applicability`
+- **ALL** `Écriture admin des applicabilités de distinction` — roles ['public']
+  - `(( SELECT auth.role() AS role) = 'service_role'::text) | (( SELECT auth.role() AS role) = 'service_role'::text)`
+- **SELECT** `Lecture publique des applicabilités de distinction` — roles ['public']
   - `true`
 
 ## `public.ref_classification_value`
@@ -1632,6 +1642,12 @@
 - **SELECT** `pub_ref_code_read` — roles ['public']
   - `true`
 
+## `public.ref_code_trail_link_role`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
 ## `public.ref_code_transport_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
@@ -1665,8 +1681,12 @@
 ## `public.ref_document`
 - **ALL** `Écriture admin des documents de référence` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
-- **SELECT** `Lecture publique des documents de référence` — roles ['public']
-  - `true`
+- **SELECT** `Lecture publique des documents de référence` — roles ['anon', 'authenticated']
+  - `(access_scope = 'public'::text)`
+- **SELECT** `legal_document_metadata_read` — roles ['authenticated']
+  - `((access_scope = 'legal_private'::text) AND (EXISTS ( SELECT 1
+   FROM object_legal ol
+  WHERE ((ol.document_id = ref_document.id) AND ( SELECT api.user_can_manage_object_legal(ol.object_id) AS user_can_manage_object_legal)))))`
 
 ## `public.ref_facet_applicability`
 - **ALL** `admin_write_ref_facet_applicability` — roles ['public']
@@ -1807,10 +1827,18 @@
   - `(bucket_id <> 'avatars'::text) | (bucket_id <> 'avatars'::text)`
 - **ALL** `avatars_service_role_write` — roles ['service_role']
   - `(bucket_id = 'avatars'::text) | (bucket_id = 'avatars'::text)`
+- **ALL RESTRICTIVE** `branding_assets_no_anon_write` — roles ['anon', 'authenticated']
+  - `(bucket_id <> 'branding-assets'::text) | (bucket_id <> 'branding-assets'::text)`
+- **ALL** `branding_assets_service_role_write` — roles ['service_role']
+  - `(bucket_id = 'branding-assets'::text) | (bucket_id = 'branding-assets'::text)`
 - **ALL RESTRICTIVE** `documents_no_anon_write` — roles ['anon', 'authenticated']
   - `(bucket_id <> 'documents'::text) | (bucket_id <> 'documents'::text)`
 - **ALL** `documents_service_role_write` — roles ['service_role']
   - `(bucket_id = 'documents'::text) | (bucket_id = 'documents'::text)`
+- **ALL RESTRICTIVE** `legal_documents_no_direct_access` — roles ['anon', 'authenticated']
+  - `(bucket_id <> 'legal-documents'::text) | (bucket_id <> 'legal-documents'::text)`
+- **ALL** `legal_documents_service_role_all` — roles ['service_role']
+  - `(bucket_id = 'legal-documents'::text) | (bucket_id = 'legal-documents'::text)`
 - **ALL RESTRICTIVE** `media_no_anon_write` — roles ['anon', 'authenticated']
   - `(bucket_id <> 'media'::text) | (bucket_id <> 'media'::text)`
 - **ALL** `media_service_role_write` — roles ['service_role']

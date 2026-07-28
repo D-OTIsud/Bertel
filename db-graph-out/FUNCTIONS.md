@@ -173,6 +173,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to check if an object has all required legal records
 > =====================================================
 
+## `api.check_org_branding_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Garde type ORG (miroir de api.check_org_config_org_type — table à part, message dédié).
+
 ## `api.check_org_config_org_type()`
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -441,8 +447,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.enforce_app_user_profile_role_change()`
 - returns: `trigger` — SECURITY DEFINER
-- reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
+
+> Never trust raw_user_meta_data for authorization. A signed-in user may edit
+> it, so only service/admin or an existing platform owner may change roles.
 
 ## `api.enforce_contact_email_shape()`
 - returns: `trigger`
@@ -552,8 +560,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_app_branding()`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
 
-> Returns the full branding payload used by the authenticated SPA, including marker styles.
+> Payload branding authentifié — résout la surcharge ORG selon le membership actif, champ par champ, fallback plateforme. markerStyles/extra plateforme. Clé orgObjectId = ORG résolue (NULL si aucun membership).
 
 ## `api.get_dashboard_actualisation(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_threshold_days integer DEFAULT 90)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -704,6 +713,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_amenity` _(high)_
 - reads `public.object_capacity` _(high)_
 - reads `public.object_classification` _(high)_
+- reads `public.object_fma` _(high)_
 - reads `public.object_iti` _(high)_
 - reads `public.object_iti_practice` _(high)_
 - reads `public.object_location` _(high)_
@@ -725,6 +735,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_sustainability_action_category` _(high)_
 - reads `public.ref_tag` _(high)_
 - reads `public.tag_link` _(high)_
+
+> ---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----
 
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -762,6 +774,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_local_now_for_timezone(p_business_timezone text)`
 - returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
+
+## `api.get_local_time_for_timezone(p_business_timezone text, p_at timestamp with time zone)`
+- returns: `TABLE(local_date date, local_time time without time zone, local_isodow integer, business_timezone text)`
+
+> §157 — variante paramétrée du résolveur d'heure locale : même validation
+> « pas cher » de la zone (AT TIME ZONE lève 22023, attrapé → Indian/Reunion,
+> cf. §37 — JAMAIS de scan pg_timezone_names sur un hot path), évaluée à un
+> instant ARBITRAIRE. C'est la brique du moteur d'ouverture paramétré
+> (internal.compute_open_status) qui rend possible « ouvert à 18 h » alors
+> qu'il est 10 h. get_local_now_for_timezone délègue (une seule implémentation).
 
 ## `api.get_media_for_web(p_object_id text, p_preferred_tags text[] DEFAULT ARRAY['facade'::text, 'interieur'::text, 'cuisine'::text, 'paysage'::text], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20)`
 - returns: `json`
@@ -865,9 +887,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_object_interop(p_object_id text, p_profile text)`
 - returns: `jsonb`
 - reads `public.object` _(high)_
+- reads `public.object_taxonomy` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_taxonomy_closure` _(high)_
 - reads `public.ref_interop_crosswalk` _(high)_
 
-> Partner interop serializer (audit API I4 §137): datatourisme/apidae/tourinsoft document for a PUBLISHED object; @type/class from ref_interop_crosswalk; service_role-only; core-fields subset.
+> Partner interop serializer (audit API I4 §137): datatourisme (JSON-LD) / apidae / tourinsoft (bespoke JSON) document for a PUBLISHED object; @type/class from the nearest mapped taxonomy ancestor (closure depth ASC), then the object_type fallback in ref_interop_crosswalk (table-driven), core via api.interop_object_core (public-only). service_role-only; unmapped/unpublished/unknown-profile => NULL. Core-fields subset — validate field-level conformance against the target importer before production sync.
 
 ## `api.get_object_jsonld(p_object_id text, p_profile text DEFAULT 'jsonld'::text)`
 - returns: `jsonb`
@@ -1191,6 +1216,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Enhanced API function: Get objects by type with deep data
 > =====================================================
 
+## `api.get_objects_interop_batch(p_object_ids text[], p_profile text)`
+- returns: `jsonb`
+- reads `public.object` _(high)_
+
+> Partner batch interop serializer (audit API I4 §153): {"<object_id>": <profile document>} for up to 200 PUBLISHED ids, wrapping get_object_jsonld (profile 'jsonld') / get_object_interop (datatourisme/apidae/tourinsoft). Unpublished/unknown/unmapped ids are absent. service_role-only. Measured 200 docs = 88 ms.
+
 ## `api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb)`
 - returns: `json`
 - reads `public.actor` _(high)_
@@ -1233,6 +1264,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Helper function to extract opening time slots for a specific day (legacy)
 > =====================================================
+
+## `api.get_org_branding(p_org_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+
+> -----------------------------------------------------
+> 4) Lecture admin (éditeur de branding) : ligne brute (NULL = hérite) + payload résolu.
+> -----------------------------------------------------
 
 ## `api.get_organization_data(p_object_id text)`
 - returns: `jsonb`
@@ -1278,7 +1318,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
 
-> Returns public-safe brand settings for anonymous contexts such as the login page.
+> Returns public-safe brand settings for anonymous contexts such as the login page, including the runtime-driven institutional operator attribution (operatorName/territory/islandTagline from extra).
 
 ## `api.get_public_list_by_token(p_token text)`
 - returns: `json` — SECURITY DEFINER
@@ -1287,6 +1327,28 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > ---------- 7. RPC PUBLIQUE (anon) : lecture par token ----------
 > Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 > (NULL) si token invalide / désactivé / expiré.
+
+## `api.get_public_trail(p_slug text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+
+## `api.get_trail(p_trail_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_commune` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_commune` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_history` _(high)_
+- reads `public.trail_status_override` _(high)_
 
 ## `api.guard_object_status_change()`
 - returns: `trigger` — SECURITY DEFINER
@@ -1485,13 +1547,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > (jamais de ligne sans étiquette). Superuser sans membership : [] (assignation par
 > user_can_assign_crm reste possible — documenté). Trié par display_name.
 
-## `api.list_crm_directory(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+## `api.list_crm_directory(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_search text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
 - reads `public.actor_object_role` _(high)_
 - reads `public.crm_interaction` _(high)_
 - reads `public.object` _(high)_
 - reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
 
 ## `api.list_crm_tasks()`
@@ -1589,6 +1653,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json`
 - reads `public.object` _(high)_
 
+> ---- 2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts) ----
+
 ## `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 - reads `public.object` _(high)_
@@ -1632,6 +1698,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement.
 
+## `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+
 ## `api.list_ref_code_domains()`
 - returns: `jsonb`
 - reads `public.ref_code` _(high)_
@@ -1643,6 +1718,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb`
 
 > Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1.
+
+## `api.list_trail_sync_runs(p_source_code text DEFAULT NULL::text, p_limit integer DEFAULT 20)`
+- returns: `TABLE(id uuid, source_code text, trigger text, dry_run boolean, status text, started_at timestamp with time zone, finished_at timestamp with time zone, http_status integer, error text, layer_last_edit_date timestamp with time zone, counts jsonb, report jsonb)` — SECURITY DEFINER
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail_sync_run` _(high)_
+
+## `api.list_trails(p_status_code text DEFAULT NULL::text, p_presence text DEFAULT NULL::text, p_visibility text DEFAULT NULL::text, p_search text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
+- returns: `TABLE(id uuid, slug text, name text, origin text, visibility text, public_status_code text, public_status_flags jsonb, manager_codes text[], source_count integer, presence_summary jsonb, archived_at timestamp with time zone, created_at timestamp with time zone, updated_at timestamp with time zone, total_count bigint)` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
 
 ## `api.lock_object_private_description_system_fields()`
 - returns: `trigger` — SECURITY DEFINER
@@ -1710,6 +1798,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.periods_partial_overlap(p_all_years boolean, a_s date, a_e date, b_s date, b_e date)`
 - returns: `boolean`
+
+## `api.phonetic_document(p_text text)`
+- returns: `text`
+
+> §198 — texte normalisé → codes dmetaphone dédupliqués, séparés par des espaces. SOURCE UNIQUE de la transformation phonétique : utilisée pour construire object.search_document_phonetic ET pour interroger. Deux implémentations divergeraient en silence. Entrée attendue déjà en minuscules sans accents.
 
 ## `api.pick_lang(p_lang_prefs text[] DEFAULT ARRAY['fr'::text])`
 - returns: `text`
@@ -1787,7 +1880,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.tag_link` _(high)_
 - writes `public.object` _(high)_
 
-> Refresh denormalized filter caches used by hot-path filtered listing.
+> 2) Extend the cache-refresh function to also build search_document ---------
+> (full body — folded identically into schema_unified.sql)
 
 ## `api.refresh_object_taxonomy_cache_for_domain(p_domain text)`
 - returns: `void`
@@ -1799,13 +1893,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.refresh_open_status()`
 - returns: `void`
-- reads `public.object` _(high)_
-- reads `public.opening_period` _(high)_
-- reads `public.opening_schedule` _(high)_
-- reads `public.opening_time_frame` _(high)_
-- reads `public.opening_time_period` _(high)_
-- reads `public.opening_time_period_weekday` _(high)_
-- reads `public.ref_code_weekday` _(high)_
 - writes `public.object` _(high)_
 
 > 5) Moteur de statut : la période active la PLUS SPÉCIFIQUE gagne ; une fermeture active force fermé.
@@ -1922,6 +2009,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > ID généré automatiquement par le trigger (basé sur object_type + region_code).
 > Retourne : l'id TEXT de l'objet créé.
 > -------------------------------------------------------
+
+## `api.rpc_create_org(p_name text, p_region_code text DEFAULT 'RUN'::text, p_access_scope text DEFAULT 'own_objects_only'::text)`
+- returns: `text` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- writes `public.object` _(high)_
+- writes `public.org_config` _(high)_
+
+> Crée une organisation (objet ORG published + org_config) en une transaction. Superadmin plateforme uniquement — voie UNIQUE de création d'ORG (jamais rpc_create_object ni le dialog B1).
 
 ## `api.rpc_deactivate_membership(p_membership_id uuid)`
 - returns: `void` — SECURITY DEFINER
@@ -2046,6 +2141,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+
+## `api.rpc_list_orgs()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Liste des organisations (ORG) avec périmètre d'accès et effectif actif. Superadmin plateforme uniquement.
 
 ## `api.rpc_publish_object(p_object_id text, p_publish boolean DEFAULT true)`
 - returns: `void` — SECURITY DEFINER
@@ -2508,6 +2611,52 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > to_base36
 
+## `api.trail_create_manual(p_name text, p_visibility text DEFAULT 'private'::text, p_description_md text DEFAULT NULL::text)`
+- returns: `uuid` — SECURITY DEFINER
+- writes `public.trail` _(high)_
+
+## `api.trail_force_status(p_trail_id uuid, p_forced_status_code text, p_reason text, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+- writes `public.trail_status_override` _(high)_
+
+## `api.trail_link_source_record(p_source_record_id uuid, p_trail_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- reads `public.trail_source_record` _(high)_
+- writes `public.trail_source_record` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `api.trail_revoke_override(p_override_id uuid, p_note text DEFAULT NULL::text)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.trail_status_override` _(high)_
+
+## `api.trail_set_visibility(p_trail_id uuid, p_visibility text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `api.trail_sync_apply_service(p_sync_run_id uuid, p_features jsonb, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_sync_begin(p_source_code text, p_trigger text, p_dry_run boolean DEFAULT false, p_requested_by uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.ref_trail_source` _(high)_
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_sync_finalize(p_sync_run_id uuid, p_status text, p_report jsonb DEFAULT NULL::jsonb, p_http_status integer DEFAULT NULL::integer, p_error text DEFAULT NULL::text, p_layer_last_edit_date timestamp with time zone DEFAULT NULL::timestamp with time zone)`
+- returns: `void` — SECURITY DEFINER
+- writes `public.trail_sync_run` _(high)_
+
+## `api.trail_update_editorial(p_trail_id uuid, p_name text DEFAULT NULL::text, p_description_md text DEFAULT NULL::text, p_editorial_geom_geojson jsonb DEFAULT NULL::jsonb)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.trail` _(high)_
+- writes `public.trail` _(high)_
+
 ## `api.trg_refresh_caches_from_menu_item_link()`
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.object_menu` _(high)_
@@ -2559,6 +2708,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Creates or updates the global branding/theme settings used by the UI. Restricted to platform admins.
 
+## `api.upsert_org_branding(p_org_object_id text, p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_reset boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_branding_settings` _(high)_
+- writes `public.org_branding_settings` _(high)_
+
+> -----------------------------------------------------
+> 5) Écriture : contrat FULL-STATE PUT — chaque appel remplace la ligne entière (NULL = hérite).
+> Le dialog recharge d'abord get_org_branding().raw et renvoie TOUS les champs.
+> p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
+> -----------------------------------------------------
+
 ## `api.user_actor_ids()`
 - returns: `SETOF uuid`
 - reads `public.actor_channel` _(high)_
@@ -2577,6 +2737,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > existant (un superuser sans membership renvoie [] depuis list_crm_assignees mais peut
 > assigner n'importe quel utilisateur connu — cohérent avec son périmètre non restreint).
 
+## `api.user_can_attach_object_document(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
 ## `api.user_can_create_object()`
 - returns: `boolean` — SECURITY DEFINER
 
@@ -2586,6 +2751,21 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > d'exécution SQL : la policy INSERT référence la fonction, elle doit
 > exister au moment du CREATE POLICY.
 > -------------------------------------------------------
+
+## `api.user_can_manage_object_legal(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+## `api.user_can_manage_org_branding(p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> -----------------------------------------------------
+> 3) Gouvernance : superuser plateforme OU admin (rang >= 30) actif de CETTE ORG.
+> -----------------------------------------------------
 
 ## `api.user_can_moderate_object(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -2773,6 +2953,63 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
 > ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
+
+## `internal.compute_open_status(p_at timestamp with time zone)`
+- returns: `TABLE(object_id text, is_open boolean)`
+- reads `public.object` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.opening_schedule` _(high)_
+- reads `public.opening_time_frame` _(high)_
+- reads `public.opening_time_period` _(high)_
+- reads `public.opening_time_period_weekday` _(high)_
+- reads `public.ref_code_weekday` _(high)_
+
+> §157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :
+> api.refresh_open_status (cache « maintenant », cron) et le filtre « ouvert à … »
+> de get_filtered_object_ids sont deux lectures du MÊME calcul — plus de dérive
+> possible entre la pastille et le filtre. Publiés uniquement (parité stricte
+> avec le cache : un brouillon n'a jamais matché « Ouvert maintenant »).
+> TRI-ÉTAT préservé (§133) : NULL = aucune donnée (jamais matché par un filtre,
+> pas de pastille) ; TRUE = ouvert (dont « jour ouvert sans horaire », §93) ;
+> FALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).
+> La récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.
+
+## `internal.recompute_trail_status(p_trail_id uuid)`
+- returns: `void`
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.trail` _(high)_
+- reads `public.trail_manager_link` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_override` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `internal.trail_expire_overrides()`
+- returns: `void`
+- reads `public.trail` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_status_override` _(high)_
+- writes `public.trail_status_history` _(high)_
+
+## `internal.trail_recompute_status_self_trigger()`
+- returns: `trigger`
+
+## `internal.trail_recompute_status_trigger()`
+- returns: `trigger`
+
+## `internal.trail_sync_apply(p_sync_run_id uuid, p_features jsonb, p_options jsonb DEFAULT '{}'::jsonb)`
+- returns: `jsonb`
+- reads `public.ref_code_iti_open_status` _(high)_
+- reads `public.ref_trail_manager` _(high)_
+- reads `public.ref_trail_source` _(high)_
+- reads `public.trail_geometry_version` _(high)_
+- reads `public.trail_source_record` _(high)_
+- reads `public.trail_sync_run` _(high)_
+- writes `public.trail` _(high)_
+- writes `public.trail_geometry_version` _(high)_
+- writes `public.trail_manager_link` _(high)_
+- writes `public.trail_source_record` _(high)_
+- writes `public.trail_status_history` _(high)_
 
 ## `internal.workspace_assert_can_write_object(p_object_id text)`
 - returns: `void` — SECURITY DEFINER

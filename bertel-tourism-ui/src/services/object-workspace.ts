@@ -723,6 +723,7 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
   objectId: string,
   baseModule: ObjectWorkspaceCapacityPoliciesModule,
   objectType: string,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceCapacityPoliciesModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -737,18 +738,21 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
     };
   }
 
-  const [metricRefsResult, capacitiesResult, groupPolicyResult, petPolicyResult, stayPolicyResult, applicabilityResult] = await Promise.all([
-    client.from('ref_capacity_metric').select('id, code, name, position').order('position', { ascending: true }),
+  // 2 catalogues depuis le cache de session : 6 requetes -> 4. Le filtre par
+  // object_type de l applicabilite passe du serveur a la memoire.
+  const metricRefs = catalogs.tables.ref_capacity_metric ?? [];
+  const applicabilityRows = objectType
+    ? (catalogs.tables.ref_capacity_applicability ?? []).filter((row) => readString(row.object_type) === objectType)
+    : [];
+
+  const [capacitiesResult, groupPolicyResult, petPolicyResult, stayPolicyResult] = await Promise.all([
     client.from('object_capacity').select('id, metric_id, value_integer, unit, effective_from, effective_to').eq('object_id', objectId),
     client.from('object_group_policy').select('min_size, max_size, group_only, notes').eq('object_id', objectId).maybeSingle(),
     client.from('object_pet_policy').select('accepted, conditions').eq('object_id', objectId).maybeSingle(),
     client.from('object_stay_policy').select('check_in_from, check_in_until, check_out_until, conditions').eq('object_id', objectId).maybeSingle(),
-    objectType
-      ? client.from('ref_capacity_applicability').select('metric_id').eq('object_type', objectType)
-      : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (metricRefsResult.error || capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error || stayPolicyResult.error) {
+  if (capacitiesResult.error || groupPolicyResult.error || petPolicyResult.error || stayPolicyResult.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module C4 complet pour ce profil.',
@@ -756,7 +760,7 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
   }
 
   const allMetricOptions = dedupeReferenceOptions(
-    (metricRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    metricRefs.map((row) => normalizeReferenceOption(row)),
   );
   const metricById = new Map(allMetricOptions.map((option) => [option.id, option]));
   const capacityItems = ((capacitiesResult.data ?? []) as Record<string, unknown>[])
@@ -772,9 +776,9 @@ export async function getObjectWorkspaceCapacityPoliciesModule(
   // matrix (a type with 0 rows must not brick the section), and a non-applicable
   // metric the object ALREADY carries stays selectable (no data loss).
   const applicableIds =
-    objectType && !applicabilityResult.error && (applicabilityResult.data ?? []).length > 0
+    objectType && applicabilityRows.length > 0
       ? new Set(
-          ((applicabilityResult.data ?? []) as Record<string, unknown>[]).map((row) => readString(row.metric_id)),
+          applicabilityRows.map((row) => readString(row.metric_id)),
         )
       : null;
   const usedMetricIds = new Set(capacityItems.map((item) => item.metricId));
@@ -1174,6 +1178,7 @@ function reconcileTaxonomyAssignment(params: {
 async function getObjectWorkspaceTaxonomyModule(
   objectId: string,
   baseModule: ObjectWorkspaceTaxonomyModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceTaxonomyModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1203,22 +1208,13 @@ async function getObjectWorkspaceTaxonomyModule(
 
   const objectType = readString((objectResult.data as Record<string, unknown> | null)?.object_type).trim();
   const fallbackByDomain = new Map(baseModule.domains.map((domain) => [domain.domain, domain]));
-  const domainRefsResult = await client
-    .from('ref_code_domain_registry')
-    .select('domain, name, description, object_type, position, is_taxonomy, is_active')
-    .eq('is_taxonomy', true)
-    .eq('is_active', true)
-    .order('position', { ascending: true });
+  // Registre depuis le cache de session ; les filtres is_taxonomy / is_active
+  // etaient faits cote serveur, ils le sont desormais en memoire. Ce saut
+  // sérialisé disparait : le module passe de 3 hops a 2.
+  const domainRegistryRows = (catalogs.tables.ref_code_domain_registry ?? [])
+    .filter((row) => row.is_taxonomy === true && row.is_active === true);
 
-  if (domainRefsResult.error) {
-    return {
-      ...baseModule,
-      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
-    };
-  }
-
-  const domainRefs = (domainRefsResult.data ?? [])
-    .map((row) => row as Record<string, unknown>)
+  const domainRefs = domainRegistryRows
     .map(normalizeTaxonomyDomainRef)
     .filter((domain) => !domain.objectType || domain.objectType === objectType || fallbackByDomain.has(domain.domain))
     .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
@@ -1283,6 +1279,7 @@ async function getObjectWorkspaceTaxonomyModule(
 async function getObjectWorkspaceDistinctionsModule(
   objectId: string,
   baseModule: ObjectWorkspaceDistinctionsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceDistinctionsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1297,52 +1294,40 @@ async function getObjectWorkspaceDistinctionsModule(
     };
   }
 
+  // 3 catalogues depuis le cache de session : 5 requetes -> 3. Les filtres
+  // serveur (is_distinction / display_group, tri par position et ordinal)
+  // passent en memoire. ref_amenity etait lu ici SANS filtre de scope : c est un
+  // sur-ensemble des deux autres lectures, d ou une seule table partagee.
+  const classificationSchemeRows = (catalogs.tables.ref_classification_scheme ?? [])
+    .filter((row) => row.is_distinction === true || readString(row.display_group) === 'accessibility_labels')
+    .sort((left, right) => Number(left.position ?? 0) - Number(right.position ?? 0));
+  const classificationValueRows = [...(catalogs.tables.ref_classification_value ?? [])]
+    .sort((left, right) => Number(left.ordinal ?? 0) - Number(right.ordinal ?? 0));
+  const distinctionAmenityRows = catalogs.tables.ref_amenity ?? [];
+
   const [
-    schemeRefsResult,
-    valueRefsResult,
     objectClassificationsResult,
-    amenityRefsResult,
     objectAmenitiesResult,
   ] = await Promise.allSettled([
-    client
-      .from('ref_classification_scheme')
-      .select('id, code, name, description, selection, position, display_group, is_distinction')
-      .or('is_distinction.eq.true,display_group.eq.accessibility_labels')
-      .order('position', { ascending: true }),
-    client
-      .from('ref_classification_value')
-      .select('id, scheme_id, code, name, ordinal, metadata')
-      .order('ordinal', { ascending: true }),
     client
       .from('object_classification')
       .select('id, scheme_id, value_id, status, awarded_at, valid_until, subvalue_ids, document_id')
       .eq('object_id', objectId)
       .order('created_at', { ascending: true }),
     client
-      .from('ref_amenity')
-      .select('id, code, name, extra, family_id, position, family:family_id(code, name)')
-      .order('position', { ascending: true }),
-    client
       .from('object_amenity')
       .select('amenity_id')
       .eq('object_id', objectId),
   ]);
 
-  if (
-    schemeRefsResult.status !== 'fulfilled'
-    || valueRefsResult.status !== 'fulfilled'
-    || objectClassificationsResult.status !== 'fulfilled'
-    || schemeRefsResult.value.error
-    || valueRefsResult.value.error
-    || objectClassificationsResult.value.error
-  ) {
+  if (objectClassificationsResult.status !== 'fulfilled' || objectClassificationsResult.value.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module C2 complet pour ce profil.',
     };
   }
 
-  const schemeRows = (schemeRefsResult.value.data ?? []) as Record<string, unknown>[];
+  const schemeRows = classificationSchemeRows;
   const distinctionSchemes = schemeRows
     .filter(isDistinctionClassificationScheme)
     .map(normalizeClassificationSchemeRef)
@@ -1351,8 +1336,7 @@ async function getObjectWorkspaceDistinctionsModule(
     .filter(isAccessibilityClassificationScheme)
     .map(normalizeClassificationSchemeRef)
     .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
-  const valueRefs = ((valueRefsResult.value.data ?? []) as Record<string, unknown>[])
-    .map(normalizeClassificationValueRef);
+  const valueRefs = classificationValueRows.map(normalizeClassificationValueRef);
   const valueById = new Map(valueRefs.map((value) => [value.id, value]));
   const distinctionSchemeById = new Map(distinctionSchemes.map((scheme) => [scheme.id, scheme]));
   const accessibilitySchemeById = new Map(accessibilitySchemes.map((scheme) => [scheme.id, scheme]));
@@ -1437,13 +1421,11 @@ async function getObjectWorkspaceDistinctionsModule(
   let unavailableReason: string | null = null;
 
   if (
-    amenityRefsResult.status === 'fulfilled'
+    distinctionAmenityRows.length > 0
     && objectAmenitiesResult.status === 'fulfilled'
-    && amenityRefsResult.value.error == null
     && objectAmenitiesResult.value.error == null
   ) {
-    const amenityRefs = ((amenityRefsResult.value.data ?? []) as Record<string, unknown>[])
-      .map(normalizeAmenityRef);
+    const amenityRefs = distinctionAmenityRows.map(normalizeAmenityRef);
     const amenityById = new Map(amenityRefs.map((amenity) => [amenity.id, amenity]));
     const selectedAmenities = ((objectAmenitiesResult.value.data ?? []) as Record<string, unknown>[])
       .map((row) => amenityById.get(readString(row.amenity_id)) ?? null)
@@ -1676,6 +1658,7 @@ function normalizeWorkspaceContactItem(params: {
 async function getObjectWorkspaceContactsModule(
   objectId: string,
   baseModule: ObjectWorkspaceContactsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceContactsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1702,27 +1685,31 @@ async function getObjectWorkspaceContactsModule(
     return baseModule;
   }
 
-  const [contactsResult, kindRefsResult, roleRefsResult, webChannelsResult, webKindRefsResult] = await Promise.all([
+  // 3 catalogues depuis le cache de session : 5 requetes -> 2.
+  const kindRefs = catalogs.refCodeByDomain.contact_kind ?? [];
+  const roleRefs = catalogs.tables.ref_contact_role ?? [];
+  const webKindRows = [
+    ...(catalogs.refCodeByDomain.social_network ?? []),
+    ...(catalogs.refCodeByDomain.distribution_channel ?? []),
+  ];
+
+  const [contactsResult, webChannelsResult] = await Promise.all([
     client.from('contact_channel').select('id, kind_id, value, role_id, is_public, is_primary, position').eq('object_id', objectId).order('is_primary', { ascending: false }).order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name').eq('domain', 'contact_kind').order('position', { ascending: true }),
-    client.from('ref_contact_role').select('id, code, name').order('position', { ascending: true }),
     // §90 object-scoped réseaux sociaux + distribution (object_web_channel, direct PostgREST — §40/§41 precedent)
     client.from('object_web_channel').select('id, kind_id, kind_domain, value, is_public, position').eq('object_id', objectId).order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, domain').in('domain', ['social_network', 'distribution_channel']).order('domain', { ascending: true }).order('position', { ascending: true }),
   ]);
 
-  if (contactsResult.error || kindRefsResult.error || roleRefsResult.error) {
+  if (contactsResult.error) {
     return baseModule;
   }
 
-  const kindOptions = (kindRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>));
-  const roleOptions = (roleRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>));
+  const kindOptions = kindRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>));
+  const roleOptions = roleRefs.map((row) => normalizeReferenceOption(row));
   const kindById = new Map(kindOptions.map((option) => [option.id, option]));
   const roleById = new Map(roleOptions.map((option) => [option.id, option]));
 
   // §90 web channels degrade gracefully: a missing/unexposed table keeps the parser-derived
   // baseModule.webItems and an empty catalog rather than breaking the whole contacts load.
-  const webKindRows = webKindRefsResult.error ? [] : (webKindRefsResult.data ?? []);
   const webKindOptions = webKindRows.map((row) => normalizeReferenceOption(row as Record<string, unknown>));
   const webKindById = new Map(
     webKindRows.map((row) => {
@@ -3893,8 +3880,8 @@ export async function getObjectWorkspaceResource(
     locationModule,
     permissions,
   ] = await Promise.all([
-    getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy),
-    getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions),
+    getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs),
+    getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
     getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
@@ -3906,7 +3893,7 @@ export async function getObjectWorkspaceResource(
     // ref_contact_role — basic, all-object-type reference tables that the save path
     // (saveObjectWorkspaceContacts) already queries. Enriched unconditionally so the
     // editor's contact type/role dropdowns are populated, not behind the optional gate.
-    getObjectWorkspaceContactsModule(objectId, parsedModules.contacts),
+    getObjectWorkspaceContactsModule(objectId, parsedModules.contacts, catalogs),
     // Amenity / payment / environment / language CATALOGS live in ref_amenity, ref_code and
     // ref_language — basic reference tables the save path already queries. Enriched unconditionally
     // (like contacts above) so the editor's selectors are populated with the full catalog from the
@@ -3961,7 +3948,7 @@ export async function getObjectWorkspaceResource(
     facetRows,
   ] = await Promise.all([
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
-    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? ''),
+    getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? '', catalogs),
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),

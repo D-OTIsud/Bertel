@@ -369,6 +369,11 @@ export async function saveWorkspaceModule(objectId: string, input: SaveWorkspace
  * One post-save cache refresh for a whole save batch, fire-and-forget: the editor snapshot is
  * init-once (it never consumes the refetch), so nothing should wait on the heavy workspace
  * reload — it only re-warms the caches for the preview drawer and the next mount.
+ *
+ * Depuis que le tiroir observe `object-detail` (il ne consomme plus le chargeur
+ * d'espace de travail), cette invalidation-la declenche un VRAI rechargement quand le
+ * tiroir est ouvert, et non plus un simple marquage. C'est voulu : une note d'equipe
+ * ajoutee depuis le tiroir doit reapparaitre. Cout : 1 requete, pas 85.
  */
 export function invalidateObjectWorkspaceCaches(queryClient: QueryClient, objectId: string): void {
   void queryClient.invalidateQueries({ queryKey: ['object-workspace', objectId] });

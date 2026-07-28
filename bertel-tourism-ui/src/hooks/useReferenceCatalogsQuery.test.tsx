@@ -44,7 +44,9 @@ describe('useReferenceCatalogsQuery', () => {
 
     const entry = client.getQueryCache().find({ queryKey: [...REFERENCE_CATALOGS_QUERY_KEY] });
     expect(entry?.meta?.persist).toBe(true);
-    expect(entry?.options.staleTime).toBe(60 * 60 * 1000);
+    // `staleTime` n'est pas expose sur le type QueryOptions du cache (il vit sur
+    // les options d'observateur) ; on le lit tel quel, l'assertion reste exacte.
+    expect((entry?.options as { staleTime?: number } | undefined)?.staleTime).toBe(60 * 60 * 1000);
   });
 });
 

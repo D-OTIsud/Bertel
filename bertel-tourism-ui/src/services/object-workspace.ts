@@ -1517,6 +1517,7 @@ export async function getObjectWorkspaceMediaModule(
   objectId: string,
   baseModule: ObjectWorkspaceMediaModule,
   placeLabelById: Map<string, string>,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceMediaModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1543,7 +1544,11 @@ export async function getObjectWorkspaceMediaModule(
   }
 
   const placeIds = Array.from(placeLabelById.keys());
-  const [objectMediaResult, placeMediaResult, mediaTypeResult, tagRefResult] = await Promise.allSettled([
+  // 2 catalogues depuis le cache de session : 4 requetes -> 2.
+  const mediaTypeRefs = catalogs.refCodeByDomain.media_type ?? [];
+  const mediaTagRefs = catalogs.refCodeByDomain.media_tag ?? [];
+
+  const [objectMediaResult, placeMediaResult] = await Promise.allSettled([
     client
       .from('media')
       .select('id, object_id, place_id, media_type_id, title, title_i18n, description, description_i18n, credit, url, is_main, is_published, position, rights_expires_at, visibility, width, height, kind')
@@ -1557,19 +1562,15 @@ export async function getObjectWorkspaceMediaModule(
           .in('place_id', placeIds)
           .order('position', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
-    client.from('ref_code').select('id, code, name').eq('domain', 'media_type').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name').eq('domain', 'media_tag').order('position', { ascending: true }),
   ]);
 
-  const typeOptions =
-    mediaTypeResult.status === 'fulfilled' && mediaTypeResult.value.error == null
-      ? (mediaTypeResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
-      : baseModule.typeOptions;
+  const typeOptions = mediaTypeRefs.length > 0
+    ? mediaTypeRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>))
+    : baseModule.typeOptions;
 
-  const tagOptions =
-    tagRefResult.status === 'fulfilled' && tagRefResult.value.error == null
-      ? (tagRefResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
-      : baseModule.tagOptions;
+  const tagOptions = mediaTagRefs.length > 0
+    ? mediaTagRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>))
+    : baseModule.tagOptions;
 
   // R1 no-clobber: a failed object-media select must NOT silently become an empty
   // grid — the saver's delete reconcile would interpret it as "delete everything".
@@ -2717,6 +2718,7 @@ async function getObjectWorkspaceRoomsModule(
 async function getObjectWorkspaceMeetingRoomsModule(
   objectId: string,
   baseModule: ObjectWorkspaceMeetingRoomsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceMeetingRoomsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2730,13 +2732,15 @@ async function getObjectWorkspaceMeetingRoomsModule(
       : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les salles MICE.' };
   }
 
-  const [roomsResult, equipmentRefsResult] = await Promise.allSettled([
+  // 1 catalogue depuis le cache de session.
+  const equipmentRefs = catalogs.refCodeByDomain.meeting_equipment ?? [];
+
+  const [roomsResult] = await Promise.allSettled([
     client
       .from('object_meeting_room')
       .select('id, name, name_i18n, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
       .eq('object_id', objectId)
       .order('name', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'meeting_equipment').order('position', { ascending: true }),
   ]);
 
   if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
@@ -2751,8 +2755,8 @@ async function getObjectWorkspaceMeetingRoomsModule(
   const linksResult = roomIds.length > 0
     ? await client.from('meeting_room_equipment').select('room_id, equipment_id').in('room_id', roomIds)
     : { data: [], error: null };
-  const equipmentOptions = equipmentRefsResult.status === 'fulfilled' && equipmentRefsResult.value.error == null
-    ? dedupeReferenceOptions((equipmentRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const equipmentOptions = equipmentRefs.length > 0
+    ? dedupeReferenceOptions(equipmentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.equipmentOptions;
   const equipmentById = optionMapById(equipmentOptions);
   const equipmentCodesByRoom = new Map<string, string[]>();
@@ -2798,6 +2802,7 @@ async function getObjectWorkspaceMeetingRoomsModule(
 async function getObjectWorkspaceCuisineModule(
   objectId: string,
   baseModule: ObjectWorkspaceCuisineModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceCuisineModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2808,16 +2813,18 @@ async function getObjectWorkspaceCuisineModule(
     return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les cuisines.' };
   }
 
-  const [catalogResult, linksResult] = await Promise.allSettled([
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'cuisine_type').order('position', { ascending: true }),
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const cuisineRefs = catalogs.refCodeByDomain.cuisine_type ?? [];
+
+  const [linksResult] = await Promise.allSettled([
     client.from('object_cuisine_type').select('cuisine_type_id, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
-  if (catalogResult.status !== 'fulfilled' || catalogResult.value.error != null) {
+  if (cuisineRefs.length === 0) {
     return { ...baseModule, unavailableReason: 'Le catalogue des types de cuisine n’a pas pu être chargé.' };
   }
   const options = dedupeReferenceOptions(
-    (catalogResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    cuisineRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const codeById = new Map(options.map((option) => [option.id, option.code]));
 
@@ -3956,13 +3963,13 @@ export async function getObjectWorkspaceResource(
     crmFollowUpModule,
     facetRows,
   ] = await Promise.all([
-    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
+    getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? ''),
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
-    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
+    getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),
     getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
-    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine),
+    getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine, catalogs),
     getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),

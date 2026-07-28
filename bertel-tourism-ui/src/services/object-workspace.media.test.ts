@@ -149,6 +149,12 @@ afterEach(() => {
  * a DB NULL visibility means "extended-scope only" under the 8t read gate;
  * the editor must never silently widen it to 'public'.
  */
+// Catalogues vides : ces tests portent sur le chargement des MEDIAS de l'objet,
+// pas sur les catalogues (le module retombe alors sur baseModule.typeOptions).
+function emptyCatalogs() {
+  return { refCodeByDomain: {}, tables: {} };
+}
+
 describe('media visibility NULL handling', () => {
   it('loader normalization keeps a NULL DB visibility as empty (not public)', () => {
     const item = normalizeWorkspaceMediaItem({
@@ -251,7 +257,7 @@ describe('media load-failure no-clobber guard', () => {
     const { client } = makeMockClient({ failObjectMediaSelect: true });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceMediaModule('o1', mediaModule([mediaItem()]), new Map());
+    const moduleResult = await getObjectWorkspaceMediaModule('o1', mediaModule([mediaItem()]), new Map(), emptyCatalogs());
 
     expect(moduleResult.unavailableReason).toBeTruthy();
     expect(moduleResult.objectItems).toEqual([]);
@@ -261,7 +267,7 @@ describe('media load-failure no-clobber guard', () => {
     const { client } = makeMockClient({ existingMediaIds: [] });
     mockGetClient.mockReturnValue(client);
 
-    const moduleResult = await getObjectWorkspaceMediaModule('o1', mediaModule([]), new Map());
+    const moduleResult = await getObjectWorkspaceMediaModule('o1', mediaModule([]), new Map(), emptyCatalogs());
 
     expect(moduleResult.unavailableReason).toBeNull();
   });

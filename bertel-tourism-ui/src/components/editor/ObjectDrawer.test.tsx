@@ -5,14 +5,14 @@ import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
 
 const mockPush = jest.fn();
-const mockUseObjectWorkspaceQuery = jest.fn();
+const mockUseObjectDetailQuery = jest.fn();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
-  useObjectWorkspaceQuery: (...args: unknown[]) => mockUseObjectWorkspaceQuery(...args),
+  useObjectDetailQuery: (...args: unknown[]) => mockUseObjectDetailQuery(...args),
   useLocationReferenceOptionsQuery: () => ({ data: {}, isLoading: false, isError: false, error: null }),
   useSaveObjectWorkspaceModuleMutation: () => ({ mutateAsync: jest.fn() }),
   usePublishObjectWorkspaceMutation: () => ({ mutateAsync: jest.fn() }),
@@ -34,264 +34,17 @@ jest.mock('../../hooks/usePresenceRoom', () => ({
   }),
 }));
 
-const emptyPlan4Modules = {
-  tags: { displayed: [], derived: [], library: [] },
-  sustainability: { categories: [], equivalentLabels: [] },
-  distribution: { channels: [], readonlyReason: null },
-  provider: {
-    siret: '',
-    companyName: '',
-    sireneVerified: false,
-    legalForm: '',
-    nafCode: '',
-    consularChamber: '',
-    cfeOrganization: '',
-    directorFullName: '',
-    directorEmail: '',
-    directorPhone: '',
-    address: '',
-    incorporationDate: '',
-    readonlyReason: null,
-  },
-};
-
-const emptyPlan4Permissions = {
-  tags: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-  sustainability: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-  distribution: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-  provider: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-};
-
-function buildWorkspaceResource(params: { id: string; name: string; type?: string; description?: string }) {
+// Le tiroir est view-only : il ne consomme que le payload de la fiche
+// (useObjectDetailQuery). Le decor workspace (modules / permissions) a ete
+// retire avec la bascule — il ne decrivait plus rien de ce que le composant lit.
+function buildObjectDetail(params: { id: string; name: string; type?: string; description?: string }) {
   return {
     id: params.id,
     name: params.name,
     type: params.type ?? 'HOT',
-    detail: {
-      id: params.id,
-      name: params.name,
-      type: params.type ?? 'HOT',
-      raw: {
-        description: params.description ?? '',
-        status: 'published',
-      },
-    },
-    modules: {
-      generalInfo: {
-        name: params.name,
-        nameTranslations: {},
-        businessTimezone: 'Indian/Reunion',
-        commercialVisibility: 'active',
-        regionCode: 'RUN',
-        status: 'published',
-        publishedAt: '',
-        isEditing: false,
-        secondaryTypes: [],
-      },
-      taxonomy: { domains: [], unavailableReason: null },
-      publication: {
-        status: 'published',
-        publishedAt: '',
-        isEditing: false,
-        moderation: { availability: 'available', pendingCount: 0, unavailableReason: null, items: [] },
-        printPublications: { availability: 'available', selectionCount: 0, unavailableReason: null, items: [] },
-      },
-      syncIdentifiers: {
-        objectCreatedAt: '',
-        objectUpdatedAt: '',
-        objectUpdatedAtSource: 'manual',
-        externalIdentifiers: [],
-        origins: [],
-        externalIdentifiersVisibilityNote: null,
-        originsVisibilityNote: null,
-      },
-      location: {
-        main: {
-          recordId: null,
-          address1: '',
-          address1Suite: '',
-          address2: '',
-          address3: '',
-          postcode: '',
-          city: '',
-          codeInsee: '',
-          lieuDit: '',
-          direction: '',
-          latitude: '',
-          longitude: '',
-          zoneTouristique: '',
-        },
-        places: [],
-        zoneCodes: [],
-      },
-      descriptions: {
-        localLanguage: 'fr',
-        activeLanguage: 'fr',
-        availableLanguages: ['fr'],
-        object: {
-          recordId: null,
-          scope: 'object',
-          placeId: null,
-          label: 'Objet principal',
-          visibility: 'public',
-          description: { baseValue: params.description ?? '', values: {} },
-          chapo: { baseValue: '', values: {} },
-          adaptedDescription: { baseValue: '', values: {} },
-          mobileDescription: { baseValue: '', values: {} },
-          editorialDescription: { baseValue: '', values: {} },
-        },
-        places: [],
-      },
-      media: { typeOptions: [], tagOptions: [], objectItems: [], placeItems: [], placeScopeUnavailableReason: null, unavailableReason: null },
-      contacts: { kindOptions: [], roleOptions: [], objectItems: [], webItems: [], webKindOptions: [], relatedActorContactsCount: 0, relatedOrganizationContactsCount: 0 },
-      characteristics: {
-        languageOptions: [],
-        languageLevelOptions: [],
-        selectedLanguages: [],
-        paymentOptions: [],
-        selectedPaymentCodes: [],
-        environmentOptions: [],
-        selectedEnvironmentCodes: [],
-        amenityGroups: [],
-        selectedAmenityCodes: [],
-        unavailableReason: null,
-      },
-      distinctions: {
-        distinctionGroups: [],
-        accessibilityLabels: [],
-        accessibilityAmenityCoverage: [],
-        schemeOptions: [],
-        unavailableReason: null,
-      },
-      capacityPolicies: {
-        metricOptions: [],
-        capacityItems: [],
-        groupPolicy: { minSize: '', maxSize: '', groupOnly: false, notes: '' },
-        petPolicy: { accepted: false, conditions: '' },
-        unavailableReason: null,
-      },
-      pricing: {
-        priceKindOptions: [],
-        priceTypeOptions: [],
-        priceSeasonOptions: [],
-        priceUnitOptions: [],
-        prices: [],
-        discounts: [],
-        promotions: [],
-        promotionsUnavailableReason: null,
-        unavailableReason: null,
-      },
-      rooms: { viewTypeOptions: [], amenityOptions: [], mediaOptions: [], items: [], unavailableReason: null },
-      meetingRooms: { equipmentOptions: [], items: [], unavailableReason: null },
-      menus: {
-        categoryOptions: [],
-        dietaryTagOptions: [],
-        allergenOptions: [],
-        cuisineTypeOptions: [],
-        priceKindOptions: [],
-        priceUnitOptions: [],
-        mediaOptions: [],
-        items: [],
-        unavailableReason: null,
-      },
-      activity: {
-        durationMin: '',
-        minParticipants: '',
-        maxParticipants: '',
-        difficultyLevel: '',
-        guideRequired: false,
-        minAge: '',
-        equipmentProvided: false,
-        equipmentProvidedDetails: '',
-        difficultyOptions: [],
-        unavailableReason: null,
-      },
-      places: { items: [], unavailableReason: null },
-      event: {
-        startDate: '',
-        endDate: '',
-        startTime: '',
-        endTime: '',
-        recurring: false,
-        recurrenceText: '',
-        occurrences: [],
-        unavailableReason: null,
-      },
-      itinerary: {
-        distanceKm: '',
-        durationMin: '',
-        difficultyLevel: '',
-        elevationPositiveM: '',
-        elevationNegativeM: '',
-        loop: false,
-        openStatus: '',
-        statusNote: '',
-        practiceOptions: [],
-        practiceCodes: [],
-        stages: [],
-        sectionsCount: 0,
-        profilesCount: 0,
-        geometrySummary: '',
-        traceEditable: false,
-        unavailableReason: null,
-      },
-      openings: { periods: [], unavailableReason: null },
-      providerFollowUp: { notes: [], interactionsUnavailableReason: null, tasksUnavailableReason: null },
-      relationships: {
-        organizationLinks: [],
-        actors: [],
-        relatedObjects: [],
-        orgRoleOptions: [],
-        orgOptions: [],
-        actorRoleOptions: [],
-        organizationLinkWriteUnavailableReason: null,
-        actorWriteUnavailableReason: null,
-        actorConsentUnavailableReason: null,
-        relatedObjectWriteUnavailableReason: null,
-      },
-      memberships: { campaignOptions: [], tierOptions: [], scopeOptions: [], items: [], unavailableReason: null },
-      legal: {
-        typeOptions: [],
-        records: [],
-        compliance: {
-          complianceStatus: 'unknown',
-          requiredCount: 0,
-          validCount: 0,
-          expiringCount: 0,
-          missingCount: 0,
-          compliancePercentage: 0,
-          details: [],
-        },
-        unavailableReason: null,
-      },
-      ...emptyPlan4Modules,
-    },
-    permissions: {
-      generalInfo: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      taxonomy: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      publication: { canDirectWrite: true, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      syncIdentifiers: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      location: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null, canEditZones: true },
-      places: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      descriptions: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null, canEditCanonical: true, canEditOrgEnrichment: false },
-      media: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null, canEditPlaceMedia: false },
-      contacts: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      characteristics: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      distinctions: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      capacityPolicies: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      pricing: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      rooms: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      meetingRooms: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      menus: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      activity: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      event: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      itinerary: { canDirectWrite: true, canPrepareProposal: true, canSubmitProposal: false, disabledReason: null },
-      openings: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      providerFollowUp: { canDirectWrite: true, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      relationships: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      memberships: { canDirectWrite: true, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      legal: { canDirectWrite: true, canPrepareProposal: false, canSubmitProposal: false, disabledReason: null },
-      ...emptyPlan4Permissions,
+    raw: {
+      description: params.description ?? '',
+      status: 'published',
     },
   };
 }
@@ -302,11 +55,11 @@ describe('ObjectDrawer view-only shell', () => {
     useUiStore.setState({ drawerObjectId: 'obj-1' });
     useObjectDrawerStore.setState({ dirtyObjects: {} });
     useSessionStore.setState({ role: 'tourism_agent', status: 'ready' });
-    mockUseObjectWorkspaceQuery.mockReset();
+    mockUseObjectDetailQuery.mockReset();
   });
 
   it('shows a loading skeleton instead of the object technical id while fetching', () => {
-    mockUseObjectWorkspaceQuery.mockReturnValue({
+    mockUseObjectDetailQuery.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -320,8 +73,8 @@ describe('ObjectDrawer view-only shell', () => {
   });
 
   it('renders the detail preview when the workspace is loaded', () => {
-    mockUseObjectWorkspaceQuery.mockReturnValue({
-      data: buildWorkspaceResource({ id: 'obj-1', name: 'Hotel A', description: 'Vue mer' }),
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: buildObjectDetail({ id: 'obj-1', name: 'Hotel A', description: 'Vue mer' }),
       isLoading: false,
       isError: false,
       error: null,
@@ -335,8 +88,8 @@ describe('ObjectDrawer view-only shell', () => {
   });
 
   it('navigates to the full-page editor when Modifier is clicked', () => {
-    mockUseObjectWorkspaceQuery.mockReturnValue({
-      data: buildWorkspaceResource({ id: 'obj-1', name: 'Hotel A' }),
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: buildObjectDetail({ id: 'obj-1', name: 'Hotel A' }),
       isLoading: false,
       isError: false,
       error: null,
@@ -349,8 +102,8 @@ describe('ObjectDrawer view-only shell', () => {
   });
 
   it('PLAN 6 : rend le panneau ORG (pas d’éditeur, renvoi vers /team) pour une ORG', () => {
-    mockUseObjectWorkspaceQuery.mockReturnValue({
-      data: buildWorkspaceResource({ id: 'org-1', name: 'OTI du Sud', type: 'ORG' }),
+    mockUseObjectDetailQuery.mockReturnValue({
+      data: buildObjectDetail({ id: 'org-1', name: 'OTI du Sud', type: 'ORG' }),
       isLoading: false,
       isError: false,
       error: null,

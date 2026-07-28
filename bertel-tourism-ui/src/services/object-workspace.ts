@@ -2824,6 +2824,7 @@ async function getObjectWorkspaceCuisineModule(
 async function getObjectWorkspaceMenusModule(
   objectId: string,
   baseModule: ObjectWorkspaceMenusModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceMenusModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2837,14 +2838,20 @@ async function getObjectWorkspaceMenusModule(
       : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les menus.' };
   }
 
-  const [menusResult, categoryRefsResult, dietaryRefsResult, allergenRefsResult, cuisineRefsResult, kindRefsResult, unitRefsResult, mediaResult] = await Promise.allSettled([
+  // 6 catalogues depuis le cache de session : ce module passe de 8 requetes a 2
+  // sur son premier saut. C'etait le plus gros emetteur du chargement, execute
+  // meme pour un HEB sans aucun menu.
+  const menuRefs = {
+    category: catalogs.refCodeByDomain.menu_category ?? [],
+    dietary: catalogs.refCodeByDomain.dietary_tag ?? [],
+    allergen: catalogs.refCodeByDomain.allergen ?? [],
+    cuisine: catalogs.refCodeByDomain.cuisine_type ?? [],
+    priceKind: catalogs.refCodeByDomain.price_kind ?? [],
+    priceUnit: catalogs.refCodeByDomain.price_unit ?? [],
+  };
+
+  const [menusResult, mediaResult] = await Promise.allSettled([
     client.from('object_menu').select('id, category_id, name, description, is_active, visibility, position').eq('object_id', objectId).order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'menu_category').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'dietary_tag').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'allergen').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'cuisine_type').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_kind').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_unit').order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
@@ -2885,23 +2892,23 @@ async function getObjectWorkspaceMenusModule(
         { status: 'fulfilled' as const, value: { data: [], error: null } },
         { status: 'fulfilled' as const, value: { data: [], error: null } },
       ];
-  const categoryOptions = categoryRefsResult.status === 'fulfilled' && categoryRefsResult.value.error == null
-    ? dedupeReferenceOptions((categoryRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const categoryOptions = menuRefs.category.length > 0
+    ? dedupeReferenceOptions(menuRefs.category.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.categoryOptions;
-  const dietaryTagOptions = dietaryRefsResult.status === 'fulfilled' && dietaryRefsResult.value.error == null
-    ? dedupeReferenceOptions((dietaryRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const dietaryTagOptions = menuRefs.dietary.length > 0
+    ? dedupeReferenceOptions(menuRefs.dietary.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.dietaryTagOptions;
-  const allergenOptions = allergenRefsResult.status === 'fulfilled' && allergenRefsResult.value.error == null
-    ? dedupeReferenceOptions((allergenRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const allergenOptions = menuRefs.allergen.length > 0
+    ? dedupeReferenceOptions(menuRefs.allergen.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.allergenOptions;
-  const cuisineTypeOptions = cuisineRefsResult.status === 'fulfilled' && cuisineRefsResult.value.error == null
-    ? dedupeReferenceOptions((cuisineRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const cuisineTypeOptions = menuRefs.cuisine.length > 0
+    ? dedupeReferenceOptions(menuRefs.cuisine.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.cuisineTypeOptions;
-  const priceKindOptions = kindRefsResult.status === 'fulfilled' && kindRefsResult.value.error == null
-    ? dedupeReferenceOptions((kindRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const priceKindOptions = menuRefs.priceKind.length > 0
+    ? dedupeReferenceOptions(menuRefs.priceKind.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.priceKindOptions;
-  const priceUnitOptions = unitRefsResult.status === 'fulfilled' && unitRefsResult.value.error == null
-    ? dedupeReferenceOptions((unitRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const priceUnitOptions = menuRefs.priceUnit.length > 0
+    ? dedupeReferenceOptions(menuRefs.priceUnit.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.priceUnitOptions;
   const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
     ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
@@ -3940,7 +3947,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
-    getObjectWorkspaceMenusModule(objectId, parsedModules.menus),
+    getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
     getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine),
     getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),

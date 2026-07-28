@@ -1802,7 +1802,6 @@ async function getObjectWorkspaceRelationshipsModule(
       .order('is_primary', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: true }),
     client.from('object').select('id, name').eq('object_type', 'ORG').order('name', { ascending: true }),
-    client.from('ref_actor_role').select('id, code, name').order('position', { ascending: true }),
   ]);
 
   // Anti-clobber: when org links can't be read reliably, keep the parser rows AND a reason —

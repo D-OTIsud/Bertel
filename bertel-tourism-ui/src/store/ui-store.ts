@@ -8,6 +8,13 @@ interface UiState {
   mapLayer: MapLayerMode;
   networkStatus: NetworkStatus;
   liveMembers: PresenceMember[];
+  /**
+   * Reprise du canal temps réel, publiée par `useGlobalPresence` (seul écrivain) et
+   * consommée par le bouton « Reconnecter » de la pastille réseau. `null` quand aucun
+   * canal n'est monté (mode démo, invité, pas de backend) : le bouton retombe alors
+   * sur un rechargement de page. Non persisté.
+   */
+  realtimeRetry: (() => void) | null;
   markerStyles: Record<ObjectTypeCode, MarkerStyle>;
   /** D24 : palette de commandes ⌘K (état de session, non persisté). */
   commandPaletteOpen: boolean;
@@ -19,6 +26,7 @@ interface UiState {
   setMobileNavOpen: (open: boolean) => void;
   setMapLayer: (layer: MapLayerMode) => void;
   setNetworkStatus: (status: NetworkStatus) => void;
+  setRealtimeRetry: (retry: (() => void) | null) => void;
   setLivePresence: (members: PresenceMember[]) => void;
   setMarkerStyles: (styles: unknown) => void;
   setMarkerColor: (type: ObjectTypeCode, color: string) => void;
@@ -36,6 +44,7 @@ export const useUiStore = create<UiState>()(
       mapLayer: 'satellite',
       networkStatus: 'connected',
       liveMembers: [],
+      realtimeRetry: null,
       markerStyles: defaultMarkerStyles,
       commandPaletteOpen: false,
       mobileNavOpen: false,
@@ -45,6 +54,7 @@ export const useUiStore = create<UiState>()(
       setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
       setMapLayer: (layer) => set({ mapLayer: layer }),
       setNetworkStatus: (status) => set({ networkStatus: status }),
+      setRealtimeRetry: (retry) => set({ realtimeRetry: retry }),
       setLivePresence: (members) => set({ liveMembers: members }),
       setMarkerStyles: (styles) => set({ markerStyles: coerceMarkerStyles(styles) }),
       setMarkerColor: (type, color) =>

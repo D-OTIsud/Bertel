@@ -2192,6 +2192,10 @@ a {
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
+.status-pill__refresh:disabled {
+  cursor: progress;
+}
+
 .status-pill__refresh:active svg {
   transform: rotate(180deg);
 }
@@ -2200,8 +2204,17 @@ a {
   transition: transform 240ms var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
+.status-pill__refresh-spin {
+  animation: status-pill-spin 900ms linear infinite;
+}
+
+@keyframes status-pill-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .status-pill__refresh svg { transition: none; }
+  .status-pill__refresh-spin { animation-duration: 2.4s; }
 }
 
 .status-pill--orange {

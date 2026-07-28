@@ -12,6 +12,7 @@ function seed(members: PresenceMember[], networkStatus: NetworkStatus = 'connect
 
 describe('LivePresenceIndicator', () => {
   beforeEach(() => {
+    useUiStore.setState({ realtimeRetry: null });
     useSessionStore.setState({ userId: 'me' });
     seed([{ userId: 'me', name: 'Marie', avatar: 'MA', color: '#ff7b54', onlineSince: Date.now() - 5 * 60_000 }]);
   });
@@ -56,24 +57,40 @@ describe('LivePresenceIndicator', () => {
     expect(screen.getByText('Hors ligne')).toBeInTheDocument();
   });
 
-  it('offers a refresh button only while the connection is degraded, and it reloads the page', async () => {
+  it('offers the reconnect button only while the connection is degraded', () => {
+    const { unmount } = render(<LivePresenceIndicator />); // networkStatus = 'connected'
+    expect(screen.queryByRole('button', { name: /reconnecter/i })).not.toBeInTheDocument();
+    unmount();
+
+    seed([], 'degraded');
+    render(<LivePresenceIndicator />);
+    expect(screen.getByText('Temps réel interrompu')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reconnecter/i })).toBeInTheDocument();
+  });
+
+  it('reconnects the realtime channel in place, without reloading the page', async () => {
+    const user = userEvent.setup();
+    const realtimeRetry = jest.fn();
+    seed([], 'degraded');
+    useUiStore.setState({ realtimeRetry });
+
+    render(<LivePresenceIndicator />);
+    await user.click(screen.getByRole('button', { name: /reconnecter/i }));
+
+    expect(realtimeRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to a page reload when no realtime channel is mounted', async () => {
     const user = userEvent.setup();
     const reload = jest.fn();
     const original = window.location;
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { ...original, reload },
-    });
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, reload } });
 
     try {
-      const { unmount } = render(<LivePresenceIndicator />); // networkStatus = 'connected'
-      expect(screen.queryByRole('button', { name: /rafraîchir la page/i })).not.toBeInTheDocument();
-      unmount();
-
-      seed([], 'degraded');
+      seed([], 'offline');
+      useUiStore.setState({ realtimeRetry: null });
       render(<LivePresenceIndicator />);
-      expect(screen.getByText('Temps réel interrompu')).toBeInTheDocument();
-      await user.click(screen.getByRole('button', { name: /rafraîchir la page/i }));
+      await user.click(screen.getByRole('button', { name: /reconnecter/i }));
       expect(reload).toHaveBeenCalledTimes(1);
     } finally {
       Object.defineProperty(window, 'location', { configurable: true, value: original });

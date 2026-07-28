@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ObjectDrawerShell } from './ObjectDrawerShell';
+import { useSessionStore } from '../../store/session-store';
 
 // Le tiroir est en LECTURE SEULE : il ne doit consommer que le chargeur léger
 // (1 RPC), jamais le chargeur d'espace de travail (~85 requêtes) qui n'existe
@@ -9,6 +10,7 @@ import { ObjectDrawerShell } from './ObjectDrawerShell';
 // re-branche le tiroir sur useObjectWorkspaceQuery.
 const detailSpy = jest.fn();
 const workspaceSpy = jest.fn();
+const prefetchWorkspaceSpy = jest.fn();
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectDetailQuery: (objectId: string | null) => {
@@ -24,14 +26,16 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
     workspaceSpy(objectId);
     return { data: undefined, isError: false, error: null, isLoading: true };
   },
+  usePrefetchObjectWorkspace: () => prefetchWorkspaceSpy,
 }));
 
 jest.mock('../../hooks/usePresenceRoom', () => ({
   usePresenceRoom: () => ({ peers: [], typingUsers: [] }),
 }));
 
+const mockPrefetch = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), prefetch: (...args: unknown[]) => mockPrefetch(...args) }),
 }));
 
 jest.mock('./ObjectDetailView', () => ({
@@ -49,6 +53,10 @@ describe('ObjectDrawerShell', () => {
   beforeEach(() => {
     detailSpy.mockClear();
     workspaceSpy.mockClear();
+    mockPrefetch.mockClear();
+    prefetchWorkspaceSpy.mockClear();
+    // `canEdit` gate le prechargement ET le bouton « Modifier ».
+    useSessionStore.setState({ role: 'tourism_agent' });
   });
 
   test('consomme le chargeur léger et jamais le chargeur d espace de travail', () => {
@@ -63,5 +71,23 @@ describe('ObjectDrawerShell', () => {
 
     expect(screen.getByRole('heading', { name: 'Chez Testeur' })).toBeInTheDocument();
     expect(screen.getByTestId('detail-view')).toHaveTextContent('Chez Testeur');
+  });
+
+  test('precharge la route editeur a l ouverture du tiroir', () => {
+    render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+    expect(mockPrefetch).toHaveBeenCalledWith('/objects/RESRUN0000000001/edit');
+  });
+
+  test('ne precharge les DONNEES de l editeur qu au survol de « Modifier »', () => {
+    render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+    // Le simple affichage du tiroir ne doit PAS declencher le chargeur lourd :
+    // sinon toutes les fiches consultees paieraient les ~85 requetes.
+    expect(prefetchWorkspaceSpy).not.toHaveBeenCalled();
+
+    fireEvent.mouseEnter(screen.getByRole('button', { name: /modifier/i }));
+
+    expect(prefetchWorkspaceSpy).toHaveBeenCalledWith('RESRUN0000000001');
   });
 });

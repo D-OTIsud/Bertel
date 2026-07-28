@@ -1,10 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Printer, X } from 'lucide-react';
 import { AvatarStack } from '../../components/common/AvatarStack';
 import { StatusPill } from '../../components/common/StatusPill';
-import { useObjectDetailQuery } from '../../hooks/useExplorerQueries';
+import { useObjectDetailQuery, usePrefetchObjectWorkspace } from '../../hooks/useExplorerQueries';
 import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useSessionStore } from '../../store/session-store';
 import { resolveTypeLabel } from '../../utils/labels';
@@ -83,6 +84,7 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   );
   const role = useSessionStore((state) => state.role);
   const canEdit = role !== null;
+  const prefetchWorkspace = usePrefetchObjectWorkspace();
 
   const resolvedData = data ?? null;
   const isShellLoading = isLoading || !resolvedData;
@@ -95,6 +97,17 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const typeLabel = resolveTypeLabel(resolvedData?.type);
   const typeLineUpper = typeLabel ? typeLabel.toUpperCase() : '';
   const title = resolvedData?.name ?? 'Chargement…';
+
+  // Le bouton « Modifier » est un <button> + router.push, donc Next ne precharge
+  // PAS la route (il ne le fait que pour les <Link>). Le bundle de l'editeur
+  // (~253 Ko JS+CSS, 20-21 sections importees statiquement) partait au clic. On
+  // le telecharge pendant que l'utilisateur lit la fiche.
+  useEffect(() => {
+    if (!objectId || !canEdit) {
+      return;
+    }
+    router.prefetch(`/objects/${objectId}/edit`);
+  }, [canEdit, objectId, router]);
 
   function openFullPageEditor() {
     if (!objectId) {
@@ -135,7 +148,13 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
             <span>Imprimer</span>
           </button>
           {canEdit && !isOrg && (
-            <button type="button" className="drawer-header__btn-primary" onClick={openFullPageEditor}>
+            <button
+              type="button"
+              className="drawer-header__btn-primary"
+              onMouseEnter={() => objectId && prefetchWorkspace(objectId)}
+              onFocus={() => objectId && prefetchWorkspace(objectId)}
+              onClick={openFullPageEditor}
+            >
               <Pencil className="h-4 w-4" strokeWidth={2} />
               Modifier
             </button>

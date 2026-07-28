@@ -8,11 +8,12 @@ const mockPush = jest.fn();
 const mockUseObjectDetailQuery = jest.fn();
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, prefetch: jest.fn() }),
 }));
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectDetailQuery: (...args: unknown[]) => mockUseObjectDetailQuery(...args),
+  usePrefetchObjectWorkspace: () => jest.fn(),
   useLocationReferenceOptionsQuery: () => ({ data: {}, isLoading: false, isError: false, error: null }),
   useSaveObjectWorkspaceModuleMutation: () => ({ mutateAsync: jest.fn() }),
   usePublishObjectWorkspaceMutation: () => ({ mutateAsync: jest.fn() }),

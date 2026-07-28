@@ -287,6 +287,33 @@ export function usePrefetchObjectDetail(): (objectId: string) => () => void {
   );
 }
 
+/**
+ * Precharge les donnees LOURDES de l'editeur (le chargeur d'espace de travail)
+ * au survol du bouton « Modifier ». Depuis que le tiroir ne charge plus que la
+ * fiche seule, ce prechauffage-la doit etre explicite ; on le declenche sur le
+ * signal d'intention le plus fiable, pour ne PAS payer les ~85 requetes sur les
+ * fiches simplement consultees.
+ */
+export function usePrefetchObjectWorkspace(): (objectId: string) => void {
+  const queryClient = useQueryClient();
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useMemo(
+    () => (objectId: string) => {
+      if (!objectId) {
+        return;
+      }
+      void queryClient
+        .prefetchQuery({
+          queryKey: ['object-workspace', objectId, langPrefs],
+          queryFn: () => getObjectWorkspaceResource(objectId, langPrefs),
+        })
+        .catch(() => undefined);
+    },
+    [langPrefs, queryClient],
+  );
+}
+
 export function useObjectWorkspaceQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
 

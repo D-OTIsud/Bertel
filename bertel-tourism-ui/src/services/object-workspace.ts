@@ -1775,6 +1775,7 @@ async function getObjectWorkspaceContactsModule(
 async function getObjectWorkspaceRelationshipsModule(
   objectId: string,
   baseModule: ObjectWorkspaceRelationshipsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceRelationshipsModule> {
   const session = useSessionStore.getState();
 
@@ -1799,8 +1800,13 @@ async function getObjectWorkspaceRelationshipsModule(
     };
   }
 
-  const [orgRolesResult, orgLinksResult, orgObjectsResult, actorRolesResult] = await Promise.all([
-    client.from('ref_org_role').select('id, code, name').order('position', { ascending: true }),
+  // 2 catalogues depuis le cache de session. La liste des ORG reste une requete :
+  // elle passe par la RLS, donc elle depend de l utilisateur et n a rien a faire
+  // dans un cache partage entre tous les utilisateurs du navigateur.
+  const orgRoleRows = catalogs.tables.ref_org_role ?? [];
+  const actorRoleRows = catalogs.tables.ref_actor_role ?? [];
+
+  const [orgLinksResult, orgObjectsResult] = await Promise.all([
     client
       .from('object_org_link')
       .select('org_object_id, role_id, is_primary, note, org:org_object_id(id, name, object_type, status), role:role_id(id, code, name)')
@@ -1838,8 +1844,8 @@ async function getObjectWorkspaceRelationshipsModule(
   return {
     ...baseModule,
     organizationLinks,
-    orgRoleOptions: orgRolesResult.error == null
-      ? (orgRolesResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
+    orgRoleOptions: orgRoleRows.length > 0
+      ? orgRoleRows.map((row) => normalizeReferenceOption(row))
       : [],
     orgOptions: orgObjectsResult.error == null
       ? ((orgObjectsResult.data ?? []) as Record<string, unknown>[]).map((row) => ({
@@ -1847,8 +1853,8 @@ async function getObjectWorkspaceRelationshipsModule(
           name: readString(row.name),
         }))
       : [],
-    actorRoleOptions: actorRolesResult.error == null
-      ? (actorRolesResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>))
+    actorRoleOptions: actorRoleRows.length > 0
+      ? actorRoleRows.map((row) => normalizeReferenceOption(row))
       : [],
     organizationLinkWriteUnavailableReason: orgLinksReadable
       ? null
@@ -2034,6 +2040,7 @@ async function getObjectWorkspaceMembershipModule(
   objectId: string,
   detail: ObjectDetail,
   baseModule: ObjectWorkspaceMembershipModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceMembershipModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2067,9 +2074,11 @@ async function getObjectWorkspaceMembershipModule(
     ...linkedOrgIds,
   ]));
 
-  const [campaignRefsResult, tierRefsResult, directMembershipsResult, orgMembershipsResult] = await Promise.all([
-    client.from('ref_code').select('id, code, name').eq('domain', 'membership_campaign').order('name', { ascending: true }),
-    client.from('ref_code').select('id, code, name').eq('domain', 'membership_tier').order('name', { ascending: true }),
+  // 2 catalogues depuis le cache de session.
+  const campaignRefs = catalogs.refCodeByDomain.membership_campaign ?? [];
+  const tierRefs = catalogs.refCodeByDomain.membership_tier ?? [];
+
+  const [directMembershipsResult, orgMembershipsResult] = await Promise.all([
     client
       .from('object_membership')
       .select('id, org_object_id, object_id, campaign_id, tier_id, status, starts_at, ends_at, payment_date, metadata')
@@ -2085,7 +2094,7 @@ async function getObjectWorkspaceMembershipModule(
       : Promise.resolve({ data: [], error: null }),
   ]);
 
-  if (campaignRefsResult.error || tierRefsResult.error || directMembershipsResult.error || orgMembershipsResult.error) {
+  if (directMembershipsResult.error || orgMembershipsResult.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module D3 complet pour ce profil.',
@@ -2111,10 +2120,10 @@ async function getObjectWorkspaceMembershipModule(
   }
 
   const campaignOptions = dedupeReferenceOptions(
-    ((campaignRefsResult.data ?? []) as Record<string, unknown>[]).map((row) => normalizeReferenceOption(row)),
+    campaignRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const tierOptions = dedupeReferenceOptions(
-    ((tierRefsResult.data ?? []) as Record<string, unknown>[]).map((row) => normalizeReferenceOption(row)),
+    tierRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const campaignById = new Map(campaignOptions.map((option) => [option.id, option]));
   const tierById = new Map(tierOptions.map((option) => [option.id, option]));
@@ -2285,6 +2294,7 @@ function normalizeWorkspaceLegalComplianceSummary(value: unknown): ObjectWorkspa
 async function getObjectWorkspaceLegalModule(
   objectId: string,
   baseModule: ObjectWorkspaceLegalModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceLegalModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2300,13 +2310,17 @@ async function getObjectWorkspaceLegalModule(
     };
   }
 
-  const [typeRefsResult, legalDataResult, complianceResult] = await Promise.allSettled([
-    client
-      .from('ref_legal_type')
-      .select('id, code, name, category, is_public, is_required')
-      .order('is_required', { ascending: false })
-      .order('category', { ascending: true })
-      .order('name', { ascending: true }),
+  // 1 catalogue depuis le cache de session. Le tri (obligatoires d abord, puis
+  // categorie, puis nom) etait fait cote serveur ; il l est desormais en memoire.
+  const legalTypeRows = [...(catalogs.tables.ref_legal_type ?? [])].sort((left, right) => {
+    const requiredDelta = Number(right.is_required === true) - Number(left.is_required === true);
+    if (requiredDelta !== 0) return requiredDelta;
+    const categoryDelta = readString(left.category).localeCompare(readString(right.category), 'fr');
+    if (categoryDelta !== 0) return categoryDelta;
+    return readString(left.name).localeCompare(readString(right.name), 'fr');
+  });
+
+  const [legalDataResult, complianceResult] = await Promise.allSettled([
     apiClient.schema('api').rpc('get_object_legal_data', {
       p_object_id: objectId,
     }),
@@ -2315,12 +2329,7 @@ async function getObjectWorkspaceLegalModule(
     }),
   ]);
 
-  if (
-    typeRefsResult.status !== 'fulfilled'
-    || legalDataResult.status !== 'fulfilled'
-    || typeRefsResult.value.error
-    || legalDataResult.value.error
-  ) {
+  if (legalDataResult.status !== 'fulfilled' || legalDataResult.value.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module D6 exploitable pour ce profil.',
@@ -2328,9 +2337,9 @@ async function getObjectWorkspaceLegalModule(
   }
 
   const typeOptions = dedupeReferenceOptions(
-    (typeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    legalTypeRows.map((row) => normalizeReferenceOption(row)),
   ).map((option) => {
-    const source = ((typeRefsResult.value.data ?? []) as Record<string, unknown>[])
+    const source = legalTypeRows
       .map(normalizeLegalTypeOption)
       .find((item) => item.code === option.code);
     return source ?? {
@@ -3426,6 +3435,7 @@ async function getObjectWorkspacePublicationModule(
 
 async function getObjectWorkspaceSustainabilityModule(
   baseModule: ObjectWorkspaceSustainabilityModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceSustainabilityModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -3437,18 +3447,12 @@ async function getObjectWorkspaceSustainabilityModule(
     return baseModule;
   }
 
-  const [categoriesResult, actionsResult] = await Promise.all([
-    client
-      .from('ref_sustainability_action_category')
-      .select('id, code, name, description, position')
-      .order('position', { ascending: true }),
-    client
-      .from('ref_sustainability_action')
-      .select('id, code, label, description, category_id, position')
-      .order('position', { ascending: true }),
-  ]);
+  // Ce module est 100 % catalogue : il ne prend meme pas d objectId. Ses 2
+  // requetes disparaissent entierement du chemin par fiche.
+  const categoryRows = catalogs.tables.ref_sustainability_action_category ?? [];
+  const actionRows = catalogs.tables.ref_sustainability_action ?? [];
 
-  if (categoriesResult.error || actionsResult.error) {
+  if (categoryRows.length === 0) {
     return baseModule;
   }
 
@@ -3461,9 +3465,9 @@ async function getObjectWorkspaceSustainabilityModule(
     }
   }
 
-  const categories = ((categoriesResult.data ?? []) as Record<string, unknown>[]).map((row) => {
+  const categories = categoryRows.map((row) => {
     const categoryId = readString(row.id);
-    const categoryActions = ((actionsResult.data ?? []) as Record<string, unknown>[])
+    const categoryActions = actionRows
       .filter((action) => readString(action.category_id) === categoryId)
       .map((action) => {
         const actionId = readString(action.id);
@@ -3894,9 +3898,9 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
     getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
-    getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
-    getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
-    getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
+    getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships, catalogs),
+    getObjectWorkspaceLegalModule(objectId, parsedModules.legal, catalogs),
+    getObjectWorkspaceSustainabilityModule(parsedModules.sustainability, catalogs),
     getObjectWorkspaceTagsModule(objectId, parsedModules.tags, catalogs),
     // Contacts kind/role reference data lives in ref_code (domain contact_kind) and
     // ref_contact_role — basic, all-object-type reference tables that the save path
@@ -3966,7 +3970,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceActivityModule(objectId, parsedModules.activity, catalogs),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
-    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
+    getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships, catalogs),
     getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
     Promise.resolve(getFacetApplicabilityRows(catalogs)),
   ]);

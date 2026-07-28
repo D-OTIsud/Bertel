@@ -6,6 +6,10 @@ export type RefCodeRow = {
   name: string;
   domain: string;
   position: number | null;
+  /** §92 — le domaine `opening_period_type` porte sa recurrence dans `metadata`. */
+  metadata?: unknown;
+  /** Les consommateurs qui filtraient `is_active` cote serveur filtrent en memoire. */
+  is_active?: boolean | null;
 };
 
 /**
@@ -124,7 +128,7 @@ export async function fetchReferenceCatalogs(): Promise<ReferenceCatalogs> {
   const [refCodeResult, ...tableResults] = await Promise.all([
     client
       .from('ref_code')
-      .select('id, code, name, domain, position')
+      .select('id, code, name, domain, position, metadata, is_active')
       .in('domain', [...REF_CODE_DOMAINS])
       .order('domain', { ascending: true })
       .order('position', { ascending: true }),

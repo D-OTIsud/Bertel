@@ -3041,6 +3041,7 @@ async function getObjectWorkspaceMenusModule(
 async function getObjectWorkspaceActivityModule(
   objectId: string,
   baseModule: ObjectWorkspaceActivityModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceActivityModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -3052,13 +3053,15 @@ async function getObjectWorkspaceActivityModule(
     return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger le detail activite.' };
   }
 
-  const [dataResult, difficultyRefsResult] = await Promise.all([
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const difficultyRefs = catalogs.refCodeByDomain.iti_difficulty ?? [];
+
+  const [dataResult] = await Promise.all([
     client
       .from('object_act')
       .select('duration_min, min_participants, max_participants, difficulty_level, guide_required, min_age, equipment_provided, equipment_provided_details')
       .eq('object_id', objectId)
       .maybeSingle(),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
   ]);
 
   if (dataResult.error) {
@@ -3068,9 +3071,9 @@ async function getObjectWorkspaceActivityModule(
     };
   }
 
-  const difficultyOptions = difficultyRefsResult.error
+  const difficultyOptions = difficultyRefs.length === 0
     ? baseModule.difficultyOptions
-    : dedupeReferenceOptions((difficultyRefsResult.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)));
+    : dedupeReferenceOptions(difficultyRefs.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)));
 
   if (!dataResult.data) {
     return { ...baseModule, difficultyOptions, unavailableReason: null };
@@ -3257,18 +3260,12 @@ async function getObjectWorkspaceItineraryModule(
  * public read). Mirrors the §41 zones pattern — a direct ref_code select, not bundled in
  * get_object_resource. Best-effort: returns [] on failure (the modal then shows no types).
  */
-async function loadOpeningPeriodTypeOptions(
-  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
-): Promise<ObjectWorkspaceOpeningPeriodTypeOption[]> {
-  const { data, error } = await client
-    .from('ref_code')
-    .select('code, name, position, metadata')
-    .eq('domain', 'opening_period_type')
-    .eq('is_active', true)
-    .order('position', { ascending: true });
-  if (error || !data) {
-    return [];
-  }
+function loadOpeningPeriodTypeOptions(
+  catalogs: ReferenceCatalogs,
+): ObjectWorkspaceOpeningPeriodTypeOption[] {
+  // Catalogue depuis le cache de session. Le filtre `is_active` etait fait cote
+  // serveur ; il l'est desormais en memoire (le select du cache porte la colonne).
+  const data = (catalogs.refCodeByDomain.opening_period_type ?? []).filter((row) => row.is_active !== false);
   return data.map((row) => {
     const metadata = (row.metadata ?? {}) as { color?: unknown; all_year?: unknown };
     return {
@@ -3283,6 +3280,7 @@ async function loadOpeningPeriodTypeOptions(
 async function getObjectWorkspaceOpeningsModule(
   objectId: string,
   baseModule: ObjectWorkspaceOpeningsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceOpeningsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -3301,7 +3299,7 @@ async function getObjectWorkspaceOpeningsModule(
 
   const [{ count, error }, periodTypeOptions] = await Promise.all([
     client.from('opening_period').select('id', { head: true, count: 'exact' }).eq('object_id', objectId),
-    loadOpeningPeriodTypeOptions(client),
+    Promise.resolve(loadOpeningPeriodTypeOptions(catalogs)),
   ]);
 
   if (error) {
@@ -3499,6 +3497,7 @@ async function getObjectWorkspaceSustainabilityModule(
 async function getObjectWorkspaceTagsModule(
   objectId: string,
   baseModule: ObjectWorkspaceTagsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceTagsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -3514,11 +3513,10 @@ async function getObjectWorkspaceTagsModule(
   // Also fetch tag_link rows for this object ordered by position so the displayed list
   // reflects the drag-and-drop order saved by save_object_workspace_tags, and so the
   // per-object color override (tag_link.extra.color_variant) takes precedence over ref_tag.color.
-  const [tagsResult, tagLinkResult] = await Promise.all([
-    client
-      .from('ref_tag')
-      .select('id, slug, name, color, position')
-      .order('position', { ascending: true }),
+  // 1 catalogue depuis le cache de session : 2 requetes -> 1.
+  const tagRows = catalogs.tables.ref_tag ?? [];
+
+  const [tagLinkResult] = await Promise.all([
     client
       .from('tag_link')
       .select('tag_id, extra, position')
@@ -3527,12 +3525,8 @@ async function getObjectWorkspaceTagsModule(
       .order('position', { ascending: true }),
   ]);
 
-  if (tagsResult.error) {
-    return baseModule;
-  }
-
   const refTagById = new Map(
-    ((tagsResult.data ?? []) as Record<string, unknown>[]).map((row) => [readString(row.id), row]),
+    tagRows.map((row) => [readString(row.id), row]),
   );
 
   // Rebuild displayed list from tag_link (authoritative position + extra), joined with ref_tag for
@@ -3558,7 +3552,7 @@ async function getObjectWorkspaceTagsModule(
   }
 
   const displayedTagIds = new Set(displayed.map((tag) => tag.tagId));
-  const library = ((tagsResult.data ?? []) as Record<string, unknown>[])
+  const library = tagRows
     .map((row) => ({
       tagId: readString(row.id),
       slug: readString(row.slug),
@@ -3854,17 +3848,16 @@ export function facetUnavailableReason(
   return `Module non applicable au type ${objectType} (référentiel ref_facet_applicability).`;
 }
 
-async function getFacetApplicabilityRows(): Promise<FacetApplicabilityRow[]> {
+function getFacetApplicabilityRows(catalogs: ReferenceCatalogs): FacetApplicabilityRow[] {
   const session = useSessionStore.getState();
   if (session.demoMode) return [];
-  const client = getSupabaseClient();
-  if (!client) return [];
-  const result = await client
-    .from('ref_facet_applicability')
-    .select('facet_table, object_type')
-    .in('facet_table', Object.values(TYPE_SPECIFIC_MODULE_FACETS));
-  if (result.error) return []; // fail open — see header comment
-  return (result.data ?? []).map((row) => ({
+  // Catalogue depuis le cache de session ; le filtre sur les facettes surfacees
+  // par l'editeur passe du serveur a la memoire. Fail open inchange : catalogue
+  // vide => aucun gating, le trigger DB reste la garde dure (§46).
+  const facetTables = new Set<string>(Object.values(TYPE_SPECIFIC_MODULE_FACETS));
+  return (catalogs.tables.ref_facet_applicability ?? [])
+    .filter((row) => facetTables.has(readString(row.facet_table)))
+    .map((row) => ({
     facetTable: readString((row as Record<string, unknown>).facet_table),
     objectType: readString((row as Record<string, unknown>).object_type),
   }));
@@ -3900,11 +3893,11 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
-    getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings),
+    getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),
     getObjectWorkspaceRelationshipsModule(objectId, parsedModules.relationships),
     getObjectWorkspaceLegalModule(objectId, parsedModules.legal),
     getObjectWorkspaceSustainabilityModule(parsedModules.sustainability),
-    getObjectWorkspaceTagsModule(objectId, parsedModules.tags),
+    getObjectWorkspaceTagsModule(objectId, parsedModules.tags, catalogs),
     // Contacts kind/role reference data lives in ref_code (domain contact_kind) and
     // ref_contact_role — basic, all-object-type reference tables that the save path
     // (saveObjectWorkspaceContacts) already queries. Enriched unconditionally so the
@@ -3970,12 +3963,12 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms, catalogs),
     getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
     getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine, catalogs),
-    getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
+    getObjectWorkspaceActivityModule(objectId, parsedModules.activity, catalogs),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
     getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
     getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
-    getFacetApplicabilityRows(),
+    Promise.resolve(getFacetApplicabilityRows(catalogs)),
   ]);
 
   Object.assign(modules, {

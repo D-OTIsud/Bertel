@@ -2372,6 +2372,7 @@ async function getObjectWorkspaceLegalModule(
 async function getObjectWorkspacePricingModule(
   objectId: string,
   baseModule: ObjectWorkspacePricingModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspacePricingModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2387,11 +2388,14 @@ async function getObjectWorkspacePricingModule(
     };
   }
 
-  const [kindRefsResult, typeRefsResult, seasonRefsResult, unitRefsResult, pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_kind').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_type').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'season_type').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'price_unit').order('position', { ascending: true }),
+  // 4 catalogues (price_kind / price_type / season_type / price_unit) depuis le
+  // cache de session : ce module passe de 7 requetes a 3.
+  const kindRefs = catalogs.refCodeByDomain.price_kind ?? [];
+  const typeRefs = catalogs.refCodeByDomain.price_type ?? [];
+  const seasonRefs = catalogs.refCodeByDomain.season_type ?? [];
+  const unitRefs = catalogs.refCodeByDomain.price_unit ?? [];
+
+  const [pricesResult, discountsResult, promotionsResult] = await Promise.allSettled([
     client
       .from('object_price')
       .select('id, kind_id, unit_id, amount, amount_max, currency, season_code, indication_code, age_min_enfant, age_max_enfant, age_min_junior, age_max_junior, valid_from, valid_to, conditions, source')
@@ -2408,14 +2412,7 @@ async function getObjectWorkspacePricingModule(
       .eq('object_id', objectId),
   ]);
 
-  if (
-    kindRefsResult.status !== 'fulfilled'
-    || unitRefsResult.status !== 'fulfilled'
-    || pricesResult.status !== 'fulfilled'
-    || kindRefsResult.value.error
-    || unitRefsResult.value.error
-    || pricesResult.value.error
-  ) {
+  if (pricesResult.status !== 'fulfilled' || pricesResult.value.error) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module C5 exploitable pour ce profil.',
@@ -2433,18 +2430,21 @@ async function getObjectWorkspacePricingModule(
     : { data: [], error: null };
 
   const kindOptions = dedupeReferenceOptions(
-    (kindRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    kindRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   // §13 price_type catalog — graceful fallback to the parser-derived options when the
   // domain is not exposed (older live / restricted profile), like the other ref fetches.
-  const typeOptions = typeRefsResult.status === 'fulfilled' && typeRefsResult.value.error == null
-    ? dedupeReferenceOptions((typeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  // §13 : repli sur les options derivees du parser quand le domaine est vide
+  // (live ancien / profil restreint) — meme semantique qu'avant, la source du
+  // catalogue ayant seule change.
+  const typeOptions = typeRefs.length > 0
+    ? dedupeReferenceOptions(typeRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.priceTypeOptions;
-  const seasonOptions = seasonRefsResult.status === 'fulfilled' && seasonRefsResult.value.error == null
-    ? dedupeReferenceOptions((seasonRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const seasonOptions = seasonRefs.length > 0
+    ? dedupeReferenceOptions(seasonRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.priceSeasonOptions;
   const unitOptions = dedupeReferenceOptions(
-    (unitRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    unitRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const kindById = new Map(kindOptions.map((option) => [option.id, option]));
   const unitById = new Map(unitOptions.map((option) => [option.id, option]));
@@ -3937,7 +3937,7 @@ export async function getObjectWorkspaceResource(
   ] = await Promise.all([
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? ''),
-    getObjectWorkspacePricingModule(objectId, parsedModules.pricing),
+    getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
     getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
     getObjectWorkspaceMenusModule(objectId, parsedModules.menus),

@@ -45,6 +45,9 @@ DECLARE
   v_bebe  text := 'HLORUN9999999807';  -- §197 : description contenant « bebe » (plancher de bruit 4 car.)
   v_pub   text := 'HLORUN9999999808';  -- §197 : fixture PUBLIÉE ⇒ chemin MV
   v_jacq  text := 'HLORUN9999999809';  -- §197 : « Jacques » — proche de jacuzzi (0.375) SANS l'être
+  v_cafe  text := 'RESRUN9999999810';  -- §199 : contient « cafe » — cible de la graphie « kafé »
+  v_goya  text := 'RESRUN9999999811';  -- §199 : « goyavier » collide phonétiquement (KF) SANS parenté de caractères
+  v_word  text := 'HLORUN9999999812';  -- §199 : « pique » (code PK) + « bebe » (trgm 0.400) — piège de la confirmation
   v_amen_jacuzzi uuid;
   v_dietary_vegan uuid;
   v_menu_res uuid; v_menu_res2 uuid; v_menu_priv uuid; v_item_res uuid;
@@ -94,7 +97,10 @@ BEGIN
     (v_hoar,  'HLO', 'Chez Hoareau',       'draft'),
     (v_bebe,  'HLO', 'Le Nid Douillet',    'draft'),
     (v_pub,   'HLO', 'Villa Publiee',      'published'),
-    (v_jacq,  'HLO', 'La Kaz Tranquille',  'draft');
+    (v_jacq,  'HLO', 'La Kaz Tranquille',  'draft'),
+    (v_cafe,  'RES', 'Le Comptoir',        'draft'),
+    (v_goya,  'RES', 'La Confiturerie',    'draft'),
+    (v_word,  'HLO', 'L Aire Verte',       'draft');
 
   INSERT INTO object_amenity (object_id, amenity_id) VALUES (v_res, v_amen_jacuzzi);
   INSERT INTO object_amenity (object_id, amenity_id) VALUES (v_pub, v_amen_jacuzzi);
@@ -122,6 +128,14 @@ BEGIN
     VALUES (v_bebe, NULL, 'Lit bebe sur demande.', 'public');
   INSERT INTO object_description (object_id, org_object_id, description, visibility)
     VALUES (v_jacq, NULL, 'Chez Jacques et Jacqueline.', 'public');
+  -- §199 — fixtures du bras phonétique. Codes dmetaphone vérifiés en base :
+  --   cafe = KF · goyavier = KF (collision) · pique = PK · bebe = PP · bequ = PK
+  INSERT INTO object_description (object_id, org_object_id, description, visibility)
+    VALUES (v_cafe, NULL, 'Petit cafe de quartier.', 'public');
+  INSERT INTO object_description (object_id, org_object_id, description, visibility)
+    VALUES (v_goya, NULL, 'Confiture de goyavier maison.', 'public');
+  INSERT INTO object_description (object_id, org_object_id, description, visibility)
+    VALUES (v_word, NULL, 'Aire de pique nique, lit bebe sur demande.', 'public');
 
   INSERT INTO object_menu (id, object_id, name, is_active, visibility)
     VALUES (gen_random_uuid(), v_priv, 'Carte secrete', TRUE, 'private') RETURNING id INTO v_menu_priv;
@@ -264,6 +278,61 @@ BEGIN
   ASSERT NOT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{"search_mode":"global"}'::jsonb,NULL,ARRAY['draft']::object_status[],'zzqtrpp')),
          '§197: une saisie fantaisiste ne doit ramener aucun objet';
 
+  -- =================================================================
+  -- §199 — BRAS PHONÉTIQUE (confirmé par trigramme)
+  -- =================================================================
+
+  ASSERT EXISTS (SELECT 1 FROM pg_extension WHERE extname='fuzzystrmatch'),
+         '§199: extension fuzzystrmatch absente';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='object' AND column_name='search_document_phonetic'),
+         '§199: object.search_document_phonetic absente';
+  ASSERT EXISTS (SELECT 1 FROM pg_attribute
+                 WHERE attrelid='internal.mv_filtered_objects'::regclass
+                   AND attname='search_document_phonetic' AND NOT attisdropped),
+         '§199: le MV ne porte pas search_document_phonetic (bras muet pour les anonymes)';
+
+  -- La transformation phonétique, figée sur ses deux comportements attendus.
+  ASSERT api.phonetic_document('kafe') = api.phonetic_document('cafe'),
+         '§199: kafe et cafe doivent produire le MÊME code (c''est TOUT le principe)';
+  ASSERT api.phonetic_document('bequ') <> api.phonetic_document('bebe'),
+         '§199: bequ et bebe ne doivent PAS collider phonétiquement';
+
+  -- LE CAS SIGNALÉ : « kafé » retrouve « café ».
+  -- FALSIFIABLE en deux temps — d'abord on prouve que les trigrammes SEULS ne peuvent
+  -- pas y arriver (score sous le seuil des requêtes de 4 caractères), ensuite que la
+  -- fiche remonte quand même. Sans cette première assertion, le test pourrait être
+  -- satisfait par le bras trigramme et ne rien prouver du phonétique.
+  SELECT round(word_similarity('kafe', search_document_text)::numeric,3) INTO v_ws
+    FROM object WHERE id = v_cafe;
+  ASSERT v_ws < 0.45,
+         format('§199: les trigrammes ne doivent PAS pouvoir attraper kafe (score %s, seuil 4 car. = 0.45)', v_ws);
+  ASSERT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{"search_mode":"global"}'::jsonb,NULL,ARRAY['draft']::object_status[],'kafé') f WHERE f.object_id=v_cafe),
+         '§199: « kafé » doit retrouver la fiche qui contient « cafe » (cas signalé par le PO)';
+
+  -- LA CONFIRMATION REJETTE LES COLLISIONS SANS PARENTÉ.
+  -- « goyavier » porte le MÊME code phonétique que « cafe » (KF) mais 0.000 de
+  -- similarité trigramme. Sans l'étage de confirmation, cette fiche remonterait.
+  ASSERT api.phonetic_document('goyavier') = api.phonetic_document('kafe'),
+         '§199: la fixture ne prouve rien si goyavier ne collide plus avec kafe';
+  ASSERT NOT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{"search_mode":"global"}'::jsonb,NULL,ARRAY['draft']::object_status[],'kafé') f WHERE f.object_id=v_goya),
+         '§199: une collision phonétique SANS parenté de caractères doit être rejetée';
+
+  -- LA CONFIRMATION PORTE SUR LE MOT, PAS SUR LE DOCUMENT.
+  -- v_word contient « pique » (code PK, comme « bequ », mais 0.000 de trigramme) ET
+  -- « bebe » (0.400 de trigramme, mais code PP). Aucun mot ne réunit les deux critères.
+  -- Une confirmation portant sur le DOCUMENT ENTIER validerait pourtant la fiche —
+  -- c'est la version que la mesure a écartée (bequ passait à 18 fiches).
+  SELECT round(word_similarity('bequ', search_document_text)::numeric,3) INTO v_ws
+    FROM object WHERE id = v_word;
+  ASSERT v_ws >= 0.30 AND v_ws < 0.45,
+         format('§199: la fixture ne piège plus rien — score document %s, il doit être dans [0.30, 0.45)', v_ws);
+  ASSERT NOT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{"search_mode":"global"}'::jsonb,NULL,ARRAY['draft']::object_status[],'bequ') f WHERE f.object_id=v_word),
+         '§199: la confirmation doit porter sur LE mot qui a matché, pas sur un mot quelconque du document';
+
+  -- Le bras phonétique hérite de la garde de mode (sélecteurs de l'éditeur).
+  ASSERT NOT EXISTS(SELECT 1 FROM api.get_filtered_object_ids('{}'::jsonb,NULL,ARRAY['draft']::object_status[],'kafé') f WHERE f.object_id=v_cafe),
+         '§199: mode  — le bras phonétique ne doit PAS s''appliquer';
   -- ---------- Chemin PUBLIÉ : le MV porte bien le texte ----------
   -- Sans cette assertion, oublier la colonne dans le MV rendrait le flou muet pour les
   -- visiteurs anonymes — le seul chemin qui compte en production — sans aucune erreur.

@@ -15,6 +15,9 @@ CREATE EXTENSION IF NOT EXISTS "postgis";
 CREATE SCHEMA IF NOT EXISTS extensions;
 CREATE EXTENSION IF NOT EXISTS "unaccent" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+-- §198 — dmetaphone (bras phonétique de la recherche). Dans `extensions` comme pg_trgm :
+-- toute fonction à search_path restreint doit l'y trouver (gotcha §29).
+CREATE EXTENSION IF NOT EXISTS "fuzzystrmatch" WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 ALTER EXTENSION btree_gist SET SCHEMA extensions;
 
@@ -939,6 +942,12 @@ ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document tsvector;
 -- Un tsvector ne conserve que des lexèmes racinisés — la forme réelle des mots, seule
 -- exploitable par word_similarity(), y est perdue. Rempli par le MÊME CTE que ci-dessus.
 ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document_text TEXT;
+-- §198 — codes phonétiques (dmetaphone) des mots du MÊME contenu, produits depuis le MÊME
+-- CTE. Préfiltre du bras phonétique du repli : rattrape les graphies dont la PREMIÈRE
+-- lettre change (kafé/café), que les trigrammes ne peuvent pas rattraper — leur score y
+-- tombe exactement au plancher de bruit. Dictionnaire `simple`, pas `french` : les
+-- lexèmes sont des codes, les raciniser n'aurait aucun sens.
+ALTER TABLE IF EXISTS object ADD COLUMN IF NOT EXISTS search_document_phonetic tsvector;
 
 -- ─── Lot 1 — 2026-03-20 ──────────────────────────────────────────────────────
 -- TRANSITOIRE / NON-CANONIQUE / OPT-IN
@@ -4288,6 +4297,7 @@ SELECT
   -- colonnes ici, le flou serait muet sur le chemin publié (visiteurs anonymes) SANS
   -- aucune erreur : le MV est le cache chaud de get_filtered_object_ids.
   o.search_document_text,
+  o.search_document_phonetic,
   public.immutable_unaccent(lower(ol.city)) AS city_normalized
 FROM object o
 LEFT JOIN object_location ol
@@ -4584,6 +4594,22 @@ AFTER INSERT OR UPDATE OR DELETE ON object_review
 FOR EACH ROW EXECUTE FUNCTION update_object_cached_rating_metrics();
 
 -- Refresh denormalized filter caches used by hot-path filtered listing.
+CREATE OR REPLACE FUNCTION api.phonetic_document(p_text TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+-- `extensions` : dmetaphone y vit (même gotcha §29 que word_similarity).
+SET search_path = pg_catalog, public, api, extensions
+AS $$
+  -- Entrée ATTENDUE déjà normalisée (minuscules, sans accents) : c'est le cas des deux
+  -- appelants — object.search_document_text et api.norm_search(). Le garde `^[a-z]`
+  -- écarte les jetons numériques, dont le code phonétique n'a aucun sens.
+  -- length >= 3 : en deçà, dmetaphone produit des codes trop courts pour discriminer.
+  SELECT string_agg(DISTINCT extensions.dmetaphone(w.tok), ' ')
+  FROM regexp_split_to_table(COALESCE(p_text, ''), '[^a-z0-9]+') AS w(tok)
+  WHERE length(w.tok) >= 3 AND w.tok ~ '^[a-z]';
+$$;
+
 CREATE OR REPLACE FUNCTION api.refresh_object_filter_caches(p_object_id TEXT)
 RETURNS VOID
 LANGUAGE plpgsql
@@ -4599,6 +4625,7 @@ DECLARE
   v_cached_taxonomy_codes TEXT[];
   v_search_document tsvector;
   v_search_document_text TEXT;
+  v_search_document_phonetic tsvector;
 BEGIN
   IF p_object_id IS NULL THEN
     RETURN;
@@ -4742,6 +4769,16 @@ BEGIN
           WHERE m.object_id = p_object_id AND m.is_active AND (m.visibility IS NULL OR m.visibility = 'public')
             AND mi.description IS NOT NULL), '')
       ) AS doc_d
+  ),
+  -- §199 — la normalisation est faite UNE fois ici et alimente les trois
+  -- représentations (tsvector, texte brut, codes phonétiques). La dupliquer
+  -- serait rouvrir exactement le piège que §197 avait fermé.
+  norm AS (
+    SELECT d.doc_b, d.doc_c, d.doc_d,
+           NULLIF(btrim(regexp_replace(
+             immutable_unaccent(lower(d.doc_b || ' ' || d.doc_c || ' ' || d.doc_d)),
+             '\s+', ' ', 'g')), '') AS flat
+    FROM doc d
   )
   SELECT
        setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_b))), 'B')
@@ -4749,11 +4786,13 @@ BEGIN
     || setweight(to_tsvector('french', immutable_unaccent(lower(doc.doc_d))), 'D'),
        -- §197 — même contenu, forme brute. NULLIF('') : une fiche sans contenu
        -- enfant porte NULL, pas une chaîne vide (les lecteurs COALESCE de toute façon).
-       NULLIF(btrim(regexp_replace(
-         immutable_unaccent(lower(doc.doc_b || ' ' || doc.doc_c || ' ' || doc.doc_d)),
-         '\s+', ' ', 'g')), '')
-  INTO v_search_document, v_search_document_text
-  FROM doc;
+       doc.flat,
+       -- §199 — codes phonétiques des mots du même contenu. Dictionnaire 'simple'
+       -- (surtout PAS 'french') : les lexèmes sont des codes dmetaphone, les
+       -- raciniser n'aurait aucun sens.
+       to_tsvector('simple', COALESCE(api.phonetic_document(doc.flat), ''))
+  INTO v_search_document, v_search_document_text, v_search_document_phonetic
+  FROM norm doc;
 
   UPDATE object o
   SET
@@ -4764,7 +4803,8 @@ BEGIN
     cached_classification_codes = v_cached_classification_codes,
     cached_taxonomy_codes = v_cached_taxonomy_codes,
     search_document = v_search_document,
-    search_document_text = v_search_document_text
+    search_document_text = v_search_document_text,
+    search_document_phonetic = v_search_document_phonetic
   WHERE o.id = p_object_id
     AND (
       o.cached_amenity_codes IS DISTINCT FROM v_cached_amenity_codes
@@ -4775,6 +4815,7 @@ BEGIN
       OR o.cached_taxonomy_codes IS DISTINCT FROM v_cached_taxonomy_codes
       OR o.search_document IS DISTINCT FROM v_search_document
       OR o.search_document_text IS DISTINCT FROM v_search_document_text
+      OR o.search_document_phonetic IS DISTINCT FROM v_search_document_phonetic
     );
 END;
 $$;

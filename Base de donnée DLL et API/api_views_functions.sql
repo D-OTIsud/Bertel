@@ -1321,7 +1321,8 @@ AS $$
       m.cached_taxonomy_codes,
       m.search_document,
       m.name_normalized,
-      m.search_document_text
+      m.search_document_text,
+      m.search_document_phonetic
     FROM internal.mv_filtered_objects m
     CROSS JOIN params
     WHERE params.use_mv
@@ -1347,7 +1348,8 @@ AS $$
       o.cached_taxonomy_codes,
       o.search_document,
       o.name_normalized,
-      o.search_document_text
+      o.search_document_text,
+      o.search_document_phonetic
     FROM object o
     CROSS JOIN params
     LEFT JOIN LATERAL (
@@ -1394,7 +1396,17 @@ AS $$
                 AND s2.search_document @@ plainto_tsquery('french', api.norm_search(p_search)))
           )
       )
-    ) AS armed
+    ) AS armed,
+    -- §199 — le code phonétique de la saisie. Le flou est mono-mot par construction
+    -- (garde `search_norm !~ '\s'`), donc UN code suffit — pas besoin de tokeniser.
+    -- Calculé ici, dans un CTE MATERIALIZED évalué une seule fois.
+    -- Le CASE n'est PAS cosmétique : sans lui, plainto_tsquery reçoit une chaîne vide
+    -- sur CHAQUE requête sans terme de recherche — le chemin le plus chaud — et
+    -- PostgreSQL émet alors un NOTICE « text-search query doesn't contain lexemes »
+    -- à chaque appel. Constaté en production après le déploiement, corrigé aussitôt.
+    CASE WHEN params.fuzzy_enabled THEN dmetaphone(params.search_norm) END AS phonetic_code,
+    CASE WHEN params.fuzzy_enabled AND COALESCE(dmetaphone(params.search_norm), '') <> ''
+         THEN plainto_tsquery('simple', dmetaphone(params.search_norm)) END AS phonetic_query
     FROM params
   )
   SELECT
@@ -1583,6 +1595,37 @@ AS $$
           fz.name_score >= params.fuzzy_threshold
           OR fz.city_score >= params.fuzzy_threshold
           OR fz.doc_score >= params.fuzzy_threshold
+        )
+      ) OR
+      -- §199 — bras PHONÉTIQUE, lui aussi armé en repli seulement. Il rattrape la
+      -- classe que les trigrammes ne peuvent PAS rattraper : les graphies phonétiques
+      -- (`kafé`→`café`, `site`→`cité`), où la 1re lettre change et détruit d'un coup
+      -- trois trigrammes sur cinq. Mesuré : `kafe`↔`cafe` = 0.400, soit EXACTEMENT le
+      -- plancher de bruit des requêtes de 4 caractères (`bequ`↔`bebe` = 0.400) — aucun
+      -- seuil trigramme ne peut les séparer, c'est une collision, pas un réglage.
+      --
+      -- DEUX ÉTAGES, et l'ordre compte :
+      --   1. préfiltre `@@` sur le document phonétique — intersection de listes triées,
+      --      ~1 ms sur les 846 fiches (à comparer aux ~145 ms d'un balayage trigramme).
+      --   2. confirmation AU NIVEAU DU MOT sur les seuls candidats. Confirmer sur le
+      --      document ENTIER ne marche pas : mesuré, `bequ` passait alors à 18 fiches
+      --      parce qu'un mot QUELCONQUE du document suffisait. Il faut que ce soit LE
+      --      mot qui a matché phonétiquement qui ressemble aussi à la saisie.
+      -- Seuil de confirmation 0.30 : plateau mesuré (comptes identiques de 0.25 à 0.35).
+      -- Il ne refiltre pas, il rejette les collisions sans parenté de caractères —
+      -- `zzqtrpp`→`secteur` 0.000, `bequ`→`pique` 0.000, `kafe`→`goyavier` 0.000 —
+      -- et garde `kafe`→`cafe` (0.400).
+      (
+        gate.armed
+        AND COALESCE(gate.phonetic_code, '') <> ''
+        AND src.search_document_phonetic @@ gate.phonetic_query
+        AND EXISTS (
+          SELECT 1
+          FROM regexp_split_to_table(COALESCE(src.search_document_text, ''), '[^a-z0-9]+') AS w(tok)
+          WHERE length(w.tok) >= 3
+            AND w.tok ~ '^[a-z]'
+            AND dmetaphone(w.tok) = gate.phonetic_code
+            AND word_similarity(params.search_norm, w.tok) >= 0.30
         )
       )
     )

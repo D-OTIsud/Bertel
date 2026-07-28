@@ -5,12 +5,12 @@ _The §101/§103 invariant: any **authorable** object-attached table MUST be emi
 > ⚠️ **Reads are regex-inferred — false negatives exist** (e.g. `save_object_places` writes `object_zone` but the edge wasn't detected). A table flagged ‘no consumer detected’ is a **candidate** gap to verify in the function body or live, not a proven one. Confirmed exposure gaps belong in the decision log (§101/§103).
 
 ## Summary
-- authorable object-attached tables: **62** — emitted by a detected consumer read: **62** — candidate gaps: **0**
+- authorable object-attached tables: **65** — emitted by a detected consumer read: **64** — candidate gaps: **1**
 - system-ledger object-attached tables (out of §101 scope): **9** (`audit_session`, `incident_report`, `org_config`, `org_permission`, `pending_change`, `promotion_object`, `promotion_usage`, `publication_object`, `user_org_membership`)
 
 ## Candidate authorable gaps (verify before trusting)
 
-_None — every authorable object-attached table has at least one detected consumer read. The §101/§103 invariant holds across the live surface._
+- **other**: `trail_object_link`
 
 ## Covered authorable tables
 
@@ -30,7 +30,7 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_document` ← `get_object_resource`, `rpc_delete_object`
 - `object_environment_tag` ← `get_object_cards_batch`, `get_object_environment_tags_compact`, `get_object_resource`, `refresh_object_filter_caches`, `save_object_commercial`
 - `object_external_id` ← `get_object_resource`, `rpc_delete_object_external_id`
-- `object_fma` ← `get_dashboard_completeness`, `get_object_resource`
+- `object_fma` ← `get_dashboard_completeness`, `get_filtered_object_ids`, `get_object_resource`
 - `object_fma_occurrence` ← `get_object_resource`
 - `object_group_policy` ← `get_object_resource`, `save_object_commercial`
 - `object_iti` ← `build_iti_track`, `export_itinerary_gpx`, `get_dashboard_completeness`, `get_filtered_object_ids`, `get_itinerary_track_geojson`, `get_itinerary_track_simplified` …
@@ -70,9 +70,11 @@ _None — every authorable object-attached table has at least one detected consu
 - `object_room_type_media` ← `get_object_resource`, `get_object_room_types`
 - `object_stay_policy` ← `get_object_resource`
 - `object_sustainability_action` ← `capture_metric_snapshots`, `get_filtered_object_ids`, `get_object_badges_compact`, `get_object_cards_batch`, `get_object_resource`, `rpc_delete_object` …
-- `object_taxonomy` ← `get_dashboard_completeness`, `get_object_cards_batch`, `get_object_resource`, `get_object_taxonomy_compact`, `refresh_object_filter_caches`, `refresh_object_taxonomy_cache_for_domain`
+- `object_taxonomy` ← `get_dashboard_completeness`, `get_object_cards_batch`, `get_object_interop`, `get_object_resource`, `get_object_taxonomy_compact`, `refresh_object_filter_caches` …
 - `object_version` ← `get_object_version_snapshot`, `get_object_versions`, `rpc_restore_object_version`
 - `object_web_channel` ← `get_object_jsonld`, `get_object_resource`, `interop_object_core`
 - `object_zone` ← `get_object_resource`, `save_object_places`
-- `opening_period` ← `build_opening_period_json`, `get_object_resource`, `is_object_open_now`, `refresh_open_status`, `save_object_openings`
+- `opening_period` ← `build_opening_period_json`, `compute_open_status`, `get_object_resource`, `is_object_open_now`, `save_object_openings`
+- `org_branding_settings` ← `get_app_branding`, `get_org_branding`, `upsert_org_branding`
 - `promotion` ← `get_object_resource`, `validate_promotion_code`
+- `ref_trail_manager` ← `get_public_trail`, `get_trail`, `list_public_trails`, `list_trails`, `trail_sync_apply`

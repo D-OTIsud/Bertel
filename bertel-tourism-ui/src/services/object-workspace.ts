@@ -3136,6 +3136,7 @@ async function getObjectWorkspaceEventModule(
 async function getObjectWorkspaceItineraryModule(
   objectId: string,
   baseModule: ObjectWorkspaceItineraryModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceItineraryModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -3150,20 +3151,24 @@ async function getObjectWorkspaceItineraryModule(
   // §111 C: stages come from baseModule (parser of get_object_resource.itinerary_details.stages),
   // which now carries kind / lng / lat / mediaIds — richer than a direct object_iti_stage select
   // (lng/lat need ST_X/ST_Y, only available server-side). No stage re-fetch here.
-  const [itiResult, practiceRefsResult, practicesResult, difficultyRefsResult, openStatusRefsResult, stageKindRefsResult, assocRoleRefsResult, mediaResult] = await Promise.allSettled([
+  // 5 catalogues (4 domaines ref_code + ref_iti_assoc_role) depuis le cache de
+  // session : 8 requetes -> 3. Elles partaient pour TOUT objet, y compris ceux
+  // dont ref_facet_applicability interdit object_iti.
+  const itiRefs = {
+    practice: catalogs.refCodeByDomain.iti_practice ?? [],
+    difficulty: catalogs.refCodeByDomain.iti_difficulty ?? [],
+    openStatus: catalogs.refCodeByDomain.iti_open_status ?? [],
+    stageKind: catalogs.refCodeByDomain.iti_stage_kind ?? [],
+    assocRole: catalogs.tables.ref_iti_assoc_role ?? [],
+  };
+
+  const [itiResult, practicesResult, mediaResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
       .eq('object_id', objectId)
       .maybeSingle(),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_practice').order('position', { ascending: true }),
     client.from('object_iti_practice').select('practice_id').eq('object_id', objectId),
-    // §111 vocab for the Difficulté / Statut d'ouverture / type d'étape selects (replaces the free-text write-traps)
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_difficulty').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_open_status').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'iti_stage_kind').order('position', { ascending: true }),
-    // §111 C3 roles for the linked-objects select (ref_iti_assoc_role — a standalone table, not ref_code)
-    client.from('ref_iti_assoc_role').select('id, code, name, position').order('position', { ascending: true }),
     // §111 stage-photos closeout: the object's §05 media rows, to curate per stage (object_iti_stage_media).
     // Stages LINK existing object media (single-writer); same source as the rooms loader's mediaOptions.
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
@@ -3177,20 +3182,20 @@ async function getObjectWorkspaceItineraryModule(
   }
 
   const row = readRecord(itiResult.value.data);
-  const practiceOptions = practiceRefsResult.status === 'fulfilled' && practiceRefsResult.value.error == null
-    ? dedupeReferenceOptions((practiceRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+  const practiceOptions = itiRefs.practice.length > 0
+    ? dedupeReferenceOptions(itiRefs.practice.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.practiceOptions;
-  const difficultyOptions = difficultyRefsResult.status === 'fulfilled' && difficultyRefsResult.value.error == null
-    ? dedupeReferenceOptions((difficultyRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+  const difficultyOptions = itiRefs.difficulty.length > 0
+    ? dedupeReferenceOptions(itiRefs.difficulty.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.difficultyOptions;
-  const openStatusOptions = openStatusRefsResult.status === 'fulfilled' && openStatusRefsResult.value.error == null
-    ? dedupeReferenceOptions((openStatusRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+  const openStatusOptions = itiRefs.openStatus.length > 0
+    ? dedupeReferenceOptions(itiRefs.openStatus.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.openStatusOptions;
-  const stageKindOptions = stageKindRefsResult.status === 'fulfilled' && stageKindRefsResult.value.error == null
-    ? dedupeReferenceOptions((stageKindRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+  const stageKindOptions = itiRefs.stageKind.length > 0
+    ? dedupeReferenceOptions(itiRefs.stageKind.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.stageKindOptions;
-  const assocRoleOptions = assocRoleRefsResult.status === 'fulfilled' && assocRoleRefsResult.value.error == null
-    ? dedupeReferenceOptions((assocRoleRefsResult.value.data ?? []).map((entry) => normalizeReferenceOption(entry as Record<string, unknown>)))
+  const assocRoleOptions = itiRefs.assocRole.length > 0
+    ? dedupeReferenceOptions(itiRefs.assocRole.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.assocRoleOptions;
   // §111 stage-photos: the object's media rows for the per-stage link picker (mirror the rooms loader).
   const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
@@ -3951,7 +3956,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine),
     getObjectWorkspaceActivityModule(objectId, parsedModules.activity),
     getObjectWorkspaceEventModule(objectId, parsedModules.event),
-    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary),
+    getObjectWorkspaceItineraryModule(objectId, parsedModules.itinerary, catalogs),
     getObjectWorkspaceMembershipModule(objectId, detail, parsedModules.memberships),
     getObjectWorkspaceCrmModule(objectId, parsedModules.providerFollowUp),
     getFacetApplicabilityRows(),

@@ -44,6 +44,34 @@ Elles s'appliquent à **toutes** les tâches de ce plan.
 
 ---
 
+## Protocole de mesure — à exécuter après CHAQUE lot
+
+Un lot n'est pas terminé tant que son gain n'a pas été observé. Le protocole est le même pour les trois ; seules les valeurs attendues changent. **Ne pas lancer de serveur soi-même** : demander à l'utilisateur d'ouvrir l'application, outils de développement sur l'onglet Réseau, filtre `Fetch/XHR`.
+
+**Mesure À FROID** (première ouverture de la session) :
+1. Fermer tous les onglets de l'application, vider `localStorage` (onglet Application → Stockage local → `bertel-rq-cache` → supprimer).
+2. Recharger, se connecter, ouvrir l'Exploreur.
+3. Vider le journal réseau, ouvrir **une** fiche. Noter le nombre de requêtes vers `ryycrdhlkmzpxwwwwupy.supabase.co` et le temps jusqu'au premier contenu affiché.
+4. Cliquer « Modifier ». Noter les deux mêmes chiffres.
+
+**Mesure À CHAUD** (dans la même session, sans recharger) :
+5. Revenir à l'Exploreur, vider le journal réseau, ouvrir une **autre** fiche. Noter.
+6. Cliquer « Modifier ». Noter.
+
+**Valeurs attendues** (référence avant tout lot : ~85 requêtes dans les quatre cas) :
+
+| | fiche à froid | éditeur à froid | fiche à chaud | éditeur à chaud |
+|---|---|---|---|---|
+| après lot 1 | **1–3** | ~85 | **1–3** | ~85 |
+| après lot 2 | 1–3 | **~38** | 1–3 | **~21** |
+| après lot 3 | 1–3 | ~38 | 1–3 | ~21, et **3 latences enchaînées au lieu de 7** |
+
+> La distinction froid/chaud est **le** test du lot 2 : si le chiffre à chaud n'est pas nettement inférieur à celui à froid, le cache de catalogues ne fonctionne pas — le plus probable étant un retour accidentel à `ensureQueryData` (voir tâche 7) ou une clé de cache incluant `objectId`.
+
+**Consigner chaque série** dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`, section `## §NN` (numéro obtenu par `grep -o "^## §[0-9]*" | tail -1`, **jamais deviné**).
+
+---
+
 # LOT 1 — Le tiroir cesse de charger les données de l'éditeur
 
 **Gain :** ~85 requêtes → 1 à l'ouverture d'une fiche.
@@ -359,6 +387,11 @@ git add src/hooks/useExplorerQueries.ts src/hooks/invalidate-object-workspace-ca
 
 **Contexte indispensable.** L'accroche de survol existe déjà et est câblée de bout en bout : `ResultCardView` pose un `onMouseEnter` sur son conteneur (`ResultCardView.tsx:269`) et remonte `onHoverChange(hovered)`, que `ResultsList.tsx:218` reçoit avec `card.id` sous la main. Il n'y a **rien à câbler**, seulement un appel à ajouter. Il n'existe aujourd'hui **aucun** `prefetchQuery` dans l'application.
 
+**Deux pièges à ne pas reproduire (relevés en revue).**
+
+1. **Chaque carte a sa propre clé de cache.** `prefetchQuery` est un no-op quand *cette clé-là* est fraîche — il ne protège donc **pas** contre un balayage de la liste à la souris : survoler 30 cartes déclencherait 30 requêtes. Il faut un **délai d'intention** de 200 ms, annulé au départ du pointeur : seule une carte réellement regardée est préchargée.
+2. **`staleTime` doit être explicite et partagé** entre le préchargement et `useObjectDetailQuery`. Sans cela, les deux peuvent diverger et l'ouverture refait immédiatement la requête que le survol vient de payer. On introduit une constante unique, `OBJECT_DETAIL_STALE_TIME_MS`, utilisée par les deux.
+
 - [ ] **Étape 3.1 : Écrire le test qui échoue**
 
 Créer `src/hooks/usePrefetchObjectDetail.test.tsx` :
@@ -384,28 +417,60 @@ function makeWrapper(client: QueryClient) {
 
 describe('usePrefetchObjectDetail', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     mockGetObjectResource.mockReset();
     mockGetObjectResource.mockResolvedValue({ id: 'X', name: 'X', raw: {} });
   });
 
-  test('precharge la fiche survolee sous la cle lue par le tiroir', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const { result } = renderHook(() => usePrefetchObjectDetail(), { wrapper: makeWrapper(client) });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
-    result.current('RESRUN0000000001');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+  // Le QueryClient de test déclare EXPLICITEMENT le staleTime : le client de
+  // production le tient de app/query-client.ts, un client de test nu aurait
+  // staleTime=0 et rendrait la 3e assertion ininterprétable.
+  function makeClient() {
+    return new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 5 * 60 * 1000 } },
+    });
+  }
+
+  test('precharge apres le delai d intention', async () => {
+    const { result } = renderHook(() => usePrefetchObjectDetail(), { wrapper: makeWrapper(makeClient()) });
+
+    const cancel = result.current('RESRUN0000000001');
+    expect(mockGetObjectResource).not.toHaveBeenCalled(); // rien avant le délai
+
+    jest.advanceTimersByTime(200);
+    await jest.runOnlyPendingTimersAsync();
 
     expect(mockGetObjectResource).toHaveBeenCalledTimes(1);
     expect(mockGetObjectResource.mock.calls[0][0]).toBe('RESRUN0000000001');
+    expect(typeof cancel).toBe('function');
+  });
+
+  test('un balayage de la liste ne precharge AUCUNE carte traversee', async () => {
+    const { result } = renderHook(() => usePrefetchObjectDetail(), { wrapper: makeWrapper(makeClient()) });
+
+    // 30 cartes survolées 50 ms chacune : sous le seuil d'intention de 200 ms.
+    for (let i = 0; i < 30; i += 1) {
+      const cancel = result.current(`RESRUN000000${String(i).padStart(4, '0')}`);
+      jest.advanceTimersByTime(50);
+      cancel();
+    }
+    await jest.runOnlyPendingTimersAsync();
+
+    expect(mockGetObjectResource).not.toHaveBeenCalled();
   });
 
   test('ne repart pas si la fiche est deja fraiche en cache', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = makeClient();
     client.setQueryData(['object-detail', 'RESRUN0000000001', ['fr']], { id: 'X', name: 'X', raw: {} });
     const { result } = renderHook(() => usePrefetchObjectDetail(), { wrapper: makeWrapper(client) });
 
     result.current('RESRUN0000000001');
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    jest.advanceTimersByTime(200);
+    await jest.runOnlyPendingTimersAsync();
 
     expect(mockGetObjectResource).not.toHaveBeenCalled();
   });
@@ -426,36 +491,72 @@ Dans `src/hooks/useExplorerQueries.ts`, ajouter juste **après** la fonction `us
 
 ```ts
 /**
+ * §NN — fraîcheur de la fiche, PARTAGÉE entre le préchargement au survol et la
+ * lecture du tiroir. Elle doit être explicite et unique : si le préchargement et
+ * `useObjectDetailQuery` divergent, l'ouverture refait la requête que le survol
+ * vient de payer.
+ */
+export const OBJECT_DETAIL_STALE_TIME_MS = 5 * 60 * 1000;
+
+/** §NN — délai d'intention avant préchargement, en millisecondes. */
+const PREFETCH_INTENT_DELAY_MS = 200;
+
+/**
  * §NN — précharge la fiche survolée sous la clé exacte que lit le tiroir
  * (`['object-detail', id, langPrefs]`). Le survol précède le clic de plusieurs
  * centaines de millisecondes, soit à peu près le coût d'un aller-retour vers
  * Supabase depuis La Réunion (220–310 ms mesurés) : la fiche est donc déjà en
  * cache au moment du clic.
  *
- * `prefetchQuery` est un no-op si l'entrée est encore fraîche (staleTime), donc
- * balayer une liste à la souris ne déclenche pas une requête par carte survolée.
+ * ATTENTION — chaque carte a sa PROPRE clé de cache : sans garde, balayer une
+ * liste à la souris déclencherait une requête par carte traversée. D'où le délai
+ * d'intention, que l'appelant annule via la fonction rendue quand le pointeur
+ * quitte la carte. Seule une carte réellement regardée est préchargée.
+ *
  * Les erreurs sont volontairement avalées : un préchargement qui échoue ne doit
  * jamais remonter à l'utilisateur, le vrai chargement au clic rejouera et
  * affichera l'erreur normalement.
+ *
+ * @returns une fonction d'annulation, à appeler au `mouseleave`.
  */
-export function usePrefetchObjectDetail(): (objectId: string) => void {
+export function usePrefetchObjectDetail(): (objectId: string) => () => void {
   const queryClient = useQueryClient();
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
   return useMemo(
     () => (objectId: string) => {
       if (!objectId) {
-        return;
+        return () => undefined;
       }
-      void queryClient
-        .prefetchQuery({
-          queryKey: ['object-detail', objectId, langPrefs],
-          queryFn: () => getObjectResource(objectId, langPrefs),
-        })
-        .catch(() => undefined);
+      const timer = setTimeout(() => {
+        void queryClient
+          .prefetchQuery({
+            queryKey: ['object-detail', objectId, langPrefs],
+            queryFn: () => getObjectResource(objectId, langPrefs),
+            staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+          })
+          .catch(() => undefined);
+      }, PREFETCH_INTENT_DELAY_MS);
+
+      return () => clearTimeout(timer);
     },
     [langPrefs, queryClient],
   );
+}
+```
+
+Puis appliquer le **même** `staleTime` à `useObjectDetailQuery` (lignes 225–233), sans quoi le préchargement est perdu à l'ouverture :
+
+```ts
+export function useObjectDetailQuery(objectId: string | null) {
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useQuery({
+    queryKey: ['object-detail', objectId, langPrefs],
+    queryFn: () => getObjectResource(objectId ?? '', langPrefs),
+    enabled: Boolean(objectId),
+    staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+  });
 }
 ```
 
@@ -478,7 +579,13 @@ Dans `src/components/explorer/ResultsList.tsx` :
 
 ```tsx
   const prefetchObjectDetail = usePrefetchObjectDetail();
+  // Annulation du délai d'intention en cours. Un seul suffit : le pointeur n'est
+  // que sur une carte à la fois, et `onHoverChange(false)` part avant le
+  // `onHoverChange(true)` de la carte suivante.
+  const cancelPrefetchRef = useRef<(() => void) | null>(null);
 ```
+
+> Ajouter `useRef` à l'import `react` en tête de fichier s'il n'y est pas déjà.
 
 3. Ligne 218, remplacer :
 
@@ -491,9 +598,8 @@ par :
 ```tsx
         onHoverChange={(hovered) => {
           setHoveredCard(hovered ? card.id : null);
-          if (hovered) {
-            prefetchObjectDetail(card.id);
-          }
+          cancelPrefetchRef.current?.();
+          cancelPrefetchRef.current = hovered ? prefetchObjectDetail(card.id) : null;
         }}
 ```
 
@@ -687,27 +793,40 @@ Reporter le nombre observé dans le journal de décisions `bertel-tourism-ui/cla
 
 ---
 
-# LOT 2 — Les catalogues de référence deviennent un cache de session
+# LOT 2 — Les catalogues publics deviennent un cache de session
 
-**Gain :** ~43 requêtes de catalogue par ouverture d'éditeur → ~16 **une seule fois par session**, puis 0 (persistées en `localStorage`).
-**Risque :** moyen. Deux pièges réels, traités par les tâches 7 et 8.
-**Livrable :** ouvrir dix fiches d'affilée dans l'éditeur ne télécharge les catalogues qu'une fois.
+**Périmètre exact — chiffres recomptés en revue.** Le chemin de chargement (`object-workspace.ts` avant la ligne 3800) contient **50 sites `ref_*`** :
 
-> **Décision d'architecture à respecter.** L'utilisateur a proposé « tout appeler via un seul RPC ». Pour les catalogues, **ce n'est pas nécessaire** : une fois qu'ils sont chargés une seule fois par session et persistés, passer de 16 requêtes à 1 ne gagne plus rien de perceptible (16 requêtes en parallèle sur une connexion HTTP/2 = ~1 aller-retour). Le RPC unique garde tout son sens pour les **données d'objet** (lot 3), qui ne sont pas cacheables entre fiches. Ce lot se fait donc **sans aucune modification SQL**.
+| Catégorie | Sites | Cacheable ? |
+|---|---|---|
+| `ref_code` avec domaine **statique** | 30 | **oui** — 27 domaines distincts |
+| `ref_code` avec domaine **dynamique** (taxonomie, ligne 1232) | 1 | **non** — le domaine se calcule à l'exécution |
+| Autres catalogues publics (`ref_amenity` ×3, `ref_language`, `ref_contact_role`, `ref_org_role`, `ref_actor_role`, `ref_iti_assoc_role`, `ref_tag`, `ref_legal_type`, `ref_capacity_metric`, `ref_capacity_applicability`, `ref_classification_scheme`, `ref_classification_value`, `ref_sustainability_action`, `ref_sustainability_action_category`, `ref_code_domain_registry`) | 17 | **oui** |
+| `ref_document` (×2) | 2 | **non** — filtré par les identifiants de documents de l'objet, ce n'est pas un catalogue |
+
+**Gain réel :** 47 des 50 sites disparaissent du chemin par fiche. Restent 3 lectures `ref_*` par fiche (taxonomie dynamique + les 2 `ref_document`).
+**Risque :** moyen. Trois pièges réels, traités par les tâches 6 (exclusion des données soumises à la RLS), 7 (fraîcheur réelle) et 9 (invalidation à l'édition d'un code).
+**Livrable :** ouvrir dix fiches d'affilée dans l'éditeur télécharge les catalogues **une seule fois**.
+
+> **Le lot ne s'appelle PAS « cache des `ref_code` ».** Une première version de ce plan ne mutualisait que `ref_code` et annonçait « puis 0 » : c'était faux, ~19 lectures de catalogue seraient restées par fiche. Le lot couvre **tous les catalogues publics**, sinon l'annonce est mensongère.
+
+> **Décision d'architecture à respecter.** L'utilisateur a proposé « tout appeler via un seul RPC ». Pour les catalogues, **ce n'est pas nécessaire** : une fois qu'ils sont chargés une seule fois par session et persistés, passer de ~17 requêtes à 1 ne gagne plus rien de perceptible (elles partent en parallèle sur une connexion HTTP/2 ≈ 1 aller-retour, **une fois par heure**). Le RPC unique garde tout son sens pour les **données d'objet** (lot 3), qui ne sont cacheables entre aucune fiche. Ce lot se fait donc **sans aucune modification SQL**.
 
 ## Structure des fichiers du lot 2
 
 | Fichier | Rôle | Action |
 |---|---|---|
-| `src/services/reference-catalogs.ts` | Source unique des catalogues `ref_*` : un fetch groupé, un type de sortie | **Créer** |
-| `src/services/reference-catalogs.test.ts` | Garde : un seul appel `ref_code` pour les 25 domaines | **Créer** |
-| `src/hooks/useReferenceCatalogsQuery.ts` | Hook React Query : cache long + persistance | **Créer** |
-| `src/services/object-workspace.ts` | Chargeur de l'éditeur | **Modifier** — consommer le cache |
+| `src/services/reference-catalogs.ts` | Source unique des catalogues publics : un fetch groupé, un type de sortie | **Créer** |
+| `src/services/reference-catalogs.test.ts` | Garde : un seul appel `ref_code` pour les 27 domaines | **Créer** |
+| `src/hooks/useReferenceCatalogsQuery.ts` | Contrat de fraîcheur : 1 h, vérifié horloge en main | **Créer** |
+| `src/hooks/useReferenceCatalogsQuery.test.tsx` | Garde : périmé au-delà d'1 h ⇒ refetch | **Créer** |
+| `src/services/object-workspace.ts` | Chargeur de l'éditeur (lecture) | **Modifier** — signatures + consommation |
+| `src/services/object-workspace.ts` | Chemins d'écriture | **Modifier** — tâche séparée (tâche 10) |
 | `src/views/RefCodeEditor.tsx` | Édition des `ref_code` en console admin | **Modifier** — invalider le cache |
 
 ---
 
-### Tâche 6 : Un seul appel pour les 25 domaines `ref_code`
+### Tâche 6 : Un seul appel pour les 27 domaines `ref_code`
 
 **Fichiers :**
 - Créer : `src/services/reference-catalogs.ts`
@@ -723,17 +842,31 @@ Reporter le nombre observé dans le journal de décisions `bertel-tourism-ui/cla
   ```
   Ces noms sont consommés tels quels par les tâches 7, 8 et 9.
 
-**Contexte indispensable.** `src/services/object-workspace.ts` contient 46 appels `.from('ref_code')`, qui couvrent **25 domaines distincts**. Chacun est un GET PostgREST séparé. PostgREST accepte `.in('domain', [...])` : les 25 deviennent un seul appel filtré, regroupé côté client.
+**Contexte indispensable.** `src/services/object-workspace.ts` lit `ref_code` en 31 endroits sur le chemin de chargement. Chacun est un GET PostgREST séparé. PostgREST accepte `.in('domain', [...])` : tous deviennent un seul appel filtré, regroupé côté client.
 
-La liste des 25 domaines doit être **régénérée**, pas recopiée. Commande de vérification :
+**La liste des domaines doit être régénérée, pas recopiée — et la commande naïve est FAUSSE.** Une première version de ce plan proposait :
 
 ```bash
-grep -oE "eq\('domain', '[a-z_]+'\)" src/services/object-workspace.ts | grep -oE "'[a-z_]+'\)$" | tr -d "')" | sort -u
+# INCOMPLET — ne détecte que les .eq('domain', …)
+grep -oE "eq\('domain', '[a-z_]+'\)" src/services/object-workspace.ts
 ```
 
-Sortie attendue le 2026-07-28 (25 lignes) : `allergen bed_type contact_kind cuisine_type dietary_tag environment_tag iti_difficulty iti_open_status iti_practice iti_stage_kind language_level media_tag media_type meeting_equipment membership_campaign membership_tier menu_category opening_period_type payment_method price_kind price_type price_unit room_type season_type view_type`.
+Elle rate les domaines chargés par `.in(...)`. Ligne 1710 :
 
-> Si la commande rend un nombre différent de 25, **utiliser sa sortie**, pas cette liste, et le signaler.
+```ts
+client.from('ref_code').select('id, code, name, domain').in('domain', ['social_network', 'distribution_channel'])…
+```
+
+Commande **correcte**, qui couvre les deux formes :
+
+```bash
+grep -oE "(eq\('domain', '[a-z_]+'\)|in\('domain', \[[^]]*\])" src/services/object-workspace.ts \
+  | grep -oE "'[a-z_]+'" | tr -d "'" | grep -v '^domain$' | sort -u
+```
+
+Sortie attendue le 2026-07-28 : **27 domaines** — les 25 de la forme `.eq` plus `social_network` et `distribution_channel`.
+
+> Si la commande rend un nombre différent de 27, **utiliser sa sortie**, pas la liste ci-dessous, et le signaler. Écarter `domainCodes` et `managedDomains` s'ils apparaissent : ce sont des variables, pas des domaines (lignes 1232, 4137, 4144, 4220 — domaines calculés à l'exécution, hors périmètre de ce cache).
 
 - [ ] **Étape 6.1 : Écrire le test qui échoue**
 
@@ -749,20 +882,27 @@ const rows = [
   { id: '3', code: 'double', name: 'Lit double', domain: 'bed_type', position: 1 },
 ];
 
+// Le mock imite la partie de l'API PostgREST réellement utilisée : `select()`
+// est « thenable » (les tables de référence sont awaitées directement) ET porte
+// `in()` / `order()` chaînables (le bras ref_code).
 jest.mock('../lib/supabase', () => ({
   getSupabaseClient: () => ({
     from: (table: string) => ({
-      select: () => ({
-        in: (column: string, values: string[]) => {
-          inSpy(table, column, values);
-          return {
-            order: () => ({
-              order: () => Promise.resolve({ data: rows, error: null }),
-            }),
-          };
-        },
-        order: () => Promise.resolve({ data: [], error: null }),
-      }),
+      select: () => {
+        const terminal = Promise.resolve({ data: table === 'ref_code' ? rows : [], error: null });
+        return Object.assign(terminal, {
+          in: (column: string, values: string[]) => {
+            inSpy(table, column, values);
+            const chain = Promise.resolve({ data: rows, error: null });
+            return Object.assign(chain, {
+              order: () => Object.assign(Promise.resolve({ data: rows, error: null }), {
+                order: () => Promise.resolve({ data: rows, error: null }),
+              }),
+            });
+          },
+          order: () => terminal,
+        });
+      },
     }),
   }),
 }));
@@ -770,7 +910,7 @@ jest.mock('../lib/supabase', () => ({
 describe('fetchReferenceCatalogs', () => {
   beforeEach(() => inSpy.mockClear());
 
-  test('couvre les 25 domaines ref_code en UN seul appel', async () => {
+  test('couvre les 27 domaines ref_code en UN seul appel', async () => {
     await fetchReferenceCatalogs();
 
     const refCodeCalls = inSpy.mock.calls.filter(([table]) => table === 'ref_code');
@@ -820,7 +960,7 @@ export type RefCodeRow = {
 };
 
 /**
- * §NN — les 25 domaines `ref_code` que le chargeur de l'éditeur lisait
+ * §NN — les 27 domaines `ref_code` que le chargeur de l'éditeur lisait
  * jusqu'ici en 25 requêtes séparées (une par `.eq('domain', …)`), soit ~23
  * allers-retours mesurés par ouverture de fiche en production.
  *
@@ -837,6 +977,7 @@ export const REF_CODE_DOMAINS = [
   'contact_kind',
   'cuisine_type',
   'dietary_tag',
+  'distribution_channel',
   'environment_tag',
   'iti_difficulty',
   'iti_open_status',
@@ -856,15 +997,45 @@ export const REF_CODE_DOMAINS = [
   'price_unit',
   'room_type',
   'season_type',
+  'social_network',
   'view_type',
+] as const;
+
+/**
+ * §NN — les autres catalogues publics du chemin de chargement. Même nature que
+ * `ref_code` : lecture publique, identiques pour toutes les fiches ET pour tous
+ * les utilisateurs. Ne PAS y ajouter :
+ *  - `ref_document` : filtré par les identifiants de documents de l'objet, ce
+ *    n'est pas un catalogue ;
+ *  - la liste des ORG (`from('object').eq('object_type','ORG')`) : elle passe
+ *    par la RLS et dépend de l'utilisateur — ce cache est partagé entre tous
+ *    les utilisateurs du navigateur.
+ */
+export const REFERENCE_TABLES = [
+  'ref_amenity',
+  'ref_language',
+  'ref_contact_role',
+  'ref_org_role',
+  'ref_actor_role',
+  'ref_iti_assoc_role',
+  'ref_tag',
+  'ref_legal_type',
+  'ref_capacity_metric',
+  'ref_capacity_applicability',
+  'ref_classification_scheme',
+  'ref_classification_value',
+  'ref_sustainability_action',
+  'ref_sustainability_action_category',
+  'ref_code_domain_registry',
 ] as const;
 
 export type ReferenceCatalogs = {
   refCodeByDomain: Record<string, RefCodeRow[]>;
+  tables: Record<string, Record<string, unknown>[]>;
 };
 
 /**
- * Charge en UN appel tous les codes de référence des 25 domaines et les
+ * Charge en UN appel tous les codes de référence des 27 domaines et les
  * regroupe par domaine. Chaque domaine déclaré rend TOUJOURS un tableau
  * (vide si aucune ligne) : les appelants n'ont pas à gérer `undefined`.
  */
@@ -874,32 +1045,71 @@ export async function fetchReferenceCatalogs(): Promise<ReferenceCatalogs> {
   for (const domain of REF_CODE_DOMAINS) {
     refCodeByDomain[domain] = [];
   }
+  const tables: Record<string, Record<string, unknown>[]> = {};
+  for (const table of REFERENCE_TABLES) {
+    tables[table] = [];
+  }
 
   if (!client) {
-    return { refCodeByDomain };
+    return { refCodeByDomain, tables };
   }
 
-  const { data, error } = await client
-    .from('ref_code')
-    .select('id, code, name, domain, position')
-    .in('domain', [...REF_CODE_DOMAINS])
-    .order('domain', { ascending: true })
-    .order('position', { ascending: true });
+  const [refCodeResult, ...tableResults] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id, code, name, domain, position')
+      .in('domain', [...REF_CODE_DOMAINS])
+      .order('domain', { ascending: true })
+      .order('position', { ascending: true }),
+    ...REFERENCE_TABLES.map((table) => client.from(table).select(REFERENCE_TABLE_SELECT[table])),
+  ]);
 
-  if (error) {
-    throw error;
+  if (refCodeResult.error) {
+    throw refCodeResult.error;
   }
 
-  for (const row of (data ?? []) as RefCodeRow[]) {
+  for (const row of (refCodeResult.data ?? []) as RefCodeRow[]) {
     const bucket = refCodeByDomain[row.domain];
     if (bucket) {
       bucket.push(row);
     }
   }
 
-  return { refCodeByDomain };
+  REFERENCE_TABLES.forEach((table, index) => {
+    const result = tableResults[index];
+    if (result?.error) {
+      throw result.error;
+    }
+    tables[table] = (result?.data ?? []) as Record<string, unknown>[];
+  });
+
+  return { refCodeByDomain, tables };
 }
 ```
+
+**`REFERENCE_TABLE_SELECT` : à construire, pas à deviner.** Pour chaque table de `REFERENCE_TABLES`, la liste de colonnes doit être **l'union** de ce que demandent les sites d'appel existants (sinon un module perdra une colonne qu'il lisait). Commande pour les extraire :
+
+```bash
+for t in ref_amenity ref_language ref_contact_role ref_org_role ref_actor_role \
+         ref_iti_assoc_role ref_tag ref_legal_type ref_capacity_metric \
+         ref_capacity_applicability ref_classification_scheme ref_classification_value \
+         ref_sustainability_action ref_sustainability_action_category ref_code_domain_registry; do
+  echo "--- $t"
+  grep -oE "from\('$t'\)[^;]{0,240}" src/services/object-workspace.ts | grep -oE "select\('[^']*'\)" | sort -u
+done
+```
+
+Reporter le résultat dans une constante juste au-dessus de `fetchReferenceCatalogs` :
+
+```ts
+/** Colonnes = UNION des select() des sites d'appel existants (voir le plan). */
+const REFERENCE_TABLE_SELECT: Record<string, string> = {
+  // …une entrée par table, remplie depuis la sortie de la commande ci-dessus…
+};
+```
+
+> **Deux pièges de filtrage à traiter côté client, pas côté requête.**
+> `ref_amenity` est lu trois fois avec des filtres de `scope` qui se chevauchent (`['object','both']` ligne 621, sans filtre ligne 1322, `['room','both']` ligne 2570). On charge la table **entière** une fois et chaque module filtre sur `scope` en mémoire. Idem `ref_capacity_applicability`, filtré par `object_type` ligne 747 : charger la table entière (elle est petite) et filtrer en mémoire.
 
 - [ ] **Étape 6.4 : Lancer le test et vérifier qu'il PASSE**
 
@@ -912,7 +1122,7 @@ Attendu : `Tests: 3 passed`.
 - [ ] **Étape 6.5 : Commit**
 
 ```bash
-git add src/services/reference-catalogs.ts src/services/reference-catalogs.test.ts && git commit -m "perf(catalogues): charger les 25 domaines ref_code en une seule requete"
+git add src/services/reference-catalogs.ts src/services/reference-catalogs.test.ts && git commit -m "perf(catalogues): charger les 27 domaines ref_code en une seule requete"
 ```
 
 ---
@@ -988,7 +1198,51 @@ describe('useReferenceCatalogsQuery', () => {
     expect(entry?.options.staleTime).toBe(60 * 60 * 1000);
   });
 });
+
+describe('ensureReferenceCatalogs — contrat de fraicheur', () => {
+  // CE TEST EST LA RAISON D'ÊTRE DE LA TÂCHE. Avec `ensureQueryData`, il échoue :
+  // le cache est rendu tel quel même vieux de 24 h. Avec `fetchQuery({staleTime}),
+  // il passe. Neutraliser `staleTime` DOIT le faire tomber — sinon la garde est
+  // vacante et ne prouve rien.
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockFetch.mockReset();
+    mockFetch.mockResolvedValue({ refCodeByDomain: { bed_type: [] }, tables: {} });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('rend le cache sans requete tant qu il a moins d une heure', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    await ensureReferenceCatalogs(client);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(59 * 60 * 1000); // 59 minutes
+    await ensureReferenceCatalogs(client);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1); // toujours 1 : servi du cache
+  });
+
+  test('refetch des que le cache depasse une heure', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    await ensureReferenceCatalogs(client);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    jest.advanceTimersByTime(61 * 60 * 1000); // 61 minutes
+    await ensureReferenceCatalogs(client);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2); // périmé : rechargé
+  });
+});
 ```
+
+> Ajouter `ensureReferenceCatalogs` à l'import en tête de ce fichier de test.
+>
+> **Si le second test ne passe pas** avec `jest.advanceTimersByTime`, c'est que les faux timers de la configuration Jest du projet ne remplacent pas `Date.now()` (TanStack compare `dataUpdatedAt` à `Date.now()`). Dans ce cas, remplacer l'avance d'horloge par un `jest.spyOn(Date, 'now')` renvoyant `base + 61 * 60 * 1000`. **Ne pas supprimer le test** : c'est lui qui distingue `fetchQuery` de `ensureQueryData`.
 
 - [ ] **Étape 7.2 : Lancer le test et vérifier qu'il ÉCHOUE**
 
@@ -1040,12 +1294,21 @@ export function useReferenceCatalogsQuery(): UseQueryResult<ReferenceCatalogs> {
 
 /**
  * Variante impérative pour le chargeur de l'éditeur, qui n'est pas un composant
- * React. `ensureQueryData` rend l'entrée du cache si elle est fraîche, et ne
- * déclenche un fetch que sinon — c'est ce qui fait tomber les ~43 requêtes de
- * catalogue à 0 dès la deuxième fiche ouverte.
+ * React.
+ *
+ * ATTENTION — utiliser `fetchQuery`, PAS `ensureQueryData`. Vérifié dans la
+ * version installée (@tanstack/query-core 5.100.7, `queryClient.ts`) :
+ * `ensureQueryData` rend la valeur en cache **dès que `data !== undefined`**,
+ * sans regarder `staleTime` ; l'option `revalidateIfStale` ne fait que lancer un
+ * prefetch d'arrière-plan et rend **quand même** la valeur périmée. Combiné à la
+ * persistance localStorage (gcTime 24 h), un catalogue vieux de 24 h serait servi
+ * tel quel et le contrat « rafraîchi toutes les heures » serait faux.
+ *
+ * `fetchQuery({ staleTime })` a la sémantique voulue : rend le cache s'il est
+ * frais **au sens de `staleTime`**, refetch sinon et attend le résultat.
  */
 export async function ensureReferenceCatalogs(queryClient: QueryClient): Promise<ReferenceCatalogs> {
-  return queryClient.ensureQueryData({
+  return queryClient.fetchQuery({
     queryKey: [...REFERENCE_CATALOGS_QUERY_KEY],
     queryFn: fetchReferenceCatalogs,
     staleTime: CATALOGS_STALE_TIME_MS,
@@ -1083,18 +1346,56 @@ git add src/hooks/useReferenceCatalogsQuery.ts src/hooks/useReferenceCatalogsQue
 
 > **Cette tâche est la plus longue du plan. Elle se découpe module par module, avec un commit par groupe de modules.** Ne pas tenter de convertir les 46 sites d'un coup : le fichier fait 6 500 lignes et une erreur de regroupement y est difficile à retrouver.
 
-**Méthode, à appliquer à l'identique pour chaque module.**
+**Méthode, à appliquer à l'identique pour chaque module — quatre gestes, pas trois.**
 
-Chaque fonction de module contient aujourd'hui un `Promise.all([...])` où figurent une ou plusieurs entrées de la forme :
+Une première version de ce plan disait « remplacer l'usage par `catalogs.refCodeByDomain.…` ». **C'était incomplet** : `catalogs` n'existe pas dans la portée des fonctions de module. Chacune doit d'abord **recevoir le paramètre**. Exemple complet sur le module caractéristiques, à reproduire pour les autres :
+
+1. **Ajouter le paramètre à la signature.** Ligne 586 :
 
 ```ts
-client.from('ref_code').select('id, code, name, position').eq('domain', 'bed_type').order('position', { ascending: true }),
+async function getObjectWorkspaceCharacteristicsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCharacteristicsModule,
+): Promise<ObjectWorkspaceCharacteristicsModule> {
 ```
 
-Pour chacune :
-1. Supprimer l'entrée du `Promise.all`.
-2. Décaler la destructuration du résultat en conséquence.
-3. Remplacer l'usage de son `.data` par `catalogs.refCodeByDomain.bed_type`.
+devient :
+
+```ts
+async function getObjectWorkspaceCharacteristicsModule(
+  objectId: string,
+  baseModule: ObjectWorkspaceCharacteristicsModule,
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceCharacteristicsModule> {
+```
+
+2. **Retirer les entrées de catalogue du `Promise.all` interne** (ici lignes 614–621 : `ref_language`, les trois `ref_code`, `ref_amenity`) et **décaler la destructuration** en conséquence.
+
+3. **Remplacer chaque usage** de leur `.data` :
+
+| Ancien | Nouveau |
+|---|---|
+| résultat de `ref_code` domaine `language_level` | `catalogs.refCodeByDomain.language_level` |
+| résultat de `ref_code` domaine `payment_method` | `catalogs.refCodeByDomain.payment_method` |
+| résultat de `ref_code` domaine `environment_tag` | `catalogs.refCodeByDomain.environment_tag` |
+| résultat de `ref_language` | `catalogs.tables.ref_language` |
+| résultat de `ref_amenity` filtré `scope in ('object','both')` | `catalogs.tables.ref_amenity.filter((a) => a.scope === 'object' \|\| a.scope === 'both')` |
+
+4. **Mettre à jour l'appelant** dans `getObjectWorkspaceResource` :
+
+```ts
+    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
+```
+
+> **`catalogs.tables.*` est typé `Record<string, unknown>[]`.** Les modules qui en consomment devront caster vers leur type de ligne local (celui que la destructuration leur donnait déjà). Ne pas introduire de nouveaux types : réutiliser ceux qui existent au-dessus de chaque module.
+
+**Lister les fonctions à modifier** (elles se traitent une par une, un commit par module) :
+
+```bash
+grep -nE "^async function getObjectWorkspace[A-Za-z]+Module" src/services/object-workspace.ts
+```
+
+Après chaque module converti, `npm run typecheck` doit pointer exactement l'appelant restant à mettre à jour. **C'est le compilateur qui tient la liste — ne pas la tenir de tête.**
 
 - [ ] **Étape 8.1 : Ajouter le paramètre `catalogs` à la signature du chargeur**
 
@@ -1160,7 +1461,7 @@ Attendu : des erreurs « Expected 3 arguments, but got 2 » sur chaque appelant 
 
 - [ ] **Étape 8.4 : Convertir le groupe « caractéristiques » (lignes 614–621)**
 
-Retirer du `Promise.all` les trois entrées `ref_code` (`language_level` ligne 615, `payment_method` 617, `environment_tag` 619) et remplacer leurs usages par `catalogs.refCodeByDomain.language_level`, `.payment_method`, `.environment_tag`. Laisser `ref_language` et `ref_amenity` en place (ce ne sont pas des `ref_code`).
+Appliquer les quatre gestes de la « Méthode » ci-dessus au module caractéristiques (lignes 586–698). Les cinq entrées de catalogue à retirer du `Promise.all` sont : `ref_language` (614), `ref_code` `language_level` (615), `ref_code` `payment_method` (617), `ref_code` `environment_tag` (619), `ref_amenity` (621). Ce module passe ainsi de 9 requêtes à 4.
 
 - [ ] **Étape 8.5 : Vérifier**
 
@@ -1180,32 +1481,58 @@ git add src/services/object-workspace.ts src/hooks/useExplorerQueries.ts && git 
 
 Groupes à traiter, dans cet ordre (numéros de ligne au 2026-07-28, à revérifier avant chaque passe car ils bougent) :
 
-| Groupe | Lignes | Domaines `ref_code` à retirer |
-|---|---|---|
-| médias | 1560–1561 | `media_type`, `media_tag` |
-| contacts | 1706, 1710 | `contact_kind`, `social_network`, `distribution_channel` |
-| adhésions | 2070–2071 | `membership_campaign`, `membership_tier` |
-| tarifs | 2391–2394 | `price_kind`, `price_type`, `season_type`, `price_unit` |
-| chambres | 2568–2572 | `view_type`, `room_type`, `bed_type` |
-| salles de réunion | 2730 | `meeting_equipment` |
-| cuisine | 2803 | `cuisine_type` |
-| menus | 2842–2847 | `menu_category`, `dietary_tag`, `allergen`, `cuisine_type`, `price_kind`, `price_unit` |
-| activité | 3038 | `iti_difficulty` |
-| itinéraire | 3152–3157 | `iti_practice`, `iti_difficulty`, `iti_open_status`, `iti_stage_kind` |
-| taxonomie | 1230 | (filtré dynamiquement — **ne pas convertir**, voir ci-dessous) |
-| horaires | site `opening_period_type` | `opening_period_type` |
+| Groupe | Lignes | `ref_code` à retirer | Autres catalogues à retirer |
+|---|---|---|---|
+| capacité | 741, 747 | — | `ref_capacity_metric`, `ref_capacity_applicability` |
+| taxonomie | 1207 | — | `ref_code_domain_registry` |
+| distinctions | 1308, 1313, 1322 | — | `ref_classification_scheme`, `ref_classification_value`, `ref_amenity` |
+| médias | 1560–1561 | `media_type`, `media_tag` | — |
+| contacts | 1706, 1707, 1710 | `contact_kind`, `social_network`, `distribution_channel` | `ref_contact_role` |
+| relations | 1802, 1811 | — | `ref_org_role`, `ref_actor_role` |
+| adhésions | 2070–2071 | `membership_campaign`, `membership_tier` | — |
+| juridique | 2304 | — | `ref_legal_type` |
+| tarifs | 2391–2394 | `price_kind`, `price_type`, `season_type`, `price_unit` | — |
+| chambres | 2568–2572 | `view_type`, `room_type`, `bed_type` | `ref_amenity` (scope `room`/`both`) |
+| salles de réunion | 2730 | `meeting_equipment` | — |
+| cuisine | 2803 | `cuisine_type` | — |
+| menus | 2842–2847 | `menu_category`, `dietary_tag`, `allergen`, `cuisine_type`, `price_kind`, `price_unit` | — |
+| activité | 3038 | `iti_difficulty` | — |
+| itinéraire | 3152–3157, 3159 | `iti_practice`, `iti_difficulty`, `iti_open_status`, `iti_stage_kind` | `ref_iti_assoc_role` |
+| durabilité | 3416, 3420 | — | `ref_sustainability_action_category`, `ref_sustainability_action` |
+| étiquettes | 3491 | — | `ref_tag` |
+| horaires | site `opening_period_type` | `opening_period_type` | — |
 
-> **Exception à respecter.** La lecture ligne 1230 est filtrée par un domaine calculé à l'exécution depuis `ref_code_domain_registry` : elle ne fait pas partie des 25 domaines statiques. La laisser telle quelle.
->
-> Les sites au-delà de la ligne 4000 (4135, 4863, 4939, 4995–4998) appartiennent aux chemins d'**écriture**, pas au chargement. Les convertir aussi — ils bénéficient du même cache — mais dans un commit séparé nommé `perf(editeur): chemins d ecriture lisent les codes depuis le cache de session`.
+> **Trois exceptions à NE PAS convertir.**
+> - Ligne 1232 (taxonomie) : `ref_code` filtré par `domainCodes`, calculé à l'exécution depuis `ref_code_domain_registry`. Hors des 27 domaines statiques.
+> - Lignes 1373 et 2237 : `ref_document` filtré par les identifiants de documents de l'objet. Ce n'est pas un catalogue.
+> - Ligne 3835 : `ref_facet_applicability` — **à convertir aussi si la commande de la tâche 6 l'a listée**, sinon la laisser. Vérifier, ne pas supposer.
 
-- [ ] **Étape 8.8 : Vérifier qu'aucune lecture `ref_code` de chargement ne subsiste**
+- [ ] **Étape 8.10 : Les chemins d'ÉCRITURE, dans un commit séparé**
+
+Les sites au-delà de la ligne 4000 (4135, 4137, 4144, 4220, 4249, 4253, 4863, 4939, 4995–4998, 6294) appartiennent aux fonctions d'**enregistrement**, pas au chargement. Ils bénéficient du même cache, mais **leurs fonctions n'ont pas non plus `catalogs` en portée** et leurs appelants sont différents (les savers, appelés depuis `saveWorkspaceModule`, pas depuis le chargeur).
+
+Deux options, à trancher **après** avoir regardé un saver :
+
+- **Option A (préférée) :** les savers résolvent les catalogues eux-mêmes via `ensureReferenceCatalogs(queryClient)`. Cela suppose de leur passer le `queryClient`, ce qui remonte jusqu'à `saveWorkspaceModule`. Chaîne d'appelants à modifier : à établir par `npm run typecheck`, pas de tête.
+- **Option B (repli) :** laisser les chemins d'écriture tels quels. Ils ne sont pas sur le chemin d'**ouverture** — ils ne coûtent rien au problème que ce plan traite. Une écriture qui relit un catalogue coûte une requête au moment de l'enregistrement, pas à l'ouverture.
+
+> **Si l'option A dépasse trois fichiers de propagation, prendre l'option B et le signaler.** L'objectif du plan est l'ouverture, pas l'enregistrement. Ne pas transformer un lot de perf en refonte de la chaîne d'écriture.
 
 ```bash
-grep -n "from('ref_code')" src/services/object-workspace.ts
+git add src/services/object-workspace.ts && git commit -m "perf(editeur): chemins d ecriture lisent les catalogues depuis le cache de session"
 ```
 
-Attendu : **une seule** occurrence restante, celle de la ligne ~1230 (taxonomie, domaine dynamique).
+- [ ] **Étape 8.8 : Vérifier qu'il ne reste que les exceptions documentées**
+
+```bash
+awk 'NR<3800' src/services/object-workspace.ts | grep -cE "\.from\('ref_"
+```
+
+Attendu : **3** (la taxonomie à domaine dynamique + les deux `ref_document`), contre 50 avant le lot. Si le compte est supérieur, lister les restantes et vérifier une par une qu'elles figurent bien dans les exceptions documentées :
+
+```bash
+awk 'NR<3800' src/services/object-workspace.ts | grep -nE "\.from\('ref_"
+```
 
 - [ ] **Étape 8.9 : Non-régression complète et commit final du lot**
 
@@ -1267,6 +1594,22 @@ git add src/views/RefCodeEditor.tsx && git commit -m "fix(catalogues): invalider
 
 ---
 
+### Tâche 9 bis : Mesure froide/chaude du lot 2
+
+- [ ] **Étape 9b.1 : Exécuter le protocole de mesure** (section « Protocole de mesure » en tête de plan) avec l'utilisateur.
+
+Attendu : éditeur **~38 requêtes à froid**, **~21 à chaud**. La chute entre froid et chaud est la preuve que le cache de catalogues fonctionne.
+
+- [ ] **Étape 9b.2 : Si le chiffre à chaud n'a pas chuté**, vérifier dans cet ordre :
+  1. `ensureReferenceCatalogs` utilise-t-il bien `fetchQuery` et non `ensureQueryData` ?
+  2. La clé `['reference-catalogs']` contient-elle par erreur `objectId` ou `langPrefs` ?
+  3. `meta: { persist: true }` est-il bien présent (sinon rien ne survit au rechargement) ?
+  4. Une invalidation trop large purge-t-elle la clé à chaque enregistrement ?
+
+- [ ] **Étape 9b.3 : Consigner** la série dans le journal de décisions.
+
+---
+
 # LOT 3 — Le chargeur de l'éditeur cesse de sérialiser
 
 **Prérequis : le lot 2 doit être terminé** (signature à trois paramètres de `getObjectWorkspaceResource`).
@@ -1285,42 +1628,46 @@ git add src/views/RefCodeEditor.tsx && git commit -m "fix(catalogues): invalider
 
 - [ ] **Étape 10.1 : Écrire le test qui échoue**
 
+**Pourquoi PAS un test de chronométrage.** Une première version de ce plan proposait d'instrumenter `fetch`, de bloquer toutes les réponses sur une même promesse et d'affirmer `starts.length > 1`. **Cette assertion ne prouve rien** : en séquentiel aussi, la première vague émet plusieurs requêtes, donc `starts.length > 1` est déjà vrai. Un vrai test de chronométrage exigerait deux promesses différées distinctes et l'assertion « des appels des DEUX groupes ont démarré avant que la première ne se résolve » — faisable, mais dépendant de l'ordre interne des 26 modules, donc fragile au moindre ajout.
+
+**Garde retenue : structurelle et déterministe.** Ce qui doit être vérifié est exactement : *il ne reste qu'un seul point de synchronisation dans le chargeur*. C'est vérifiable par lecture du source, sans réseau ni horloge, et **ça tombe** si quelqu'un réintroduit un `await` entre les deux groupes.
+
 Créer `src/services/object-workspace.waves.test.ts` :
 
 ```ts
-import { getObjectWorkspaceResource } from './object-workspace';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-// Garde d'ORDONNANCEMENT : les deux groupes d'enrichissement doivent partir
-// dans le MÊME tour de boucle d'événements. Si quelqu'un réintroduit un await
-// entre les deux, le second groupe démarrera après la résolution du premier et
-// ce test échouera.
-jest.mock('./rpc', () => ({
-  getObjectResource: jest.fn().mockResolvedValue({ id: 'X', name: 'X', type: 'RES', raw: {} }),
-}));
-
+/**
+ * §NN — GARDE D'ORDONNANCEMENT. La vague 2 était awaitée après la vague 1 alors
+ * qu'aucun de ses 13 arguments n'en provenait : une latence réseau complète
+ * (220-310 ms depuis La Réunion) payée pour rien.
+ *
+ * Le corps de `getObjectWorkspaceResource` ne doit contenir qu'UN SEUL
+ * `await Promise.all`. En ajouter un second = réintroduire la sérialisation.
+ * Si un jour un second point de synchronisation est légitime (une dépendance
+ * réelle apparaît), mettre à jour ce test EN MÊME TEMPS, avec un commentaire
+ * disant laquelle — ne jamais le supprimer.
+ */
 describe('getObjectWorkspaceResource — ordonnancement', () => {
-  test('lance les enrichissements de facette en meme temps que les enrichissements de base', async () => {
-    const starts: string[] = [];
-    const gate = new Promise<void>((resolve) => setTimeout(resolve, 30));
+  test('ne contient qu un seul point de synchronisation', () => {
+    const source = readFileSync(join(__dirname, 'object-workspace.ts'), 'utf8');
+    const start = source.indexOf('export async function getObjectWorkspaceResource');
+    expect(start).toBeGreaterThan(-1);
 
-    // On instrumente deux fonctions, une de chaque groupe historique, via le
-    // client Supabase : chacune enregistre l'instant de son premier appel.
-    jest.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
-      starts.push(String(input));
-      await gate;
-      return new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } });
-    });
+    // Fin du corps = début de la déclaration exportée suivante.
+    const nextExport = source.indexOf('\nexport ', start + 1);
+    const body = source.slice(start, nextExport === -1 ? undefined : nextExport);
 
-    await getObjectWorkspaceResource('RESRUN0000000001', ['fr'], { refCodeByDomain: {} }).catch(() => undefined);
-
-    // Toutes les requêtes d'enrichissement doivent être parties AVANT que la
-    // première ne se résolve (elles sont toutes bloquées sur le même `gate`).
-    expect(starts.length).toBeGreaterThan(1);
+    const syncPoints = body.match(/await Promise\.all\(/g) ?? [];
+    expect(syncPoints).toHaveLength(1);
   });
 });
 ```
 
-> **Note pour l'exécutant :** ce test est le plus délicat du plan. S'il s'avère instable (dépendant du nombre exact de requêtes), le remplacer par une assertion structurelle plus simple : vérifier par lecture du fichier qu'il ne reste qu'**un seul** `await Promise.all` dans `getObjectWorkspaceResource`. **Signaler le choix retenu** plutôt que de supprimer la garde.
+- [ ] **Étape 10.1 bis : Vérifier que la garde n'est PAS vacante**
+
+Avant de corriger le code, ce test doit échouer avec `Expected length: 1, Received length: 2`. Si le message dit autre chose (par exemple `Received length: 0`), la découpe du corps est fausse : **corriger la découpe avant de continuer**, sinon la garde ne protège rien.
 
 - [ ] **Étape 10.2 : Lancer le test et vérifier qu'il ÉCHOUE**
 
@@ -1440,85 +1787,26 @@ git add src/services/object-workspace.ts && git commit -m "perf(editeur): taxono
 
 ---
 
-### Tâche 12 : Supprimer les lectures dupliquées de `media`
+### Tâche 12 : Supprimer les lectures dupliquées de `media` — **REPORTÉE**
 
-**Fichiers :**
-- Modifier : `src/services/object-workspace.ts`
+## REPORTÉE — ne pas exécuter dans ce plan
 
-**Contexte indispensable.** Les médias de l'objet sont lus **quatre** fois dans la même requête utilisateur : le module médias fait le `select` complet (ligne 1548), et les modules chambres (2571), menus (2848) et itinéraire (3162) refont chacun **exactement** la même requête :
+**Constat (exact).** Les médias de l'objet sont lus **quatre** fois par ouverture : le module médias fait le `select` complet (ligne 1548), et les modules chambres (2571), menus (2848) et itinéraire (3162) refont chacun **exactement** la même requête :
 
 ```ts
 client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
 ```
 
-Trois requêtes identiques, donc deux au moins sont gratuites — et comme elles partent en parallèle, les supprimer ne raccourcit pas le chemin critique mais allège la charge serveur et le budget de connexions. Gain modeste, coût quasi nul.
+**Pourquoi elle est reportée.** Une première version de ce plan proposait de charger les vignettes une fois et de les lire « à l'assemblage ». **Ce n'est pas implémentable** : les trois modules consomment le résultat **à l'intérieur** de leur fonction, pas au moment où le chargeur assemble l'objet `modules`. Il n'y a pas de point où injecter la valeur après coup.
 
-- [ ] **Étape 12.1 : Confirmer les sites**
+**La forme correcte**, si la tâche est reprise plus tard :
 
-```bash
-grep -n "from('media').select('id, title, url, position')" src/services/object-workspace.ts
-```
+1. Vague 0 : `const [detail, mediaThumbs] = await Promise.all([getObjectResource(...), fetchObjectMediaThumbs(objectId)])` — les deux partent ensemble, donc **aucune** latence ajoutée.
+2. Passer `mediaThumbs` en paramètre aux trois modules chambres / menus / itinéraire, comme `catalogs` au lot 2.
 
-Attendu : exactement **3 lignes** (2571, 2848, 3162 au 2026-07-28). Si le compte diffère, utiliser la sortie réelle.
+**Et le gain honnête est 4 lectures → 2, pas → 1** : le module médias garde son `select` complet (colonnes bien plus larges), il n'est pas mutualisable avec les vignettes.
 
-- [ ] **Étape 12.2 : Définir le type partagé**
-
-Dans `src/services/object-workspace.ts`, juste au-dessus de `getObjectWorkspaceResource` (ligne 3845), ajouter :
-
-```ts
-/** §NN — vignettes de médias, lues UNE fois et partagées par les modules
- *  chambres / menus / itinéraire, qui émettaient chacun la même requête. */
-export type MediaThumbRow = { id: string; title: string | null; url: string; position: number | null };
-
-async function fetchObjectMediaThumbs(objectId: string): Promise<MediaThumbRow[]> {
-  const client = getApiClient();
-  if (!client) {
-    return [];
-  }
-  const { data, error } = await client
-    .from('media')
-    .select('id, title, url, position')
-    .eq('object_id', objectId)
-    .order('position', { ascending: true });
-  if (error) {
-    return [];
-  }
-  return (data ?? []) as MediaThumbRow[];
-}
-```
-
-- [ ] **Étape 12.3 : Charger une fois dans le chargeur**
-
-Dans `getObjectWorkspaceResource`, juste après la ligne `const placeLabelById = …` (déplacée par la tâche 10), ajouter :
-
-```ts
-  const mediaThumbs = await fetchObjectMediaThumbs(objectId);
-```
-
-> **Attention à l'ordonnancement.** Ce `await` ne doit **pas** réintroduire un saut sérialisé devant le `Promise.all` fusionné. Le placer **dans** le `Promise.all` en tête de tableau et le destructurer avec les autres :
->
-> ```ts
->   const [
->     mediaThumbs,
->     taxonomyModule, /* …les 26 autres… */
->   ] = await Promise.all([
->     fetchObjectMediaThumbs(objectId),
->     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, detail.type ?? ''),
->     /* … */
->   ]);
-> ```
->
-> Les trois modules consommateurs ne peuvent alors plus le recevoir en paramètre (ils partent en même temps). **Solution retenue :** ne pas passer `mediaThumbs` en paramètre — supprimer purement et simplement les trois entrées dupliquées des `Promise.all` internes et lire `mediaThumbs` **après** résolution, au moment où chaque module est assemblé dans l'objet `modules`. Si cela s'avère structurellement impossible pour un module donné (sa valeur est consommée à l'intérieur de la fonction, pas à l'assemblage), **laisser ce module tel quel et le signaler** : la duplication d'une requête parallèle est un coût très inférieur à celui d'une refonte hasardeuse.
-
-- [ ] **Étape 12.4 : Vérifier et commiter**
-
-```bash
-npm run typecheck && npm run test:run
-```
-
-```bash
-git add src/services/object-workspace.ts && git commit -m "perf(editeur): une seule lecture des medias au lieu de quatre"
-```
+**Pourquoi ce n'est pas prioritaire.** Les trois requêtes dupliquées partent **en parallèle** : les supprimer ne raccourcit pas le chemin critique. Le gain est de la charge serveur, pas de la latence perçue — c'est-à-dire pas l'objectif de ce plan. À reprendre dans une passe d'hygiène, après mesure des lots 1 et 2.
 
 ---
 
@@ -1529,29 +1817,72 @@ git add src/services/object-workspace.ts && git commit -m "perf(editeur): une se
 
 **Contexte indispensable.** `api.get_object_resource` exécute par défaut une passe `render` qui **rebalaie une seconde fois** 15 tables enfants pour produire des clés `*_lines` d'affichage. `grep -rn "_lines" src/` rend **0 occurrence** : ces clés ne sont lues nulle part dans le front. Gain mesuré : 2,5 à 6 ms par objet.
 
-**Attention, portée sous-estimée à vérifier.** `getObjectResource` a **quatre** appelants, pas deux : `object-workspace.ts:3846`, `useExplorerQueries.ts:230`, `SelectionBar.tsx:66` (impression) et `selection-export.ts:17`, qui fait `csvCell(JSON.stringify(d.raw ?? {}))` — l'export CSV **déverse `render` dans sa colonne `raw_json`**. Couper la passe modifie donc silencieusement un livrable utilisateur.
+**Attention, portée sous-estimée.** `getObjectResource` a **quatre** appelants, pas deux. Les lister avant de toucher quoi que ce soit :
+
+```bash
+grep -rn "getObjectResource(" src/ --include=*.ts --include=*.tsx | grep -v "\.test\." | grep -v "export async function"
+```
+
+Attendu au 2026-07-28 : `src/services/object-workspace.ts:3846`, `src/hooks/useExplorerQueries.ts:230`, `src/components/explorer/SelectionBar.tsx:66` (impression) et **`src/services/selection-export.ts:17`** — ce dernier fait `csvCell(JSON.stringify(d.raw ?? {}))` (ligne 28) et **déverse donc `render` dans la colonne `raw_json` du CSV exporté**. Couper la passe sans le traiter modifierait silencieusement un livrable utilisateur.
 
 - [ ] **Étape 13.1 : Rendre l'option paramétrable plutôt que globale**
 
-Changer la signature en `getObjectResource(objectId: string, langPrefs: string[], options?: { render?: boolean })`, avec `render: false` par défaut, et propager la valeur dans les deux `p_options` (lignes 144 et 454).
+Changer la signature en `getObjectResource(objectId: string, langPrefs: string[], options?: { render?: boolean })`, avec `render: false` par défaut, et propager la valeur dans les **deux** `p_options` du fichier (ligne 144, chemin `get_object_with_deep_data` ; ligne 454, chemin de repli `get_object_resource`).
 
 - [ ] **Étape 13.2 : Préserver l'export CSV**
 
-Dans `src/features/.../selection-export.ts`, appeler explicitement `getObjectResource(id, langPrefs, { render: true })` pour que la colonne `raw_json` reste inchangée.
+Dans **`src/services/selection-export.ts`** (ligne 17 — *pas* `src/features/…`), remplacer :
 
-- [ ] **Étape 13.3 : Ne PAS toucher au défaut SQL**
+```ts
+  const details = await Promise.all(ids.map((id) => getObjectResource(id, langPrefs)));
+```
+
+par :
+
+```ts
+  // §NN — l'export CSV sérialise `raw` entier dans sa colonne `raw_json`. Le
+  // reste de l'app ne demande plus la passe `render` (inutilisée) ; ici on la
+  // garde explicitement pour ne pas amputer un livrable utilisateur existant.
+  const details = await Promise.all(ids.map((id) => getObjectResource(id, langPrefs, { render: true })));
+```
+
+- [ ] **Étape 13.3 : Décider pour l'impression de sélection**
+
+`src/components/explorer/SelectionBar.tsx:66` boucle sur jusqu'à 50 fiches. Vérifier si le rendu d'impression lit une clé `*_lines` :
+
+```bash
+grep -rn "_lines" src/components/explorer/ src/features/ | grep -v "\.test\."
+```
+
+Attendu : **0 résultat** ⇒ laisser l'impression sur le défaut `render: false`, ce qui lui fait gagner 2,5–6 ms × 50 fiches. Si le grep rend quelque chose, passer `{ render: true }` à cet appelant aussi et le signaler.
+
+- [ ] **Étape 13.4 : Ne PAS toucher au défaut SQL**
 
 Ne pas modifier `v_render_enabled := COALESCE(..., TRUE)` dans `api_views_functions.sql:2995` : l'API partenaire documentée continue de recevoir `render` sans le demander.
 
-- [ ] **Étape 13.4 : Vérifier et commiter**
+- [ ] **Étape 13.5 : Vérifier et commiter — les DEUX fichiers**
 
 ```bash
 npm run typecheck && npm run test:run
 ```
 
 ```bash
-git add src/services/rpc.ts && git commit -m "perf(rpc): ne plus demander la passe render, inutilisee par le front"
+git add src/services/rpc.ts src/services/selection-export.ts && git commit -m "perf(rpc): ne plus demander la passe render, inutilisee par le front"
 ```
+
+> Une première version de ce plan ne stageait que `rpc.ts` : la préservation du CSV serait restée hors commit, donc l'export aurait été cassé par le commit suivant. **Vérifier `git status` avant de commiter** — si `selection-export.ts` n'apparaît pas modifié, l'étape 13.2 n'a pas été faite.
+
+---
+
+### Tâche 14 : Mesure froide/chaude du lot 3
+
+- [ ] **Étape 14.1 : Exécuter le protocole de mesure** avec l'utilisateur.
+
+Le lot 3 ne change **pas** le nombre de requêtes — il change leur **enchaînement**. La bonne mesure n'est donc pas le compte mais la **profondeur** : dans l'onglet Réseau, trier par heure de début et compter les « marches d'escalier », c'est-à-dire les groupes de requêtes qui ne démarrent qu'une fois le groupe précédent terminé.
+
+Attendu : **3 marches au lieu de 7**, et un temps jusqu'au premier pixel de l'éditeur réduit d'environ 0,7 s à froid.
+
+- [ ] **Étape 14.2 : Consigner** la série dans le journal de décisions, et **rouvrir la question du RPC unique** : c'est à ce moment, chiffres en main, qu'on décide s'il vaut son coût.
 
 ---
 
@@ -1559,7 +1890,9 @@ git add src/services/rpc.ts && git commit -m "perf(rpc): ne plus demander la pas
 
 | Piste | Verdict | Raison |
 |---|---|---|
-| RPC unique `api.get_object_workspace()` | **Reporté** | C'est le geste le plus lourd (SQL + migration + runbook + test d'application à froid) et son gain dépend de ce que les lots 1–3 auront déjà retiré. À replanifier **après** mesure du lot 2, pas avant. |
+| RPC unique `api.get_object_workspace()` | **Reporté** | C'est le geste le plus lourd (SQL + migration + runbook + test d'application à froid) et son gain dépend de ce que les lots 1–3 auront déjà retiré. À replanifier **après** la mesure de la tâche 14, pas avant. |
+| Déduplication des 4 lectures `media` (ex-tâche 12) | **Reporté** | Les 3 requêtes dupliquées partent en **parallèle** : les supprimer n'allège pas le chemin critique, seulement la charge serveur. Et le gain honnête est 4 → 2, pas 4 → 1. Forme correcte décrite dans la tâche 12. Passe d'hygiène. |
+| Propagation de `catalogs` dans les chemins d'**écriture** | **Optionnel (étape 8.10)** | Hors du chemin d'ouverture. À faire seulement si la propagation reste sous trois fichiers. |
 | RPC unique pour les catalogues | **Écarté** | Une fois les catalogues chargés une fois par session et persistés, 16 requêtes ≈ 1 aller-retour sur HTTP/2. Le SQL n'achète rien ici. |
 | Précharger la clé `['object-detail', …]` avant le lot 1 | **Écarté** | Inerte : avant la tâche 1, personne ne lit cette clé. |
 | Précharger le chunk du tiroir | **Écarté** | Il part déjà au montage de l'`AppShell`, pas au clic. |
@@ -1572,5 +1905,18 @@ git add src/services/rpc.ts && git commit -m "perf(rpc): ne plus demander la pas
 # Ordre d'exécution recommandé
 
 1. **Lot 1 en entier** (tâches 1 à 5) — c'est 95 % du gain sur l'ouverture d'une fiche, pour un risque quasi nul. Faire valider la mesure de la tâche 5 par l'utilisateur **avant** d'aller plus loin.
-2. **Lot 2** (tâches 6 à 9) — le gros du gain sur l'éditeur. La tâche 8 est longue : la découper en commits par groupe de modules comme indiqué.
-3. **Lot 3** (tâches 10 à 13) — finition. Remesurer après, et **seulement alors** décider si le RPC unique vaut son coût.
+2. **Lot 2** (tâches 6 à 9 bis) — le gros du gain sur l'éditeur. La tâche 8 est longue : la découper en commits par groupe de modules comme indiqué. La tâche 9 bis est **obligatoire** : sans elle, on ne sait pas si le cache fonctionne.
+3. **Lot 3** (tâches 10, 11, 13, 14 — la 12 est reportée) — finition. Remesurer, et **seulement alors** décider si le RPC unique vaut son coût.
+
+## Journal des corrections apportées à ce plan
+
+Ce plan a été révisé après une revue technique qui a relevé huit défauts, tous vérifiés dans le code avant correction. Ils sont consignés ici pour que l'exécutant sache **pourquoi** certaines consignes sont insistantes :
+
+1. `ensureQueryData` rend le cache sans regarder `staleTime` (vérifié dans `@tanstack/query-core` 5.100.7) → remplacé par `fetchQuery`, avec un test à horloge avancée.
+2. La commande d'extraction des domaines ratait la forme `.in('domain', […])` → 27 domaines, pas 25, et commande corrigée.
+3. Le gain « puis 0 » était faux : seuls les `ref_code` étaient mutualisés → le lot couvre désormais tous les catalogues publics.
+4. `catalogs` n'était pas propagé aux fonctions de module → changements de signature explicités, lecture et écriture séparées.
+5. Le préchargement au survol aurait généré une requête par carte balayée → délai d'intention + `staleTime` explicite et partagé.
+6. Le test d'ordonnancement (`starts.length > 1`) était vrai aussi en séquentiel → garde structurelle déterministe.
+7. La déduplication média n'était pas implémentable telle qu'écrite → reportée, avec la forme correcte documentée.
+8. Le chemin de `selection-export.ts` était faux et son commit l'excluait → corrigé, commit sur deux fichiers.

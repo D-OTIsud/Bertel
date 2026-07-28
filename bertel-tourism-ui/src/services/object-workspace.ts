@@ -2546,6 +2546,7 @@ async function getObjectWorkspaceCrmModule(
 async function getObjectWorkspaceRoomsModule(
   objectId: string,
   baseModule: ObjectWorkspaceRoomsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceRoomsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -2559,17 +2560,25 @@ async function getObjectWorkspaceRoomsModule(
       : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
   }
 
-  const [roomsResult, viewRefsResult, roomTypeRefsResult, amenityRefsResult, mediaResult, bedTypeRefsResult] = await Promise.allSettled([
+  // 4 catalogues depuis le cache de session : 6 requetes -> 2. Le filtre de
+  // scope sur ref_amenity passe du serveur a la memoire (table chargee une fois).
+  const roomRefs = {
+    view: catalogs.refCodeByDomain.view_type ?? [],
+    roomType: catalogs.refCodeByDomain.room_type ?? [],
+    bedType: catalogs.refCodeByDomain.bed_type ?? [],
+    amenity: (catalogs.tables.ref_amenity ?? []).filter((row) => {
+      const scope = readString(row.scope);
+      return scope === 'room' || scope === 'both';
+    }),
+  };
+
+  const [roomsResult, mediaResult] = await Promise.allSettled([
     client
       .from('object_room_type')
       .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
       .eq('object_id', objectId)
       .order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'view_type').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'room_type').order('position', { ascending: true }),
-    client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name, position)').in('scope', ['room', 'both']).order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'bed_type').order('position', { ascending: true }),
   ]);
 
   if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
@@ -2593,23 +2602,23 @@ async function getObjectWorkspaceRoomsModule(
         { status: 'fulfilled' as const, value: { data: [], error: null } },
       ];
 
-  const viewTypeOptions = viewRefsResult.status === 'fulfilled' && viewRefsResult.value.error == null
-    ? dedupeReferenceOptions((viewRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const viewTypeOptions = roomRefs.view.length > 0
+    ? dedupeReferenceOptions(roomRefs.view.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.viewTypeOptions;
-  const roomTypeOptions = roomTypeRefsResult.status === 'fulfilled' && roomTypeRefsResult.value.error == null
-    ? dedupeReferenceOptions((roomTypeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const roomTypeOptions = roomRefs.roomType.length > 0
+    ? dedupeReferenceOptions(roomRefs.roomType.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.roomTypeOptions;
-  const amenityOptions = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
-    ? dedupeReferenceOptions((amenityRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const amenityOptions = roomRefs.amenity.length > 0
+    ? dedupeReferenceOptions(roomRefs.amenity.map((row) => normalizeReferenceOption(row)))
     : baseModule.amenityOptions;
-  const amenityGroups = amenityRefsResult.status === 'fulfilled' && amenityRefsResult.value.error == null
-    ? buildRoomAmenityGroups((amenityRefsResult.value.data ?? []) as Record<string, unknown>[])
+  const amenityGroups = roomRefs.amenity.length > 0
+    ? buildRoomAmenityGroups(roomRefs.amenity)
     : baseModule.amenityGroups;
   const mediaOptions = mediaResult.status === 'fulfilled' && mediaResult.value.error == null
     ? sortReferenceOptions((mediaResult.value.data ?? []).map((row) => normalizeMediaOption(row as Record<string, unknown>)))
     : baseModule.mediaOptions;
-  const bedTypeOptions = bedTypeRefsResult.status === 'fulfilled' && bedTypeRefsResult.value.error == null
-    ? dedupeReferenceOptions((bedTypeRefsResult.value.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)))
+  const bedTypeOptions = roomRefs.bedType.length > 0
+    ? dedupeReferenceOptions(roomRefs.bedType.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.bedTypeOptions;
   const viewTypeById = optionMapById(viewTypeOptions);
   const roomTypeById = optionMapById(roomTypeOptions);
@@ -3950,7 +3959,7 @@ export async function getObjectWorkspaceResource(
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? ''),
     getObjectWorkspacePricingModule(objectId, parsedModules.pricing, catalogs),
-    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms),
+    getObjectWorkspaceRoomsModule(objectId, parsedModules.rooms, catalogs),
     getObjectWorkspaceMeetingRoomsModule(objectId, parsedModules.meetingRooms),
     getObjectWorkspaceMenusModule(objectId, parsedModules.menus, catalogs),
     getObjectWorkspaceCuisineModule(objectId, parsedModules.cuisine),

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ResultsList } from './ResultsList';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useUiStore } from '../../store/ui-store';
@@ -18,8 +19,15 @@ function makeCard(overrides: Partial<ObjectCard> = {}): ObjectCard {
   } as ObjectCard;
 }
 
+// ResultsList precharge la fiche au survol (usePrefetchObjectDetail), donc il
+// lui faut un QueryClientProvider comme au runtime.
 function renderResultsList(props: Partial<Parameters<typeof ResultsList>[0]> & { cards: ObjectCard[] }) {
-  return render(<ResultsList loading={false} {...props} />);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ResultsList loading={false} {...props} />
+    </QueryClientProvider>,
+  );
 }
 
 describe('ResultsList', () => {

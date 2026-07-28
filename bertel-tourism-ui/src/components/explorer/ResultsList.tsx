@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
+import { usePrefetchObjectDetail } from '../../hooks/useExplorerQueries';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
 import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
@@ -203,6 +204,12 @@ export function ResultsList({
     return () => observer.disconnect();
   }, [hasMore, isLoadingMore, onLoadMore, cards.length]);
 
+  const prefetchObjectDetail = usePrefetchObjectDetail();
+  // Annulation du delai d'intention en cours. Un seul suffit : le pointeur n'est
+  // que sur une carte a la fois, et `onHoverChange(false)` part avant le
+  // `onHoverChange(true)` de la carte suivante.
+  const cancelPrefetchRef = useRef<(() => void) | null>(null);
+
   const renderCard = (card: ObjectCard) => {
     const isSelected = selectedObjectIds.includes(card.id) || selectedCardId === card.id;
     const inSelection = selectedObjectIds.includes(card.id);
@@ -215,7 +222,11 @@ export function ResultsList({
         isHovered={hoveredCardId === card.id}
         inSelection={inSelection}
         onOpen={() => openDrawer(card.id)}
-        onHoverChange={(hovered) => setHoveredCard(hovered ? card.id : null)}
+        onHoverChange={(hovered) => {
+          setHoveredCard(hovered ? card.id : null);
+          cancelPrefetchRef.current?.();
+          cancelPrefetchRef.current = hovered ? prefetchObjectDetail(card.id) : null;
+        }}
         onToggleTag={toggleTag}
         onToggleSelect={(event) => {
           event.preventDefault();

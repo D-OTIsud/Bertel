@@ -222,6 +222,17 @@ export function useExplorerReferencesQuery() {
   });
 }
 
+/**
+ * Fraicheur de la fiche, PARTAGEE entre le prechargement au survol et la lecture
+ * du tiroir. Elle doit etre explicite et unique : si le prechargement et
+ * `useObjectDetailQuery` divergent, l'ouverture refait la requete que le survol
+ * vient de payer.
+ */
+export const OBJECT_DETAIL_STALE_TIME_MS = 5 * 60 * 1000;
+
+/** Delai d'intention avant prechargement, en millisecondes. */
+const PREFETCH_INTENT_DELAY_MS = 200;
+
 export function useObjectDetailQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
 
@@ -229,7 +240,51 @@ export function useObjectDetailQuery(objectId: string | null) {
     queryKey: ['object-detail', objectId, langPrefs],
     queryFn: () => getObjectResource(objectId ?? '', langPrefs),
     enabled: Boolean(objectId),
+    staleTime: OBJECT_DETAIL_STALE_TIME_MS,
   });
+}
+
+/**
+ * Precharge la fiche survolee sous la cle exacte que lit le tiroir
+ * (`['object-detail', id, langPrefs]`). Le survol precede le clic de plusieurs
+ * centaines de millisecondes, soit a peu pres le cout d'un aller-retour vers
+ * Supabase depuis La Reunion (220-310 ms mesures) : la fiche est donc deja en
+ * cache au moment du clic.
+ *
+ * ATTENTION — chaque carte a sa PROPRE cle de cache : sans garde, balayer une
+ * liste a la souris declencherait une requete par carte traversee. D'ou le delai
+ * d'intention, que l'appelant annule via la fonction rendue quand le pointeur
+ * quitte la carte. Seule une carte reellement regardee est prechargee.
+ *
+ * Les erreurs sont volontairement avalees : un prechargement qui echoue ne doit
+ * jamais remonter a l'utilisateur, le vrai chargement au clic rejouera et
+ * affichera l'erreur normalement.
+ *
+ * @returns une fonction d'annulation, a appeler au `mouseleave`.
+ */
+export function usePrefetchObjectDetail(): (objectId: string) => () => void {
+  const queryClient = useQueryClient();
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+
+  return useMemo(
+    () => (objectId: string) => {
+      if (!objectId) {
+        return () => undefined;
+      }
+      const timer = setTimeout(() => {
+        void queryClient
+          .prefetchQuery({
+            queryKey: ['object-detail', objectId, langPrefs],
+            queryFn: () => getObjectResource(objectId, langPrefs),
+            staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+          })
+          .catch(() => undefined);
+      }, PREFETCH_INTENT_DELAY_MS);
+
+      return () => clearTimeout(timer);
+    },
+    [langPrefs, queryClient],
+  );
 }
 
 export function useObjectWorkspaceQuery(objectId: string | null) {

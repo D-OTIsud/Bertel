@@ -14,7 +14,10 @@ export async function exportSelectedObjectsCsv(objectIds: string[], langPrefs: s
   const ids = [...new Set(objectIds.map((id) => String(id).trim()).filter(Boolean))];
   if (ids.length === 0) return;
 
-  const details = await Promise.all(ids.map((id) => getObjectResource(id, langPrefs)));
+  // L'export CSV serialise `raw` entier dans sa colonne `raw_json`. Le reste de
+  // l'app ne demande plus la passe `render` (aucun lecteur de ses cles `*_lines`) ;
+  // ici on la garde explicitement pour ne pas amputer un livrable existant.
+  const details = await Promise.all(ids.map((id) => getObjectResource(id, langPrefs, { render: true })));
 
   const headers = ['id', 'name', 'type', 'city', 'address', 'raw_json'];
   const lines = details.map((d) => {

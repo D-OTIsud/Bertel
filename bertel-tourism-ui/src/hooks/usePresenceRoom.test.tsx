@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { PRESENCE_LOCK_TTL_MS, usePresenceRoom } from './usePresenceRoom';
+import { getSupabaseClient } from '../lib/supabase';
+import { makeFakeRealtimeClient } from '../lib/realtime-recovery.test-utils';
 import { useSessionStore } from '../store/session-store';
+
+jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
 
 describe('usePresenceRoom', () => {
   beforeEach(() => {
@@ -50,5 +54,35 @@ describe('usePresenceRoom', () => {
     });
 
     expect(typeof result.current.broadcast).toBe('function');
+  });
+
+  // Même défaut que la présence globale : un canal CLOSED est mort pour realtime-js.
+  // Sans reconstruction, la présence et les verrous de champ s'éteignent en silence au
+  // milieu d'une session d'édition — il n'y a aucune pastille pour le signaler ici.
+  it('rebuilds the room after the channel dies, and routes sends to the new channel', async () => {
+    const { client, created } = makeFakeRealtimeClient();
+    (getSupabaseClient as jest.Mock).mockReturnValue(client);
+    useSessionStore.setState({ demoMode: false, userId: 'u1', userName: 'Solo', avatar: 'SO' });
+
+    const { result } = renderHook(() => usePresenceRoom('room:test', { enabled: true }));
+    act(() => created[0].emit('SUBSCRIBED'));
+    expect(created[0].track).toHaveBeenCalled();
+
+    act(() => created[0].emit('CLOSED'));
+    act(() => {
+      jest.advanceTimersByTime(1_000);
+    });
+    expect(created).toHaveLength(2);
+
+    act(() => created[1].emit('SUBSCRIBED'));
+    expect(created[1].track).toHaveBeenCalled();
+
+    await act(async () => {
+      await result.current.lockField('description');
+    });
+    expect(created[1].send).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'field:lock', payload: expect.objectContaining({ field: 'description' }) }),
+    );
+    expect(created[0].send).not.toHaveBeenCalled();
   });
 });

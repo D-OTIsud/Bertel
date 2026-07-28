@@ -1,66 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createResilientChannel, REALTIME_LIB_GRACE_MS } from './realtime-recovery';
-
-/**
- * Faux client realtime reproduisant les DEUX comportements de realtime-js qui pilotent
- * la reprise (vérifiés dans node_modules/@supabase/realtime-js 2.99.1) :
- *  - `channel(topic)` RÉUTILISE un canal existant de même topic (pas de canal neuf) ;
- *  - `removeChannel(chan)` le retire de la liste, ce qui rend le topic à nouveau libre.
- */
-interface FakeChannel {
-  topic: string;
-  bindings: string[];
-  emit: (status: string) => void;
-  on: jest.Mock;
-  subscribe: jest.Mock;
-  track: jest.Mock;
-  untrack: jest.Mock;
-  unsubscribe: jest.Mock;
-}
-
-function makeFakeClient() {
-  const live = new Map<string, FakeChannel>();
-  const created: FakeChannel[] = [];
-
-  const client = {
-    channel: jest.fn((topic: string) => {
-      const existing = live.get(topic);
-      if (existing) return existing;
-
-      let callback: ((status: string) => void) | null = null;
-      const chan: FakeChannel = {
-        topic,
-        bindings: [],
-        emit: (status) => callback?.(status),
-        on: jest.fn((type: string) => {
-          chan.bindings.push(type);
-          return chan;
-        }),
-        subscribe: jest.fn((cb: (status: string) => void) => {
-          callback = cb;
-          return chan;
-        }),
-        track: jest.fn().mockResolvedValue('ok'),
-        untrack: jest.fn().mockResolvedValue('ok'),
-        unsubscribe: jest.fn().mockResolvedValue('ok'),
-      };
-      live.set(topic, chan);
-      created.push(chan);
-      return chan;
-    }),
-    removeChannel: jest.fn(async (chan: FakeChannel) => {
-      live.delete(chan.topic);
-      return 'ok';
-    }),
-    /** Simule un canal encore en cours de départ : le topic reste occupé. */
-    keepTopicBusy: (chan: FakeChannel) => live.set(chan.topic, chan),
-  };
-
-  return { client, created };
-}
+import { makeFakeRealtimeClient } from './realtime-recovery.test-utils';
 
 function setup() {
-  const { client, created } = makeFakeClient();
+  const { client, created } = makeFakeRealtimeClient();
   const onState = jest.fn();
   const onSubscribed = jest.fn();
   const handle = createResilientChannel(client as unknown as SupabaseClient, {

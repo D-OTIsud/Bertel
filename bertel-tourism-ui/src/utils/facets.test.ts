@@ -1,4 +1,4 @@
-import type { ExplorerFilters, ObjectCard } from '../types/domain';
+import type { ExplorerFilters, ExplorerReferenceOption, ObjectCard } from '../types/domain';
 import {
   applyClientPreviewFilters,
   buildBucketRpcFilters,
@@ -784,10 +784,11 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
 });
 
 describe('filterOptionsBySelectedBuckets (16n — applicabilité des distinctions)', () => {
-  const HOTEL = { code: 'hot_stars', name: 'Classement hôtelier', objectTypes: ['HOT'] as const };
-  const PATRIMOINE = { code: 'monument_historique', name: 'Monument Historique', objectTypes: ['PCU'] as const };
-  const TRANSVERSE = { code: 'LBL_QUALITE_TOURISME', name: 'Qualité Tourisme' }; // pas de objectTypes
-  const OPTIONS = [HOTEL, PATRIMOINE, TRANSVERSE].map((o) => ({ ...o, objectTypes: o.objectTypes ? [...o.objectTypes] : undefined }));
+  // Typées sur le contrat réel de la fonction : le fixture dérive du modèle, pas l'inverse.
+  const HOTEL: ExplorerReferenceOption = { code: 'hot_stars', name: 'Classement hôtelier', objectTypes: ['HOT'] };
+  const PATRIMOINE: ExplorerReferenceOption = { code: 'monument_historique', name: 'Monument Historique', objectTypes: ['PCU'] };
+  const TRANSVERSE: ExplorerReferenceOption = { code: 'LBL_QUALITE_TOURISME', name: 'Qualité Tourisme' }; // pas de objectTypes
+  const OPTIONS: ExplorerReferenceOption[] = [HOTEL, PATRIMOINE, TRANSVERSE];
 
   it('ne restreint rien quand aucun bucket n’est sélectionné', () => {
     expect(filterOptionsBySelectedBuckets(OPTIONS, []).map((o) => o.code)).toEqual([

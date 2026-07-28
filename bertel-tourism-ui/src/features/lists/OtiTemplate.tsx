@@ -137,36 +137,42 @@ function CoupDeCoeur({ poi, lang, advisorFirst }: { poi: OtiPoi; lang: 'fr' | 'e
   );
 }
 
-function Contacts({ poi, lang, solidMap, iconsOnly }: { poi: OtiPoi; lang: 'fr' | 'en'; solidMap?: boolean; iconsOnly?: boolean }) {
+/**
+ * Coordonnées d'un lieu. Le libellé est TOUJOURS rendu — un contact est une information, pas
+ * une décoration : la Grille les affichait en pastilles icône-seule, ce qui donnait trois
+ * boutons ronds sans numéro, sans domaine, et sans nom accessible sur tel/web.
+ * Le libellé est porté par `.oti-cbtn__t` (ellipsé) pour tenir dans la carte étroite (248px).
+ */
+function Contacts({ poi, lang, solidMap }: { poi: OtiPoi; lang: 'fr' | 'en'; solidMap?: boolean }) {
   const items = [];
   if (poi.lat != null && poi.lon != null) {
     items.push(
       <a
         key="map"
-        className={`oti-cbtn${solidMap ? ' oti-cbtn--solid' : ''}${iconsOnly ? ' oti-cbtn--ico' : ''}`}
+        className={`oti-cbtn${solidMap ? ' oti-cbtn--solid' : ''}`}
         href={`https://maps.google.com/?q=${poi.lat},${poi.lon}`}
         target="_blank"
         rel="noreferrer"
         title={t('Voir sur la carte', 'View on map', lang)}
       >
         <MapPin />
-        {!iconsOnly && t('Voir sur la carte', 'View on map', lang)}
+        <span className="oti-cbtn__t">{t('Voir sur la carte', 'View on map', lang)}</span>
       </a>,
     );
   }
   if (poi.phone) {
     items.push(
-      <a key="tel" className={`oti-cbtn${iconsOnly ? ' oti-cbtn--ico' : ''}`} href={`tel:${poi.phone.replace(/\s/g, '')}`}>
+      <a key="tel" className="oti-cbtn" href={`tel:${poi.phone.replace(/\s/g, '')}`} title={poi.phone}>
         <Phone />
-        {!iconsOnly && poi.phone}
+        <span className="oti-cbtn__t">{poi.phone}</span>
       </a>,
     );
   }
   if (poi.web) {
     items.push(
-      <a key="web" className={`oti-cbtn${iconsOnly ? ' oti-cbtn--ico' : ''}`} href={webHref(poi.web)} target="_blank" rel="noreferrer">
+      <a key="web" className="oti-cbtn" href={webHref(poi.web)} target="_blank" rel="noreferrer" title={webLabel(poi.web)}>
         <Globe />
-        {!iconsOnly && webLabel(poi.web)}
+        <span className="oti-cbtn__t">{webLabel(poi.web)}</span>
       </a>,
     );
   }
@@ -365,7 +371,7 @@ function TplGrille({ pois, ctx }: { pois: OtiPoi[]; ctx: RenderCtx }) {
               <h3 className="oti-poi__title">{p.name}</h3>
               {p.subtitle && <div className="oti-card__type">{p.subtitle}</div>}
               <CoupDeCoeur poi={p} lang={ctx.lang} advisorFirst={ctx.advisorFirst} />
-              <Contacts poi={p} lang={ctx.lang} iconsOnly />
+              <Contacts poi={p} lang={ctx.lang} />
             </div>
           </article>
         ))}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { RotateCw } from 'lucide-react';
 import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
 import { formatPresenceDuration, initials, networkStatusLabel } from '../../lib/presence';
@@ -75,6 +76,17 @@ export function LivePresenceIndicator() {
         <span className={`status-pill status-pill--${net.tone}`} title={net.description}>
           <span className="status-pill__dot" aria-hidden="true" />
           {net.label}
+          {/* Le canal temps réel ne se rétablit pas tout seul après une session trop longue :
+              on offre la seule action utile (recharger la page) là où l'utilisateur voit le problème. */}
+          <button
+            type="button"
+            className="status-pill__refresh"
+            aria-label="Rafraîchir la page"
+            title="Rafraîchir la page pour rétablir le temps réel"
+            onClick={() => window.location.reload()}
+          >
+            <RotateCw size={13} aria-hidden="true" />
+          </button>
         </span>
       ) : null}
 

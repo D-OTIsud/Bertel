@@ -56,6 +56,30 @@ describe('LivePresenceIndicator', () => {
     expect(screen.getByText('Hors ligne')).toBeInTheDocument();
   });
 
+  it('offers a refresh button only while the connection is degraded, and it reloads the page', async () => {
+    const user = userEvent.setup();
+    const reload = jest.fn();
+    const original = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { ...original, reload },
+    });
+
+    try {
+      const { unmount } = render(<LivePresenceIndicator />); // networkStatus = 'connected'
+      expect(screen.queryByRole('button', { name: /rafraîchir la page/i })).not.toBeInTheDocument();
+      unmount();
+
+      seed([], 'degraded');
+      render(<LivePresenceIndicator />);
+      expect(screen.getByText('Temps réel interrompu')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /rafraîchir la page/i }));
+      expect(reload).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original });
+    }
+  });
+
   it('closes the panel when keyboard focus leaves it', async () => {
     const user = userEvent.setup();
     render(

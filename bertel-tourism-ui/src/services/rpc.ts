@@ -136,12 +136,17 @@ function assertObjectPayload(data: unknown): ObjectResourceRpcPayload {
   return data as ObjectResourceRpcPayload;
 }
 
-async function tryGetObjectWithDeepData(objectId: string, langPrefs: string[], client: NonNullable<ReturnType<typeof getSupabaseClient>>): Promise<ObjectDetail> {
+async function tryGetObjectWithDeepData(
+  objectId: string,
+  langPrefs: string[],
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  render: boolean,
+): Promise<ObjectDetail> {
   const { data, error } = await client.schema('api').rpc('get_object_with_deep_data', {
     p_object_id: objectId,
     p_languages: langPrefs,
     p_options: {
-      render: true,
+      render,
       include_private: true,
     },
   });
@@ -428,7 +433,25 @@ export function explorerCardsHasNextPage(
   );
 }
 
-export async function getObjectResource(objectId: string, langPrefs: string[]): Promise<ObjectDetail> {
+/**
+ * `render` : la passe d'affichage de `api.get_object_resource` rebalaye une
+ * SECONDE fois 15 tables enfants pour produire des chaines `*_lines` dont
+ * `grep -rn "_lines" src/` ne trouve AUCUN lecteur. Elle est donc coupee par
+ * defaut (~2,5-6 ms/objet de CPU serveur).
+ *
+ * Le defaut SQL (`v_render_enabled := COALESCE(..., TRUE)`) reste inchange :
+ * l'API partenaire documentee continue de recevoir `render` sans le demander.
+ *
+ * Seul l'export CSV de selection passe `render: true` — il serialise `raw`
+ * entier dans sa colonne `raw_json`, donc le couper amputerait un livrable
+ * utilisateur existant.
+ */
+export async function getObjectResource(
+  objectId: string,
+  langPrefs: string[],
+  options: { render?: boolean } = {},
+): Promise<ObjectDetail> {
+  const render = options.render ?? false;
   const session = useSessionStore.getState();
   const client = requireRpcClient();
 
@@ -441,7 +464,7 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
   }
 
   try {
-    return await tryGetObjectWithDeepData(objectId, langPrefs, client);
+    return await tryGetObjectWithDeepData(objectId, langPrefs, client, render);
   } catch (deepError) {
     console.warn('Deep data indisponible, fallback sur get_object_resource.', deepError);
   }
@@ -451,7 +474,7 @@ export async function getObjectResource(objectId: string, langPrefs: string[]): 
     p_lang_prefs: langPrefs,
     p_track_format: 'geojson',
     p_options: {
-      render: true,
+      render,
       include_private: true,
     },
   });

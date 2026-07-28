@@ -3,6 +3,7 @@ import { useSessionStore } from '../store/session-store';
 import type { ObjectDetail } from '../types/domain';
 import { mockPendingChanges, mockPublicationCards } from '../data/mock';
 import { getObjectResource } from './rpc';
+import type { ReferenceCatalogs } from './reference-catalogs';
 import {
   type ObjectWorkspaceCapacityItem,
   type ObjectWorkspaceCapacityPoliciesModule,
@@ -586,6 +587,7 @@ function buildRoomAmenityGroups(rows: Record<string, unknown>[]): ObjectWorkspac
 async function getObjectWorkspaceCharacteristicsModule(
   objectId: string,
   baseModule: ObjectWorkspaceCharacteristicsModule,
+  catalogs: ReferenceCatalogs,
 ): Promise<ObjectWorkspaceCharacteristicsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -600,37 +602,35 @@ async function getObjectWorkspaceCharacteristicsModule(
     };
   }
 
+  // Les 5 catalogues (ref_language, 3 domaines ref_code, ref_amenity) viennent du
+  // cache de session : ce module passe de 9 requetes a 4.
+  const languageRefs = catalogs.tables.ref_language ?? [];
+  const languageLevelRefs = catalogs.refCodeByDomain.language_level ?? [];
+  const paymentRefs = catalogs.refCodeByDomain.payment_method ?? [];
+  const environmentRefs = catalogs.refCodeByDomain.environment_tag ?? [];
+  // Le filtre de `scope` etait fait cote serveur ; il l'est desormais en memoire,
+  // la table entiere etant chargee une seule fois pour tous ses consommateurs.
+  const amenityRefsRows = (catalogs.tables.ref_amenity ?? []).filter((row) => {
+    const scope = readString(row.scope);
+    return scope === 'object' || scope === 'both';
+  });
+
   const [
-    languageRefsResult,
-    languageLevelsResult,
     objectLanguagesResult,
-    paymentRefsResult,
     objectPaymentsResult,
-    environmentRefsResult,
     objectEnvironmentsResult,
-    amenityRefsResult,
     objectAmenitiesResult,
   ] = await Promise.all([
-    client.from('ref_language').select('id, code, name, position').order('position', { ascending: true }),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'language_level').order('position', { ascending: true }),
     client.from('object_language').select('language_id, level_id').eq('object_id', objectId),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'payment_method').order('position', { ascending: true }),
     client.from('object_payment_method').select('payment_method_id').eq('object_id', objectId),
-    client.from('ref_code').select('id, code, name, position').eq('domain', 'environment_tag').order('position', { ascending: true }),
     client.from('object_environment_tag').select('environment_tag_id').eq('object_id', objectId),
-    client.from('ref_amenity').select('id, code, name, extra, family_id, position, family:family_id(code, name)').in('scope', ['object', 'both']).order('position', { ascending: true }),
     client.from('object_amenity').select('amenity_id').eq('object_id', objectId),
   ]);
 
   if (
-    languageRefsResult.error
-    || languageLevelsResult.error
-    || objectLanguagesResult.error
-    || paymentRefsResult.error
+    objectLanguagesResult.error
     || objectPaymentsResult.error
-    || environmentRefsResult.error
     || objectEnvironmentsResult.error
-    || amenityRefsResult.error
     || objectAmenitiesResult.error
   ) {
     return {
@@ -640,10 +640,10 @@ async function getObjectWorkspaceCharacteristicsModule(
   }
 
   const languageOptions = dedupeReferenceOptions(
-    (languageRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    languageRefs.map((row) => normalizeReferenceOption(row)),
   );
   const languageLevelOptions = dedupeReferenceOptions(
-    (languageLevelsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    languageLevelRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const languageById = new Map(languageOptions.map((option) => [option.id, option]));
   const levelById = new Map(languageLevelOptions.map((option) => [option.id, option]));
@@ -657,7 +657,7 @@ async function getObjectWorkspaceCharacteristicsModule(
     .sort((left, right) => left.label.localeCompare(right.label, 'fr'));
 
   const paymentOptions = dedupeReferenceOptions(
-    (paymentRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    paymentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const paymentById = new Map(paymentOptions.map((option) => [option.id, option.code]));
   const selectedPaymentCodes = Array.from(new Set(
@@ -667,7 +667,7 @@ async function getObjectWorkspaceCharacteristicsModule(
   )).sort();
 
   const environmentOptions = dedupeReferenceOptions(
-    (environmentRefsResult.data ?? []).map((row) => normalizeReferenceOption(row as Record<string, unknown>)),
+    environmentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)),
   );
   const environmentById = new Map(environmentOptions.map((option) => [option.id, option.code]));
   const selectedEnvironmentCodes = Array.from(new Set(
@@ -676,7 +676,7 @@ async function getObjectWorkspaceCharacteristicsModule(
       .filter(Boolean),
   )).sort();
 
-  const amenityRefs = ((amenityRefsResult.data ?? []) as Record<string, unknown>[]).map(normalizeAmenityRef);
+  const amenityRefs = amenityRefsRows.map(normalizeAmenityRef);
   const selectedAmenityCodes = new Set(
     ((objectAmenitiesResult.data ?? []) as Record<string, unknown>[])
       .map((row) => amenityRefs.find((amenity) => amenity.id === readString(row.amenity_id))?.code ?? '')
@@ -3842,7 +3842,11 @@ async function getFacetApplicabilityRows(): Promise<FacetApplicabilityRow[]> {
   }));
 }
 
-export async function getObjectWorkspaceResource(objectId: string, langPrefs: string[]): Promise<ObjectWorkspaceResource> {
+export async function getObjectWorkspaceResource(
+  objectId: string,
+  langPrefs: string[],
+  catalogs: ReferenceCatalogs,
+): Promise<ObjectWorkspaceResource> {
   const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
 
@@ -3884,7 +3888,7 @@ export async function getObjectWorkspaceResource(objectId: string, langPrefs: st
     // database, not just the object's existing values (which is all get_object_resource carries).
     // Without this, §10 accessibility equipment panels showed "0 / 0" and nothing was selectable.
     // See lot1_mapping_decisions §32.
-    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics),
+    getObjectWorkspaceCharacteristicsModule(objectId, parsedModules.characteristics, catalogs),
     // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
     getObjectWorkspaceZonesModule(objectId, parsedModules.location),

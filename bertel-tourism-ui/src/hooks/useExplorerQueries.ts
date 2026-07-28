@@ -48,6 +48,7 @@ import {
   deleteObjectExternalId,
 } from '../services/object-workspace';
 import { getObjectVersions, restoreObjectVersion } from '../services/object-versions';
+import { ensureReferenceCatalogs } from './useReferenceCatalogsQuery';
 import { dedupeExplorerCards, refineCardsByPolygon, resolveExplorerStatuses, sortExplorerCards } from '../utils/facets';
 import type {
   ObjectWorkspaceCapacityPoliciesModule,
@@ -306,7 +307,10 @@ export function usePrefetchObjectWorkspace(): (objectId: string) => void {
       void queryClient
         .prefetchQuery({
           queryKey: ['object-workspace', objectId, langPrefs],
-          queryFn: () => getObjectWorkspaceResource(objectId, langPrefs),
+          queryFn: async () => {
+            const catalogs = await ensureReferenceCatalogs(queryClient);
+            return getObjectWorkspaceResource(objectId, langPrefs, catalogs);
+          },
         })
         .catch(() => undefined);
     },
@@ -316,10 +320,16 @@ export function usePrefetchObjectWorkspace(): (objectId: string) => void {
 
 export function useObjectWorkspaceQuery(objectId: string | null) {
   const langPrefs = useSessionStore((state) => state.langPrefs);
+  const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: ['object-workspace', objectId, langPrefs],
-    queryFn: () => getObjectWorkspaceResource(objectId ?? '', langPrefs),
+    queryFn: async () => {
+      // Les catalogues sont resolus depuis le cache de session (0 requete des la
+      // deuxieme fiche) AVANT que le chargeur ne parte : il ne les refetch plus.
+      const catalogs = await ensureReferenceCatalogs(queryClient);
+      return getObjectWorkspaceResource(objectId ?? '', langPrefs, catalogs);
+    },
     enabled: Boolean(objectId),
   });
 }

@@ -1179,6 +1179,7 @@ async function getObjectWorkspaceTaxonomyModule(
   objectId: string,
   baseModule: ObjectWorkspaceTaxonomyModule,
   catalogs: ReferenceCatalogs,
+  objectType: string,
 ): Promise<ObjectWorkspaceTaxonomyModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1193,20 +1194,10 @@ async function getObjectWorkspaceTaxonomyModule(
     };
   }
 
-  const objectResult = await client
-    .from('object')
-    .select('object_type')
-    .eq('id', objectId)
-    .maybeSingle();
-
-  if (objectResult.error) {
-    return {
-      ...baseModule,
-      unavailableReason: 'Le live actuel ne fournit pas encore une taxonomie structurante complete pour ce profil.',
-    };
-  }
-
-  const objectType = readString((objectResult.data as Record<string, unknown> | null)?.object_type).trim();
+  // `object_type` est DEJA connu : il vient de `detail.type`, charge par la
+  // vague 0. Le relire ici coutait un aller-retour complet (220-310 ms depuis La
+  // Reunion) en tete d une cascade serialisee.
+  const resolvedObjectType = objectType.trim();
   const fallbackByDomain = new Map(baseModule.domains.map((domain) => [domain.domain, domain]));
   // Registre depuis le cache de session ; les filtres is_taxonomy / is_active
   // etaient faits cote serveur, ils le sont desormais en memoire. Ce saut
@@ -1216,7 +1207,7 @@ async function getObjectWorkspaceTaxonomyModule(
 
   const domainRefs = domainRegistryRows
     .map(normalizeTaxonomyDomainRef)
-    .filter((domain) => !domain.objectType || domain.objectType === objectType || fallbackByDomain.has(domain.domain))
+    .filter((domain) => !domain.objectType || domain.objectType === resolvedObjectType || fallbackByDomain.has(domain.domain))
     .sort((left, right) => left.position - right.position || left.label.localeCompare(right.label, 'fr'));
 
   const domainCodes = domainRefs.map((domain) => domain.domain);
@@ -3879,7 +3870,7 @@ export async function getObjectWorkspaceResource(
     locationModule,
     permissions,
   ] = await Promise.all([
-    getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs),
+    getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs, detail.type ?? ''),
     getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),

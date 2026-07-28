@@ -7,20 +7,44 @@ import { useUiStore } from '../../store/ui-store';
 import { formatPresenceDuration, initials, networkStatusLabel } from '../../lib/presence';
 
 const TICK_MS = 30_000;
+/** Durée d'affichage du retour visuel « ça reconnecte » quand la reprise n'aboutit pas. */
+const RETRY_FEEDBACK_MS = 4_000;
 
 export function LivePresenceIndicator() {
   const liveMembers = useUiStore((state) => state.liveMembers);
   const networkStatus = useUiStore((state) => state.networkStatus);
+  const realtimeRetry = useUiStore((state) => state.realtimeRetry);
   const selfId = useSessionStore((state) => state.userId);
 
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [retrying, setRetrying] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const net = networkStatusLabel(networkStatus);
   const count = liveMembers.length;
   const isAlone = count === 1 && liveMembers[0]?.userId === selfId;
+
+  // Le retour visuel s'arrête dès que la connexion est rétablie, sinon au bout du délai
+  // (la reprise peut échouer : le bouton redevient alors cliquable).
+  useEffect(() => {
+    if (!retrying) return undefined;
+    if (networkStatus === 'connected') {
+      setRetrying(false);
+      return undefined;
+    }
+    const id = window.setTimeout(() => setRetrying(false), RETRY_FEEDBACK_MS);
+    return () => window.clearTimeout(id);
+  }, [retrying, networkStatus]);
+
+  const handleRetry = () => {
+    setRetrying(true);
+    // Pas de canal monté (démo, invité, backend absent) : le rechargement reste la
+    // seule action utile.
+    if (realtimeRetry) realtimeRetry();
+    else window.location.reload();
+  };
 
   // Keep the "en ligne depuis" labels fresh while the panel is open.
   useEffect(() => {
@@ -76,16 +100,22 @@ export function LivePresenceIndicator() {
         <span className={`status-pill status-pill--${net.tone}`} title={net.description}>
           <span className="status-pill__dot" aria-hidden="true" />
           {net.label}
-          {/* Le canal temps réel ne se rétablit pas tout seul après une session trop longue :
-              on offre la seule action utile (recharger la page) là où l'utilisateur voit le problème. */}
+          {/* Reprise manuelle du canal temps réel, là où l'utilisateur voit la panne.
+              Elle reconstruit le canal SANS recharger la page : le travail en cours
+              (éditeur ouvert, filtres, brouillons) est préservé. */}
           <button
             type="button"
             className="status-pill__refresh"
-            aria-label="Rafraîchir la page"
-            title="Rafraîchir la page pour rétablir le temps réel"
-            onClick={() => window.location.reload()}
+            aria-label="Reconnecter le temps réel"
+            title="Reconnecter le temps réel"
+            onClick={handleRetry}
+            disabled={retrying}
           >
-            <RotateCw size={13} aria-hidden="true" />
+            <RotateCw
+              size={13}
+              aria-hidden="true"
+              className={retrying ? 'status-pill__refresh-spin' : undefined}
+            />
           </button>
         </span>
       ) : null}

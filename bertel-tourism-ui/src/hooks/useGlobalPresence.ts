@@ -7,6 +7,7 @@ import {
   type PresenceTrackPayload,
   type RealtimeConnState,
 } from '../lib/presence';
+import { createResilientChannel } from '../lib/realtime-recovery';
 import { useSessionStore } from '../store/session-store';
 import { useUiStore } from '../store/ui-store';
 import type { PresenceMember } from '../types/domain';
@@ -19,6 +20,10 @@ const DEMO_STAGGER_MS = 7 * 60_000;
  * Site-wide presence: a single realtime channel mounted ONCE (in AppBootstrap) that
  * publishes the deduplicated roster of people currently online + a unified network
  * status into the UI store. This hook is the SOLE writer of networkStatus.
+ *
+ * Le canal passe par `createResilientChannel` : un canal realtime mort (CLOSED) n'est
+ * jamais ranimé par realtime-js, il faut en construire un neuf — sans quoi la pastille
+ * restait sur « Temps réel interrompu » jusqu'au rechargement de la page.
  */
 export function useGlobalPresence(): void {
   const userId = useSessionStore((state) => state.userId);
@@ -27,6 +32,7 @@ export function useGlobalPresence(): void {
   const demoMode = useSessionStore((state) => state.demoMode);
   const setLivePresence = useUiStore((state) => state.setLivePresence);
   const setNetworkStatus = useUiStore((state) => state.setNetworkStatus);
+  const setRealtimeRetry = useUiStore((state) => state.setRealtimeRetry);
   // Captured once: when this tab came online.
   const onlineSinceRef = useRef(Date.now());
 
@@ -64,28 +70,26 @@ export function useGlobalPresence(): void {
       setNetworkStatus(deriveNetworkStatus(navigator.onLine, realtimeStatus));
     };
 
-    const channel = client.channel(GLOBAL_PRESENCE_ROOM, {
-      config: { presence: { key: userId }, broadcast: { self: false } },
-    });
-
-    channel.on('presence', { event: 'sync' }, () => {
-      const state = channel.presenceState<PresenceTrackPayload>();
-      setLivePresence(dedupePresenceMembers(state as Record<string, PresenceTrackPayload[]>, userId));
-    });
-
-    channel.subscribe(async (status) => {
-      if (status === 'SUBSCRIBED') {
-        realtimeStatus = 'subscribed';
-        applyNetworkStatus();
+    const handle = createResilientChannel(client, {
+      topic: GLOBAL_PRESENCE_ROOM,
+      config: { config: { presence: { key: userId }, broadcast: { self: false } } },
+      bind: (channel) => {
+        channel.on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState<PresenceTrackPayload>();
+          setLivePresence(dedupePresenceMembers(state as Record<string, PresenceTrackPayload[]>, userId));
+        });
+      },
+      onSubscribed: async (channel) => {
         await channel.track(me);
-      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        realtimeStatus = 'error';
+      },
+      onState: (state) => {
+        realtimeStatus = state;
         applyNetworkStatus();
-      } else if (status === 'CLOSED') {
-        realtimeStatus = 'closed';
-        applyNetworkStatus();
-      }
+      },
     });
+
+    // Le bouton « Reconnecter » de la pastille réseau appelle cette reprise-ci.
+    setRealtimeRetry(handle.retryNow);
 
     const handleBrowserChange = () => applyNetworkStatus();
     window.addEventListener('online', handleBrowserChange);
@@ -95,9 +99,8 @@ export function useGlobalPresence(): void {
     return () => {
       window.removeEventListener('online', handleBrowserChange);
       window.removeEventListener('offline', handleBrowserChange);
-      void channel.untrack();
-      void channel.unsubscribe();
-      void client.removeChannel(channel);
+      setRealtimeRetry(null);
+      handle.dispose();
     };
-  }, [demoMode, userId, userName, avatar, setLivePresence, setNetworkStatus]);
+  }, [demoMode, userId, userName, avatar, setLivePresence, setNetworkStatus, setRealtimeRetry]);
 }

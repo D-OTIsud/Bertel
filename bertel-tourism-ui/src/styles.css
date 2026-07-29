@@ -13008,6 +13008,8 @@ a {
 /* 7.4 — Équipe : table des membres + drawer permissions en vocabulaire maison. */
 .members-table__name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .members-table__mail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+/* Dernière activité : date/heure exacte lisible, écart relatif en appui (réutilise __mail). */
+.members-table__seen { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .members-perm-btn { gap: 5px; padding: 5px 10px; min-height: 0; font-size: 13px; }
 .members-perm-btn.is-muted { color: var(--text-muted); }
 .members-deactivate { color: var(--destructive); padding: 5px 10px; min-height: 0; font-size: 13px; }

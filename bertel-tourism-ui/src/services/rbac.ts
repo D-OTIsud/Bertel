@@ -10,6 +10,8 @@ export interface OrgMember {
   businessRoleCode: string | null;
   adminRoleCode: string | null;
   permissionCodes: string[];
+  /** Dernière activité (ISO) = dernière connexion OU dernier refresh de session, au plus récent. */
+  lastSeenAt: string | null;
 }
 export interface RefRole { code: string; name: string; rank: number | null; position: number | null; }
 export interface RefPermission { code: string; name: string; category: string; }
@@ -39,6 +41,7 @@ export async function listOrgMembers(orgObjectId: string): Promise<OrgMember[]> 
     businessRoleCode: (r.business_role_code as string) ?? null,
     adminRoleCode: (r.admin_role_code as string) ?? null,
     permissionCodes: Array.isArray(r.permission_codes) ? (r.permission_codes as string[]) : [],
+    lastSeenAt: (r.last_seen_at as string) ?? null,
   }));
 }
 

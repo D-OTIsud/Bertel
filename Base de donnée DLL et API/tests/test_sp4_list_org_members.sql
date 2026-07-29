@@ -19,6 +19,10 @@ BEGIN
   INSERT INTO object (id, object_type, name, status) VALUES (v_org, 'ORG', 'SP4 Org', 'published');
   INSERT INTO auth.users (id, email) VALUES
     (v_admin, 'sp4_admin@test.local'), (v_member, 'sp4_member@test.local'), (v_outsider, 'sp4_out@test.local');
+  -- Témoin « dernière activité » : sign-in ancien + session rafraîchie plus tard sur le seul admin.
+  UPDATE auth.users SET last_sign_in_at = timestamptz '2026-07-01 08:00:00+00' WHERE id = v_admin;
+  INSERT INTO auth.sessions (id, user_id, created_at, updated_at)
+    VALUES (gen_random_uuid(), v_admin, timestamptz '2026-07-01 08:00:00+00', timestamptz '2026-07-29 09:00:00+00');
   INSERT INTO app_user_profile (id, role, display_name) VALUES
     (v_admin,'tourism_agent','SP4 Admin'), (v_member,'tourism_agent','SP4 Member'), (v_outsider,'tourism_agent','SP4 Out')
     ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role, display_name=EXCLUDED.display_name;
@@ -33,6 +37,15 @@ BEGIN
     SELECT count(*) INTO v_rc FROM api.rpc_list_org_members(v_org);
     ASSERT v_rc = 2, 'admin must see 2 members';
     ASSERT (SELECT bool_and(email IS NOT NULL) FROM api.rpc_list_org_members(v_org)), 'roster must include emails';
+    -- Dernière activité : garde NON VACANTE — on pose un sign-in daté sur l'admin et un refresh de
+    -- session PLUS RÉCENT, puis on exige que le RPC remonte le refresh (c'est tout l'intérêt de la
+    -- colonne : last_sign_in_at seul est périmé tant que la session vit). Le membre sans session ni
+    -- sign-in doit rester NULL (« Jamais »).
+    ASSERT (SELECT last_seen_at FROM api.rpc_list_org_members(v_org) WHERE user_id = v_member) IS NULL,
+      'a member who never signed in must report NULL last_seen_at';
+    ASSERT (SELECT last_seen_at FROM api.rpc_list_org_members(v_org) WHERE user_id = v_admin)
+           = timestamptz '2026-07-29 09:00:00+00',
+      'last_seen_at must follow the session refresh, not the stale last_sign_in_at';
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_outsider, 'role','authenticated')::text, true);

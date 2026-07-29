@@ -9,6 +9,8 @@ import type {
   ExplorerTagFilter,
   GeoPolygon,
   MeetingRoomFilter,
+  MissingEssentialBucket,
+  MissingEssentialCode,
 } from '../types/domain';
 import { mergeSelectedObjectIds } from '../utils/explorer-selection';
 import {
@@ -63,6 +65,10 @@ interface ExplorerState extends ExplorerFilters {
    */
   toggleStatus: (status: ExplorerStatusFilter) => void;
   setStatuses: (statuses: ExplorerStatusFilter[]) => void;
+  /** §204 — paliers de remplissage (éditeurs). */
+  setMissingEssentialsBuckets: (buckets: MissingEssentialBucket[]) => void;
+  /** §204 — essentiels manquants recherchés (éditeurs). */
+  setMissingEssentialsAny: (codes: MissingEssentialCode[]) => void;
   toggleSelectedObject: (objectId: string) => void;
   addSelectedObjects: (objectIds: string[]) => void;
   /** D9 : restauration de la sélection précédente (« Annuler » du toast). */
@@ -350,6 +356,14 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
   setStatuses: (statuses) =>
     set((state) => ({
       common: { ...state.common, statuses: [...new Set(statuses)] },
+    })),
+  setMissingEssentialsBuckets: (buckets) =>
+    set((state) => ({
+      common: { ...state.common, missingEssentialsBuckets: [...new Set(buckets)] },
+    })),
+  setMissingEssentialsAny: (codes) =>
+    set((state) => ({
+      common: { ...state.common, missingEssentialsAny: [...new Set(codes)] },
     })),
   toggleSelectedObject: (objectId) =>
     set((state) => {

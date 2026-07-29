@@ -139,6 +139,24 @@ export interface ExplorerTagFilter {
   color?: string;
 }
 
+/** §204 — paliers de remplissage : 0 manquant, 1–2, 3 et plus. */
+export type MissingEssentialBucket = 'complete' | 'few' | 'many';
+
+/**
+ * §204 — codes d'essentiels visiteur, IDENTIQUES à ceux du champ `missing_fields`
+ * de `api.get_dashboard_completeness` et de `internal.v_object_essentials`.
+ * Ne pas en inventer, ne pas les renommer : ils voyagent tels quels dans le RPC.
+ */
+export type MissingEssentialCode =
+  | 'name'
+  | 'subcategory'
+  | 'location'
+  | 'contact'
+  | 'description'
+  | 'photos'
+  | 'type_block'
+  | 'tags';
+
 export interface ExplorerCommonFilters {
   search: string;
   /**
@@ -217,6 +235,16 @@ export interface ExplorerCommonFilters {
    * to ['published','draft'] at session bootstrap.
    */
   statuses: ExplorerStatusFilter[];
+  /**
+   * §204 — paliers de remplissage. Réservé aux éditeurs, et gardé DEUX FOIS :
+   * le panneau masque le groupe pour un lecteur seul, `useExplorerQueryFilters`
+   * neutralise l'état (il survivrait à une URL partagée ou à un changement de
+   * rôle en session), et le RPC ignore les clés d'un non-éditeur. Les trois sont
+   * indépendantes — aucune ne suffit seule.
+   */
+  missingEssentialsBuckets: MissingEssentialBucket[];
+  /** §204 — quels essentiels manquent (OU interne, ET avec le palier). */
+  missingEssentialsAny: MissingEssentialCode[];
   bbox?: [number, number, number, number] | null;
   polygon?: GeoPolygon | null;
 }
@@ -278,6 +306,14 @@ export interface ObjectCard {
   taxonomy?: ObjectCardTaxonomy[];
   environment_tags?: ObjectCardTag[];
   amenity_codes?: string[];
+  /**
+   * §204 — essentiels visiteur manquants. Émis par le RPC UNIQUEMENT pour un
+   * appelant éditeur (`api.object_missing_essentials`). **L'absence du champ ne
+   * signifie PAS « fiche complète »** — elle signifie « appelant non éditeur ».
+   * Une fiche complète porte un tableau VIDE. Ne jamais afficher un signal
+   * positif sur une absence.
+   */
+  missing_essentials?: string[];
   updated_at?: string | null;
   location?: LocationSummary;
   render?: {

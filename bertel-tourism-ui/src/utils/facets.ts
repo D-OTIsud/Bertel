@@ -102,6 +102,9 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   // Empty = "use the server default" (published only). Editors get the default
   // broadened in `useExplorerFilters` once their canEditObjects flag is known.
   statuses: [],
+  // §204 — remplissage : vide = pas de filtre. Réservé aux éditeurs.
+  missingEssentialsBuckets: [],
+  missingEssentialsAny: [],
   bbox: null,
   polygon: null,
 };
@@ -167,6 +170,8 @@ export function normalizeExplorerFilters(
       rankedLabelIncludeEquivalents: common.rankedLabelIncludeEquivalents ?? true,
       rankedLabelValueCodes: common.rankedLabelValueCodes ?? [],
       statuses: common.statuses ?? [],
+      missingEssentialsBuckets: common.missingEssentialsBuckets ?? [],
+      missingEssentialsAny: common.missingEssentialsAny ?? [],
     },
     hot: {
       ...hot,
@@ -541,6 +546,16 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
 
   if (common.petsAccepted) {
     payload.pet_accepted = true;
+  }
+
+  // §204 — Remplissage. Deux clés indépendantes, combinées en ET côté SQL.
+  // Un tableau vide n'émet RIEN : le RPC traiterait une clé vide comme « pas de
+  // filtre » de toute façon, autant garder le payload lisible en débogage.
+  if (common.missingEssentialsBuckets.length > 0) {
+    payload.missing_essentials_buckets = [...common.missingEssentialsBuckets];
+  }
+  if (common.missingEssentialsAny.length > 0) {
+    payload.missing_essentials_any = [...common.missingEssentialsAny];
   }
 
   const accessibilityAmenityCodes = common.accessibilityAmenityCodesAny.map(cleanString).filter(Boolean);

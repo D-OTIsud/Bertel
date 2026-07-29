@@ -127,6 +127,43 @@ WHERE tl.target_table = 'object'
   AND tl.extra ->> 'source' = 'old_data_enrichment_20260512';
 
 -- -------------------------------------------------------------------------------------
+-- 1bis) SAUVEGARDE EXACTE des lignes qui vont disparaître — avant toute suppression.
+--
+--   Sans elle, la purge est irréversible : 4 529 liens dont on ne saurait plus reconstruire
+--   ni le `position` ni le `extra`. La table vit dans `internal` (non exposé à PostgREST),
+--   porte la forme complète de `tag_link` + l'horodatage de purge, et sert deux usages :
+--     * le ROLLBACK (SQL fourni au pied de ce fichier) ;
+--     * la garde CI, qui vérifie que la sauvegarde ne contient QUE des lignes d'import —
+--       c'est la preuve exécutable qu'aucune écriture éditeur n'a été emportée.
+-- -------------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS internal.tag_link_purge_backup_20260512 (
+  id           uuid,
+  tag_id       uuid,
+  tag_slug     text,          -- dénormalisé : le `ref_tag` correspondant est supprimé en 3
+  tag_name     text,
+  target_table text,
+  target_pk    text,
+  created_by   uuid,
+  created_at   timestamptz,
+  extra        jsonb,
+  position     integer,
+  purged_at    timestamptz NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE internal.tag_link_purge_backup_20260512 IS
+  'Sauvegarde des tag_link supprimés par la migration 16p (import old_data_enrichment_20260512). Rollback : voir le pied de migration_tags_purge_import_20260512.sql. Ne pas supprimer sans décision explicite — c est le seul exemplaire de ces lignes.';
+
+INSERT INTO internal.tag_link_purge_backup_20260512
+  (id, tag_id, tag_slug, tag_name, target_table, target_pk, created_by, created_at, extra, position)
+SELECT tl.id, tl.tag_id, t.slug, t.name, tl.target_table, tl.target_pk,
+       tl.created_by, tl.created_at, tl.extra, tl.position
+FROM public.tag_link tl
+JOIN public.ref_tag t ON t.id = tl.tag_id
+WHERE tl.target_table = 'object'
+  AND tl.extra ->> 'source' = 'old_data_enrichment_20260512'
+  -- rejeu : ne pas empiler deux sauvegardes de la même ligne
+  AND NOT EXISTS (SELECT 1 FROM internal.tag_link_purge_backup_20260512 b WHERE b.id = tl.id);
+
+-- -------------------------------------------------------------------------------------
 -- 2) Suppression des liens, trigger de cache éteint (cf. précaution §197 ci-dessus).
 -- -------------------------------------------------------------------------------------
 ALTER TABLE public.tag_link DISABLE TRIGGER trg_refresh_object_filter_caches_tag_link;
@@ -260,4 +297,46 @@ COMMIT;
 --   REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;
 --
 -- Pas de `NOTIFY pgrst` : aucune signature de fonction ni colonne exposée ne change.
+--
+-- -------------------------------------------------------------------------------------
+-- ROLLBACK EXACT (à exécuter en UNE transaction, trigger de cache éteint comme à l'aller)
+--
+-- Restaure les liens ET les entrées de catalogue supprimées, à l'identique (`id`,
+-- `position`, `extra`, `created_at`, `created_by` d'origine). Les `ref_tag` sont recréés
+-- AVANT les liens (FK), avec leur `id` d'origine — celui que la sauvegarde a conservé —
+-- sinon les liens restaurés pointeraient dans le vide.
+--
+--   BEGIN;
+--   ALTER TABLE public.tag_link DISABLE TRIGGER trg_refresh_object_filter_caches_tag_link;
+--
+--   -- 1. catalogue : re-créer les ref_tag disparus, avec leur id d'origine
+--   INSERT INTO public.ref_tag (id, slug, name)
+--   SELECT DISTINCT b.tag_id, b.tag_slug, b.tag_name
+--     FROM internal.tag_link_purge_backup_20260512 b
+--    WHERE NOT EXISTS (SELECT 1 FROM public.ref_tag t WHERE t.id = b.tag_id);
+--
+--   -- 2. liens : restauration à l'identique
+--   INSERT INTO public.tag_link (id, tag_id, target_table, target_pk, created_by, created_at, extra, position)
+--   SELECT b.id, b.tag_id, b.target_table, b.target_pk, b.created_by, b.created_at, b.extra, b.position
+--     FROM internal.tag_link_purge_backup_20260512 b
+--    WHERE NOT EXISTS (SELECT 1 FROM public.tag_link tl WHERE tl.id = b.id);
+--
+--   ALTER TABLE public.tag_link ENABLE TRIGGER trg_refresh_object_filter_caches_tag_link;
+--
+--   -- 3. caches : un seul passage par fiche restaurée
+--   DO $rb$ DECLARE v_id text; BEGIN
+--     FOR v_id IN SELECT DISTINCT target_pk FROM internal.tag_link_purge_backup_20260512
+--                  WHERE target_table = 'object' LOOP
+--       PERFORM api.refresh_object_filter_caches(v_id);
+--     END LOOP;
+--   END $rb$;
+--   COMMIT;
+--
+--   -- puis, hors transaction, les 2 REFRESH MATERIALIZED VIEW ci-dessus.
+--
+-- ⚠️ Le rollback re-bumpe `updated_at` sur les fiches restaurées : les partenaires
+--    reprendront une seconde fois. C'est le prix d'un aller-retour, pas un défaut.
+-- ⚠️ Il ne défait PAS les couleurs/positions/descriptions du catalogue reseedé entre-temps
+--    (`family`/`romantic` de `seeds_data.sql`) — sans objet, ces deux tags ne sont pas purgés.
+-- -------------------------------------------------------------------------------------
 -- =====================================================================================

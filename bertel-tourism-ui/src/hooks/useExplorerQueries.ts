@@ -20,6 +20,7 @@ import {
   saveObjectWorkspaceCapacityPolicies,
   saveObjectWorkspaceDistinctions,
   getObjectWorkspaceResource,
+  type ObjectWorkspaceResource,
   publishObjectWorkspace,
   setObjectStatus,
   type ObjectLifecycleStatus,
@@ -289,6 +290,45 @@ export function usePrefetchObjectDetail(): (objectId: string) => () => void {
 }
 
 /**
+ * Fraicheur de l'espace de travail. Doit etre la MEME au prechargement et a la
+ * lecture, sinon l'ouverture de l'editeur refait le chargement que le
+ * prechargement vient de payer. 5 min, comme la fiche.
+ */
+export const OBJECT_WORKSPACE_STALE_TIME_MS = 5 * 60 * 1000;
+
+/**
+ * Point d'entree UNIQUE du chargeur d'espace de travail.
+ *
+ * Resout la fiche et les catalogues EN PARALLELE, puis passe les deux au
+ * chargeur. La fiche passe par `fetchQuery` sur la cle exacte du tiroir
+ * (`['object-detail', id, langPrefs]`), ce qui :
+ *  - reutilise le resultat si le tiroir vient de le charger,
+ *  - se GREFFE sur la requete si elle est encore en vol (React Query deduplique
+ *    les fetch concurrents d'une meme cle),
+ *  - ne declenche un appel reseau que si personne ne l'a demandee.
+ *
+ * Avant ce point d'entree, le chargeur rappelait `getObjectResource` lui-meme :
+ * ouvrir une fiche puis cliquer « Modifier » executait deux fois le RPC lourd
+ * (469 ms de moyenne en production).
+ */
+export async function loadObjectWorkspace(
+  queryClient: QueryClient,
+  objectId: string,
+  langPrefs: string[],
+): Promise<ObjectWorkspaceResource> {
+  const [detail, catalogs] = await Promise.all([
+    queryClient.fetchQuery({
+      queryKey: ['object-detail', objectId, langPrefs],
+      queryFn: () => getObjectResource(objectId, langPrefs),
+      staleTime: OBJECT_DETAIL_STALE_TIME_MS,
+    }),
+    ensureReferenceCatalogs(queryClient),
+  ]);
+
+  return getObjectWorkspaceResource(objectId, langPrefs, catalogs, detail);
+}
+
+/**
  * Precharge les donnees LOURDES de l'editeur (le chargeur d'espace de travail)
  * au survol du bouton « Modifier ». Depuis que le tiroir ne charge plus que la
  * fiche seule, ce prechauffage-la doit etre explicite ; on le declenche sur le
@@ -307,10 +347,8 @@ export function usePrefetchObjectWorkspace(): (objectId: string) => void {
       void queryClient
         .prefetchQuery({
           queryKey: ['object-workspace', objectId, langPrefs],
-          queryFn: async () => {
-            const catalogs = await ensureReferenceCatalogs(queryClient);
-            return getObjectWorkspaceResource(objectId, langPrefs, catalogs);
-          },
+          queryFn: () => loadObjectWorkspace(queryClient, objectId, langPrefs),
+          staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
         })
         .catch(() => undefined);
     },
@@ -324,13 +362,9 @@ export function useObjectWorkspaceQuery(objectId: string | null) {
 
   return useQuery({
     queryKey: ['object-workspace', objectId, langPrefs],
-    queryFn: async () => {
-      // Les catalogues sont resolus depuis le cache de session (0 requete des la
-      // deuxieme fiche) AVANT que le chargeur ne parte : il ne les refetch plus.
-      const catalogs = await ensureReferenceCatalogs(queryClient);
-      return getObjectWorkspaceResource(objectId ?? '', langPrefs, catalogs);
-    },
+    queryFn: () => loadObjectWorkspace(queryClient, objectId ?? '', langPrefs),
     enabled: Boolean(objectId),
+    staleTime: OBJECT_WORKSPACE_STALE_TIME_MS,
   });
 }
 

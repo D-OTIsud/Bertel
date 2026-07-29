@@ -2,7 +2,6 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectDetail } from '../types/domain';
 import { mockPendingChanges, mockPublicationCards } from '../data/mock';
-import { getObjectResource } from './rpc';
 import type { ReferenceCatalogs } from './reference-catalogs';
 import {
   type ObjectWorkspaceCapacityItem,
@@ -3844,12 +3843,20 @@ function getFacetApplicabilityRows(catalogs: ReferenceCatalogs): FacetApplicabil
   }));
 }
 
+/**
+ * `detail` est FOURNI par l'appelant, jamais recharge ici. Le tiroir vient de
+ * l'obtenir sous la cle React Query `['object-detail', id, langPrefs]` ; le
+ * rappeler ici executait une SECONDE fois `api.get_object_with_deep_data`
+ * (469 ms de moyenne en production) pour un resultat identique.
+ * Passer par `loadObjectWorkspace` (hooks) garantit la deduplication, y compris
+ * quand la requete du tiroir est encore EN VOL.
+ */
 export async function getObjectWorkspaceResource(
   objectId: string,
   langPrefs: string[],
   catalogs: ReferenceCatalogs,
+  detail: ObjectDetail,
 ): Promise<ObjectWorkspaceResource> {
-  const detail = await getObjectResource(objectId, langPrefs);
   const parsedModules = parseObjectWorkspace(detail, langPrefs);
 
   // §42: catalog enrichment for the type-specific / optional modules — moved OUT of the old

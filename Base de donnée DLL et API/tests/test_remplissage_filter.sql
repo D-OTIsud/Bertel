@@ -182,6 +182,48 @@ BEGIN
   RAISE NOTICE 'Bloc C (non-vacuité du filtre) OK.';
 END$$;
 
+-- ---------- (D) La page de cartes porte missing_essentials ----------
+DO $$
+DECLARE
+  v_page JSONB;
+  v_item JSONB;
+BEGIN
+  -- published+draft : même raison qu'au bloc C (les témoins ne sont pas dans le MV).
+  -- p_search cible les temoins : sans lui, « il manque les photos » remonte ~357
+  -- fiches et 02 n'est pas dans la premiere page — le test echouerait sur la
+  -- PAGINATION en laissant croire a un defaut du filtre.
+  v_page := api.list_object_resources_filtered_page(
+              NULL, ARRAY['fr']::text[], 50,
+              '{"missing_essentials_any": ["photos"]}'::jsonb,
+              NULL::object_type[], ARRAY['published','draft']::object_status[], 'Remplissage')::jsonb;
+
+  SELECT d INTO v_item
+  FROM jsonb_array_elements(v_page->'data') d
+  WHERE d->>'id' = 'RMPLIS9999999902';
+
+  ASSERT v_item IS NOT NULL,
+    '02 doit être dans la page filtrée sur « il manque les photos »';
+  ASSERT v_item ? 'missing_essentials',
+    'la carte doit porter missing_essentials pour un appelant éditeur';
+  ASSERT (SELECT array_agg(x) FROM jsonb_array_elements_text(v_item->'missing_essentials') x)
+         = ARRAY['photos'],
+    format('02 ne doit manquer que de photos ; obtenu: %s', v_item->'missing_essentials');
+
+  -- 01 est complète : elle porte le champ, mais VIDE. Absence et tableau vide
+  -- ne veulent pas dire la même chose — le front ne doit jamais déduire
+  -- « complète » d'une absence (= appelant non éditeur).
+  v_page := api.list_object_resources_filtered_page(
+              NULL, ARRAY['fr']::text[], 50, '{}'::jsonb,
+              NULL::object_type[], ARRAY['published','draft']::object_status[], 'Remplissage')::jsonb;
+  SELECT d INTO v_item
+  FROM jsonb_array_elements(v_page->'data') d
+  WHERE d->>'id' = 'RMPLIS9999999901';
+  ASSERT v_item ? 'missing_essentials' AND jsonb_array_length(v_item->'missing_essentials') = 0,
+    format('01 doit porter un tableau VIDE, pas l''absence du champ ; obtenu: %s', v_item->'missing_essentials');
+
+  RAISE NOTICE 'Bloc D (carte décorée) OK.';
+END$$;
+
 -- ---------- (B) Gardes du helper ----------
 DO $$
 DECLARE

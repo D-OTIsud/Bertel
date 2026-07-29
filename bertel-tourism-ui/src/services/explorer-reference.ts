@@ -13,6 +13,7 @@ import type {
   SustainabilityCategoryRef,
   ExplorerTaxonomyDomain,
   ExplorerTaxonomyNode,
+  ExplorerAccommodationFamily,
 } from '../types/domain';
 import { ACCESSIBILITY_DISABILITY_TYPE_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, HEADLINE_CAPACITY_METRIC } from '../utils/facets';
 
@@ -590,6 +591,40 @@ export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]
     taxonomyDomains,
     (taxonomyNodesResult.data ?? []) as TaxonomyNodeRow[],
   );
+}
+
+/**
+ * §200 — familles d'hébergement seules (parcours de création guidée).
+ * Le dialogue de création n'a pas besoin des ~20 catalogues de `listExplorerReferences`.
+ */
+export async function listAccommodationFamilies(): Promise<ExplorerAccommodationFamily[]> {
+  const session = useSessionStore.getState();
+  const client = getSupabaseClient();
+
+  if (session.demoMode || !client) {
+    return buildDemoReferences().accommodationFamilies ?? [];
+  }
+
+  const result = await client
+    .from('ref_code')
+    .select('code,name,description,position,metadata')
+    .eq('domain', 'accommodation_family')
+    .eq('is_active', true)
+    .order('position', { ascending: true });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  return ((result.data ?? []) as Array<{
+    code: string; name: string; description: string | null; position: number | null; metadata?: unknown;
+  }>).map((row) => ({
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    position: row.position,
+    aliases: readStringList(readRecord(row.metadata).aliases),
+  }));
 }
 
 export async function listExplorerReferences(): Promise<ExplorerReferences> {

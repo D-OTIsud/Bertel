@@ -736,6 +736,62 @@ function mapCreateObjectError(message: string): Error {
  * the creator's ORG as publisher (trigger), so the creator can immediately author the new
  * object in the full-page editor. This is the ONLY object-creation write path.
  */
+/**
+ * §200 — pose la nature choisie au dialogue de création sur la fiche neuve.
+ *
+ * `rpc_create_object` ne prend que type/nom/région : sans cette écriture, la
+ * nature sélectionnée par l'agent serait silencieusement perdue — exactement le
+ * write-trap que l'éditeur s'interdit. Même écrivain que l'éditeur (upsert
+ * PostgREST sur `object_taxonomy`, gardé par la même policy canonique), donc
+ * aucun second chemin d'écriture n'est introduit.
+ *
+ * Volontairement SÉPARÉ de `createObject` : la fiche existe déjà quand on
+ * arrive ici. Un échec ici ne doit jamais faire croire que la création a
+ * échoué — l'appelant le signale sans perdre l'identifiant.
+ */
+export async function assignObjectTaxonomy(input: {
+  objectId: string;
+  domain: string;
+  code: string;
+}): Promise<void> {
+  const session = useSessionStore.getState();
+  if (session.demoMode) {
+    return;
+  }
+
+  const client = getApiClient();
+  if (!client) {
+    throw new Error('Connexion backend indisponible pour enregistrer la nature.');
+  }
+
+  const { data: node, error: lookupError } = await client
+    .from('ref_code')
+    .select('id')
+    .eq('domain', input.domain)
+    .eq('code', input.code)
+    .eq('is_active', true)
+    .eq('is_assignable', true)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw lookupError;
+  }
+  if (!node?.id) {
+    throw new Error(`Nature introuvable ou non assignable (${input.domain}:${input.code}).`);
+  }
+
+  const { error } = await client
+    .from('object_taxonomy')
+    .upsert(
+      { object_id: input.objectId, domain: input.domain, ref_code_id: node.id, source: 'create_object_dialog' },
+      { onConflict: 'object_id,domain' },
+    );
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function createObject(input: { type: string; name: string }): Promise<string> {
   const session = useSessionStore.getState();
   if (session.demoMode) {

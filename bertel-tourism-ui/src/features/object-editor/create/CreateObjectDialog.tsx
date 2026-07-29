@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { getArchetypeMeta, type ArchetypeCode } from '../archetypes';
 import { useObjectSearch } from '../useObjectSearch';
-import { createObject } from '../../../services/rpc';
+import { assignObjectTaxonomy, createObject } from '../../../services/rpc';
 import {
   buildCreateTypeOptions,
   buildCreateTypeTaxonomyLabels,
@@ -34,9 +34,15 @@ import {
   MAX_OBJECT_NAME_LENGTH,
   type CreateTypeOption,
 } from './create-object-options';
+import {
+  accommodationSelectionPath,
+  buildCreateAccommodationFamilies,
+  findAccommodationNature,
+  resolveAccommodationTechnicalType,
+} from './accommodation-create-flow';
 import { splitDuplicateMatches } from './duplicate-hint';
-import { listTaxonomyReferences } from '../../../services/explorer-reference';
-import type { ExplorerTaxonomyDomain } from '../../../types/domain';
+import { listAccommodationFamilies, listTaxonomyReferences } from '../../../services/explorer-reference';
+import type { ExplorerAccommodationFamily, ExplorerTaxonomyDomain } from '../../../types/domain';
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -75,6 +81,8 @@ function typeColor(typeCode: string): string {
 
 type TooltipPosition = { left: number; top: number };
 
+const TAXONOMY_PREVIEW_LIMIT = 3;
+
 interface CreateTypeTileProps {
   option: CreateTypeOption;
   selected: boolean;
@@ -86,9 +94,9 @@ interface CreateTypeTileProps {
 }
 
 /**
- * A type tile whose tooltip is portalled to document.body. `position: fixed`
- * escapes both the scrollable type list and Radix Dialog stacking contexts, so
- * neighbouring cards can never paint over the taxonomy catalogue.
+ * Type tile with a deliberately compact taxonomy preview. The preview is opened
+ * only from the info affordance (not from the whole selection tile) and is
+ * portalled to escape the dialog's scrollable region.
  */
 function CreateTypeTile({
   option,
@@ -99,7 +107,7 @@ function CreateTypeTile({
   taxonomyError,
   onSelect,
 }: CreateTypeTileProps) {
-  const anchorRef = useRef<HTMLLabelElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const [position, setPosition] = useState<TooltipPosition | null>(null);
@@ -149,7 +157,7 @@ function CreateTypeTile({
           ref={tooltipRef}
           id={tooltipId}
           role="tooltip"
-          className="pointer-events-none fixed z-[1000] w-[460px] max-w-[calc(100vw-24px)] rounded-xl bg-ink px-3.5 py-3 text-left text-[11.5px] font-normal leading-[1.45] text-white shadow-2xl"
+          className="pointer-events-none fixed z-[1000] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-ink px-3 py-2.5 text-left text-[11.5px] font-normal leading-[1.4] text-white shadow-xl"
           style={{
             left: position?.left ?? 0,
             top: position?.top ?? 0,
@@ -166,14 +174,14 @@ function CreateTypeTile({
           ) : taxonomyError ? (
             <span className="mt-1 block text-white/75">Catalogue momentanément indisponible.</span>
           ) : subcategories.length > 0 ? (
-            <ul className="mt-1.5 grid grid-cols-1 gap-x-5 gap-y-1 sm:grid-cols-2">
-              {subcategories.map((subcategory) => (
-                <li key={subcategory} className="flex gap-1.5">
-                  <span aria-hidden="true" className="text-white/50">•</span>
-                  <span>{subcategory}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="mt-1 text-white/80">
+              Ex. {subcategories.slice(0, TAXONOMY_PREVIEW_LIMIT).join(', ')}
+              {subcategories.length > TAXONOMY_PREVIEW_LIMIT ? (
+                <span className="ml-1 whitespace-nowrap text-white/60">
+                  +{subcategories.length - TAXONOMY_PREVIEW_LIMIT} autres
+                </span>
+              ) : null}
+            </p>
           ) : (
             <span className="mt-1 block text-white/75">Aucune sous-catégorie active.</span>
           )}
@@ -184,18 +192,9 @@ function CreateTypeTile({
 
   return (
     <>
-      <label
-        ref={anchorRef}
-        onMouseEnter={() => setTooltipOpen(true)}
-        onMouseLeave={() => setTooltipOpen(false)}
-        onFocusCapture={(event) => {
-          if ((event.target as HTMLElement).matches(':focus-visible')) {
-            setTooltipOpen(true);
-          }
-        }}
-        onBlurCapture={() => setTooltipOpen(false)}
+      <div
         className={[
-          'relative flex cursor-pointer items-center rounded-xl border px-3 py-2.5 text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
+          'relative flex items-center rounded-xl border text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
           selected
             ? 'shadow-sm'
             : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
@@ -211,26 +210,41 @@ function CreateTypeTile({
             : undefined
         }
       >
-        <input
-          type="radio"
-          name="create-object-type"
-          value={option.code}
-          checked={selected}
-          onChange={onSelect}
-          aria-label={option.label}
-          aria-describedby={tooltipId}
-          className="sr-only"
-        />
-        <span className="min-w-0 leading-5">{option.label}</span>
-        <Info className="ml-auto h-3.5 w-3.5 flex-none opacity-55" aria-hidden />
-        {selected ? (
-          <Check
-            className="ml-1.5 h-4 w-4 flex-none"
-            strokeWidth={3}
-            style={{ color: visual.color }}
+        <label className="flex min-w-0 flex-1 cursor-pointer items-center py-2.5 pl-3">
+          <input
+            type="radio"
+            name="create-object-type"
+            value={option.code}
+            checked={selected}
+            onChange={onSelect}
+            aria-label={option.label}
+            className="sr-only"
           />
-        ) : null}
-      </label>
+          <span className="min-w-0 leading-5">{option.label}</span>
+          {selected ? (
+            <Check
+              className="ml-auto h-4 w-4 flex-none"
+              strokeWidth={3}
+              style={{ color: visual.color }}
+            />
+          ) : null}
+        </label>
+        <button
+          ref={anchorRef}
+          type="button"
+          aria-label={`Voir des exemples de sous-catégories pour ${option.label}`}
+          aria-describedby={tooltipOpen ? tooltipId : undefined}
+          aria-expanded={tooltipOpen}
+          onClick={() => setTooltipOpen(true)}
+          onMouseEnter={() => setTooltipOpen(true)}
+          onMouseLeave={() => setTooltipOpen(false)}
+          onFocus={() => setTooltipOpen(true)}
+          onBlur={() => setTooltipOpen(false)}
+          className="mx-1 grid h-8 w-8 flex-none place-items-center rounded-lg text-current opacity-55 transition-[background-color,opacity] hover:bg-black/5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/30"
+        >
+          <Info className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </div>
       {tooltip}
     </>
   );
@@ -249,26 +263,46 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState(false);
   const [taxonomies, setTaxonomies] = useState<ExplorerTaxonomyDomain[] | null>(null);
+  const [accommodationFamilyRefs, setAccommodationFamilyRefs] = useState<ExplorerAccommodationFamily[]>([]);
   const [taxonomyError, setTaxonomyError] = useState(false);
+  const [familiesError, setFamiliesError] = useState(false);
+  /** §200 — parcours hébergement : famille ouverte + nature (ou sous-type) retenue. */
+  const [guided, setGuided] = useState(false);
+  const [familyCode, setFamilyCode] = useState<string | null>(null);
+  const [natureSelection, setNatureSelection] = useState<{ domain: string; code: string } | null>(null);
 
   useEffect(() => {
     if (!open || taxonomies || taxonomyError) return;
     let cancelled = false;
 
+    // Les deux catalogues sont chargés INDÉPENDAMMENT : un `Promise.all` ferait
+    // dépendre l'aide des tuiles de type (13 types hors hébergement) de la
+    // disponibilité des familles d'hébergement, qui ne la concernent pas.
     listTaxonomyReferences()
-      .then((catalog) => {
-        if (!cancelled) setTaxonomies(catalog);
-      })
-      .catch(() => {
-        if (!cancelled) setTaxonomyError(true);
-      });
+      .then((catalog) => { if (!cancelled) setTaxonomies(catalog); })
+      .catch(() => { if (!cancelled) setTaxonomyError(true); });
+
+    listAccommodationFamilies()
+      .then((families) => { if (!cancelled) setAccommodationFamilyRefs(families); })
+      .catch(() => { if (!cancelled) setFamiliesError(true); });
 
     return () => {
       cancelled = true;
     };
   }, [open, taxonomies, taxonomyError]);
+
+  const accommodationFamilies = useMemo(
+    () => (taxonomies ? buildCreateAccommodationFamilies(taxonomies, accommodationFamilyRefs) : []),
+    [taxonomies, accommodationFamilyRefs],
+  );
+  const openFamily = accommodationFamilies.find((family) => family.code === familyCode) ?? null;
+  const selectedNature = findAccommodationNature(accommodationFamilies, natureSelection);
+  // Le type technique n'est JAMAIS saisi : il se déduit du domaine de la nature.
+  const guidedType = guided ? resolveAccommodationTechnicalType(accommodationFamilies, natureSelection) : null;
+  const effectiveType = guided ? (guidedType ?? '') : type;
 
   const subcategoriesByType = useMemo(() => {
     const result: Record<string, string[]> = {};
@@ -281,8 +315,8 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     return result;
   }, [groups, taxonomies]);
 
-  const validation = validateCreateObjectInput({ type, name });
-  const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === type))?.archetype ?? null;
+  const validation = validateCreateObjectInput({ type: effectiveType, name });
+  const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === effectiveType))?.archetype ?? null;
   const accent = selectedArchetype ? ARCHETYPE_VISUAL[selectedArchetype] : null;
 
   const { results: similar, loading: searching } = useObjectSearch(name, { debounceMs: 300, limit: 6 });
@@ -293,7 +327,19 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     setType('');
     setName('');
     setError(null);
+    setNotice(null);
     setBusy(false);
+    setGuided(false);
+    setFamilyCode(null);
+    setNatureSelection(null);
+  }
+
+  /** Choisir un type hors hébergement quitte le parcours guidé — jamais d'état mixte. */
+  function selectPlainType(code: string) {
+    setGuided(false);
+    setFamilyCode(null);
+    setNatureSelection(null);
+    setType(code);
   }
 
   function handleClose() {
@@ -312,15 +358,34 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     if (!validation.ok || busy) return;
     setBusy(true);
     setError(null);
+    setNotice(null);
+    const pendingNature = guided ? natureSelection : null;
+    let id: string;
     try {
-      const id = await createObject({ type, name: name.trim() });
-      reset();
-      setJustCreated(true);
-      onCreated(id);
+      id = await createObject({ type: effectiveType, name: name.trim() });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Création impossible pour le moment.');
       setBusy(false);
+      return;
     }
+
+    // La fiche EXISTE désormais. Un échec d'affectation de la nature ne doit pas
+    // être présenté comme un échec de création — ce serait pousser l'agent à
+    // recommencer et à créer un doublon.
+    let assignmentNotice: string | null = null;
+    if (pendingNature) {
+      try {
+        await assignObjectTaxonomy({ objectId: id, domain: pendingNature.domain, code: pendingNature.code });
+      } catch {
+        assignmentNotice = "Fiche créée, mais la nature n'a pas pu être enregistrée : choisissez-la dans la section Identité.";
+      }
+    }
+
+    reset();
+    // APRÈS reset : celui-ci efface les messages, et l'avertissement doit survivre.
+    setNotice(assignmentNotice);
+    setJustCreated(true);
+    onCreated(id);
   }
 
   return (
@@ -426,23 +491,165 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={group.codeName}>
-                    {group.types.map((option) => {
-                      const selected = type === option.code;
-                      return (
+                  {/* §200 — l'hébergement ne propose plus ses 5 codes techniques :
+                      l'agent choisit une famille puis une nature, et Bertel en
+                      déduit HOT / HLO / RVA / CAMP / HPA. Les 13 autres types
+                      gardent exactement leur parcours. */}
+                  {group.archetype === 'HEB' ? (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        onClick={() => { setGuided(true); setType(''); }}
+                        aria-pressed={guided}
+                        className={[
+                          'flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13.5px] font-medium transition',
+                          guided ? 'shadow-sm' : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:bg-surface2 hover:text-ink',
+                        ].join(' ')}
+                        style={guided ? { borderColor: v.color, backgroundColor: `${v.color}14`, color: v.deep } : undefined}
+                      >
+                        <span className="min-w-0 flex-1">Hébergement</span>
+                        {guided ? <Check className="h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} /> : null}
+                      </button>
+
+                      {guided ? (
+                        <div className="space-y-3 rounded-xl border border-line bg-surface2/60 p-3">
+                          {taxonomyError || familiesError ? (
+                            <p className="text-[12.5px] text-ink-3">
+                              Catalogue momentanément indisponible : réessayez dans un instant.
+                            </p>
+                          ) : accommodationFamilies.length === 0 ? (
+                            <p className="text-[12.5px] text-ink-3">Chargement des familles d&apos;hébergement…</p>
+                          ) : (
+                            <>
+                              <div>
+                                <label htmlFor="create-accommodation-family" className="mb-1.5 block text-[12.5px] font-semibold text-ink">
+                                  1 · Famille d&apos;hébergement
+                                </label>
+                                <select
+                                  id="create-accommodation-family"
+                                  value={familyCode ?? ''}
+                                  onChange={(event) => { setFamilyCode(event.target.value || null); setNatureSelection(null); }}
+                                  className="h-10 w-full rounded-lg border border-line bg-surface px-2.5 text-[13px] text-ink"
+                                >
+                                  <option value="">Choisissez une famille…</option>
+                                  {accommodationFamilies.map((family) => (
+                                    <option key={family.code} value={family.code}>{family.name}</option>
+                                  ))}
+                                </select>
+                                {openFamily?.description ? (
+                                  <p className="mt-1 text-[12px] leading-snug text-ink-3">{openFamily.description}</p>
+                                ) : null}
+                              </div>
+
+                              {openFamily ? (
+                                <div>
+                                  <span className="mb-1.5 block text-[12.5px] font-semibold text-ink">
+                                    2 · Nature de l&apos;établissement
+                                  </span>
+                                  <div className="space-y-1.5" role="radiogroup" aria-label="Nature de l'établissement">
+                                    {openFamily.natures.map((nature) => {
+                                      const natureSelected = natureSelection?.domain === nature.domain
+                                        && natureSelection?.code === nature.code;
+                                      const childSelected = nature.children
+                                        .some((child) => natureSelection?.domain === child.domain && natureSelection?.code === child.code);
+                                      return (
+                                        <div key={`${nature.domain}:${nature.code}`}>
+                                          <button
+                                            type="button"
+                                            onClick={() => setNatureSelection({ domain: nature.domain, code: nature.code })}
+                                            aria-pressed={natureSelected}
+                                            className={[
+                                              'w-full rounded-lg border px-2.5 py-2 text-left text-[13px] transition',
+                                              natureSelected || childSelected
+                                                ? 'border-ink-3 bg-surface text-ink'
+                                                : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
+                                            ].join(' ')}
+                                          >
+                                            <span className="font-medium">{nature.name}</span>
+                                            {nature.description ? (
+                                              <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-3">
+                                                {nature.description}
+                                              </span>
+                                            ) : null}
+                                          </button>
+                                          {nature.children.length > 0 && (natureSelected || childSelected) ? (
+                                            <div className="ml-3 mt-1.5 space-y-1 border-l border-line pl-3">
+                                              <span className="block text-[11.5px] font-semibold text-ink-2">
+                                                3 · Précisez la forme (facultatif)
+                                              </span>
+                                              {nature.children.map((child) => {
+                                                const active = natureSelection?.domain === child.domain
+                                                  && natureSelection?.code === child.code;
+                                                return (
+                                                  <button
+                                                    key={`${child.domain}:${child.code}`}
+                                                    type="button"
+                                                    onClick={() => setNatureSelection({ domain: child.domain, code: child.code })}
+                                                    aria-pressed={active}
+                                                    className={[
+                                                      'w-full rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition',
+                                                      active
+                                                        ? 'border-ink-3 bg-surface text-ink'
+                                                        : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
+                                                    ].join(' ')}
+                                                  >
+                                                    <span className="font-medium">{child.name}</span>
+                                                    {child.description ? (
+                                                      <span className="mt-0.5 block text-[11px] leading-snug text-ink-3">
+                                                        {child.description}
+                                                      </span>
+                                                    ) : null}
+                                                  </button>
+                                                );
+                                              })}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {selectedNature ? (
+                                <div className="rounded-lg border border-line bg-surface px-2.5 py-2">
+                                  <p className="text-[12.5px] font-semibold text-ink">
+                                    {accommodationSelectionPath(accommodationFamilies, natureSelection)}
+                                  </p>
+                                  {/* Le code technique reste VISIBLE mais secondaire : il n'est
+                                      pas un choix, et il n'est pas non plus un secret. */}
+                                  <p className="mt-0.5 text-[11.5px] text-ink-3">
+                                    Type technique calculé par Bertel :{' '}
+                                    <span data-testid="computed-technical-type" className="font-semibold text-ink-2">
+                                      {guidedType ? `${createTypeLabel(guidedType)} (${guidedType})` : 'indéterminé'}
+                                    </span>
+                                  </p>
+                                  <p className="mt-1 text-[11.5px] leading-snug text-ink-3">
+                                    Types d&apos;unité, services, classement et tarifs se renseignent après la création.
+                                  </p>
+                                </div>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-label={group.codeName}>
+                      {group.types.map((option) => (
                         <CreateTypeTile
                           key={option.code}
                           option={option}
-                          selected={selected}
+                          selected={!guided && type === option.code}
                           visual={v}
                           subcategories={subcategoriesByType[option.code] ?? []}
                           taxonomyLoading={!taxonomies && !taxonomyError}
                           taxonomyError={taxonomyError}
-                          onSelect={() => setType(option.code)}
+                          onSelect={() => selectPlainType(option.code)}
                         />
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </section>
               );
             })}
@@ -460,6 +667,15 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
               style={{ borderColor: '#e6b8b0', backgroundColor: '#fbf1ef', color: '#9a3b2a' }}
             >
               {error}
+            </p>
+          ) : null}
+          {notice ? (
+            <p
+              role="status"
+              className="rounded-xl border px-3.5 py-2.5 text-[13px]"
+              style={{ borderColor: '#ecd9ad', backgroundColor: '#fdf7ea', color: '#8a6d1f' }}
+            >
+              {notice}
             </p>
           ) : null}
 

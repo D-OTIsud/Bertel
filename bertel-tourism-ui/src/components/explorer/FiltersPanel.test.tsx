@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { FiltersPanel } from './FiltersPanel';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useSessionStore } from '../../store/session-store';
 import type { ExplorerReferences } from '../../types/domain';
 
 // Références minimales : seuls les schemes classés + leurs niveaux sont nécessaires ici,
@@ -688,5 +689,53 @@ describe('FiltersPanel — capacité d’accueil bornée des deux côtés', () =
 
     // `max_capacity` serait mort ici : aucune fiche RES n'en porte (0 ligne en base).
     expect(useExplorerStore.getState().res.capacityFilters).toEqual([{ code: 'seats', min: 20, max: undefined }]);
+  });
+});
+
+describe('§204 — groupe Remplissage', () => {
+  const initial = useSessionStore.getState().canEditObjects;
+  afterEach(() => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: initial });
+    });
+  });
+
+  it('un lecteur seul ne voit pas le groupe', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: false });
+    });
+    render(<FiltersPanel />);
+    expect(screen.queryByText('Remplissage')).not.toBeInTheDocument();
+  });
+
+  it('un éditeur voit le groupe et ses trois paliers', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    expect(screen.getByText('Remplissage')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Complète' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '1–2 manquants' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3 et plus' })).toBeInTheDocument();
+  });
+
+  it('cliquer un palier le marque actif', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    const chip = screen.getByRole('button', { name: '3 et plus' });
+    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(chip);
+    expect(screen.getByRole('button', { name: '3 et plus' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('« Nom » n’est pas proposé dans la facette — ce serait un critère muet', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    expect(screen.getByText('Il manque')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Nom' })).not.toBeInTheDocument();
   });
 });

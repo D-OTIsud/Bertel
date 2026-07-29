@@ -148,6 +148,14 @@ function useExplorerQueryFilters() {
       common: {
         ...filters.common,
         statuses: effectiveStatuses,
+        // §204 — le remplissage est réservé aux éditeurs. Masquer le groupe ne
+        // suffit pas : l'état survivrait à une URL partagée ou à un changement
+        // de rôle en cours de session. On neutralise ici, à la source du
+        // payload. Le serveur ferme la porte de son côté (les clés d'un
+        // non-éditeur sont ignorées par le RPC) — les deux gardes sont
+        // indépendantes, aucune ne suffit seule.
+        missingEssentialsBuckets: canEditObjects ? filters.common.missingEssentialsBuckets : [],
+        missingEssentialsAny: canEditObjects ? filters.common.missingEssentialsAny : [],
       },
     };
   }, [canEditObjects, filters]);

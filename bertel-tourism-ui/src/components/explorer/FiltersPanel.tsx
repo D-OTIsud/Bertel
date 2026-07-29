@@ -36,6 +36,10 @@ import { schemeUnit } from '../../utils/explorer-card-display';
 import { Input } from '@/components/ui/input';
 import { FilterDropdown } from '../dashboard/FilterDropdown';
 import { FilterColumnGroup } from '../common/FilterColumnGroup';
+import {
+  REMPLISSAGE_BUCKET_OPTIONS,
+  REMPLISSAGE_ESSENTIAL_OPTIONS,
+} from '../../utils/remplissage';
 import { GradeBar } from './GradeBar';
 import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
@@ -237,6 +241,8 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const toggleItiPractice = useStore((state) => state.toggleItiPractice);
   const resetAll = useStore((state) => state.resetAll);
   const setStatuses = useStore((state) => state.setStatuses);
+  const setMissingEssentialsBuckets = useStore((state) => state.setMissingEssentialsBuckets);
+  const setMissingEssentialsAny = useStore((state) => state.setMissingEssentialsAny);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const showHot = isBucketSelected(selectedBuckets, 'HOT');
   const showRes = isBucketSelected(selectedBuckets, 'RES');
@@ -975,6 +981,57 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   </button>
                 );
               })}
+            </div>
+          </FilterColumnGroup>
+        ) : null}
+
+        {/* §204 — Remplissage : liste de travail « à compléter ». Même condition
+            canEditObjects que le groupe Statut ci-dessus. Le masquage n'est PAS
+            la garde : le hook neutralise l'état et le RPC ignore les clés d'un
+            non-éditeur. On dit « remplissage », jamais « complétude ». */}
+        {canEditObjects ? (
+          <FilterColumnGroup label="Remplissage">
+            <div className="space-y-3">
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">
+                  Essentiels visiteur manquants
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {REMPLISSAGE_BUCKET_OPTIONS.map((option) => {
+                    const active = common.missingEssentialsBuckets.includes(option.code);
+                    return (
+                      <button
+                        key={option.code}
+                        type="button"
+                        className={bucketChipClass(active)}
+                        onClick={() =>
+                          setMissingEssentialsBuckets(
+                            active
+                              ? common.missingEssentialsBuckets.filter((code) => code !== option.code)
+                              : [...common.missingEssentialsBuckets, option.code],
+                          )
+                        }
+                        aria-pressed={active}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Il manque</span>
+                <FilterDropdown<string>
+                  mode="multi"
+                  placeholder="N'importe quel essentiel"
+                  allLabel="N'importe quel essentiel"
+                  options={REMPLISSAGE_ESSENTIAL_OPTIONS.map((o) => ({ code: o.code, label: o.label }))}
+                  selected={common.missingEssentialsAny}
+                  onChange={(vals) =>
+                    setMissingEssentialsAny(vals as typeof common.missingEssentialsAny)
+                  }
+                />
+              </div>
             </div>
           </FilterColumnGroup>
         ) : null}

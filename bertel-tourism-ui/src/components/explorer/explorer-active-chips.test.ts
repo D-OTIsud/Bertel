@@ -217,3 +217,26 @@ describe('buildExplorerActiveChips — sous-types et MICE', () => {
     expect(chip!.label).toMatch(/2 critères/);
   });
 });
+
+describe('§204 — puces du remplissage', () => {
+  it('un palier actif produit une puce au libellé lisible, jamais le code brut', () => {
+    const chips = buildExplorerActiveChips(filters({ missingEssentialsBuckets: ['many'] }));
+    const chip = chips.find((c) => c.group === 'missingEssentialsBuckets');
+    expect(chip).toBeDefined();
+    expect(chip?.label).toBe('Remplissage · 3 et plus');
+    expect(chip?.value).toBe('many');
+  });
+
+  it('chaque essentiel demandé produit sa propre puce, retirable seule', () => {
+    const chips = buildExplorerActiveChips(
+      filters({ missingEssentialsAny: ['photos', 'contact'] }),
+    );
+    const labels = chips.filter((c) => c.group === 'missingEssentialsAny').map((c) => c.label);
+    expect(labels).toEqual(['Il manque · Photos', 'Il manque · Contact public']);
+  });
+
+  it('aucune puce quand aucun critère de remplissage n’est actif', () => {
+    const chips = buildExplorerActiveChips(DEFAULT_EXPLORER_FILTERS);
+    expect(chips.some((c) => c.group.startsWith('missingEssentials'))).toBe(false);
+  });
+});

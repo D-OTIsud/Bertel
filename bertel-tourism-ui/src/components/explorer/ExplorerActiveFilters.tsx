@@ -112,6 +112,22 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
       case 'status':
         toggleStatus(chip.value as ExplorerStatusFilter);
         break;
+      // §204 — retrait UNITAIRE : on enlève la seule valeur cliquée, pas tout
+      // le groupe. Une puce qui viderait ses voisines serait un piège.
+      case 'missingEssentialsBuckets': {
+        const state = useStore.getState();
+        state.setMissingEssentialsBuckets(
+          state.common.missingEssentialsBuckets.filter((code) => code !== chip.value),
+        );
+        break;
+      }
+      case 'missingEssentialsAny': {
+        const state = useStore.getState();
+        state.setMissingEssentialsAny(
+          state.common.missingEssentialsAny.filter((code) => code !== chip.value),
+        );
+        break;
+      }
       case 'rankedLabel':
         setRankedLabelScheme(null);
         break;

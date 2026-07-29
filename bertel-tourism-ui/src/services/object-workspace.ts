@@ -3592,39 +3592,31 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let isPlatformSuperuser = directWrite;
   if (!session.demoMode && apiClient) {
     try {
-      const [canonicalResult, enrichmentResult, publishResult, providerFollowUpResult, ownerResult, crmResult, orgAdminResult, superuserResult] = await Promise.allSettled([
-        apiClient.schema('api').rpc('user_can_write_canonical', { p_object_id: objectId }),
-        apiClient.schema('api').rpc('user_can_write_enrichment', { p_object_id: objectId }),
-        apiClient.schema('api').rpc('user_can_publish_object', { p_object_id: objectId }),
-        apiClient.schema('api').rpc('can_write_object_private_notes', { p_object_id: objectId }),
-        apiClient.schema('api').rpc('is_object_owner', { p_object_id: objectId }),
-        // §19 CRM: per-object write gate (publisher-ORG membership + write_crm_notes) — the
-        // global userCanWriteCrmNotes() helper is NOT object-scoped and must not be used here.
-        apiClient.schema('api').rpc('user_can_write_crm', { p_object_id: objectId }),
-        // §22 external identifiers: admin-only write gate (mirrors the RPC gate exactly).
-        apiClient.schema('api').rpc('current_user_is_org_admin'),
-        // §108 : garde de suppression définitive (mirroir exact de api.rpc_delete_object).
-        apiClient.schema('api').rpc('is_platform_superuser'),
-      ]);
+      // UN seul aller-retour au lieu de huit. La resilience par sonde n'est pas
+      // perdue : elle a migre DANS la fonction SQL (un bloc EXCEPTION par sonde),
+      // qui conserve la semantique Promise.allSettled — une sonde en echec rend
+      // false sans faire echouer les sept autres.
+      // Les gates metier restent identiques :
+      //  - §19 CRM : `crm` est la garde PAR OBJET (adhesion a l'ORG publisher +
+      //    write_crm_notes) ; le helper global userCanWriteCrmNotes() n'est PAS
+      //    object-scoped et ne doit pas servir ici.
+      //  - §22 identifiants externes : `org_admin`, miroir exact du gate du RPC.
+      //  - §108 : `platform_superuser`, miroir exact de api.rpc_delete_object.
+      const { data: probes, error: probesError } = await apiClient
+        .schema('api')
+        .rpc('get_object_workspace_permissions', { p_object_id: objectId });
+      const p = (probesError == null && probes && typeof probes === 'object'
+        ? probes
+        : {}) as Record<string, unknown>;
 
-      canonical =
-        canonicalResult.status === 'fulfilled' && canonicalResult.value.error == null && canonicalResult.value.data === true;
-      enrichment =
-        enrichmentResult.status === 'fulfilled' && enrichmentResult.value.error == null && enrichmentResult.value.data === true;
-      objectOwner =
-        ownerResult.status === 'fulfilled' && ownerResult.value.error == null && ownerResult.value.data === true;
-      canPublishObject =
-        directWrite
-        || (publishResult.status === 'fulfilled' && publishResult.value.error == null && publishResult.value.data === true);
-      canWriteProviderFollowUp =
-        providerFollowUpResult.status === 'fulfilled' && providerFollowUpResult.value.error == null && providerFollowUpResult.value.data === true;
-      crmWrite = crmResult.status === 'fulfilled' && crmResult.value.error == null && crmResult.value.data === true;
-      isOrgAdmin =
-        directWrite
-        || (orgAdminResult.status === 'fulfilled' && orgAdminResult.value.error == null && orgAdminResult.value.data === true);
-      isPlatformSuperuser =
-        directWrite
-        || (superuserResult.status === 'fulfilled' && superuserResult.value.error == null && superuserResult.value.data === true);
+      canonical = p.canonical === true;
+      enrichment = p.enrichment === true;
+      objectOwner = p.owner === true;
+      canPublishObject = directWrite || p.publish === true;
+      canWriteProviderFollowUp = p.private_notes === true;
+      crmWrite = p.crm === true;
+      isOrgAdmin = directWrite || p.org_admin === true;
+      isPlatformSuperuser = directWrite || p.platform_superuser === true;
 
       canPrepareProposal = directWrite || canonical || enrichment;
       canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });

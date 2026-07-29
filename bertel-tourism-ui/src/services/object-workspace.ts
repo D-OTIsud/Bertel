@@ -64,6 +64,8 @@ import {
   type ObjectWorkspaceTaxonomyAssignment,
   type ObjectWorkspaceTaxonomyDomain,
   type ObjectWorkspaceTaxonomyModule,
+  type ObjectWorkspaceUnitTypes,
+  EMPTY_UNIT_TYPES,
   type ObjectWorkspaceTaxonomyNodeOption,
   type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
@@ -1262,6 +1264,62 @@ async function getObjectWorkspaceTaxonomyModule(
         })),
       ...baseModule.domains.filter((domain) => !domainCodes.includes(domain.domain)),
     ].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+    unitTypes: await loadAccommodationUnitTypes(client, objectId, resolvedObjectType),
+    unavailableReason: null,
+  };
+}
+
+/** §200 — types d'unité applicables à l'hébergement, et ceux déjà posés sur la fiche. */
+const ACCOMMODATION_UNIT_TYPE_OBJECT_TYPES = new Set(['HOT', 'HLO', 'RVA', 'CAMP', 'HPA']);
+
+async function loadAccommodationUnitTypes(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  objectType: string,
+): Promise<ObjectWorkspaceUnitTypes> {
+  // L'axe ne concerne que l'hébergement : l'exposer ailleurs serait un contrôle
+  // qui ne veut rien dire pour un restaurant ou un itinéraire.
+  if (!ACCOMMODATION_UNIT_TYPE_OBJECT_TYPES.has(objectType.toUpperCase())) {
+    return EMPTY_UNIT_TYPES;
+  }
+
+  const [catalogResult, selectedResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code,name,description,position')
+      .eq('domain', 'accommodation_unit_type')
+      .eq('is_active', true)
+      .eq('is_assignable', true)
+      .order('position', { ascending: true }),
+    client
+      .from('object_accommodation_unit_type')
+      .select('unit_type_id')
+      .eq('object_id', objectId),
+  ]);
+
+  // Catalogue absent = taxo6 pas encore appliquée. On rend le motif plutôt que
+  // de laisser un sélecteur vide dont l'agent conclurait qu'il n'y a rien à choisir.
+  if (catalogResult.error || selectedResult.error) {
+    return {
+      ...EMPTY_UNIT_TYPES,
+      unavailableReason: "Le catalogue des types d'unité n'est pas encore disponible sur cette base.",
+    };
+  }
+
+  const options = ((catalogResult.data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+    id: readString(row.id),
+    code: readString(row.code),
+    label: readString(row.name),
+    description: readString(row.description),
+  }));
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+  const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => codeById.get(readString(row.unit_type_id)))
+    .filter((code): code is string => Boolean(code));
+
+  return {
+    options: options.map(({ code, label, description }) => ({ code, label, description })),
+    selectedCodes,
     unavailableReason: null,
   };
 }
@@ -4226,6 +4284,86 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
 
     if (error) {
       throw mapMutationError(error, "Impossible de supprimer les affectations de taxonomie retirees.");
+    }
+  }
+
+  await saveAccommodationUnitTypes(client, objectId, input.unitTypes);
+}
+
+/**
+ * §200 — réconcilie les types d'unité (multi-valués).
+ *
+ * Garde anti-clobber : si le module s'est chargé en échec (`unavailableReason`),
+ * `selectedCodes` est vide par DÉFAUT, pas parce que l'agent a tout décoché.
+ * Enregistrer effacerait alors des unités réelles. On ne touche à rien.
+ *
+ * Réconciliation par différence (et non delete-all + reinsert) : la table n'a
+ * pas d'autre colonne à préserver aujourd'hui, mais un delete global ferait
+ * disparaître les lignes puis les recréer, ce qui casse `created_at` et fait
+ * du bruit inutile dans les triggers.
+ */
+async function saveAccommodationUnitTypes(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  unitTypes: ObjectWorkspaceUnitTypes | undefined,
+): Promise<void> {
+  if (!unitTypes || unitTypes.unavailableReason) {
+    return;
+  }
+
+  const wanted = Array.from(new Set(unitTypes.selectedCodes.map((code: string) => code.trim()).filter(Boolean)));
+  const knownCodes = new Set(unitTypes.options.map((option: { code: string }) => option.code));
+  const unknown = wanted.filter((code) => !knownCodes.has(code));
+  if (unknown.length > 0) {
+    throw new Error(`Type d'unité inconnu : ${unknown.join(', ')}.`);
+  }
+
+  const [catalogResult, existingResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code')
+      .eq('domain', 'accommodation_unit_type')
+      .eq('is_active', true)
+      .eq('is_assignable', true),
+    client
+      .from('object_accommodation_unit_type')
+      .select('unit_type_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error) {
+    throw mapMutationError(catalogResult.error, "Impossible de lire le catalogue des types d'unité.");
+  }
+  if (existingResult.error) {
+    throw mapMutationError(existingResult.error, "Impossible de lire les types d'unité actuels.");
+  }
+
+  const idByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => [readString(row.code), readString(row.id)] as const));
+  const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => readString(row.unit_type_id)));
+  const wantedIds = new Set(wanted.map((code: string) => idByCode.get(code)).filter((id): id is string => Boolean(id)));
+
+  const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
+  const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));
+
+  if (toInsert.length > 0) {
+    const { error } = await client
+      .from('object_accommodation_unit_type')
+      .insert(toInsert.map((unit_type_id) => ({ object_id: objectId, unit_type_id })));
+    if (error) {
+      throw mapMutationError(error, "Impossible d'ajouter le type d'unité.");
+    }
+  }
+
+  if (toDelete.length > 0) {
+    const { error } = await client
+      .from('object_accommodation_unit_type')
+      .delete()
+      .eq('object_id', objectId)
+      .in('unit_type_id', toDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de retirer le type d'unité.");
     }
   }
 }

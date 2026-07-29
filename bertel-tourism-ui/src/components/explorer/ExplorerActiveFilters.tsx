@@ -129,6 +129,9 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
       case 'environment':
         useStore.getState().setEnvironmentTags([]);
         break;
+      case 'accommodationUnitTypes':
+        useStore.getState().setAccommodationUnitTypes([]);
+        break;
       case 'openAt':
         useStore.getState().setOpenAt(null);
         break;

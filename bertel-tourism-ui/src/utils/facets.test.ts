@@ -739,6 +739,7 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
     petsAccepted: true,
     openNow: true,
     openAt: '2026-07-27T18:00',
+    accommodationUnitTypesAny: ['bubble'],
     environmentTagsAny: ['bord_de_mer'],
     amenityFamiliesAny: ['wellness'],
     taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }],

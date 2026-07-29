@@ -34,7 +34,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       isEditing: true,
       secondaryTypes: [],
     },
-    taxonomy: { domains: [], unavailableReason: null },
+    taxonomy: { domains: [], unitTypes: { options: [], selectedCodes: [], unavailableReason: null }, unavailableReason: null },
     descriptions: {
       localLanguage: 'fr',
       activeLanguage: 'fr',

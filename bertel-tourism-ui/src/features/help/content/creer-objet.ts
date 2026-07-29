@@ -50,10 +50,10 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     id: 'creer-hpa',
     rubrique: 'creer-objet',
     question: 'Comment créer une aire ou un hébergement de plein air ?',
-    keywords: ['plein air', 'aire naturelle', 'camping à la ferme', 'camping-car', 'glamping', 'insolite'],
+    keywords: ['plein air', 'aire naturelle', 'camping à la ferme', 'camping chez l’habitant', 'camping-car', 'glamping', 'insolite'],
     types: ['HPA'],
     related: ['creer-fiche'],
-    answer: `**C'est quoi.** Une offre de plein air qui n'est pas un terrain de camping classé : aire naturelle, camping à la ferme, aire d'accueil camping-car ou hébergement insolite de plein air (glamping, tipi, lodge toilé) — type **Hébergement de plein air (HPA)**.
+    answer: `**C'est quoi.** Une offre de plein air qui n'est pas un terrain de camping classé : aire naturelle, camping à la ferme, camping chez l'habitant, aire d'accueil camping-car ou hébergement insolite de plein air (glamping, tipi, lodge toilé) — type **Hébergement de plein air (HPA)**.
 
 **Quand choisir ce type.** L'offre relève d'une des formes ci-dessus et n'a pas le statut de terrain de camping classé. **Pas ce type si** : le terrain est classé, qu'il propose des emplacements nus, des mobil-homes ou les deux → Camping classé (CAMP).
 

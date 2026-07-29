@@ -293,6 +293,15 @@ ROLLBACK;
 \echo '== taxo5-test garde permanente §200 (5 familles actives, sous-types = vrais enfants same-domain, closure depth=1, ET filtre parent NON VACANT via api.get_filtered_object_ids sur porteurs temoins) =='
 \ir tests/test_taxonomy_accommodation_hierarchy_v2.sql
 
+-- taxo6 DOIT rester APRES migration_explorer_phonetic_search.sql (l. 242) : les deux
+-- redefinissent api.get_filtered_object_ids, et la derniere definition gagne. Le corps
+-- embarque ici est celui de la version phonetique, patche aux trois points d ancrage.
+\echo '== taxo6  migration_accommodation_unit_type.sql  (§200 lot 5A axe Type d unite MULTI-VALUE : partition ref_code_accommodation_unit_type (le domaine est garanti par la partition, pas par un CHECK) + 5 codes + table de liaison object_accommodation_unit_type (PK composite, FK indexee des deux cotes, RLS lecture §38 et ecriture PAR COMMANDE, GRANT explicites), reprise nominative des 7 unites historiques puis retraite des feuilles bulle/lodges/hebergement_insolite/outdoor_glamping, cle de filtre accommodation_unit_types_any ; auto-assertive, idempotente et fresh-safe) =='
+\ir migration_accommodation_unit_type.sql
+
+\echo '== taxo6-test garde permanente §200 lot 5 (multi-valeur, doublon refuse, personas anon/proprietaire/etranger sur les 4 commandes, GRANT anon borne a SELECT, cascade, filtre Explorer non vacant, reprise des 7 unites) =='
+\ir tests/test_accommodation_unit_type.sql
+
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
 \ir migration_interop_crosswalk_leafaware.sql
 

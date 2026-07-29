@@ -7,7 +7,6 @@ import type {
   ObjectWorkspaceTaxonomyNodeOption,
   ObjectWorkspaceTaxonomyPathNode,
 } from '../../../services/object-workspace-parser';
-import { ARCHETYPE_META, TYPE_LABEL } from '../archetypes';
 
 function toTaxonomyPathNode(
   node: ObjectWorkspaceTaxonomyNodeOption,
@@ -392,16 +391,12 @@ function TaxonomyModal({
   );
 }
 
-/** Section 01 — commercial name, technical object type and accommodation nature.
+/** Section 01 — commercial name and accommodation nature.
  *  Publication status moved to the editor rail; legal name is edited in §18 Fournisseur. */
-export function SectionIdentity({ editor, objectId, typeCode, archetype, folded }: SectionProps) {
+export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
   const info = editor.draft.generalInfo;
   const taxonomy = editor.draft.taxonomy;
-  const meta = archetype ? ARCHETYPE_META[archetype] : null;
-  const canonicalType = typeCode?.toUpperCase() ?? '';
-  const typeFamilyLabel = TYPE_LABEL[canonicalType] ?? meta?.codeName ?? canonicalType;
-  const typeDisplay = canonicalType ? `${canonicalType} — ${typeFamilyLabel}` : meta?.codeName ?? '';
   const canonicalId = objectId ?? '';
   const taxonomyDomain = taxonomy.domains[0] ?? null;
   const taxonomyPath = formatTaxonomyPath(taxonomyDomain?.assignment);
@@ -422,7 +417,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
     <Fs
       num="01"
       title="Identité de l’hébergement"
-      sub="Nom commercial, type de fiche et nature d’hébergement"
+      sub="Nom commercial et nature d’hébergement"
       folded={folded}
       pill={{ tone: 'ok', label: 'OK' }}
     >
@@ -439,15 +434,8 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         </Field>
       </div>
 
-      <div className="grid-1-2" style={{ marginBottom: 12 }}>
-        <Field
-          label="Type de fiche Bertel"
-          required
-          hint="Code technique calculé à la création — il n’est jamais modifié par un enregistrement"
-        >
-          <Readout value={typeDisplay} mono prefix="●" />
-        </Field>
-        <Field label="Nature d'hébergement" hint="Répond à « quel type d’établissement est-ce ? » — pas à ce dans quoi le visiteur dort">
+      <div style={{ marginBottom: 12 }}>
+        <Field label="Nature d'hébergement">
           <button
             type="button"
             className="identity-taxo-trigger"
@@ -469,18 +457,10 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       {/* §201 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
           juste sous elle parce que c'est là que la confusion se joue : « Bulle »
           n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
-      {taxonomy.unitTypes.unavailableReason || taxonomy.unitTypes.options.length > 0 ? (
+      {taxonomy.unitTypes.options.length > 0 ? (
         <div style={{ marginBottom: 12 }}>
-          <Field
-            label="Types d'unité"
-            hint="Répond à « dans quoi le visiteur dort-il ? » — plusieurs valeurs possibles"
-          >
-            {taxonomy.unitTypes.unavailableReason ? (
-              <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: 0 }}>
-                {taxonomy.unitTypes.unavailableReason}
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Types d'unité">
+          <Field label="Types de logement">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Types de logement">
                 {taxonomy.unitTypes.options.map((option) => {
                   const active = taxonomy.unitTypes.selectedCodes.includes(option.code);
                   return (
@@ -515,22 +495,9 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
                   );
                 })}
               </div>
-            )}
           </Field>
         </div>
       ) : null}
-
-      {/* §201 — l'éditeur ne propose QUE les natures du domaine compatible avec le
-          type technique de la fiche. Le dire explicitement évite la conclusion la
-          plus naturelle et la plus fausse : « la nature que je cherche a disparu ».
-          Un enregistrement ne change jamais `object_type` (le trigger de garde le
-          refuserait) — la conversion est une opération administrative. */}
-      <p className="identity-taxo-note" style={{ marginTop: -4, marginBottom: 12, fontSize: 12, lineHeight: 1.45, color: 'var(--ink-3)' }}>
-        Seules les natures compatibles avec le type <strong>{canonicalType || '—'}</strong> sont proposées.
-        Si la nature qui décrit vraiment l’établissement appartient à un autre type de fiche, cette nature
-        nécessite une conversion de type de fiche : demandez-la à un administrateur — l’enregistrement de
-        cette section ne changera pas le type.
-      </p>
 
       <TaxonomyModal
         open={taxonomyOpen}

@@ -5,20 +5,17 @@ Plan : `docs/plans/2026-07-29-taxonomie-hebergements-collectifs-campings-aires-p
 Gel et manifeste : `docs/research/taxonomy-hebergements-gel-revalidation-2026-07-29.md`
 Audit amont : `docs/research/taxonomy-hebergements-existing-objects-audit-2026-07-29.md`
 
-## 0. État — PRÉPARÉ, PAS APPLIQUÉ
+## 0. État — APPLIQUÉ SUR LA BASE SUPABASE DISTANTE LE 2026-07-29
 
-**Aucune écriture n'a été faite sur la base de production.** Toutes les mesures ci-dessous
-proviennent d'exécutions réelles contre la base cloud, dans une transaction terminée par
-`ROLLBACK` (`.tmp_pgapply/_v2_dryrun.cjs`, qui refuse de s'exécuter s'il ne peut pas neutraliser
-la borne de transaction de chaque fichier).
+Le frontend rétrocompatible était en ligne avant l'écriture SQL. Le déploiement a ensuite été
+revalidé dans une transaction terminée par `ROLLBACK`, puis appliqué sur la base Supabase
+distante dans l'ordre taxo5 → test taxo5 → taxo6 → test taxo6 → taxo7.
 
-Le plan §4.11 et §14.8-9 imposent que le frontend rétrocompatible du lot 3 soit **en ligne en
-production avant** le SQL. Sinon `outdoor_glamping` reste affiché comme une nature
-sélectionnable alors qu'il n'accepte plus d'écriture. Le frontend contient désormais une
-projection explicite de l'ancien catalogue : même avant le SQL, il remplace visuellement
-`plein_air` par « Campings et terrains » et « Aires et haltes de plein air », répartit les
-nœuds connus et masque `outdoor_glamping`. La mise en ligne de ce commit reste donc le premier
-jalon obligatoire.
+Post-déploiement : les deux vues matérialisées ont été rafraîchies avec `CONCURRENTLY`, puis le
+cache de schéma PostgREST a été rechargé. Le contrôle direct confirme 5 types de logement actifs,
+0 ancienne pseudo-nature encore active, 7 liens historiques repris, et les privilèges attendus
+(`anon` en lecture seule ; écritures `authenticated` bornées par les policies canoniques). Aucune
+base locale n'a été utilisée.
 
 ## 1. Ce qui a été livré
 
@@ -173,13 +170,11 @@ et doit être revu séparément.
 
 ## 9. Ce qui reste ouvert
 
-- **Application live** — bloquée par la mise en ligne du frontend (étape 1 du §5).
-- **Revue architecture et sécurité du lot 5** — exigée par le plan avant application.
 - **Fresh-apply complet** — `ci_fresh_apply.sql` est câblé (taxo5, taxo5-test, taxo6, taxo6-test,
-  taxo7) mais n'a pas pu être joué localement : `psql` n'est pas installé sur ce poste. Il tourne
-  en CI (`.github/workflows/sql-fresh-apply.yml`) au push. Chaque migration a en revanche été
-  exécutée contre la base live en transaction annulée, ce qui couvre la syntaxe, les asserts et
-  le comportement sur données réelles — mais pas l'ordre d'application sur base vierge.
+  taxo7). Conformément à la politique du projet, aucun PostgreSQL/Supabase local n'est utilisé ;
+  ce contrôle de base vierge reste confié à la CI (`.github/workflows/sql-fresh-apply.yml`). Les
+  migrations et tests ont été exécutés ensemble contre la base distante dans une transaction
+  annulée avant leur application réelle.
 - **Recette avec un agent débutant** (plan §6 bis.8) — humaine, à planifier après la mise en ligne.
 - **Migration des `type_unite` restés dans `taxonomy_hlo`** (maison, appartement, studio, bungalow,
   chalet, roulotte) vers `accommodation_unit_type` — lot à part, volontairement hors périmètre.

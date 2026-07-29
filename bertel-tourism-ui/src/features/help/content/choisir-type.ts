@@ -30,7 +30,7 @@ export const CHOISIR_TYPE_FAQ: FaqEntry[] = [
 **Les arbitrages qui font hésiter.**
 
 - **Résidence hôtelière** reste dans *Hébergement collectif* : le mot « hôtelière » décrit ses services, mais l'établissement est organisé comme une résidence de logements autonomes.
-- **Aire naturelle de camping** est dans *Campings et terrains* malgré le mot « aire » : c'est une catégorie de terrain de camping.
+- **Aire naturelle de camping** est dans *Campings et terrains* malgré le mot « aire » : c'est une catégorie réglementaire de terrain de camping aménagé, classée sans étoile. Elle accueille uniquement tentes, caravanes et camping-cars, au maximum six mois par an ; mobil-homes et habitations légères y sont interdits.
 - **Aire d'accueil camping-car** autorise la nuitée. Une **Aire de services camping-car** décrit des équipements (eau, vidange, électricité) et ne prouve **jamais** que l'on peut y dormir.
 - **Parc résidentiel de loisirs** désigne un terrain aménagé pour des habitations légères et des résidences mobiles en séjour temporaire — ni un lotissement permanent, ni une simple aire de stationnement.
 - **Gîte** existe dans deux familles : *Hébergement collectif › Gîte* (accueil d'un groupe) et le mot commercial « gîte » employé pour un *Meublé de tourisme*. Bertel affiche toujours le chemin complet pour lever le doute.

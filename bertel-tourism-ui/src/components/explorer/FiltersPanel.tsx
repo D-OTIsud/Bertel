@@ -48,6 +48,10 @@ import {
   type AccommodationTaxonomyEntry,
 } from './accommodation-taxonomy-tree';
 import { CapacityCriteria } from './CapacityCriteria';
+import {
+  accommodationFamilyDescription,
+  accommodationNatureDescription,
+} from '../../utils/accommodation-help';
 
 /** Unités affichées à côté des valeurs de capacité — seulement là où elles éclairent. */
 const HOT_CAPACITY_UNITS: Record<string, string> = { beds: 'lits', bedrooms: 'ch.', pitches: 'empl.', floor_area_m2: 'm²' };
@@ -474,8 +478,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     // `ref_code.description` et `source_ref` servent aussi aux audits et peuvent
     // contenir des notes de migration. Ils restent indexables, mais ne sont pas
     // une microcopie validée pour l'utilisateur final.
-    const nodeTitle = (node: ExplorerTaxonomyNode, breadcrumb?: string) => [
+    const nodeTitle = (domain: string, node: ExplorerTaxonomyNode, breadcrumb?: string) => [
       breadcrumb,
+      accommodationNatureDescription(domain, node.code),
       node.aliases?.length ? `Aussi appelé : ${node.aliases.join(', ')}` : null,
     ].filter(Boolean).join('\n');
 
@@ -487,6 +492,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
      */
     const renderChip = (entry: AccommodationTaxonomyEntry, breadcrumb: string) => {
       const active = isTaxonomyActive(entry.domain, entry.node.code);
+      const explanation = accommodationNatureDescription(entry.domain, entry.node.code);
       return (
         <button
           key={`${entry.domain}:${entry.node.code}`}
@@ -497,9 +503,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             toggleTaxonomy(entry.domain, entry.node.code);
           }}
           aria-pressed={active}
-          title={nodeTitle(entry.node, breadcrumb) || undefined}
+          aria-description={explanation || undefined}
+          title={nodeTitle(entry.domain, entry.node, breadcrumb) || undefined}
         >
           {entry.node.name}
+          {explanation ? <Info className="ml-1 h-3 w-3 opacity-60" aria-hidden="true" /> : null}
         </button>
       );
     };
@@ -534,7 +542,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   }
                 }}
                 aria-pressed={active}
-                title={group.map((entry) => nodeTitle(entry.node)).filter(Boolean).join('\n\n') || undefined}
+                title={group.map((entry) => nodeTitle(entry.domain, entry.node)).filter(Boolean).join('\n\n') || undefined}
               >
                 {representative.node.name}
               </button>
@@ -548,10 +556,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       const familyCode = familyGroup.code;
       const family = familyByCode.get(familyCode) as ExplorerAccommodationFamily | undefined;
       const familyLabel = family?.name ?? familyCode.replace(/_/g, ' ');
+      const familyDescription = accommodationFamilyDescription(familyCode) ?? family?.description ?? null;
       // La recherche interroge AUSSI les alias de famille : « plein air » doit
       // continuer de mener aux deux familles qui ont remplacé l'ancienne.
       const familyMatches = Boolean(query) && foldAccommodationTerm(
-        [familyLabel, family?.description ?? '', ...(family?.aliases ?? [])].join(' '),
+        [familyLabel, familyDescription ?? '', ...(family?.aliases ?? [])].join(' '),
       ).includes(query);
       const natures = familyMatches
         ? familyGroup.natures
@@ -569,7 +578,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             onClick={() => setOpenAccommodationFamily((current) => current === familyCode ? null : familyCode)}
             aria-expanded={expanded}
             aria-controls={`accommodation-family-${familyCode}`}
-            aria-description={family?.description || undefined}
+            aria-description={familyDescription || undefined}
           >
             <ChevronDown
               aria-hidden="true"
@@ -581,10 +590,10 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 {selectedCount}
               </span>
             ) : null}
-            {family?.description ? (
+            {familyDescription ? (
               <span
                 className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ink-3 group-hover:text-ink-2"
-                title={family.description}
+                title={familyDescription}
                 aria-hidden="true"
               >
                 <Info className="h-3.5 w-3.5" aria-hidden="true" />

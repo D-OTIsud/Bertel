@@ -87,7 +87,7 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
 **Comment choisir.** Créer → nom exact → famille → nature. Bertel calcule le type technique ; vous n'avez pas à le connaître. Renseignez ensuite la **capacité et les emplacements** (section Chambres, capacité & séminaire).
 
 **Pièges.**
-- *Aire naturelle de camping* est un **camping** malgré le mot « aire » : elle est dans *Campings et terrains*.
+- *Aire naturelle de camping* est un **terrain de camping aménagé classé sans étoile**, malgré le mot « aire ». Elle accueille uniquement tentes, caravanes et camping-cars, au maximum six mois par an ; mobil-homes et habitations légères y sont interdits.
 - *Glamping*, *tipi*, *lodge* et *cabane* ne sont plus des natures : ce sont des **types d'unité**, à saisir après la création, et une fiche peut en porter plusieurs.
 - La présence d'un mobil-home ne détermine rien : un camping classé peut proposer des locatifs. La frontière est le régime du terrain, pas l'équipement apporté par le client.`,
   },

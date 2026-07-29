@@ -232,6 +232,28 @@ describe("§201 — création guidée d'un hébergement", () => {
     expect(screen.queryByRole('combobox', { name: /famille d'hébergement/i })).not.toBeInTheDocument();
   });
 
+  it('propose une aide explicite pour les deux familles de plein air sans les sélectionner', async () => {
+    await openGuidedAccommodation();
+
+    const campingHelp = screen.getByRole('button', { name: 'Comprendre la famille Campings et terrains' });
+    fireEvent.click(campingHelp);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/terrains organisés pour le camping/i);
+    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
+
+    fireEvent.blur(campingHelp);
+    fireEvent.click(screen.getByRole('button', { name: 'Comprendre la famille Aires et haltes de plein air' }));
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/halte ou une nuitée/i);
+  });
+
+  it("explique précisément ce qu'est une Aire naturelle de camping", async () => {
+    await chooseFamilyAndNature('Campings et terrains', 'Aire naturelle de camping');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comprendre Aire naturelle de camping' }));
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/terrain de camping aménagé/i);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/classée sans étoile/i);
+    expect(screen.getByRole('tooltip')).toHaveTextContent(/mobil-homes.*interdits/i);
+  });
+
   it('calcule RVA pour Résidence de tourisme, sans jamais demander le code', async () => {
     await expectGuidedCreationType('Hébergement collectif', 'Résidence de tourisme', 'RVA');
   });

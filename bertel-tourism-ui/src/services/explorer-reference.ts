@@ -16,6 +16,7 @@ import type {
   ExplorerAccommodationFamily,
 } from '../types/domain';
 import { ACCESSIBILITY_DISABILITY_TYPE_OPTIONS, EXPLORER_BUCKET_TYPE_MAP, HEADLINE_CAPACITY_METRIC } from '../utils/facets';
+import { accommodationFamilyDescription } from '../utils/accommodation-help';
 
 type CapacityMetricRow = {
   id: string;
@@ -486,8 +487,20 @@ export function projectLegacyOutdoorAccommodationFamilies(
   const legacyAliases = legacy ? [legacy.name, ...(legacy.aliases ?? [])] : [];
   const aliases = Array.from(new Set([...OUTDOOR_FAMILY_ALIASES, ...legacyAliases]));
   const targets: ExplorerAccommodationFamily[] = [
-    { code: 'campings_terrains', name: 'Campings et terrains', position: 4, aliases },
-    { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 5, aliases },
+    {
+      code: 'campings_terrains',
+      name: 'Campings et terrains',
+      description: accommodationFamilyDescription('campings_terrains'),
+      position: 4,
+      aliases,
+    },
+    {
+      code: 'aires_haltes_plein_air',
+      name: 'Aires et haltes de plein air',
+      description: accommodationFamilyDescription('aires_haltes_plein_air'),
+      position: 5,
+      aliases,
+    },
   ];
 
   for (const target of targets) {
@@ -501,6 +514,7 @@ export function projectLegacyOutdoorAccommodationFamilies(
     projected[existingIndex] = {
       ...existing,
       name: target.name,
+      description: existing.description ?? target.description,
       position: target.position,
       aliases: Array.from(new Set([...(existing.aliases ?? []), ...aliases])),
     };

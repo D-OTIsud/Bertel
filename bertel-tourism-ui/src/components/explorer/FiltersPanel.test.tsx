@@ -231,6 +231,20 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       expect(screen.queryByRole('button', { name: /^Hôtellerie de plein air/ })).not.toBeInTheDocument();
     });
 
+    it('explique les deux familles de plein air et la nature Aire naturelle', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      expect(screen.getByRole('button', { name: /^Campings et terrains/ }))
+        .toHaveAttribute('aria-description', expect.stringMatching(/terrains organisés/i));
+      expect(screen.getByRole('button', { name: /^Aires et haltes de plein air/ }))
+        .toHaveAttribute('aria-description', expect.stringMatching(/halte ou une nuitée/i));
+
+      openFamily('Campings et terrains');
+      expect(screen.getByRole('button', { name: 'Aire naturelle de camping' }))
+        .toHaveAttribute('aria-description', expect.stringMatching(/classée sans étoile/i));
+    });
+
     it('range les six natures collectives sous UN seul bloc Nature, sans bloc Sous-type', () => {
       act(() => useExplorerStore.getState().toggleBucket('HOT'));
       render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);

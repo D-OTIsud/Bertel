@@ -13,6 +13,7 @@ import {
   isSubtypeNarrowed,
 } from '../../utils/facets';
 import { resolveSchemeLabel } from '../../utils/labels';
+import { REMPLISSAGE_BUCKET_OPTIONS, essentialLabel } from '../../utils/remplissage';
 
 export type ActiveChipGroup =
   | 'search'
@@ -53,7 +54,10 @@ export type ActiveChipGroup =
   | 'itiDifficulty'
   | 'itiDistance'
   | 'itiDuration'
-  | 'itiPractices';
+  | 'itiPractices'
+  // §204 — remplissage (éditeurs seulement)
+  | 'missingEssentialsBuckets'
+  | 'missingEssentialsAny';
 
 export interface ActiveChip {
   key: string;
@@ -141,6 +145,29 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
 
   for (const status of c.statuses ?? []) {
     chips.push({ key: `status:${status}`, group: 'status', value: status, label: `Statut · ${STATUS_LABELS[status] ?? status}` });
+  }
+
+  // §204 — une puce PAR critère : chacune se retire seule. Libellés résolus,
+  // jamais de code brut à l'écran. Un filtre sans puce est un filtre qu'on
+  // oublie avoir posé — c'est exactement ce qui avait été corrigé le 2026-07-27
+  // sur trois autres critères (cf. le commentaire D23 plus bas).
+  for (const bucket of c.missingEssentialsBuckets ?? []) {
+    const option = REMPLISSAGE_BUCKET_OPTIONS.find((o) => o.code === bucket);
+    chips.push({
+      key: `remplissage:${bucket}`,
+      group: 'missingEssentialsBuckets',
+      value: bucket,
+      label: `Remplissage · ${option?.label ?? bucket}`,
+    });
+  }
+
+  for (const code of c.missingEssentialsAny ?? []) {
+    chips.push({
+      key: `manque:${code}`,
+      group: 'missingEssentialsAny',
+      value: code,
+      label: `Il manque · ${essentialLabel(code)}`,
+    });
   }
 
   // D23 — complétude : les filtres ci-dessous étaient actifs mais INVISIBLES

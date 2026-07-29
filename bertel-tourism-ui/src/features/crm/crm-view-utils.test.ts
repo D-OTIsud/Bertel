@@ -191,7 +191,7 @@ describe('mappings interaction', () => {
 
 // Auteur affiché d'une interaction (fix « par Système ») — l'agent qui a consigné prime ;
 // à défaut, l'interlocuteur (interlocutor_email) ; à défaut, une étiquette dérivée de la
-// source (« Import Berta 2 » pour les lignes importées), et seulement en dernier recours
+// source (« Import initial » pour les lignes reprises), et seulement en dernier recours
 // le fallback générique « Système ». Tué le « par Système » dès qu'un auteur réel existe.
 describe('interactionAuthorOf — fix « par Système »', () => {
   it('owner présent → ownerName', () => {
@@ -204,9 +204,10 @@ describe('interactionAuthorOf — fix « par Système »', () => {
     ).toBe('marie@basalte.re');
   });
 
-  it('owner null + interlocuteur null + source import → « Import Berta 2 »', () => {
+  it('owner null + interlocuteur null + source import → « Import initial »', () => {
+    // Le code de source garde sa valeur de lignée en base ; l'ÉTIQUETTE affichée, non.
     expect(interactionAuthorOf({ ownerName: null, interlocutorEmail: null, source: 'import_berta2_crm' })).toBe(
-      'Import Berta 2',
+      'Import initial',
     );
   });
 

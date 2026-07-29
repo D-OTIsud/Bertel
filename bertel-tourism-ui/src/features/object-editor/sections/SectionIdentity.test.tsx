@@ -245,7 +245,7 @@ describe('SectionIdentity', () => {
     expect(within(dialog).queryByRole('radio', { name: /Hôtel familial/i })).not.toBeInTheDocument();
   });
 
-  it('retrouve un libellé canonique avec son ancien terme Berta', () => {
+  it('retrouve un libellé canonique avec son ancien libellé (alias de reprise)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
@@ -256,7 +256,9 @@ describe('SectionIdentity', () => {
     });
 
     expect(within(dialog).getByRole('radio', { name: /Gîte rural/i })).toBeInTheDocument();
-    expect(within(dialog).getByText(/Berta : Location saisonnière/)).toBeInTheDocument();
+    // L'alias reste cherchable et affiché, mais SANS nommer l'ancien système (cf. FiltersPanel).
+    expect(within(dialog).getByText(/Aussi appelé : Location saisonnière/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Berta/)).not.toBeInTheDocument();
   });
 
   it('checks the parent radio when a child is selected (the whole path reads as selected)', () => {

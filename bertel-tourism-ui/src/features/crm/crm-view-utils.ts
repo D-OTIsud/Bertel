@@ -197,8 +197,8 @@ export function interactionTypeLabelOf(interactionType: string): string {
  * Auteur affiché d'une interaction (fix « par Système ») — résout le « par {auteur} » du pied
  * de carte et des réponses. Priorité : l'AGENT qui a consigné (ownerName) ; à défaut
  * l'INTERLOCUTEUR connu (interlocutor_email — l'établissement/le contact à l'origine de la
- * demande) ; à défaut une étiquette dérivée de la SOURCE (les lignes importées de Berta 2
- * portent `source` commençant par `import` ⇒ « Import Berta 2 »). « Système » n'est plus
+ * demande) ; à défaut une étiquette dérivée de la SOURCE (les lignes reprises de l'ancien
+ * système portent `source` commençant par `import` ⇒ « Import initial »). « Système » n'est plus
  * qu'un dernier recours quand AUCUN auteur réel n'est connu, au lieu de masquer
  * systématiquement les imports et les demandes entrantes.
  */
@@ -211,7 +211,7 @@ export function interactionAuthorOf({
   interlocutorEmail: string | null;
   source: string | null;
 }): string {
-  return ownerName || interlocutorEmail || (source?.startsWith('import') ? 'Import Berta 2' : 'Système');
+  return ownerName || interlocutorEmail || (source?.startsWith('import') ? 'Import initial' : 'Système');
 }
 
 /** Raison standard du gating page-wide (no-write-trap) — permission write_crm_notes. */

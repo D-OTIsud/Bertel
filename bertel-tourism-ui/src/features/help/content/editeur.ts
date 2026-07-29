@@ -16,6 +16,29 @@ import type { FaqEntry } from './types';
 
 export const EDITEUR_FAQ: FaqEntry[] = [
   {
+    id: 'editeur-nature-unite-service-tarif',
+    rubrique: 'editeur',
+    question: "Nature, type d'unité, service, tarif, classement : quelle différence ?",
+    keywords: [
+      'nature', 'type d’unité', 'unité', 'bulle', 'tipi', 'lodge', 'cabane', 'glamping',
+      'hébergement insolite', 'service', 'eau', 'vidange', 'électricité', 'tarif', 'gratuit',
+      'payant', 'classement', 'étoiles', 'catégorie', 'sous-catégorie',
+    ],
+    types: ['HOT', 'HLO', 'RVA', 'CAMP', 'HPA'],
+    related: ['creer-hebergement', 'choisir-famille-hebergement'],
+    answer: `Cinq informations différentes, cinq champs différents. Les confondre est la première cause de fiche mal classée.
+
+- **La nature** répond à « **quel type d'établissement est-ce ?** » — Camping, Chambre d'hôtes, Aire de bivouac… Une seule valeur, en section *Identité*.
+- **Le type d'unité** répond à « **dans quoi le visiteur dort-il ?** » — bulle, tipi, lodge, cabane. **Plusieurs valeurs possibles** sur une même fiche, en section *Identité*, juste sous la nature.
+- **Un service** répond à « **qu'est-ce qui est mis à disposition ?** » — alimentation en eau, vidange des eaux usées, branchement électrique. Ce sont des **équipements**, jamais une nature.
+- **Un tarif** répond à « **combien cela coûte-t-il ?** » — y compris la gratuité. Il vit dans la section *Tarifs*, jamais dans la taxonomie.
+- **Le classement** (étoiles, épis, clés) est une distinction officielle, en section *Classement & labels*. Il ne fait pas partie de l'identité de la nature : un camping non classé reste un camping.
+
+**Ce qui n'est pas déductible.** Disposer d'eau, de vidange et d'électricité ne prouve **pas** que la nuitée est autorisée : une *Aire de services camping-car* n'est pas une *Aire d'accueil camping-car*. Inversement, une aire d'accueil peut autoriser la nuitée sans posséder le moindre service.
+
+**Piège.** « Hébergement insolite de plein air » n'est plus une nature d'établissement. Si vous le cherchez encore dans la liste des natures, c'est qu'il faut renseigner un **type d'unité** à la place — la nature reste celle de l'établissement (chambre d'hôtes, camping…).`,
+  },
+  {
     id: 'editeur-ouvrir',
     rubrique: 'editeur',
     question: 'Comment modifier une fiche existante ?',

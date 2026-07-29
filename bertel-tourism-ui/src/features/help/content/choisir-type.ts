@@ -8,6 +8,38 @@ import type { FaqEntry } from './types';
 
 export const CHOISIR_TYPE_FAQ: FaqEntry[] = [
   {
+    id: 'choisir-famille-hebergement',
+    rubrique: 'choisir-type',
+    question: "Quelle famille d'hébergement choisir ?",
+    keywords: [
+      'famille', 'hébergement collectif', 'campings et terrains', 'aires et haltes',
+      'hôtellerie de plein air', 'hébergement de plein air', 'auberge', 'auberge collective',
+      'gîte de groupe', 'résidence hôtelière', 'résidence de vacances', 'aire naturelle',
+      'aire de services', 'PRL', 'parc résidentiel', 'halte van', 'bivouac',
+    ],
+    types: ['HOT', 'HLO', 'RVA', 'CAMP', 'HPA'],
+    related: ['creer-hebergement', 'choisir-hlo-rva'],
+    answer: `**Les cinq familles.**
+
+- **Hôtellerie** — Hôtel.
+- **Hébergement locatif** — Chambre d'hôtes, Meublé de tourisme.
+- **Hébergement collectif** — Auberge, Gîte, Refuge et gîte d'étape, Résidence de tourisme, Village de vacances, Résidence hôtelière.
+- **Campings et terrains** — Camping, Aire naturelle de camping, Terrain de camping déclaré (*à la ferme* / *chez l'habitant*), Parc résidentiel de loisirs.
+- **Aires et haltes de plein air** — Aire de bivouac, Aire d'accueil camping-car, Halte nocturne camping-car/van.
+
+**Les arbitrages qui font hésiter.**
+
+- **Résidence hôtelière** reste dans *Hébergement collectif* : le mot « hôtelière » décrit ses services, mais l'établissement est organisé comme une résidence de logements autonomes.
+- **Aire naturelle de camping** est dans *Campings et terrains* malgré le mot « aire » : c'est une catégorie de terrain de camping.
+- **Aire d'accueil camping-car** autorise la nuitée. Une **Aire de services camping-car** décrit des équipements (eau, vidange, électricité) et ne prouve **jamais** que l'on peut y dormir.
+- **Parc résidentiel de loisirs** désigne un terrain aménagé pour des habitations légères et des résidences mobiles en séjour temporaire — ni un lotissement permanent, ni une simple aire de stationnement.
+- **Gîte** existe dans deux familles : *Hébergement collectif › Gîte* (accueil d'un groupe) et le mot commercial « gîte » employé pour un *Meublé de tourisme*. Bertel affiche toujours le chemin complet pour lever le doute.
+
+**Ancien vocabulaire.** « Hôtellerie de plein air » recouvrait à la fois les terrains et les aires de halte : elle est remplacée par **deux** familles. Une recherche sur l'ancien terme vous propose les deux.
+
+**Piège.** Ne choisissez jamais la famille d'après le bâtiment. Bulle, tipi, lodge et cabane ne sont pas des natures d'établissement : ce sont des **types d'unité**, qui se saisissent après la création et acceptent plusieurs valeurs.`,
+  },
+  {
     id: 'choisir-artisan',
     rubrique: 'choisir-type',
     question: 'Je veux créer un artisan : quel type de fiche choisir ?',

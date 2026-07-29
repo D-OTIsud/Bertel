@@ -26,14 +26,26 @@ export const EXPLORER_FAQ: FaqEntry[] = [
   {
     id: 'explorer-filtres',
     rubrique: 'explorer',
-    question: 'Filtrer par catégorie et sous-catégorie ?',
-    keywords: ['filtre', 'catégorie', 'sous-catégorie', 'affiner'],
-    related: ['explorer-recherche', 'explorer-brouillons'],
-    answer: `Le volet de filtres de l'Explorer présente les **catégories** en rangées à cocher ; ouvrez une catégorie pour affiner avec ses **sous-catégories**, affichées sous forme de chips à sélectionner.
+    question: 'Filtrer par catégorie, famille et nature ?',
+    keywords: [
+      'filtre', 'catégorie', 'sous-catégorie', 'affiner', 'famille', 'nature',
+      'type d’unité', 'hôtellerie de plein air', 'campings et terrains', 'aires et haltes',
+    ],
+    related: ['explorer-recherche', 'explorer-brouillons', 'choisir-famille-hebergement'],
+    answer: `Le volet de filtres présente les **catégories** en rangées à cocher ; ouvrez-en une pour affiner.
 
-**Les filtres se cumulent.** Catégorie, sous-catégorie et les autres filtres du volet (accessibilité, durabilité, animaux, ouvert maintenant…) s'appliquent tous ensemble — les résultats sont l'intersection de vos choix.
+**Pour l'hébergement**, l'affinement se fait par **famille** puis par **nature**. Cinq familles : Hôtellerie, Hébergement locatif, Hébergement collectif, Campings et terrains, Aires et haltes de plein air. Ouvrir une famille n'est **pas** un filtre : c'est un accordéon. Le filtre, c'est la nature que vous cochez à l'intérieur.
 
-**Piège.** Sélectionner une sous-catégorie d'un type que vous aviez décoché le réintègre automatiquement dans la sélection — sinon le croisement type/sous-catégorie ne renverrait jamais de résultat.`,
+**Certaines natures se déplient.** *Terrain de camping déclaré* contient *Camping à la ferme* et *Camping chez l'habitant*. Cocher le **parent** remonte aussi les fiches de ses deux formes ; cocher une **forme** ne remonte qu'elle.
+
+**Critères complémentaires.** Le **type d'unité** (bulle, tipi, lodge, cabane) s'y trouve : il décrit dans quoi le visiteur dort, pas la nature de l'établissement. Une fiche peut en porter plusieurs.
+
+**Les filtres se cumulent** — les résultats sont l'intersection de vos choix.
+
+**Pièges.**
+- Une nature neuve peut n'avoir **encore aucune fiche** : Bertel l'annonce explicitement au lieu d'afficher « aucun résultat », qui ferait croire à une panne.
+- Cocher une nature d'un type que vous aviez décoché le réintègre automatiquement — sinon le croisement ne renverrait jamais rien.
+- L'ancien terme « Hôtellerie de plein air » recouvrait deux réalités : la recherche vous propose désormais les **deux** familles qui l'ont remplacé.`,
   },
   {
     id: 'explorer-vues',

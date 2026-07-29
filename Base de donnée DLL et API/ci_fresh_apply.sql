@@ -302,6 +302,9 @@ ROLLBACK;
 \echo '== taxo6-test garde permanente §200 lot 5 (multi-valeur, doublon refuse, personas anon/proprietaire/etranger sur les 4 commandes, GRANT anon borne a SELECT, cascade, filtre Explorer non vacant, reprise des 7 unites) =='
 \ir tests/test_accommodation_unit_type.sql
 
+\echo '== taxo7  migration_motorhome_service_amenities.sql  (§200 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
+\ir migration_motorhome_service_amenities.sql
+
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
 \ir migration_interop_crosswalk_leafaware.sql
 

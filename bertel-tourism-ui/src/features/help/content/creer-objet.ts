@@ -9,12 +9,40 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     rubrique: 'creer-objet',
     question: 'Comment créer une nouvelle fiche ?',
     keywords: ['créer', 'nouvelle fiche', 'ajouter', 'établissement', 'nouveau'],
-    related: ['choisir-artisan', 'publier-fiche'],
+    related: ['creer-hebergement', 'choisir-artisan', 'publier-fiche'],
     answer: `**Où.** Bouton **Créer** de l'Explorer, ou palette de commandes (Ctrl/⌘ + K → « Créer une fiche »). Si le bouton n'apparaît pas, votre compte n'a pas le droit de création — voyez l'administrateur de votre organisation.
 
-**Comment.** 1. Choisissez le **type de fiche** (regroupés par famille : hébergement, restaurant, activité, itinéraire, visite, service, événement) — ce choix conditionne les sections de l'éditeur, prenez le temps de vérifier l'arbitrage dans la rubrique « Choisir le bon type ». 2. Saisissez le **nom exact** de l'établissement ou de l'offre. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.
+**Comment.** 1. Saisissez le **nom exact** de l'établissement ou de l'offre ; Bertel vous signale au passage les fiches au nom proche, pour éviter un doublon. 2. Choisissez ce que vous décrivez. Pour un **hébergement**, vous choisissez une **famille** puis une **nature** et Bertel calcule le code technique à votre place — voyez « Créer une fiche d'hébergement en 5 étapes ». Pour tout le reste (restaurant, activité, itinéraire, visite, service, événement), vous choisissez directement le type. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.
 
 **Ensuite.** Remplissez les sections prioritaires (identité, localisation, contacts, description, photos) puis publiez depuis la section Publication. Un brouillon n'est visible que par votre organisation.`,
+  },
+  {
+    id: 'creer-hebergement',
+    rubrique: 'creer-objet',
+    question: "Créer une fiche d'hébergement en 5 étapes",
+    keywords: [
+      'hébergement', 'famille', 'nature', 'auberge', 'auberge collective', 'gîte de groupe',
+      'refuge', 'gîte d’étape', 'résidence de tourisme', 'résidence hôtelière', 'résidence de vacances',
+      'village de vacances', 'camping', 'camping aménagé', 'camping classé', 'aire naturelle',
+      'terrain de camping déclaré', 'camping à la ferme', 'camping chez l’habitant',
+      'parc résidentiel de loisirs', 'PRL', 'aire de bivouac', 'bivouac', 'aire d’accueil camping-car',
+      'halte nocturne', 'halte van', 'plein air',
+    ],
+    types: ['HOT', 'HLO', 'RVA', 'CAMP', 'HPA'],
+    related: ['creer-fiche', 'choisir-hlo-rva', 'editeur-nature-unite-service-tarif'],
+    answer: `**1 · Nommez la fiche.** Saisissez le nom officiel de l'établissement. Bertel affiche les fiches au nom proche : ouvrez-en une si c'est la même offre, sinon continuez — un même nom ailleurs est légitime.
+
+**2 · Choisissez la famille.** Cinq familles couvrent tout l'hébergement : **Hôtellerie**, **Hébergement locatif**, **Hébergement collectif**, **Campings et terrains**, **Aires et haltes de plein air**.
+
+**3 · Choisissez la nature.** La nature répond à « **quel type d'établissement est-ce ?** » — pas à son bâtiment ni à ses équipements. Certaines natures se précisent ensuite : sous *Terrain de camping déclaré*, indiquez *à la ferme* ou *chez l'habitant*.
+
+**4 · Vérifiez le récapitulatif.** Bertel affiche le chemin choisi et le **type technique calculé**. Ce code n'est pas un choix : il découle de la nature. Vous n'avez jamais à savoir ce que signifient HLO, RVA, CAMP ou HPA.
+
+**5 · Complétez après la création.** Dans des champs séparés : les **types d'unité** (dans quoi le visiteur dort : bulle, tipi, lodge, cabane — plusieurs valeurs possibles), les **services** (eau, vidange, électricité…), le **classement** en étoiles, et les **tarifs**.
+
+**Exemple.** Un établissement peut avoir pour nature *Aire naturelle de camping*, proposer des unités *Lodge* et *Cabane*, fournir eau et électricité, et être gratuit ou payant. **Aucune** de ces trois dernières informations ne change sa nature.
+
+**Piège.** Le classement en étoiles est une information séparée de la nature *Camping* : un terrain non classé reste un camping.`,
   },
   {
     id: 'creer-hlo',
@@ -50,31 +78,37 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     id: 'creer-hpa',
     rubrique: 'creer-objet',
     question: 'Comment créer une aire ou un hébergement de plein air ?',
-    keywords: ['plein air', 'aire naturelle', 'camping à la ferme', 'camping chez l’habitant', 'camping-car', 'glamping', 'insolite'],
+    keywords: ['plein air', 'aire naturelle', 'terrain de camping déclaré', 'camping à la ferme', 'camping chez l’habitant', 'parc résidentiel de loisirs', 'PRL', 'camping-car', 'aire de bivouac', 'bivouac', 'halte nocturne', 'halte van', 'glamping', 'insolite'],
     types: ['HPA'],
-    related: ['creer-fiche'],
-    answer: `**C'est quoi.** Une offre de plein air qui n'est pas un terrain de camping classé : aire naturelle, camping à la ferme, camping chez l'habitant, aire d'accueil camping-car ou hébergement insolite de plein air (glamping, tipi, lodge toilé) — type **Hébergement de plein air (HPA)**.
+    related: ['creer-hebergement', 'choisir-famille-hebergement'],
+    answer: `**C'est quoi.** Deux familles distinctes, et la différence compte :
 
-**Quand choisir ce type.** L'offre relève d'une des formes ci-dessus et n'a pas le statut de terrain de camping classé. **Pas ce type si** : le terrain est classé, qu'il propose des emplacements nus, des mobil-homes ou les deux → Camping classé (CAMP).
+- **Campings et terrains** — *Aire naturelle de camping*, *Terrain de camping déclaré* (à préciser ensuite : *à la ferme* ou *chez l'habitant*), *Parc résidentiel de loisirs*. Ce sont des **terrains** organisés pour le séjour.
+- **Aires et haltes de plein air** — *Aire de bivouac*, *Aire d'accueil camping-car*, *Halte nocturne camping-car/van*. Ce sont des **autorisations de halte**, pas des terrains de camping.
 
-**Étapes.** Créer → type « Hébergement de plein air » → nom exact. Dans l'éditeur, précisez ensuite la forme exacte dans la taxonomie et renseignez la **capacité et les emplacements** (section Chambres, capacité & séminaire).
+**Comment choisir.** Créer → nom exact → famille → nature. Bertel calcule le type technique ; vous n'avez pas à le connaître. Renseignez ensuite la **capacité et les emplacements** (section Chambres, capacité & séminaire).
 
-**Pièges.** La présence d'un mobil-home ne suffit pas à choisir HPA : un camping classé peut proposer des locatifs. La frontière est le classement du terrain, pas l'équipement apporté par le client.`,
+**Pièges.**
+- *Aire naturelle de camping* est un **camping** malgré le mot « aire » : elle est dans *Campings et terrains*.
+- *Glamping*, *tipi*, *lodge* et *cabane* ne sont plus des natures : ce sont des **types d'unité**, à saisir après la création, et une fiche peut en porter plusieurs.
+- La présence d'un mobil-home ne détermine rien : un camping classé peut proposer des locatifs. La frontière est le régime du terrain, pas l'équipement apporté par le client.`,
   },
   {
     id: 'creer-camp',
     rubrique: 'creer-objet',
     question: 'Comment créer un camping classé ?',
-    keywords: ['camping', 'camping classé', 'étoiles', 'tente', 'caravane', 'mobil-home', 'emplacement'],
+    keywords: ['camping', 'camping aménagé', 'camping classé', 'étoiles', 'tente', 'caravane', 'mobil-home', 'emplacement'],
     types: ['CAMP'],
-    related: ['creer-fiche'],
-    answer: `**C'est quoi.** Un terrain de camping classé, avec son classement officiel et ses étoiles — type **Camping classé (CAMP)**. Il peut proposer des emplacements nus, des mobil-homes ou les deux.
+    related: ['creer-hebergement', 'choisir-famille-hebergement'],
+    answer: `**C'est quoi.** Un terrain aménagé pour l'accueil de tentes, caravanes ou résidences mobiles de loisirs — nature **Camping**, dans la famille *Campings et terrains*. Il peut proposer des emplacements nus, des mobil-homes ou les deux.
 
-**Quand choisir ce type.** L'établissement relève du classement officiel des terrains de camping. **Pas ce type si** : aire naturelle, camping à la ferme, aire d'accueil camping-car ou glamping/insolite hors camping classé → Hébergement de plein air (HPA).
+**Comment choisir.** Créer → nom exact → famille *Campings et terrains* → nature *Camping*. **Pas cette nature si** : le terrain relève du régime déclaratif (petite structure à la ferme ou chez un particulier) → *Terrain de camping déclaré* ; aménagement allégé → *Aire naturelle de camping* ; simple autorisation de halte → famille *Aires et haltes de plein air*.
 
-**Étapes.** Créer → type « Camping classé » → nom exact. Renseignez son classement dans Classement & labels, puis la **capacité et les emplacements** (section Chambres, capacité & séminaire).
+**Étapes.** Renseignez ensuite le **classement** dans Classement & labels, puis la **capacité et les emplacements** (section Chambres, capacité & séminaire).
 
-**Pièges.** Ne classez pas selon la proportion d'emplacements nus et de locatifs : un terrain classé reste CAMP, même si les mobil-homes sont majoritaires.`,
+**Pièges.**
+- Le **classement en étoiles est séparé de la nature** : un terrain non classé reste un *Camping*. Ne cherchez pas une nature « camping non classé ».
+- Ne classez pas selon la proportion d'emplacements nus et de locatifs : un camping reste un camping même si les mobil-homes sont majoritaires.`,
   },
   {
     id: 'creer-rva',

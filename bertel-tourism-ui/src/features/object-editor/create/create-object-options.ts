@@ -6,7 +6,7 @@
  * added there automatically appears in the picker — no hardcoded type list here.
  */
 import { TYPE_ARCHETYPES, TYPE_LABEL, ARCHETYPE_META, type ArchetypeCode } from '../archetypes';
-import type { ExplorerTaxonomyDomain, ExplorerTaxonomyNode } from '../../../types/domain';
+import type { ExplorerTaxonomyDomain } from '../../../types/domain';
 
 export const MAX_OBJECT_NAME_LENGTH = 200;
 
@@ -28,41 +28,38 @@ export interface CreateTypeGroup {
 }
 
 /**
- * Libellés d'infobulle dérivés du même arbre que les filtres Explorer.
- * Le chemin désambiguïse les feuilles homonymes (par exemple une « Maison »
- * sous Chambre d'hôtes ou sous Meublé de tourisme) sans inventer un second
- * vocabulaire côté création.
+ * Libellés courts dérivés du même arbre que les filtres Explorer.
+ * Les chemins complets rendaient l'aide du sélecteur de type illisible. On garde
+ * donc le nom seul et on ajoute le parent uniquement pour désambiguïser deux
+ * feuilles homonymes.
  */
 export function buildCreateTypeTaxonomyLabels(
   taxonomies: ExplorerTaxonomyDomain[],
   typeCode: string,
 ): string[] {
-  const labels: string[] = [];
+  const entries: Array<{ name: string; parentName?: string }> = [];
 
   for (const domain of taxonomies.filter((item) => item.objectType === typeCode)) {
     const nodesByCode = new Map(domain.nodes.map((node) => [node.code, node]));
 
-    const buildPath = (node: ExplorerTaxonomyNode, visited: Set<string>): string => {
-      if (!node.parentCode || visited.has(node.code)) {
-        return node.name;
-      }
-      const parent = nodesByCode.get(node.parentCode);
-      if (!parent) {
-        return node.name;
-      }
-      const nextVisited = new Set(visited).add(node.code);
-      const parentPath = buildPath(parent, nextVisited);
-      return `${parentPath} › ${node.name}`;
-    };
-
     for (const node of domain.nodes) {
       if (node.isAssignable) {
-        labels.push(buildPath(node, new Set()));
+        entries.push({
+          name: node.name,
+          parentName: node.parentCode ? nodesByCode.get(node.parentCode)?.name : undefined,
+        });
       }
     }
   }
 
-  return [...new Set(labels)];
+  const occurrences = new Map<string, number>();
+  for (const { name } of entries) {
+    occurrences.set(name, (occurrences.get(name) ?? 0) + 1);
+  }
+
+  return [...new Set(entries.map(({ name, parentName }) => (
+    (occurrences.get(name) ?? 0) > 1 && parentName ? `${name} (${parentName})` : name
+  )))];
 }
 
 /** Grouped, stably-sorted creatable types for the picker (enum minus ORG). */

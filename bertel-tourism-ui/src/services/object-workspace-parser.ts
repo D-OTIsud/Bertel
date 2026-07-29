@@ -73,10 +73,30 @@ export interface ObjectWorkspaceTaxonomyDomain {
   assignment: ObjectWorkspaceTaxonomyAssignment | null;
 }
 
-export interface ObjectWorkspaceTaxonomyModule {
-  domains: ObjectWorkspaceTaxonomyDomain[];
+/**
+ * §200 — axe « Type d'unité d'hébergement », MULTI-VALUÉ et distinct de la
+ * NATURE. `object_taxonomy` n'accepte qu'une valeur par domaine : un
+ * établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
+ * Répond à « dans quoi le visiteur dort-il ? ».
+ */
+export interface ObjectWorkspaceUnitTypes {
+  options: Array<{ code: string; label: string; description: string }>;
+  selectedCodes: string[];
+  /** Non nul = catalogue absent (taxo6 non appliquée) ⇒ contrôle désactivé AVEC motif. */
   unavailableReason: string | null;
 }
+
+export interface ObjectWorkspaceTaxonomyModule {
+  domains: ObjectWorkspaceTaxonomyDomain[];
+  unitTypes: ObjectWorkspaceUnitTypes;
+  unavailableReason: string | null;
+}
+
+export const EMPTY_UNIT_TYPES: ObjectWorkspaceUnitTypes = {
+  options: [],
+  selectedCodes: [],
+  unavailableReason: null,
+};
 
 export interface ObjectWorkspaceLocationForm {
   recordId: string | null;
@@ -1644,6 +1664,9 @@ function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorks
 
   return {
     domains: domains.sort((left, right) => left.label.localeCompare(right.label, 'fr')),
+    // §200 — le catalogue et la sélection sont chargés par un select direct dans
+    // l'étape d'enrichissement : `get_object_resource` ne les porte pas.
+    unitTypes: EMPTY_UNIT_TYPES,
     unavailableReason: null,
   };
 }

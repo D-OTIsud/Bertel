@@ -37,7 +37,7 @@ describe('buildCreateTypeOptions', () => {
 });
 
 describe('buildCreateTypeTaxonomyLabels', () => {
-  it('uses assignable nodes from the Explorer taxonomy and prefixes descendants with their path', () => {
+  it('uses concise assignable labels and adds the parent only for homonyms', () => {
     const taxonomies: ExplorerTaxonomyDomain[] = [{
       domain: 'taxonomy_hlo',
       name: 'Hébergement locatif',
@@ -45,13 +45,16 @@ describe('buildCreateTypeTaxonomyLabels', () => {
       nodes: [
         { code: 'chambre_d_hotes', name: 'Chambre d’hôtes', parentCode: null, depth: 0, isAssignable: true, position: 1 },
         { code: 'cdh_maison', name: 'Maison d’hôtes', parentCode: 'chambre_d_hotes', depth: 1, isAssignable: true, position: 2 },
+        { code: 'meuble', name: 'Meublé de tourisme', parentCode: null, depth: 0, isAssignable: false, position: 3 },
+        { code: 'meuble_maison', name: 'Maison d’hôtes', parentCode: 'meuble', depth: 1, isAssignable: true, position: 4 },
         { code: 'legacy', name: 'Ancien code', parentCode: null, depth: 0, isAssignable: false, position: 3 },
       ],
     }];
 
     expect(buildCreateTypeTaxonomyLabels(taxonomies, 'HLO')).toEqual([
       'Chambre d’hôtes',
-      'Chambre d’hôtes › Maison d’hôtes',
+      'Maison d’hôtes (Chambre d’hôtes)',
+      'Maison d’hôtes (Meublé de tourisme)',
     ]);
     expect(buildCreateTypeTaxonomyLabels(taxonomies, 'HOT')).toEqual([]);
   });

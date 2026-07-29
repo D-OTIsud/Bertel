@@ -186,6 +186,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const accessibilityAmenityCodesAny = common.accessibilityAmenityCodesAny ?? [];
   const sustainable = common.sustainable === true;
   const environmentTagsAny = common.environmentTagsAny ?? [];
+  const accommodationUnitTypesAny = common.accommodationUnitTypesAny ?? [];
   const amenityFamiliesAny = common.amenityFamiliesAny ?? [];
   const taxonomyAny = common.taxonomyAny ?? [];
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
@@ -208,6 +209,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const setPetsAccepted = useStore((state) => state.setPetsAccepted);
   const setOpenNow = useStore((state) => state.setOpenNow);
   const setEnvironmentTags = useStore((state) => state.setEnvironmentTags);
+  const setAccommodationUnitTypes = useStore((state) => state.setAccommodationUnitTypes);
   const setOpenAt = useStore((state) => state.setOpenAt);
   const setEvtEventRange = useStore((state) => state.setEvtEventRange);
   const setAmenityFamilies = useStore((state) => state.setAmenityFamilies);
@@ -657,9 +659,18 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
     const unitEntries = tree.unitTypes.filter((entry) => accommodationNodeMatches(entry.node, query));
     const positioningEntries = tree.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
-    const hasResults = familyBlocks.length > 0 || unitEntries.length > 0 || positioningEntries.length > 0;
+    // §200 — le NOUVEL axe multi-valué. Il cohabite volontairement avec les
+    // `type_unite` restés dans taxonomy_hlo (maison, appartement, chalet…) :
+    // leur migration est un lot à part, et créer un second système concurrent
+    // pour elles serait pire que la cohabitation.
+    const unitTypeOptions = (references?.accommodationUnitTypes ?? []).filter((option) => (
+      !query || foldAccommodationTerm(option.name).includes(query)
+    ));
+    const hasResults = familyBlocks.length > 0 || unitEntries.length > 0
+      || positioningEntries.length > 0 || unitTypeOptions.length > 0;
     const complementarySelectedCount = [...unitEntries, ...positioningEntries]
-      .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
+      .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length
+      + accommodationUnitTypesAny.length;
     const showComplements = Boolean(query) || showAccommodationComplements;
 
     return (
@@ -699,7 +710,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         ) : null}
 
-        {unitEntries.length > 0 || positioningEntries.length > 0 ? (
+        {unitEntries.length > 0 || positioningEntries.length > 0 || unitTypeOptions.length > 0 ? (
           <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
             <button
               type="button"
@@ -721,6 +732,34 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             </button>
             {showComplements ? (
               <div id="accommodation-complementary-filters" className="space-y-2 border-t border-line px-2 pb-2.5 pt-2">
+                {unitTypeOptions.length > 0 ? (
+                  <div>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                      Type d&apos;unité
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {unitTypeOptions.map((option) => {
+                        const active = accommodationUnitTypesAny.includes(option.code);
+                        return (
+                          <button
+                            key={option.code}
+                            type="button"
+                            className={taxonomyChipClass(active)}
+                            onClick={() => setAccommodationUnitTypes(
+                              active
+                                ? accommodationUnitTypesAny.filter((code) => code !== option.code)
+                                : [...accommodationUnitTypesAny, option.code],
+                            )}
+                            aria-pressed={active}
+                            title="Dans quoi le visiteur dort — indépendant de la nature de l’établissement."
+                          >
+                            {option.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
                 {unitEntries.length > 0 ? (
                   <div>
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">

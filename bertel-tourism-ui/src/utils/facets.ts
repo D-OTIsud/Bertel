@@ -91,6 +91,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   openNow: false,
   openAt: null,
   environmentTagsAny: [],
+  accommodationUnitTypesAny: [],
   amenityFamiliesAny: [],
   taxonomyAny: [],
   tagsAny: [],
@@ -156,6 +157,7 @@ export function normalizeExplorerFilters(
       sustainabilityActionCodesAny: common.sustainabilityActionCodesAny ?? [],
       openAt: common.openAt ?? null,
       environmentTagsAny: common.environmentTagsAny ?? [],
+      accommodationUnitTypesAny: common.accommodationUnitTypesAny ?? [],
       amenityFamiliesAny: common.amenityFamiliesAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
       tagsAny: common.tagsAny ?? [],
@@ -302,6 +304,9 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     return true;
   }
   if (common.environmentTagsAny.length > 0) {
+    return true;
+  }
+  if (common.accommodationUnitTypesAny.length > 0) {
     return true;
   }
   if (common.amenityFamiliesAny.length > 0) {
@@ -616,6 +621,14 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const environmentTags = common.environmentTagsAny.map(cleanString).filter(Boolean);
   if (environmentTags.length > 0) {
     payload.environment_tags_any = environmentTags;
+  }
+
+  // §200 — types d'unité d'hébergement, MULTI-VALUÉS. Le RPC joint la table de
+  // liaison `object_accommodation_unit_type` (pas un cache scalaire : un objet
+  // porte plusieurs unités), ce qui contourne le MV — assumé et documenté.
+  const unitTypes = common.accommodationUnitTypesAny.map(cleanString).filter(Boolean);
+  if (unitTypes.length > 0) {
+    payload.accommodation_unit_types_any = unitTypes;
   }
 
   // §155 — sous-catégories : partition par bucket (une sélection « Pizzeria »

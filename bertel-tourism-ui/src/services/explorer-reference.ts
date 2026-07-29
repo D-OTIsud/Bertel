@@ -534,6 +534,14 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'foret', name: 'Forêt' },
       { code: 'vue_panoramique', name: 'Vue panoramique' },
     ],
+    // §200 — types d'unité d'hébergement (axe multi-valué).
+    accommodationUnitTypes: [
+      { code: 'bubble', name: 'Bulle' },
+      { code: 'tipi', name: 'Tipi' },
+      { code: 'lodge', name: 'Lodge' },
+      { code: 'cabin', name: 'Cabane' },
+      { code: 'unusual_outdoor_unit', name: 'Hébergement insolite de plein air — autre' },
+    ],
     amenityFamilies: [
       { code: 'outdoor', name: 'Plein air' },
       { code: 'wellness', name: 'Bien-être' },
@@ -642,6 +650,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     accommodationFamiliesResult,
     practicesResult,
     environmentTagsResult,
+    accommodationUnitTypesResult,
     amenityFamiliesResult,
     tagsResult,
     locationOptionsResult,
@@ -660,6 +669,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
+    // §200 — types d'unité d'hébergement. Lu sur le PARENT `ref_code` avec un
+    // filtre de domaine : les partitions filles ne sont pas exposées par PostgREST.
+    client.from('ref_code').select('code,name,position').eq('domain', 'accommodation_unit_type').eq('is_active', true).eq('is_assignable', true).order('position', { ascending: true }),
     // §159 — familles de services & équipements (transverse).
     client.from('ref_code').select('code,name,position').eq('domain', 'amenity_family').eq('is_active', true).order('position', { ascending: true }),
     // §160 — catalogue des tags §09 (picker du panneau ; le click-to-filter reste l'autre voie).
@@ -741,6 +753,12 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const applicability = (applicabilityResult.data ?? []) as CapacityApplicabilityRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
   const environmentTags = (environmentTagsResult.data ?? []) as PracticeRow[];
+  // §200 — tolérant à l'absence : tant que taxo6 n'est pas appliquée, le domaine
+  // n'existe pas. Un throw ici priverait l'Explorateur de TOUS ses catalogues
+  // pour un filtre qui n'a pas encore de données.
+  const accommodationUnitTypes = (accommodationUnitTypesResult.error
+    ? []
+    : (accommodationUnitTypesResult.data ?? [])) as PracticeRow[];
   const amenityFamilies = (amenityFamiliesResult.data ?? []) as PracticeRow[];
   const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
   const accessibilityAmenities = (accessibilityAmenitiesResult.data ?? []) as AmenityRow[];
@@ -782,6 +800,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),
     itiPractices: toReferenceOptions(practices),
     environmentTags: toReferenceOptions(environmentTags),
+    accommodationUnitTypes: toReferenceOptions(accommodationUnitTypes),
     amenityFamilies: toReferenceOptions(amenityFamilies),
     tags: ((tagsResult.data ?? []) as ExplorerTagFilter[]).filter((tag) => tag.slug && tag.name),
     cities: locationOptions?.cities ?? [],

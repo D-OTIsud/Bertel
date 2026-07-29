@@ -361,6 +361,31 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       expect(screen.getAllByRole('button', { name: 'Camping' })).toHaveLength(2);
     });
 
+    it('propose le nouvel axe Type d\'unité dans les critères complémentaires', () => {
+      const references = {
+        ...V2_ACCOMMODATION_REFERENCES,
+        accommodationUnitTypes: [
+          { code: 'bubble', name: 'Bulle' },
+          { code: 'lodge', name: 'Lodge' },
+        ],
+      } as unknown as ExplorerReferences;
+
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={references} />);
+
+      // Replié par défaut : c'est un critère secondaire, pas la nature.
+      expect(screen.queryByRole('button', { name: 'Bulle' })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Critères complémentaires', expanded: false }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Bulle' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Lodge' }));
+      // Multi-valué : les deux coexistent, contrairement à la nature.
+      expect(useExplorerStore.getState().common.accommodationUnitTypesAny).toEqual(['bubble', 'lodge']);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Bulle' }));
+      expect(useExplorerStore.getState().common.accommodationUnitTypesAny).toEqual(['lodge']);
+    });
+
     it('l\'en-tête de famille reste un accordéon, jamais un filtre', () => {
       act(() => useExplorerStore.getState().toggleBucket('HOT'));
       render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);

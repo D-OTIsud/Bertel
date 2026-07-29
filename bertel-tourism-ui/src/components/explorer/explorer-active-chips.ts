@@ -34,6 +34,7 @@ export type ActiveChipGroup =
   | 'openAt'
   | 'evtDates'
   | 'amenityFamilies'
+  | 'accommodationUnitTypes'
   | 'accessDisability'
   | 'accessAmenities'
   | 'sustCategories'
@@ -188,6 +189,18 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       group: 'environment',
       value: '*',
       label: `Cadre · ${envCount} critère${envCount > 1 ? 's' : ''}`,
+    });
+  }
+
+  // §200 — un critère actif DOIT produire une pastille : sans elle il serait
+  // invisible dans la barre, non retirable et absent des compteurs (§194).
+  const unitTypeCount = (c.accommodationUnitTypesAny ?? []).length;
+  if (unitTypeCount > 0) {
+    chips.push({
+      key: 'accommodationUnitTypes',
+      group: 'accommodationUnitTypes',
+      value: '*',
+      label: `Type d'unité · ${unitTypeCount}`,
     });
   }
 

@@ -1213,6 +1213,18 @@ AS $$
           ARRAY[]::text[]
         )
       END AS taxonomy_any_codes,
+      -- §200 — types d'unité d'hébergement (axe MULTI-VALUÉ, table de liaison
+      -- object_accommodation_unit_type). Volontairement hors cache objet : un
+      -- objet peut porter plusieurs unités, ce qu'une colonne cache scalaire ne
+      -- représente pas — on lit la table de liaison (comme tags_any).
+      CASE WHEN n.filters ? 'accommodation_unit_types_any'
+        THEN NULLIF(
+          ARRAY(
+            SELECT jsonb_array_elements_text(n.filters->'accommodation_unit_types_any')
+          ),
+          ARRAY[]::text[]
+        )
+      END AS accommodation_unit_types_any,
       -- accessibility type filters (2026-03-22)
       -- disability_types_any: TEXT[] of canonical disability types (motor/hearing/visual/cognitive).
       -- label_disability_types_any: TEXT[] of canonical disability types matched against LBL_TOURISME_HANDICAP subvalue_ids.
@@ -1269,6 +1281,7 @@ AS $$
         OR n.filters ? 'meeting_room'
         OR n.filters ? 'capacity_filters'
         OR n.filters ? 'tags_any'
+        OR n.filters ? 'accommodation_unit_types_any'   -- §200: jointure vive sur object_accommodation_unit_type
         OR n.filters ? 'itinerary'
         OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
         OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)
@@ -1837,6 +1850,13 @@ AS $$
       WHERE tl.target_table = 'object'
         AND tl.target_pk = src.object_id
         AND t.slug = ANY(params.tags_any)
+    ))
+    AND (params.accommodation_unit_types_any IS NULL OR EXISTS (
+      SELECT 1
+      FROM object_accommodation_unit_type ou
+      JOIN ref_code_accommodation_unit_type ut ON ut.id = ou.unit_type_id
+      WHERE ou.object_id = src.object_id
+        AND ut.code = ANY(params.accommodation_unit_types_any)
     ))
     AND (NOT (params.filters ? 'itinerary') OR EXISTS (
       SELECT 1

@@ -467,6 +467,60 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         </Field>
       </div>
 
+      {/* §200 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
+          juste sous elle parce que c'est là que la confusion se joue : « Bulle »
+          n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
+      {taxonomy.unitTypes.unavailableReason || taxonomy.unitTypes.options.length > 0 ? (
+        <div style={{ marginBottom: 12 }}>
+          <Field
+            label="Types d'unité"
+            hint="Répond à « dans quoi le visiteur dort-il ? » — plusieurs valeurs possibles"
+          >
+            {taxonomy.unitTypes.unavailableReason ? (
+              <p style={{ fontSize: 12, color: 'var(--ink-3)', margin: 0 }}>
+                {taxonomy.unitTypes.unavailableReason}
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Types d'unité">
+                {taxonomy.unitTypes.options.map((option) => {
+                  const active = taxonomy.unitTypes.selectedCodes.includes(option.code);
+                  return (
+                    <button
+                      key={option.code}
+                      type="button"
+                      aria-pressed={active}
+                      title={option.description || undefined}
+                      onClick={() => editor.replaceModule('taxonomy', {
+                        ...taxonomy,
+                        unitTypes: {
+                          ...taxonomy.unitTypes,
+                          selectedCodes: active
+                            ? taxonomy.unitTypes.selectedCodes.filter((code) => code !== option.code)
+                            : [...taxonomy.unitTypes.selectedCodes, option.code],
+                        },
+                      })}
+                      className={`identity-unit-chip${active ? ' is-active' : ''}`}
+                      style={{
+                        minHeight: 28,
+                        borderRadius: 8,
+                        border: `1px solid ${active ? 'var(--teal, #176b6a)' : 'var(--line)'}`,
+                        background: active ? 'var(--teal, #176b6a)' : 'var(--surface)',
+                        color: active ? '#fff' : 'var(--ink-2)',
+                        padding: '4px 10px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </Field>
+        </div>
+      ) : null}
+
       {/* §200 — l'éditeur ne propose QUE les natures du domaine compatible avec le
           type technique de la fiche. Le dire explicitement évite la conclusion la
           plus naturelle et la plus fausse : « la nature que je cherche a disparu ».

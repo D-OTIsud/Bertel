@@ -43,6 +43,7 @@ function modulesWithTaxonomy(
   const modules = fullModulesFixture();
   modules.taxonomy = {
     domains: [assignment === undefined ? taxonomyDomainFixture(nodes) : taxonomyDomainFixture(nodes, assignment)],
+    unitTypes: { options: [], selectedCodes: [], unavailableReason: null },
     unavailableReason: null,
   };
   return modules;
@@ -276,5 +277,63 @@ describe('SectionIdentity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Modifier/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("§200 — types d'unité (axe multi-valué)", () => {
+  const UNIT_TYPES = {
+    options: [
+      { code: 'bubble', label: 'Bulle', description: 'Unité transparente.' },
+      { code: 'lodge', label: 'Lodge', description: 'Unité de type lodge.' },
+    ],
+    selectedCodes: ['bubble'],
+    unavailableReason: null,
+  };
+
+  function modulesWithUnitTypes(unitTypes: ObjectWorkspaceModules['taxonomy']['unitTypes']) {
+    const modules = modulesWithTaxonomy();
+    modules.taxonomy = { ...modules.taxonomy, unitTypes };
+    return modules;
+  }
+
+  it('permet de porter DEUX unités à la fois — la nature reste intacte', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
+    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByRole('button', { name: 'Bulle' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Lodge' }));
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual(['bubble', 'lodge']);
+    // Une reprise de FORME ne déplace jamais l'établissement.
+    expect(result.current.draft.taxonomy.domains[0].assignment?.code).toBe('family_hotel');
+  });
+
+  it('retire une unité au second clic', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
+    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bulle' }));
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual([]);
+  });
+
+  it('affiche un motif au lieu d\u2019un s\u00e9lecteur vide quand le catalogue manque', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes({
+      options: [], selectedCodes: [], unavailableReason: "Le catalogue des types d'unité n'est pas encore disponible sur cette base.",
+    })));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    expect(screen.getByText(/catalogue des types d.unité n.est pas encore disponible/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bulle' })).not.toBeInTheDocument();
+  });
+
+  it("n'affiche rien quand l'objet n'est pas un hébergement (catalogue vide, aucun motif)", () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes({
+      options: [], selectedCodes: [], unavailableReason: null,
+    })));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    expect(screen.queryByText(/Types d.unité/)).not.toBeInTheDocument();
   });
 });

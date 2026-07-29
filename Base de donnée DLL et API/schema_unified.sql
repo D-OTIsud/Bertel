@@ -312,6 +312,10 @@ CREATE TABLE IF NOT EXISTS ref_code_language_level PARTITION OF ref_code FOR VAL
 CREATE TABLE IF NOT EXISTS ref_code_amenity_family PARTITION OF ref_code FOR VALUES IN ('amenity_family');
 CREATE TABLE IF NOT EXISTS ref_code_payment_method PARTITION OF ref_code FOR VALUES IN ('payment_method');
 CREATE TABLE IF NOT EXISTS ref_code_environment_tag PARTITION OF ref_code FOR VALUES IN ('environment_tag');
+-- §200 — « type d'unité d'hébergement » (bulle, tipi, lodge, cabane). La partition
+-- garantit STRUCTURELLEMENT le domaine : la FK de object_accommodation_unit_type ne
+-- peut pas viser un code d'un autre domaine, sans CHECK à maintenir.
+CREATE TABLE IF NOT EXISTS ref_code_accommodation_unit_type PARTITION OF ref_code FOR VALUES IN ('accommodation_unit_type');
 CREATE TABLE IF NOT EXISTS ref_code_price_kind PARTITION OF ref_code FOR VALUES IN ('price_kind');
 CREATE TABLE IF NOT EXISTS ref_code_price_unit PARTITION OF ref_code FOR VALUES IN ('price_unit');
 CREATE TABLE IF NOT EXISTS ref_code_price_type PARTITION OF ref_code FOR VALUES IN ('price_type');
@@ -409,6 +413,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_id ON ref_code_lang
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_family_id ON ref_code_amenity_family (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_id ON ref_code_payment_method (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_id ON ref_code_environment_tag (id);
+-- Obligatoire pour qu'une partition soit cible de FK : la PK du parent est (id, domain).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_unit_type_id ON ref_code_accommodation_unit_type (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_id ON ref_code_price_kind (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_id ON ref_code_price_unit (id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_id ON ref_code_price_type (id);
@@ -456,6 +462,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_language_level_code ON ref_code_la
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_amenity_family_code ON ref_code_amenity_family(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_payment_method_code ON ref_code_payment_method(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_environment_tag_code ON ref_code_environment_tag(code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_accommodation_unit_type_code ON ref_code_accommodation_unit_type(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_kind_code ON ref_code_price_kind(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_unit_code ON ref_code_price_unit(code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_ref_code_price_type_code ON ref_code_price_type(code);
@@ -2007,6 +2014,24 @@ CREATE TABLE IF NOT EXISTS object_environment_tag (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (object_id, environment_tag_id)
 );
+-- §200 — types d'unité d'hébergement d'un objet, MULTI-VALUÉS.
+-- `object_taxonomy` impose une seule valeur par objet et par domaine : un
+-- établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
+-- Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type
+-- d'établissement est-ce ? » (= object_taxonomy).
+-- Défini AVANT api_views_functions.sql : `api.get_filtered_object_ids` référence
+-- cette table dans son corps et ne compilerait pas sans elle.
+CREATE TABLE IF NOT EXISTS object_accommodation_unit_type (
+  object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
+  unit_type_id UUID NOT NULL REFERENCES ref_code_accommodation_unit_type(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (object_id, unit_type_id)
+);
+-- PostgreSQL n'indexe pas le côté référençant d'une FK : sans cet index, purger
+-- un code de référentiel balaierait toute la table de liaison.
+CREATE INDEX IF NOT EXISTS idx_object_accommodation_unit_type_unit_type_id
+  ON object_accommodation_unit_type (unit_type_id);
 CREATE TABLE IF NOT EXISTS object_amenity (
   object_id TEXT NOT NULL REFERENCES object(id) ON DELETE CASCADE,
   amenity_id UUID NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE,

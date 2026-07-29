@@ -173,6 +173,14 @@ export interface ExplorerCommonFilters {
    */
   environmentTagsAny: string[];
   /**
+   * §200 — types d'unité d'hébergement (bulle, tipi, lodge, cabane). Axe
+   * MULTI-VALUÉ porté par `object_accommodation_unit_type`, distinct de la
+   * NATURE de l'établissement : « dans quoi le visiteur dort-il ? » n'est pas
+   * « quel type d'établissement est-ce ? ». Envoyé au RPC comme
+   * `accommodation_unit_types_any`.
+   */
+  accommodationUnitTypesAny: string[];
+  /**
    * §159 — services & équipements (familles d'aménités : piscine→outdoor,
    * bien-être, parking…). Transverse (`object_amenity` est trans-types) ;
    * envoyé au RPC comme `amenity_families_any`.
@@ -389,6 +397,8 @@ export interface ExplorerReferences {
   itiPractices: ExplorerReferenceOption[];
   /** Cadre & environnement (ref_code domaine environment_tag) — filtre transverse §154. */
   environmentTags: ExplorerReferenceOption[];
+  /** §200 — catalogue `accommodation_unit_type` (bulle, tipi, lodge, cabane…). */
+  accommodationUnitTypes: ExplorerReferenceOption[];
   /** Familles de services & équipements (ref_code domaine amenity_family) — filtre transverse §159. */
   amenityFamilies: ExplorerReferenceOption[];
   /** Catalogue des tags §09 (ref_tag) — le picker du panneau complète le click-to-filter (§160). */

@@ -14,8 +14,9 @@
 -- qui a écrasé la nature par la forme dans la taxonomie hébergement (§190) et mal typé
 -- la moitié des ACT (§186). Mesures live du 2026-07-29 :
 --
---   * 813 fiches sur 846 taguées, ~5,6 tags par fiche (jusqu'à 13) : l'axe ne sépare plus
---     rien. « Plein air » 571 (68 % du corpus), « Cuisine » 545, « Panorama » 442.
+--   * 830 fiches sur 846 taguées (828 par l'import, 2 par un éditeur), ~5,5 tags par
+--     fiche jusqu'à 13 : l'axe ne sépare plus rien. « Plein air » 571 (68 % du corpus),
+--     « Cuisine » 545, « Panorama » 442.
 --   * Les tags ne sont pas reproductibles depuis le contenu de la fiche : seules 19 % des
 --     fiches taguées « Boutique » contiennent un mot du champ lexical, 20 % pour
 --     « Patrimoine », 42 % pour « Mer et littoral ». Et ce chiffre est une BORNE HAUTE :
@@ -40,10 +41,25 @@
 -- ------------------------------------------------------------------------------------
 -- CE QUE FAIT CETTE MIGRATION
 -- ------------------------------------------------------------------------------------
--- 1. Supprime les liens `tag_link` issus de l'import (et les 6 reliquats `extra = '{}'`,
---    17/06 et 03/07, également `created_by = NULL` : petits imports, pas de la saisie).
---    ⚠️ Les liens portant un `created_by` NON NUL sont TOUJOURS préservés — garde-fou
---    pour le cas où cette migration serait rejouée après de la saisie humaine.
+-- 1. Supprime les liens `tag_link` issus de l'import — et EUX SEULS. Le prédicat porte
+--    exclusivement sur `extra->>'source' = 'old_data_enrichment_20260512'` (+ la cible
+--    `target_table = 'object'`, `tag_link` étant polymorphe : sans elle, le DELETE
+--    déborderait le périmètre que la table temporaire rafraîchit ensuite).
+--
+--    ⚠️ CORRECTION DE REVUE (2026-07-29) — NE JAMAIS revenir à `created_by IS NULL`
+--    comme marqueur d'import. Le RPC éditeur `api.save_object_workspace_tags`
+--    (`object_workspace_gap_rpcs.sql`) insère `(tag_id, target_table, target_pk,
+--    position, extra)` **sans `created_by`** : une écriture humaine a donc, elle aussi,
+--    `created_by = NULL`. La première version de cette migration présentait ce test comme
+--    un garde-fou protégeant le travail des éditeurs ; il ne protégeait rien.
+--
+--    Les 6 lignes `extra = '{}'` (2 fiches, 17/06 et 03/07) ont été AUDITÉES et sont bien
+--    de la SAISIE ÉDITEUR — donc explicitement HORS purge. Preuve : le RPC fait un
+--    delete-then-insert sur toute la fiche en écrivant `position = ordinality-1` et
+--    `extra = {}` ; ces 6 lignes ont des positions contiguës depuis 0 (0-1-2-3 sur
+--    HLORUN00000000TV, 0-1 sur LOIRUN00000000QO), un horodatage identique par fiche, et
+--    surtout ces 2 fiches ne portent AUCUNE ligne d'import — exactement ce que produit le
+--    delete-then-insert quand un agent sauvegarde ses tags.
 -- 2. Retire du catalogue les 15 tags qui échouent au test d'admission (§4.1 du design).
 --    `Famille` et `Romantique` sont CONSERVÉS au catalogue (seuls sans doublon
 --    structuré) mais vidés de leurs liens hérités : ils redeviennent des tags éditoriaux
@@ -55,12 +71,12 @@
 -- ------------------------------------------------------------------------------------
 -- `tag_link` porte `trg_refresh_object_filter_caches_tag_link`, **FOR EACH ROW**, qui
 -- appelle `api.refresh_object_filter_caches(target_pk)` à chaque suppression. Une purge
--- naïve de 4 535 lignes ferait donc 4 535 reconstructions de `search_document` pour
--- 830 fiches (~5,5 par fiche, toutes redondantes sauf une). Le trigger est éteint — dans
+-- naïve de 4 529 lignes ferait donc 4 529 reconstructions de `search_document` pour
+-- 828 fiches (~5,5 par fiche, toutes redondantes sauf une). Le trigger est éteint — dans
 -- la transaction qui détient déjà le verrou, nommage gardé — puis UN seul passage de
 -- rafraîchissement est fait sur les fiches touchées.
 --
--- ⚠️ Ce rafraîchissement unique POSE VOLONTAIREMENT `updated_at = now()` sur les 830
+-- ⚠️ Ce rafraîchissement unique POSE VOLONTAIREMENT `updated_at = now()` sur les 828
 --    fiches concernées (`search_document` n'est pas exclu des trois triggers « changement
 --    métier » de `object` — différé §197 documenté). C'est VOULU ici, contrairement au
 --    backfill §197 qui les éteignait : les tags SONT dans la charge utile partenaire
@@ -89,7 +105,7 @@ BEGIN
   END IF;
   -- Le nom du trigger est codé en dur dans le DISABLE/ENABLE ci-dessous : s'il a été
   -- renommé, il faut le savoir AVANT d'avoir supprimé quoi que ce soit (sinon la purge
-  -- part avec le trigger actif et fait 4 535 rafraîchissements).
+  -- part avec le trigger actif et fait 4 529 rafraîchissements).
   IF NOT EXISTS (
     SELECT 1 FROM pg_trigger
     WHERE NOT tgisinternal
@@ -108,12 +124,7 @@ CREATE TEMP TABLE _tags_purge_targets ON COMMIT DROP AS
 SELECT DISTINCT tl.target_pk AS object_id
 FROM public.tag_link tl
 WHERE tl.target_table = 'object'
-  AND tl.created_by IS NULL                       -- garde : jamais de saisie humaine
-  AND (
-        tl.extra ->> 'source' = 'old_data_enrichment_20260512'
-     OR tl.extra IS NULL
-     OR NOT (tl.extra ? 'source')                  -- les 6 reliquats `extra = '{}'`
-      );
+  AND tl.extra ->> 'source' = 'old_data_enrichment_20260512';
 
 -- -------------------------------------------------------------------------------------
 -- 2) Suppression des liens, trigger de cache éteint (cf. précaution §197 ci-dessus).
@@ -124,14 +135,10 @@ DO $$
 DECLARE v_deleted bigint;
 BEGIN
   DELETE FROM public.tag_link tl
-  WHERE tl.created_by IS NULL
-    AND (
-          tl.extra ->> 'source' = 'old_data_enrichment_20260512'
-       OR tl.extra IS NULL
-       OR NOT (tl.extra ? 'source')
-        );
+  WHERE tl.target_table = 'object'
+    AND tl.extra ->> 'source' = 'old_data_enrichment_20260512';
   GET DIAGNOSTICS v_deleted = ROW_COUNT;
-  RAISE NOTICE 'migration 16p : % lien(s) tag_link supprimé(s) (attendu 4535 sur live, 0 en rejeu)', v_deleted;
+  RAISE NOTICE 'migration 16p : % lien(s) tag_link supprimé(s) (attendu 4529 sur live, 0 en rejeu)', v_deleted;
 END $$;
 
 ALTER TABLE public.tag_link ENABLE TRIGGER trg_refresh_object_filter_caches_tag_link;
@@ -172,17 +179,28 @@ DECLARE
   v_blocking bigint;
   v_removed  bigint;
 BEGIN
-  -- Fail-closed : `tag_link.tag_id → ref_tag ON DELETE CASCADE`. Si un lien SUBSISTE sur
-  -- un tag sortant, c'est qu'il porte un `created_by` (saisie humaine, préservée en 2) —
-  -- le supprimer par cascade détruirait silencieusement du travail d'éditeur.
+  -- Fail-closed : `tag_link.tag_id → ref_tag ON DELETE CASCADE`. Tout lien qui SUBSISTE
+  -- sur un tag sortant a survécu à l'étape 2, donc il n'est PAS de l'import : c'est de la
+  -- saisie éditeur. Le cascader détruirait silencieusement le travail d'un agent.
+  --
+  -- ⚠️ SUR LIVE AUJOURD'HUI CETTE GARDE FIRE, ET C'EST VOULU : 5 des 6 liens éditeur
+  -- audités pointent vers des tags sortants (HLORUN00000000TV « Panorama », « Mer et
+  -- littoral », « Bien-être » ; LOIRUN00000000QO « Produits locaux », « Boutique »).
+  -- Un agent les a posés délibérément — leur sort est un ARBITRAGE MÉTIER, pas un effet
+  -- de bord de migration. Il se règle au lot de requalification (rail de suggestion), pas
+  -- ici. Cette migration ne peut donc pas s'appliquer avant cet arbitrage : c'est la
+  -- raison technique qui confirme le reséquencement (purge en DERNIER, cf. design §6).
   SELECT count(*) INTO v_blocking
   FROM public.tag_link tl JOIN public.ref_tag t ON t.id = tl.tag_id
   WHERE t.slug = ANY(v_retired);
 
   IF v_blocking > 0 THEN
     RAISE EXCEPTION
-      'migration 16p : % lien(s) humain(s) subsistent sur des tags sortants — les cascader les détruirait. Arbitrer avant de rejouer.',
-      v_blocking;
+      'migration 16p : % lien(s) de SAISIE ÉDITEUR subsistent sur des tags sortants — les cascader les détruirait. Détail : %. Arbitrer (conserver le tag / requalifier la fiche / accepter la perte) avant de rejouer.',
+      v_blocking,
+      (SELECT string_agg(format('%s→%s', tl.target_pk, t.name), ', ' ORDER BY tl.target_pk, t.name)
+         FROM public.tag_link tl JOIN public.ref_tag t ON t.id = tl.tag_id
+        WHERE t.slug = ANY(v_retired));
   END IF;
 
   DELETE FROM public.ref_tag WHERE slug = ANY(v_retired);
@@ -203,7 +221,7 @@ BEGIN
     PERFORM api.refresh_object_filter_caches(v_id);
     v_n := v_n + 1;
   END LOOP;
-  RAISE NOTICE 'migration 16p : caches de filtre rafraîchis sur % fiche(s) (attendu 830 sur live, 0 en rejeu)', v_n;
+  RAISE NOTICE 'migration 16p : caches de filtre rafraîchis sur % fiche(s) (attendu 828 sur live, 0 en rejeu)', v_n;
 END $$;
 
 -- -------------------------------------------------------------------------------------
@@ -214,8 +232,8 @@ DECLARE v_left bigint; v_slugs text;
 BEGIN
   SELECT count(*) INTO v_left
   FROM public.tag_link
-  WHERE created_by IS NULL
-    AND (extra ->> 'source' = 'old_data_enrichment_20260512' OR extra IS NULL OR NOT (extra ? 'source'));
+  WHERE target_table = 'object'
+    AND extra ->> 'source' = 'old_data_enrichment_20260512';
   IF v_left > 0 THEN
     RAISE EXCEPTION 'migration 16p : % lien(s) de l''import subsistent après purge', v_left;
   END IF;

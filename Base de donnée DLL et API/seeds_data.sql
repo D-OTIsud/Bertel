@@ -2443,13 +2443,31 @@ USING ref_classification_scheme s
 WHERE s.id = oc.scheme_id
   AND s.code IN ('type_hot', 'type_act', 'retail_category');
 
--- 2) Tags « retail » RETIRÉS le 2026-07-29 (manifest 16p, decision log §203).
---    `shopping` (« Boutique ») dupliquait exactement l'équipement `ref_amenity.Boutique`
---    et `local_products` le nœud `taxonomy_com.local_crafts` — invariant §196 « un concept
---    filtrable n'a qu'UNE surface de saisie ». Les deux échouaient au test d'admission des
---    tags (design 2026-07-29-tags-doctrine-gouvernance) ; le concept reste filtrable par
---    son axe légitime. Ne pas les réintroduire ici : `tests/test_tags_purge_catalog.sql`
---    (garde D) échouerait.
+-- 2) Catalogue de tags §09 — SOURCE DE VÉRITÉ VERSIONNÉE (manifest 16p, decision log §203).
+--
+--    Les tags « retail » `shopping` / `local_products` ont été RETIRÉS le 2026-07-29 :
+--    « Boutique » dupliquait exactement l'équipement `ref_amenity.Boutique` et
+--    « Produits locaux » le nœud `taxonomy_com.local_crafts` — invariant §196 « un concept
+--    filtrable n'a qu'UNE surface de saisie ». Ne pas les réintroduire :
+--    `tests/test_tags_purge_catalog.sql` (garde D) échouerait.
+--
+--    ⚠️ Les tags ci-dessous sont seedés ICI parce qu'ils n'existaient JUSQU'À PRÉSENT que
+--    via `old_data_enrichment_20260512/01_enrich_imported_old_data.sql`, hors manifest —
+--    une base fraîche n'avait donc AUCUN tag alors que live en portait 16 (même classe de
+--    dérive fresh/live que la taxonomie, cf. la note 13b du runbook). Le catalogue survivant
+--    devient versionné : fresh == live.
+--
+--    Statut : `family` et `romantic` sont conservés À TITRE TRANSITOIRE. Ils sont les seuls
+--    sans doublon structuré, mais ils échouent au critère « vérifiable » du test d'admission
+--    tant qu'ils n'ont pas de définition écrite (à quoi reconnaît-on une fiche « Famille » ?).
+--    Leur requalification — définir, ou retirer — est un arbitrage du lot de promotion
+--    (design §4.3). Ne pas présenter ce statut comme acquis.
+INSERT INTO ref_tag (slug, name, description, color, position)
+VALUES ('family','Famille','Adapté aux familles ou aux enfants','#f59e0b',1)
+ON CONFLICT (slug) DO NOTHING;
+INSERT INTO ref_tag (slug, name, description, color, position)
+VALUES ('romantic','Romantique','Ambiance couple, intime ou cocooning','#e11d48',2)
+ON CONFLICT (slug) DO NOTHING;
 
 WITH cap AS (
   SELECT id, code FROM ref_capacity_metric

@@ -103,33 +103,43 @@ Seuls **Famille**, **Romantique** et **Bio** n'ont aucun doublon structuré.
 
 ## 2. Doctrine
 
-### R1 — Un tag qualifie la fiche, jamais son voisinage
+> **Assouplissements de revue (2026-07-29) — cette version PRÉVAUT sur la première rédaction.** Les règles
+> ci-dessous étaient formulées de façon trop absolue : R1 interdisait « vue sur » alors qu'une vue mer réelle
+> est un fait sur place ; R2-b et R2-c éliminaient alors qu'ils devraient orienter ; R3 promouvait
+> automatiquement, au risque de multiplier champs et taxonomies.
 
-> Si la phrase qui justifie le tag contient « à 30 minutes de », « proche de », « vue sur » — ce n'est pas un
-> tag, c'est de la localisation. La localisation a déjà deux axes : la commune et « Cadre & environnement ».
+### R1 — Un tag nomme un fait constatable SUR PLACE, jamais une proximité
 
-C'est la règle qui tue la classe de bug signalée. Elle est mesurable : **4,5 %** du corpus contient
-littéralement la formule « à X minutes de », **5,0 %** contient « vue mer ».
+> Le test n'est pas le mot employé, c'est **l'ancrage** : le fait est-il vérifiable en se tenant dans
+> l'établissement ? « Vue mer depuis la terrasse » = **oui**, c'est une caractéristique sur place, vérifiable
+> et actionnable. « À 30 minutes de la mer », « proche du volcan » = **non**, c'est de la localisation, et la
+> localisation a déjà ses axes (commune, « Cadre & environnement »).
 
-### R2 — Le test d'admission, quatre critères cumulatifs
+C'est la règle qui tue la classe de bug signalée, sans jeter les vues réelles avec. Elle est mesurable :
+**4,5 %** du corpus contient littéralement « à X minutes de » — ceux-là sont exclus par construction.
 
-| | Critère | Ce qu'il élimine |
+### R2 — Le test d'admission : un critère éliminatoire, trois indicateurs
+
+| | Critère | Portée |
 |---|---|---|
-| a | **Orphelin** — aucun axe structuré ne le porte (type, taxonomie, cadre, équipement, classement, capacité, prix, horaires) | 13 des 16 tags actuels (§1.4). C'est l'invariant §196 |
-| b | **Sélectif** — vise ~2 à 25 % du corpus | *Plein air* (68 %), *Cuisine* (64 %), *Panorama* (52 %) |
-| c | **Vérifiable** — un agent répond oui/non en regardant la fiche, sans interpréter | *Romantique*, *Famille* dans leur forme actuelle |
-| d | **Actionnable** — quelqu'un choisit vraiment avec | critère métier (PO) |
+| a | **Orphelin** — aucun axe structuré ne porte déjà le concept (type, taxonomie, cadre, équipement, classement, capacité, prix, horaires) | **ÉLIMINATOIRE.** Seul critère qui tranche à lui seul, parce qu'un doublon produit un filtre qui ment (invariant §196). Élimine 13 des 16 tags actuels (§1.4) |
+| b | **Sélectivité** | **Indicateur.** La bande ~2-25 % oriente, elle n'élimine pas : un tag sur 68 % du corpus est un décor, mais un tag sur 1 % peut être décisif s'il est le seul à répondre à une vraie demande |
+| c | **Vérifiabilité** | **Indicateur fort.** Plus un tag est interprétatif, plus il exige une **définition écrite** pour que deux agents le posent pareil. Sans définition, il dérive |
+| d | **Actionnable** | Critère métier (PO) |
 
-### R3 — Un candidat-tag récurrent ET vérifiable n'est pas un tag : c'est un champ manquant
+### R3 — Un candidat récurrent et vérifiable est un SIGNAL DE PROMOTION, pas une promotion automatique
 
-> Le tag est le brouillon du modèle. On ne garde en tag que ce qui est éditorial et **non normalisable**.
+> Le tag est le brouillon du modèle. Quand un concept revient et se vérifie, c'est le signal qu'il **mérite
+> d'être instruit** pour rejoindre le modèle (`ref_amenity`, taxonomie, champ dédié) — pas qu'il doit y
+> passer d'office.
 
-Conséquence opérationnelle : quand un concept revient (mesuré ≥ ~2 % du corpus) et qu'il est objectivement
-vérifiable, il rejoint **le modèle** (`ref_amenity`, taxonomie, champ dédié) — pas le catalogue de tags. Il
-devient alors filtrable proprement, et R2-a interdit d'en refaire un tag.
+L'instruction pèse deux choses avant de promouvoir : le **coût** (surface éditeur, filtre, i18n, seeds,
+manifest, migration, et une ligne de plus dans chaque sélecteur) et la **stabilité** du concept. Un concept
+instable, saisonnier ou marginal **reste un tag** — c'est précisément le rôle de cet axe : accueillir ce qui
+n'est pas encore, ou pas assez, stabilisé pour mériter une colonne.
 
-C'est ce qui distingue durablement cet axe des autres : **le catalogue de tags doit rester petit et le
-rester.** Un catalogue de tags qui grossit est le symptôme d'un modèle qui n'a pas suivi.
+Le catalogue de tags doit rester petit ; mais multiplier les champs a son propre coût, et un modèle
+sur-normalisé est aussi coûteux qu'un catalogue de tags qui enfle.
 
 ---
 
@@ -182,10 +192,22 @@ est normalisable rejoint le modèle, le reste passe par une suggestion relue par
 | Bio | 25 | R2-c | (aucun axe — voir 4.3, candidat à promotion) |
 | `jacuzzy` | 0 | doublon orthographique de l'équipement `Jacuzzi` (85 usages) | équipement `Jacuzzi` |
 
-**Famille** (193) et **Romantique** (51) sont les seuls sans doublon structuré. Ils échouent R2-c sous leur
-forme actuelle (non vérifiables). Ils ne sont pas supprimés du catalogue mais **vidés de leurs liens**
-hérités : ils redeviennent des tags éditoriaux à poser, et rejoignent le chantier « clientèle / audience »
-déjà différé (§34).
+**Famille** (193) et **Romantique** (51) — statut assumé, pas masqué. Ce sont les seuls sans doublon
+structuré, mais ils **échouent l'indicateur R2-c** : rien n'écrit à quoi on reconnaît une fiche « Famille ».
+Les conserver au catalogue est donc une décision **transitoire**, pas une réussite au test — la première
+rédaction de cette spec les gardait sans le dire, ce qui mettait la doctrine en contradiction avec son propre
+catalogue cible.
+
+Deux sorties, à trancher au lot 2 :
+- **les définir** (« Famille » = équipements enfants ∪ capacité ≥ 4 ∪ mention explicite ; « Romantique » = ?)
+  — et ils passent R2-c ; mais une définition dérivable est aussi un signal R3, donc l'instruction doit
+  peser champ vs tag ;
+- **les retirer**, et le catalogue démarre vide en attendant la requalification.
+
+Point ouvert relevé au passage : « Romantique » recoupe le nœud `taxonomy_hot.hotel_romantique` (similarité
+0.647). Aucun nœud équivalent n'existe côté HLO, où il s'applique surtout — mais c'est un arbitrage R2-a.
+
+Ils sont en tout état de cause **vidés de leurs liens hérités** (issus du même import).
 
 ### 4.2 Candidats mesurés — vers le modèle (R3), pas vers le catalogue
 
@@ -276,13 +298,44 @@ Gate : superuser plateforme ou admin d'ORG de rang suffisant, aligné sur l'admi
 
 ## 6. Lots
 
-| Lot | Contenu | Dépend de |
-|---|---|---|
-| **0** | Purge des 4 529 + 6 liens ; retrait des 15 tags sortants (§4.1) ; garde CI non vacante | — |
-| **1** | `api.suggest_similar_tags` + `create_tag` fail-closed + `TagPickerModal` ; écran d'administration du catalogue | — |
-| **2** | Promotions R3 : `ref_amenity.table_hotes` (famille Gastronomie) + nœuds productions en taxonomie PRD | arbitrage PO §4.2 |
-| **3** | Rail de suggestion à valider (preuve = la phrase justificative), pour les tags **et** les champs promus | lots 1-2 |
-| **4** | Sud Sauvage : tag ou `zone_touristique` ? périmètre communal à définir | arbitrage PO |
+> **Reséquencé en revue (2026-07-29).** La purge était d'abord le lot 0. C'était une erreur d'ordre : elle
+> vide l'axe public **avant** que la gouvernance, les champs de remplacement et la requalification n'existent,
+> et rien n'empêcherait un éditeur de recréer le lendemain les tags qu'on vient de retirer (`api.create_tag`
+> est ouvert). **La purge passe en dernier, dans une release coordonnée.**
+
+| # | Lot | Contenu | Dépend de |
+|---|---|---|---|
+| **1** | Traçabilité des écritures | `api.save_object_workspace_tags` doit écrire `created_by` (et `api.create_tag` le fait déjà sur `ref_tag`). Sans ça, aucune purge ne peut distinguer l'import de la saisie — c'est le défaut qui a failli détruire 6 lignes humaines | — |
+| **2** | Gouvernance | `api.suggest_similar_tags` (trigramme + phonétique, sur `ref_tag` **et** catalogues voisins) + `create_tag` fail-closed (`p_confirm_distinct`) + `TagPickerModal` + écran d'administration du catalogue (fusionner / renommer / supprimer avec report des liens, ramassage des 0-lien) | — |
+| **3** | Seed du catalogue survivant | **FAIT dans cette passe** — `family` / `romantic` seedés dans `seeds_data.sql`. Ils n'existaient que via l'enrichissement d'import hors manifest : une base fraîche n'avait aucun tag alors que live en portait 16 (même dérive fresh/live que la taxonomie, note 13b du runbook) | — |
+| **4** | Champs de remplacement (R3) | Instruction coût/stabilité puis, si retenu : `ref_amenity.table_hotes` (famille Gastronomie) + nœuds productions en taxonomie PRD (vanille 28, letchis 22, curcuma 18, miel 14, rhum 14, géranium 13) | arbitrage PO §4.2 |
+| **5** | Requalification | Rail de suggestion à valider (preuve = la phrase justificative), pour les tags **et** les champs promus. Inclut l'arbitrage des 5 liens éditeur posés sur des tags sortants (§6.2) | lots 2 et 4 |
+| **6** | Sauvegarde + purge + republication | Table de sauvegarde des lignes exactes à supprimer, PUIS `migration_tags_purge_import_20260512.sql` (écrite, manifest 16p), PUIS refresh des MV — **une seule release coordonnée**, parce que la purge republie 828 fiches chez les partenaires | lots 1-5 |
+| **0b** | Réparation de `object_environment_tag` | voir la correction de vérité-terrain en tête de document | couche côtière absente |
+| — | Sud Sauvage | tag ou `object_location.zone_touristique` (colonne existante, 100 % NULL) ? périmètre communal à définir | arbitrage PO |
+
+### 6.2 La provenance ne se lit PAS dans `created_by` (correction de revue)
+
+`api.save_object_workspace_tags` (`object_workspace_gap_rpcs.sql`) insère `tag_link` **sans `created_by`** :
+une écriture éditeur a donc, elle aussi, `created_by = NULL`. Tout test qui prend `created_by IS NULL` pour
+un marqueur d'import est **inerte** — la première version de la purge présentait exactement ce test comme un
+garde-fou protégeant le travail des agents.
+
+**Le seul marqueur fiable est `extra->>'source'`**, et le prédicat de purge s'y limite désormais (plus
+`target_table = 'object'`, `tag_link` étant polymorphe).
+
+Les 6 lignes `extra = '{}'` ont été **auditées et sont de la saisie éditeur** : le RPC fait un
+delete-then-insert de toute la fiche en écrivant `position = ordinality-1` et `extra = {}` ; ces lignes ont
+des positions contiguës depuis 0 (0-1-2-3 sur `HLORUN00000000TV`, 0-1 sur `LOIRUN00000000QO`), un horodatage
+identique par fiche, et ces 2 fiches ne portent **aucune** ligne d'import — signature exacte du
+delete-then-insert. Elles sont hors purge.
+
+**Conséquence directe :** 5 de ces 6 liens pointent vers des tags sortants (*Panorama*, *Mer et littoral*,
+*Bien-être*, *Produits locaux*, *Boutique*). La garde fail-closed de la migration **fire donc aujourd'hui**,
+et c'est voulu : un agent les a posés délibérément, leur sort est un arbitrage métier (lot 5), pas un effet
+de bord de migration. C'est la raison technique qui confirme le reséquencement.
+
+Le lot 1 (écrire `created_by`) rend ce raisonnement inutile pour l'avenir : la provenance sera lisible.
 
 ### 6.1 Précaution d'exécution du lot 0 (§197)
 

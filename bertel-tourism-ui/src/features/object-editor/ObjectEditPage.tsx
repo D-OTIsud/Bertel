@@ -6,9 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useUiStore } from '../../store/ui-store';
 import { useSessionStore } from '../../store/session-store';
 import { useToast } from '../../hooks/useToast';
-import { getObjectWorkspaceResource } from '../../services/object-workspace';
-import { ensureReferenceCatalogs } from '../../hooks/useReferenceCatalogsQuery';
-import { useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
+import { loadObjectWorkspace, useObjectWorkspaceQuery, usePublishObjectWorkspaceMutation, useSetObjectStatusMutation, useObjectVersionsQuery, useRestoreObjectVersionMutation } from '../../hooks/useExplorerQueries';
 import type { ObjectWorkspaceResource, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { getArchetypeMeta, type ArchetypeCode, type ArchetypeMeta, TYPE_LABEL } from './archetypes';
@@ -217,8 +215,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
   async function handleExportJson() {
     try {
-      const catalogs = await ensureReferenceCatalogs(queryClient);
-      const ws = await getObjectWorkspaceResource(objectId, langPrefs, catalogs);
+      const ws = await loadObjectWorkspace(queryClient, objectId, langPrefs);
       if (editor.isDirty) {
         setStatusMessage(`Export basé sur la fiche enregistrée — vos modifications non sauvegardées n'y figurent pas.`);
       }
@@ -231,8 +228,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
   async function handleExportCsv() {
     try {
-      const catalogs = await ensureReferenceCatalogs(queryClient);
-      const ws = await getObjectWorkspaceResource(objectId, langPrefs, catalogs);
+      const ws = await loadObjectWorkspace(queryClient, objectId, langPrefs);
       const ioMeta: ObjectIoMeta = { objectId, type: ws.type ?? '', name: ws.name };
       downloadTextFile(`${objectId}.csv`, 'text/csv', serializeObjectCsv(ws.modules, ioMeta));
     } catch (error) {

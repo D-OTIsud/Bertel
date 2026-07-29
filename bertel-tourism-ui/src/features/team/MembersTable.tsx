@@ -2,6 +2,7 @@
 import { ShieldCheck } from 'lucide-react';
 import type { OrgMember } from '@/services/rbac';
 import { resolveRoleLabel } from '@/utils/labels';
+import { formatLastSeen } from './format-last-seen';
 
 /** Shape returned by the `children` render-prop — controls both role cells. */
 export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
@@ -26,6 +27,7 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
           <th scope="col">Rôle métier</th>
           <th scope="col">Rôle admin</th>
           <th scope="col">Permissions</th>
+          <th scope="col">Dernière activité</th>
           <th scope="col" className="data-table__actions"></th>
         </tr>
       </thead>
@@ -34,6 +36,7 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
           const isSelf = m.userId === currentUserId;
           const cells = children ? children(m, isSelf) : null;
           const count = m.permissionCodes.length;
+          const lastSeen = formatLastSeen(m.lastSeenAt);
           return (
             <tr key={m.membershipId}>
               <td>
@@ -66,6 +69,16 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
                 >
                   <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}
                 </button>
+              </td>
+              <td>
+                {lastSeen ? (
+                  <>
+                    <div className="members-table__seen">{lastSeen.absolute}</div>
+                    <div className="members-table__mail">{lastSeen.relative}</div>
+                  </>
+                ) : (
+                  <span className="muted" title="Ce compte ne s'est jamais connecté">Jamais</span>
+                )}
               </td>
               <td className="data-table__actions">
                 {!isSelf && onDeactivate && (

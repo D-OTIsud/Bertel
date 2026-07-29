@@ -14,7 +14,8 @@ describe('rbac service', () => {
   it('listOrgMembers maps RPC rows to OrgMember objects', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: [{ membership_id: 'm1', user_id: 'u1', email: 'a@b.c', display_name: 'A', is_active: true,
-               business_role_code: 'contributor', admin_role_code: null, permission_codes: ['create_object'] }],
+               business_role_code: 'contributor', admin_role_code: null, permission_codes: ['create_object'],
+               last_seen_at: '2026-07-29T11:11:09.98Z' }],
       error: null,
     });
     mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
@@ -23,6 +24,7 @@ describe('rbac service', () => {
     expect(members[0]).toEqual({
       membershipId: 'm1', userId: 'u1', email: 'a@b.c', displayName: 'A', isActive: true,
       businessRoleCode: 'contributor', adminRoleCode: null, permissionCodes: ['create_object'],
+      lastSeenAt: '2026-07-29T11:11:09.98Z',
     });
   });
 

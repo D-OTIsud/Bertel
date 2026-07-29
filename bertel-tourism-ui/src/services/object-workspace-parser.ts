@@ -86,13 +86,28 @@ export interface ObjectWorkspaceUnitTypes {
   unavailableReason: string | null;
 }
 
+/** Positionnements commerciaux d'un hôtel, multi-valués et indépendants de sa nature. */
+export interface ObjectWorkspacePositionings {
+  options: Array<{ code: string; label: string; description: string }>;
+  selectedCodes: string[];
+  unavailableReason: string | null;
+}
+
 export interface ObjectWorkspaceTaxonomyModule {
   domains: ObjectWorkspaceTaxonomyDomain[];
   unitTypes: ObjectWorkspaceUnitTypes;
+  /** Optionnel pour préserver les brouillons/imports créés avant cet axe. */
+  positionings?: ObjectWorkspacePositionings;
   unavailableReason: string | null;
 }
 
 export const EMPTY_UNIT_TYPES: ObjectWorkspaceUnitTypes = {
+  options: [],
+  selectedCodes: [],
+  unavailableReason: null,
+};
+
+export const EMPTY_POSITIONINGS: ObjectWorkspacePositionings = {
   options: [],
   selectedCodes: [],
   unavailableReason: null,
@@ -1667,6 +1682,7 @@ function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorks
     // §201 — le catalogue et la sélection sont chargés par un select direct dans
     // l'étape d'enrichissement : `get_object_resource` ne les porte pas.
     unitTypes: EMPTY_UNIT_TYPES,
+    positionings: EMPTY_POSITIONINGS,
     unavailableReason: null,
   };
 }

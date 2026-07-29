@@ -92,6 +92,7 @@ export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
   openAt: null,
   environmentTagsAny: [],
   accommodationUnitTypesAny: [],
+  accommodationPositioningsAny: [],
   amenityFamiliesAny: [],
   taxonomyAny: [],
   tagsAny: [],
@@ -158,6 +159,7 @@ export function normalizeExplorerFilters(
       openAt: common.openAt ?? null,
       environmentTagsAny: common.environmentTagsAny ?? [],
       accommodationUnitTypesAny: common.accommodationUnitTypesAny ?? [],
+      accommodationPositioningsAny: common.accommodationPositioningsAny ?? [],
       amenityFamiliesAny: common.amenityFamiliesAny ?? [],
       taxonomyAny: common.taxonomyAny ?? [],
       tagsAny: common.tagsAny ?? [],
@@ -307,6 +309,9 @@ export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
     return true;
   }
   if (common.accommodationUnitTypesAny.length > 0) {
+    return true;
+  }
+  if (common.accommodationPositioningsAny.length > 0) {
     return true;
   }
   if (common.amenityFamiliesAny.length > 0) {
@@ -629,6 +634,14 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const unitTypes = common.accommodationUnitTypesAny.map(cleanString).filter(Boolean);
   if (unitTypes.length > 0) {
     payload.accommodation_unit_types_any = unitTypes;
+  }
+
+  // Positionnement = axe hôtelier multi-valué, indépendant de la nature. Le
+  // RPC l'AND avec `taxonomy_any` : « Hôtel » + « boutique » affine réellement
+  // la liste au lieu d'élargir l'union des deux valeurs.
+  const positionings = common.accommodationPositioningsAny.map(cleanString).filter(Boolean);
+  if (bucket === 'HOT' && positionings.length > 0) {
+    payload.accommodation_positionings_any = positionings;
   }
 
   // §155 — sous-catégories : partition par bucket (une sélection « Pizzeria »

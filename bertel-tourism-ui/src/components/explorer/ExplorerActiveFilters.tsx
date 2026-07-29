@@ -132,6 +132,9 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
       case 'accommodationUnitTypes':
         useStore.getState().setAccommodationUnitTypes([]);
         break;
+      case 'accommodationPositionings':
+        useStore.getState().setAccommodationPositionings([]);
+        break;
       case 'openAt':
         useStore.getState().setOpenAt(null);
         break;

@@ -181,6 +181,12 @@ export interface ExplorerCommonFilters {
    */
   accommodationUnitTypesAny: string[];
   /**
+   * Positionnements commerciaux d'hôtel (boutique, affaires, familial…).
+   * Axe multi-valué, combiné en ET avec la nature d'hébergement et envoyé au
+   * RPC comme `accommodation_positionings_any`.
+   */
+  accommodationPositioningsAny: string[];
+  /**
    * §159 — services & équipements (familles d'aménités : piscine→outdoor,
    * bien-être, parking…). Transverse (`object_amenity` est trans-types) ;
    * envoyé au RPC comme `amenity_families_any`.
@@ -399,6 +405,8 @@ export interface ExplorerReferences {
   environmentTags: ExplorerReferenceOption[];
   /** §201 — catalogue `accommodation_unit_type` (bulle, tipi, lodge, cabane…). */
   accommodationUnitTypes: ExplorerReferenceOption[];
+  /** Positionnements d'hôtel issus des nœuds `taxonomy_hot` d'axe `positionnement`. */
+  accommodationPositionings?: ExplorerReferenceOption[];
   /** Familles de services & équipements (ref_code domaine amenity_family) — filtre transverse §159. */
   amenityFamilies: ExplorerReferenceOption[];
   /** Catalogue des tags §09 (ref_tag) — le picker du panneau complète le click-to-filter (§160). */

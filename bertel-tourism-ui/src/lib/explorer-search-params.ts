@@ -115,6 +115,12 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     ...(searchParams.get('environment') != null && {
       environmentTagsAny: (searchParams.get('environment') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
     }),
+    ...(searchParams.get('accommodationUnitTypes') != null && {
+      accommodationUnitTypesAny: (searchParams.get('accommodationUnitTypes') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
+    ...(searchParams.get('accommodationPositionings') != null && {
+      accommodationPositioningsAny: (searchParams.get('accommodationPositionings') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
+    }),
     ...(taxonomyAny !== undefined && { taxonomyAny }),
     ...(searchParams.get('amenityFamilies') != null && {
       amenityFamiliesAny: (searchParams.get('amenityFamilies') ?? '').split(',').map((item) => item.trim()).filter(Boolean),
@@ -290,6 +296,12 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   }
   if (normalizedFilters.common.taxonomyAny.length > 0) {
     p.set('taxonomy', normalizedFilters.common.taxonomyAny.map((item) => `${item.domain}:${item.code}`).join(','));
+  }
+  if (normalizedFilters.common.accommodationUnitTypesAny.length > 0) {
+    p.set('accommodationUnitTypes', normalizedFilters.common.accommodationUnitTypesAny.join(','));
+  }
+  if (normalizedFilters.common.accommodationPositioningsAny.length > 0) {
+    p.set('accommodationPositionings', normalizedFilters.common.accommodationPositioningsAny.join(','));
   }
   const hotCapacity = serializeCapacityFilters(normalizedFilters.hot.capacityFilters);
   if (hotCapacity) {

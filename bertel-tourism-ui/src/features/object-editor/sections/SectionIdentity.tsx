@@ -197,7 +197,12 @@ function TaxonomyModal({
   onApply: (assignment: ObjectWorkspaceTaxonomyAssignment) => void;
 }) {
   const assignment = domain?.assignment ?? null;
-  const nodes = domain?.nodes ?? [];
+  // La nature reste un choix exclusif. Les axes multi-valués ont leurs propres
+  // contrôles sous le sélecteur et ne doivent jamais apparaître comme des
+  // « natures » concurrentes d'Hôtel ou Hôtel-restaurant.
+  const nodes = (domain?.nodes ?? []).filter(
+    (node) => node.axis !== 'positionnement' && node.axis !== 'type_unite',
+  );
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
   const childrenByParentId = groupTaxonomyChildren(nodes);
   const roots = childrenByParentId.get(null) ?? [];
@@ -453,6 +458,48 @@ export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
           </button>
         </Field>
       </div>
+
+      {taxonomy.positionings && taxonomy.positionings.options.length > 0 ? (
+        <div style={{ marginBottom: 12 }}>
+          <Field label="Positionnement">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Positionnement">
+              {taxonomy.positionings.options.map((option) => {
+                const active = taxonomy.positionings?.selectedCodes.includes(option.code) === true;
+                return (
+                  <button
+                    key={option.code}
+                    type="button"
+                    aria-pressed={active}
+                    title={option.description || undefined}
+                    onClick={() => editor.replaceModule('taxonomy', {
+                      ...taxonomy,
+                      positionings: taxonomy.positionings ? {
+                        ...taxonomy.positionings,
+                        selectedCodes: active
+                          ? taxonomy.positionings.selectedCodes.filter((code) => code !== option.code)
+                          : [...taxonomy.positionings.selectedCodes, option.code],
+                      } : undefined,
+                    })}
+                    className={`identity-unit-chip${active ? ' is-active' : ''}`}
+                    style={{
+                      minHeight: 28,
+                      borderRadius: 8,
+                      border: `1px solid ${active ? 'var(--teal, #176b6a)' : 'var(--line)'}`,
+                      background: active ? 'var(--teal, #176b6a)' : 'var(--surface)',
+                      color: active ? '#fff' : 'var(--ink-2)',
+                      padding: '4px 10px',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        </div>
+      ) : null}
 
       {/* §201 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
           juste sous elle parce que c'est là que la confusion se joue : « Bulle »

@@ -48,6 +48,7 @@ interface ExplorerState extends ExplorerFilters {
   /** §154 — cadre & environnement (bord de mer, montagne, volcan…), transverse. */
   setEnvironmentTags: (codes: string[]) => void;
   setAccommodationUnitTypes: (codes: string[]) => void;
+  setAccommodationPositionings: (codes: string[]) => void;
   setRankedLabelScheme: (schemeCode: string | null) => void;
   setRankedLabelIncludeEquivalents: (value: boolean) => void;
   setRankedLabelValueCodes: (codes: string[]) => void;
@@ -238,6 +239,9 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
   // §201 — types d'unité d'hébergement (axe multi-valué, table de liaison).
   setAccommodationUnitTypes: (codes) =>
     set((state) => ({ common: { ...state.common, accommodationUnitTypesAny: codes } })),
+  // Positionnements d'hôtel : axe multi-valué séparé de la nature.
+  setAccommodationPositionings: (codes) =>
+    set((state) => ({ common: { ...state.common, accommodationPositioningsAny: codes } })),
   // §157 — « ouvert à … » exclusif avec « ouvert maintenant » (deux instants
   // contradictoires ne doivent jamais s'ANDer silencieusement côté RPC).
   setOpenAt: (value) =>

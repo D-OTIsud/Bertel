@@ -13,7 +13,14 @@ export interface DashboardPeriod { updatedAtFrom?: string; updatedAtTo?: string 
 // Clés de facettes SPÉCIFIQUES par type — honnêtes seulement en mono-bucket (§7).
 // En multi/zéro-bucket, elles sont retirées du payload (le garde EXISTS du RPC
 // exclurait tous les objets des autres types). `bbox` = repli carte, hors Dashboard.
-const TYPE_SPECIFIC_KEYS = ['itinerary', 'capacity_filters', 'meeting_room', 'event', 'bbox'] as const;
+const TYPE_SPECIFIC_KEYS = [
+  'itinerary',
+  'capacity_filters',
+  'meeting_room',
+  'event',
+  'bbox',
+  'accommodation_positionings_any',
+] as const;
 
 /** Payload transverse (multi/zéro-bucket) : facettes indépendantes du type +
  *  taxonomie RÉ-AGRÉGÉE sur tous les domaines (buildBucketRpcFilters la scope au bucket). */

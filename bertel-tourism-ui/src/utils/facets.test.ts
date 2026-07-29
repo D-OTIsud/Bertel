@@ -740,6 +740,7 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
     openNow: true,
     openAt: '2026-07-27T18:00',
     accommodationUnitTypesAny: ['bubble'],
+    accommodationPositioningsAny: ['boutique_hotel'],
     environmentTagsAny: ['bord_de_mer'],
     amenityFamiliesAny: ['wellness'],
     taxonomyAny: [{ domain: 'taxonomy_hlo', code: 'gite' }],

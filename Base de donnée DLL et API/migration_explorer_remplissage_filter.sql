@@ -1250,4 +1250,233 @@ AS $function$
 $function$
 ;
 
+-- ---- 5) list_object_resources_filtered_page : le champ sur les cartes -----
+-- Corps DERIVE de la definition live par .tmp_pgapply/_gen_page204.cjs.
+-- NE PAS EDITER A LA MAIN : regenerer.
+-- Emis des que l appelant est editeur, sans condition sur le filtre :
+-- 2,0 ms mesures pour une page de 24 (tout en index scan). Le conditionner
+-- au filtre economiserait 2 ms et priverait la colonne Table de ses donnees
+-- filtre eteint.
+CREATE OR REPLACE FUNCTION api.list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)
+ RETURNS json
+ LANGUAGE plpgsql
+ STABLE
+ SET search_path TO 'pg_catalog', 'public', 'api', 'extensions', 'auth', 'audit', 'crm', 'ref'
+AS $function$
+DECLARE
+  v_cur JSONB;
+  v_offset INTEGER := 0;
+  v_limit  INTEGER := LEAST(GREATEST(COALESCE(p_page_size,50),1), 200);
+  v_filters JSONB := COALESCE(p_filters, '{}'::jsonb);
+  v_types object_type[] := p_types;
+  v_status object_status[] := p_status;
+  v_search TEXT := p_search;
+  v_lang_prefs TEXT[] := p_lang_prefs;
+  v_total BIGINT;
+  v_cursor JSONB;
+  v_next TEXT;
+  v_data JSONB;
+  v_track TEXT := lower(coalesce(p_track_format,'none'));
+  v_inc   BOOLEAN := p_include_stages;
+  v_color TEXT    := p_stage_color;
+  v_render_enabled BOOLEAN := TRUE;
+  v_render_locale TEXT := NULL;
+  v_render_tz TEXT := 'UTC';
+  v_render_version TEXT := '1.0';
+  v_view TEXT := lower(COALESCE(p_view, 'card'));
+  v_current_cursor TEXT;
+  v_rank0 INT;
+  v_rank1 INT;
+BEGIN
+  v_render_locale := CASE
+    WHEN array_length(p_lang_prefs,1) >= 1 AND position('-' IN p_lang_prefs[1]) > 0 THEN p_lang_prefs[1]
+    WHEN array_length(p_lang_prefs,1) >= 1 AND char_length(p_lang_prefs[1]) = 2 THEN lower(p_lang_prefs[1]) || '-' || upper(p_lang_prefs[1])
+    ELSE 'fr-FR'
+  END;
+  v_render_locale := lower(split_part(v_render_locale, '-', 1)) || '-' ||
+                     upper(CASE WHEN position('-' IN v_render_locale) > 0 THEN split_part(v_render_locale, '-', 2)
+                                ELSE split_part(v_render_locale, '-', 1) END);
+
+  -- Cursor (offset/page_size + options)
+  IF p_cursor IS NOT NULL THEN
+    v_cur := api.cursor_unpack(p_cursor);
+    v_offset := COALESCE((v_cur->>'offset')::INT, 0);
+    v_limit  := LEAST(GREATEST(COALESCE((v_cur->>'page_size')::INT, v_limit),1),200);
+    IF v_cur ? 'filters'      THEN v_filters := v_cur->'filters'; END IF;
+    IF v_cur ? 'types'        THEN v_types := ARRAY(SELECT jsonb_array_elements_text(v_cur->'types'))::object_type[]; END IF;
+    IF v_cur ? 'status' THEN
+      IF (v_cur->'status') IS NULL OR jsonb_typeof(v_cur->'status') <> 'array' THEN
+        v_status := NULL;
+      ELSE
+        v_status := ARRAY(SELECT jsonb_array_elements_text(v_cur->'status'))::object_status[];
+      END IF;
+    END IF;
+    IF v_cur ? 'search'       THEN v_search := v_cur->>'search'; END IF;
+    IF v_cur ? 'lang'         THEN v_lang_prefs := ARRAY(SELECT jsonb_array_elements_text(v_cur->'lang')); END IF;
+    IF v_cur ? 'track_format'   THEN v_track := lower(v_cur->>'track_format'); END IF;
+    IF v_cur ? 'include_stages' THEN v_inc   := (v_cur->>'include_stages')::boolean; END IF;
+    IF v_cur ? 'stage_color'    THEN v_color := v_cur->>'stage_color'; END IF;
+    IF v_cur ? 'render'         THEN v_render_enabled := (v_cur->>'render')::boolean; END IF;
+    IF v_cur ? 'render_locale'  THEN v_render_locale := v_cur->>'render_locale'; END IF;
+    IF v_cur ? 'render_tz'      THEN v_render_tz := v_cur->>'render_tz'; END IF;
+    IF v_cur ? 'render_version' THEN v_render_version := v_cur->>'render_version'; END IF;
+    IF v_cur ? 'view'           THEN v_view := lower(v_cur->>'view'); END IF;
+  END IF;
+
+  IF v_status IS NULL THEN
+    v_status := ARRAY['published']::object_status[];
+  END IF;
+
+  IF v_view NOT IN ('card', 'full') THEN
+    v_view := 'card';
+  END IF;
+
+  IF v_render_locale IS NULL OR v_render_locale = '' THEN
+    v_render_locale := 'fr-FR';
+  END IF;
+  v_render_locale := lower(split_part(v_render_locale, '-', 1)) || '-' ||
+                     upper(CASE WHEN position('-' IN v_render_locale) > 0 THEN split_part(v_render_locale, '-', 2)
+                                ELSE split_part(v_render_locale, '-', 1) END);
+
+  WITH filt AS (
+    SELECT
+      o.id,
+      o.name_normalized,
+      o.updated_at,
+      o.updated_at_source,
+      -- label_rank: 0 = exact label, 1 = equivalent evidence; always 0 when no label_scheme_ranked filter
+      fids.label_rank,
+      fids.label_match,
+      -- relevance (§109): full-text rank; 0 when no search term (ordering then identical to legacy)
+      fids.relevance
+    FROM api.get_filtered_object_ids(v_filters, v_types, v_status, v_search) fids
+    JOIN object o ON o.id = fids.object_id
+  ),
+  paged AS (
+    SELECT f.*, ROW_NUMBER() OVER (ORDER BY CASE WHEN v_filters ? 'label_scheme_ranked' THEN f.label_rank END, f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id) AS ord
+    FROM filt f
+    ORDER BY CASE WHEN v_filters ? 'label_scheme_ranked' THEN f.label_rank END, f.relevance DESC, f.label_rank, f.name_normalized NULLS LAST, f.id
+    OFFSET v_offset LIMIT v_limit
+  ),
+  raw_data AS (
+    SELECT
+      CASE
+        WHEN v_view = 'full' THEN
+          api.get_object_resources_batch(
+            (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+            v_lang_prefs,
+            v_track,
+            jsonb_build_object(
+              'include_stages', v_inc,
+              'stage_color', v_color,
+              'render', v_render_enabled,
+              'render_locale', v_render_locale,
+              'render_tz', v_render_tz,
+              'render_version', v_render_version
+            )
+          )::jsonb
+        ELSE
+          api.get_object_cards_batch(
+            (SELECT ARRAY_AGG(p.id ORDER BY p.ord) FROM paged p),
+            v_lang_prefs
+          )::jsonb
+      END AS data
+  ),
+  decorated_data AS (
+    -- Attach per-card label_match by array position. Sound because this function is
+    -- SECURITY INVOKER (paged ids are already RLS-filtered to the caller's readable set,
+    -- the same set the batch functions authorize) and both batch functions return items
+    -- in input order (ORDER BY input ordinality).
+    SELECT COALESCE(
+      jsonb_agg(
+        CASE
+          WHEN p.label_match IS NULL THEN item.value
+          ELSE item.value || jsonb_build_object('label_match', p.label_match)
+        END
+        ORDER BY item.ordinality
+      ) FILTER (WHERE item.value IS NOT NULL),
+      '[]'::jsonb
+    ) AS data
+    FROM raw_data rd
+    LEFT JOIN LATERAL jsonb_array_elements(COALESCE(rd.data, '[]'::jsonb)) WITH ORDINALITY AS item(value, ordinality) ON TRUE
+    LEFT JOIN paged p ON p.ord = item.ordinality
+  )
+  SELECT
+    (SELECT COUNT(*) FROM filt) AS total,
+    (SELECT data FROM decorated_data) AS data,
+    (SELECT COUNT(*) FROM filt WHERE label_rank = 0) AS rank0,
+    (SELECT COUNT(*) FROM filt WHERE label_rank = 1) AS rank1
+  INTO v_total, v_data, v_rank0, v_rank1;
+
+  -- 204 — Remplissage : decoration de la page en UN SEUL appel ensembliste.
+  -- Jamais par ligne. api.object_missing_essentials rend 0 ligne si l appelant
+  -- n est pas editeur, donc le LEFT JOIN laisse simplement le champ absent :
+  -- le gate « editeur et superieur » est porte LA-BAS, pas ici.
+  -- Cette fonction est en plpgsql : le corps du IF n est planifie QUE s il
+  -- s execute. Le cout est donc reellement nul pour une page vide, contrairement
+  -- a un predicat SQL dont la seule presence coute de la planification.
+  IF jsonb_array_length(COALESCE(v_data, '[]'::jsonb)) > 0 THEN
+    SELECT COALESCE(
+             jsonb_agg(
+               CASE WHEN me.missing IS NULL THEN item.value
+                    ELSE item.value || jsonb_build_object('missing_essentials', to_jsonb(me.missing))
+               END
+               ORDER BY item.ordinality
+             ),
+             '[]'::jsonb
+           )
+    INTO v_data
+    FROM jsonb_array_elements(v_data) WITH ORDINALITY AS item(value, ordinality)
+    LEFT JOIN api.object_missing_essentials(
+                ARRAY(SELECT d->>'id' FROM jsonb_array_elements(v_data) AS d)
+              ) me ON me.object_id = item.value->>'id';
+  END IF;
+
+  v_cursor := jsonb_build_object(
+    'kind','page',
+    'offset', v_offset,
+    'page_size', v_limit,
+    'filters', v_filters,
+    'types', CASE WHEN v_types IS NULL THEN NULL ELSE to_jsonb(v_types) END,
+    'status', CASE WHEN v_status IS NULL THEN NULL ELSE to_jsonb(v_status) END,
+    'search', v_search,
+    'lang', to_jsonb(v_lang_prefs),
+    'track_format', v_track,
+    'include_stages', v_inc,
+    'stage_color', v_color,
+    'view', v_view,
+    'render', v_render_enabled,
+    'render_locale', v_render_locale,
+    'render_tz', v_render_tz,
+    'render_version', v_render_version
+  );
+  v_current_cursor := api.cursor_pack(api.json_clean(v_cursor));
+  v_next := api.cursor_pack(api.json_clean(jsonb_set(v_cursor,'{offset}', to_jsonb(v_offset + v_limit))));
+
+  RETURN json_build_object(
+    'meta', json_build_object(
+      'kind','page',
+      'language', COALESCE(v_lang_prefs[1],'fr'),
+      'language_fallbacks', v_lang_prefs,
+      'page_size', v_limit,
+      'offset', v_offset,
+      'total', v_total,
+      -- §173 — comptes corpus par rang quand le filtre label est actif (sinon null).
+      'label_rank_counts', CASE WHEN v_filters ? 'label_scheme_ranked'
+        THEN json_build_object('labelled', v_rank0, 'equivalent', v_rank1)
+        ELSE NULL END,
+      'schema_version', '3.0',
+      'render_locale', v_render_locale,
+      'render_tz', v_render_tz,
+      'render_version', v_render_version,
+      'cursor', v_current_cursor,
+      'next_cursor', CASE WHEN v_offset + v_limit < v_total THEN v_next ELSE NULL END
+    ),
+    'data', v_data
+  );
+END;
+$function$
+;
+
+
 COMMIT;

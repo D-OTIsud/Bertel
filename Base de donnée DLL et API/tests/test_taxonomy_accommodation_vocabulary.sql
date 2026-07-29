@@ -87,7 +87,15 @@ BEGIN
     FROM (VALUES
             ('taxonomy_hot','hotel','Hôtel'),
             ('taxonomy_hlo','location_saisonniere','Meublé de tourisme'),
-            ('taxonomy_rva','tourism_residence','Résidence de tourisme')
+            ('taxonomy_rva','tourism_residence','Résidence de tourisme'),
+            -- §200 : mêmes raisons, mêmes risques. Le snapshot des arbres porte
+            -- désormais ces libellés, mais il s'exécute AVANT taxo5 : si quelqu'un
+            -- le rejoue seul avec une version antérieure, « Auberge » redevient
+            -- « Auberge collective » sans qu'aucune requête n'échoue.
+            ('taxonomy_hlo','auberge_collective','Auberge'),
+            ('taxonomy_hlo','gite_de_groupe','Gîte'),
+            ('taxonomy_hlo','gite_de_randonnee','Refuge et gîte d''étape'),
+            ('taxonomy_camp','camping','Camping')
          ) AS t(domain, code, expected)
     LEFT JOIN ref_code rc ON rc.domain = t.domain AND rc.code = t.code
    WHERE rc.name IS DISTINCT FROM t.expected;

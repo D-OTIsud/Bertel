@@ -3741,6 +3741,10 @@ BEGIN
                jsonb_build_object(
                  'scheme',                  (SELECT code FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
                  'scheme_name',             (SELECT name FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
+                 -- Logo du label. Les classements par etoiles n'en portent pas (le grade
+                 -- est rendu par la barre d'etoiles) : NULL est la valeur normale, pas une
+                 -- anomalie — tout consommateur DOIT replier sur scheme_name.
+                 'scheme_icon_url',         (SELECT icon_url FROM ref_classification_scheme s WHERE s.id = oc.scheme_id),
                  'value',                   (SELECT code FROM ref_classification_value  v WHERE v.id = oc.value_id),
                  'value_name',              (SELECT name FROM ref_classification_value  v WHERE v.id = oc.value_id),
                  'awarded_at',              oc.awarded_at,
@@ -4344,6 +4348,7 @@ BEGIN
                jsonb_build_object(
                  'scheme_code', sc.code,
                  'scheme_name', COALESCE(api.i18n_pick_strict(sc.name_i18n, lang, 'fr'), sc.name),
+                 'scheme_icon_url', sc.icon_url,
                  'value_code',  cv.code,
                  'value_name',  COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name),
                  'value_id',    cv.id,
@@ -4381,6 +4386,7 @@ BEGIN
                    'id',          oc.id,
                    'scheme',      sc.code,
                    'scheme_name', COALESCE(api.i18n_pick_strict(sc.name_i18n, lang, 'fr'), sc.name),
+                   'scheme_icon_url', sc.icon_url,
                    'value',       cv.code,
                    'value_name',  COALESCE(api.i18n_pick_strict(cv.name_i18n, lang, 'fr'), cv.name),
                    'value_id',    cv.id,

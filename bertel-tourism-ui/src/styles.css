@@ -5860,6 +5860,21 @@ a {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
+/*
+  Logo de label dans une chip de distinction. Hauteur BORNEE et largeur libre
+  (`width: auto`) : les logos officiels vont du carre (Clef Verte) au bandeau
+  tres large (Label bas-carbone) et aucun ne doit etre deforme — d'ou
+  `object-fit: contain` plutot qu'une boite carree qui ecraserait les seconds.
+  `flex-shrink: 0` empeche la chip de compresser le logo quand le libelle est long.
+*/
+.detail-chip__logo {
+  height: 16px;
+  width: auto;
+  max-width: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .detail-chip--distinction-classifications {
   background: rgba(226, 123, 85, 0.12);
   color: #9f4d29;

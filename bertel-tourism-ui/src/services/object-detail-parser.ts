@@ -905,7 +905,9 @@ function mapOwnerContacts(params: {
 
 function buildSustainabilityLabelItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
-    .map((item, index) => {
+    // Annotation explicite : sans elle, `iconUrl: string | undefined` est infere
+    // REQUIS dans le litteral et entre en conflit avec `iconUrl?` de TaxonomyItem.
+    .map((item, index): TaxonomyItem | null => {
       const scheme = readString(item.scheme_name, readNamedValue(item.scheme, 'Durabilite'));
       const valueName = readString(item.value_name, readNamedValue(item.value, ''));
       const label = [scheme, valueName].filter(Boolean).join(' · ') || scheme;
@@ -917,6 +919,7 @@ function buildSustainabilityLabelItems(value: unknown): TaxonomyItem[] {
       return {
         id: readString(item.value_id, readString(item.id, `sustainability-label-${index}`)),
         label,
+        iconUrl: readString(item.scheme_icon_url) || undefined,
         meta: [readString(item.status), formatDateRange(item.awarded_at, item.valid_until, '')].filter(Boolean).join(' · '),
       };
     })

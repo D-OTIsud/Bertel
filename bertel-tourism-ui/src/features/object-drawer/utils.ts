@@ -254,6 +254,14 @@ export interface TaxonomyItem {
    * description; absent for short-meta items (labels, classifications).
    */
   description?: string;
+  /**
+   * Logo du label (`ref_classification_scheme.icon_url`). TOUJOURS optionnel :
+   * les classements par etoiles n'en portent pas, et les labels dont le kit
+   * officiel n'a pas encore ete fourni non plus. Le libelle reste la source de
+   * verite affichable — le logo le DECORE, il ne le remplace jamais (sinon un
+   * label sans logo disparaitrait de l'ecran).
+   */
+  iconUrl?: string;
 }
 
 export interface TaxonomyGroup {
@@ -866,7 +874,9 @@ function buildBasicTaxonomyItems(value: unknown, prefix: string): TaxonomyItem[]
 
 function buildClassificationItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
-    .map((item, index) => {
+    // Annotation explicite : sans elle, `iconUrl: string | undefined` est infere
+    // REQUIS dans le litteral et entre en conflit avec `iconUrl?` de TaxonomyItem.
+    .map((item, index): TaxonomyItem | null => {
       const schemeCode = readString(item.scheme_code, readString(item.scheme, readString(readRecord(item.scheme).code)));
       const valueCode = readString(item.value_code, readString(item.value, readString(readRecord(item.value).code)));
       const rawScheme = readNamedValue(item.scheme, readString(item.scheme_name, humanizeClassificationScheme(schemeCode)));
@@ -887,6 +897,7 @@ function buildClassificationItems(value: unknown): TaxonomyItem[] {
       return {
         id: makeItemId('classification', item, index, label),
         label,
+        iconUrl: readString(item.scheme_icon_url) || undefined,
         meta: [
           scheme && scheme !== label ? scheme : humanizeClassificationScheme(schemeCode),
           readString(item.status),

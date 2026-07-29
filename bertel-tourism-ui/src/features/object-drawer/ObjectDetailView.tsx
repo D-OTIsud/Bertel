@@ -1794,6 +1794,35 @@ function TeamNotesSection({
   );
 }
 
+/**
+ * Logo d'un label, rendu DEVANT son libelle — jamais a la place. Trois raisons
+ * de ne pas basculer en logo-seul : les classements par etoiles n'ont pas de
+ * logo par nature, les labels dont le kit officiel manque encore non plus, et
+ * un logo est muet pour un lecteur d'ecran. Le libelle porte donc toujours le
+ * sens ; l'image est purement decorative (`alt=""`).
+ *
+ * Un 404 sur le fichier (lien casse, bucket purge) retire l'image et laisse le
+ * libelle seul : la chip reste lisible au lieu d'afficher une icone brisee.
+ */
+function DistinctionLogo({ src }: { src?: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!src || failed) {
+    return null;
+  }
+
+  return (
+    <img
+      className="detail-chip__logo"
+      src={src}
+      alt=""
+      aria-hidden="true"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface DistinctionDetail {
   label: string;
   meta: string;
@@ -1886,6 +1915,7 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
                         className={`${chipClass} detail-chip--has-detail`}
                         onClick={() => openDetail(item)}
                       >
+                        <DistinctionLogo src={item.iconUrl} />
                         <span>{item.label}</span>
                         <Info size={12} aria-hidden="true" />
                         <span className="sr-only">, voir le détail</span>
@@ -1899,6 +1929,7 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
                     return (
                       <DetailTooltip key={item.id} content={item.meta}>
                         <span className={chipClass} tabIndex={0} aria-label={`${item.label}, ${item.meta}`}>
+                          <DistinctionLogo src={item.iconUrl} />
                           {item.label}
                         </span>
                       </DetailTooltip>
@@ -1907,6 +1938,7 @@ function TaxonomySection({ groups }: { groups: TaxonomyGroup[] }) {
 
                   return (
                     <span key={item.id} className={chipClass}>
+                      <DistinctionLogo src={item.iconUrl} />
                       {item.label}
                     </span>
                   );

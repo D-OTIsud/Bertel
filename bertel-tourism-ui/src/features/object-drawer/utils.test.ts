@@ -597,3 +597,41 @@ describe('parseItinerarySummary — profils & trace (PLAN 3.4)', () => {
     expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[1, 2], [3, 4]] } })).not.toBeNull();
   });
 });
+
+/**
+ * Logos de labels (`ref_classification_scheme.icon_url`).
+ *
+ * Garde NON VACANTE : retirer `iconUrl: readString(item.scheme_icon_url)` de
+ * `buildClassificationItems` fait tomber le premier cas ; remplacer le repli par
+ * une chaine vide (au lieu de `undefined`) fait tomber le second — c'est ce
+ * repli qui empeche un `<img src="">` de partir dans le DOM pour les 8
+ * classements par etoiles, qui n'ont pas de logo par nature.
+ */
+describe('logos de labels', () => {
+  it('porte scheme_icon_url jusqu a l item de distinction', () => {
+    const groups = parseTaxonomyGroups({
+      classifications: [
+        {
+          id: 'class-1',
+          scheme: 'gites_epics',
+          value: '3',
+          scheme_icon_url: 'https://cdn.example/labels/gites_epics.png',
+        },
+      ],
+    } as Record<string, unknown>);
+
+    const item = groups.find((group) => group.key === 'classifications')?.items[0];
+    expect(item?.label).toBe('Gites de France · 3 epis');
+    expect(item?.iconUrl).toBe('https://cdn.example/labels/gites_epics.png');
+  });
+
+  it('laisse iconUrl indefini quand le schema n a pas de logo', () => {
+    const groups = parseTaxonomyGroups({
+      classifications: [{ id: 'class-2', scheme: 'hot_stars', value: '3' }],
+    } as Record<string, unknown>);
+
+    const item = groups.find((group) => group.key === 'classifications')?.items[0];
+    expect(item?.label).toBeTruthy();
+    expect(item?.iconUrl).toBeUndefined();
+  });
+});

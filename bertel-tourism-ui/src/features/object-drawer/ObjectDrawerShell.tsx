@@ -11,6 +11,13 @@ import { useSessionStore } from '../../store/session-store';
 import { resolveTypeLabel } from '../../utils/labels';
 import { ObjectDetailView } from './ObjectDetailView';
 
+/**
+ * Delai avant le prechargement automatique de l'editeur, en millisecondes.
+ * Assez court pour que l'editeur soit chaud au clic, assez long pour que le
+ * tiroir ait peint. A remonter si la mesure montre qu'il concurrence le rendu.
+ */
+const AUTO_PREFETCH_DELAY_MS = 300;
+
 interface ObjectDrawerShellProps {
   objectId: string | null;
   onClose: () => void;
@@ -116,6 +123,27 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     }
     router.prefetch(`/objects/${objectId}/edit`);
   }, [canEdit, objectId, router]);
+
+  // §NN — mesure terrain : ~80 % des ouvertures de fiche par un editeur sont
+  // suivies d'un clic sur « Modifier ». A ce taux de conversion, l'editeur est la
+  // navigation ATTENDUE, pas une hypothese : on precharge sans attendre le survol
+  // du bouton (qui reste, pour les 20 % restants et pour le clavier).
+  //
+  // La temporisation courte n'est PAS un filtre d'intention (contrairement aux
+  // 200 ms des cartes de resultat) : elle laisse simplement le tiroir peindre
+  // avant que ~20 requetes ne partent en concurrence.
+  //
+  // Cout d'un prechargement inutilise : les catalogues sont deja en cache de
+  // session et le gros RPC est mutualise avec celui du tiroir (loadObjectWorkspace),
+  // donc il ne reste que les selects par objet.
+  const hasDetail = Boolean(resolvedData);
+  useEffect(() => {
+    if (!objectId || !canEdit || isOrg || !hasDetail) {
+      return;
+    }
+    const timer = setTimeout(() => prefetchWorkspace(objectId), AUTO_PREFETCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [canEdit, hasDetail, isOrg, objectId, prefetchWorkspace]);
 
   function openFullPageEditor() {
     if (!objectId) {

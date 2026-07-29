@@ -8,6 +8,7 @@ import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
 import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
+import { useExplorerEmptyState } from './explorer-empty-state';
 import { ResultCardView } from './ResultCardView';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +95,9 @@ export function ResultsList({
   const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
   const setHoveredCard = useExplorerStore((state) => state.setHoveredCard);
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
+  // §200 — une nature d'hébergement neuve est visible SANS porteur : dire
+  // « Aucun résultat » ferait croire à une panne.
+  const emptyState = useExplorerEmptyState();
   const visibleCards = hasMounted ? cards : [];
   const showLoading = loading || !hasMounted;
   // « N fiches » = total réel du corpus quand il est connu (page 0), sinon le nombre de cartes
@@ -277,8 +281,8 @@ export function ResultsList({
         <div className="p-3">
           <EmptyState
             mode="filtered"
-            title="Aucun résultat pour ces filtres"
-            description="Essayez d'élargir la recherche ou de relâcher les contraintes (carte, statuts, équipements)."
+            title={emptyState.title}
+            description={emptyState.description}
             action={{ label: 'Réinitialiser les filtres', onClick: () => resetAllFilters() }}
           />
         </div>

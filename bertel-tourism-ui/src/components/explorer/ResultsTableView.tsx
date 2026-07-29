@@ -11,6 +11,7 @@ import { useUiStore } from '../../store/ui-store';
 import type { ObjectCard } from '../../types/domain';
 import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
+import { useExplorerEmptyState } from './explorer-empty-state';
 import { buildTableCsv, sortCards, TABLE_COLUMNS } from './table-columns';
 import { cn } from '@/lib/utils';
 
@@ -154,6 +155,7 @@ export function ResultsTableView({
   const addSelectedObjects = useExplorerStore((state) => state.addSelectedObjects);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
+  const emptyState = useExplorerEmptyState();
   const tableColumns = useExplorerViewStore((state) => state.tableColumns);
   const tableDensity = useExplorerViewStore((state) => state.tableDensity);
   const tableSort = useExplorerViewStore((state) => state.tableSort);
@@ -284,8 +286,8 @@ export function ResultsTableView({
         <div className="p-3">
           <EmptyState
             mode="filtered"
-            title="Aucun résultat pour ces filtres"
-            description="Essayez d'élargir la recherche ou de relâcher les contraintes (carte, statuts, équipements)."
+            title={emptyState.title}
+            description={emptyState.description}
             action={{ label: 'Réinitialiser les filtres', onClick: () => resetAllFilters() }}
           />
         </div>

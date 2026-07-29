@@ -287,6 +287,12 @@ ROLLBACK;
 \echo '== taxo4-test permanent §192 guards (axes declared, family resolves, canonical labels held, alias indexing wired) =='
 \ir tests/test_taxonomy_accommodation_vocabulary.sql
 
+\echo '== taxo5  migration_taxonomy_accommodation_hierarchy_v2.sql  (§200 hiérarchie v2 : familles campings_terrains + aires_haltes_plein_air, plein_air retiree, 3 natures collectives HLO passees de sous_type a nature (libelles Auberge/Gite), declared_campground parent reel de farm_camping/homestay_camping, residential_leisure_park, bivouac_area, motorhome_night_stop, outdoor_glamping hors axe nature ; 2 reprises object_taxonomy gardees ; auto-assertive, idempotente et fresh-safe) =='
+\ir migration_taxonomy_accommodation_hierarchy_v2.sql
+
+\echo '== taxo5-test garde permanente §200 (5 familles actives, sous-types = vrais enfants same-domain, closure depth=1, ET filtre parent NON VACANT via api.get_filtered_object_ids sur porteurs temoins) =='
+\ir tests/test_taxonomy_accommodation_hierarchy_v2.sql
+
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
 \ir migration_interop_crosswalk_leafaware.sql
 

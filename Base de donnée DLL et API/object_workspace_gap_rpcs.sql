@@ -159,13 +159,22 @@ BEGIN
       RAISE EXCEPTION 'Unknown tag reference (tag_id="%", slug="%")', v_row->>'tag_id', v_slug USING ERRCODE = '23503';
     END IF;
 
-    INSERT INTO public.tag_link (tag_id, target_table, target_pk, position, extra)
+    -- PROVENANCE (§203) — `created_by` + `extra.source = 'editor'` sont écrits ICI, et
+    -- c'est la seule façon de distinguer plus tard une saisie humaine d'un import.
+    -- Avant cette correction, ce RPC insérait SANS `created_by` : une écriture éditeur
+    -- avait donc `created_by = NULL` exactement comme une ligne d'import, et une purge
+    -- qui prenait `created_by IS NULL` pour un marqueur d'import détruisait du travail
+    -- d'agent en croyant s'en protéger (défaut réel, rattrapé avant application).
+    -- `source` est posé APRÈS le `extra` du payload : le writer est propriétaire de sa
+    -- propre provenance, un client ne peut pas la maquiller.
+    INSERT INTO public.tag_link (tag_id, target_table, target_pk, position, extra, created_by)
     VALUES (
       v_tag_id,
       'object',
       p_object_id,
       (v_ordinality - 1)::integer,
-      internal.workspace_jsonb_object(v_row->'extra')
+      internal.workspace_jsonb_object(v_row->'extra') || jsonb_build_object('source', 'editor'),
+      (select auth.uid())
     )
     ON CONFLICT (tag_id, target_table, target_pk) DO NOTHING;
     v_inserted := v_inserted + 1;

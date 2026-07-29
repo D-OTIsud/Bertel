@@ -2454,8 +2454,16 @@ WHERE s.id = oc.scheme_id
 --    ⚠️ Les tags ci-dessous sont seedés ICI parce qu'ils n'existaient JUSQU'À PRÉSENT que
 --    via `old_data_enrichment_20260512/01_enrich_imported_old_data.sql`, hors manifest —
 --    une base fraîche n'avait donc AUCUN tag alors que live en portait 16 (même classe de
---    dérive fresh/live que la taxonomie, cf. la note 13b du runbook). Le catalogue survivant
---    devient versionné : fresh == live.
+--    dérive fresh/live que la taxonomie, cf. la note 13b du runbook).
+--
+--    PORTÉE EXACTE DU `ON CONFLICT DO NOTHING` : il garantit l'**existence** de ces deux
+--    lignes, PAS l'égalité de leurs valeurs entre fresh et live. C'est délibéré et non un
+--    raccourci — un `DO UPDATE` écraserait à chaque ré-application des seeds la couleur
+--    choisie par un admin via `api.set_tag_color`, le libellé renommé depuis l'écran
+--    d'administration du catalogue, ou la position réordonnée. Le seed pose une valeur
+--    initiale ; le catalogue vivant est ensuite la propriété des administrateurs.
+--    La garde CI (`tests/test_tags_purge_catalog.sql`, assertion C) teste donc la
+--    PRÉSENCE des slugs, jamais leurs libellés ni leurs couleurs.
 --
 --    Statut : `family` et `romantic` sont conservés À TITRE TRANSITOIRE. Ils sont les seuls
 --    sans doublon structuré, mais ils échouent au critère « vérifiable » du test d'admission

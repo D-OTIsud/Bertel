@@ -1,7 +1,8 @@
 # Tags §09 — doctrine, catalogue cible et gouvernance de création (design)
 
 **Date :** 2026-07-29
-**Statut :** design — décisions PO prises en séance (§ 3), lots 0→4 à séquencer
+**Statut :** design — décisions PO prises en séance (§ 3) ; revu et corrigé le 2026-07-29 (voir §6.2) ;
+lots 1→6 séquencés en §6, la purge en dernier
 **Périmètre :** `ref_tag` / `tag_link` (axe §09), le modal de création de tag, un écran d'administration du
 catalogue, et les promotions de concepts vers `ref_amenity` / taxonomie PRD.
 **Hors périmètre :** i18n des noms de tags (FR seul, inchangé) ; la couleur et l'ordre des tags (livrés §09,
@@ -40,13 +41,14 @@ Les **4 529** liens `tag_link` ont été posés en **une seule passe le 12/05/20
 `extra.source = 'old_data_enrichment_20260512'`. C'est le **même import** qui a écrasé la nature par la forme
 dans la taxonomie hébergement (§190) et mal typé environ la moitié des ACT (§186).
 
-Six liens supplémentaires portent `extra = '{}'` (2 fiches, 17/06 et 03/07), `created_by = NULL` également :
-petits reliquats d'import, pas de la saisie éditeur.
+Six liens supplémentaires portent `extra = '{}'` (2 fiches, 17/06 et 03/07). **Ce sont des écritures
+ÉDITEUR** — audit en §6.2 — et non des reliquats d'import comme le disait la première rédaction. Ils sont
+explicitement HORS purge. `created_by` ne les distingue pas : le RPC éditeur n'écrivait pas cette colonne.
 
 ### 1.2 Le tag ne sépare plus rien
 
-813 fiches sur 846 sont taguées, **~5,6 tags par fiche** (jusqu'à 13). Un axe qui qualifie tout le monde
-n'a plus de pouvoir de filtre.
+830 fiches sur 846 sont taguées (828 par l'import, 2 par un éditeur), **~5,5 tags par fiche** jusqu'à 13.
+Un axe qui qualifie tout le monde n'a plus de pouvoir de filtre.
 
 | Tag | Liens | % du corpus |
 |---|---:|---:|
@@ -147,7 +149,7 @@ sur-normalisé est aussi coûteux qu'un catalogue de tags qui enfle.
 
 | # | Décision |
 |---|---|
-| **D1** | **Purge** des 4 529 liens hérités de `old_data_enrichment_20260512` (+ les 6 reliquats). Aucun n'est de la saisie humaine. |
+| **D1** | **Purge** des 4 529 liens portant `extra.source = 'old_data_enrichment_20260512'`, et EUX SEULS. Les 6 liens sans `source` sont de la **saisie éditeur** (audit §6.2) et sont conservés. Sauvegarde exacte des lignes supprimées avant tout DELETE, rollback fourni. |
 | **D2** | **Retrait du catalogue** des tags qui échouent au test R2 (§4.1). Le concept reste filtrable via son axe légitime. |
 | **D3** | **Gouvernance de création : suggérer avant de créer + écran d'administration** (§5). Pas de cycle de vie « proposé → validé » : l'éditeur ne doit jamais être bloqué pendant son travail ; la dérive se corrige après coup, en un seul endroit. |
 | **D4** | **Repeuplement mixte** : promotion en **champs structurés** de ce qui est normalisable (table d'hôtes, productions) ; **rail de suggestion à valider** pour l'éditorial restant. Aucun tag n'est reposé automatiquement depuis la prose. |
@@ -307,7 +309,7 @@ Gate : superuser plateforme ou admin d'ORG de rang suffisant, aligné sur l'admi
 |---|---|---|---|
 | **1** | Traçabilité des écritures | `api.save_object_workspace_tags` doit écrire `created_by` (et `api.create_tag` le fait déjà sur `ref_tag`). Sans ça, aucune purge ne peut distinguer l'import de la saisie — c'est le défaut qui a failli détruire 6 lignes humaines | — |
 | **2** | Gouvernance | `api.suggest_similar_tags` (trigramme + phonétique, sur `ref_tag` **et** catalogues voisins) + `create_tag` fail-closed (`p_confirm_distinct`) + `TagPickerModal` + écran d'administration du catalogue (fusionner / renommer / supprimer avec report des liens, ramassage des 0-lien) | — |
-| **3** | Seed du catalogue survivant | **FAIT dans cette passe** — `family` / `romantic` seedés dans `seeds_data.sql`. Ils n'existaient que via l'enrichissement d'import hors manifest : une base fraîche n'avait aucun tag alors que live en portait 16 (même dérive fresh/live que la taxonomie, note 13b du runbook) | — |
+| **3** | Seed du catalogue survivant | **FAIT dans cette passe** — `family` / `romantic` seedés dans `seeds_data.sql`. Ils n'existaient que via l'enrichissement d'import hors manifest : une base fraîche n'avait aucun tag alors que live en portait 16 (même dérive fresh/live que la taxonomie, note 13b). ⚠️ Le `ON CONFLICT DO NOTHING` garantit l'**existence** des lignes, **pas** l'égalité des valeurs fresh/live : un `DO UPDATE` écraserait à chaque ré-application la couleur posée par `set_tag_color`, le libellé renommé depuis l'écran d'admin ou la position réordonnée. Le seed pose une valeur initiale, le catalogue vivant appartient ensuite aux administrateurs — et l'assertion C du test porte sur la PRÉSENCE des slugs, jamais sur leurs libellés | — |
 | **4** | Champs de remplacement (R3) | Instruction coût/stabilité puis, si retenu : `ref_amenity.table_hotes` (famille Gastronomie) + nœuds productions en taxonomie PRD (vanille 28, letchis 22, curcuma 18, miel 14, rhum 14, géranium 13) | arbitrage PO §4.2 |
 | **5** | Requalification | Rail de suggestion à valider (preuve = la phrase justificative), pour les tags **et** les champs promus. Inclut l'arbitrage des 5 liens éditeur posés sur des tags sortants (§6.2) | lots 2 et 4 |
 | **6** | Sauvegarde + purge + republication | Table de sauvegarde des lignes exactes à supprimer, PUIS `migration_tags_purge_import_20260512.sql` (écrite, manifest 16p), PUIS refresh des MV — **une seule release coordonnée**, parce que la purge republie 828 fiches chez les partenaires | lots 1-5 |
@@ -362,14 +364,21 @@ dont les tags ont disparu) ou non (correction interne, invisible aux partenaires
 > ### Un tag qualifie la fiche, jamais son voisinage — et un tag récurrent vérifiable est un champ manquant
 >
 > L'axe §09 (`ref_tag` / `tag_link`) est **éditorial et non normalisable**. Trois règles :
-> 1. **Voisinage interdit.** Si la justification d'un tag contient « à X minutes de », « proche de »,
->    « vue sur », c'est de la localisation — elle a déjà ses axes (commune, `object_environment_tag`).
->    C'est ce qui a produit *Mer et littoral* sur des gîtes des hauts du Tampon (import 20260512).
-> 2. **Test d'admission cumulatif** : orphelin (aucun axe structuré ne le porte — invariant §196),
->    sélectif (~2-25 % du corpus), vérifiable sans interprétation, actionnable.
-> 3. **Un candidat récurrent ET vérifiable rejoint le MODÈLE** (`ref_amenity`, taxonomie, champ dédié),
->    pas le catalogue de tags. Le catalogue doit rester petit ; sa croissance est le symptôme d'un modèle
->    en retard.
+> 1. **Le fait doit être constatable SUR PLACE.** Le test est l'ancrage, pas le mot : « vue mer depuis la
+>    terrasse » est une caractéristique de l'établissement et passe ; « à X minutes de », « proche de » sont
+>    de la localisation, qui a déjà ses axes (commune, `object_environment_tag`). C'est cette confusion qui a
+>    produit *Mer et littoral* sur des gîtes des hauts du Tampon (import 20260512).
+> 2. **Un seul critère éliminatoire : orphelin** — si un axe structuré porte déjà le concept, pas de tag
+>    (invariant §196), parce que le doublon produit un filtre qui ment. Sélectivité (~2-25 %) et
+>    vérifiabilité sont des **indicateurs** qui orientent la décision, pas des couperets : un tag sur 1 %
+>    peut être décisif, et un tag interprétatif est recevable s'il porte une définition écrite.
+> 3. **Un candidat récurrent et vérifiable est un SIGNAL DE PROMOTION vers le modèle** (`ref_amenity`,
+>    taxonomie, champ dédié), à instruire — coût de la surface ajoutée contre stabilité du concept — et non
+>    à promouvoir d'office. Un concept instable ou marginal reste un tag : c'est le rôle de cet axe. Le
+>    catalogue doit rester petit, mais un modèle sur-normalisé coûte autant qu'un catalogue qui enfle.
+> 4. **La provenance s'écrit à l'écriture.** Tout writer de `tag_link` stampe `created_by` ET
+>    `extra.source`. Sans cela, une saisie humaine est indiscernable d'un import, et aucune purge ne peut
+>    plus être ciblée sans détruire du travail d'agent (défaut réel, rattrapé avant application en §203).
 >
 > **Création contrôlée :** un nom normalisé exact ne suffit pas à dédoublonner (`jacuzzy` vs l'équipement
 > `Jacuzzi`). Toute création passe par une suggestion à **deux signaux orthogonaux** (trigramme + phonétique,

@@ -37,9 +37,11 @@ const MOCK_TAXONOMIES: ExplorerTaxonomyDomain[] = Object.keys(TYPE_ARCHETYPES).m
   }],
 }));
 
-// §201 — le parcours hébergement remplace les 5 tuiles techniques par une entrée
-// « Hébergement » guidée. Ce catalogue reproduit l'arbre cible.
+// §201 — le parcours hébergement remplace les 5 tuiles techniques par les cinq
+// familles métier directement sélectionnables. Ce catalogue reproduit l'arbre cible.
 const ACCOMMODATION_FAMILIES: ExplorerAccommodationFamily[] = [
+  { code: 'hotellerie', name: 'Hôtellerie', description: 'Description interne à ne pas afficher.', position: 1 },
+  { code: 'locatif', name: 'Hébergement locatif', description: 'Description interne à ne pas afficher.', position: 2 },
   { code: 'collectif', name: 'Hébergement collectif', description: 'Accueil de groupes.', position: 3 },
   { code: 'campings_terrains', name: 'Campings et terrains', description: 'Terrains organisés pour le camping.', position: 4 },
   { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', description: 'Halte ou nuitée sans terrain de camping.', position: 5 },
@@ -47,8 +49,16 @@ const ACCOMMODATION_FAMILIES: ExplorerAccommodationFamily[] = [
 
 const V2_TAXONOMIES: ExplorerTaxonomyDomain[] = [
   {
+    domain: 'taxonomy_hot', name: 'HOT', objectType: 'HOT',
+    nodes: [
+      { code: 'hotel', name: 'Hôtel', description: 'Description interne à ne pas afficher.', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [] },
+    ],
+  },
+  {
     domain: 'taxonomy_hlo', name: 'HLO', objectType: 'HLO',
     nodes: [
+      { code: 'chambre_d_hotes', name: "Chambre d'hôtes", description: null, parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'locatif', aliases: [] },
+      { code: 'location_saisonniere', name: 'Meublé de tourisme', description: 'Candidat à la fusion — arbitrage L3.', parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'locatif', aliases: [] },
       { code: 'gite_de_groupe', name: 'Gîte', description: "Accueil d'un groupe.", parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'collectif', aliases: [] },
     ],
   },
@@ -95,20 +105,30 @@ function selectTypeAndName(name: string) {
   fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: name } });
 }
 
-/** Ouvre le parcours guidé avec le catalogue v2 résolu. */
+/** Charge le parcours guidé avec le catalogue v2 résolu. */
 async function openGuidedAccommodation() {
   mockListTaxonomyReferences.mockResolvedValueOnce(V2_TAXONOMIES);
   mockListAccommodationFamilies.mockResolvedValueOnce(ACCOMMODATION_FAMILIES);
   render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
   await waitFor(() => expect(mockListAccommodationFamilies).toHaveBeenCalledTimes(1));
-  fireEvent.click(screen.getByRole('button', { name: /^Hébergement$/ }));
-  return screen.findByLabelText(/famille d'hébergement/i);
+  await screen.findByRole('button', { name: 'Hébergement collectif' });
 }
 
 async function chooseFamilyAndNature(family: string, nature: string) {
-  const select = await openGuidedAccommodation();
-  fireEvent.change(select, { target: { value: family } });
-  fireEvent.click(await screen.findByRole('button', { name: new RegExp(`^${nature}`) }));
+  await openGuidedAccommodation();
+  fireEvent.click(screen.getByRole('button', { name: family }));
+  fireEvent.click(await screen.findByRole('button', { name: nature }));
+}
+
+async function expectGuidedCreationType(family: string, nature: string, expectedType: string) {
+  mockCreateObject.mockResolvedValue(`${expectedType}RUN0000000999`);
+  await chooseFamilyAndNature(family, nature);
+  fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: `Test ${nature}` } });
+  fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
+  await waitFor(() => expect(mockCreateObject).toHaveBeenCalledWith({
+    type: expectedType,
+    name: `Test ${nature}`,
+  }));
 }
 
 it('disables create until a type and a non-empty name are chosen', () => {
@@ -202,59 +222,61 @@ it('warns about existing fiches with a close name and opens one on click', () =>
 });
 
 describe("§201 — création guidée d'un hébergement", () => {
+  it('affiche directement les cinq familles, sans bouton intermédiaire Hébergement', async () => {
+    await openGuidedAccommodation();
+
+    for (const family of ['Hôtellerie', 'Hébergement locatif', 'Hébergement collectif', 'Campings et terrains', 'Aires et haltes de plein air']) {
+      expect(screen.getByRole('button', { name: family })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('button', { name: 'Hébergement' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: /famille d'hébergement/i })).not.toBeInTheDocument();
+  });
+
   it('calcule RVA pour Résidence de tourisme, sans jamais demander le code', async () => {
-    await chooseFamilyAndNature('collectif', 'Résidence de tourisme');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(RVA)');
+    await expectGuidedCreationType('Hébergement collectif', 'Résidence de tourisme', 'RVA');
   });
 
   it('calcule HLO pour Gîte sous Hébergement collectif', async () => {
-    await chooseFamilyAndNature('collectif', 'Gîte');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HLO)');
+    await expectGuidedCreationType('Hébergement collectif', 'Gîte', 'HLO');
   });
 
   it('calcule CAMP pour Camping', async () => {
-    await chooseFamilyAndNature('campings_terrains', 'Camping Le classement');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(CAMP)');
+    await expectGuidedCreationType('Campings et terrains', 'Camping', 'CAMP');
   });
 
   it('calcule HPA pour Aire naturelle de camping', async () => {
-    await chooseFamilyAndNature('campings_terrains', 'Aire naturelle de camping');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HPA)');
+    await expectGuidedCreationType('Campings et terrains', 'Aire naturelle de camping', 'HPA');
   });
 
   it('calcule HPA pour Aire de bivouac', async () => {
-    await chooseFamilyAndNature('aires_haltes_plein_air', 'Aire de bivouac');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HPA)');
+    await expectGuidedCreationType('Aires et haltes de plein air', 'Aire de bivouac', 'HPA');
   });
 
   it('conserve le chemin parent pour Terrain déclaré puis Camping à la ferme', async () => {
-    await chooseFamilyAndNature('campings_terrains', 'Terrain de camping déclaré');
-    fireEvent.click(screen.getByRole('button', { name: /^Camping à la ferme/ }));
+    await chooseFamilyAndNature('Campings et terrains', 'Terrain de camping déclaré');
+    fireEvent.click(screen.getByRole('button', { name: 'Camping à la ferme' }));
 
-    expect(screen.getByText('Campings et terrains › Terrain de camping déclaré › Camping à la ferme')).toBeInTheDocument();
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HPA)');
+    expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it("conserve le chemin parent pour Terrain déclaré puis Camping chez l'habitant", async () => {
-    await chooseFamilyAndNature('campings_terrains', 'Terrain de camping déclaré');
-    fireEvent.click(screen.getByRole('button', { name: /^Camping chez l'habitant/ }));
+    await chooseFamilyAndNature('Campings et terrains', 'Terrain de camping déclaré');
+    fireEvent.click(screen.getByRole('button', { name: "Camping chez l'habitant" }));
 
-    expect(screen.getByText("Campings et terrains › Terrain de camping déclaré › Camping chez l'habitant")).toBeInTheDocument();
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HPA)');
+    expect(screen.getByRole('button', { name: "Camping chez l'habitant" })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('affiche le type calculé en lecture seule — aucun contrôle pour le changer', async () => {
-    await chooseFamilyAndNature('collectif', 'Gîte');
-    const readout = screen.getByTestId('computed-technical-type');
+  it('n’affiche ni codes techniques ni descriptions internes dans le parcours', async () => {
+    await chooseFamilyAndNature('Hébergement locatif', 'Meublé de tourisme');
 
-    expect(readout.tagName).toBe('SPAN');
-    expect(readout.closest('button')).toBeNull();
-    expect(readout.closest('label')).toBeNull();
+    expect(screen.queryByText(/candidat à la fusion/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/arbitrage L3/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('(HLO)')).not.toBeInTheDocument();
   });
 
   it('crée la fiche avec le type calculé ET pose la nature choisie', async () => {
     mockCreateObject.mockResolvedValue('HPARUN0000000001');
-    await chooseFamilyAndNature('aires_haltes_plein_air', 'Aire de bivouac');
+    await chooseFamilyAndNature('Aires et haltes de plein air', 'Aire de bivouac');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Bivouac du Piton' } });
     fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
 
@@ -275,9 +297,8 @@ describe("§201 — création guidée d'un hébergement", () => {
     mockListAccommodationFamilies.mockResolvedValueOnce(ACCOMMODATION_FAMILIES);
     render(<CreateObjectDialog open onClose={() => {}} onCreated={onCreated} />);
     await waitFor(() => expect(mockListAccommodationFamilies).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole('button', { name: /^Hébergement$/ }));
-    fireEvent.change(await screen.findByLabelText(/famille d'hébergement/i), { target: { value: 'aires_haltes_plein_air' } });
-    fireEvent.click(await screen.findByRole('button', { name: /^Aire de bivouac/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Aires et haltes de plein air' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Aire de bivouac' }));
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Bivouac du Piton' } });
     fireEvent.click(screen.getByRole('button', { name: /créer la fiche/i }));
 
@@ -302,20 +323,19 @@ describe("§201 — création guidée d'un hébergement", () => {
     expect(screen.getAllByRole('radio')).toHaveLength(13);
   });
 
-  it('un parcours non hébergement ne montre aucune étape Famille', () => {
+  it('un parcours non hébergement ne montre aucun panneau de natures', () => {
     render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
     fireEvent.click(screen.getByRole('radio', { name: /^Itinéraire$/i }));
 
-    expect(screen.queryByLabelText(/famille d'hébergement/i)).not.toBeInTheDocument();
-    expect(screen.queryByTestId('computed-technical-type')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
   });
 
   it("choisir un type hors hébergement quitte le parcours guidé — jamais d'état mixte", async () => {
-    await chooseFamilyAndNature('collectif', 'Gîte');
-    expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(HLO)');
+    await chooseFamilyAndNature('Hébergement collectif', 'Gîte');
+    expect(screen.getByRole('group', { name: /nature de l'établissement/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('radio', { name: /^Restaurant$/i }));
-    expect(screen.queryByLabelText(/famille d'hébergement/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
 
     mockCreateObject.mockResolvedValue('RESRUN0000000009');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Chez Guilaine' } });
@@ -330,12 +350,12 @@ describe("§201 — création guidée d'un hébergement", () => {
     mockListAccommodationFamilies.mockResolvedValueOnce(ACCOMMODATION_FAMILIES);
     render(<CreateObjectDialog open onClose={onClose} onCreated={() => {}} />);
     await waitFor(() => expect(mockListAccommodationFamilies).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole('button', { name: /^Hébergement$/ }));
-    await screen.findByLabelText(/famille d'hébergement/i);
+    fireEvent.click(await screen.findByRole('button', { name: 'Hébergement collectif' }));
+    await screen.findByRole('group', { name: /nature de l'établissement/i });
 
     fireEvent.click(screen.getByRole('button', { name: /^Annuler$/ }));
     expect(onClose).toHaveBeenCalled();
-    expect(screen.queryByLabelText(/famille d'hébergement/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
   });
 
   it('garde la détection de doublons active pendant le parcours guidé', async () => {
@@ -347,7 +367,7 @@ describe("§201 — création guidée d'un hébergement", () => {
       }],
       loading: false,
     });
-    await chooseFamilyAndNature('collectif', 'Gîte');
+    await chooseFamilyAndNature('Hébergement collectif', 'Gîte');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Gîte Hydrangea 974' } });
 
     expect(screen.getByText(/au nom proche/i)).toBeInTheDocument();

@@ -214,6 +214,15 @@ describe('SectionIdentity', () => {
     expect(screen.getByText('Choisir la nature d’hébergement')).toBeInTheDocument();
   });
 
+  it('n’expose pas la description de catalogue comme infobulle utilisateur', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
+    const radio = within(screen.getByRole('dialog')).getByRole('radio', { name: /Gîte rural/i });
+    expect(radio.closest('.taxo2-row')).not.toHaveAttribute('title');
+  });
+
   it('badges the saved assignment as "Actuelle"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);

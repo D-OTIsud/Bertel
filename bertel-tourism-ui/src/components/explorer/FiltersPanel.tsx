@@ -471,10 +471,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       }
     };
 
+    // `ref_code.description` et `source_ref` servent aussi aux audits et peuvent
+    // contenir des notes de migration. Ils restent indexables, mais ne sont pas
+    // une microcopie validée pour l'utilisateur final.
     const nodeTitle = (node: ExplorerTaxonomyNode, breadcrumb?: string) => [
       breadcrumb,
-      node.description,
-      node.sourceRef ? `Source : ${node.sourceRef}` : null,
       node.aliases?.length ? `Aussi appelé : ${node.aliases.join(', ')}` : null,
     ].filter(Boolean).join('\n');
 

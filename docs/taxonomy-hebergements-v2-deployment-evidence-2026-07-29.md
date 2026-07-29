@@ -12,11 +12,13 @@ proviennent d'exécutions réelles contre la base cloud, dans une transaction te
 `ROLLBACK` (`.tmp_pgapply/_v2_dryrun.cjs`, qui refuse de s'exécuter s'il ne peut pas neutraliser
 la borne de transaction de chaque fichier).
 
-Le déploiement est **bloqué par une dépendance d'ordre, pas par un défaut** : le plan §4.11 et
-§14.8-9 imposent que le frontend rétrocompatible du lot 3 soit **en ligne en production avant**
-le SQL. Sinon `outdoor_glamping` reste affiché comme une nature sélectionnable alors qu'il
-n'accepte plus d'écriture. La mise en ligne passe par un `git push` (Coolify construit `master`),
-qui n'est pas dans mon périmètre.
+Le plan §4.11 et §14.8-9 imposent que le frontend rétrocompatible du lot 3 soit **en ligne en
+production avant** le SQL. Sinon `outdoor_glamping` reste affiché comme une nature
+sélectionnable alors qu'il n'accepte plus d'écriture. Le frontend contient désormais une
+projection explicite de l'ancien catalogue : même avant le SQL, il remplace visuellement
+`plein_air` par « Campings et terrains » et « Aires et haltes de plein air », répartit les
+nœuds connus et masque `outdoor_glamping`. La mise en ligne de ce commit reste donc le premier
+jalon obligatoire.
 
 ## 1. Ce qui a été livré
 
@@ -25,8 +27,8 @@ qui n'est pas dans mon périmètre.
 | 0 | Revalidation du gel + manifeste nominatif figé | `9b05fd9` |
 | 1 | `migration_taxonomy_accommodation_hierarchy_v2.sql` (taxo5) + snapshot d'arbres réaligné | `9b05fd9` |
 | 2 | `tests/test_taxonomy_accommodation_hierarchy_v2.sql` + manifeste CI + runbook | `9b05fd9` |
-| 3 | Explorer : 5 familles, vrais sous-arbres, état vide explicite | `60c259e` |
-| 4 | Création guidée Famille → Nature → type technique calculé | (lot 4) |
+| 3 | Explorer : 5 familles, projection rétrocompatible de `plein_air`, vrais sous-arbres, état vide explicite | présent lot |
+| 4 | Création guidée par cinq familles directement visibles → Nature ; type technique calculé en arrière-plan | (lot 4) |
 | 5 | Axe Type d'unité multi-valué (taxo6) : schéma, RLS, éditeur, filtre | (lot 5) |
 | 6 + 6 bis | 3 équipements camping-car distincts (taxo7) + aide utilisateur réécrite | (lot 6) |
 
@@ -66,7 +68,8 @@ qui bougent, parce qu'on ne peut pas savoir avant de mesurer lesquelles bougeron
 | Sabotage : `farm_camping`/`homestay_camping` re-parentés sous `root` en gardant `metadata.famille` | **rouge** (« sous-type sans parent réel same-domain ») ⇒ l'invariant structurel est réellement mesuré |
 | taxo6 + son test (personas anon / propriétaire / étranger × 4 commandes) | vert |
 | taxo7 seule, ROLLBACK | vert |
-| Suite frontend complète | 364 suites / 2730 tests verts |
+| Suite frontend complète sur l'état exact à pousser | verte (`npm run test:run`, exit 0) |
+| Tests ciblés création / filtres / aide / éditeur / projection rétrocompatible | 5 suites / 97 tests verts |
 | `tsc --noEmit` | propre |
 
 ### Filtre parent — contrôle NON VACANT
@@ -97,9 +100,11 @@ ni de `ENABLE ROW LEVEL SECURITY` ni des policies du parent.
 
 1. **`git push`** de `master`. Coolify construit et met en ligne le frontend.
 2. **Vérifier en production** que l'Explorer fonctionne toujours avec l'**ancien** catalogue :
-   les natures collectives sont visibles, les familles s'ouvrent. C'est ce que garantit le
-   traitement « parent d'axe `famille` = conteneur » — sans lui, les 3 natures collectives
-   disparaîtraient pendant toute la fenêtre où le frontend est en ligne avant le SQL.
+   cinq familles sont visibles ; « Hôtellerie de plein air » est absente ; Camping est dans
+   « Campings et terrains » ; Aire d'accueil camping-car est dans « Aires et haltes de plein
+   air » ; les natures collectives sont visibles et les familles s'ouvrent. La projection
+   conserve les vrais couples domaine/code, donc les filtres continuent d'utiliser la closure
+   serveur pendant toute la fenêtre où le frontend est en ligne avant le SQL.
 3. **Puis seulement**, appliquer le SQL, dans cet ordre :
 
    ```
@@ -130,7 +135,7 @@ modèle multi-valué, FK, index, GRANT, policies RLS et résultat du backfill.
 
 | Scénario | Attendu |
 |---|---|
-| Créer → Hébergement → Collectif → Gîte | type HLO calculé, nature posée sur la fiche |
+| Créer → Hébergement collectif → Gîte | type HLO calculé en arrière-plan, nature posée sur la fiche |
 | Créer → Collectif → Résidence de tourisme | type RVA calculé |
 | Créer → Campings et terrains → Camping | type CAMP ; classement saisi séparément |
 | Créer → Campings et terrains → Aire naturelle | type HPA, famille Campings et terrains |

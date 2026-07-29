@@ -1,4 +1,10 @@
-import { buildTaxonomyDomains, toRankedLabelSchemeValues } from './explorer-reference';
+import type { ExplorerTaxonomyDomain } from '../types/domain';
+import {
+  buildTaxonomyDomains,
+  projectLegacyOutdoorAccommodationFamilies,
+  projectLegacyOutdoorAccommodationTaxonomies,
+  toRankedLabelSchemeValues,
+} from './explorer-reference';
 
 describe('toRankedLabelSchemeValues', () => {
   it('groups grade values by scheme code, sorted ascending, numeric-aware', () => {
@@ -48,5 +54,79 @@ describe('buildTaxonomyDomains — vocabulaire hébergement §192', () => {
       sourceRef: 'Code du tourisme art. D324-1',
       description: 'Villa, appartement ou studio meublé.',
     });
+  });
+});
+
+describe('projection de compatibilité §201 — ancien catalogue plein_air', () => {
+  it('remplace la quatrième famille historique par les deux familles validées', () => {
+    const result = projectLegacyOutdoorAccommodationFamilies([
+      { code: 'hotellerie', name: 'Hôtellerie', position: 1 },
+      { code: 'locatif', name: 'Hébergement locatif', position: 2 },
+      { code: 'collectif', name: 'Hébergement collectif', position: 3 },
+      { code: 'plein_air', name: 'Hôtellerie de plein air', position: 4 },
+    ]);
+
+    expect(result.map(({ code, name }) => ({ code, name }))).toEqual([
+      { code: 'hotellerie', name: 'Hôtellerie' },
+      { code: 'locatif', name: 'Hébergement locatif' },
+      { code: 'collectif', name: 'Hébergement collectif' },
+      { code: 'campings_terrains', name: 'Campings et terrains' },
+      { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air' },
+    ]);
+    expect(result.some((family) => family.code === 'plein_air')).toBe(false);
+    expect(result.slice(3).every((family) => family.aliases?.includes('Hôtellerie de plein air'))).toBe(true);
+  });
+
+  it('reste idempotente pendant une transition où ancien et nouveaux codes coexistent', () => {
+    const once = projectLegacyOutdoorAccommodationFamilies([
+      { code: 'plein_air', name: 'Hôtellerie de plein air', position: 4 },
+      { code: 'campings_terrains', name: 'Ancien libellé temporaire', position: 8 },
+      { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 9 },
+    ]);
+    const twice = projectLegacyOutdoorAccommodationFamilies(once);
+
+    expect(twice).toEqual(once);
+    expect(twice.map((family) => family.code)).toEqual([
+      'campings_terrains',
+      'aires_haltes_plein_air',
+    ]);
+    expect(twice[0].name).toBe('Campings et terrains');
+  });
+
+  it('répartit les nœuds live connus sans changer leurs vrais domaine et code', () => {
+    const domains: ExplorerTaxonomyDomain[] = [
+      {
+        domain: 'taxonomy_camp', name: 'CAMP', objectType: 'CAMP',
+        nodes: [
+          { code: 'camping', name: 'Camping', parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+        ],
+      },
+      {
+        domain: 'taxonomy_hpa', name: 'HPA', objectType: 'HPA',
+        nodes: [
+          { code: 'natural_camp_area', name: 'Aire naturelle', parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+          { code: 'farm_camping', name: 'Camping à la ferme', parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+          { code: 'homestay_camping', name: "Camping chez l'habitant", parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+          { code: 'motorhome_area', name: 'Aire camping-car', parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+          { code: 'outdoor_glamping', name: 'Insolite', parentCode: null, depth: 0, isAssignable: true, axis: 'nature', family: 'plein_air' },
+        ],
+      },
+    ];
+
+    const result = projectLegacyOutdoorAccommodationTaxonomies(domains);
+    const camp = result.find((domain) => domain.domain === 'taxonomy_camp')!;
+    const hpa = result.find((domain) => domain.domain === 'taxonomy_hpa')!;
+
+    expect(camp.nodes[0]).toMatchObject({ code: 'camping', family: 'campings_terrains' });
+    expect(hpa.nodes.filter((node) => ['natural_camp_area', 'farm_camping', 'homestay_camping'].includes(node.code)))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: 'natural_camp_area', family: 'campings_terrains' }),
+        expect.objectContaining({ code: 'farm_camping', family: 'campings_terrains' }),
+        expect.objectContaining({ code: 'homestay_camping', family: 'campings_terrains' }),
+      ]));
+    expect(hpa.nodes.find((node) => node.code === 'motorhome_area'))
+      .toMatchObject({ family: 'aires_haltes_plein_air' });
+    expect(hpa.nodes.find((node) => node.code === 'outdoor_glamping'))
+      .toMatchObject({ family: null, axis: 'type_unite', isAssignable: false });
   });
 });

@@ -882,6 +882,23 @@ L'affichage live doit continuer de lire accommodation_family. Ne pas coder les n
 
 Étendre la lecture accommodation_family pour sélectionner metadata, puis exposer metadata.aliases dans ExplorerAccommodationFamily. La recherche de famille doit tester name, description et aliases.
 
+Ajouter une projection de compatibilité dans le service de références, en amont de
+FiltersPanel **et** du dialogue de création. Tant que le catalogue live expose encore
+`plein_air`, cette projection doit :
+
+- masquer l'ancien regroupement et fournir les deux familles cibles ;
+- ranger `taxonomy_camp.camping`, `natural_camp_area`, `farm_camping` et
+  `homestay_camping` dans Campings et terrains ;
+- ranger `motorhome_area` dans Aires et haltes de plein air ;
+- sortir `outdoor_glamping` des natures assignables ;
+- conserver les vrais couples domaine/code afin que les filtres continuent d'interroger
+  la closure serveur sans inventer de données ;
+- être idempotente lorsque l'ancien et les nouveaux codes coexistent pendant le déploiement.
+
+Ainsi, le frontend publié en premier affiche déjà les cinq familles validées avec l'ancien
+catalogue à quatre lignes. Il ne doit exister aucune fenêtre de déploiement où
+« Hôtellerie de plein air » réapparaît comme famille active.
+
 ### Étape 3.2 — Rendre la relation visuelle honnête
 
 Cette étape ajoute une vraie capacité de rendu hiérarchique. Elle ne doit pas être traitée comme un simple changement de libellé dans FiltersPanel.
@@ -968,6 +985,8 @@ Ajouter au minimum ces scénarios :
 15. un parentCode identique dans un autre domaine n'établit aucune parenté ;
 16. un nœud isAssignable=false est absent des familles et des Critères complémentaires ;
 17. un sous-type orphelin n'est pas présenté comme une nature sœur et produit le signal de développement attendu.
+18. l'ancien catalogue à quatre familles est projeté en cinq familles, sans doublon ni famille `plein_air` visible ;
+19. la projection reste identique après un second passage et conserve les vrais domaine/code des nœuds.
 
 Commandes :
 
@@ -1000,17 +1019,17 @@ Pour une fiche d'hébergement, l'agent choisit un vocabulaire métier et le logi
 - bertel-tourism-ui/src/services/object-workspace.ts
 - bertel-tourism-ui/src/features/help/content/creer-objet.ts
 
-### Étape 4.1 — Ajouter un sélecteur en deux temps à la création
+### Étape 4.1 — Afficher directement les familles à la création
 
-Le parcours Famille puis Nature ne s'active que lorsque l'utilisateur choisit de créer un hébergement. Il couvre HOT, HLO, RVA, CAMP et HPA. RES, ACT, ITI et les dix autres types non-hébergement doivent rester visibles, sélectionnables et créés avec le même object_type qu'avant ce chantier.
+Dans la section Hébergement, afficher immédiatement cinq boutons : Hôtellerie, Hébergement locatif, Hébergement collectif, Campings et terrains, Aires et haltes de plein air. Ne pas ajouter un bouton intermédiaire « Hébergement » ni un menu déroulant de familles. RES, ACT, ITI et les dix autres types non-hébergement doivent rester visibles, sélectionnables et créés avec le même object_type qu'avant ce chantier.
 
-Ordre dans la branche Hébergement :
+Ordre :
 
 1. Famille d'hébergement ;
 2. Nature d'hébergement ;
 3. Sous-type lorsqu'il existe, notamment pour Terrain de camping déclaré ;
-4. Type technique calculé et affiché en lecture seule ;
-5. Nom de la fiche.
+4. Type technique calculé silencieusement ;
+5. Nom de la fiche, qui peut rester la première zone du dialogue.
 
 Mapping technique :
 
@@ -1022,7 +1041,7 @@ Mapping technique :
 
 Le mapping doit être construit depuis le catalogue domain/object_type, pas depuis une liste dupliquée dans le composant.
 
-Conserver le comportement actuel de saisie du nom, de recherche de doublons, de retour arrière et d'annulation. Si le dialogue actuel commence par le nom, la refonte peut conserver cette première étape ; l'exigence métier porte sur l'ordre relatif Famille > Nature > Sous-type > type technique, pas sur le déplacement forcé du champ Nom.
+Conserver le comportement actuel de saisie du nom, de recherche de doublons, de retour arrière et d'annulation. L'agent n'a pas besoin de voir HOT, HLO, RVA, CAMP ou HPA : ces codes restent dans les journaux et outils techniques.
 
 ### Étape 4.2 — Ne pas autoriser un changement de type caché en édition
 
@@ -1228,7 +1247,7 @@ Chaque ligne de la matrice doit avoir un propriétaire. La personne en première
 
 ### Étape 6 bis.2 — Écrire le tutoriel Créer une fiche d'hébergement
 
-Créer une entrée d'aide centrale intitulée Créer une fiche d'hébergement en 5 étapes. Elle doit suivre exactement l'ordre réel de l'interface :
+Créer une entrée d'aide centrale intitulée Créer une fiche d'hébergement en 4 étapes. Elle doit suivre exactement l'ordre réel de l'interface :
 
 1. saisir le nom officiel de l'établissement et rechercher un éventuel doublon ;
 2. choisir l'une des cinq familles métier ;
@@ -1285,11 +1304,11 @@ Comme le mot Gîte peut aussi désigner un hébergement locatif, toujours affich
 
 Dans le dialogue de création :
 
-- afficher une définition d'une phrase sous chaque famille et chaque nature ambiguë ;
-- proposer un lien Pourquoi ce choix ? vers l'entrée d'aide correspondante ;
-- afficher avant validation un récapitulatif Famille, Nature et Type technique calculé ;
-- garder le code technique visuellement secondaire ;
-- signaler que types d'unité, services, classement et tarifs seront renseignés après la création ;
+- afficher les familles et les natures comme des boutons compacts, sans paragraphe permanent dessous ;
+- si une aide courte est nécessaire, la placer derrière un bouton d'information distinct ;
+- ne jamais afficher directement ref_code.description ou source_ref : ces champs peuvent contenir des notes d'audit, de migration ou d'arbitrage ;
+- n'utiliser dans une infobulle qu'une microcopie explicitement validée pour l'utilisateur final ;
+- calculer le type technique sans l'afficher ;
 - ne jamais demander à l'utilisateur de quitter le dialogue et de lire toute la documentation pour comprendre un choix courant.
 
 Dans la section Identité d'une fiche existante :
@@ -1299,7 +1318,7 @@ Dans la section Identité d'une fiche existante :
 - fournir une action ou une consigne claire pour demander cette conversion ;
 - ne jamais laisser croire qu'une simple sauvegarde changera le type technique.
 
-Les descriptions courtes doivent provenir d'une source unique, idéalement ref_code.description ou un catalogue frontend central, afin d'éviter qu'une définition diverge entre l'Explorer, le dialogue et l'aide.
+Si des descriptions publiques sont ajoutées plus tard, les stocker dans un champ distinct et validé, par exemple metadata.public_description. ref_code.description et source_ref restent des données de catalogue interne et de recherche, pas une microcopie d'interface.
 
 ### Étape 6 bis.6 — Réécrire les entrées existantes qui deviendraient fausses
 
@@ -1327,7 +1346,7 @@ Mettre à jour ou créer les tests suivants :
 - bertel-tourism-ui/src/features/help/content-integrity.test.ts : identifiants uniques, liens connexes valides et types référencés existants ;
 - bertel-tourism-ui/src/features/help/faq-search.test.ts et bertel-tourism-ui/src/features/help/faq-search.corpus.test.ts : les libellés actuels et anciens renvoient vers la bonne réponse ;
 - bertel-tourism-ui/src/views/HelpPage.test.tsx : les nouvelles entrées sont rendues et accessibles ;
-- bertel-tourism-ui/src/features/object-editor/create/CreateObjectDialog.test.tsx : parcours Famille > Nature > récapitulatif sans choix préalable d'un code technique ;
+- bertel-tourism-ui/src/features/object-editor/create/CreateObjectDialog.test.tsx : cinq familles directement visibles, parcours Famille > Nature et absence des descriptions internes ou codes techniques ;
 - bertel-tourism-ui/src/features/object-editor/create/create-object-options.test.ts : mapping métier vers type technique et alias attendus ;
 - bertel-tourism-ui/src/features/object-editor/sections/SectionIdentity.test.tsx : chemin visible et message de conversion.
 

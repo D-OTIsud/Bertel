@@ -35,7 +35,6 @@ import {
   type CreateTypeOption,
 } from './create-object-options';
 import {
-  accommodationSelectionPath,
   buildCreateAccommodationFamilies,
   findAccommodationNature,
   resolveAccommodationTechnicalType,
@@ -468,8 +467,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
 
         {/* 2 · Type — the scrollable region (clearly the main content) */}
         <div className="flex items-baseline justify-between px-6 pb-1.5 pt-4">
-          <p className="text-[13px] font-semibold text-ink">Type de fiche</p>
-          <p className="text-[12px] text-ink-3">{groups.reduce((n, g) => n + g.types.length, 0)} types</p>
+          <p className="text-[13px] font-semibold text-ink">Catégorie de fiche</p>
         </div>
         <div className="relative min-h-0">
           <div className="max-h-[38vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">
@@ -487,150 +485,115 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                     </span>
                     <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
                       <h3 className="text-[13.5px] font-semibold tracking-tight text-ink">{group.codeName}</h3>
-                      <span className="truncate text-[12px] text-ink-3">{group.family}</span>
+                      {group.archetype !== 'HEB' ? (
+                        <span className="truncate text-[12px] text-ink-3">{group.family}</span>
+                      ) : null}
                     </div>
                   </div>
 
-                  {/* §201 — l'hébergement ne propose plus ses 5 codes techniques :
-                      l'agent choisit une famille puis une nature, et Bertel en
-                      déduit HOT / HLO / RVA / CAMP / HPA. Les 13 autres types
-                      gardent exactement leur parcours. */}
+                  {/* §201 — les cinq familles métier sont les choix de premier
+                      niveau. Aucune étape générique « Hébergement » ni aucun code
+                      HOT/HLO/RVA/CAMP/HPA n'est présenté à l'agent. */}
                   {group.archetype === 'HEB' ? (
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => { setGuided(true); setType(''); }}
-                        aria-pressed={guided}
-                        className={[
-                          'flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13.5px] font-medium transition',
-                          guided ? 'shadow-sm' : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:bg-surface2 hover:text-ink',
-                        ].join(' ')}
-                        style={guided ? { borderColor: v.color, backgroundColor: `${v.color}14`, color: v.deep } : undefined}
-                      >
-                        <span className="min-w-0 flex-1">Hébergement</span>
-                        {guided ? <Check className="h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} /> : null}
-                      </button>
+                    <div className="space-y-2.5">
+                      {taxonomyError || familiesError ? (
+                        <p className="text-[12.5px] text-ink-3">
+                          Catalogue momentanément indisponible : réessayez dans un instant.
+                        </p>
+                      ) : accommodationFamilies.length === 0 ? (
+                        <p className="text-[12.5px] text-ink-3">Chargement des familles d&apos;hébergement…</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="Familles d'hébergement">
+                          {accommodationFamilies.map((family) => {
+                            const selected = guided && familyCode === family.code;
+                            return (
+                              <button
+                                key={family.code}
+                                type="button"
+                                onClick={() => {
+                                  setGuided(true);
+                                  setType('');
+                                  setFamilyCode(family.code);
+                                  setNatureSelection(null);
+                                }}
+                                aria-pressed={selected}
+                                className={[
+                                  'flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13.5px] font-medium transition',
+                                  selected
+                                    ? 'shadow-sm'
+                                    : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink',
+                                ].join(' ')}
+                                style={selected ? { borderColor: v.color, backgroundColor: `${v.color}14`, color: v.deep } : undefined}
+                              >
+                                <span className="min-w-0 flex-1">{family.name}</span>
+                                {selected ? <Check className="h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} /> : null}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
 
-                      {guided ? (
-                        <div className="space-y-3 rounded-xl border border-line bg-surface2/60 p-3">
-                          {taxonomyError || familiesError ? (
-                            <p className="text-[12.5px] text-ink-3">
-                              Catalogue momentanément indisponible : réessayez dans un instant.
-                            </p>
-                          ) : accommodationFamilies.length === 0 ? (
-                            <p className="text-[12.5px] text-ink-3">Chargement des familles d&apos;hébergement…</p>
-                          ) : (
-                            <>
-                              <div>
-                                <label htmlFor="create-accommodation-family" className="mb-1.5 block text-[12.5px] font-semibold text-ink">
-                                  1 · Famille d&apos;hébergement
-                                </label>
-                                <select
-                                  id="create-accommodation-family"
-                                  value={familyCode ?? ''}
-                                  onChange={(event) => { setFamilyCode(event.target.value || null); setNatureSelection(null); }}
-                                  className="h-10 w-full rounded-lg border border-line bg-surface px-2.5 text-[13px] text-ink"
-                                >
-                                  <option value="">Choisissez une famille…</option>
-                                  {accommodationFamilies.map((family) => (
-                                    <option key={family.code} value={family.code}>{family.name}</option>
-                                  ))}
-                                </select>
-                                {openFamily?.description ? (
-                                  <p className="mt-1 text-[12px] leading-snug text-ink-3">{openFamily.description}</p>
-                                ) : null}
-                              </div>
-
-                              {openFamily ? (
-                                <div>
-                                  <span className="mb-1.5 block text-[12.5px] font-semibold text-ink">
-                                    2 · Nature de l&apos;établissement
-                                  </span>
-                                  <div className="space-y-1.5" role="radiogroup" aria-label="Nature de l'établissement">
-                                    {openFamily.natures.map((nature) => {
-                                      const natureSelected = natureSelection?.domain === nature.domain
-                                        && natureSelection?.code === nature.code;
-                                      const childSelected = nature.children
-                                        .some((child) => natureSelection?.domain === child.domain && natureSelection?.code === child.code);
-                                      return (
-                                        <div key={`${nature.domain}:${nature.code}`}>
+                      {openFamily ? (
+                        <div className="space-y-2 rounded-xl border border-line bg-surface2/60 p-3">
+                          <span className="block text-[12.5px] font-semibold text-ink">
+                            Nature de l&apos;établissement
+                          </span>
+                          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" role="group" aria-label="Nature de l'établissement">
+                            {openFamily.natures.map((nature) => {
+                              const natureSelected = natureSelection?.domain === nature.domain
+                                && natureSelection?.code === nature.code;
+                              const childSelected = nature.children
+                                .some((child) => natureSelection?.domain === child.domain && natureSelection?.code === child.code);
+                              return (
+                                <div key={`${nature.domain}:${nature.code}`} className="min-w-0">
+                                  <button
+                                    type="button"
+                                    onClick={() => setNatureSelection({ domain: nature.domain, code: nature.code })}
+                                    aria-pressed={natureSelected}
+                                    className={[
+                                      'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[13px] transition',
+                                      natureSelected || childSelected
+                                        ? 'border-ink-3 bg-surface text-ink'
+                                        : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
+                                    ].join(' ')}
+                                  >
+                                    <span className="min-w-0 flex-1 font-medium">{nature.name}</span>
+                                    {natureSelected ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
+                                  </button>
+                                  {nature.children.length > 0 && (natureSelected || childSelected) ? (
+                                    <div className="ml-3 mt-1.5 space-y-1 border-l border-line pl-3">
+                                      {nature.children.map((child) => {
+                                        const active = natureSelection?.domain === child.domain
+                                          && natureSelection?.code === child.code;
+                                        return (
                                           <button
+                                            key={`${child.domain}:${child.code}`}
                                             type="button"
-                                            onClick={() => setNatureSelection({ domain: nature.domain, code: nature.code })}
-                                            aria-pressed={natureSelected}
+                                            onClick={() => setNatureSelection({ domain: child.domain, code: child.code })}
+                                            aria-pressed={active}
                                             className={[
-                                              'w-full rounded-lg border px-2.5 py-2 text-left text-[13px] transition',
-                                              natureSelected || childSelected
+                                              'flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition',
+                                              active
                                                 ? 'border-ink-3 bg-surface text-ink'
                                                 : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
                                             ].join(' ')}
                                           >
-                                            <span className="font-medium">{nature.name}</span>
-                                            {nature.description ? (
-                                              <span className="mt-0.5 block text-[11.5px] leading-snug text-ink-3">
-                                                {nature.description}
-                                              </span>
-                                            ) : null}
+                                            <span className="min-w-0 flex-1 font-medium">{child.name}</span>
+                                            {active ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
                                           </button>
-                                          {nature.children.length > 0 && (natureSelected || childSelected) ? (
-                                            <div className="ml-3 mt-1.5 space-y-1 border-l border-line pl-3">
-                                              <span className="block text-[11.5px] font-semibold text-ink-2">
-                                                3 · Précisez la forme (facultatif)
-                                              </span>
-                                              {nature.children.map((child) => {
-                                                const active = natureSelection?.domain === child.domain
-                                                  && natureSelection?.code === child.code;
-                                                return (
-                                                  <button
-                                                    key={`${child.domain}:${child.code}`}
-                                                    type="button"
-                                                    onClick={() => setNatureSelection({ domain: child.domain, code: child.code })}
-                                                    aria-pressed={active}
-                                                    className={[
-                                                      'w-full rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition',
-                                                      active
-                                                        ? 'border-ink-3 bg-surface text-ink'
-                                                        : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
-                                                    ].join(' ')}
-                                                  >
-                                                    <span className="font-medium">{child.name}</span>
-                                                    {child.description ? (
-                                                      <span className="mt-0.5 block text-[11px] leading-snug text-ink-3">
-                                                        {child.description}
-                                                      </span>
-                                                    ) : null}
-                                                  </button>
-                                                );
-                                              })}
-                                            </div>
-                                          ) : null}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : null}
                                 </div>
-                              ) : null}
-
-                              {selectedNature ? (
-                                <div className="rounded-lg border border-line bg-surface px-2.5 py-2">
-                                  <p className="text-[12.5px] font-semibold text-ink">
-                                    {accommodationSelectionPath(accommodationFamilies, natureSelection)}
-                                  </p>
-                                  {/* Le code technique reste VISIBLE mais secondaire : il n'est
-                                      pas un choix, et il n'est pas non plus un secret. */}
-                                  <p className="mt-0.5 text-[11.5px] text-ink-3">
-                                    Type technique calculé par Bertel :{' '}
-                                    <span data-testid="computed-technical-type" className="font-semibold text-ink-2">
-                                      {guidedType ? `${createTypeLabel(guidedType)} (${guidedType})` : 'indéterminé'}
-                                    </span>
-                                  </p>
-                                  <p className="mt-1 text-[11.5px] leading-snug text-ink-3">
-                                    Types d&apos;unité, services, classement et tarifs se renseignent après la création.
-                                  </p>
-                                </div>
-                              ) : null}
-                            </>
-                          )}
+                              );
+                            })}
+                          </div>
+                          {selectedNature ? (
+                            <span className="sr-only" aria-live="polite">
+                              Nature sélectionnée.
+                            </span>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>

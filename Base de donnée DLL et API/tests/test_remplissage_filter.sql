@@ -107,6 +107,81 @@ BEGIN
   RAISE NOTICE 'Bloc A (vue) OK.';
 END$$;
 
+-- ---------- (C) NON VACUITÉ — le filtre remonte l'ensemble EXACT ----------
+-- Toutes les requêtes passent published+draft : cf. la note du bloc B3 — avec
+-- `published` seul, le RPC lirait la vue matérialisée, qui ne contient pas les
+-- témoins de cette transaction, et chaque assertion « passerait » sur 0 ligne.
+DO $$
+DECLARE
+  v_hits text[];
+BEGIN
+  -- Palier « many » (3 et plus) : seule 03 y est.
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_buckets": ["many"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999903'],
+    format('palier many doit remonter exactement 03 ; obtenu: %s', v_hits);
+
+  -- Palier « complete » : seule 01.
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_buckets": ["complete"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999901'],
+    format('palier complete doit remonter exactement 01 ; obtenu: %s', v_hits);
+
+  -- Sélection NON CONTIGUË (complete + many) : 01 et 03, pas 02. C'est ce cas
+  -- qui justifie des codes de palier plutôt qu'un intervalle min/max.
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_buckets": ["complete","many"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999901','RMPLIS9999999903'],
+    format('paliers complete+many doivent remonter 01 et 03 ; obtenu: %s', v_hits);
+
+  -- Facette « il manque les photos » : 02 et 03 (01 en a 4).
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_any": ["photos"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999902','RMPLIS9999999903'],
+    format('facette photos doit remonter 02 et 03 ; obtenu: %s', v_hits);
+
+  -- OU interne à la facette : « contact OU tags » ne remonte que 03.
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_any": ["contact","tags"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999903'],
+    format('facette contact+tags (OU interne) doit remonter 03 ; obtenu: %s', v_hits);
+
+  -- Les deux clés se combinent en ET : « sans photo » ET palier few ⇒ 02 seule.
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_any": ["photos"], "missing_essentials_buckets": ["few"]}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT v_hits = ARRAY['RMPLIS9999999902'],
+    format('photos ET palier few doivent remonter 02 seule ; obtenu: %s', v_hits);
+
+  -- Clé présente mais VIDE = pas de filtre (convention des facettes).
+  SELECT array_agg(f.object_id ORDER BY f.object_id) INTO v_hits
+  FROM api.get_filtered_object_ids(
+         '{"missing_essentials_any": []}'::jsonb,
+         NULL::object_type[], ARRAY['published','draft']::object_status[], NULL) AS f
+  WHERE f.object_id LIKE 'RMPLIS%';
+  ASSERT cardinality(v_hits) = 3,
+    format('une clé vide ne doit RIEN filtrer ; obtenu: %s', v_hits);
+
+  RAISE NOTICE 'Bloc C (non-vacuité du filtre) OK.';
+END$$;
+
 -- ---------- (B) Gardes du helper ----------
 DO $$
 DECLARE

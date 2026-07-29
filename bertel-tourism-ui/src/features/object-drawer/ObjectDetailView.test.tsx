@@ -1198,3 +1198,65 @@ describe('ObjectDetailView', () => {
     });
   });
 });
+
+/**
+ * Rendu du logo de label DANS le tiroir.
+ *
+ * Distinct de la garde de `utils.test.ts`, qui ne prouve que le portage parser :
+ * ici on verifie que la chip emet vraiment une balise <img>. Les deux sont
+ * necessaires — le parser peut porter `iconUrl` sans que le composant l'affiche,
+ * et c'est exactement l'ecart qui rend un cablage « fait » invisible a l'ecran.
+ *
+ * Les assertions portent sur LA CHIP, pas sur la page : le libelle du label
+ * apparait aussi dans l'aria-label et dans d'autres sections, donc un
+ * `getByText` global remonte plusieurs noeuds et ne prouve rien de precis.
+ */
+describe('ObjectDetailView — logos de labels', () => {
+  it('rend le logo dans la chip ET conserve le libelle', () => {
+    const { container } = renderDetail({
+      id: 'obj-logo',
+      name: 'Fiche logo',
+      raw: {
+        id: 'obj-logo',
+        name: 'Fiche logo',
+        classifications: [
+          {
+            id: 'class-logo',
+            scheme: 'gites_epics',
+            value: '3',
+            scheme_icon_url: 'https://cdn.example/labels/gites_epics.png',
+          },
+        ],
+      },
+    });
+
+    const chip = container.querySelector('.detail-chip--distinction');
+    expect(chip).not.toBeNull();
+
+    const logo = chip!.querySelector('img.detail-chip__logo');
+    expect(logo).toHaveAttribute('src', 'https://cdn.example/labels/gites_epics.png');
+    // Decoratif : le sens passe par le texte, jamais par l'image.
+    expect(logo).toHaveAttribute('alt', '');
+    expect(logo).toHaveAttribute('aria-hidden', 'true');
+    // Le logo DECORE le libelle, il ne le remplace pas.
+    expect(chip!.textContent).toContain('Gites de France');
+  });
+
+  it('n emet aucune img quand le schema n a pas de logo', () => {
+    const { container } = renderDetail({
+      id: 'obj-nologo',
+      name: 'Fiche sans logo',
+      raw: {
+        id: 'obj-nologo',
+        name: 'Fiche sans logo',
+        classifications: [{ id: 'class-nologo', scheme: 'hot_stars', value: '3' }],
+      },
+    });
+
+    const chip = container.querySelector('.detail-chip--distinction');
+    expect(chip).not.toBeNull();
+    // Pas de <img src=""> parasite : un src vide relance une requete sur la page.
+    expect(container.querySelector('.detail-chip__logo')).toBeNull();
+    expect(chip!.textContent?.trim()).not.toBe('');
+  });
+});

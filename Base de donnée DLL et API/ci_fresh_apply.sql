@@ -332,6 +332,12 @@ ROLLBACK;
 \echo '== 16p/16q-test garde permanente §203 (A import parti / B aucun tag sortant / C les 5 tags attendus sont au catalogue / D aucun tag ne duplique le nom exact d un equipement, cadre ou noeud de taxonomie / E la sauvegarde ne contient QUE des lignes d import, donc la purge n a pas emporte de saisie editeur / F le RPC editeur stampe created_by et extra.source / G tout lien de regle porte sa regle et reste revocable seul) =='
 \ir tests/test_tags_purge_catalog.sql
 
+\echo '== 16r    migration_explorer_remplissage_filter.sql  (204 filtre Remplissage: internal.v_object_essentials devient la source UNIQUE du bundle des 8 essentiels visiteur, jusque-la recopie dans get_dashboard_completeness; booleens en colonnes SEPAREES car PostgreSQL elague les colonnes non consommees; helper DEFINER api.object_missing_essentials portant REVOKE FROM PUBLIC + gate editeur + auto-autorisation des ids, car list_object_resources_filtered_page est SECURITY INVOKER et ne peut pas lire le schema internal; deux cles missing_essentials_buckets/_any dans get_filtered_object_ids sous garde CASE avec sonde d autorisation PARESSEUSE; APRES taxo6 = corps complet de get_filtered_object_ids incluant 197/199/201; NOUVELLE fonction exposee donc NOTIFY pgrst requis) =='
+\ir migration_explorer_remplissage_filter.sql
+
+\echo '== 16r-test garde permanente 204 (A la vue voit les bons trous / C non-vacuite: paliers, selection non contigue, facette, OU interne, combinaison ET, cle vide = pas de filtre / D la carte porte missing_essentials, tableau vide != champ absent / B REVOKE anon par le catalogue, gate editeur ferme, cles d un non-editeur ignorees) =='
+\ir tests/test_remplissage_filter.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

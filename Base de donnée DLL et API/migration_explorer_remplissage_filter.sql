@@ -205,4 +205,53 @@ moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des
 GRANT EXECUTE ON FUNCTION api.get_dashboard_completeness(object_type[], object_status[], jsonb, date, date, int)
   TO authenticated, service_role;
 
+-- ---- 3) Helper pour le chemin CARTES ----------------------------------------
+-- api.list_object_resources_filtered_page est SECURITY INVOKER et ne peut pas
+-- lire le schéma internal (authenticated n'a pas USAGE dessus, par conception).
+-- Ce helper est le seul point de passage, et il porte TROIS verrous :
+--   1. REVOKE FROM PUBLIC (plus bas) — sinon anon peut l'appeler ;
+--   2. gate métier : ensemble vide si l'appelant n'est pas éditeur — c'est ICI
+--      que vit le « éditeur et supérieur », côté serveur, pas seulement masqué
+--      à l'écran ;
+--   3. auto-autorisation (§36) : la fonction est exécutable via PostgREST, donc
+--      elle ne fait JAMAIS confiance à la liste d'ids reçue.
+--
+-- POURQUOI DANS `api` ET PAS UN SCHÉMA PRIVÉ : le RPC de page est SECURITY
+-- INVOKER, donc c'est l'APPELANT (authenticated) qui doit pouvoir exécuter ce
+-- helper. Le placer dans `internal` exigerait d'accorder USAGE sur `internal` à
+-- authenticated — ce qui ouvrirait toute la couche privée, très au-delà de cette
+-- fonction. Basculer le RPC de page en DEFINER changerait en bloc la sémantique
+-- d'autorisation d'un RPC central. On garde `api`, verrouillé.
+CREATE OR REPLACE FUNCTION api.object_missing_essentials(p_object_ids TEXT[])
+RETURNS TABLE(object_id TEXT, missing TEXT[])
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, extensions, auth, audit, crm, ref
+AS $$
+  SELECT e.object_id, e.missing_essentials
+  FROM   internal.v_object_essentials e
+  -- COALESCE(..., FALSE) N'EST PAS DÉCORATIF : current_user_can_edit_objects()
+  -- est à TROIS valeurs. Sa chaîne de OR passe par auth.role(), NULL hors
+  -- contexte HTTP, donc la fonction rend NULL — pas FALSE — dans toute session
+  -- sans JWT. Un WHERE écarterait déjà la ligne, mais on ne laisse pas le sens
+  -- de NULL implicite : ici NULL vaut « pas éditeur ».
+  WHERE  COALESCE(api.current_user_can_edit_objects(), FALSE)
+    AND  e.object_id = ANY(COALESCE(p_object_ids, ARRAY[]::text[]))
+    AND  e.object_id IN (SELECT api.current_user_readable_object_ids());
+$$;
+
+COMMENT ON FUNCTION api.object_missing_essentials IS
+'§204 — essentiels manquants pour un ENSEMBLE d''objets (jamais par ligne). Rend 0 ligne si
+l''appelant n''est pas éditeur (api.current_user_can_edit_objects) : c''est le gate serveur du
+filtre « Remplissage ». Auto-autorise ses ids contre current_user_readable_object_ids (§36) — la
+liste reçue n''est jamais crue sur parole. Mesuré: 2,0 ms pour une page de 24.';
+
+-- PostgreSQL accorde EXECUTE à PUBLIC par DÉFAUT sur toute fonction créée. Un
+-- GRANT ciblé ne retire pas ce droit — il faut le révoquer explicitement, sinon
+-- `anon` peut appeler la fonction. Ici le corps refuserait de toute façon (gate
+-- éditeur), mais on ne fait pas reposer un contrôle d'accès sur le seul corps.
+REVOKE ALL ON FUNCTION api.object_missing_essentials(TEXT[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.object_missing_essentials(TEXT[]) TO authenticated, service_role;
+
 COMMIT;

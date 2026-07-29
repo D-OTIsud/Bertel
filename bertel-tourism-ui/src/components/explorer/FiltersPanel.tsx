@@ -65,7 +65,7 @@ const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
 const ACCOMMODATION_AXIS_LABELS = {
   nature: "Nature d'hébergement",
   sous_type: "Sous-type d'hébergement",
-  type_unite: "Type d'unité d'hébergement",
+  type_unite: "Type d'unité",
   positionnement: 'Positionnement',
 } as const;
 
@@ -565,9 +565,14 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       const natures = familyMatches
         ? familyGroup.natures
         : filterAccommodationNatures(familyGroup.natures, (node) => accommodationNodeMatches(node, query));
-      if (natures.length === 0) return null;
-      const selectedCount = familyGroup.natures
-        .flatMap((nature) => [nature.entry, ...nature.children.map((child) => child.entry)])
+      const positionings = familyMatches
+        ? familyGroup.positionings
+        : familyGroup.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
+      if (natures.length === 0 && positionings.length === 0) return null;
+      const selectedCount = [
+        ...familyGroup.natures.flatMap((nature) => [nature.entry, ...nature.children.map((child) => child.entry)]),
+        ...familyGroup.positionings,
+      ]
         .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
       const expanded = Boolean(query) || openAccommodationFamily === familyCode;
       return (
@@ -602,12 +607,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </button>
           {expanded ? (
             <div id={`accommodation-family-${familyCode}`} className="space-y-2 px-2 pb-2.5 pl-7">
-              {/* UN SEUL étage « Nature » : les six natures collectives (HLO et RVA
-                  confondus) sont des sœurs. Les sous-types n'ont plus de bloc à
-                  part — ils vivent DANS le conteneur de leur parent. */}
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                Nature
-              </span>
+              {/* Les entrées parlent d'elles-mêmes dans leur famille : aucun
+                  surtitre « Nature » redondant. Les vrais sous-types restent
+                  visuellement imbriqués sous leur parent. */}
               <div className="space-y-1.5">
                 {natures.map((nature) => {
                   const natureKey = `${nature.entry.domain}:${nature.entry.node.code}`;
@@ -661,26 +663,28 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   );
                 })}
               </div>
+              {positionings.length > 0 ? (
+                <div className="space-y-1 pt-1">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                    {ACCOMMODATION_AXIS_LABELS.positionnement}
+                  </span>
+                  {renderFlatEntries(positionings)}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
       );
     }).filter(Boolean);
 
-    const unitEntries = tree.unitTypes.filter((entry) => accommodationNodeMatches(entry.node, query));
-    const positioningEntries = tree.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
-    // §201 — le NOUVEL axe multi-valué. Il cohabite volontairement avec les
-    // `type_unite` restés dans taxonomy_hlo (maison, appartement, chalet…) :
-    // leur migration est un lot à part, et créer un second système concurrent
-    // pour elles serait pire que la cohabitation.
+    // §201 lot 5B — source UNIQUE : le domaine multi-valué
+    // accommodation_unit_type. Les anciens `taxonomy_*.axis=type_unite` sont
+    // ignorés pendant la transition puis supprimés par taxo6b.
     const unitTypeOptions = (references?.accommodationUnitTypes ?? []).filter((option) => (
       !query || foldAccommodationTerm(option.name).includes(query)
     ));
-    const hasResults = familyBlocks.length > 0 || unitEntries.length > 0
-      || positioningEntries.length > 0 || unitTypeOptions.length > 0;
-    const complementarySelectedCount = [...unitEntries, ...positioningEntries]
-      .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length
-      + accommodationUnitTypesAny.length;
+    const hasResults = familyBlocks.length > 0 || unitTypeOptions.length > 0;
+    const complementarySelectedCount = accommodationUnitTypesAny.length;
     const showComplements = Boolean(query) || showAccommodationComplements;
 
     return (
@@ -720,7 +724,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         ) : null}
 
-        {unitEntries.length > 0 || positioningEntries.length > 0 || unitTypeOptions.length > 0 ? (
+        {unitTypeOptions.length > 0 ? (
           <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
             <button
               type="button"
@@ -768,22 +772,6 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                         );
                       })}
                     </div>
-                  </div>
-                ) : null}
-                {unitEntries.length > 0 ? (
-                  <div>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                      {ACCOMMODATION_AXIS_LABELS.type_unite}
-                    </span>
-                    {renderFlatEntries(unitEntries, true)}
-                  </div>
-                ) : null}
-                {positioningEntries.length > 0 ? (
-                  <div>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                      {ACCOMMODATION_AXIS_LABELS.positionnement}
-                    </span>
-                    {renderFlatEntries(positioningEntries)}
                   </div>
                 ) : null}
               </div>

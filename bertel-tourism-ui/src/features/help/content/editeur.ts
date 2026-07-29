@@ -36,7 +36,7 @@ export const EDITEUR_FAQ: FaqEntry[] = [
 
 **Ce qui n'est pas déductible.** Disposer d'eau, de vidange et d'électricité ne prouve **pas** que la nuitée est autorisée : une *Aire de services camping-car* n'est pas une *Aire d'accueil camping-car*. Inversement, une aire d'accueil peut autoriser la nuitée sans posséder le moindre service.
 
-**Piège.** « Hébergement insolite de plein air » n'est plus une nature d'établissement. Si vous le cherchez encore dans la liste des natures, c'est qu'il faut renseigner un **type d'unité** à la place — la nature reste celle de l'établissement (chambre d'hôtes, camping…).`,
+**À retenir.** Une bulle, un bungalow, une maison ou un lodge se renseigne dans **Type d'unité**. La catégorie décrit l'établissement (chambre d'hôtes, camping, meublé de tourisme…) ; « Insolite » reste disponible comme type générique et « Autre » comme choix séparé.`,
   },
   {
     id: 'editeur-ouvrir',

@@ -459,8 +459,8 @@ export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
           n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
       {taxonomy.unitTypes.options.length > 0 ? (
         <div style={{ marginBottom: 12 }}>
-          <Field label="Types de logement">
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Types de logement">
+          <Field label="Type d'unité">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Type d'unité">
                 {taxonomy.unitTypes.options.map((option) => {
                   const active = taxonomy.unitTypes.selectedCodes.includes(option.code);
                   return (

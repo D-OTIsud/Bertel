@@ -34,7 +34,7 @@ export const EXPLORER_FAQ: FaqEntry[] = [
     related: ['explorer-recherche', 'explorer-brouillons', 'choisir-famille-hebergement'],
     answer: `Le volet de filtres présente les **catégories** en rangées à cocher ; ouvrez-en une pour affiner.
 
-**Pour l'hébergement**, l'affinement se fait par **famille** puis par **nature**. Cinq familles : Hôtellerie, Hébergement locatif, Hébergement collectif, Campings et terrains, Aires et haltes de plein air. Ouvrir une famille n'est **pas** un filtre : c'est un accordéon. Le filtre, c'est la nature que vous cochez à l'intérieur.
+**Pour l'hébergement**, l'affinement se fait directement dans cinq familles : Hôtellerie, Hébergement locatif, Hébergement collectif, Campings et terrains, Aires et haltes de plein air. Ouvrir une famille n'est **pas** un filtre : c'est un accordéon. Le filtre est le choix que vous cochez à l'intérieur. Les positionnements d'hôtel restent dans Hôtellerie.
 
 **Certaines natures se déplient.** *Terrain de camping déclaré* contient *Camping à la ferme* et *Camping chez l'habitant*. Cocher le **parent** remonte aussi les fiches de ses deux formes ; cocher une **forme** ne remonte qu'elle.
 

@@ -441,10 +441,14 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
       </div>
 
       <div className="grid-1-2" style={{ marginBottom: 12 }}>
-        <Field label="Type de fiche Bertel" required hint="Code technique — détermine les sections obligatoires">
+        <Field
+          label="Type de fiche Bertel"
+          required
+          hint="Code technique calculé à la création — il n’est jamais modifié par un enregistrement"
+        >
           <Readout value={typeDisplay} mono prefix="●" />
         </Field>
-        <Field label="Nature d'hébergement" hint="Nature canonique ; les précisions existantes restent visibles jusqu’au lot 3">
+        <Field label="Nature d'hébergement" hint="Répond à « quel type d’établissement est-ce ? » — pas à ce dans quoi le visiteur dort">
           <button
             type="button"
             className="identity-taxo-trigger"
@@ -462,6 +466,18 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
           </button>
         </Field>
       </div>
+
+      {/* §200 — l'éditeur ne propose QUE les natures du domaine compatible avec le
+          type technique de la fiche. Le dire explicitement évite la conclusion la
+          plus naturelle et la plus fausse : « la nature que je cherche a disparu ».
+          Un enregistrement ne change jamais `object_type` (le trigger de garde le
+          refuserait) — la conversion est une opération administrative. */}
+      <p className="identity-taxo-note" style={{ marginTop: -4, marginBottom: 12, fontSize: 12, lineHeight: 1.45, color: 'var(--ink-3)' }}>
+        Seules les natures compatibles avec le type <strong>{canonicalType || '—'}</strong> sont proposées.
+        Si la nature qui décrit vraiment l’établissement appartient à un autre type de fiche, cette nature
+        nécessite une conversion de type de fiche : demandez-la à un administrateur — l’enregistrement de
+        cette section ne changera pas le type.
+      </p>
 
       <TaxonomyModal
         open={taxonomyOpen}

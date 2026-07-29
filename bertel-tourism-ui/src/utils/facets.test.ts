@@ -749,6 +749,8 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
     rankedLabelIncludeEquivalents: false,
     rankedLabelValueCodes: ['3'],
     statuses: ['draft'],
+    missingEssentialsBuckets: ['many'],
+    missingEssentialsAny: ['photos'],
     bbox: [55.2, -21.4, 55.6, -20.9],
     polygon: { type: 'Polygon', coordinates: [[[55.2, -21.4], [55.6, -21.4], [55.6, -20.9], [55.2, -21.4]]] },
   };
@@ -846,5 +848,38 @@ describe('resolveCapacityBounds (16o)', () => {
     expect(resolveCapacityBounds(BOUNDS, 'beds', ['CAMP'])).toBeNull();
     expect(resolveCapacityBounds(BOUNDS, 'pitches', ['CAMP'])).toBeNull();
     expect(resolveCapacityBounds(undefined, 'beds', ['HOT'])).toBeNull();
+  });
+});
+
+describe('§204 — payload du filtre remplissage', () => {
+  test('rien n’est émis quand aucun critère de remplissage n’est actif', () => {
+    const payload = buildBucketRpcFilters(buildFilters({}), 'HOT');
+    expect(payload).not.toHaveProperty('missing_essentials_buckets');
+    expect(payload).not.toHaveProperty('missing_essentials_any');
+  });
+
+  test('les paliers partent sous la clé missing_essentials_buckets', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsBuckets: ['many', 'complete'] } as never }),
+      'HOT',
+    );
+    expect(payload.missing_essentials_buckets).toEqual(['many', 'complete']);
+  });
+
+  test('la facette part sous la clé missing_essentials_any', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsAny: ['photos'] } as never }),
+      'HOT',
+    );
+    expect(payload.missing_essentials_any).toEqual(['photos']);
+  });
+
+  test('un tableau vide n’émet PAS la clé — le RPC la traiterait comme « pas de filtre »', () => {
+    const payload = buildBucketRpcFilters(
+      buildFilters({ common: { missingEssentialsBuckets: [], missingEssentialsAny: [] } as never }),
+      'HOT',
+    );
+    expect(payload).not.toHaveProperty('missing_essentials_buckets');
+    expect(payload).not.toHaveProperty('missing_essentials_any');
   });
 });

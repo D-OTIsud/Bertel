@@ -276,7 +276,6 @@ function TaxonomyModal({
         <div
           className={`taxo2-row${isSelectedPath ? ' is-selected-path' : ''}${isSelected ? ' is-selected' : ''}`}
           style={{ paddingLeft: 10 + depth * 18 }}
-          title={[node.description, node.sourceRef].filter(Boolean).join(' — ') || undefined}
         >
           {node.isAssignable ? (
             <label className="taxo2-opt">

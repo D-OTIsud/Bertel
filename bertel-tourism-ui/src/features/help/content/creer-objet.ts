@@ -12,14 +12,14 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     related: ['creer-hebergement', 'choisir-artisan', 'publier-fiche'],
     answer: `**Où.** Bouton **Créer** de l'Explorer, ou palette de commandes (Ctrl/⌘ + K → « Créer une fiche »). Si le bouton n'apparaît pas, votre compte n'a pas le droit de création — voyez l'administrateur de votre organisation.
 
-**Comment.** 1. Saisissez le **nom exact** de l'établissement ou de l'offre ; Bertel vous signale au passage les fiches au nom proche, pour éviter un doublon. 2. Choisissez ce que vous décrivez. Pour un **hébergement**, vous choisissez une **famille** puis une **nature** et Bertel calcule le code technique à votre place — voyez « Créer une fiche d'hébergement en 5 étapes ». Pour tout le reste (restaurant, activité, itinéraire, visite, service, événement), vous choisissez directement le type. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.
+**Comment.** 1. Saisissez le **nom exact** de l'établissement ou de l'offre ; Bertel vous signale au passage les fiches au nom proche, pour éviter un doublon. 2. Choisissez ce que vous décrivez. Pour un **hébergement**, vous choisissez directement une **famille** puis une **nature** — voyez « Créer une fiche d'hébergement en 4 étapes ». Pour tout le reste (restaurant, activité, itinéraire, visite, service, événement), vous choisissez directement le type. 3. La fiche s'ouvre en **brouillon** dans l'éditeur.
 
 **Ensuite.** Remplissez les sections prioritaires (identité, localisation, contacts, description, photos) puis publiez depuis la section Publication. Un brouillon n'est visible que par votre organisation.`,
   },
   {
     id: 'creer-hebergement',
     rubrique: 'creer-objet',
-    question: "Créer une fiche d'hébergement en 5 étapes",
+    question: "Créer une fiche d'hébergement en 4 étapes",
     keywords: [
       'hébergement', 'famille', 'nature', 'auberge', 'auberge collective', 'gîte de groupe',
       'refuge', 'gîte d’étape', 'résidence de tourisme', 'résidence hôtelière', 'résidence de vacances',
@@ -32,13 +32,11 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     related: ['creer-fiche', 'choisir-hlo-rva', 'editeur-nature-unite-service-tarif'],
     answer: `**1 · Nommez la fiche.** Saisissez le nom officiel de l'établissement. Bertel affiche les fiches au nom proche : ouvrez-en une si c'est la même offre, sinon continuez — un même nom ailleurs est légitime.
 
-**2 · Choisissez la famille.** Cinq familles couvrent tout l'hébergement : **Hôtellerie**, **Hébergement locatif**, **Hébergement collectif**, **Campings et terrains**, **Aires et haltes de plein air**.
+**2 · Choisissez directement la famille.** Les cinq boutons proposés dans la section Hébergement sont : **Hôtellerie**, **Hébergement locatif**, **Hébergement collectif**, **Campings et terrains**, **Aires et haltes de plein air**. Il n'y a pas de bouton « Hébergement » intermédiaire.
 
 **3 · Choisissez la nature.** La nature répond à « **quel type d'établissement est-ce ?** » — pas à son bâtiment ni à ses équipements. Certaines natures se précisent ensuite : sous *Terrain de camping déclaré*, indiquez *à la ferme* ou *chez l'habitant*.
 
-**4 · Vérifiez le récapitulatif.** Bertel affiche le chemin choisi et le **type technique calculé**. Ce code n'est pas un choix : il découle de la nature. Vous n'avez jamais à savoir ce que signifient HLO, RVA, CAMP ou HPA.
-
-**5 · Complétez après la création.** Dans des champs séparés : les **types d'unité** (dans quoi le visiteur dort : bulle, tipi, lodge, cabane — plusieurs valeurs possibles), les **services** (eau, vidange, électricité…), le **classement** en étoiles, et les **tarifs**.
+**4 · Complétez après la création.** Bertel déduit silencieusement le classement technique nécessaire. Dans l'éditeur, renseignez ensuite dans des champs séparés : les **types d'unité** (dans quoi le visiteur dort : bulle, tipi, lodge, cabane — plusieurs valeurs possibles), les **services** (eau, vidange, électricité…), le **classement** en étoiles, et les **tarifs**.
 
 **Exemple.** Un établissement peut avoir pour nature *Aire naturelle de camping*, proposer des unités *Lodge* et *Cabane*, fournir eau et électricité, et être gratuit ou payant. **Aucune** de ces trois dernières informations ne change sa nature.
 
@@ -51,11 +49,11 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     keywords: ['gîte', 'meublé', 'chambre d’hôtes', 'maison d’hôtes', 'location saisonnière', 'kaz', 'villa', 'bungalow', 'location vacances', 'gîte de groupe', 'refuge'],
     types: ['HLO'],
     related: ['creer-fiche', 'choisir-hlo-rva'],
-    answer: `**C'est quoi.** Un hébergement locatif non hôtelier : logement entier autonome (gîte, meublé, villa, bungalow), chambre d'hôtes chez l'habitant, ou hébergement collectif de type gîte de groupe/refuge — type **Gîtes, meublés & chambres d'hôtes (HLO)**.
+    answer: `**C'est quoi.** Un hébergement locatif non hôtelier : logement entier autonome (gîte, meublé, villa, bungalow), chambre d'hôtes chez l'habitant, ou hébergement collectif de type gîte/refuge.
 
-**Quand choisir ce type.** Le voyageur loue un logement autonome, séjourne chez l'habitant avec petit-déjeuner, ou réserve un hébergement collectif sans fonctionnement hôtelier. **Pas ce type si** : chambres exploitées comme un hôtel avec réception et services hôteliers → Hôtel (HOT) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA) ; emplacements de plein air → Camping (CAMP) ou Hôtellerie de plein air (HPA).
+**Comment choisir.** Pour un logement autonome ou une chambre chez l'habitant, choisissez *Hébergement locatif*, puis *Meublé de tourisme* ou *Chambre d'hôtes*. Pour l'accueil d'un groupe, choisissez *Hébergement collectif*, puis *Gîte* ou *Refuge et gîte d'étape*. **Pas ces natures si** : chambres exploitées comme un hôtel avec réception et services hôteliers → *Hôtellerie › Hôtel* ; ensemble d'appartements avec services collectifs → *Hébergement collectif › Résidence de tourisme* ; emplacement ou halte de plein air → l'une des deux familles dédiées.
 
-**Étapes.** Créer → type « Gîtes, meublés & chambres d'hôtes » → nom exact. Dans l'éditeur, choisissez d'abord la nature puis la forme dans la taxonomie, et renseignez en priorité : localisation, contacts, description, photos, **capacité** et tarifs.
+**Étapes.** Créer → nom exact → famille → nature. Bertel calcule le type technique en arrière-plan. Dans l'éditeur, renseignez en priorité : localisation, contacts, description, photos, **capacité** et tarifs.
 
 **Pièges.** Une maison d'hôtes reste une chambre d'hôtes : « maison » décrit la forme et ne doit pas la faire basculer dans les meublés. Le classement en étoiles d'un meublé de tourisme se saisit dans Classement & labels — jamais dans le nom.`,
   },
@@ -66,11 +64,11 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
     keywords: ['hôtel', 'chambre', 'nuitée', 'étoiles'],
     types: ['HOT'],
     related: ['creer-fiche'],
-    answer: `**C'est quoi.** Un établissement proposant des chambres à la nuitée avec des services hôteliers (réception, ménage…) — type **Hôtel (HOT)**.
+    answer: `**C'est quoi.** Un établissement proposant des chambres à la nuitée avec des services hôteliers (réception, ménage…).
 
-**Quand choisir ce type.** Réception et services hôteliers, chambres louées à la nuitée. **Pas ce type si** : logement entier autonome ou chambre chez l'habitant avec petit-déjeuner → Gîtes, meublés & chambres d'hôtes (HLO) ; ensemble d'appartements avec services collectifs → Résidence de vacances (RVA).
+**Quand choisir cette nature.** Réception et services hôteliers, chambres louées à la nuitée. **Pas cette nature si** : logement entier autonome ou chambre chez l'habitant avec petit-déjeuner → *Hébergement locatif* ; ensemble d'appartements avec services collectifs → *Hébergement collectif › Résidence de tourisme*.
 
-**Étapes.** Créer → type « Hôtel » → nom exact. Dans l'éditeur, renseignez la **capacité et les chambres** (section Chambres, capacité & séminaire) et le **classement en étoiles** (section Classifications & distinctions).
+**Étapes.** Créer → nom exact → *Hôtellerie* → *Hôtel*. Dans l'éditeur, renseignez la **capacité et les chambres** (section Chambres, capacité & séminaire) et le **classement en étoiles** (section Classifications & distinctions).
 
 **Pièges.** Le nombre d'étoiles n'est pas un champ libre : il se déclare comme une classification officielle, avec son statut (accordée, en cours…), pas dans le nom ni la description.`,
   },
@@ -113,15 +111,15 @@ export const CREER_OBJET_FAQ: FaqEntry[] = [
   {
     id: 'creer-rva',
     rubrique: 'creer-objet',
-    question: 'Comment créer une résidence de vacances ?',
-    keywords: ['résidence', 'appartement', 'studio', 'vacances'],
+    question: 'Comment créer une résidence de tourisme ?',
+    keywords: ['résidence', 'résidence de tourisme', 'résidence de vacances', 'appartement', 'studio', 'vacances'],
     types: ['RVA'],
     related: ['creer-fiche'],
-    answer: `**C'est quoi.** Un ensemble locatif (appartements, studios) avec des services collectifs (accueil, ménage, parfois piscine ou animation) — type **Résidence de vacances (RVA)**.
+    answer: `**C'est quoi.** Un ensemble locatif (appartements, studios) avec des services collectifs (accueil, ménage, parfois piscine ou animation) — nature **Résidence de tourisme**.
 
-**Quand choisir ce type.** Plusieurs logements gérés par un même exploitant, avec des services partagés. **Pas ce type si** : logement autonome, chambre d'hôtes ou gîte collectif sans services de résidence → Gîtes, meublés & chambres d'hôtes (HLO).
+**Quand choisir cette nature.** Plusieurs logements gérés par un même exploitant, avec des services partagés. **Pas cette nature si** : logement autonome ou chambre d'hôtes → *Hébergement locatif* ; gîte collectif sans services de résidence → *Hébergement collectif › Gîte*.
 
-**Étapes.** Créer → type « Résidence de vacances » → nom exact. Renseignez la **capacité et les logements** (section Chambres, capacité & séminaire).
+**Étapes.** Créer → nom exact → *Hébergement collectif* → *Résidence de tourisme*. Renseignez la **capacité et les logements** (section Chambres, capacité & séminaire).
 
 **Pièges.** La frontière avec HLO tient au fonctionnement en résidence et aux services collectifs, pas au seul nombre de logements — un exploitant avec plusieurs gîtes indépendants reste en HLO (une fiche par logement).`,
   },

@@ -361,7 +361,7 @@ export function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: 
     nodesByDomain.set(node.domain, current);
   }
 
-  return sortByPositionAndName(domainRows.map((row) => ({ ...row, name: row.name }))).map((domainRow) => {
+  const domains = sortByPositionAndName(domainRows.map((row) => ({ ...row, name: row.name }))).map((domainRow) => {
     const domainNodes = nodesByDomain.get(domainRow.domain) ?? [];
     const nodeById = new Map(domainNodes.map((node) => [node.id, node]));
     const parentIdByNodeId = new Map(domainNodes.map((node) => [node.id, node.parent_id]));
@@ -404,6 +404,125 @@ export function buildTaxonomyDomains(domainRows: TaxonomyDomainRow[], nodeRows: 
       nodes,
     };
   });
+
+  return projectLegacyOutdoorAccommodationTaxonomies(domains);
+}
+
+const LEGACY_OUTDOOR_FAMILY_CODE = 'plein_air';
+const OUTDOOR_FAMILY_ALIASES = ['Hôtellerie de plein air', 'Hébergement de plein air'];
+const CAMPING_TERRAIN_HPA_CODES = new Set([
+  'natural_camp_area',
+  'farm_camping',
+  'homestay_camping',
+]);
+
+/**
+ * Compatibilité de déploiement §201.
+ *
+ * Le frontend doit être publiable avant la migration SQL de la hiérarchie v2.
+ * Tant que le catalogue live porte encore l'ancienne famille `plein_air`, on
+ * projette ses nœuds connus vers les deux familles cibles. Les filtres envoyés
+ * au serveur conservent leurs vrais couples domaine/code : cette projection ne
+ * fabrique donc aucune affectation et ne change pas la sémantique de filtrage.
+ */
+export function projectLegacyOutdoorAccommodationTaxonomies(
+  domains: ExplorerTaxonomyDomain[],
+): ExplorerTaxonomyDomain[] {
+  return domains.map((domain) => ({
+    ...domain,
+    nodes: domain.nodes.map((node) => {
+      if (node.family !== LEGACY_OUTDOOR_FAMILY_CODE) {
+        return node;
+      }
+
+      if (domain.domain === 'taxonomy_camp') {
+        return { ...node, family: 'campings_terrains' };
+      }
+
+      if (domain.domain === 'taxonomy_hpa' && CAMPING_TERRAIN_HPA_CODES.has(node.code)) {
+        return { ...node, family: 'campings_terrains' };
+      }
+
+      if (domain.domain === 'taxonomy_hpa' && node.code === 'motorhome_area') {
+        return { ...node, family: 'aires_haltes_plein_air' };
+      }
+
+      if (domain.domain === 'taxonomy_hpa' && node.code === 'outdoor_glamping') {
+        return {
+          ...node,
+          family: null,
+          axis: 'type_unite',
+          isAssignable: false,
+        };
+      }
+
+      // Un nouveau code encore non arbitré ne doit pas recréer silencieusement
+      // l'ancienne famille ni être rangé au hasard dans l'une des deux nouvelles.
+      return { ...node, family: null };
+    }),
+  }));
+}
+
+/**
+ * Remplace à l'affichage l'ancien regroupement `plein_air` par les deux familles
+ * validées. Idempotent : après la migration SQL, les lignes cibles sont gardées
+ * telles quelles et l'éventuelle ligne historique active est seulement masquée.
+ */
+export function projectLegacyOutdoorAccommodationFamilies(
+  families: ExplorerAccommodationFamily[],
+): ExplorerAccommodationFamily[] {
+  const legacy = families.find((family) => family.code === LEGACY_OUTDOOR_FAMILY_CODE);
+  const hasOutdoorFamily = Boolean(
+    legacy
+    || families.some((family) => family.code === 'campings_terrains')
+    || families.some((family) => family.code === 'aires_haltes_plein_air'),
+  );
+  const projected = families.filter((family) => family.code !== LEGACY_OUTDOOR_FAMILY_CODE);
+
+  if (!hasOutdoorFamily) {
+    return sortByPositionAndName(projected);
+  }
+
+  const legacyAliases = legacy ? [legacy.name, ...(legacy.aliases ?? [])] : [];
+  const aliases = Array.from(new Set([...OUTDOOR_FAMILY_ALIASES, ...legacyAliases]));
+  const targets: ExplorerAccommodationFamily[] = [
+    { code: 'campings_terrains', name: 'Campings et terrains', position: 4, aliases },
+    { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 5, aliases },
+  ];
+
+  for (const target of targets) {
+    const existingIndex = projected.findIndex((family) => family.code === target.code);
+    if (existingIndex < 0) {
+      projected.push(target);
+      continue;
+    }
+
+    const existing = projected[existingIndex];
+    projected[existingIndex] = {
+      ...existing,
+      name: target.name,
+      position: target.position,
+      aliases: Array.from(new Set([...(existing.aliases ?? []), ...aliases])),
+    };
+  }
+
+  return sortByPositionAndName(projected);
+}
+
+function toAccommodationFamilies(rows: Array<{
+  code: string;
+  name: string;
+  description: string | null;
+  position: number | null;
+  metadata?: unknown;
+}>): ExplorerAccommodationFamily[] {
+  return projectLegacyOutdoorAccommodationFamilies(rows.map((row) => ({
+    code: row.code,
+    name: row.name,
+    description: row.description,
+    position: row.position,
+    aliases: readStringList(readRecord(row.metadata).aliases),
+  })));
 }
 
 // Representative Réunion municipalities for demo mode city dropdown.
@@ -481,6 +600,51 @@ function buildDemoReferences(): ExplorerReferences {
           { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4, axis: 'positionnement', family: 'hotellerie', aliases: [] },
+        ],
+      },
+      {
+        domain: 'taxonomy_hlo',
+        name: 'Taxonomie HLO',
+        objectType: 'HLO',
+        nodes: [
+          { code: 'chambre_d_hotes', name: "Chambre d'hôtes", parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'locatif', aliases: [] },
+          { code: 'location_saisonniere', name: 'Meublé de tourisme', parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'locatif', aliases: ['Gîte', 'Location saisonnière'] },
+          { code: 'auberge_collective', name: 'Auberge', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'collectif', aliases: ['Auberge collective'] },
+          { code: 'gite_de_groupe', name: 'Gîte', parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'collectif', aliases: ['Gîte de groupe'] },
+          { code: 'gite_de_randonnee', name: "Refuge et gîte d'étape", parentCode: null, depth: 0, isAssignable: true, position: 3, axis: 'nature', family: 'collectif', aliases: ["Gîte d'étape et de randonnée"] },
+        ],
+      },
+      {
+        domain: 'taxonomy_rva',
+        name: 'Taxonomie RVA',
+        objectType: 'RVA',
+        nodes: [
+          { code: 'tourism_residence', name: 'Résidence de tourisme', parentCode: null, depth: 0, isAssignable: true, position: 4, axis: 'nature', family: 'collectif', aliases: [] },
+          { code: 'holiday_village', name: 'Village de vacances', parentCode: null, depth: 0, isAssignable: true, position: 5, axis: 'nature', family: 'collectif', aliases: [] },
+          { code: 'aparthotel', name: 'Résidence hôtelière', parentCode: null, depth: 0, isAssignable: true, position: 6, axis: 'nature', family: 'collectif', aliases: [] },
+        ],
+      },
+      {
+        domain: 'taxonomy_camp',
+        name: 'Taxonomie CAMP',
+        objectType: 'CAMP',
+        nodes: [
+          { code: 'camping', name: 'Camping', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'campings_terrains', aliases: ['Camping aménagé', 'Camping classé'] },
+        ],
+      },
+      {
+        domain: 'taxonomy_hpa',
+        name: 'Taxonomie HPA',
+        objectType: 'HPA',
+        nodes: [
+          { code: 'natural_camp_area', name: 'Aire naturelle de camping', parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'campings_terrains', aliases: [] },
+          { code: 'declared_campground', name: 'Terrain de camping déclaré', parentCode: null, depth: 0, isAssignable: true, position: 3, axis: 'nature', family: 'campings_terrains', aliases: [] },
+          { code: 'farm_camping', name: 'Camping à la ferme', parentCode: 'declared_campground', depth: 1, isAssignable: true, position: 1, axis: 'sous_type', family: 'campings_terrains', aliases: [] },
+          { code: 'homestay_camping', name: "Camping chez l'habitant", parentCode: 'declared_campground', depth: 1, isAssignable: true, position: 2, axis: 'sous_type', family: 'campings_terrains', aliases: [] },
+          { code: 'residential_leisure_park', name: 'Parc résidentiel de loisirs', parentCode: null, depth: 0, isAssignable: true, position: 4, axis: 'nature', family: 'campings_terrains', aliases: ['PRL'] },
+          { code: 'bivouac_area', name: 'Aire de bivouac', parentCode: null, depth: 0, isAssignable: true, position: 10, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
+          { code: 'motorhome_area', name: "Aire d'accueil camping-car", parentCode: null, depth: 0, isAssignable: true, position: 11, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
+          { code: 'motorhome_night_stop', name: 'Halte nocturne camping-car/van', parentCode: null, depth: 0, isAssignable: true, position: 12, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
         ],
       },
       {
@@ -624,15 +788,9 @@ export async function listAccommodationFamilies(): Promise<ExplorerAccommodation
     throw result.error;
   }
 
-  return ((result.data ?? []) as Array<{
+  return toAccommodationFamilies((result.data ?? []) as Array<{
     code: string; name: string; description: string | null; position: number | null; metadata?: unknown;
-  }>).map((row) => ({
-    code: row.code,
-    name: row.name,
-    description: row.description,
-    position: row.position,
-    aliases: readStringList(readRecord(row.metadata).aliases),
-  }));
+  }>);
 }
 
 export async function listExplorerReferences(): Promise<ExplorerReferences> {
@@ -786,15 +944,9 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     // §201 — `metadata.aliases` porte l'ancien vocabulaire de famille (« Hôtellerie
     // de plein air »). Sans lui, un agent qui cherche l'ancien terme ne trouve
     // plus rien alors que DEUX familles le remplacent.
-    accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{
+    accommodationFamilies: toAccommodationFamilies((accommodationFamiliesResult.data ?? []) as Array<{
       code: string; name: string; description: string | null; position: number | null; metadata?: unknown;
-    }>).map((row) => ({
-      code: row.code,
-      name: row.name,
-      description: row.description,
-      position: row.position,
-      aliases: readStringList(readRecord(row.metadata).aliases),
-    })),
+    }>),
     capacityBounds: toCapacityBounds(capacityBoundsResult.error ? [] : ((capacityBoundsResult.data ?? []) as CapacityBoundsRow[])),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),

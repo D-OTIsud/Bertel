@@ -58,18 +58,18 @@ export const CHOISIR_TYPE_FAQ: FaqEntry[] = [
   {
     id: 'choisir-hlo-rva',
     rubrique: 'choisir-type',
-    question: 'Gîte, chambre d’hôtes, hôtel ou résidence : quel type choisir ?',
+    question: 'Gîte, chambre d’hôtes, hôtel ou résidence : quelle nature choisir ?',
     keywords: ['gîte', 'meublé', 'chambre d’hôtes', 'maison d’hôtes', 'hôtel', 'résidence', 'appartement', 'location', 'services collectifs', 'villa', 'gîte de groupe', 'refuge'],
     types: ['HLO', 'HOT', 'RVA'],
     related: ['creer-hlo', 'creer-hot', 'creer-rva'],
     answer: `La question à trancher : **quel est le fonctionnement réel de l'hébergement ?**
 
-- **Un logement entier autonome, loué sans réception ni service partagé** (gîte, meublé, villa, bungalow) → **Gîtes, meublés & chambres d'hôtes (HLO)**, branche « Meublé de tourisme / gîte ».
-- **Une chambre chez l'habitant avec accueil et petit-déjeuner** → **HLO**, branche « Chambre d'hôtes » — même si le bâtiment est présenté comme une maison, une villa, une bulle ou un lodge.
-- **Un gîte de groupe, refuge ou gîte d'étape sans fonctionnement hôtelier** → **HLO**, branche « Hébergement collectif ».
-- **Des chambres exploitées avec réception et services hôteliers** → **Hôtel (HOT)**.
-- **Plusieurs logements gérés par le même exploitant, avec des services collectifs** (accueil, ménage, parfois piscine ou animation) → **Résidence de vacances (RVA)**.
-- **Un exploitant avec plusieurs gîtes indépendants, sans service collectif** → toujours HLO, **une fiche par logement** — le nombre de logements ne fait pas basculer en RVA, seuls les services collectifs le font.
+- **Un logement entier autonome, loué sans réception ni service partagé** (gîte, meublé, villa, bungalow) → **Hébergement locatif › Meublé de tourisme**.
+- **Une chambre chez l'habitant avec accueil et petit-déjeuner** → **Hébergement locatif › Chambre d'hôtes** — même si le bâtiment est présenté comme une maison, une villa, une bulle ou un lodge.
+- **Un gîte accueillant un groupe, un refuge ou un gîte d'étape sans fonctionnement hôtelier** → **Hébergement collectif › Gîte** ou **Refuge et gîte d'étape**.
+- **Des chambres exploitées avec réception et services hôteliers** → **Hôtellerie › Hôtel**.
+- **Plusieurs logements gérés par le même exploitant, avec des services collectifs** (accueil, ménage, parfois piscine ou animation) → **Hébergement collectif › Résidence de tourisme**.
+- **Un exploitant avec plusieurs gîtes indépendants, sans service collectif** → **Hébergement locatif › Meublé de tourisme**, avec **une fiche par logement** — le nombre de logements ne transforme pas l'établissement en résidence de tourisme ; seuls son fonctionnement et ses services collectifs le font.
 
 **Piège.** La forme physique ne détermine jamais la nature : une « maison d'hôtes » n'est pas un meublé parce que c'est une maison. En cas de doute, vérifiez qui occupe les lieux, quels services sont fournis et si le voyageur dispose du logement entier.`,
   },

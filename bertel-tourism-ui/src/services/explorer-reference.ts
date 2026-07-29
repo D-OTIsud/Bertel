@@ -611,6 +611,7 @@ function buildDemoReferences(): ExplorerReferences {
         objectType: 'HOT',
         nodes: [
           { code: 'hotel', name: 'Hôtel', description: 'Établissement hôtelier.', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [], sourceRef: 'Code du tourisme art. D311-4' },
+          { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'family_hotel', name: 'Hôtel familial', parentCode: 'hotel', depth: 1, isAssignable: true, position: 3, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'business_hotel', name: 'Hôtel d’affaires', parentCode: 'hotel', depth: 1, isAssignable: true, position: 4, axis: 'positionnement', family: 'hotellerie', aliases: [] },
@@ -736,6 +737,17 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'boat', name: 'Péniche / bateau' },
       { code: 'unusual_outdoor_unit', name: 'Insolite' },
       { code: 'other', name: 'Autre' },
+    ],
+    accommodationPositionings: [
+      { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant' },
+      { code: 'boutique_hotel', name: 'Hôtel boutique' },
+      { code: 'business_hotel', name: 'Hôtel d’affaires' },
+      { code: 'eco_hotel', name: 'Hôtel écologique' },
+      { code: 'family_hotel', name: 'Hôtel familial' },
+      { code: 'heritage_hotel', name: 'Hôtel patrimonial' },
+      { code: 'modern_hotel', name: 'Hôtel contemporain' },
+      { code: 'romantic_hotel', name: 'Hôtel romantique' },
+      { code: 'traditional_hotel', name: 'Hôtel traditionnel' },
     ],
     amenityFamilies: [
       { code: 'outdoor', name: 'Plein air' },
@@ -948,6 +960,11 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const accommodationUnitTypes = (accommodationUnitTypesResult.error
     ? []
     : (accommodationUnitTypesResult.data ?? [])) as PracticeRow[];
+  const accommodationPositionings = taxonomies
+    .find((domain) => domain.domain === 'taxonomy_hot')
+    ?.nodes
+    .filter((node) => node.axis === 'positionnement' && node.isAssignable)
+    .map((node) => ({ code: node.code, name: node.name, position: node.position })) ?? [];
   const amenityFamilies = (amenityFamiliesResult.data ?? []) as PracticeRow[];
   const locationOptions = locationOptionsResult.data as { cities: string[]; lieu_dits: string[] } | null;
   const accessibilityAmenities = (accessibilityAmenitiesResult.data ?? []) as AmenityRow[];
@@ -984,6 +1001,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     itiPractices: toReferenceOptions(practices),
     environmentTags: toReferenceOptions(environmentTags),
     accommodationUnitTypes: toReferenceOptions(accommodationUnitTypes),
+    accommodationPositionings: toReferenceOptions(accommodationPositionings),
     amenityFamilies: toReferenceOptions(amenityFamilies),
     tags: ((tagsResult.data ?? []) as ExplorerTagFilter[]).filter((tag) => tag.slug && tag.name),
     cities: locationOptions?.cities ?? [],

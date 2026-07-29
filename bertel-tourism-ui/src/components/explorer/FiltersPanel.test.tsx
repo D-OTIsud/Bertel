@@ -183,7 +183,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
         domain: 'taxonomy_hot', name: 'HOT', objectType: 'HOT',
         nodes: [
           { code: 'hotel', name: 'Hôtel', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [] },
-          { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant', parentCode: 'hotel', depth: 1, isAssignable: true, position: 10, axis: 'sous_type', family: 'hotellerie', aliases: [] },
+          { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant', parentCode: 'hotel', depth: 1, isAssignable: true, position: 10, axis: 'positionnement', family: 'hotellerie', aliases: [] },
           { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
         ],
       },
@@ -250,8 +250,25 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
 
       expect(screen.getByRole('button', { name: 'Hôtel' })).toBeInTheDocument();
       expect(screen.getByText('Positionnement')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hôtel-restaurant' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Hôtel boutique' })).toBeInTheDocument();
       expect(screen.queryByText(/^Nature$/)).not.toBeInTheDocument();
+    });
+
+    it('combine Hôtel et Hôtel-restaurant sur deux axes distincts', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Hôtellerie');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hôtel' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Hôtel-restaurant' }));
+
+      expect(useExplorerStore.getState().common.taxonomyAny).toEqual([
+        { domain: 'taxonomy_hot', code: 'hotel' },
+      ]);
+      expect(useExplorerStore.getState().common.accommodationPositioningsAny).toEqual([
+        'hotel_with_restaurant',
+      ]);
     });
 
     it('explique les deux familles de plein air et la nature Aire naturelle', () => {

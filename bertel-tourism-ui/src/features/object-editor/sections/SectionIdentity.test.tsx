@@ -13,14 +13,13 @@ function taxonomyDomainFixture(
   nodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [],
   assignment: ObjectWorkspaceTaxonomyAssignment | null = {
     recordId: 'tx1',
-    nodeId: 'n-hotel-familial',
-    code: 'family_hotel',
-    label: 'Hôtel familial',
+    nodeId: 'n-hotel',
+    code: 'hotel',
+    label: 'Hôtel',
     description: '',
     depth: 1,
     path: [
       { id: 'n-hotel', code: 'hotel', label: 'Hôtel', description: '', depth: 0 },
-      { id: 'n-hotel-familial', code: 'family_hotel', label: 'Hôtel familial', description: '', depth: 1 },
     ],
     updatedAt: '',
     source: '',
@@ -44,6 +43,14 @@ function modulesWithTaxonomy(
   modules.taxonomy = {
     domains: [assignment === undefined ? taxonomyDomainFixture(nodes) : taxonomyDomainFixture(nodes, assignment)],
     unitTypes: { options: [], selectedCodes: [], unavailableReason: null },
+    positionings: {
+      options: [
+        { code: 'hotel_with_restaurant', label: 'Hôtel-restaurant', description: '' },
+        { code: 'family_hotel', label: 'Hôtel familial', description: '' },
+      ],
+      selectedCodes: ['hotel_with_restaurant', 'family_hotel'],
+      unavailableReason: null,
+    },
     unavailableReason: null,
   };
   return modules;
@@ -58,8 +65,21 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
     parentId: null,
     parentCode: null,
     depth: 0,
-    isAssignable: false,
+    isAssignable: true,
     position: 1,
+    axis: 'nature',
+  },
+  {
+    id: 'n-hotel-restaurant',
+    code: 'hotel_with_restaurant',
+    label: 'Hôtel-restaurant',
+    description: '',
+    parentId: 'n-hotel',
+    parentCode: 'hotel',
+    depth: 1,
+    isAssignable: true,
+    position: 2,
+    axis: 'positionnement',
   },
   {
     id: 'n-hotel-familial',
@@ -70,7 +90,8 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
     parentCode: 'hotel',
     depth: 1,
     isAssignable: true,
-    position: 2,
+    position: 3,
+    axis: 'positionnement',
   },
   {
     id: 'n-gite-rural',
@@ -81,7 +102,8 @@ const editableTaxonomyNodes: ObjectWorkspaceTaxonomyDomain['nodes'] = [
     parentCode: 'hotel',
     depth: 1,
     isAssignable: true,
-    position: 3,
+    position: 4,
+    axis: 'sous_type',
     aliases: ['Location saisonnière'],
     sourceRef: 'Code du tourisme art. D324-1',
   },
@@ -156,13 +178,14 @@ describe('SectionIdentity', () => {
   });
 
   it('shows the current taxonomy path inside the modal', () => {
-    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getAllByText('Hôtel').length).toBeGreaterThan(0);
-    expect(within(dialog).getByText('Hôtel familial')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Hôtel').length).toBeGreaterThanOrEqual(2);
+    expect(within(dialog).queryByText('Hôtel-restaurant')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Hôtel familial')).not.toBeInTheDocument();
   });
 
   it('highlights the full selected taxonomy path in the tree', () => {
@@ -171,11 +194,7 @@ describe('SectionIdentity', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
-    const parentRow = within(dialog).getByRole('button', { name: /^Hôtel$/ }).closest('.taxo2-row');
-    const selectedRow = within(dialog).getByRole('radio', { name: /Hôtel familial/i }).closest('.taxo2-row');
-
-    expect(parentRow).toHaveClass('is-selected-path');
-    expect(parentRow).not.toHaveClass('is-selected');
+    const selectedRow = within(dialog).getByRole('radio', { name: /^Hôtel/ }).closest('.taxo2-row');
     expect(selectedRow).toHaveClass('is-selected-path');
     expect(selectedRow).toHaveClass('is-selected');
   });
@@ -198,7 +217,8 @@ describe('SectionIdentity', () => {
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).toBeDisabled();
 
-    // Leaves are radios in the single-column tree; the current branch is pre-expanded.
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Développer Hôtel' }));
+    // Leaves are radios in the single-column tree.
     fireEvent.click(within(dialog).getByRole('radio', { name: /Gîte rural/i }));
     expect(within(dialog).getByRole('button', { name: 'Valider la sélection' })).not.toBeDisabled();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Valider la sélection' }));
@@ -221,7 +241,9 @@ describe('SectionIdentity', () => {
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
-    const radio = within(screen.getByRole('dialog')).getByRole('radio', { name: /Gîte rural/i });
+    const dialog = screen.getByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Développer Hôtel' }));
+    const radio = within(dialog).getByRole('radio', { name: /Gîte rural/i });
     expect(radio.closest('.taxo2-row')).not.toHaveAttribute('title');
   });
 
@@ -309,6 +331,29 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     return modules;
   }
 
+  it('édite le positionnement sans remplacer la nature Hôtel', () => {
+    const modules = modulesWithTaxonomy(editableTaxonomyNodes);
+    modules.taxonomy.positionings = {
+      options: [
+        { code: 'family_hotel', label: 'Hôtel familial', description: '' },
+        { code: 'boutique_hotel', label: 'Hôtel boutique', description: '' },
+      ],
+      selectedCodes: ['family_hotel'],
+      unavailableReason: null,
+    };
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hôtel boutique' }));
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+
+    expect(result.current.draft.taxonomy.positionings?.selectedCodes).toEqual([
+      'family_hotel',
+      'boutique_hotel',
+    ]);
+    expect(result.current.draft.taxonomy.domains[0].assignment?.code).toBe('hotel');
+  });
+
   it('permet de porter DEUX unités à la fois — la nature reste intacte', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
     const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
@@ -320,7 +365,7 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
 
     expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual(['bubble', 'lodge']);
     // Une reprise de FORME ne déplace jamais l'établissement.
-    expect(result.current.draft.taxonomy.domains[0].assignment?.code).toBe('family_hotel');
+    expect(result.current.draft.taxonomy.domains[0].assignment?.code).toBe('hotel');
   });
 
   it('retire une unité au second clic', () => {

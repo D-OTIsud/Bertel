@@ -65,7 +65,7 @@ Donc : **`HLO` chevauche deux familles**, tandis que `CAMP`+`HPA` et `HLO/collec
 | code | libellé actuel | action | libellé cible | porteurs |
 |---|---|---|---|---|
 | `hotel` | **Hotel** | renommer (accent) | **Hôtel** | 3 |
-| `hotel_with_restaurant` | Hôtel-restaurant | conserver — sous-type DATAtourisme reconnu | Hôtel-restaurant | 5 |
+| `hotel_with_restaurant` | Hôtel-restaurant | **sortir de l'axe nature** → axe *positionnement* ; la nature commune reste Hôtel | Hôtel-restaurant | 5 |
 | `boutique_hotel`, `business_hotel`, `eco_hotel`, `family_hotel`, `heritage_hotel`, `modern_hotel`, `romantic_hotel`, `traditional_hotel` | 8 nœuds | **sortir de l'axe nature** → axe *positionnement* | idem, hors taxonomie | 0 chacun |
 
 ⚠️ Les sortir n'est **pas** un masquage sur données (invariant §150 : un filtre existe parce que le concept existe). Le motif est un **mauvais axe** : ce sont des orientations commerciales, pas des natures. Elles réapparaîtront dans le filtre sous « Positionnement » une fois cet axe créé.
@@ -232,7 +232,11 @@ Trois lots indépendants, du moins risqué au plus structurant. Chacun est livra
 1. `Camping chez l'habitant` (2 fiches) → camping à la ferme ou aire naturelle ? *Vérification terrain requise.*
 2. `Auberge` (1 fiche, brouillon) → Hôtel ou Auberge collective ?
 3. `gite_rural` (4 fiches) → alias de *Meublé de tourisme*, ou nature distincte conservée ?
-4. Le positionnement (8 nœuds HOT) : axe à créer maintenant, ou nœuds simplement désactivés en attendant ?
+4. ~~Le positionnement (8 nœuds HOT) : axe à créer maintenant, ou nœuds simplement désactivés en attendant ?~~
+   **Décidé le 2026-07-29** : axe multi-valué créé. `hotel_with_restaurant`
+   rejoint les huit orientations commerciales, soit 9 valeurs. « Hôtel » reste
+   la nature englobante et son filtre couvre donc les hôtels avec ou sans
+   restaurant ; « Hôtel-restaurant » affine via le nouvel axe.
 
 ---
 

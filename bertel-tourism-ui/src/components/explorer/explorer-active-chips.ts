@@ -35,6 +35,7 @@ export type ActiveChipGroup =
   | 'evtDates'
   | 'amenityFamilies'
   | 'accommodationUnitTypes'
+  | 'accommodationPositionings'
   | 'accessDisability'
   | 'accessAmenities'
   | 'sustCategories'
@@ -201,6 +202,16 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
       group: 'accommodationUnitTypes',
       value: '*',
       label: `Type d'unité · ${unitTypeCount}`,
+    });
+  }
+
+  const positioningCount = (c.accommodationPositioningsAny ?? []).length;
+  if (positioningCount > 0) {
+    chips.push({
+      key: 'accommodationPositionings',
+      group: 'accommodationPositionings',
+      value: '*',
+      label: `Positionnement · ${positioningCount}`,
     });
   }
 

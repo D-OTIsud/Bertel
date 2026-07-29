@@ -65,7 +65,9 @@ import {
   type ObjectWorkspaceTaxonomyDomain,
   type ObjectWorkspaceTaxonomyModule,
   type ObjectWorkspaceUnitTypes,
+  type ObjectWorkspacePositionings,
   EMPTY_UNIT_TYPES,
+  EMPTY_POSITIONINGS,
   type ObjectWorkspaceTaxonomyNodeOption,
   type ObjectWorkspaceTaxonomyPathNode,
   type WorkspaceReferenceOption,
@@ -1247,6 +1249,10 @@ async function getObjectWorkspaceTaxonomyModule(
     ((assignmentsResult.data ?? []) as Record<string, unknown>[])
       .map((row) => [readString(row.domain), row] as const),
   );
+  const [unitTypes, positionings] = await Promise.all([
+    loadAccommodationUnitTypes(client, objectId, resolvedObjectType),
+    loadHotelPositionings(client, objectId, resolvedObjectType),
+  ]);
 
   return {
     domains: [
@@ -1264,7 +1270,8 @@ async function getObjectWorkspaceTaxonomyModule(
         })),
       ...baseModule.domains.filter((domain) => !domainCodes.includes(domain.domain)),
     ].sort((left, right) => left.label.localeCompare(right.label, 'fr')),
-    unitTypes: await loadAccommodationUnitTypes(client, objectId, resolvedObjectType),
+    unitTypes,
+    positionings,
     unavailableReason: null,
   };
 }
@@ -1315,6 +1322,57 @@ async function loadAccommodationUnitTypes(
   const codeById = new Map(options.map((option) => [option.id, option.code]));
   const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
     .map((row) => codeById.get(readString(row.unit_type_id)))
+    .filter((code): code is string => Boolean(code));
+
+  return {
+    options: options.map(({ code, label, description }) => ({ code, label, description })),
+    selectedCodes,
+    unavailableReason: null,
+  };
+}
+
+/** Positionnements commerciaux disponibles uniquement sur les fiches HOT. */
+async function loadHotelPositionings(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  objectType: string,
+): Promise<ObjectWorkspacePositionings> {
+  if (objectType.toUpperCase() !== 'HOT') {
+    return EMPTY_POSITIONINGS;
+  }
+
+  const [catalogResult, selectedResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code,name,description,position,metadata')
+      .eq('domain', 'taxonomy_hot')
+      .eq('is_active', true)
+      .eq('is_assignable', true)
+      .order('position', { ascending: true }),
+    client
+      .from('object_hotel_positioning')
+      .select('positioning_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error || selectedResult.error) {
+    return {
+      ...EMPTY_POSITIONINGS,
+      unavailableReason: "Le catalogue des positionnements d'hôtel n'est pas encore disponible sur cette base.",
+    };
+  }
+
+  const options = ((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => readString(readRecord(row.metadata).axis) === 'positionnement')
+    .map((row) => ({
+      id: readString(row.id),
+      code: readString(row.code),
+      label: readString(row.name),
+      description: readString(row.description),
+    }));
+  const codeById = new Map(options.map((option) => [option.id, option.code]));
+  const selectedCodes = ((selectedResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => codeById.get(readString(row.positioning_id)))
     .filter((code): code is string => Boolean(code));
 
   return {
@@ -4288,6 +4346,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
   }
 
   await saveAccommodationUnitTypes(client, objectId, input.unitTypes);
+  await saveHotelPositionings(client, objectId, input.positionings);
 }
 
 /**
@@ -4364,6 +4423,74 @@ async function saveAccommodationUnitTypes(
       .in('unit_type_id', toDelete);
     if (error) {
       throw mapMutationError(error, "Impossible de retirer le type d'unité.");
+    }
+  }
+}
+
+/** Réconciliation par différence des positionnements hôteliers multi-valués. */
+async function saveHotelPositionings(
+  client: NonNullable<ReturnType<typeof getSupabaseClient>>,
+  objectId: string,
+  positionings: ObjectWorkspacePositionings | undefined,
+): Promise<void> {
+  if (!positionings || positionings.unavailableReason) {
+    return;
+  }
+
+  const wanted = Array.from(new Set(positionings.selectedCodes.map((code) => code.trim()).filter(Boolean)));
+  const knownCodes = new Set(positionings.options.map((option) => option.code));
+  const unknown = wanted.filter((code) => !knownCodes.has(code));
+  if (unknown.length > 0) {
+    throw new Error(`Positionnement d'hôtel inconnu : ${unknown.join(', ')}.`);
+  }
+
+  const [catalogResult, existingResult] = await Promise.all([
+    client
+      .from('ref_code')
+      .select('id,code,metadata')
+      .eq('domain', 'taxonomy_hot')
+      .eq('is_active', true)
+      .eq('is_assignable', true),
+    client
+      .from('object_hotel_positioning')
+      .select('positioning_id')
+      .eq('object_id', objectId),
+  ]);
+
+  if (catalogResult.error) {
+    throw mapMutationError(catalogResult.error, "Impossible de lire le catalogue des positionnements d'hôtel.");
+  }
+  if (existingResult.error) {
+    throw mapMutationError(existingResult.error, "Impossible de lire les positionnements d'hôtel actuels.");
+  }
+
+  const idByCode = new Map(((catalogResult.data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => readString(readRecord(row.metadata).axis) === 'positionnement')
+    .map((row) => [readString(row.code), readString(row.id)] as const));
+  const existingIds = new Set(((existingResult.data ?? []) as Array<Record<string, unknown>>)
+    .map((row) => readString(row.positioning_id)));
+  const wantedIds = new Set(wanted.map((code) => idByCode.get(code)).filter((id): id is string => Boolean(id)));
+
+  const toInsert = [...wantedIds].filter((id) => !existingIds.has(id));
+  const toDelete = [...existingIds].filter((id) => !wantedIds.has(id));
+
+  if (toInsert.length > 0) {
+    const { error } = await client
+      .from('object_hotel_positioning')
+      .insert(toInsert.map((positioning_id) => ({ object_id: objectId, positioning_id })));
+    if (error) {
+      throw mapMutationError(error, "Impossible d'ajouter le positionnement d'hôtel.");
+    }
+  }
+
+  if (toDelete.length > 0) {
+    const { error } = await client
+      .from('object_hotel_positioning')
+      .delete()
+      .eq('object_id', objectId)
+      .in('positioning_id', toDelete);
+    if (error) {
+      throw mapMutationError(error, "Impossible de retirer le positionnement d'hôtel.");
     }
   }
 }

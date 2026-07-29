@@ -191,6 +191,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const sustainable = common.sustainable === true;
   const environmentTagsAny = common.environmentTagsAny ?? [];
   const accommodationUnitTypesAny = common.accommodationUnitTypesAny ?? [];
+  const accommodationPositioningsAny = common.accommodationPositioningsAny ?? [];
   const amenityFamiliesAny = common.amenityFamiliesAny ?? [];
   const taxonomyAny = common.taxonomyAny ?? [];
   const sustainabilityCategoryCodesAny = common.sustainabilityCategoryCodesAny ?? [];
@@ -214,6 +215,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const setOpenNow = useStore((state) => state.setOpenNow);
   const setEnvironmentTags = useStore((state) => state.setEnvironmentTags);
   const setAccommodationUnitTypes = useStore((state) => state.setAccommodationUnitTypes);
+  const setAccommodationPositionings = useStore((state) => state.setAccommodationPositionings);
   const setOpenAt = useStore((state) => state.setOpenAt);
   const setEvtEventRange = useStore((state) => state.setEvtEventRange);
   const setAmenityFamilies = useStore((state) => state.setAmenityFamilies);
@@ -304,6 +306,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const hotSectionCount =
     (isSubtypeNarrowed(hot.subtypes, DEFAULT_HOT_SUBTYPES) ? 1 : 0) +
     taxonomyCountForBucket(taxonomyAny, 'HOT') +
+    accommodationPositioningsAny.length +
     countActiveRanges(hot.capacityFilters) +
     (Object.values(hot.meetingRoom).some((value) => value != null) ? 1 : 0);
   const resSectionCount = taxonomyCountForBucket(taxonomyAny, 'RES') + countActiveRanges(res.capacityFilters);
@@ -512,45 +515,16 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       );
     };
 
-    /** Axes complémentaires (type d'unité, positionnement) : liste plate. */
-    const renderFlatEntries = (axisEntries: AccommodationTaxonomyEntry[], dedupe = false) => {
-      const groups = new Map<string, AccommodationTaxonomyEntry[]>();
-      for (const entry of axisEntries) {
-        const key = dedupe ? foldAccommodationTerm(entry.node.name) : `${entry.domain}:${entry.node.code}`;
-        const current = groups.get(key) ?? [];
-        current.push(entry);
-        groups.set(key, current);
-      }
-      return (
-        <div className="flex flex-wrap gap-1.5">
-          {Array.from(groups.values()).map((group) => {
-            const representative = group[0];
-            const active = group.some((entry) => isTaxonomyActive(entry.domain, entry.node.code));
-            return (
-              <button
-                key={group.map((entry) => `${entry.domain}:${entry.node.code}`).join('|')}
-                type="button"
-                className={taxonomyChipClass(active)}
-                onClick={() => {
-                  const nextActive = !active;
-                  for (const entry of group) {
-                    const entryActive = isTaxonomyActive(entry.domain, entry.node.code);
-                    if (entryActive !== nextActive) {
-                      if (nextActive) activateType(entry.objectType);
-                      toggleTaxonomy(entry.domain, entry.node.code);
-                    }
-                  }
-                }}
-                aria-pressed={active}
-                title={group.map((entry) => nodeTitle(entry.domain, entry.node)).filter(Boolean).join('\n\n') || undefined}
-              >
-                {representative.node.name}
-              </button>
-            );
-          })}
-        </div>
-      );
-    };
+    // Compatibilité de déploiement : le nouveau catalogue dédié est préféré ;
+    // avant son chargement, les mêmes références sont dérivées des anciens
+    // nœuds metadata.axis=positionnement, sans les renvoyer à taxonomyAny.
+    const positioningOptions = (references?.accommodationPositionings
+      ?? tree.positionings.map((entry) => ({
+        code: entry.node.code,
+        name: entry.node.name,
+      }))).filter((option) => (
+      !query || foldAccommodationTerm(option.name).includes(query)
+    ));
 
     const familyBlocks = tree.families.map((familyGroup) => {
       const familyCode = familyGroup.code;
@@ -565,15 +539,13 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       const natures = familyMatches
         ? familyGroup.natures
         : filterAccommodationNatures(familyGroup.natures, (node) => accommodationNodeMatches(node, query));
-      const positionings = familyMatches
-        ? familyGroup.positionings
-        : familyGroup.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
+      const positionings = familyCode === 'hotellerie' ? positioningOptions : [];
       if (natures.length === 0 && positionings.length === 0) return null;
       const selectedCount = [
         ...familyGroup.natures.flatMap((nature) => [nature.entry, ...nature.children.map((child) => child.entry)]),
-        ...familyGroup.positionings,
       ]
-        .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
+        .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length
+        + (familyCode === 'hotellerie' ? accommodationPositioningsAny.length : 0);
       const expanded = Boolean(query) || openAccommodationFamily === familyCode;
       return (
         <div key={familyCode} className="border-b border-line last:border-b-0">
@@ -668,7 +640,27 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                   <span className="block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
                     {ACCOMMODATION_AXIS_LABELS.positionnement}
                   </span>
-                  {renderFlatEntries(positionings)}
+                  <div className="flex flex-wrap gap-1.5">
+                    {positionings.map((option) => {
+                      const active = accommodationPositioningsAny.includes(option.code);
+                      return (
+                        <button
+                          key={option.code}
+                          type="button"
+                          className={taxonomyChipClass(active)}
+                          onClick={() => setAccommodationPositionings(
+                            active
+                              ? accommodationPositioningsAny.filter((code) => code !== option.code)
+                              : [...accommodationPositioningsAny, option.code],
+                          )}
+                          aria-pressed={active}
+                          title="Orientation commerciale, indépendante de la nature de l’hôtel."
+                        >
+                          {option.name}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : null}
             </div>

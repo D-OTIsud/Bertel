@@ -368,3 +368,43 @@ SELECT cron.alter_job(job_id := <id>, schedule := '3,18,33,48 * * * *');  -- ref
 ```
 
 "Open now" staleness budget: ≤15 min. A set-based rewrite (sub-second) is a tracked follow-up (`lot1_mapping_decisions.md` §35).
+
+## 16r — `migration_explorer_remplissage_filter.sql` (§204, filtre Remplissage)
+
+À appliquer **après** `taxo6` (`migration_accommodation_unit_type.sql`), qui porte la
+dernière définition de `api.get_filtered_object_ids`. L'appliquer avant écraserait le patch.
+
+Contenu :
+
+- `internal.v_object_essentials` — source **unique** du bundle des 8 essentiels visiteur,
+  jusque-là recopié dans le corps de `api.get_dashboard_completeness` ;
+- `api.get_dashboard_completeness` rebranchée dessus — sortie vérifiée **octet à octet**
+  identique avant/après sur deux périmètres (publiées, tous statuts) ;
+- `api.object_missing_essentials` — helper `SECURITY DEFINER` du chemin cartes, avec
+  `REVOKE ALL FROM PUBLIC` + gate éditeur + auto-autorisation des ids ;
+- `api.get_filtered_object_ids` — clés `missing_essentials_buckets` / `missing_essentials_any` ;
+- `api.list_object_resources_filtered_page` — champ `missing_essentials` par carte.
+
+**Après application — hors transaction :**
+
+```sql
+NOTIFY pgrst, 'reload schema';   -- OBLIGATOIRE : api.object_missing_essentials est nouvelle
+```
+
+Aucun `REFRESH MATERIALIZED VIEW` n'est nécessaire : la migration ne touche ni
+`internal.mv_filtered_objects` ni `internal.mv_ref_data_json`.
+
+**Vérification.** `tests/test_remplissage_filter.sql` doit passer, ainsi que
+`tests/test_global_search.sql`, `tests/test_accommodation_unit_type.sql`,
+`tests/test_pet_policy_single_source.sql` et `tests/test_dashboard_scorecards.sql` —
+preuve qu'aucune régression §197/§199/§201 n'a été introduite en remplaçant les 43 Ko de
+`get_filtered_object_ids`, et que les scorecards suivent le rebranchement du Dashboard.
+
+**Coût de planification assumé.** Le prédicat ajoute **+4,4 ms par appel de
+`get_filtered_object_ids`, filtre éteint** (mesuré par bissection sur live : les ajouts au
+CTE `params` et le `CASE` par ligne sont gratuits ; c'est la simple présence du `EXISTS`
+sur la vue qui fait planifier un sous-plan à chaque appel — la fonction étant
+`SECURITY DEFINER`, elle n'est pas inlinée). Aucune garde ne peut l'éviter : le coût
+précède l'exécution. L'échappatoire documentée, si ce chemin devient critique, est de
+matérialiser `v_object_essentials` et de la rafraîchir avec le cron des 10 min — au prix
+d'une fraîcheur ≤ 10 min, or ce filtre **est** une liste de travail.

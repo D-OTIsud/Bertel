@@ -323,6 +323,12 @@ ROLLBACK;
 \echo '== pets1-test garde permanente §197 (doublon absent, famille pets preservee, filtre pet_accepted non vacant) =='
 \ir tests/test_pet_policy_single_source.sql
 
+\echo '== 16p    migration_tags_purge_import_20260512.sql  (§203 tags : purge des 4535 liens tag_link de l import old_data_enrichment_20260512 + retrait des 15 tags du catalogue qui doublonnent un axe deja filtrable ; family/romantic conserves ; no-op sur base fraiche puisque les 2 seuls tags seedes ont ete retires de seeds_data.sql) =='
+\ir migration_tags_purge_import_20260512.sql
+
+\echo '== 16p-test garde permanente §203 (aucun lien de l import, aucun tag sortant, family/romantic preserves, aucun tag ne duplique le nom exact d un equipement / cadre / noeud de taxonomie) =='
+\ir tests/test_tags_purge_catalog.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -10,6 +10,24 @@ catalogue, et les promotions de concepts vers `ref_amenity` / taxonomie PRD.
 Prédécesseur : `2026-06-15-tags-section-09-redesign-design.md` (qui différait explicitement
 « tag catalog merge/rename/retire admin tooling » — c'est le lot 1 ci-dessous).
 
+> **⚠ Correction de vérité-terrain (2026-07-29, postérieure à la rédaction — elle PRÉVAUT sur le corps).**
+> Le tableau §4.1 dit, pour chaque tag sortant, que « le concept reste filtrable via son axe légitime ».
+> **C'est faux pour les codes géographiques de `object_environment_tag`** : cet axe est le **jumeau du même
+> import** — 3 419 de ses 3 441 lignes ont été posées à la **même minute** (12/05/2026 13:52), seules 22
+> sont des corrections humaines postérieures. Vérifié objectivement : **20 fiches « Plage » au Tampon**,
+> commune sans littoral, + 3 à Entre-Deux (23 faux certains sur 55) ; **5 des 6 « Lagon »** au Tampon /
+> Entre-Deux, alors qu'il n'y a aucun lagon sur le territoire CASUD (le lagon réunionnais est côte ouest) ;
+> 8 « Bord de mer » au Tampon.
+> **Décision PO (2026-07-29) : purger les tags, mais RÉPARER le cadre plutôt que le purger** — les tags sont
+> irrécupérables (184 fiches sans aucune justification), tandis que les codes du cadre sont *falsifiables par
+> la géographie* et son catalogue est bien conçu. La réparation devient le **lot 0b**.
+> **Lot 0b actuellement BLOQUÉ**, et il ne faut pas le forcer : il n'existe en base **aucune géométrie de
+> littoral ni de commune** (`ref_commune` n'a que l'INSEE et le nom ; les seules colonnes géographiques sont
+> `object_location.geog2`, les traces ITI et les sentiers ONF), et **`object_location.city` ne concorde pas
+> partout avec les coordonnées** (Le Tampon descend à `lat -21.3733`, au sud de son territoire réel).
+> Débloqué par : l'import d'une couche côtière (donnée publique IGN/OSM). Écrire la règle sur des limites
+> communales devinées serait exactement l'erreur qu'on corrige.
+
 ---
 
 ## 1. Constat — ce que la base dit réellement

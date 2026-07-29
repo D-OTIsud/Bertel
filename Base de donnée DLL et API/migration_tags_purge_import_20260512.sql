@@ -55,12 +55,12 @@
 -- ------------------------------------------------------------------------------------
 -- `tag_link` porte `trg_refresh_object_filter_caches_tag_link`, **FOR EACH ROW**, qui
 -- appelle `api.refresh_object_filter_caches(target_pk)` à chaque suppression. Une purge
--- naïve de 4 535 lignes ferait donc 4 535 reconstructions de `search_document` (~5,6 par
--- fiche, toutes redondantes). Le trigger est donc éteint le temps du seul DELETE — dans
+-- naïve de 4 535 lignes ferait donc 4 535 reconstructions de `search_document` pour
+-- 830 fiches (~5,5 par fiche, toutes redondantes sauf une). Le trigger est éteint — dans
 -- la transaction qui détient déjà le verrou, nommage gardé — puis UN seul passage de
 -- rafraîchissement est fait sur les fiches touchées.
 --
--- ⚠️ Ce rafraîchissement unique POSE VOLONTAIREMENT `updated_at = now()` sur les ~813
+-- ⚠️ Ce rafraîchissement unique POSE VOLONTAIREMENT `updated_at = now()` sur les 830
 --    fiches concernées (`search_document` n'est pas exclu des trois triggers « changement
 --    métier » de `object` — différé §197 documenté). C'est VOULU ici, contrairement au
 --    backfill §197 qui les éteignait : les tags SONT dans la charge utile partenaire
@@ -203,7 +203,7 @@ BEGIN
     PERFORM api.refresh_object_filter_caches(v_id);
     v_n := v_n + 1;
   END LOOP;
-  RAISE NOTICE 'migration 16p : caches de filtre rafraîchis sur % fiche(s) (attendu ~813 sur live, 0 en rejeu)', v_n;
+  RAISE NOTICE 'migration 16p : caches de filtre rafraîchis sur % fiche(s) (attendu 830 sur live, 0 en rejeu)', v_n;
 END $$;
 
 -- -------------------------------------------------------------------------------------

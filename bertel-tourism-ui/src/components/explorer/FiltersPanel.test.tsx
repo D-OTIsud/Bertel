@@ -163,6 +163,216 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: 'Maison / villa' })).toBeInTheDocument();
   });
 
+  // §200 — catalogue cible : 5 familles, natures collectives au même niveau,
+  // vrais sous-arbres sous Terrain de camping déclaré, outdoor_glamping retiré.
+  const V2_ACCOMMODATION_REFERENCES = {
+    hotCapacityMetrics: [],
+    accommodationFamilies: [
+      { code: 'hotellerie', name: 'Hôtellerie', position: 1 },
+      { code: 'locatif', name: 'Hébergement locatif', position: 2 },
+      { code: 'collectif', name: 'Hébergement collectif', position: 3 },
+      { code: 'campings_terrains', name: 'Campings et terrains', position: 4, aliases: ['Hôtellerie de plein air', 'Hébergement de plein air'] },
+      { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 5, aliases: ['Hôtellerie de plein air', 'Hébergement de plein air'] },
+    ],
+    taxonomies: [
+      {
+        domain: 'taxonomy_hlo', name: 'HLO', objectType: 'HLO',
+        nodes: [
+          { code: 'auberge_collective', name: 'Auberge', parentCode: 'hebergement_collectif', depth: 1, isAssignable: true, position: 1, axis: 'nature', family: 'collectif', aliases: ['Auberge collective'] },
+          { code: 'gite_de_groupe', name: 'Gîte', parentCode: 'hebergement_collectif', depth: 1, isAssignable: true, position: 2, axis: 'nature', family: 'collectif', aliases: ['Gîte de groupe'] },
+          { code: 'gite_de_randonnee', name: "Refuge et gîte d'étape", parentCode: 'hebergement_collectif', depth: 1, isAssignable: true, position: 3, axis: 'nature', family: 'collectif', aliases: [] },
+        ],
+      },
+      {
+        domain: 'taxonomy_rva', name: 'RVA', objectType: 'RVA',
+        nodes: [
+          { code: 'tourism_residence', name: 'Résidence de tourisme', parentCode: null, depth: 0, isAssignable: true, position: 4, axis: 'nature', family: 'collectif', aliases: [] },
+          { code: 'holiday_village', name: 'Village de vacances', parentCode: null, depth: 0, isAssignable: true, position: 5, axis: 'nature', family: 'collectif', aliases: [] },
+          { code: 'aparthotel', name: 'Résidence hôtelière', parentCode: null, depth: 0, isAssignable: true, position: 6, axis: 'nature', family: 'collectif', aliases: [] },
+        ],
+      },
+      {
+        domain: 'taxonomy_camp', name: 'CAMP', objectType: 'CAMP',
+        nodes: [
+          { code: 'camping', name: 'Camping', parentCode: null, depth: 0, isAssignable: true, position: 101, axis: 'nature', family: 'campings_terrains', aliases: ['Camping aménagé', 'Camping classé'] },
+        ],
+      },
+      {
+        domain: 'taxonomy_hpa', name: 'HPA', objectType: 'HPA',
+        nodes: [
+          { code: 'natural_camp_area', name: 'Aire naturelle de camping', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'campings_terrains', aliases: [] },
+          { code: 'declared_campground', name: 'Terrain de camping déclaré', parentCode: null, depth: 0, isAssignable: true, position: 3, axis: 'nature', family: 'campings_terrains', aliases: [] },
+          { code: 'farm_camping', name: 'Camping à la ferme', parentCode: 'declared_campground', depth: 1, isAssignable: true, position: 1, axis: 'sous_type', family: 'campings_terrains', aliases: [] },
+          { code: 'homestay_camping', name: "Camping chez l'habitant", parentCode: 'declared_campground', depth: 1, isAssignable: true, position: 2, axis: 'sous_type', family: 'campings_terrains', aliases: [] },
+          { code: 'residential_leisure_park', name: 'Parc résidentiel de loisirs', parentCode: null, depth: 0, isAssignable: true, position: 6, axis: 'nature', family: 'campings_terrains', aliases: ['PRL'] },
+          { code: 'motorhome_area', name: "Aire d'accueil camping-car", parentCode: null, depth: 0, isAssignable: true, position: 4, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
+          { code: 'bivouac_area', name: 'Aire de bivouac', parentCode: null, depth: 0, isAssignable: true, position: 10, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
+          { code: 'motorhome_night_stop', name: 'Halte nocturne camping-car/van', parentCode: null, depth: 0, isAssignable: true, position: 12, axis: 'nature', family: 'aires_haltes_plein_air', aliases: [] },
+          { code: 'outdoor_glamping', name: 'Hébergement insolite de plein air', parentCode: null, depth: 0, isAssignable: false, position: 3, axis: 'type_unite', family: null, aliases: [] },
+        ],
+      },
+    ],
+  } as unknown as ExplorerReferences;
+
+  function openFamily(name: string) {
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name}`), expanded: false }));
+  }
+
+  describe('§200 — hiérarchie v2 des hébergements', () => {
+    beforeEach(resetStore);
+
+    it('affiche les cinq familles et plus « Hôtellerie de plein air »', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      for (const label of ['Hébergement collectif', 'Campings et terrains', 'Aires et haltes de plein air']) {
+        expect(screen.getByRole('button', { name: new RegExp(`^${label}`) })).toBeInTheDocument();
+      }
+      expect(screen.queryByRole('button', { name: /^Hôtellerie de plein air/ })).not.toBeInTheDocument();
+    });
+
+    it('range les six natures collectives sous UN seul bloc Nature, sans bloc Sous-type', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Hébergement collectif');
+
+      for (const label of ['Auberge', 'Gîte', "Refuge et gîte d'étape", 'Résidence de tourisme', 'Village de vacances', 'Résidence hôtelière']) {
+        expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
+      }
+      expect(screen.queryByText('Sous-type')).not.toBeInTheDocument();
+    });
+
+    it('rend Camping à la ferme et Chez l\'habitant DANS le conteneur de Terrain déclaré', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Campings et terrains');
+
+      // Repliés par défaut : le parent porte le contrôle de dépliage.
+      expect(screen.queryByRole('button', { name: 'Camping à la ferme' })).not.toBeInTheDocument();
+      const toggle = screen.getByRole('button', { name: /Déplier les sous-types de Terrain de camping déclaré/ });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(toggle);
+
+      const container = document.getElementById(
+        screen.getByRole('button', { name: /Replier les sous-types de Terrain de camping déclaré/ })
+          .getAttribute('aria-controls') as string,
+      );
+      expect(container).not.toBeNull();
+      // Les deux enfants sont DANS ce conteneur, pas voisins DOM de « Camping ».
+      expect(container!).toContainElement(screen.getByRole('button', { name: 'Camping à la ferme' }));
+      expect(container!).toContainElement(screen.getByRole('button', { name: "Camping chez l'habitant" }));
+      expect(container!).not.toContainElement(screen.getByRole('button', { name: 'Camping' }));
+    });
+
+    it('sélectionner le parent et sélectionner un enfant produisent deux filtres différents', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Campings et terrains');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Terrain de camping déclaré' }));
+      // Le front n'envoie QUE le parent : l'union des descendants est faite par
+      // la closure serveur, jamais reconstituée ici.
+      expect(useExplorerStore.getState().common.taxonomyAny).toEqual([
+        { domain: 'taxonomy_hpa', code: 'declared_campground' },
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: /Replier|Déplier/ }));
+      fireEvent.click(screen.getByRole('button', { name: 'Camping à la ferme' }));
+      expect(useExplorerStore.getState().common.taxonomyAny).toContainEqual(
+        { domain: 'taxonomy_hpa', code: 'farm_camping' },
+      );
+    });
+
+    it('sépare Aire naturelle (campings) et Aire d\'accueil camping-car (aires et haltes)', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      openFamily('Campings et terrains');
+      expect(screen.getByRole('button', { name: 'Aire naturelle de camping' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: "Aire d'accueil camping-car" })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: /^Campings et terrains/, expanded: true }));
+      openFamily('Aires et haltes de plein air');
+      expect(screen.getByRole('button', { name: "Aire d'accueil camping-car" })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aire de bivouac' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Halte nocturne camping-car/van' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Aire naturelle de camping' })).not.toBeInTheDocument();
+    });
+
+    it('n\'expose nulle part un nœud non assignable, y compris dans les critères complémentaires', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      expect(screen.queryByRole('button', { name: 'Hébergement insolite de plein air' })).not.toBeInTheDocument();
+      // Le bloc entier disparaît quand il ne reste aucun critère assignable.
+      expect(screen.queryByRole('button', { name: 'Critères complémentaires' })).not.toBeInTheDocument();
+    });
+
+    it('retrouve les deux nouvelles familles via l\'ancien terme « plein air »', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      const search = screen.getByRole('textbox', { name: "Rechercher un type d'hébergement" });
+      fireEvent.change(search, { target: { value: 'plein air' } });
+
+      expect(screen.getByRole('button', { name: 'Aire de bivouac' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Parc résidentiel de loisirs' })).toBeInTheDocument();
+      // …sans jamais réafficher l'ancienne famille comme un choix actif.
+      expect(screen.queryByRole('button', { name: /^Hôtellerie de plein air/ })).not.toBeInTheDocument();
+    });
+
+    it('révèle le chemin parent quand la recherche correspond à un sous-type', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      const search = screen.getByRole('textbox', { name: "Rechercher un type d'hébergement" });
+      fireEvent.change(search, { target: { value: 'à la ferme' } });
+
+      expect(screen.getByRole('button', { name: 'Terrain de camping déclaré' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Camping à la ferme' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: "Camping chez l'habitant" })).not.toBeInTheDocument();
+    });
+
+    it('porte le contexte « Hébergement collectif › Gîte » sur la puce au libellé court', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Hébergement collectif');
+
+      // Le libellé visible reste court — c'est la famille ouverte qui le situe —
+      // mais « Gîte » désigne AUSSI un meublé de tourisme : le chemin complet
+      // doit rester lisible sans quitter le filtre.
+      expect(screen.getByRole('button', { name: 'Gîte' }))
+        .toHaveAttribute('title', expect.stringContaining('Hébergement collectif › Gîte'));
+    });
+
+    it('ne dédoublonne pas deux natures homonymes de domaines différents', () => {
+      const references = {
+        ...V2_ACCOMMODATION_REFERENCES,
+        taxonomies: [
+          { domain: 'taxonomy_camp', name: 'CAMP', objectType: 'CAMP', nodes: [{ code: 'camping', name: 'Camping', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'campings_terrains', aliases: [] }] },
+          { domain: 'taxonomy_hpa', name: 'HPA', objectType: 'HPA', nodes: [{ code: 'camping', name: 'Camping', parentCode: null, depth: 0, isAssignable: true, position: 2, axis: 'nature', family: 'campings_terrains', aliases: [] }] },
+        ],
+      } as unknown as ExplorerReferences;
+
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={references} />);
+      openFamily('Campings et terrains');
+
+      expect(screen.getAllByRole('button', { name: 'Camping' })).toHaveLength(2);
+    });
+
+    it('l\'en-tête de famille reste un accordéon, jamais un filtre', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+
+      const header = screen.getByRole('button', { name: /^Campings et terrains/, expanded: false });
+      expect(header).not.toHaveAttribute('aria-pressed');
+      fireEvent.click(header);
+      // Ouvrir la famille ne pose aucun filtre.
+      expect(useExplorerStore.getState().common.taxonomyAny).toEqual([]);
+    });
+  });
+
   it('la section Itinéraires est repliable et compte ses critères', () => {
     act(() => {
       useExplorerStore.getState().toggleBucket('ITI');

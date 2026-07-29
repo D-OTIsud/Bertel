@@ -332,6 +332,13 @@ export interface ExplorerAccommodationFamily {
   name: string;
   description?: string | null;
   position?: number | null;
+  /**
+   * §200 — ancien vocabulaire conservé pour la recherche. « Hôtellerie de plein
+   * air » recouvrait à la fois les terrains et les aires de halte : les DEUX
+   * familles qui la remplacent le portent, pour que la recherche propose les
+   * deux au lieu de trancher à la place de l'agent.
+   */
+  aliases?: string[];
 }
 
 export interface ExplorerTaxonomyDomain {

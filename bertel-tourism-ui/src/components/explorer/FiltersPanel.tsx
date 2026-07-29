@@ -41,6 +41,12 @@ import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 import { RangeSlider } from '@/components/ui/range-slider';
 import { buildExplorerActiveChips } from './explorer-active-chips';
+import {
+  accommodationBreadcrumb,
+  buildAccommodationTaxonomyTree,
+  filterAccommodationNatures,
+  type AccommodationTaxonomyEntry,
+} from './accommodation-taxonomy-tree';
 import { CapacityCriteria } from './CapacityCriteria';
 
 /** Unités affichées à côté des valeurs de capacité — seulement là où elles éclairent. */
@@ -51,12 +57,6 @@ const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
   { code: 'published', label: 'Publié' },
   { code: 'draft', label: 'Brouillon' },
 ];
-
-type AccommodationCatalogNode = {
-  domain: string;
-  objectType: BackendObjectTypeCode;
-  node: ExplorerTaxonomyNode;
-};
 
 const ACCOMMODATION_AXIS_LABELS = {
   nature: "Nature d'hébergement",
@@ -77,13 +77,6 @@ function accommodationNodeMatches(node: ExplorerTaxonomyNode, query: string): bo
   if (!query) return true;
   return [node.name, node.description ?? '', node.sourceRef ?? '', ...(node.aliases ?? [])]
     .some((value) => foldAccommodationTerm(value).includes(query));
-}
-
-function sortAccommodationNodes(entries: AccommodationCatalogNode[]): AccommodationCatalogNode[] {
-  return [...entries].sort((left, right) => (
-    (left.node.position ?? Number.MAX_SAFE_INTEGER) - (right.node.position ?? Number.MAX_SAFE_INTEGER)
-    || left.node.name.localeCompare(right.node.name, 'fr', { sensitivity: 'base' })
-  ));
 }
 
 /** §156 — l'échelle FFRandonnée 1-5 en trois segments parlants (bornes min/max du store). */
@@ -180,6 +173,8 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
+  /** §200 — sous-arbres de nature dépliés (clé `domaine:code`), ex. Terrain de camping déclaré. */
+  const [openAccommodationSubtrees, setOpenAccommodationSubtrees] = useState<string[]>([]);
   const selectedBuckets = useStore((state) => state.selectedBuckets);
   const common = useStore((state) => state.common);
   const cities = common.cities ?? [];
@@ -456,30 +451,17 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     const domains = (references?.taxonomies ?? []).filter((domain) =>
       HOT_BUCKET_TYPES.includes(domain.objectType as BackendObjectTypeCode),
     );
-    const entries: AccommodationCatalogNode[] = domains.flatMap((domain) =>
-      domain.nodes
-        .filter((node) => Boolean(node.axis))
-        .map((node) => ({
-          domain: domain.domain,
-          objectType: domain.objectType as BackendObjectTypeCode,
-          node,
-        })),
-    );
-    if (!entries.some((entry) => entry.node.axis === 'nature')) {
+    const familyRefs = references?.accommodationFamilies ?? [];
+    const familyByCode = new Map(familyRefs.map((family) => [family.code, family]));
+    // §200 — l'arbre est construit par une fonction PURE et testée à part : c'est
+    // elle qui garantit qu'un enfant à l'écran est un vrai enfant en base
+    // (`parentCode` same-domain), et qu'un nœud non assignable disparaît partout.
+    const tree = buildAccommodationTaxonomyTree(domains, familyRefs.map((family) => family.code));
+    if (tree.families.length === 0) {
       return null;
     }
 
     const query = foldAccommodationTerm(accommodationQuery);
-    const familyRefs = references?.accommodationFamilies ?? [];
-    const familyByCode = new Map(familyRefs.map((family) => [family.code, family]));
-    const familyCodes = Array.from(new Set([
-      ...familyRefs.map((family) => family.code),
-      ...entries.map((entry) => entry.node.family).filter((code): code is string => Boolean(code)),
-    ])).sort((left, right) => {
-      const a = familyByCode.get(left)?.position ?? Number.MAX_SAFE_INTEGER;
-      const b = familyByCode.get(right)?.position ?? Number.MAX_SAFE_INTEGER;
-      return a - b || left.localeCompare(right, 'fr');
-    });
 
     const activateType = (type: BackendObjectTypeCode) => {
       if (isSubtypeNarrowed(hot.subtypes, HOT_BUCKET_TYPES) && !hot.subtypes.includes(type)) {
@@ -487,15 +469,42 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       }
     };
 
-    const nodeTitle = (node: ExplorerTaxonomyNode) => [
+    const nodeTitle = (node: ExplorerTaxonomyNode, breadcrumb?: string) => [
+      breadcrumb,
       node.description,
       node.sourceRef ? `Source : ${node.sourceRef}` : null,
-      node.aliases?.length ? `Ancien vocabulaire Berta : ${node.aliases.join(', ')}` : null,
+      node.aliases?.length ? `Aussi appelé : ${node.aliases.join(', ')}` : null,
     ].filter(Boolean).join('\n');
 
-    const renderSemanticEntries = (axisEntries: AccommodationCatalogNode[], dedupe = false) => {
-      const groups = new Map<string, AccommodationCatalogNode[]>();
-      for (const entry of sortAccommodationNodes(axisEntries)) {
+    /**
+     * Une puce = UN couple domaine/code envoyé à `taxonomyAny`. Sélectionner un
+     * parent n'envoie QUE le parent : c'est la closure serveur qui inclut les
+     * sous-types. Le front ne reconstitue jamais l'union des descendants — il
+     * dériverait du jour où la hiérarchie change en base.
+     */
+    const renderChip = (entry: AccommodationTaxonomyEntry, breadcrumb: string) => {
+      const active = isTaxonomyActive(entry.domain, entry.node.code);
+      return (
+        <button
+          key={`${entry.domain}:${entry.node.code}`}
+          type="button"
+          className={taxonomyChipClass(active)}
+          onClick={() => {
+            if (!active) activateType(entry.objectType);
+            toggleTaxonomy(entry.domain, entry.node.code);
+          }}
+          aria-pressed={active}
+          title={nodeTitle(entry.node, breadcrumb) || undefined}
+        >
+          {entry.node.name}
+        </button>
+      );
+    };
+
+    /** Axes complémentaires (type d'unité, positionnement) : liste plate. */
+    const renderFlatEntries = (axisEntries: AccommodationTaxonomyEntry[], dedupe = false) => {
+      const groups = new Map<string, AccommodationTaxonomyEntry[]>();
+      for (const entry of axisEntries) {
         const key = dedupe ? foldAccommodationTerm(entry.node.name) : `${entry.domain}:${entry.node.code}`;
         const current = groups.get(key) ?? [];
         current.push(entry);
@@ -532,21 +541,22 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       );
     };
 
-    const familyBlocks = familyCodes.map((familyCode) => {
+    const familyBlocks = tree.families.map((familyGroup) => {
+      const familyCode = familyGroup.code;
       const family = familyByCode.get(familyCode) as ExplorerAccommodationFamily | undefined;
       const familyLabel = family?.name ?? familyCode.replace(/_/g, ' ');
-      const familyEntries = entries.filter((entry) => entry.node.family === familyCode);
-      const familyMatches = Boolean(query) && (
-        foldAccommodationTerm([familyLabel, family?.description ?? ''].join(' ')).includes(query)
-        || familyEntries.some((entry) => entry.node.axis === 'famille' && accommodationNodeMatches(entry.node, query))
-      );
-      const visible = familyMatches
-        ? familyEntries
-        : familyEntries.filter((entry) => accommodationNodeMatches(entry.node, query));
-      const natures = visible.filter((entry) => entry.node.axis === 'nature');
-      const subtypes = visible.filter((entry) => entry.node.axis === 'sous_type');
-      if (natures.length === 0 && subtypes.length === 0) return null;
-      const selectedCount = familyEntries.filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
+      // La recherche interroge AUSSI les alias de famille : « plein air » doit
+      // continuer de mener aux deux familles qui ont remplacé l'ancienne.
+      const familyMatches = Boolean(query) && foldAccommodationTerm(
+        [familyLabel, family?.description ?? '', ...(family?.aliases ?? [])].join(' '),
+      ).includes(query);
+      const natures = familyMatches
+        ? familyGroup.natures
+        : filterAccommodationNatures(familyGroup.natures, (node) => accommodationNodeMatches(node, query));
+      if (natures.length === 0) return null;
+      const selectedCount = familyGroup.natures
+        .flatMap((nature) => [nature.entry, ...nature.children.map((child) => child.entry)])
+        .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
       const expanded = Boolean(query) || openAccommodationFamily === familyCode;
       return (
         <div key={familyCode} className="border-b border-line last:border-b-0">
@@ -580,34 +590,73 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </button>
           {expanded ? (
             <div id={`accommodation-family-${familyCode}`} className="space-y-2 px-2 pb-2.5 pl-7">
-              {natures.length > 0 ? (
-                <div>
-                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                    Nature
-                  </span>
-                  {renderSemanticEntries(natures)}
-                </div>
-              ) : null}
-              {subtypes.length > 0 ? (
-                <div>
-                  <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-                    Sous-type
-                  </span>
-                  {renderSemanticEntries(subtypes)}
-                </div>
-              ) : null}
+              {/* UN SEUL étage « Nature » : les six natures collectives (HLO et RVA
+                  confondus) sont des sœurs. Les sous-types n'ont plus de bloc à
+                  part — ils vivent DANS le conteneur de leur parent. */}
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+                Nature
+              </span>
+              <div className="space-y-1.5">
+                {natures.map((nature) => {
+                  const natureKey = `${nature.entry.domain}:${nature.entry.node.code}`;
+                  const breadcrumb = accommodationBreadcrumb(familyLabel, nature.entry.node.name);
+                  if (nature.children.length === 0) {
+                    return (
+                      <div key={natureKey} className="flex flex-wrap gap-1.5">
+                        {renderChip(nature.entry, breadcrumb)}
+                      </div>
+                    );
+                  }
+                  const childSelected = nature.children
+                    .some((child) => isTaxonomyActive(child.entry.domain, child.entry.node.code));
+                  const subtreeOpen = Boolean(query) || childSelected || openAccommodationSubtrees.includes(natureKey);
+                  return (
+                    <div key={natureKey}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {renderChip(nature.entry, breadcrumb)}
+                        <button
+                          type="button"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition hover:bg-surface2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+                          onClick={() => setOpenAccommodationSubtrees((current) => (
+                            current.includes(natureKey)
+                              ? current.filter((key) => key !== natureKey)
+                              : [...current, natureKey]
+                          ))}
+                          aria-expanded={subtreeOpen}
+                          aria-controls={`accommodation-subtree-${familyCode}-${nature.entry.node.code}`}
+                          aria-label={`${subtreeOpen ? 'Replier' : 'Déplier'} les sous-types de ${nature.entry.node.name}`}
+                        >
+                          <ChevronDown
+                            aria-hidden="true"
+                            className={cn('h-3.5 w-3.5 transition-transform', subtreeOpen && 'rotate-180')}
+                          />
+                        </button>
+                      </div>
+                      {/* Conteneur ENFANT, indenté et bordé : les sous-types ne
+                          doivent jamais être des voisins DOM des natures sœurs. */}
+                      {subtreeOpen ? (
+                        <div
+                          id={`accommodation-subtree-${familyCode}-${nature.entry.node.code}`}
+                          className="ml-3 mt-1.5 flex flex-wrap gap-1.5 border-l border-line pl-3"
+                        >
+                          {nature.children.map((child) => renderChip(
+                            child.entry,
+                            accommodationBreadcrumb(familyLabel, nature.entry.node.name, child.entry.node.name),
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ) : null}
         </div>
       );
     }).filter(Boolean);
 
-    const unitEntries = entries.filter((entry) =>
-      entry.node.axis === 'type_unite' && accommodationNodeMatches(entry.node, query),
-    );
-    const positioningEntries = entries.filter((entry) =>
-      entry.node.axis === 'positionnement' && accommodationNodeMatches(entry.node, query),
-    );
+    const unitEntries = tree.unitTypes.filter((entry) => accommodationNodeMatches(entry.node, query));
+    const positioningEntries = tree.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
     const hasResults = familyBlocks.length > 0 || unitEntries.length > 0 || positioningEntries.length > 0;
     const complementarySelectedCount = [...unitEntries, ...positioningEntries]
       .filter((entry) => isTaxonomyActive(entry.domain, entry.node.code)).length;
@@ -677,7 +726,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
                       {ACCOMMODATION_AXIS_LABELS.type_unite}
                     </span>
-                    {renderSemanticEntries(unitEntries, true)}
+                    {renderFlatEntries(unitEntries, true)}
                   </div>
                 ) : null}
                 {positioningEntries.length > 0 ? (
@@ -685,7 +734,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
                       {ACCOMMODATION_AXIS_LABELS.positionnement}
                     </span>
-                    {renderSemanticEntries(positioningEntries)}
+                    {renderFlatEntries(positioningEntries)}
                   </div>
                 ) : null}
               </div>

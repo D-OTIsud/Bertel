@@ -494,11 +494,16 @@ function buildDemoReferences(): ExplorerReferences {
         ],
       },
     ],
+    // §200 — `plein_air` est retirée : elle mélangeait un TERRAIN de camping et
+    // une simple autorisation de halte. Les deux familles qui la remplacent
+    // portent son libellé en alias, car l'ancien terme les recouvrait toutes les
+    // deux : une recherche sur « plein air » doit proposer les deux.
     accommodationFamilies: [
       { code: 'hotellerie', name: 'Hôtellerie', position: 1 },
       { code: 'locatif', name: 'Hébergement locatif', position: 2 },
       { code: 'collectif', name: 'Hébergement collectif', position: 3 },
-      { code: 'plein_air', name: 'Hôtellerie de plein air', position: 4 },
+      { code: 'campings_terrains', name: 'Campings et terrains', position: 4, aliases: ['Hôtellerie de plein air', 'Hébergement de plein air'] },
+      { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 5, aliases: ['Hôtellerie de plein air', 'Hébergement de plein air'] },
     ],
     // Démo : les métriques portent leurs types applicables comme en live, sinon le
     // scoping par sous-type (16o) ne serait pas exerçable dans ce mode.
@@ -616,7 +621,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_capacity_metric').select('id,code,name,position').order('position', { ascending: true }),
     client.from('ref_capacity_applicability').select('metric_id,object_type'),
     listTaxonomyReferences(),
-    client.from('ref_code').select('code,name,description,position').eq('domain', 'accommodation_family').eq('is_active', true).order('position', { ascending: true }),
+    client.from('ref_code').select('code,name,description,position,metadata').eq('domain', 'accommodation_family').eq('is_active', true).order('position', { ascending: true }),
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
@@ -725,7 +730,18 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes, rankedLabelApplicability),
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies,
-    accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{ code: string; name: string; description: string | null; position: number | null }>),
+    // §200 — `metadata.aliases` porte l'ancien vocabulaire de famille (« Hôtellerie
+    // de plein air »). Sans lui, un agent qui cherche l'ancien terme ne trouve
+    // plus rien alors que DEUX familles le remplacent.
+    accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{
+      code: string; name: string; description: string | null; position: number | null; metadata?: unknown;
+    }>).map((row) => ({
+      code: row.code,
+      name: row.name,
+      description: row.description,
+      position: row.position,
+      aliases: readStringList(readRecord(row.metadata).aliases),
+    })),
     capacityBounds: toCapacityBounds(capacityBoundsResult.error ? [] : ((capacityBoundsResult.data ?? []) as CapacityBoundsRow[])),
     hotCapacityMetrics: bucketCapacityOptions('HOT', metrics, applicability),
     resCapacityMetrics: bucketCapacityOptions('RES', metrics, applicability),

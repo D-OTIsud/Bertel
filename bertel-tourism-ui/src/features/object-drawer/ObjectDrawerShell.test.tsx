@@ -79,16 +79,55 @@ describe('ObjectDrawerShell', () => {
     expect(mockPrefetch).toHaveBeenCalledWith('/objects/RESRUN0000000001/edit');
   });
 
-  test('ne precharge les DONNEES de l editeur qu au survol de « Modifier »', () => {
+  test('le survol de « Modifier » declenche le prechargement immediatement', () => {
     render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
 
-    // Le simple affichage du tiroir ne doit PAS declencher le chargeur lourd :
-    // sinon toutes les fiches consultees paieraient les ~85 requetes.
+    // Rien ne part SYNCHRONEMENT au rendu : le tiroir peint d abord (le
+    // prechargement automatique attend AUTO_PREFETCH_DELAY_MS, cf. bloc dedie).
     expect(prefetchWorkspaceSpy).not.toHaveBeenCalled();
 
+    // Le survol reste un declencheur a part entiere : il court-circuite la
+    // temporisation, et sert le chemin clavier via onFocus.
     fireEvent.mouseEnter(screen.getByRole('button', { name: /modifier/i }));
 
     expect(prefetchWorkspaceSpy).toHaveBeenCalledWith('RESRUN0000000001');
+  });
+
+  // §NN — mesure terrain : ~80 % des ouvertures de fiche par un editeur sont
+  // suivies d un clic sur « Modifier ». L editeur est donc traite comme la
+  // navigation ATTENDUE, pas comme une hypothese : on precharge sans attendre le
+  // survol du bouton. La temporisation courte laisse le tiroir peindre d abord.
+  describe('prechargement automatique de l editeur', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    test('part tout seul peu apres l affichage de la fiche, sans aucun survol', () => {
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      expect(prefetchWorkspaceSpy).not.toHaveBeenCalled(); // le tiroir peint d abord
+      jest.advanceTimersByTime(300);
+
+      expect(prefetchWorkspaceSpy).toHaveBeenCalledWith('RESRUN0000000001');
+    });
+
+    test('ne part pas pour un membre en lecture seule', () => {
+      useSessionStore.setState({ role: 'tourism_agent', canEditObjects: false });
+
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+      jest.advanceTimersByTime(300);
+
+      expect(prefetchWorkspaceSpy).not.toHaveBeenCalled();
+    });
+
+    test('est annule si le tiroir se ferme avant l echeance', () => {
+      const { unmount } = render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+      jest.advanceTimersByTime(150);
+      unmount();
+      jest.advanceTimersByTime(300);
+
+      expect(prefetchWorkspaceSpy).not.toHaveBeenCalled();
+    });
   });
 
   test('un membre en lecture seule ne voit pas Modifier et ne declenche aucun prechargement', () => {

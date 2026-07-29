@@ -102,7 +102,7 @@ const nestedAssignment: ObjectWorkspaceTaxonomyAssignment = {
 };
 
 describe('SectionIdentity', () => {
-  it('renders the commercial name, ID OTI and object type', () => {
+  it('renders the commercial name and ID OTI without exposing the technical object type', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(
       <SectionIdentity
@@ -114,9 +114,9 @@ describe('SectionIdentity', () => {
     );
 
     expect(screen.getByDisplayValue('Domaine du Bel Air')).toBeInTheDocument();
-    // ID OTI and object type are read-only readouts (static text), not editable inputs.
     expect(screen.getByText('HLORUN00000000TV')).toBeInTheDocument();
-    expect(screen.getByText('HOT — Hôtel')).toBeInTheDocument();
+    expect(screen.queryByText('HOT — Hôtel')).not.toBeInTheDocument();
+    expect(screen.queryByText('Type de fiche Bertel')).not.toBeInTheDocument();
     // Raison sociale moved out of §01 (it is edited in §18 Fournisseur).
     expect(screen.queryByDisplayValue('SARL Domaine du Bel Air')).not.toBeInTheDocument();
   });
@@ -129,11 +129,13 @@ describe('SectionIdentity', () => {
     expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
   });
 
-  it('renders a single bullet on the object type (no doubled prefix)', () => {
+  it('does not expose technical compatibility explanations in the editing form', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<SectionIdentity editor={result.current} permissions={allowAll} typeCode="HOT" />);
 
-    expect(screen.getAllByText('●')).toHaveLength(1);
+    expect(screen.queryByText(/Seules les natures compatibles/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/conversion de type de fiche/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Répond à/i)).not.toBeInTheDocument();
   });
 
   it('no longer shows the publication status — it moved to the editor rail', () => {
@@ -329,13 +331,14 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual([]);
   });
 
-  it('affiche un motif au lieu d\u2019un s\u00e9lecteur vide quand le catalogue manque', () => {
+  it("n'affiche pas de message technique quand le catalogue manque", () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes({
       options: [], selectedCodes: [], unavailableReason: "Le catalogue des types d'unité n'est pas encore disponible sur cette base.",
     })));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getByText(/catalogue des types d.unité n.est pas encore disponible/i)).toBeInTheDocument();
+    expect(screen.queryByText(/catalogue des types d.unité n.est pas encore disponible/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Types de logement/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bulle' })).not.toBeInTheDocument();
   });
 
@@ -345,6 +348,6 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     })));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    expect(screen.queryByText(/Types d.unité/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Types de logement/)).not.toBeInTheDocument();
   });
 });

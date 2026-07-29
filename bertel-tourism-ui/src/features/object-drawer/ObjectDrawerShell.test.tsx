@@ -55,8 +55,8 @@ describe('ObjectDrawerShell', () => {
     workspaceSpy.mockClear();
     mockPrefetch.mockClear();
     prefetchWorkspaceSpy.mockClear();
-    // `canEdit` gate le prechargement ET le bouton « Modifier ».
-    useSessionStore.setState({ role: 'tourism_agent' });
+    // `canEditObjects` gate le prechargement ET le bouton « Modifier ».
+    useSessionStore.setState({ role: 'tourism_agent', canEditObjects: true });
   });
 
   test('consomme le chargeur léger et jamais le chargeur d espace de travail', () => {
@@ -89,5 +89,18 @@ describe('ObjectDrawerShell', () => {
     fireEvent.mouseEnter(screen.getByRole('button', { name: /modifier/i }));
 
     expect(prefetchWorkspaceSpy).toHaveBeenCalledWith('RESRUN0000000001');
+  });
+
+  test('un membre en lecture seule ne voit pas Modifier et ne declenche aucun prechargement', () => {
+    // canEditObjects=false = membre d ORG sans droit d edition. `role !== null`
+    // ne le distinguait PAS d un editeur : il voyait le bouton et aurait paye le
+    // prechargement d un editeur qu il ne peut pas utiliser.
+    useSessionStore.setState({ role: 'tourism_agent', canEditObjects: false });
+
+    render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+
+    expect(screen.queryByRole('button', { name: /modifier/i })).not.toBeInTheDocument();
+    expect(mockPrefetch).not.toHaveBeenCalled();
+    expect(prefetchWorkspaceSpy).not.toHaveBeenCalled();
   });
 });

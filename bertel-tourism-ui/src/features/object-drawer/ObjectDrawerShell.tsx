@@ -82,8 +82,16 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     objectId ? `room:${objectId}` : 'room:empty',
     { enabled: Boolean(objectId) },
   );
-  const role = useSessionStore((state) => state.role);
-  const canEdit = role !== null;
+  // `canEditObjects` = api.current_user_can_edit_objects() : superuser plateforme,
+  // admin d'ORG, ou l'une des permissions editables. Il remplace `role !== null`,
+  // qui n'excluait meme pas un membre d'ORG en LECTURE SEULE.
+  //
+  // ATTENTION — il signifie « peut modifier AU MOINS UN objet », PAS « peut
+  // modifier CETTE fiche ». C'est un bon filtre pour decider d'un prechargement ;
+  // ce n'est PAS une autorisation. L'autorisation par fiche est
+  // api.user_can_write_object_canonical, resolue par le chargeur d'espace de
+  // travail et imposee par les policies d'ecriture — le tiroir ne l'a pas.
+  const canEdit = useSessionStore((state) => state.canEditObjects);
   const prefetchWorkspace = usePrefetchObjectWorkspace();
 
   const resolvedData = data ?? null;

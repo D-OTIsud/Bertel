@@ -235,7 +235,7 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
   setSearch: (search) => set((state) => ({ common: { ...state.common, search } })),
   // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters).
   setEnvironmentTags: (codes) => set((state) => ({ common: { ...state.common, environmentTagsAny: codes } })),
-  // §200 — types d'unité d'hébergement (axe multi-valué, table de liaison).
+  // §201 — types d'unité d'hébergement (axe multi-valué, table de liaison).
   setAccommodationUnitTypes: (codes) =>
     set((state) => ({ common: { ...state.common, accommodationUnitTypesAny: codes } })),
   // §157 — « ouvert à … » exclusif avec « ouvert maintenant » (deux instants

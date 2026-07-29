@@ -1,6 +1,6 @@
 -- =============================================================================
 -- migration_accommodation_unit_type.sql
--- §200 lot 5A — axe « Type d'unité d'hébergement », MULTI-VALUÉ.
+-- §201 lot 5A — axe « Type d'unité d'hébergement », MULTI-VALUÉ.
 -- Manifest : taxo6 (APRÈS taxo5 `migration_taxonomy_accommodation_hierarchy_v2.sql`)
 -- =============================================================================
 --
@@ -10,7 +10,7 @@
 --   couramment plusieurs formes de couchage — une bulle ET un lodge, des
 --   emplacements nus ET des cabanes. Réutiliser `object_taxonomy` obligerait à
 --   choisir arbitrairement laquelle des unités « compte », ce qui est
---   exactement l'écrasement d'information que §200 supprime ailleurs.
+--   exactement l'écrasement d'information que §201 supprime ailleurs.
 --
 --   C'est aussi pourquoi cet axe n'entre PAS dans `object.cached_taxonomy_codes` :
 --   une colonne de cache scalaire ne représente pas un ensemble. Le filtre lit
@@ -18,7 +18,7 @@
 --   du MV — assumé et documenté.
 --
 -- CE QUE ÇA RÉPARE
---   Avant §200, « Bulle », « Lodge » et « Hébergement insolite » étaient des
+--   Avant §201, « Bulle », « Lodge » et « Hébergement insolite » étaient des
 --   NATURES d'établissement (HLO) ou une nature de plein air (HPA
 --   `outdoor_glamping`). Un établissement dont la nature réelle est « Chambre
 --   d'hôtes » se retrouvait donc classé « Bulle » — sa nature était perdue pour
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS object_accommodation_unit_type (
 );
 
 COMMENT ON TABLE object_accommodation_unit_type IS
-  '§200 — types d''unité d''hébergement d''un objet (multi-valué). Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type d''établissement est-ce ? » (= object_taxonomy).';
+  '§201 — types d''unité d''hébergement d''un objet (multi-valué). Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type d''établissement est-ce ? » (= object_taxonomy).';
 
 -- PostgreSQL n'indexe PAS automatiquement le côté référençant d'une FK : sans
 -- cet index, supprimer un code de référence balaierait toute la table de liaison.
@@ -468,7 +468,7 @@ AS $function$
           ARRAY[]::text[]
         )
       END AS taxonomy_any_codes,
-      -- §200 — types d'unité d'hébergement (axe MULTI-VALUÉ, table de liaison
+      -- §201 — types d'unité d'hébergement (axe MULTI-VALUÉ, table de liaison
       -- object_accommodation_unit_type). Volontairement hors cache objet : un
       -- objet peut porter plusieurs unités, ce qu'une colonne cache scalaire ne
       -- représente pas — on lit la table de liaison (comme tags_any).
@@ -536,7 +536,7 @@ AS $function$
         OR n.filters ? 'meeting_room'
         OR n.filters ? 'capacity_filters'
         OR n.filters ? 'tags_any'
-        OR n.filters ? 'accommodation_unit_types_any'   -- §200: jointure vive sur object_accommodation_unit_type
+        OR n.filters ? 'accommodation_unit_types_any'   -- §201: jointure vive sur object_accommodation_unit_type
         OR n.filters ? 'itinerary'
         OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
         OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)

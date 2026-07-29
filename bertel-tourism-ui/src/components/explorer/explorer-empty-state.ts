@@ -3,7 +3,7 @@ import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
 import { useExplorerStore } from '../../store/explorer-store';
 import { buildExplorerActiveChips } from './explorer-active-chips';
 
-/** Domaines de taxonomie porteurs d'une nature d'hébergement (§200). */
+/** Domaines de taxonomie porteurs d'une nature d'hébergement (§201). */
 const ACCOMMODATION_TAXONOMY_DOMAINS = new Set([
   'taxonomy_hot',
   'taxonomy_hlo',
@@ -23,7 +23,7 @@ const GENERIC: ExplorerEmptyStateCopy = {
 };
 
 /**
- * §200 — état vide explicite pour une nature d'hébergement encore inutilisée.
+ * §201 — état vide explicite pour une nature d'hébergement encore inutilisée.
  *
  * POURQUOI : la v2 crée des natures que personne ne porte encore (aire de
  * bivouac, halte nocturne, PRL…). Elles restent visibles à dessein — elles

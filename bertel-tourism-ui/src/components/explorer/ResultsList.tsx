@@ -95,7 +95,7 @@ export function ResultsList({
   const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
   const setHoveredCard = useExplorerStore((state) => state.setHoveredCard);
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
-  // §200 — une nature d'hébergement neuve est visible SANS porteur : dire
+  // §201 — une nature d'hébergement neuve est visible SANS porteur : dire
   // « Aucun résultat » ferait croire à une panne.
   const emptyState = useExplorerEmptyState();
   const visibleCards = hasMounted ? cards : [];

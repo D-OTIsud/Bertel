@@ -67,12 +67,12 @@ describe('recherche métier sur le corpus réel', () => {
   });
 
   /**
-   * §200 — corpus de transition. Un agent qui tape l'ANCIEN mot doit atterrir sur
+   * §201 — corpus de transition. Un agent qui tape l'ANCIEN mot doit atterrir sur
    * la nouvelle explication, sinon le renommage se paie en tickets. Chaque terme
    * ci-dessous est soit un libellé v2, soit une appellation qu'on a délibérément
    * retirée de l'affichage tout en la gardant recherchable.
    */
-  describe('§200 — vocabulaire de l’hébergement, ancien comme nouveau', () => {
+  describe('§201 — vocabulaire de l’hébergement, ancien comme nouveau', () => {
     const HEBERGEMENT_IDS = [
       'creer-hebergement', 'choisir-famille-hebergement',
       'editeur-nature-unite-service-tarif', 'creer-hpa', 'creer-camp', 'explorer-filtres',

@@ -467,7 +467,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         </Field>
       </div>
 
-      {/* §200 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
+      {/* §201 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
           juste sous elle parce que c'est là que la confusion se joue : « Bulle »
           n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
       {taxonomy.unitTypes.unavailableReason || taxonomy.unitTypes.options.length > 0 ? (
@@ -521,7 +521,7 @@ export function SectionIdentity({ editor, objectId, typeCode, archetype, folded 
         </div>
       ) : null}
 
-      {/* §200 — l'éditeur ne propose QUE les natures du domaine compatible avec le
+      {/* §201 — l'éditeur ne propose QUE les natures du domaine compatible avec le
           type technique de la fiche. Le dire explicitement évite la conclusion la
           plus naturelle et la plus fausse : « la nature que je cherche a disparu ».
           Un enregistrement ne change jamais `object_type` (le trigger de garde le

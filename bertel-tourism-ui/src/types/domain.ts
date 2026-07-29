@@ -173,7 +173,7 @@ export interface ExplorerCommonFilters {
    */
   environmentTagsAny: string[];
   /**
-   * §200 — types d'unité d'hébergement (bulle, tipi, lodge, cabane). Axe
+   * §201 — types d'unité d'hébergement (bulle, tipi, lodge, cabane). Axe
    * MULTI-VALUÉ porté par `object_accommodation_unit_type`, distinct de la
    * NATURE de l'établissement : « dans quoi le visiteur dort-il ? » n'est pas
    * « quel type d'établissement est-ce ? ». Envoyé au RPC comme
@@ -341,7 +341,7 @@ export interface ExplorerAccommodationFamily {
   description?: string | null;
   position?: number | null;
   /**
-   * §200 — ancien vocabulaire conservé pour la recherche. « Hôtellerie de plein
+   * §201 — ancien vocabulaire conservé pour la recherche. « Hôtellerie de plein
    * air » recouvrait à la fois les terrains et les aires de halte : les DEUX
    * familles qui la remplacent le portent, pour que la recherche propose les
    * deux au lieu de trancher à la place de l'agent.
@@ -397,7 +397,7 @@ export interface ExplorerReferences {
   itiPractices: ExplorerReferenceOption[];
   /** Cadre & environnement (ref_code domaine environment_tag) — filtre transverse §154. */
   environmentTags: ExplorerReferenceOption[];
-  /** §200 — catalogue `accommodation_unit_type` (bulle, tipi, lodge, cabane…). */
+  /** §201 — catalogue `accommodation_unit_type` (bulle, tipi, lodge, cabane…). */
   accommodationUnitTypes: ExplorerReferenceOption[];
   /** Familles de services & équipements (ref_code domaine amenity_family) — filtre transverse §159. */
   amenityFamilies: ExplorerReferenceOption[];

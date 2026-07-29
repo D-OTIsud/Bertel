@@ -173,7 +173,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
-  /** §200 — sous-arbres de nature dépliés (clé `domaine:code`), ex. Terrain de camping déclaré. */
+  /** §201 — sous-arbres de nature dépliés (clé `domaine:code`), ex. Terrain de camping déclaré. */
   const [openAccommodationSubtrees, setOpenAccommodationSubtrees] = useState<string[]>([]);
   const selectedBuckets = useStore((state) => state.selectedBuckets);
   const common = useStore((state) => state.common);
@@ -455,7 +455,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     );
     const familyRefs = references?.accommodationFamilies ?? [];
     const familyByCode = new Map(familyRefs.map((family) => [family.code, family]));
-    // §200 — l'arbre est construit par une fonction PURE et testée à part : c'est
+    // §201 — l'arbre est construit par une fonction PURE et testée à part : c'est
     // elle qui garantit qu'un enfant à l'écran est un vrai enfant en base
     // (`parentCode` same-domain), et qu'un nœud non assignable disparaît partout.
     const tree = buildAccommodationTaxonomyTree(domains, familyRefs.map((family) => family.code));
@@ -659,7 +659,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
     const unitEntries = tree.unitTypes.filter((entry) => accommodationNodeMatches(entry.node, query));
     const positioningEntries = tree.positionings.filter((entry) => accommodationNodeMatches(entry.node, query));
-    // §200 — le NOUVEL axe multi-valué. Il cohabite volontairement avec les
+    // §201 — le NOUVEL axe multi-valué. Il cohabite volontairement avec les
     // `type_unite` restés dans taxonomy_hlo (maison, appartement, chalet…) :
     // leur migration est un lot à part, et créer un second système concurrent
     // pour elles serait pire que la cohabitation.

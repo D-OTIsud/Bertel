@@ -1269,7 +1269,7 @@ async function getObjectWorkspaceTaxonomyModule(
   };
 }
 
-/** §200 — types d'unité applicables à l'hébergement, et ceux déjà posés sur la fiche. */
+/** §201 — types d'unité applicables à l'hébergement, et ceux déjà posés sur la fiche. */
 const ACCOMMODATION_UNIT_TYPE_OBJECT_TYPES = new Set(['HOT', 'HLO', 'RVA', 'CAMP', 'HPA']);
 
 async function loadAccommodationUnitTypes(
@@ -4291,7 +4291,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
 }
 
 /**
- * §200 — réconcilie les types d'unité (multi-valués).
+ * §201 — réconcilie les types d'unité (multi-valués).
  *
  * Garde anti-clobber : si le module s'est chargé en échec (`unavailableReason`),
  * `selectedCodes` est vide par DÉFAUT, pas parce que l'agent a tout décoché.

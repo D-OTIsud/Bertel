@@ -280,7 +280,7 @@ describe('SectionIdentity', () => {
   });
 });
 
-describe("§200 — types d'unité (axe multi-valué)", () => {
+describe("§201 — types d'unité (axe multi-valué)", () => {
   const UNIT_TYPES = {
     options: [
       { code: 'bubble', label: 'Bulle', description: 'Unité transparente.' },

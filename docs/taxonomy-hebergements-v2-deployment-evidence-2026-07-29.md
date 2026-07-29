@@ -1,4 +1,4 @@
-# Preuve de préparation au déploiement — taxonomie des hébergements v2 (§200)
+# Preuve de préparation au déploiement — taxonomie des hébergements v2 (§201)
 
 Date : 2026-07-29
 Plan : `docs/plans/2026-07-29-taxonomie-hebergements-collectifs-campings-aires-plan.md`

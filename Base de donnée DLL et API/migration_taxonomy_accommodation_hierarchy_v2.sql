@@ -1,6 +1,6 @@
 -- =============================================================================
 -- migration_taxonomy_accommodation_hierarchy_v2.sql
--- §200 — Taxonomie des hébergements v2 : hiérarchie honnête, familles de plein
+-- §201 — Taxonomie des hébergements v2 : hiérarchie honnête, familles de plein
 --        air scindées, natures collectives au même niveau.
 -- Manifest : taxo5 (APRÈS taxo4 `migration_taxonomy_accommodation_vocabulary.sql`)
 -- Plan     : docs/plans/2026-07-29-taxonomie-hebergements-collectifs-campings-aires-plan.md

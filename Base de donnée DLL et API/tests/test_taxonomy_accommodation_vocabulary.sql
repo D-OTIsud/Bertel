@@ -88,7 +88,7 @@ BEGIN
             ('taxonomy_hot','hotel','Hôtel'),
             ('taxonomy_hlo','location_saisonniere','Meublé de tourisme'),
             ('taxonomy_rva','tourism_residence','Résidence de tourisme'),
-            -- §200 : mêmes raisons, mêmes risques. Le snapshot des arbres porte
+            -- §201 : mêmes raisons, mêmes risques. Le snapshot des arbres porte
             -- désormais ces libellés, mais il s'exécute AVANT taxo5 : si quelqu'un
             -- le rejoue seul avec une version antérieure, « Auberge » redevient
             -- « Auberge collective » sans qu'aucune requête n'échoue.

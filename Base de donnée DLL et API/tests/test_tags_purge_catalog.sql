@@ -73,14 +73,18 @@ BEGIN
   END IF;
 
   -- ---------------------------------------------------------------------------------
-  -- C. Le catalogue survivant est bien là (sinon « supprimer tout ref_tag » passerait
-  --    A et B). Seedé par `seeds_data.sql` ⇒ non vacant aussi sur base fraîche.
+  -- C. Le catalogue attendu est bien là (sinon « supprimer tout ref_tag » passerait A
+  --    et B). `family`/`romantic` viennent de `seeds_data.sql`, les 3 tags choisis de la
+  --    migration 16q ⇒ non vacant aussi sur base fraîche.
+  --    ⚠️ PRÉSENCE des slugs uniquement, jamais les libellés/couleurs : le seed et 16q
+  --    utilisent `ON CONFLICT DO NOTHING`, donc un admin peut recolorer ou renommer sans
+  --    faire tomber le build (c'est son droit — cf. `api.set_tag_color`).
   -- ---------------------------------------------------------------------------------
   SELECT string_agg(s, ', ' ORDER BY s) INTO v_slugs
-  FROM unnest(ARRAY['family','romantic']) AS s
+  FROM unnest(ARRAY['family','romantic','vue_mer','feu_de_bois','case_creole']) AS s
   WHERE NOT EXISTS (SELECT 1 FROM public.ref_tag t WHERE t.slug = s);
   IF v_slugs IS NOT NULL THEN
-    RAISE EXCEPTION 'test 16p C : tag(s) à conserver absent(s) du catalogue : %', v_slugs;
+    RAISE EXCEPTION 'test 16p C : tag(s) attendu(s) absent(s) du catalogue : %', v_slugs;
   END IF;
 
   -- ---------------------------------------------------------------------------------
@@ -150,6 +154,24 @@ BEGIN
   IF position('''editor''' IN v_def) = 0 THEN
     RAISE EXCEPTION
       'test 16p F : api.save_object_workspace_tags ne stampe pas extra.source = ''editor'' (§203)';
+  END IF;
+
+  -- ---------------------------------------------------------------------------------
+  -- G (16q). Tout lien posé par les règles curées porte SA règle dans `extra.rule`, et
+  --    pointe vers un des 3 tags choisis. C'est ce qui rend chaque tag révocable seul
+  --    (rollback par règle) et ce qui interdit qu'une passe future repose des liens en
+  --    masse sans se nommer — la faute exacte de l'import de mai.
+  -- ---------------------------------------------------------------------------------
+  SELECT count(*) INTO v_n
+  FROM public.tag_link tl
+  LEFT JOIN public.ref_tag t ON t.id = tl.tag_id
+  WHERE tl.extra ->> 'source' = 'tag_rules_20260729'
+    AND (tl.extra ->> 'rule' IS NULL
+         OR t.slug IS DISTINCT FROM tl.extra ->> 'rule'
+         OR t.slug NOT IN ('vue_mer','feu_de_bois','case_creole'));
+  IF v_n > 0 THEN
+    RAISE EXCEPTION
+      'test 16q G : % lien(s) de règle sans `extra.rule` cohérent — un lien non nommé n''est pas révocable seul (§203)', v_n;
   END IF;
 
   RAISE NOTICE 'test 16p : OK — catalogue = %, sauvegarde = % ligne(s)',

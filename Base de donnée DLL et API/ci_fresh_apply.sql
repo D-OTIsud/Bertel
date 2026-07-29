@@ -326,7 +326,10 @@ ROLLBACK;
 \echo '== 16p    migration_tags_purge_import_20260512.sql  (§203 tags : sauvegarde puis purge des 4529 liens tag_link portant extra.source = old_data_enrichment_20260512 + retrait des 15 tags du catalogue qui doublonnent un axe deja filtrable ; family/romantic conserves, desormais seedes par seeds_data.sql ; les 6 lignes de saisie editeur sont explicitement HORS purge ; no-op complet sur base fraiche) =='
 \ir migration_tags_purge_import_20260512.sql
 
-\echo '== 16p-test garde permanente §203 (A import parti / B aucun tag sortant / C family+romantic preserves / D aucun tag ne duplique le nom exact d un equipement, cadre ou noeud de taxonomie / E la sauvegarde ne contient QUE des lignes d import, donc la purge n a pas emporte de saisie editeur / F le RPC editeur stampe created_by et extra.source) =='
+\echo '== 16q    migration_tags_curated_seed.sql  (§203 tags : catalogue reconstruit — 3 tags choisis (Vue mer, Cuisine au feu de bois, Case creole) appliques par regles a phrase specifique dont la precision a ete mesuree a la main sur echantillon lu ; 146 liens sur live, chacun portant extra.source + extra.rule donc revocable seul ; sur base fraiche seul le catalogue est cree, 0 lien) =='
+\ir migration_tags_curated_seed.sql
+
+\echo '== 16p/16q-test garde permanente §203 (A import parti / B aucun tag sortant / C les 5 tags attendus sont au catalogue / D aucun tag ne duplique le nom exact d un equipement, cadre ou noeud de taxonomie / E la sauvegarde ne contient QUE des lignes d import, donc la purge n a pas emporte de saisie editeur / F le RPC editeur stampe created_by et extra.source / G tout lien de regle porte sa regle et reste revocable seul) =='
 \ir tests/test_tags_purge_catalog.sql
 
 \echo '== MV refresh (non-concurrent) =='

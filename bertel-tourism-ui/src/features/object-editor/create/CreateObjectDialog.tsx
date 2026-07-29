@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Dialog,
@@ -42,6 +42,10 @@ import {
 import { splitDuplicateMatches } from './duplicate-hint';
 import { listAccommodationFamilies, listTaxonomyReferences } from '../../../services/explorer-reference';
 import type { ExplorerAccommodationFamily, ExplorerTaxonomyDomain } from '../../../types/domain';
+import {
+  accommodationFamilyDescription,
+  accommodationNatureDescription,
+} from '../../../utils/accommodation-help';
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -82,35 +86,22 @@ type TooltipPosition = { left: number; top: number };
 
 const TAXONOMY_PREVIEW_LIMIT = 3;
 
-interface CreateTypeTileProps {
-  option: CreateTypeOption;
-  selected: boolean;
-  visual: ArchetypeVisual;
-  subcategories: string[];
-  taxonomyLoading: boolean;
-  taxonomyError: boolean;
-  onSelect: () => void;
+interface InfoTooltipButtonProps {
+  ariaLabel: string;
+  tooltipId?: string;
+  /** Recalcule la position quand le contenu change après un chargement. */
+  contentKey?: string;
+  children: ReactNode;
 }
 
-/**
- * Type tile with a deliberately compact taxonomy preview. The preview is opened
- * only from the info affordance (not from the whole selection tile) and is
- * portalled to escape the dialog's scrollable region.
- */
-function CreateTypeTile({
-  option,
-  selected,
-  visual,
-  subcategories,
-  taxonomyLoading,
-  taxonomyError,
-  onSelect,
-}: CreateTypeTileProps) {
+/** Bouton d'aide compact partagé par les types, familles et natures. */
+function InfoTooltipButton({ ariaLabel, tooltipId: explicitTooltipId, contentKey = '', children }: InfoTooltipButtonProps) {
   const anchorRef = useRef<HTMLButtonElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const [position, setPosition] = useState<TooltipPosition | null>(null);
-  const tooltipId = `create-type-${option.code}-tooltip`;
+  const generatedId = useId().replace(/:/g, '');
+  const tooltipId = explicitTooltipId ?? `create-info-${generatedId}`;
 
   useLayoutEffect(() => {
     if (!tooltipOpen) {
@@ -148,7 +139,7 @@ function CreateTypeTile({
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('scroll', updatePosition, true);
     };
-  }, [tooltipOpen, subcategories]);
+  }, [contentKey, tooltipOpen]);
 
   const tooltip = tooltipOpen && typeof document !== 'undefined'
     ? createPortal(
@@ -163,6 +154,103 @@ function CreateTypeTile({
             visibility: position ? 'visible' : 'hidden',
           }}
         >
+          {children}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={anchorRef}
+        type="button"
+        aria-label={ariaLabel}
+        aria-describedby={tooltipOpen ? tooltipId : undefined}
+        aria-expanded={tooltipOpen}
+        onClick={() => setTooltipOpen(true)}
+        onMouseEnter={() => setTooltipOpen(true)}
+        onMouseLeave={() => setTooltipOpen(false)}
+        onFocus={() => setTooltipOpen(true)}
+        onBlur={() => setTooltipOpen(false)}
+        className="mx-1 grid h-8 w-8 flex-none place-items-center rounded-lg text-current opacity-55 transition-[background-color,opacity] hover:bg-black/5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/30"
+      >
+        <Info className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {tooltip}
+    </>
+  );
+}
+
+interface CreateTypeTileProps {
+  option: CreateTypeOption;
+  selected: boolean;
+  visual: ArchetypeVisual;
+  subcategories: string[];
+  taxonomyLoading: boolean;
+  taxonomyError: boolean;
+  onSelect: () => void;
+}
+
+/**
+ * Type tile with a deliberately compact taxonomy preview. The preview is opened
+ * only from the info affordance (not from the whole selection tile) and is
+ * portalled to escape the dialog's scrollable region.
+ */
+function CreateTypeTile({
+  option,
+  selected,
+  visual,
+  subcategories,
+  taxonomyLoading,
+  taxonomyError,
+  onSelect,
+}: CreateTypeTileProps) {
+  const previewKey = `${taxonomyLoading}:${taxonomyError}:${subcategories.join('|')}`;
+
+  return (
+    <div
+      className={[
+        'relative flex items-center rounded-xl border text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
+        selected
+          ? 'shadow-sm'
+          : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
+      ].join(' ')}
+      style={
+        selected
+          ? {
+              borderColor: visual.color,
+              backgroundColor: `${visual.color}14`,
+              color: visual.deep,
+              boxShadow: `0 0 0 3px ${visual.color}24`,
+            }
+          : undefined
+      }
+    >
+      <label className="flex min-w-0 flex-1 cursor-pointer items-center py-2.5 pl-3">
+        <input
+          type="radio"
+          name="create-object-type"
+          value={option.code}
+          checked={selected}
+          onChange={onSelect}
+          aria-label={option.label}
+          className="sr-only"
+        />
+        <span className="min-w-0 leading-5">{option.label}</span>
+        {selected ? (
+          <Check
+            className="ml-auto h-4 w-4 flex-none"
+            strokeWidth={3}
+            style={{ color: visual.color }}
+          />
+        ) : null}
+      </label>
+      <InfoTooltipButton
+        ariaLabel={`Voir des exemples de sous-catégories pour ${option.label}`}
+        tooltipId={`create-type-${option.code}-tooltip`}
+        contentKey={previewKey}
+      >
           <span className="block text-[12px] font-semibold">
             {subcategories.length > 0
               ? `${subcategories.length} sous-catégorie${subcategories.length > 1 ? 's' : ''} disponible${subcategories.length > 1 ? 's' : ''}`
@@ -184,68 +272,8 @@ function CreateTypeTile({
           ) : (
             <span className="mt-1 block text-white/75">Aucune sous-catégorie active.</span>
           )}
-        </div>,
-        document.body,
-      )
-    : null;
-
-  return (
-    <>
-      <div
-        className={[
-          'relative flex items-center rounded-xl border text-[13.5px] font-medium transition-[transform,background-color,border-color,box-shadow,color] duration-150 will-change-transform active:scale-[0.98]',
-          selected
-            ? 'shadow-sm'
-            : 'border-line bg-surface text-ink-2 hover:-translate-y-px hover:border-ink-3/40 hover:bg-surface2 hover:text-ink hover:shadow-sm',
-        ].join(' ')}
-        style={
-          selected
-            ? {
-                borderColor: visual.color,
-                backgroundColor: `${visual.color}14`,
-                color: visual.deep,
-                boxShadow: `0 0 0 3px ${visual.color}24`,
-              }
-            : undefined
-        }
-      >
-        <label className="flex min-w-0 flex-1 cursor-pointer items-center py-2.5 pl-3">
-          <input
-            type="radio"
-            name="create-object-type"
-            value={option.code}
-            checked={selected}
-            onChange={onSelect}
-            aria-label={option.label}
-            className="sr-only"
-          />
-          <span className="min-w-0 leading-5">{option.label}</span>
-          {selected ? (
-            <Check
-              className="ml-auto h-4 w-4 flex-none"
-              strokeWidth={3}
-              style={{ color: visual.color }}
-            />
-          ) : null}
-        </label>
-        <button
-          ref={anchorRef}
-          type="button"
-          aria-label={`Voir des exemples de sous-catégories pour ${option.label}`}
-          aria-describedby={tooltipOpen ? tooltipId : undefined}
-          aria-expanded={tooltipOpen}
-          onClick={() => setTooltipOpen(true)}
-          onMouseEnter={() => setTooltipOpen(true)}
-          onMouseLeave={() => setTooltipOpen(false)}
-          onFocus={() => setTooltipOpen(true)}
-          onBlur={() => setTooltipOpen(false)}
-          className="mx-1 grid h-8 w-8 flex-none place-items-center rounded-lg text-current opacity-55 transition-[background-color,opacity] hover:bg-black/5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/30"
-        >
-          <Info className="h-3.5 w-3.5" aria-hidden />
-        </button>
-      </div>
-      {tooltip}
-    </>
+      </InfoTooltipButton>
+    </div>
   );
 }
 
@@ -506,17 +534,10 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="Familles d'hébergement">
                           {accommodationFamilies.map((family) => {
                             const selected = guided && familyCode === family.code;
+                            const explanation = accommodationFamilyDescription(family.code) ?? family.description;
                             return (
-                              <button
+                              <div
                                 key={family.code}
-                                type="button"
-                                onClick={() => {
-                                  setGuided(true);
-                                  setType('');
-                                  setFamilyCode(family.code);
-                                  setNatureSelection(null);
-                                }}
-                                aria-pressed={selected}
                                 className={[
                                   'flex min-h-10 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13.5px] font-medium transition',
                                   selected
@@ -525,9 +546,27 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                                 ].join(' ')}
                                 style={selected ? { borderColor: v.color, backgroundColor: `${v.color}14`, color: v.deep } : undefined}
                               >
-                                <span className="min-w-0 flex-1">{family.name}</span>
-                                {selected ? <Check className="h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} /> : null}
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setGuided(true);
+                                    setType('');
+                                    setFamilyCode(family.code);
+                                    setNatureSelection(null);
+                                  }}
+                                  aria-pressed={selected}
+                                  className="flex min-w-0 flex-1 items-center self-stretch text-left"
+                                >
+                                  <span className="min-w-0 flex-1">{family.name}</span>
+                                  {selected ? <Check className="h-4 w-4 flex-none" strokeWidth={3} style={{ color: v.color }} /> : null}
+                                </button>
+                                {explanation ? (
+                                  <InfoTooltipButton ariaLabel={`Comprendre la famille ${family.name}`} contentKey={explanation}>
+                                    <span className="block text-[12px] font-semibold">{family.name}</span>
+                                    <p className="mt-1 text-white/80">{explanation}</p>
+                                  </InfoTooltipButton>
+                                ) : null}
+                              </div>
                             );
                           })}
                         </div>
@@ -544,43 +583,63 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                                 && natureSelection?.code === nature.code;
                               const childSelected = nature.children
                                 .some((child) => natureSelection?.domain === child.domain && natureSelection?.code === child.code);
+                              const explanation = accommodationNatureDescription(nature.domain, nature.code);
                               return (
                                 <div key={`${nature.domain}:${nature.code}`} className="min-w-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => setNatureSelection({ domain: nature.domain, code: nature.code })}
-                                    aria-pressed={natureSelected}
-                                    className={[
-                                      'flex w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-[13px] transition',
-                                      natureSelected || childSelected
-                                        ? 'border-ink-3 bg-surface text-ink'
-                                        : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
-                                    ].join(' ')}
-                                  >
-                                    <span className="min-w-0 flex-1 font-medium">{nature.name}</span>
-                                    {natureSelected ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
-                                  </button>
+                                  <div className={[
+                                    'flex w-full items-center rounded-lg border text-[13px] transition',
+                                    natureSelected || childSelected
+                                      ? 'border-ink-3 bg-surface text-ink'
+                                      : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
+                                  ].join(' ')}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setNatureSelection({ domain: nature.domain, code: nature.code })}
+                                      aria-pressed={natureSelected}
+                                      className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-2 text-left"
+                                    >
+                                      <span className="min-w-0 flex-1 font-medium">{nature.name}</span>
+                                      {natureSelected ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
+                                    </button>
+                                    {explanation ? (
+                                      <InfoTooltipButton ariaLabel={`Comprendre ${nature.name}`} contentKey={explanation}>
+                                        <span className="block text-[12px] font-semibold">{nature.name}</span>
+                                        <p className="mt-1 text-white/80">{explanation}</p>
+                                      </InfoTooltipButton>
+                                    ) : null}
+                                  </div>
                                   {nature.children.length > 0 && (natureSelected || childSelected) ? (
                                     <div className="ml-3 mt-1.5 space-y-1 border-l border-line pl-3">
                                       {nature.children.map((child) => {
                                         const active = natureSelection?.domain === child.domain
                                           && natureSelection?.code === child.code;
+                                        const childExplanation = accommodationNatureDescription(child.domain, child.code);
                                         return (
-                                          <button
+                                          <div
                                             key={`${child.domain}:${child.code}`}
-                                            type="button"
-                                            onClick={() => setNatureSelection({ domain: child.domain, code: child.code })}
-                                            aria-pressed={active}
                                             className={[
-                                              'flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-left text-[12.5px] transition',
+                                              'flex w-full items-center rounded-lg border text-[12.5px] transition',
                                               active
                                                 ? 'border-ink-3 bg-surface text-ink'
                                                 : 'border-line bg-surface text-ink-2 hover:border-ink-3/40 hover:text-ink',
                                             ].join(' ')}
                                           >
-                                            <span className="min-w-0 flex-1 font-medium">{child.name}</span>
-                                            {active ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
-                                          </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => setNatureSelection({ domain: child.domain, code: child.code })}
+                                              aria-pressed={active}
+                                              className="flex min-w-0 flex-1 items-center gap-2 px-2.5 py-1.5 text-left"
+                                            >
+                                              <span className="min-w-0 flex-1 font-medium">{child.name}</span>
+                                              {active ? <Check className="h-3.5 w-3.5 flex-none" strokeWidth={3} /> : null}
+                                            </button>
+                                            {childExplanation ? (
+                                              <InfoTooltipButton ariaLabel={`Comprendre ${child.name}`} contentKey={childExplanation}>
+                                                <span className="block text-[12px] font-semibold">{child.name}</span>
+                                                <p className="mt-1 text-white/80">{childExplanation}</p>
+                                              </InfoTooltipButton>
+                                            ) : null}
+                                          </div>
                                         );
                                       })}
                                     </div>

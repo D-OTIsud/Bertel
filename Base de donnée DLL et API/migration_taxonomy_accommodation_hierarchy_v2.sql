@@ -304,7 +304,7 @@ WITH v(domain, code, add_aliases, descr) AS (
     ('taxonomy_camp', 'camping', '["Camping aménagé","Camping classé"]',
      'Terrain aménagé pour l''accueil de tentes, caravanes ou résidences mobiles de loisirs. Le classement se filtre séparément.'),
     ('taxonomy_hpa', 'natural_camp_area', '["Aire naturelle"]',
-     'Catégorie de terrain de camping à aménagement allégé, malgré le mot « aire » : elle relève bien des campings et terrains.')
+     'Catégorie réglementaire de terrain de camping aménagé, classée sans étoile, réservée aux tentes, caravanes et autocaravanes, exploitée au maximum six mois par an et sans habitation légère ni résidence mobile de loisirs.')
 )
 UPDATE ref_code rc
    SET description = v.descr,
@@ -322,6 +322,13 @@ UPDATE ref_code rc
                        'source', 'taxonomy_hierarchie_v2_20260729')
   FROM v
  WHERE rc.domain = v.domain AND rc.code = v.code;
+
+UPDATE ref_code rc
+   SET metadata = COALESCE(rc.metadata, '{}'::jsonb)
+                  || jsonb_build_object(
+                       'source_ref', 'Code du tourisme, articles D332-1 et D332-1-2 ; DGE — Aires naturelles de camping',
+                       'source', 'taxonomy_hierarchie_v2_20260729')
+ WHERE rc.domain = 'taxonomy_hpa' AND rc.code = 'natural_camp_area';
 
 -- -----------------------------------------------------------------------------
 -- 4. Aires et haltes de plein air.

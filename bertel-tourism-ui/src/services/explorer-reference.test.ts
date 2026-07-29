@@ -75,6 +75,10 @@ describe('projection de compatibilité §201 — ancien catalogue plein_air', ()
     ]);
     expect(result.some((family) => family.code === 'plein_air')).toBe(false);
     expect(result.slice(3).every((family) => family.aliases?.includes('Hôtellerie de plein air'))).toBe(true);
+    expect(result.find((family) => family.code === 'campings_terrains')?.description)
+      .toMatch(/terrains organisés/i);
+    expect(result.find((family) => family.code === 'aires_haltes_plein_air')?.description)
+      .toMatch(/halte ou une nuitée/i);
   });
 
   it('reste idempotente pendant une transition où ancien et nouveaux codes coexistent', () => {

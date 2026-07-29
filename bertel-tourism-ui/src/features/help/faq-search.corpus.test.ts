@@ -65,4 +65,41 @@ describe('recherche métier sur le corpus réel', () => {
   test('« api partenaire » trouve le guide partenaires API', () => {
     expect(topIds('api partenaire', 5)).toContain('aide-partenaires');
   });
+
+  /**
+   * §200 — corpus de transition. Un agent qui tape l'ANCIEN mot doit atterrir sur
+   * la nouvelle explication, sinon le renommage se paie en tickets. Chaque terme
+   * ci-dessous est soit un libellé v2, soit une appellation qu'on a délibérément
+   * retirée de l'affichage tout en la gardant recherchable.
+   */
+  describe('§200 — vocabulaire de l’hébergement, ancien comme nouveau', () => {
+    const HEBERGEMENT_IDS = [
+      'creer-hebergement', 'choisir-famille-hebergement',
+      'editeur-nature-unite-service-tarif', 'creer-hpa', 'creer-camp', 'explorer-filtres',
+    ];
+
+    test.each([
+      ['auberge'],
+      ['auberge collective'],
+      ['gîte de groupe'],
+      ['résidence hôtelière'],
+      ['camping classé'],
+      ['aire naturelle'],
+      ['PRL'],
+      ['aire de bivouac'],
+      ['aire de services'],
+      ['halte van'],
+      ['glamping'],
+      ['lodge'],
+      ['vidange'],
+      ['hôtellerie de plein air'],
+    ])('« %s » mène à une entrée du chantier hébergement', (query) => {
+      const ids = topIds(query, 5);
+      expect(ids.some((id) => HEBERGEMENT_IDS.includes(id))).toBe(true);
+    });
+
+    test('« gratuit » mène à l’explication tarif/nature, pas à une nature', () => {
+      expect(topIds('gratuit', 5)).toContain('editeur-nature-unite-service-tarif');
+    });
+  });
 });

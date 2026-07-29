@@ -143,6 +143,12 @@ c'est ce qui préserve l'élagage mesuré. Un filtre « sans photo » ne consomm
 qu'une colonne → 2,5 ms. Seuls le palier et la pastille, qui ont réellement
 besoin des 8, paient les 23 ms.
 
+**Chaque essentiel est calculé une seule fois** : un CTE interne produit les
+booléens, le `SELECT` externe dérive `missing_essentials` **depuis ces
+booléens**. Recopier les expressions dans le tableau remettrait deux copies du
+calcul dans le fichier dont la raison d'être est d'en supprimer les copies — et
+la première divergence serait silencieuse.
+
 Schéma `internal` : couche dérivée privée, cohérent avec
 `internal.mv_filtered_objects`, et hors de portée de PostgREST.
 
@@ -175,14 +181,41 @@ api.object_missing_essentials(p_object_ids TEXT[])
   SECURITY DEFINER
 ```
 
-Il porte **les deux gardes, en un seul endroit** :
-1. rend l'ensemble vide si `NOT api.current_user_can_edit_objects()` — c'est ici
+Il porte **trois verrous cumulés** :
+1. `REVOKE ALL … FROM PUBLIC` **explicite** — PostgreSQL accorde `EXECUTE` à
+   `PUBLIC` par défaut sur toute fonction créée, et un `GRANT` ciblé ne retire
+   pas ce droit. Sans ce `REVOKE`, `anon` peut appeler la fonction ;
+2. rend l'ensemble vide si `NOT api.current_user_can_edit_objects()` — c'est ici
    que vit le « éditeur et supérieur », côté serveur ;
-2. **s'auto-autorise** ses ids contre `api.current_user_readable_object_ids()`
-   sans jamais faire confiance à la liste reçue (§36 : la fonction est
-   exécutable via PostgREST).
+3. **s'auto-autorise** ses ids contre `api.current_user_readable_object_ids()`
+   sans jamais faire confiance à la liste reçue (§36).
 
 Appelé **une fois par page**, en ensemble — jamais par ligne.
+
+**Pourquoi il reste dans `api` et non dans un schéma privé.** La règle générale
+veut qu'une fonction `SECURITY DEFINER` sorte du schéma exposé. Elle ne
+s'applique pas ici, pour une raison mécanique : le RPC de page est
+`SECURITY INVOKER`, donc c'est **l'appelant** (`authenticated`) qui doit pouvoir
+exécuter le helper. Le placer dans `internal` exigerait d'accorder `USAGE` sur
+`internal` à `authenticated` — ouvrant toute la couche privée, bien au-delà de
+cette fonction. Basculer le RPC de page en `DEFINER` changerait en bloc la
+sémantique d'autorisation d'un RPC central. Le helper reste donc appelable par
+un éditeur via PostgREST, ce qui est sans conséquence : pour un éditeur, ces
+données ne sont pas un secret.
+
+### Le gate porte aussi sur le filtre, pas seulement sur l'affichage
+
+Gater l'émission de `missing_essentials` ne suffit pas : un utilisateur
+authentifié en lecture seule peut envoyer les deux clés directement à
+`api.get_filtered_object_ids`. Si « éditeur et supérieur » est une règle
+d'autorisation, elle doit être vérifiée **là aussi**. Le CTE `params` évalue donc
+`api.current_user_can_edit_objects()` (constant par requête, un seul InitPlan) et
+les clés d'un non-éditeur sont **ignorées**.
+
+Ignorées et non rejetées, pour deux raisons : `get_filtered_object_ids` est
+`LANGUAGE sql` et ne peut pas lever d'exception sans une fonction tierce ; et une
+dégradation douce évite de casser la session d'un utilisateur dont le rôle change
+en cours de route. Ignorer ne divulgue rien — le filtre est simplement sans effet.
 
 ---
 
@@ -303,7 +336,11 @@ clé est acceptée ne prouve pas que le filtre remonte le bon ensemble.
 
 `Base de donnée DLL et API/tests/test_remplissage_filter.sql` :
 1. crée des fiches témoins avec des trous **connus** (une complète, une à 1
-   manquant, une à 3, une sans photo mais complète par ailleurs) ;
+   manquant, une à 4). **Le bloc type dépend du type d'objet** : pour des témoins
+   `HLO`, `e_typeblock` exige une capacité `max_capacity` ou une chambre —
+   `object_amenity` ne vaut que pour la branche `ELSE`. S'y tromper donne un
+   témoin « complet » à 1 manquant, et un test qui échoue sans que la cause soit
+   lisible ;
 2. exécute le **vrai** `api.get_filtered_object_ids` ;
 3. exige l'**ensemble exact** pour chaque palier et chaque code de facette ;
 4. **parité** : `get_dashboard_completeness` rend les mêmes chiffres avant et
@@ -311,7 +348,9 @@ clé est acceptée ne prouve pas que le filtre remonte le bon ensemble.
 5. **gardes du helper** `api.object_missing_essentials` : ensemble vide pour un
    appelant non-éditeur, et un id passé en argument mais hors du périmètre
    lisible est écarté (ne pas faire confiance à la liste reçue) ;
-6. vérifié **rouge par sabotage** avant d'être considéré comme une garde.
+6. **gate du filtre** : sous `SET ROLE anon`, les deux clés envoyées à
+   `api.get_filtered_object_ids` sont ignorées — les témoins ressortent tous ;
+7. vérifié **rouge par sabotage** avant d'être considéré comme une garde.
 
 Le point 5 demande un vrai `SET ROLE` : exécuté en superuser, le test passerait
 sans rien prouver — le piège relevé au §48 sur `test_actor_links_editor.sql`.

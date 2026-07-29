@@ -172,8 +172,10 @@ WITH v(domain, code, axis, famille, aliases, source_ref, descr) AS (
      'Chambre meublée chez l''habitant, louée à la nuitée avec petit-déjeuner ; l''accueil est assuré par l''habitant.'),
     ('taxonomy_hlo','location_saisonniere','nature','locatif','["Location saisonnière","Gîte","Gîte rural","Meublé"]',
      'Code du tourisme art. D324-1 · DATAtourisme:SelfCateringAccommodation',
-     -- Le renvoi Berta n'est plus répété ici : l'alias vit dans `metadata.aliases`
-     -- et L2 l'affiche en badge « Berta : Location saisonnière ». Une seule source.
+     -- L'ancien libellé n'est plus répété ici : l'alias vit dans `metadata.aliases`
+     -- et L2 l'affiche en badge « Aussi appelé : Location saisonnière ». Une seule
+     -- source. La microcopie ne NOMME pas le système d'origine (celui-ci reste dans
+     -- la lignée `object_origin.source_system`, pas dans l'interface).
      'Villa, appartement ou studio meublé loué à une clientèle de passage, à l''usage exclusif du locataire. « Gîte » est une appellation commerciale, pas une nature (DGCCRF).'),
     ('taxonomy_camp','camping','nature','plein_air','["Camping"]',NULL,
      'Terrain aménagé pour l''accueil de tentes, caravanes ou résidences mobiles de loisirs. Le classement se filtre séparément.'),

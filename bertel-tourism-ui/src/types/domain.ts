@@ -329,7 +329,7 @@ export interface ExplorerTaxonomyNode {
   axis?: 'famille' | 'nature' | 'sous_type' | 'type_unite' | 'positionnement' | null;
   /** §192 — famille ontologique dérivée, indépendante du type d'objet technique. */
   family?: string | null;
-  /** Termes Berta et synonymes conservés pour la recherche de transition. */
+  /** Anciens libellés (reprise) et synonymes conservés pour la recherche de transition. */
   aliases?: string[];
   /** Référence normative courte affichable avec la définition. */
   sourceRef?: string | null;

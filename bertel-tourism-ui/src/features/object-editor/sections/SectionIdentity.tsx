@@ -293,7 +293,7 @@ function TaxonomyModal({
                 {node.label}
                 {(node.aliases?.length ?? 0) > 0 ? (
                   <small className="block text-[10px] font-normal text-ink-3">
-                    Berta : {node.aliases?.join(', ')}
+                    Aussi appelé : {node.aliases?.join(', ')}
                   </small>
                 ) : null}
               </span>
@@ -310,7 +310,7 @@ function TaxonomyModal({
                 {node.label}
                 {(node.aliases?.length ?? 0) > 0 ? (
                   <small className="block text-[10px] font-normal text-ink-3">
-                    Berta : {node.aliases?.join(', ')}
+                    Aussi appelé : {node.aliases?.join(', ')}
                   </small>
                 ) : null}
               </span>
@@ -368,7 +368,7 @@ function TaxonomyModal({
                   <input
                     type="text"
                     className="taxo2-search__input"
-                    placeholder="Rechercher une nature ou un ancien terme Berta…"
+                    placeholder="Rechercher une nature ou un ancien libellé…"
                     aria-label="Rechercher une nature d’hébergement"
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}

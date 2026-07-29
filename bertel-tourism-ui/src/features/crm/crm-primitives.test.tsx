@@ -169,11 +169,11 @@ describe('TlCard — fil de discussion (§65/§66)', () => {
     expect(queryByText('par Système')).toBeNull();
   });
 
-  it('« par Import Berta 2 » quand owner+interlocuteur null mais source import (plus jamais « Système »)', () => {
+  it('« par Import initial » quand owner+interlocuteur null mais source import (plus jamais « Système »)', () => {
     const { getByText } = render(
       <CrmTimeline items={[makeItem({ ownerName: null, interlocutorEmail: null, source: 'import_berta2_crm' })]} />,
     );
-    expect(getByText('par Import Berta 2')).toBeInTheDocument();
+    expect(getByText('par Import initial')).toBeInTheDocument();
   });
 
   it('rend les réponses NICHÉES sous la racine (auteur · date + corps + pastille)', () => {

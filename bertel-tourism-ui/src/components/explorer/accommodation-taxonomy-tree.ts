@@ -36,13 +36,15 @@ export interface AccommodationFamilyGroup {
   /** Code de `accommodation_family` (`collectif`, `campings_terrains`, …). */
   code: string;
   natures: AccommodationTreeNode[];
+  /** Positionnements appartenant à cette famille, rendus dans son accordéon. */
+  positionings: AccommodationTaxonomyEntry[];
 }
 
 export interface AccommodationTaxonomyTree {
   families: AccommodationFamilyGroup[];
   /** Axe « Type d'unité » — rendu dans les Critères complémentaires. */
   unitTypes: AccommodationTaxonomyEntry[];
-  /** Axe « Positionnement » — idem. */
+  /** Axe « Positionnement » — également ventilé dans chaque famille. */
   positionings: AccommodationTaxonomyEntry[];
   /**
    * Sous-types dont le parent n'est pas une nature retenue du même domaine.
@@ -89,6 +91,7 @@ export function buildAccommodationTaxonomyTree(
 
   const natures = entries.filter((entry) => entry.node.axis === 'nature').sort(compareEntries);
   const subtypes = entries.filter((entry) => entry.node.axis === 'sous_type').sort(compareEntries);
+  const positionings = entries.filter((entry) => entry.node.axis === 'positionnement').sort(compareEntries);
 
   // 2. L'index est clé COMPOSÉE domaine+code. Deux domaines peuvent porter le
   //    même code sans avoir le moindre rapport : les confondre fusionnerait des
@@ -156,7 +159,11 @@ export function buildAccommodationTaxonomyTree(
 
   const orderIndex = new Map(familyOrder.map((code, index) => [code, index]));
   const families: AccommodationFamilyGroup[] = Array.from(naturesByFamily.entries())
-    .map(([code, natureNodes]) => ({ code, natures: natureNodes }))
+    .map(([code, natureNodes]) => ({
+      code,
+      natures: natureNodes,
+      positionings: positionings.filter((entry) => entry.node.family === code),
+    }))
     .sort((left, right) => {
       const a = orderIndex.get(left.code) ?? Number.MAX_SAFE_INTEGER;
       const b = orderIndex.get(right.code) ?? Number.MAX_SAFE_INTEGER;
@@ -166,7 +173,7 @@ export function buildAccommodationTaxonomyTree(
   return {
     families,
     unitTypes: entries.filter((entry) => entry.node.axis === 'type_unite').sort(compareEntries),
-    positionings: entries.filter((entry) => entry.node.axis === 'positionnement').sort(compareEntries),
+    positionings,
     orphanSubtypes,
   };
 }

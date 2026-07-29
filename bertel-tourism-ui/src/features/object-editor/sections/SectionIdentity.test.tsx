@@ -313,6 +313,7 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
     const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
+    expect(screen.getByText("Type d'unité")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bulle' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Lodge' }));
     rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
@@ -338,7 +339,7 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText(/catalogue des types d.unité n.est pas encore disponible/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Types de logement/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Type d.unité/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bulle' })).not.toBeInTheDocument();
   });
 
@@ -348,6 +349,6 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     })));
     render(<SectionIdentity editor={result.current} permissions={allowAll} />);
 
-    expect(screen.queryByText(/Types de logement/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Type d.unité/)).not.toBeInTheDocument();
   });
 });

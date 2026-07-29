@@ -39,6 +39,9 @@ const HOT_TAXONOMY_REFERENCES = {
 
 const SEMANTIC_ACCOMMODATION_REFERENCES = {
   hotCapacityMetrics: [],
+  accommodationUnitTypes: [
+    { code: 'house_villa', name: 'Maison / villa' },
+  ],
   accommodationFamilies: [
     { code: 'hotellerie', name: 'Hôtellerie', description: 'Établissements hôteliers.', position: 1 },
     { code: 'locatif', name: 'Hébergement locatif', description: 'Locations touristiques.', position: 2 },
@@ -153,13 +156,14 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: "Effacer la recherche d'hébergement" })).toBeInTheDocument();
   });
 
-  it("range le type d'unité dans les critères complémentaires", () => {
+  it("n'affiche qu'un seul axe Type d'unité dans les critères complémentaires", () => {
     act(() => useExplorerStore.getState().toggleBucket('HOT'));
     render(<FiltersPanel references={SEMANTIC_ACCOMMODATION_REFERENCES} />);
 
     expect(screen.queryByRole('button', { name: 'Maison / villa' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Critères complémentaires', expanded: false }));
-    expect(screen.getByText("Type d'unité d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText("Type d'unité")).toBeInTheDocument();
+    expect(screen.queryByText("Type d'unité d'hébergement")).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Maison / villa' })).toBeInTheDocument();
   });
 
@@ -175,6 +179,14 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
       { code: 'aires_haltes_plein_air', name: 'Aires et haltes de plein air', position: 5, aliases: ['Hôtellerie de plein air', 'Hébergement de plein air'] },
     ],
     taxonomies: [
+      {
+        domain: 'taxonomy_hot', name: 'HOT', objectType: 'HOT',
+        nodes: [
+          { code: 'hotel', name: 'Hôtel', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [] },
+          { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant', parentCode: 'hotel', depth: 1, isAssignable: true, position: 10, axis: 'sous_type', family: 'hotellerie', aliases: [] },
+          { code: 'boutique_hotel', name: 'Hôtel boutique', parentCode: 'hotel', depth: 1, isAssignable: true, position: 2, axis: 'positionnement', family: 'hotellerie', aliases: [] },
+        ],
+      },
       {
         domain: 'taxonomy_hlo', name: 'HLO', objectType: 'HLO',
         nodes: [
@@ -229,6 +241,17 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
         expect(screen.getByRole('button', { name: new RegExp(`^${label}`) })).toBeInTheDocument();
       }
       expect(screen.queryByRole('button', { name: /^Hôtellerie de plein air/ })).not.toBeInTheDocument();
+    });
+
+    it('place les positionnements dans Hôtellerie et retire le surtitre Nature', () => {
+      act(() => useExplorerStore.getState().toggleBucket('HOT'));
+      render(<FiltersPanel references={V2_ACCOMMODATION_REFERENCES} />);
+      openFamily('Hôtellerie');
+
+      expect(screen.getByRole('button', { name: 'Hôtel' })).toBeInTheDocument();
+      expect(screen.getByText('Positionnement')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Hôtel boutique' })).toBeInTheDocument();
+      expect(screen.queryByText(/^Nature$/)).not.toBeInTheDocument();
     });
 
     it('explique les deux familles de plein air et la nature Aire naturelle', () => {

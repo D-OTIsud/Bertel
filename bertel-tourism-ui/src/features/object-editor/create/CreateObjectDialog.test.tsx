@@ -52,6 +52,7 @@ const V2_TAXONOMIES: ExplorerTaxonomyDomain[] = [
     domain: 'taxonomy_hot', name: 'HOT', objectType: 'HOT',
     nodes: [
       { code: 'hotel', name: 'Hôtel', description: 'Description interne à ne pas afficher.', parentCode: null, depth: 0, isAssignable: true, position: 1, axis: 'nature', family: 'hotellerie', aliases: [] },
+      { code: 'hotel_with_restaurant', name: 'Hôtel-restaurant', description: null, parentCode: 'hotel', depth: 1, isAssignable: true, position: 10, axis: 'sous_type', family: 'hotellerie', aliases: [] },
     ],
   },
   {
@@ -238,7 +239,7 @@ describe("§201 — création guidée d'un hébergement", () => {
     const campingHelp = screen.getByRole('button', { name: 'Comprendre la famille Campings et terrains' });
     fireEvent.click(campingHelp);
     expect(screen.getByRole('tooltip')).toHaveTextContent(/terrains organisés pour le camping/i);
-    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /choix dans/i })).not.toBeInTheDocument();
 
     fireEvent.blur(campingHelp);
     fireEvent.click(screen.getByRole('button', { name: 'Comprendre la famille Aires et haltes de plein air' }));
@@ -256,6 +257,14 @@ describe("§201 — création guidée d'un hébergement", () => {
 
   it('calcule RVA pour Résidence de tourisme, sans jamais demander le code', async () => {
     await expectGuidedCreationType('Hébergement collectif', 'Résidence de tourisme', 'RVA');
+  });
+
+  it('reproduit la hiérarchie Hôtellerie › Hôtel › Hôtel-restaurant sans surtitre Nature', async () => {
+    await chooseFamilyAndNature('Hôtellerie', 'Hôtel');
+
+    expect(screen.getByRole('group', { name: 'Choix dans Hôtellerie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hôtel-restaurant' })).toBeInTheDocument();
+    expect(screen.queryByText(/Nature de l'établissement/i)).not.toBeInTheDocument();
   });
 
   it('calcule HLO pour Gîte sous Hébergement collectif', async () => {
@@ -349,15 +358,15 @@ describe("§201 — création guidée d'un hébergement", () => {
     render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
     fireEvent.click(screen.getByRole('radio', { name: /^Itinéraire$/i }));
 
-    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /choix dans/i })).not.toBeInTheDocument();
   });
 
   it("choisir un type hors hébergement quitte le parcours guidé — jamais d'état mixte", async () => {
     await chooseFamilyAndNature('Hébergement collectif', 'Gîte');
-    expect(screen.getByRole('group', { name: /nature de l'établissement/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /choix dans hébergement collectif/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('radio', { name: /^Restaurant$/i }));
-    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /choix dans/i })).not.toBeInTheDocument();
 
     mockCreateObject.mockResolvedValue('RESRUN0000000009');
     fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Chez Guilaine' } });
@@ -373,11 +382,11 @@ describe("§201 — création guidée d'un hébergement", () => {
     render(<CreateObjectDialog open onClose={onClose} onCreated={() => {}} />);
     await waitFor(() => expect(mockListAccommodationFamilies).toHaveBeenCalledTimes(1));
     fireEvent.click(await screen.findByRole('button', { name: 'Hébergement collectif' }));
-    await screen.findByRole('group', { name: /nature de l'établissement/i });
+    await screen.findByRole('group', { name: /choix dans hébergement collectif/i });
 
     fireEvent.click(screen.getByRole('button', { name: /^Annuler$/ }));
     expect(onClose).toHaveBeenCalled();
-    expect(screen.queryByRole('group', { name: /nature de l'établissement/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: /choix dans/i })).not.toBeInTheDocument();
   });
 
   it('garde la détection de doublons active pendant le parcours guidé', async () => {

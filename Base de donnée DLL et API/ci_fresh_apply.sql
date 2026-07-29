@@ -302,6 +302,12 @@ ROLLBACK;
 \echo '== taxo6-test garde permanente §201 lot 5 (multi-valeur, doublon refuse, personas anon/proprietaire/etranger sur les 4 commandes, GRANT anon borne a SELECT, cascade, filtre Explorer non vacant, reprise des 7 unites) =='
 \ir tests/test_accommodation_unit_type.sql
 
+\echo '== taxo6b migration_accommodation_unit_type_catalog_v2.sql (§201 lot 5B : 22 types de logement, Insolite court + Autre distinct, extraction maison/appartement/studio/bungalow/chalet/roulotte hors taxonomy_hlo) =='
+\ir migration_accommodation_unit_type_catalog_v2.sql
+
+\echo '== taxo6b-test garde permanente (catalogue exact, ancien libelle absent, anciennes formes HLO retirees, alias Gite rural preserve) =='
+\ir tests/test_accommodation_unit_type_catalog_v2.sql
+
 \echo '== taxo7  migration_motorhome_service_amenities.sql  (§201 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
 \ir migration_motorhome_service_amenities.sql
 

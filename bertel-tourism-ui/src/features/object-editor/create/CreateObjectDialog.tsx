@@ -574,10 +574,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
 
                       {openFamily ? (
                         <div className="space-y-2 rounded-xl border border-line bg-surface2/60 p-3">
-                          <span className="block text-[12.5px] font-semibold text-ink">
-                            Nature de l&apos;établissement
-                          </span>
-                          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" role="group" aria-label="Nature de l'établissement">
+                          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" role="group" aria-label={`Choix dans ${openFamily.name}`}>
                             {openFamily.natures.map((nature) => {
                               const natureSelected = natureSelection?.domain === nature.domain
                                 && natureSelection?.code === nature.code;
@@ -650,7 +647,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                           </div>
                           {selectedNature ? (
                             <span className="sr-only" aria-live="polite">
-                              Nature sélectionnée.
+                              Catégorie sélectionnée.
                             </span>
                           ) : null}
                         </div>

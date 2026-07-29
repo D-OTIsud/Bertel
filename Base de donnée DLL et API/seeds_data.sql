@@ -2443,13 +2443,13 @@ USING ref_classification_scheme s
 WHERE s.id = oc.scheme_id
   AND s.code IN ('type_hot', 'type_act', 'retail_category');
 
--- 2) Tags useful for retail use-cases
-INSERT INTO ref_tag (slug, name, description, position)
-VALUES ('shopping','Shopping','Commerces et boutiques',10)
-ON CONFLICT (slug) DO NOTHING;
-INSERT INTO ref_tag (slug, name, description, position)
-VALUES ('local_products','Produits locaux','Produits du terroir, artisanat',11)
-ON CONFLICT (slug) DO NOTHING;
+-- 2) Tags « retail » RETIRÉS le 2026-07-29 (manifest 16p, decision log §203).
+--    `shopping` (« Boutique ») dupliquait exactement l'équipement `ref_amenity.Boutique`
+--    et `local_products` le nœud `taxonomy_com.local_crafts` — invariant §196 « un concept
+--    filtrable n'a qu'UNE surface de saisie ». Les deux échouaient au test d'admission des
+--    tags (design 2026-07-29-tags-doctrine-gouvernance) ; le concept reste filtrable par
+--    son axe légitime. Ne pas les réintroduire ici : `tests/test_tags_purge_catalog.sql`
+--    (garde D) échouerait.
 
 WITH cap AS (
   SELECT id, code FROM ref_capacity_metric

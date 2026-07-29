@@ -1,6 +1,6 @@
 -- =============================================================================
 -- test_taxonomy_accommodation_hierarchy_v2.sql
--- Garde permanente §200 — hiérarchie v2 des hébergements.
+-- Garde permanente §201 — hiérarchie v2 des hébergements.
 -- Manifest : immédiatement après taxo5.
 --
 -- Les asserts intégrés à la migration ne protègent que l'instant de l'apply.

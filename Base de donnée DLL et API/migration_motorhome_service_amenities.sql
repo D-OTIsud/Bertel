@@ -1,6 +1,6 @@
 -- =============================================================================
 -- migration_motorhome_service_amenities.sql
--- §200 lot 6 — les trois capacités d'une aire de services camping-car, DISTINCTES.
+-- §201 lot 6 — les trois capacités d'une aire de services camping-car, DISTINCTES.
 -- Manifest : taxo7 (après taxo6 `migration_accommodation_unit_type.sql`)
 -- =============================================================================
 --

@@ -269,7 +269,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const [accommodationFamilyRefs, setAccommodationFamilyRefs] = useState<ExplorerAccommodationFamily[]>([]);
   const [taxonomyError, setTaxonomyError] = useState(false);
   const [familiesError, setFamiliesError] = useState(false);
-  /** §200 — parcours hébergement : famille ouverte + nature (ou sous-type) retenue. */
+  /** §201 — parcours hébergement : famille ouverte + nature (ou sous-type) retenue. */
   const [guided, setGuided] = useState(false);
   const [familyCode, setFamilyCode] = useState<string | null>(null);
   const [natureSelection, setNatureSelection] = useState<{ domain: string; code: string } | null>(null);
@@ -491,7 +491,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
                     </div>
                   </div>
 
-                  {/* §200 — l'hébergement ne propose plus ses 5 codes techniques :
+                  {/* §201 — l'hébergement ne propose plus ses 5 codes techniques :
                       l'agent choisit une famille puis une nature, et Bertel en
                       déduit HOT / HLO / RVA / CAMP / HPA. Les 13 autres types
                       gardent exactement leur parcours. */}

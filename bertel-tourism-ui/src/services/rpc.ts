@@ -737,7 +737,7 @@ function mapCreateObjectError(message: string): Error {
  * object in the full-page editor. This is the ONLY object-creation write path.
  */
 /**
- * §200 — pose la nature choisie au dialogue de création sur la fiche neuve.
+ * §201 — pose la nature choisie au dialogue de création sur la fiche neuve.
  *
  * `rpc_create_object` ne prend que type/nom/région : sans cette écriture, la
  * nature sélectionnée par l'agent serait silencieusement perdue — exactement le

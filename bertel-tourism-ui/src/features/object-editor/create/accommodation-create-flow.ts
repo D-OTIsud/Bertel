@@ -1,5 +1,5 @@
 /**
- * §200 — parcours de création guidée d'un hébergement : Famille → Nature →
+ * §201 — parcours de création guidée d'un hébergement : Famille → Nature →
  * Sous-type, le type technique étant CALCULÉ et jamais choisi.
  *
  * POURQUOI : un agent ne doit pas avoir à savoir ce que signifient HOT, HLO,

@@ -74,7 +74,7 @@ export interface ObjectWorkspaceTaxonomyDomain {
 }
 
 /**
- * §200 — axe « Type d'unité d'hébergement », MULTI-VALUÉ et distinct de la
+ * §201 — axe « Type d'unité d'hébergement », MULTI-VALUÉ et distinct de la
  * NATURE. `object_taxonomy` n'accepte qu'une valeur par domaine : un
  * établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
  * Répond à « dans quoi le visiteur dort-il ? ».
@@ -1664,7 +1664,7 @@ function parseWorkspaceTaxonomyModule(raw: Record<string, unknown>): ObjectWorks
 
   return {
     domains: domains.sort((left, right) => left.label.localeCompare(right.label, 'fr')),
-    // §200 — le catalogue et la sélection sont chargés par un select direct dans
+    // §201 — le catalogue et la sélection sont chargés par un select direct dans
     // l'étape d'enrichissement : `get_object_resource` ne les porte pas.
     unitTypes: EMPTY_UNIT_TYPES,
     unavailableReason: null,

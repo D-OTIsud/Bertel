@@ -1213,7 +1213,7 @@ AS $$
           ARRAY[]::text[]
         )
       END AS taxonomy_any_codes,
-      -- §200 — types d'unité d'hébergement (axe MULTI-VALUÉ, table de liaison
+      -- §201 — types d'unité d'hébergement (axe MULTI-VALUÉ, table de liaison
       -- object_accommodation_unit_type). Volontairement hors cache objet : un
       -- objet peut porter plusieurs unités, ce qu'une colonne cache scalaire ne
       -- représente pas — on lit la table de liaison (comme tags_any).
@@ -1281,7 +1281,7 @@ AS $$
         OR n.filters ? 'meeting_room'
         OR n.filters ? 'capacity_filters'
         OR n.filters ? 'tags_any'
-        OR n.filters ? 'accommodation_unit_types_any'   -- §200: jointure vive sur object_accommodation_unit_type
+        OR n.filters ? 'accommodation_unit_types_any'   -- §201: jointure vive sur object_accommodation_unit_type
         OR n.filters ? 'itinerary'
         OR n.filters ? 'label_scheme_ranked'  -- requires live joins for rank-1 evidence
         OR n.filters ? 'disability_types_any'      -- requires live join on ref_amenity.extra (not in cache)

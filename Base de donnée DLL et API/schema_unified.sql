@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS ref_code_language_level PARTITION OF ref_code FOR VAL
 CREATE TABLE IF NOT EXISTS ref_code_amenity_family PARTITION OF ref_code FOR VALUES IN ('amenity_family');
 CREATE TABLE IF NOT EXISTS ref_code_payment_method PARTITION OF ref_code FOR VALUES IN ('payment_method');
 CREATE TABLE IF NOT EXISTS ref_code_environment_tag PARTITION OF ref_code FOR VALUES IN ('environment_tag');
--- §200 — « type d'unité d'hébergement » (bulle, tipi, lodge, cabane). La partition
+-- §201 — « type d'unité d'hébergement » (bulle, tipi, lodge, cabane). La partition
 -- garantit STRUCTURELLEMENT le domaine : la FK de object_accommodation_unit_type ne
 -- peut pas viser un code d'un autre domaine, sans CHECK à maintenir.
 CREATE TABLE IF NOT EXISTS ref_code_accommodation_unit_type PARTITION OF ref_code FOR VALUES IN ('accommodation_unit_type');
@@ -2014,7 +2014,7 @@ CREATE TABLE IF NOT EXISTS object_environment_tag (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (object_id, environment_tag_id)
 );
--- §200 — types d'unité d'hébergement d'un objet, MULTI-VALUÉS.
+-- §201 — types d'unité d'hébergement d'un objet, MULTI-VALUÉS.
 -- `object_taxonomy` impose une seule valeur par objet et par domaine : un
 -- établissement qui propose une bulle ET un lodge ne peut pas s'y représenter.
 -- Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type

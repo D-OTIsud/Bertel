@@ -495,7 +495,7 @@ function buildDemoReferences(): ExplorerReferences {
         ],
       },
     ],
-    // §200 — `plein_air` est retirée : elle mélangeait un TERRAIN de camping et
+    // §201 — `plein_air` est retirée : elle mélangeait un TERRAIN de camping et
     // une simple autorisation de halte. Les deux familles qui la remplacent
     // portent son libellé en alias, car l'ancien terme les recouvrait toutes les
     // deux : une recherche sur « plein air » doit proposer les deux.
@@ -534,7 +534,7 @@ function buildDemoReferences(): ExplorerReferences {
       { code: 'foret', name: 'Forêt' },
       { code: 'vue_panoramique', name: 'Vue panoramique' },
     ],
-    // §200 — types d'unité d'hébergement (axe multi-valué).
+    // §201 — types d'unité d'hébergement (axe multi-valué).
     accommodationUnitTypes: [
       { code: 'bubble', name: 'Bulle' },
       { code: 'tipi', name: 'Tipi' },
@@ -602,7 +602,7 @@ export async function listTaxonomyReferences(): Promise<ExplorerTaxonomyDomain[]
 }
 
 /**
- * §200 — familles d'hébergement seules (parcours de création guidée).
+ * §201 — familles d'hébergement seules (parcours de création guidée).
  * Le dialogue de création n'a pas besoin des ~20 catalogues de `listExplorerReferences`.
  */
 export async function listAccommodationFamilies(): Promise<ExplorerAccommodationFamily[]> {
@@ -669,7 +669,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     client.from('ref_code').select('code,name,position').eq('domain', 'iti_practice').eq('is_active', true).order('position', { ascending: true }),
     // §154 — cadre & environnement (transverse, cf. ExplorerCommonFilters.environmentTagsAny).
     client.from('ref_code').select('code,name,position').eq('domain', 'environment_tag').eq('is_active', true).order('position', { ascending: true }),
-    // §200 — types d'unité d'hébergement. Lu sur le PARENT `ref_code` avec un
+    // §201 — types d'unité d'hébergement. Lu sur le PARENT `ref_code` avec un
     // filtre de domaine : les partitions filles ne sont pas exposées par PostgREST.
     client.from('ref_code').select('code,name,position').eq('domain', 'accommodation_unit_type').eq('is_active', true).eq('is_assignable', true).order('position', { ascending: true }),
     // §159 — familles de services & équipements (transverse).
@@ -753,7 +753,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
   const applicability = (applicabilityResult.data ?? []) as CapacityApplicabilityRow[];
   const practices = (practicesResult.data ?? []) as PracticeRow[];
   const environmentTags = (environmentTagsResult.data ?? []) as PracticeRow[];
-  // §200 — tolérant à l'absence : tant que taxo6 n'est pas appliquée, le domaine
+  // §201 — tolérant à l'absence : tant que taxo6 n'est pas appliquée, le domaine
   // n'existe pas. Un throw ici priverait l'Explorateur de TOUS ses catalogues
   // pour un filtre qui n'a pas encore de données.
   const accommodationUnitTypes = (accommodationUnitTypesResult.error
@@ -783,7 +783,7 @@ export async function listExplorerReferences(): Promise<ExplorerReferences> {
     rankedLabelSchemes: toRankedLabelOptions(rankedLabelSchemes, rankedLabelApplicability),
     rankedLabelSchemeValues: toRankedLabelSchemeValues(rankedLabelSchemeValues),
     taxonomies,
-    // §200 — `metadata.aliases` porte l'ancien vocabulaire de famille (« Hôtellerie
+    // §201 — `metadata.aliases` porte l'ancien vocabulaire de famille (« Hôtellerie
     // de plein air »). Sans lui, un agent qui cherche l'ancien terme ne trouve
     // plus rien alors que DEUX familles le remplacent.
     accommodationFamilies: ((accommodationFamiliesResult.data ?? []) as Array<{

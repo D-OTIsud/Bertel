@@ -37,7 +37,7 @@ const MOCK_TAXONOMIES: ExplorerTaxonomyDomain[] = Object.keys(TYPE_ARCHETYPES).m
   }],
 }));
 
-// §200 — le parcours hébergement remplace les 5 tuiles techniques par une entrée
+// §201 — le parcours hébergement remplace les 5 tuiles techniques par une entrée
 // « Hébergement » guidée. Ce catalogue reproduit l'arbre cible.
 const ACCOMMODATION_FAMILIES: ExplorerAccommodationFamily[] = [
   { code: 'collectif', name: 'Hébergement collectif', description: 'Accueil de groupes.', position: 3 },
@@ -125,7 +125,7 @@ it('shows a concise taxonomy preview only from the info affordance', async () =>
 
   await waitFor(() => expect(mockListTaxonomyReferences).toHaveBeenCalledTimes(1));
   const radios = screen.getAllByRole('radio');
-  // §200 — les 5 types d'hébergement ne sont plus des tuiles : ils passent par le
+  // §201 — les 5 types d'hébergement ne sont plus des tuiles : ils passent par le
   // parcours guidé. Les 13 autres gardent exactement leur tuile.
   expect(radios).toHaveLength(Object.keys(TYPE_ARCHETYPES).length - ACCOMMODATION_TYPE_CODES.length);
   for (const radio of radios) {
@@ -201,7 +201,7 @@ it('warns about existing fiches with a close name and opens one on click', () =>
   expect(onOpenExisting).toHaveBeenCalledWith('LOIRUN0000000001');
 });
 
-describe("§200 — création guidée d'un hébergement", () => {
+describe("§201 — création guidée d'un hébergement", () => {
   it('calcule RVA pour Résidence de tourisme, sans jamais demander le code', async () => {
     await chooseFamilyAndNature('collectif', 'Résidence de tourisme');
     expect(screen.getByTestId('computed-technical-type')).toHaveTextContent('(RVA)');

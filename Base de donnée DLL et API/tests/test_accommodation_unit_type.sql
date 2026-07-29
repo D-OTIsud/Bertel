@@ -1,6 +1,6 @@
 -- =============================================================================
 -- test_accommodation_unit_type.sql
--- Garde permanente §200 lot 5 — axe « Type d'unité d'hébergement », multi-valué.
+-- Garde permanente §201 lot 5 — axe « Type d'unité d'hébergement », multi-valué.
 -- Manifest : immédiatement après taxo6.
 --
 -- Prouve, sur des fixtures réelles et par PERSONA (anon / propriétaire /

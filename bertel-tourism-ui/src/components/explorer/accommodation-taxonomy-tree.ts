@@ -1,7 +1,7 @@
 import type { BackendObjectTypeCode, ExplorerTaxonomyDomain, ExplorerTaxonomyNode } from '../../types/domain';
 
 /**
- * §200 — construction de l'arbre d'hébergement rendu par le panneau de filtres.
+ * §201 — construction de l'arbre d'hébergement rendu par le panneau de filtres.
  *
  * INVARIANT CENTRAL, et la raison d'être de ce fichier :
  *
@@ -17,7 +17,7 @@ import type { BackendObjectTypeCode, ExplorerTaxonomyDomain, ExplorerTaxonomyNod
  *
  * D'où les règles ci-dessous — et le fait qu'un sous-type orphelin soit EXCLU du
  * rendu imbriqué plutôt que rétrogradé au rang de nature sœur : le présenter
- * comme une nature serait exactement le mensonge que §200 supprime.
+ * comme une nature serait exactement le mensonge que §201 supprime.
  */
 
 export interface AccommodationTaxonomyEntry {
@@ -116,7 +116,7 @@ export function buildAccommodationTaxonomyTree(
     } else if (parentKey && containerKeys.has(parentKey)) {
       // Parent = le CONTENEUR de famille : le nœud est déjà au premier niveau de
       // sa famille, il n'est subordonné à aucune nature. C'est l'état du
-      // catalogue AVANT la migration §200 (les 3 natures collectives HLO y sont
+      // catalogue AVANT la migration §201 (les 3 natures collectives HLO y sont
       // encore marquées `sous_type` sous `hebergement_collectif`). Les rétrograder
       // en orphelins les ferait disparaître de l'Explorer pendant la fenêtre où
       // le frontend est déployé avant le SQL — exactement ce que l'ordre de
@@ -125,7 +125,7 @@ export function buildAccommodationTaxonomyTree(
     } else {
       // Ni nature ni conteneur : erreur de catalogue (axe posé, re-parentage
       // oublié). Exclu du rendu — le montrer comme une nature sœur recréerait la
-      // fausse hiérarchie que §200 supprime.
+      // fausse hiérarchie que §201 supprime.
       orphanSubtypes.push(entry);
     }
   }

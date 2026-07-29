@@ -192,7 +192,7 @@ export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[]
     });
   }
 
-  // §200 — un critère actif DOIT produire une pastille : sans elle il serait
+  // §201 — un critère actif DOIT produire une pastille : sans elle il serait
   // invisible dans la barre, non retirable et absent des compteurs (§194).
   const unitTypeCount = (c.accommodationUnitTypesAny ?? []).length;
   if (unitTypeCount > 0) {

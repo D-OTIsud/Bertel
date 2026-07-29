@@ -24,7 +24,7 @@ function domain(name: string, objectType: string, nodes: ExplorerTaxonomyNode[])
   return { domain: name, name, objectType, nodes } as ExplorerTaxonomyDomain;
 }
 
-/** L'arbre cible du §200, réduit à ce qui porte une décision. */
+/** L'arbre cible du §201, réduit à ce qui porte une décision. */
 function targetDomains(): ExplorerTaxonomyDomain[] {
   return [
     domain('taxonomy_hlo', 'HLO', [
@@ -49,7 +49,7 @@ function targetDomains(): ExplorerTaxonomyDomain[] {
       node({ code: 'bivouac_area', name: 'Aire de bivouac', family: 'aires_haltes_plein_air', position: 10 }),
       node({ code: 'motorhome_area', name: "Aire d'accueil camping-car", family: 'aires_haltes_plein_air', position: 4 }),
       node({ code: 'motorhome_night_stop', name: 'Halte nocturne camping-car/van', family: 'aires_haltes_plein_air', position: 12 }),
-      // Sorti de l'axe nature par la migration §200.
+      // Sorti de l'axe nature par la migration §201.
       node({ code: 'outdoor_glamping', name: 'Hébergement insolite de plein air', family: null, position: 3, axis: 'type_unite', isAssignable: false }),
     ]),
   ];
@@ -77,7 +77,7 @@ describe('buildAccommodationTaxonomyTree', () => {
       'Village de vacances',
       'Résidence hôtelière',
     ]);
-    // Aucune n'est l'enfant d'une autre : le défaut visible que §200 corrige.
+    // Aucune n'est l'enfant d'une autre : le défaut visible que §201 corrige.
     for (const nature of tree.families.find((f) => f.code === 'collectif')!.natures) {
       expect(nature.children).toEqual([]);
     }
@@ -184,7 +184,7 @@ describe('buildAccommodationTaxonomyTree', () => {
   });
 
   it('garde visibles les natures collectives de l\'ANCIEN catalogue (sous_type sous le conteneur de famille)', () => {
-    // État live AVANT la migration §200 : les 3 nœuds HLO sont encore marqués
+    // État live AVANT la migration §201 : les 3 nœuds HLO sont encore marqués
     // `sous_type` sous `hebergement_collectif` (axe `famille`). Le frontend est
     // déployé avant le SQL : s'il les traitait en orphelins, l'Explorer perdrait
     // ses natures collectives pendant toute la fenêtre de déploiement.

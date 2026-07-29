@@ -1,6 +1,6 @@
 -- =============================================================================
 -- dry_run_taxonomy_hierarchy_v2_manifest.sql
--- §200 — mesure du RAYON D'ACTION réel du déploiement (plan §14).
+-- §201 — mesure du RAYON D'ACTION réel du déploiement (plan §14).
 --
 -- Ce n'est pas un test de correction : c'est la mesure que le plan exige AVANT
 -- d'écrire en production. `api.refresh_object_filter_caches` réécrit
@@ -60,7 +60,7 @@ BEGIN
     FROM _taxonomy_refresh_manifest m
    WHERE NOT EXISTS (SELECT 1 FROM object o WHERE o.id = m.object_id);
   IF v_missing > 0 THEN
-    RAISE NOTICE '§200 dry-run: % identifiant(s) du manifeste absents de cette base — mesure partielle', v_missing;
+    RAISE NOTICE '§201 dry-run: % identifiant(s) du manifeste absents de cette base — mesure partielle', v_missing;
   END IF;
 
   SELECT string_agg(o.id || ' (v' || b.current_version || '→v' || o.current_version || ')', ', ' ORDER BY o.id),
@@ -71,8 +71,8 @@ BEGIN
    WHERE o.updated_at IS DISTINCT FROM b.updated_at
       OR o.current_version IS DISTINCT FROM b.current_version;
 
-  RAISE NOTICE '§200 dry-run: % fiche(s) dont updated_at ou current_version a bougé', COALESCE(v_moved_n, 0);
-  RAISE NOTICE '§200 dry-run: %', COALESCE(v_moved, '(aucune)');
+  RAISE NOTICE '§201 dry-run: % fiche(s) dont updated_at ou current_version a bougé', COALESCE(v_moved_n, 0);
+  RAISE NOTICE '§201 dry-run: %', COALESCE(v_moved, '(aucune)');
 
   -- LE contrôle qui compte : rien en dehors du manifeste.
   SELECT string_agg(o.id, ', ' ORDER BY o.id) INTO v_outside
@@ -84,11 +84,11 @@ BEGIN
 
   IF v_outside IS NOT NULL THEN
     RAISE EXCEPTION
-      '§200 dry-run: fiche(s) HORS manifeste modifiée(s) par le script — les synchronisations partenaires les reprendraient sans raison: %',
+      '§201 dry-run: fiche(s) HORS manifeste modifiée(s) par le script — les synchronisations partenaires les reprendraient sans raison: %',
       v_outside;
   END IF;
 
-  RAISE NOTICE '§200 dry-run: aucun objet hors manifeste modifié';
+  RAISE NOTICE '§201 dry-run: aucun objet hors manifeste modifié';
 END
 $measure$;
 

@@ -623,7 +623,7 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
     payload.environment_tags_any = environmentTags;
   }
 
-  // §200 — types d'unité d'hébergement, MULTI-VALUÉS. Le RPC joint la table de
+  // §201 — types d'unité d'hébergement, MULTI-VALUÉS. Le RPC joint la table de
   // liaison `object_accommodation_unit_type` (pas un cache scalaire : un objet
   // porte plusieurs unités), ce qui contourne le MV — assumé et documenté.
   const unitTypes = common.accommodationUnitTypesAny.map(cleanString).filter(Boolean);

@@ -163,7 +163,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     expect(screen.getByRole('button', { name: 'Maison / villa' })).toBeInTheDocument();
   });
 
-  // §200 — catalogue cible : 5 familles, natures collectives au même niveau,
+  // §201 — catalogue cible : 5 familles, natures collectives au même niveau,
   // vrais sous-arbres sous Terrain de camping déclaré, outdoor_glamping retiré.
   const V2_ACCOMMODATION_REFERENCES = {
     hotCapacityMetrics: [],
@@ -218,7 +218,7 @@ describe('FiltersPanel — sections type-spécifiques repliables', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${name}`), expanded: false }));
   }
 
-  describe('§200 — hiérarchie v2 des hébergements', () => {
+  describe('§201 — hiérarchie v2 des hébergements', () => {
     beforeEach(resetStore);
 
     it('affiche les cinq familles et plus « Hôtellerie de plein air »', () => {

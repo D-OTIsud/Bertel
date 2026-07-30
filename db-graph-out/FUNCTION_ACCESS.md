@@ -427,7 +427,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_completeness`
 - **object types served:** **all object types**
-- _§Qualité  Complétude « perçue visiteur » par type_
+- _Dashboard Qualité: remplissage « perçu visiteur » par type. Lit internal.v_object_essentials_
 
 ### `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -475,7 +475,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_filtered_object_ids`
 - **object types served:** **all object types**
-- _1) api.get_filtered_object_ids (corps complet §157+§162+§173)_
+- _4) get_filtered_object_ids : les deux cles de remplissage_
 
 ### `api.get_ingestor_metrics()` _(DEFINER)_
 - **returns:** `jsonb`
@@ -691,6 +691,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_with_deep_data`
 - **object types served:** —
+
+### `api.get_object_workspace_permissions(p_object_id text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_workspace_permissions`
+- **object types served:** —
+- _Agrege en un appel les 8 sondes de permission de l'editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front._
 
 ### `api.get_objects_by_type_with_deep_data(p_object_type text, p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - **returns:** `json`
@@ -974,7 +980,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `json`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_object_resources_filtered_page`
 - **object types served:** **all object types**
-- _2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts)_
+- _5) list_object_resources_filtered_page : le champ sur les cartes_
 
 ### `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - **returns:** `json`
@@ -1078,6 +1084,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `text`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/norm_search`
 - **object types served:** —
+
+### `api.object_missing_essentials(p_object_ids text[])` _(DEFINER)_
+- **returns:** `TABLE(object_id text, missing text[])`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/object_missing_essentials`
+- **object types served:** —
+- _§204 — essentiels manquants pour un ENSEMBLE d'objets (jamais par ligne). Rend 0 ligne si_
 
 ### `api.object_private_note_author_admin_rank(p_note_id uuid)` _(DEFINER)_
 - **returns:** `integer`
@@ -1372,7 +1384,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - _Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable)._
 
 ### `api.rpc_list_org_members(p_org_object_id text)` _(DEFINER)_
-- **returns:** `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])`
+- **returns:** `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_list_org_members`
 - **object types served:** **all object types**
 
@@ -1851,6 +1863,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** —
+
+### `api.validate_object_hotel_positioning()`
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
 
 ### `api.validate_object_taxonomy_assignment()`
 - **returns:** `trigger`

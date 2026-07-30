@@ -35,7 +35,7 @@ export function ScorecardStrip({ data }: Props) {
 
       {/* Secondaire 1 — complétude moyenne perçue visiteur. */}
       <article className="summary-stat">
-        <span className="summary-stat__label">Complétude moyenne</span>
+        <span className="summary-stat__label">Remplissage moyen</span>
         <strong className="summary-stat__value">
           {data.avg_completeness != null ? `${Math.round(data.avg_completeness)} %` : '—'}
         </strong>

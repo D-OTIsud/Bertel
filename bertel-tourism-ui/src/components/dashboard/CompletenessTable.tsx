@@ -30,7 +30,7 @@ function Meter({ score, completePct }: { score: number; completePct: number }) {
     <span
       className="meter-cell"
       role="img"
-      aria-label={`Complétude ${score} % — ${zone.label} ; ${completePct} % des fiches complètes`}
+      aria-label={`Remplissage ${score} % — ${zone.label} ; ${completePct} % des fiches complètes`}
       title={`${completePct} % des fiches complètes`}
     >
       <span className="meter" aria-hidden="true">
@@ -71,7 +71,7 @@ export function CompletenessTable({ data }: Props) {
       <div className="panel-heading">
         <div>
           <span className="eyebrow">Qualité</span>
-          <h2>Complétude par type</h2>
+          <h2>Remplissage par type</h2>
           <p>Richesse perçue visiteur et premier essentiel manquant, par famille.</p>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function CompletenessTable({ data }: Props) {
             <tr>
               <th>Type</th>
               <th>Fiches</th>
-              <th className="completeness-table__meter-col">Complétude</th>
+              <th className="completeness-table__meter-col">Remplissage</th>
               <th>Champ manquant n°1</th>
             </tr>
           </thead>

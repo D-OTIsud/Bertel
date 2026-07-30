@@ -62,16 +62,21 @@ Impact recherche : nul pour casse/accents/tirets (le tsvector normalise) ; la li
 corrigée gardera son ancien jeton dans `search_document` jusqu'au prochain rafraîchissement naturel
 (assumé — pas de refresh forcé, cf. gotcha §197 sur le bump `updated_at`).
 
-**Arbitrages restants (OTI / PO)** — non touchés, à trancher avec Mélodie :
+**Arbitrages rendus par le PO le 30/07** (migration `lieu_dit_arbitrages_po`, appliquée live —
+65 lieux-dits distincts après) :
 
-| Valeurs en base | Question |
-|---|---|
-| Baril (9) · Le Baril (4) · Baril les Hauts (4) | Même lieu-dit avec/sans article ? « les Hauts » distinct ? |
-| Mare-Longue (4) · Forêt de Mare Longue (2) | Le PDF demandait « forêt OU mare longue » — fusionner vers quoi ? |
-| Ravine Citrons (4) · Ravine des Citrons (18) | Même ravine ? (le « des » est une vraie différence toponymique) |
-| 10e (1) · PK11 (1) · PK12/14/17/19/23 | « PK11 ou 10è » (PDF) : quel système retenir ? |
-| Tampon (18) | Un lieu-dit « Tampon » dans la commune du Tampon est-il une info ? |
-| Centre-ville (23) | Générique multi-communes — acceptable ou à préfixer ? |
+| Valeurs en base | Décision PO | État |
+|---|---|---|
+| Baril (9) · Le Baril (4) | Même lieu-dit — canon « Le Baril » | ✅ fusionné (13) |
+| Baril les Hauts (4) | Lieu-dit DISTINCT | ✅ conservé tel quel |
+| Mare-Longue (4) · Forêt de Mare Longue (2) | Deux espaces différents | ✅ conservés tels quels |
+| 10e (1) | Système **PK** retenu | ✅ → PK10 (numéro préservé ; si la fiche visait PK11, 1 ligne à corriger) |
+| Tampon (18) | Nom de la commune, pas un lieu-dit | ✅ vidé |
+| Centre-ville (23) | Pas un lieu-dit — c'est du cadre & environnement | ✅ vidé + tag `centre_ville` posé sur les 23 fiches (celles qui l'avaient déjà : inchangées) |
+| Ravine Citrons (4) · Ravine des Citrons (18) | **À vérifier** — le PO ne sait pas | ⏳ seul arbitrage restant (Mélodie ?) |
+
+Le bump `updated_at` des ~23 fiches taguées est assumé (le contenu change réellement — signal
+partenaires légitime) ; le cache `cached_environment_tags` est maintenu par le trigger de la table.
 
 ⚠️ La synchro Berta (§168) peut réintroduire des variantes à l'import — si les fusions deviennent
 récurrentes, normaliser à l'entrée du mapping d'import (pas de garde posée aujourd'hui).

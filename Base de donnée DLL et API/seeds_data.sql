@@ -1302,7 +1302,8 @@ WHERE s.code = 'clevacances_keys'
 INSERT INTO ref_classification_scheme (code, name, description, selection, is_distinction, display_group, position) VALUES
 ('residence_tourisme_stars','Classement résidence de tourisme','Classement officiel Atout France des résidences de tourisme (étoiles)','single',TRUE,'official_classification',6),
 ('village_vacances_stars',  'Classement village de vacances',  'Classement officiel Atout France des villages de vacances (étoiles)','single',TRUE,'official_classification',7),
-('auberge_collective_stars','Classement auberge collective',   'Classement officiel Atout France des auberges collectives (étoiles)','single',TRUE,'official_classification',8),
+-- `auberge_collective_stars` retiré (§206, réunion 2026-07-17) : catégorie DÉCLARÉE
+-- (L325-1), pas de classement Atout France — même logique que les chambres d'hôtes.
 ('prl_stars',               'Classement parc résidentiel de loisirs','Classement officiel Atout France des PRL (étoiles)','single',TRUE,'official_classification',9),
 ('ot_category',             'Classement office de tourisme',   'Classement préfectoral des offices de tourisme (catégories)','single',TRUE,'official_classification',10),
 -- « Qualité Tourisme™ » national non recréé (doublon de LBL_QUALITE_TOURISME, sustainability_labels, éditable §08 depuis §71 E).
@@ -1329,7 +1330,7 @@ INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)
 SELECT s.id, v.code, v.name, v.ordinal
 FROM ref_classification_scheme s
 JOIN (VALUES ('1','1 étoile',1),('2','2 étoiles',2),('3','3 étoiles',3),('4','4 étoiles',4),('5','5 étoiles',5)) AS v(code,name,ordinal) ON TRUE
-WHERE s.code IN ('residence_tourisme_stars','village_vacances_stars','auberge_collective_stars','prl_stars')
+WHERE s.code IN ('residence_tourisme_stars','village_vacances_stars','prl_stars')
   AND NOT EXISTS (SELECT 1 FROM ref_classification_value cv WHERE cv.scheme_id = s.id AND cv.code = v.code);
 
 INSERT INTO ref_classification_value (scheme_id, code, name, ordinal)

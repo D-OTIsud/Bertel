@@ -58,7 +58,7 @@ describe('DashboardPage — onglets', () => {
   it("l'onglet Qualité (défaut) montre corpus + complétude + actualisation, pas les communes", async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('Corpus par type')).toBeInTheDocument());
-    expect(screen.getByText('Complétude par type')).toBeInTheDocument();
+    expect(screen.getByText('Remplissage par type')).toBeInTheDocument();
     expect(screen.getByText("Taux d'actualisation")).toBeInTheDocument();
     expect(screen.queryByText('Par commune')).not.toBeInTheDocument();
   });

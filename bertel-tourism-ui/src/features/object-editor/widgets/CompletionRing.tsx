@@ -25,9 +25,9 @@ export function CompletionRing({ overall, sections, publishable }: CompletionRin
   return (
     <div className="card completion-card">
       <h4>
-        Complétude <span className="small-act">Voir détails ›</span>
+        Remplissage <span className="small-act">Voir détails ›</span>
       </h4>
-      <div className="edit-nav__ring" aria-label={`Complétude ${percent}%`}>
+      <div className="edit-nav__ring" aria-label={`Remplissage ${percent}%`}>
         <svg width="148" height="148" viewBox="0 0 148 148" role="img" aria-hidden="true">
           <circle cx="74" cy="74" r={radius} fill="none" stroke="rgba(24,49,59,0.08)" strokeWidth="10" />
           <circle

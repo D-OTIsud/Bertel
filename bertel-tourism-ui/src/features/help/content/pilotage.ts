@@ -16,7 +16,7 @@ export const PILOTAGE_FAQ: FaqEntry[] = [
 
 Deux onglets structurent l'analyse :
 
-- **Qualité** : répartition par type, **complétude** des fiches et **actualisation** (fraîcheur des mises à jour).
+- **Qualité** : répartition par type, **remplissage** des fiches et **actualisation** (fraîcheur des mises à jour).
 - **Offre** : répartition **par commune** et synthèse des **distinctions** (labels, classements…).
 
 Ces vues aident à repérer les trous de contenu et les fiches à remettre à jour, sans ouvrir l'Explorer fiche par fiche.`,

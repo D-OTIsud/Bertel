@@ -10,6 +10,7 @@ import type { ClassementUnit } from '../../utils/explorer-card-display';
 import { CLASSEMENT_ICON } from './classement-icons';
 import { defaultMarkerStyles, markerIconCatalog } from '../../config/map-markers';
 import { normalizeExplorerObjectType } from '../../utils/facets';
+import { remplissageDetail, remplissageTone } from '../../utils/remplissage';
 import { cn } from '@/lib/utils';
 
 /** Pictos lucide des pastilles-logo de label (impl. 3.1, primitives Phase 1). */
@@ -27,6 +28,34 @@ const RATING_UNIT_LABEL: Record<ClassementUnit, readonly [string, string]> = {
   epi: ['épi', 'épis'],
   cle: ['clé', 'clés'],
 };
+
+/**
+ * §204 — pastille « N manquants » de la liste de travail (éditeurs seulement :
+ * le RPC n'émet `missing_essentials` qu'à eux).
+ *
+ * L'ABSENCE du champ ne signifie PAS « fiche complète » — elle signifie
+ * « appelant non éditeur » ou « champ non demandé ». Une fiche complète porte un
+ * tableau VIDE. On ne rend donc rien dans les deux cas, mais surtout jamais un
+ * signal positif sur une absence.
+ */
+function RemplissagePastille({ missing }: { missing?: string[] }) {
+  if (!missing) return null;
+  const tone = remplissageTone(missing.length);
+  if (!tone) return null;
+  return (
+    <span
+      data-testid="remplissage-pastille"
+      className={cn('badge shrink-0', {
+        'badge--muted': tone === 'neutral',
+        'badge--warn': tone === 'warning',
+        'badge--danger': tone === 'danger',
+      })}
+      title={remplissageDetail(missing)}
+    >
+      {missing.length} manquant{missing.length > 1 ? 's' : ''}
+    </span>
+  );
+}
 
 /**
  * Cocarde de classement « à cheval » en haut-gauche de la miniature : N pictos de l'unité réelle
@@ -350,6 +379,7 @@ export function ResultCardView({
               Fermé
             </span>
           )}
+          <RemplissagePastille missing={card.missing_essentials} />
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-3">
           <span className="inline-flex shrink-0 items-center gap-1" title={display.typeLabel}>

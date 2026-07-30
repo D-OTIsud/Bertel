@@ -122,12 +122,16 @@ export interface MeetingRoomFilter {
  * Visible publication statuses in the Explorer.
  * - 'published'  : object is live (default for every user, including anonymous).
  * - 'draft'      : object is being prepared by the publishing ORG.
- *                  Only relevant for users with `canEditObjects = true`. RLS
- *                  still gates which non-published rows are actually returned —
- *                  cross-ORG drafts remain hidden regardless of this flag.
- * archived/hidden are intentionally not surfaced here today.
+ * - 'archived'   : object retired from publication (§205). Opt-in via the
+ *                  status filter — never part of a default set.
+ * draft/archived are editor-only (`canEditObjects`): the FiltersPanel hides the
+ * Statut group for everyone else AND resolveExplorerStatuses forces them back
+ * to ['published'] (a shared URL cannot leak the selection). RLS still gates
+ * which non-published rows are actually returned — cross-ORG drafts/archives
+ * remain hidden regardless of this flag.
+ * 'hidden' is intentionally never surfaced in the Explorer.
  */
-export type ExplorerStatusFilter = 'published' | 'draft';
+export type ExplorerStatusFilter = 'published' | 'draft' | 'archived';
 
 /**
  * An active §09 tag filter. `slug` is the value sent to the RPC (`tags_any`); `name`/`color`
@@ -230,9 +234,11 @@ export interface ExplorerCommonFilters {
   rankedLabelValueCodes: string[];
   /**
    * Active publication-status filter sent to api.list_object_resources_filtered_page
-   * as p_status. An empty array means "use the server default" (= published only),
-   * which is the safe baseline for read-only personas. Editors broaden the default
-   * to ['published','draft'] at session bootstrap.
+   * as p_status. An empty array means "use the session-aware default" resolved by
+   * resolveExplorerStatuses: ['published'] for read-only personas (forced, §205 —
+   * an explicit selection from a shared URL is neutralised too), ['published',
+   * 'draft'] for editors. 'archived' only ever appears here as an editor's
+   * explicit pick from the Statut group.
    */
   statuses: ExplorerStatusFilter[];
   /**

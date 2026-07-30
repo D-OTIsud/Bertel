@@ -1,8 +1,17 @@
-import type { ExplorerBucketKey, ExplorerFilters, ExplorerStatusFilter } from '@/types/domain';
-import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS, normalizeExplorerFilters } from '@/utils/facets';
+import type {
+  ExplorerBucketKey,
+  ExplorerFilters,
+  ExplorerStatusFilter,
+  MissingEssentialBucket,
+  MissingEssentialCode,
+} from '@/types/domain';
+import { DEFAULT_EXPLORER_FILTERS, EXPLORER_BUCKET_OPTIONS, EXPLORER_STATUS_OPTIONS, normalizeExplorerFilters } from '@/utils/facets';
 
 const EXPLORER_BUCKETS: ExplorerBucketKey[] = EXPLORER_BUCKET_OPTIONS.map((bucket) => bucket.code);
-const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = ['published', 'draft'];
+// §205 — dérivée du vocabulaire unique ; un statut hors liste (ex. hidden) est
+// écarté au parse. Pour un non-éditeur, resolveExplorerStatuses neutralise de
+// toute façon la sélection portée par une URL partagée.
+const EXPLORER_STATUS_VALUES: readonly ExplorerStatusFilter[] = EXPLORER_STATUS_OPTIONS.map((option) => option.code);
 
 function parseCapacityFilters(value: string | null): Array<{ code: string; min?: number; max?: number }> | undefined {
   if (!value) {
@@ -62,6 +71,27 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       ?.split(',')
       .map((item) => item.trim().toLowerCase())
       .filter((item): item is ExplorerStatusFilter => (EXPLORER_STATUS_VALUES as readonly string[]).includes(item)) ?? undefined;
+  // §204 — remplissage. Les valeurs sont VALIDÉES contre les vocabulaires : une
+  // URL trafiquée ne doit pas injecter un code inconnu que le RPC ignorerait en
+  // silence, laissant une puce active qui ne filtre rien.
+  const missingEssentialsBuckets =
+    searchParams
+      .get('remplissage')
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter((item): item is MissingEssentialBucket =>
+        (['complete', 'few', 'many'] as readonly string[]).includes(item),
+      ) ?? undefined;
+  const missingEssentialsAny =
+    searchParams
+      .get('manque')
+      ?.split(',')
+      .map((item) => item.trim())
+      .filter((item): item is MissingEssentialCode =>
+        (
+          ['name', 'subcategory', 'location', 'contact', 'description', 'photos', 'type_block', 'tags'] as readonly string[]
+        ).includes(item),
+      ) ?? undefined;
   const hotSubtypes = searchParams.get('hotSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const visSubtypes = searchParams.get('visSubtypes')?.split(',').filter(Boolean) ?? undefined;
   const srvSubtypes = searchParams.get('srvSubtypes')?.split(',').filter(Boolean) ?? undefined;
@@ -131,6 +161,8 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
     }),
     ...(rankedLabelValueCodes !== undefined && { rankedLabelValueCodes }),
     ...(statuses !== undefined && { statuses }),
+    ...(missingEssentialsBuckets !== undefined && { missingEssentialsBuckets }),
+    ...(missingEssentialsAny !== undefined && { missingEssentialsAny }),
   };
 
   const itiPatch = {
@@ -277,6 +309,14 @@ export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
     // belong in the URL — keeps shareable links shorter and survives a
     // role change between sessions.
     p.set('status', normalizedFilters.common.statuses.join(','));
+  }
+  // §204 — remplissage : sérialisé comme tous les autres filtres, sinon il ne
+  // survivrait ni au rechargement ni au partage de lien, seul dans le panneau.
+  if (normalizedFilters.common.missingEssentialsBuckets.length > 0) {
+    p.set('remplissage', normalizedFilters.common.missingEssentialsBuckets.join(','));
+  }
+  if (normalizedFilters.common.missingEssentialsAny.length > 0) {
+    p.set('manque', normalizedFilters.common.missingEssentialsAny.join(','));
   }
   if (normalizedFilters.hot.subtypes.length > 0) {
     p.set('hotSubtypes', normalizedFilters.hot.subtypes.join(','));

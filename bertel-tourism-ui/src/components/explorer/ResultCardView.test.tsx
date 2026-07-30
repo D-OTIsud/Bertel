@@ -152,3 +152,41 @@ describe('ResultCardView', () => {
     });
   });
 });
+
+describe('§204 — pastille de remplissage', () => {
+  const renderCard = (overrides: Partial<ObjectCard>) =>
+    render(<ResultCardView card={makeCard(overrides)} domId="card-rmp" onOpen={() => {}} />);
+
+  it('aucune pastille quand le champ est absent — absence ≠ fiche complète', () => {
+    renderCard({});
+    expect(screen.queryByTestId('remplissage-pastille')).not.toBeInTheDocument();
+  });
+
+  it('aucune pastille quand la fiche est complète (tableau vide)', () => {
+    renderCard({ missing_essentials: [] });
+    expect(screen.queryByTestId('remplissage-pastille')).not.toBeInTheDocument();
+  });
+
+  it('le compte s’affiche et le détail est dans le title', () => {
+    renderCard({ missing_essentials: ['photos', 'contact', 'tags'] });
+    const pastille = screen.getByTestId('remplissage-pastille');
+    expect(pastille).toHaveTextContent('3 manquants');
+    expect(pastille).toHaveAttribute('title', 'Manque : Photos, Contact public, Tags');
+  });
+
+  it('le singulier est respecté', () => {
+    renderCard({ missing_essentials: ['photos'] });
+    expect(screen.getByTestId('remplissage-pastille')).toHaveTextContent('1 manquant');
+  });
+
+  it('le ton monte avec le nombre : neutre à 2, alerte à 3, danger à 4', () => {
+    const { unmount } = renderCard({ missing_essentials: ['photos', 'tags'] });
+    expect(screen.getByTestId('remplissage-pastille')).toHaveClass('badge--muted');
+    unmount();
+    const r3 = renderCard({ missing_essentials: ['photos', 'tags', 'contact'] });
+    expect(screen.getByTestId('remplissage-pastille')).toHaveClass('badge--warn');
+    r3.unmount();
+    renderCard({ missing_essentials: ['photos', 'tags', 'contact', 'description'] });
+    expect(screen.getByTestId('remplissage-pastille')).toHaveClass('badge--danger');
+  });
+});

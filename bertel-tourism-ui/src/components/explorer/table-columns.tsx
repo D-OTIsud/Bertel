@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { ObjectCard } from '../../types/domain';
 import type { ExplorerTableSort } from '../../store/explorer-view-store';
 import { resolveTypeLabel } from '../../utils/labels';
+import { essentialLabel, remplissageDetail } from '../../utils/remplissage';
 import { csvCell } from '@/lib/safe-output';
 
 /**
@@ -9,8 +10,10 @@ import { csvCell } from '@/lib/safe-output';
  * par colonne (libellé, rendu, valeur de tri, valeur CSV). Toute nouvelle
  * colonne s'ajoute ICI + dans ALL_TABLE_COLUMN_IDS (store) — jamais en dur
  * dans le composant.
- * NB « Complétude » attend que le RPC cards émette le score (backend, remonté
- * à la session API) — ObjectCard ne le porte pas aujourd'hui.
+ * §204 — la colonne « Remplissage » lit ObjectCard.missing_essentials, émis par
+ * api.list_object_resources_filtered_page aux appelants ÉDITEURS uniquement.
+ * Champ absent = appelant non éditeur, PAS « fiche complète » : la colonne rend
+ * alors « — » et trie en dernier. Une fiche complète porte un tableau vide.
  */
 
 const STATUS_LABELS: Record<string, string> = {
@@ -140,6 +143,23 @@ export const TABLE_COLUMNS: Record<string, TableColumnDef> = {
       ) : (
         <span className="badge badge--muted">Fermé</span>
       ),
+  },
+  remplissage: {
+    id: 'remplissage',
+    label: 'Remplissage',
+    numeric: true,
+    // null (champ absent) trie en dernier : on ne prétend pas savoir.
+    sortValue: (card) => (card.missing_essentials ? card.missing_essentials.length : null),
+    csvValue: (card) => {
+      if (!card.missing_essentials) return '';
+      if (card.missing_essentials.length === 0) return 'complète';
+      return card.missing_essentials.map(essentialLabel).join(', ');
+    },
+    render: (card) => {
+      if (!card.missing_essentials) return '—';
+      if (card.missing_essentials.length === 0) return 'complète';
+      return <span title={remplissageDetail(card.missing_essentials)}>{card.missing_essentials.length}</span>;
+    },
   },
   labels: {
     id: 'labels',

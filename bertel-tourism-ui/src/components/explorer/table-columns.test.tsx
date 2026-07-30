@@ -1,5 +1,6 @@
 import type { ObjectCard } from '../../types/domain';
-import { buildTableCsv, sortCards } from './table-columns';
+import { TABLE_COLUMNS, buildTableCsv, sortCards } from './table-columns';
+import { ALL_TABLE_COLUMN_IDS, DEFAULT_TABLE_COLUMNS } from '../../store/explorer-view-store';
 
 function card(partial: Partial<ObjectCard> & { id: string; name: string }): ObjectCard {
   return { type: 'HOT', ...partial };
@@ -61,5 +62,28 @@ describe('buildTableCsv (D17 — colonnes visibles, cellules gardées SEC-2)', (
   it('ignore les ids de colonnes inconnus', () => {
     const csv = buildTableCsv(CARDS, ['name', 'ghost']);
     expect(csv.split('\n')[0]).toBe('"id";"Nom"');
+  });
+});
+
+describe('§204 — colonne Remplissage', () => {
+  it('existe, est optionnelle (masquée par défaut) et déclarée dans le registre canonique', () => {
+    expect(TABLE_COLUMNS.remplissage).toBeDefined();
+    expect(TABLE_COLUMNS.remplissage.label).toBe('Remplissage');
+    expect(DEFAULT_TABLE_COLUMNS).not.toContain('remplissage');
+    expect(ALL_TABLE_COLUMN_IDS).toContain('remplissage');
+  });
+
+  it('trie par nombre de manquants, le champ absent en dernier', () => {
+    const sort = TABLE_COLUMNS.remplissage.sortValue!;
+    expect(sort(card({ id: 'x', name: 'x', missing_essentials: ['a', 'b'] }))).toBe(2);
+    expect(sort(card({ id: 'y', name: 'y', missing_essentials: [] }))).toBe(0);
+    expect(sort(card({ id: 'z', name: 'z' }))).toBeNull();
+  });
+
+  it('le CSV porte les libellés lisibles, pas un compte muet', () => {
+    const csv = TABLE_COLUMNS.remplissage.csvValue;
+    expect(csv(card({ id: 'x', name: 'x', missing_essentials: ['photos'] }))).toBe('Photos');
+    expect(csv(card({ id: 'y', name: 'y', missing_essentials: [] }))).toBe('complète');
+    expect(csv(card({ id: 'z', name: 'z' }))).toBe('');
   });
 });

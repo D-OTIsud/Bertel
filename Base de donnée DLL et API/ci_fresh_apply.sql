@@ -338,6 +338,12 @@ ROLLBACK;
 \echo '== 16r-test garde permanente 204 (A la vue voit les bons trous / C non-vacuite: paliers, selection non contigue, facette, OU interne, combinaison ET, cle vide = pas de filtre / D la carte porte missing_essentials, tableau vide != champ absent / B REVOKE anon par le catalogue, gate editeur ferme, cles d un non-editeur ignorees) =='
 \ir tests/test_remplissage_filter.sql
 
+\echo '== 16s    migration_remove_auberge_collective_scheme.sql  (§206 reunion 2026-07-17 : auberge collective = categorie DECLAREE L325-1, jamais classee en etoiles — retrait du schema auberge_collective_stars, de ses 5 valeurs et de son applicabilite ; fail-closed si une attribution existe ; retire AUSSI a la source dans seeds_data/14d/16n donc no-op complet sur base fraiche) =='
+\ir migration_remove_auberge_collective_scheme.sql
+
+\echo '== 16s-test garde permanente 206 + enrolement du test 14d, orphelin depuis sa creation (jamais joue en CI — la derive §176 logis→graded_label y etait invisible) : 4 classements officiels §71, absence de auberge_collective_stars, 6 labels qualite, 3 graded_label §176, valeurs presentes, QTIR 2 valeurs, logis multiple =='
+\ir tests/test_classification_labels_expansion.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

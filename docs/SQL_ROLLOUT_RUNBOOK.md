@@ -408,3 +408,30 @@ sur la vue qui fait planifier un sous-plan à chaque appel — la fonction étan
 précède l'exécution. L'échappatoire documentée, si ce chemin devient critique, est de
 matérialiser `v_object_essentials` et de la rafraîchir avec le cron des 10 min — au prix
 d'une fraîcheur ≤ 10 min, or ce filtre **est** une liste de travail.
+
+## 16s — `migration_remove_auberge_collective_scheme.sql` (§206, retrait du classement auberge collective)
+
+Décision de la réunion « Point V3 BERTEL » du 2026-07-17 : une auberge collective est une
+catégorie **déclarée** (art. L325-1 du Code du tourisme), jamais classée en étoiles par
+Atout France — le schéma `auberge_collective_stars` était un excès de périmètre de
+l'expansion §71 (14d). Position dans l'ordre d'application : **en fin de manifeste**
+(après 16r-test) — sans contrainte réelle d'ordre, la migration étant un no-op partout où
+le schéma n'existe pas.
+
+Contenu :
+
+- garde **fail-closed** : refuse si une attribution `object_classification` référence le
+  schéma (0 sur live au 2026-07-30) ;
+- `DELETE` de la ligne d'applicabilité (16n), des 5 valeurs d'étoiles, puis du schéma ;
+- le retrait est fait **à la source** (invariant §196) : `seeds_data.sql`,
+  `migration_classification_labels_expansion.sql` (14d) et
+  `migration_classification_scheme_applicability.sql` (16n) n'insèrent plus ce code —
+  sur base fraîche la migration est un no-op complet.
+
+**Après application :** rien — aucune fonction/vue touchée (pas de `NOTIFY pgrst`), aucun
+MV concerné (`mv_ref_data_json` ne porte pas les schémas de classement). Le cache de
+session des catalogues côté frontend (TTL 1 h) se purge tout seul.
+
+**Vérification.** `tests/test_classification_labels_expansion.sql` doit passer : il exige
+désormais **4** classements officiels §71 et **l'absence** de `auberge_collective_stars`
+(garde anti-réintroduction par un futur re-collage de seeds).

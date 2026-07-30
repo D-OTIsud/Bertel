@@ -94,9 +94,8 @@ WITH mapping(scheme_code, object_types) AS (
     ('meuble_stars',                 ARRAY['HLO']),
     ('residence_tourisme_stars',     ARRAY['RVA']),
     ('village_vacances_stars',       ARRAY['RVA']),
-    -- Auberge collective = hébergement collectif (branche `hebergement_collectif` §190,
-    -- portée par HLO) ; les villages/résidences en relèvent aussi.
-    ('auberge_collective_stars',     ARRAY['HLO','RVA']),
+    -- `auberge_collective_stars` retiré du catalogue (§206, 16s) : pas de classement
+    -- Atout France pour les auberges collectives — plus de ligne d'applicabilité.
     ('prl_stars',                    ARRAY['HPA','CAMP']),
     -- Classement d'office de tourisme : porté par l'ORG, parfois modélisé en service public.
     ('ot_category',                  ARRAY['ORG','SPU']),

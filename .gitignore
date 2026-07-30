@@ -110,3 +110,6 @@ docs/superpowers/plans/.*
 # repo root. The durable outputs are committed under docs/research/ + the migrations.
 /_*
 
+
+# Sorties generees par les exports (ex. export Tourinsoft) — jamais versionnees
+outputs/

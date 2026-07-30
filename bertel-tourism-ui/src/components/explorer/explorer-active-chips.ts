@@ -10,6 +10,7 @@ import {
   DEFAULT_SRV_SUBTYPES,
   DEFAULT_VIS_SUBTYPES,
   EXPLORER_BUCKET_OPTIONS,
+  EXPLORER_STATUS_OPTIONS,
   isSubtypeNarrowed,
 } from '../../utils/facets';
 import { resolveSchemeLabel } from '../../utils/labels';
@@ -67,10 +68,10 @@ export interface ActiveChip {
   value: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  published: 'Publié',
-  draft: 'Brouillon',
-};
+// §205 — dérivés du vocabulaire unique (« Archivé » inclus, jamais hidden).
+const STATUS_LABELS: Record<string, string> = Object.fromEntries(
+  EXPLORER_STATUS_OPTIONS.map((option) => [option.code, option.label]),
+);
 
 /** Types de handicap (codes stables du modèle, cf. AccessibilityDisabilityTypeCode). */
 const DISABILITY_LABELS: Record<string, string> = {

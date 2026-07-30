@@ -26,6 +26,18 @@ export const EXPLORER_BUCKET_OPTIONS: Array<{ code: ExplorerBucketKey; label: st
 ];
 
 /**
+ * §205 — vocabulaire UNIQUE du filtre Statut (chips du panneau, pastilles de la
+ * barre active, liste blanche de l'URL). Trois listes codées en dur divergeaient ;
+ * une seule source ferme la porte pour toutes les surfaces à la fois.
+ * `hidden` est volontairement absent : jamais surfacé dans l'Exploreur.
+ */
+export const EXPLORER_STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
+  { code: 'published', label: 'Publié' },
+  { code: 'draft', label: 'Brouillon' },
+  { code: 'archived', label: 'Archivé' },
+];
+
+/**
  * Familles de bucket de l'Explorer — DÉRIVÉES de la table canonique type→archétype
  * (`buildExplorerTypeFamilies`, cf. utils/labels.ts). Le bucket d'un type ==
  * son archétype éditeur, par construction : Explorer et éditeur ne peuvent plus
@@ -341,21 +353,29 @@ export function getEffectiveSelectedBuckets(selectedBuckets: ExplorerBucketKey[]
 /**
  * Resolves the publication-status set the Explorer should query for.
  *
- * Rules:
- *   - Explicit user/UI selection wins (any non-empty `configured`).
- *   - Editors (admin role or one of create/edit/publish permissions) default
- *     to ['published', 'draft'] so the Explorer surfaces drafts of their ORG.
- *     RLS still limits drafts to their own scope (cf. api.can_read_extended).
- *   - Read-only personas stay on ['published'] only.
+ * Rules (§205):
+ *   - Non-editors are ALWAYS forced back to ['published'] — even an explicit
+ *     selection carried by a shared URL or surviving a role change mid-session
+ *     is neutralised here, at the source of the query payload (même doctrine
+ *     de double garde que les clés remplissage §204 : le panneau masque, le
+ *     résolveur neutralise ; RLS/readable-set reste le filet côté serveur).
+ *   - Editors (admin role or one of create/edit/publish permissions): explicit
+ *     selection wins (deduped); default is ['published', 'draft'] so the
+ *     Explorer surfaces drafts of their ORG. 'archived' is opt-in only —
+ *     never part of a default set. RLS still limits non-published rows to
+ *     their own scope (cf. api.can_read_extended).
  */
 export function resolveExplorerStatuses(
   configured: ExplorerStatusFilter[],
   canEditObjects: boolean,
 ): ExplorerStatusFilter[] {
+  if (!canEditObjects) {
+    return ['published'];
+  }
   if (configured.length > 0) {
     return [...new Set(configured)];
   }
-  return canEditObjects ? ['published', 'draft'] : ['published'];
+  return ['published', 'draft'];
 }
 
 export function getBackendTypesForBucket(bucket: ExplorerBucketKey): BackendObjectTypeCode[] {

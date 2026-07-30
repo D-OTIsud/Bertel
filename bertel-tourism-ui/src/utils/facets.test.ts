@@ -6,8 +6,10 @@ import {
   resolveCapacityBounds,
   DEFAULT_EXPLORER_FILTERS,
   EXPLORER_BUCKET_TYPE_MAP,
+  EXPLORER_STATUS_OPTIONS,
   EXPLORER_TYPE_CODE_FAMILIES,
   getEffectiveBackendTypesForBucket,
+  resolveExplorerStatuses,
   hasServerOnlyFilters,
   normalizeExplorerObjectType,
   normalizeExplorerFilters,
@@ -881,5 +883,30 @@ describe('§204 — payload du filtre remplissage', () => {
     );
     expect(payload).not.toHaveProperty('missing_essentials_buckets');
     expect(payload).not.toHaveProperty('missing_essentials_any');
+  });
+});
+
+// §205 — le filtre Statut est réservé aux éditeurs et plus (canEditObjects) ;
+// « archivé » est un choix explicite, jamais un défaut.
+describe('resolveExplorerStatuses', () => {
+  test('un non-éditeur est TOUJOURS ramené à published — même avec une sélection explicite (URL partagée)', () => {
+    expect(resolveExplorerStatuses([], false)).toEqual(['published']);
+    expect(resolveExplorerStatuses(['draft', 'archived'], false)).toEqual(['published']);
+    expect(resolveExplorerStatuses(['published', 'draft'], false)).toEqual(['published']);
+  });
+
+  test('défaut éditeur = published + draft (archivé jamais implicite)', () => {
+    expect(resolveExplorerStatuses([], true)).toEqual(['published', 'draft']);
+  });
+
+  test('la sélection explicite d’un éditeur gagne, dédupliquée', () => {
+    expect(resolveExplorerStatuses(['archived'], true)).toEqual(['archived']);
+    expect(resolveExplorerStatuses(['published', 'published', 'archived'], true)).toEqual(['published', 'archived']);
+  });
+});
+
+describe('EXPLORER_STATUS_OPTIONS', () => {
+  test('vocabulaire = published/draft/archived — jamais hidden (invariant Explorer)', () => {
+    expect(EXPLORER_STATUS_OPTIONS.map((option) => option.code)).toEqual(['published', 'draft', 'archived']);
   });
 });

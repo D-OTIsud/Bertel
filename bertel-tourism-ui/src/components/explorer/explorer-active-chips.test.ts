@@ -240,3 +240,13 @@ describe('§204 — puces du remplissage', () => {
     expect(chips.some((c) => c.group.startsWith('missingEssentials'))).toBe(false);
   });
 });
+
+// §205 — les statuts en pastilles, libellés résolus depuis le vocabulaire unique.
+describe('buildExplorerActiveChips — statuts (§205)', () => {
+  it('rend une pastille par statut sélectionné, « Archivé » inclus', () => {
+    const chips = buildExplorerActiveChips(filters({ statuses: ['draft', 'archived'] }));
+    const statuses = chips.filter((c) => c.group === 'status');
+    expect(statuses.map((c) => c.label)).toEqual(['Statut · Brouillon', 'Statut · Archivé']);
+    expect(statuses.map((c) => c.value)).toEqual(['draft', 'archived']);
+  });
+});

@@ -598,35 +598,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)`
 - returns: `jsonb` — SECURITY DEFINER
-- reads `public.contact_channel` _(high)_
-- reads `public.media` _(high)_
+- reads `internal.v_object_essentials` _(high)_
 - reads `public.object` _(high)_
-- reads `public.object_act` _(high)_
-- reads `public.object_amenity` _(high)_
-- reads `public.object_capacity` _(high)_
-- reads `public.object_description` _(high)_
-- reads `public.object_fma` _(high)_
-- reads `public.object_iti` _(high)_
-- reads `public.object_location` _(high)_
-- reads `public.object_menu` _(high)_
-- reads `public.object_room_type` _(high)_
-- reads `public.object_taxonomy` _(high)_
-- reads `public.ref_capacity_metric` _(high)_
-- reads `public.tag_link` _(high)_
 
-> ─────────────────────────────────────────────────────
-> §Qualité  Complétude « perçue visiteur » par type
-> ─────────────────────────────────────────────────────
-> Réplique côté portefeuille le bundle d'essentiels visiteur du modèle éditeur
-> (bertel-tourism-ui/.../editor-completion.ts ; spec docs/.../2026-06-18-completude-par-type-design.md) :
-> 8 essentiels (nom, sous-catégorie, lieu, contact public, descriptif+accroche, photos [richesse
-> min(n/4,1), 4=plein], équipements/équivalent type, ≥1 tag). Par type : score moyen (richesse 0-100),
-> % de fiches « complètes visiteur » (tous essentiels présents, ≥4 photos), essentiel le plus manquant,
-> et la liste des fiches < 80 (plafonnée par p_below_limit, pas de troncature silencieuse au-delà).
-> NB : le slot 7 exact et le score complet 80/15/5 restent autoritatifs côté éditeur ; cette vue
-> mesure le bundle essentiels = le signal de pilotage « où sont les trous » (goulot live = photos).
-> Approximation assumée : n_photos compte toutes les lignes media de l'objet (vidéos/docs inclus) —
-> filtrage strict au type-photo différé (kind non fiable en base ; cf. invariant média).
+> Dashboard Qualité: remplissage « perçu visiteur » par type. Lit internal.v_object_essentials
+> (§204, source unique du bundle) — le calcul était auparavant recopié dans ce corps. Par type: score
+> moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des fiches <80
+> (plafonnée par p_below_limit). ORG exclus. p_updated_at_from/to bornes DATE inclusives.
 
 ## `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -707,13 +685,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
 - reads `internal.mv_filtered_objects` _(high)_
+- reads `internal.v_object_essentials` _(high)_
 - reads `public.media` _(high)_
 - reads `public.meeting_room_equipment` _(high)_
 - reads `public.object` _(high)_
+- reads `public.object_accommodation_unit_type` _(high)_
 - reads `public.object_amenity` _(high)_
 - reads `public.object_capacity` _(high)_
 - reads `public.object_classification` _(high)_
 - reads `public.object_fma` _(high)_
+- reads `public.object_hotel_positioning` _(high)_
 - reads `public.object_iti` _(high)_
 - reads `public.object_iti_practice` _(high)_
 - reads `public.object_location` _(high)_
@@ -727,6 +708,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_equivalent_group` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
+- reads `public.ref_code` _(high)_
+- reads `public.ref_code_accommodation_unit_type` _(high)_
 - reads `public.ref_code_amenity_family` _(high)_
 - reads `public.ref_code_iti_practice` _(high)_
 - reads `public.ref_code_media_type` _(high)_
@@ -736,7 +719,40 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_tag` _(high)_
 - reads `public.tag_link` _(high)_
 
-> ---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----
+> ---- 4) get_filtered_object_ids : les deux cles de remplissage ------------
+> 
+> COUT MESURE ET ASSUME — +4,4 ms de PLANIFICATION par appel, filtre ETEINT.
+> Localise par bissection sur live (30 iterations x 2 series, ecart stable) :
+> temoin sans patch ................................. 22,7 ms
+> ajouts au CTE params seuls ........................ 22,9 ms  (gratuit)
+> CASE par ligne SANS reference a la vue ............ 23,0 ms  (gratuit)
+> patch complet, filtre eteint ...................... 27,0 ms  (+4,4)
+> Le surcout n'est donc NI le CASE NI le parsing : c'est la simple PRESENCE du
+> EXISTS sur internal.v_object_essentials dans le texte de la requete. Le
+> planificateur plante le sous-plan a chaque appel meme quand la branche n'est
+> jamais prise, et la fonction etant SECURITY DEFINER elle n'est pas inlinee.
+> AUCUNE garde ne peut supprimer ce cout : il precede l'execution.
+> 
+> Pourquoi on l'accepte plutot que de le supprimer :
+> * le supprimer vraiment demanderait de materialiser les essentiels (une MV
+> rafraichie par le cron des 10 min). La planification tomberait a ~0, mais
+> la fiche ne quitterait la liste de travail qu'au rafraichissement suivant
+> — or ce filtre EST une liste de travail : l'agent corrige puis refiltre.
+> La fraicheur est la fonctionnalite, pas un detail.
+> * l'autre issue serait de sortir le predicat vers le RPC de page (plpgsql :
+> une branche IF n'est planifiee que si elle s'execute), mais la carte et le
+> tableau de bord passent aussi par get_filtered_object_ids : le filtre
+> cesserait de s'appliquer a la carte. Incoherence, pas optimisation.
+> * ordre de grandeur : 4,4 ms contre 220-310 ms de latence Reunion->Supabase
+> par aller-retour, soit ~1,5 % d'un seul aller-retour.
+> Si le corpus grossit ou si ce chemin devient critique, la MV est l'echappatoire
+> documentee (cf. journal de decision).
+> Corps DERIVE de la definition live par .tmp_pgapply/_gen_remplissage.cjs
+> (ancres assertees, refus d ecrire si une ancre bouge ou est ambigue).
+> NE PAS EDITER A LA MAIN : regenerer.
+> La derniere definition vivait dans migration_accommodation_unit_type.sql
+> (taxo6), PAS dans la migration phonetique : partir de la mauvaise source
+> ferait regresser 199 (dmetaphone) et 201 (types d unite).
 
 ## `api.get_ingestor_metrics()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1208,6 +1224,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_object_with_deep_data(p_object_id text, p_languages text[] DEFAULT ARRAY['fr'::text], p_options jsonb DEFAULT '{}'::jsonb)`
 - returns: `json`
 
+## `api.get_object_workspace_permissions(p_object_id text)`
+- returns: `jsonb`
+
+> Agrege en un appel les 8 sondes de permission de l'editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front.
+
 ## `api.get_objects_by_type_with_deep_data(p_object_type text, p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - returns: `json`
 - reads `public.object` _(high)_
@@ -1653,7 +1674,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `json`
 - reads `public.object` _(high)_
 
-> ---- 2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts) ----
+> ---- 5) list_object_resources_filtered_page : le champ sur les cartes -----
+> Corps DERIVE de la definition live par .tmp_pgapply/_gen_page204.cjs.
+> NE PAS EDITER A LA MAIN : regenerer.
+> Emis des que l appelant est editeur, sans condition sur le filtre :
+> 2,0 ms mesures pour une page de 24 (tout en index scan). Le conditionner
+> au filtre economiserait 2 ms et priverait la colonne Table de ses donnees
+> filtre eteint.
 
 ## `api.list_object_resources_filtered_since_fast(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
@@ -1755,6 +1782,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.norm_search(p text)`
 - returns: `text`
+
+## `api.object_missing_essentials(p_object_ids text[])`
+- returns: `TABLE(object_id text, missing text[])` — SECURITY DEFINER
+- reads `internal.v_object_essentials` _(high)_
+
+> §204 — essentiels manquants pour un ENSEMBLE d'objets (jamais par ligne). Rend 0 ligne si
+> l'appelant n'est pas éditeur (api.current_user_can_edit_objects) : c'est le gate serveur du
+> filtre « Remplissage ». Auto-autorise ses ids contre current_user_readable_object_ids (§36) — la
+> liste reçue n'est jamais crue sur parole. Mesuré: 2,0 ms pour une page de 24.
 
 ## `api.object_private_note_author_admin_rank(p_note_id uuid)`
 - returns: `integer` — SECURITY DEFINER
@@ -2131,7 +2167,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable).
 
 ## `api.rpc_list_org_members(p_org_object_id text)`
-- returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])` — SECURITY DEFINER
+- returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone)` — SECURITY DEFINER
+- reads `auth.sessions` _(high)_
 - reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.ref_org_admin_role` _(high)_
@@ -2885,6 +2922,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.validate_object_business_timezone()`
 - returns: `trigger`
+
+## `api.validate_object_hotel_positioning()`
+- returns: `trigger`
+- reads `public.object` _(high)_
+- reads `public.ref_code` _(high)_
 
 ## `api.validate_object_taxonomy_assignment()`
 - returns: `trigger`

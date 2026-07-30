@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 368,
-  "view_count": 12,
-  "function_count": 371,
-  "policy_count": 527,
-  "trigger_count": 560,
+  "table_count": 370,
+  "view_count": 13,
+  "function_count": 374,
+  "policy_count": 537,
+  "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3386
+  "edge_count": 3466
  },
  "nodes": [
   {
@@ -41766,207 +41766,6 @@
    }
   },
   {
-   "id": "realtime.messages_2026_07_24",
-   "kind": "table",
-   "label": "messages_2026_07_24",
-   "schema": "realtime",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "topic",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "extension",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "event",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "private",
-      "type": "boolean",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "inserted_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "binary_payload",
-      "type": "bytea",
-      "nullable": true,
-      "pk": false
-     }
-    ],
-    "rls_enabled": false
-   }
-  },
-  {
-   "id": "realtime.messages_2026_07_25",
-   "kind": "table",
-   "label": "messages_2026_07_25",
-   "schema": "realtime",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "topic",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "extension",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "event",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "private",
-      "type": "boolean",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "inserted_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "binary_payload",
-      "type": "bytea",
-      "nullable": true,
-      "pk": false
-     }
-    ],
-    "rls_enabled": false
-   }
-  },
-  {
-   "id": "realtime.messages_2026_07_26",
-   "kind": "table",
-   "label": "messages_2026_07_26",
-   "schema": "realtime",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "topic",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "extension",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "payload",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "event",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "private",
-      "type": "boolean",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "inserted_at",
-      "type": "timestamp without time zone",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "binary_payload",
-      "type": "bytea",
-      "nullable": true,
-      "pk": false
-     }
-    ],
-    "rls_enabled": false
-   }
-  },
-  {
    "id": "realtime.messages_2026_07_27",
    "kind": "table",
    "label": "messages_2026_07_27",
@@ -42533,6 +42332,497 @@
    }
   },
   {
+   "id": "realtime.messages_2026_08_01",
+   "kind": "table",
+   "label": "messages_2026_08_01",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "topic",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "extension",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "payload",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "event",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "private",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "inserted_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "binary_payload",
+      "type": "bytea",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false
+   }
+  },
+  {
+   "id": "public.ref_code_accommodation_unit_type",
+   "kind": "table",
+   "label": "ref_code_accommodation_unit_type",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "domain",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "code",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "name",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "description",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "position",
+      "type": "integer",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "icon_url",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "is_active",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "valid_from",
+      "type": "date",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "valid_to",
+      "type": "date",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "parent_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "metadata",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "name_i18n",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "description_i18n",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "name_normalized",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "dow_number",
+      "type": "smallint",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "is_assignable",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false
+   }
+  },
+  {
+   "id": "trigger:public.ref_code_accommodation_unit_type:trg_audit_ref_code",
+   "kind": "trigger",
+   "label": "trg_audit_ref_code",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:public.ref_code_accommodation_unit_type:trg_refresh_ref_code_taxonomy_closure",
+   "kind": "trigger",
+   "label": "trg_refresh_ref_code_taxonomy_closure",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:public.ref_code_accommodation_unit_type:trg_validate_ref_code_taxonomy_hierarchy",
+   "kind": "trigger",
+   "label": "trg_validate_ref_code_taxonomy_hierarchy",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "trigger:public.ref_code_accommodation_unit_type:update_ref_code_updated_at",
+   "kind": "trigger",
+   "label": "update_ref_code_updated_at",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "public.object_accommodation_unit_type",
+   "kind": "table",
+   "label": "object_accommodation_unit_type",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": "§201 — types d'unité d'hébergement d'un objet (multi-valué). Répond à « dans quoi le visiteur dort-il ? », jamais à « quel type d'établissement est-ce ? » (= object_taxonomy).",
+   "props": {
+    "columns": [
+     {
+      "name": "object_id",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "unit_type_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true
+   }
+  },
+  {
+   "id": "public.object_hotel_positioning",
+   "kind": "table",
+   "label": "object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": "Positionnements commerciaux multi-valués des hôtels. Indépendants de la nature exclusive portée par object_taxonomy.",
+   "props": {
+    "columns": [
+     {
+      "name": "object_id",
+      "type": "text",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "positioning_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "positioning_domain",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true
+   }
+  },
+  {
+   "id": "trigger:public.object_hotel_positioning:trg_validate_object_hotel_positioning",
+   "kind": "trigger",
+   "label": "trg_validate_object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_hotel_positioning",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "internal.v_object_essentials",
+   "kind": "view",
+   "label": "v_object_essentials",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "§204 — bundle des 8 essentiels visiteur, source UNIQUE partagée par api.get_dashboard_completeness,\napi.get_filtered_object_ids et api.object_missing_essentials. Booléens exposés en colonnes SÉPARÉES\nvolontairement : PostgreSQL élague les colonnes non consommées, donc un filtre sur un seul essentiel\ncoûte 2,5 ms au lieu de 23 ms. ORG exclus. n_photos = COUNT(media) (approximation héritée : vidéos et\ndocuments inclus).",
+   "props": {
+    "columns": [
+     {
+      "name": "object_id",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "object_type",
+      "type": "object_type",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_name",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_subcat",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_location",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_contact",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_desc",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "n_photos",
+      "type": "bigint",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "photo_target",
+      "type": "integer",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_typeblock",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "e_tags",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "missing_essentials",
+      "type": "text[]",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false
+   }
+  },
+  {
+   "id": "realtime.messages_2026_08_02",
+   "kind": "table",
+   "label": "messages_2026_08_02",
+   "schema": "realtime",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "columns": [
+     {
+      "name": "topic",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "extension",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "payload",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "event",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "private",
+      "type": "boolean",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "inserted_at",
+      "type": "timestamp without time zone",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "binary_payload",
+      "type": "bytea",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false
+   }
+  },
+  {
    "id": "audit.redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])",
    "kind": "function",
    "label": "redact_subject",
@@ -42548,12 +42838,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6596
+      "line": 6621
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6596
+     "line": 6621
     }
    }
   },
@@ -42577,7 +42867,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6617
+      "line": 6642
      }
     ]
    }
@@ -42595,47 +42885,6 @@
     "security_definer": false,
     "volatility": "v",
     "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
-   "kind": "function",
-   "label": "get_filtered_object_ids",
-   "schema": "api",
-   "domain": "api",
-   "doc": "---- 1) api.get_filtered_object_ids (corps complet §157+§162+§173) ----",
-   "props": {
-    "signature": "get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
-    "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1050
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_explorer_fuzzy_search.sql",
-      "line": 421
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_explorer_phonetic_search.sql",
-      "line": 419
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_filters_accessibility_label.sql",
-      "line": 36
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_filters_open_at_event_dates.sql",
-      "line": 194
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_label_filter_sections.sql",
-      "line": 17
-     }
-    ]
    }
   },
   {
@@ -42658,7 +42907,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5124
+      "line": 5149
      }
     ]
    }
@@ -42683,7 +42932,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5204
+      "line": 5229
      }
     ]
    }
@@ -42704,13 +42953,38 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2308
+      "line": 2328
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2308
+     "line": 2328
     }
+   }
+  },
+  {
+   "id": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "get_filtered_object_ids",
+   "schema": "api",
+   "domain": "api",
+   "doc": "---- 4) get_filtered_object_ids : les deux cles de remplissage ------------\n\nCOUT MESURE ET ASSUME — +4,4 ms de PLANIFICATION par appel, filtre ETEINT.\nLocalise par bissection sur live (30 iterations x 2 series, ecart stable) :\ntemoin sans patch ................................. 22,7 ms\najouts au CTE params seuls ........................ 22,9 ms  (gratuit)\nCASE par ligne SANS reference a la vue ............ 23,0 ms  (gratuit)\npatch complet, filtre eteint ...................... 27,0 ms  (+4,4)\nLe surcout n'est donc NI le CASE NI le parsing : c'est la simple PRESENCE du\nEXISTS sur internal.v_object_essentials dans le texte de la requete. Le\nplanificateur plante le sous-plan a chaque appel meme quand la branche n'est\njamais prise, et la fonction etant SECURITY DEFINER elle n'est pas inlinee.\nAUCUNE garde ne peut supprimer ce cout : il precede l'execution.\n\nPourquoi on l'accepte plutot que de le supprimer :\n* le supprimer vraiment demanderait de materialiser les essentiels (une MV\nrafraichie par le cron des 10 min). La planification tomberait a ~0, mais\nla fiche ne quitterait la liste de travail qu'au rafraichissement suivant\n— or ce filtre EST une liste de travail : l'agent corrige puis refiltre.\nLa fraicheur est la fonctionnalite, pas un detail.\n* l'autre issue serait de sortir le predicat vers le RPC de page (plpgsql :\nune branche IF n'est planifiee que si elle s'execute), mais la carte et le\ntableau de bord passent aussi par get_filtered_object_ids : le filtre\ncesserait de s'appliquer a la carte. Incoherence, pas optimisation.\n* ordre de grandeur : 4,4 ms contre 220-310 ms de latence Reunion->Supabase\npar aller-retour, soit ~1,5 % d'un seul aller-retour.\nSi le corpus grossit ou si ce chemin devient critique, la MV est l'echappatoire\ndocumentee (cf. journal de decision).\nCorps DERIVE de la definition live par .tmp_pgapply/_gen_remplissage.cjs\n(ancres assertees, refus d ecrire si une ancre bouge ou est ambigue).\nNE PAS EDITER A LA MAIN : regenerer.\nLa derniere definition vivait dans migration_accommodation_unit_type.sql\n(taxo6), PAS dans la migration phonetique : partir de la mauvaise source\nferait regresser 199 (dmetaphone) et 201 (types d unite).",
+   "props": {
+    "signature": "get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+    "returns": "TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_accommodation_unit_type.sql",
+      "line": 318
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+      "line": 291
+     }
+    ]
    }
   },
   {
@@ -42744,12 +43018,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2170
+      "line": 2190
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2170
+     "line": 2190
     }
    }
   },
@@ -42769,12 +43043,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2209
+      "line": 2229
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2209
+     "line": 2229
     }
    }
   },
@@ -42794,12 +43068,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2140
+      "line": 2165
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2140
+     "line": 2165
     }
    }
   },
@@ -42949,12 +43223,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1702
+      "line": 1709
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1702
+     "line": 1709
     }
    }
   },
@@ -43049,12 +43323,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1793
+      "line": 1800
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1793
+     "line": 1800
     }
    }
   },
@@ -43089,7 +43363,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2493
+      "line": 2513
      },
      {
       "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
@@ -43114,12 +43388,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3817
+      "line": 3842
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3817
+     "line": 3842
     }
    }
   },
@@ -43139,12 +43413,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2797
+      "line": 2817
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2797
+     "line": 2817
     }
    }
   },
@@ -43179,12 +43453,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6353
+      "line": 6378
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6353
+     "line": 6378
     }
    }
   },
@@ -43304,12 +43578,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2124
+      "line": 2149
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2124
+     "line": 2149
     }
    }
   },
@@ -43429,12 +43703,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7407
+      "line": 7433
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7407
+     "line": 7433
     }
    }
   },
@@ -43554,12 +43828,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4823
+      "line": 4848
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 4823
+     "line": 4848
     }
    }
   },
@@ -43629,7 +43903,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10521
+      "line": 10547
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -43654,12 +43928,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2867
+      "line": 2887
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2867
+     "line": 2887
     }
    }
   },
@@ -43679,12 +43953,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2892
+      "line": 2912
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2892
+     "line": 2912
     }
    }
   },
@@ -43704,12 +43978,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9058
+      "line": 9084
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9058
+     "line": 9084
     }
    }
   },
@@ -43729,7 +44003,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5654
+      "line": 5680
      },
      {
       "path": "Base de donnée DLL et API/migration_opening_open_without_hours.sql",
@@ -43754,7 +44028,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10532
+      "line": 10558
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -43779,12 +44053,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5586
+      "line": 5612
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5586
+     "line": 5612
     }
    }
   },
@@ -43854,7 +44128,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10581
+      "line": 10607
      },
      {
       "path": "Base de donnée DLL et API/migration_object_external_id_writes.sql",
@@ -43904,12 +44178,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8491
+      "line": 8517
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8491
+     "line": 8517
     }
    }
   },
@@ -44054,7 +44328,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10706
+      "line": 10732
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44104,12 +44378,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6633
+      "line": 6659
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6633
+     "line": 6659
     }
    }
   },
@@ -44129,12 +44403,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6883
+      "line": 6909
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6883
+     "line": 6909
     }
    }
   },
@@ -44154,12 +44428,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7211
+      "line": 7237
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7211
+     "line": 7237
     }
    }
   },
@@ -44179,12 +44453,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7019
+      "line": 7045
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7019
+     "line": 7045
     }
    }
   },
@@ -44204,7 +44478,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10739
+      "line": 10765
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44233,7 +44507,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3655
+      "line": 3680
      }
     ]
    }
@@ -44254,12 +44528,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1012
+      "line": 1019
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1012
+     "line": 1019
     }
    }
   },
@@ -44279,12 +44553,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7512
+      "line": 7538
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7512
+     "line": 7538
     }
    }
   },
@@ -44304,7 +44578,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10630
+      "line": 10656
      },
      {
       "path": "Base de donnée DLL et API/migration_object_version_read_restore.sql",
@@ -44354,12 +44628,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7934
+      "line": 7960
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7934
+     "line": 7960
     }
    }
   },
@@ -44379,12 +44653,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10391
+      "line": 10417
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10391
+     "line": 10417
     }
    }
   },
@@ -44469,12 +44743,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9264
+      "line": 9290
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9264
+     "line": 9290
     }
    }
   },
@@ -44516,31 +44790,6 @@
     "security_definer": false,
     "volatility": "v",
     "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "kind": "function",
-   "label": "get_dashboard_completeness",
-   "schema": "api",
-   "domain": "api",
-   "doc": "─────────────────────────────────────────────────────\n§Qualité  Complétude « perçue visiteur » par type\n─────────────────────────────────────────────────────\nRéplique côté portefeuille le bundle d'essentiels visiteur du modèle éditeur\n(bertel-tourism-ui/.../editor-completion.ts ; spec docs/.../2026-06-18-completude-par-type-design.md) :\n8 essentiels (nom, sous-catégorie, lieu, contact public, descriptif+accroche, photos [richesse\nmin(n/4,1), 4=plein], équipements/équivalent type, ≥1 tag). Par type : score moyen (richesse 0-100),\n% de fiches « complètes visiteur » (tous essentiels présents, ≥4 photos), essentiel le plus manquant,\net la liste des fiches < 80 (plafonnée par p_below_limit, pas de troncature silencieuse au-delà).\nNB : le slot 7 exact et le score complet 80/15/5 restent autoritatifs côté éditeur ; cette vue\nmesure le bundle essentiels = le signal de pilotage « où sont les trous » (goulot live = photos).\nApproximation assumée : n_photos compte toutes les lignes media de l'objet (vidéos/docs inclus) —\nfiltrage strict au type-photo différé (kind non fiable en base ; cf. invariant média).",
-   "props": {
-    "signature": "get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9610
-     },
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10071
-     }
-    ]
    }
   },
   {
@@ -44609,6 +44858,35 @@
    }
   },
   {
+   "id": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
+   "kind": "function",
+   "label": "get_dashboard_completeness",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Dashboard Qualité: remplissage « perçu visiteur » par type. Lit internal.v_object_essentials\n(§204, source unique du bundle) — le calcul était auparavant recopié dans ce corps. Par type: score\nmoyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des fiches <80\n(plafonnée par p_below_limit). ORG exclus. p_updated_at_from/to bornes DATE inclusives.",
+   "props": {
+    "signature": "get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 9636
+     },
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 10097
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+      "line": 105
+     }
+    ]
+   }
+  },
+  {
    "id": "api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)",
    "kind": "function",
    "label": "capture_metric_snapshots",
@@ -44624,7 +44902,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10229
+      "line": 10255
      },
      {
       "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
@@ -44699,12 +44977,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8545
+      "line": 8571
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8545
+     "line": 8571
     }
    }
   },
@@ -44799,7 +45077,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10328
+      "line": 10354
      },
      {
       "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
@@ -44824,7 +45102,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10355
+      "line": 10381
      },
      {
       "path": "Base de donnée DLL et API/migration_metric_snapshot.sql",
@@ -44874,12 +45152,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2827
+      "line": 2847
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2827
+     "line": 2847
     }
    }
   },
@@ -44899,12 +45177,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2837
+      "line": 2857
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2837
+     "line": 2857
     }
    }
   },
@@ -44949,12 +45227,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2847
+      "line": 2867
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2847
+     "line": 2867
     }
    }
   },
@@ -44999,12 +45277,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2857
+      "line": 2877
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2857
+     "line": 2877
     }
    }
   },
@@ -45024,12 +45302,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2814
+      "line": 2834
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2814
+     "line": 2834
     }
    }
   },
@@ -45074,7 +45352,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2970
+      "line": 2990
      },
      {
       "path": "Base de donnée DLL et API/migration_markdown_d2_place.sql",
@@ -45124,12 +45402,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10459
+      "line": 10485
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10459
+     "line": 10485
     }
    }
   },
@@ -45199,7 +45477,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7587
+      "line": 7613
      },
      {
       "path": "Base de donnée DLL et API/migration_cards_batch_authorize_definer.sql",
@@ -45319,12 +45597,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9743
+      "line": 9769
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9743
+     "line": 9769
     }
    }
   },
@@ -45369,12 +45647,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3642
+      "line": 3667
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3642
+     "line": 3667
     }
    }
   },
@@ -45448,12 +45726,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5316
+      "line": 5341
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5316
+     "line": 5341
     }
    }
   },
@@ -45473,12 +45751,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10422
+      "line": 10448
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 10422
+     "line": 10448
     }
    }
   },
@@ -45563,12 +45841,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5175
+      "line": 5200
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5175
+     "line": 5200
     }
    }
   },
@@ -45588,12 +45866,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2430
+      "line": 2450
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2430
+     "line": 2450
     }
    }
   },
@@ -45613,12 +45891,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5301
+      "line": 5326
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5301
+     "line": 5326
     }
    }
   },
@@ -45642,7 +45920,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3750
+      "line": 3775
      }
     ]
    }
@@ -45663,12 +45941,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9426
+      "line": 9452
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9426
+     "line": 9452
     }
    }
   },
@@ -45813,7 +46091,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2040
+      "line": 2060
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -45838,12 +46116,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2940
+      "line": 2960
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2940
+     "line": 2960
     }
    }
   },
@@ -45867,7 +46145,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4892
+      "line": 4917
      }
     ]
    }
@@ -45892,7 +46170,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4880
+      "line": 4905
      }
     ]
    }
@@ -45917,7 +46195,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4905
+      "line": 4930
      }
     ]
    }
@@ -45978,12 +46256,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 972
+      "line": 979
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 972
+     "line": 979
     }
    }
   },
@@ -46018,12 +46296,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 988
+      "line": 995
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 988
+     "line": 995
     }
    }
   },
@@ -46043,12 +46321,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8358
+      "line": 8384
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8358
+     "line": 8384
     }
    }
   },
@@ -46133,12 +46411,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7365
+      "line": 7391
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7365
+     "line": 7391
     }
    }
   },
@@ -46158,12 +46436,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8263
+      "line": 8289
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8263
+     "line": 8289
     }
    }
   },
@@ -46183,12 +46461,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6504
+      "line": 6529
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6504
+     "line": 6529
     }
    }
   },
@@ -46208,12 +46486,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2769
+      "line": 2794
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2769
+     "line": 2794
     }
    }
   },
@@ -46263,12 +46541,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6070
+      "line": 6095
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6070
+     "line": 6095
     }
    }
   },
@@ -46288,12 +46566,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5443
+      "line": 5468
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5443
+     "line": 5468
     }
    }
   },
@@ -46473,12 +46751,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3180
+      "line": 3205
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3180
+     "line": 3205
     }
    }
   },
@@ -46523,12 +46801,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3041
+      "line": 3066
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3041
+     "line": 3066
     }
    }
   },
@@ -46548,12 +46826,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3693
+      "line": 3718
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3693
+     "line": 3718
     }
    }
   },
@@ -46573,12 +46851,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3767
+      "line": 3792
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3767
+     "line": 3792
     }
    }
   },
@@ -46673,12 +46951,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2905
+      "line": 2925
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2905
+     "line": 2925
     }
    }
   },
@@ -46698,12 +46976,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5070
+      "line": 5095
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5070
+     "line": 5095
     }
    }
   },
@@ -46756,7 +47034,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5157
+      "line": 5182
      }
     ]
    }
@@ -46789,7 +47067,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4613
+      "line": 4638
      }
     ]
    }
@@ -46822,7 +47100,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5284
+      "line": 5309
      }
     ]
    }
@@ -46893,12 +47171,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6746
+      "line": 6772
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6746
+     "line": 6772
     }
    }
   },
@@ -46943,12 +47221,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8233
+      "line": 8259
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8233
+     "line": 8259
     }
    }
   },
@@ -46993,12 +47271,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9397
+      "line": 9423
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9397
+     "line": 9423
     }
    }
   },
@@ -47018,12 +47296,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9086
+      "line": 9112
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9086
+     "line": 9112
     }
    }
   },
@@ -47093,12 +47371,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6928
+      "line": 6954
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6928
+     "line": 6954
     }
    }
   },
@@ -47118,12 +47396,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9121
+      "line": 9147
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9121
+     "line": 9147
     }
    }
   },
@@ -47143,12 +47421,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9168
+      "line": 9194
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9168
+     "line": 9194
     }
    }
   },
@@ -47293,12 +47571,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2882
+      "line": 2902
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2882
+     "line": 2902
     }
    }
   },
@@ -47572,12 +47850,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6252
+      "line": 6277
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6252
+     "line": 6277
     }
    }
   },
@@ -47597,12 +47875,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3460
+      "line": 3485
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3460
+     "line": 3485
     }
    }
   },
@@ -47752,12 +48030,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7106
+      "line": 7132
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7106
+     "line": 7132
     }
    }
   },
@@ -47792,12 +48070,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3706
+      "line": 3731
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3706
+     "line": 3731
     }
    }
   },
@@ -47842,12 +48120,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7593
+      "line": 7619
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7593
+     "line": 7619
     }
    }
   },
@@ -47917,12 +48195,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2291
+      "line": 2311
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2291
+     "line": 2311
     }
    }
   },
@@ -47971,7 +48249,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2595
+      "line": 2620
      }
     ]
    }
@@ -48121,7 +48399,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2649
+      "line": 2674
      }
     ]
    }
@@ -48192,12 +48470,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2109
+      "line": 2134
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2109
+     "line": 2134
     }
    }
   },
@@ -48242,12 +48520,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 5099
+      "line": 5124
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 5099
+     "line": 5124
     }
    }
   },
@@ -48317,12 +48595,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1757
+      "line": 1764
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1757
+     "line": 1764
     }
    }
   },
@@ -48367,12 +48645,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1715
+      "line": 1722
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1715
+     "line": 1722
     }
    }
   },
@@ -48417,12 +48695,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2915
+      "line": 2935
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2915
+     "line": 2935
     }
    }
   },
@@ -48442,12 +48720,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5708
+      "line": 5734
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5708
+     "line": 5734
     }
    }
   },
@@ -48492,12 +48770,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5913
+      "line": 5939
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5913
+     "line": 5939
     }
    }
   },
@@ -48517,12 +48795,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5553
+      "line": 5579
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5553
+     "line": 5579
     }
    }
   },
@@ -48617,12 +48895,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1926
+      "line": 1946
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1926
+     "line": 1946
     }
    }
   },
@@ -48642,12 +48920,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7460
+      "line": 7486
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7460
+     "line": 7486
     }
    }
   },
@@ -48667,12 +48945,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5957
+      "line": 5983
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5957
+     "line": 5983
     }
    }
   },
@@ -48682,7 +48960,7 @@
    "label": "list_object_resources_filtered_page",
    "schema": "api",
    "domain": "api",
-   "doc": "---- 2) api.list_object_resources_filtered_page (tri label_rank + meta.label_rank_counts) ----",
+   "doc": "---- 5) list_object_resources_filtered_page : le champ sur les cartes -----\nCorps DERIVE de la definition live par .tmp_pgapply/_gen_page204.cjs.\nNE PAS EDITER A LA MAIN : regenerer.\nEmis des que l appelant est editeur, sans condition sur le filtre :\n2,0 ms mesures pour une page de 24 (tout en index scan). Le conditionner\nau filtre economiserait 2 ms et priverait la colonne Table de ses donnees\nfiltre eteint.",
    "props": {
     "signature": "list_object_resources_filtered_page(p_cursor text DEFAULT NULL::text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_page_size integer DEFAULT 50, p_filters jsonb DEFAULT '{}'::jsonb, p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)",
     "returns": "json",
@@ -48691,14 +48969,14 @@
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6229
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_label_filter_sections.sql",
-      "line": 718
+      "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+      "line": 1260
      }
-    ]
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+     "line": 1260
+    }
    }
   },
   {
@@ -48746,12 +49024,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6184
+      "line": 6210
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6184
+     "line": 6210
     }
    }
   },
@@ -48771,12 +49049,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 6449
+      "line": 6475
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 6449
+     "line": 6475
     }
    }
   },
@@ -48971,12 +49249,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8861
+      "line": 8887
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8861
+     "line": 8887
     }
    }
   },
@@ -49046,12 +49324,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7177
+      "line": 7203
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7177
+     "line": 7203
     }
    }
   },
@@ -49071,12 +49349,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7758
+      "line": 7784
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7758
+     "line": 7784
     }
    }
   },
@@ -49096,12 +49374,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7851
+      "line": 7877
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7851
+     "line": 7877
     }
    }
   },
@@ -49171,12 +49449,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9330
+      "line": 9356
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9330
+     "line": 9356
     }
    }
   },
@@ -49196,12 +49474,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2194
+      "line": 2219
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 2194
+     "line": 2219
     }
    }
   },
@@ -49221,12 +49499,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6107
+      "line": 6132
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6107
+     "line": 6132
     }
    }
   },
@@ -49246,12 +49524,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3325
+      "line": 3350
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3325
+     "line": 3350
     }
    }
   },
@@ -49271,12 +49549,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3305
+      "line": 3330
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3305
+     "line": 3330
     }
    }
   },
@@ -49296,12 +49574,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3486
+      "line": 3511
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3486
+     "line": 3511
     }
    }
   },
@@ -49321,12 +49599,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1856
+      "line": 1863
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1856
+     "line": 1863
     }
    }
   },
@@ -49346,12 +49624,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3434
+      "line": 3459
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 3434
+     "line": 3459
     }
    }
   },
@@ -49371,12 +49649,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 1908
+      "line": 1915
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 1908
+     "line": 1915
     }
    }
   },
@@ -49396,12 +49674,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2340
+      "line": 2360
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 2340
+     "line": 2360
     }
    }
   },
@@ -49421,12 +49699,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8587
+      "line": 8613
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8587
+     "line": 8613
     }
    }
   },
@@ -49471,12 +49749,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8657
+      "line": 8683
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8657
+     "line": 8683
     }
    }
   },
@@ -49496,12 +49774,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8946
+      "line": 8972
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8946
+     "line": 8972
     }
    }
   },
@@ -49596,12 +49874,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8902
+      "line": 8928
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8902
+     "line": 8928
     }
    }
   },
@@ -49696,12 +49974,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9891
+      "line": 9917
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9891
+     "line": 9917
     }
    }
   },
@@ -49721,12 +49999,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9815
+      "line": 9841
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9815
+     "line": 9841
     }
    }
   },
@@ -49746,12 +50024,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9975
+      "line": 10001
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9975
+     "line": 10001
     }
    }
   },
@@ -49796,12 +50074,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9623
+      "line": 9649
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9623
+     "line": 9649
     }
    }
   },
@@ -49875,7 +50153,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 4597
+      "line": 4622
      }
     ]
    }
@@ -49896,12 +50174,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 5447
+      "line": 5473
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 5447
+     "line": 5473
     }
    }
   },
@@ -49946,12 +50224,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 1984
+      "line": 2004
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 1984
+     "line": 2004
     }
    }
   },
@@ -49971,7 +50249,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10518
+      "line": 10544
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
@@ -50025,7 +50303,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 10519
+      "line": 10545
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
@@ -50086,6 +50364,31 @@
       "line": 182
      }
     ]
+   }
+  },
+  {
+   "id": "api.get_object_workspace_permissions(p_object_id text)",
+   "kind": "function",
+   "label": "get_object_workspace_permissions",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Agrege en un appel les 8 sondes de permission de l'editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front.",
+   "props": {
+    "signature": "get_object_workspace_permissions(p_object_id text)",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql",
+      "line": 30
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql",
+     "line": 30
+    }
    }
   },
   {
@@ -50229,7 +50532,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2248
+      "line": 2268
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -50329,12 +50632,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8781
+      "line": 8807
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8781
+     "line": 8807
     }
    }
   },
@@ -50360,6 +50663,31 @@
     "source": {
      "path": "Base de donnée DLL et API/migration_object_list.sql",
      "line": 119
+    }
+   }
+  },
+  {
+   "id": "api.rpc_list_org_members(p_org_object_id text)",
+   "kind": "function",
+   "label": "rpc_list_org_members",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "rpc_list_org_members(p_org_object_id text)",
+    "returns": "TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
+      "line": 13
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
+     "line": 13
     }
    }
   },
@@ -50614,6 +50942,21 @@
    }
   },
   {
+   "id": "api.validate_object_hotel_positioning()",
+   "kind": "function",
+   "label": "validate_object_hotel_positioning",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "validate_object_hotel_positioning()",
+    "returns": "trigger",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.export_itinerary_gpx(p_object_id text, p_include_stages boolean DEFAULT true, p_include_metadata boolean DEFAULT true)",
    "kind": "function",
    "label": "export_itinerary_gpx",
@@ -50629,12 +50972,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8113
+      "line": 8139
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8113
+     "line": 8139
     }
    }
   },
@@ -50654,12 +50997,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7995
+      "line": 8021
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7995
+     "line": 8021
     }
    }
   },
@@ -50679,12 +51022,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8206
+      "line": 8232
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8206
+     "line": 8232
     }
    }
   },
@@ -50704,12 +51047,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8441
+      "line": 8467
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8441
+     "line": 8467
     }
    }
   },
@@ -50729,12 +51072,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 8716
+      "line": 8742
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 8716
+     "line": 8742
     }
    }
   },
@@ -50754,12 +51097,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9206
+      "line": 9232
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9206
+     "line": 9232
     }
    }
   },
@@ -50779,37 +51122,37 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 9574
+      "line": 9600
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 9574
+     "line": 9600
     }
    }
   },
   {
-   "id": "api.rpc_list_org_members(p_org_object_id text)",
+   "id": "api.object_missing_essentials(p_object_ids text[])",
    "kind": "function",
-   "label": "rpc_list_org_members",
+   "label": "object_missing_essentials",
    "schema": "api",
    "domain": "api",
-   "doc": null,
+   "doc": "§204 — essentiels manquants pour un ENSEMBLE d'objets (jamais par ligne). Rend 0 ligne si\nl'appelant n'est pas éditeur (api.current_user_can_edit_objects) : c'est le gate serveur du\nfiltre « Remplissage ». Auto-autorise ses ids contre current_user_readable_object_ids (§36) — la\nliste reçue n'est jamais crue sur parole. Mesuré: 2,0 ms pour une page de 24.",
    "props": {
-    "signature": "rpc_list_org_members(p_org_object_id text)",
-    "returns": "TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[])",
+    "signature": "object_missing_essentials(p_object_ids text[])",
+    "returns": "TABLE(object_id text, missing text[])",
     "security_definer": true,
     "volatility": "s",
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
-      "line": 9
+      "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+      "line": 225
      }
     ],
     "source": {
-     "path": "Base de donnée DLL et API/migration_sp4_list_org_members.sql",
-     "line": 9
+     "path": "Base de donnée DLL et API/migration_explorer_remplissage_filter.sql",
+     "line": 225
     }
    }
   },
@@ -50954,12 +51297,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 7664
+      "line": 7690
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/api_views_functions.sql",
-     "line": 7664
+     "line": 7690
     }
    }
   },
@@ -51283,7 +51626,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 2085
+      "line": 2105
      },
      {
       "path": "Base de donnée DLL et API/migration_tags_create_and_order.sql",
@@ -51337,7 +51680,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 3893
+      "line": 3918
      }
     ]
    }
@@ -52144,6 +52487,41 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_09:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_09",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_09:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_09",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -53725,6 +54103,70 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:public.object_hotel_positioning:canonical_del_object_hotel_positioning",
+   "kind": "policy",
+   "label": "canonical_del_object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_hotel_positioning",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_hotel_positioning:canonical_ins_object_hotel_positioning",
+   "kind": "policy",
+   "label": "canonical_ins_object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_hotel_positioning",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_hotel_positioning:canonical_upd_object_hotel_positioning",
+   "kind": "policy",
+   "label": "canonical_upd_object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_hotel_positioning",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_hotel_positioning:read_object_hotel_positioning",
+   "kind": "policy",
+   "label": "read_object_hotel_positioning",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_hotel_positioning",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = object_hotel_positioning.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
    }
   },
   {
@@ -55843,6 +56285,40 @@
    }
   },
   {
+   "id": "policy:public.ref_code_accommodation_unit_type:admin_ref_code_write",
+   "kind": "policy",
+   "label": "admin_ref_code_write",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:public.ref_code_accommodation_unit_type:pub_ref_code_read",
+   "kind": "policy",
+   "label": "pub_ref_code_read",
+   "schema": "public",
+   "domain": "ref-lookups",
+   "doc": null,
+   "props": {
+    "table": "public.ref_code_accommodation_unit_type",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "true",
+    "partition_of": "public.ref_code"
+   }
+  },
+  {
    "id": "policy:public.ref_code_membership_campaign:admin_ref_code_write",
    "kind": "policy",
    "label": "admin_ref_code_write",
@@ -56044,6 +56520,70 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:public.object_accommodation_unit_type:canonical_del_object_accommodation_unit_type",
+   "kind": "policy",
+   "label": "canonical_del_object_accommodation_unit_type",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_accommodation_unit_type",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_accommodation_unit_type:canonical_ins_object_accommodation_unit_type",
+   "kind": "policy",
+   "label": "canonical_ins_object_accommodation_unit_type",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_accommodation_unit_type",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_accommodation_unit_type:canonical_upd_object_accommodation_unit_type",
+   "kind": "policy",
+   "label": "canonical_upd_object_accommodation_unit_type",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_accommodation_unit_type",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_accommodation_unit_type:read_object_accommodation_unit_type",
+   "kind": "policy",
+   "label": "read_object_accommodation_unit_type",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_accommodation_unit_type",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = object_accommodation_unit_type.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
    }
   },
   {
@@ -58256,6 +58796,23 @@
    }
   },
   {
+   "id": "policy:public.object_version_2026_08:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_08",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
+   }
+  },
+  {
    "id": "policy:public.object_location:canonical_del_object_location",
    "kind": "policy",
    "label": "canonical_del_object_location",
@@ -58384,23 +58941,6 @@
    }
   },
   {
-   "id": "policy:public.object_version_2026_08:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_08",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
-   }
-  },
-  {
    "id": "policy:public.ref_capacity_metric:Lecture publique des métriques de capacité",
    "kind": "policy",
    "label": "Lecture publique des métriques de capacité",
@@ -58430,6 +58970,23 @@
      "public"
     ],
     "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
+   }
+  },
+  {
+   "id": "policy:public.object_version_2026_09:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_09",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
    }
   },
   {
@@ -58740,23 +59297,6 @@
    }
   },
   {
-   "id": "policy:public.object_version_2026_09:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_09",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
-   }
-  },
-  {
    "id": "policy:public.object_capacity:canonical_del_object_capacity",
    "kind": "policy",
    "label": "canonical_del_object_capacity",
@@ -59016,41 +59556,6 @@
      "public"
     ],
     "predicate": "((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = object_pet_policy.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_09:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_09",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_09:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_09",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -66766,6 +67271,66 @@
    "props": {}
   },
   {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_audit_ref_code",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_audit_ref_code",
+   "target": "audit.log_row_changes()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_refresh_ref_code_taxonomy_closure",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_refresh_ref_code_taxonomy_closure",
+   "target": "api.trg_refresh_ref_code_taxonomy_closure()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_validate_ref_code_taxonomy_hierarchy",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:trg_validate_ref_code_taxonomy_hierarchy",
+   "target": "api.validate_ref_code_taxonomy_hierarchy()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:update_ref_code_updated_at",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.ref_code_accommodation_unit_type:update_ref_code_updated_at",
+   "target": "public.update_updated_at_column()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_hotel_positioning:trg_validate_object_hotel_positioning",
+   "target": "public.object_hotel_positioning",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_hotel_positioning:trg_validate_object_hotel_positioning",
+   "target": "api.validate_object_hotel_positioning()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
    "source": "auth.refresh_tokens",
    "target": "auth.sessions",
    "kind": "fk",
@@ -73243,6 +73808,40 @@
    }
   },
   {
+   "source": "public.ref_code_taxonomy_closure",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "ancestor_id",
+      "id"
+     ],
+     [
+      "domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.ref_code_taxonomy_closure",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "descendant_id",
+      "id"
+     ],
+     [
+      "domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
    "source": "public.object_taxonomy",
    "target": "public.ref_code",
    "kind": "fk",
@@ -74172,6 +74771,23 @@
   {
    "source": "public.object_taxonomy",
    "target": "public.ref_code_trail_link_role",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "ref_code_id",
+      "id"
+     ],
+     [
+      "domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_taxonomy",
+   "target": "public.ref_code_accommodation_unit_type",
    "kind": "fk",
    "props": {
     "columns": [
@@ -75181,6 +75797,23 @@
   {
    "source": "public.object_web_channel",
    "target": "public.ref_code_trail_link_role",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "kind_id",
+      "id"
+     ],
+     [
+      "kind_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_web_channel",
+   "target": "public.ref_code_accommodation_unit_type",
    "kind": "fk",
    "props": {
     "columns": [
@@ -76244,6 +76877,23 @@
    }
   },
   {
+   "source": "public.ref_interop_crosswalk",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "taxonomy_domain",
+      "domain"
+     ],
+     [
+      "taxonomy_code",
+      "code"
+     ]
+    ]
+   }
+  },
+  {
    "source": "public.object_version_2026_06",
    "target": "auth.users",
    "kind": "fk",
@@ -76738,6 +77388,980 @@
    }
   },
   {
+   "source": "public.object_accommodation_unit_type",
+   "target": "public.object",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "object_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_accommodation_unit_type",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "unit_type_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_contact_kind",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_media_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_media_tag",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_social_network",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_weekday",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_language_level",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_amenity_family",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_payment_method",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_environment_tag",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_price_kind",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_price_unit",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_meeting_equipment",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_opening_schedule_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_iti_practice",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_demand_topic",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_demand_subtopic",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_mood",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_menu_category",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_dietary_tag",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_allergen",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_cuisine_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_accommodation_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_tourism_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_transport_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_activity_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_season_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_client_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_service_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_booking_status",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_promotion_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_document_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_insurance_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_feedback_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_partnership_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_assistance_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_destination_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_event_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_package_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_room_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_view_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_amenity_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_membership_tier",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_membership_campaign",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_incident_category",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.object",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "object_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_other",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_crm_sentiment",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_bed_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_price_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_opening_period_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_iti_difficulty",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_iti_open_status",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_iti_stage_kind",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_trail_link_role",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.object_hotel_positioning",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "positioning_id",
+      "id"
+     ],
+     [
+      "positioning_domain",
+      "domain"
+     ]
+    ]
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -76963,6 +78587,22 @@
    "kind": "gates",
    "props": {
     "via_partition": "public.ref_code_price_type"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_09:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_09"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_09:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_09"
    }
   },
   {
@@ -77578,6 +79218,30 @@
    "props": {
     "via_partition": "public.ref_code_price_unit"
    }
+  },
+  {
+   "source": "policy:public.object_hotel_positioning:canonical_del_object_hotel_positioning",
+   "target": "public.object_hotel_positioning",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_hotel_positioning:canonical_ins_object_hotel_positioning",
+   "target": "public.object_hotel_positioning",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_hotel_positioning:canonical_upd_object_hotel_positioning",
+   "target": "public.object_hotel_positioning",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_hotel_positioning:read_object_hotel_positioning",
+   "target": "public.object_hotel_positioning",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "policy:public.ref_org_role:Lecture publique des rôles d'organisation",
@@ -78456,6 +80120,22 @@
    }
   },
   {
+   "source": "policy:public.ref_code_accommodation_unit_type:admin_ref_code_write",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_accommodation_unit_type"
+   }
+  },
+  {
+   "source": "policy:public.ref_code_accommodation_unit_type:pub_ref_code_read",
+   "target": "public.ref_code",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.ref_code_accommodation_unit_type"
+   }
+  },
+  {
    "source": "policy:public.ref_code_membership_campaign:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -78550,6 +80230,30 @@
    "props": {
     "via_partition": "public.ref_code_membership_tier"
    }
+  },
+  {
+   "source": "policy:public.object_accommodation_unit_type:canonical_del_object_accommodation_unit_type",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_accommodation_unit_type:canonical_ins_object_accommodation_unit_type",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_accommodation_unit_type:canonical_upd_object_accommodation_unit_type",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_accommodation_unit_type:read_object_accommodation_unit_type",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "policy:public.ref_classification_value:Lecture publique des valeurs de classification",
@@ -79422,6 +81126,14 @@
    }
   },
   {
+   "source": "policy:public.object_version_2026_08:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_08"
+   }
+  },
+  {
    "source": "policy:public.object_location:canonical_del_object_location",
    "target": "public.object_location",
    "kind": "gates",
@@ -79470,14 +81182,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.object_version_2026_08:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_08"
-   }
-  },
-  {
    "source": "policy:public.ref_capacity_metric:Lecture publique des métriques de capacité",
    "target": "public.ref_capacity_metric",
    "kind": "gates",
@@ -79488,6 +81192,14 @@
    "target": "public.ref_capacity_metric",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:public.object_version_2026_09:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_09"
+   }
   },
   {
    "source": "policy:public.ref_capacity_applicability:Lecture publique des applicabilités de capacité",
@@ -79608,14 +81320,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.object_version_2026_09:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_09"
-   }
-  },
-  {
    "source": "policy:public.object_capacity:canonical_del_object_capacity",
    "target": "public.object_capacity",
    "kind": "gates",
@@ -79718,22 +81422,6 @@
    "target": "public.object_pet_policy",
    "kind": "gates",
    "props": {}
-  },
-  {
-   "source": "policy:audit.audit_log_2026_09:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_09"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_09:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_09"
-   }
   },
   {
    "source": "policy:public.object_fma_occurrence:canonical_del_object_fma_occurrence",
@@ -80172,6 +81860,14 @@
    }
   },
   {
+   "source": "internal.v_object_essentials",
+   "target": "public.object_type",
+   "kind": "typed_by",
+   "props": {
+    "column": "internal.v_object_essentials.object_type"
+   }
+  },
+  {
    "source": "public.object",
    "target": "public.object_type",
    "kind": "typed_by",
@@ -80584,6 +82280,114 @@
    }
   },
   {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM opening_period"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_schedule",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_schedule"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_period",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_period_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_period_weekday"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.opening_time_frame",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN opening_time_frame"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.ref_code_weekday",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_weekday"
+    }
+   }
+  },
+  {
+   "source": "internal.compute_open_status(p_at timestamp with time zone)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.object_environment_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_environment_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
+   "target": "public.ref_code_environment_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_environment_tag"
+    }
+   }
+  },
+  {
    "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "target": "internal.mv_filtered_objects",
    "kind": "reads",
@@ -80765,6 +82569,18 @@
   },
   {
    "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "internal.v_object_essentials",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.v_object_essentials"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "target": "public.object_pet_policy",
    "kind": "reads",
    "props": {
@@ -80861,6 +82677,30 @@
   },
   {
    "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_hotel_positioning",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_hotel_positioning"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
    "target": "public.tag_link",
    "kind": "reads",
    "props": {
@@ -80880,6 +82720,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_tag"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.object_accommodation_unit_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_accommodation_unit_type"
+    }
+   }
+  },
+  {
+   "source": "api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)",
+   "target": "public.ref_code_accommodation_unit_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_accommodation_unit_type"
     }
    }
   },
@@ -80928,114 +82792,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object_fma"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM opening_period"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_schedule",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_schedule"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_period",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_period_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_period_weekday"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.opening_time_frame",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN opening_time_frame"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.ref_code_weekday",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_weekday"
-    }
-   }
-  },
-  {
-   "source": "internal.compute_open_status(p_at timestamp with time zone)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
-   "target": "public.object_environment_tag",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_environment_tag"
-    }
-   }
-  },
-  {
-   "source": "api.get_object_environment_tags_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY['fr'::text])",
-   "target": "public.ref_code_environment_tag",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_code_environment_tag"
     }
    }
   },
@@ -83872,186 +85628,6 @@
    }
   },
   {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM   object"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_taxonomy",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_taxonomy"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_location",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_location"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.contact_channel",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM contact_channel"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_description",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_description"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.media",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM media"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_capacity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_capacity"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.ref_capacity_metric",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_capacity_metric"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_room_type",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_room_type"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_menu",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_menu"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_act",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_act"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_iti",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_iti"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_fma",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_fma"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.object_amenity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_amenity"
-    }
-   }
-  },
-  {
-   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
-   "target": "public.tag_link",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM tag_link"
-    }
-   }
-  },
-  {
    "source": "api.rpc_create_org(p_name text, p_region_code text DEFAULT 'RUN'::text, p_access_scope text DEFAULT 'own_objects_only'::text)",
    "target": "public.object",
    "kind": "reads",
@@ -84132,6 +85708,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE object"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
+   "target": "internal.v_object_essentials",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM   internal.v_object_essentials"
+    }
+   }
+  },
+  {
+   "source": "api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN   object"
     }
    }
   },
@@ -91324,6 +92924,126 @@
    }
   },
   {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.user_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_permission"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.ref_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_permission"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "auth.sessions",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.sessions"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.user_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.ref_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_list_org_members(p_org_object_id text)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
    "source": "api.list_effective_object_ids(p_list_id uuid, p_published_only boolean)",
    "target": "public.object_list",
    "kind": "reads",
@@ -91440,6 +93160,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object_iti_stage"
+    }
+   }
+  },
+  {
+   "source": "api.validate_object_hotel_positioning()",
+   "target": "public.ref_code",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_code"
+    }
+   }
+  },
+  {
+   "source": "api.validate_object_hotel_positioning()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
     }
    }
   },
@@ -91696,110 +93440,14 @@
    }
   },
   {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.user_org_membership",
+   "source": "api.object_missing_essentials(p_object_ids text[])",
+   "target": "internal.v_object_essentials",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM user_org_membership"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.user_org_admin_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN user_org_admin_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.user_permission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM user_permission"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.ref_permission",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_permission"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN auth.users"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.user_org_business_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN user_org_business_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.ref_org_business_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_org_business_role"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_list_org_members(p_org_object_id text)",
-   "target": "public.ref_org_admin_role",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN ref_org_admin_role"
+     "evidence": "FROM   internal.v_object_essentials"
     }
    }
   },
@@ -93194,6 +94842,7 @@
   "public.ref_code_dietary_tag": "public.ref_code",
   "public.object_version_default": "public.object_version",
   "public.ref_code_price_type": "public.ref_code",
+  "audit.audit_log_2026_09": "audit.audit_log",
   "public.object_version_2026_05": "public.object_version",
   "public.ref_code_iti_difficulty": "public.ref_code",
   "public.ref_code_iti_open_status": "public.ref_code",
@@ -93226,6 +94875,7 @@
   "public.ref_code_opening_period_type": "public.ref_code",
   "public.ref_code_bed_type": "public.ref_code",
   "public.ref_code_crm_sentiment": "public.ref_code",
+  "public.ref_code_accommodation_unit_type": "public.ref_code",
   "public.ref_code_membership_campaign": "public.ref_code",
   "public.ref_code_incident_category": "public.ref_code",
   "public.ref_code_room_type": "public.ref_code",
@@ -93248,11 +94898,10 @@
   "public.object_version_2026_07": "public.object_version",
   "public.ref_code_price_kind": "public.ref_code",
   "public.object_version_2026_08": "public.object_version",
-  "public.ref_code_other": "public.ref_code",
   "public.object_version_2026_09": "public.object_version",
+  "public.ref_code_other": "public.ref_code",
   "audit.audit_log_2026_07": "audit.audit_log",
   "audit.audit_log_2026_08": "audit.audit_log",
-  "audit.audit_log_2026_09": "audit.audit_log",
   "public.ref_code_contact_kind": "public.ref_code",
   "public.ref_code_media_type": "public.ref_code",
   "public.ref_code_payment_method": "public.ref_code",

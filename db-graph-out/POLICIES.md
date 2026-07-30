@@ -260,6 +260,18 @@
 - **UPDATE** `owner_update_object` — roles ['public']
   - `((( SELECT auth.uid() AS uid) = created_by) OR api.user_can_write_object_canonical(id)) | ((( SELECT auth.uid() AS uid) = created_by) OR api.user_can_write_object_canonical(id))`
 
+## `public.object_accommodation_unit_type`
+- **DELETE** `canonical_del_object_accommodation_unit_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_accommodation_unit_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_accommodation_unit_type` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_accommodation_unit_type.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_accommodation_unit_type` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+
 ## `public.object_act`
 - **DELETE** `canonical_del_object_act` — roles ['public']
   - `api.user_can_write_object_canonical(object_id)`
@@ -414,6 +426,18 @@
 - **SELECT** `ext_group_policies_org_actor` — roles ['public']
   - `api.can_read_extended(object_id)`
 - **UPDATE** `canonical_upd_object_group_policy` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
+
+## `public.object_hotel_positioning`
+- **DELETE** `canonical_del_object_hotel_positioning` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **INSERT** `canonical_ins_object_hotel_positioning` — roles ['public']
+  - `api.user_can_write_object_canonical(object_id)`
+- **SELECT** `read_object_hotel_positioning` — roles ['public']
+  - `((EXISTS ( SELECT 1
+   FROM object o
+  WHERE ((o.id = object_hotel_positioning.object_id) AND (o.status = 'published'::object_status)))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))`
+- **UPDATE** `canonical_upd_object_hotel_positioning` — roles ['public']
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.object_iti`
@@ -1337,6 +1361,12 @@
   - `true`
 
 ## `public.ref_code_accommodation_type`
+- **ALL** `admin_ref_code_write` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+- **SELECT** `pub_ref_code_read` — roles ['public']
+  - `true`
+
+## `public.ref_code_accommodation_unit_type`
 - **ALL** `admin_ref_code_write` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `pub_ref_code_read` — roles ['public']

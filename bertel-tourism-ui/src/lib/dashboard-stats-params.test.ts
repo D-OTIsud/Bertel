@@ -53,3 +53,8 @@ it('statuts restreints à published/draft (défaut published si vide)', () => {
   const withDraft = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'draft'] } };
   expect(dashboardStatsParams(withDraft as any, {}).p_status).toEqual(['published', 'draft']);
 });
+
+it('« archived » (§205) est écarté — hors périmètre des KPI Dashboard', () => {
+  const withArchived = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'archived'] } };
+  expect(dashboardStatsParams(withArchived as any, {}).p_status).toEqual(['published']);
+});

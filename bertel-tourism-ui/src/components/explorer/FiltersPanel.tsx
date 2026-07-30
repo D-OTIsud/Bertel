@@ -20,6 +20,7 @@ import {
   ACCESSIBILITY_DISABILITY_TYPE_OPTIONS,
   EXPLORER_BUCKET_OPTIONS,
   EXPLORER_BUCKET_TYPE_MAP,
+  EXPLORER_STATUS_OPTIONS,
   DEFAULT_HOT_SUBTYPES,
   DEFAULT_SRV_SUBTYPES,
   DEFAULT_VIS_SUBTYPES,
@@ -61,10 +62,8 @@ import {
 const HOT_CAPACITY_UNITS: Record<string, string> = { beds: 'lits', bedrooms: 'ch.', pitches: 'empl.', floor_area_m2: 'm²' };
 const RES_CAPACITY_UNITS: Record<string, string> = { seats: 'places', standing_places: 'places' };
 
-const STATUS_OPTIONS: Array<{ code: ExplorerStatusFilter; label: string }> = [
-  { code: 'published', label: 'Publié' },
-  { code: 'draft', label: 'Brouillon' },
-];
+// §205 — vocabulaire des statuts : source unique EXPLORER_STATUS_OPTIONS
+// (utils/facets), partagée avec les pastilles actives et la liste blanche URL.
 
 const ACCOMMODATION_AXIS_LABELS = {
   nature: "Nature d'hébergement",
@@ -103,6 +102,10 @@ interface FiltersPanelProps {
   /** Rendre les sections de facettes SPÉCIFIQUES par type (capacité, ITI, EVT…). Défaut true.
    *  Le Dashboard passe false hors mono-bucket (§7 : honnête seulement en 1 bucket). */
   typeSpecificFacets?: boolean;
+  /** §205 — proposer « Archivé » dans le groupe Statut. Défaut true (Exploreur).
+   *  Le Dashboard passe false : buildDashboardStatsParams restreint p_status à
+   *  published/draft (§7), la chip serait un contrôle mort là-bas. */
+  includeArchivedStatus?: boolean;
 }
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
@@ -177,7 +180,7 @@ function filterSustainabilityActions(
   );
 }
 
-export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true }: FiltersPanelProps) {
+export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true }: FiltersPanelProps) {
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
@@ -252,6 +255,11 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const showVis = isBucketSelected(selectedBuckets, 'VIS');
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
   const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
+  // §205 — le Dashboard n'offre pas « Archivé » (ses stats restreignent p_status
+  // à published/draft) ; l'Exploreur offre le vocabulaire complet.
+  const statusOptions = includeArchivedStatus
+    ? EXPLORER_STATUS_OPTIONS
+    : EXPLORER_STATUS_OPTIONS.filter((option) => option.code !== 'archived');
 
   /**
    * « N actifs » = le nombre exact de pastilles de la barre de filtres actifs.
@@ -954,10 +962,13 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         </FilterColumnGroup>
 
+        {/* §205 — groupe réservé aux éditeurs et plus. Le masquage n'est PAS la
+            garde : resolveExplorerStatuses force ['published'] pour un lecteur
+            seul (URL partagée, changement de rôle) et RLS reste le filet. */}
         {canEditObjects ? (
           <FilterColumnGroup label="Statut">
             <div className="flex flex-wrap gap-2">
-              {STATUS_OPTIONS.map((option) => {
+              {statusOptions.map((option) => {
                 const active = effectiveStatuses.includes(option.code);
                 return (
                   <button
@@ -970,9 +981,14 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                         : [...effectiveStatuses, option.code];
                       const sanitized: ExplorerStatusFilter[] =
                         nextEffective.length > 0 ? nextEffective : ['published'];
+                      // §205 — on ne replie vers « défaut » (store vide, URL propre)
+                      // que si la sélection ÉGALE le défaut éditeur published+draft.
+                      // Comparer à « toutes les options » avalerait « Archivé » :
+                      // les 3 chips cochées se replieraient en published+draft.
+                      const editorDefault = resolveExplorerStatuses([], true);
                       const isEditorDefault =
-                        sanitized.length === STATUS_OPTIONS.length &&
-                        STATUS_OPTIONS.every((opt) => sanitized.includes(opt.code));
+                        sanitized.length === editorDefault.length &&
+                        editorDefault.every((code) => sanitized.includes(code));
                       setStatuses(isEditorDefault ? [] : sanitized);
                     }}
                     aria-pressed={active}

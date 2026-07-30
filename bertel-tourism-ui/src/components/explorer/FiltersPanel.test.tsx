@@ -739,3 +739,62 @@ describe('§204 — groupe Remplissage', () => {
     expect(screen.queryByRole('option', { name: 'Nom' })).not.toBeInTheDocument();
   });
 });
+
+describe('§205 — groupe Statut (éditeurs et plus, avec « Archivé »)', () => {
+  const initial = useSessionStore.getState().canEditObjects;
+  beforeEach(resetStore);
+  afterEach(() => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: initial });
+    });
+  });
+
+  it('un lecteur seul ne voit pas le groupe Statut', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: false });
+    });
+    render(<FiltersPanel />);
+    expect(screen.queryByText('Statut')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archivé' })).not.toBeInTheDocument();
+  });
+
+  it('un éditeur voit les trois statuts, dont « Archivé »', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    expect(screen.getByText('Statut')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Publié' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Brouillon' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Archivé' })).toBeInTheDocument();
+  });
+
+  it('cocher « Archivé » ajoute le statut à la sélection explicite (published+draft+archived)', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    expect(useExplorerStore.getState().common.statuses).toEqual(['published', 'draft', 'archived']);
+  });
+
+  it('décocher « Archivé » replie vers le défaut éditeur (store vide → URL propre)', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel />);
+    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Archivé' }));
+    expect(useExplorerStore.getState().common.statuses).toEqual([]);
+  });
+
+  it('includeArchivedStatus=false (Dashboard) : Publié/Brouillon restent, pas d’« Archivé »', () => {
+    act(() => {
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<FiltersPanel includeArchivedStatus={false} />);
+    expect(screen.getByRole('button', { name: 'Publié' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Brouillon' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Archivé' })).not.toBeInTheDocument();
+  });
+});

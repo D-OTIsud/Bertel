@@ -20,7 +20,7 @@ export interface ExplorerTableSort {
 /** Ordre canonique des colonnes (ids résolus par le registre du composant). */
 export const DEFAULT_TABLE_COLUMNS = ['name', 'type', 'city', 'status', 'updated', 'rating', 'labels'] as const;
 /** Colonnes proposées mais masquées par défaut. */
-export const OPTIONAL_TABLE_COLUMNS = ['price', 'open'] as const;
+export const OPTIONAL_TABLE_COLUMNS = ['price', 'open', 'remplissage'] as const;
 export const ALL_TABLE_COLUMN_IDS = [...DEFAULT_TABLE_COLUMNS, ...OPTIONAL_TABLE_COLUMNS] as string[];
 
 interface ExplorerViewState {

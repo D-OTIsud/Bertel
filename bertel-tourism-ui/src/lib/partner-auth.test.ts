@@ -33,6 +33,8 @@ describe('partner-auth', () => {
   test('public RPC allowlist contains only public reads — never writers/admin/secrets', () => {
     expect(PUBLIC_RPC_ALLOWLIST.has('list_object_resources_page_text')).toBe(true);
     expect(PUBLIC_RPC_ALLOWLIST.has('get_object_resource')).toBe(true);
+    expect(PUBLIC_RPC_ALLOWLIST.has('get_object_tourinsoft')).toBe(true);
+    expect(PUBLIC_RPC_ALLOWLIST.has('get_objects_tourinsoft_batch')).toBe(true);
     expect(PUBLIC_RPC_ALLOWLIST.has('list_reference_bundle')).toBe(true);
     expect(PUBLIC_RPC_ALLOWLIST.has('list_object_markers')).toBe(true);
     // must NEVER be reachable by a partner

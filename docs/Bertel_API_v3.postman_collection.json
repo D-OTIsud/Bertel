@@ -1375,7 +1375,73 @@
               "path": ["api", "public", "objects", "{{object_id}}"],
               "query": [{"key": "format", "value": "tourinsoft"}]
             },
-            "description": "Ajoute un bloc ADDITIF `data.tourinsoft` = enregistrement de syndication SIT (`SyndObjectID`, `type` bordereau, `NomOffre`, `Descriptif`, `Adresse1`/`CodePostal`/`Commune`, `Latitude`/`Longitude`, `Telephone`/`Mel`/`SiteWeb`, `Photo`). Les codes Bertel sont de lignée Tourinsoft. Socle cœur — valider contre le SIT régional avant synchro de prod."
+            "description": "Ajoute le bloc historique ADDITIF `data.tourinsoft` au contrat `legacy-v1` (`SyndObjectID`, `type`, `NomOffre` et les 10 autres champs historiques). L'absence de `variant` conserve strictement ce comportement."
+          }
+        },
+        {
+          "name": "Fiche + Tourinsoft CRT Réunion (I4e · hébergement v1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('contrat Tourinsoft Réunion', function () { pm.expect(d.data).to.have.property('tourinsoft'); pm.expect(d.data.tourinsoft).to.have.property('SyndicObjectID'); pm.expect(d.data.tourinsoft).to.have.property('ObjectTypeFix'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{object_id}}?format=tourinsoft&variant=reunion-hebergement-v1",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{object_id}}"],
+              "query": [
+                {"key": "format", "value": "tourinsoft"},
+                {"key": "variant", "value": "reunion-hebergement-v1"}
+              ]
+            },
+            "description": "Projection Tourinsoft CRT Réunion public-only. Utiliser un `object_id` publié de type HOT, HLO ou CAMP. Le contrat d'import/écriture doit encore être validé par le CRT."
+          }
+        },
+        {
+          "name": "Liste + Tourinsoft CRT Réunion (I4e · hébergement v1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('page hébergement Tourinsoft', function () { pm.expect(d.data).to.be.an('array'); d.data.filter(x => x.tourinsoft).forEach(x => { pm.expect(x.tourinsoft).to.have.property('SyndicObjectID'); }); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?types=HOT,HLO,CAMP&page_size=200&format=tourinsoft&variant=reunion-hebergement-v1",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "types", "value": "HOT,HLO,CAMP"},
+                {"key": "page_size", "value": "200"},
+                {"key": "format", "value": "tourinsoft"},
+                {"key": "variant", "value": "reunion-hebergement-v1"}
+              ]
+            },
+            "description": "Batch Tourinsoft CRT Réunion sur les trois bordereaux couverts. Paginer avec `meta.next_cursor`; une fiche hors contrat n'a pas de bloc `tourinsoft`."
           }
         },
         {

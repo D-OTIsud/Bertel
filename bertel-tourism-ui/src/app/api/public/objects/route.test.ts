@@ -208,6 +208,40 @@ describe('GET /api/public/objects', () => {
     expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
   });
 
+  it('?format=tourinsoft&variant=reunion-hebergement-v1 — uses one dedicated set-based batch RPC', async () => {
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_objects_tourinsoft_batch'
+        ? Promise.resolve({ ok: true, status: 200, body: { X: { SyndicObjectID: 'X' } } })
+        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
+    );
+    const res = await GET(req('?format=tourinsoft&variant=reunion-hebergement-v1'));
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_objects_tourinsoft_batch', {
+      p_object_ids: ['X'],
+      p_variant: 'reunion-hebergement-v1',
+    });
+    expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
+    expect((await res.json()).data[0].tourinsoft).toEqual({ SyndicObjectID: 'X' });
+  });
+
+  it('?format=tourinsoft&variant=legacy-v1 — preserves the historical batch RPC path', async () => {
+    await GET(req('?format=tourinsoft&variant=legacy-v1'));
+    expect(rpcMock).toHaveBeenCalledWith('get_objects_interop_batch', {
+      p_object_ids: ['X'],
+      p_profile: 'tourinsoft',
+    });
+    expect(rpcMock).not.toHaveBeenCalledWith('get_objects_tourinsoft_batch', expect.anything());
+  });
+
+  it('rejects unknown Tourinsoft variants and variants attached to another format before the list RPC', async () => {
+    for (const query of ['?format=tourinsoft&variant=v99', '?format=jsonld&variant=legacy-v1']) {
+      const res = await GET(req(query));
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe('bad_request');
+    }
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
   it('view=full — passe p_view:full et page_size par défaut 25', async () => {
     await GET(req('?view=full'));
     const [rpcName, params] = rpcMock.mock.calls[0];

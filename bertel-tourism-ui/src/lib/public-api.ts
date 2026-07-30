@@ -27,6 +27,8 @@ export const PUBLIC_RPC_ALLOWLIST = new Set<string>([
   'get_object_jsonld',          // I4 schema.org JSON-LD block (service-role only in DB)
   'get_object_interop',         // I4b datatourisme/apidae/tourinsoft block (service-role only in DB)
   'get_objects_interop_batch',  // I4c per-page pivot batch for the list route (service-role only in DB)
+  'get_object_tourinsoft',      // I4e versioned Tourinsoft detail (legacy-v1 / reunion-hebergement-v1)
+  'get_objects_tourinsoft_batch', // I4e set-based Tourinsoft page batch
 ]);
 
 export interface PublicApiResult {

@@ -88,15 +88,17 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 ### 13. API Publique Partenaire (`/api/public/*`)
 > Surface **tierce** dédiée : un prestataire externe passe par cette passerelle (jamais PostgREST direct). Auth par **clé partenaire** `Authorization: Bearer bk_live_…` (variable `partner_key`), base = `public_base_url`. Enveloppe `{ meta, data }`, `meta.contract_version` + header `X-Bertel-Api-Version`, fiches **publiées** uniquement. Lancer « Lister les fiches publiées » en premier (remplit `object_id`).
 
-- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang` ; **`format=<profil>`** ajoute le document pivot par fiche sous `data[i].<profil>` — synchronisation par lots, même pagination)
+- **Lister les fiches publiées** : `GET /api/public/objects` (curseur, `page_size`, `types`, `search`, `lang` ; **`format=<profil>`** ajoute le document pivot par fiche sous `data[i].<profil>` — synchronisation par lots, même pagination ; `variant` sélectionne le contrat Tourinsoft)
 - **Récupérer une fiche publiée** : `GET /api/public/objects/{id}`
 - **Fiche + JSON-LD schema.org (I4)** : `GET /api/public/objects/{id}?format=jsonld` → bloc additif `data.jsonld` (document schema.org, `@type` selon le type d'objet ; prêt pour SEO / interop)
 - **Fiche + DATAtourisme (I4b)** : `?format=datatourisme` → bloc additif `data.datatourisme` (JSON-LD ontologie nationale)
 - **Fiche + Apidae (I4b)** : `?format=apidae` → bloc additif `data.apidae` (JSON régional Apidae)
-- **Fiche + Tourinsoft (I4b)** : `?format=tourinsoft` → bloc additif `data.tourinsoft` (syndication SIT)
+- **Fiche + Tourinsoft historique (I4b)** : `?format=tourinsoft` → bloc additif `data.tourinsoft` au contrat `legacy-v1` inchangé
+- **Fiche + Tourinsoft CRT Réunion hébergement (I4e)** : `?format=tourinsoft&variant=reunion-hebergement-v1` → projection enrichie, public-only, pour HOT/HLO/CAMP
+- **Liste + Tourinsoft CRT Réunion hébergement (I4e)** : `?types=HOT,HLO,CAMP&format=tourinsoft&variant=reunion-hebergement-v1` → même contrat par fiche et même pagination
 - **Fiche — toutes les langues (C-5)** : `GET /api/public/objects/{id}?lang=all` → bloc additif `data.i18n`
 
-> Les formats pivot (`jsonld`/`datatourisme`/`apidae`/`tourinsoft`) émettent un **socle cœur** (type/classe, nom, description, adresse, géo, contacts publics, image) dans la structure et le vocabulaire de chaque standard. Valider la conformité field-à-field contre l'importeur cible avant une synchro de production.
+> `jsonld`, `datatourisme`, `apidae` et Tourinsoft `legacy-v1` restent des projections cœur. La variante `reunion-hebergement-v1` couvre les groupes Tourinsoft approuvés du flux CRT fourni, mais ce flux de lecture ne prouve pas le contrat d'import : une validation CRT reste obligatoire avant toute écriture de production.
 - **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
 - **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
 

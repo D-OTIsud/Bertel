@@ -1,0 +1,15 @@
+{
+  "SyndObjectID": "HOTRUN0000000001",
+  "type": "HOT",
+  "NomOffre": "Hôtel exemple",
+  "Descriptif": "Description publique",
+  "Adresse1": "1 rue des Palmiers",
+  "CodePostal": "97410",
+  "Commune": "Saint-Pierre",
+  "Latitude": -21.34,
+  "Longitude": 55.48,
+  "Telephone": "+262262000000",
+  "Mel": "contact@example.re",
+  "SiteWeb": "https://example.re",
+  "Photo": "https://cdn.example.re/photo.jpg"
+}

@@ -317,6 +317,12 @@ ROLLBACK;
 \echo '== I4d-test leaf-aware interop assertions =='
 \ir tests/test_interop_crosswalk_leafaware.sql
 
+\echo '== I4e    migration_tourinsoft_reunion_export_v1.sql  (opt-in reunion-hebergement-v1: value crosswalks + set-based public projection + unit/batch serializers; legacy-v1 unchanged) =='
+\ir migration_tourinsoft_reunion_export_v1.sql
+
+\echo '== I4e-test Tourinsoft Reunion export assertions =='
+\ir tests/test_tourinsoft_reunion_export_v1.sql
+
 \echo '== pets1  migration_pet_policy_single_source.sql  (§197 « Animaux acceptés » source unique : retire l equipement doublon ref_amenity.pet_friendly, backfille object_pet_policy depuis l amenity + la revue manuelle des descriptions; auto-assertive et fresh-safe) =='
 \ir migration_pet_policy_single_source.sql
 

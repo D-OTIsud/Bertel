@@ -107,6 +107,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `search` | string | — | Recherche sur le **nom** de la fiche uniquement |
 | `lang` | code | `fr` | Langue de résolution des textes |
 | `format` | profil | — | Ajoute un document pivot par fiche (voir section 5) |
+| `variant` | `legacy-v1` \| `reunion-hebergement-v1` | `legacy-v1` | Uniquement avec `format=tourinsoft` ; active le contrat Tourinsoft souhaité |
 
 **Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`, `view`, `track`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
 
@@ -161,6 +162,7 @@ L'identifiant a la forme `RESRUN00000000XK` (3 lettres de type + territoire + 10
 | `lang` | Langue de résolution (`fr` par défaut) |
 | `lang=all` | Résout en français **et** ajoute un bloc `data.i18n` = `{champ: {langue: texte}}` avec toutes les traductions disponibles, en un seul appel. Ce bloc couvre **uniquement** les 7 champs de la famille description (`description`, `description_chapo`, `description_mobile`, `description_edition`, `description_adapted`, `description_offre_hors_zone`, `sanitary_measures`) — **pas** le nom (`name`) ni les proses de facettes (menus, chambres, étapes d'itinéraire) |
 | `format` | Ajoute un document pivot (section 5) |
+| `variant` | Uniquement avec `format=tourinsoft` : `legacy-v1` (défaut) ou `reunion-hebergement-v1` |
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
@@ -290,7 +292,8 @@ Chaque fiche peut être servie accompagnée d'un document conforme à un standar
 | `jsonld` | `jsonld` | schema.org (JSON-LD) | SEO — à coller dans un `<script type="application/ld+json">` |
 | `datatourisme` | `datatourisme` | Ontologie nationale DATAtourisme | Alimentation open data / plateforme nationale |
 | `apidae` | `apidae` | JSON objet touristique Apidae | Échange avec la plateforme Apidae |
-| `tourinsoft` | `tourinsoft` | Syndication SIT Tourinsoft | Échange SIT (les codes de type Bertel sont des bordereaux Tourinsoft) |
+| `tourinsoft` | `tourinsoft` | Tourinsoft `legacy-v1` (défaut) | Compatibilité avec le bloc historique de 13 champs |
+| `tourinsoft&variant=reunion-hebergement-v1` | `tourinsoft` | Tourinsoft CRT Réunion — hébergement | Projection enrichie HOT/HLO/CAMP conforme au schéma observé dans le flux CRT |
 
 Le bloc est **additif** : les clés de base de la réponse ne changent jamais ; sans `format`, la réponse est identique à avant. Une fiche non couverte par un profil n'a simplement **pas** la clé — l'élément reste complet par ailleurs. En cas d'échec de construction, la réponse est servie sans le bloc (jamais d'erreur bloquante).
 
@@ -311,13 +314,34 @@ Exemple (détail, abrégé) :
 }
 ```
 
-### Périmètre des pivots — à lire avant une synchro de production
+### Variante Tourinsoft CRT Réunion — hébergement
 
-Les documents pivot couvrent les **champs cœur** : type/classe correcte dans le vocabulaire cible, nom, description (texte propre), adresse, coordonnées géographiques, téléphone/email/site publics, image de couverture, réseaux sociaux publics.
+La variante `reunion-hebergement-v1` ne remplace pas silencieusement le contrat historique. Elle est activée explicitement :
 
-Ne sont **pas** encore portés dans les pivots (chaque standard compte des centaines de champs) : horaires d'ouverture, tarifs, capacités, équipements, classements, **dates d'occurrence des événements** (FMA), tracés GPX des itinéraires, ainsi que le multilingue (pivots en français ; les traductions restent disponibles sur la ressource de base via `?lang=all`).
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects/HOTRUN0000000001?format=tourinsoft&variant=reunion-hebergement-v1"
 
-**Avant tout branchement réel**, validez la conformité champ à champ contre l'importeur cible (validateur DATAtourisme, plateforme Apidae, SIT Tourinsoft régional). Si un champ vous manque dans un pivot, il est en général déjà présent dans la ressource de base `data` — et le profil peut être enrichi : parlez-en au contact ci-dessous.
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects?types=HOT,HLO,CAMP&page_size=200&format=tourinsoft&variant=reunion-hebergement-v1"
+```
+
+Elle couvre uniquement les fiches publiées `HOT`, `HLO` et `CAMP`. Les groupes actuellement approuvés sont : identité et bordereau CRT, dates de publication/mise à jour, description commerciale, adresse et géolocalisation, communications publiques, réservation et réseaux sociaux publics, galerie de photos publiables, langues, paiements, animaux, capacités, arrivée/départ, tarifs et périodes d'ouverture. Les collections sont ordonnées de façon déterministe ; une fiche hors périmètre ne reçoit pas de bloc `tourinsoft`.
+
+Les données privées, CRM, juridiques non approuvées, médias privés/non publiés/expirés et champs encore en attente de décision CRT ne sont jamais émis. L'inventaire contractuel classe les **314 propriétés** observées dans le flux fourni : 55 approuvées, 96 en attente de validation CRT et 163 auxiliaires ou exclues.
+
+Le flux fourni par le CRT est un flux de **lecture/syndication**. Il permet de prouver la forme observée, mais pas à lui seul les règles d'import ou d'écriture. Avant toute alimentation Tourinsoft, le CRT doit confirmer l'endpoint d'écriture, l'authentification, les champs obligatoires, les thésaurus, les règles de suppression/dépublication et la priorité en cas de conflit.
+
+### Cycle de synchronisation recommandé
+
+1. Parcourir `GET /objects?view=full&format=tourinsoft&variant=reunion-hebergement-v1` avec `meta.next_cursor`, puis faire un upsert par `id`.
+2. Comparer `updated_at` lors des cycles suivants et réconcilier périodiquement la liste complète des ids publiés. Une fiche dépubliée disparaît du corpus publié ; elle n'est pas encore signalée comme suppression définitive.
+3. Consommer `GET /objects/deletions?since=…` pour les suppressions définitives et conserver le curseur renvoyé.
+4. En cas de `429` ou `5xx`, reprendre avec backoff sans reconstruire le curseur.
+
+### Périmètre des autres pivots
+
+Les profils `jsonld`, `datatourisme`, `apidae` et Tourinsoft `legacy-v1` restent des projections cœur et ne changent pas avec cette livraison. Avant tout branchement réel, validez leur conformité champ à champ contre l'importeur cible.
 
 ---
 

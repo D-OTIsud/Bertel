@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { OBJECT_TYPE_CODES } from '@/lib/object-types';
+import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
 
@@ -63,6 +64,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const lang = (url.searchParams.get('lang') ?? 'fr').trim() || 'fr';
   const search = url.searchParams.get('search');
   const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
+  const tourinsoftVariant = resolveTourinsoftVariant(format, url.searchParams.get('variant'));
+  if (!tourinsoftVariant.ok) {
+    return NextResponse.json({ error: 'bad_request', detail: tourinsoftVariant.detail }, { status: 400, headers });
+  }
   // Blob GPX/KML des itinéraires — honoré uniquement en mode full (les cartes ne portent pas
   // itinerary_details). Le tracé GeoJSON est de toute façon natif (track_geojson).
   const trackParam = (url.searchParams.get('track') ?? '').trim().toLowerCase();
@@ -103,7 +108,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // One batch call for the whole page; merge each pivot document under item.<profil> (additive,
     // mirror of the detail route). Best-effort — a failure leaves the plain page untouched.
     const ids = items.map((it) => it?.id).filter((v): v is string => typeof v === 'string');
-    const batch = await callPublicRpc('get_objects_interop_batch', { p_object_ids: ids, p_profile: format });
+    const batch = format === 'tourinsoft' && tourinsoftVariant.variant === 'reunion-hebergement-v1'
+      ? await callPublicRpc('get_objects_tourinsoft_batch', {
+          p_object_ids: ids,
+          p_variant: tourinsoftVariant.variant,
+        })
+      : await callPublicRpc('get_objects_interop_batch', { p_object_ids: ids, p_profile: format });
     if (batch.ok && batch.body && typeof batch.body === 'object') {
       const docs = batch.body as Record<string, unknown>;
       items = items.map((it) =>

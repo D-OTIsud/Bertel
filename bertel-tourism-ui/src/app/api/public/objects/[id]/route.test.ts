@@ -243,6 +243,53 @@ describe('GET /api/public/objects/[id]', () => {
     expect(json.data.tourinsoft).toBeUndefined();
   });
 
+  it('?format=tourinsoft&variant=reunion-hebergement-v1 — uses the dedicated regional RPC', async () => {
+    mockStatus({ status: 'published' });
+    const regional = { SyndicObjectID: VALID_ID, ObjectTypeName: 'Hôtellerie' };
+    rpcMock.mockImplementation((name: string) =>
+      name === 'get_object_tourinsoft'
+        ? Promise.resolve({ ok: true, status: 200, body: regional })
+        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+    );
+    const r = new NextRequest(
+      `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=reunion-hebergement-v1`,
+      { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
+    );
+    const res = await GET(r, ctx());
+    expect(res.status).toBe(200);
+    expect(rpcMock).toHaveBeenCalledWith('get_object_tourinsoft', {
+      p_object_id: VALID_ID,
+      p_variant: 'reunion-hebergement-v1',
+    });
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
+    expect((await res.json()).data.tourinsoft).toEqual(regional);
+  });
+
+  it('?format=tourinsoft&variant=legacy-v1 — preserves the historical interop RPC path', async () => {
+    mockStatus({ status: 'published' });
+    rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID } });
+    const r = new NextRequest(
+      `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=legacy-v1`,
+      { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
+    );
+    await GET(r, ctx());
+    expect(rpcMock).toHaveBeenCalledWith('get_object_interop', { p_object_id: VALID_ID, p_profile: 'tourinsoft' });
+    expect(rpcMock).not.toHaveBeenCalledWith('get_object_tourinsoft', expect.anything());
+  });
+
+  it('rejects an unknown Tourinsoft variant and a variant attached to another format', async () => {
+    for (const query of ['format=tourinsoft&variant=v99', 'format=apidae&variant=legacy-v1']) {
+      const r = new NextRequest(`http://localhost/api/public/objects/${VALID_ID}?${query}`, {
+        headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) },
+      });
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe('bad_request');
+    }
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(serverMock).not.toHaveBeenCalled();
+  });
+
   it('?format=<unknown> — ignored: no interop/jsonld call, no extra key', async () => {
     mockStatus({ status: 'published' });
     rpcMock.mockResolvedValue({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } });

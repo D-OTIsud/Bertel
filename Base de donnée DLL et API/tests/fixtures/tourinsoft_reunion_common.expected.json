@@ -1,0 +1,58 @@
+{
+  "SyndicObjectID": "HOTRUN0000000001",
+  "SyndicObjectName": "Hôtel exemple",
+  "Nometablissement": "Hôtel exemple",
+  "ObjectTypeName": "Hôtellerie",
+  "ObjectTypeFix": "25EB2EC5-507B-40A9-A799-2716A0536792",
+  "Published": "2026-01-01T00:00:00+00:00",
+  "Updated": "2026-01-02T00:00:00+00:00",
+  "Adresse1": "1 rue des Palmiers",
+  "Adresse2": "Résidence Corail",
+  "Adresse3": "Bâtiment A",
+  "CodePostal": "97410",
+  "Commune": "Saint-Pierre",
+  "CodeINSEE": "97416",
+  "GmapLatitude": "-21.34",
+  "GmapLongitude": "55.48",
+  "Lieudit": { "ThesLibelle": "Front de mer" },
+  "Access": [{ "Descriptifduplandacces": "Suivre la route" }],
+  "Descriptifss": [{ "Accroche": "Accroche publique", "Descriptioncommerciale": "Description publique" }],
+  "Moyencommunications": [{
+    "Coordonnees": "+262262000000",
+    "Moyendecommunication": { "ThesCode": "C1", "ThesLibelle": "Tél. fixe" }
+  }],
+  "Reseauxsociauxs": [{
+    "Typedeplateforme": { "ThesCode": "FACE", "ThesLibelle": "Facebook" },
+    "URL": "https://facebook.com/example"
+  }],
+  "Reservations": [{ "Lien": "https://example.re/reserver" }],
+  "Photos": [{
+    "Datedefindutilisation": "2027-12-31T00:00:00+00:00",
+    "Photo": {
+      "Credit": "CRT",
+      "MediaID": "00000000-0000-0000-0000-000000000001",
+      "Titre": "Façade",
+      "Url": "https://cdn.example.re/photo.jpg"
+    }
+  }],
+  "LanguesParleess": [{ "ThesCode": "FR", "ThesLibelle": "Français" }],
+  "ModesPaiements": [{ "ThesCode": "CB", "ThesLibelle": "Cartes bancaires" }],
+  "Animauxacceptess": [{ "Animauxacceptes": true, "Complementdinformations": "Sur demande" }],
+  "Capacites": [{
+    "Capacitetotalenombredepersonnes": 12,
+    "Nombredelits": 8,
+    "Nombretotaldechambres": 4,
+    "Salledereunion": true,
+    "Surfacedelhabitation": 120
+  }],
+  "Capacitecampings": [{ "Capacite": 80, "Nombredeproduits": 30, "Superficieduterrain": 2000 }],
+  "Horairearriveedeparts": [{ "Heuredarrivee": "14:00:00", "Heuredarriveemax": "20:00:00", "Heurededepart": "10:00:00" }],
+  "Tarifs": [{
+    "complementtarifs": "Petit déjeuner inclus",
+    "Datedebutaffichage": "2026-01-01",
+    "Datefinvalidite": "2026-12-31",
+    "MaximumEuro": 180,
+    "MinimumEuro": 120
+  }],
+  "PeriodeOuvertures": [{ "Datedebut": "2026-01-01", "Datefin": "2026-12-31" }]
+}

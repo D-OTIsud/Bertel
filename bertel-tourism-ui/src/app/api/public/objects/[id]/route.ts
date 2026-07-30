@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
 
@@ -57,6 +58,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // `all` is not a language: resolve the base keys in FR and add the multi-language block below.
   const baseLang = wantAllLangs ? 'fr' : lang;
   const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
+  const tourinsoftVariant = resolveTourinsoftVariant(format, url.searchParams.get('variant'));
+  if (!tourinsoftVariant.ok) {
+    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 400);
+    return NextResponse.json({ error: 'bad_request', detail: tourinsoftVariant.detail }, { status: 400, headers });
+  }
 
   // Published gate — the security boundary for the single-object read (service-role bypasses RLS).
   const server = getServerSupabaseClient();
@@ -98,6 +104,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
       const jsonld = await callPublicRpc('get_object_jsonld', { p_object_id: id });
       if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
+    } else if (format === 'tourinsoft' && tourinsoftVariant.variant === 'reunion-hebergement-v1') {
+      // Regional, opt-in contract. The default/legacy path below remains byte-identical to I4b.
+      const tourinsoft = await callPublicRpc('get_object_tourinsoft', {
+        p_object_id: id,
+        p_variant: tourinsoftVariant.variant,
+      });
+      if (tourinsoft.ok && tourinsoft.body != null) {
+        (data as Record<string, unknown>).tourinsoft = tourinsoft.body;
+      }
     } else if (INTEROP_FORMATS.has(format)) {
       // Additive sector-interop block (I4b): datatourisme / apidae / tourinsoft. Merged under a key
       // named after the profile (data.datatourisme, data.apidae, data.tourinsoft). Best-effort.

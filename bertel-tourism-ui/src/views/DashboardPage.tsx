@@ -68,6 +68,9 @@ export default function DashboardPage() {
             references={references.data}
             useStore={useDashboardExplorerStore}
             typeSpecificFacets={selectedBuckets.length === 1}
+            // §205 — pas d'« Archivé » ici : buildDashboardStatsParams restreint
+            // p_status à published/draft, la chip serait un contrôle mort.
+            includeArchivedStatus={false}
           />
         </aside>
 

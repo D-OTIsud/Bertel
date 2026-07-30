@@ -53,7 +53,10 @@ export function dashboardStatsParams(filters: ExplorerFilters, period: Dashboard
     ? buildBucketRpcFilters(filters, buckets[0] as ExplorerBucketKey)
     : transverseFilters(filters);
 
-  // p_status : restreint à published/draft (défaut published).
+  // p_status : restreint à published/draft (défaut published). §205 : « archived »
+  // existe dans le vocabulaire Explorer mais reste hors périmètre des KPI — le
+  // panneau du Dashboard masque la chip (includeArchivedStatus={false}) et ce
+  // filtre écarte toute valeur résiduelle (URL, état partagé).
   const statuses = (normalized.common.statuses ?? []).filter(
     (s): s is ExplorerStatusFilter => s === 'published' || s === 'draft',
   );

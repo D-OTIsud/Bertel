@@ -8,8 +8,10 @@
  *  - any CSV cell starting with a formula leader (`= + - @`) MUST be neutralized,
  *    or it executes when the file is opened in Excel / LibreOffice / Sheets.
  *
- * One escaper per concern, reused by all sinks (selection print/CSV today; the
- * §05 drawer notes export should adopt `csvCell` too — SEC-8).
+ * One escaper per concern, reused by all sinks. SEC-8 is soldée (§208): the two
+ * divergent local copies (`csvEscape` in object-io-serialize, `escapeCsvValue` in
+ * the §05 drawer notes export) now go through `csvCell`. Any NEW sink adopts one
+ * of these helpers — never a local copy, which is how the guard was lost twice.
  */
 
 /** HTML-escape a value for safe interpolation into an HTML string. */

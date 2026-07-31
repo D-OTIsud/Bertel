@@ -88,6 +88,26 @@ le reste du document, **cette section fait foi**.
    fonctions deep comme site à modifier (la R1 avait laissé la contradiction dans
    l'en-tête de T13).
 
+**Révision R2.1 (3e passe de revue, même jour) :**
+
+10. **Le préflight OUVRE, il ne fait pas que restreindre.** Les capacités
+    `actor_identity` / `actor_contacts` ne sont plus dérivées de la session du
+    tout : `clearanceLevels` ne les émet pas, et `availableColumns(session, caps)`
+    compose deux autorités disjointes — session pour public/org/editor/superuser,
+    **préflight serveur seul** pour les deux capacités acteur. Motif : le droit
+    sur les acteurs est PAR FICHE ; un lecteur sans ORG a légitimement accès à
+    l'identité des acteurs d'une fiche à lien `public`. Si la session filtrait en
+    premier, le préflight ne pourrait plus que restreindre une liste déjà amputée
+    et ce lecteur ne verrait jamais la colonne. `caps` est **fermé par défaut**
+    dans toutes les signatures (fail-closed pour l'appelant qui l'oublie).
+11. **`search_path` sûr sur les fonctions `SECURITY DEFINER`** — voir §7 point
+    2bis. Périmètre : les 3 fonctions neuves (créées durcies + relations
+    qualifiées) **et** les 2 feuilles d'autorisation dont elles dépendent
+    (`current_user_crm_object_ids`, `current_user_extended_object_ids`), durcies
+    par `ALTER FUNCTION` — corps intouchés, sources corrigées en parallèle pour
+    qu'une base fraîche naisse durcie. Vérification : sabotage par table
+    temporaire en CI (assertion J), lui-même vérifié rouge.
+
 ---
 
 ## 1. Le problème
@@ -601,6 +621,7 @@ ne prouve pas que l'export la remplit.
 
 1. CSP de production sans `unsafe-eval` — une librairie à `eval` casse **uniquement** en production.
 2. `REVOKE ALL … FROM PUBLIC` obligatoire sur toute fonction `DEFINER` neuve ; un `GRANT` ciblé ne le retire pas.
+2bis. **`search_path` sûr sur toute fonction `DEFINER` (R2.1)** : `pg_temp` explicitement **en dernier** + relations schéma-qualifiées. PostgreSQL cherche le schéma temporaire **en premier** pour les relations quand `pg_temp` n'est pas listé — un `CREATE TEMP TABLE app_user_profile` par n'importe quel `authenticated` masque alors la table qui décide du statut superuser. Dette générale du dépôt : ~105 fonctions `DEFINER` sans `pg_temp` (2 occurrences dans tout le dépôt) — passe dédiée à prévoir, cette passe durcit la chaîne qu'elle utilise.
 3. Ne jamais `REVOKE FROM PUBLIC` sans re-`GRANT` explicite : sur ces RPC, `anon` et `service_role` n'ont `EXECUTE` que par `PUBLIC`.
 4. Une garde d'accès aux données personnelles ne s'appuie jamais sur `auth.role()` — la clé de service n'est pas une personne.
 5. §49 — un drapeau de champ **compose**, il ne se substitue jamais.

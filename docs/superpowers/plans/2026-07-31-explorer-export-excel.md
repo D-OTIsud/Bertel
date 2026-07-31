@@ -8,7 +8,25 @@
 
 **Tech stack :** Next.js 15 (webpack build), React, TypeScript, Zustand (persist), Jest + RTL, `write-excel-file@4.1.1`, PostgreSQL/Supabase (migration 16t).
 
-**Spec :** [docs/superpowers/specs/2026-07-31-explorer-export-excel-design.md](../specs/2026-07-31-explorer-export-excel-design.md) — la lire AVANT de commencer.
+**Spec :** [docs/superpowers/specs/2026-07-31-explorer-export-excel-design.md](../specs/2026-07-31-explorer-export-excel-design.md) — la lire AVANT de commencer, **section §0 (Révision R1) comprise : elle prévaut**.
+
+## Révision R1 — ce qui a changé dans CE plan (2026-07-31)
+
+Une revue externe a corrigé la conception ; le plan intègre les corrections en place.
+Résumé pour l'exécutant :
+1. Capacités `actor_identity` / `actor_contacts` remplacent le faux « public » des
+   colonnes nom/rôle/principal (T4, T7, T10).
+2. **`get_object_with_deep_data` / `get_objects_with_deep_data` : INTERDIT d'y toucher**
+   — l'ex-Step 5 de T13 est supprimé ; un test CI prouve qu'elles sont intactes (T14).
+3. Fusion multi-lots par `object_id` + `export_run_id` partagé + résultat de lot
+   `{logId, authorized, denied, batchIndex/Count}` (T3, T8, T12, T16).
+4. `cellType 'text' | 'number'` — latitude/longitude numériques (T4, T5, T8).
+5. `actor_primary` multi-valué (T7).
+6. Performance : projection `fields` par union des colonnes cochées, concurrence
+   bornée à 2 lots, aplatissement immédiat + libération du JSON (T3, T7, T8) ;
+   cibles d'acceptation mesurées (T17).
+7. Matrice des colonnes **validée par le PO avant** le code du registre (T4 Step 0).
+8. Journal multi-ORG : `org_object_ids[]` + `org_attributions` (T12, T14).
 
 ## Global Constraints
 
@@ -17,7 +35,9 @@
 - **Commits :** conventionnels, français, **SANS trailer Co-Authored-By** (préférence maison). Stage par pathspec + commit dans la même commande. Un commit par tâche verte. Ne jamais `git push` (le PO pousse).
 - **CSP de production sans `unsafe-eval`** (`next.config.ts:66`) : ne jamais introduire une lib qui appelle `eval`/`new Function` au runtime. `write-excel-file@4.1.1` est audité sain — ne pas lui substituer une autre lib.
 - **Séparateurs :** `;` entre cellules CSV (existant), ` | ` entre valeurs DANS une cellule (export Excel). Jamais `;` en intra-cellule.
-- **Cellules xlsx :** tout en `type: String` sauf `latitude`/`longitude` (restent du texte aussi en v1 — voir Tâche 8). Un champ absent rend `''`, jamais « Non » (tri-état §133).
+- **Cellules xlsx :** `cellType 'text'` ⇒ `type: String` (identifiants, codes postaux, SIRET…) ; `cellType 'number'` ⇒ `type: Number` (**latitude/longitude uniquement** — R1). Un champ absent rend `''` (texte) ou cellule vide (number), jamais « Non » (tri-état §133).
+- **Deep RPC :** `api.get_object_with_deep_data` et `api.get_objects_with_deep_data` ne sont modifiées par AUCUNE tâche (R1). Toute tentation de les patcher = STOP + signalement.
+- **Performance (R1) :** concurrence de lots bornée à 2 (jamais illimitée) ; aplatissement immédiat de chaque lot puis libération du JSON ; projection `p_options.fields` = union des besoins des colonnes cochées.
 - **Notes d'équipe :** AUCUNE colonne ne les lit. Interdit d'ajouter une colonne dont la valeur lit `text.privateNote`, `text.privateNotes` ou `internal.privateNotes` (décision PO, spec §2).
 - **SQL :** `gen_random_uuid()` jamais `uuid_generate_v4()` ; `REVOKE ALL … FROM PUBLIC` sur toute fonction DEFINER neuve ; `COALESCE(…, FALSE)` sur toute sonde à trois valeurs ; tableau passé EN VALEUR (`= ANY(v_scope)`), jamais `ANY((SELECT …))` ; policies par commande, `auth.*()` wrappé `(select …)`.
 - **Toute décision prise en cours de route** va dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` §208 (Tâche 18).
@@ -233,19 +253,23 @@ le .xlsx : typage texte de la cellule, PAS d'apostrophe (elle serait visible)."
 **Interfaces:**
 - Consumes: `requireRpcClient()` (rpc.ts:111, privée — la nouvelle fonction vit DANS rpc.ts pour y accéder), `normalizeObjectDetailPayload` (déjà importée en tête de rpc.ts), `mockObjectDetails` (déjà importé), `parseObjectDetail` (`src/services/object-detail-parser.ts:1260`).
 - Produces:
-  - `getObjectResourcesBatch(objectIds: string[], langPrefs: string[], options?: { signal?: AbortSignal }): Promise<(ObjectDetail | null)[]>` (export de `src/services/rpc.ts`)
-  - `EXPORT_BATCH_SIZE = 50`, `chunkIds(ids: string[], size?: number): string[][]`, `fetchExportDetails(ids: string[], langPrefs: string[], opts: { onProgress?: (done: number, total: number) => void; signal?: AbortSignal }): Promise<Map<string, ParsedObjectDetail>>` (exports de `src/services/export/export-fetch.ts`)
+  - `getObjectResourcesBatch(objectIds: string[], langPrefs: string[], options?: { signal?: AbortSignal; fields?: string[] }): Promise<(ObjectDetail | null)[]>` (export de `src/services/rpc.ts`)
+  - `EXPORT_BATCH_SIZE = 50`, `EXPORT_BATCH_CONCURRENCY = 2`, `chunkIds(ids: string[], size?: number): string[][]`, `fetchResourceBatches(ids: string[], langPrefs: string[], opts: { fields?: string[]; onBatch: (entries: Array<[string, ParsedObjectDetail]>) => void; onProgress?: (done: number, total: number) => void; signal?: AbortSignal }): Promise<void>` (exports de `src/services/export/export-fetch.ts`)
+- **R1 :** le chargeur STREAME chaque lot à `onBatch` (l'appelant aplatit immédiatement et libère le JSON — jamais 10,5 Mo accumulés) ; concurrence bornée à 2 lots ; fusion par `object_id` (ceinture : si `payload.id` diffère de l'id positionnel attendu, `payload.id` fait foi).
 
 - [ ] **Step 1 : écrire les tests qui échouent**
 
 Créer `src/services/export/export-fetch.test.ts` :
 
 ```ts
-import { chunkIds, EXPORT_BATCH_SIZE, fetchExportDetails } from './export-fetch';
+import { chunkIds, EXPORT_BATCH_SIZE, fetchResourceBatches } from './export-fetch';
 import { getObjectResourcesBatch } from '../rpc';
+import type { ParsedObjectDetail } from '../object-detail-parser';
 
 jest.mock('../rpc', () => ({ getObjectResourcesBatch: jest.fn() }));
 const mockBatch = getObjectResourcesBatch as jest.Mock;
+
+const fakeDetail = (id: string) => ({ id, name: `Fiche ${id}`, raw: { id, name: `Fiche ${id}`, type: 'HOT', status: 'published' } });
 
 describe('chunkIds', () => {
   it('découpe par 50, dédoublonne et écarte les ids vides/null (jamais de NULL dans p_ids)', () => {
@@ -259,27 +283,55 @@ describe('chunkIds', () => {
   });
 });
 
-describe('fetchExportDetails', () => {
+describe('fetchResourceBatches (R1 : streaming + concurrence 2 + fusion par object_id)', () => {
   beforeEach(() => mockBatch.mockReset());
 
-  it('appelle le batch par lot, parse chaque fiche, saute les null, rapporte la progression', async () => {
-    mockBatch.mockImplementation(async (ids: string[]) =>
-      ids.map((id) => (id === 'absent' ? null : { id, name: `Fiche ${id}`, raw: { id, name: `Fiche ${id}`, type: 'HOT', status: 'published' } })),
-    );
+  it('streame chaque lot à onBatch, saute les null, rapporte la progression', async () => {
+    mockBatch.mockImplementation(async (ids: string[]) => ids.map((id) => (id === 'absent' ? null : fakeDetail(id))));
     const seen: Array<[number, number]> = [];
-    const map = await fetchExportDetails(['x', 'absent', 'y'], ['fr'], {
+    const collected = new Map<string, ParsedObjectDetail>();
+    await fetchResourceBatches(['x', 'absent', 'y'], ['fr'], {
+      onBatch: (entries) => entries.forEach(([id, d]) => collected.set(id, d)),
       onProgress: (done, total) => seen.push([done, total]),
     });
     expect(mockBatch).toHaveBeenCalledTimes(1);
-    expect([...map.keys()]).toEqual(['x', 'y']);
-    expect(map.get('x')?.identity.name).toBe('Fiche x');
+    expect([...collected.keys()]).toEqual(['x', 'y']);
+    expect(collected.get('x')?.identity.name).toBe('Fiche x');
     expect(seen.at(-1)).toEqual([3, 3]);
+  });
+
+  it("fusionne par object_id : si le payload porte un id différent de la position, payload.id fait foi", async () => {
+    mockBatch.mockImplementation(async () => [fakeDetail('reel-1')]); // le serveur rend un id ≠ position
+    const collected = new Map<string, ParsedObjectDetail>();
+    await fetchResourceBatches(['demande-1'], ['fr'], { onBatch: (e) => e.forEach(([id, d]) => collected.set(id, d)) });
+    expect([...collected.keys()]).toEqual(['reel-1']);
+  });
+
+  it('concurrence bornée à 2 : jamais plus de 2 lots en vol', async () => {
+    let inFlight = 0; let peak = 0;
+    mockBatch.mockImplementation(async (ids: string[]) => {
+      inFlight += 1; peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 5));
+      inFlight -= 1;
+      return ids.map(fakeDetail);
+    });
+    const many = Array.from({ length: 250 }, (_, i) => `id-${i}`); // 5 lots de 50
+    await fetchResourceBatches(many, ['fr'], { onBatch: () => {} });
+    expect(mockBatch).toHaveBeenCalledTimes(5);
+    expect(peak).toBeLessThanOrEqual(2);
+    expect(peak).toBeGreaterThan(1); // la concurrence existe vraiment
+  });
+
+  it('transmet fields au batch (projection R1) et le signal', async () => {
+    mockBatch.mockResolvedValue([fakeDetail('x')]);
+    await fetchResourceBatches(['x'], ['fr'], { fields: ['contacts', 'address'], onBatch: () => {} });
+    expect(mockBatch).toHaveBeenCalledWith(['x'], ['fr'], expect.objectContaining({ fields: ['contacts', 'address'] }));
   });
 
   it("s'arrête net quand le signal est déjà annulé (aucun appel réseau)", async () => {
     const controller = new AbortController();
     controller.abort();
-    await expect(fetchExportDetails(['x'], ['fr'], { signal: controller.signal })).rejects.toThrow(/annul/i);
+    await expect(fetchResourceBatches(['x'], ['fr'], { onBatch: () => {}, signal: controller.signal })).rejects.toThrow(/annul/i);
     expect(mockBatch).not.toHaveBeenCalled();
   });
 });
@@ -312,7 +364,7 @@ Insérer **après** la fonction `getObjectResource` (après la ligne 488, avant 
 export async function getObjectResourcesBatch(
   objectIds: string[],
   langPrefs: string[],
-  options: { signal?: AbortSignal } = {},
+  options: { signal?: AbortSignal; fields?: string[] } = {},
 ): Promise<(ObjectDetail | null)[]> {
   const client = requireRpcClient();
   if (!client) {
@@ -323,7 +375,15 @@ export async function getObjectResourcesBatch(
     p_ids: objectIds,
     p_lang_prefs: langPrefs,
     p_track_format: 'none',
-    p_options: { render: false, omit_empty: true, include_private: false },
+    p_options: {
+      render: false,
+      omit_empty: true,
+      include_private: false,
+      // R1 — projection : union des blocs requis par les colonnes cochées.
+      // Mécanisme NON étanche (opening_times/relations/menus sortent quand même)
+      // mais il réduit l'essentiel du payload. Absent = fiche complète.
+      ...(options.fields && options.fields.length > 0 ? { fields: options.fields } : {}),
+    },
   });
   if (options.signal) {
     query = query.abortSignal(options.signal);
@@ -353,6 +413,9 @@ import { parseObjectDetail, type ParsedObjectDetail } from '../object-detail-par
 /** Taille de lot mesurée en prod : 50 fiches = 1,37 s (marge ×5,8 sous le timeout authenticated de 8 s). NE PAS monter à 100 (3,3 s, marge ×2,4 — trop mince à 220-310 ms d'AR Réunion↔Supabase). */
 export const EXPORT_BATCH_SIZE = 50;
 
+/** R1 — concurrence BORNÉE : 2 lots en vol maximum. Jamais illimitée (charge SQL sans réduction du travail total). Mesurer avant d'augmenter. */
+export const EXPORT_BATCH_CONCURRENCY = 2;
+
 /** Dédoublonne, écarte les ids vides (jamais de NULL dans p_ids — décalage des positions), découpe. */
 export function chunkIds(ids: string[], size = EXPORT_BATCH_SIZE): string[][] {
   const clean = [...new Set(ids.map((id) => String(id ?? '').trim()).filter(Boolean))];
@@ -364,34 +427,60 @@ export function chunkIds(ids: string[], size = EXPORT_BATCH_SIZE): string[][] {
 }
 
 /**
- * Charge la sélection par lots et rend une Map id → fiche parsée (ordre de sélection
- * préservé par insertion). Les ids non lisibles (null du RPC) sont silencieusement
- * absents de la Map — le classeur listera « N fiches sur M » dans Lisez-moi.
+ * R1 — charge la sélection par lots et STREAME chaque lot à `onBatch` : l'appelant
+ * aplatit immédiatement en lignes d'export et laisse le JSON partir au GC — on
+ * n'accumule jamais le corpus entier en mémoire (10,5 Mo réseau ≫ en objets JS).
+ * Fusion par object_id : le payload porte son id ; s'il diffère de l'id positionnel
+ * attendu, payload.id fait foi (ceinture sur le contrat positionnel du RPC).
+ * Concurrence bornée à EXPORT_BATCH_CONCURRENCY. Un lot en échec ⇒ throw — l'appelant
+ * ne produit AUCUN fichier (spec R1-3).
  */
-export async function fetchExportDetails(
+export async function fetchResourceBatches(
   ids: string[],
   langPrefs: string[],
-  opts: { onProgress?: (done: number, total: number) => void; signal?: AbortSignal } = {},
-): Promise<Map<string, ParsedObjectDetail>> {
+  opts: {
+    fields?: string[];
+    onBatch: (entries: Array<[string, ParsedObjectDetail]>) => void;
+    onProgress?: (done: number, total: number) => void;
+    signal?: AbortSignal;
+  },
+): Promise<void> {
   const chunks = chunkIds(ids);
   const total = chunks.reduce((n, c) => n + c.length, 0);
-  const out = new Map<string, ParsedObjectDetail>();
   let done = 0;
+  let cursor = 0;
 
-  for (const chunk of chunks) {
-    if (opts.signal?.aborted) {
-      throw new Error('Export annulé.');
+  const assertAlive = () => {
+    if (opts.signal?.aborted) throw new Error('Export annulé.');
+  };
+
+  async function worker(): Promise<void> {
+    for (;;) {
+      assertAlive();
+      const index = cursor;
+      if (index >= chunks.length) return;
+      cursor += 1;
+      const chunk = chunks[index];
+      const details = await getObjectResourcesBatch(chunk, langPrefs, {
+        signal: opts.signal,
+        fields: opts.fields,
+      });
+      assertAlive();
+      const entries: Array<[string, ParsedObjectDetail]> = [];
+      details.forEach((detail, i) => {
+        if (!detail) return;
+        const rawId = typeof detail.raw.id === 'string' && detail.raw.id.trim() !== '' ? detail.raw.id : chunk[i];
+        entries.push([rawId, parseObjectDetail(detail.raw)]);
+      });
+      opts.onBatch(entries);
+      done += chunk.length;
+      opts.onProgress?.(done, total);
     }
-    const details = await getObjectResourcesBatch(chunk, langPrefs, { signal: opts.signal });
-    details.forEach((detail, index) => {
-      if (detail) {
-        out.set(chunk[index], parseObjectDetail(detail.raw));
-      }
-    });
-    done += chunk.length;
-    opts.onProgress?.(done, total);
   }
-  return out;
+
+  assertAlive();
+  const workers = Array.from({ length: Math.min(EXPORT_BATCH_CONCURRENCY, chunks.length) }, () => worker());
+  await Promise.all(workers);
 }
 ```
 
@@ -400,10 +489,11 @@ export async function fetchExportDetails(
 ```bash
 cd bertel-tourism-ui && npm run test:run -- src/services/export/export-fetch.test.ts && npm run typecheck
 git add src/services/rpc.ts src/services/export/export-fetch.ts src/services/export/export-fetch.test.ts
-git commit -m "feat(export): getObjectResourcesBatch (1er consommateur du RPC dormant) + chargeur par lots de 50
+git commit -m "feat(export): getObjectResourcesBatch (projection fields) + chargeur streamant, concurrence 2, fusion par object_id
 
-render:false + omit_empty:true + include_private:false figes ; progression et
-annulation par AbortSignal ; jamais de null dans p_ids (decalage des positions)."
+R1 : onBatch streame chaque lot (aplatissement immediat cote appelant, JSON
+libere) ; 2 lots en vol max ; payload.id fait foi sur la position ; progression
+et annulation par AbortSignal ; jamais de null dans p_ids."
 ```
 
 ---
@@ -418,14 +508,27 @@ annulation par AbortSignal ; jamais de null dans p_ids (decalage des positions).
 **Interfaces:**
 - Consumes: `ParsedObjectDetail` et ses sous-types (`src/services/object-detail-parser.ts:218`), types d'items (`src/features/object-drawer/utils.ts:10-319`).
 - Produces (consommés par Tâches 5-10) :
-  - `type ExportClearance = 'public' | 'org' | 'editor' | 'superuser'`
+  - `type ExportClearance = 'public' | 'org' | 'actor_identity' | 'actor_contacts' | 'editor' | 'superuser'` (R1)
+  - `type ExportCellValue = string | number | null` (R1)
   - `type ExportGroupId = 'identite' | 'localisation' | 'contacts' | 'descriptions' | 'labels' | 'equipements' | 'capacite' | 'tarifs' | 'horaires' | 'medias' | 'acteur' | 'organisation' | 'legal' | 'liens'`
   - `interface ActorContactChannel { kindCode: string; kindName: string; value: string; isPrimary: boolean }`
   - `interface ActorContactsRow { objectId: string; displayName: string; roleName: string; isPrimary: boolean; note: string; contacts: ActorContactChannel[] }`
   - `interface ExportContext { actorContacts: Map<string, ActorContactsRow[]> | null }`
-  - `interface ExportColumnDef { id; label; group; clearance; requiresPurpose?: true; value(d, ctx): string }`
-  - helpers : `SEP`, `joinParts`, `itemLabels`, `groupItems`, `rawRecord`, `rawStr`, `rawList`, `namedList`, `dateFr`, `openingToText`, `EXPORT_GROUP_LABELS`
+  - `interface ExportColumnDef { id; label; group; clearance; cellType?: 'text' | 'number'; fields?: string[]; requiresPurpose?: true; value(d, ctx): ExportCellValue }` — `cellType` absent = `'text'` ; `fields` = blocs `get_object_resource` requis (projection R1 ; absent = fiche complète requise, la projection est alors désactivée pour tout l'export)
+  - helpers : `SEP`, `joinParts`, `itemLabels`, `groupItems`, `rawRecord`, `rawStr`, `rawList`, `namedList`, `dateFr`, `openingToText`, `EXPORT_GROUP_LABELS`, `requiredFieldsFor(columnIds): string[] | undefined`
 - **Interdit :** aucune colonne ne lit `privateNote`/`privateNotes` (constrainte globale — un test le verrouille en Tâche 7).
+
+- [ ] **Step 0 (R1) : la matrice des colonnes, validée par le PO AVANT le code**
+
+Produire `docs/superpowers/specs/2026-07-31-export-excel-columns-matrix.md` : un tableau
+UNE LIGNE PAR COLONNE du registre (celles des Tâches 5-7, qui servent de source), aux
+colonnes : `id | libellé FR | groupe | source (chemin ParsedObjectDetail ou raw.*) |
+type XLSX (text/number) | capacité requise | règle d'agrégation (jointure « | », comptage,
+premier…) | si absent (rend '') | caractère (public / partenaire / interne / personnel)`.
+Les colonnes `actor_*` portent « personnel » ; les colonnes `org`-clearance portent
+« interne ». Committer le fichier, puis **STOP : présenter la matrice au PO et attendre
+sa validation explicite avant d'exécuter les Tâches 5-7.** Toute correction du PO
+s'applique à la matrice ET aux blocs de code des tâches concernées avant de continuer.
 
 - [ ] **Step 1 : écrire le test des helpers (échec attendu)**
 
@@ -488,7 +591,16 @@ import type { ParsedObjectDetail } from '../object-detail-parser';
  * (décision PO §208 — les notes d'équipe ne sortent jamais en Excel).
  */
 
-export type ExportClearance = 'public' | 'org' | 'editor' | 'superuser';
+/**
+ * R1 — capacités MÉTIER, pas des rangs : `actor_identity` reprend exactement le
+ * droit normal de consulter les acteurs d'une fiche (le gate de ligne serveur
+ * v_can_read_extended OR visibility='public') ; `actor_contacts` exige le droit
+ * d'export renforcé (16t). On ne réinvente PAS une interprétation des rôles pour
+ * l'export : la modale approxime (ergonomie), le serveur réévalue PAR FICHE.
+ */
+export type ExportClearance = 'public' | 'org' | 'actor_identity' | 'actor_contacts' | 'editor' | 'superuser';
+
+export type ExportCellValue = string | number | null;
 
 export type ExportGroupId =
   | 'identite' | 'localisation' | 'contacts' | 'descriptions' | 'labels'
@@ -521,9 +633,30 @@ export interface ExportColumnDef {
   label: string;
   group: ExportGroupId;
   clearance: ExportClearance;
+  /** R1 — type de cellule XLSX. Absent = 'text'. 'number' : latitude/longitude uniquement. */
+  cellType?: 'text' | 'number';
+  /** R1 — blocs get_object_resource requis (projection p_options.fields). Absent = fiche complète requise : la projection est alors désactivée pour l'export entier. */
+  fields?: string[];
   /** TRUE ⇒ exige la saisie d'une finalité + l'appel journalisé (§208). Exactement les colonnes gardées serveur par 16t — même ensemble, aucune zone grise. */
   requiresPurpose?: true;
-  value: (d: ParsedObjectDetail, ctx: ExportContext) => string;
+  value: (d: ParsedObjectDetail, ctx: ExportContext) => ExportCellValue;
+}
+
+/**
+ * R1 — union des blocs requis par les colonnes cochées, pour p_options.fields.
+ * `undefined` = au moins une colonne exige la fiche complète ⇒ pas de projection.
+ * Mécanisme non étanche (certains legs sortent hors garde v_fields) : c'est une
+ * optimisation de payload, jamais une garde.
+ */
+export function requiredFieldsFor(columnIds: string[]): string[] | undefined {
+  const union = new Set<string>();
+  for (const id of columnIds) {
+    const col = getExportColumn(id);
+    if (!col) continue;
+    if (!col.fields) return undefined;
+    col.fields.forEach((f) => union.add(f));
+  }
+  return [...union];
 }
 
 // ---------- Helpers d'aplatissement ----------
@@ -735,11 +868,13 @@ describe('registre — identité/localisation/contacts/descriptions (§208)', ()
     expect(val('status')).toBe('Publiée');
     expect(val('updated_at')).toBe('30/07/2026');
   });
-  it('localisation — postcode reste une chaîne, code_insee vide rend \'\'', () => {
+  it('localisation — postcode reste une chaîne, code_insee vide rend \'\', lat/lon NUMÉRIQUES (R1)', () => {
     expect(val('postcode')).toBe('97418');
     expect(val('city')).toBe('Le Tampon');
     expect(val('code_insee')).toBe('');
-    expect(val('latitude')).toBe('-21.2783');
+    expect(val('latitude')).toBe(-21.2783);
+    expect(getExportColumn('latitude')!.cellType).toBe('number');
+    expect(getExportColumn('longitude')!.cellType).toBe('number');
     expect(val('altitude_m')).toBe('1600');
   });
   it('contacts — value, jamais displayValue/href ; le non-public reste hors de la colonne publique', () => {
@@ -754,7 +889,7 @@ describe('registre — identité/localisation/contacts/descriptions (§208)', ()
     expect(val('chapo')).toBe('Accroche témoin.');
     expect(val('descriptions_langs')).toBe('');
   });
-  it('toutes les colonnes rendent une STRING sans jeter, même sur une fiche quasi vide', () => {
+  it('toutes les colonnes rendent string | number | null sans jeter, même sur une fiche quasi vide (R1)', () => {
     const minimal = buildFixtureDetail({
       contacts: [], languages: [], amenities: [], payment_methods: [], environment_tags: [], tags: [],
       taxonomy: [], classifications: [], sustainability_labels: [], capacities: [], prices: [],
@@ -763,7 +898,8 @@ describe('registre — identité/localisation/contacts/descriptions (§208)', ()
     });
     for (const col of EXPORT_COLUMNS) {
       const out = col.value(minimal, EMPTY_CTX);
-      expect(typeof out).toBe('string');
+      expect(out === null || typeof out === 'string' || typeof out === 'number').toBe(true);
+      if (col.cellType !== 'number') expect(typeof out).toBe('string');
     }
   });
 });
@@ -829,8 +965,9 @@ Remplacer la ligne `// PLAN-TACHE-5-ICI` par les colonnes (le marqueur `// PLAN-
   { id: 'lieu_dit', label: 'Lieu-dit', group: 'localisation', clearance: 'public', value: (d) => d.location?.lieuDit ?? '' },
   { id: 'direction', label: 'Accès / itinéraire', group: 'localisation', clearance: 'public', value: (d) => d.location?.direction ?? '' },
   { id: 'location_label', label: 'Localisation (ligne)', group: 'localisation', clearance: 'public', value: (d) => d.location?.label ?? '' },
-  { id: 'latitude', label: 'Latitude', group: 'localisation', clearance: 'public', value: (d) => (d.location?.latitude == null ? '' : String(d.location.latitude)) },
-  { id: 'longitude', label: 'Longitude', group: 'localisation', clearance: 'public', value: (d) => (d.location?.longitude == null ? '' : String(d.location.longitude)) },
+  // R1 — les DEUX seules colonnes numériques du registre (cellType 'number', valeur number|null).
+  { id: 'latitude', label: 'Latitude', group: 'localisation', clearance: 'public', cellType: 'number', value: (d) => d.location?.latitude ?? null },
+  { id: 'longitude', label: 'Longitude', group: 'localisation', clearance: 'public', cellType: 'number', value: (d) => d.location?.longitude ?? null },
   { id: 'google_maps_url', label: 'Lien Google Maps', group: 'localisation', clearance: 'public', value: (d) => d.location?.googleMapsUrl ?? '' },
   { id: 'directions_url', label: 'Lien itinéraire', group: 'localisation', clearance: 'public', value: (d) => d.location?.directionsUrl ?? '' },
   { id: 'code_insee', label: 'Code INSEE', group: 'localisation', clearance: 'public', value: (d) => rawStr(d, 'address', 'code_insee') },
@@ -1077,13 +1214,25 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
       expect(col.value(spy, EMPTY_CTX)).not.toContain('NOTE-INTERNE-SENTINELLE');
     }
   });
-  it('clearance FILTRE la liste (§205) — un anonyme ne voit aucune colonne org/editor/superuser', () => {
+  it('clearance FILTRE la liste (§205) — un lecteur simple ne voit AUCUNE colonne acteur (R1)', () => {
     const ids = availableColumns(SESSION_PUBLIC).map((c) => c.id);
     expect(ids).toContain('name');
     expect(ids).not.toContain('contacts_object');
+    expect(ids).not.toContain('actor_names');   // R1 : identité acteur = droit de consultation, pas « public »
+    expect(ids).not.toContain('actor_primary');
     expect(ids).not.toContain('actor_mobile');
     expect(ids).not.toContain('unhandled_keys');
+    expect(clearanceLevels(SESSION_ORG).has('actor_identity')).toBe(true);
     expect(clearanceLevels(SESSION_SUPER).has('superuser')).toBe(true);
+  });
+  it('R1 — plusieurs acteurs principaux sont TOUS rendus, joints par « | »', () => {
+    const multi = buildFixtureDetail({
+      actors: [
+        { id: 'a1', display_name: 'Jean Payet', role: { code: 'operator', name: 'Exploitant' }, is_primary: true, visibility: 'partners', contacts: [] },
+        { id: 'a2', display_name: 'Marie Hoarau', role: { code: 'guide', name: 'Guide' }, is_primary: true, visibility: 'partners', contacts: [] },
+      ],
+    });
+    expect(getExportColumn('actor_primary')!.value(multi, EMPTY_CTX)).toBe('Jean Payet | Marie Hoarau');
   });
   it('préréglage Diffusion partenaire : STRICTEMENT public, sans le groupe acteur — recalculé du code', () => {
     const ids = presetColumnIds('diffusion', SESSION_SUPER);
@@ -1134,25 +1283,29 @@ Remplacer `// PLAN-TACHE-7-ICI` par :
 
 ```ts
   // ---------- Propriétaire / acteur ----------
-  // Nom/rôle : PUBLICS (le serveur filtre déjà les LIGNES par visibilité de lien).
-  // Coordonnées : requiresPurpose ⇒ lues UNIQUEMENT depuis ctx.actorContacts
-  // (l'appel journalisé api.export_actor_contacts) — jamais depuis la fiche,
-  // sinon le journal serait contournable. Même ensemble que la garde 16t.
-  { id: 'actor_names', label: 'Acteur — nom', group: 'acteur', clearance: 'public', value: (d) => joinParts(d.relations.actors.map((a) => a.name)) },
-  { id: 'actor_roles', label: 'Acteur — rôle', group: 'acteur', clearance: 'public', value: (d) => joinParts(d.relations.actors.map((a) => a.role)) },
-  { id: 'actor_primary', label: 'Acteur principal', group: 'acteur', clearance: 'public', value: (d) => d.relations.actors.find((a) => a.isPrimary)?.name ?? '' },
-  { id: 'actor_phone', label: 'Acteur — téléphone', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'phone') },
-  { id: 'actor_mobile', label: 'Acteur — mobile', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'mobile') },
-  { id: 'actor_email', label: 'Acteur — e-mail', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'email') },
+  // R1 — l'export ne donne jamais plus que la consultation : nom/rôle/principal
+  // portent actor_identity (= le droit normal de voir les acteurs ; le serveur
+  // filtre déjà les LIGNES par v_can_read_extended OR visibility='public').
+  // Coordonnées/note/résumé : actor_contacts + requiresPurpose ⇒ lues UNIQUEMENT
+  // depuis ctx.actorContacts (l'appel journalisé api.export_actor_contacts) —
+  // jamais depuis la fiche, sinon le journal serait contournable. Même ensemble
+  // que la garde 16t.
+  { id: 'actor_names', label: 'Acteur — nom', group: 'acteur', clearance: 'actor_identity', value: (d) => joinParts(d.relations.actors.map((a) => a.name)) },
+  { id: 'actor_roles', label: 'Acteur — rôle', group: 'acteur', clearance: 'actor_identity', value: (d) => joinParts(d.relations.actors.map((a) => a.role)) },
+  // R1 — MULTI-valué : la contrainte permet un principal PAR RÔLE, pas un par fiche.
+  { id: 'actor_primary', label: 'Acteur(s) principal(aux)', group: 'acteur', clearance: 'actor_identity', value: (d) => joinParts(d.relations.actors.filter((a) => a.isPrimary).map((a) => a.name)) },
+  { id: 'actor_phone', label: 'Acteur — téléphone', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'phone') },
+  { id: 'actor_mobile', label: 'Acteur — mobile', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'mobile') },
+  { id: 'actor_email', label: 'Acteur — e-mail', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'email') },
   // Colonne créée VIDE aujourd'hui (0 canal address en base) — §150 : la surface suit le modèle, pas la donnée.
-  { id: 'actor_address', label: 'Acteur — adresse', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'address') },
-  { id: 'actor_summary', label: 'Propriétaire (résumé)', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => joinParts([
+  { id: 'actor_address', label: 'Acteur — adresse', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => actorChannelValues(d, ctx, 'address') },
+  { id: 'actor_summary', label: 'Propriétaire (résumé)', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => joinParts([
       joinParts([r.displayName, r.roleName && `(${r.roleName})`], ' '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'phone' || c.kindCode === 'mobile').map((c) => c.value), ', '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'email').map((c) => c.value), ', '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'address').map((c) => c.value), ', '),
     ], ' — '))) },
-  { id: 'actors_notes', label: 'Acteur — note', group: 'acteur', clearance: 'org', requiresPurpose: true, value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => r.note)) },
+  { id: 'actors_notes', label: 'Acteur — note', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => r.note)) },
 
   // ---------- Organisation éditrice ----------
   { id: 'publisher', label: 'Organisation éditrice', group: 'organisation', clearance: 'public', value: (d) => (d.relations.orgLinks.find((o) => /publisher|édit/i.test(o.linkType)) ?? d.relations.orgLinks[0])?.name ?? '' },
@@ -1192,11 +1345,30 @@ Puis, **en fin de fichier**, les niveaux et préréglages :
 ```ts
 // ---------- Niveaux d'autorisation & préréglages ----------
 
+/**
+ * R1 — traduction des capacités dans les prédicats EXISTANTS, côté modale
+ * (ergonomie ; la GARDE reste serveur, réévaluée par fiche) :
+ *  - actor_identity ⇔ « peut consulter les acteurs » : proxy client = membre d'une
+ *    ORG (orgId non nul) — c'est l'arm extended du gate de ligne serveur. Un
+ *    partenaire API (service_role) n'ouvre pas la modale ; un lecteur simple sans
+ *    ORG ne voit pas ces colonnes ET le serveur lui rendrait des lignes vides.
+ *  - actor_contacts ⇔ le droit d'export renforcé 16t (membre d'une ORG publisher) :
+ *    même proxy client (orgId), distinction rendue visible par requiresPurpose ;
+ *    le RPC journalisé refuse fiche par fiche ce que la modale a sur-offert.
+ */
 export function clearanceLevels(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): Set<ExportClearance> {
   const levels = new Set<ExportClearance>(['public']);
-  if (session.orgId) levels.add('org');
+  if (session.orgId) {
+    levels.add('org');
+    levels.add('actor_identity');
+    levels.add('actor_contacts');
+  }
   if (session.canEditObjects) levels.add('editor');
-  if (session.role === 'super_admin') levels.add('superuser');
+  if (session.role === 'super_admin') {
+    levels.add('superuser');
+    levels.add('actor_identity');
+    levels.add('actor_contacts');
+  }
   return levels;
 }
 
@@ -1242,6 +1414,36 @@ export function purposeRequired(columnIds: string[]): boolean {
 }
 ```
 
+- [ ] **Step 3bis (R1) : annoter `fields` sur TOUTES les colonnes (projection)**
+
+La liste EXACTE des legs gardés par `v_fields` se lit mécaniquement — ne pas la deviner :
+
+```bash
+cd "Base de donnée DLL et API" && grep -o "IF v_fields IS NULL OR '[a-z_]*'" api_views_functions.sql | sort -u
+```
+
+Règle d'annotation, colonne par colonne (la matrice du T4 Step 0 porte déjà la source) :
+- la source de la colonne est un leg listé par le grep ⇒ `fields: ['<nom_du_leg>']`
+  (plusieurs legs ⇒ tous : ex. `contacts_public` lit `contacts` ET les contacts
+  d'acteurs/orgs du parser ⇒ `fields: ['contacts', 'actors', 'organizations']`) ;
+- la source est un bloc NON gardé (clés d'identité, `address`, `location`, blocs
+  hors-garde connus : `opening_times`, `menus`, relations…) ⇒ `fields: []`
+  (aucun leg gardé requis — c'est ce qui rend la projection agressive) ;
+- doute ⇒ OMETTRE `fields` (la projection se désactive pour l'export entier —
+  correct par défaut, jamais faux).
+
+Vérification non vacante à ajouter au test :
+
+```ts
+  it('R1 — projection : requiredFieldsFor unionne, et une colonne sans fields désactive tout', () => {
+    expect(requiredFieldsFor(['name', 'postcode'])).toEqual([]); // identité/adresse : rien à demander
+    const withActors = requiredFieldsFor(['name', 'actor_names']);
+    expect(withActors).toContain('actors');
+    // au moins une colonne du registre déclare fields ⇒ le préréglage Essentiel est projeté
+    expect(requiredFieldsFor(presetColumnIds('essentiel', SESSION_ORG))).not.toBeUndefined();
+  });
+```
+
 - [ ] **Step 4 : vert + typecheck + commit**
 
 ```bash
@@ -1265,60 +1467,80 @@ recalcule du code. Garde de test : aucune colonne ne lit les notes d'equipe."
 - Test: `bertel-tourism-ui/src/services/export/export-workbook.test.ts`
 
 **Interfaces:**
-- Consumes: `EXPORT_COLUMNS`/`getExportColumn`/`ExportContext`/`purposeRequired` (T7), `fetchExportDetails` (T3), `xlsxCell` (T2), `exportActorContacts` (T16 — **mocké ici**, contrat déclaré ci-dessous).
+- Consumes: `EXPORT_COLUMNS`/`getExportColumn`/`ExportContext`/`purposeRequired`/`requiredFieldsFor` (T7), `fetchResourceBatches` (T3), `xlsxCell` (T2), `exportActorContacts` (T16 — **mocké ici**, contrat déclaré au squelette).
 - Produces:
-  - `interface WorkbookModel { sheets: [CellModel[][], CellModel[][]]; sheetNames: ['Fiches', 'Lisez-moi']; columns: [Array<{width:number}>, Array<{width:number}>] }` avec `CellModel = { value: string; type: StringConstructor; fontWeight?: 'bold' }`
-  - `buildWorkbookModel(input: { details: Map<string, ParsedObjectDetail>; orderedIds: string[]; columnIds: string[]; ctx: ExportContext; requestedCount: number; actorExportIds: string[] }): WorkbookModel`
+  - `type CellModel = { value: string | number; type: StringConstructor | NumberConstructor; fontWeight?: 'bold' }` (R1 — number pour lat/lon ; une valeur null devient une cellule texte vide)
+  - `interface WorkbookModel { sheets: [CellModel[][], CellModel[][]]; sheetNames: ['Fiches', 'Lisez-moi']; columns: [Array<{width:number}>, Array<{width:number}>] }`
+  - `projectRow(detail: ParsedObjectDetail, columns: ExportColumnDef[], ctx: ExportContext): ExportCellValue[]` — l'aplatissement immédiat (R1) : appelé lot par lot, le JSON part au GC ensuite
+  - `buildWorkbookModel(input: { rowsById: Map<string, ExportCellValue[]>; orderedIds: string[]; columns: ExportColumnDef[]; requestedCount: number; actorLogIds: string[]; actorAuthorizedCount: number | null; actorDeniedCount: number | null }): WorkbookModel`
   - `runSelectionXlsxExport(input: { ids: string[]; columnIds: string[]; langPrefs: string[]; purpose: string; onProgress?: (done: number, total: number) => void; signal?: AbortSignal }): Promise<{ exported: number; requested: number }>`
+- **R1 — ordre d'exécution de l'orchestrateur :** (1) lots ACTEUR d'abord si nécessaires (légers, ils construisent le ctx complet) ; (2) lots ressources en streaming, chaque lot **immédiatement projeté** en `ExportCellValue[]` puis JSON libéré ; (3) UN SEUL classeur à la fin, seulement si TOUS les lots ont réussi — un lot en échec ⇒ aucun fichier (les journaux acteur déjà écrits restent : la donnée a atteint le navigateur).
 
 - [ ] **Step 1 : tests d'abord**
 
 Créer `export-workbook.test.ts` :
 
 ```ts
-import { buildWorkbookModel } from './export-workbook';
+import { buildWorkbookModel, projectRow } from './export-workbook';
+import { getExportColumn } from './export-columns';
 import { buildFixtureDetail, EMPTY_CTX } from './export-fixture.test-utils';
 
-describe('buildWorkbookModel (§208) — le test RELIT les cellules (garde non vacante)', () => {
+const cols = (ids: string[]) => ids.map((id) => getExportColumn(id)!);
+
+describe('buildWorkbookModel (§208/R1) — le test RELIT les cellules (garde non vacante)', () => {
   const detail = buildFixtureDetail();
+  const columns = cols(['id', 'name', 'postcode', 'latitude', 'amenities']);
+  const rowsById = new Map([['HOTRUN0000000TST', projectRow(detail, columns, EMPTY_CTX)]]);
   const model = buildWorkbookModel({
-    details: new Map([['HOTRUN0000000TST', detail]]),
+    rowsById,
     orderedIds: ['HOTRUN0000000TST', 'ID-NON-LISIBLE'],
-    columnIds: ['id', 'name', 'postcode', 'amenities'],
-    ctx: EMPTY_CTX,
+    columns,
     requestedCount: 2,
-    actorExportIds: [],
+    actorLogIds: [],
+    actorAuthorizedCount: null,
+    actorDeniedCount: null,
   });
 
   it('feuille Fiches : en-têtes FR en gras, une ligne par fiche lisible, ordre de sélection', () => {
     const [fiches] = model.sheets;
-    expect(fiches[0].map((c) => c.value)).toEqual(['Identifiant', 'Nom', 'Code postal', 'Équipements']);
+    expect(fiches[0].map((c) => c.value)).toEqual(['Identifiant', 'Nom', 'Code postal', 'Latitude', 'Équipements']);
     expect(fiches[0].every((c) => c.fontWeight === 'bold')).toBe(true);
     expect(fiches).toHaveLength(2); // 1 en-tête + 1 fiche (la non-lisible est absente, pas une ligne vide)
-    expect(fiches[1].map((c) => c.value)).toEqual(['HOTRUN0000000TST', 'Hôtel Témoin', '97418', 'Wi-Fi | Piscine']);
+    expect(fiches[1].map((c) => c.value)).toEqual(['HOTRUN0000000TST', 'Hôtel Témoin', '97418', -21.2783, 'Wi-Fi | Piscine']);
   });
-  it('TOUTES les cellules sont typées String — y compris le code postal (zéro initial)', () => {
-    for (const sheet of model.sheets) for (const row of sheet) for (const cell of row) {
-      expect(cell.type).toBe(String);
-      expect(typeof cell.value).toBe('string');
-    }
+  it('R1 — typage par colonne : postcode String (zéro initial), latitude Number', () => {
+    const [fiches] = model.sheets;
+    expect(fiches[1][2].type).toBe(String);   // postcode
+    expect(fiches[1][3].type).toBe(Number);   // latitude
+    expect(typeof fiches[1][3].value).toBe('number');
+  });
+  it('une latitude absente rend une cellule TEXTE vide, pas un zéro', () => {
+    const noLoc = buildFixtureDetail({ location: {} });
+    const row = projectRow(noLoc, columns, EMPTY_CTX);
+    const m = buildWorkbookModel({ rowsById: new Map([['X', row]]), orderedIds: ['X'], columns, requestedCount: 1, actorLogIds: [], actorAuthorizedCount: null, actorDeniedCount: null });
+    expect(m.sheets[0][1][3].type).toBe(String);
+    expect(m.sheets[0][1][3].value).toBe('');
   });
   it('Lisez-moi : périmètre honnête (1 fiche sur 2) + dictionnaire des colonnes retenues', () => {
-    const flat = model.sheets[1].map((r) => r.map((c) => c.value).join(' ')).join('\n');
+    const flat = model.sheets[1].map((r) => r.map((c) => String(c.value)).join(' ')).join('\n');
     expect(flat).toContain('1 fiche exportée sur 2 sélectionnées');
     expect(flat).toContain('Identifiant');
-    expect(flat).toContain('Équipements');
     expect(flat).not.toContain('journal'); // pas de colonnes acteur ⇒ pas de mention de traçabilité
   });
-  it("mention de traçabilité présente quand l'export acteur a eu lieu", () => {
+  it('R1 — traçabilité multi-lots : TOUS les logId + comptes autorisées/refusées', () => {
+    const actorColumns = cols(['id', 'actor_mobile']);
     const withActor = buildWorkbookModel({
-      details: new Map([['HOTRUN0000000TST', detail]]), orderedIds: ['HOTRUN0000000TST'],
-      columnIds: ['id', 'actor_mobile'], ctx: EMPTY_CTX, requestedCount: 1,
-      actorExportIds: ['3e2a…-journal-1'],
+      rowsById: new Map([['HOTRUN0000000TST', projectRow(detail, actorColumns, EMPTY_CTX)]]),
+      orderedIds: ['HOTRUN0000000TST'],
+      columns: actorColumns, requestedCount: 1,
+      actorLogIds: ['journal-lot-1', 'journal-lot-2'],
+      actorAuthorizedCount: 700, actorDeniedCount: 140,
     });
-    const flat = withActor.sheets[1].map((r) => r.map((c) => c.value).join(' ')).join('\n');
-    expect(flat).toContain('journal');
-    expect(flat).toContain('3e2a…-journal-1');
+    const flat = withActor.sheets[1].map((r) => r.map((c) => String(c.value)).join(' ')).join('\n');
+    expect(flat).toContain('journal-lot-1');
+    expect(flat).toContain('journal-lot-2');
+    expect(flat).toContain('700');    // autorisées
+    expect(flat).toContain('140');    // refusées
   });
   it('largeur de colonne bornée [10, 60] selon le contenu', () => {
     for (const col of model.columns[0]) {
@@ -1338,11 +1560,15 @@ Créer `export-workbook.ts` :
 ```ts
 import { xlsxCell } from '@/lib/safe-output';
 import type { ParsedObjectDetail } from '../object-detail-parser';
-import { getExportColumn, purposeRequired, type ExportContext } from './export-columns';
-import { chunkIds, fetchExportDetails } from './export-fetch';
+import {
+  getExportColumn, purposeRequired, requiredFieldsFor,
+  type ExportCellValue, type ExportColumnDef, type ExportContext,
+} from './export-columns';
+import { chunkIds, fetchResourceBatches } from './export-fetch';
 import { ACTOR_EXPORT_BATCH, exportActorContacts } from './export-actor-contacts';
 
-export interface CellModel { value: string; type: StringConstructor; fontWeight?: 'bold' }
+/** R1 — cellule texte OU numérique. Une valeur null devient une cellule texte vide. */
+export interface CellModel { value: string | number; type: StringConstructor | NumberConstructor; fontWeight?: 'bold' }
 export interface WorkbookModel {
   sheets: [CellModel[][], CellModel[][]];
   sheetNames: ['Fiches', 'Lisez-moi'];
@@ -1350,33 +1576,46 @@ export interface WorkbookModel {
 }
 
 const header = (value: string): CellModel => ({ value: xlsxCell(value), type: String, fontWeight: 'bold' });
-const cell = (value: string): CellModel => ({ value: xlsxCell(value), type: String });
+const text = (value: string): CellModel => ({ value: xlsxCell(value), type: String });
+
+function toCell(value: ExportCellValue, col: ExportColumnDef): CellModel {
+  if (col.cellType === 'number' && typeof value === 'number' && Number.isFinite(value)) {
+    return { value, type: Number };
+  }
+  return text(value == null ? '' : String(value));
+}
+
+/** R1 — aplatissement immédiat : une fiche → une ligne de valeurs finales. Appelé lot par lot ; le ParsedObjectDetail part au GC ensuite. */
+export function projectRow(detail: ParsedObjectDetail, columns: ExportColumnDef[], ctx: ExportContext): ExportCellValue[] {
+  return columns.map((c) => c.value(detail, ctx));
+}
 
 const DATE_FMT = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
 
 export function buildWorkbookModel(input: {
-  details: Map<string, ParsedObjectDetail>;
+  rowsById: Map<string, ExportCellValue[]>;
   orderedIds: string[];
-  columnIds: string[];
-  ctx: ExportContext;
+  columns: ExportColumnDef[];
   requestedCount: number;
-  actorExportIds: string[];
+  actorLogIds: string[];
+  actorAuthorizedCount: number | null;
+  actorDeniedCount: number | null;
 }): WorkbookModel {
-  const columns = input.columnIds
-    .map((id) => getExportColumn(id))
-    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  const { columns } = input;
 
   // Une ligne par fiche LISIBLE, dans l'ordre de la sélection. Un id non lisible
   // est ABSENT (pas une ligne vide) — le décompte honnête vit dans Lisez-moi.
   const fiches: CellModel[][] = [columns.map((c) => header(c.label))];
   for (const id of input.orderedIds) {
-    const detail = input.details.get(id);
-    if (!detail) continue;
-    fiches.push(columns.map((c) => cell(c.value(detail, input.ctx))));
+    const row = input.rowsById.get(id);
+    if (!row) continue;
+    // Piloté par les COLONNES (pas par la ligne) : une ligne trop courte/longue
+    // ne peut jamais désaligner le typage des cellules.
+    fiches.push(columns.map((col, i) => toCell(row[i] ?? null, col)));
   }
 
   const widths = columns.map((_, colIndex) => {
-    const max = fiches.reduce((acc, row) => Math.max(acc, row[colIndex]?.value.length ?? 0), 0);
+    const max = fiches.reduce((acc, row) => Math.max(acc, String(row[colIndex]?.value ?? '').length), 0);
     return { width: Math.min(60, Math.max(10, max + 2)) };
   });
 
@@ -1384,32 +1623,41 @@ export function buildWorkbookModel(input: {
   const plural = (n: number, s: string) => `${n} ${s}${n > 1 ? 's' : ''}`;
   const lisezMoi: CellModel[][] = [
     [header('Export Bertel — sélection Exploreur')],
-    [cell('Généré le'), cell(DATE_FMT.format(new Date()))],
-    [cell('Périmètre'), cell(`${plural(exported, 'fiche exportée')} sur ${plural(input.requestedCount, 'sélectionnée')}`)],
-    [cell('')],
+    [text('Généré le'), text(DATE_FMT.format(new Date()))],
+    [text('Périmètre'), text(`${plural(exported, 'fiche exportée')} sur ${plural(input.requestedCount, 'sélectionnée')}`)],
+    [text('')],
     [header('Colonne'), header('Contenu')],
-    ...columns.map((c) => [cell(c.label), cell(`${c.group} · ${c.requiresPurpose ? 'accès tracé (journal)' : 'standard'}`)]),
+    ...columns.map((c) => [text(c.label), text(`${c.group} · ${c.requiresPurpose ? 'accès tracé (journal)' : 'standard'}`)]),
   ];
-  if (input.actorExportIds.length > 0) {
-    lisezMoi.push([cell('')], [
-      cell('Traçabilité'),
-      cell(`Ce fichier contient des coordonnées de personnes — export inscrit au journal (${input.actorExportIds.join(', ')}). Ne pas rediffuser hors de votre organisation.`),
-    ]);
+  if (input.actorLogIds.length > 0) {
+    lisezMoi.push(
+      [text('')],
+      [text('Traçabilité'), text(
+        `Ce fichier contient des coordonnées de personnes — export inscrit au journal, ${plural(input.actorLogIds.length, 'lot')} : ${input.actorLogIds.join(', ')}. Ne pas rediffuser hors de votre organisation.`,
+      )],
+      [text('Coordonnées — fiches autorisées'), text(input.actorAuthorizedCount == null ? '' : String(input.actorAuthorizedCount))],
+      [text('Coordonnées — fiches refusées'), text(input.actorDeniedCount == null ? '' : String(input.actorDeniedCount))],
+    );
   }
 
   return {
     sheets: [fiches, lisezMoi],
     sheetNames: ['Fiches', 'Lisez-moi'],
-    columns: [widths, [{ width: 24 }, { width: 90 }]],
+    columns: [widths, [{ width: 32 }, { width: 90 }]],
   };
 }
 
 /**
- * Orchestrateur complet : charge par lots (progression/annulation), appelle
- * l'export acteur JOURNALISÉ si nécessaire, construit le modèle, écrit le
- * fichier via write-excel-file en IMPORT DYNAMIQUE (précédent pdf-rasterize.ts —
- * la lib n'entre pas dans le bundle initial ; CSP prod sans unsafe-eval : lib
- * auditée, ne pas la remplacer sans refaire l'audit).
+ * Orchestrateur complet (R1) :
+ *  1. lots ACTEUR d'abord si une colonne à finalité est cochée (légers, set-based,
+ *     journalisés — export_run_id partagé entre les lots) ;
+ *  2. lots ressources en streaming (concurrence 2), chaque lot IMMÉDIATEMENT
+ *     projeté en valeurs finales puis JSON libéré — jamais 10,5 Mo accumulés ;
+ *  3. UN SEUL classeur, construit seulement si TOUS les lots ont réussi. Un lot
+ *     en échec ⇒ aucun fichier ; les journaux acteur déjà écrits RESTENT (la
+ *     donnée a réellement atteint le navigateur — le journal dit la vérité).
+ * Écriture via write-excel-file en IMPORT DYNAMIQUE (précédent pdf-rasterize.ts) ;
+ * CSP prod sans unsafe-eval : lib auditée, ne pas la remplacer sans refaire l'audit.
  */
 export async function runSelectionXlsxExport(input: {
   ids: string[];
@@ -1419,29 +1667,52 @@ export async function runSelectionXlsxExport(input: {
   onProgress?: (done: number, total: number) => void;
   signal?: AbortSignal;
 }): Promise<{ exported: number; requested: number }> {
-  const details = await fetchExportDetails(input.ids, input.langPrefs, {
-    onProgress: input.onProgress,
-    signal: input.signal,
-  });
+  const columns = input.columnIds
+    .map((id) => getExportColumn(id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  const orderedIds = [...new Set(input.ids.map((id) => id.trim()).filter(Boolean))];
 
+  // (1) Coordonnées d'acteur — AVANT les ressources : le ctx doit être complet
+  // au moment de la projection immédiate des lots.
   let ctx: ExportContext = { actorContacts: null };
-  let actorExportIds: string[] = [];
+  let actorLogIds: string[] = [];
+  let actorAuthorizedCount: number | null = null;
+  let actorDeniedCount: number | null = null;
   if (purposeRequired(input.columnIds)) {
-    const result = await exportActorContacts([...details.keys()], input.purpose, {
+    const result = await exportActorContacts(orderedIds, input.purpose, {
       batchSize: ACTOR_EXPORT_BATCH,
       signal: input.signal,
     });
     ctx = { actorContacts: result.rows };
-    actorExportIds = result.exportIds;
+    actorLogIds = result.logIds;
+    actorAuthorizedCount = result.authorizedObjectIds.length;
+    actorDeniedCount = result.deniedObjectIds.length;
   }
 
+  // (2) Ressources en streaming + projection immédiate (fusion par object_id).
+  const rowsById = new Map<string, ExportCellValue[]>();
+  await fetchResourceBatches(orderedIds, input.langPrefs, {
+    fields: requiredFieldsFor(input.columnIds),
+    signal: input.signal,
+    onProgress: input.onProgress,
+    onBatch: (entries) => {
+      for (const [id, detail] of entries) {
+        rowsById.set(id, projectRow(detail, columns, ctx));
+      }
+      // Les ParsedObjectDetail de ce lot ne sont référencés nulle part ailleurs :
+      // ils partent au GC ici — c'est l'aplatissement immédiat R1.
+    },
+  });
+
+  // (3) Un seul classeur, après la réussite de TOUS les lots.
   const model = buildWorkbookModel({
-    details,
-    orderedIds: [...new Set(input.ids.map((id) => id.trim()).filter(Boolean))],
-    columnIds: input.columnIds,
-    ctx,
+    rowsById,
+    orderedIds,
+    columns,
     requestedCount: chunkIds(input.ids).reduce((n, c) => n + c.length, 0),
-    actorExportIds,
+    actorLogIds,
+    actorAuthorizedCount,
+    actorDeniedCount,
   });
 
   const { default: writeXlsxFile } = await import('write-excel-file');
@@ -1461,13 +1732,22 @@ Créer aussi le **squelette** `src/services/export/export-actor-contacts.ts` pou
 ```ts
 import type { ActorContactsRow } from './export-columns';
 
-export const ACTOR_EXPORT_BATCH = 500; // plafond dur du RPC (16t) — au-delà on découpe : N lignes de journal, pas une
+export const ACTOR_EXPORT_BATCH = 500; // plafond PAR APPEL du RPC (16t) — au-delà on découpe : N lignes de journal, pas une. Aucun plafond fonctionnel d'export (R1).
+
+/** R1 — résultat AGRÉGÉ des lots : tous partagent un export_run_id ; chaque lot a son logId ; les refus sont nommés. */
+export interface ActorContactsExportResult {
+  rows: Map<string, ActorContactsRow[]>;
+  exportRunId: string;
+  logIds: string[];
+  authorizedObjectIds: string[];
+  deniedObjectIds: string[];
+}
 
 export async function exportActorContacts(
   _ids: string[],
   _purpose: string,
   _opts: { batchSize?: number; signal?: AbortSignal } = {},
-): Promise<{ rows: Map<string, ActorContactsRow[]>; exportIds: string[] }> {
+): Promise<ActorContactsExportResult> {
   // Tâche 16 branche le RPC api.export_actor_contacts (migration 16t). D'ici là :
   // refuser explicitement plutôt que rendre un export silencieusement vide.
   throw new Error("Export des coordonnées d'acteur indisponible (migration 16t non déployée).");
@@ -1479,11 +1759,12 @@ export async function exportActorContacts(
 ```bash
 cd bertel-tourism-ui && npm run test:run -- src/services/export/export-workbook.test.ts && npm run typecheck
 git add src/services/export/export-workbook.ts src/services/export/export-workbook.test.ts src/services/export/export-actor-contacts.ts
-git commit -m "feat(export): constructeur de classeur (tout en cellules texte) + Lisez-moi + orchestrateur
+git commit -m "feat(export): classeur (cellules typees text/number) + Lisez-moi multi-lots + orchestrateur streamant
 
-Le test relit les cellules du modele (garde non vacante) : en-tetes FR gras,
-type String partout (zeros initiaux), decompte honnete N sur M, mention de
-tracabilite quand l'export acteur a eu lieu. Ecriture par import dynamique."
+R1 : projection immediate lot par lot (JSON libere), acteurs d'abord (ctx complet),
+UN classeur apres reussite de TOUS les lots — un echec = aucun fichier. Le test
+relit les cellules : postcode String (zero initial), latitude Number, decompte
+demandees/exportees, tous les logId + comptes autorisees/refusees en Lisez-moi."
 ```
 
 ---
@@ -1771,7 +2052,8 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
   const effectiveIds = locked ? presetColumnIds('diffusion', session) : columnIds.filter((id) => offered.some((c) => c.id === id));
   const needsPurpose = purposeRequired(effectiveIds);
   const exporting = progress !== null;
-  const canDownload = effectiveIds.length > 0 && !exporting && (!needsPurpose || purpose.trim().length > 0);
+  // R1 : 5 caractères minimum — le serveur revalide (REASON_REQUIRED), la modale n'est que l'ergonomie.
+  const canDownload = effectiveIds.length > 0 && !exporting && (!needsPurpose || purpose.trim().length >= 5);
 
   const byGroup = useMemo(() => {
     const map = new Map<ExportGroupId, ExportColumnDef[]>();
@@ -2053,6 +2335,11 @@ GRANT  EXECUTE ON FUNCTION api.can_read_actor_contacts(text) TO   authenticated,
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS actor_contact_export_log (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- R1 : tous les LOTS d'un même export logique partagent export_run_id (fourni
+  -- par le client, sinon généré) ; batch_index/batch_count situent le lot.
+  export_run_id   UUID NOT NULL,
+  batch_index     INT  NOT NULL DEFAULT 1,
+  batch_count     INT  NOT NULL DEFAULT 1,
   performed_by    UUID,
   performed_org   TEXT,
   performed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -2062,27 +2349,35 @@ CREATE TABLE IF NOT EXISTS actor_contact_export_log (
   actor_count     INT  NOT NULL DEFAULT 0,
   channel_count   INT  NOT NULL DEFAULT 0,
   object_ids      TEXT[] NOT NULL DEFAULT '{}',
+  denied_object_ids TEXT[] NOT NULL DEFAULT '{}',
   actor_ids       UUID[] NOT NULL DEFAULT '{}',
   channel_kinds   TEXT[] NOT NULL DEFAULT '{}',
   identity_fields TEXT[] NOT NULL DEFAULT '{}',
+  -- R1 multi-ORG : QUELLES ORG publisher ont permis l'accès (bras RLS de lecture)
+  -- + l'attribution détaillée objet↔ORG. current_user_crm_object_ids() ne le dit pas.
+  org_object_ids  TEXT[] NOT NULL DEFAULT '{}',
+  org_attributions JSONB NOT NULL DEFAULT '[]',
   report          JSONB
 );
 
 COMMENT ON TABLE actor_contact_export_log IS
-  'Journal immuable des exports de coordonnées d''acteur (§208). Écrit uniquement par api.export_actor_contacts ; aucune valeur de coordonnée n''y figure ; survit à la suppression des objets/acteurs (pas de FK).';
+  'Journal immuable des exports de coordonnées d''acteur (§208). Écrit uniquement par api.export_actor_contacts ; aucune valeur de coordonnée n''y figure ; survit à la suppression des objets/acteurs (pas de FK). export_run_id relie les lots d''un même export ; org_object_ids/org_attributions disent quelle ORG publisher a autorisé quoi (multi-ORG).';
 
 CREATE INDEX IF NOT EXISTS idx_acel_at    ON actor_contact_export_log (performed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_acel_by    ON actor_contact_export_log (performed_by, performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_acel_run   ON actor_contact_export_log (export_run_id);
 CREATE INDEX IF NOT EXISTS idx_acel_actor ON actor_contact_export_log USING GIN (actor_ids);
 
 ALTER TABLE actor_contact_export_log ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS actor_contact_export_log_read ON actor_contact_export_log;
+-- R1 : l'admin d'ORG lit les exports où SON ORG a autorisé au moins une fiche
+-- (org_object_ids), pas seulement ceux dont l'exportateur avait son ORG active —
+-- sans quoi la politique serait ambiguë à plusieurs ORG.
 CREATE POLICY actor_contact_export_log_read ON actor_contact_export_log
   FOR SELECT TO authenticated USING (
     (SELECT api.is_platform_superuser())
-    OR (actor_contact_export_log.performed_org IS NOT NULL
-        AND actor_contact_export_log.performed_org = (SELECT api.current_user_org_id())
-        AND (SELECT api.current_user_admin_rank()) IS NOT NULL)
+    OR ((SELECT api.current_user_admin_rank()) IS NOT NULL
+        AND (SELECT api.current_user_org_id()) = ANY(actor_contact_export_log.org_object_ids))
   );
 -- Pas de policy INSERT/UPDATE/DELETE : seul le RPC DEFINER écrit ; per-command, jamais FOR ALL.
 REVOKE ALL    ON actor_contact_export_log FROM PUBLIC, anon;
@@ -2095,9 +2390,12 @@ GRANT  SELECT ON actor_contact_export_log TO authenticated, service_role;
 --    PAS de GRANT à service_role : un export doit être imputable à une personne.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.export_actor_contacts(
-  p_object_ids text[],
-  p_reason     text,
-  p_format     text DEFAULT 'xlsx'
+  p_object_ids    text[],
+  p_reason        text,
+  p_format        text DEFAULT 'xlsx',
+  p_export_run_id uuid DEFAULT NULL,   -- R1 : partagé entre les lots d'un même export ; NULL = généré
+  p_batch_index   int  DEFAULT 1,
+  p_batch_count   int  DEFAULT 1
 )
 RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
@@ -2107,24 +2405,44 @@ DECLARE
   v_caller    uuid := (SELECT auth.uid());
   v_super     boolean;
   v_org       text;
+  v_ids       text[];
   v_scope     text[];
+  v_denied    text[];
   v_rows      jsonb;
   v_actors    uuid[];
   v_channels  bigint;
   v_kinds     text[];
-  v_export_id uuid := gen_random_uuid();  -- search_path restreint : jamais uuid_generate_v4()
+  v_org_ids   text[];
+  v_org_attr  jsonb;
+  v_run_id    uuid := COALESCE(p_export_run_id, gen_random_uuid());
+  v_log_id    uuid := gen_random_uuid();  -- search_path restreint : jamais uuid_generate_v4()
 BEGIN
   IF v_caller IS NULL THEN
     RAISE EXCEPTION 'NO_AUTH_CONTEXT' USING ERRCODE = '42501';
   END IF;
-  IF btrim(coalesce(p_reason, '')) = '' THEN
-    RAISE EXCEPTION 'REASON_REQUIRED' USING ERRCODE = '22023';
+  -- R1 : la finalité est validée SERVEUR (la modale seule n'est pas une protection).
+  IF length(btrim(coalesce(p_reason, ''))) < 5 THEN
+    RAISE EXCEPTION 'REASON_REQUIRED: finalite de 5 caracteres minimum' USING ERRCODE = '22023';
   END IF;
-  IF coalesce(array_length(p_object_ids, 1), 0) = 0 THEN
+  IF length(btrim(p_reason)) > 500 THEN
+    RAISE EXCEPTION 'REASON_TOO_LONG: 500 caracteres maximum' USING ERRCODE = '22023';
+  END IF;
+  IF lower(coalesce(p_format, '')) NOT IN ('xlsx', 'csv') THEN
+    RAISE EXCEPTION 'FORMAT_INVALID: xlsx ou csv' USING ERRCODE = '22023';
+  END IF;
+  IF p_batch_index < 1 OR p_batch_count < 1 OR p_batch_index > p_batch_count THEN
+    RAISE EXCEPTION 'BATCH_META_INVALID' USING ERRCODE = '22023';
+  END IF;
+
+  -- R1 : dédoublonnage et nettoyage CÔTÉ SERVEUR, plafond appliqué APRÈS.
+  SELECT COALESCE(array_agg(DISTINCT btrim(t.id)), '{}') INTO v_ids
+    FROM unnest(p_object_ids) AS t(id)
+   WHERE btrim(coalesce(t.id, '')) <> '';
+  IF coalesce(array_length(v_ids, 1), 0) = 0 THEN
     RAISE EXCEPTION 'EMPTY_SELECTION' USING ERRCODE = '22023';
   END IF;
-  IF array_length(p_object_ids, 1) > 500 THEN
-    RAISE EXCEPTION 'BATCH_TOO_LARGE: 500 max (recu %)', array_length(p_object_ids, 1)
+  IF array_length(v_ids, 1) > 500 THEN
+    RAISE EXCEPTION 'BATCH_TOO_LARGE: 500 max apres dedoublonnage (recu %)', array_length(v_ids, 1)
       USING ERRCODE = '22023';
   END IF;
 
@@ -2132,20 +2450,38 @@ BEGIN
                       WHERE p.id = v_caller AND p.role IN ('owner','super_admin'));
   v_org := api.current_user_org_id();
 
-  -- Autorise-une-fois : on réduit la demande au périmètre de l'appelant.
+  -- Autorise-une-fois : on réduit la demande au périmètre de l'appelant, PAR FICHE.
   IF v_super THEN
-    SELECT array_agg(DISTINCT t.id) INTO v_scope
-      FROM unnest(p_object_ids) AS t(id)
+    SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
+      FROM unnest(v_ids) AS t(id)
      WHERE EXISTS (SELECT 1 FROM object o WHERE o.id = t.id);
   ELSE
-    SELECT array_agg(DISTINCT t.id) INTO v_scope
-      FROM unnest(p_object_ids) AS t(id)
+    SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
+      FROM unnest(v_ids) AS t(id)
      WHERE t.id IN (SELECT api.current_user_crm_object_ids());
   END IF;
 
+  -- R1 : sélection MIXTE = on sert l'autorisé et on NOMME le refusé (le fichier
+  -- n'échoue pas) ; tout-refusé = FORBIDDEN.
+  SELECT COALESCE(array_agg(t.id), '{}') INTO v_denied
+    FROM unnest(v_ids) AS t(id)
+   WHERE NOT (t.id = ANY(v_scope));
   IF coalesce(array_length(v_scope, 1), 0) = 0 THEN
     RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
   END IF;
+
+  -- R1 multi-ORG : QUELLE ORG publisher autorise chaque fiche du périmètre.
+  -- Pour un superuser sans membership, l'attribution retombe sur la/les ORG
+  -- publisher de la fiche (granted_via = 'superuser' dans report).
+  SELECT COALESCE(array_agg(DISTINCT ool.org_object_id), '{}'),
+         COALESCE(jsonb_agg(DISTINCT jsonb_build_object('object_id', ool.object_id, 'org_object_id', ool.org_object_id)), '[]')
+    INTO v_org_ids, v_org_attr
+    FROM object_org_link ool
+    JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+   WHERE ool.object_id = ANY(v_scope)
+     AND (v_super OR ool.org_object_id IN (
+           SELECT uom.org_object_id FROM user_org_membership uom
+            WHERE uom.user_id = v_caller AND uom.is_active = TRUE));
 
   SELECT COALESCE(jsonb_agg(r.line ORDER BY r.object_id, r.is_primary DESC, r.display_name), '[]'::jsonb),
          COALESCE(array_agg(DISTINCT r.actor_id), '{}'::uuid[]),
@@ -2197,32 +2533,43 @@ BEGIN
    WHERE aor.object_id = ANY(v_scope);
 
   INSERT INTO actor_contact_export_log(
-    id, performed_by, performed_org, reason, format,
+    id, export_run_id, batch_index, batch_count,
+    performed_by, performed_org, reason, format,
     object_count, actor_count, channel_count,
-    object_ids, actor_ids, channel_kinds, identity_fields, report)
+    object_ids, denied_object_ids, actor_ids, channel_kinds, identity_fields,
+    org_object_ids, org_attributions, report)
   VALUES (
-    v_export_id, v_caller, v_org, btrim(p_reason), lower(coalesce(p_format, 'xlsx')),
+    v_log_id, v_run_id, p_batch_index, p_batch_count,
+    v_caller, v_org, btrim(p_reason), lower(p_format),
     coalesce(array_length(v_scope, 1), 0), coalesce(array_length(v_actors, 1), 0), v_channels,
-    v_scope, v_actors, v_kinds,
+    v_scope, v_denied, v_actors, v_kinds,
     ARRAY['display_name','first_name','last_name','role','note','validity'],
+    v_org_ids, v_org_attr,
     jsonb_build_object(
-      'requested_count', array_length(p_object_ids, 1),
+      'requested_count', array_length(v_ids, 1),
       'granted_count',   array_length(v_scope, 1),
-      'superuser',       v_super));
+      'denied_count',    coalesce(array_length(v_denied, 1), 0),
+      'granted_via',     CASE WHEN v_super THEN 'superuser' ELSE 'org_membership' END));
 
   RETURN jsonb_build_object(
-    'export_id',     v_export_id,
-    'exported_at',   now(),
-    'object_count',  coalesce(array_length(v_scope, 1), 0),
-    'actor_count',   coalesce(array_length(v_actors, 1), 0),
-    'channel_count', v_channels,
-    'rows',          v_rows);
+    'log_id',                v_log_id,
+    'export_run_id',         v_run_id,
+    'batch_index',           p_batch_index,
+    'batch_count',           p_batch_count,
+    'exported_at',           now(),
+    'authorized_object_ids', to_jsonb(v_scope),
+    'denied_object_ids',     to_jsonb(v_denied),
+    'object_count',          coalesce(array_length(v_scope, 1), 0),
+    'actor_count',           coalesce(array_length(v_actors, 1), 0),
+    'channel_count',         v_channels,
+    'rows',                  v_rows);
 END;
 $$;
 
-REVOKE ALL     ON FUNCTION api.export_actor_contacts(text[], text, text) FROM PUBLIC, anon;
-GRANT  EXECUTE ON FUNCTION api.export_actor_contacts(text[], text, text) TO   authenticated;
--- Volontairement PAS service_role : un export de PII est imputable à une personne.
+-- R1 : REVOKE explicite de service_role EN PLUS de PUBLIC/anon — un export de PII
+-- est imputable à une personne, jamais à une clé.
+REVOKE ALL     ON FUNCTION api.export_actor_contacts(text[], text, text, uuid, int, int) FROM PUBLIC, anon, service_role;
+GRANT  EXECUTE ON FUNCTION api.export_actor_contacts(text[], text, text, uuid, int, int) TO   authenticated;
 
 -- ---------------------------------------------------------------------
 -- 4. Hygiène §208 : l'EXECUTE de get_object_resources_batch n'était porté que
@@ -2389,20 +2736,28 @@ par :
           AND (v_can_read_extended OR c.is_public IS TRUE)
 ```
 
-- [ ] **Step 5 : latéral acteurs de `get_objects_with_deep_data` (défense en profondeur)**
+- [ ] **Step 5 (R1) : NE PAS toucher `get_objects_with_deep_data` — vérifier qu'elle est intacte**
 
-Cette fonction est SECURITY INVOKER : pour un utilisateur `authenticated`, la RLS d'`actor_channel` (lecture = service_role/admin ou soi-même) vide déjà les canaux. Mais **service_role la traverse RLS-bypass** — un futur appelant service-role fuirait tout. Localiser `'contacts', COALESCE(actor_contacts.contacts, '[]'::jsonb)` (~l.7303). Remplacer le champ par :
+**Décision de revue R1 : les fonctions deep (`get_object_with_deep_data`,
+`get_objects_with_deep_data`) sont HORS PÉRIMÈTRE.** L'export ne passe pas par elles
+(chemin : modale → service → `get_object_resources_batch` → `get_object_resource`),
+et les patcher cascaderait sur le tiroir, l'éditeur, l'impression et tous les
+consommateurs de `getObjectResource`. État des lieux honnête, à consigner au §208
+comme dette distincte : leur latéral acteurs émet la PII sans gate, mais elles sont
+`SECURITY INVOKER` (la RLS d'`actor_channel` vide les canaux pour `authenticated`)
+et n'ont **aucun appelant service-role** (vérifié : les routes partenaires appellent
+`get_object_resource`). Cette dette n'entre dans cette passe QUE si les tests
+démontrent une régression réellement introduite par 16t.
 
-```sql
-        'contacts_restricted', NOT gate.ok,
-        'contacts', CASE WHEN NOT gate.ok THEN '[]'::jsonb ELSE COALESCE(actor_contacts.contacts, '[]'::jsonb) END
+Vérification mécanique qu'aucun édit ne les a touchées :
+
+```bash
+cd "Base de donnée DLL et API" && git diff api_views_functions.sql | grep -n "deep_data" ; echo "exit=$?"
 ```
 
-et les trois champs PII au-dessus (`first_name`, `last_name`, `gender`) et `note` par la même forme `CASE WHEN gate.ok THEN … END`. Puis, dans le `FROM` du latéral (juste après `JOIN actor a ON a.id = aor.actor_id`), ajouter :
-
-```sql
-    CROSS JOIN LATERAL (SELECT COALESCE(api.can_read_actor_contacts(o.id), FALSE) AS ok) gate
-```
+Attendu : AUCUNE ligne (exit=1). Si une ligne sort : annuler cet édit avant de continuer.
+(Le test SQL de la Tâche 14 fige la même assertion côté base : `pg_proc.prosrc` des
+deux fonctions ne contient pas `can_read_actor_contacts`.)
 
 - [ ] **Step 6 : inventaire exhaustif des émetteurs d'`actor_channel`**
 
@@ -2410,20 +2765,20 @@ et les trois champs PII au-dessus (`first_name`, `last_name`, `gender`) et `note
 cd "Base de donnée DLL et API" && grep -n "FROM actor_channel\|JOIN actor_channel" api_views_functions.sql migration_actor_contacts_org_gate.sql
 ```
 
-Pour CHAQUE site listé, vérifier qu'il est soit (a) patché ci-dessus, soit (b) dans une fonction déjà gated (chercher la garde en tête de la fonction porteuse : `is_platform_superuser` / scope CRM / `user_actor_ids`). Consigner la liste et le verdict par site dans le commit — c'est l'assertion « la classe est fermée ». Si un site n'est ni (a) ni (b) : STOP, le signaler avant de continuer.
+Pour CHAQUE site listé, vérifier qu'il est soit (a) patché ci-dessus, soit (b) dans une fonction déjà gated (chercher la garde en tête de la fonction porteuse : `is_platform_superuser` / scope CRM / `user_actor_ids`), soit (c) le latéral des fonctions deep — **hors périmètre R1, dette consignée, NE PAS patcher**. Consigner la liste et le verdict par site dans le commit. Si un site n'est ni (a) ni (b) ni (c) : STOP, le signaler avant de continuer.
 
 - [ ] **Step 7 : commit**
 
 ```bash
 git add "Base de donnée DLL et API/api_views_functions.sql"
-git commit -m "fix(sql): gate 16t sur les 3 voies acteur de get_object_resource + deep_data (classe §49)
+git commit -m "fix(sql): gate 16t sur les 3 voies acteur de get_object_resource (classe §49) — deep_data INTOUCHEE (R1)
 
 Leg actors : PII et canaux sous api.can_read_actor_contacts (sonde paresseuse,
 CASE court-circuite — la correlee actor_channel n'est jamais executee sur le
 chemin public) + cle contacts_restricted. render.actor_lines : garde de ligne
 (fuyait des noms a anon sur 760 fiches publiees). render.contact_lines :
-compose is_public avec l'arm publie. deep_data : meme gate (service_role
-bypasse la RLS — defense en profondeur)."
+compose is_public avec l'arm publie. get_objects_with_deep_data volontairement
+non modifiee (decision de revue R1 — dette distincte consignee au §208)."
 ```
 
 ---
@@ -2588,7 +2943,9 @@ BEGIN
   IF leak <> 0 THEN RAISE EXCEPTION 'E2 FAIL: une VALEUR de coordonnee est entree au journal'; END IF;
 END $$;
 
--- F. Gardes d'entrée du RPC (membre) : raison vide refusée, >500 refusé.
+-- F. Gardes d'entrée du RPC (membre) : finalité vide OU trop courte refusée
+--    SERVEUR (R1 — la modale seule n'est pas une protection), >500 refusé,
+--    format hors liste refusé.
 SELECT set_config('request.jwt.claims',
   '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000001"}', true);
 SET LOCAL ROLE authenticated;
@@ -2600,11 +2957,62 @@ BEGIN
   EXCEPTION WHEN invalid_parameter_value THEN ok := TRUE; END;
   IF NOT ok THEN RAISE EXCEPTION 'F1 FAIL: raison vide devait etre refusee'; END IF;
   ok := FALSE;
-  BEGIN PERFORM api.export_actor_contacts(ARRAY(SELECT 'X' || g::text FROM generate_series(1, 501) g), 'test', 'xlsx');
+  BEGIN PERFORM api.export_actor_contacts(ARRAY['HOTRUN000000T16T'], 'abc', 'xlsx');
+  EXCEPTION WHEN invalid_parameter_value THEN ok := TRUE; END;
+  IF NOT ok THEN RAISE EXCEPTION 'F1b FAIL: raison < 5 caracteres devait etre refusee SERVEUR'; END IF;
+  ok := FALSE;
+  BEGIN PERFORM api.export_actor_contacts(ARRAY(SELECT 'X' || g::text FROM generate_series(1, 501) g), 'test valide', 'xlsx');
   EXCEPTION WHEN invalid_parameter_value THEN ok := TRUE; END;
   IF NOT ok THEN RAISE EXCEPTION 'F2 FAIL: 501 ids devait lever BATCH_TOO_LARGE'; END IF;
+  ok := FALSE;
+  BEGIN PERFORM api.export_actor_contacts(ARRAY['HOTRUN000000T16T'], 'test valide', 'pdf');
+  EXCEPTION WHEN invalid_parameter_value THEN ok := TRUE; END;
+  IF NOT ok THEN RAISE EXCEPTION 'F3 FAIL: format hors liste blanche devait etre refuse'; END IF;
 END $$;
 RESET ROLE;
+
+-- G (R1). Multi-lots : deux appels avec le MÊME p_export_run_id ⇒ 2 lignes de
+--    journal partageant export_run_id ; sélection MIXTE ⇒ denied nommés, pas d'échec.
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000001"}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE run_id uuid := gen_random_uuid(); r1 jsonb; r2 jsonb; n int;
+BEGIN
+  r1 := api.export_actor_contacts(ARRAY['HOTRUN000000T16T'], 'Test multi-lots G', 'xlsx', run_id, 1, 2);
+  -- lot 2 : sélection MIXTE (une fiche autorisée + une inconnue/hors périmètre)
+  r2 := api.export_actor_contacts(ARRAY['HOTRUN000000T16T', 'ZZZINCONNUE00000'], 'Test multi-lots G', 'xlsx', run_id, 2, 2);
+  IF (r1->>'export_run_id') <> run_id::text OR (r2->>'export_run_id') <> run_id::text THEN
+    RAISE EXCEPTION 'G1 FAIL: les deux lots doivent partager export_run_id';
+  END IF;
+  IF NOT (r2->'denied_object_ids' ? 'ZZZINCONNUE00000') THEN
+    RAISE EXCEPTION 'G2 FAIL: la fiche hors perimetre doit etre NOMMEE dans denied_object_ids, recu %', r2->'denied_object_ids';
+  END IF;
+  IF NOT (r2->'authorized_object_ids' ? 'HOTRUN000000T16T') THEN
+    RAISE EXCEPTION 'G3 FAIL: la fiche autorisee doit etre servie malgre le refus voisin (selection mixte)';
+  END IF;
+  SELECT count(*) INTO n FROM actor_contact_export_log WHERE export_run_id = run_id;
+  IF n <> 2 THEN RAISE EXCEPTION 'G4 FAIL: attendu 2 lignes de journal pour ce run, trouve %', n; END IF;
+  -- L'attribution multi-ORG dit QUELLE ORG a autorisé :
+  SELECT count(*) INTO n FROM actor_contact_export_log
+   WHERE export_run_id = run_id AND 'ORGRUN000000T16T' = ANY(org_object_ids);
+  IF n <> 2 THEN RAISE EXCEPTION 'G5 FAIL: org_object_ids doit porter l ORG publisher qui a autorise'; END IF;
+END $$;
+RESET ROLE;
+
+-- H (R1). PREUVE que 16t n'a pas touché les fonctions deep (décision de revue) :
+DO $$
+DECLARE n int;
+BEGIN
+  SELECT count(*) INTO n
+    FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+   WHERE ns.nspname = 'api'
+     AND p.proname IN ('get_object_with_deep_data', 'get_objects_with_deep_data')
+     AND p.prosrc LIKE '%can_read_actor_contacts%';
+  IF n <> 0 THEN
+    RAISE EXCEPTION 'H1 FAIL: une fonction deep reference la garde 16t — elles sont HORS PERIMETRE (R1)';
+  END IF;
+END $$;
 
 SELECT 'test_actor_contacts_org_gate: OK' AS result;
 ROLLBACK;
@@ -2625,12 +3033,14 @@ Via le MCP Supabase (`execute_sql`, le fichier entier — il se termine par ROLL
 
 ```bash
 git add "Base de donnée DLL et API/tests/test_actor_contacts_org_gate.sql"
-git commit -m "test(sql): garde 16t — 4 personas par request.jwt.claims + journal sans valeur de coordonnee
+git commit -m "test(sql): garde 16t — personas jwt.claims, multi-lots run_id, selection mixte, deep intouchee
 
 A membre publisher (contacts+PII+export+journal), B authentifie etranger
 (FORBIDDEN), C anon (0 ligne, actor_lines vide), D service_role (ligne sans
-PII ni canaux — non-regression du contrat partenaire). Verifie rouge par
-sabotage : retirer le CASE du leg contacts fait tomber D2."
+PII ni canaux — non-regression du contrat partenaire), F finalite/format/plafond
+valides SERVEUR, G export_run_id partage + denied nommes + attribution ORG,
+H preuve que les fonctions deep ne referencent pas la garde (R1). Verifie
+rouge par sabotage : retirer le CASE du leg contacts fait tomber D2."
 ```
 
 ---
@@ -2727,27 +3137,48 @@ import { callExportActorContactsRpc } from '../rpc';
 jest.mock('../rpc', () => ({ callExportActorContactsRpc: jest.fn() }));
 const mockRpc = callExportActorContactsRpc as jest.Mock;
 
-describe('exportActorContacts (§208)', () => {
+describe('exportActorContacts (§208/R1)', () => {
   beforeEach(() => mockRpc.mockReset());
 
-  it('découpe par 500 (N lignes de journal, pas une) et fusionne lignes + export_ids', async () => {
-    mockRpc.mockImplementation(async (ids: string[]) => ({
-      export_id: `journal-${ids.length}`,
+  it('découpe par 500, partage le MÊME export_run_id, fusionne lignes + logIds + autorisées/refusées', async () => {
+    mockRpc.mockImplementation(async (ids: string[], _reason: string, meta: { exportRunId: string; batchIndex: number; batchCount: number }) => ({
+      log_id: `journal-lot-${meta.batchIndex}`,
+      export_run_id: meta.exportRunId,
+      authorized_object_ids: ids.filter((id) => id !== 'refusee'),
+      denied_object_ids: ids.filter((id) => id === 'refusee'),
       rows: ids.slice(0, 1).map((id) => ({
         object_id: id, display_name: 'Jean', role_name: 'Exploitant', is_primary: true, note: '',
         contacts: [{ kind_code: 'mobile', kind_name: 'Mobile', value: '0692', is_primary: true }],
       })),
     }));
-    const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    const ids = [...Array.from({ length: 500 }, (_, i) => `id-${i}`), 'refusee'];
     const result = await exportActorContacts(ids, 'Campagne 2026', {});
     expect(mockRpc).toHaveBeenCalledTimes(2);
     expect(mockRpc.mock.calls[0][0]).toHaveLength(500);
-    expect(result.exportIds).toEqual(['journal-500', 'journal-1']);
+    // R1 : le run id est GÉNÉRÉ CLIENT et identique sur les deux lots (1/2 puis 2/2)
+    const meta1 = mockRpc.mock.calls[0][2];
+    const meta2 = mockRpc.mock.calls[1][2];
+    expect(meta1.exportRunId).toBe(meta2.exportRunId);
+    expect([meta1.batchIndex, meta1.batchCount]).toEqual([1, 2]);
+    expect([meta2.batchIndex, meta2.batchCount]).toEqual([2, 2]);
+    expect(result.exportRunId).toBe(meta1.exportRunId);
+    expect(result.logIds).toEqual(['journal-lot-1', 'journal-lot-2']);
+    expect(result.authorizedObjectIds).toHaveLength(500);
+    expect(result.deniedObjectIds).toEqual(['refusee']);
     expect(result.rows.get('id-0')?.[0].contacts[0].kindCode).toBe('mobile');
   });
 
-  it('refuse une finalité vide AVANT tout appel réseau', async () => {
+  it("R1 — échec du second lot ⇒ l'appel REJETTE (aucun fichier ne sera produit)", async () => {
+    mockRpc
+      .mockResolvedValueOnce({ log_id: 'j1', export_run_id: 'run', authorized_object_ids: [], denied_object_ids: [], rows: [] })
+      .mockRejectedValueOnce(new Error('timeout'));
+    const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    await expect(exportActorContacts(ids, 'Campagne 2026', {})).rejects.toThrow('timeout');
+  });
+
+  it('refuse une finalité vide ou trop courte AVANT tout appel réseau (le serveur revalide)', async () => {
     await expect(exportActorContacts(['a'], '   ', {})).rejects.toThrow(/finalité/i);
+    await expect(exportActorContacts(['a'], 'abc', {})).rejects.toThrow(/finalité/i);
     expect(mockRpc).not.toHaveBeenCalled();
   });
 });
@@ -2760,12 +3191,13 @@ describe('exportActorContacts (§208)', () => {
 Dans `src/services/rpc.ts`, ajouter (même zone que `getObjectResourcesBatch`) :
 
 ```ts
-/** Appel brut du RPC journalisé 16t — une invocation = UNE ligne de journal. Le découpage par 500 vit dans export-actor-contacts.ts. */
+/** Appel brut du RPC journalisé 16t — une invocation = UNE ligne de journal (un LOT). Le découpage par 500 et le partage du run id vivent dans export-actor-contacts.ts. */
 export async function callExportActorContactsRpc(
   objectIds: string[],
   reason: string,
+  meta: { exportRunId: string; batchIndex: number; batchCount: number },
   options: { signal?: AbortSignal } = {},
-): Promise<{ export_id: string; rows: unknown[] }> {
+): Promise<{ log_id: string; export_run_id: string; authorized_object_ids: string[]; denied_object_ids: string[]; rows: unknown[] }> {
   const client = requireRpcClient();
   if (!client) {
     throw new Error("Export des coordonnées d'acteur indisponible en mode démo.");
@@ -2774,13 +3206,20 @@ export async function callExportActorContactsRpc(
     p_object_ids: objectIds,
     p_reason: reason,
     p_format: 'xlsx',
+    p_export_run_id: meta.exportRunId,
+    p_batch_index: meta.batchIndex,
+    p_batch_count: meta.batchCount,
   });
   if (options.signal) query = query.abortSignal(options.signal);
   const { data, error } = await query;
   if (error) throw error;
-  const payload = (data ?? {}) as { export_id?: unknown; rows?: unknown };
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
   return {
-    export_id: typeof payload.export_id === 'string' ? payload.export_id : '',
+    log_id: typeof payload.log_id === 'string' ? payload.log_id : '',
+    export_run_id: typeof payload.export_run_id === 'string' ? payload.export_run_id : meta.exportRunId,
+    authorized_object_ids: strings(payload.authorized_object_ids),
+    denied_object_ids: strings(payload.denied_object_ids),
     rows: Array.isArray(payload.rows) ? payload.rows : [],
   };
 }
@@ -2792,8 +3231,17 @@ Remplacer le corps du squelette `export-actor-contacts.ts` :
 import { callExportActorContactsRpc } from '../rpc';
 import type { ActorContactChannel, ActorContactsRow } from './export-columns';
 
-/** Plafond dur du RPC 16t — au-delà on découpe : N lignes de journal, pas une. */
+/** Plafond PAR APPEL du RPC 16t — au-delà on découpe : N lignes de journal, pas une. Aucun plafond fonctionnel (R1). */
 export const ACTOR_EXPORT_BATCH = 500;
+
+/** R1 — résultat agrégé des lots (contrat identique au squelette T8, conservé). */
+export interface ActorContactsExportResult {
+  rows: Map<string, ActorContactsRow[]>;
+  exportRunId: string;
+  logIds: string[];
+  authorizedObjectIds: string[];
+  deniedObjectIds: string[];
+}
 
 function toChannel(raw: Record<string, unknown>): ActorContactChannel {
   return {
@@ -2816,35 +3264,57 @@ function toRow(raw: Record<string, unknown>): ActorContactsRow {
 }
 
 /**
- * §208 — SEULE voie de lecture des coordonnées d'acteur pour l'export : l'appel
+ * §208/R1 — SEULE voie de lecture des coordonnées d'acteur pour l'export : l'appel
  * journalisé api.export_actor_contacts (16t). Les colonnes requiresPurpose du
  * registre ne lisent QUE le résultat de cette fonction — jamais la fiche batch
- * (le journal serait contournable).
+ * (le journal serait contournable). Tous les lots partagent un export_run_id
+ * GÉNÉRÉ CLIENT ; chaque lot a sa ligne de journal (logId). Fusion par object_id.
+ * Un lot en échec ⇒ throw : l'orchestrateur ne produit AUCUN fichier (les journaux
+ * des lots déjà réussis restent — la donnée a atteint le navigateur).
  */
 export async function exportActorContacts(
   ids: string[],
   purpose: string,
   opts: { batchSize?: number; signal?: AbortSignal } = {},
-): Promise<{ rows: Map<string, ActorContactsRow[]>; exportIds: string[] }> {
-  if (purpose.trim() === '') {
-    throw new Error("La finalité de l'export est obligatoire (elle est inscrite au journal).");
+): Promise<ActorContactsExportResult> {
+  const cleanPurpose = purpose.trim();
+  if (cleanPurpose.length < 5) {
+    throw new Error("La finalité de l'export est obligatoire (5 caractères minimum — elle est inscrite au journal).");
   }
   const size = opts.batchSize ?? ACTOR_EXPORT_BATCH;
   const clean = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  const exportRunId = crypto.randomUUID();
+  const batchCount = Math.max(1, Math.ceil(clean.length / size));
+
   const rows = new Map<string, ActorContactsRow[]>();
-  const exportIds: string[] = [];
+  const logIds: string[] = [];
+  const authorized = new Set<string>();
+  const denied = new Set<string>();
 
   for (let i = 0; i < clean.length; i += size) {
+    if (opts.signal?.aborted) throw new Error('Export annulé.');
     const chunk = clean.slice(i, i + size);
-    const result = await callExportActorContactsRpc(chunk, purpose.trim(), { signal: opts.signal });
-    if (result.export_id) exportIds.push(result.export_id);
+    const result = await callExportActorContactsRpc(chunk, cleanPurpose, {
+      exportRunId,
+      batchIndex: Math.floor(i / size) + 1,
+      batchCount,
+    }, { signal: opts.signal });
+    if (result.log_id) logIds.push(result.log_id);
+    result.authorized_object_ids.forEach((id) => authorized.add(id));
+    result.denied_object_ids.forEach((id) => denied.add(id));
     for (const rawRow of result.rows) {
       const row = toRow(rawRow as Record<string, unknown>);
       if (!row.objectId) continue;
       rows.set(row.objectId, [...(rows.get(row.objectId) ?? []), row]);
     }
   }
-  return { rows, exportIds };
+  return {
+    rows,
+    exportRunId,
+    logIds,
+    authorizedObjectIds: [...authorized],
+    deniedObjectIds: [...denied],
+  };
 }
 ```
 
@@ -2919,9 +3389,27 @@ RESET ROLE;  -- attendu : [] ou NULL
 -- 4. advisors : get_advisors — le WARN security_definer sur export_actor_contacts est ATTENDU (§36).
 ```
 
-- [ ] **Step 4 : smoke test app**
+- [ ] **Step 4 : valider le plafond 500 SOUS le timeout (R1 — hypothèse à mesurer, pas à croire)**
 
-Sur l'app (compte membre OTI) : sélectionner 3 fiches → Excel → cocher « Acteur — mobile » → finalité → télécharger. Vérifier : le fichier porte les mobiles ; `SELECT reason, object_count, actor_count FROM actor_contact_export_log ORDER BY performed_at DESC LIMIT 1;` montre la ligne. Côté partenaire : `curl` de la route publique d'une fiche à acteurs → `"contacts": []` + `"contacts_restricted": true`.
+En persona `authenticated` réelle (pas superuser sans timeout), chronométrer un lot
+plein : `SELECT api.export_actor_contacts(ARRAY(SELECT id FROM object WHERE status='published' LIMIT 500), 'Mesure plafond 16t', 'xlsx');`
+dans une transaction **annulée** (BEGIN … ROLLBACK — le journal du test part avec).
+Attendu : < 4 s (marge ×2 sous le `statement_timeout` de 8 s). Si > 4 s : descendre
+`ACTOR_EXPORT_BATCH` (front) à 250 et consigner la mesure au §208. Ne PAS figer 500
+dans la doc partenaire avant cette mesure.
+
+- [ ] **Step 5 : benchmark des cibles d'acceptation (R1)**
+
+Depuis l'app en conditions réelles (La Réunion, machine bureautique) : mesurer et
+consigner au §208 — 50 fiches (cible 2-5 s), 200 fiches (5-10 s), corpus entier en
+colonnes usuelles (15-25 s), corpus entier toutes colonnes + acteurs (< 30 s). Si les
+cibles sont ratées avec projection + concurrence 2 + aplatissement immédiat en place :
+consigner les chiffres RÉELS et annoncer honnêtement la durée dans l'UI (le message de
+progression suffit) — ne pas sur-optimiser sans mesure.
+
+- [ ] **Step 6 : smoke test app**
+
+Sur l'app (compte membre OTI) : sélectionner 3 fiches → Excel → cocher « Acteur — mobile » → finalité → télécharger. Vérifier : le fichier porte les mobiles ; `SELECT reason, export_run_id, batch_index, batch_count, object_count, actor_count FROM actor_contact_export_log ORDER BY performed_at DESC LIMIT 2;` montre la/les lignes du run. Côté partenaire : `curl` de la route publique d'une fiche à acteurs → `"contacts": []` + `"contacts_restricted": true`.
 
 ---
 
@@ -2934,7 +3422,7 @@ Sur l'app (compte membre OTI) : sélectionner 3 fiches → Excel → cocher « A
 
 - [ ] **Step 1 : décision log §208**
 
-Rédiger `## §208` avec, a minima : le remplacement CSV→Excel (raw_json + city/address vides = bugs constatés) ; le registre unique et ses 4 écrivains d'origine ; les arbitrages PO (sélection seule, cellules lisibles, préréglages poste, acteur réservé ORG + journalisé, notes jamais, SIRET public, colonnes vides proposées §150) ; les mesures prod (846 objets, 0 lien acteur public, 0 adresse, coûts batch) ; la garde 16t et la fuite `render.actor_lines` fermée ; la renumérotation 16q-logos→16u ; les DIFFÉRÉS avec raison : `open_now`/`remplissage` (source ObjectCard), onglets normalisés, `is_public` sur `actor_channel` (le vrai correctif de modèle), workspace-parser `contacts_restricted` (compteur §17, impact nul à une ORG), unification `ColumnDef<TSource>` avec la vue Table, montage SelectionBar mobile.
+Rédiger `## §208` avec, a minima : le remplacement CSV→Excel (raw_json + city/address vides = bugs constatés) ; le registre unique et ses 4 écrivains d'origine ; les arbitrages PO (sélection seule, cellules lisibles, préréglages poste, acteur réservé ORG + journalisé, notes jamais, SIRET public, colonnes vides proposées §150) ; les mesures prod (846 objets, 0 lien acteur public, 0 adresse, coûts batch) ; la garde 16t et la fuite `render.actor_lines` fermée ; la renumérotation 16q-logos→16u ; **les corrections R1 de revue** : capacités `actor_identity`/`actor_contacts` (l'export ne donne jamais plus que la consultation), fusion multi-lots par `object_id` + `export_run_id`, journal multi-ORG (`org_object_ids`/`org_attributions`), cellules typées (lat/lon Number), `actor_primary` multi-valué, projection `fields` + concurrence 2 + aplatissement immédiat, cibles de temps mesurées ; les DIFFÉRÉS avec raison : **divergence deep↔resource sur les acteurs (R1 — deep intouchée : INVOKER, RLS vide les canaux pour authenticated, 0 appelant service-role ; à reprendre si un appelant service-role du deep apparaît)**, `open_now`/`remplissage` (source ObjectCard), onglets normalisés, `is_public` sur `actor_channel` (le vrai correctif de modèle), workspace-parser `contacts_restricted` (compteur §17, impact nul à une ORG), unification `ColumnDef<TSource>` avec la vue Table, montage SelectionBar mobile.
 
 - [ ] **Step 2 : WORKFLOW.md**
 
@@ -2953,10 +3441,11 @@ git commit -m "docs(§208): decision log export Excel + garde 16t, differes trac
 
 ---
 
-## Auto-revue du plan (faite à l'écriture)
+## Auto-revue du plan (faite à l'écriture, mise à jour R1)
 
-- **Couverture spec :** §1-2 → T1-T11 ; §3.2 (REVOKE hygiène) → T12 Step 4 ; §3.4 fuite → T13/T14/T17 ; §4.5 → T12-T14/T16 ; §4.6 modale → T10 ; §6 vérifications → T1 (témoin Excel), T14 (personas+sabotage), tests relisant les cellules (T8) ; §7 manifeste/dérive → T15 ; §8 risques → T1 (risque 1), T13 Step 6 (risque « autres émetteurs »), T16 Step 5 (risque collision docs).
-- **Écarts assumés vs spec (consignés §208, T18) :** `open_now`/`remplissage` différées ; « Complet hors groupe acteur » appliqué à la lettre ; `xlsxCell` borne à 32 000 caractères ; le préréglage Diffusion exclut aussi `actor_names`/`actor_roles` (groupe entier) — plus strict que « colonnes publiques », cohérent avec « ni acteur ».
-- **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel` définis en T4, consommés T7/T8/T16 ; `runSelectionXlsxExport` signature identique T8/T10 ; `presetColumnIds(presetId, session)` identique T7/T9/T10.
-- **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle).
+- **Couverture spec :** §0 R1 → intégré en place (voir « Révision R1 » en tête) ; §1-2 → T1-T11 ; §3.2 (REVOKE hygiène) → T12 Step 4 ; §3.4 fuite → T13/T14/T17 ; §4.5 → T12-T14/T16 ; §4.6 modale → T10 ; §6 vérifications → T1 (témoin Excel), T14 (personas+sabotage+multi-lots+deep intouchée), tests relisant les cellules (T8) ; §7 manifeste/dérive → T15 ; §8 risques → T1 (risque 1), T13 Step 6 (« autres émetteurs »), T16 Step 5 (collision docs), T17 Steps 4-5 (plafond 500 + cibles de temps).
+- **Couverture R1 point par point :** capacités → T4/T7/T10 ; deep intouchée + preuve → T13 Step 5 + T14 H ; multi-lots/`export_run_id`/fusion par id → T3/T8/T12/T16 + T14 G ; contrat sécurité RPC (REVOKE service_role, finalité serveur 5-500, dédoublonnage serveur, format liste blanche) → T12 + T14 F ; journal multi-ORG → T12 + T14 G5 ; cellules typées + lat/lon Number → T4/T5/T8 ; `actor_primary` multi → T7 ; matrice avant code → T4 Step 0 (STOP PO) ; projection `fields` → T4/T7 Step 3bis/T8 ; concurrence 2 → T3 ; aplatissement immédiat → T8 ; échec d'un lot ⇒ aucun fichier → T8/T16 ; annulation entre lots → T3/T16 ; cibles de temps → T17 Step 5.
+- **Écarts assumés vs revue (consignés §208, T18) :** le proxy MODALE de `actor_identity`/`actor_contacts` est le même (`orgId` non nul) — la distinction réelle est serveur, par fiche (documenté dans `clearanceLevels`) ; `cellType` implémenté en champ optionnel (défaut `text`) plutôt qu'obligatoire — équivalent, moins de bruit ; la sélection mixte tolérée par le RPC sauf tout-refusé (`FORBIDDEN`), conformément à « les lignes autorisées sont remplies ».
+- **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel`/`ExportCellValue` définis en T4, consommés T7/T8/T16 ; `ActorContactsExportResult` identique T8 (squelette) / T16 (réel) ; `runSelectionXlsxExport` signature identique T8/T10 ; `callExportActorContactsRpc(ids, reason, meta, options)` identique T16 service/test ; `presetColumnIds(presetId, session)` identique T7/T9/T10 ; `requiredFieldsFor` défini T4, testé T7 Step 3bis, consommé T8.
+- **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) + mesures ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle). **Deux STOP PO :** T4 Step 0 (matrice) et T17 (live).
 

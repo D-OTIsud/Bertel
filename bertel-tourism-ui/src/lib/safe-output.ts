@@ -32,3 +32,17 @@ export function csvCell(value: unknown): string {
   const guarded = /^[=+\-@]/.test(normalized) ? `'${normalized}` : normalized;
   return `"${guarded.replace(/"/g, '""')}"`;
 }
+
+/**
+ * Prépare une valeur pour une cellule .xlsx (§208). DIFFÈRE de csvCell, et c'est
+ * voulu : dans un classeur OOXML la cellule est TYPÉE (`type: String` côté
+ * write-excel-file) — c'est ce typage qui neutralise l'injection de formule
+ * (`= + - @`), PAS le préfixe apostrophe de csvCell, qui serait ici VISIBLE dans
+ * Excel. On garde les \n (Excel les rend dans la cellule), on normalise \r\n,
+ * et on borne à la limite Excel de 32 767 caractères par cellule.
+ * Invariant : tout écrivain xlsx passe par ici — ne pas recopier (dette SEC-8).
+ */
+export function xlsxCell(value: unknown): string {
+  const normalized = (value == null ? '' : String(value)).replace(/\r\n?/g, '\n').trim();
+  return normalized.length > 32000 ? `${normalized.slice(0, 32000)}…` : normalized;
+}

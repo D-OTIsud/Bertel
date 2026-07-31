@@ -1,4 +1,5 @@
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
+import { csvCell } from '@/lib/safe-output';
 import { MODULE_KEY_MAP } from '../editor-state';
 
 /** Identity not carried inside `draft` (type/id live on the resource) — passed in. */
@@ -30,13 +31,6 @@ export const KNOWN_MODULE_KEYS: ReadonlySet<keyof ObjectWorkspaceModules> = new 
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-/** Strip newlines, wrap in quotes, double embedded quotes (mirrors selection-export.ts). */
-function csvEscape(value: unknown): string {
-  const str = value == null ? '' : String(value);
-  const normalized = str.replace(/\r?\n/g, ' ').trim();
-  return `"${normalized.replace(/"/g, '""')}"`;
 }
 
 export function serializeObjectJson(draft: ObjectWorkspaceModules, meta: ObjectIoMeta): string {
@@ -72,7 +66,7 @@ export function serializeObjectCsv(draft: ObjectWorkspaceModules, meta: ObjectIo
     main.city,
     firstContactValue(draft, 'phone'),
     firstContactValue(draft, 'email'),
-  ].map(csvEscape).join(',');
+  ].map(csvCell).join(',');
   return [CSV_HEADERS.join(','), row].join('\n');
 }
 

@@ -28,6 +28,16 @@ Résumé pour l'exécutant :
 7. Matrice des colonnes **validée par le PO avant** le code du registre (T4 Step 0).
 8. Journal multi-ORG : `org_object_ids[]` + `org_attributions` (T12, T14).
 
+**Révision R2 (2e passe de revue, même jour) :**
+9. La liste des fichiers de T13 ne mentionne plus les fonctions deep — la
+   contradiction avec l'interdiction R1 est levée ; **la preuve d'identité est une
+   comparaison des définitions complètes HEAD↔arbre** (T13 Step 5), l'assertion
+   `prosrc` du test SQL n'étant qu'un complément (T14 H).
+10. **Préflight serveur des capacités acteur** : `api.export_actor_capabilities(ids)`
+    (T12 §1bis, T14 I, T10 Step 4a) — l'offre de colonnes acteur suit la
+    consultation réelle DE LA SÉLECTION, pas le proxy « membre d'une ORG » ;
+    fail-closed avant 16t ; jamais une garde (l'export refait fiche par fiche).
+
 ## Global Constraints
 
 - **Répertoire de travail frontend :** `bertel-tourism-ui/`. Tous les chemins `src/…` ci-dessous sont relatifs à ce dossier. Les chemins SQL sont relatifs à `Base de donnée DLL et API/`.
@@ -1346,15 +1356,16 @@ Puis, **en fin de fichier**, les niveaux et préréglages :
 // ---------- Niveaux d'autorisation & préréglages ----------
 
 /**
- * R1 — traduction des capacités dans les prédicats EXISTANTS, côté modale
- * (ergonomie ; la GARDE reste serveur, réévaluée par fiche) :
- *  - actor_identity ⇔ « peut consulter les acteurs » : proxy client = membre d'une
- *    ORG (orgId non nul) — c'est l'arm extended du gate de ligne serveur. Un
- *    partenaire API (service_role) n'ouvre pas la modale ; un lecteur simple sans
- *    ORG ne voit pas ces colonnes ET le serveur lui rendrait des lignes vides.
- *  - actor_contacts ⇔ le droit d'export renforcé 16t (membre d'une ORG publisher) :
- *    même proxy client (orgId), distinction rendue visible par requiresPurpose ;
- *    le RPC journalisé refuse fiche par fiche ce que la modale a sur-offert.
+ * R1/R2 — DEUX étages pour l'offre de colonnes, aucun n'est la garde :
+ *  1. clearanceLevels (ici) : filtre GROSSIER de session — un lecteur sans ORG
+ *     ni rôle ne se voit jamais proposer les niveaux org/acteur/éditeur.
+ *  2. Préflight serveur (R2, modale T10) : `api.export_actor_capabilities(ids)`
+ *     évalue les MÊMES prédicats que les gates réels SUR LA SÉLECTION —
+ *     l'export ne propose l'identité/les coordonnées acteur que si la
+ *     consultation les donnerait. Le proxy de session seul est trop large
+ *     (le droit est par fiche : extended OU lien public / ORG publisher).
+ * La GARDE reste 16t : le RPC journalisé refuse fiche par fiche, quoi qu'ait
+ * offert la modale — un localStorage forgé ne contourne rien.
  */
 export function clearanceLevels(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): Set<ExportClearance> {
   const levels = new Set<ExportClearance>(['public']);
@@ -1898,8 +1909,9 @@ git commit -m "feat(export): store persistant des colonnes d'export (localStorag
 - Test: `bertel-tourism-ui/src/features/explorer/export/ExportExcelModal.test.tsx`
 
 **Interfaces:**
-- Consumes: `Modal` (piège documenté `Modal.tsx:10-12` : ne PAS entourer d'un `if (!open) return null`), `FilterColumnGroup` (`src/components/common/FilterColumnGroup.tsx:16`, prop `collapsible`), stores T9 + session, `runSelectionXlsxExport` (T8), `availableColumns`/`EXPORT_PRESETS`/`presetColumnIds`/`purposeRequired`/`EXPORT_GROUP_LABELS` (T7).
-- Produces: `ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void })` — consommé par la Tâche 11. `Modal` gagne `size?: 'default' | 'wide'`.
+- Consumes: `Modal` (piège documenté `Modal.tsx:10-12` : ne PAS entourer d'un `if (!open) return null`), `FilterColumnGroup` (`src/components/common/FilterColumnGroup.tsx:16`, prop `collapsible`), stores T9 + session, `runSelectionXlsxExport` (T8), `availableColumns`/`EXPORT_PRESETS`/`presetColumnIds`/`purposeRequired`/`EXPORT_GROUP_LABELS` (T7), `getExportActorCapabilities` (rpc.ts — ajouté ICI, Step 4a).
+- Produces: `ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void })` — consommé par la Tâche 11. `Modal` gagne `size?: 'default' | 'wide'`. `getExportActorCapabilities(objectIds): Promise<{ actorIdentityAvailable: boolean; actorContactsAvailable: boolean }>` (export de rpc.ts).
+- **R2 — préflight des capacités acteur :** à l'ouverture, la modale interroge `api.export_actor_capabilities(selectedObjectIds)` et ne propose les colonnes `actor_identity` / `actor_contacts` que si le serveur dit qu'AU MOINS une fiche de la sélection y donne accès. Échec ou RPC absent (avant 16t) ⇒ `{false, false}` — **offre fail-closed**, jamais un crash ni une offre par défaut. Ce préflight est de l'ergonomie : la garde reste 16t, fiche par fiche.
 
 - [ ] **Step 1 : variante large de Modal (pas de TDD — 3 lignes de CSS + 1 prop)**
 
@@ -1948,9 +1960,12 @@ import { useExplorerStore } from '../../../store/explorer-store';
 import { useSessionStore } from '../../../store/session-store';
 import { useExplorerExportStore } from '../../../store/explorer-export-store';
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
+import { getExportActorCapabilities } from '../../../services/rpc';
 
 jest.mock('../../../services/export/export-workbook', () => ({ runSelectionXlsxExport: jest.fn() }));
+jest.mock('../../../services/rpc', () => ({ getExportActorCapabilities: jest.fn() }));
 const mockRun = runSelectionXlsxExport as jest.Mock;
+const mockCaps = getExportActorCapabilities as jest.Mock;
 
 function setup(session: Partial<ReturnType<typeof useSessionStore.getState>> = {}) {
   useExplorerStore.setState({ selectedObjectIds: ['a', 'b', 'c'] });
@@ -1961,7 +1976,11 @@ function setup(session: Partial<ReturnType<typeof useSessionStore.getState>> = {
 }
 
 describe('ExportExcelModal (§208)', () => {
-  beforeEach(() => mockRun.mockReset().mockResolvedValue({ exported: 3, requested: 3 }));
+  beforeEach(() => {
+    mockRun.mockReset().mockResolvedValue({ exported: 3, requested: 3 });
+    // R2 : par défaut le préflight ouvre tout (membre publisher) — les cas contraires le surchargent.
+    mockCaps.mockReset().mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: true });
+  });
 
   it('affiche le compte, les 3 préréglages et les groupes repliables', () => {
     setup();
@@ -1974,6 +1993,30 @@ describe('ExportExcelModal (§208)', () => {
   it("un lecteur sans ORG ne voit PAS les colonnes org (clearance filtre l'offre, §205)", () => {
     setup({ orgId: null, canEditObjects: false, role: null });
     expect(screen.queryByLabelText(/Contacts de la fiche \(tous\)/)).toBeNull();
+  });
+
+  it('R2 — préflight serveur : capacités refusées ⇒ colonnes acteur ABSENTES malgré la session ORG', async () => {
+    mockCaps.mockResolvedValue({ actorIdentityAvailable: false, actorContactsAvailable: false });
+    setup();
+    expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
+    expect(mockCaps).toHaveBeenCalledWith(['a', 'b', 'c']);
+    expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull();
+    expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
+  });
+
+  it('R2 — identité disponible mais pas les coordonnées : nom/rôle offerts, mobile absent', async () => {
+    mockCaps.mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: false });
+    setup();
+    expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
+  });
+
+  it('R2 — préflight en échec (ex. 16t pas encore déployée) : offre FAIL-CLOSED, pas de crash', async () => {
+    mockCaps.mockRejectedValue(new Error('function api.export_actor_capabilities does not exist'));
+    setup();
+    expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull();
+    expect(screen.getByLabelText(/^Nom$/)).toBeInTheDocument(); // le reste de la modale vit normalement
   });
 
   it('sans colonne à finalité : télécharge directement, sans champ finalité', async () => {
@@ -2006,6 +2049,40 @@ describe('ExportExcelModal (§208)', () => {
 
 - [ ] **Step 3 : échec** — `npm run test:run -- src/features/explorer/export/ExportExcelModal.test.tsx`. FAIL attendu.
 
+- [ ] **Step 4a (R2) : le service de préflight dans `rpc.ts`**
+
+Ajouter dans `src/services/rpc.ts` (même zone que `getObjectResourcesBatch`) :
+
+```ts
+/**
+ * R2 — préflight de l'offre de colonnes acteur : le SERVEUR dit si la sélection
+ * donne accès à l'identité / aux coordonnées (mêmes prédicats que les gates).
+ * ERGONOMIE seulement — la garde reste 16t, fiche par fiche. Tout échec (RPC
+ * absent avant 16t, réseau) rend {false, false} : offre fail-closed, jamais
+ * un crash ni une offre par défaut.
+ */
+export async function getExportActorCapabilities(
+  objectIds: string[],
+): Promise<{ actorIdentityAvailable: boolean; actorContactsAvailable: boolean }> {
+  const closed = { actorIdentityAvailable: false, actorContactsAvailable: false };
+  const client = requireRpcClient();
+  if (!client) return closed;
+  try {
+    const { data, error } = await client.schema('api').rpc('export_actor_capabilities', {
+      p_object_ids: objectIds,
+    });
+    if (error) return closed;
+    const payload = (data ?? {}) as Record<string, unknown>;
+    return {
+      actorIdentityAvailable: payload.actor_identity_available === true,
+      actorContactsAvailable: payload.actor_contacts_available === true,
+    };
+  } catch {
+    return closed;
+  }
+}
+```
+
 - [ ] **Step 4 : implémenter le composant**
 
 Créer `ExportExcelModal.tsx` :
@@ -2013,7 +2090,7 @@ Créer `ExportExcelModal.tsx` :
 ```tsx
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Download } from 'lucide-react';
 import { Modal } from '../../../components/common/Modal';
@@ -2026,7 +2103,11 @@ import {
   type ExportColumnDef, type ExportGroupId,
 } from '../../../services/export/export-columns';
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
+import { getExportActorCapabilities } from '../../../services/rpc';
 import { cn } from '@/lib/utils';
+
+/** R2 — capacités acteur par défaut : FERMÉES tant que le serveur n'a pas répondu. */
+const CLOSED_CAPS = { actorIdentityAvailable: false, actorContactsAvailable: false };
 
 /**
  * §208 — modale de l'export Excel de la sélection. L'offre de colonnes est
@@ -2044,9 +2125,33 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
 
   const [purpose, setPurpose] = useState('');
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [caps, setCaps] = useState(CLOSED_CAPS);
   const abortRef = useRef<AbortController | null>(null);
 
-  const offered = useMemo(() => availableColumns(session), [session]);
+  // R2 — préflight serveur à l'ouverture : l'offre de colonnes acteur suit la
+  // consultation RÉELLE de la sélection (mêmes prédicats que les gates). Échec
+  // ⇒ fermé. Garde anti-course : une réponse d'une sélection périmée est ignorée.
+  useEffect(() => {
+    if (!open || selectedObjectIds.length === 0) {
+      setCaps(CLOSED_CAPS);
+      return;
+    }
+    let stale = false;
+    setCaps(CLOSED_CAPS);
+    getExportActorCapabilities(selectedObjectIds)
+      .then((result) => { if (!stale) setCaps(result); })
+      .catch(() => { if (!stale) setCaps(CLOSED_CAPS); });
+    return () => { stale = true; };
+  }, [open, selectedObjectIds]);
+
+  const offered = useMemo(
+    () => availableColumns(session).filter((col) => {
+      if (col.clearance === 'actor_identity') return caps.actorIdentityAvailable;
+      if (col.clearance === 'actor_contacts') return caps.actorContactsAvailable;
+      return true;
+    }),
+    [session, caps],
+  );
   const locked = presetId === 'diffusion';
   // Verrouillé ⇒ on ignore l'état persisté et on recalcule (jamais restauré du localStorage).
   const effectiveIds = locked ? presetColumnIds('diffusion', session) : columnIds.filter((id) => offered.some((c) => c.id === id));
@@ -2170,8 +2275,13 @@ Ajustements permis à l'implémentation (mêmes assertions) : classes utilitaire
 
 ```bash
 cd bertel-tourism-ui && npm run test:run -- src/features/explorer/export/ExportExcelModal.test.tsx src/components/common/Modal.test.tsx && npm run typecheck
-git add src/components/common/Modal.tsx src/styles.css src/features/explorer/export/ExportExcelModal.tsx src/features/explorer/export/ExportExcelModal.test.tsx
-git commit -m "feat(export): modale de selection de colonnes (Modal wide 720px, groupes repliables, 3 prereglages, finalite obligatoire sur colonnes tracees)"
+git add src/components/common/Modal.tsx src/styles.css src/services/rpc.ts src/features/explorer/export/ExportExcelModal.tsx src/features/explorer/export/ExportExcelModal.test.tsx
+git commit -m "feat(export): modale de colonnes + preflight serveur des capacites acteur (R2)
+
+Modal wide 720px, groupes repliables, 3 prereglages, finalite >= 5 caracteres.
+L'offre des colonnes acteur suit la consultation REELLE de la selection
+(api.export_actor_capabilities, memes predicats que les gates) — fail-closed
+avant 16t ou sur echec ; la garde reste serveur, fiche par fiche."
 ```
 
 ---
@@ -2326,6 +2436,51 @@ REVOKE ALL     ON FUNCTION api.can_read_actor_contacts(text) FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.can_read_actor_contacts(text) TO   authenticated, service_role;
 -- service_role a EXECUTE (les legs DEFINER/INVOKER l'évaluent sous ce rôle)
 -- mais la fonction lui répond FALSE (auth.uid() NULL) — c'est le comportement voulu.
+
+-- ---------------------------------------------------------------------
+-- 1bis. Préflight des capacités acteur (R2) : la modale d'export demande au
+--    SERVEUR si la sélection donne accès à l'identité / aux coordonnées des
+--    acteurs — l'offre de colonnes suit la consultation réelle, pas un proxy
+--    « membre d'une ORG ». Booléens AGRÉGÉS sur la sélection (∃ une fiche
+--    accessible ⇒ true : les fiches refusées resteront vides, sélection mixte
+--    assumée). ERGONOMIE seulement : export_actor_contacts refait les contrôles
+--    fiche par fiche — ce préflight n'est jamais une garde.
+--    Mêmes prédicats que les gates réels : identité ⇔ extended OU lien public
+--    (l'arm du leg actors) ; coordonnées ⇔ can_read_actor_contacts.
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION api.export_actor_capabilities(p_object_ids text[])
+RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth
+AS $$
+  WITH ids AS (
+    SELECT DISTINCT btrim(t.id) AS id
+      FROM unnest(p_object_ids) AS t(id)
+     WHERE btrim(coalesce(t.id, '')) <> ''
+  ),
+  super AS (
+    SELECT EXISTS (SELECT 1 FROM app_user_profile p
+                    WHERE p.id = (SELECT auth.uid())
+                      AND p.role IN ('owner','super_admin')) AS ok
+  )
+  SELECT jsonb_build_object(
+    'actor_identity_available',
+      COALESCE((SELECT ok FROM super), FALSE)
+      OR EXISTS (
+        SELECT 1 FROM ids i
+         WHERE i.id IN (SELECT api.current_user_extended_object_ids())
+            OR EXISTS (SELECT 1 FROM actor_object_role aor
+                        WHERE aor.object_id = i.id AND aor.visibility = 'public')),
+    'actor_contacts_available',
+      COALESCE((SELECT ok FROM super), FALSE)
+      OR EXISTS (
+        SELECT 1 FROM ids i
+         WHERE i.id IN (SELECT api.current_user_crm_object_ids()))
+  );
+$$;
+
+REVOKE ALL     ON FUNCTION api.export_actor_capabilities(text[]) FROM PUBLIC, anon, service_role;
+GRANT  EXECUTE ON FUNCTION api.export_actor_capabilities(text[]) TO   authenticated;
 
 -- ---------------------------------------------------------------------
 -- 2. Journal IMMUABLE des exports de coordonnées (modèle : object_deletion_log).
@@ -2583,7 +2738,8 @@ GRANT  EXECUTE ON FUNCTION api.get_object_resources_batch(text[], text[], text, 
 
 COMMIT;
 
--- Deux fonctions api neuves exposées PostgREST :
+-- Trois fonctions api neuves exposées PostgREST (can_read_actor_contacts,
+-- export_actor_capabilities, export_actor_contacts) :
 NOTIFY pgrst, 'reload schema';
 ```
 
@@ -2593,18 +2749,23 @@ NOTIFY pgrst, 'reload schema';
 cd "Base de donnée DLL et API" && grep -n "uuid_generate_v4\|ANY((SELECT\|FOR ALL" migration_actor_contacts_org_gate.sql; grep -c "REVOKE ALL" migration_actor_contacts_org_gate.sql
 ```
 
-Attendu : la première commande ne renvoie RIEN (aucun des trois interdits) ; la seconde renvoie `3` (garde + journal + RPC… + le 4e bloc batch ⇒ `4` si tu comptes la ligne batch — vérifier que chaque fonction/table neuve a le sien).
+Attendu : la première commande ne renvoie RIEN (aucun des trois interdits) ; la
+seconde renvoie `5` — un REVOKE par surface neuve : garde (1), préflight (1bis),
+journal (2), RPC export (3), hygiène batch (4). Si le compte diffère, une surface
+est née sans son REVOKE : la trouver avant de continuer.
 
 - [ ] **Step 3 : commit**
 
 ```bash
 git add "Base de donnée DLL et API/migration_actor_contacts_org_gate.sql"
-git commit -m "feat(sql): 16t — garde api.can_read_actor_contacts + journal actor_contact_export_log + RPC export journalise
+git commit -m "feat(sql): 16t — garde can_read_actor_contacts + preflight export_actor_capabilities + journal + RPC export journalise
 
 Perimetre reutilise (current_user_crm_object_ids = ORG publisher du membership).
 Pas de bras service_role dans la garde (les routes partenaires appellent en
-service-role — une cle de service n'est pas une personne). Journal sans aucune
-valeur de coordonnee, sans FK (survit a la suppression et a l'art. 17)."
+service-role — une cle de service n'est pas une personne). Preflight R2 : la
+modale offre les colonnes acteur selon la consultation REELLE de la selection
+(memes predicats que les gates — jamais une garde, l'export refait fiche par
+fiche). Journal multi-ORG sans aucune valeur de coordonnee, sans FK."
 ```
 
 ---
@@ -2612,7 +2773,8 @@ valeur de coordonnee, sans FK (survit a la suppression et a l'art. 17)."
 ### Tâche 13 : patch des trois voies qui fuient dans `api_views_functions.sql`
 
 **Files:**
-- Modify: `Base de donnée DLL et API/api_views_functions.sql` — 4 sites : DECLARE (~l.3022), leg `actors` (~l.4023-4080), `render.actor_lines` (~l.5262-5279), `render.contact_lines` (~l.5030-5048), + le latéral acteurs de `get_objects_with_deep_data` (~l.7284-7336).
+- Modify: `Base de donnée DLL et API/api_views_functions.sql` — **4 sites, tous dans `get_object_resource`** : DECLARE (~l.3022), leg `actors` (~l.4023-4080), `render.actor_lines` (~l.5262-5279), `render.contact_lines` (~l.5030-5048).
+- **INTERDIT (R1/R2)** : `get_object_with_deep_data` et `get_objects_with_deep_data` (~l.7203-7360) ne sont modifiées par AUCUN step — le Step 5 le PROUVE par comparaison de leurs définitions complètes.
 
 ⚠ Les numéros de ligne bougent à chaque édition : localiser par `grep -n`, jamais de tête.
 
@@ -2749,15 +2911,27 @@ et n'ont **aucun appelant service-role** (vérifié : les routes partenaires app
 `get_object_resource`). Cette dette n'entre dans cette passe QUE si les tests
 démontrent une régression réellement introduite par 16t.
 
-Vérification mécanique qu'aucun édit ne les a touchées :
+Vérification mécanique — **comparaison des DÉFINITIONS COMPLÈTES entre HEAD et
+l'arbre de travail** (R2 : un `git diff | grep deep_data` raterait une modification
+au milieu du corps si le nom de la fonction n'apparaît pas dans le contexte du diff) :
 
 ```bash
-cd "Base de donnée DLL et API" && git diff api_views_functions.sql | grep -n "deep_data" ; echo "exit=$?"
+cd "Base de donnée DLL et API"
+mkdir -p /tmp/deep-proof
+git show HEAD:./api_views_functions.sql | awk '/CREATE OR REPLACE FUNCTION api\.get_object_with_deep_data\(/,/^\$\$;$/' > /tmp/deep-proof/single.head.sql
+awk '/CREATE OR REPLACE FUNCTION api\.get_object_with_deep_data\(/,/^\$\$;$/' api_views_functions.sql > /tmp/deep-proof/single.work.sql
+git show HEAD:./api_views_functions.sql | awk '/CREATE OR REPLACE FUNCTION api\.get_objects_with_deep_data\(/,/^\$\$;$/' > /tmp/deep-proof/batch.head.sql
+awk '/CREATE OR REPLACE FUNCTION api\.get_objects_with_deep_data\(/,/^\$\$;$/' api_views_functions.sql > /tmp/deep-proof/batch.work.sql
+diff -u /tmp/deep-proof/single.head.sql /tmp/deep-proof/single.work.sql && diff -u /tmp/deep-proof/batch.head.sql /tmp/deep-proof/batch.work.sql && echo "OK — les 2 fonctions deep sont IDENTIQUES a HEAD"
+wc -l /tmp/deep-proof/*.head.sql   # garde de non-vacuite : les extraits ne doivent PAS etre vides
 ```
 
-Attendu : AUCUNE ligne (exit=1). Si une ligne sort : annuler cet édit avant de continuer.
-(Le test SQL de la Tâche 14 fige la même assertion côté base : `pg_proc.prosrc` des
-deux fonctions ne contient pas `can_read_actor_contacts`.)
+Attendu : les deux `diff` muets + la ligne `OK — …`, ET des extraits non vides (si
+`wc -l` montre 0, le motif awk n'a rien capturé et la preuve est VACANTE — corriger
+le motif avant de conclure). Si un `diff` sort quelque chose : annuler cet édit
+avant de continuer. Le test SQL de la Tâche 14 (assertion H) reste en COMPLÉMENT :
+il fige côté base que `pg_proc.prosrc` ne référence pas la garde — il ne prouve pas
+l'identité, c'est cette comparaison-ci qui la prouve.
 
 - [ ] **Step 6 : inventaire exhaustif des émetteurs d'`actor_channel`**
 
@@ -3000,7 +3174,10 @@ BEGIN
 END $$;
 RESET ROLE;
 
--- H (R1). PREUVE que 16t n'a pas touché les fonctions deep (décision de revue) :
+-- H (R1/R2). Fonctions deep : COMPLÉMENT de la preuve d'identité (qui vit dans
+--    T13 Step 5, comparaison des définitions complètes HEAD↔arbre). Ici on fige
+--    côté base que la garde 16t n'y est pas référencée — assertion plus faible
+--    mais permanente en CI.
 DO $$
 DECLARE n int;
 BEGIN
@@ -3013,6 +3190,55 @@ BEGIN
     RAISE EXCEPTION 'H1 FAIL: une fonction deep reference la garde 16t — elles sont HORS PERIMETRE (R1)';
   END IF;
 END $$;
+
+-- I (R2). Préflight des capacités acteur : le serveur dit si la SÉLECTION donne
+--    accès à l'identité / aux coordonnées — la modale n'offre que ça.
+-- I1 : membre publisher ⇒ les deux capacités vraies sur sa fiche.
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000001"}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE c jsonb;
+BEGIN
+  c := api.export_actor_capabilities(ARRAY['HOTRUN000000T16T']);
+  IF c->>'actor_identity_available' IS DISTINCT FROM 'true'
+     OR c->>'actor_contacts_available' IS DISTINCT FROM 'true' THEN
+    RAISE EXCEPTION 'I1 FAIL: membre publisher = identite ET coordonnees disponibles, recu %', c;
+  END IF;
+END $$;
+RESET ROLE;
+-- I2 : authentifié SANS membership, fiche à liens 'partners' seulement ⇒ les deux false.
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000002"}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE c jsonb;
+BEGIN
+  c := api.export_actor_capabilities(ARRAY['HOTRUN000000T16T']);
+  IF c->>'actor_identity_available' IS DISTINCT FROM 'false'
+     OR c->>'actor_contacts_available' IS DISTINCT FROM 'false' THEN
+    RAISE EXCEPTION 'I2 FAIL: lecteur sans acces acteurs = aucune capacite offerte, recu %', c;
+  END IF;
+END $$;
+RESET ROLE;
+-- I3 : un lien PUBLIC ouvre l'identité (pas les coordonnées) au même lecteur.
+UPDATE actor_object_role SET visibility = 'public'
+ WHERE actor_id = '20000000-0000-4000-8000-000000000001' AND object_id = 'HOTRUN000000T16T';
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000002"}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE c jsonb;
+BEGIN
+  c := api.export_actor_capabilities(ARRAY['HOTRUN000000T16T']);
+  IF c->>'actor_identity_available' IS DISTINCT FROM 'true'
+     OR c->>'actor_contacts_available' IS DISTINCT FROM 'false' THEN
+    RAISE EXCEPTION 'I3 FAIL: lien public = identite oui, coordonnees non, recu %', c;
+  END IF;
+END $$;
+RESET ROLE;
+UPDATE actor_object_role SET visibility = 'partners'
+ WHERE actor_id = '20000000-0000-4000-8000-000000000001' AND object_id = 'HOTRUN000000T16T';
 
 SELECT 'test_actor_contacts_org_gate: OK' AS result;
 ROLLBACK;
@@ -3365,17 +3591,21 @@ Via MCP Supabase : `apply_migration` avec `name: "actor_contacts_org_gate_16t"` 
 
 - [ ] **Step 2 : redéployer les fonctions patchées**
 
-Le patch T13 vit dans `api_views_functions.sql`, trop gros pour un apply complet. Recette maison (mémoire §106) : `.tmp_pgapply/apply_range.cjs` applique une PLAGE de lignes via Node pg. Localiser les bornes AU MOMENT de l'apply (elles ont bougé) :
+Le patch T13 vit dans `api_views_functions.sql`, trop gros pour un apply complet.
+Recette maison (mémoire §106) : `.tmp_pgapply/apply_range.cjs` applique une PLAGE de
+lignes via Node pg. **UNE SEULE fonction est redéployée : `get_object_resource`** —
+les fonctions deep sont hors périmètre (R1/R2), les redéployer serait précisément
+la modification interdite. Localiser les bornes AU MOMENT de l'apply (elles ont bougé) :
 
 ```bash
 cd "Base de donnée DLL et API" && grep -n "CREATE OR REPLACE FUNCTION api.get_object_resource(" api_views_functions.sql
-grep -n "CREATE OR REPLACE FUNCTION api.get_objects_with_deep_data" api_views_functions.sql
-grep -n "^\$\$;" api_views_functions.sql | head -80   # repérer la fin de chaque fonction
+grep -n "^\$\$;" api_views_functions.sql | head -80   # repérer la fin de la fonction
 node ../.tmp_pgapply/apply_range.cjs api_views_functions.sql <debut_resource> <fin_resource>
-node ../.tmp_pgapply/apply_range.cjs api_views_functions.sql <debut_deep> <fin_deep>
 ```
 
-Puis `NOTIFY pgrst, 'reload schema';` via `execute_sql`.
+Puis `NOTIFY pgrst, 'reload schema';` via `execute_sql`. Contre-preuve immédiate en
+live (R2) : `SELECT proname, md5(prosrc) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname='api' AND proname LIKE '%deep_data%';`
+avant ET après l'apply — les deux hash doivent être IDENTIQUES.
 
 - [ ] **Step 3 : vérifications live (lecture seule)**
 
@@ -3445,7 +3675,8 @@ git commit -m "docs(§208): decision log export Excel + garde 16t, differes trac
 
 - **Couverture spec :** §0 R1 → intégré en place (voir « Révision R1 » en tête) ; §1-2 → T1-T11 ; §3.2 (REVOKE hygiène) → T12 Step 4 ; §3.4 fuite → T13/T14/T17 ; §4.5 → T12-T14/T16 ; §4.6 modale → T10 ; §6 vérifications → T1 (témoin Excel), T14 (personas+sabotage+multi-lots+deep intouchée), tests relisant les cellules (T8) ; §7 manifeste/dérive → T15 ; §8 risques → T1 (risque 1), T13 Step 6 (« autres émetteurs »), T16 Step 5 (collision docs), T17 Steps 4-5 (plafond 500 + cibles de temps).
 - **Couverture R1 point par point :** capacités → T4/T7/T10 ; deep intouchée + preuve → T13 Step 5 + T14 H ; multi-lots/`export_run_id`/fusion par id → T3/T8/T12/T16 + T14 G ; contrat sécurité RPC (REVOKE service_role, finalité serveur 5-500, dédoublonnage serveur, format liste blanche) → T12 + T14 F ; journal multi-ORG → T12 + T14 G5 ; cellules typées + lat/lon Number → T4/T5/T8 ; `actor_primary` multi → T7 ; matrice avant code → T4 Step 0 (STOP PO) ; projection `fields` → T4/T7 Step 3bis/T8 ; concurrence 2 → T3 ; aplatissement immédiat → T8 ; échec d'un lot ⇒ aucun fichier → T8/T16 ; annulation entre lots → T3/T16 ; cibles de temps → T17 Step 5.
-- **Écarts assumés vs revue (consignés §208, T18) :** le proxy MODALE de `actor_identity`/`actor_contacts` est le même (`orgId` non nul) — la distinction réelle est serveur, par fiche (documenté dans `clearanceLevels`) ; `cellType` implémenté en champ optionnel (défaut `text`) plutôt qu'obligatoire — équivalent, moins de bruit ; la sélection mixte tolérée par le RPC sauf tout-refusé (`FORBIDDEN`), conformément à « les lignes autorisées sont remplies ».
+- **Couverture R2 :** contradiction T13 levée (liste des fichiers purgée du deep) ; preuve d'identité des fonctions deep par diff des définitions complètes HEAD↔arbre avec garde de non-vacuité (`wc -l`), `prosrc` en complément ; préflight `export_actor_capabilities` (SQL T12 §1bis + personas I1-I3 en T14 + service fail-closed T10 Step 4a + 3 cas RTL T10) — l'offre suit la consultation réelle de la sélection.
+- **Écarts assumés vs revue (consignés §208, T18) :** `cellType` implémenté en champ optionnel (défaut `text`) plutôt qu'obligatoire — équivalent, moins de bruit ; la sélection mixte tolérée par le RPC sauf tout-refusé (`FORBIDDEN`), conformément à « les lignes autorisées sont remplies » ; le préflight rend des booléens AGRÉGÉS sur la sélection (∃ une fiche accessible ⇒ colonne offerte, les fiches refusées restent vides — cohérent avec la sélection mixte).
 - **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel`/`ExportCellValue` définis en T4, consommés T7/T8/T16 ; `ActorContactsExportResult` identique T8 (squelette) / T16 (réel) ; `runSelectionXlsxExport` signature identique T8/T10 ; `callExportActorContactsRpc(ids, reason, meta, options)` identique T16 service/test ; `presetColumnIds(presetId, session)` identique T7/T9/T10 ; `requiredFieldsFor` défini T4, testé T7 Step 3bis, consommé T8.
 - **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) + mesures ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle). **Deux STOP PO :** T4 Step 0 (matrice) et T17 (live).
 

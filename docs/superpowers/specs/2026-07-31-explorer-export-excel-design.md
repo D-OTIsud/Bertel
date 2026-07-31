@@ -68,6 +68,26 @@ le reste du document, **cette section fait foi**.
 
    Sans (a)-(c), annoncer honnêtement 30-40 s — pas de promesse « en un clic ».
 
+**Révision R2 (2e passe de revue, même jour) — deux précisions et une correction :**
+
+7. **Préflight serveur des capacités acteur.** Le proxy client « membre d'une ORG »
+   est trop large : le droit de consulter les acteurs est PAR FICHE. La modale
+   interroge `api.export_actor_capabilities(p_object_ids)` →
+   `{actor_identity_available, actor_contacts_available}` — booléens agrégés sur la
+   sélection, évalués avec les MÊMES prédicats que les gates réels (extended OU lien
+   public ; ORG publisher). L'offre de colonnes acteur suit ce résultat ; échec ou
+   RPC absent ⇒ offre fermée (fail-closed). **Ergonomie, jamais une garde** :
+   `export_actor_contacts` refait impérativement les contrôles fiche par fiche.
+8. **La preuve « deep intouchée » est une comparaison de définitions complètes**
+   (extraction des deux corps de fonction dans HEAD et dans l'arbre de travail,
+   `diff` strict, garde de non-vacuité sur les extraits) — un `git diff | grep` sur
+   le nom peut manquer une modification au milieu du corps, et l'assertion
+   `pg_proc.prosrc NOT LIKE '%can_read_actor_contacts%'` ne prouve que l'absence de
+   la garde, pas l'identité. Elle reste en complément CI.
+9. Correction éditoriale : plus AUCUNE liste de fichiers du plan ne mentionne les
+   fonctions deep comme site à modifier (la R1 avait laissé la contradiction dans
+   l'en-tête de T13).
+
 ---
 
 ## 1. Le problème
@@ -463,10 +483,12 @@ deep↔resource sur les acteurs est une dette distincte (INVOKER : RLS vide déj
 canaux pour `authenticated` ; 0 appelant service-role — vérifié). Un test CI prouve
 que 16t ne les a pas touchées.
 
-**Conséquence UI — la ligne de démarcation est la CAPACITÉ (R1).**
-`actor_names`, `actor_roles`, `actor_primary` portent `actor_identity` : elles sortent
-du batch (lignes déjà filtrées serveur par la visibilité du lien), sans friction, et
-ne sont **proposées** qu'aux sessions qui ont le droit normal de consulter les acteurs.
+**Conséquence UI — la ligne de démarcation est la CAPACITÉ (R1), vérifiée par
+préflight serveur (R2).** `actor_names`, `actor_roles`, `actor_primary` portent
+`actor_identity` : elles sortent du batch (lignes déjà filtrées serveur par la
+visibilité du lien), sans friction, et ne sont **proposées** que si le préflight
+`api.export_actor_capabilities(sélection)` confirme qu'au moins une fiche de la
+sélection y donne accès — jamais sur la seule foi d'un proxy de session.
 Les six colonnes `actor_contacts` déclenchent la **finalité obligatoire** et passent
 par `api.export_actor_contacts` (journalisé, multi-lots, `export_run_id` partagé).
 Les colonnes gardées 16t et les colonnes journalisées sont **exactement le même

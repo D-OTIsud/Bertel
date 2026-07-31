@@ -168,6 +168,12 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== A-LEGAL migration_unblock_team_legal_access.sql  (dedicated legal permission + private-document metadata + role hardening) =='
 \ir migration_unblock_team_legal_access.sql
 
+\echo '== A-LEGAL2 migration_fix_legal_workspace_permission.sql  (expose the object-scoped legal gate to the editor) =='
+\ir migration_fix_legal_workspace_permission.sql
+
+\echo '== A-LEGAL2-test workspace permission aggregate includes the dedicated legal gate =='
+\ir tests/test_object_workspace_permissions_rpc.sql
+
 \echo '== A1     avatars_bucket.sql  (user profile pictures: storage bucket `avatars`, image-only, service-role write via /api/avatar/upload; RESTRICTIVE anon/authenticated deny; idempotent) =='
 \ir avatars_bucket.sql
 

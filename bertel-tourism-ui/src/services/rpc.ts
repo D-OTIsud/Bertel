@@ -487,6 +487,57 @@ export async function getObjectResource(
   return normalizeObjectDetailPayload(payload, objectId);
 }
 
+/**
+ * Charge N fiches complètes en UN appel serveur (§208 — api.get_object_resources_batch,
+ * dormant jusqu'ici : 0 appelant). Jamais N × get_object_resource : chaque aller-retour
+ * coûte 220-310 ms depuis La Réunion. Options FIGÉES côté export :
+ *  - render:false (personne ne lit les *_lines ici — et render.actor_lines n'est pas gardé) ;
+ *  - omit_empty:true (payload mesuré 573 Ko / 50 fiches au lieu de 630) ;
+ *  - include_private:false — les notes d'équipe ne sortent JAMAIS par ce chemin (décision PO).
+ * Contrat du RPC : l'ordre d'entrée est préservé, un id inconnu/non lisible rend null
+ * À SA PLACE. Ne JAMAIS passer null/'' dans p_ids (ligne supprimée ⇒ décalage des positions) —
+ * l'appelant nettoie (cf. chunkIds).
+ */
+export async function getObjectResourcesBatch(
+  objectIds: string[],
+  langPrefs: string[],
+  options: { signal?: AbortSignal; fields?: string[] } = {},
+): Promise<(ObjectDetail | null)[]> {
+  const client = requireRpcClient();
+  if (!client) {
+    return objectIds.map((id) => mockObjectDetails[id] ?? null);
+  }
+
+  let query = client.schema('api').rpc('get_object_resources_batch', {
+    p_ids: objectIds,
+    p_lang_prefs: langPrefs,
+    p_track_format: 'none',
+    p_options: {
+      render: false,
+      omit_empty: true,
+      include_private: false,
+      // R1 — projection : union des blocs requis par les colonnes cochées.
+      // Mécanisme NON étanche (opening_times/relations/menus sortent quand même)
+      // mais il réduit l'essentiel du payload. Absent = fiche complète.
+      ...(options.fields && options.fields.length > 0 ? { fields: options.fields } : {}),
+    },
+  });
+  if (options.signal) {
+    query = query.abortSignal(options.signal);
+  }
+  const { data, error } = await query;
+  if (error) {
+    throw error;
+  }
+
+  const list = Array.isArray(data) ? data : [];
+  return objectIds.map((id, index) => {
+    const payload = list[index];
+    if (!payload || typeof payload !== 'object') return null;
+    return normalizeObjectDetailPayload(payload as Record<string, unknown>, id);
+  });
+}
+
 /** Lit `payload.itinerary.track` — chaîne non vide, sinon ''. */
 function readItineraryTrackFromPayload(payload: unknown): string {
   if (!payload || typeof payload !== 'object') return '';

@@ -38,6 +38,20 @@ Résumé pour l'exécutant :
     consultation réelle DE LA SÉLECTION, pas le proxy « membre d'une ORG » ;
     fail-closed avant 16t ; jamais une garde (l'export refait fiche par fiche).
 
+**Révision R2.1 (3e passe de revue, même jour) :**
+11. **Le préflight peut OUVRIR, pas seulement restreindre.** `clearanceLevels`
+    n'émet plus `actor_identity`/`actor_contacts` — ces deux capacités sont
+    décidées **uniquement** par le préflight, et `availableColumns(session, caps)`
+    compose les deux autorités. Sans ça, un lecteur sans ORG ne voyait jamais
+    « Acteur — nom » même sur une fiche à lien public : le persona I3 était
+    mort-né côté UI (T4/T7/T9/T10, + 3 tests dont le cas I3 en RTL).
+12. **`search_path` sûr sur les fonctions `SECURITY DEFINER`** : `pg_temp`
+    explicitement **en dernier** + relations schéma-qualifiées, sur les 3
+    fonctions neuves ET (par `ALTER FUNCTION`, corps intouchés) sur les 2 feuilles
+    d'autorisation `current_user_crm_object_ids` / `current_user_extended_object_ids`.
+    Sabotage par table temporaire en CI (assertion J). Dette générale du dépôt
+    (~105 fonctions) consignée, hors périmètre.
+
 ## Global Constraints
 
 - **Répertoire de travail frontend :** `bertel-tourism-ui/`. Tous les chemins `src/…` ci-dessous sont relatifs à ce dossier. Les chemins SQL sont relatifs à `Base de donnée DLL et API/`.
@@ -50,6 +64,7 @@ Résumé pour l'exécutant :
 - **Performance (R1) :** concurrence de lots bornée à 2 (jamais illimitée) ; aplatissement immédiat de chaque lot puis libération du JSON ; projection `p_options.fields` = union des besoins des colonnes cochées.
 - **Notes d'équipe :** AUCUNE colonne ne les lit. Interdit d'ajouter une colonne dont la valeur lit `text.privateNote`, `text.privateNotes` ou `internal.privateNotes` (décision PO, spec §2).
 - **SQL :** `gen_random_uuid()` jamais `uuid_generate_v4()` ; `REVOKE ALL … FROM PUBLIC` sur toute fonction DEFINER neuve ; `COALESCE(…, FALSE)` sur toute sonde à trois valeurs ; tableau passé EN VALEUR (`= ANY(v_scope)`), jamais `ANY((SELECT …))` ; policies par commande, `auth.*()` wrappé `(select …)`.
+- **SQL — `search_path` sûr (R2.1) :** toute fonction `SECURITY DEFINER` créée ou altérée par ce plan porte `SET search_path = pg_catalog, …, pg_temp` (**`pg_temp` en dernier**) et **schéma-qualifie ses relations sensibles** (`public.app_user_profile`, `public.user_org_membership`, `public.object*`, `public.actor*`, `public.ref_*`). Motif : sans `pg_temp` explicite, PostgreSQL cherche le schéma temporaire EN PREMIER pour les relations — une table temporaire homonyme créée par n'importe quel `authenticated` masquerait celle qui décide de l'autorisation.
 - **Toute décision prise en cours de route** va dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` §208 (Tâche 18).
 
 ---
@@ -1174,10 +1189,11 @@ git commit -m "feat(export): registre — labels, equipements, capacite, tarifs,
 
 **Interfaces:**
 - Produces (consommés par Tâches 8-11) :
-  - `clearanceLevels(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): Set<ExportClearance>`
-  - `availableColumns(session): ExportColumnDef[]`
+  - `interface ActorCapabilities { actorIdentityAvailable: boolean; actorContactsAvailable: boolean }` + `CLOSED_ACTOR_CAPS` (R2.1)
+  - `clearanceLevels(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): Set<ExportClearance>` — **n'émet PAS les capacités acteur** (R2.1 : elles ne sont pas session-dérivées)
+  - `availableColumns(session, caps: ActorCapabilities = CLOSED_ACTOR_CAPS): ExportColumnDef[]` — compose les deux autorités ; `caps` **OUVRE** `actor_identity`/`actor_contacts`
   - `type ExportPresetId = 'essentiel' | 'complet' | 'diffusion' | 'custom'`
-  - `presetColumnIds(presetId, session): string[]` — `diffusion` TOUJOURS recalculé depuis le code (jamais depuis le localStorage)
+  - `presetColumnIds(presetId, session, caps = CLOSED_ACTOR_CAPS): string[]` — `diffusion` TOUJOURS recalculé depuis le code (jamais depuis le localStorage)
   - `EXPORT_PRESETS: Array<{ id: ExportPresetId; label: string; locked: boolean }>` (sans `custom`)
   - `purposeRequired(columnIds: string[]): boolean`
 
@@ -1224,16 +1240,31 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
       expect(col.value(spy, EMPTY_CTX)).not.toContain('NOTE-INTERNE-SENTINELLE');
     }
   });
-  it('clearance FILTRE la liste (§205) — un lecteur simple ne voit AUCUNE colonne acteur (R1)', () => {
-    const ids = availableColumns(SESSION_PUBLIC).map((c) => c.id);
+  it('clearance FILTRE la liste (§205) — sans capacités serveur, AUCUNE colonne acteur (R1)', () => {
+    const ids = availableColumns(SESSION_PUBLIC).map((c) => c.id); // caps par défaut = fermé
     expect(ids).toContain('name');
     expect(ids).not.toContain('contacts_object');
     expect(ids).not.toContain('actor_names');   // R1 : identité acteur = droit de consultation, pas « public »
     expect(ids).not.toContain('actor_primary');
     expect(ids).not.toContain('actor_mobile');
     expect(ids).not.toContain('unhandled_keys');
-    expect(clearanceLevels(SESSION_ORG).has('actor_identity')).toBe(true);
     expect(clearanceLevels(SESSION_SUPER).has('superuser')).toBe(true);
+  });
+  it('R2.1 — les capacités acteur viennent du SERVEUR, pas de la session : un lecteur SANS ORG peut les recevoir', () => {
+    // Persona I3 du test SQL : lien acteur `public` ⇒ identité accessible sans membership.
+    const ids = availableColumns(SESSION_PUBLIC, { actorIdentityAvailable: true, actorContactsAvailable: false }).map((c) => c.id);
+    expect(ids).toContain('actor_names');
+    expect(ids).toContain('actor_primary');
+    expect(ids).not.toContain('actor_mobile');   // coordonnées refusées par le serveur
+    expect(ids).not.toContain('contacts_object'); // le niveau `org` reste, lui, session-dérivé
+  });
+  it("R2.1 — symétrique : membre d'ORG mais serveur fermé ⇒ aucune colonne acteur", () => {
+    const ids = availableColumns(SESSION_ORG).map((c) => c.id);
+    expect(ids).toContain('contacts_object');
+    expect(ids).not.toContain('actor_names');
+    expect(ids).not.toContain('actor_mobile');
+    // clearanceLevels n'émet PLUS les capacités acteur : elles ne sont pas session-dérivées.
+    expect(clearanceLevels(SESSION_ORG).has('actor_identity' as never)).toBe(false);
   });
   it('R1 — plusieurs acteurs principaux sont TOUS rendus, joints par « | »', () => {
     const multi = buildFixtureDetail({
@@ -1245,7 +1276,8 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
     expect(getExportColumn('actor_primary')!.value(multi, EMPTY_CTX)).toBe('Jean Payet | Marie Hoarau');
   });
   it('préréglage Diffusion partenaire : STRICTEMENT public, sans le groupe acteur — recalculé du code', () => {
-    const ids = presetColumnIds('diffusion', SESSION_SUPER);
+    // Même avec les capacités acteur grandes ouvertes, Diffusion n'en prend aucune.
+    const ids = presetColumnIds('diffusion', SESSION_SUPER, { actorIdentityAvailable: true, actorContactsAvailable: true });
     for (const id of ids) {
       const col = getExportColumn(id)!;
       expect(col.clearance).toBe('public');
@@ -1355,38 +1387,58 @@ Puis, **en fin de fichier**, les niveaux et préréglages :
 ```ts
 // ---------- Niveaux d'autorisation & préréglages ----------
 
+/** R2.1 — verdict du préflight serveur sur LA SÉLECTION. Fermé par défaut. */
+export interface ActorCapabilities {
+  actorIdentityAvailable: boolean;
+  actorContactsAvailable: boolean;
+}
+export const CLOSED_ACTOR_CAPS: ActorCapabilities = {
+  actorIdentityAvailable: false,
+  actorContactsAvailable: false,
+};
+
 /**
- * R1/R2 — DEUX étages pour l'offre de colonnes, aucun n'est la garde :
- *  1. clearanceLevels (ici) : filtre GROSSIER de session — un lecteur sans ORG
- *     ni rôle ne se voit jamais proposer les niveaux org/acteur/éditeur.
- *  2. Préflight serveur (R2, modale T10) : `api.export_actor_capabilities(ids)`
- *     évalue les MÊMES prédicats que les gates réels SUR LA SÉLECTION —
- *     l'export ne propose l'identité/les coordonnées acteur que si la
- *     consultation les donnerait. Le proxy de session seul est trop large
- *     (le droit est par fiche : extended OU lien public / ORG publisher).
- * La GARDE reste 16t : le RPC journalisé refuse fiche par fiche, quoi qu'ait
- * offert la modale — un localStorage forgé ne contourne rien.
+ * R2.1 — DEUX AUTORITÉS DISJOINTES, et c'est le point clé :
+ *  - `clearanceLevels` décide des niveaux DÉRIVÉS DE LA SESSION : public, org,
+ *    editor, superuser. Il ne dit RIEN des capacités acteur.
+ *  - le PRÉFLIGHT SERVEUR (`api.export_actor_capabilities`) décide SEUL de
+ *    `actor_identity` / `actor_contacts`.
+ * Pourquoi disjointes et non superposées : le droit sur les acteurs est PAR
+ * FICHE (extended OU lien `public` / ORG publisher), pas par session. Un lecteur
+ * SANS ORG a légitimement accès à l'identité des acteurs d'une fiche à lien
+ * public — si la session filtrait d'abord, le préflight ne pourrait plus que
+ * restreindre une liste déjà amputée, et ce lecteur ne verrait jamais la
+ * colonne (persona I3 du test SQL, mort-né côté UI). Le serveur doit pouvoir
+ * OUVRIR, pas seulement fermer.
+ * Aucune des deux n'est la garde : le RPC journalisé 16t refuse fiche par fiche.
  */
 export function clearanceLevels(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): Set<ExportClearance> {
   const levels = new Set<ExportClearance>(['public']);
-  if (session.orgId) {
-    levels.add('org');
-    levels.add('actor_identity');
-    levels.add('actor_contacts');
-  }
+  if (session.orgId) levels.add('org');
   if (session.canEditObjects) levels.add('editor');
   if (session.role === 'super_admin') {
     levels.add('superuser');
-    levels.add('actor_identity');
-    levels.add('actor_contacts');
+    levels.add('org');
   }
   return levels;
 }
 
-/** L'offre de la modale. FILTRE (§205) — jamais un masquage d'options qui resteraient dans l'état. La GARDE reste serveur. */
-export function availableColumns(session: { orgId: string | null; canEditObjects: boolean; role: string | null }): ExportColumnDef[] {
+/**
+ * L'offre de la modale. FILTRE (§205) — jamais un masquage d'options qui
+ * resteraient dans l'état. Les clearances acteur viennent du préflight, tout le
+ * reste de la session. `caps` par défaut FERMÉ : un appelant qui l'oublie
+ * n'ouvre rien (fail-closed).
+ */
+export function availableColumns(
+  session: { orgId: string | null; canEditObjects: boolean; role: string | null },
+  caps: ActorCapabilities = CLOSED_ACTOR_CAPS,
+): ExportColumnDef[] {
   const levels = clearanceLevels(session);
-  return EXPORT_COLUMNS.filter((c) => levels.has(c.clearance));
+  return EXPORT_COLUMNS.filter((c) => {
+    if (c.clearance === 'actor_identity') return caps.actorIdentityAvailable;
+    if (c.clearance === 'actor_contacts') return caps.actorContactsAvailable;
+    return levels.has(c.clearance);
+  });
 }
 
 export type ExportPresetId = 'essentiel' | 'complet' | 'diffusion' | 'custom';
@@ -1403,8 +1455,12 @@ const ESSENTIEL_IDS = [
   'phone', 'mobile', 'email', 'website', 'chapo', 'classifications', 'publisher', 'updated_at',
 ];
 
-export function presetColumnIds(presetId: ExportPresetId, session: { orgId: string | null; canEditObjects: boolean; role: string | null }): string[] {
-  const allowed = availableColumns(session);
+export function presetColumnIds(
+  presetId: ExportPresetId,
+  session: { orgId: string | null; canEditObjects: boolean; role: string | null },
+  caps: ActorCapabilities = CLOSED_ACTOR_CAPS,
+): string[] {
+  const allowed = availableColumns(session, caps);
   switch (presetId) {
     case 'essentiel':
       return ESSENTIEL_IDS.filter((id) => allowed.some((c) => c.id === id));
@@ -1787,8 +1843,8 @@ demandees/exportees, tous les logId + comptes autorisees/refusees en Lisez-moi."
 - Test: `bertel-tourism-ui/src/store/explorer-export-store.test.ts`
 
 **Interfaces:**
-- Consumes: `EXPORT_COLUMN_IDS`, `presetColumnIds`, `ExportPresetId` (T7).
-- Produces: `useExplorerExportStore` — état `{ presetId: ExportPresetId; columnIds: string[] }`, actions `applyPreset(presetId, session)`, `toggleColumn(id)`, `setColumns(ids)`.
+- Consumes: `EXPORT_COLUMN_IDS`, `presetColumnIds`, `ExportPresetId`, `ActorCapabilities`/`CLOSED_ACTOR_CAPS` (T7).
+- Produces: `useExplorerExportStore` — état `{ presetId: ExportPresetId; columnIds: string[] }`, actions `applyPreset(presetId, session, caps?)`, `toggleColumn(id)`, `setColumns(ids)`. **R2.1 :** `caps` est optionnel et **fermé par défaut** — un préréglage appliqué avant la réponse du préflight ne coche aucune colonne acteur.
 
 - [ ] **Step 1 : tests d'abord**
 
@@ -1833,7 +1889,10 @@ describe('explorer-export-store (§208) — même mécanique que explorer-view-s
 ```ts
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { EXPORT_COLUMN_IDS, presetColumnIds, type ExportPresetId } from '../services/export/export-columns';
+import {
+  CLOSED_ACTOR_CAPS, EXPORT_COLUMN_IDS, presetColumnIds,
+  type ActorCapabilities, type ExportPresetId,
+} from '../services/export/export-columns';
 
 /**
  * §208 — préférences de l'export Excel, mémorisées SUR LE POSTE (même mécanique
@@ -1845,7 +1904,12 @@ import { EXPORT_COLUMN_IDS, presetColumnIds, type ExportPresetId } from '../serv
 interface ExplorerExportState {
   presetId: ExportPresetId;
   columnIds: string[];
-  applyPreset: (presetId: ExportPresetId, session: { orgId: string | null; canEditObjects: boolean; role: string | null }) => void;
+  /** R2.1 — `caps` vient du préflight serveur ; fermé par défaut (aucune colonne acteur cochée avant sa réponse). */
+  applyPreset: (
+    presetId: ExportPresetId,
+    session: { orgId: string | null; canEditObjects: boolean; role: string | null },
+    caps?: ActorCapabilities,
+  ) => void;
   toggleColumn: (id: string) => void;
   setColumns: (ids: string[]) => void;
 }
@@ -1859,8 +1923,8 @@ export const useExplorerExportStore = create<ExplorerExportState>()(
     (set) => ({
       presetId: 'essentiel',
       columnIds: [],
-      applyPreset: (presetId, session) =>
-        set({ presetId, columnIds: presetId === 'custom' ? [] : presetColumnIds(presetId, session) }),
+      applyPreset: (presetId, session, caps = CLOSED_ACTOR_CAPS) =>
+        set({ presetId, columnIds: presetId === 'custom' ? [] : presetColumnIds(presetId, session, caps) }),
       toggleColumn: (id) =>
         set((state) => {
           if (!EXPORT_COLUMN_IDS.includes(id)) return state;
@@ -1968,10 +2032,16 @@ const mockRun = runSelectionXlsxExport as jest.Mock;
 const mockCaps = getExportActorCapabilities as jest.Mock;
 
 function setup(session: Partial<ReturnType<typeof useSessionStore.getState>> = {}) {
+  const merged = { orgId: 'ORG', orgName: 'OTI du Sud', canEditObjects: true, role: 'tourism_agent', langPrefs: ['fr'], ...session };
   useExplorerStore.setState({ selectedObjectIds: ['a', 'b', 'c'] });
-  useSessionStore.setState({ orgId: 'ORG', orgName: 'OTI du Sud', canEditObjects: true, role: 'tourism_agent', langPrefs: ['fr'], ...session });
+  useSessionStore.setState(merged);
   useExplorerExportStore.setState({ presetId: 'essentiel', columnIds: [] });
-  useExplorerExportStore.getState().applyPreset('essentiel', { orgId: 'ORG', canEditObjects: true, role: 'tourism_agent' });
+  // Le préréglage initial part de la session RÉELLE du cas (pas d'ORG codée en
+  // dur) et SANS caps : les colonnes acteur ne sont jamais pré-cochées — le
+  // préflight ouvre l'OFFRE, il ne coche rien.
+  useExplorerExportStore.getState().applyPreset('essentiel', {
+    orgId: merged.orgId, canEditObjects: merged.canEditObjects, role: merged.role,
+  });
   return render(<ExportExcelModal open onOpenChange={jest.fn()} />);
 }
 
@@ -2009,6 +2079,17 @@ describe('ExportExcelModal (§208)', () => {
     setup();
     expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
+  });
+
+  it('R2.1 — persona I3 : lecteur SANS ORG + identité accordée par le serveur ⇒ « Acteur — nom » VISIBLE', async () => {
+    // C'est le cas que la R2 laissait mort-né : la session filtrait avant le préflight.
+    mockCaps.mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: false });
+    setup({ orgId: null, orgName: null, canEditObjects: false, role: null });
+    expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Acteur\(s\) principal\(aux\)/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
+    // Le niveau `org`, lui, reste session-dérivé : toujours absent pour ce lecteur.
+    expect(screen.queryByLabelText(/Contacts de la fiche \(tous\)/)).toBeNull();
   });
 
   it('R2 — préflight en échec (ex. 16t pas encore déployée) : offre FAIL-CLOSED, pas de crash', async () => {
@@ -2144,17 +2225,12 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
     return () => { stale = true; };
   }, [open, selectedObjectIds]);
 
-  const offered = useMemo(
-    () => availableColumns(session).filter((col) => {
-      if (col.clearance === 'actor_identity') return caps.actorIdentityAvailable;
-      if (col.clearance === 'actor_contacts') return caps.actorContactsAvailable;
-      return true;
-    }),
-    [session, caps],
-  );
+  // R2.1 — `caps` est passé À availableColumns (il OUVRE les clearances acteur),
+  // il ne filtre pas une liste déjà amputée par la session.
+  const offered = useMemo(() => availableColumns(session, caps), [session, caps]);
   const locked = presetId === 'diffusion';
   // Verrouillé ⇒ on ignore l'état persisté et on recalcule (jamais restauré du localStorage).
-  const effectiveIds = locked ? presetColumnIds('diffusion', session) : columnIds.filter((id) => offered.some((c) => c.id === id));
+  const effectiveIds = locked ? presetColumnIds('diffusion', session, caps) : columnIds.filter((id) => offered.some((c) => c.id === id));
   const needsPurpose = purposeRequired(effectiveIds);
   const exporting = progress !== null;
   // R1 : 5 caractères minimum — le serveur revalide (REASON_REQUIRED), la modale n'est que l'ergonomie.
@@ -2227,7 +2303,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
           <button key={preset.id} type="button"
             className={cn('rounded-[9px] border px-3 py-1.5 text-[12.5px] font-semibold transition',
               presetId === preset.id ? 'border-teal bg-teal-soft text-teal' : 'border-line text-ink-3 hover:text-ink')}
-            onClick={() => applyPreset(preset.id, session)}
+            onClick={() => applyPreset(preset.id, session, caps)}
           >
             {preset.label}{preset.locked ? ' 🔒' : ''}
           </button>
@@ -2375,10 +2451,16 @@ Lancer le dev server (préview du projet), ouvrir l'Exploreur, sélectionner 2-3
 
 **Files:**
 - Create: `Base de donnée DLL et API/migration_actor_contacts_org_gate.sql`
+- Modify (R2.1, Step 1bis — **une seule ligne chacun**, aucun corps touché) : `Base de donnée DLL et API/rls_policies.sql` (`SET search_path` de `api.current_user_extended_object_ids`), `Base de donnée DLL et API/migration_crm_module.sql` (idem pour `api.current_user_crm_object_ids`)
 
 **Interfaces:**
 - Consumes: `api.current_user_crm_object_ids()` (`migration_crm_module.sql:269` — « objets dont une ORG du membership actif est publisher », le périmètre PO mot pour mot — RÉUTILISÉ, pas réinventé), `object_deletion_log` comme modèle de journal (`migration_object_hard_delete.sql`), `app_user_profile.role`.
-- Produces: `api.can_read_actor_contacts(text) → boolean`, table `actor_contact_export_log`, `api.export_actor_contacts(text[], text, text) → jsonb`. Consommés par Tâches 13, 14, 16.
+- Produces (5 surfaces, chacune avec son `REVOKE`) :
+  - `api.can_read_actor_contacts(text) → boolean` — la garde (consommée par T13)
+  - `api.export_actor_capabilities(text[]) → jsonb` — le préflight R2 (consommé par T10 via `getExportActorCapabilities`)
+  - table `actor_contact_export_log` — le journal multi-ORG (lu par T14)
+  - `api.export_actor_contacts(text[], text, text, uuid, int, int) → jsonb` — l'export journalisé (consommé par T16)
+  - `ALTER FUNCTION` sur les 2 feuilles d'autorisation (R2.1, Step 1bis) + `REVOKE/GRANT` d'hygiène sur `get_object_resources_batch`
 - **Interdits :** aucun bras `auth.role() IN ('service_role', …)` dans la garde — les routes partenaires appellent en service-role, ce bras dirait TRUE au seul chemin qui fuit. Une clé de service n'est pas une personne.
 
 - [ ] **Step 1 : créer le fichier de migration**
@@ -2419,12 +2501,18 @@ BEGIN;
 CREATE OR REPLACE FUNCTION api.can_read_actor_contacts(p_object_id text)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+-- R2.1 — search_path SÛR pour une fonction DEFINER : `pg_temp` EXPLICITEMENT EN
+-- DERNIER. Sans lui, PostgreSQL cherche le schéma temporaire EN PREMIER pour les
+-- relations (doc CREATE FUNCTION §Security), donc un `CREATE TEMP TABLE
+-- app_user_profile` par n'importe quel `authenticated` masquerait la table qui
+-- décide ici du statut superuser. Les relations sont EN PLUS schéma-qualifiées :
+-- ceinture (search_path) + bretelles (qualification).
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
   SELECT CASE
     WHEN (SELECT auth.uid()) IS NULL THEN FALSE
     ELSE COALESCE(
-           EXISTS (SELECT 1 FROM app_user_profile p
+           EXISTS (SELECT 1 FROM public.app_user_profile p
                     WHERE p.id = (SELECT auth.uid())
                       AND p.role IN ('owner','super_admin'))
         OR p_object_id IN (SELECT api.current_user_crm_object_ids()),
@@ -2451,7 +2539,7 @@ GRANT  EXECUTE ON FUNCTION api.can_read_actor_contacts(text) TO   authenticated,
 CREATE OR REPLACE FUNCTION api.export_actor_capabilities(p_object_ids text[])
 RETURNS jsonb
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+SET search_path = pg_catalog, public, api, auth, pg_temp   -- R2.1 : pg_temp EN DERNIER
 AS $$
   WITH ids AS (
     SELECT DISTINCT btrim(t.id) AS id
@@ -2459,7 +2547,7 @@ AS $$
      WHERE btrim(coalesce(t.id, '')) <> ''
   ),
   super AS (
-    SELECT EXISTS (SELECT 1 FROM app_user_profile p
+    SELECT EXISTS (SELECT 1 FROM public.app_user_profile p
                     WHERE p.id = (SELECT auth.uid())
                       AND p.role IN ('owner','super_admin')) AS ok
   )
@@ -2469,7 +2557,7 @@ AS $$
       OR EXISTS (
         SELECT 1 FROM ids i
          WHERE i.id IN (SELECT api.current_user_extended_object_ids())
-            OR EXISTS (SELECT 1 FROM actor_object_role aor
+            OR EXISTS (SELECT 1 FROM public.actor_object_role aor
                         WHERE aor.object_id = i.id AND aor.visibility = 'public')),
     'actor_contacts_available',
       COALESCE((SELECT ok FROM super), FALSE)
@@ -2554,7 +2642,7 @@ CREATE OR REPLACE FUNCTION api.export_actor_contacts(
 )
 RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path = public, api, auth
+SET search_path = pg_catalog, public, api, auth, pg_temp   -- R2.1 : pg_temp EN DERNIER
 AS $$
 DECLARE
   v_caller    uuid := (SELECT auth.uid());
@@ -2601,7 +2689,9 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
-  v_super := EXISTS (SELECT 1 FROM app_user_profile p
+  -- R2.1 : relations schéma-qualifiées (pg_temp ne peut plus masquer la table
+  -- qui décide du statut superuser, ni celles du périmètre).
+  v_super := EXISTS (SELECT 1 FROM public.app_user_profile p
                       WHERE p.id = v_caller AND p.role IN ('owner','super_admin'));
   v_org := api.current_user_org_id();
 
@@ -2609,7 +2699,7 @@ BEGIN
   IF v_super THEN
     SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
       FROM unnest(v_ids) AS t(id)
-     WHERE EXISTS (SELECT 1 FROM object o WHERE o.id = t.id);
+     WHERE EXISTS (SELECT 1 FROM public.object o WHERE o.id = t.id);
   ELSE
     SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
       FROM unnest(v_ids) AS t(id)
@@ -2631,11 +2721,11 @@ BEGIN
   SELECT COALESCE(array_agg(DISTINCT ool.org_object_id), '{}'),
          COALESCE(jsonb_agg(DISTINCT jsonb_build_object('object_id', ool.object_id, 'org_object_id', ool.org_object_id)), '[]')
     INTO v_org_ids, v_org_attr
-    FROM object_org_link ool
-    JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+    FROM public.object_org_link ool
+    JOIN public.ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
    WHERE ool.object_id = ANY(v_scope)
      AND (v_super OR ool.org_object_id IN (
-           SELECT uom.org_object_id FROM user_org_membership uom
+           SELECT uom.org_object_id FROM public.user_org_membership uom
             WHERE uom.user_id = v_caller AND uom.is_active = TRUE));
 
   SELECT COALESCE(jsonb_agg(r.line ORDER BY r.object_id, r.is_primary DESC, r.display_name), '[]'::jsonb),
@@ -2743,6 +2833,58 @@ COMMIT;
 NOTIFY pgrst, 'reload schema';
 ```
 
+- [ ] **Step 1bis (R2.1) : durcir le `search_path` des DEUX feuilles d'autorisation**
+
+Les trois fonctions ci-dessus délèguent leur décision à `api.current_user_crm_object_ids()`
+et `api.current_user_extended_object_ids()` — toutes deux `SECURITY DEFINER` avec
+`SET search_path = public, api, auth` et des relations **non qualifiées**
+(`user_org_membership`, `object_org_link`, `actor_object_role`). Un durcissement qui
+s'arrêterait aux fonctions neuves serait cosmétique : la décision réelle se prend dans
+ces feuilles, et `CREATE TEMP TABLE user_org_membership` y accorderait le périmètre
+CRM sur n'importe quel objet.
+
+**On corrige le `search_path` par `ALTER FUNCTION`, jamais en réécrivant les corps** —
+zéro risque de transcription sur des fonctions consommées par des dizaines de policies.
+Ajouter à la migration, **avant le `COMMIT`** :
+
+```sql
+-- ---------------------------------------------------------------------
+-- 1ter. R2.1 — durcissement du search_path des DEUX feuilles d'autorisation
+--    dont dépendent les fonctions ci-dessus. ALTER FUNCTION ne touche PAS le
+--    corps (aucun risque de transcription) : il ne fait que placer `pg_temp`
+--    explicitement EN DERNIER, là où PostgreSQL le cherchait EN PREMIER pour
+--    les relations. Iso-fonctionnel pour tout usage légitime.
+--    ⚠ Ces deux fonctions sont consommées par de nombreuses policies RLS —
+--    ne PAS les recréer ici, seulement les altérer.
+-- ---------------------------------------------------------------------
+ALTER FUNCTION api.current_user_crm_object_ids()
+  SET search_path = pg_catalog, public, api, auth, pg_temp;
+ALTER FUNCTION api.current_user_extended_object_ids()
+  SET search_path = pg_catalog, public, api, auth, pg_temp;
+```
+
+Puis **corriger les SOURCES** pour qu'une base fraîche naisse durcie (invariant
+d'intégrité de déploiement — sinon `rls_policies.sql` recrée la forme faible et
+seule la migration tardive la rattrape) :
+
+- `Base de donnée DLL et API/rls_policies.sql` — la ligne `SET search_path = public, api, auth`
+  de `api.current_user_extended_object_ids()` devient
+  `SET search_path = pg_catalog, public, api, auth, pg_temp`.
+- `Base de donnée DLL et API/migration_crm_module.sql` — idem pour
+  `api.current_user_crm_object_ids()`.
+
+Localiser par `grep -n -A3 "FUNCTION api.current_user_extended_object_ids"` etc. —
+**une seule ligne change par fichier**, aucun corps n'est touché.
+
+> **Reste hors périmètre, à consigner au §208 (T18) :** ~105 fonctions
+> `SECURITY DEFINER` du dépôt portent un `search_path` sans `pg_temp`
+> (`grep -c "SET search_path" *.sql` : 126 occurrences de la forme
+> `public, api, auth` à elle seule ; `pg_temp` n'apparaît que 2 fois dans tout
+> le dépôt). C'est une dette **antérieure et générale**, pas introduite ici :
+> la corriger entièrement est une passe dédiée (balayage catalogue + test de
+> non-régression par policy). Cette passe durcit **la chaîne qu'elle utilise**,
+> et le dit.
+
 - [ ] **Step 2 : contrôles statiques**
 
 ```bash
@@ -2757,15 +2899,21 @@ est née sans son REVOKE : la trouver avant de continuer.
 - [ ] **Step 3 : commit**
 
 ```bash
-git add "Base de donnée DLL et API/migration_actor_contacts_org_gate.sql"
-git commit -m "feat(sql): 16t — garde can_read_actor_contacts + preflight export_actor_capabilities + journal + RPC export journalise
+git add "Base de donnée DLL et API/migration_actor_contacts_org_gate.sql" "Base de donnée DLL et API/rls_policies.sql" "Base de donnée DLL et API/migration_crm_module.sql"
+git commit -m "feat(sql): 16t — garde + preflight + journal + RPC export journalise, search_path durci (pg_temp en dernier)
 
 Perimetre reutilise (current_user_crm_object_ids = ORG publisher du membership).
 Pas de bras service_role dans la garde (les routes partenaires appellent en
 service-role — une cle de service n'est pas une personne). Preflight R2 : la
 modale offre les colonnes acteur selon la consultation REELLE de la selection
 (memes predicats que les gates — jamais une garde, l'export refait fiche par
-fiche). Journal multi-ORG sans aucune valeur de coordonnee, sans FK."
+fiche). Journal multi-ORG sans aucune valeur de coordonnee, sans FK.
+R2.1 : search_path sur (pg_catalog, ..., pg_temp EN DERNIER) + relations
+schema-qualifiees sur les 3 fonctions neuves, et ALTER FUNCTION sur les 2
+feuilles d'autorisation dont elles dependent (corps intouches ; sources
+corrigees pour qu'une base fraiche naisse durcie). Sans cela, un CREATE TEMP
+TABLE app_user_profile / user_org_membership par n'importe quel authenticated
+masquait la relation qui decide du statut superuser et du perimetre CRM."
 ```
 
 ---
@@ -3240,6 +3388,49 @@ RESET ROLE;
 UPDATE actor_object_role SET visibility = 'partners'
  WHERE actor_id = '20000000-0000-4000-8000-000000000001' AND object_id = 'HOTRUN000000T16T';
 
+-- J (R2.1). SABOTAGE PAR TABLE TEMPORAIRE : un `authenticated` qui crée une
+--    relation temporaire homonyme ne doit RIEN obtenir. Sans `pg_temp` en
+--    dernier dans le search_path, PostgreSQL cherche le schéma temporaire EN
+--    PREMIER pour les relations — le faux app_user_profile ferait passer
+--    l'utilisateur pour un superuser, et le faux user_org_membership lui
+--    accorderait le périmètre CRM sur tout le corpus.
+--    Ce test DOIT être vérifié rouge en retirant `pg_temp` du search_path.
+SELECT set_config('request.jwt.claims',
+  '{"role":"authenticated","sub":"10000000-0000-4000-8000-000000000002"}', true);
+SET LOCAL ROLE authenticated;
+DO $$
+DECLARE c jsonb; ok boolean := FALSE;
+BEGIN
+  -- Faux profil : « je suis owner ».
+  CREATE TEMP TABLE app_user_profile (id uuid, role text, display_name text) ON COMMIT DROP;
+  INSERT INTO pg_temp.app_user_profile VALUES
+    ('10000000-0000-4000-8000-000000000002', 'owner', 'Usurpateur');
+  -- Faux membership : « je publie tout ».
+  CREATE TEMP TABLE user_org_membership (id uuid, user_id uuid, org_object_id text, is_active boolean) ON COMMIT DROP;
+  INSERT INTO pg_temp.user_org_membership VALUES
+    (gen_random_uuid(), '10000000-0000-4000-8000-000000000002', 'ORGRUN000000T16T', TRUE);
+
+  IF COALESCE(api.can_read_actor_contacts('HOTRUN000000T16T'), FALSE) THEN
+    RAISE EXCEPTION 'J1 FAIL: une table TEMP a fait passer la garde — search_path non sur (pg_temp doit etre EN DERNIER + relations qualifiees)';
+  END IF;
+
+  c := api.export_actor_capabilities(ARRAY['HOTRUN000000T16T']);
+  IF c->>'actor_contacts_available' IS DISTINCT FROM 'false' THEN
+    RAISE EXCEPTION 'J2 FAIL: une table TEMP a ouvert les capacites, recu %', c;
+  END IF;
+
+  BEGIN
+    PERFORM api.export_actor_contacts(ARRAY['HOTRUN000000T16T'], 'Tentative usurpation', 'xlsx');
+  EXCEPTION WHEN insufficient_privilege THEN ok := TRUE;
+  END;
+  IF NOT ok THEN
+    RAISE EXCEPTION 'J3 FAIL: l export a servi des coordonnees a un usurpateur par table TEMP';
+  END IF;
+END $$;
+RESET ROLE;
+DROP TABLE IF EXISTS pg_temp.app_user_profile;
+DROP TABLE IF EXISTS pg_temp.user_org_membership;
+
 SELECT 'test_actor_contacts_org_gate: OK' AS result;
 ROLLBACK;
 ```
@@ -3248,12 +3439,21 @@ ROLLBACK;
 
 Via le MCP Supabase (`execute_sql`, le fichier entier — il se termine par ROLLBACK) ou `psql "$DATABASE_URL" -f tests/test_actor_contacts_org_gate.sql`. Attendu : `test_actor_contacts_org_gate: OK`. Si une fixture casse sur une contrainte (colonne NOT NULL imprévue d'`auth.users`, code `operator` absent…), adapter la fixture — jamais l'assertion.
 
-- [ ] **Step 3 : VÉRIFICATION ROUGE PAR SABOTAGE (obligatoire avant de figer)**
+- [ ] **Step 3 : VÉRIFICATION ROUGE PAR SABOTAGE — DEUX sabotages obligatoires**
 
+**Sabotage A — la garde du leg contacts :**
 1. Dans `api_views_functions.sql`, remettre temporairement `'contacts', COALESCE((…` sans le `CASE` (annuler localement le Step 2 de la Tâche 13 sur ce seul champ) ;
 2. rejouer le test → il DOIT tomber sur **D2** (service_role reçoit des canaux) ;
 3. restaurer le patch (`git checkout -- "Base de donnée DLL et API/api_views_functions.sql"` puis ré-appliquer si besoin) ;
-4. rejouer → OK. Consigner « vérifié rouge par sabotage (D2) » dans le message de commit.
+4. rejouer → OK.
+
+**Sabotage B (R2.1) — le `search_path` sûr :**
+1. Dans la migration, retirer `, pg_temp` du `SET search_path` de `api.can_read_actor_contacts` **et** remettre `app_user_profile` non qualifiée dans son corps ; ré-appliquer la seule fonction ;
+2. rejouer le test → il DOIT tomber sur **J1** (la table temporaire fait passer la garde) ;
+3. **si J1 passe malgré le sabotage, le test est VACANT** — vérifier que le rôle a bien le droit de créer des tables temporaires (`SELECT has_database_privilege('authenticated', current_database(), 'TEMP');` doit rendre `true`) et que la temp table est créée avant l'appel. Ne pas conclure « c'est sûr » sur un test qui ne peut pas échouer ;
+4. restaurer, rejouer → OK.
+
+Consigner « vérifié rouge par sabotage (D2 + J1) » dans le message de commit.
 
 - [ ] **Step 4 : commit**
 
@@ -3316,7 +3516,12 @@ Dans `docs/SQL_ROLLOUT_RUNBOOK.md` :
 Après `api_views_functions.sql` (le leg actors patché y vit) et `migration_crm_module.sql`
 (8z — `api.current_user_crm_object_ids`, le périmètre réutilisé). Voir la spec
 `docs/superpowers/specs/2026-07-31-explorer-export-excel-design.md` §4.5 et le
-décision log §208. `NOTIFY pgrst` requis (2 fonctions api neuves). Test :
+décision log §208. `NOTIFY pgrst` requis (**3** fonctions api neuves :
+`can_read_actor_contacts`, `export_actor_capabilities`, `export_actor_contacts`).
+Durcit aussi le `search_path` (`pg_temp` en dernier) des 2 feuilles d'autorisation
+`current_user_crm_object_ids` / `current_user_extended_object_ids` par `ALTER FUNCTION`
+— corps intouchés ; les sources `rls_policies.sql` / `migration_crm_module.sql` sont
+corrigées en parallèle pour qu'une base fraîche naisse durcie. Test :
 `tests/test_actor_contacts_org_gate.sql` (4 personas par request.jwt.claims,
 vérifié rouge par sabotage). Consommateur : export Excel de l'Exploreur
 (colonnes acteur à finalité) ; rupture partenaire assumée : `actors[].contacts`
@@ -3656,11 +3861,14 @@ Rédiger `## §208` avec, a minima : le remplacement CSV→Excel (raw_json + cit
 
 - [ ] **Step 2 : WORKFLOW.md**
 
-Ajouter au tableau des différés : « `actor_channel.is_public` (le correctif de modèle §208 — aligne acteur sur contact_channel et rend l'AIPD honnête) | 16t couvre le besoin immédiat | passe modèle + saisie OTI » et « Colonnes export `open_now`/`remplissage` | source ObjectCard non portée par la fiche | jonction carte Explorer ou émission par le RPC fiche ».
+Ajouter au tableau des différés : « `actor_channel.is_public` (le correctif de modèle §208 — aligne acteur sur contact_channel et rend l'AIPD honnête) | 16t couvre le besoin immédiat | passe modèle + saisie OTI » ; « Colonnes export `open_now`/`remplissage` | source ObjectCard non portée par la fiche | jonction carte Explorer ou émission par le RPC fiche » ; **« `search_path` sans `pg_temp` sur ~105 fonctions `SECURITY DEFINER` (R2.1 — `pg_temp` n'apparaît que 2 fois dans tout le dépôt ; une table temporaire homonyme peut masquer une relation non qualifiée dans une fonction privilégiée) | dette antérieure et générale ; §208 a durci la chaîne qu'il utilise (3 neuves + 2 feuilles) | passe dédiée : balayage catalogue `pg_proc.proconfig` + qualification des relations sensibles + test de non-régression par policy »** ; **« divergence deep↔resource sur les acteurs (le latéral de `get_objects_with_deep_data` émet la PII sans gate) | R1 : hors périmètre, INVOKER + RLS vide les canaux pour `authenticated` + 0 appelant service-role | dès qu'un appelant service-role du deep apparaît »**.
 
 - [ ] **Step 3 : proposition CLAUDE.md (validation PO)**
 
-Proposer l'invariant : « **Une garde d'accès aux données personnelles ne s'appuie jamais sur `auth.role()`** — la clé de service n'est pas une personne ; les routes partenaires appellent en service-role et un bras `service_role` dirait TRUE au seul chemin qui fuit. Sonder l'identité (`auth.uid()` + membership), court-circuiter par `CASE` quand `auth.uid()` est NULL. » + une ligne dans la section export : « Tout export tabulaire passe par le registre `export-columns.ts` et par `csvCell`/`xlsxCell` — jamais un écrivain ad hoc. »
+Proposer **trois** invariants :
+1. « **Une garde d'accès aux données personnelles ne s'appuie jamais sur `auth.role()`** — la clé de service n'est pas une personne ; les routes partenaires appellent en service-role et un bras `service_role` dirait TRUE au seul chemin qui fuit. Sonder l'identité (`auth.uid()` + membership), court-circuiter par `CASE` quand `auth.uid()` est NULL. »
+2. « **Toute fonction `SECURITY DEFINER` porte `pg_temp` EN DERNIER dans son `search_path` et schéma-qualifie ses relations sensibles.** Sans `pg_temp` explicite, PostgreSQL cherche le schéma temporaire *en premier* pour les relations : un `CREATE TEMP TABLE app_user_profile` par n'importe quel `authenticated` masque la table qui décide de l'autorisation. Forme : `SET search_path = pg_catalog, public, api, auth, pg_temp`. Dette antérieure : ~105 fonctions du dépôt ne l'ont pas (§208 a durci sa propre chaîne). »
+3. Une ligne dans la section export : « Tout export tabulaire passe par le registre `export-columns.ts` et par `csvCell`/`xlsxCell` — jamais un écrivain ad hoc. **Une offre de colonnes dérivée d'une session est un filtre grossier, jamais une garde : quand le droit est par fiche (acteurs), c'est un préflight serveur qui décide, et il doit pouvoir OUVRIR autant que fermer.** »
 
 - [ ] **Step 4 : commit final**
 
@@ -3675,8 +3883,9 @@ git commit -m "docs(§208): decision log export Excel + garde 16t, differes trac
 
 - **Couverture spec :** §0 R1 → intégré en place (voir « Révision R1 » en tête) ; §1-2 → T1-T11 ; §3.2 (REVOKE hygiène) → T12 Step 4 ; §3.4 fuite → T13/T14/T17 ; §4.5 → T12-T14/T16 ; §4.6 modale → T10 ; §6 vérifications → T1 (témoin Excel), T14 (personas+sabotage+multi-lots+deep intouchée), tests relisant les cellules (T8) ; §7 manifeste/dérive → T15 ; §8 risques → T1 (risque 1), T13 Step 6 (« autres émetteurs »), T16 Step 5 (collision docs), T17 Steps 4-5 (plafond 500 + cibles de temps).
 - **Couverture R1 point par point :** capacités → T4/T7/T10 ; deep intouchée + preuve → T13 Step 5 + T14 H ; multi-lots/`export_run_id`/fusion par id → T3/T8/T12/T16 + T14 G ; contrat sécurité RPC (REVOKE service_role, finalité serveur 5-500, dédoublonnage serveur, format liste blanche) → T12 + T14 F ; journal multi-ORG → T12 + T14 G5 ; cellules typées + lat/lon Number → T4/T5/T8 ; `actor_primary` multi → T7 ; matrice avant code → T4 Step 0 (STOP PO) ; projection `fields` → T4/T7 Step 3bis/T8 ; concurrence 2 → T3 ; aplatissement immédiat → T8 ; échec d'un lot ⇒ aucun fichier → T8/T16 ; annulation entre lots → T3/T16 ; cibles de temps → T17 Step 5.
-- **Couverture R2 :** contradiction T13 levée (liste des fichiers purgée du deep) ; preuve d'identité des fonctions deep par diff des définitions complètes HEAD↔arbre avec garde de non-vacuité (`wc -l`), `prosrc` en complément ; préflight `export_actor_capabilities` (SQL T12 §1bis + personas I1-I3 en T14 + service fail-closed T10 Step 4a + 3 cas RTL T10) — l'offre suit la consultation réelle de la sélection.
+- **Couverture R2 :** contradiction T13 levée (liste des fichiers purgée du deep) ; vestige T17 Step 2 corrigé (le redéploiement live du deep était la modification interdite elle-même) ; preuve d'identité des fonctions deep par diff des définitions complètes HEAD↔arbre avec garde de non-vacuité (`wc -l`), `prosrc` en complément ; préflight `export_actor_capabilities` (SQL T12 §1bis + personas I1-I3 en T14 + service fail-closed T10 Step 4a + 3 cas RTL T10).
+- **Couverture R2.1 :** capacités acteur retirées de `clearanceLevels` et décidées par le seul préflight, `availableColumns(session, caps)`/`presetColumnIds(…, caps)`/`applyPreset(…, caps)` threadés avec défaut fermé (T4/T7/T9/T10) + 2 tests unitaires (ouverture sans ORG, fermeture avec ORG) + 1 cas RTL persona I3 ; `search_path` durci sur les 3 fonctions neuves (créées) et les 2 feuilles (par `ALTER FUNCTION`, corps intouchés) + sources corrigées (T12 Step 1bis) + relations qualifiées + sabotage temp-table (T14 J, vérifié rouge en T14 Step 3 sabotage B) ; T12 Produces liste les 5 surfaces ; runbook « 3 fonctions api neuves ».
 - **Écarts assumés vs revue (consignés §208, T18) :** `cellType` implémenté en champ optionnel (défaut `text`) plutôt qu'obligatoire — équivalent, moins de bruit ; la sélection mixte tolérée par le RPC sauf tout-refusé (`FORBIDDEN`), conformément à « les lignes autorisées sont remplies » ; le préflight rend des booléens AGRÉGÉS sur la sélection (∃ une fiche accessible ⇒ colonne offerte, les fiches refusées restent vides — cohérent avec la sélection mixte).
-- **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel`/`ExportCellValue` définis en T4, consommés T7/T8/T16 ; `ActorContactsExportResult` identique T8 (squelette) / T16 (réel) ; `runSelectionXlsxExport` signature identique T8/T10 ; `callExportActorContactsRpc(ids, reason, meta, options)` identique T16 service/test ; `presetColumnIds(presetId, session)` identique T7/T9/T10 ; `requiredFieldsFor` défini T4, testé T7 Step 3bis, consommé T8.
+- **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel`/`ExportCellValue`/`ActorCapabilities`/`CLOSED_ACTOR_CAPS` définis en T4/T7, consommés T7/T8/T9/T10/T16 ; `ActorContactsExportResult` identique T8 (squelette) / T16 (réel) ; `runSelectionXlsxExport` signature identique T8/T10 ; `callExportActorContactsRpc(ids, reason, meta, options)` identique T16 service/test ; `availableColumns(session, caps?)` et `presetColumnIds(presetId, session, caps?)` identiques T7/T9/T10 (caps optionnel, défaut fermé) ; `applyPreset(presetId, session, caps?)` identique T9/T10 ; `getExportActorCapabilities` rend `{actorIdentityAvailable, actorContactsAvailable}` = `ActorCapabilities` (T10) ; `requiredFieldsFor` défini T4, testé T7 Step 3bis, consommé T8.
 - **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) + mesures ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle). **Deux STOP PO :** T4 Step 0 (matrice) et T17 (live).
 

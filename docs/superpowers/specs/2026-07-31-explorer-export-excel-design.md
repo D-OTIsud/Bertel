@@ -1,9 +1,72 @@
 # Export Excel de la sélection, avec sélecteur de colonnes — conception
 
-**Date** : 2026-07-31
-**Statut** : conception validée par le PO, prête pour le plan d'implémentation
+**Date** : 2026-07-31 · **Révision R1** : 2026-07-31 (revue externe intégrée — voir §0)
+**Statut** : conception validée par le PO + corrigée en revue, prête pour le plan d'implémentation
 **Journal de décisions** : §208 (dernier utilisé : §207)
 **Étape de manifeste SQL** : 16t (dernière utilisée : 16s)
+
+## 0. Révision R1 — corrections de revue (prévalent sur le texte d'origine)
+
+Une revue externe a corrigé la conception sur six points. En cas de contradiction avec
+le reste du document, **cette section fait foi**.
+
+1. **L'export ne donne jamais plus de droits que la consultation.** Les colonnes
+   Acteur — nom / rôle / principal ne sont PAS « publiques » : elles suivent le droit
+   réel de consultation des acteurs (capacité `actor_identity` ↔ le gate de ligne
+   existant `v_can_read_extended OR visibility='public'` — on ne réinvente PAS une
+   deuxième interprétation des rôles pour l'export). Les coordonnées/notes/résumé
+   restent sous `actor_contacts` (garde 16t + finalité + journal). La modale applique
+   ces capacités pour l'ergonomie ; **le serveur réévalue toujours par fiche**. Une
+   sélection forgée ou un localStorage modifié ne contourne rien.
+2. **`get_object_with_deep_data` / `get_objects_with_deep_data` ne sont PAS modifiées
+   dans ce chantier.** La migration 16t ne touche que `get_object_resource` (leg
+   `actors` : PII/canaux/note + `contacts_restricted` ; `render.actor_lines` ;
+   `render.contact_lines`). Motif : éviter la cascade sur le tiroir, l'éditeur,
+   l'impression et tous les consommateurs de `getObjectResource`. La divergence
+   deep↔resource sur les acteurs est une **dette nommée, distincte** (le latéral deep
+   émet la PII sans gate mais est `SECURITY INVOKER` : RLS vide déjà les canaux pour
+   `authenticated`, et il n'a **aucun appelant service-role aujourd'hui** — vérifié).
+   Un test CI prouve que la migration n'a pas touché ces fonctions.
+3. **Aucun plafond fonctionnel d'export.** Toute la sélection (jusqu'au corpus entier)
+   est exportable : ressources par lots de 50, coordonnées d'acteur par lots de 500
+   (500 puis 340 pour 840 fiches). **Fusion par `object_id`, jamais par position seule**
+   (ceinture : vérifier `payload.id` contre l'id attendu) ; ordre initial de la
+   sélection conservé ; **un seul classeur, construit après la réussite de TOUS les
+   lots** — un lot en échec ⇒ aucun fichier (les journaux des lots sensibles déjà
+   réussis sont conservés : la donnée a réellement atteint le navigateur).
+4. **Journal multi-ORG et multi-lots.** Tous les lots d'un même export partagent un
+   `export_run_id` (généré client, transmis au RPC) ; chaque lot rend
+   `{logId, exportRunId, batchIndex, batchCount, authorizedObjectIds, deniedObjectIds}` ;
+   Lisez-moi liste TOUS les logId + les comptes demandées/autorisées/refusées.
+   `current_user_crm_object_ids()` ne dit pas QUELLE ORG autorise chaque fiche : le
+   journal porte l'attribution objet↔ORG (`org_object_ids TEXT[]` pour la RLS de
+   lecture + `org_attributions JSONB` détaillée), sinon « lecture par l'admin de l'ORG
+   exportatrice » est ambigu à plusieurs ORG.
+5. **Contrat de cellule typé.** `value()` rend `string | number | null` avec
+   `cellType: 'text' | 'number'` — `latitude`/`longitude` sont **numériques** (le
+   « tout texte » de la v0 ne vaut que pour les identifiants/codes). `actor_primary`
+   est **multi-valué** (la contrainte permet un principal PAR RÔLE, pas un par fiche) :
+   noms joints par ` | `. La **matrice exhaustive des colonnes** (source, libellé,
+   type XLSX, capacité, règle d'agrégation, comportement si absent, caractère
+   public/partenaire/interne/personnel) est **validée avant le code du registre**.
+6. **Performance exigée, pas espérée.** (a) chaque colonne déclare ses blocs API
+   (`fields`) ; le service passe l'**union** des blocs des colonnes cochées à
+   `p_options.fields` (mécanisme non étanche mais qui réduit l'essentiel du payload) ;
+   (b) **concurrence bornée à 2 lots** simultanés (jamais illimitée) ; (c)
+   **aplatissement immédiat** de chaque lot en lignes d'export puis libération du JSON
+   (ne jamais accumuler 10,5 Mo de JSON brut) ; (d) RPC acteur **set-based** (une
+   requête relationnelle par lot, jamais get_object_resource par fiche) ; le plafond
+   de 500 n'est **validé qu'après mesure sous le `statement_timeout` de 8 s**.
+   Cibles d'acceptation (machine bureautique, depuis La Réunion) :
+
+   | Sélection | Cible |
+   |---|---|
+   | ≤ 50 fiches | 2-5 s |
+   | 200 fiches | 5-10 s |
+   | 840 fiches, colonnes usuelles | 15-25 s |
+   | 840 fiches, toutes colonnes + acteurs | < 30 s |
+
+   Sans (a)-(c), annoncer honnêtement 30-40 s — pas de promesse « en un clic ».
 
 ---
 
@@ -45,8 +108,9 @@ libellés français en en-tête, des valeurs en clair. `raw_json` disparaît.
 | Valeurs multiples | **Une cellule, texte lisible** — jamais d'onglet normalisé, jamais de matrice |
 | Préréglages | **Mémorisés sur le poste** + 3 modèles livrés |
 | Colonne propriétaire | **Colonnes séparées + une colonne récapitulative** |
-| Acteur — nom, rôle | Colonnes **publiques**, sans friction |
-| Acteur — coordonnées | Téléphone, mobile, e-mail, adresse, résumé, note : **gardées serveur** à l'ORG éditrice, **finalité saisie + export journalisé** |
+| Acteur — nom, rôle, principal | **`actor_identity`** (R1) : suivent le droit réel de consultation des acteurs — jamais « publiques » par déclaration |
+| Acteur — coordonnées | Téléphone, mobile, e-mail, adresse, résumé, note : **`actor_contacts`** — gardées serveur à l'ORG éditrice (16t), **finalité saisie + export journalisé multi-lots** |
+| Plafond d'export | **Aucun plafond fonctionnel** (R1) — plafonds techniques PAR LOT (50 ressources / 500 acteur), fusion par `object_id`, un seul classeur en fin de course |
 | Adresse acteur | **Colonne créée**, bien qu'aucune ligne n'existe aujourd'hui — invariant §150 : la surface suit le modèle, pas la donnée |
 | Notes d'équipe | **Aucune colonne n'existe.** Pas « décochée par défaut » : absente du registre |
 | SIRET / SIREN | **Exportables sans garde** — `is_public = TRUE` assumé, arbitrage PO du 2026-07-31 |
@@ -194,14 +258,26 @@ avec deux différences :
 - chaque colonne porte un **`group`** et un **`clearance`**.
 
 ```ts
+type ExportClearance = 'public' | 'org' | 'actor_identity' | 'actor_contacts' | 'editor' | 'superuser';
+type ExportCellValue = string | number | null;
+
 type ExportColumnDef = {
   id: string;
   label: string;            // libellé FR, celui qui part en en-tête
   group: ExportColumnGroup;
-  clearance: 'public' | 'org' | 'editor' | 'superuser';
-  value: (detail: ParsedObjectDetail, ctx: ExportContext) => string;
+  clearance: ExportClearance;
+  cellType: 'text' | 'number';   // R1 — latitude/longitude sont numériques
+  /** Blocs de get_object_resource nécessaires (R1, projection p_options.fields). Absent = fiche complète requise. */
+  fields?: string[];
+  value: (detail: ParsedObjectDetail, ctx: ExportContext) => ExportCellValue;
 };
 ```
+
+`actor_identity` reprend exactement le droit normal de consultation des acteurs
+(le gate de ligne existant) ; `actor_contacts` exige le droit d'export renforcé
+(16t) et implique finalité + journal. Le plan d'implémentation fixe la traduction
+de ces capacités dans les prédicats EXISTANTS — pas de deuxième interprétation
+des rôles inventée pour l'export.
 
 > **`clearance` FILTRE, il ne masque pas** (leçon §205). L'offre de colonnes se
 > construit par `columns.filter(hasClearance)`, jamais par un `display:none` sur une
@@ -240,17 +316,21 @@ livrable de code, pas de conception. **Un seul groupe est détaillé ici**, parc
 c'est celui que le PO a arbitré explicitement et que la cartographie initiale le
 sous-estimait (elle proposait 4 colonnes agrégées) :
 
-| id | Libellé FR | Contenu | Niveau |
+| id | Libellé FR | Contenu | Capacité (R1) |
 |---|---|---|---|
-| `actor_names` | Acteur — nom | Les noms, joints par ` \| ` s'il y en a plusieurs | public |
-| `actor_roles` | Acteur — rôle | Exploitant, gérant, guide… (libellé `ref_actor_role`) | public |
-| `actor_primary` | Acteur principal | Le seul portant `is_primary` | public |
-| `actor_phone` | Acteur — téléphone | canaux `phone` — **0 ligne en base à ce jour** | ORG publisher |
-| `actor_mobile` | Acteur — mobile | canaux `mobile` — 672 lignes | ORG publisher |
-| `actor_email` | Acteur — e-mail | canaux `email` — 681 lignes | ORG publisher |
-| `actor_address` | Acteur — adresse | canaux `address` — **0 ligne en base à ce jour** | ORG publisher |
-| `actor_summary` | Propriétaire (résumé) | Une phrase : « Nom (rôle) — tél — e-mail — adresse » | ORG publisher |
-| `actors_notes` | Acteur — note | `actor_object_role.note` | ORG publisher |
+| `actor_names` | Acteur — nom | Les noms, joints par ` \| ` s'il y en a plusieurs | `actor_identity` |
+| `actor_roles` | Acteur — rôle | Exploitant, gérant, guide… (libellé `ref_actor_role`) | `actor_identity` |
+| `actor_primary` | Acteur(s) principal(aux) | **Multi-valué** (un principal PAR RÔLE possible) — noms joints par ` \| ` | `actor_identity` |
+| `actor_phone` | Acteur — téléphone | canaux `phone` — **0 ligne en base à ce jour** | `actor_contacts` |
+| `actor_mobile` | Acteur — mobile | canaux `mobile` — 672 lignes | `actor_contacts` |
+| `actor_email` | Acteur — e-mail | canaux `email` — 681 lignes | `actor_contacts` |
+| `actor_address` | Acteur — adresse | canaux `address` — **0 ligne en base à ce jour** | `actor_contacts` |
+| `actor_summary` | Propriétaire (résumé) | Une phrase : « Nom (rôle) — tél — e-mail — adresse » | `actor_contacts` |
+| `actors_notes` | Acteur — note | `actor_object_role.note` | `actor_contacts` |
+
+Pour une **sélection mixte** (certaines fiches autorisées, d'autres non), les lignes
+autorisées sont remplies et les autres restent vides — le fichier n'échoue pas, et
+Lisez-moi porte les comptes demandées / autorisées / refusées.
 
 Les colonnes `actor_phone` et `actor_address` sont créées bien qu'aucune ligne
 n'existe (§150 : la surface suit le modèle, pas la donnée). Elles rendent `''`
@@ -289,10 +369,11 @@ Deux feuilles.
 
 **« Fiches »** — une ligne par fiche, dans l'ordre de la sélection.
 - Première ligne gelée (`stickyRowsCount: 1`), largeurs de colonnes calculées.
-- **Toutes les cellules en `type: String`** (+ `format: '@'` en ceinture), y compris
-  `id`, `postcode`, `code_insee`, `siret`. Seules `latitude` / `longitude` restent
-  numériques. Le corpus est en 974xx aujourd'hui, mais la première fiche métropole en
-  `01xxx` perdrait son zéro.
+- **Cellules typées par le registre (R1)** : `cellType: 'text'` ⇒ `type: String`
+  (identifiants, codes postaux, `code_insee`, `siret` — la première fiche métropole
+  en `01xxx` perdrait sinon son zéro) ; `cellType: 'number'` ⇒ `type: Number`
+  (**`latitude` / `longitude` uniquement** aujourd'hui). Un test relit le classeur
+  et vérifie les deux familles.
 - Chaque cellule passe par `csvCell` (`src/lib/safe-output.ts`) : `name` et
   `description` sont éditables par un opérateur et le fichier s'ouvre dans Excel.
   **Attention, contre-intuitif** : `csvCell` préfixe une apostrophe devant `= + - @`.
@@ -345,28 +426,52 @@ de l'ORG exportatrice. **Aucune valeur de coordonnée n'y entre jamais** — qui
 combien de fiches, quels `object_id`, quels *types* de canaux, quels champs
 d'identité. Pas les valeurs.
 
-**5. `api.export_actor_contacts(p_object_ids, p_reason, p_format)`** — autorise-une-fois
-(§36 : la liste d'ids du client n'est jamais de confiance, la fonction est
-PostgREST-exécutable), filtre le périmètre, lit, **journalise dans la même
-transaction**, rend les lignes. Plafond dur **500 fiches** : aspirer le corpus doit
-produire N lignes de journal, pas une. `gen_random_uuid()`, jamais
-`uuid_generate_v4()` (`search_path` restreint). Le tableau est passé **en valeur**
-(`= ANY(v_scope)`), jamais `ANY((SELECT …))` — sinon `text = text[]`, SQLSTATE 42883.
-**Pas de `GRANT` à `service_role`** : un export doit être imputable à une personne.
+**5. `api.export_actor_contacts(p_object_ids, p_reason, p_format, p_export_run_id, p_batch_index, p_batch_count)`**
+— autorise-une-fois (§36 : la liste d'ids du client n'est jamais de confiance, la
+fonction est PostgREST-exécutable), **set-based** (une requête relationnelle par lot,
+jamais `get_object_resource` par fiche), filtre le périmètre, lit, **journalise dans
+la même transaction**, rend `{log_id, export_run_id, batch_index, batch_count,
+authorized_object_ids, denied_object_ids, rows}`.
 
-**Conséquence UI — la ligne de démarcation est le `clearance`, pas le groupe.**
-`actor_names`, `actor_roles` et `actor_primary` sont de niveau public : elles sortent
-du batch comme n'importe quelle autre colonne, sans friction. Les six autres
-(`actor_phone`, `actor_mobile`, `actor_email`, `actor_address`, `actor_summary`,
-`actors_notes`) sont de niveau ORG publisher : `get_object_resources_batch` les rendra
-désormais `[]` + `contacts_restricted`, et l'export doit passer par
-`api.export_actor_contacts`.
+Contrat de sécurité (R1, exhaustif) : `SECURITY DEFINER` · `auth.uid() IS NOT NULL`
+· `search_path` restreint · `REVOKE` de `PUBLIC`, `anon` **ET `service_role`** ·
+`GRANT EXECUTE` à `authenticated` seulement (un export de PII est imputable à une
+personne) · **finalité validée SERVEUR** (non vide après trim, longueur 5-500 — la
+modale seule n'est pas une protection) · format sur liste blanche · ids vides/doublons
+**supprimés côté serveur** · plafond **500 par appel, après dédoublonnage** (validé
+sous le `statement_timeout` de 8 s avant d'être figé) · autorisation **par fiche** ·
+**aucune valeur de coordonnée au journal**. `gen_random_uuid()`, jamais
+`uuid_generate_v4()`. Tableau passé **en valeur** (`= ANY(v_scope)`), jamais
+`ANY((SELECT …))` — 42883.
 
-Donc : **si et seulement si** au moins une colonne de niveau ORG publisher du groupe
-Acteur est cochée, la modale demande une **finalité** (champ obligatoire, elle part
-dans le journal) et l'export fait un appel supplémentaire. Sinon, rien ne change.
-Les colonnes gardées et les colonnes journalisées sont **exactement le même
-ensemble** — une seule règle à retenir, aucune zone grise.
+**Journal multi-ORG (R1)** : `current_user_crm_object_ids()` ne dit pas quelle ORG
+autorise chaque fiche. Le journal porte `export_run_id` (partagé entre les lots d'un
+même export), `batch_index`/`batch_count`, **`org_object_ids TEXT[]`** (les ORG
+publisher ayant permis l'accès — bras RLS de lecture pour l'admin d'ORG) et
+**`org_attributions JSONB`** (paires objet↔ORG détaillées). Lecture : superuser OU
+admin d'une ORG présente dans `org_object_ids`.
+
+**Sémantique d'échec (R1)** : un lot en échec ⇒ **aucun fichier produit** ; les
+journaux des lots déjà réussis sont **conservés** (la donnée a réellement atteint le
+navigateur — le journal dit la vérité, pas l'intention).
+
+**Hors périmètre EXPLICITE (R1)** : `api.get_object_with_deep_data` et
+`api.get_objects_with_deep_data` ne sont pas modifiées — l'export ne passe pas par
+elles (chemin : modale → service → `get_object_resources_batch` → `get_object_resource`),
+et les patcher cascaderait sur le tiroir, l'éditeur, l'impression. La divergence
+deep↔resource sur les acteurs est une dette distincte (INVOKER : RLS vide déjà les
+canaux pour `authenticated` ; 0 appelant service-role — vérifié). Un test CI prouve
+que 16t ne les a pas touchées.
+
+**Conséquence UI — la ligne de démarcation est la CAPACITÉ (R1).**
+`actor_names`, `actor_roles`, `actor_primary` portent `actor_identity` : elles sortent
+du batch (lignes déjà filtrées serveur par la visibilité du lien), sans friction, et
+ne sont **proposées** qu'aux sessions qui ont le droit normal de consulter les acteurs.
+Les six colonnes `actor_contacts` déclenchent la **finalité obligatoire** et passent
+par `api.export_actor_contacts` (journalisé, multi-lots, `export_run_id` partagé).
+Les colonnes gardées 16t et les colonnes journalisées sont **exactement le même
+ensemble** — une seule règle, aucune zone grise. Ordre d'exécution : les lots acteur
+d'abord (légers), puis les lots ressources avec **aplatissement immédiat** (R1-6).
 
 **Rupture du contrat partenaire, assumée :** `actors[].contacts` devient `[]` +
 `contacts_restricted: true` sur `/api/public/objects/{id}` et `?view=full`. À
@@ -425,6 +530,7 @@ l'export : progression par lot et bouton Annuler.
 | Unification complète des registres de colonnes | `TableColumnDef` a 5 consommateurs et sert un écran ; différé, journalisé |
 | Montage de `SelectionBar` sous 1180 px | Elle n'est montée que sur l'onglet carte (`ExplorerPage.tsx:111-137`). Constat, pas régression de cette passe |
 | Ajout de `is_public` sur `actor_channel` | Le vrai correctif du modèle, mais c'est une migration + une passe de saisie. 16t couvre le besoin immédiat |
+| **Modification de `get_object_with_deep_data` / `get_objects_with_deep_data`** | **R1 — exclusion explicite.** L'export ne passe pas par elles ; les patcher cascaderait sur tiroir/éditeur/impression. Dette nommée : divergence deep↔resource sur les acteurs (INVOKER, RLS vide les canaux pour authenticated, 0 appelant service-role). N'entre dans cette passe QUE si les tests démontrent une régression réellement introduite par 16t |
 | `n_photos` compte aussi vidéos et documents | Différé documenté §204 ; l'export recompte plutôt que de réutiliser ce chiffre |
 
 ---
@@ -455,6 +561,17 @@ ne prouve pas que l'export la remplit.
    doit faire tomber ces assertions.
 5. **Le préréglage verrouillé** ne peut rien laisser passer, même avec un
    `localStorage` forgé.
+6. **Ajouts R1 — le plan de tests couvre aussi** : export > 500 fiches (fusion
+   multi-lots par `object_id`, ordre initial conservé) ; sélection mixte
+   autorisée/refusée (lignes autorisées remplies, comptes en Lisez-moi) ; personas
+   membre autorisé / éditeur / lecteur simple refusé ; coordonnées journalisées sur
+   PLUSIEURS lots (`export_run_id` partagé, tous les `log_id` en Lisez-moi) ; échec
+   du second lot ⇒ **aucun fichier** (journaux du 1er lot conservés) ; annulation
+   entre deux lots ; non-régression du tiroir et de l'éditeur (suites front) ;
+   **preuve que `get_objects_with_deep_data` n'a pas été modifiée** (assertion sur
+   `pg_proc.prosrc`) ; `=2+2` conservé comme texte ; zéro initial des codes postaux ;
+   plusieurs acteurs principaux joints par ` | ` ; finalité trop courte refusée
+   SERVEUR ; cibles de temps mesurées (§0-6) comme critères d'acceptation.
 
 ---
 
@@ -513,3 +630,10 @@ cela perpétue la dérive. Insertion dans `ci_fresh_apply.sql` entre les lignes 
    sur 840 fiches.
 5. **Collision de diff** sur les trois fichiers de documentation partenaire, déjà
    modifiés dans l'arbre de travail par le chantier Tourinsoft.
+6. **R1 — le plafond 500 du RPC acteur est une hypothèse** tant qu'il n'a pas été
+   mesuré sous le `statement_timeout` de 8 s : le valider en production (et le
+   descendre si > 4 s) avant de le figer dans la doc.
+7. **R1 — les cibles de temps** (15-25 s pour 840 fiches avec projection +
+   concurrence 2 + aplatissement immédiat) sont réalistes mais non prouvées : un
+   benchmark depuis La Réunion les confirme ou les révise — sans ces optimisations,
+   annoncer 30-40 s.

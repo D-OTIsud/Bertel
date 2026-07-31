@@ -3691,6 +3691,14 @@ export function canWriteCanonicalDirect(flags: {
   return flags.directWrite || flags.objectOwner || flags.canonical;
 }
 
+/** Pure: mirror api.user_can_manage_object_legal for the editor's legal module gate. */
+export function canManageObjectLegalDirect(flags: {
+  directWrite: boolean;
+  legal: boolean;
+}): boolean {
+  return flags.directWrite || flags.legal;
+}
+
 async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
   const session = useSessionStore.getState();
   const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
@@ -3704,14 +3712,15 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
   let canonical = false;
   let enrichment = false;
   let objectOwner = false;
+  let canManageLegal = directWrite;
   let isOrgAdmin = directWrite;
   let isPlatformSuperuser = directWrite;
   if (!session.demoMode && apiClient) {
     try {
-      // UN seul aller-retour au lieu de huit. La resilience par sonde n'est pas
+      // UN seul aller-retour pour les neuf sondes. La resilience par sonde n'est pas
       // perdue : elle a migre DANS la fonction SQL (un bloc EXCEPTION par sonde),
       // qui conserve la semantique Promise.allSettled — une sonde en echec rend
-      // false sans faire echouer les sept autres.
+      // false sans faire echouer les huit autres.
       // Les gates metier restent identiques :
       //  - §19 CRM : `crm` est la garde PAR OBJET (adhesion a l'ORG publisher +
       //    write_crm_notes) ; le helper global userCanWriteCrmNotes() n'est PAS
@@ -3731,6 +3740,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canPublishObject = directWrite || p.publish === true;
       canWriteProviderFollowUp = p.private_notes === true;
       crmWrite = p.crm === true;
+      canManageLegal = canManageObjectLegalDirect({ directWrite, legal: p.legal === true });
       isOrgAdmin = directWrite || p.org_admin === true;
       isPlatformSuperuser = directWrite || p.platform_superuser === true;
 
@@ -3742,6 +3752,7 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       canPublishObject = directWrite;
       canWriteProviderFollowUp = directWrite;
       crmWrite = false;
+      canManageLegal = directWrite;
       isOrgAdmin = directWrite;
       isPlatformSuperuser = directWrite;
     }
@@ -3874,10 +3885,10 @@ async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWo
       disabledReason: directWrite ? null : "Vos droits actuels ne permettent pas de gerer les adhesions de cette fiche.",
     },
     legal: {
-      canDirectWrite: directWrite,
+      canDirectWrite: canManageLegal,
       canPrepareProposal: false,
       canSubmitProposal: false,
-      disabledReason: directWrite ? null : "Vos droits actuels ne permettent pas de gerer la conformite juridique de cette fiche.",
+      disabledReason: canManageLegal ? null : "Permission « Gérer la conformité juridique » requise pour cette fiche.",
     },
     tags: {
       canDirectWrite: canWriteSafeWorkspaceRpc,

@@ -1,34 +1,6 @@
--- =====================================================================
--- migration_object_workspace_permissions_rpc.sql
--- Agrégateur des 9 sondes de permission de l'éditeur de fiche.
---
--- MOTIF (perf, mesuré) : l'ouverture de l'éditeur émettait HUIT appels
--- PostgREST séparés pour huit booléens portant tous sur le même objet
--- (`user_can_write_canonical`, `user_can_write_enrichment`,
--- `user_can_publish_object`, `can_write_object_private_notes`,
--- `is_object_owner`, `user_can_write_crm`, `current_user_is_org_admin`,
--- `is_platform_superuser`, `user_can_manage_object_legal`). Production :
--- 909 appels de chacune des huit sondes historiques, entre 22 et
--- 32 ms de temps DB — mais surtout huit allers-retours HTTP, à 220-310 ms de
--- latence mesurée depuis La Réunion. Ce fichier les ramène à UN.
---
--- SECURITY INVOKER, DÉLIBÉRÉMENT — et il ne faut PAS le passer en DEFINER.
--- Les huit fonctions feuilles sont déjà `SECURITY DEFINER` et font chacune
--- leur propre contrôle ; les envelopper dans un DEFINER de plus élargirait la
--- surface privilégiée sans rien apporter. L'agrégateur ne fait que composer
--- des résultats, il n'accède à aucune table par lui-même.
---
--- RÉSILIENCE PAR SONDE — le front utilisait `Promise.allSettled` : une sonde
--- en échec laisse les huit autres répondre. Un `SELECT` unique perdrait cette
--- propriété (une erreur ferait échouer l'ensemble, donc verrouillerait un
--- éditeur légitime pour une raison sans rapport). D'où les blocs EXCEPTION
--- individuels : même sémantique observable, fail-closed par sonde.
---
--- Idempotent. Aucun DDL de table. Signature nouvelle ⇒ NOTIFY pgrst en pied.
--- Dépend de : rls_policies.sql + migration_unblock_team_legal_access.sql
--- (les 9 fonctions feuilles).
--- =====================================================================
-
+-- Expose the dedicated, object-scoped legal authorization probe to the editor.
+-- The previous aggregate omitted it, so the UI fell back to platform-wide
+-- `directWrite` and rendered legal fields/documents read-only for normal editors.
 CREATE OR REPLACE FUNCTION api.get_object_workspace_permissions(p_object_id text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -89,19 +61,14 @@ END;
 $$;
 
 COMMENT ON FUNCTION api.get_object_workspace_permissions(text) IS
-  'Agrège en un appel les 9 sondes de permission de l''éditeur pour un objet. '
-  'SECURITY INVOKER volontairement : les feuilles sont déjà DEFINER et gatent '
-  'elles-mêmes. Chaque sonde est isolée dans un bloc EXCEPTION pour conserver la '
-  'sémantique Promise.allSettled du front (une sonde en échec = false, pas un '
-  'échec global).';
+  'Agrège en un appel les 9 sondes de permission de l''éditeur pour un objet, '
+  'dont la permission juridique dédiée. SECURITY INVOKER volontairement ; '
+  'chaque sonde échoue fermée et indépendamment.';
 
--- Pas de `anon` : ce n'est ni un helper de policy SELECT ni un lecteur public
--- (cf. la denylist Q1b du runbook). Les fonctions nées `PUBLIC EXECUTE`.
 REVOKE ALL ON FUNCTION api.get_object_workspace_permissions(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION api.get_object_workspace_permissions(text) FROM anon;
 GRANT EXECUTE ON FUNCTION api.get_object_workspace_permissions(text) TO authenticated, service_role;
 
--- Auto-assertion : l'agrégat doit rendre exactement les 9 clés attendues.
 DO $$
 DECLARE
   v_keys text[];

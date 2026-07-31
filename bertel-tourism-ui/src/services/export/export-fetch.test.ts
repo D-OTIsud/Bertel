@@ -60,8 +60,13 @@ describe('fetchResourceBatches (R1 : streaming + concurrence 2 + fusion par obje
 
   it('transmet fields au batch (projection R1) et le signal', async () => {
     mockBatch.mockResolvedValue([fakeDetail('x')]);
-    await fetchResourceBatches(['x'], ['fr'], { fields: ['contacts', 'address'], onBatch: () => {} });
-    expect(mockBatch).toHaveBeenCalledWith(['x'], ['fr'], expect.objectContaining({ fields: ['contacts', 'address'] }));
+    const controller = new AbortController(); // non annulé : on vérifie juste la transmission
+    await fetchResourceBatches(['x'], ['fr'], { fields: ['contacts', 'address'], onBatch: () => {}, signal: controller.signal });
+    expect(mockBatch).toHaveBeenCalledWith(
+      ['x'],
+      ['fr'],
+      expect.objectContaining({ fields: ['contacts', 'address'], signal: controller.signal }),
+    );
   });
 
   it("s'arrête net quand le signal est déjà annulé (aucun appel réseau)", async () => {
@@ -69,5 +74,22 @@ describe('fetchResourceBatches (R1 : streaming + concurrence 2 + fusion par obje
     controller.abort();
     await expect(fetchResourceBatches(['x'], ['fr'], { onBatch: () => {}, signal: controller.signal })).rejects.toThrow(/annul/i);
     expect(mockBatch).not.toHaveBeenCalled();
+  });
+
+  it("un lot en échec fait rejeter fetchResourceBatches avec la MÊME erreur (R1-3 : aucun fichier tronqué) — tombe si worker() avale l'erreur dans un catch", async () => {
+    const boom = new Error('boom réseau');
+    mockBatch.mockRejectedValue(boom);
+    await expect(fetchResourceBatches(['x'], ['fr'], { onBatch: () => {} })).rejects.toBe(boom);
+  });
+
+  it('annulation EN VOL (signal coupé pendant un lot en réseau) : remonte la même erreur canonique que l’annulation avant départ, pas l’erreur brute du client', async () => {
+    const controller = new AbortController();
+    mockBatch.mockImplementation(async () => {
+      controller.abort(); // le signal se coupe PENDANT que le lot est en vol
+      throw new Error('AbortError: la requête a été annulée par le client'); // message brut quelconque
+    });
+    await expect(
+      fetchResourceBatches(['x'], ['fr'], { onBatch: () => {}, signal: controller.signal }),
+    ).rejects.toThrow(/annul/i);
   });
 });

@@ -52,10 +52,19 @@ export async function fetchResourceBatches(
       if (index >= chunks.length) return;
       cursor += 1;
       const chunk = chunks[index];
-      const details = await getObjectResourcesBatch(chunk, langPrefs, {
-        signal: opts.signal,
-        fields: opts.fields,
-      });
+      let details: Awaited<ReturnType<typeof getObjectResourcesBatch>>;
+      try {
+        details = await getObjectResourcesBatch(chunk, langPrefs, {
+          signal: opts.signal,
+          fields: opts.fields,
+        });
+      } catch (err) {
+        // Annulation en vol : le signal a coupé la requête réseau (AbortError/erreur client, message
+        // quelconque) AVANT le prochain assertAlive() — remonter l'erreur canonique d'annulation pour
+        // que l'appelant (Tâche 8) distingue "annulé" de "échec dur" sans dépendre du message brut.
+        if (opts.signal?.aborted) throw new Error('Export annulé.');
+        throw err;
+      }
       assertAlive();
       const entries: Array<[string, ParsedObjectDetail]> = [];
       details.forEach((detail, i) => {

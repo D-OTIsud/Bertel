@@ -8,7 +8,7 @@
 
 # API publique Bertel — Guide partenaires
 
-**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-07-03
+**Office de Tourisme Intercommunal du Sud de La Réunion (OTI du Sud)** · Contrat `1.0.0` · Guide mis à jour le 2026-07-31
 
 Bertel est le système d'information touristique de l'OTI du Sud. Son API publique donne aux partenaires un accès **en lecture seule** aux fiches touristiques **publiées** du territoire : hébergements, restaurants, activités, itinéraires, événements, patrimoine, sites naturels…
 
@@ -107,7 +107,7 @@ Au sein d'une même version majeure, les évolutions sont **uniquement additives
 | `search` | string | — | Recherche sur le **nom** de la fiche uniquement |
 | `lang` | code | `fr` | Langue de résolution des textes |
 | `format` | profil | — | Ajoute un document pivot par fiche (voir section 5) |
-| `variant` | `legacy-v1` \| `reunion-hebergement-v1` | `legacy-v1` | Uniquement avec `format=tourinsoft` ; active le contrat Tourinsoft souhaité |
+| `variant` | `legacy-v1` \| `reunion-hebergement-v1` \| `reunion-regional-v1` | `legacy-v1` | Uniquement avec `format=tourinsoft` ; active explicitement le contrat Tourinsoft souhaité |
 
 **Pagination par curseur** : la réponse porte `meta.next_cursor`. Repassez cette valeur telle quelle dans `?cursor=` pour obtenir la page suivante ; `next_cursor` vaut `null` sur la dernière page. Arrêtez la boucle de pagination quand `next_cursor` vaut `null`. Le curseur est **opaque** — ne le construisez ni ne l'interprétez jamais. Les paramètres de filtre (`types`, `page_size`, `search`, `lang`, `view`, `track`) sont **figés par le curseur** : pour changer un filtre, repartez sans `cursor`.
 
@@ -162,7 +162,7 @@ L'identifiant a la forme `RESRUN00000000XK` (3 lettres de type + territoire + 10
 | `lang` | Langue de résolution (`fr` par défaut) |
 | `lang=all` | Résout en français **et** ajoute un bloc `data.i18n` = `{champ: {langue: texte}}` avec toutes les traductions disponibles, en un seul appel. Ce bloc couvre **uniquement** les 7 champs de la famille description (`description`, `description_chapo`, `description_mobile`, `description_edition`, `description_adapted`, `description_offre_hors_zone`, `sanitary_measures`) — **pas** le nom (`name`) ni les proses de facettes (menus, chambres, étapes d'itinéraire) |
 | `format` | Ajoute un document pivot (section 5) |
-| `variant` | Uniquement avec `format=tourinsoft` : `legacy-v1` (défaut) ou `reunion-hebergement-v1` |
+| `variant` | Uniquement avec `format=tourinsoft` : `legacy-v1` (défaut), `reunion-hebergement-v1` ou `reunion-regional-v1` |
 
 ```bash
 curl -H "Authorization: Bearer bk_live_…" \
@@ -294,6 +294,7 @@ Chaque fiche peut être servie accompagnée d'un document conforme à un standar
 | `apidae` | `apidae` | JSON objet touristique Apidae | Échange avec la plateforme Apidae |
 | `tourinsoft` | `tourinsoft` | Tourinsoft `legacy-v1` (défaut) | Compatibilité avec le bloc historique de 13 champs |
 | `tourinsoft&variant=reunion-hebergement-v1` | `tourinsoft` | Tourinsoft CRT Réunion — hébergement | Projection enrichie HOT/HLO/CAMP conforme au schéma observé dans le flux CRT |
+| `tourinsoft&variant=reunion-regional-v1` | `tourinsoft` | Tourinsoft CRT Réunion — régional | Projection taxonomique vers les six familles CRT actuellement publiées |
 
 Le bloc est **additif** : les clés de base de la réponse ne changent jamais ; sans `format`, la réponse est identique à avant. Une fiche non couverte par un profil n'a simplement **pas** la clé — l'élément reste complet par ailleurs. En cas d'échec de construction, la réponse est servie sans le bloc (jamais d'erreur bloquante).
 
@@ -332,16 +333,70 @@ Les données privées, CRM, juridiques non approuvées, médias privés/non publ
 
 Le flux fourni par le CRT est un flux de **lecture/syndication**. Il permet de prouver la forme observée, mais pas à lui seul les règles d'import ou d'écriture. Avant toute alimentation Tourinsoft, le CRT doit confirmer l'endpoint d'écriture, l'authentification, les champs obligatoires, les thésaurus, les règles de suppression/dépublication et la priorité en cas de conflit.
 
+### Variante Tourinsoft CRT Réunion — régional
+
+La variante `reunion-regional-v1` étend la projection aux six familles actuelles sans
+modifier `legacy-v1` ni `reunion-hebergement-v1` :
+
+```bash
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects/RESRUN00000000XK?format=tourinsoft&variant=reunion-regional-v1"
+
+curl -H "Authorization: Bearer bk_live_…" \
+  "https://VOTRE_DOMAINE/api/public/objects?page_size=200&format=tourinsoft&variant=reunion-regional-v1"
+```
+
+Le routage est piloté par la taxonomie Bertel. Certains types ont une route directe ;
+les familles qui se recouvrent restent fermées tant qu'une taxonomie n'a pas confirmé
+le bordereau cible :
+
+| Famille Tourinsoft | Routage Bertel actuel |
+|---|---|
+| Découverte | `PCU`, `PNA`, `PRD`, `LOI` |
+| Hébergement | `HOT`, `HLO`, `CAMP`, `HPA`, `RVA` |
+| Information et service touristique | `SPU` classé office d'information ; `PSV` classé agence réceptive |
+| Loisir / plein air | `ACT` seulement pour les taxonomies approuvées ; locations de cycles `PSV` identifiées par taxonomie ; aucun repli `ASC` |
+| Restauration | `RES` |
+| Transport | `PSV` après les exceptions taxonomiques précédentes |
+
+Une fiche publiée sans route, sans correspondance de type ou avec deux routes
+taxonomiques contradictoires n'a pas de bloc `tourinsoft` ; le reste de la fiche reste
+présent et le cas est remonté dans la file de diagnostic réservée au connecteur. Les
+replis directs `HLO` et `RES` restent exportables mais sont signalés comme provisoires
+jusqu'à validation du CRT. Les noms de collections restent
+ceux du profil cible, y compris leurs variantes historiques (`Localisations` /
+`Localisationss`, par exemple). Le détail et la liste utilisent le même sérialiseur ;
+la liste effectue un seul appel par lot de 200 identifiants au maximum.
+
+Le contrat régional inventorie les propriétés déclarées par `$metadata`, même si
+aucune des 411 fiches ne les renseigne. Il couvre **683 chemins** et **1 983
+occurrences champ-profil** : 187 chemins sont approuvés, 278 restent soumis à une
+décision CRT et 218 sont exclus. Les champs approuvés sont produits depuis les données
+canoniques publiques de Bertel. Les champs en attente ne sont pas inventés. Une
+extension réservée au connecteur peut restituer uniquement les chemins autorisés pour
+ce profil ; les feuilles exclues, privées ou inconnues sont supprimées et signalées,
+les valeurs canoniques Bertel conservent toujours la priorité et les éléments sans
+correspondant canonique ne sont pas émis. L'identifiant Tourinsoft est lui aussi propre
+au profil ; il est omis tant que le CRT ne l'a pas confirmé, sans repli artificiel sur
+l'identifiant Bertel. Le SIRET, lorsqu'il est présent, provient uniquement d'un
+enregistrement légal public et actif validé à 14 chiffres ; aucun autre contenu
+juridique n'est exposé.
+
+Comme pour la variante hébergement, cette projection est une sortie de lecture
+candidate. Elle ne doit pas être envoyée vers Tourinsoft en production avant validation
+par le CRT du contrat d'import, des référentiels, des cardinalités, des règles
+d'effacement et de la résolution des conflits bidirectionnels.
+
 ### Cycle de synchronisation recommandé
 
-1. Parcourir `GET /objects?view=full&format=tourinsoft&variant=reunion-hebergement-v1` avec `meta.next_cursor`, puis faire un upsert par `id`.
+1. Parcourir `GET /objects?view=full&format=tourinsoft&variant=<variante>` avec `meta.next_cursor`, puis faire un upsert par `id` (`<variante>` = `reunion-hebergement-v1` ou `reunion-regional-v1`).
 2. Comparer `updated_at` lors des cycles suivants et réconcilier périodiquement la liste complète des ids publiés. Une fiche dépubliée disparaît du corpus publié ; elle n'est pas encore signalée comme suppression définitive.
 3. Consommer `GET /objects/deletions?since=…` pour les suppressions définitives et conserver le curseur renvoyé.
 4. En cas de `429` ou `5xx`, reprendre avec backoff sans reconstruire le curseur.
 
 ### Périmètre des autres pivots
 
-Les profils `jsonld`, `datatourisme`, `apidae` et Tourinsoft `legacy-v1` restent des projections cœur et ne changent pas avec cette livraison. Avant tout branchement réel, validez leur conformité champ à champ contre l'importeur cible.
+Les profils `jsonld`, `datatourisme`, `apidae`, Tourinsoft `legacy-v1` et la variante `reunion-hebergement-v1` ne changent pas avec cette livraison. Avant tout branchement réel, validez leur conformité champ à champ contre l'importeur cible.
 
 ---
 

@@ -1445,6 +1445,74 @@
           }
         },
         {
+          "name": "Liste + Tourinsoft CRT Réunion (I4f · régional v1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "const regional = d.data.filter(x => x.tourinsoft);",
+                  "pm.test('page régionale Tourinsoft additive', function () { pm.expect(d.data).to.be.an('array'); pm.expect(regional.length).to.be.above(0); regional.forEach(x => { pm.expect(x.tourinsoft).to.have.property('ClassificationType'); if (Object.prototype.hasOwnProperty.call(x.tourinsoft, 'SyndicObjectID')) pm.expect(x.tourinsoft.SyndicObjectID).to.be.a('string').and.not.empty; }); });",
+                  "if (regional.length > 0) pm.collectionVariables.set('tourinsoft_regional_object_id', regional[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects?page_size=200&format=tourinsoft&variant=reunion-regional-v1",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects"],
+              "query": [
+                {"key": "page_size", "value": "200"},
+                {"key": "format", "value": "tourinsoft"},
+                {"key": "variant", "value": "reunion-regional-v1"}
+              ]
+            },
+            "description": "Projection régionale opt-in sur les six familles CRT. Un seul RPC set-based traite la page (200 ids maximum) ; les fiches non routées restent dans la page sans bloc `tourinsoft`. Cette requête mémorise le premier id couvert dans `tourinsoft_regional_object_id` pour la requête de détail suivante."
+          }
+        },
+        {
+          "name": "Fiche + Tourinsoft CRT Réunion (I4f · régional v1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = pm.response.json();",
+                  "pm.test('contrat Tourinsoft régional', function () { pm.expect(d.data).to.have.property('tourinsoft'); pm.expect(d.data.tourinsoft).to.have.property('ObjectTypeFix'); pm.expect(d.data.tourinsoft).to.have.property('ClassificationType'); if (Object.prototype.hasOwnProperty.call(d.data.tourinsoft, 'SyndicObjectID')) pm.expect(d.data.tourinsoft.SyndicObjectID).to.be.a('string').and.not.empty; });",
+                  "pm.test('famille CRT routée', function () { pm.expect(['Découverte','Hôtellerie','Hébergement locatifs','Camping','Information et service touristique','Loisirs / Plein air','Restauration','Transport']).to.include(d.data.tourinsoft.ObjectTypeName); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer {{partner_key}}"}
+            ],
+            "url": {
+              "raw": "{{public_base_url}}/api/public/objects/{{tourinsoft_regional_object_id}}?format=tourinsoft&variant=reunion-regional-v1",
+              "host": ["{{public_base_url}}"],
+              "path": ["api", "public", "objects", "{{tourinsoft_regional_object_id}}"],
+              "query": [
+                {"key": "format", "value": "tourinsoft"},
+                {"key": "variant", "value": "reunion-regional-v1"}
+              ]
+            },
+            "description": "Même projection régionale que le batch, pour une fiche. Exécuter d'abord la requête de liste régionale afin de renseigner `tourinsoft_regional_object_id`. Le flux est public-only et le contrat d'import/écriture doit encore être validé par le CRT."
+          }
+        },
+        {
           "name": "Fiche — toutes les langues (C-5 · ?lang=all)",
           "request": {
             "method": "GET",
@@ -1586,6 +1654,11 @@
       "key": "object_id",
       "value": "",
       "description": "ID d'objet pour les tests (auto-rempli)"
+    },
+    {
+      "key": "tourinsoft_regional_object_id",
+      "value": "",
+      "description": "ID d'une fiche couverte par reunion-regional-v1 (auto-rempli par la liste régionale)"
     },
     {
       "key": "itinerary_id",

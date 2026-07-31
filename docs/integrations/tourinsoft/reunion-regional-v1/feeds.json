@@ -1,0 +1,38 @@
+[
+  {
+    "slug": "decouverte",
+    "name": "FS_DECOUVERTE_OTI Sud",
+    "id": "39bab676-97bb-4c78-9d7d-28dd43753314",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/39BAB676-97BB-4C78-9D7D-28DD43753314"
+  },
+  {
+    "slug": "hebergement",
+    "name": "FS_Hébergement_OTI Sud",
+    "id": "b2bc0524-adc3-45d5-8a77-a0d70d2425b3",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/B2BC0524-ADC3-45D5-8A77-A0D70D2425B3"
+  },
+  {
+    "slug": "information_service",
+    "name": "FS_INFORMATION & SERVICE TOURISTIQUE_OTI Sud",
+    "id": "5a285c91-d35f-4873-8f3c-a032abb418d3",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/5A285C91-D35F-4873-8F3C-A032ABB418D3"
+  },
+  {
+    "slug": "loisir_plein_air",
+    "name": "FS_LOISIR/PLEIN AIR_OTI Sud",
+    "id": "c32a0407-a66f-48d5-8db0-618fdf03f49f",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/C32A0407-A66F-48D5-8DB0-618FDF03F49F"
+  },
+  {
+    "slug": "restauration",
+    "name": "FS_Restauration_OTI Sud",
+    "id": "cc575ee1-aa90-49bd-b23f-1935c4b151cd",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/CC575EE1-AA90-49BD-B23F-1935C4B151CD"
+  },
+  {
+    "slug": "transport",
+    "name": "FS_TRANSPORT_OTI Sud",
+    "id": "15dd031a-caac-4e1b-aa75-5f65d7a437e8",
+    "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/15DD031A-CAAC-4E1B-AA75-5F65D7A437E8"
+  }
+]

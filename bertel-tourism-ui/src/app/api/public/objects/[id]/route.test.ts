@@ -243,27 +243,30 @@ describe('GET /api/public/objects/[id]', () => {
     expect(json.data.tourinsoft).toBeUndefined();
   });
 
-  it('?format=tourinsoft&variant=reunion-hebergement-v1 — uses the dedicated regional RPC', async () => {
-    mockStatus({ status: 'published' });
-    const regional = { SyndicObjectID: VALID_ID, ObjectTypeName: 'Hôtellerie' };
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_object_tourinsoft'
-        ? Promise.resolve({ ok: true, status: 200, body: regional })
-        : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
-    );
-    const r = new NextRequest(
-      `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=reunion-hebergement-v1`,
-      { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
-    );
-    const res = await GET(r, ctx());
-    expect(res.status).toBe(200);
-    expect(rpcMock).toHaveBeenCalledWith('get_object_tourinsoft', {
-      p_object_id: VALID_ID,
-      p_variant: 'reunion-hebergement-v1',
-    });
-    expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
-    expect((await res.json()).data.tourinsoft).toEqual(regional);
-  });
+  it.each(['reunion-hebergement-v1', 'reunion-regional-v1'] as const)(
+    '?format=tourinsoft&variant=%s — uses the dedicated regional RPC',
+    async (variant) => {
+      mockStatus({ status: 'published' });
+      const regional = { SyndicObjectID: VALID_ID, ObjectTypeName: 'Hôtellerie' };
+      rpcMock.mockImplementation((name: string) =>
+        name === 'get_object_tourinsoft'
+          ? Promise.resolve({ ok: true, status: 200, body: regional })
+          : Promise.resolve({ ok: true, status: 200, body: { id: VALID_ID, name: 'Hôtel' } }),
+      );
+      const r = new NextRequest(
+        `http://localhost/api/public/objects/${VALID_ID}?format=tourinsoft&variant=${variant}`,
+        { headers: { authorization: 'Bearer bk_live_' + 'a'.repeat(48) } },
+      );
+      const res = await GET(r, ctx());
+      expect(res.status).toBe(200);
+      expect(rpcMock).toHaveBeenCalledWith('get_object_tourinsoft', {
+        p_object_id: VALID_ID,
+        p_variant: variant,
+      });
+      expect(rpcMock).not.toHaveBeenCalledWith('get_object_interop', expect.anything());
+      expect((await res.json()).data.tourinsoft).toEqual(regional);
+    },
+  );
 
   it('?format=tourinsoft&variant=legacy-v1 — preserves the historical interop RPC path', async () => {
     mockStatus({ status: 'published' });

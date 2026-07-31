@@ -62,7 +62,10 @@ export async function fetchResourceBatches(
         // Annulation en vol : le signal a coupé la requête réseau (AbortError/erreur client, message
         // quelconque) AVANT le prochain assertAlive() — remonter l'erreur canonique d'annulation pour
         // que l'appelant (Tâche 8) distingue "annulé" de "échec dur" sans dépendre du message brut.
-        if (opts.signal?.aborted) throw new Error('Export annulé.');
+        // `cause` : la garde teste l'ÉTAT du signal, pas la CAUSALITÉ. Avec 2 lots en vol, un lot
+        // peut échouer pour une vraie raison (SQL, permission) pile quand l'utilisateur annule —
+        // on garde alors l'erreur d'origine sous le coude au lieu de la jeter (revue T3).
+        if (opts.signal?.aborted) throw new Error('Export annulé.', { cause: err });
         throw err;
       }
       assertAlive();

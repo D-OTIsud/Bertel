@@ -32,7 +32,7 @@
         "tags": ["Objets"],
         "operationId": "listObjects",
         "summary": "Lister les objets publiés (paginé)",
-        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé. Pour Tourinsoft, l'absence de `variant` conserve le contrat historique `legacy-v1`; `variant=reunion-hebergement-v1` active le contrat hébergement CRT Réunion pour HOT, HLO et CAMP.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).",
+        "description": "Retourne une page d'objets **publiés uniquement** (le statut est forcé côté serveur). Utiliser `cursor` pour paginer.\n\nAvec `format=<profil>` (`jsonld` | `datatourisme` | `apidae` | `tourinsoft`), chaque objet de la page porte en plus son document pivot sous une clé additive nommée d'après le profil — même pagination par curseur, un seul appel par page. Un objet non couvert par le profil n'a simplement pas la clé. Pour Tourinsoft, l'absence de `variant` conserve le contrat historique `legacy-v1`; `variant=reunion-hebergement-v1` active le contrat hébergement CRT Réunion pour HOT, HLO et CAMP ; `variant=reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion.\n\nAvec `view=full`, chaque objet de la page est la **fiche complète** (identique à `GET /objects/{id}`) au lieu de la carte allégée. En mode `full` la page est bornée à **100** (défaut 25) pour la performance ; `track=gpx|kml` ajoute le blob GPX/KML des itinéraires (le tracé GeoJSON est de toute façon natif).",
         "parameters": [
           { "$ref": "#/components/parameters/Cursor" },
           { "$ref": "#/components/parameters/PageSize" },
@@ -85,7 +85,7 @@
         "tags": ["Objets"],
         "operationId": "getObject",
         "summary": "Récupérer une fiche publiée",
-        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=<profil>`, un bloc additif nommé d'après le profil est ajouté à `data` : `jsonld` (schema.org), `datatourisme`, `apidae`, `tourinsoft`. Pour Tourinsoft, l'absence de `variant` conserve `legacy-v1`; `variant=reunion-hebergement-v1` active la projection hébergement CRT Réunion. `@type`/classe selon le type d'objet (crosswalk piloté par table). Orthogonal à `lang` ; les clés de base sont inchangées.",
+        "description": "Retourne la ressource complète d'un objet **publié**. Un id inconnu ou non publié renvoie **404** (indistinguable, pas de fuite de brouillon).\n\nAvec `lang=all`, les clés de base restent en français et un bloc additif `i18n` (texte propre par langue) est ajouté à `data` — toutes les traductions en un seul appel.\n\nAvec `format=<profil>`, un bloc additif nommé d'après le profil est ajouté à `data` : `jsonld` (schema.org), `datatourisme`, `apidae`, `tourinsoft`. Pour Tourinsoft, l'absence de `variant` conserve `legacy-v1`; `variant=reunion-hebergement-v1` active la projection hébergement CRT Réunion ; `variant=reunion-regional-v1` sélectionne la projection taxonomique vers les six familles CRT. `@type`/classe selon le type d'objet (crosswalk piloté par table). Orthogonal à `lang` ; les clés de base sont inchangées.",
         "parameters": [
           { "$ref": "#/components/parameters/ObjectId" },
           { "$ref": "#/components/parameters/LangWithAll" },
@@ -738,8 +738,8 @@
       },
       "TourinsoftVariant": {
         "name": "variant", "in": "query", "required": false,
-        "description": "Uniquement avec `format=tourinsoft`. `legacy-v1` conserve les 13 champs historiques. `reunion-hebergement-v1` émet le contrat hébergement CRT Réunion pour HOT, HLO et CAMP. Une variante inconnue ou une combinaison avec un autre format renvoie 400.",
-        "schema": { "type": "string", "enum": ["legacy-v1", "reunion-hebergement-v1"], "default": "legacy-v1" }
+        "description": "Uniquement avec `format=tourinsoft`. `legacy-v1` conserve les 13 champs historiques. `reunion-hebergement-v1` émet le contrat hébergement CRT Réunion pour HOT, HLO et CAMP. `reunion-regional-v1` route les fiches couvertes vers les six familles CRT Réunion (Découverte, Hébergement, Information/service, Loisir/plein air, Restauration, Transport). Une variante inconnue ou une combinaison avec un autre format renvoie 400.",
+        "schema": { "type": "string", "enum": ["legacy-v1", "reunion-hebergement-v1", "reunion-regional-v1"], "default": "legacy-v1" }
       },
       "Since": {
         "name": "since", "in": "query", "required": false,
@@ -1047,9 +1047,10 @@
           "tourinsoft": {
             "oneOf": [
               { "$ref": "#/components/schemas/TourinsoftLegacy" },
-              { "$ref": "#/components/schemas/TourinsoftReunionHebergementV1" }
+              { "$ref": "#/components/schemas/TourinsoftReunionHebergementV1" },
+              { "$ref": "#/components/schemas/TourinsoftReunionRegionalV1" }
             ],
-            "description": "Présent uniquement avec `?format=tourinsoft`. Sans variante : contrat historique `legacy-v1`. Avec `variant=reunion-hebergement-v1` : contrat hébergement CRT Réunion, public-only, limité à HOT/HLO/CAMP."
+            "description": "Présent uniquement avec `?format=tourinsoft`. Sans variante : contrat historique `legacy-v1`. Avec `variant=reunion-hebergement-v1` : contrat hébergement CRT Réunion, public-only, limité à HOT/HLO/CAMP. Avec `variant=reunion-regional-v1` : projection public-only et taxonomique vers les six familles CRT ; une fiche sans route n'a pas ce bloc."
           }
         },
         "additionalProperties": true
@@ -1116,6 +1117,55 @@
           "PeriodeOuvertures": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
         },
         "additionalProperties": false
+      },
+      "TourinsoftReunionRegionalV1": {
+        "type": "object",
+        "description": "Projection régionale CRT Réunion opt-in. La fiche publiée est routée par taxonomie puis, lorsqu'il est sans ambiguïté, par type Bertel vers l'un des six profils de fil. Les valeurs absentes sont omises, les collections sont stables et les noms historiques exacts du profil cible sont conservés. Les données canoniques publiques de Bertel priment sur toute extension de round-trip réservée au connecteur. Le flux public de syndication et son `$metadata` documentent la forme de lecture, pas encore le contrat d'import CRT.",
+        "required": ["SyndicObjectName", "Nometablissement", "ObjectTypeName", "ObjectTypeFix", "Published", "Updated", "ClassificationType"],
+        "properties": {
+          "SyndicObjectID": { "type": "string", "description": "Identifiant Tourinsoft propre au profil, présent seulement après attribution ou confirmation par le CRT. L’identifiant Bertel n’est jamais utilisé comme repli." },
+          "SyndicObjectName": { "type": "string" },
+          "Nometablissement": { "type": "string" },
+          "ObjectTypeName": {
+            "type": "string",
+            "enum": ["Découverte", "Hôtellerie", "Hébergement locatifs", "Camping", "Information et service touristique", "Loisirs / Plein air", "Restauration", "Transport"]
+          },
+          "ObjectTypeFix": { "type": "string", "format": "uuid" },
+          "Published": { "type": ["string", "null"], "format": "date-time" },
+          "Updated": { "type": ["string", "null"], "format": "date-time" },
+          "EnLigne": { "type": "boolean", "const": true, "description": "Présent uniquement pour les profils Découverte et Restauration qui déclarent ce champ." },
+          "ClassificationType": {
+            "type": "object",
+            "required": ["ThesCode", "ThesLibelle"],
+            "properties": {
+              "ThesCode": { "type": "string", "enum": ["DECO", "HEB", "INF", "LPA", "REST", "TRAN"] },
+              "ThesLibelle": { "type": "string" },
+              "ThesID": { "type": "string", "format": "uuid", "description": "Identifiant auxiliaire Tourinsoft conservé uniquement lorsqu’il correspond au même ThesCode canonique." }
+            },
+            "additionalProperties": false
+          },
+          "Adresse1": { "type": "string" },
+          "Adresse2": { "type": "string" },
+          "Adresse3": { "type": "string" },
+          "CodePostal": { "type": "string" },
+          "Commune": { "type": "string" },
+          "CodeINSEE": { "type": "string" },
+          "GmapLatitude": { "type": "string" },
+          "GmapLongitude": { "type": "string" },
+          "SIRET": { "type": "string" },
+          "Descriptifss": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Moyencommunications": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Reservations": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Photos": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Videos": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Fichiers": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "LanguesParleess": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "ModesPaiements": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "PrestationsEquipementss": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "Tarifs": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "PeriodeOuvertures": { "type": "array", "items": { "type": "object", "additionalProperties": true } }
+        },
+        "additionalProperties": true
       },
       "JsonLd": {
         "type": "object",

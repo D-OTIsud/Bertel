@@ -1,4 +1,8 @@
-export const TOURINSOFT_VARIANTS = ['legacy-v1', 'reunion-hebergement-v1'] as const;
+export const TOURINSOFT_VARIANTS = [
+  'legacy-v1',
+  'reunion-hebergement-v1',
+  'reunion-regional-v1',
+] as const;
 export type TourinsoftVariant = (typeof TOURINSOFT_VARIANTS)[number];
 
 const VARIANTS = new Set<string>(TOURINSOFT_VARIANTS);
@@ -6,6 +10,12 @@ const VARIANTS = new Set<string>(TOURINSOFT_VARIANTS);
 export type TourinsoftVariantResolution =
   | { ok: true; variant: TourinsoftVariant | null }
   | { ok: false; detail: string };
+
+export function isRegionalTourinsoftVariant(
+  variant: TourinsoftVariant | null,
+): variant is Exclude<TourinsoftVariant, 'legacy-v1'> {
+  return variant !== null && variant !== 'legacy-v1';
+}
 
 /**
  * `variant` is meaningful only for `format=tourinsoft`.

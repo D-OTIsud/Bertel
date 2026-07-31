@@ -208,21 +208,24 @@ describe('GET /api/public/objects', () => {
     expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
   });
 
-  it('?format=tourinsoft&variant=reunion-hebergement-v1 — uses one dedicated set-based batch RPC', async () => {
-    rpcMock.mockImplementation((name: string) =>
-      name === 'get_objects_tourinsoft_batch'
-        ? Promise.resolve({ ok: true, status: 200, body: { X: { SyndicObjectID: 'X' } } })
-        : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
-    );
-    const res = await GET(req('?format=tourinsoft&variant=reunion-hebergement-v1'));
-    expect(res.status).toBe(200);
-    expect(rpcMock).toHaveBeenCalledWith('get_objects_tourinsoft_batch', {
-      p_object_ids: ['X'],
-      p_variant: 'reunion-hebergement-v1',
-    });
-    expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
-    expect((await res.json()).data[0].tourinsoft).toEqual({ SyndicObjectID: 'X' });
-  });
+  it.each(['reunion-hebergement-v1', 'reunion-regional-v1'] as const)(
+    '?format=tourinsoft&variant=%s — uses one dedicated set-based batch RPC',
+    async (variant) => {
+      rpcMock.mockImplementation((name: string) =>
+        name === 'get_objects_tourinsoft_batch'
+          ? Promise.resolve({ ok: true, status: 200, body: { X: { SyndicObjectID: 'X' } } })
+          : Promise.resolve({ ok: true, status: 200, body: { info: {}, data: [{ id: 'X' }] } }),
+      );
+      const res = await GET(req(`?format=tourinsoft&variant=${variant}`));
+      expect(res.status).toBe(200);
+      expect(rpcMock).toHaveBeenCalledWith('get_objects_tourinsoft_batch', {
+        p_object_ids: ['X'],
+        p_variant: variant,
+      });
+      expect(rpcMock).not.toHaveBeenCalledWith('get_objects_interop_batch', expect.anything());
+      expect((await res.json()).data[0].tourinsoft).toEqual({ SyndicObjectID: 'X' });
+    },
+  );
 
   it('?format=tourinsoft&variant=legacy-v1 — preserves the historical batch RPC path', async () => {
     await GET(req('?format=tourinsoft&variant=legacy-v1'));

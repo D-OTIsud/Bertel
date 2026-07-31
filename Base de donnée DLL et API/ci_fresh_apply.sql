@@ -323,6 +323,15 @@ ROLLBACK;
 \echo '== I4e-test Tourinsoft Reunion export assertions =='
 \ir tests/test_tourinsoft_reunion_export_v1.sql
 
+\echo '== I4f    migration_tourinsoft_reunion_regional_v1.sql  (opt-in reunion-regional-v1: six exact feed profiles, taxonomy-aware routing, canonical+extension serializer, legacy and accommodation contracts preserved) =='
+\ir migration_tourinsoft_reunion_regional_v1.sql
+
+\echo '== I4f-test Tourinsoft Reunion six-family regional export assertions =='
+\ir tests/test_tourinsoft_reunion_regional_v1.sql
+
+\echo '== I4f-compat-test legacy-v1 and reunion-hebergement-v1 after regional wrapper redefinition =='
+\ir tests/test_tourinsoft_reunion_export_v1.sql
+
 \echo '== pets1  migration_pet_policy_single_source.sql  (§197 « Animaux acceptés » source unique : retire l equipement doublon ref_amenity.pet_friendly, backfille object_pet_policy depuis l amenity + la revue manuelle des descriptions; auto-assertive et fresh-safe) =='
 \ir migration_pet_policy_single_source.sql
 
@@ -349,6 +358,9 @@ ROLLBACK;
 
 \echo '== 16s-test garde permanente 206 + enrolement du test 14d, orphelin depuis sa creation (jamais joue en CI — la derive §176 logis→graded_label y etait invisible) : 4 classements officiels §71, absence de auberge_collective_stars, 6 labels qualite, 3 graded_label §176, valeurs presentes, QTIR 2 valeurs, logis multiple =='
 \ir tests/test_classification_labels_expansion.sql
+
+\echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
+\ir tests/test_tourinsoft_reunion_regional_v1.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

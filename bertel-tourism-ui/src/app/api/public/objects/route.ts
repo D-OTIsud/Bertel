@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { OBJECT_TYPE_CODES } from '@/lib/object-types';
-import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
+import { isRegionalTourinsoftVariant, resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
 
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // One batch call for the whole page; merge each pivot document under item.<profil> (additive,
     // mirror of the detail route). Best-effort — a failure leaves the plain page untouched.
     const ids = items.map((it) => it?.id).filter((v): v is string => typeof v === 'string');
-    const batch = format === 'tourinsoft' && tourinsoftVariant.variant === 'reunion-hebergement-v1'
+    const batch = format === 'tourinsoft' && isRegionalTourinsoftVariant(tourinsoftVariant.variant)
       ? await callPublicRpc('get_objects_tourinsoft_batch', {
           p_object_ids: ids,
           p_variant: tourinsoftVariant.variant,

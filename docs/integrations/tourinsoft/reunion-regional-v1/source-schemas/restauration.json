@@ -1,0 +1,4473 @@
+{
+  "slug": "restauration",
+  "name": "FS_Restauration_OTI Sud",
+  "id": "cc575ee1-aa90-49bd-b23f-1935c4b151cd",
+  "source_url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/CC575EE1-AA90-49BD-B23F-1935C4B151CD",
+  "feed_base": "https://wcf.tourinsoft.com/Syndication/3.0/reunion/cc575ee1-aa90-49bd-b23f-1935c4b151cd/",
+  "metadata_url": "https://wcf.tourinsoft.com/Syndication/3.0/reunion/cc575ee1-aa90-49bd-b23f-1935c4b151cd/$metadata",
+  "feed_updated": "2025-12-12T23:07:34Z",
+  "object_count": 100,
+  "object_id_prefixes": {
+    "RES": 100
+  },
+  "object_type_names": {
+    "Restauration": 100
+  },
+  "object_type_fixes": {
+    "BF6C9728-398A-4E02-B258-0B4E945F8574": 100
+  },
+  "object_fields": [
+    {
+      "name": "AccessibilitePMR",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Adresse1",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Adresse2",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 1,
+      "empty": 99,
+      "coverage_pct": 1.0
+    },
+    {
+      "name": "Adresse3",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "Bureau.ThesCode",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "97422-0",
+          "count": 32
+        },
+        {
+          "value": "97412-0",
+          "count": 28
+        },
+        {
+          "value": "97417-0",
+          "count": 17
+        },
+        {
+          "value": "97422-1",
+          "count": 16
+        },
+        {
+          "value": "97403-0",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "name": "Bureau.ThesID",
+      "type": "Edm.Guid",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Bureau.ThesLibelle",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "97430 LE TAMPON",
+          "count": 32
+        },
+        {
+          "value": "97480 SAINT-JOSEPH",
+          "count": 28
+        },
+        {
+          "value": "97442 SAINT-PHILIPPE",
+          "count": 17
+        },
+        {
+          "value": "97418 LA PLAINE DES CAFRES",
+          "count": 16
+        },
+        {
+          "value": "97414 ENTRE-DEUX",
+          "count": 7
+        }
+      ]
+    },
+    {
+      "name": "Bureau.ThesOrdre",
+      "type": "Edm.Int32",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Bureau.ThesPicto",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "ClassificationType.ThesCode",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "REST",
+          "count": 100
+        }
+      ]
+    },
+    {
+      "name": "ClassificationType.ThesID",
+      "type": "Edm.Guid",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "ClassificationType.ThesLibelle",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "Restauration",
+          "count": 100
+        }
+      ]
+    },
+    {
+      "name": "ClassificationType.ThesOrdre",
+      "type": "Edm.Int32",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "ClassificationType.ThesPicto",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "CodeINSEE",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "CodePostal",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Commune",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "EnLigne",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 98,
+      "empty": 2,
+      "coverage_pct": 98.0
+    },
+    {
+      "name": "GmapLatitude",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 99,
+      "empty": 1,
+      "coverage_pct": 99.0
+    },
+    {
+      "name": "GmapLongitude",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 99,
+      "empty": 1,
+      "coverage_pct": 99.0
+    },
+    {
+      "name": "IdentifiantSoubik",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 99,
+      "empty": 1,
+      "coverage_pct": 99.0
+    },
+    {
+      "name": "Lieudit",
+      "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+      "declared": false,
+      "observed": true,
+      "count": 74,
+      "non_empty": 0,
+      "empty": 74,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "Lieudit.ThesCode",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 26,
+      "non_empty": 26,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "PDCA",
+          "count": 10
+        },
+        {
+          "value": "BMUR",
+          "count": 6
+        },
+        {
+          "value": "PDGR",
+          "count": 3
+        },
+        {
+          "value": "GCOU",
+          "count": 2
+        },
+        {
+          "value": "LASU",
+          "count": 2
+        },
+        {
+          "value": "VINC",
+          "count": 1
+        },
+        {
+          "value": "LBAR",
+          "count": 1
+        },
+        {
+          "value": "MLBA",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "Lieudit.ThesID",
+      "type": "Edm.Guid",
+      "declared": true,
+      "observed": true,
+      "count": 26,
+      "non_empty": 26,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Lieudit.ThesLibelle",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 26,
+      "non_empty": 26,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "Plaine des Cafres (La) / Plaines et Volcan",
+          "count": 10
+        },
+        {
+          "value": "Bourg Murat / Plaines et Volcan",
+          "count": 6
+        },
+        {
+          "value": "Plaine des Grègues / Sud",
+          "count": 3
+        },
+        {
+          "value": "Grand Coude / Sud",
+          "count": 2
+        },
+        {
+          "value": "Langevin / Sud",
+          "count": 2
+        },
+        {
+          "value": "Vincendo / Sud",
+          "count": 1
+        },
+        {
+          "value": "Le Baril / Plaines et Volcan",
+          "count": 1
+        },
+        {
+          "value": "Manapany-les-Bains / Sud",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "Lieudit.ThesOrdre",
+      "type": "Edm.Int32",
+      "declared": true,
+      "observed": true,
+      "count": 26,
+      "non_empty": 26,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Lieudit.ThesPicto",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 26,
+      "non_empty": 0,
+      "empty": 26,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "Menuenfant",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 99,
+      "empty": 1,
+      "coverage_pct": 99.0
+    },
+    {
+      "name": "Nometablissement",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "ObjectTypeFix",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "BF6C9728-398A-4E02-B258-0B4E945F8574",
+          "count": 100
+        }
+      ]
+    },
+    {
+      "name": "ObjectTypeName",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0,
+      "reference_values": [
+        {
+          "value": "Restauration",
+          "count": 100
+        }
+      ]
+    },
+    {
+      "name": "Ouvertdimanchesoir",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "Published",
+      "type": "Edm.DateTime",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "RaisonSociale",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 40,
+      "empty": 60,
+      "coverage_pct": 40.0
+    },
+    {
+      "name": "Receptiongroupe",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "SIRET",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 57,
+      "empty": 43,
+      "coverage_pct": 57.0
+    },
+    {
+      "name": "Surreservation",
+      "type": "Edm.Boolean",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 0,
+      "empty": 100,
+      "coverage_pct": 0.0
+    },
+    {
+      "name": "SyndicObjectID",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "SyndicObjectName",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "SyndicObjectOrder",
+      "type": "Edm.Int64",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "SyndicStructureId",
+      "type": "Edm.Guid",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "TIS_TRACKING_LISTING_OFFRE",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "TIS_TRACKING_OFFRE",
+      "type": "Edm.String",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    },
+    {
+      "name": "Updated",
+      "type": "Edm.DateTime",
+      "declared": true,
+      "observed": true,
+      "count": 100,
+      "non_empty": 100,
+      "empty": 0,
+      "coverage_pct": 100.0
+    }
+  ],
+  "relations": {
+    "Animauxs": {
+      "entry_count": 6,
+      "fields": [
+        {
+          "name": "Animauxacceptes",
+          "type": "Edm.Boolean",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Complementdinfo",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Complementdinformations",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Poidsanimal.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Poidsanimal.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Poidsanimal.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Poidsanimal.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Poidsanimal.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Capacites": {
+      "entry_count": 71,
+      "fields": [
+        {
+          "name": "Capaciteensalle",
+          "type": "Edm.Double",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 70,
+          "empty": 1,
+          "coverage_pct": 98.6
+        },
+        {
+          "name": "Capaciteenterrasse",
+          "type": "Edm.Double",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 0,
+          "empty": 71,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Capacitetotale",
+          "type": "Edm.Double",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 71,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 71,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 71,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 71,
+          "non_empty": 71,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Chaines": {
+      "entry_count": 6,
+      "fields": [
+        {
+          "name": "Groupe",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Groupe.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Groupe.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Groupe.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Groupe.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Groupe.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Reseaux",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Reseaux.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Reseaux.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Reseaux.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Reseaux.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Reseaux.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "ClassificationCategories": {
+      "entry_count": 102,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "REST",
+              "count": 67
+            },
+            {
+              "value": "ATYR",
+              "count": 22
+            },
+            {
+              "value": "THOT",
+              "count": 7
+            },
+            {
+              "value": "AUBE",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Restaurant",
+              "count": 67
+            },
+            {
+              "value": "Autre type de restauration",
+              "count": 22
+            },
+            {
+              "value": "Table d'hôtes",
+              "count": 7
+            },
+            {
+              "value": "Auberge",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 102,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 102,
+          "non_empty": 0,
+          "empty": 102,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "ClassificationSousCategorieAuberges": {
+      "entry_count": 6,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "FAUB",
+              "count": 3
+            },
+            {
+              "value": "AUBE",
+              "count": 2
+            },
+            {
+              "value": "ACAM",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Ferme auberge",
+              "count": 3
+            },
+            {
+              "value": "Auberge",
+              "count": 2
+            },
+            {
+              "value": "Auberge de campagne",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 6,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 6,
+          "non_empty": 0,
+          "empty": 6,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "ClassificationSousCategorieAutreTypes": {
+      "entry_count": 8,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "PIZZ",
+              "count": 6
+            },
+            {
+              "value": "CREP",
+              "count": 1
+            },
+            {
+              "value": "BOUL",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Pizzeria",
+              "count": 6
+            },
+            {
+              "value": "Crêperie",
+              "count": 1
+            },
+            {
+              "value": "Boulangerie-sandwicherie",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 8,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 8,
+          "non_empty": 0,
+          "empty": 8,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "ClassificationSousCategorieRestaurants": {
+      "entry_count": 70,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "REST",
+              "count": 63
+            },
+            {
+              "value": "RESH",
+              "count": 4
+            },
+            {
+              "value": "TRAI",
+              "count": 2
+            },
+            {
+              "value": "BRAS",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Restaurant",
+              "count": 63
+            },
+            {
+              "value": "Restaurant de l'hôtel",
+              "count": 4
+            },
+            {
+              "value": "Traiteur",
+              "count": 2
+            },
+            {
+              "value": "Brasserie",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 70,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 70,
+          "non_empty": 0,
+          "empty": 70,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "ClassificationSousCategorieTableHotess": {
+      "entry_count": 7,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "THOT",
+              "count": 7
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Table d'hôte",
+              "count": 7
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 7,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 7,
+          "non_empty": 0,
+          "empty": 7,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Descriptifaccess": {
+      "entry_count": 100,
+      "fields": [
+        {
+          "name": "Descriptifduplandacces",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 56,
+          "empty": 44,
+          "coverage_pct": 56.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Descriptifss": {
+      "entry_count": 100,
+      "fields": [
+        {
+          "name": "Accroche",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 67,
+          "empty": 33,
+          "coverage_pct": 67.0
+        },
+        {
+          "name": "Descriptioncommerciale",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Fichiers": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "DocumentFichier.Credit",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "DocumentFichier.MediaID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "DocumentFichier.Titre",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "DocumentFichier.Url",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "Handicaps": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "Labels": {
+      "entry_count": 16,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 16,
+          "non_empty": 16,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 16,
+          "non_empty": 16,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 16,
+          "non_empty": 16,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "LanguesParleess": {
+      "entry_count": 194,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "FR",
+              "count": 99
+            },
+            {
+              "value": "CRE",
+              "count": 57
+            },
+            {
+              "value": "AN",
+              "count": 33
+            },
+            {
+              "value": "ES",
+              "count": 3
+            },
+            {
+              "value": "AL",
+              "count": 1
+            },
+            {
+              "value": "IT",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Français",
+              "count": 99
+            },
+            {
+              "value": "Créole",
+              "count": 57
+            },
+            {
+              "value": "Anglais",
+              "count": 33
+            },
+            {
+              "value": "Espagnol",
+              "count": 3
+            },
+            {
+              "value": "Allemand",
+              "count": 1
+            },
+            {
+              "value": "Italien",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 194,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 194,
+          "non_empty": 0,
+          "empty": 194,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Localisations": {
+      "entry_count": 116,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "MRUR",
+              "count": 40
+            },
+            {
+              "value": "VILL",
+              "count": 29
+            },
+            {
+              "value": "CVIL",
+              "count": 20
+            },
+            {
+              "value": "LIT",
+              "count": 10
+            },
+            {
+              "value": "LITV",
+              "count": 9
+            },
+            {
+              "value": "MONT",
+              "count": 3
+            },
+            {
+              "value": "VOLC",
+              "count": 2
+            },
+            {
+              "value": "PLAG",
+              "count": 1
+            },
+            {
+              "value": "ZRESI",
+              "count": 1
+            },
+            {
+              "value": "ZICO",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Milieu rural",
+              "count": 40
+            },
+            {
+              "value": "Village",
+              "count": 29
+            },
+            {
+              "value": "Centre ville",
+              "count": 20
+            },
+            {
+              "value": "Littoral",
+              "count": 10
+            },
+            {
+              "value": "Littoral volcan",
+              "count": 9
+            },
+            {
+              "value": "Montagne",
+              "count": 3
+            },
+            {
+              "value": "Volcan",
+              "count": 2
+            },
+            {
+              "value": "Plage",
+              "count": 1
+            },
+            {
+              "value": "Zone résidentielle",
+              "count": 1
+            },
+            {
+              "value": "Zone industrielle et commerciale",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 116,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 116,
+          "non_empty": 0,
+          "empty": 116,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Marques": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "ModesPaiements": {
+      "entry_count": 283,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "ES",
+              "count": 91
+            },
+            {
+              "value": "CHQ",
+              "count": 78
+            },
+            {
+              "value": "CB",
+              "count": 51
+            },
+            {
+              "value": "TICKETRESTO",
+              "count": 34
+            },
+            {
+              "value": "AEX",
+              "count": 10
+            },
+            {
+              "value": "ECB",
+              "count": 9
+            },
+            {
+              "value": "VAC",
+              "count": 6
+            },
+            {
+              "value": "Virement",
+              "count": 3
+            },
+            {
+              "value": "TCHE",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Espèces",
+              "count": 91
+            },
+            {
+              "value": "Chèques bancaires",
+              "count": 78
+            },
+            {
+              "value": "Cartes bancaires",
+              "count": 51
+            },
+            {
+              "value": "Tickets restaurant",
+              "count": 34
+            },
+            {
+              "value": "American express",
+              "count": 10
+            },
+            {
+              "value": "E-carte bleue",
+              "count": 9
+            },
+            {
+              "value": "Chèques vacances",
+              "count": 6
+            },
+            {
+              "value": "Virement bancaire",
+              "count": 3
+            },
+            {
+              "value": "Traveller chèque",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 283,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 283,
+          "non_empty": 0,
+          "empty": 283,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Moyencommunications": {
+      "entry_count": 271,
+      "fields": [
+        {
+          "name": "Complementdinformations",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 0,
+          "empty": 271,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Coordonnees",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 240,
+          "empty": 31,
+          "coverage_pct": 88.6
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Moyendecommunication",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 16,
+          "non_empty": 0,
+          "empty": 16,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Moyendecommunication.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 255,
+          "non_empty": 255,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "C1",
+              "count": 76
+            },
+            {
+              "value": "C6",
+              "count": 65
+            },
+            {
+              "value": "C4",
+              "count": 57
+            },
+            {
+              "value": "C5",
+              "count": 44
+            },
+            {
+              "value": "C2",
+              "count": 13
+            }
+          ]
+        },
+        {
+          "name": "Moyendecommunication.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 255,
+          "non_empty": 255,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Moyendecommunication.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 255,
+          "non_empty": 255,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Tél. fixe",
+              "count": 76
+            },
+            {
+              "value": "Tél. mobile",
+              "count": 65
+            },
+            {
+              "value": "Mail",
+              "count": 57
+            },
+            {
+              "value": "Site web (url)",
+              "count": 44
+            },
+            {
+              "value": "Télécopieur /fax",
+              "count": 13
+            }
+          ]
+        },
+        {
+          "name": "Moyendecommunication.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": true,
+          "count": 255,
+          "non_empty": 255,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Moyendecommunication.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 255,
+          "non_empty": 0,
+          "empty": 255,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedecoordonnees.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "LP002",
+              "count": 271
+            }
+          ]
+        },
+        {
+          "name": "Typedecoordonnees.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedecoordonnees.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Professionnelles",
+              "count": 271
+            }
+          ]
+        },
+        {
+          "name": "Typedecoordonnees.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 271,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedecoordonnees.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 271,
+          "non_empty": 0,
+          "empty": 271,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "PeriodeOuvertures": {
+      "entry_count": 3,
+      "fields": [
+        {
+          "name": "Datedebut",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "Datefin",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "dimancheheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "dimancheheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "dimancheheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "dimancheheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "heuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "heuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "heurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "heurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "jeudiheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "jeudiheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "jeudiheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "jeudiheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "lundiheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "lundiheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "lundiheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "lundiheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mardiheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "mardiheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mardiheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "mardiheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mercrediheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mercrediheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mercrediheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "mercrediheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Precisionssurlesfermetures",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Precisionssurlesouvertures",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "samediheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "samediheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "samediheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "samediheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 0,
+          "empty": 3,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "vendrediheuredebut1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 3,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "vendrediheuredebut2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        },
+        {
+          "name": "vendrediheurefin1",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 2,
+          "empty": 1,
+          "coverage_pct": 66.7
+        },
+        {
+          "name": "vendrediheurefin2",
+          "type": "Edm.TimeSpan",
+          "declared": true,
+          "observed": true,
+          "count": 3,
+          "non_empty": 1,
+          "empty": 2,
+          "coverage_pct": 33.3
+        }
+      ]
+    },
+    "Photos": {
+      "entry_count": 348,
+      "fields": [
+        {
+          "name": "Datedefindutilisation",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 348,
+          "non_empty": 0,
+          "empty": 348,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 348,
+          "non_empty": 348,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Licencecreativecommons",
+          "type": "Edm.Boolean",
+          "declared": true,
+          "observed": true,
+          "count": 348,
+          "non_empty": 0,
+          "empty": 348,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 348,
+          "non_empty": 348,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Photo",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.MediaComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 1,
+          "non_empty": 0,
+          "empty": 1,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Photo.Credit",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 347,
+          "non_empty": 347,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Photo.MediaID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 347,
+          "non_empty": 347,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Photo.Titre",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 347,
+          "non_empty": 347,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Photo.Url",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 347,
+          "non_empty": 347,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 348,
+          "non_empty": 348,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "PrestationProximites": {
+      "entry_count": 237,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "PPUB",
+              "count": 40
+            },
+            {
+              "value": "SDRA",
+              "count": 35
+            },
+            {
+              "value": "PDVP",
+              "count": 34
+            },
+            {
+              "value": "SLCU",
+              "count": 27
+            },
+            {
+              "value": "COMA",
+              "count": 16
+            },
+            {
+              "value": "EQUI",
+              "count": 15
+            },
+            {
+              "value": "SDGR",
+              "count": 13
+            },
+            {
+              "value": "PECH",
+              "count": 11
+            },
+            {
+              "value": "CCOM",
+              "count": 10
+            },
+            {
+              "value": "RIVI",
+              "count": 8
+            },
+            {
+              "value": "BGAU",
+              "count": 8
+            },
+            {
+              "value": "PLAG",
+              "count": 5
+            },
+            {
+              "value": "TENN",
+              "count": 5
+            },
+            {
+              "value": "JARD",
+              "count": 3
+            },
+            {
+              "value": "ABUS",
+              "count": 3
+            },
+            {
+              "value": "PBAL",
+              "count": 2
+            },
+            {
+              "value": "APIER",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Parking public",
+              "count": 40
+            },
+            {
+              "value": "Sentier de randonnée",
+              "count": 35
+            },
+            {
+              "value": "Point de vue panoramique",
+              "count": 34
+            },
+            {
+              "value": "Site - lieu culturel",
+              "count": 27
+            },
+            {
+              "value": "Commerce alimentaire",
+              "count": 16
+            },
+            {
+              "value": "Équitation",
+              "count": 15
+            },
+            {
+              "value": "Sentier de grande randonnée",
+              "count": 13
+            },
+            {
+              "value": "Pêche",
+              "count": 11
+            },
+            {
+              "value": "Centre commercial",
+              "count": 10
+            },
+            {
+              "value": "Riviere",
+              "count": 8
+            },
+            {
+              "value": "Banque - guichet automatique",
+              "count": 8
+            },
+            {
+              "value": "Plage",
+              "count": 5
+            },
+            {
+              "value": "Tennis",
+              "count": 5
+            },
+            {
+              "value": "Jardin",
+              "count": 3
+            },
+            {
+              "value": "Arrêt bus",
+              "count": 3
+            },
+            {
+              "value": "Poste - boite aux lettres",
+              "count": 2
+            },
+            {
+              "value": "Aéroport de pierrefonds",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 237,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 237,
+          "non_empty": 0,
+          "empty": 237,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "PrestationsActivites": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "PrestationsEquipementss": {
+      "entry_count": 98,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "PRKPV",
+              "count": 32
+            },
+            {
+              "value": "CLIM",
+              "count": 17
+            },
+            {
+              "value": "JRD",
+              "count": 15
+            },
+            {
+              "value": "WIFI",
+              "count": 10
+            },
+            {
+              "value": "ACCIG",
+              "count": 9
+            },
+            {
+              "value": "VNTL",
+              "count": 9
+            },
+            {
+              "value": "PKATC",
+              "count": 3
+            },
+            {
+              "value": "SDRSEM",
+              "count": 2
+            },
+            {
+              "value": "ADJE",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Parking privé",
+              "count": 32
+            },
+            {
+              "value": "Climatisation",
+              "count": 17
+            },
+            {
+              "value": "Jardin",
+              "count": 15
+            },
+            {
+              "value": "Wifi",
+              "count": 10
+            },
+            {
+              "value": "Accès internet gratuit",
+              "count": 9
+            },
+            {
+              "value": "Ventilateur",
+              "count": 9
+            },
+            {
+              "value": "Parking autocar",
+              "count": 3
+            },
+            {
+              "value": "Salle de réunion - séminaire",
+              "count": 2
+            },
+            {
+              "value": "Aire de jeux pour enfant",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 98,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 98,
+          "non_empty": 0,
+          "empty": 98,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Reservations": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Lien",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Listeplateforme.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Listeplateforme.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Listeplateforme.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Listeplateforme.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Listeplateforme.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "Restaurateurcertifies": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "Expertaccrediteprestationliee",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "Structure": {
+      "entry_count": 100,
+      "fields": [
+        {
+          "name": "Address1",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Address2",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Address3",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "City",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Country",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Email",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "EmailName",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Name",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Phone",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Postcode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicStructureId",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Url",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Tarifs": {
+      "entry_count": 9,
+      "fields": [
+        {
+          "name": "complementtarifs",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Datedebutaffichage",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Datedebutvalidite",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Datefinaffichage",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Datefinvalidite",
+          "type": "Edm.DateTime",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "IntituleTarifs",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "IntituleTarifs.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "IntituleTarifs.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "IntituleTarifs.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "IntituleTarifs.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "IntituleTarifs.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "MaximumEuro",
+          "type": "Edm.Decimal",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "MinimumEuro",
+          "type": "Edm.Decimal",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Saisonnalite",
+          "type": "TourInSoft.V5.Syndication.Syndication_FSRestaurationOTISud_CB2825CEC3B7425D8F6A9313DD745C1E.ListeComplexType",
+          "declared": false,
+          "observed": true,
+          "count": 9,
+          "non_empty": 0,
+          "empty": 9,
+          "coverage_pct": 0.0
+        },
+        {
+          "name": "Saisonnalite.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Saisonnalite.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Saisonnalite.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Saisonnalite.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Saisonnalite.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 9,
+          "non_empty": 9,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Thematiques": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    },
+    "TisTracking": {
+      "entry_count": 100,
+      "fields": [
+        {
+          "name": "CodeOffre",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "CodeStructure",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "CodeSyndication",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        }
+      ]
+    },
+    "Typecuisines": {
+      "entry_count": 124,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "CCR",
+              "count": 66
+            },
+            {
+              "value": "CEUR",
+              "count": 23
+            },
+            {
+              "value": "CRAP",
+              "count": 13
+            },
+            {
+              "value": "CASI",
+              "count": 11
+            },
+            {
+              "value": "DIVE",
+              "count": 5
+            },
+            {
+              "value": "CIND",
+              "count": 3
+            },
+            {
+              "value": "CINT",
+              "count": 2
+            },
+            {
+              "value": "CORI",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Cuisine créole",
+              "count": 66
+            },
+            {
+              "value": "Cuisine européenne",
+              "count": 23
+            },
+            {
+              "value": "Cuisine rapide",
+              "count": 13
+            },
+            {
+              "value": "Cuisine asiatique",
+              "count": 11
+            },
+            {
+              "value": "Divers",
+              "count": 5
+            },
+            {
+              "value": "Cuisine indienne",
+              "count": 3
+            },
+            {
+              "value": "Cuisine internationale",
+              "count": 2
+            },
+            {
+              "value": "Cuisine orientale",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "name": "ThesOrdre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 124,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 124,
+          "non_empty": 0,
+          "empty": 124,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Typeequipements": {
+      "entry_count": 100,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedactivite.ThesCode",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "REST",
+              "count": 100
+            }
+          ]
+        },
+        {
+          "name": "Typedactivite.ThesID",
+          "type": "Edm.Guid",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedactivite.ThesLibelle",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0,
+          "reference_values": [
+            {
+              "value": "Restauration",
+              "count": 100
+            }
+          ]
+        },
+        {
+          "name": "Typedactivite.ThesOrdre",
+          "type": "Edm.Int32",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 100,
+          "empty": 0,
+          "coverage_pct": 100.0
+        },
+        {
+          "name": "Typedactivite.ThesPicto",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": true,
+          "count": 100,
+          "non_empty": 0,
+          "empty": 100,
+          "coverage_pct": 0.0
+        }
+      ]
+    },
+    "Videos": {
+      "entry_count": 0,
+      "fields": [
+        {
+          "name": "ID",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "IntegrerlavideosursonsitecopiercollerdeObjetouembedYoutubeouDailymotion",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Licencecreativecommons",
+          "type": "Edm.Boolean",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "Ordre",
+          "type": "Edm.Int64",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "SyndicObjectId",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        },
+        {
+          "name": "URLvideo",
+          "type": "Edm.String",
+          "declared": true,
+          "observed": false,
+          "count": 0,
+          "non_empty": 0,
+          "empty": 0,
+          "coverage_pct": 0
+        }
+      ]
+    }
+  }
+}

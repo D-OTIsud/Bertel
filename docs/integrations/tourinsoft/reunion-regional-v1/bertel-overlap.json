@@ -1,0 +1,1108 @@
+{
+  "method": "case-, accent- and punctuation-insensitive exact title match against linked published Bertel objects",
+  "privacy": "aggregate counts only; no source title or object identifier is persisted",
+  "bertel_published_objects": 840,
+  "feed_count": 6,
+  "feeds": [
+    {
+      "slug": "decouverte",
+      "feed_id": "39bab676-97bb-4c78-9d7d-28dd43753314",
+      "tourinsoft_objects": 49,
+      "match_status": {
+        "unique": 27,
+        "unmatched": 22
+      },
+      "unique_match_bertel_types": {
+        "LOI": 14,
+        "PRD": 9,
+        "ACT": 2,
+        "HLO": 1,
+        "RES": 1
+      },
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {
+        "DEC": {
+          "LOI": 14,
+          "PRD": 9,
+          "ACT": 2,
+          "HLO": 1,
+          "RES": 1
+        }
+      },
+      "reference_code_to_bertel_type": {
+        "ClassificationCategories.PATA": {
+          "PRD": 4
+        },
+        "ClassificationCategories.PATC": {
+          "PRD": 4,
+          "ACT": 2,
+          "LOI": 2,
+          "HLO": 1
+        },
+        "ClassificationCategories.TER": {
+          "LOI": 12,
+          "PRD": 3,
+          "RES": 1
+        },
+        "ClassificationSousCategoriePatAgricoles.PLAN": {
+          "PRD": 4
+        },
+        "ClassificationSousCategoriePatCulturels.VPCU": {
+          "PRD": 4,
+          "ACT": 2,
+          "LOI": 2,
+          "HLO": 1
+        },
+        "ClassificationSousCategorieTerroirs.ART": {
+          "LOI": 12,
+          "RES": 1
+        },
+        "ClassificationSousCategorieTerroirs.PROD": {
+          "PRD": 3
+        },
+        "LanguesParleess.AL": {
+          "ACT": 1
+        },
+        "LanguesParleess.AN": {
+          "LOI": 6,
+          "PRD": 2,
+          "ACT": 1,
+          "RES": 1
+        },
+        "LanguesParleess.CRE": {
+          "LOI": 5,
+          "PRD": 5
+        },
+        "LanguesParleess.ES": {
+          "ACT": 1
+        },
+        "LanguesParleess.FR": {
+          "LOI": 14,
+          "PRD": 9,
+          "ACT": 2,
+          "HLO": 1,
+          "RES": 1
+        },
+        "Localisations.CVIL": {
+          "LOI": 1
+        },
+        "Localisations.LIT": {
+          "LOI": 1
+        },
+        "Localisations.LITV": {
+          "PRD": 1
+        },
+        "Localisations.MONT": {
+          "RES": 1
+        },
+        "Localisations.MRUR": {
+          "PRD": 4,
+          "ACT": 1,
+          "LOI": 1
+        },
+        "Localisations.VILL": {
+          "LOI": 8,
+          "PRD": 2,
+          "RES": 1
+        },
+        "ModesPaiements.CB": {
+          "LOI": 3,
+          "PRD": 2,
+          "ACT": 1,
+          "RES": 1
+        },
+        "ModesPaiements.CHQ": {
+          "LOI": 12,
+          "PRD": 8,
+          "ACT": 1,
+          "HLO": 1,
+          "RES": 1
+        },
+        "ModesPaiements.ECB": {
+          "PRD": 1
+        },
+        "ModesPaiements.ES": {
+          "LOI": 14,
+          "PRD": 8,
+          "ACT": 2,
+          "HLO": 1,
+          "RES": 1
+        },
+        "ModesPaiements.VAC": {
+          "PRD": 1
+        },
+        "ModesPaiements.Virement": {
+          "ACT": 1
+        },
+        "PrestationProximites.ABUS": {
+          "PRD": 1
+        },
+        "PrestationProximites.COMA": {
+          "PRD": 2,
+          "LOI": 1
+        },
+        "PrestationProximites.PDVP": {
+          "PRD": 3,
+          "LOI": 1
+        },
+        "PrestationProximites.PECH": {
+          "PRD": 1
+        },
+        "PrestationProximites.PLAG": {
+          "PRD": 1
+        },
+        "PrestationProximites.PPUB": {
+          "LOI": 2,
+          "PRD": 2
+        },
+        "PrestationProximites.SDGR": {
+          "LOI": 2,
+          "PRD": 2
+        },
+        "PrestationProximites.SDRA": {
+          "PRD": 4,
+          "LOI": 3
+        },
+        "PrestationProximites.SLCU": {
+          "PRD": 2
+        },
+        "PrestationsEquipementss.AIGR": {
+          "LOI": 2,
+          "PRD": 1
+        },
+        "PrestationsEquipementss.E0025": {
+          "HLO": 1,
+          "PRD": 1
+        },
+        "PrestationsEquipementss.PPRI": {
+          "HLO": 1,
+          "LOI": 1,
+          "PRD": 1
+        },
+        "PrestationsEquipementss.WIFI": {
+          "LOI": 3,
+          "PRD": 1
+        },
+        "Thematiques.AGRI": {
+          "PRD": 2
+        },
+        "Thematiques.BIJO": {
+          "LOI": 1
+        },
+        "Thematiques.JCRE": {
+          "PRD": 2,
+          "LOI": 1
+        },
+        "Thematiques.JTHE": {
+          "PRD": 1
+        },
+        "Thematiques.RAND": {
+          "LOI": 1
+        },
+        "Thematiques.SFAI": {
+          "PRD": 4,
+          "LOI": 1
+        },
+        "Thematiques.VICR": {
+          "LOI": 5,
+          "PRD": 3
+        },
+        "Thematiques.VOLC": {
+          "PRD": 1
+        }
+      }
+    },
+    {
+      "slug": "hebergement",
+      "feed_id": "b2bc0524-adc3-45d5-8a77-a0d70d2425b3",
+      "tourinsoft_objects": 211,
+      "match_status": {
+        "unmatched": 128,
+        "unique": 77,
+        "ambiguous_multiple_types": 6
+      },
+      "unique_match_bertel_types": {
+        "HLO": 73,
+        "HOT": 2,
+        "CAMP": 1,
+        "RES": 1
+      },
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {
+        "CAM": {
+          "CAMP": 1
+        },
+        "HLO": {
+          "HLO": 73,
+          "RES": 1
+        },
+        "HOT": {
+          "HOT": 2
+        }
+      },
+      "reference_code_to_bertel_type": {
+        "Classificationcategories.CAMP": {
+          "CAMP": 1
+        },
+        "Classificationcategories.CHH": {
+          "HLO": 16,
+          "RES": 1
+        },
+        "Classificationcategories.GERA": {
+          "HLO": 6
+        },
+        "Classificationcategories.HOT": {
+          "HOT": 2
+        },
+        "Classificationcategories.LSAI": {
+          "HLO": 50
+        },
+        "ClassificationsouscategorieCHoteHLOs.CHOT": {
+          "HLO": 16,
+          "RES": 1
+        },
+        "ClassificationsouscategoriegiteHLOs.GDGR": {
+          "HLO": 2
+        },
+        "ClassificationsouscategoriegiteHLOs.GDRA": {
+          "HLO": 4
+        },
+        "ClassificationsouscategorielocsaisHLOs.APPA": {
+          "HLO": 10
+        },
+        "ClassificationsouscategorielocsaisHLOs.BCHA": {
+          "HLO": 7
+        },
+        "ClassificationsouscategorielocsaisHLOs.GRUR": {
+          "HLO": 1
+        },
+        "ClassificationsouscategorielocsaisHLOs.GVIL": {
+          "HLO": 32
+        },
+        "Classificationsouscategories.CAMP": {
+          "CAMP": 1
+        },
+        "Classificationsouscategories.HOTEL": {
+          "HOT": 2
+        },
+        "Labels.CLVS": {
+          "HLO": 1
+        },
+        "Labels.FDS": {
+          "HLO": 1
+        },
+        "Labels.GDF": {
+          "HLO": 5,
+          "CAMP": 1
+        },
+        "Labels.QTILDR": {
+          "HLO": 3
+        },
+        "LanguesParleess.AL": {
+          "CAMP": 1,
+          "HLO": 1
+        },
+        "LanguesParleess.AN": {
+          "HLO": 35,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "LanguesParleess.CRE": {
+          "HLO": 19,
+          "HOT": 2,
+          "CAMP": 1,
+          "RES": 1
+        },
+        "LanguesParleess.ES": {
+          "HLO": 3
+        },
+        "LanguesParleess.FR": {
+          "HLO": 72,
+          "HOT": 2,
+          "CAMP": 1,
+          "RES": 1
+        },
+        "LanguesParleess.PO": {
+          "HLO": 1
+        },
+        "Localisationss.CVIL": {
+          "HLO": 6
+        },
+        "Localisationss.LIT": {
+          "HLO": 1,
+          "HOT": 1
+        },
+        "Localisationss.LITV": {
+          "HLO": 4
+        },
+        "Localisationss.MONT": {
+          "HLO": 7,
+          "HOT": 1
+        },
+        "Localisationss.MRUR": {
+          "HLO": 35,
+          "RES": 1
+        },
+        "Localisationss.VILL": {
+          "HLO": 20,
+          "CAMP": 1,
+          "HOT": 1,
+          "RES": 1
+        },
+        "Localisationss.VOLC": {
+          "HLO": 6
+        },
+        "ModesPaiements.AEX": {
+          "HOT": 2,
+          "HLO": 1
+        },
+        "ModesPaiements.CB": {
+          "HLO": 16,
+          "HOT": 2
+        },
+        "ModesPaiements.CHQ": {
+          "HLO": 49,
+          "HOT": 1,
+          "RES": 1
+        },
+        "ModesPaiements.ECB": {
+          "HLO": 3
+        },
+        "ModesPaiements.ES": {
+          "HLO": 65,
+          "HOT": 2,
+          "CAMP": 1,
+          "RES": 1
+        },
+        "ModesPaiements.MPO": {
+          "HLO": 2
+        },
+        "ModesPaiements.PAYPAL": {
+          "HLO": 1
+        },
+        "ModesPaiements.VAC": {
+          "HLO": 7,
+          "HOT": 1
+        },
+        "ModesPaiements.Virement": {
+          "HLO": 27,
+          "CAMP": 1
+        },
+        "PrestationProximites.ABUS": {
+          "HLO": 11
+        },
+        "PrestationProximites.AERI": {
+          "HLO": 1
+        },
+        "PrestationProximites.BGAU": {
+          "HLO": 3
+        },
+        "PrestationProximites.CCOM": {
+          "HLO": 1
+        },
+        "PrestationProximites.COMA": {
+          "HLO": 29,
+          "CAMP": 1
+        },
+        "PrestationProximites.EQUI": {
+          "HLO": 9,
+          "HOT": 1,
+          "RES": 1
+        },
+        "PrestationProximites.JARD": {
+          "HLO": 2
+        },
+        "PrestationProximites.PBAL": {
+          "HLO": 4
+        },
+        "PrestationProximites.PDVP": {
+          "HLO": 10,
+          "HOT": 1
+        },
+        "PrestationProximites.PECH": {
+          "HLO": 1
+        },
+        "PrestationProximites.PISC": {
+          "CAMP": 1,
+          "HLO": 1
+        },
+        "PrestationProximites.PLAG": {
+          "HLO": 2
+        },
+        "PrestationProximites.PPUB": {
+          "HLO": 10,
+          "CAMP": 1
+        },
+        "PrestationProximites.RIVI": {
+          "HLO": 4
+        },
+        "PrestationProximites.SDGR": {
+          "HLO": 8,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationProximites.SDRA": {
+          "HLO": 35,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationProximites.SLCU": {
+          "HLO": 10,
+          "HOT": 1
+        },
+        "PrestationProximites.TENN": {
+          "HLO": 2
+        },
+        "PrestationProximites.VTT": {
+          "HLO": 2
+        },
+        "PrestationsEquipementss.E0001": {
+          "HLO": 44,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0002": {
+          "HLO": 1
+        },
+        "PrestationsEquipementss.E0005": {
+          "HLO": 33,
+          "CAMP": 1
+        },
+        "PrestationsEquipementss.E0007": {
+          "HLO": 16,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0008": {
+          "HLO": 22,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0009": {
+          "HLO": 2
+        },
+        "PrestationsEquipementss.E0010": {
+          "HLO": 2
+        },
+        "PrestationsEquipementss.E0011": {
+          "HLO": 5
+        },
+        "PrestationsEquipementss.E0012": {
+          "HLO": 30,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0013": {
+          "HLO": 15
+        },
+        "PrestationsEquipementss.E0014": {
+          "HLO": 7
+        },
+        "PrestationsEquipementss.E0015": {
+          "HLO": 19,
+          "CAMP": 1,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0016": {
+          "HLO": 4,
+          "CAMP": 1
+        },
+        "PrestationsEquipementss.E0017": {
+          "HLO": 26
+        },
+        "PrestationsEquipementss.E0018": {
+          "HLO": 14
+        },
+        "PrestationsEquipementss.E0019": {
+          "HLO": 12
+        },
+        "PrestationsEquipementss.E0020": {
+          "HLO": 6,
+          "RES": 1
+        },
+        "PrestationsEquipementss.E0021": {
+          "HLO": 1
+        },
+        "PrestationsEquipementss.E0022": {
+          "HLO": 19,
+          "CAMP": 1
+        },
+        "PrestationsEquipementss.E0024": {
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0025": {
+          "HLO": 51,
+          "HOT": 2,
+          "CAMP": 1,
+          "RES": 1
+        },
+        "PrestationsEquipementss.E0026": {
+          "HLO": 24,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0029": {
+          "HLO": 1
+        },
+        "PrestationsEquipementss.E0030": {
+          "HLO": 3
+        },
+        "PrestationsEquipementss.E0035": {
+          "HLO": 4
+        },
+        "PrestationsEquipementss.E0037": {
+          "HLO": 2,
+          "CAMP": 1
+        },
+        "PrestationsEquipementss.E0038": {
+          "HLO": 14,
+          "RES": 1
+        },
+        "PrestationsEquipementss.E0041": {
+          "HLO": 4
+        },
+        "PrestationsEquipementss.E0042": {
+          "HLO": 2
+        },
+        "PrestationsEquipementss.E0045": {
+          "HLO": 31,
+          "HOT": 2,
+          "CAMP": 1
+        },
+        "PrestationsEquipementss.E0046": {
+          "HLO": 12
+        },
+        "PrestationsEquipementss.E0047": {
+          "HLO": 17,
+          "HOT": 1
+        },
+        "PrestationsEquipementss.E0049": {
+          "HLO": 48,
+          "CAMP": 1,
+          "HOT": 1,
+          "RES": 1
+        },
+        "Thematiques.AGRI": {
+          "HLO": 1
+        },
+        "Thematiques.AGRO": {
+          "HLO": 1
+        },
+        "Thematiques.COUP": {
+          "HLO": 2
+        },
+        "Thematiques.ECOT": {
+          "HLO": 1
+        },
+        "Thematiques.FAME": {
+          "HLO": 10
+        },
+        "Thematiques.GAST": {
+          "HLO": 1
+        },
+        "Thematiques.GROU": {
+          "CAMP": 1
+        },
+        "Thematiques.INSO": {
+          "CAMP": 1,
+          "HLO": 1
+        },
+        "Thematiques.MONT": {
+          "HLO": 3
+        },
+        "Thematiques.RAND": {
+          "HLO": 4
+        },
+        "Thematiques.VICR": {
+          "HLO": 3
+        },
+        "Thematiques.VOLC": {
+          "HLO": 4
+        }
+      }
+    },
+    {
+      "slug": "information_service",
+      "feed_id": "5a285c91-d35f-4873-8f3c-a032abb418d3",
+      "tourinsoft_objects": 5,
+      "match_status": {
+        "unmatched": 5
+      },
+      "unique_match_bertel_types": {},
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {},
+      "reference_code_to_bertel_type": {}
+    },
+    {
+      "slug": "loisir_plein_air",
+      "feed_id": "c32a0407-a66f-48d5-8db0-618fdf03f49f",
+      "tourinsoft_objects": 28,
+      "match_status": {
+        "unique": 18,
+        "unmatched": 10
+      },
+      "unique_match_bertel_types": {
+        "ACT": 17,
+        "COM": 1
+      },
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {
+        "LOI": {
+          "ACT": 17,
+          "COM": 1
+        }
+      },
+      "reference_code_to_bertel_type": {
+        "ClassificationCategoriess.ADR": {
+          "ACT": 7
+        },
+        "ClassificationCategoriess.AUTR": {
+          "ACT": 2
+        },
+        "ClassificationCategoriess.EXPLR": {
+          "ACT": 9
+        },
+        "ClassificationCategoriess.LOC V": {
+          "COM": 1
+        },
+        "ClassificationCategoriess.LOIN": {
+          "ACT": 2
+        },
+        "ClassificationCategoriess.PARC": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieAdrenalines.CANY": {
+          "ACT": 3
+        },
+        "ClassificationCategoriesSousCategorieAdrenalines.DESC": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieAdrenalines.ESCA": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieAdrenalines.PARA": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieAdrenalines.SPEL": {
+          "ACT": 2
+        },
+        "ClassificationCategoriesSousCategorieAttractionss.AQUAC": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieAutress.SPA": {
+          "ACT": 2
+        },
+        "ClassificationCategoriesSousCategorieExplorations.4F4": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieExplorations.EQUI": {
+          "ACT": 2
+        },
+        "ClassificationCategoriesSousCategorieExplorations.RADA": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieExplorations.RADP": {
+          "ACT": 4
+        },
+        "ClassificationCategoriesSousCategorieExplorations.VTTC": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieNautiquess.PROM": {
+          "ACT": 1
+        },
+        "ClassificationCategoriesSousCategorieVehiculeLoisirs.VELO": {
+          "COM": 1
+        },
+        "LanguesParleess.AN": {
+          "ACT": 12
+        },
+        "LanguesParleess.CRE": {
+          "ACT": 7,
+          "COM": 1
+        },
+        "LanguesParleess.ES": {
+          "ACT": 2
+        },
+        "LanguesParleess.FR": {
+          "ACT": 17,
+          "COM": 1
+        },
+        "Localisations.LIT": {
+          "ACT": 1
+        },
+        "Localisations.MONT": {
+          "ACT": 1
+        },
+        "Localisations.MRUR": {
+          "ACT": 6
+        },
+        "Localisations.VILL": {
+          "ACT": 4
+        },
+        "Localisations.VOLC": {
+          "ACT": 1
+        },
+        "ModesPaiements.CB": {
+          "ACT": 3,
+          "COM": 1
+        },
+        "ModesPaiements.CHQ": {
+          "ACT": 16,
+          "COM": 1
+        },
+        "ModesPaiements.ES": {
+          "ACT": 17,
+          "COM": 1
+        },
+        "ModesPaiements.PLOI": {
+          "ACT": 1
+        },
+        "ModesPaiements.VAC": {
+          "ACT": 3
+        },
+        "ModesPaiements.Virement": {
+          "ACT": 3
+        },
+        "PrestationProximites.APIER": {
+          "ACT": 1
+        },
+        "PrestationProximites.COMA": {
+          "ACT": 2
+        },
+        "PrestationProximites.EQUI": {
+          "ACT": 1
+        },
+        "PrestationProximites.PDVP": {
+          "ACT": 4
+        },
+        "PrestationProximites.PLAG": {
+          "ACT": 1
+        },
+        "PrestationProximites.PPUB": {
+          "ACT": 2
+        },
+        "PrestationProximites.SDGR": {
+          "ACT": 2
+        },
+        "PrestationProximites.SDRA": {
+          "ACT": 4
+        },
+        "PrestationProximites.SLCU": {
+          "ACT": 2
+        },
+        "PrestationsEquipementss.ACCIG": {
+          "ACT": 2
+        },
+        "PrestationsEquipementss.E0001": {
+          "ACT": 2
+        },
+        "PrestationsEquipementss.E0025": {
+          "ACT": 3
+        },
+        "PrestationsEquipementss.E0037": {
+          "ACT": 1
+        },
+        "PrestationsEquipementss.E0045": {
+          "ACT": 1
+        },
+        "PrestationsEquipementss.E0049": {
+          "ACT": 2
+        },
+        "PrestationsEquipementss.PRKPV": {
+          "ACT": 2
+        },
+        "Thematiques.ACME": {
+          "ACT": 1
+        },
+        "Thematiques.CELI": {
+          "ACT": 1
+        },
+        "Thematiques.COUP": {
+          "ACT": 1
+        },
+        "Thematiques.FAME": {
+          "ACT": 1
+        },
+        "Thematiques.GROU": {
+          "ACT": 2
+        },
+        "Thematiques.MONT": {
+          "ACT": 2
+        },
+        "Thematiques.RAND": {
+          "ACT": 2
+        },
+        "Thematiques.RIVI": {
+          "ACT": 1
+        },
+        "Thematiques.VICR": {
+          "ACT": 2
+        },
+        "Thematiques.VOLC": {
+          "ACT": 5
+        }
+      }
+    },
+    {
+      "slug": "restauration",
+      "feed_id": "cc575ee1-aa90-49bd-b23f-1935c4b151cd",
+      "tourinsoft_objects": 100,
+      "match_status": {
+        "unmatched": 73,
+        "unique": 23,
+        "ambiguous_multiple_types": 4
+      },
+      "unique_match_bertel_types": {
+        "RES": 23
+      },
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {
+        "RES": {
+          "RES": 23
+        }
+      },
+      "reference_code_to_bertel_type": {
+        "ClassificationCategories.ATYR": {
+          "RES": 6
+        },
+        "ClassificationCategories.AUBE": {
+          "RES": 2
+        },
+        "ClassificationCategories.REST": {
+          "RES": 14
+        },
+        "ClassificationCategories.THOT": {
+          "RES": 1
+        },
+        "ClassificationSousCategorieAuberges.AUBE": {
+          "RES": 1
+        },
+        "ClassificationSousCategorieAuberges.FAUB": {
+          "RES": 1
+        },
+        "ClassificationSousCategorieAutreTypes.PIZZ": {
+          "RES": 2
+        },
+        "ClassificationSousCategorieRestaurants.REST": {
+          "RES": 14
+        },
+        "ClassificationSousCategorieTableHotess.THOT": {
+          "RES": 1
+        },
+        "LanguesParleess.AN": {
+          "RES": 7
+        },
+        "LanguesParleess.CRE": {
+          "RES": 14
+        },
+        "LanguesParleess.FR": {
+          "RES": 22
+        },
+        "Localisations.CVIL": {
+          "RES": 3
+        },
+        "Localisations.LIT": {
+          "RES": 2
+        },
+        "Localisations.LITV": {
+          "RES": 2
+        },
+        "Localisations.MONT": {
+          "RES": 1
+        },
+        "Localisations.MRUR": {
+          "RES": 7
+        },
+        "Localisations.PLAG": {
+          "RES": 1
+        },
+        "Localisations.VILL": {
+          "RES": 4
+        },
+        "Localisations.VOLC": {
+          "RES": 1
+        },
+        "Localisations.ZICO": {
+          "RES": 1
+        },
+        "Localisations.ZRESI": {
+          "RES": 1
+        },
+        "ModesPaiements.AEX": {
+          "RES": 1
+        },
+        "ModesPaiements.CB": {
+          "RES": 9
+        },
+        "ModesPaiements.CHQ": {
+          "RES": 15
+        },
+        "ModesPaiements.ECB": {
+          "RES": 1
+        },
+        "ModesPaiements.ES": {
+          "RES": 19
+        },
+        "ModesPaiements.TICKETRESTO": {
+          "RES": 7
+        },
+        "ModesPaiements.VAC": {
+          "RES": 2
+        },
+        "ModesPaiements.Virement": {
+          "RES": 1
+        },
+        "PrestationProximites.APIER": {
+          "RES": 1
+        },
+        "PrestationProximites.BGAU": {
+          "RES": 2
+        },
+        "PrestationProximites.CCOM": {
+          "RES": 1
+        },
+        "PrestationProximites.COMA": {
+          "RES": 4
+        },
+        "PrestationProximites.EQUI": {
+          "RES": 2
+        },
+        "PrestationProximites.PDVP": {
+          "RES": 5
+        },
+        "PrestationProximites.PECH": {
+          "RES": 1
+        },
+        "PrestationProximites.PLAG": {
+          "RES": 1
+        },
+        "PrestationProximites.PPUB": {
+          "RES": 6
+        },
+        "PrestationProximites.RIVI": {
+          "RES": 1
+        },
+        "PrestationProximites.SDGR": {
+          "RES": 3
+        },
+        "PrestationProximites.SDRA": {
+          "RES": 4
+        },
+        "PrestationProximites.SLCU": {
+          "RES": 5
+        },
+        "PrestationProximites.TENN": {
+          "RES": 1
+        },
+        "PrestationsEquipementss.ACCIG": {
+          "RES": 2
+        },
+        "PrestationsEquipementss.CLIM": {
+          "RES": 4
+        },
+        "PrestationsEquipementss.JRD": {
+          "RES": 1
+        },
+        "PrestationsEquipementss.PKATC": {
+          "RES": 1
+        },
+        "PrestationsEquipementss.PRKPV": {
+          "RES": 6
+        },
+        "PrestationsEquipementss.VNTL": {
+          "RES": 2
+        },
+        "PrestationsEquipementss.WIFI": {
+          "RES": 2
+        },
+        "Typecuisines.CASI": {
+          "RES": 3
+        },
+        "Typecuisines.CCR": {
+          "RES": 14
+        },
+        "Typecuisines.CEUR": {
+          "RES": 6
+        },
+        "Typecuisines.CIND": {
+          "RES": 3
+        },
+        "Typecuisines.CRAP": {
+          "RES": 5
+        },
+        "Typecuisines.DIVE": {
+          "RES": 1
+        }
+      }
+    },
+    {
+      "slug": "transport",
+      "feed_id": "15dd031a-caac-4e1b-aa75-5f65d7a437e8",
+      "tourinsoft_objects": 18,
+      "match_status": {
+        "unmatched": 11,
+        "unique": 7
+      },
+      "unique_match_bertel_types": {
+        "PSV": 7
+      },
+      "ambiguous_same_type_bertel_types": {},
+      "object_prefix_to_bertel_type": {
+        "TRA": {
+          "PSV": 7
+        }
+      },
+      "reference_code_to_bertel_type": {
+        "ClassificationCategories.SERV": {
+          "PSV": 7
+        },
+        "ClassificationSousCategorieServicess.EXC": {
+          "PSV": 5
+        },
+        "ClassificationSousCategorieServicess.LVAC": {
+          "PSV": 2
+        },
+        "ClassificationSousCategorieServicess.TRAN": {
+          "PSV": 1
+        },
+        "LanguesParleess.AN": {
+          "PSV": 5
+        },
+        "LanguesParleess.ARA": {
+          "PSV": 1
+        },
+        "LanguesParleess.CRE": {
+          "PSV": 2
+        },
+        "LanguesParleess.ES": {
+          "PSV": 1
+        },
+        "LanguesParleess.FR": {
+          "PSV": 7
+        },
+        "Localisations.CVIL": {
+          "PSV": 1
+        },
+        "Localisations.MRUR": {
+          "PSV": 4
+        },
+        "ModesPaiements.CB": {
+          "PSV": 7
+        },
+        "ModesPaiements.CHQ": {
+          "PSV": 3
+        },
+        "ModesPaiements.ES": {
+          "PSV": 7
+        },
+        "ModesPaiements.Virement": {
+          "PSV": 2
+        },
+        "PrestationsEquipementss.ACINGR": {
+          "PSV": 1
+        },
+        "PrestationsEquipementss.WIFI": {
+          "PSV": 1
+        }
+      }
+    }
+  ]
+}

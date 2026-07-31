@@ -96,9 +96,11 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 - **Fiche + Tourinsoft historique (I4b)** : `?format=tourinsoft` → bloc additif `data.tourinsoft` au contrat `legacy-v1` inchangé
 - **Fiche + Tourinsoft CRT Réunion hébergement (I4e)** : `?format=tourinsoft&variant=reunion-hebergement-v1` → projection enrichie, public-only, pour HOT/HLO/CAMP
 - **Liste + Tourinsoft CRT Réunion hébergement (I4e)** : `?types=HOT,HLO,CAMP&format=tourinsoft&variant=reunion-hebergement-v1` → même contrat par fiche et même pagination
+- **Liste + Tourinsoft CRT Réunion régional (I4f)** : `?page_size=200&format=tourinsoft&variant=reunion-regional-v1` → projection taxonomique additive vers les six familles ; mémorise le premier id couvert
+- **Fiche + Tourinsoft CRT Réunion régional (I4f)** : `/{tourinsoft_regional_object_id}?format=tourinsoft&variant=reunion-regional-v1` → même document qu'en batch pour l'id mémorisé
 - **Fiche — toutes les langues (C-5)** : `GET /api/public/objects/{id}?lang=all` → bloc additif `data.i18n`
 
-> `jsonld`, `datatourisme`, `apidae` et Tourinsoft `legacy-v1` restent des projections cœur. La variante `reunion-hebergement-v1` couvre les groupes Tourinsoft approuvés du flux CRT fourni, mais ce flux de lecture ne prouve pas le contrat d'import : une validation CRT reste obligatoire avant toute écriture de production.
+> `jsonld`, `datatourisme`, `apidae`, Tourinsoft `legacy-v1` et `reunion-hebergement-v1` restent inchangés. `reunion-regional-v1` couvre 683 chemins déclarés ou observés sur les six flux (187 approuvés, 278 en attente CRT, 218 exclus). Les flux et `$metadata` prouvent la forme de lecture, pas le contrat d'import : une validation CRT reste obligatoire avant toute écriture de production.
 - **Flux tombstone (C-4)** : `GET /api/public/objects/deletions?since=…` (suppressions définitives, pour miroir partenaire)
 - **Catalogues de référentiels (I1)** : `GET /api/public/catalog?domains=…`
 
@@ -112,6 +114,7 @@ Cette collection Postman fournit une interface complète pour tester et explorer
 | `public_base_url` | URL de l'app (passerelle partenaire `/api/public/*`) | `https://app.bertel.example.com` |
 | `partner_key` | Clé partenaire Bearer pour `/api/public/*` (émise par l'OTI) | `bk_live_…` |
 | `object_id` | ID d'objet (auto-rempli) | Auto-généré |
+| `tourinsoft_regional_object_id` | ID couvert par la variante régionale (auto-rempli par la liste I4f) | Auto-généré |
 | `itinerary_id` | ID d'itinéraire (auto-rempli) | Auto-généré |
 | `current_timestamp` | Timestamp actuel (auto-généré) | Auto-généré |
 

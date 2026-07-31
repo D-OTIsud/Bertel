@@ -1,0 +1,149 @@
+{
+  "generated_from": "docs/integrations/tourinsoft/reunion-regional-v1/feeds.json",
+  "feed_count": 6,
+  "total_objects": 411,
+  "feeds": [
+    {
+      "slug": "decouverte",
+      "name": "FS_DECOUVERTE_OTI Sud",
+      "id": "39bab676-97bb-4c78-9d7d-28dd43753314",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/39BAB676-97BB-4C78-9D7D-28DD43753314",
+      "feed_updated": "2025-12-18T23:11:15Z",
+      "object_count": 49,
+      "object_id_prefixes": {
+        "DEC": 49
+      },
+      "object_type_names": {
+        "Découverte": 49
+      },
+      "object_type_fixes": {
+        "C713C5B4-8DE3-4B95-9597-C8206B3EE13C": 49
+      },
+      "object_field_count": 41,
+      "observed_object_field_count": 41,
+      "relation_count": 32,
+      "relation_field_count": 296,
+      "observed_relation_field_count": 205
+    },
+    {
+      "slug": "hebergement",
+      "name": "FS_Hébergement_OTI Sud",
+      "id": "b2bc0524-adc3-45d5-8a77-a0d70d2425b3",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/B2BC0524-ADC3-45D5-8A77-A0D70D2425B3",
+      "feed_updated": "2025-12-12T23:10:15Z",
+      "object_count": 211,
+      "object_id_prefixes": {
+        "CAM": 3,
+        "HLO": 201,
+        "HOT": 7
+      },
+      "object_type_names": {
+        "Camping": 3,
+        "Hébergement locatifs": 201,
+        "Hôtellerie": 7
+      },
+      "object_type_fixes": {
+        "EECC37A2-050A-45EB-B288-9D288EC3316F": 3,
+        "55782D99-B37E-4933-90AD-B79401000C1D": 201,
+        "25EB2EC5-507B-40A9-A799-2716A0536792": 7
+      },
+      "object_field_count": 48,
+      "observed_object_field_count": 48,
+      "relation_count": 35,
+      "relation_field_count": 327,
+      "observed_relation_field_count": 266
+    },
+    {
+      "slug": "information_service",
+      "name": "FS_INFORMATION & SERVICE TOURISTIQUE_OTI Sud",
+      "id": "5a285c91-d35f-4873-8f3c-a032abb418d3",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/5A285C91-D35F-4873-8F3C-A032ABB418D3",
+      "feed_updated": "2025-12-12T23:12:45Z",
+      "object_count": 5,
+      "object_id_prefixes": {
+        "INF": 5
+      },
+      "object_type_names": {
+        "Information et service touristique": 5
+      },
+      "object_type_fixes": {
+        "8A787E66-2FDC-4A4C-95D1-3D08E6C86505": 5
+      },
+      "object_field_count": 44,
+      "observed_object_field_count": 44,
+      "relation_count": 24,
+      "relation_field_count": 224,
+      "observed_relation_field_count": 130
+    },
+    {
+      "slug": "loisir_plein_air",
+      "name": "FS_LOISIR/PLEIN AIR_OTI Sud",
+      "id": "c32a0407-a66f-48d5-8db0-618fdf03f49f",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/C32A0407-A66F-48D5-8DB0-618FDF03F49F",
+      "feed_updated": "2025-12-12T23:10:54Z",
+      "object_count": 28,
+      "object_id_prefixes": {
+        "LOI": 28
+      },
+      "object_type_names": {
+        "Loisirs / Plein air": 28
+      },
+      "object_type_fixes": {
+        "7737C632-EB09-4E81-B3CA-2F1C9BCCAD5D": 28
+      },
+      "object_field_count": 41,
+      "observed_object_field_count": 41,
+      "relation_count": 34,
+      "relation_field_count": 312,
+      "observed_relation_field_count": 201
+    },
+    {
+      "slug": "restauration",
+      "name": "FS_Restauration_OTI Sud",
+      "id": "cc575ee1-aa90-49bd-b23f-1935c4b151cd",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/CC575EE1-AA90-49BD-B23F-1935C4B151CD",
+      "feed_updated": "2025-12-12T23:07:34Z",
+      "object_count": 100,
+      "object_id_prefixes": {
+        "RES": 100
+      },
+      "object_type_names": {
+        "Restauration": 100
+      },
+      "object_type_fixes": {
+        "BF6C9728-398A-4E02-B258-0B4E945F8574": 100
+      },
+      "object_field_count": 44,
+      "observed_object_field_count": 44,
+      "relation_count": 32,
+      "relation_field_count": 301,
+      "observed_relation_field_count": 218
+    },
+    {
+      "slug": "transport",
+      "name": "FS_TRANSPORT_OTI Sud",
+      "id": "15dd031a-caac-4e1b-aa75-5f65d7a437e8",
+      "url": "https://api-v3.tourinsoft.com/api/syndications/reunion.tourinsoft.com/15DD031A-CAAC-4E1B-AA75-5F65D7A437E8",
+      "feed_updated": "2025-12-12T23:08:28Z",
+      "object_count": 18,
+      "object_id_prefixes": {
+        "TRA": 18
+      },
+      "object_type_names": {
+        "Transport": 18
+      },
+      "object_type_fixes": {
+        "1F1D1630-34B0-40E3-99CC-D999FAE76872": 18
+      },
+      "object_field_count": 39,
+      "observed_object_field_count": 39,
+      "relation_count": 27,
+      "relation_field_count": 266,
+      "observed_relation_field_count": 147
+    }
+  ],
+  "union_field_count": 683,
+  "all_feed_field_count": 186,
+  "shared_field_count": 111,
+  "feed_specific_field_count": 386
+}

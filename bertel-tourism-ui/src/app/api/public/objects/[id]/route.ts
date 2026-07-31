@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
+import { isRegionalTourinsoftVariant, resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
 
 export const runtime = 'nodejs';
 
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
       const jsonld = await callPublicRpc('get_object_jsonld', { p_object_id: id });
       if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
-    } else if (format === 'tourinsoft' && tourinsoftVariant.variant === 'reunion-hebergement-v1') {
+    } else if (format === 'tourinsoft' && isRegionalTourinsoftVariant(tourinsoftVariant.variant)) {
       // Regional, opt-in contract. The default/legacy path below remains byte-identical to I4b.
       const tourinsoft = await callPublicRpc('get_object_tourinsoft', {
         p_object_id: id,

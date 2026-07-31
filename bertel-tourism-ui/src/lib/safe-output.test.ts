@@ -1,4 +1,4 @@
-import { escapeHtml, csvCell } from './safe-output';
+import { csvCell, escapeHtml, xlsxCell } from './safe-output';
 
 describe('escapeHtml (SEC-1)', () => {
   it('neutralizes a script/img XSS payload from DB content', () => {
@@ -37,5 +37,26 @@ describe('csvCell (SEC-2 formula injection)', () => {
 
   it('renders null/undefined as an empty quoted cell', () => {
     expect(csvCell(null)).toBe('""');
+  });
+});
+
+describe('xlsxCell — cellule xlsx typée texte (§208)', () => {
+  it("ne préfixe PAS d'apostrophe : le typage String de la cellule est la garde", () => {
+    // Contre-intuitif vs csvCell : dans un .xlsx la cellule est typée, une chaîne
+    // commençant par = n'est jamais évaluée — l'apostrophe serait VISIBLE.
+    expect(xlsxCell('=1+1')).toBe('=1+1');
+    expect(xlsxCell('+33 692 12 34 56')).toBe('+33 692 12 34 56');
+  });
+  it('normalise les fins de ligne en \\n et trim', () => {
+    expect(xlsxCell('a\r\nb\rc\n')).toBe('a\nb\nc');
+  });
+  it('rend une chaîne vide pour null/undefined', () => {
+    expect(xlsxCell(null)).toBe('');
+    expect(xlsxCell(undefined)).toBe('');
+  });
+  it('borne à la limite Excel (32 767 caractères par cellule)', () => {
+    const long = 'x'.repeat(40000);
+    expect(xlsxCell(long).length).toBeLessThanOrEqual(32001);
+    expect(xlsxCell(long).endsWith('…')).toBe(true);
   });
 });

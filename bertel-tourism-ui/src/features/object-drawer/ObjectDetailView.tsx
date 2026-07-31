@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { csvCell } from '@/lib/safe-output';
 import { cn } from '@/lib/utils';
 import { buildEventDisplayData, type EventDateRange, type EventDisplayData } from './event-occurrences';
 import { buildRestaurantMenuData } from './restaurant-menu';
@@ -722,11 +723,9 @@ function getNoteCategoryIcon(category: PrivateNoteEntry['category']) {
   }
 }
 
-function escapeCsvValue(value: string): string {
-  const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  return `"${normalized.replace(/"/g, '""')}"`;
-}
-
+// SEC-8 soldée (§208) : csvCell partagé = garde anti-formule (= + - @) que la
+// copie locale avait perdue. Effet assumé : les \n DANS une note deviennent des
+// espaces (csvCell aplatit) — le CSV reste RFC-4180 mais mono-ligne par cellule.
 function buildNotesCsv(notes: PrivateNoteEntry[]): string {
   const rows = [
     ['date', 'author', 'category', 'pinned', 'archived', 'note'],
@@ -740,7 +739,7 @@ function buildNotesCsv(notes: PrivateNoteEntry[]): string {
     ]),
   ];
 
-  return rows.map((row) => row.map((cell) => escapeCsvValue(cell)).join(',')).join('\n');
+  return rows.map((row) => row.map((cell) => csvCell(cell)).join(',')).join('\n');
 }
 
 function DetailTooltip({

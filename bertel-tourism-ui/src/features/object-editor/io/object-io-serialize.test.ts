@@ -94,7 +94,9 @@ describe('serializeObjectCsv', () => {
     expect(row).toContain('"12 rue des Cimes"');
     expect(row).toContain('"97400"');
     expect(row).toContain('"Saint-Denis"');
-    expect(row).toContain('"+262 262 00 00 00"');
+    // csvCell neutralise l'injection de formule : un numéro commençant par '+'
+    // (leader de formule spreadsheet) gagne un apostrophe de tête (SEC-2/SEC-8, §208).
+    expect(row).toContain('"\'+262 262 00 00 00"');
     expect(row).toContain('"contact@volcan.re"');
   });
 

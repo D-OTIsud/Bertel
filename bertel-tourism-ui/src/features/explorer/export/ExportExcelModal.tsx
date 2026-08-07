@@ -77,7 +77,12 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
   const offered = useMemo(() => availableColumns(session, caps), [session, caps]);
   const locked = presetId === 'diffusion';
   // Verrouillé ⇒ on ignore l'état persisté et on recalcule (jamais restauré du localStorage).
-  const effectiveIds = locked ? presetColumnIds('diffusion', session, caps) : columnIds.filter((id) => offered.some((c) => c.id === id));
+  // Mémoïsé : sans lui la référence change à CHAQUE rendu (donc à chaque frappe dans
+  // Finalité, qui ne touche à rien ici) et invalide `groupsContent` ci-dessous en pure perte.
+  const effectiveIds = useMemo(
+    () => (locked ? presetColumnIds('diffusion', session, caps) : columnIds.filter((id) => offered.some((c) => c.id === id))),
+    [locked, session, caps, columnIds, offered],
+  );
   const needsPurpose = purposeRequired(effectiveIds);
   const exporting = progress !== null;
   // R1 : 5 caractères minimum — le serveur revalide (REASON_REQUIRED), la modale n'est que l'ergonomie.
@@ -90,6 +95,49 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
     }
     return map;
   }, [offered]);
+
+  // Perf (tâche 11b) — 121 colonnes possibles réparties sur 14 groupes : mesuré à
+  // ~35 ms de reconciliation React PAR rendu (React Profiler, corpus complet acteur
+  // ouvert). Sans ce cache, chaque frappe dans Finalité (état purement local, plus
+  // bas) réexécute ce map et force React à re-diffier les ~120 lignes de case à
+  // cocher alors qu'AUCUNE de leurs données (byGroup/effectiveIds/locked/toggleColumn)
+  // n'a changé. Mémoïser l'ARBRE RENDU (pas seulement les données sources) permet à
+  // React de bail out sur ce sous-arbre par égalité référentielle des éléments —
+  // même mécanisme que « passer des enfants déjà rendus » (aucun changement de
+  // logique R2.1/R2 : `offered`/`effectiveIds` restent calculés exactement comme
+  // avant, seule la RESTITUTION est mise en cache).
+  const groupsContent = useMemo(() => {
+    if (byGroup.size === 0) return null;
+    return [...byGroup.entries()].map(([groupId, cols]) => {
+      const checkedCount = cols.filter((c) => effectiveIds.includes(c.id)).length;
+      return (
+        <FilterColumnGroup
+          key={groupId}
+          label={EXPORT_GROUP_LABELS[groupId]}
+          count={checkedCount || undefined}
+          collapsible
+          // R2.1 — le groupe 'acteur' n'existe dans byGroup QUE lorsque le préflight vient
+          // d'OUVRIR une clearance (il est absent tant que caps est fermé) : à son premier
+          // montage checkedCount vaut toujours 0 (aucune colonne acteur n'est jamais
+          // pré-cochée par un préréglage). Le laisser sous checkedCount>0 le monterait
+          // replié en permanence — l'offre que le préflight vient d'ouvrir resterait
+          // cachée derrière un disclosure que rien n'invite à ouvrir. Le préflight doit
+          // pouvoir OUVRIR l'offre, pas seulement l'annoncer sous un repli.
+          defaultOpen={checkedCount > 0 || groupId === 'acteur'}
+        >
+          <div className="grid grid-cols-2 gap-x-4">
+            {cols.map((col) => (
+              <label key={col.id} className={cn('flex items-center gap-2 py-0.5 text-[12.5px]', locked ? 'text-ink-4' : 'text-ink')}>
+                <input type="checkbox" checked={effectiveIds.includes(col.id)} disabled={locked} onChange={() => toggleColumn(col.id)} />
+                {col.label}
+                {col.requiresPurpose ? <span aria-hidden="true" className="rounded-[6px] bg-orange-soft px-1.5 text-[10.5px] font-semibold text-orange">tracé</span> : null}
+              </label>
+            ))}
+          </div>
+        </FilterColumnGroup>
+      );
+    });
+  }, [byGroup, effectiveIds, locked, toggleColumn]);
 
   async function handleDownload() {
     if (!canDownload) return;
@@ -165,35 +213,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
         ))}
       </div>
 
-      {byGroup.size === 0 ? null : [...byGroup.entries()].map(([groupId, cols]) => {
-        const checkedCount = cols.filter((c) => effectiveIds.includes(c.id)).length;
-        return (
-          <FilterColumnGroup
-            key={groupId}
-            label={EXPORT_GROUP_LABELS[groupId]}
-            count={checkedCount || undefined}
-            collapsible
-            // R2.1 — le groupe 'acteur' n'existe dans byGroup QUE lorsque le préflight vient
-            // d'OUVRIR une clearance (il est absent tant que caps est fermé) : à son premier
-            // montage checkedCount vaut toujours 0 (aucune colonne acteur n'est jamais
-            // pré-cochée par un préréglage). Le laisser sous checkedCount>0 le monterait
-            // replié en permanence — l'offre que le préflight vient d'ouvrir resterait
-            // cachée derrière un disclosure que rien n'invite à ouvrir. Le préflight doit
-            // pouvoir OUVRIR l'offre, pas seulement l'annoncer sous un repli.
-            defaultOpen={checkedCount > 0 || groupId === 'acteur'}
-          >
-            <div className="grid grid-cols-2 gap-x-4">
-              {cols.map((col) => (
-                <label key={col.id} className={cn('flex items-center gap-2 py-0.5 text-[12.5px]', locked ? 'text-ink-4' : 'text-ink')}>
-                  <input type="checkbox" checked={effectiveIds.includes(col.id)} disabled={locked} onChange={() => toggleColumn(col.id)} />
-                  {col.label}
-                  {col.requiresPurpose ? <span aria-hidden="true" className="rounded-[6px] bg-orange-soft px-1.5 text-[10.5px] font-semibold text-orange">tracé</span> : null}
-                </label>
-              ))}
-            </div>
-          </FilterColumnGroup>
-        );
-      })}
+      {groupsContent}
 
       {needsPurpose ? (
         <div className="rounded-[10px] border border-orange/40 bg-orange-soft/40 p-3">

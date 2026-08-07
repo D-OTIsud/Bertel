@@ -439,7 +439,6 @@ entre les mailles d'un seed oublie. Le test l'asserte."
 - Produces:
   - `internal.ref_catalog_label_column(text) → text` — cascade `label_column` du registre → `name`/`label`/`title`/`libelle` → `code` → `NULL` (matrices : le libellé se compose côté front).
   - `internal.ref_catalog_access(text) → text` et `internal.ref_catalog_readonly_reason(text) → text` — verrouillages **dérivés d'abord**, registre ensuite.
-  - `internal.ref_catalog_row_key_expr(jsonb) → text` — fragment SQL bâtissant la clé canonique d'une ligne.
   - `api.list_ref_catalogs() → jsonb` : `[{catalog_key, kind, label, family, used_in, access, readonly_reason, n_values}]`.
   - `api.get_ref_catalog(text) → jsonb` : `{catalog_key, kind, label, family, used_in, access, readonly_reason, is_identifiable, primary_key_columns[], label_column, columns[], outgoing_fk[], rows[], usage}`.
 

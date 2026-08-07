@@ -7,13 +7,39 @@ import type { ObjectWorkspaceLegalModule, ObjectWorkspaceModules } from '../../.
 
 function legalModule(overrides: Partial<ObjectWorkspaceLegalModule> = {}): ObjectWorkspaceLegalModule {
   return {
+    // `description` (§209) = l'aide « quand demander cette pièce », rendue en hint du sélecteur de
+    // la modale. Libellés repris du catalogue ref_legal_type réel.
     typeOptions: [
-      { id: 'id-siret', code: 'siret', label: 'SIRET', category: 'business', isPublic: true, isRequired: true },
-      { id: 'id-siren', code: 'siren', label: 'SIREN', category: 'business', isPublic: true, isRequired: false },
-      { id: 'id-rs', code: 'raison_sociale', label: 'Raison sociale', category: 'business', isPublic: false, isRequired: false },
-      { id: 'id-vat', code: 'vat_number', label: 'Numéro TVA', category: 'business', isPublic: false, isRequired: false },
-      { id: 'id-tax', code: 'tourist_tax', label: 'Taxe de séjour', category: 'accommodation', isPublic: true, isRequired: true },
-      { id: 'id-li', code: 'attestation_assurance', label: "Attestation d'assurance", category: 'insurance', isPublic: false, isRequired: false },
+      {
+        id: 'id-siret', code: 'siret', label: 'SIRET',
+        description: 'Identifiant établissement (14 chiffres = SIREN 9 + NIC 5).',
+        category: 'business', isPublic: true, isRequired: true,
+      },
+      {
+        id: 'id-siren', code: 'siren', label: 'SIREN',
+        description: 'Identifiant entreprise (9 chiffres), dérivable des 9 premiers chiffres du SIRET.',
+        category: 'business', isPublic: true, isRequired: false,
+      },
+      {
+        id: 'id-rs', code: 'raison_sociale', label: 'Raison sociale',
+        description: 'Dénomination ou raison sociale de la personne morale exploitante.',
+        category: 'business', isPublic: false, isRequired: false,
+      },
+      {
+        id: 'id-vat', code: 'vat_number', label: 'Numéro TVA',
+        description: 'Numéro de TVA intracommunautaire.',
+        category: 'business', isPublic: false, isRequired: false,
+      },
+      {
+        id: 'id-tax', code: 'tourist_tax', label: 'Taxe de séjour',
+        description: "Numéro d'enregistrement ou d'autorisation de collecte de la taxe de séjour.",
+        category: 'accommodation', isPublic: true, isRequired: true,
+      },
+      {
+        id: 'id-li', code: 'attestation_assurance', label: "Attestation d'assurance",
+        description: "Attestation d'assurance en cours de validité couvrant l'activité : responsabilité civile professionnelle. Renouvellement annuel.",
+        category: 'insurance', isPublic: false, isRequired: false,
+      },
     ],
     records: [
       {
@@ -92,6 +118,9 @@ describe('SectionLegal', () => {
     });
     expect(result.current.draft.legal.records.filter((r) => r.typeCode === 'attestation_assurance')).toHaveLength(0);
     expect(screen.getByLabelText('Type de document')).toBeInTheDocument();
+    // La section passe bien les options COMPLÈTES à la modale : l'aide §209 du type présélectionné
+    // est rendue (sans elle, le catalogue arriverait amputé de sa description).
+    expect(screen.getByText(/responsabilité civile professionnelle/)).toBeInTheDocument();
 
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));

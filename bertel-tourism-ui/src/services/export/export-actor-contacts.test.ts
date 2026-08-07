@@ -43,6 +43,23 @@ describe('exportActorContacts (§208/R1)', () => {
     await expect(exportActorContacts(ids, 'Campagne 2026', {})).rejects.toThrow('timeout');
   });
 
+  // `crypto.randomUUID` est réservé aux contextes SÉCURISÉS (et absent avant Safari 15.4) :
+  // en HTTP simple il vaut `undefined` et l'export mourait sur un TypeError, sans fichier.
+  // jest.setup.ts le polyfille — donc SEUL un test qui le retire peut voir ce chemin.
+  it("génère un export_run_id même sans crypto.randomUUID (contexte non sécurisé)", async () => {
+    const original = globalThis.crypto.randomUUID;
+    Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+    try {
+      mockRpc.mockResolvedValue({ log_id: 'j1', export_run_id: 'run', authorized_object_ids: ['a'], denied_object_ids: [], rows: [] });
+      const result = await exportActorContacts(['a'], 'Campagne 2026', {});
+      expect(typeof result.exportRunId).toBe('string');
+      expect(result.exportRunId.length).toBeGreaterThan(8);
+      expect(mockRpc.mock.calls[0][2].exportRunId).toBe(result.exportRunId);
+    } finally {
+      Object.defineProperty(globalThis.crypto, 'randomUUID', { value: original, configurable: true });
+    }
+  });
+
   it('refuse une finalité vide ou trop courte AVANT tout appel réseau (le serveur revalide)', async () => {
     await expect(exportActorContacts(['a'], '   ', {})).rejects.toThrow(/finalité/i);
     await expect(exportActorContacts(['a'], 'abc', {})).rejects.toThrow(/finalité/i);

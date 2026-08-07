@@ -1,6 +1,12 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ProviderCards } from './ProviderCards';
-import type { ObjectWorkspaceActorLinkItem, ObjectWorkspaceRelationshipsModule } from '../../../services/object-workspace-parser';
+import {
+  ACTOR_NOTE_RESTRICTED_REASON,
+  ACTOR_NOTE_UNKNOWN_REASON,
+  type ObjectWorkspaceActorLinkItem,
+  type ObjectWorkspaceRelationshipsModule,
+} from '../../../services/object-workspace-parser';
 
 // The ActorPicker has its own spec (debounce + api.search_actors). Here it is stubbed so the
 // attach-modal pick wiring is exercised without the network search.
@@ -41,8 +47,25 @@ function relationships(overrides: Partial<ObjectWorkspaceRelationshipsModule> = 
     actorWriteUnavailableReason: null,
     actorConsentUnavailableReason: null,
     relatedObjectWriteUnavailableReason: null,
+    actorNoteWriteUnavailableReason: null,
     ...overrides,
   };
+}
+
+/**
+ * Enveloppe CONTRÔLÉE : ProviderCards est piloté par ses props, donc sans re-rendu le lien
+ * qu'on vient de rattacher n'apparaît jamais. Cette enveloppe reproduit ce que fait l'éditeur
+ * (`replaceModule('relationships', …)`) pour pouvoir ouvrir la modale du lien NEUF.
+ */
+function ControlledProviderCards({ initial }: { initial: ObjectWorkspaceRelationshipsModule }) {
+  const [module, setModule] = useState(initial);
+  return (
+    <ProviderCards
+      relationships={module}
+      canWrite
+      onChange={(actors) => setModule((current) => ({ ...current, actors }))}
+    />
+  );
 }
 
 describe('ProviderCards — §19 prestataire authoring', () => {
@@ -153,6 +176,55 @@ describe('ProviderCards — §19 prestataire authoring', () => {
       />,
     );
     expect(screen.getByLabelText(/2 interaction\(s\) en attente avec Marie Guide/i)).toBeInTheDocument();
+  });
+
+  // §208 — LE cas que l'héritage « depuis la ligne 0 » laissait ouvert : sur une fiche SANS
+  // aucun prestataire, il n'y avait aucune ligne à échantillonner, donc le lien neuf naissait
+  // `contactsRestricted: false` ⇒ champ Note actif ⇒ api.save_object_relations écrivait NULL
+  // (lien neuf pour un appelant restreint) sans le moindre signal.
+  it('§208 — fiche SANS prestataire : la note du premier rattaché n\'est pas saisissable, motif affiché', () => {
+    render(<ControlledProviderCards initial={relationships({ actors: [], actorNoteWriteUnavailableReason: ACTOR_NOTE_UNKNOWN_REASON })} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Rattacher un nouveau prestataire/ })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir Rémi Janisset' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Rémi Janisset/ })); });
+
+    const note = screen.getByLabelText('Note sur Rémi Janisset');
+    expect(note).toHaveAttribute('readonly');
+    expect(screen.getByText(ACTOR_NOTE_UNKNOWN_REASON)).toBeInTheDocument();
+    act(() => { fireEvent.change(note, { target: { value: 'référent terrain' } }); });
+    expect(note).toHaveValue('');
+  });
+
+  it('§208 — fiche dont le serveur a rédigé les liens : la note du prestataire NEUF est réservée elle aussi', () => {
+    render(
+      <ControlledProviderCards
+        initial={relationships({
+          actors: [actor({ id: 'a1', displayName: 'Marie Guide', contactsRestricted: true })],
+          actorNoteWriteUnavailableReason: ACTOR_NOTE_RESTRICTED_REASON,
+        })}
+      />,
+    );
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Rattacher un nouveau prestataire/ })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir Rémi Janisset' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Rémi Janisset/ })); });
+
+    expect(screen.getByLabelText('Note sur Rémi Janisset')).toHaveAttribute('readonly');
+    expect(screen.getByText(ACTOR_NOTE_RESTRICTED_REASON)).toBeInTheDocument();
+  });
+
+  it('§208 — verdict par fiche à null : la note du prestataire neuf reste saisissable', () => {
+    render(<ControlledProviderCards initial={relationships({ actors: [], actorNoteWriteUnavailableReason: null })} />);
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Rattacher un nouveau prestataire/ })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Choisir Rémi Janisset' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Rémi Janisset/ })); });
+
+    const note = screen.getByLabelText('Note sur Rémi Janisset');
+    expect(note).not.toHaveAttribute('readonly');
+    act(() => { fireEvent.change(note, { target: { value: 'référent terrain' } }); });
+    expect(note).toHaveValue('référent terrain');
   });
 
   it('shows no notification badge when the actor has no open interactions', () => {

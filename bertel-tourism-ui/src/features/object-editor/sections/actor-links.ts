@@ -56,11 +56,13 @@ export function addActorLink(
       validTo: '',
       note: '',
       contacts: [],
-      // §208 — pas de signal serveur pour un lien pas encore enregistré : on reprend l'état
-      // des liens déjà chargés pour CETTE fiche (contactsRestricted est un verdict par
-      // appelant+objet, identique sur toutes les lignes reçues), à défaut `false` (comportement
-      // antérieur à §208 — pas de régression quand la fiche n'a encore aucun acteur).
-      contactsRestricted: actors[0]?.contactsRestricted ?? false,
+      // §208 — `contactsRestricted` décrit une REDACTION SUBIE par CETTE ligne au retour de
+      // get_object_resource. Un lien qui n'existe pas encore côté serveur n'en a subi aucune :
+      // `false` est le fait exact, et ce n'est PAS lui qui décide si la note est saisissable.
+      // Ce verdict-là est PAR APPELANT + PAR FICHE et vit sur le module
+      // (`actorNoteWriteUnavailableReason`) — l'échantillonner sur une ligne quelconque était
+      // structurellement faux et laissait un write-trap ouvert sur une fiche sans aucun acteur.
+      contactsRestricted: false,
     },
   ];
 }

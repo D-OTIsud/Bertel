@@ -20,6 +20,7 @@ const mod = (
   orgRoleOptions: [], orgOptions: [], actorRoleOptions: [],
   organizationLinkWriteUnavailableReason: null, actorWriteUnavailableReason: null,
   actorConsentUnavailableReason: null, relatedObjectWriteUnavailableReason: null,
+  actorNoteWriteUnavailableReason: null,
   ...over,
 });
 

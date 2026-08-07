@@ -8,7 +8,7 @@
 
 **Tech Stack:** PostgreSQL 17 / Supabase (schémas `api`, `internal`, `public`), PostgREST, Next.js App Router, React 19, TypeScript, Zustand, Jest + React Testing Library.
 
-**Spec de référence :** `docs/superpowers/specs/2026-08-07-copier-emails-selection-design.md` — toute divergence entre ce plan et la spec est une erreur du plan.
+**Spec de référence :** `docs/superpowers/specs/2026-08-07-copier-emails-selection-design.md` (**v5**) — toute divergence entre ce plan et la spec est une erreur du plan.
 
 ## Global Constraints
 
@@ -35,7 +35,9 @@
 | `Base de donnée DLL et API/tests/test_list_resolver_internal.sql` | garde : le contrat public reste plafonné, le moteur n'est pas joignable | 1 |
 | `Base de donnée DLL et API/migration_selection_emails.sql` | le RPC `api.list_selection_emails` | 2 |
 | `Base de donnée DLL et API/tests/test_selection_emails.sql` | garde non vacante du RPC (16 cas) | 2 |
-| `docs/SQL_ROLLOUT_RUNBOOK.md` | entrées de manifeste E1 et E2 | 1, 2 |
+| `Base de donnée DLL et API/ci_fresh_apply.sql` | manifeste **exécuté** par la CI (`\ir`) — E1 et E2 | 1, 2 |
+| `.github/workflows/sql-fresh-apply.yml` | **exécution** des tests SQL — une étape par fichier de test | 1, 2 |
+| `docs/SQL_ROLLOUT_RUNBOOK.md` | documentation du manifeste — entrées E1 et E2 | 1, 2 |
 | `bertel-tourism-ui/src/services/selection-emails.ts` | appel RPC + **deux fonctions pures** (dédoublonnage, formatage) | 3 |
 | `bertel-tourism-ui/src/services/selection-emails.test.ts` | tests des fonctions pures | 3 |
 | `bertel-tourism-ui/src/components/explorer/CopyEmailsModal.tsx` | la modale, seule surface d'affichage | 4 |
@@ -296,7 +298,27 @@ Dans `Base de donnée DLL et API/ci_fresh_apply.sql`, **immédiatement après** 
 \ir migration_list_resolver_internal.sql
 ```
 
-- [ ] **Step 7: Documenter la migration au runbook**
+- [ ] **Step 7: Brancher les tests dans la CI**
+
+⚠️ `ci_fresh_apply.sql` **applique** les migrations mais n'exécute **aucun** test : le workflow porte une étape `- name:` par fichier de test. Un test non branché n'est jamais lancé — et un test qui ne tourne pas ne garde rien.
+
+Dans `.github/workflows/sql-fresh-apply.yml`, ajouter avant l'étape `Stop Supabase` :
+
+```yaml
+      - name: "§211 E1 — dynamic-list resolver split (internal engine reaches 205, public contract still capped at 200, internal helper not executable by anon/authenticated)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_list_resolver_internal.sql"
+
+      - name: "§211 E1 — Listes module non-regression (get_list / list_my_lists unchanged by the resolver split)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_list.sql"
+```
+
+`test_object_list.sql` existe mais **n'était branché nulle part** : c'est la garde de non-régression du module Listes, et E1 modifie une de ses fonctions. La brancher fait partie de cette tâche.
+
+- [ ] **Step 8: Documenter la migration au runbook**
 
 Dans `docs/SQL_ROLLOUT_RUNBOOK.md`, ajouter une entrée **immédiatement après** l'entrée `L1.` (`migration_object_list.sql`), en suivant le format des entrées voisines :
 
@@ -304,10 +326,10 @@ Dans `docs/SQL_ROLLOUT_RUNBOOK.md`, ajouter une entrée **immédiatement après*
 E1. `migration_list_resolver_internal.sql` — **Scission du résolveur de listes dynamiques (§211)** (self-contained ; après `migration_object_list.sql` [L1], qui crée `api.resolve_list_object_ids`). **Pourquoi :** `api.resolve_list_object_ids` est `SECURITY DEFINER`, exposée en RPC PostgREST et `GRANT EXECUTE … TO authenticated` ; elle délègue à `api.get_filtered_object_ids`, dont le chemin vif lit `FROM object o` **sans intersection avec l'ensemble lisible** — un utilisateur authentifié peut donc obtenir jusqu'à 200 ids d'objets hors de son périmètre (exposition **pré-existante**, portée = des identifiants, pas de contenu ni de PII ; cf. différé). L'export d'e-mails (E2) doit résoudre jusqu'à 2 001 ids : relever le plafond du RPC public aurait multiplié cette exposition par dix. **Contenu :** le moteur est déplacé dans `internal.resolve_list_object_ids` (plafond **2001** = 2000+1 pour distinguer « exactement 2000 » de « plus de 2000 » ; `REVOKE ALL … FROM PUBLIC, anon, authenticated` + `GRANT … TO service_role`) ; `api.resolve_list_object_ids` devient un **passe-plat** qui replafonne à **200** — signature, grants et comportement strictement inchangés (`api.list_effective_object_ids` passe le littéral `200`, donc `get_list` et `list_my_lists` ne bougent pas). Idempotent (`CREATE SCHEMA IF NOT EXISTS`, `CREATE OR REPLACE`). Couvert par `tests/test_list_resolver_internal.sql` — garde **non vacante** : 205 fiches témoins, le moteur doit dépasser 200 ET le contrat public doit rester à 200, plus les privilèges des deux fonctions. Non-régression : `tests/test_object_list.sql`. Décision log §211.
 ```
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add "Base de donnée DLL et API/migration_list_resolver_internal.sql" "Base de donnée DLL et API/tests/test_list_resolver_internal.sql" "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
+git add "Base de donnée DLL et API/migration_list_resolver_internal.sql" "Base de donnée DLL et API/tests/test_list_resolver_internal.sql" "Base de donnée DLL et API/ci_fresh_apply.sql" .github/workflows/sql-fresh-apply.yml docs/SQL_ROLLOUT_RUNBOOK.md
 git commit -m "feat(sql §211): scinde le resolveur de listes — moteur internal a 2001, contrat public inchange a 200"
 ```
 
@@ -405,18 +427,25 @@ DECLARE
   v_res        json;
   v_kind_email uuid;
   v_role_op    uuid;
+  v_role_other uuid;
   v_role_pub   uuid;
   v_actor_a    uuid := gen_random_uuid();
   v_actor_exp  uuid := gen_random_uuid();
   v_actor_priv uuid := gen_random_uuid();
   v_actor_no   uuid := gen_random_uuid();
+  v_actor_fut  uuid := gen_random_uuid();
+  v_actor_role uuid := gen_random_uuid();
   v_emails     text[];
 BEGIN
   SELECT id INTO v_kind_email FROM ref_code_contact_kind WHERE code = 'email';
   SELECT id INTO v_role_op    FROM ref_actor_role        WHERE code = 'operator';
   SELECT id INTO v_role_pub   FROM ref_org_role          WHERE code = 'publisher';
+  -- N'importe quel rôle acteur AUTRE qu'operator : c'est la nature du rôle qu'on
+  -- éprouve, pas un code particulier.
+  SELECT id INTO v_role_other FROM ref_actor_role WHERE code <> 'operator' ORDER BY code LIMIT 1;
   ASSERT v_kind_email IS NOT NULL, 'ref_code_contact_kind[email] introuvable';
   ASSERT v_role_op    IS NOT NULL, 'ref_actor_role[operator] introuvable';
+  ASSERT v_role_other IS NOT NULL, 'aucun rôle acteur non-operator dans le catalogue';
 
   -- ---------- Témoins ----------
   -- EML…01 acteur + e-mail propre → l'acteur gagne
@@ -428,6 +457,8 @@ BEGIN
   -- EML…07 is_primary NULL vs TRUE→ le TRUE gagne
   -- EML…08 archived               → exclu (D9)
   -- EML…09 PUBLIÉE mais publisher = ORG ÉTRANGÈRE → hors périmètre (D4)
+  -- EML…10 lien operator FUTUR    → repli
+  -- EML…11 lien de rôle NON-operator → repli
   INSERT INTO object (id, object_type, name, status, published_at) VALUES
     ('EMLSEL9999999901', 'HLO', 'Emails acteur gagne',  'published', now()),
     ('EMLSEL9999999902', 'HLO', 'Emails repli fiche',   'published', now()),
@@ -437,7 +468,9 @@ BEGIN
     ('EMLSEL9999999906', 'HLO', 'Emails refus consent', 'published', now()),
     ('EMLSEL9999999907', 'HLO', 'Emails primary null',  'published', now()),
     ('EMLSEL9999999908', 'HLO', 'Emails archivee',      'archived',  now()),
-    ('EMLSEL9999999909', 'HLO', 'Emails org etrangere', 'published', now());
+    ('EMLSEL9999999909', 'HLO', 'Emails org etrangere', 'published', now()),
+    ('EMLSEL9999999910', 'HLO', 'Emails lien futur',    'published', now()),
+    ('EMLSEL9999999911', 'HLO', 'Emails role non op',   'published', now());
 
   -- Publisher : 01→08 chez moi, 09 chez l'ORG étrangère.
   INSERT INTO object_org_link (object_id, org_object_id, role_id)
@@ -451,19 +484,25 @@ BEGIN
     (v_actor_a,    'Gerant A'),
     (v_actor_exp,  'Ancien gerant'),
     (v_actor_priv, 'Gerant prive'),
-    (v_actor_no,   'Gerant refusant');
+    (v_actor_no,   'Gerant refusant'),
+    (v_actor_fut,  'Futur gerant'),
+    (v_actor_role, 'Moniteur');
 
   INSERT INTO actor_channel (actor_id, kind_id, value, is_primary) VALUES
     (v_actor_a,    v_kind_email, 'gerant.a@example.test',    true),
     (v_actor_exp,  v_kind_email, 'ancien@example.test',      true),
     (v_actor_priv, v_kind_email, 'prive@example.test',       true),
-    (v_actor_no,   v_kind_email, 'refusant@example.test',    true);
+    (v_actor_no,   v_kind_email, 'refusant@example.test',    true),
+    (v_actor_fut,  v_kind_email, 'futur@example.test',       true),
+    (v_actor_role, v_kind_email, 'moniteur@example.test',    true);
 
-  INSERT INTO actor_object_role (actor_id, object_id, role_id, visibility, valid_to) VALUES
-    (v_actor_a,    'EMLSEL9999999901', v_role_op, 'partners', NULL),
-    (v_actor_exp,  'EMLSEL9999999904', v_role_op, 'partners', CURRENT_DATE - 1),
-    (v_actor_priv, 'EMLSEL9999999905', v_role_op, 'private',  NULL),
-    (v_actor_no,   'EMLSEL9999999906', v_role_op, 'partners', NULL);
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, visibility, valid_from, valid_to) VALUES
+    (v_actor_a,    'EMLSEL9999999901', v_role_op,    'partners', NULL, NULL),
+    (v_actor_exp,  'EMLSEL9999999904', v_role_op,    'partners', NULL, CURRENT_DATE - 1),
+    (v_actor_priv, 'EMLSEL9999999905', v_role_op,    'private',  NULL, NULL),
+    (v_actor_no,   'EMLSEL9999999906', v_role_op,    'partners', NULL, NULL),
+    (v_actor_fut,  'EMLSEL9999999910', v_role_op,    'partners', CURRENT_DATE + 1, NULL),
+    (v_actor_role, 'EMLSEL9999999911', v_role_other, 'partners', NULL, NULL);
 
   INSERT INTO actor_consent (actor_id, channel, consent_given)
   VALUES (v_actor_no, 'email', false);
@@ -475,7 +514,9 @@ BEGIN
     ('EMLSEL9999999905', v_kind_email, 'fiche05@example.test', true),
     ('EMLSEL9999999906', v_kind_email, 'fiche06@example.test', true),
     ('EMLSEL9999999908', v_kind_email, 'fiche08@example.test', true),
-    ('EMLSEL9999999909', v_kind_email, 'etrangere09@example.test', true);
+    ('EMLSEL9999999909', v_kind_email, 'etrangere09@example.test', true),
+    ('EMLSEL9999999910', v_kind_email, 'fiche10@example.test', true),
+    ('EMLSEL9999999911', v_kind_email, 'fiche11@example.test', true);
 
   -- 07 : le drapeau NULL ne doit PAS passer devant le TRUE (garde du NULLS LAST).
   INSERT INTO contact_channel (object_id, kind_id, value, is_primary, position) VALUES
@@ -486,7 +527,7 @@ BEGIN
   v_res := api.list_selection_emails(ARRAY[
     'EMLSEL9999999901','EMLSEL9999999902','EMLSEL9999999903','EMLSEL9999999904',
     'EMLSEL9999999905','EMLSEL9999999906','EMLSEL9999999907','EMLSEL9999999908',
-    'EMLSEL9999999909']);
+    'EMLSEL9999999909','EMLSEL9999999910','EMLSEL9999999911']);
 
   SELECT array_agg(r->>'email' ORDER BY (r->>'ord')::int)
     INTO v_emails
@@ -498,8 +539,16 @@ BEGIN
       'fiche04@example.test',       -- 04 : lien expiré ignoré
       'fiche05@example.test',       -- 05 : lien private ignoré
       'fiche06@example.test',       -- 06 : refus de consentement ⇒ repli
-      'principal07@example.test'],  -- 07 : is_primary TRUE devant NULL
+      'principal07@example.test',   -- 07 : is_primary TRUE devant NULL
+      'fiche10@example.test',       -- 10 : lien pas encore valide ignoré
+      'fiche11@example.test'],      -- 11 : rôle non-operator ignoré
     format('cascade inattendue : %s', v_emails);
+
+  -- Aucune des adresses écartées ne doit avoir fui, quelle qu'en soit la raison.
+  ASSERT NOT (v_emails && ARRAY[
+      'ancien@example.test', 'prive@example.test', 'refusant@example.test',
+      'futur@example.test',  'moniteur@example.test']),
+    'une adresse d un lien expiré / privé / refusé / futur / non-operator a fui';
 
   -- LA garantie centrale : une fiche PUBLIÉE d'une ORG étrangère n'apporte
   -- AUCUNE adresse, alors même qu'elle est parfaitement lisible.
@@ -513,20 +562,29 @@ BEGIN
     'une fiche archivée ne doit PAS figurer dans missing — elle est exclue (D9)';
   ASSERT NOT ((v_res->'missing')::jsonb @> '[{"object_id":"EMLSEL9999999909"}]'::jsonb),
     'une fiche hors périmètre ne doit PAS figurer dans missing — elle est comptée dans excluded_count';
-  ASSERT (v_res->>'requested_count')::int = 9,
+  ASSERT (v_res->>'requested_count')::int = 11,
     'requested_count doit compter les ids demandés';
-  ASSERT (v_res->>'eligible_count')::int = 7,
+  ASSERT (v_res->>'eligible_count')::int = 9,
     'eligible_count doit écarter l archivée ET l ORG étrangère';
   ASSERT (v_res->>'excluded_count')::int = 2,
     'excluded_count doit valoir requested - eligible, et être RENDU (jamais absorbé)';
 
-  -- ---------- B. Ids dupliqués : une seule ligne, ordre stable ----------
+  -- ---------- B. Ids dupliqués : une seule ligne, ordre STABLE ----------
+  -- Deux exécutions successives doivent rendre la MÊME chose : c'est cela, un
+  -- ordre déterministe. Une seule exécution ne prouve rien — un plan instable
+  -- passerait une fois sur deux.
   v_res := api.list_selection_emails(ARRAY[
     'EMLSEL9999999902','EMLSEL9999999902','EMLSEL9999999901']);
   SELECT array_agg(r->>'email' ORDER BY (r->>'ord')::int) INTO v_emails
   FROM json_array_elements(v_res->'rows') r;
   ASSERT v_emails = ARRAY['fiche02@example.test','gerant.a@example.test'],
     format('les doublons doivent être réduits en conservant la PREMIÈRE ordinalité : %s', v_emails);
+
+  v_res := api.list_selection_emails(ARRAY[
+    'EMLSEL9999999902','EMLSEL9999999902','EMLSEL9999999901']);
+  ASSERT (SELECT array_agg(r->>'email' ORDER BY (r->>'ord')::int)
+          FROM json_array_elements(v_res->'rows') r) = v_emails,
+    'deux exécutions identiques doivent rendre exactement le même ordre';
 
   -- ---------- C. Tableau vide = demande valide ----------
   v_res := api.list_selection_emails(ARRAY[]::text[]);
@@ -654,10 +712,23 @@ BEGIN
            json_array_length(v_res->'rows'));
 
   -- H3. NON-RÉGRESSION : le module Listes, lui, reste à 200 sur la MÊME liste.
-  SELECT count(*) INTO v_n
-  FROM api.list_effective_object_ids(v_list_dynamic, true);
+  -- On interroge le VRAI RPC consommateur `api.get_list` — pas le helper interne
+  -- list_effective_object_ids. Le helper pourrait rester plafonné alors qu'un
+  -- futur get_list contournerait le plafond : c'est le comportement de la
+  -- surface réelle qu'on garde, pas celui d'un rouage.
+  SELECT json_array_length((api.get_list(v_list_dynamic))->'items') INTO v_n;
   ASSERT v_n = 200,
-    format('le module Listes doit rester plafonné à 200 (obtenu %s)', v_n);
+    format('api.get_list doit rester plafonné à 200 sur une liste dynamique (obtenu %s)', v_n);
+
+  -- H4. Liste statique portant une fiche `hidden` : exclue comme `archived` (D9).
+  UPDATE object SET status = 'hidden' WHERE id = 'EMLSEL9999999907';
+  INSERT INTO object_list_item (list_id, object_id, position)
+  VALUES (v_list_static, 'EMLSEL9999999907', 3);
+
+  v_res := api.list_selection_emails(NULL, v_list_static);
+  ASSERT json_array_length(v_res->'rows') = 1,
+    'une fiche `hidden` doit être exclue au même titre qu une archivée (D9)';
+  UPDATE object SET status = 'published' WHERE id = 'EMLSEL9999999907';
 END $$;
 
 -- ---------- I. Contexte LECTEUR : refus, pas ensemble vide ----------
@@ -911,7 +982,18 @@ Dans `Base de donnée DLL et API/ci_fresh_apply.sql`, **immédiatement après** 
 
 ⚠️ Vérifier que le bloc CRM (`api.current_user_crm_object_ids`) est bien `\ir`é **avant** cette ligne dans `ci_fresh_apply.sql` — si ce n'est pas le cas, placer E2 après lui. Une base fraîche échouerait sinon à la création de la fonction.
 
-- [ ] **Step 6: Documenter la migration au runbook**
+- [ ] **Step 6: Brancher le test dans la CI**
+
+Dans `.github/workflows/sql-fresh-apply.yml`, ajouter après les deux étapes E1 :
+
+```yaml
+      - name: "§211 E2 — bulk email export (operator→object cascade, publisher scope isolates a PUBLISHED foreign-ORG object, expired/future/private/non-operator links ignored, consent refusal honoured, PT400/PT404/PT413 contracts, reader refused)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_selection_emails.sql"
+```
+
+- [ ] **Step 7: Documenter la migration au runbook**
 
 Dans `docs/SQL_ROLLOUT_RUNBOOK.md`, ajouter après l'entrée `E1.` :
 
@@ -919,10 +1001,10 @@ Dans `docs/SQL_ROLLOUT_RUNBOOK.md`, ajouter après l'entrée `E1.` :
 E2. `migration_selection_emails.sql` — **Export de la liste d'e-mails d'une sélection (§211)** (self-contained ; après `migration_list_resolver_internal.sql` [E1] pour `internal.resolve_list_object_ids`, après `api_views_functions.sql` pour `api.current_user_can_edit_objects`, après `rls_policies.sql` pour `api.is_platform_superuser`, après le module CRM pour `api.current_user_crm_object_ids`). **Besoin :** écrire à un sous-ensemble de prestataires (toute la base, les hébergements, une zone) sans recomposer la liste à la main — un clic, le presse-papiers, on colle dans Gmail. **RPC** `api.list_selection_emails(p_object_ids text[] DEFAULT NULL, p_list_id uuid DEFAULT NULL) RETURNS json`, `SECURITY DEFINER`, entrées mutuellement exclusives. **Garde à deux étages** : (1) éditeur — `COALESCE(api.current_user_can_edit_objects(), FALSE)`, la fonction étant à TROIS valeurs, sans quoi la garde est fail-OPEN (§204) ; (2) périmètre — `api.current_user_crm_object_ids()` (fiches dont l'ORG est `publisher`) **et non** `current_user_readable_object_ids()` : lire une fiche publiée d'une autre ORG ne donne pas droit à l'e-mail `visibility='partners'` de son exploitant. `archived`/`hidden` exclus. **Cascade** prestataire → fiche : bras acteur = rôle `operator`, `visibility IN ('public','partners')` (private exclu — le drapeau se compose, §49), lien temporellement valide (`valid_from`/`valid_to`), refus de consentement honoré (`actor_consent(email, FALSE)` coupe le bras acteur ; le repli sur l'adresse pro de la fiche reste licite) ; bras fiche = `contact_channel[email]`. `NULLS LAST` **obligatoire** sur les `is_primary DESC` — la colonne est nullable et `DESC` place les NULL en premier. **Retour** `{requested_count, eligible_count, excluded_count, rows:[{object_id,email,source,ord}], missing:[{object_id,name}]}` — le périmètre écarté est **compté et rendu**, jamais absorbé : une fiche silencieusement retirée se lirait comme une fiche sans e-mail. Ordre **déterministe** de bout en bout (`unnest … WITH ORDINALITY`, `ORDER BY ord`, départages terminaux sur `ac.id`/`cc.id`). Plafond **2 000** ids (vérifié par `cardinality` AVANT `unnest`) ; résolution des listes dynamiques à **2 001** via le moteur `internal` pour distinguer « exactement 2000 » de « plus de 2000 » — jamais de troncature. **Codes d'erreur** `42501` (refus), `PT400`/`PT404`/`PT413` (PostgREST mappe `PTxyz` sur le statut HTTP `xyz` et expose le SQLSTATE) — un `RAISE EXCEPTION` nu rendrait les trois indiscernables sous `P0001`. Liste dynamique en `published`-only, fidèle à `get_list`. Idempotent (`CREATE OR REPLACE`). Couvert par `tests/test_selection_emails.sql` — garde **non vacante** : 8 fiches témoins couvrant les deux bras et les cinq exclusions, ids dupliqués, contrats d'erreur, contexte lecteur éprouvé par `request.jwt.claims` (jamais `SET ROLE` seul — sans JWT le bras éditeur n'est pas emprunté et le test n'asserte que du vide, §204), privilèges. État mesuré au 2026-08-07 : 842 fiches demandées → 840 éligibles → 821 résolues → **717 adresses distinctes** → 19 muettes. Décision log §211.
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add "Base de donnée DLL et API/migration_selection_emails.sql" "Base de donnée DLL et API/tests/test_selection_emails.sql" "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
+git add "Base de donnée DLL et API/migration_selection_emails.sql" "Base de donnée DLL et API/tests/test_selection_emails.sql" "Base de donnée DLL et API/ci_fresh_apply.sql" .github/workflows/sql-fresh-apply.yml docs/SQL_ROLLOUT_RUNBOOK.md
 git commit -m "feat(sql §211): RPC list_selection_emails — cascade prestataire, perimetre publisher, ordre deterministe"
 ```
 
@@ -1188,7 +1270,11 @@ describe('CopyEmailsModal', () => {
 
   it('annonce les compteurs, dont la mention « sur N » quand des fiches sont écartées', async () => {
     mockFetch.mockResolvedValue(RESULT);
-    render(<CopyEmailsModal objectIds={['o1', 'o2', 'o3', 'o4']} open onOpenChange={jest.fn()} />);
+    // Cinq ids, parce que le faux annonce cinq demandes : un test dont l'entrée
+    // contredit la sortie ne décrit aucun scénario réel.
+    render(
+      <CopyEmailsModal objectIds={['o1', 'o2', 'o3', 'o4', 'o5']} open onOpenChange={jest.fn()} />,
+    );
 
     expect(await screen.findByText(/4 fiches éligibles sur 5/)).toBeInTheDocument();
     expect(screen.getByText(/2 adresses/)).toBeInTheDocument();
@@ -1247,6 +1333,9 @@ describe('CopyEmailsModal', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /^Copier$/ }));
     expect(screen.queryByRole('button', { name: /Copié/ })).toBeNull();
+    // Pendant l'attente : état visible ET bouton désactivé (pas de double-clic).
+    const pending = screen.getByRole('button', { name: /Copie…/ });
+    expect(pending).toBeDisabled();
 
     release();
     await waitFor(() => expect(screen.getByRole('button', { name: /Copié/ })).toBeInTheDocument());
@@ -1501,15 +1590,22 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
             </p>
           )}
 
+          {/* L'état `copying` est VISIBLE et désactive le bouton : sans cela un
+              double-clic relance une écriture presse-papiers concurrente, et
+              l'utilisateur n'a aucun retour pendant l'attente. */}
           <button
             type="button"
             onClick={() => void handleCopy()}
-            disabled={emails.length === 0}
+            disabled={emails.length === 0 || copyState === 'copying'}
             className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
           >
             {copyState === 'copied' ? (
               <>
                 <Check className="h-4 w-4" /> Copié
+              </>
+            ) : copyState === 'copying' ? (
+              <>
+                <Copy className="h-4 w-4" /> Copie…
               </>
             ) : (
               <>

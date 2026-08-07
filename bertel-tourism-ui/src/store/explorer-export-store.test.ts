@@ -23,9 +23,30 @@ describe('explorer-export-store (§208) — même mécanique que explorer-view-s
     expect(useExplorerExportStore.getState().columnIds).toEqual(['name']);
   });
 
-  it('merge filtre les ids inconnus (renommage futur) et retombe sur essentiel si vide', () => {
-    // simule une restauration corrompue
+  it('setColumns filtre les ids inconnus (renommage futur) et garde les ids valides restants', () => {
     useExplorerExportStore.getState().setColumns(['colonne_disparue', 'name']);
     expect(useExplorerExportStore.getState().columnIds).toEqual(['name']);
+  });
+
+  it('setColumns garde l\'état précédent si TOUS les ids proposés sont périmés (finding 2)', () => {
+    useExplorerExportStore.getState().setColumns(['name', 'city']);
+    useExplorerExportStore.getState().setColumns(['colonne_disparue', 'autre_disparue']);
+    expect(useExplorerExportStore.getState().columnIds).toEqual(['name', 'city']);
+  });
+
+  it("applyPreset('custom') ne vide jamais la sélection en cours (finding 3)", () => {
+    useExplorerExportStore.getState().setColumns(['name', 'city']);
+    useExplorerExportStore.getState().applyPreset('custom', SESSION);
+    expect(useExplorerExportStore.getState().columnIds).toEqual(['name', 'city']);
+  });
+
+  it('merge (rehydratation) retombe sur essentiel si le disque ne contient plus aucun id valide (finding 1)', () => {
+    // simule une restauration corrompue : la SEULE colonne persistée a disparu du registre
+    localStorage.setItem(
+      'bertel-explorer-export',
+      JSON.stringify({ state: { presetId: 'custom', columnIds: ['colonne_disparue'] }, version: 0 }),
+    );
+    useExplorerExportStore.persist.rehydrate();
+    expect(useExplorerExportStore.getState().columnIds.length).toBeGreaterThan(0);
   });
 });

@@ -251,9 +251,10 @@ export const EXPORT_COLUMNS: ExportColumnDef[] = [
   // ---------- Capacité & politiques ----------
   { id: 'capacity', label: 'Capacités', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.capacities.map((c) => `${c.label} : ${c.value}`)) },
   // Note capacity_max : CapacityItem ne porte pas metric_code (retiré au dédoublonnage, utils.ts:1320) —
-  // le match se fait sur le libellé (/capacit/i), repli premier item. Assumé (§208) — AUCUN autre repli
-  // (bedrooms/pitches/…) : une fiche sans métrique « capacité » rend une cellule VIDE, jamais une valeur fausse.
-  { id: 'capacity_max', label: 'Capacité maximale', group: 'capacite', clearance: 'public', value: (d) => d.operations.capacities.find((c) => /capacit/i.test(c.label))?.value ?? d.operations.capacities[0]?.value ?? '' },
+  // le match se fait sur le libellé FR résolu serveur (/capacit/i). AUCUN repli sur une autre métrique
+  // (arbitrage PO, matrice §208 arbitrage #3) : une métrique quelconque (chambres, emplacements…)
+  // présentée comme « Capacité maximale » serait une donnée FAUSSE — une cellule vide est correcte.
+  { id: 'capacity_max', label: 'Capacité maximale', group: 'capacite', clearance: 'public', value: (d) => d.operations.capacities.find((c) => /capacit/i.test(c.label))?.value ?? '' },
   { id: 'rooms_count', label: 'Types de chambres', group: 'capacite', clearance: 'public', value: (d) => (d.operations.roomTypes.length ? String(d.operations.roomTypes.length) : '') },
   { id: 'room_types', label: 'Chambres', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.roomTypes.map((r) => joinParts([r.name, r.quantity && `×${r.quantity}`, r.capacityAdults && `${r.capacityAdults} pers.`], ' '))) },
   { id: 'meeting_rooms_count', label: 'Salles de séminaire', group: 'capacite', clearance: 'public', value: (d) => (d.operations.meetingRooms.length ? String(d.operations.meetingRooms.length) : '') },

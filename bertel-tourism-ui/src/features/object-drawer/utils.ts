@@ -1176,7 +1176,13 @@ export function parseMedia(raw: Record<string, unknown>): MediaItem[] {
 
 export function parseLegal(raw: Record<string, unknown>): LegalItem[] {
   return readArray(raw.legal_records).map((record) => {
-    const explicit = readBoolean(record.is_public);
+    // is_public lives on the referenced ref_legal_type, nested under `type` (get_object_resource's
+    // 'legal_records' block: 'type', jsonb_build_object(..., 'is_public', rlt.is_public, ...)) — never
+    // top-level on the object_legal row itself. A bare `record.is_public` read is always undefined
+    // against real payloads, silently defaulting every legal record to public (§208 discovery: this
+    // parser disagreed with object-workspace-parser.ts's correct `typeRecord.is_public` read for the
+    // same table). Top-level kept as a harmless fallback in case a future producer flattens it.
+    const explicit = readBoolean(readRecord(record.type).is_public ?? record.is_public);
     return {
       label: readNamedValue(record.type, readString(record.label, 'Document legal')),
       status: readString(record.status, 'Statut inconnu'),

@@ -28,6 +28,14 @@
 --   sous-requête de ANY — 42883) ; REVOKE FROM PUBLIC sur toute fonction neuve.
 -- Idempotent (CREATE OR REPLACE / IF NOT EXISTS / DROP POLICY IF EXISTS).
 -- Recette de retour arrière : voir le bloc en fin de fichier.
+-- Limites ASSUMÉES et écrites là où elles portent (ne pas les redécouvrir en audit) :
+--   · journal « immuable » — voir §2, bloc REVOKE : les privilèges de table ferment
+--     authenticated ET service_role, mais AUCUN trigger append-only ne protège du
+--     propriétaire de la table ni d'un superuser PostgreSQL ;
+--   · export_run_id / batch_index / batch_count sont des ASSERTIONS DE L'APPELANT
+--     (COMMENT ON COLUMN §2) — corrélation, jamais preuve ;
+--   · une tentative INTÉGRALEMENT refusée ne laisse AUCUNE ligne — voir §3, bloc
+--     FORBIDDEN.
 
 BEGIN;
 
@@ -39,6 +47,19 @@ BEGIN;
 --    bras est auth.role() IN ('service_role','admin')).
 --    auth.uid() est NULL hors contexte HTTP ET en service-role ⇒ le CASE
 --    court-circuite AVANT toute lecture (sonde paresseuse, §204).
+--
+--    ⚠ SOURCE AUTORITAIRE de la règle « qui voit les coordonnées d'un acteur ».
+--    Elle porte le NOM de la règle ; tout consommateur PAR FICHE l'appelle
+--    (le préflight §1bis, la tâche 13). Une SEULE autre formulation existe dans
+--    tout le dépôt : la forme ENSEMBLISTE du périmètre dans api.export_actor_contacts
+--    (§3, bras `ELSE`). Ce n'est PAS un miroir libre, c'est une duplication
+--    DÉLIBÉRÉE et bornée, justifiée par §204 : l'export réduit jusqu'à 500 ids et
+--    un scalaire SECURITY DEFINER par ligne y est un coût réel, alors que la forme
+--    ensembliste ne planifie/exécute le périmètre qu'une fois (InitPlan).
+--    ⇒ Toute évolution de la règle se fait ICI D'ABORD, puis dans cette unique
+--      forme ensembliste. Le test permanent (tâche 14) doit asserter que les deux
+--      rendent le MÊME ensemble sur les mêmes personas — sans cette assertion, la
+--      divergence ne lève aucune erreur : elle donne juste une réponse fausse.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.can_read_actor_contacts(p_object_id text)
 RETURNS boolean
@@ -67,6 +88,9 @@ GRANT  EXECUTE ON FUNCTION api.can_read_actor_contacts(text) TO   authenticated,
 -- service_role a EXECUTE (les legs DEFINER/INVOKER l'évaluent sous ce rôle)
 -- mais la fonction lui répond FALSE (auth.uid() NULL) — c'est le comportement voulu.
 
+COMMENT ON FUNCTION api.can_read_actor_contacts(text) IS
+  'SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d''un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d''une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l''éditeur. UNE seule autre formulation existe : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204) — faire évoluer les deux ensemble.';
+
 -- ---------------------------------------------------------------------
 -- 1bis. Préflight des capacités acteur (R2) : la modale d'export demande au
 --    SERVEUR si la sélection donne accès à l'identité / aux coordonnées des
@@ -75,8 +99,23 @@ GRANT  EXECUTE ON FUNCTION api.can_read_actor_contacts(text) TO   authenticated,
 --    accessible ⇒ true : les fiches refusées resteront vides, sélection mixte
 --    assumée). ERGONOMIE seulement : export_actor_contacts refait les contrôles
 --    fiche par fiche — ce préflight n'est jamais une garde.
---    Mêmes prédicats que les gates réels : identité ⇔ extended OU lien public
---    (l'arm du leg actors) ; coordonnées ⇔ can_read_actor_contacts.
+--    Les deux prédicats sont APPELÉS, jamais retranscrits :
+--      · coordonnées  = api.can_read_actor_contacts(id) — la source autoritaire (§1) ;
+--      · identité     = le leg `actors` de la lecture de fiche, c.-à-d. périmètre
+--        étendu OU lien acteur public — ce dernier bras UNIQUEMENT sur une fiche que
+--        l'appelant peut réellement lire.
+--    ⚠ §36 — TOUTE entrée est intersectée avec le périmètre de l'appelant. Sans la
+--    conjonction `IN (SELECT api.current_user_readable_object_ids())`, le bras
+--    « lien public » serait la seule sonde du fichier à répondre sur un id NON lu :
+--    la fonction est PostgREST-exécutable par tout `authenticated` et les ids sont
+--    structurés donc devinables ⇒ un appel à un id fabriqué rendrait un booléen
+--    révélant l'existence d'un lien acteur public sur une fiche draft/hidden/archived.
+--    C'est en outre ce que fait le vrai leg : il ne s'exécute QUE sur une fiche déjà
+--    atteinte (published ∪ extended) ; sans la conjonction, l'offre serait plus large
+--    que la garde qu'elle prétend refléter et les colonnes reviendraient vides.
+--    Coût (§204) : la sonde par fiche s'arrête au PREMIER id qui répond TRUE ; le pire
+--    cas (sélection entièrement refusée) est N évaluations, borné par la taille de la
+--    sélection. Appel one-shot à l'ouverture de la modale, hors chemin chaud.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.export_actor_capabilities(p_object_ids text[])
 RETURNS jsonb
@@ -87,30 +126,30 @@ AS $$
     SELECT DISTINCT btrim(t.id) AS id
       FROM unnest(p_object_ids) AS t(id)
      WHERE btrim(coalesce(t.id, '')) <> ''
-  ),
-  super AS (
-    SELECT EXISTS (SELECT 1 FROM public.app_user_profile p
-                    WHERE p.id = (SELECT auth.uid())
-                      AND p.role IN ('owner','super_admin')) AS ok
   )
   SELECT jsonb_build_object(
     'actor_identity_available',
-      COALESCE((SELECT ok FROM super), FALSE)
-      OR EXISTS (
+      EXISTS (
         SELECT 1 FROM ids i
+         -- ensembles d'abord (un seul InitPlan chacun), sonde par fiche en dernier
          WHERE i.id IN (SELECT api.current_user_extended_object_ids())
-            OR EXISTS (SELECT 1 FROM public.actor_object_role aor
-                        WHERE aor.object_id = i.id AND aor.visibility = 'public')),
+            OR (i.id IN (SELECT api.current_user_readable_object_ids())
+                AND EXISTS (SELECT 1 FROM public.actor_object_role aor
+                             WHERE aor.object_id = i.id AND aor.visibility = 'public'))
+            -- qui voit les coordonnées voit a fortiori l'identité (couvre le superuser)
+            OR COALESCE(api.can_read_actor_contacts(i.id), FALSE)),
     'actor_contacts_available',
-      COALESCE((SELECT ok FROM super), FALSE)
-      OR EXISTS (
+      EXISTS (
         SELECT 1 FROM ids i
-         WHERE i.id IN (SELECT api.current_user_crm_object_ids()))
+         WHERE COALESCE(api.can_read_actor_contacts(i.id), FALSE))
   );
 $$;
 
 REVOKE ALL     ON FUNCTION api.export_actor_capabilities(text[]) FROM PUBLIC, anon, service_role;
 GRANT  EXECUTE ON FUNCTION api.export_actor_capabilities(text[]) TO   authenticated;
+
+COMMENT ON FUNCTION api.export_actor_capabilities(text[]) IS
+  'Préflight ERGONOMIQUE (§208 R2) de la modale d''export : deux booléens agrégés sur la sélection réelle — l''offre de colonnes acteur suit la consultation effective, pas un proxy « membre d''une ORG ». N''est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c''est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l''appelant (§36) — aucun oracle d''existence sur un id non lu.';
 
 -- ---------------------------------------------------------------------
 -- 1ter. R2.1 — durcissement du search_path des feuilles d'autorisation dont
@@ -128,14 +167,29 @@ ALTER FUNCTION api.current_user_crm_object_ids()
   SET search_path = pg_catalog, public, api, auth, pg_temp;
 ALTER FUNCTION api.current_user_extended_object_ids()
   SET search_path = pg_catalog, public, api, auth, pg_temp;
+-- 3ᵉ feuille, ajoutée avec la conjonction §36 du préflight ci-dessus : son corps lit
+-- `object` SANS qualification, donc sous la forme faible (`public, api, auth`) un
+-- `CREATE TEMP TABLE object` par n'importe quel `authenticated` injecterait des ids
+-- arbitraires dans l'ensemble « lisible » — exactement l'oracle que la conjonction
+-- ferme. Sa SOURCE (migration_cards_batch_authorize_definer.sql, étape 8j) n'est PAS
+-- modifiée : 8j s'applique AVANT ce fichier, donc une base fraîche naît durcie par cet
+-- ALTER. ⚠ Caveat à consigner au runbook (tâche 15) : rejouer 8j sur une base vive
+-- dé-durcit la fonction — il faut alors rejouer cet ALTER.
+ALTER FUNCTION api.current_user_readable_object_ids()
+  SET search_path = pg_catalog, public, api, auth, pg_temp;
 
 -- ---------------------------------------------------------------------
--- 2. Journal IMMUABLE des exports de coordonnées (modèle : object_deletion_log).
+-- 2. Journal des exports de coordonnées (modèle : object_deletion_log).
 --    Pas de FK vers object ni actor : la ligne survit à rpc_delete_object et à
 --    l'effacement RGPD art. 17. AUCUNE VALEUR de coordonnée n'y entre jamais —
 --    qui, quand, combien, quels ids, quels TYPES de canaux. Pas les valeurs.
+--    Relations SCHÉMA-QUALIFIÉES ici aussi : ce fichier ne pose aucun search_path
+--    de session, donc une DDL nue atterrirait dans le premier schéma de la session
+--    qui l'applique — alors que le corps du RPC écrit, lui, dans
+--    `public.actor_contact_export_log`. Ceinture + bretelles, y compris sur l'objet
+--    que ce fichier crée lui-même.
 -- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS actor_contact_export_log (
+CREATE TABLE IF NOT EXISTS public.actor_contact_export_log (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   -- R1 : tous les LOTS d'un même export logique partagent export_run_id (fourni
   -- par le client, sinon généré) ; batch_index/batch_count situent le lot.
@@ -149,7 +203,10 @@ CREATE TABLE IF NOT EXISTS actor_contact_export_log (
   format          TEXT,
   object_count    INT  NOT NULL DEFAULT 0,
   actor_count     INT  NOT NULL DEFAULT 0,
-  channel_count   INT  NOT NULL DEFAULT 0,
+  -- Nommée d'après CE qu'elle compte (cf. COMMENT ON COLUMN) : une LIGNE de la même
+  -- table ne doit pas porter deux conventions de comptage. object_count/actor_count
+  -- sont des comptages DISTINCTS ; celle-ci compte les coordonnées ÉMISES.
+  emitted_contact_count INT NOT NULL DEFAULT 0,
   object_ids      TEXT[] NOT NULL DEFAULT '{}',
   denied_object_ids TEXT[] NOT NULL DEFAULT '{}',
   actor_ids       UUID[] NOT NULL DEFAULT '{}',
@@ -162,23 +219,50 @@ CREATE TABLE IF NOT EXISTS actor_contact_export_log (
   report          JSONB
 );
 
-COMMENT ON TABLE actor_contact_export_log IS
-  'Journal immuable des exports de coordonnées d''acteur (§208). Écrit uniquement par api.export_actor_contacts ; aucune valeur de coordonnée n''y figure ; survit à la suppression des objets/acteurs (pas de FK). export_run_id relie les lots d''un même export ; org_object_ids/org_attributions disent quelle ORG publisher a autorisé quoi (multi-ORG).';
+-- Convergence : une base ayant appliqué une version ANTÉRIEURE de ce fichier porte
+-- encore l'ancien nom `channel_count` — que `CREATE TABLE IF NOT EXISTS` ne corrigerait
+-- jamais (il ne fait rien sur une table existante). Renommage guardé ⇒ le fichier reste
+-- réellement idempotent, y compris contre lui-même.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+              WHERE a.attrelid = 'public.actor_contact_export_log'::regclass
+                AND a.attname = 'channel_count' AND NOT a.attisdropped)
+     AND NOT EXISTS (SELECT 1 FROM pg_catalog.pg_attribute a
+              WHERE a.attrelid = 'public.actor_contact_export_log'::regclass
+                AND a.attname = 'emitted_contact_count' AND NOT a.attisdropped)
+  THEN
+    ALTER TABLE public.actor_contact_export_log
+      RENAME COLUMN channel_count TO emitted_contact_count;
+  END IF;
+END$$;
 
-CREATE INDEX IF NOT EXISTS idx_acel_at    ON actor_contact_export_log (performed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_acel_by    ON actor_contact_export_log (performed_by, performed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_acel_run   ON actor_contact_export_log (export_run_id);
-CREATE INDEX IF NOT EXISTS idx_acel_actor ON actor_contact_export_log USING GIN (actor_ids);
+COMMENT ON TABLE public.actor_contact_export_log IS
+  'Journal des exports de coordonnées d''acteur (§208). Écrit uniquement par api.export_actor_contacts ; aucune valeur de coordonnée n''y figure ; survit à la suppression des objets/acteurs (pas de FK). export_run_id relie les lots d''un même export ; org_object_ids/org_attributions disent quelle ORG publisher a autorisé quoi (multi-ORG). IMMUABILITÉ — portée exacte : ni PUBLIC, ni anon, ni authenticated, ni service_role ne peuvent écrire (privilèges de table retirés ; ils ne sont PAS contournés par le BYPASSRLS de service_role). AUCUN trigger append-only : le propriétaire de la table et un superuser PostgreSQL peuvent encore modifier ou supprimer une ligne. FIDÉLITÉ — performed_by / performed_at / object_ids / denied_object_ids / org_object_ids sont dérivés du SERVEUR et font foi ; export_run_id / batch_index / batch_count sont des assertions de l''appelant (corrélation seulement). Une tentative INTÉGRALEMENT refusée ne laisse aucune ligne (cf. api.export_actor_contacts).';
 
-ALTER TABLE actor_contact_export_log ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS actor_contact_export_log_read ON actor_contact_export_log;
+COMMENT ON COLUMN public.actor_contact_export_log.export_run_id IS
+  'ASSERTION DE L''APPELANT, non vérifiée : sert à recoller les lots d''un même export logique. Un appelant peut fournir l''identifiant d''une autre campagne. Non évidentiel — l''imputabilité repose sur performed_by/performed_at/object_ids, dérivés du serveur.';
+COMMENT ON COLUMN public.actor_contact_export_log.batch_index IS
+  'ASSERTION DE L''APPELANT, non vérifiée (seule la cohérence 1 <= index <= count est contrôlée). Cinquante appels déclarant chacun batch_index=1/batch_count=1 se reconstruisent en cinquante exports d''un lot, pas en un balayage. Non évidentiel.';
+COMMENT ON COLUMN public.actor_contact_export_log.batch_count IS
+  'ASSERTION DE L''APPELANT, non vérifiée — cf. batch_index. Non évidentiel.';
+COMMENT ON COLUMN public.actor_contact_export_log.emitted_contact_count IS
+  'Nombre de coordonnées ÉMISES dans le fichier — donc une par ligne rendue : les canaux d''un acteur sont recomptés pour CHAQUE lien acteur↔objet (la PK de actor_object_role est (actor_id, object_id, role_id), deux rôles sur une même fiche produisent deux lignes). Ce n''est PAS un nombre de canaux distincts, à la différence de object_count/actor_count qui sont des comptages DISTINCTS. Le nom dit la convention : ne pas le lire comme une métrique de volumétrie de canaux.';
+
+CREATE INDEX IF NOT EXISTS idx_acel_at    ON public.actor_contact_export_log (performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_acel_by    ON public.actor_contact_export_log (performed_by, performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_acel_run   ON public.actor_contact_export_log (export_run_id);
+CREATE INDEX IF NOT EXISTS idx_acel_actor ON public.actor_contact_export_log USING GIN (actor_ids);
+
+ALTER TABLE public.actor_contact_export_log ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS actor_contact_export_log_read ON public.actor_contact_export_log;
 -- R1 : l'admin d'ORG lit les exports où SON ORG a autorisé au moins une fiche
 -- (org_object_ids), pas seulement ceux dont l'exportateur avait son ORG active —
 -- sans quoi la politique serait ambiguë à plusieurs ORG.
 -- §39 : les appels d'autorisation sont wrappés en (select …) ⇒ un seul InitPlan.
 -- §55 : la colonne EXTERNE est table-qualifiée (une colonne nue se relierait au
 -- plus interne au prochain CREATE si une table sondée gagnait un homonyme).
-CREATE POLICY actor_contact_export_log_read ON actor_contact_export_log
+CREATE POLICY actor_contact_export_log_read ON public.actor_contact_export_log
   FOR SELECT TO authenticated USING (
     (SELECT api.is_platform_superuser())
     OR ((SELECT api.current_user_admin_rank()) IS NOT NULL
@@ -186,8 +270,24 @@ CREATE POLICY actor_contact_export_log_read ON actor_contact_export_log
   );
 -- Pas de policy INSERT/UPDATE/DELETE : seul le RPC DEFINER écrit ; par commande,
 -- jamais une policy toutes-commandes (celle-ci s'appliquerait aussi au SELECT).
-REVOKE ALL    ON actor_contact_export_log FROM PUBLIC, anon;
-GRANT  SELECT ON actor_contact_export_log TO authenticated, service_role;
+--
+-- « Immuable » doit être APPLIQUÉ, pas seulement affirmé. L'absence de policy
+-- d'écriture est un refus correct pour `authenticated` — mais `service_role` porte
+-- BYPASSRLS : la RLS ne lui oppose rien. Les privilèges de TABLE, eux, ne sont PAS
+-- contournés par BYPASSRLS ⇒ on retire explicitement l'écriture aux deux rôles
+-- clients (les privilèges par défaut de Supabase les accordent sur toute table neuve
+-- de `public`, donc le REVOKE FROM PUBLIC, anon ci-dessous ne suffit pas).
+-- TRUNCATE est inclus : il efface la preuve aussi sûrement que DELETE.
+-- Le RPC est SECURITY DEFINER et insère donc en tant que PROPRIÉTAIRE de la table
+-- (le rôle qui applique ce fichier) : il conserve INSERT, et le propriétaire n'est
+-- pas soumis à la RLS de sa table (pas de FORCE ROW LEVEL SECURITY).
+-- LIMITE ASSUMÉE : aucun trigger append-only. Ce propriétaire, et tout superuser
+-- PostgreSQL, peuvent encore modifier ou supprimer une ligne. Le journal est
+-- inviolable POUR LES RÔLES CLIENTS, pas contre un accès administrateur à la base.
+REVOKE ALL    ON public.actor_contact_export_log FROM PUBLIC, anon;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE
+              ON public.actor_contact_export_log FROM authenticated, service_role;
+GRANT  SELECT ON public.actor_contact_export_log TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 3. L'export : autorise-une-fois (§36 — la liste d'ids du client n'est jamais
@@ -216,7 +316,7 @@ DECLARE
   v_denied    text[];
   v_rows      jsonb;
   v_actors    uuid[];
-  v_channels  bigint;
+  v_emitted   bigint;   -- coordonnées ÉMISES (une par ligne rendue), pas canaux distincts
   v_kinds     text[];
   v_org_ids   text[];
   v_org_attr  jsonb;
@@ -259,6 +359,15 @@ BEGIN
   v_org := api.current_user_org_id();
 
   -- Autorise-une-fois : on réduit la demande au périmètre de l'appelant, PAR FICHE.
+  -- ⚠ Ce bloc est la forme ENSEMBLISTE de api.can_read_actor_contacts (§1), qui reste
+  -- la définition AUTORITAIRE de la règle. La duplication est délibérée et bornée à
+  -- ces deux endroits : §204 — la simple présence d'un scalaire SECURITY DEFINER
+  -- évalué par ligne sur jusqu'à 500 ids est un coût réel, alors qu'ici le périmètre
+  -- n'est calculé qu'une fois (InitPlan). Ce n'est PAS « un miroir » libre de dériver :
+  -- ajouter un bras à la garde SANS l'ajouter ici change ce que le préflight offre et
+  -- ce que la tâche 13 autorise, sans changer ce que l'export laisse réellement sortir
+  -- — aucune erreur ne se lève, la réponse est simplement fausse. La tâche 14 doit
+  -- asserter l'égalité des deux ensembles sur les mêmes personas.
   IF v_super THEN
     SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
       FROM unnest(v_ids) AS t(id)
@@ -274,6 +383,14 @@ BEGIN
   SELECT COALESCE(array_agg(t.id), '{}') INTO v_denied
     FROM unnest(v_ids) AS t(id)
    WHERE NOT (t.id = ANY(v_scope));
+  -- LIMITE ASSUMÉE (journal) : ce RAISE précède l'INSERT et le fait donc annuler avec
+  -- la transaction ⇒ une tentative INTÉGRALEMENT refusée ne laisse AUCUNE trace. Un
+  -- balayage d'énumération sur des fiches qu'on ne possède pas est invisible ; seules
+  -- les sélections MIXTES sont journalisées (avec denied_object_ids). Pour un journal
+  -- d'accès, « tenté et refusé » est souvent la ligne la plus intéressante — la
+  -- consigner exigerait d'écrire hors transaction (dblink / autonomous / trigger sur un
+  -- log d'échec), mécanisme volontairement NON introduit ici. Décision explicite, pas
+  -- un oubli : à rouvrir si l'exigence d'audit le demande.
   IF coalesce(array_length(v_scope, 1), 0) = 0 THEN
     RAISE EXCEPTION 'FORBIDDEN' USING ERRCODE = '42501';
   END IF;
@@ -291,10 +408,14 @@ BEGIN
            SELECT uom.org_object_id FROM public.user_org_membership uom
             WHERE uom.user_id = v_caller AND uom.is_active = TRUE));
 
+  -- n_channels = tous les canaux de l'acteur, répétés sur CHAQUE ligne (une par lien
+  -- acteur↔objet↔rôle) : leur somme est donc exactement le nombre de coordonnées
+  -- ÉMISES dans le fichier. C'est la convention que porte le nom de la colonne —
+  -- object_count/actor_count, eux, sont DISTINCTS.
   SELECT COALESCE(jsonb_agg(r.line ORDER BY r.object_id, r.is_primary DESC, r.display_name), '[]'::jsonb),
          COALESCE(array_agg(DISTINCT r.actor_id), '{}'::uuid[]),
          COALESCE(sum(r.n_channels), 0)
-    INTO v_rows, v_actors, v_channels
+    INTO v_rows, v_actors, v_emitted
     FROM (
       SELECT aor.object_id, a.id AS actor_id, a.display_name, aor.is_primary,
              COALESCE(ch.n, 0) AS n_channels,
@@ -343,13 +464,13 @@ BEGIN
   INSERT INTO public.actor_contact_export_log(
     id, export_run_id, batch_index, batch_count,
     performed_by, performed_org, reason, format,
-    object_count, actor_count, channel_count,
+    object_count, actor_count, emitted_contact_count,
     object_ids, denied_object_ids, actor_ids, channel_kinds, identity_fields,
     org_object_ids, org_attributions, report)
   VALUES (
     v_log_id, v_run_id, p_batch_index, p_batch_count,
     v_caller, v_org, btrim(p_reason), lower(p_format),
-    coalesce(array_length(v_scope, 1), 0), coalesce(array_length(v_actors, 1), 0), v_channels,
+    coalesce(array_length(v_scope, 1), 0), coalesce(array_length(v_actors, 1), 0), v_emitted,
     v_scope, v_denied, v_actors, v_kinds,
     ARRAY['display_name','first_name','last_name','role','note','validity'],
     v_org_ids, v_org_attr,
@@ -369,7 +490,8 @@ BEGIN
     'denied_object_ids',     to_jsonb(v_denied),
     'object_count',          coalesce(array_length(v_scope, 1), 0),
     'actor_count',           coalesce(array_length(v_actors, 1), 0),
-    'channel_count',         v_channels,
+    -- même convention que la colonne du journal : coordonnées ÉMISES, pas canaux distincts
+    'emitted_contact_count', v_emitted,
     'rows',                  v_rows);
 END;
 $$;
@@ -378,6 +500,9 @@ $$;
 -- est imputable à une personne, jamais à une clé.
 REVOKE ALL     ON FUNCTION api.export_actor_contacts(text[], text, text, uuid, int, int) FROM PUBLIC, anon, service_role;
 GRANT  EXECUTE ON FUNCTION api.export_actor_contacts(text[], text, text, uuid, int, int) TO   authenticated;
+
+COMMENT ON FUNCTION api.export_actor_contacts(text[], text, text, uuid, int, int) IS
+  'Export JOURNALISÉ des coordonnées d''acteur (§208), seule voie autorisée : autorise-une-fois (§36 — la liste d''ids du client n''est jamais de confiance, elle est réduite fiche par fiche au périmètre de l''appelant), finalité validée serveur (5–500 car.), format xlsx|csv, dédoublonnage serveur, plafond dur de 500 ids par appel, puis écriture d''une ligne dans public.actor_contact_export_log DANS LA MÊME TRANSACTION que la lecture. Sélection mixte : sert l''autorisé et NOMME le refusé (denied_object_ids) ; tout-refusé ⇒ FORBIDDEN (42501) et — limite assumée — aucune ligne de journal. Pas de GRANT à service_role : un export de PII est imputable à une personne. Le bras de périmètre est la forme ensembliste de api.can_read_actor_contacts (duplication délibérée §204) : faire évoluer les deux ensemble.';
 
 -- ---------------------------------------------------------------------
 -- 4. Hygiène §208 : l'EXECUTE de get_object_resources_batch n'était porté que
@@ -401,14 +526,24 @@ NOTIFY pgrst, 'reload schema';
 --   DROP FUNCTION IF EXISTS api.export_actor_contacts(text[], text, text, uuid, int, int);
 --   DROP FUNCTION IF EXISTS api.export_actor_capabilities(text[]);
 --   DROP FUNCTION IF EXISTS api.can_read_actor_contacts(text);
---   DROP POLICY   IF EXISTS actor_contact_export_log_read ON actor_contact_export_log;
+--   DROP POLICY   IF EXISTS actor_contact_export_log_read ON public.actor_contact_export_log;
 --   -- ⚠ Le journal est une trace RGPD : ne le supprimer que si l'on assume la
 --   --   perte de la preuve des exports déjà réalisés.
---   -- DROP TABLE IF EXISTS actor_contact_export_log;
+--   -- DROP TABLE IF EXISTS public.actor_contact_export_log;
+--   -- Si la table est CONSERVÉE alors que le RPC est retiré, ses privilèges retirés
+--   --   (INSERT/UPDATE/DELETE/TRUNCATE à authenticated et service_role) le restent :
+--   --   c'est l'état voulu (personne ne doit écrire sans passer par le RPC). Pour
+--   --   revenir strictement à l'état antérieur des privilèges par défaut Supabase :
+--   --   GRANT INSERT, UPDATE, DELETE, TRUNCATE ON public.actor_contact_export_log
+--   --     TO authenticated, service_role;   -- ⚠ rouvre l'écriture du journal
+--   -- Le renommage channel_count -> emitted_contact_count :
+--   --   ALTER TABLE public.actor_contact_export_log
+--   --     RENAME COLUMN emitted_contact_count TO channel_count;   -- ⚠ nom trompeur
 --   -- Étape 1ter (search_path) : revenir à la forme faible n'a aucun intérêt de
 --   --   sécurité ; si un besoin d'iso-état l'exige :
 --   --   ALTER FUNCTION api.current_user_crm_object_ids()      SET search_path = public, api, auth;
 --   --   ALTER FUNCTION api.current_user_extended_object_ids() SET search_path = public, api, auth;
+--   --   ALTER FUNCTION api.current_user_readable_object_ids() SET search_path = public, api, auth;
 --   -- Étape 4 (hygiène batch) : GRANT EXECUTE ON FUNCTION
 --   --   api.get_object_resources_batch(text[], text[], text, jsonb) TO PUBLIC;
 --   NOTIFY pgrst, 'reload schema';

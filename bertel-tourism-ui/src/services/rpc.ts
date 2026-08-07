@@ -571,6 +571,34 @@ export async function getObjectResourcesBatch(
   });
 }
 
+/**
+ * R2 — préflight de l'offre de colonnes acteur : le SERVEUR dit si la sélection
+ * donne accès à l'identité / aux coordonnées (mêmes prédicats que les gates).
+ * ERGONOMIE seulement — la garde reste 16t, fiche par fiche. Tout échec (RPC
+ * absent avant 16t, réseau) rend {false, false} : offre fail-closed, jamais
+ * un crash ni une offre par défaut.
+ */
+export async function getExportActorCapabilities(
+  objectIds: string[],
+): Promise<{ actorIdentityAvailable: boolean; actorContactsAvailable: boolean }> {
+  const closed = { actorIdentityAvailable: false, actorContactsAvailable: false };
+  const client = requireRpcClient();
+  if (!client) return closed;
+  try {
+    const { data, error } = await client.schema('api').rpc('export_actor_capabilities', {
+      p_object_ids: objectIds,
+    });
+    if (error) return closed;
+    const payload = (data ?? {}) as Record<string, unknown>;
+    return {
+      actorIdentityAvailable: payload.actor_identity_available === true,
+      actorContactsAvailable: payload.actor_contacts_available === true,
+    };
+  } catch {
+    return closed;
+  }
+}
+
 /** Lit `payload.itinerary.track` — chaîne non vide, sinon ''. */
 function readItineraryTrackFromPayload(payload: unknown): string {
   if (!payload || typeof payload !== 'object') return '';

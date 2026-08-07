@@ -14,6 +14,7 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { usePresence } from '../../hooks/usePresence';
+import { cn } from '@/lib/utils';
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),' +
@@ -72,6 +73,7 @@ export function Modal({
   children,
   footer,
   variant = 'modal',
+  size = 'default',
 }: {
   open: boolean;
   title: string;
@@ -79,6 +81,8 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   variant?: 'modal' | 'drawer';
+  /** 'wide' = 720px (sélecteur de colonnes d'export §208) — la carte centrée par défaut fait 520px. */
+  size?: 'default' | 'wide';
 }) {
   const { shouldRender, phase } = usePresence(open, MODAL_EXIT_MS_BY_VARIANT[variant]);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -152,7 +156,10 @@ export function Modal({
     >
       <div
         ref={cardRef}
-        className={variant === 'drawer' ? 'app-modal app-modal--drawer' : 'app-modal'}
+        className={cn(
+          variant === 'drawer' ? 'app-modal app-modal--drawer' : 'app-modal',
+          size === 'wide' && 'app-modal--wide',
+        )}
         data-motion-phase={phase}
         role="dialog"
         aria-modal="true"

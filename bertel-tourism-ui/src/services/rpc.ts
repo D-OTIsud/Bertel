@@ -12,6 +12,12 @@ interface ExplorerPageInput {
   bucket: ExplorerBucketKey;
   filters: ExplorerFilters;
   langPrefs: string[];
+  /**
+   * Signal d'abandon fourni par TanStack Query. Quand l'utilisateur change de filtre,
+   * la requête devenue obsolète doit S'ARRÊTER : sans cela elle continue de consommer
+   * du CPU serveur pour un résultat que plus personne n'affichera (incident 2026-08-07).
+   */
+  signal?: AbortSignal;
 }
 
 interface ExplorerRpcPayload {
@@ -175,19 +181,22 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
   const statuses = input.filters.common.statuses;
   const pStatus = statuses.length > 0 ? statuses : null;
 
-  const { data, error } = await client.schema('api').rpc('list_object_resources_filtered_page', {
-    p_cursor: input.cursor ?? null,
-    p_lang_prefs: input.langPrefs,
-    p_page_size: pageSize,
-    p_filters: buildBucketRpcFilters(input.filters, input.bucket),
-    // Subtypes are pushed into p_types (server-side) instead of being filtered client-side,
-    // so lazy server pagination returns exactly the rows the user asked for (§125).
-    p_types: getEffectiveBackendTypesForBucket(input.filters, input.bucket),
-    p_status: pStatus,
-    p_search: input.filters.common.search || null,
-    p_track_format: 'none',
-    p_view: 'card',
-  });
+  const { data, error } = await withAbort(
+    client.schema('api').rpc('list_object_resources_filtered_page', {
+      p_cursor: input.cursor ?? null,
+      p_lang_prefs: input.langPrefs,
+      p_page_size: pageSize,
+      p_filters: buildBucketRpcFilters(input.filters, input.bucket),
+      // Subtypes are pushed into p_types (server-side) instead of being filtered client-side,
+      // so lazy server pagination returns exactly the rows the user asked for (§125).
+      p_types: getEffectiveBackendTypesForBucket(input.filters, input.bucket),
+      p_status: pStatus,
+      p_search: input.filters.common.search || null,
+      p_track_format: 'none',
+      p_view: 'card',
+    }),
+    input.signal,
+  );
 
   if (error) {
     throw error;
@@ -233,6 +242,22 @@ async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: E
   } while (cursor);
 
   return cards;
+}
+
+/**
+ * Branche le signal d'abandon de TanStack Query sur un builder PostgREST.
+ *
+ * `abortSignal` n'existe que sur le builder supabase-js ; le typage du retour de `.rpc()`
+ * est un `PromiseLike` étendu, d'où la garde souple plutôt qu'un cast aveugle : si une
+ * montée de version retirait la méthode, on dégrade en « pas d'annulation » au lieu de
+ * planter la requête.
+ */
+function withAbort<T extends PromiseLike<unknown>>(builder: T, signal?: AbortSignal): T {
+  if (!signal) {
+    return builder;
+  }
+  const withSignal = builder as T & { abortSignal?: (s: AbortSignal) => T };
+  return typeof withSignal.abortSignal === 'function' ? withSignal.abortSignal(signal) : builder;
 }
 
 async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
@@ -310,7 +335,10 @@ function normalizeMarkerCards(rows: unknown): ObjectCard[] {
 
 // No langPrefs: markers carry the canonical object name (no i18n pick) — keeping the
 // signature lean. The map hover/popup uses the name as-is, same as the legacy card path.
-export async function listObjectMarkers(filters: ExplorerFilters): Promise<ObjectCard[]> {
+export async function listObjectMarkers(
+  filters: ExplorerFilters,
+  signal?: AbortSignal,
+): Promise<ObjectCard[]> {
   const session = useSessionStore.getState();
   const client = requireRpcClient();
   const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
@@ -331,12 +359,15 @@ export async function listObjectMarkers(filters: ExplorerFilters): Promise<Objec
     if (types.length === 0) {
       return [] as ObjectCard[];
     }
-    const { data, error } = await client.schema('api').rpc('list_object_markers', {
-      p_types: types,
-      p_status: pStatus,
-      p_filters: buildBucketRpcFilters(filters, bucket),
-      p_search: filters.common.search || null,
-    });
+    const { data, error } = await withAbort(
+      client.schema('api').rpc('list_object_markers', {
+        p_types: types,
+        p_status: pStatus,
+        p_filters: buildBucketRpcFilters(filters, bucket),
+        p_search: filters.common.search || null,
+      }),
+      signal,
+    );
     if (error) {
       throw error;
     }
@@ -379,6 +410,7 @@ export async function fetchExplorerCardsPage(
   filters: ExplorerFilters,
   langPrefs: string[],
   pageParam: ExplorerBucketCursorMap,
+  signal?: AbortSignal,
 ): Promise<ExplorerCardsPage> {
   const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
   const cursors: ExplorerBucketCursorMap = {};
@@ -403,6 +435,7 @@ export async function fetchExplorerCardsPage(
       pageSize: EXPLORER_BUCKET_PAGE_SIZE,
       filters,
       langPrefs,
+      signal,
     });
     return { bucket, page };
   });

@@ -2,6 +2,7 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClie
 import { useMemo } from 'react';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
+import { useDebouncedValue } from './useDebouncedValue';
 import { listExplorerReferences } from '../services/explorer-reference';
 import { listLocationReferenceOptions } from '../services/location-reference';
 import {
@@ -129,6 +130,12 @@ function useExplorerFilters() {
   );
 }
 
+/**
+ * Pause avant d'interroger le serveur sur la recherche. Même valeur que l'annuaire CRM
+ * (`CrmAnnuaire.SEARCH_DEBOUNCE_MS`) : une seule doctrine de frappe dans l'application.
+ */
+const SEARCH_DEBOUNCE_MS = 250;
+
 // Shared, role-gated filter snapshot used by BOTH the lazy card list and the
 // map markers query, so the two surfaces always show the same set. Embedding the
 // resolved statuses in the object means the React-Query cache key reflects the
@@ -140,6 +147,17 @@ function useExplorerFilters() {
 function useExplorerQueryFilters() {
   const filters = useExplorerFilters();
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  // Incident 2026-08-07 — la recherche est le SEUL filtre qui change caractère par
+  // caractère, et elle est la plus chère : un préfixe intermédiaire (« in », « ini »…)
+  // ne trouve rien en plein texte, ce qui arme le repli flou (§197/§199). Comme chaque
+  // requête émet une RPC PAR BUCKET (7 quand aucun n'est sélectionné), taper un mot de
+  // dix lettres lançait ~140 requêtes en deux secondes et affamait l'instance : toutes
+  // les RPC — y compris celles sans rapport avec la recherche — tombaient alors en
+  // `statement timeout` (8 s, rôle authenticated), soit 500 côté PostgREST.
+  // On temporise ICI, au point de convergence des deux requêtes, et pas dans le champ :
+  // le store reste l'unique source du texte affiché, et aucune surface d'appel ne peut
+  // contourner la garde. Les autres filtres (clic sur une puce) restent instantanés.
+  const debouncedSearch = useDebouncedValue(filters.common.search, SEARCH_DEBOUNCE_MS);
 
   return useMemo(() => {
     const effectiveStatuses = resolveExplorerStatuses(filters.common.statuses, canEditObjects);
@@ -147,6 +165,7 @@ function useExplorerQueryFilters() {
       ...filters,
       common: {
         ...filters.common,
+        search: debouncedSearch,
         statuses: effectiveStatuses,
         // §204 — le remplissage est réservé aux éditeurs. Masquer le groupe ne
         // suffit pas : l'état survivrait à une URL partagée ou à un changement
@@ -158,7 +177,7 @@ function useExplorerQueryFilters() {
         missingEssentialsAny: canEditObjects ? filters.common.missingEssentialsAny : [],
       },
     };
-  }, [canEditObjects, filters]);
+  }, [canEditObjects, debouncedSearch, filters]);
 }
 
 // §125 — lazy, server-paginated card list. Replaces the eager all-pages fetch +
@@ -171,7 +190,11 @@ export function useExplorerCardsQuery() {
 
   const query = useInfiniteQuery({
     queryKey: ['explorer-cards', queryFilters, langPrefs],
-    queryFn: ({ pageParam }) => fetchExplorerCardsPage(queryFilters, langPrefs, pageParam),
+    // Le `signal` va jusqu'à supabase-js : une requête rendue obsolète par un
+    // changement de filtre est ABANDONNÉE au lieu d'aller au bout. Sans lui, chaque
+    // requête dépassée continue de consommer du CPU serveur pour un résultat que
+    // personne n'affichera — c'est ce qui transforme une rafale de filtres en famine.
+    queryFn: ({ pageParam, signal }) => fetchExplorerCardsPage(queryFilters, langPrefs, pageParam, signal),
     initialPageParam: {} as ExplorerBucketCursorMap,
     getNextPageParam: (lastPage) =>
       explorerCardsHasNextPage(queryFilters, lastPage.cursors) ? lastPage.cursors : undefined,
@@ -217,7 +240,7 @@ export function useExplorerMarkersQuery() {
   return useQuery({
     // langPrefs kept in the key for cache correctness even though markers are lang-agnostic today.
     queryKey: ['explorer-markers', queryFilters, langPrefs],
-    queryFn: () => listObjectMarkers(queryFilters),
+    queryFn: ({ signal }) => listObjectMarkers(queryFilters, signal),
     placeholderData: keepPreviousData,
   });
 }

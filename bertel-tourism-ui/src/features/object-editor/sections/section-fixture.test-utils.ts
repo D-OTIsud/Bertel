@@ -359,6 +359,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
       actorWriteUnavailableReason: null,
       actorConsentUnavailableReason: null,
       relatedObjectWriteUnavailableReason: null,
+      actorNoteWriteUnavailableReason: null,
     },
     memberships: {
       campaignOptions: [{ id: 'c2026', code: '2026', label: 'Campagne 2026' }],

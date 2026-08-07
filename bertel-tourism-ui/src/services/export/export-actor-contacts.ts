@@ -100,6 +100,20 @@ function toRow(raw: Record<string, unknown>): ActorContactsRow {
 }
 
 /**
+ * Corrélateur d'un export multi-lots, partagé par toutes ses lignes de journal.
+ *
+ * `crypto.randomUUID` n'existe QUE en contexte sécurisé (et pas avant Safari 15.4) : en HTTP
+ * simple il vaut `undefined` et l'export mourait sur un `TypeError` illisible, SANS fichier —
+ * panne qu'aucun test ne pouvait voir (jest.setup.ts polyfille la méthode). D'où le repli.
+ * La valeur est une ASSERTION DE L'APPELANT servant à recoller les lots entre eux, jamais une
+ * preuve : n'importe quelle chaîne suffisamment peu collisionnante convient (pas de dépendance
+ * crypto pour ça). Le journal serveur, lui, est la seule pièce probante.
+ */
+function newExportRunId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
+/**
  * §208/R1 — SEULE voie de lecture des coordonnées d'acteur pour l'export : l'appel
  * journalisé api.export_actor_contacts (16t, via callExportActorContactsRpc). Les colonnes
  * requiresPurpose du registre ne lisent QUE le résultat de cette fonction — jamais la fiche
@@ -122,7 +136,7 @@ export async function exportActorContacts(
   }
   const size = opts.batchSize ?? ACTOR_EXPORT_BATCH;
   const clean = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
-  const exportRunId = crypto.randomUUID();
+  const exportRunId = newExportRunId();
   const batchCount = Math.max(1, Math.ceil(clean.length / size));
 
   const rows = new Map<string, ActorContactsRow[]>();

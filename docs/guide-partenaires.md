@@ -209,7 +209,7 @@ La fiche `data` contient l'ensemble des données publiques : identité, descript
 | `room_types` + `meeting_rooms` | Chambres et salles de séminaire | Hébergement / MICE |
 | `places` | Sous-lieux | selon la fiche |
 
-Un exemple de réponse détail complet et réel est fourni dans le contrat OpenAPI (`openapi.json`) et la collection Postman.
+Un exemple de réponse détail complet est fourni dans le contrat OpenAPI (`openapi.json`) et la collection Postman. Il est repris d'une capture réelle, à une exception près : le bloc `actors` y est **illustratif** (identifiants fabriqués) — il montre la FORME d'un acteur rédigé (§208) ; sur cette fiche, un appel partenaire reçoit en réalité `"actors": []`.
 
 **Acteurs (`actors`).** Depuis §208, `contacts` est vide (`[]`) et `contacts_restricted` vaut `true` pour les appels partenaires : les coordonnées personnelles des acteurs (téléphone, e-mail, adresse) ne sortent plus par l'API publique. `first_name`, `last_name`, `gender` et `note` sortent également à `null` dans ce cas. Les contacts de l'ÉTABLISSEMENT (bloc racine `contacts`) sont inchangés.
 

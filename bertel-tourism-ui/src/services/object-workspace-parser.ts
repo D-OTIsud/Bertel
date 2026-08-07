@@ -900,6 +900,15 @@ export interface ObjectWorkspaceRelationshipsModule {
   actorWriteUnavailableReason: string | null;
   actorConsentUnavailableReason: string | null;
   relatedObjectWriteUnavailableReason: string | null;
+  /**
+   * §208 — motif (ou `null`) pour lequel la NOTE d'un lien prestataire n'est pas modifiable sur
+   * CETTE fiche. `contacts_restricted` est un verdict PAR APPELANT + PAR FICHE
+   * (api.can_read_actor_contacts), jamais par ligne : le résoudre UNE fois ici est la seule forme
+   * correcte — l'échantillonner sur une ligne quelconque ne dit rien d'un lien pas encore
+   * enregistré. Forme « …UnavailableReason » comme ses voisins : le motif EST le texte affiché,
+   * donc il ne peut pas mentir sur la raison. Voir `deriveActorNoteWriteUnavailableReason`.
+   */
+  actorNoteWriteUnavailableReason: string | null;
 }
 
 export interface ObjectWorkspaceMembershipScopeOption {
@@ -2863,6 +2872,38 @@ function parseWorkspaceRelatedObject(
   };
 }
 
+/** Motif affiché quand le serveur A dit que les notes prestataire sont réservées à l'ORG éditrice. */
+export const ACTOR_NOTE_RESTRICTED_REASON =
+  "Réservé aux membres de l'organisation éditrice — non modifiable ici.";
+/**
+ * Motif affiché quand le payload ne porte AUCUN verdict (fiche sans aucun lien acteur) : le
+ * serveur n'émet `contacts_restricted` que SUR les lignes, donc un tableau vide ne dit rien.
+ */
+export const ACTOR_NOTE_UNKNOWN_REASON =
+  "Le serveur n'a pas encore indiqué si les notes de prestataire de cette fiche vous sont accessibles — "
+  + "la note sera modifiable après enregistrement du rattachement.";
+
+/**
+ * §208 — verdict PAR FICHE (et par appelant) sur l'écriture de `actor_object_role.note`.
+ *
+ * Toutes les lignes reçues portent la MÊME valeur (un seul `api.can_read_actor_contacts` par
+ * appel de `get_object_resource`) : on la résout ici, une fois, plutôt que de l'échantillonner
+ * sur une ligne — un lien qu'on vient d'ajouter n'en a aucune à échantillonner.
+ *
+ * Fiche SANS aucun lien acteur ⇒ le payload ne porte aucun signal : FAIL-CLOSED, avec un motif
+ * qui dit « inconnu », jamais « refusé ». Écrire la note quand même serait le write-trap que
+ * §208/T13b a fermé côté serveur (la note d'un appelant restreint est REPORTÉE, donc NULL pour
+ * un lien neuf) ; afficher le motif « réservé » à un éditeur légitime serait un mensonge.
+ */
+export function deriveActorNoteWriteUnavailableReason(
+  actors: readonly ObjectWorkspaceActorLinkItem[],
+): string | null {
+  if (actors.length === 0) {
+    return ACTOR_NOTE_UNKNOWN_REASON;
+  }
+  return actors.some((actor) => actor.contactsRestricted) ? ACTOR_NOTE_RESTRICTED_REASON : null;
+}
+
 function parseWorkspaceRelationshipsModule(raw: Record<string, unknown>): ObjectWorkspaceRelationshipsModule {
   const organizationLinks = [
     ...readArray(raw.organizations).map((record, index) => parseWorkspaceOrganizationLink(record, index, 'organization')),
@@ -2921,6 +2962,7 @@ function parseWorkspaceRelationshipsModule(raw: Record<string, unknown>): Object
     actorWriteUnavailableReason: null,
     actorConsentUnavailableReason: null,
     relatedObjectWriteUnavailableReason: null,
+    actorNoteWriteUnavailableReason: deriveActorNoteWriteUnavailableReason(actors),
   };
 }
 

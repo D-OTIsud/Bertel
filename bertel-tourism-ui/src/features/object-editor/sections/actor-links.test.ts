@@ -66,15 +66,15 @@ describe('addActorLink', () => {
     expect(addActorLink([], picked, [])).toEqual([]);
   });
 
-  test('§208 — a brand-new link has no server verdict yet: defaults contactsRestricted to false on an empty fiche', () => {
-    const next = addActorLink([], picked, ROLE_OPTIONS);
-    expect(next[0].contactsRestricted).toBe(false);
-  });
+  // §208 — `contactsRestricted` = « le serveur a rédigé CETTE ligne ». Un lien neuf n'a rien
+  // subi : `false` est le fait exact. Le droit d'écrire la note est un verdict PAR FICHE porté
+  // par le module (actorNoteWriteUnavailableReason) — l'échantillonner sur une ligne quelconque
+  // laissait un write-trap ouvert sur une fiche sans aucun acteur.
+  test('§208 — a brand-new link never samples an existing row verdict (it is not the gate)', () => {
+    expect(addActorLink([], picked, ROLE_OPTIONS)[0].contactsRestricted).toBe(false);
 
-  test('§208 — a brand-new link inherits contactsRestricted from the already-loaded links (same caller+object verdict)', () => {
     const existing = [actor({ id: 'a1', roleCode: 'guide', roleId: 'r-guide', contactsRestricted: true })];
-    const next = addActorLink(existing, picked, ROLE_OPTIONS);
-    expect(next[1].contactsRestricted).toBe(true);
+    expect(addActorLink(existing, picked, ROLE_OPTIONS)[1].contactsRestricted).toBe(false);
   });
 });
 

@@ -21,7 +21,15 @@ function renderModal(over: Partial<Parameters<typeof ProviderEditModal>[0]> = {}
   const onSave = jest.fn();
   const onClose = jest.fn();
   render(
-    <ProviderEditModal open actor={actor()} roleOptions={ROLE_OPTIONS} onClose={onClose} onSave={onSave} {...over} />,
+    <ProviderEditModal
+      open
+      actor={actor()}
+      roleOptions={ROLE_OPTIONS}
+      noteUnavailableReason={null}
+      onClose={onClose}
+      onSave={onSave}
+      {...over}
+    />,
   );
   return { onSave, onClose };
 }
@@ -57,8 +65,8 @@ describe('ProviderEditModal', () => {
     expect(within(role).getByRole('option', { name: 'Ancien rôle' })).toBeInTheDocument();
   });
 
-  it('§208 — disables the Note field with a stated reason when contactsRestricted (no silent write-trap)', () => {
-    renderModal({ actor: actor({ contactsRestricted: true, note: '' }) });
+  it('§208 — disables the Note field and states the per-fiche reason (no silent write-trap)', () => {
+    renderModal({ noteUnavailableReason: "Réservé aux membres de l'organisation éditrice — non modifiable ici." });
     const note = screen.getByLabelText('Note sur Marie Guide');
     expect(note).toHaveAttribute('readonly');
     expect(screen.getByText("Réservé aux membres de l'organisation éditrice — non modifiable ici.")).toBeInTheDocument();
@@ -66,8 +74,15 @@ describe('ProviderEditModal', () => {
     expect(note).toHaveValue('');
   });
 
-  it('keeps the Note field editable and saves it when contactsRestricted is false', () => {
-    const { onSave } = renderModal({ actor: actor({ contactsRestricted: false, note: '' }) });
+  // §208 — le verdict est PAR FICHE : une ligne rédigée par le serveur ne décide de rien, et un
+  // lien NEUF (contactsRestricted false par construction) ne rouvre pas le champ pour autant.
+  it("§208 — le drapeau de la LIGNE ne pilote pas le champ : seul le verdict par fiche le fait", () => {
+    renderModal({ actor: actor({ contactsRestricted: true, note: '' }), noteUnavailableReason: null });
+    expect(screen.getByLabelText('Note sur Marie Guide')).not.toHaveAttribute('readonly');
+  });
+
+  it('keeps the Note field editable and saves it when no reason is given', () => {
+    const { onSave } = renderModal({ actor: actor({ contactsRestricted: false, note: '' }), noteUnavailableReason: null });
     const note = screen.getByLabelText('Note sur Marie Guide');
     expect(note).not.toHaveAttribute('readonly');
     fireEvent.change(note, { target: { value: 'Référent terrain' } });

@@ -319,6 +319,18 @@
 .object-editor .input.lg { height: 42px; font-size: 14.5px; font-weight: 600; }
 .object-editor .input.has-prefix { padding-left: 32px; }
 .object-editor .input.has-suffix { padding-right: 56px; }
+/* Champ honnêtement désactivé (invariant « visibly disabled with a stated reason ») : `readOnly`
+   bloque bien la frappe, mais sans style le champ reste VISUELLEMENT éditable (même bordure, même
+   fond, même caret) — le motif seul ne suffit pas. Même langage visuel que `.readout` ci-dessous
+   (fond teinté, encre secondaire) ; s'applique rétroactivement aux autres champs readOnly
+   (capacité §07 `unit`, BlockASC, note prestataire §19). Le focus reste possible : on doit pouvoir
+   lire et copier la valeur. */
+.object-editor .input[readonly],
+.object-editor .textarea[readonly] {
+  background: var(--bg-tint);
+  color: var(--ink-2);
+  cursor: not-allowed;
+}
 /* Read-only reference value (X3): visually distinct from an editable input —
    borderless, tinted, non-interactive. Used for ID OTI, object type, etc. */
 .object-editor .readout {

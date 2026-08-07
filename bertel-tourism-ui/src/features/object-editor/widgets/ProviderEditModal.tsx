@@ -11,6 +11,12 @@ interface ProviderEditModalProps {
   /** The actor link being edited (attached prestataire). */
   actor: ObjectWorkspaceActorLinkItem;
   roleOptions: WorkspaceReferenceOption[];
+  /**
+   * §208 — motif (ou `null`) pour lequel la note n'est pas saisissable sur CETTE fiche. Verdict
+   * PAR APPELANT + PAR FICHE porté par le module (`actorNoteWriteUnavailableReason`), jamais lu
+   * sur la ligne : un lien qu'on vient d'ajouter n'a pas de verdict serveur à lui.
+   */
+  noteUnavailableReason: string | null;
   onClose: () => void;
   /** Returns the patched link — the section commits it and reconciles the one-primary-per-role rule. */
   onSave: (actor: ObjectWorkspaceActorLinkItem) => void;
@@ -21,7 +27,7 @@ interface ProviderEditModalProps {
  * visibility, "principal" flag and free note. Mirrors §03/§08 (display card → modal). The
  * attach itself stays in ProviderCards (ActorPicker); this modal never changes the actor identity.
  */
-export function ProviderEditModal({ open, actor, roleOptions, onClose, onSave }: ProviderEditModalProps) {
+export function ProviderEditModal({ open, actor, roleOptions, noteUnavailableReason, onClose, onSave }: ProviderEditModalProps) {
   const [draft, setDraft] = useState(actor);
   const set = (patch: Partial<ObjectWorkspaceActorLinkItem>) => setDraft((current) => ({ ...current, ...patch }));
 
@@ -71,23 +77,18 @@ export function ProviderEditModal({ open, actor, roleOptions, onClose, onSave }:
         onChange={(isPrimary) => set({ isPrimary })}
       />
 
-      <Field
-        label="Note"
-        hint={
-          actor.contactsRestricted
-            ? "Réservé aux membres de l'organisation éditrice — non modifiable ici."
-            : undefined
-        }
-      >
+      <Field label="Note" hint={noteUnavailableReason ?? undefined}>
         <Input
           value={draft.note}
           placeholder="Rôle réel, référent, conditions…"
           aria-label={`Note sur ${actor.displayName}`}
-          readOnly={actor.contactsRestricted}
+          readOnly={noteUnavailableReason !== null}
           // §208/T13b — un appelant restreint qui enregistre voit sa note REPORTÉE par le
-          // serveur quoi qu'il envoie (api.save_object_relations) : un champ éditable ici
-          // saisirait une valeur silencieusement ignorée à l'enregistrement (write-trap).
-          onChange={actor.contactsRestricted ? () => undefined : (note) => set({ note })}
+          // serveur quoi qu'il envoie (api.save_object_relations) ; sur un lien NEUF, elle part
+          // à NULL. Un champ éditable ici saisirait une valeur silencieusement ignorée à
+          // l'enregistrement (write-trap). Le motif vient du module (verdict par fiche), jamais
+          // de `actor.contactsRestricted` — qui est muet sur un lien pas encore enregistré.
+          onChange={noteUnavailableReason !== null ? () => undefined : (note) => set({ note })}
         />
       </Field>
     </EditorModal>

@@ -1,4 +1,8 @@
-import { parseObjectWorkspace } from './object-workspace-parser';
+import {
+  ACTOR_NOTE_RESTRICTED_REASON,
+  ACTOR_NOTE_UNKNOWN_REASON,
+  parseObjectWorkspace,
+} from './object-workspace-parser';
 import type { ObjectDetail } from '../types/domain';
 
 describe('parseObjectWorkspace', () => {
@@ -811,6 +815,24 @@ describe('parseObjectWorkspace', () => {
 
     expect(byId('a1')).toMatchObject({ contactsRestricted: true });
     expect(byId('a2')).toMatchObject({ contactsRestricted: false });
+  });
+
+  // §208 — le verdict est PAR APPELANT + PAR FICHE : il se résout une fois, à la source.
+  it.each([
+    ['aucun lien acteur : pas de signal dans le payload ⇒ fail-closed « inconnu »', [] as Record<string, unknown>[], ACTOR_NOTE_UNKNOWN_REASON],
+    [
+      'liens rédigés par le serveur ⇒ motif « réservé »',
+      [{ id: 'a1', display_name: 'Mme Florence GIRARD', contacts_restricted: true }],
+      ACTOR_NOTE_RESTRICTED_REASON,
+    ],
+    [
+      'liens complets ⇒ note saisissable',
+      [{ id: 'a1', display_name: 'Mme Florence GIRARD', contacts_restricted: false }],
+      null,
+    ],
+  ])('§208 — verdict par fiche sur la note prestataire — %s', (_label, actors, expected) => {
+    const detail: ObjectDetail = { id: 'HLORUN00000000TV', name: 'Gîte test', type: 'HLO', raw: { actors } };
+    expect(parseObjectWorkspace(detail, ['fr']).relationships.actorNoteWriteUnavailableReason).toBe(expected);
   });
 
   it('parses object.secondary_types into generalInfo.secondaryTypes', () => {

@@ -175,6 +175,9 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
           open
           actor={editingActor}
           roleOptions={roleOptions}
+          // §208 — verdict PAR FICHE (résolu une fois au chargement), y compris pour un lien
+          // qu'on vient d'ajouter et dont le serveur n'a encore rien dit.
+          noteUnavailableReason={relationships.actorNoteWriteUnavailableReason}
           onClose={() => setEditIndex(null)}
           onSave={(patched) => {
             onChange(commitActorEdit(actors, editIndex as number, patched));

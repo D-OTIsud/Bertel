@@ -4,6 +4,7 @@ import { SelectionBar } from './SelectionBar';
 import { MAX_PRINT_SELECTION } from './selection-print';
 import { getObjectResource } from '../../services/rpc';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useSessionStore } from '../../store/session-store';
 
 // La barre importe le routeur App Router et les services (chaîne supabase) : on les
 // neutralise — ce test ne couvre que le rendu adaptatif de la barre.
@@ -19,6 +20,7 @@ describe('SelectionBar — barre adaptative', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useExplorerStore.setState({ selectedObjectIds: [], visibleObjectIds: [] });
+    useSessionStore.setState({ canEditObjects: true });
   });
 
   it('sans sélection : seuls le compteur et « Sélection » existent (pas de CTA qui déborde)', () => {
@@ -73,5 +75,19 @@ describe('SelectionBar — barre adaptative', () => {
     render(<SelectionBar />);
 
     expect(screen.getByRole('button', { name: /^Imprimer$/ })).toBeEnabled();
+  });
+
+  it('un éditeur avec sélection voit le bouton E-mails', () => {
+    useSessionStore.setState({ canEditObjects: true });
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
+    render(<SelectionBar />);
+    expect(screen.getByRole('button', { name: /E-mails/ })).toBeInTheDocument();
+  });
+
+  it('un lecteur seul ne voit PAS le bouton E-mails, même avec une sélection', () => {
+    useSessionStore.setState({ canEditObjects: false });
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
+    render(<SelectionBar />);
+    expect(screen.queryByRole('button', { name: /E-mails/ })).toBeNull();
   });
 });

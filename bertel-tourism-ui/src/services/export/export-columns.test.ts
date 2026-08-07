@@ -144,6 +144,31 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
     expect(val('legal_records')).not.toContain('Assurance');
     expect(val('legal_records_all')).toContain('Assurance');
   });
+  it("légal — un champ absent rend '' , JAMAIS une sentinelle d'affichage du parser (même garde que le 'n/a' des tarifs)", () => {
+    // parseLegal défausse status→'Statut inconnu', validity_mode→'non precisee', label→'Document legal'
+    // pour le tiroir (utils.ts:1187-1191) ; ces défauts restent, mais ne doivent pas atteindre Excel.
+    const bare = buildFixtureDetail({
+      legal_records: [
+        { type: { code: 'siret', name: 'SIRET', is_public: true }, value: '12345678900011' },
+        { type: { code: 'assurance_rc', name: 'Assurance RC', is_public: false }, value: 'POL-99', days_until_expiry: 30 },
+      ],
+    });
+    const cell = (id: string) => String(getExportColumn(id)!.value(bare, EMPTY_CTX));
+    expect(cell('legal_records')).toBe('SIRET');
+    expect(cell('legal_records')).not.toContain('Statut inconnu');
+    expect(cell('legal_records_all')).not.toContain('Statut inconnu');
+    expect(cell('legal_validity')).toBe('SIRET | Assurance RC');
+    expect(cell('legal_validity')).not.toContain('non precisee');
+    expect(cell('legal_validity')).not.toContain('Document legal');
+    // legal_expiring : seul le document dont l'échéance est un NOMBRE fini < 90 sort.
+    expect(cell('legal_expiring')).toBe('Assurance RC');
+    // Sans aucune échéance chiffrée, la colonne est vide — 'n/a' ne doit jamais compter pour 0.
+    const noExpiry = buildFixtureDetail({ legal_records: [{ type: { code: 'siret', name: 'SIRET' }, value: 'x' }] });
+    expect(getExportColumn('legal_expiring')!.value(noExpiry, EMPTY_CTX)).toBe('');
+    // Et une chaîne vide côté serveur ne vaut pas « échéance à 0 jour » (Number('') === 0).
+    const emptyExpiry = buildFixtureDetail({ legal_records: [{ type: { code: 'siret', name: 'SIRET' }, value: 'x', days_until_expiry: '' }] });
+    expect(getExportColumn('legal_expiring')!.value(emptyExpiry, EMPTY_CTX)).toBe('');
+  });
   it('liens & références', () => {
     expect(val('relations_out')).toContain('Site du Volcan');
     expect(val('external_ids')).toBe('berta : B-1234');
@@ -192,6 +217,8 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
   it('préréglage Diffusion partenaire : STRICTEMENT public, sans le groupe acteur — recalculé du code', () => {
     // Même avec les capacités acteur grandes ouvertes, Diffusion n'en prend aucune.
     const ids = presetColumnIds('diffusion', SESSION_SUPER, { actorIdentityAvailable: true, actorContactsAvailable: true });
+    // Garde non vacante : sans cette ligne, un préréglage qui rendrait [] passerait au vert.
+    expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) {
       const col = getExportColumn(id)!;
       expect(col.clearance).toBe('public');
@@ -208,11 +235,37 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
     expect(purposeRequired(['name', 'actor_mobile'])).toBe(true);
   });
   it('R1 — projection : requiredFieldsFor unionne, et une colonne sans fields désactive tout', () => {
-    expect(requiredFieldsFor(['name', 'postcode'])).toEqual([]); // identité/adresse : rien à demander
+    // Un tableau NON VIDE restreint la projection : chaque colonne doit y faire figurer SES legs.
+    expect(requiredFieldsFor(['name', 'postcode'])).toEqual(['name', 'address']);
     const withActors = requiredFieldsFor(['name', 'actor_names']);
     expect(withActors).toContain('actors');
-    // au moins une colonne du registre déclare fields ⇒ le préréglage Essentiel est projeté
-    expect(requiredFieldsFor(presetColumnIds('essentiel', SESSION_ORG))).not.toBeUndefined();
+    // `unhandled_keys` n'a pas de `fields` ⇒ la projection est désactivée pour tout l'export.
+    expect(requiredFieldsFor(['name', 'unhandled_keys'])).toBeUndefined();
+  });
+  // GARDE DU CONTRAT INVERSÉ (revue Tâche 7) : côté SQL, `fields: []` n'est PAS « pas de
+  // projection » — un tableau vide n'est pas NULL, donc il RESTREINT tout. Les colonnes d'identité
+  // et d'adresse déclaraient `[]` alors que leurs legs sont gardés : le préréglage Essentiel
+  // produisait une projection non vide qui omettait id/name/type/status/address/updated_at — huit
+  // cellules sur seize sortaient VIDES, en silence. Ce test échoue si l'annotation régresse.
+  it('R1 — le préréglage Essentiel demande TOUS les legs dont ses colonnes ont besoin', () => {
+    const ids = presetColumnIds('essentiel', SESSION_ORG);
+    expect(ids.length).toBeGreaterThan(0);
+    const fields = requiredFieldsFor(ids);
+    expect(fields).not.toBeUndefined();
+    // Une projection non vide DOIT porter les legs des colonnes cochées, sinon elles sortent vides.
+    for (const leg of ['id', 'name', 'type', 'status', 'address', 'updated_at', 'taxonomy', 'contacts', 'description', 'classifications', 'org_links']) {
+      expect(fields).toContain(leg);
+    }
+    // `location` (lat/lon/altitude) est un leg DISTINCT d'`address` : Essentiel n'a aucune colonne
+    // qui le lit, donc il n'y figure pas — mais toute sélection de coordonnées doit le demander.
+    expect(fields).not.toContain('location');
+    expect(requiredFieldsFor(['latitude'])).toEqual(['location']);
+    expect(requiredFieldsFor(['google_maps_url'])).toEqual(['address', 'location']);
+    // Les colonnes acteur à finalité indexent ctx.actorContacts par l'id de la fiche : sans le leg
+    // 'id', une sélection uniquement acteur exporterait des cellules vides.
+    expect(requiredFieldsFor(['actor_mobile'])).toEqual(['id']);
+    // 'organizations' n'est pas un nom de garde : les contacts d'organisation viennent d'org_links.
+    expect(requiredFieldsFor(['contacts_orgs'])).toEqual(['org_links']);
   });
   // Garde non vacante (matrice §208, point 8) : les ~16 colonnes qui lisent raw.* DIRECTEMENT
   // (hors parser typé) tombent silencieusement à '' si le nom de clé change côté serveur — cette

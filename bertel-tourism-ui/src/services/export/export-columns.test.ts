@@ -76,3 +76,36 @@ describe('registre — identité/localisation/contacts/descriptions (§208)', ()
     }
   });
 });
+
+describe('registre — labels/équipements/capacité/tarifs/horaires/médias (§208)', () => {
+  it('labels & classements', () => {
+    expect(val('classifications')).toContain('3 étoiles');
+    expect(val('sustainability_labels')).toContain('Clef Verte');
+  });
+  it('équipements et politiques', () => {
+    expect(val('amenities')).toBe('Wi-Fi | Piscine');
+    expect(val('payment_methods')).toBe('Carte bancaire');
+    expect(val('pets_accepted')).toBe('Oui');
+    expect(val('pets_conditions')).toContain('Petits chiens');
+  });
+  it('tri-état animaux : null ⇒ cellule vide, jamais « Non » (§133)', () => {
+    const noPet = buildFixtureDetail({ pet_policy: null });
+    expect(getExportColumn('pets_accepted')!.value(noPet, EMPTY_CTX)).toBe('');
+  });
+  it('capacité', () => {
+    expect(val('capacity_max')).toContain('40');
+    expect(val('capacity')).toContain('Chambres');
+    expect(val('group_min')).toBe('10');
+  });
+  it("tarifs — 'n/a' n'entre jamais dans un min (piège maison)", () => {
+    expect(val('price_min')).toBe('90');
+    expect(val('prices')).toContain('Chambre double');
+    expect(val('prices')).not.toContain('n/a');
+  });
+  it('médias — la privée est comptée à part, la couverture est la principale', () => {
+    expect(val('photo_main')).toBe('https://cdn/img1.jpg');
+    expect(val('photo_main_credit')).toBe('OTI Sud');
+    expect(val('media_count')).toBe('2');
+    expect(val('media_private_count')).toBe('1');
+  });
+});

@@ -347,7 +347,7 @@ export function fullModulesFixture(): ObjectWorkspaceModules {
     },
     relationships: {
       organizationLinks: [{ id: 'org1', source: 'org_link', type: 'ORG', name: 'OTI du Sud', status: 'active', roleId: 'publisher', roleCode: 'publisher', roleLabel: 'Publisher', isPrimary: true, note: '', contacts: [] }],
-      actors: [{ id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '', roleId: 'operator', roleCode: 'operator', roleLabel: 'Opérateur', visibility: 'public', isPrimary: true, validFrom: '', validTo: '', note: '', contacts: [] }],
+      actors: [{ id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '', roleId: 'operator', roleCode: 'operator', roleLabel: 'Opérateur', visibility: 'public', isPrimary: true, validFrom: '', validTo: '', note: '', contacts: [], contactsRestricted: false }],
       relatedObjects: [{ id: 'rel1', name: 'Sentier voisin', type: 'ITI', status: 'published', relationTypeId: 'near', relationTypeCode: 'near', relationTypeLabel: 'À proximité', direction: 'out', note: '5 min', distanceM: '400' }],
       orgRoleOptions: [
         { id: 'publisher', code: 'publisher', label: 'Publisher principal' },

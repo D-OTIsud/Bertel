@@ -583,6 +583,24 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText('Reseau Sud')).toBeInTheDocument();
   });
 
+  it('§208 — l\'équipe interne dit « coordonnées réservées » plutôt qu\'un vide silencieux quand contacts_restricted', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-restricted-actor',
+      name: 'Hotel Restreint',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Hotel avec un acteur aux coordonnees reservees.' },
+        actors: [{ id: 'actor-1', display_name: 'Jean Dupont', role: { name: 'Direction' }, contacts: [], contacts_restricted: true }],
+      },
+    };
+
+    renderDetail(data);
+
+    expect(screen.getByText('Equipe interne')).toBeInTheDocument();
+    expect(screen.getByText('Jean Dupont')).toBeInTheDocument();
+    expect(screen.getByText("Coordonnées réservées à l'organisation éditrice.")).toBeInTheDocument();
+  });
+
   it('shows only the three most recent team notes by default and lets the user expand the list', () => {
     const data: ObjectDetail = {
       id: 'hotel-notes',

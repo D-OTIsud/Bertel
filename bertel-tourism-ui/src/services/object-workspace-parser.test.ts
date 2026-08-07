@@ -793,6 +793,26 @@ describe('parseObjectWorkspace', () => {
     expect(parsed.provider.directorFullName).toBe('Mme Florence GIRARD');
   });
 
+  it('§208 — parses actors[].contacts_restricted (distinct from a note simply not filled in)', () => {
+    const detail: ObjectDetail = {
+      id: 'HLORUN00000000TV',
+      name: 'Gîte test',
+      type: 'HLO',
+      raw: {
+        actors: [
+          { id: 'a1', display_name: 'Mme Florence GIRARD', role: { code: 'operator' }, note: null, contacts_restricted: true },
+          { id: 'a2', display_name: 'M. Paul Robert', role: { code: 'guide' }, note: '', contacts_restricted: false },
+        ],
+      },
+    };
+
+    const parsed = parseObjectWorkspace(detail, ['fr']);
+    const byId = (id: string) => parsed.relationships.actors.find((actor) => actor.id === id);
+
+    expect(byId('a1')).toMatchObject({ contactsRestricted: true });
+    expect(byId('a2')).toMatchObject({ contactsRestricted: false });
+  });
+
   it('parses object.secondary_types into generalInfo.secondaryTypes', () => {
     const detail: ObjectDetail = {
       id: 'HLORUN00000000TV',

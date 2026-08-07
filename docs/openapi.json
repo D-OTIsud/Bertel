@@ -213,7 +213,27 @@
                       }
                     ],
                     "menus": [],
-                    "actors": [],
+                    "actors": [
+                      {
+                        "id": "3f5c9b6b-7f36-4b1e-9b8b-58a2b1c4d9a1",
+                        "display_name": "Mme Murielle Lebon",
+                        "first_name": null,
+                        "last_name": null,
+                        "gender": null,
+                        "role": {
+                          "id": "8b0c1597-1bf7-4287-b764-2884a4e9b1a3",
+                          "code": "operator",
+                          "name": "Exploitant"
+                        },
+                        "is_primary": true,
+                        "valid_from": null,
+                        "valid_to": null,
+                        "visibility": "public",
+                        "note": null,
+                        "contacts_restricted": true,
+                        "contacts": []
+                      }
+                    ],
                     "places": [],
                     "prices": [],
                     "render": {
@@ -1026,6 +1046,11 @@
           "sanitary_measures": { "type": ["string", "null"] },
           "descriptions": { "type": "array", "description": "Toutes les descriptions publiques.", "items": { "type": "object", "additionalProperties": true } },
           "external_ids": { "type": "array", "description": "Identifiants externes (raccroche à des systèmes tiers).", "items": { "type": "object", "additionalProperties": true } },
+          "actors": {
+            "type": "array",
+            "description": "Acteurs rattachés (opérateurs, guides, contacts…). Depuis §208, un appel qui n'est pas un membre de l'organisation éditrice de la fiche reçoit `first_name`/`last_name`/`gender`/`note` à `null` et `contacts` à `[]` : les coordonnées personnelles des acteurs ne sortent plus par l'API publique/partenaire. La propriété additive `contacts_restricted` (`true` dans ce cas) permet de distinguer ce refus d'un simple « rien n'a été saisi ». Les contacts de l'ÉTABLISSEMENT (bloc `contacts` racine) sont inchangés.",
+            "items": { "type": "object", "additionalProperties": true }
+          },
           "i18n": {
             "allOf": [{ "$ref": "#/components/schemas/I18nBlock" }],
             "description": "Présent uniquement avec `?lang=all`."

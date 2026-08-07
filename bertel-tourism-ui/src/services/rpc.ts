@@ -572,6 +572,48 @@ export async function getObjectResourcesBatch(
 }
 
 /**
+ * §208/T16 — appel BRUT du RPC journalisé 16t (api.export_actor_contacts) : UNE invocation =
+ * UNE ligne de journal (un LOT). Le découpage par 500 ids et le partage du export_run_id entre
+ * lots vivent dans l'appelant (export-actor-contacts.ts), jamais ici — cette fonction ne fait
+ * que poser l'appel et normaliser la réponse. Un lot en échec (erreur PostgREST/réseau) DOIT
+ * REJETER (jamais avaler l'erreur) : c'est ce qui permet à l'orchestrateur de l'export de ne
+ * produire AUCUN fichier sur un lot manqué (R1-3). Ne PAS réutiliser le contrat "avale tout,
+ * rends {false,false}" de `getExportActorCapabilities` — celui-ci sert une offre ergonomique,
+ * celui-là un accès aux données réellement journalisé.
+ */
+export async function callExportActorContactsRpc(
+  objectIds: string[],
+  reason: string,
+  meta: { exportRunId: string; batchIndex: number; batchCount: number },
+  options: { signal?: AbortSignal } = {},
+): Promise<{ log_id: string; export_run_id: string; authorized_object_ids: string[]; denied_object_ids: string[]; rows: unknown[] }> {
+  const client = requireRpcClient();
+  if (!client) {
+    throw new Error("Export des coordonnées d'acteur indisponible en mode démo.");
+  }
+  let query = client.schema('api').rpc('export_actor_contacts', {
+    p_object_ids: objectIds,
+    p_reason: reason,
+    p_format: 'xlsx',
+    p_export_run_id: meta.exportRunId,
+    p_batch_index: meta.batchIndex,
+    p_batch_count: meta.batchCount,
+  });
+  if (options.signal) query = query.abortSignal(options.signal);
+  const { data, error } = await query;
+  if (error) throw error;
+  const payload = (data ?? {}) as Record<string, unknown>;
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  return {
+    log_id: typeof payload.log_id === 'string' ? payload.log_id : '',
+    export_run_id: typeof payload.export_run_id === 'string' ? payload.export_run_id : meta.exportRunId,
+    authorized_object_ids: strings(payload.authorized_object_ids),
+    denied_object_ids: strings(payload.denied_object_ids),
+    rows: Array.isArray(payload.rows) ? payload.rows : [],
+  };
+}
+
+/**
  * R2 (bas niveau, ajouté revue 4e vague) — même appel/mêmes prédicats fail-closed que
  * `getExportActorCapabilities` ci-dessous, mais rend un résultat DISCRIMINÉ que
  * l'appelant peut distinguer d'un verdict réel : `{ ok: false }` sur client absent,

@@ -211,6 +211,8 @@ La fiche `data` contient l'ensemble des données publiques : identité, descript
 
 Un exemple de réponse détail complet et réel est fourni dans le contrat OpenAPI (`openapi.json`) et la collection Postman.
 
+**Acteurs (`actors`).** Depuis §208, `contacts` est vide (`[]`) et `contacts_restricted` vaut `true` pour les appels partenaires : les coordonnées personnelles des acteurs (téléphone, e-mail, adresse) ne sortent plus par l'API publique. `first_name`, `last_name`, `gender` et `note` sortent également à `null` dans ce cas. Les contacts de l'ÉTABLISSEMENT (bloc racine `contacts`) sont inchangés.
+
 **Langues.** Le code de résolution par défaut est `fr`. Le corpus est aujourd'hui majoritairement francophone : la traduction du contenu des établissements est un chantier en cours. À défaut de traduction disponible pour un champ dans la langue demandée, c'est la valeur française qui est renvoyée.
 
 ### 3.3 `GET /objects/deletions` — flux des suppressions (tombstones)

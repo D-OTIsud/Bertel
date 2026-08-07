@@ -71,12 +71,23 @@ export function ProviderEditModal({ open, actor, roleOptions, onClose, onSave }:
         onChange={(isPrimary) => set({ isPrimary })}
       />
 
-      <Field label="Note">
+      <Field
+        label="Note"
+        hint={
+          actor.contactsRestricted
+            ? "Réservé aux membres de l'organisation éditrice — non modifiable ici."
+            : undefined
+        }
+      >
         <Input
           value={draft.note}
           placeholder="Rôle réel, référent, conditions…"
           aria-label={`Note sur ${actor.displayName}`}
-          onChange={(note) => set({ note })}
+          readOnly={actor.contactsRestricted}
+          // §208/T13b — un appelant restreint qui enregistre voit sa note REPORTÉE par le
+          // serveur quoi qu'il envoie (api.save_object_relations) : un champ éditable ici
+          // saisirait une valeur silencieusement ignorée à l'enregistrement (write-trap).
+          onChange={actor.contactsRestricted ? () => undefined : (note) => set({ note })}
         />
       </Field>
     </EditorModal>

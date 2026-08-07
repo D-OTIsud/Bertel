@@ -12,6 +12,7 @@ function actor(partial: Partial<ObjectWorkspaceActorLinkItem> = {}): ObjectWorks
     id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '',
     roleId: 'r-op', roleCode: 'operator', roleLabel: 'Exploitant',
     visibility: 'public', isPrimary: false, validFrom: '', validTo: '', note: '', contacts: [],
+    contactsRestricted: false,
     ...partial,
   };
 }
@@ -54,5 +55,23 @@ describe('ProviderEditModal', () => {
     renderModal({ actor: actor({ roleCode: 'legacy_role', roleLabel: 'Ancien rôle' }) });
     const role = screen.getByRole('combobox', { name: 'Rôle de Marie Guide' });
     expect(within(role).getByRole('option', { name: 'Ancien rôle' })).toBeInTheDocument();
+  });
+
+  it('§208 — disables the Note field with a stated reason when contactsRestricted (no silent write-trap)', () => {
+    renderModal({ actor: actor({ contactsRestricted: true, note: '' }) });
+    const note = screen.getByLabelText('Note sur Marie Guide');
+    expect(note).toHaveAttribute('readonly');
+    expect(screen.getByText("Réservé aux membres de l'organisation éditrice — non modifiable ici.")).toBeInTheDocument();
+    fireEvent.change(note, { target: { value: 'Tentative de saisie' } });
+    expect(note).toHaveValue('');
+  });
+
+  it('keeps the Note field editable and saves it when contactsRestricted is false', () => {
+    const { onSave } = renderModal({ actor: actor({ contactsRestricted: false, note: '' }) });
+    const note = screen.getByLabelText('Note sur Marie Guide');
+    expect(note).not.toHaveAttribute('readonly');
+    fireEvent.change(note, { target: { value: 'Référent terrain' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    expect((onSave.mock.calls[0][0] as ObjectWorkspaceActorLinkItem).note).toBe('Référent terrain');
   });
 });

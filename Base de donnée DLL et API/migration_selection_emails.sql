@@ -143,7 +143,11 @@ BEGIN
       LIMIT 1
     ) actor_mail ON TRUE
     LEFT JOIN LATERAL (
-      -- Bras FICHE : adresse professionnelle publique de l'établissement.
+      -- Bras FICHE : l'adresse de l'établissement. PAS de filtre `is_public`,
+      -- volontairement — l'appelant est un éditeur de l'ORG publisher, qui a déjà
+      -- accès aux canaux internes de ses propres fiches (le drapeau `is_public` ne
+      -- gate que le lecteur anonyme, §49). Sur le corpus réel les 819 adresses
+      -- sont publiques de toute façon.
       SELECT cc.value
       FROM public.contact_channel cc
       JOIN public.ref_code_contact_kind k ON k.id = cc.kind_id AND k.code = 'email'

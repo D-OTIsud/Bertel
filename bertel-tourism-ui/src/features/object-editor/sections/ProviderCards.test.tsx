@@ -21,6 +21,7 @@ function actor(partial: Partial<ObjectWorkspaceActorLinkItem> & { id: string }):
     displayName: partial.id, firstName: '', lastName: '', gender: '',
     roleId: 'operator', roleCode: 'operator', roleLabel: 'Exploitant',
     visibility: 'public', isPrimary: false, validFrom: '', validTo: '', note: '', contacts: [],
+    contactsRestricted: false,
     ...partial,
   };
 }

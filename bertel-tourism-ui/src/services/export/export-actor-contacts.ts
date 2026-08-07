@@ -1,6 +1,6 @@
-import { CLOSED_ACTOR_CAPS, type ActorCapabilities, type ActorContactsRow } from './export-columns';
+import { CLOSED_ACTOR_CAPS, type ActorCapabilities, type ActorContactChannel, type ActorContactsRow } from './export-columns';
 import { chunkIds } from './export-fetch';
-import { getExportActorCapabilitiesResult } from '../rpc';
+import { callExportActorContactsRpc, getExportActorCapabilitiesResult } from '../rpc';
 
 export const ACTOR_EXPORT_BATCH = 500; // plafond PAR APPEL du RPC (16t) — au-delà on découpe : N lignes de journal, pas une. Aucun plafond fonctionnel d'export (R1).
 
@@ -79,12 +79,79 @@ export interface ActorContactsExportResult {
   deniedObjectIds: string[];
 }
 
+function toChannel(raw: Record<string, unknown>): ActorContactChannel {
+  return {
+    kindCode: String(raw.kind_code ?? ''),
+    kindName: String(raw.kind_name ?? ''),
+    value: String(raw.value ?? ''),
+    isPrimary: raw.is_primary === true,
+  };
+}
+
+function toRow(raw: Record<string, unknown>): ActorContactsRow {
+  return {
+    objectId: String(raw.object_id ?? ''),
+    displayName: String(raw.display_name ?? ''),
+    roleName: String(raw.role_name ?? ''),
+    isPrimary: raw.is_primary === true,
+    note: String(raw.note ?? ''),
+    contacts: Array.isArray(raw.contacts) ? (raw.contacts as Record<string, unknown>[]).map(toChannel) : [],
+  };
+}
+
+/**
+ * §208/R1 — SEULE voie de lecture des coordonnées d'acteur pour l'export : l'appel
+ * journalisé api.export_actor_contacts (16t, via callExportActorContactsRpc). Les colonnes
+ * requiresPurpose du registre ne lisent QUE le résultat de cette fonction — jamais la fiche
+ * batch (le journal serait contournable). Tous les lots partagent un export_run_id GÉNÉRÉ
+ * CLIENT ; chaque lot a sa propre ligne de journal (logId). Fusion par object_id (un id peut,
+ * en théorie, apparaître dans deux lots si l'appelant a mal dédoublonné — peu probable ici
+ * puisque `clean` dédoublonne déjà, mais la fusion reste additive et non écrasante).
+ * Un lot en échec ⇒ throw : l'orchestrateur (runSelectionXlsxExport) ne produit AUCUN fichier
+ * (les journaux des lots déjà réussis restent — la donnée a atteint le navigateur, le journal
+ * dit la vérité ; seul le classeur final n'est jamais écrit sur un échec partiel).
+ */
 export async function exportActorContacts(
-  _ids: string[],
-  _purpose: string,
-  _opts: { batchSize?: number; signal?: AbortSignal } = {},
+  ids: string[],
+  purpose: string,
+  opts: { batchSize?: number; signal?: AbortSignal } = {},
 ): Promise<ActorContactsExportResult> {
-  // Tâche 16 branche le RPC api.export_actor_contacts (migration 16t). D'ici là :
-  // refuser explicitement plutôt que rendre un export silencieusement vide.
-  throw new Error("Export des coordonnées d'acteur indisponible (migration 16t non déployée).");
+  const cleanPurpose = purpose.trim();
+  if (cleanPurpose.length < 5) {
+    throw new Error("La finalité de l'export est obligatoire (5 caractères minimum — elle est inscrite au journal).");
+  }
+  const size = opts.batchSize ?? ACTOR_EXPORT_BATCH;
+  const clean = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  const exportRunId = crypto.randomUUID();
+  const batchCount = Math.max(1, Math.ceil(clean.length / size));
+
+  const rows = new Map<string, ActorContactsRow[]>();
+  const logIds: string[] = [];
+  const authorized = new Set<string>();
+  const denied = new Set<string>();
+
+  for (let i = 0; i < clean.length; i += size) {
+    if (opts.signal?.aborted) throw new Error('Export annulé.');
+    const chunk = clean.slice(i, i + size);
+    const result = await callExportActorContactsRpc(chunk, cleanPurpose, {
+      exportRunId,
+      batchIndex: Math.floor(i / size) + 1,
+      batchCount,
+    }, { signal: opts.signal });
+    if (result.log_id) logIds.push(result.log_id);
+    result.authorized_object_ids.forEach((id) => authorized.add(id));
+    result.denied_object_ids.forEach((id) => denied.add(id));
+    for (const rawRow of result.rows) {
+      const row = toRow(rawRow as Record<string, unknown>);
+      if (!row.objectId) continue;
+      rows.set(row.objectId, [...(rows.get(row.objectId) ?? []), row]);
+    }
+  }
+  return {
+    rows,
+    exportRunId,
+    logIds,
+    authorizedObjectIds: [...authorized],
+    deniedObjectIds: [...denied],
+  };
 }

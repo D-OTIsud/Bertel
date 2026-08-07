@@ -862,6 +862,12 @@ export interface ObjectWorkspaceActorLinkItem {
   validTo: string;
   note: string;
   contacts: ObjectWorkspaceLinkedContactItem[];
+  /** §208 — TRUE quand api.can_read_actor_contacts a refusé au CALLEUR (get_object_resource,
+   * migration_actor_contacts_org_gate.sql) : `note`/`contacts` sortent alors nuls/vides parce
+   * que RÉSERVÉS, pas parce que rien n'a été saisi. La sauvegarde (api.save_object_relations)
+   * REPORTE la note serveur pour un tel appelant quoi qu'il envoie (T13b) — l'éditeur DOIT
+   * désactiver le champ Note plutôt que laisser une saisie être silencieusement ignorée. */
+  contactsRestricted: boolean;
 }
 
 export interface ObjectWorkspaceRelatedObjectItem {
@@ -2818,6 +2824,7 @@ function parseWorkspaceActorLink(record: GenericRecord, index: number): ObjectWo
     validTo: readString(record.valid_to),
     note: readString(record.note),
     contacts,
+    contactsRestricted: readBoolean(record.contacts_restricted),
   };
 }
 

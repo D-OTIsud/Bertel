@@ -97,6 +97,12 @@ describe('registre — labels/équipements/capacité/tarifs/horaires/médias (§
     expect(val('capacity')).toContain('Chambres');
     expect(val('group_min')).toBe('10');
   });
+  it('capacity_max : AUCUN repli (arbitrage PO, matrice §208 #3) — une fiche sans métrique « capacité » rend une cellule VIDE, jamais une autre métrique (ex. chambres)', () => {
+    const noCapacityMetric = buildFixtureDetail({
+      capacities: [{ metric_code: 'bedrooms', metric_name: 'Chambres', value: 18 }],
+    });
+    expect(getExportColumn('capacity_max')!.value(noCapacityMetric, EMPTY_CTX)).toBe('');
+  });
   it("tarifs — 'n/a' n'entre jamais dans un min (piège maison)", () => {
     expect(val('price_min')).toBe('90');
     expect(val('prices')).toContain('Chambre double');

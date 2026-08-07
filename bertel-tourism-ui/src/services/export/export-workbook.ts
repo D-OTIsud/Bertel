@@ -1,10 +1,10 @@
 import { xlsxCell } from '@/lib/safe-output';
 import type { ParsedObjectDetail } from '../object-detail-parser';
 import {
-  getExportColumn, purposeRequired, requiredFieldsFor,
+  EXPORT_GROUP_LABELS, getExportColumn, purposeRequired, requiredFieldsFor,
   type ExportCellValue, type ExportColumnDef, type ExportContext,
 } from './export-columns';
-import { chunkIds, fetchResourceBatches } from './export-fetch';
+import { fetchResourceBatches } from './export-fetch';
 import { ACTOR_EXPORT_BATCH, exportActorContacts } from './export-actor-contacts';
 
 /** R1 — cellule texte OU numérique. Une valeur null devient une cellule texte vide. */
@@ -67,7 +67,7 @@ export function buildWorkbookModel(input: {
     [text('Périmètre'), text(`${plural(exported, 'fiche exportée')} sur ${plural(input.requestedCount, 'sélectionnée')}`)],
     [text('')],
     [header('Colonne'), header('Contenu')],
-    ...columns.map((c) => [text(c.label), text(`${c.group} · ${c.requiresPurpose ? 'accès tracé (journal)' : 'standard'}`)]),
+    ...columns.map((c) => [text(c.label), text(`${EXPORT_GROUP_LABELS[c.group]} · ${c.requiresPurpose ? 'accès tracé (journal)' : 'standard'}`)]),
   ];
   if (input.actorLogIds.length > 0) {
     lisezMoi.push(
@@ -152,11 +152,15 @@ export async function runSelectionXlsxExport(input: {
   });
 
   // (3) Un seul classeur, après la réussite de TOUS les lots.
+  // Finding 1 (revue Tâche 8) : `orderedIds.length` (dédoublonné, ids vides écartés) est LE seul
+  // décompte demandé — le même nombre nourrit le modèle (phrase Lisez-moi) ET le retour `requested`
+  // (toast appelant). Les deux DOIVENT s'accorder : un id dupliqué ou blanc dans la sélection ne doit
+  // jamais faire dire deux chiffres différents pour la même notion de « sélectionné ».
   const model = buildWorkbookModel({
     rowsById,
     orderedIds,
     columns,
-    requestedCount: chunkIds(input.ids).reduce((n, c) => n + c.length, 0),
+    requestedCount: orderedIds.length,
     actorLogIds,
     actorAuthorizedCount,
     actorDeniedCount,
@@ -172,5 +176,5 @@ export async function runSelectionXlsxExport(input: {
     { data: model.sheets[1], sheet: model.sheetNames[1], columns: model.columns[1], stickyRowsCount: 1 },
   ]).toFile(`export_bertel_${today}.xlsx`);
 
-  return { exported: model.sheets[0].length - 1, requested: input.ids.length };
+  return { exported: model.sheets[0].length - 1, requested: orderedIds.length };
 }

@@ -1,4 +1,5 @@
-import { SEP, joinParts, dateFr, openingToText, namedList } from './export-columns';
+import { SEP, joinParts, dateFr, openingToText, namedList, EXPORT_COLUMNS, getExportColumn } from './export-columns';
+import { buildFixtureDetail, EMPTY_CTX } from './export-fixture.test-utils';
 
 describe('helpers du registre (§208)', () => {
   it('joinParts joint par « | » et écarte vide/null', () => {
@@ -21,5 +22,57 @@ describe('helpers du registre (§208)', () => {
   });
   it('namedList résout name→label→code (readNamedValue) et joint', () => {
     expect(namedList([{ name: 'Wi-Fi' }, { label: 'Piscine' }, { code: 'raw_code' }])).toBe('Wi-Fi | Piscine | raw_code');
+  });
+});
+
+const d = buildFixtureDetail();
+const val = (id: string) => {
+  const col = getExportColumn(id);
+  if (!col) throw new Error(`colonne absente du registre: ${id}`);
+  return col.value(d, EMPTY_CTX);
+};
+
+describe('registre — identité/localisation/contacts/descriptions (§208)', () => {
+  it('identité', () => {
+    expect(val('id')).toBe('HOTRUN0000000TST');
+    expect(val('name')).toBe('Hôtel Témoin');
+    expect(val('type_code')).toBe('HOT');
+    expect(val('type')).not.toBe('HOT'); // libellé FR résolu, jamais le code nu
+    expect(val('status')).toBe('Publiée');
+    expect(val('updated_at')).toBe('30/07/2026');
+  });
+  it('localisation — postcode reste une chaîne, code_insee vide rend \'\', lat/lon NUMÉRIQUES (R1)', () => {
+    expect(val('postcode')).toBe('97418');
+    expect(val('city')).toBe('Le Tampon');
+    expect(val('code_insee')).toBe('');
+    expect(val('latitude')).toBe(-21.2783);
+    expect(getExportColumn('latitude')!.cellType).toBe('number');
+    expect(getExportColumn('longitude')!.cellType).toBe('number');
+    expect(val('altitude_m')).toBe('1600');
+  });
+  it('contacts — value, jamais displayValue/href ; le non-public reste hors de la colonne publique', () => {
+    expect(val('phone')).toBe('0262 27 00 00');
+    expect(val('email')).toBe('contact@temoin.re');
+    expect(val('website')).toBe('https://temoin.re');
+    expect(val('contacts_public')).not.toContain('0692 00 00 00');
+    expect(val('web_channels')).toContain('Facebook');
+  });
+  it('descriptions', () => {
+    expect(val('description')).toBe('Description propre sans Markdown.');
+    expect(val('chapo')).toBe('Accroche témoin.');
+    expect(val('descriptions_langs')).toBe('');
+  });
+  it('toutes les colonnes rendent string | number | null sans jeter, même sur une fiche quasi vide (R1)', () => {
+    const minimal = buildFixtureDetail({
+      contacts: [], languages: [], amenities: [], payment_methods: [], environment_tags: [], tags: [],
+      taxonomy: [], classifications: [], sustainability_labels: [], capacities: [], prices: [],
+      media: [], legal_records: [], actors: [], org_links: [], external_ids: [], outgoing_relations: [],
+      web_channels: [], pet_policy: null, group_policies: [],
+    });
+    for (const col of EXPORT_COLUMNS) {
+      const out = col.value(minimal, EMPTY_CTX);
+      expect(out === null || typeof out === 'string' || typeof out === 'number').toBe(true);
+      if (col.cellType !== 'number') expect(typeof out).toBe('string');
+    }
   });
 });

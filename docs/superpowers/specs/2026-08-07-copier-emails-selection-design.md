@@ -1,7 +1,7 @@
 # Copier la liste d'e-mails d'une sélection — design
 
 **Date** : 2026-08-07
-**Statut** : validé PO, révisé après revue (v2), prêt pour le plan d'implémentation
+**Statut** : v3, révisée après deux passes de revue — prête pour le plan d'implémentation
 **Surfaces** : barre de sélection de l'Exploreur + page d'une liste (`/listes/[id]`)
 
 ---
@@ -23,10 +23,12 @@ La « sélection dynamique enregistrable » est **déjà livrée** par le module
 
 Le seul manque est **l'extraction des e-mails** — pas le mécanisme de sélection.
 
-Autre acquis : le bouton « Sélection » de la barre coche **tout le corpus filtré**
-(il s'alimente de `api.list_object_markers`, ~113 ms), pas la page courante.
+Autre acquis : le bouton « Sélection » coche **tout le corpus filtré**
+(`api.list_object_markers`, ~113 ms), pas la page courante.
 
-## 3. État mesuré du corpus (842 fiches `published` + `draft`, 2026-08-07)
+## 3. État mesuré du corpus (2026-08-07)
+
+### 3.1 Les deux gisements
 
 | Source | Couverture | Nature de la donnée |
 |---|---|---|
@@ -36,22 +38,38 @@ Autre acquis : le bouton « Sélection » de la barre coche **tout le corpus fil
 Croisement : **753** ont les deux · **2** l'acteur seul · **66** la fiche seule · sur **75** fiches
 l'adresse acteur **diffère** de celle de la fiche (contact personnel du gérant).
 
-**Résultat de la cascade retenue (D1), mesuré directement** — et non déduit d'une union :
-**821 fiches résolues**, **717 adresses distinctes**, **21 fiches muettes**.
-L'écart 821 → 717 (~104 fiches) vient des propriétaires multi-établissements.
-*Toute reprise ultérieure de ces chiffres doit re-mesurer la cascade, pas une union de sources.*
+### 3.2 L'entonnoir réel, mesuré bout en bout
 
-Autres mesures de cadrage :
-- **840 / 842** fiches portent un lien `publisher` (1 seule ORG publisher aujourd'hui) ;
-- **0** lien acteur expiré, **0** futur ;
+Chiffres obtenus en exécutant la cascade **et** le filtre de périmètre D4 — pas en déduisant
+une union de sources :
+
+| Étape | Nombre |
+|---|---|
+| Fiches `published` + `draft` | **842** |
+| … dont dans le périmètre `publisher` (D4) — **éligibles** | **840** |
+| … résolues à une adresse par la cascade D1 | **821** |
+| **adresses distinctes** après dédoublonnage | **717** |
+| fiches **muettes** (éligibles sans aucune adresse) | **19** |
+
+L'écart 821 → 717 (~104 fiches) vient des propriétaires multi-établissements.
+Les 2 fiches hors périmètre étaient déjà muettes, d'où 19 et non 21.
+
+*Toute reprise ultérieure de ces chiffres doit re-mesurer l'entonnoir complet — une union de
+sources donne 811, ce qui est faux pour la cascade.*
+
+### 3.3 Cadrage complémentaire
+
+- **840 / 842** fiches portent un lien `publisher` ; **1 seule ORG** publisher aujourd'hui.
+- **0** lien acteur expiré, **0** futur.
 - **0** ligne dans `actor_consent`.
+- Les listes statiques existantes ne contiennent aujourd'hui que des objets `published`.
 
 ## 4. Décisions
 
 ### D1 — Cascade « prestataire d'abord, fiche en repli »
 
-Pour chaque fiche : l'e-mail principal de l'acteur `operator` valide s'il existe, **sinon**
-l'e-mail principal de la fiche. Couverture **821/842**.
+Pour chaque fiche : l'e-mail principal de l'acteur `operator` valide et non refusé s'il existe,
+**sinon** l'e-mail principal de la fiche. Couverture **821 / 840 éligibles**.
 
 *Rejeté* : prestataire seul (perd 66 fiches) ; union des deux (écrit deux fois au même
 établissement).
@@ -65,9 +83,9 @@ La `SelectionBar` de l'Exploreur **et** la page `/listes/[id]`.
 
 ### D3 — Modale de contrôle, adresses nues, séparateur au choix
 
-Une copie silencieuse ment doublement : elle tait le dédoublonnage (821 fiches → 717 adresses)
-et tait les fiches laissées de côté (21). La modale annonce les trois chiffres, montre le texte
-exact, et liste les fiches muettes en lien cliquable.
+Une copie silencieuse ment trois fois : elle tait le périmètre écarté (2 fiches), le
+dédoublonnage (821 → 717) et les fiches muettes (19). La modale annonce les quatre chiffres,
+montre le texte exact, et liste les fiches muettes en lien cliquable.
 
 **Adresses nues, sans nom d'affichage** (décision PO). Seul réglage : le séparateur
 `, ` (défaut Gmail) · `; ` · une par ligne.
@@ -78,31 +96,28 @@ fuite le plus probable de tout ce dispositif — plus probable qu'une faille d'a
 
 ### D4 — Périmètre : les fiches dont MON organisation est publisher
 
-**Révisé après revue.** La version initiale intersectait avec
-`api.current_user_readable_object_ids()` (= publié ∪ étendu). C'était insuffisant : en
-multi-organisation, un éditeur de l'ORG B pouvait fournir l'id d'une fiche **publiée** de l'ORG A
-et récupérer l'e-mail `partners` de son exploitant. L'intersection avec « ce que je peux lire »
-ne protège pas une donnée **non publique** — lire une fiche publiée ≠ pouvoir extraire l'adresse
-personnelle de son gérant.
+La v1 intersectait avec `api.current_user_readable_object_ids()` (= publié ∪ étendu).
+Insuffisant : en multi-organisation, un éditeur de l'ORG B fournissait l'id d'une fiche
+**publiée** de l'ORG A et récupérait l'e-mail `partners` de son exploitant. Lire une fiche
+publiée ≠ pouvoir extraire l'adresse personnelle de son gérant.
 
-Le périmètre correct existe déjà : **`api.current_user_crm_object_ids()`** = les objets dont
+Périmètre retenu — il existe déjà : **`api.current_user_crm_object_ids()`** = les objets dont
 l'ORG de l'utilisateur est `publisher` (membership actif). C'est déjà le périmètre du CRM, qui
-manipule exactement les mêmes données de contact — même donnée, même portée.
+manipule exactement les mêmes données de contact.
 
-Forme retenue, **set-based** (§35) :
+Forme **set-based** (§35) :
 
 ```sql
 WHERE id IN (SELECT api.current_user_crm_object_ids())
    OR api.is_platform_superuser()
 ```
 
-*Écarté : créer un `current_user_email_exportable_object_ids()`.* Ce serait un troisième
-concept de périmètre à maintenir en cohérence avec les deux existants, pour un ensemble
-strictement identique à celui du CRM. `api.user_can_read_crm` donne déjà la forme canonique
-(`is_platform_superuser() OR … IN (…)`) ; on la reprend en version ensembliste.
+*Écarté : créer un `current_user_email_exportable_object_ids()`* — un troisième concept de
+périmètre à maintenir pour un ensemble identique à celui du CRM.
 
-**Conséquence assumée** : les **2 fiches sans lien `publisher`** sortent du périmètre. C'est un
-défaut de données, pas du produit — et le signaler vaut mieux que l'absorber.
+**Le périmètre écarté est rendu, pas absorbé** (cf. §5.1 étape 5) : `requested_count` /
+`eligible_count` / `excluded_count`. Une fiche silencieusement retirée d'un export se lit
+comme une fiche sans e-mail — deux causes différentes, deux actions correctives différentes.
 
 ### D5 — Garde d'autorisation en plus du périmètre
 
@@ -114,111 +129,180 @@ n'exporte pas 717 adresses.
 
 ### D6 — Liens acteur : validité temporelle
 
-`actor_object_role` porte `valid_from` / `valid_to`. Sans garde, on peut écrire à un **ancien**
-exploitant. Ajout :
+`actor_object_role` porte `valid_from` / `valid_to`. Sans garde, on écrit à un **ancien**
+exploitant :
 
 ```sql
 AND (aor.valid_from IS NULL OR aor.valid_from <= CURRENT_DATE)
 AND (aor.valid_to   IS NULL OR aor.valid_to   >= CURRENT_DATE)
 ```
 
-**Honnêteté sur la portée** : 0 lien expiré et 0 lien futur en base aujourd'hui — la garde est
-**prospective**, elle ne répare aucune fuite active. Elle est retenue parce qu'elle est gratuite
-et que ces colonnes existent pour être utilisées.
+**Portée honnête** : 0 lien expiré et 0 futur en base — la garde est **prospective**, elle ne
+répare aucune fuite active. Retenue parce qu'elle est gratuite et que ces colonnes existent
+pour être utilisées.
 
-### D7 — Consentement : pas de garde aujourd'hui, réexamen conditionné
+### D7 — Un refus de consentement explicite est honoré dès maintenant
 
-`actor_consent` existe et couvre le canal e-mail, mais contient **0 ligne**. Il n'y a donc aucun
-refus explicite à ignorer. Décision : **pas de garde consentement** pour un message opérationnel
-B2B entre un office de tourisme et ses prestataires référencés.
+`actor_consent (actor_id, channel, consent_given)` couvre le canal `email` et contient
+**0 ligne**. Deux options étaient sur la table : ne rien faire en promettant de « rouvrir à la
+première ligne », ou poser un test qui rougit à l'apparition d'une ligne.
 
-**À rouvrir dès que la table porte sa première ligne** : un refus explicite, lui, ne doit pas
-être ignoré sans arbitrage PO/juridique écrit. Bâtir la garde maintenant serait la bâtir sur un
-comportement non observé.
+**Les deux sont écartées.** La première repose sur une vigilance humaine que rien ne garantit ;
+la seconde rougit sur une donnée parfaitement légitime et sera désarmée au premier passage.
+Le bras prestataire exclut donc **dès maintenant** un refus explicite :
 
-### D8 — Liste dynamique : le RPC résout lui-même, et reste `published`-only
+```sql
+AND NOT EXISTS (
+  SELECT 1 FROM actor_consent ac2
+  WHERE ac2.actor_id = aor.actor_id
+    AND ac2.channel = 'email'
+    AND ac2.consent_given = FALSE)
+```
 
-**Révisé après revue.** La v1 supposait que `ListComposeView` transmet ses ids déjà résolus.
-Vérifié : c'est faux à deux titres.
-- La signature est `api.list_effective_object_ids(p_list_id, **p_published_only**)` — le second
-  paramètre n'est pas `is_dynamic`.
-- Une liste **dynamique** est résolue par
-  `api.resolve_list_object_ids(l.filters, p_published_only, **200**)` : **plafond de 200**.
-  `get_list` pose par ailleurs `v_pub := (kind = 'dynamic')`, donc dynamique ⇒ publié seulement.
+Vacant aujourd'hui, correct pour toujours, et ne repose sur la vigilance de personne.
 
-Une liste dynamique « toute la base » rouverte dans `ListComposeView` ne fournirait donc que
-**200 ids** à une modale dont le RPC en accepte 2 000 — un plafond silencieux qui aurait produit
-un envoi partiel sans le moindre signal.
+**Portée du refus** : il coupe le **bras prestataire uniquement**. Le repli sur l'adresse de la
+fiche reste licite — c'est l'adresse professionnelle publique de l'établissement, pas celle de
+la personne, et elle sort déjà par l'API partenaire. Un gérant qui refuse d'être contacté
+personnellement n'a pas retiré l'établissement de l'annuaire.
 
-Le RPC accepte donc **deux entrées mutuellement exclusives** : `p_object_ids` (Exploreur) **ou**
-`p_list_id` (page liste). Sur `p_list_id`, il ré-autorise la liste (`api.user_can_read_list`)
-puis la résout lui-même, avec la limite adaptée (`resolve_list_object_ids(filters, …, 2000)`).
+*Ce qui reste hors périmètre* : l'absence de consentement (pas de ligne du tout) ne bloque
+rien — message opérationnel B2B entre un office de tourisme et ses prestataires référencés.
 
-**Sémantique `published`-only conservée pour les listes dynamiques** : on reste fidèle à la
-sémantique actuelle du module Listes plutôt que d'introduire une divergence entre `get_list` et
-l'export d'e-mails. Un éditeur qui veut joindre les exploitants de fiches en brouillon passe par
-la voie Exploreur, qui les sélectionne explicitement. *Point d'arbitrage PO si la demande
-inverse remonte.*
+### D8 — Liste dynamique : le RPC résout lui-même, à 2 001
+
+La v1 supposait que `ListComposeView` transmet ses ids déjà résolus. Vérifié, c'est faux à
+trois titres :
+
+- la signature est `api.list_effective_object_ids(p_list_id, **p_published_only**)` — le second
+  paramètre n'est pas `is_dynamic` ;
+- une liste **dynamique** est résolue par `api.resolve_list_object_ids(l.filters, …, 200)` ;
+- ce helper **replafonne lui-même** :
+  `v_lim := LEAST(GREATEST(COALESCE(p_limit,200),1), 200)` — demander 2 000 rend 200.
+
+Une liste dynamique « toute la base » aurait donc fourni **200 ids** à une modale affichant un
+compte crédible : un envoi partiel sans le moindre signal.
+
+**Correctif minimal** : relever le seul **plafond** interne de `resolve_list_object_ids` de
+`200` à `2001`, en laissant `COALESCE(p_limit, 200)` intact. `list_effective_object_ids` passe
+le littéral `200`, donc `get_list` et `list_my_lists` gardent exactement leur comportement
+actuel ; seul le nouveau RPC demande davantage. Le commentaire `ponytail:` du helper est mis à
+jour en conséquence.
+
+*Écarté* : une résolution dédiée dupliquant `get_filtered_object_ids` (deuxième source de
+vérité) ; relever le **défaut** à 2 000 (changerait le comportement du module livré).
+
+**Pourquoi 2 001 et non 2 000** : demander exactement le plafond ne permet pas de distinguer
+« exactement 2 000 » de « plus de 2 000 ». On demande N+1 et on lève `TOO_MANY_OBJECTS` si la
+2 001ᵉ ligne existe. Jamais de troncature silencieuse.
+
+**Sémantique `published`-only conservée pour les listes dynamiques** : fidélité à la sémantique
+actuelle du module plutôt qu'une divergence entre `get_list` et l'export. Un éditeur qui veut
+joindre les exploitants de fiches en brouillon passe par l'Exploreur, qui les sélectionne
+explicitement. *Point d'arbitrage PO si la demande inverse remonte.*
+
+### D9 — `archived` et `hidden` sont exclus, y compris en liste statique
+
+Le besoin porte sur `published` + `draft`. Or la branche statique de
+`list_effective_object_ids` ne filtre le statut que si `p_published_only` est vrai : une fiche
+archivée conservée dans une vieille liste statique passerait. Le RPC exclut donc explicitement
+`archived` et `hidden`, quelle que soit l'entrée.
+
+Vacant aujourd'hui (les listes statiques ne contiennent que du `published`) — mais une liste
+statique est faite pour vieillir, c'est précisément le cas qui se produira.
 
 ## 5. Architecture
 
-### 5.1 RPC `api.list_selection_emails(p_object_ids text[], p_list_id uuid) RETURNS json`
+### 5.1 RPC `api.list_selection_emails`
+
+```sql
+api.list_selection_emails(
+  p_object_ids text[] DEFAULT NULL,
+  p_list_id    uuid   DEFAULT NULL
+) RETURNS json
+```
 
 `SECURITY DEFINER`, `SET search_path = pg_catalog, public, api, auth`.
+Les deux paramètres ont un défaut : l'appelant PostgREST n'envoie que la clé qui le concerne.
 Rend les lignes **brutes** ; dédoublonnage et formatage côté client, donc les réglages de la
 modale ne coûtent aucun aller-retour.
 
 Corps, dans cet ordre :
 
-1. **Garde fail-closed (D5)**
-   ```sql
-   IF NOT COALESCE(api.current_user_can_edit_objects(), FALSE) THEN
-     RAISE EXCEPTION 'FORBIDDEN_EMAIL_EXPORT' USING ERRCODE = '42501';
-   END IF;
-   ```
-   Le `COALESCE` est obligatoire : la fonction est à **trois valeurs** et rend `NULL` hors
-   contexte HTTP ; sans lui la branche n'est pas prise et la garde devient **fail-open** (§204).
-   `ERRCODE = '42501'` + message stable : le front teste le code, jamais le texte
-   (même contrat que le `FORBIDDEN` de `get_list`).
+**1. Garde fail-closed (D5)**
 
-2. **Constitution de l'ensemble d'entrée** — exactement un des deux paramètres est non nul,
-   sinon `RAISE EXCEPTION 'INVALID_ARGUMENT'`.
-   - `p_object_ids` : `unnest(p_object_ids) WITH ORDINALITY`, ids dédoublonnés en conservant
-     la **première** ordinalité. Cette ordinalité **est** l'ordre de sortie (cf. §5.3).
-   - `p_list_id` : `api.user_can_read_list(p_list_id)` d'abord (sinon `42501`), puis résolution
-     interne — items ordonnés par `position` pour une liste statique, `resolve_list_object_ids
-     (filters, TRUE, 2000) WITH ORDINALITY` pour une dynamique (D8).
-   - Plafond dur **2 000** ids : au-delà, `RAISE EXCEPTION 'TOO_MANY_OBJECTS'`. Jamais de
-     troncature silencieuse — un export tronqué se lit comme un export complet.
+```sql
+IF NOT COALESCE(api.current_user_can_edit_objects(), FALSE) THEN
+  RAISE EXCEPTION 'FORBIDDEN_EMAIL_EXPORT' USING ERRCODE = '42501';
+END IF;
+```
 
-3. **Périmètre (D4)** — intersection **avant** toute lecture de contact :
-   `id IN (SELECT api.current_user_crm_object_ids()) OR api.is_platform_superuser()`.
-   La fonction est exécutable par PostgREST : la liste d'ids de l'appelant n'est jamais crue.
+Le `COALESCE` est obligatoire : la fonction est à **trois valeurs** et rend `NULL` hors contexte
+HTTP ; sans lui la branche n'est pas prise et la garde devient **fail-open** (§204).
+`ERRCODE = '42501'` + message stable : le front teste le code, jamais le texte (même contrat
+que le `FORBIDDEN` de `get_list`).
 
-4. **Cascade (D1)**
-   - *Bras prestataire* : `actor_object_role` → `actor_channel` (kind `email`), rôle
-     **`operator`**, `visibility IN ('public','partners')` — `private` exclu, un drapeau de
-     visibilité se compose (§49) — et validité temporelle (D6).
-     Ordre : `aor.is_primary DESC`, `ac.is_primary DESC`, `ac.position`, `ac.created_at`,
-     **`ac.id`** en départage terminal.
-   - *Bras fiche* : `contact_channel` kind `email`, ordre `is_primary DESC`, `position`,
-     `created_at`, **`cc.id`**. Pas de filtre `is_public` — les 819 le sont, et l'appelant est
-     éditeur de l'ORG publisher.
+**2. Constitution de l'ensemble demandé**
 
-   Le filtre de rôle `operator` est gratuit aujourd'hui (100 % des liens) et ferme la porte au
-   jour où un rôle `guide` apparaîtra : écrire au moniteur en croyant écrire à l'établissement
-   serait une vraie erreur.
+Exactement un des deux paramètres est non nul, sinon `RAISE EXCEPTION 'INVALID_ARGUMENT'`.
+Un tableau **vide** (`'{}'`) est une demande valide et rend un résultat vide — c'est `NULL` des
+deux côtés qui est une erreur d'appel.
 
-5. **Retour**
-   ```json
-   {
-     "rows":    [{ "object_id": "…", "email": "…", "source": "actor|object", "ord": 1 }],
-     "missing": [{ "object_id": "…", "name": "…" }]
-   }
-   ```
-   `rows` est trié par `ord`. Le nom n'est conservé que sur `missing` (il vaut `object.name`) :
-   il faut nommer les fiches muettes pour aller les compléter, et la sortie copiée ne contient
-   que des adresses (D3).
+- `p_object_ids` : plafond vérifié sur **`cardinality(p_object_ids)` AVANT `unnest`** — un
+  immense tableau de doublons ne doit pas être déplié pour être ensuite réduit. Puis
+  `unnest(…) WITH ORDINALITY`, ids dédoublonnés en conservant la **première** ordinalité, qui
+  **est** l'ordre de sortie (§5.2).
+- `p_list_id` : `api.user_can_read_list(p_list_id)` d'abord (sinon `42501`), puis résolution
+  interne — items ordonnés par `position` pour une liste statique,
+  `resolve_list_object_ids(filters, TRUE, 2001) WITH ORDINALITY` pour une dynamique (D8).
+- Au-delà de **2 000** ids (ou si la 2 001ᵉ ligne existe) : `RAISE EXCEPTION
+  'TOO_MANY_OBJECTS'`. Jamais de troncature — un export tronqué se lit comme un export complet.
+
+**3. Périmètre et statut** — **avant** toute lecture de contact :
+
+```sql
+WHERE (id IN (SELECT api.current_user_crm_object_ids()) OR api.is_platform_superuser())
+  AND status NOT IN ('archived','hidden')          -- D9
+```
+
+La fonction est exécutable par PostgREST : la liste d'ids de l'appelant n'est jamais crue.
+Le nombre de lignes retenues ici donne `eligible_count`.
+
+**4. Cascade (D1)**
+
+- *Bras prestataire* : `actor_object_role` → `actor_channel` (kind `email`), rôle
+  **`operator`**, `visibility IN ('public','partners')` — `private` exclu, un drapeau de
+  visibilité se compose (§49) — validité temporelle (D6) et absence de refus (D7).
+  Ordre : `aor.is_primary DESC **NULLS LAST**`, `ac.is_primary DESC **NULLS LAST**`,
+  `ac.position NULLS LAST`, `ac.created_at`, **`ac.id`** en départage terminal.
+- *Bras fiche* : `contact_channel` kind `email`, ordre `cc.is_primary DESC **NULLS LAST**`,
+  `cc.position NULLS LAST`, `cc.created_at`, **`cc.id`**. Pas de filtre `is_public` — les 819
+  le sont, et l'appelant est éditeur de l'ORG publisher.
+
+Les `NULLS LAST` ne sont pas cosmétiques : `is_primary` est **nullable** et `DESC` place les
+`NULL` **en premier** par défaut en PostgreSQL — sans eux, un canal au drapeau non renseigné
+passerait devant le canal explicitement principal.
+
+Le filtre de rôle `operator` est gratuit aujourd'hui (100 % des liens) et ferme la porte au jour
+où un rôle `guide` apparaîtra : écrire au moniteur en croyant écrire à l'établissement serait
+une vraie erreur.
+
+**5. Retour**
+
+```json
+{
+  "requested_count": 842,
+  "eligible_count":  840,
+  "excluded_count":    2,
+  "rows":    [{ "object_id": "…", "email": "…", "source": "actor|object", "ord": 1 }],
+  "missing": [{ "object_id": "…", "name": "…" }]
+}
+```
+
+`rows` est trié par `ord`. `missing` ne contient que des fiches **éligibles** sans adresse — une
+fiche hors périmètre n'y figure pas, elle est comptée dans `excluded_count`. Le nom n'est
+conservé que sur `missing` (il vaut `object.name`) : il faut nommer les fiches muettes pour
+aller les compléter, et la sortie copiée ne contient que des adresses (D3).
 
 `REVOKE ALL … FROM PUBLIC, anon` puis `GRANT EXECUTE TO authenticated, service_role` —
 obligatoire sur toute fonction `DEFINER` neuve, PostgreSQL accorde `EXECUTE` à `PUBLIC` par
@@ -228,9 +312,8 @@ défaut et un `GRANT` ciblé ne le retire pas.
 
 « Dédoublonner en conservant l'ordre » n'a de sens que si le serveur **définit** cet ordre.
 Sans ordre explicite, la « première occurrence » dépend du plan choisi par PostgreSQL et peut
-changer d'une exécution à l'autre. D'où, de bout en bout :
-`unnest … WITH ORDINALITY` en entrée → `ORDER BY ord` en sortie → départages terminaux sur
-`ac.id` / `cc.id` dans chaque bras de la cascade.
+changer d'une exécution à l'autre. D'où, de bout en bout : `unnest … WITH ORDINALITY` en entrée
+→ `ORDER BY ord` en sortie → départages terminaux sur `ac.id` / `cc.id` dans chaque bras.
 
 ### 5.3 Front
 
@@ -243,11 +326,12 @@ Ces deux fonctions pures portent toute la logique, donc tout le test.
 
 `src/components/explorer/CopyEmailsModal.tsx` — primitive `Modal` maison
 (`src/components/common/Modal.tsx`), props `{ objectIds?, listId?, open, onOpenChange }` :
-- ligne de compte « N fiches · M adresses · K sans e-mail » ;
-- une seconde ligne **« X fiches résolues via le prestataire, Y via la fiche »** — c'est une
-  répartition de **fiches**, jamais d'adresses : après dédoublonnage une même adresse peut
-  provenir de plusieurs fiches et de sources différentes, un « X adresses via prestataire »
-  serait faux ;
+
+- ligne de compte : **« 840 fiches éligibles sur 842 · 717 adresses · 19 sans e-mail »**, la
+  mention « sur 842 » n'apparaissant que si `excluded_count > 0` ;
+- une seconde ligne **« X fiches résolues via le prestataire, Y via la fiche »** — répartition
+  de **fiches**, jamais d'adresses : après dédoublonnage une même adresse peut provenir de
+  plusieurs fiches et de sources différentes, un « X adresses via prestataire » serait faux ;
 - la phrase Cci (D3) ;
 - sélecteur de séparateur (3 segments, `,` par défaut) ;
 - `textarea` en lecture seule, recomposé instantanément au changement de séparateur ;
@@ -273,19 +357,21 @@ Points d'entrée, même composant, **tous deux masqués si `!canEditObjects`** :
   occurrence dans l'ordre défini en §5.2.
 - Les **2 fiches publiées sans coordonnées** n'ont pas de marqueur et échappent au « tout
   sélectionner » de l'Exploreur. Elles restent atteignables par sélection manuelle.
-- Les **2 fiches sans lien `publisher`** sont hors périmètre (D4).
+- Les **2 fiches sans lien `publisher`** sont hors périmètre — **comptées et affichées**, pas
+  absorbées (D4).
 - Plafond de 2 000 ids ; au-delà, erreur explicite, jamais de troncature.
-- Liste dynamique : `published`-only (D8).
+- Liste dynamique : `published`-only (D8). `archived` / `hidden` toujours exclus (D9).
 
 ## 7. Vérification
 
 **Jest, fonctions pures** : dédoublonnage (deux fiches, une adresse → une sortie), ordre
 préservé, les trois séparateurs, casse et espaces.
 
-**Jest, modale** : comptes affichés ; libellé de répartition en *fiches* ; contenu du
-`textarea` ; « Copié » **seulement** après résolution de `writeText` ; message dédié sur rejet du
-presse-papiers ; réponse obsolète ignorée après fermeture/réouverture ; bouton absent **dans les
-deux surfaces** (`SelectionBar` *et* `ListComposeView`) quand `canEditObjects` est faux.
+**Jest, modale** : les quatre compteurs, dont la mention « sur N » qui n'apparaît qu'avec des
+exclus ; libellé de répartition en *fiches* ; contenu du `textarea` ; « Copié » **seulement**
+après résolution de `writeText` ; message dédié sur rejet du presse-papiers ; réponse obsolète
+ignorée après fermeture/réouverture ; bouton absent **dans les deux surfaces**
+(`SelectionBar` *et* `ListComposeView`) quand `canEditObjects` est faux.
 
 **SQL, `tests/test_selection_emails.sql`, non vacant** — témoins créés dans la transaction :
 
@@ -293,16 +379,20 @@ deux surfaces** (`SelectionBar` *et* `ListComposeView`) quand `canEditObjects` e
 |---|---|
 | Fiche avec acteur *et* e-mail propre | l'acteur gagne |
 | Fiche avec e-mail propre seul | repli sur la fiche |
-| Fiche sans aucun e-mail | apparaît dans `missing` |
-| Fiche **publiée d'une ORG étrangère** | écartée par le périmètre D4 |
+| Fiche éligible sans aucun e-mail | apparaît dans `missing` |
+| Fiche **publiée d'une ORG étrangère** | écartée par D4, comptée dans `excluded_count`, **absente de `missing`** |
 | Lien `operator` **expiré**, et lien **futur** | ignorés, repli sur la fiche |
 | Lien `visibility='private'` | ignoré |
 | Lien de rôle **non-`operator`** | ignoré |
+| Acteur avec `actor_consent(email, FALSE)` | bras prestataire coupé, **repli sur l'e-mail de la fiche** |
+| `is_primary` **NULL** face à un `is_primary` TRUE | le TRUE gagne (garde du `NULLS LAST`) |
+| Fiche `archived` / `hidden` dans une liste statique | exclue (D9) |
 | Ids **dupliqués** en entrée | une seule ligne, ordre déterministe et stable sur deux exécutions |
 | **2 001** ids | `TOO_MANY_OBJECTS`, jamais de troncature |
-| Tableau **vide** et **`NULL`** | retour vide, pas d'erreur |
-| Deux paramètres fournis, ou aucun | `INVALID_ARGUMENT` |
-| `p_list_id` dynamique > 200 membres | plus de 200 ids résolus (garde anti-régression du plafond D8) |
+| `p_object_ids = '{}'` | retour vide, pas d'erreur |
+| `p_object_ids` **et** `p_list_id` tous deux `NULL`, ou tous deux fournis | `INVALID_ARGUMENT` |
+| `p_list_id` dynamique de **plus de 200** membres | plus de 200 ids résolus — garde anti-régression du plafond D8 |
+| `get_list` sur la même liste dynamique | **toujours 200** — garde de non-régression du module Listes |
 | Privilèges `PUBLIC` / `anon` / `authenticated` | `EXECUTE` révoqué sauf `authenticated`, `service_role` |
 
 La garde D5 est éprouvée par **`request.jwt.claims`, jamais par `SET ROLE` seul** : sans JWT le
@@ -315,4 +405,4 @@ lecteur.
 - Envoi d'e-mail depuis l'application (le geste reste « copier → coller dans Gmail »).
 - Journalisation CRM de l'export.
 - Nouveau mécanisme de sélection : les listes `static`/`dynamic` couvrent le besoin.
-- Garde de consentement (D7 — table vide, à rouvrir à sa première ligne).
+- Pagination au-delà de 2 000 fiches (le plafond lève une erreur explicite).

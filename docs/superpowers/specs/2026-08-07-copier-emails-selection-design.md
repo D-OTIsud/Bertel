@@ -1,7 +1,7 @@
 # Copier la liste d'e-mails d'une sélection — design
 
 **Date** : 2026-08-07
-**Statut** : v3, révisée après deux passes de revue — prête pour le plan d'implémentation
+**Statut** : v5, révisée après trois passes de revue — prête pour le plan d'implémentation
 **Surfaces** : barre de sélection de l'Exploreur + page d'une liste (`/listes/[id]`)
 
 ---
@@ -203,7 +203,13 @@ inacceptable pour un besoin qui ne la requiert pas (cf. §9, constat pré-exista
    `list_selection_emails` avec **2 001**.
 
 Aucune duplication de `get_filtered_object_ids` — une seule source de vérité — et la variante
-haute capacité n'est joignable que depuis un `DEFINER` qui a déjà appliqué D4 et D5.
+haute capacité n'est joignable qu'en `internal`, donc jamais directement par PostgREST.
+
+*Précision sur l'ordre* : au moment où le moteur est appelé, seule **D5** (garde éditeur, étape 1)
+est appliquée ; **D4** (périmètre) l'est à l'étape 3, après. La sûreté ne repose donc pas sur
+« le périmètre est déjà posé » mais sur deux faits : le moteur n'est pas appelable de
+l'extérieur, et **aucune donnée de contact n'est lue avant D4** — le moteur ne rend que des ids,
+qui sont ensuite filtrés.
 
 *Écarté* : une résolution dédiée dupliquant `get_filtered_object_ids` (deuxième source de
 vérité) ; relever le **défaut** à 2 000 (changerait le comportement du module livré).
@@ -249,18 +255,34 @@ Corps, dans cet ordre :
 
 ```sql
 IF NOT COALESCE(api.current_user_can_edit_objects(), FALSE) THEN
-  RAISE EXCEPTION 'FORBIDDEN_EMAIL_EXPORT' USING ERRCODE = '42501';
+  RAISE SQLSTATE '42501' USING MESSAGE = 'FORBIDDEN_EMAIL_EXPORT';
 END IF;
 ```
 
 Le `COALESCE` est obligatoire : la fonction est à **trois valeurs** et rend `NULL` hors contexte
 HTTP ; sans lui la branche n'est pas prise et la garde devient **fail-open** (§204).
-`ERRCODE = '42501'` + message stable : le front teste le code, jamais le texte (même contrat
-que le `FORBIDDEN` de `get_list`).
+
+**Contrat d'erreur — un SQLSTATE distinct par cas.** Un `RAISE EXCEPTION 'TEXTE'` nu produit
+toujours `P0001` : les trois erreurs métier seraient indiscernables et le front n'aurait plus
+que le texte du message pour brancher. PostgREST mappe les SQLSTATE de la forme `PTxyz` sur le
+statut HTTP `xyz` et expose le SQLSTATE dans `error.code`, d'où :
+
+| Cas | SQLSTATE | HTTP | `MESSAGE` |
+|---|---|---|---|
+| Garde éditeur | `42501` | 403 | `FORBIDDEN_EMAIL_EXPORT` |
+| Lecture de liste refusée | `42501` | 403 | `FORBIDDEN` |
+| Plus de 2 000 fiches | `PT413` | 413 | `TOO_MANY_OBJECTS` |
+| Liste inexistante | `PT404` | 404 | `LIST_NOT_FOUND` |
+| Paramètres invalides | `PT400` | 400 | `INVALID_ARGUMENT` |
+
+`42501` (`insufficient_privilege`) est conservé pour les deux refus d'autorisation : c'est un
+code PostgreSQL réel, il mappe déjà sur 403, et c'est le contrat du `FORBIDDEN` de `get_list`.
+Le front branche sur **`error.code`** ; le `MESSAGE` sert au diagnostic et aux logs.
 
 **2. Constitution de l'ensemble demandé**
 
-Exactement un des deux paramètres est non nul, sinon `RAISE EXCEPTION 'INVALID_ARGUMENT'`.
+Exactement un des deux paramètres est non nul, sinon
+`RAISE SQLSTATE 'PT400' USING MESSAGE = 'INVALID_ARGUMENT'`.
 Un tableau **vide** (`'{}'`) est une demande valide et rend un résultat vide — c'est `NULL` des
 deux côtés qui est une erreur d'appel.
 
@@ -268,14 +290,33 @@ deux côtés qui est une erreur d'appel.
   immense tableau de doublons ne doit pas être déplié pour être ensuite réduit. Puis
   `unnest(…) WITH ORDINALITY`, ids dédoublonnés en conservant la **première** ordinalité, qui
   **est** l'ordre de sortie (§5.2).
-- `p_list_id` : `api.user_can_read_list(p_list_id)` d'abord (sinon `42501`), liste inexistante
-  ⇒ `RAISE EXCEPTION 'LIST_NOT_FOUND'`. Puis résolution interne :
+- `p_list_id` : **charger la ligne AVANT d'autoriser**, sinon les deux erreurs se confondent —
+  `api.user_can_read_list` est `is_platform_superuser() OR EXISTS(…)`, donc sur une liste
+  supprimée un non-superuser reçoit `FALSE` (⇒ `42501`, jamais `PT404`) et un superuser reçoit
+  `TRUE` puis travaille sur une ligne NULL :
+
+  ```sql
+  SELECT * INTO v_list FROM public.object_list WHERE id = p_list_id;
+  IF NOT FOUND THEN
+    RAISE SQLSTATE 'PT404' USING MESSAGE = 'LIST_NOT_FOUND';
+  END IF;
+  IF NOT COALESCE(api.user_can_read_list(p_list_id), FALSE) THEN
+    RAISE SQLSTATE '42501' USING MESSAGE = 'FORBIDDEN';
+  END IF;
+  ```
+
+  *Compromis assumé* : cet ordre révèle l'existence d'une liste à qui ne peut pas la lire.
+  Acceptable — les ids sont des UUID v4 non devinables, donc l'oracle n'est pas énumérable, et
+  le gain (une erreur juste au lieu d'un refus trompeur) dépasse le signal cédé.
+
+  Puis résolution interne :
   - statique — `object_list_item ORDER BY position **LIMIT 2001**`. La borne est posée **dans
     la lecture**, pas après : une liste statique n'a pas de plafond de composition, rien ne
     garantit qu'elle tienne en mémoire avant d'être comptée ;
   - dynamique — `internal.resolve_list_object_ids(filters, TRUE, 2001) WITH ORDINALITY` (D8).
-- Au-delà de **2 000** ids (ou si la 2 001ᵉ ligne existe) : `RAISE EXCEPTION
-  'TOO_MANY_OBJECTS'`. Jamais de troncature — un export tronqué se lit comme un export complet.
+- Au-delà de **2 000** ids (ou si la 2 001ᵉ ligne existe) :
+  `RAISE SQLSTATE 'PT413' USING MESSAGE = 'TOO_MANY_OBJECTS'`. Jamais de troncature — un export
+  tronqué se lit comme un export complet.
 
 **3. Périmètre et statut** — **avant** toute lecture de contact :
 
@@ -364,15 +405,15 @@ Ces deux fonctions pures portent toute la logique, donc tout le test.
   sélectionnable pour un Ctrl+C manuel — jamais de « Copié » sur un presse-papiers vide ;
 - garde de réponse obsolète : une fermeture/réouverture rapide ne doit pas laisser la réponse
   du premier chargement écraser l'état du second (`AbortController` ou jeton de requête) ;
-- **contrat d'erreur** — la modale branche sur le message stable, jamais sur le texte
-  PostgREST :
+- **contrat d'erreur** — la modale branche sur **`error.code`** (le SQLSTATE, cf. §5.1 étape 1),
+  jamais sur le texte :
 
-| Erreur serveur | Message affiché à la place du contenu |
+| `error.code` | Message affiché à la place du contenu |
 |---|---|
-| `FORBIDDEN_EMAIL_EXPORT` (`42501`) | « Réservé aux éditeurs. » — défense en profondeur, le bouton est déjà masqué aux lecteurs |
-| `TOO_MANY_OBJECTS` | « Sélection trop large (plus de 2 000 fiches). Affinez le filtre, ou copiez en deux fois. » |
-| `LIST_NOT_FOUND` | « Cette liste n'existe plus. » |
-| `INVALID_ARGUMENT` | « Une erreur technique empêche la copie. » — bug d'appel, jamais provoquable par l'utilisateur ; le détail va en console, pas à l'écran |
+| `42501` | « Réservé aux éditeurs. » — défense en profondeur, le bouton est déjà masqué aux lecteurs |
+| `PT413` | « Sélection trop large (plus de 2 000 fiches). Affinez le filtre, ou copiez en deux fois. » |
+| `PT404` | « Cette liste n'existe plus. » |
+| `PT400` | « Une erreur technique empêche la copie. » — bug d'appel, jamais provoquable par l'utilisateur ; le détail va en console, pas à l'écran |
 | autre / réseau | « Chargement impossible. » + bouton Réessayer |
 
 Points d'entrée, même composant, **tous deux masqués si `!canEditObjects`** :
@@ -418,14 +459,15 @@ ignorée après fermeture/réouverture ; bouton absent **dans les deux surfaces*
 | `is_primary` **NULL** face à un `is_primary` TRUE | le TRUE gagne (garde du `NULLS LAST`) |
 | Fiche `archived` / `hidden` dans une liste statique | exclue (D9) |
 | Ids **dupliqués** en entrée | une seule ligne, ordre déterministe et stable sur deux exécutions |
-| **2 001** ids | `TOO_MANY_OBJECTS`, jamais de troncature |
+| **2 001** ids | `PT413` / `TOO_MANY_OBJECTS`, jamais de troncature |
 | `p_object_ids = '{}'` | retour vide, pas d'erreur |
-| `p_object_ids` **et** `p_list_id` tous deux `NULL`, ou tous deux fournis | `INVALID_ARGUMENT` |
+| `p_object_ids` **et** `p_list_id` tous deux `NULL`, ou tous deux fournis | `PT400` / `INVALID_ARGUMENT` |
 | `p_list_id` dynamique de **plus de 200** membres | plus de 200 ids résolus — garde anti-régression du plafond D8 |
 | `get_list` sur la même liste dynamique | **toujours 200** — garde de non-régression du module Listes |
 | `api.resolve_list_object_ids(…, 2001)` appelé **en tant qu'`authenticated`** | **toujours 200** — le contrat public reste plafonné (D8) |
 | `internal.resolve_list_object_ids` appelé en tant qu'`authenticated` | `EXECUTE` refusé |
-| Liste inexistante | `LIST_NOT_FOUND` |
+| Liste inexistante, appelee par un NON-superuser | `PT404`, jamais `42501` (ordre charger-puis-autoriser) |
+| Liste inexistante, appelee par un superuser | `PT404`, pas un plantage sur ligne NULL |
 | Privilèges `PUBLIC` / `anon` / `authenticated` sur `list_selection_emails` | `EXECUTE` révoqué sauf `authenticated`, `service_role` |
 
 La garde D5 est éprouvée par **`request.jwt.claims`, jamais par `SET ROLE` seul** : sans JWT le

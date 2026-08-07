@@ -2,59 +2,52 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** donner une surface d'administration à **tous** les catalogues de référence du projet (**103** : 71 domaines de `ref_code` — 52 plats, 19 taxonomiques verrouillés — et 32 tables `public.ref_*` autonomes), générée depuis le catalogue PostgreSQL plutôt qu'écrite catalogue par catalogue.
+**Goal:** donner une surface d'administration à **tous** les catalogues de référence du projet (**103** : 71 domaines de `ref_code` et 32 tables `public.ref_*` autonomes), générée depuis le catalogue PostgreSQL plutôt qu'écrite catalogue par catalogue.
 
-**Architecture:** une vue d'introspection `internal.v_ref_catalog` découvre les catalogues et leur forme (colonnes, types, clés étrangères entrantes et sortantes, énumérés) sans configuration ; une petite table `ref_catalog_registry` porte l'éditorial (nom lisible, famille, section d'usage, verrouillage motivé). Quatre RPC `SECURITY DEFINER` gated super-admin lisent et écrivent — l'écriture est du SQL dynamique dont **la liste blanche est la vue, jamais le registre**. Les 52 domaines plats de `ref_code` ne sont pas réimplémentés : le RPC générique délègue aux fonctions éprouvées de la phase 7.5.
+**Architecture:** une vue d'introspection `internal.v_ref_catalog` découvre les catalogues et leur forme ; une table `ref_catalog_registry` porte l'éditorial (nom lisible, famille, verrouillage motivé) ; cinq RPC `SECURITY DEFINER` gated super-admin lisent, écrivent, suppriment et réordonnent. L'écriture est du SQL dynamique dont **la liste blanche est la vue, jamais le registre**. Les domaines de `ref_code` délèguent aux quatre fonctions éprouvées de la phase 7.5.
 
 **Tech Stack:** PostgreSQL 17 / Supabase (PL/pgSQL, `format(%I)`, `EXECUTE … USING`), PostgREST, Next.js 15 + React 19 + TanStack Query, Jest + React Testing Library.
 
-**Spec:** `docs/superpowers/specs/2026-08-07-admin-catalogues-reference-design.md` — validée section par section avec le PO le 2026-08-07.
+**Spec:** `docs/superpowers/specs/2026-08-07-admin-catalogues-reference-design.md`.
 
 ## Global Constraints
 
-- **Numéro de décision : §211.** §209 (catalogue juridique) et §210 (incident Exploreur) sont pris. Re-grepper `^## §` dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` avant de figer le numéro — d'autres sessions peuvent avoir consommé un numéro entre-temps.
-- **Étape de manifeste : `16u`.** À déclarer dans `docs/SQL_ROLLOUT_RUNBOOK.md` ET dans `Base de donnée DLL et API/ci_fresh_apply.sql`, sinon la migration est une dérive PROD-only (traitée comme un incident, cf. CLAUDE.md « Deploy integrity »).
-- **Toute fonction `SECURITY DEFINER` neuve porte `REVOKE ALL ON FUNCTION … FROM PUBLIC`** — PostgreSQL accorde `EXECUTE` à `PUBLIC` par défaut et un `GRANT` ciblé ne le retire pas.
-- **`SET search_path = pg_catalog, public, api, internal`** sur toutes les fonctions neuves, donc **`gen_random_uuid()`** et jamais `uuid_generate_v4()` (non résolvable sous ce `search_path`).
-- **Garde d'autorisation fail-closed : `IF api.is_platform_superuser() IS NOT TRUE THEN RAISE`** — `IS NOT TRUE`, pas `NOT`, car la fonction rend `NULL` hors contexte HTTP.
-- **Aucune écriture PostgREST directe sur `ref_*` depuis le front** (invariant phase 7.5). Tout passe par les RPC.
-- **Le flag advisor `0028/0029_*_security_definer_function_executable`** sur les nouvelles RPC est **attendu** (classe §36 : fonction publique-exécutable qui s'auto-autorise). Ne pas « corriger ».
-- Le SQL du projet vit dans `Base de donnée DLL et API/` (espaces dans le chemin : toujours entre guillemets en shell).
-- Commandes front, depuis `bertel-tourism-ui/` : `npx tsc --noEmit -p tsconfig.json` et `npx jest <chemin>`.
-- **Identité d'une ligne = `p_key jsonb`, jamais `p_id uuid`.** Mesuré : 10 des 32 tables sortent du moule `uuid` simple — `ref_commune` a une PK `varchar(5)`, cinq matrices ont une PK composite (2 ou 3 colonnes), `ref_facet_registry` et `ref_code_domain_registry` ont une PK `text`, et **`ref_interop_crosswalk` n'a aucune clé primaire**. Un `p_id uuid` rendrait non éditables au moins dix catalogues, dont quatre que la spec annonce éditables.
-- **Une relation sans clé primaire est en lecture seule d'office**, par règle DÉRIVÉE (`is_identifiable = false`), pas par une ligne de registre qu'on pourrait oublier.
-- **Tout appel aux RPC de la phase 7.5 se fait en arguments NOMMÉS.** La signature réelle est `api.rpc_upsert_ref_code(p_domain, p_name, p_id, p_code, p_name_i18n, p_position)` — `p_name` **avant** `p_code`. Un appel positionnel qui suppose l'inverse écrit le code dans le libellé et le libellé dans le code, **sans lever d'erreur SQL**.
-- **La colonne de libellé se résout par CASCADE**, pas par déclaration : 12 des 32 tables n'ont pas de colonne `name`. Ordre : surcharge du registre → première colonne texte parmi `name`, `label`, `title`, `libelle` → `code` → concaténation des colonnes de clé primaire.
-- **Aucune assertion de test en `>=` sur un compte de catalogues**, et aucune assertion satisfaite par un ensemble non vide. Le compte attendu se calcule dans le test.
-- Messages de commit : conventional, **sans** ligne `Co-Authored-By` (préférence du dépôt).
+- **Numéro de décision : §211.** §209 et §210 sont pris. Re-grepper `^## §` dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` avant de figer le numéro.
+- **Étape de manifeste : `16u`**, à déclarer dans `docs/SQL_ROLLOUT_RUNBOOK.md` ET dans `Base de donnée DLL et API/ci_fresh_apply.sql`. Sans cela la migration est une dérive PROD-only, traitée comme un incident (CLAUDE.md, « Deploy integrity »).
+- **`REVOKE ALL ON FUNCTION … FROM PUBLIC`** sur chaque fonction neuve — PostgreSQL accorde `EXECUTE` à `PUBLIC` par défaut et un `GRANT` ciblé ne le retire pas.
+- **`SET search_path = pg_catalog, public, api, internal`**, donc `gen_random_uuid()` et jamais `uuid_generate_v4()`.
+- **Garde fail-closed : `IF api.is_platform_superuser() IS NOT TRUE THEN RAISE`** — `IS NOT TRUE`, pas `NOT` : la fonction rend `NULL` hors contexte HTTP.
+- **Identité d'une ligne = `p_key jsonb`.** 10 des 32 tables sortent du moule `uuid` simple : `ref_commune` a une PK `varchar(5)`, cinq matrices sont composites, `ref_code_taxonomy_closure` a trois colonnes, `ref_facet_registry` et `ref_code_domain_registry` ont une PK `text`, et **`ref_interop_crosswalk` n'a aucune clé primaire**.
+- **La clé canonique d'une ligne est `jsonb_build_object(<cols PK>)::text`**, des deux côtés — `usage` en est indexé, `p_key` en est la forme désérialisée. Une valeur de PK brute comme clé serait ambiguë dès qu'une PK est composite.
+- **Tout appel aux RPC de la phase 7.5 se fait en arguments NOMMÉS.** La signature est `api.rpc_upsert_ref_code(p_domain, p_name, p_id, p_code, p_name_i18n, p_position)` — `p_name` **avant** `p_code`. Un appel positionnel inversé écrit le code dans le libellé **sans lever d'erreur SQL**.
+- **Aucune assertion de test en `>=` sur un compte de catalogues**, aucune assertion satisfaite par un ensemble non vide, aucune assertion qui ne fasse pas tourner le code testé.
+- Le SQL vit dans `Base de donnée DLL et API/` (espaces dans le chemin : guillemets obligatoires en shell). Front depuis `bertel-tourism-ui/` : `npx tsc --noEmit -p tsconfig.json`, `npx jest <chemin>`.
+- Commits conventional, **sans** ligne `Co-Authored-By`.
 
 ---
 
 ## Structure des fichiers
 
 **Créés — SQL**
+
 | Fichier | Responsabilité |
 |---|---|
-| `Base de donnée DLL et API/migration_ref_catalog_admin.sql` | tout le SQL de la fonctionnalité : vue, registre, seed, 4 RPC. Non foldé dans `schema_unified.sql` (les RPC référencent `api.is_platform_superuser` de `rls_policies.sql`) ⇒ étape de manifeste `16u`. |
-| `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql` | garde CI permanente, 3 assertions non vacantes. |
+| `Base de donnée DLL et API/migration_ref_catalog_admin.sql` | vue, registre, seed, helpers dérivés, 5 RPC. **Non foldé** dans `schema_unified.sql` (dépend de `api.is_platform_superuser` de `rls_policies.sql`) ⇒ étape `16u`. |
+| `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql` | garde CI permanente. |
 
 **Créés — front**
+
 | Fichier | Responsabilité |
 |---|---|
-| `bertel-tourism-ui/src/features/settings/catalog-fields.ts` | **pur** : traduction colonne → contrôle, et détection du blocage d'ajout. Zéro import React. |
-| `bertel-tourism-ui/src/features/settings/catalog-fields.test.ts` | tests de la fonction pure. |
-| `bertel-tourism-ui/src/services/ref-catalogs.ts` | appels aux 4 RPC + normalisation. |
-| `bertel-tourism-ui/src/services/ref-catalogs.test.ts` | tests du service (client Supabase simulé). |
+| `bertel-tourism-ui/src/features/settings/catalog-fields.ts` | **pur** : colonne → contrôle, identité de ligne, libellé de secours, blocage d'ajout. Zéro import React. |
+| `bertel-tourism-ui/src/features/settings/catalog-fields.test.ts` | tests de la partie pure. |
+| `bertel-tourism-ui/src/services/ref-catalogs.ts` | appels aux 5 RPC + normalisation + `groupByFamily`. |
+| `bertel-tourism-ui/src/services/ref-catalogs.test.ts` | tests du service. |
 | `bertel-tourism-ui/src/views/RefCatalogAdmin.tsx` | l'écran maître/détail. |
-| `bertel-tourism-ui/src/views/RefCatalogAdmin.test.tsx` | tests de rendu. |
+| `bertel-tourism-ui/src/views/RefCatalogRowModal.tsx` | la modale d'édition d'une ligne (extraite : l'écran resterait sinon au-delà de 400 lignes). |
+| `bertel-tourism-ui/src/views/RefCatalogAdmin.test.tsx` | rendu + mutations. |
 
-**Modifiés**
-| Fichier | Modification |
-|---|---|
-| `Base de donnée DLL et API/ci_fresh_apply.sql` | étape `16u` + `16u-test`, avant `I4f-final-test`. |
-| `docs/SQL_ROLLOUT_RUNBOOK.md` | entrée de manifeste `16u` (liste) + section détaillée. |
-| `bertel-tourism-ui/src/views/SettingsPage.tsx:786` | `<RefCodeEditor />` → `<RefCatalogAdmin />` + texte du bandeau. |
-| `bertel-tourism-ui/src/views/RefCodeEditor.tsx` | **supprimé** — absorbé (cf. tâche 8). Son service `ref-codes.ts` reste : les RPC génériques délèguent, mais `ref-code-reorder.ts` et la modale i18n sont réutilisés. |
+**Modifiés** : `ci_fresh_apply.sql`, `docs/SQL_ROLLOUT_RUNBOOK.md`, `src/views/SettingsPage.tsx:786`. **Supprimé** : `src/views/RefCodeEditor.tsx` (absorbé). `src/services/ref-codes.ts` et `src/views/ref-code-reorder.ts` restent — `moveItem` sert au réordonnancement.
 
 ---
 
@@ -62,17 +55,18 @@
 
 **Files:**
 - Create: `Base de donnée DLL et API/migration_ref_catalog_admin.sql`
+- Create: `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql`
 
 **Interfaces:**
-- Consumes: rien (première tâche).
-- Produces: la vue `internal.v_ref_catalog`, colonnes `kind text`, `catalog_key text`, `table_name text`, `domain text`, `columns jsonb`, **`primary_key_columns jsonb`** (tableau `[{name, type}]`, pas un scalaire), **`is_identifiable boolean`**, `outgoing_fk jsonb`, `incoming_fk jsonb`. Les tâches 3 et 4 la lisent.
-- Deux exigences que la première rédaction de ce plan avait manquées, confirmées en base :
-  1. `primary_key_columns` est un **tableau** — 5 matrices ont une PK composite, `ref_code_taxonomy_closure` en a trois, et `ref_interop_crosswalk` n'en a aucune (`is_identifiable = false`) ;
-  2. pour l'espèce `ref_code_domain`, `columns` est **synthétisée** (un domaine n'est pas une relation, son `reloid` est NULL) : sans cela 71 catalogues sur 103 seraient décrits sans aucune colonne et l'écran ne produirait aucun champ de saisie.
+- Produces: `internal.v_ref_catalog(kind text, catalog_key text, table_name text, domain text, columns jsonb, primary_key_columns jsonb, is_identifiable boolean, outgoing_fk jsonb, incoming_fk jsonb)`.
+
+**Trois pièges de cette vue, tous silencieux :**
+
+1. **Les domaines `ref_code` n'ont pas de `reloid`.** Sans synthèse explicite, `columns` vaut `[]`, `primary_key_columns` vaut `[]` et `is_identifiable` vaut `false` — ce qui, combiné au helper d'accès de la tâche 3, **verrouille les 71 domaines** et n'affiche aucun champ de saisie. C'est le défaut le plus coûteux de tout ce chantier : il ne lève aucune erreur, l'écran est simplement inerte.
+2. **Le tri « est-ce une partition » doit passer par `pg_inherits`**, pas par le nom : `ref_code_domain_registry` et `ref_code_taxonomy_closure` portent le préfixe `ref_code_` sans être des partitions.
+3. **Les cibles de clé étrangère doivent être normalisées en `catalog_key`.** `ref_amenity.family_id` pointe vers `ref_code_amenity_family`, une partition **absente de la vue** : rendue telle quelle, la liste déroulante interrogerait un catalogue inexistant. La cible attendue est `ref_code:amenity_family`.
 
 - [ ] **Step 1: Écrire le test qui échoue**
-
-Créer `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql` avec ce seul bloc pour l'instant :
 
 ```sql
 -- test_ref_catalog_admin.sql
@@ -80,18 +74,9 @@ Créer `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql` avec ce seu
 \set ON_ERROR_STOP on
 BEGIN;
 DO $$
-DECLARE
-  v_n integer;
-  v_cols jsonb;
+DECLARE v_n integer; v_cols jsonb;
 BEGIN
-  -- La vue découvre les deux espèces de catalogue.
-  -- ref_code lui-même n'est pas un catalogue (il est servi par domaine), ses partitions non plus.
-  ASSERT NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE table_name = 'ref_code' AND kind = 'table'),
-         'ref_code ne doit pas apparaître comme table-catalogue : il est servi domaine par domaine';
-  ASSERT NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code_media_type'),
-         'les partitions de ref_code ne sont pas des catalogues autonomes';
-
-  -- Le compte est EXACT, pas « au moins » : un >= masquerait la disparition de 20 catalogues.
+  -- Compte EXACT, calculé : un « >= 80 » masquerait la disparition de vingt catalogues.
   SELECT count(*) INTO v_n FROM internal.v_ref_catalog;
   ASSERT v_n = (
       (SELECT count(*) FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
@@ -99,45 +84,57 @@ BEGIN
          AND c.relname <> 'ref_code'
          AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid))
     + (SELECT count(DISTINCT domain) FROM public.ref_code)),
-    format('la vue doit émettre exactement une entrée par table et par domaine ; obtenu %s', v_n);
+    format('une entrée par table et par domaine ; obtenu %s', v_n);
 
-  -- Clé primaire COMPOSITE : ref_capacity_applicability en a deux (metric_id, object_type).
+  -- ref_code et ses partitions ne sont pas des catalogues autonomes…
+  ASSERT NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code'),
+         'ref_code est servi domaine par domaine, pas comme table';
+  ASSERT NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code_media_type'),
+         'les partitions de ref_code ne sont pas des catalogues autonomes';
+  -- … mais ces deux-là en sont, malgré leur préfixe : c'est pg_inherits qui tranche, pas le nom.
+  ASSERT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code_domain_registry'),
+         'ref_code_domain_registry porte le préfixe sans être une partition';
+  ASSERT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code_taxonomy_closure'),
+         'ref_code_taxonomy_closure porte le préfixe sans être une partition';
+
+  -- LE PIÈGE : un domaine DOIT être identifiable et décrit, sinon il est verrouillé en silence.
+  ASSERT (SELECT is_identifiable FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code:cuisine_type'),
+         'un domaine ref_code doit être identifiable : sinon le helper d''accès le verrouille';
+  ASSERT (SELECT primary_key_columns->0->>'name' FROM internal.v_ref_catalog
+          WHERE catalog_key = 'ref_code:cuisine_type') = 'id',
+         'un domaine ref_code s''identifie par ref_code.id';
   ASSERT jsonb_array_length(
-           (SELECT primary_key_columns FROM internal.v_ref_catalog
-            WHERE catalog_key = 'ref_capacity_applicability')) = 2,
-         'une PK composite doit être décrite en entier, sinon la ligne n''est pas identifiable';
+           (SELECT columns FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code:cuisine_type')) = 5,
+         'un domaine ref_code doit porter la forme éditable synthétisée de ref_code';
 
-  -- Clé primaire NATURELLE non-uuid : ref_commune.insee_code varchar(5).
+  -- Formes de clé primaire réelles.
+  ASSERT jsonb_array_length((SELECT primary_key_columns FROM internal.v_ref_catalog
+          WHERE catalog_key = 'ref_capacity_applicability')) = 2,
+         'une PK composite doit être décrite en entier';
   ASSERT (SELECT primary_key_columns->0->>'name' FROM internal.v_ref_catalog
           WHERE catalog_key = 'ref_commune') = 'insee_code',
          'ref_commune s''identifie par insee_code, pas par un uuid';
-
-  -- AUCUNE clé primaire : la relation doit être marquée non identifiable (⇒ lecture seule dérivée).
   ASSERT (SELECT is_identifiable FROM internal.v_ref_catalog
           WHERE catalog_key = 'ref_interop_crosswalk') = false,
          'une relation sans clé primaire doit être marquée non identifiable';
 
-  -- Les domaines ref_code portent des colonnes SYNTHÉTISÉES : sans elles, 71 catalogues
-  -- sur 103 n''afficheraient aucun champ de saisie.
-  ASSERT jsonb_array_length(
-           (SELECT columns FROM internal.v_ref_catalog WHERE catalog_key = 'ref_code:cuisine_type')) = 5,
-         'un domaine ref_code doit être décrit par la forme éditable synthétisée de ref_code';
-
-  -- La forme d'un catalogue connu est correctement décrite.
+  -- Description des colonnes d'une table.
   SELECT columns INTO v_cols FROM internal.v_ref_catalog WHERE catalog_key = 'ref_legal_type';
-  ASSERT v_cols @> '[{"name":"is_required","is_required":false}]'::jsonb
-      OR EXISTS (SELECT 1 FROM jsonb_array_elements(v_cols) c WHERE c->>'name' = 'is_required'),
-         'la colonne is_required de ref_legal_type doit être décrite';
   ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_cols) c
                  WHERE c->>'name' = 'review_interval_days' AND c->>'type' = 'integer'),
-         'le type PostgreSQL doit remonter tel quel';
+         'le type PostgreSQL doit remonter tel quel (il sert au cast du SQL dynamique)';
 
-  -- Les clés étrangères entrantes sont découvertes (elles portent le compteur d'usage).
-  ASSERT EXISTS (
-    SELECT 1 FROM internal.v_ref_catalog v,
-         jsonb_array_elements(v.incoming_fk) f
-    WHERE v.catalog_key = 'ref_legal_type' AND f->>'table' = 'object_legal'),
-    'object_legal référence ref_legal_type : la FK entrante doit être découverte';
+  -- Cible de FK NORMALISÉE en catalog_key, pas en nom de partition.
+  ASSERT (SELECT f->>'target' FROM internal.v_ref_catalog v, jsonb_array_elements(v.outgoing_fk) f
+          WHERE v.catalog_key = 'ref_amenity' AND f->>'column' = 'family_id')
+         = 'ref_code:amenity_family',
+         'une FK vers une partition de ref_code doit être normalisée en ref_code:<domaine>, '
+         'sinon la liste déroulante interroge un catalogue qui n''existe pas';
+
+  -- FK entrantes : elles portent le compteur d'usage.
+  ASSERT EXISTS (SELECT 1 FROM internal.v_ref_catalog v, jsonb_array_elements(v.incoming_fk) f
+                 WHERE v.catalog_key = 'ref_legal_type' AND f->>'table' = 'object_legal'),
+         'object_legal référence ref_legal_type : la FK entrante doit être découverte';
 
   RAISE NOTICE 'v_ref_catalog assertions passed';
 END$$;
@@ -152,11 +149,7 @@ psql "$TBLS_DSN" -f "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql
 
 Attendu : `ERROR: relation "internal.v_ref_catalog" does not exist`.
 
-Sans `psql` local, exécuter le corps du `DO` via le MCP Supabase entre `BEGIN;` et `ROLLBACK;` — même résultat attendu.
-
 - [ ] **Step 3: Écrire la vue**
-
-Créer `Base de donnée DLL et API/migration_ref_catalog_admin.sql` :
 
 ```sql
 -- ============================================================================
@@ -172,102 +165,90 @@ Créer `Base de donnée DLL et API/migration_ref_catalog_admin.sql` :
 -- corrompu ne peut PAS ouvrir une écriture hors public.ref_*. Inverser les deux
 -- transformerait une erreur de seed en élargissement de privilège.
 --
--- Manifeste 16u. NON foldé dans schema_unified.sql (les RPC référencent
--- api.is_platform_superuser de rls_policies.sql). Idempotent.
+-- Manifeste 16u. NON foldé dans schema_unified.sql. Idempotent.
 -- ============================================================================
 
 BEGIN;
 
--- ---------------------------------------------------------------------------
--- 1. La découverte
---
--- Espèce 'table'  : une relation ordinaire public.ref_* qui n'est PAS une partition.
---   Le test « pas une partition » (pg_inherits) est ce qui écarte les 55 partitions
---   ref_code_<domain> TOUT EN GARDANT ref_code_domain_registry et
---   ref_code_taxonomy_closure, qui portent le même préfixe sans être des partitions.
---   Un filtre par nom (NOT LIKE 'ref\_code\_%') les aurait perdues en silence.
--- Espèce 'ref_code_domain' : un domaine de ref_code, présenté comme catalogue entier.
---   Ses FK entrantes ne sont PAS émises : elles pointent vers la partition, pas vers
---   ref_code. Le comptage d'usage d'un domaine est délégué à api.ref_code_usage_counts
---   (phase 7.5), qui résout déjà ce cas par un balayage de catalogue mesuré.
--- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW internal.v_ref_catalog AS
 WITH cat AS (
-  SELECT 'table'::text                AS kind,
-         c.relname::text              AS catalog_key,
-         c.relname::text              AS table_name,
-         NULL::text                   AS domain,
-         c.oid                        AS reloid
-  FROM pg_class c
-  JOIN pg_namespace n ON n.oid = c.relnamespace
-  WHERE n.nspname = 'public'
-    AND c.relkind = 'r'
-    AND c.relname LIKE 'ref\_%'
-    AND c.relname <> 'ref_code'
+  -- Espèce 'table' : relation ordinaire public.ref_* qui n'est PAS une partition.
+  -- Le test pg_inherits est ce qui écarte les 55 partitions ref_code_<domain> TOUT EN
+  -- GARDANT ref_code_domain_registry et ref_code_taxonomy_closure, qui portent le même
+  -- préfixe sans être des partitions. Un filtre par nom les perdrait en silence.
+  SELECT 'table'::text AS kind, c.relname::text AS catalog_key,
+         c.relname::text AS table_name, NULL::text AS domain, c.oid AS reloid
+  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public' AND c.relkind = 'r'
+    AND c.relname LIKE 'ref\_%' AND c.relname <> 'ref_code'
     AND NOT EXISTS (SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid)
   UNION ALL
-  SELECT 'ref_code_domain'::text,
-         'ref_code:' || d.domain,
-         'ref_code'::text,
-         d.domain,
-         NULL::oid
+  SELECT 'ref_code_domain'::text, 'ref_code:' || d.domain, 'ref_code'::text, d.domain, NULL::oid
   FROM (SELECT DISTINCT domain FROM public.ref_code) d
 )
 SELECT
-  cat.kind,
-  cat.catalog_key,
-  cat.table_name,
-  cat.domain,
+  cat.kind, cat.catalog_key, cat.table_name, cat.domain,
+
+  -- Un domaine n'est PAS une relation : reloid est NULL et pg_attribute ne rendrait rien.
+  -- On synthétise la forme ÉDITABLE de ref_code (celle que la phase 7.5 sait écrire).
   CASE WHEN cat.kind = 'ref_code_domain' THEN
-    -- Un domaine n'est PAS une relation : reloid est NULL et pg_attribute ne rendrait rien.
-    -- On synthétise la forme ÉDITABLE de ref_code (celle que la phase 7.5 sait écrire).
-    -- Sans ce bras, 71 catalogues sur 103 seraient décrits sans colonne et l'écran
-    -- n'afficherait aucun champ de saisie — la panne serait totale et silencieuse.
-    '[{"name":"code","type":"text","is_required":true,"has_default":false,"position":1,"enum_values":null},
-      {"name":"name","type":"text","is_required":true,"has_default":false,"position":2,"enum_values":null},
-      {"name":"name_i18n","type":"jsonb","is_required":false,"has_default":true,"position":3,"enum_values":null},
-      {"name":"position","type":"integer","is_required":false,"has_default":true,"position":4,"enum_values":null},
-      {"name":"is_active","type":"boolean","is_required":false,"has_default":true,"position":5,"enum_values":null}]'::jsonb
+    '[{"name":"id","type":"uuid","is_required":true,"has_default":true,"position":1,"enum_values":null},
+      {"name":"code","type":"text","is_required":true,"has_default":false,"position":2,"enum_values":null},
+      {"name":"name","type":"text","is_required":true,"has_default":false,"position":3,"enum_values":null},
+      {"name":"name_i18n","type":"jsonb","is_required":false,"has_default":true,"position":4,"enum_values":null},
+      {"name":"position","type":"integer","is_required":false,"has_default":true,"position":5,"enum_values":null},
+      {"name":"is_active","type":"boolean","is_required":false,"has_default":true,"position":6,"enum_values":null}]'::jsonb
   ELSE COALESCE((
     SELECT jsonb_agg(jsonb_build_object(
-             'name',        a.attname,
-             'type',        format_type(a.atttypid, a.atttypmod),
+             'name', a.attname,
+             'type', format_type(a.atttypid, a.atttypmod),
              'is_required', a.attnotnull,
              'has_default', (a.atthasdef OR a.attidentity <> ''),
-             'position',    a.attnum,
+             'position', a.attnum,
              'enum_values', CASE WHEN t.typtype = 'e' THEN (
                               SELECT jsonb_agg(e.enumlabel ORDER BY e.enumsortorder)
                               FROM pg_enum e WHERE e.enumtypid = t.oid)
-                            ELSE NULL END
-           ) ORDER BY a.attnum)
-    FROM pg_attribute a
-    JOIN pg_type t ON t.oid = a.atttypid
+                            ELSE NULL END) ORDER BY a.attnum)
+    FROM pg_attribute a JOIN pg_type t ON t.oid = a.atttypid
     WHERE a.attrelid = cat.reloid AND a.attnum > 0 AND NOT a.attisdropped
   ), '[]'::jsonb) END AS columns,
-  COALESCE((
-    SELECT jsonb_agg(jsonb_build_object(
-             'name', a.attname,
-             'type', format_type(a.atttypid, a.atttypmod)) ORDER BY x.ord)
-    FROM pg_constraint k
-    CROSS JOIN LATERAL unnest(k.conkey) WITH ORDINALITY AS x(attnum, ord)
-    JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = x.attnum
-    WHERE k.conrelid = cat.reloid AND k.contype = 'p'
-  ), '[]'::jsonb) AS primary_key_columns,
-  EXISTS (SELECT 1 FROM pg_constraint k WHERE k.conrelid = cat.reloid AND k.contype = 'p')
-    AS is_identifiable,
+
+  -- SYNTHÈSE OBLIGATOIRE pour les domaines : sans elle, primary_key_columns vaut [] et
+  -- is_identifiable vaut false, donc le helper d'accès de la tâche 3 verrouille les
+  -- 71 domaines SANS AUCUNE ERREUR. C'est le défaut le plus silencieux de ce chantier.
+  CASE WHEN cat.kind = 'ref_code_domain'
+    THEN '[{"name":"id","type":"uuid"}]'::jsonb
+    ELSE COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+               'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod)) ORDER BY x.ord)
+      FROM pg_constraint k
+      CROSS JOIN LATERAL unnest(k.conkey) WITH ORDINALITY AS x(attnum, ord)
+      JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = x.attnum
+      WHERE k.conrelid = cat.reloid AND k.contype = 'p'
+    ), '[]'::jsonb) END AS primary_key_columns,
+
+  CASE WHEN cat.kind = 'ref_code_domain' THEN true
+       ELSE EXISTS (SELECT 1 FROM pg_constraint k
+                    WHERE k.conrelid = cat.reloid AND k.contype = 'p') END AS is_identifiable,
+
+  -- Cible NORMALISÉE en catalog_key : une FK vers une partition de ref_code doit rendre
+  -- 'ref_code:<domaine>', sinon le front interroge un catalogue absent de la vue.
   COALESCE((
     SELECT jsonb_agg(jsonb_build_object(
              'column', a.attname,
-             'target', pt.relname))
+             'target', CASE
+               WHEN EXISTS (SELECT 1 FROM pg_inherits i
+                            WHERE i.inhrelid = pt.oid AND i.inhparent = 'public.ref_code'::regclass)
+                 THEN 'ref_code:' || substring(pt.relname from 10)
+               ELSE pt.relname END))
     FROM pg_constraint k
     JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = k.conkey[1]
     JOIN pg_class pt ON pt.oid = k.confrelid
     WHERE k.conrelid = cat.reloid AND k.contype = 'f' AND array_length(k.conkey, 1) = 1
   ), '[]'::jsonb) AS outgoing_fk,
+
   COALESCE((
-    SELECT jsonb_agg(jsonb_build_object(
-             'table',  ct.relname,
-             'column', a.attname))
+    SELECT jsonb_agg(jsonb_build_object('table', ct.relname, 'column', a.attname))
     FROM pg_constraint k
     JOIN pg_class ct ON ct.oid = k.conrelid
     JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = k.conkey[1]
@@ -281,66 +262,68 @@ COMMENT ON VIEW internal.v_ref_catalog IS
 COMMIT;
 ```
 
-- [ ] **Step 4: Appliquer et relancer le test**
+- [ ] **Step 4: Appliquer et relancer**
 
 ```bash
 psql "$TBLS_DSN" -f "Base de donnée DLL et API/migration_ref_catalog_admin.sql"
 psql "$TBLS_DSN" -f "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
 ```
 
-Attendu : `NOTICE: v_ref_catalog assertions passed` puis `ROLLBACK`.
+Attendu : `NOTICE: v_ref_catalog assertions passed`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add "Base de donnée DLL et API/migration_ref_catalog_admin.sql" "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
-git commit -m "feat(§211): vue d'introspection des catalogues de reference
+git commit -m "feat(211): vue d'introspection des catalogues de reference
 
-internal.v_ref_catalog decouvre les 30 tables ref_* autonomes et les 71 domaines
-de ref_code, avec leurs colonnes, cles etrangeres entrantes/sortantes et enumeres.
-Le test « pas une partition » (pg_inherits) ecarte les 55 partitions ref_code_*
-tout en gardant ref_code_domain_registry et ref_code_taxonomy_closure, qu'un
-filtre par nom aurait perdus en silence."
+Decouvre les 32 tables ref_* autonomes et les 71 domaines de ref_code.
+Trois pieges fermes explicitement : les domaines recoivent une forme et une cle
+primaire SYNTHETISEES (sans quoi ils seraient tous non identifiables donc
+verrouilles, en silence) ; le tri des partitions passe par pg_inherits et non
+par le nom ; les cibles de FK vers une partition de ref_code sont normalisees
+en ref_code:<domaine>."
 ```
 
 ---
 
 ### Task 2: Registre éditorial `ref_catalog_registry` + seed
 
-**Files:**
-- Modify: `Base de donnée DLL et API/migration_ref_catalog_admin.sql` (ajout en fin de fichier, avant `COMMIT`)
-- Modify: `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql`
+**Files:** Modify `migration_ref_catalog_admin.sql` (avant `COMMIT`) et `tests/test_ref_catalog_admin.sql`.
 
 **Interfaces:**
-- Consumes: `internal.v_ref_catalog` (tâche 1).
-- Produces: table `public.ref_catalog_registry(catalog_key text PK, label text, family text, used_in text, label_column text, access text, readonly_reason text, position integer)`. Lue par les tâches 3, 4, 5.
+- Produces: `public.ref_catalog_registry(catalog_key text PK, label text, family text, used_in text, label_column text, access text, readonly_reason text, position integer)`.
+
+> **Le registre ne seede QUE les verrouillages métier.** Les verrouillages *structurels* — relation sans clé primaire, domaine `ref_code` non éditable — sont **dérivés** par les helpers de la tâche 3 et n'ont aucune ligne ici : une future table sans PK ne peut donc pas passer entre les mailles d'un seed qu'on aurait oublié de mettre à jour.
 
 - [ ] **Step 1: Écrire le test qui échoue**
-
-Ajouter ce bloc dans `tests/test_ref_catalog_admin.sql`, avant le `ROLLBACK` final :
 
 ```sql
 DO $$
 BEGIN
-  -- Un verrouillage sans motif est refusé : un écran qui dit « lecture seule »
-  -- sans dire pourquoi transforme une décision en mystère.
+  -- Un verrouillage sans motif est refusé : un écran qui dit « lecture seule » sans
+  -- dire pourquoi transforme une décision en mystère.
   BEGIN
     INSERT INTO ref_catalog_registry (catalog_key, label, family, access)
     VALUES ('ref_legal_type', 'Test', 'Juridique', 'readonly');
-    RAISE EXCEPTION 'GARDE VACANTE : un access=readonly sans readonly_reason a été accepté';
+    RAISE EXCEPTION 'GARDE VACANTE : access=readonly sans readonly_reason accepté';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
 
-  -- Le seed verrouille bien les catalogues sensibles, avec un motif lisible.
   ASSERT (SELECT access FROM ref_catalog_registry WHERE catalog_key = 'ref_permission') = 'readonly',
-         'ref_permission doit être verrouillée : ses codes sont lus en dur par le contrôle d''accès';
-  ASSERT (SELECT length(readonly_reason) FROM ref_catalog_registry WHERE catalog_key = 'ref_permission') > 20,
-         'le motif de verrouillage doit être une phrase affichable, pas un mot';
-  ASSERT (SELECT access FROM ref_catalog_registry WHERE catalog_key = 'ref_code:taxonomy_hlo') = 'readonly',
-         'les taxonomies s''éditent par migration (triggers d''applicabilité + closure)';
+         'ref_permission : ses codes sont lus en dur par le contrôle d''accès';
+  ASSERT (SELECT length(readonly_reason) FROM ref_catalog_registry
+          WHERE catalog_key = 'ref_permission') > 20,
+         'le motif doit être une phrase affichable, pas un mot';
 
-  -- Le registre ne référence QUE des catalogues réels : une ligne orpheline
-  -- afficherait un catalogue fantôme dans le maître.
+  -- Les verrouillages DÉRIVÉS ne doivent PAS être seedés : les dupliquer ferait croire
+  -- que le seed est la garde, et un oubli deviendrait une ouverture.
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_catalog_registry WHERE catalog_key = 'ref_interop_crosswalk'),
+         'sans clé primaire = verrouillage DÉRIVÉ, pas une ligne de registre';
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_catalog_registry WHERE catalog_key LIKE 'ref_code:taxonomy%'),
+         'domaine non éditable = verrouillage DÉRIVÉ via api.ref_code_domain_is_editable';
+
+  -- Le registre ne référence QUE des catalogues réels.
   ASSERT NOT EXISTS (
     SELECT 1 FROM ref_catalog_registry r
     WHERE NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog v WHERE v.catalog_key = r.catalog_key)),
@@ -360,16 +343,7 @@ Attendu : `ERROR: relation "ref_catalog_registry" does not exist`.
 
 - [ ] **Step 3: Créer la table, la policy et le seed**
 
-Insérer dans `migration_ref_catalog_admin.sql`, avant le `COMMIT` :
-
 ```sql
--- ---------------------------------------------------------------------------
--- 2. L'éditorial
---
--- Ce que la base ne peut PAS deviner. Une table absente d'ici reste VISIBLE et
--- ÉDITABLE, famille « À classer » : un catalogue oublié doit gêner, pas disparaître.
--- Le registre ne peut que RESTREINDRE (verrouiller), jamais élargir.
--- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.ref_catalog_registry (
   catalog_key     text PRIMARY KEY,
   label           text NOT NULL,
@@ -382,7 +356,6 @@ CREATE TABLE IF NOT EXISTS public.ref_catalog_registry (
   created_at      timestamptz NOT NULL DEFAULT now(),
   updated_at      timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT chk_ref_catalog_access CHECK (access IN ('editable', 'readonly')),
-  -- Un verrouillage sans motif transforme une décision en mystère à l'écran.
   CONSTRAINT chk_ref_catalog_readonly_reason
     CHECK (access <> 'readonly' OR NULLIF(TRIM(readonly_reason), '') IS NOT NULL)
 );
@@ -405,7 +378,7 @@ CREATE TRIGGER update_ref_catalog_registry_updated_at
   BEFORE UPDATE ON public.ref_catalog_registry
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Verrouillages motivés (annexe A de la spec).
+-- Verrouillages MÉTIER uniquement. Les verrouillages structurels sont dérivés (tâche 3).
 INSERT INTO public.ref_catalog_registry (catalog_key, label, family, used_in, access, readonly_reason) VALUES
   ('ref_permission', 'Permissions', 'Personnes et organisations', 'Administration de l''équipe', 'readonly',
    'Chaque code est lu en dur par le contrôle d''accès : en retirer un ferme des droits sans qu''aucun test ne rougisse.'),
@@ -418,33 +391,18 @@ INSERT INTO public.ref_catalog_registry (catalog_key, label, family, used_in, ac
   ('ref_code_taxonomy_closure', 'Closure des taxonomies', 'Structure', NULL, 'readonly',
    'Table de fermeture reconstruite par trigger depuis parent_id : toute écriture manuelle serait écrasée.'),
   ('ref_document', 'Documents déposés', 'Juridique et conformité', '§08 Classements, §18 Juridique', 'readonly',
-   'Ce ne sont pas des valeurs de vocabulaire mais les fichiers déposés par les rédacteurs.'),
-  ('ref_interop_crosswalk', 'Table de correspondance interop', 'Structure', NULL, 'readonly',
-   'Correspondances vers les référentiels partenaires : se modifient avec le contrat d''export.')
+   'Ce ne sont pas des valeurs de vocabulaire mais les fichiers déposés par les rédacteurs.')
 ON CONFLICT (catalog_key) DO UPDATE SET
   label = EXCLUDED.label, family = EXCLUDED.family, used_in = EXCLUDED.used_in,
   access = EXCLUDED.access, readonly_reason = EXCLUDED.readonly_reason, updated_at = now();
 
--- Les 19 taxonomies : verrouillées en bloc, motif commun.
-INSERT INTO public.ref_catalog_registry (catalog_key, label, family, access, readonly_reason)
-SELECT 'ref_code:' || reg.domain,
-       reg.name,
-       'Structure',
-       'readonly',
-       'Les taxonomies sont régies par les triggers d''applicabilité et la closure de parenté. Elles s''éditent par migration.'
-FROM public.ref_code_domain_registry reg
-WHERE reg.is_taxonomy
+-- Surcharge de libellé : ref_sustainability_action porte `label` (pas `name`, pas `title`).
+-- La cascade de la tâche 3 la trouverait seule ; la ligne existe pour le nom lisible.
+INSERT INTO public.ref_catalog_registry (catalog_key, label, family) VALUES
+  ('ref_sustainability_action', 'Actions de durabilité', 'Labels, classements, durabilité')
 ON CONFLICT (catalog_key) DO UPDATE SET
-  label = EXCLUDED.label, family = EXCLUDED.family,
-  access = EXCLUDED.access, readonly_reason = EXCLUDED.readonly_reason, updated_at = now();
-
--- Colonne de libellé quand ce n'est pas `name`.
-INSERT INTO public.ref_catalog_registry (catalog_key, label, family, label_column) VALUES
-  ('ref_sustainability_action', 'Actions de durabilité', 'Labels, classements, durabilité', 'title')
-ON CONFLICT (catalog_key) DO UPDATE SET label_column = EXCLUDED.label_column, updated_at = now();
+  label = EXCLUDED.label, family = EXCLUDED.family, updated_at = now();
 ```
-
-> **Vérification à faire avant d'écrire cette dernière ligne :** confirmer le nom réel de la colonne de libellé de `ref_sustainability_action` (`SELECT column_name FROM information_schema.columns WHERE table_name='ref_sustainability_action'`). La table n'a pas de `name` ; si la colonne s'appelle autrement que `title`, corriger le seed.
 
 - [ ] **Step 4: Appliquer et relancer**
 
@@ -457,99 +415,125 @@ Attendu : `NOTICE: ref_catalog_registry assertions passed`.
 
 - [ ] **Step 5: Compléter le seed des familles**
 
-Ajouter au fichier un `INSERT … ON CONFLICT DO UPDATE` couvrant les 13 familles de l'annexe A de la spec (nom lisible + famille + `used_in`). Tout catalogue non listé reste dans « À classer » par construction — c'est voulu, ce n'est pas une omission à corriger.
+Ajouter un `INSERT … ON CONFLICT DO UPDATE` couvrant les 13 familles de l'annexe A de la spec (nom lisible + famille + `used_in`), pour les tables **et** pour les 52 domaines plats (`ref_code:<domaine>`). Tout catalogue non listé reste dans « À classer » par construction.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add "Base de donnée DLL et API/migration_ref_catalog_admin.sql" "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
-git commit -m "feat(§211): registre editorial des catalogues + seed des verrouillages
+git commit -m "feat(211): registre editorial des catalogues + seed des verrouillages metier
 
-ref_catalog_registry porte le nom lisible, la famille, la section d'usage et le
-verrouillage motive. CHECK : un access=readonly sans readonly_reason est refuse
-— un ecran qui dit « lecture seule » sans dire pourquoi transforme une decision
-en mystere. Une table absente du registre reste visible et editable, famille
-« A classer » : un catalogue oublie doit gener, pas disparaitre."
+CHECK : un access=readonly sans readonly_reason est refuse. Les verrouillages
+STRUCTURELS (relation sans cle primaire, domaine ref_code non editable) ne sont
+PAS seedes : ils sont derives, donc une future table sans PK ne peut pas passer
+entre les mailles d'un seed oublie. Le test l'asserte."
 ```
 
 ---
 
-### Task 3: RPC de lecture
+### Task 3: RPC de lecture + helpers dérivés
 
-**Files:**
-- Modify: `Base de donnée DLL et API/migration_ref_catalog_admin.sql`
-- Modify: `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql`
+**Files:** Modify `migration_ref_catalog_admin.sql` et `tests/test_ref_catalog_admin.sql`.
 
 **Interfaces:**
-- Consumes: `internal.v_ref_catalog`, `public.ref_catalog_registry`, `api.list_ref_code_domains()`, `api.ref_code_usage_counts(text)`.
 - Produces:
-  - `api.list_ref_catalogs() RETURNS jsonb` — tableau `[{catalog_key, kind, label, family, used_in, access, readonly_reason, n_values}]`.
-  - `api.get_ref_catalog(p_catalog_key text) RETURNS jsonb` — `{catalog_key, kind, label, family, used_in, access, readonly_reason, is_identifiable, primary_key_columns[], label_column, columns[], **outgoing_fk[]**, rows[], usage{clé: n}}`.
-- **`outgoing_fk` est obligatoire dans le retour.** Le front en a besoin pour alimenter les listes déroulantes de référence ; sans lui, une colonne pointant vers un autre catalogue retombe en champ texte libre, c'est-à-dire en saisie d'UUID à la main. La première rédaction de ce plan l'avait omis alors que le type front l'attendait.
-- **`usage` est clé par l'identité JSON de la ligne** (`{"metric_id":"…","object_type":"HLO"}` sérialisé), pas par un uuid : une matrice à clé composite n'a pas d'`id`.
+  - `internal.ref_catalog_label_column(text) → text` — cascade `label_column` du registre → `name`/`label`/`title`/`libelle` → `code` → `NULL` (matrices : le libellé se compose côté front).
+  - `internal.ref_catalog_access(text) → text` et `internal.ref_catalog_readonly_reason(text) → text` — verrouillages **dérivés d'abord**, registre ensuite.
+  - `internal.ref_catalog_row_key_expr(jsonb) → text` — fragment SQL bâtissant la clé canonique d'une ligne.
+  - `api.list_ref_catalogs() → jsonb` : `[{catalog_key, kind, label, family, used_in, access, readonly_reason, n_values}]`.
+  - `api.get_ref_catalog(text) → jsonb` : `{catalog_key, kind, label, family, used_in, access, readonly_reason, is_identifiable, primary_key_columns[], label_column, columns[], outgoing_fk[], rows[], usage}`.
 
-- [ ] **Step 1: Écrire le test qui échoue**
+> **Le maître et le détail doivent lire le MÊME accès.** Si `list_ref_catalogs` rend `COALESCE(r.access,'editable')` pendant que `get_ref_catalog` passe par le helper dérivé, une table sans clé primaire s'affiche éditable dans la liste puis verrouillée à l'ouverture. Les deux appellent les helpers.
 
-Ajouter dans `tests/test_ref_catalog_admin.sql` :
+> **`usage` est indexé par la clé CANONIQUE de la ligne** — `jsonb_build_object('id', …)::text` — et non par la valeur brute de la PK. Une valeur brute serait ambiguë dès qu'une PK est composite, et le front n'aurait pas de clé commune entre `rows` et `usage`.
+
+- [ ] **Step 1: Écrire les tests qui échouent**
 
 ```sql
 DO $$
-DECLARE
-  v_list jsonb;
-  v_cat  jsonb;
+DECLARE v_list jsonb; v_cat jsonb; r record;
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
   v_list := api.list_ref_catalogs();
   ASSERT jsonb_array_length(v_list) = (SELECT count(*) FROM internal.v_ref_catalog),
-         format('le maître doit lister TOUS les catalogues découverts ; obtenu %s pour %s découverts',
-                jsonb_array_length(v_list), (SELECT count(*) FROM internal.v_ref_catalog));
+         'le maître doit lister TOUS les catalogues découverts';
 
-  -- Les listes déroulantes de référence dépendent de outgoing_fk : sans lui, une colonne
-  -- pointant vers un autre catalogue retombe en saisie d'UUID à la main.
-  ASSERT jsonb_array_length(api.get_ref_catalog('ref_amenity')->'outgoing_fk') > 0,
-         'get_ref_catalog doit émettre outgoing_fk (ref_amenity pointe vers une famille)';
+  -- Le maître et le détail ne doivent JAMAIS diverger sur l'accès.
+  FOR r IN SELECT catalog_key FROM internal.v_ref_catalog LOOP
+    ASSERT (SELECT c->>'access' FROM jsonb_array_elements(v_list) c
+            WHERE c->>'catalog_key' = r.catalog_key)
+           = (api.get_ref_catalog(r.catalog_key)->>'access'),
+           format('accès divergent entre maître et détail sur %s', r.catalog_key);
+  END LOOP;
 
-  -- Libellé résolu par cascade : ref_sustainability_action n'a pas de `name`, elle a `label`.
-  ASSERT api.get_ref_catalog('ref_sustainability_action')->>'label_column' = 'label',
-         'la cascade de libellé doit trouver `label` quand `name` est absente';
-
-  -- Verrouillages DÉRIVÉS, sans ligne de registre.
-  ASSERT api.get_ref_catalog('ref_interop_crosswalk')->>'access' = 'readonly',
-         'une relation sans clé primaire est en lecture seule d''office';
+  -- LE PIÈGE : un domaine plat doit être ÉDITABLE.
+  ASSERT api.get_ref_catalog('ref_code:cuisine_type')->>'access' = 'editable',
+         'un domaine ref_code plat doit rester éditable — is_identifiable synthétisé';
+  -- … et un domaine structurel verrouillé PAR DÉRIVATION.
   ASSERT api.get_ref_catalog('ref_code:taxonomy_hlo')->>'access' = 'readonly',
-         'un domaine non éditable selon api.ref_code_domain_is_editable est en lecture seule';
-  ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_list) c
-                 WHERE c->>'catalog_key' = 'ref_legal_type' AND c->>'label' = 'Documents juridiques'),
-         'le nom lisible du registre doit remplacer le nom technique';
-  ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_list) c
-                 WHERE c->>'catalog_key' = 'ref_permission' AND c->>'access' = 'readonly'
-                   AND length(c->>'readonly_reason') > 20),
-         'un catalogue verrouillé doit porter son motif jusqu''à l''écran';
+         'un domaine non éditable selon api.ref_code_domain_is_editable est verrouillé';
+  ASSERT api.get_ref_catalog('ref_interop_crosswalk')->>'access' = 'readonly',
+         'une relation sans clé primaire est verrouillée d''office';
 
-  -- BALAYAGE EXHAUSTIF : chaque catalogue découvert doit se décrire sans erreur. C'est ce qui
-  -- attrape une table dont la forme casse le générateur (PK composite, PK absente, type exotique).
-  DECLARE r record;
-  BEGIN
-    FOR r IN SELECT catalog_key FROM internal.v_ref_catalog LOOP
-      BEGIN
-        PERFORM api.get_ref_catalog(r.catalog_key);
-      EXCEPTION WHEN OTHERS THEN
-        RAISE EXCEPTION 'get_ref_catalog casse sur % : % (%)', r.catalog_key, SQLERRM, SQLSTATE;
-      END;
-    END LOOP;
-  END;
+  -- outgoing_fk émis ET normalisé : sans lui, saisie d'UUID à la main.
+  ASSERT (SELECT f->>'target'
+          FROM jsonb_array_elements(api.get_ref_catalog('ref_amenity')->'outgoing_fk') f
+          WHERE f->>'column' = 'family_id') = 'ref_code:amenity_family',
+         'la cible de FK doit être un catalog_key exploitable par le front';
+
+  -- Cascade de libellé.
+  ASSERT api.get_ref_catalog('ref_sustainability_action')->>'label_column' = 'label',
+         'la cascade doit trouver `label` quand `name` est absente';
+  ASSERT api.get_ref_catalog('ref_capacity_applicability')->>'label_column' IS NULL,
+         'une matrice n''a pas de colonne de libellé : le front compose depuis la clé';
+
+  -- BALAYAGE EXHAUSTIF : chaque catalogue doit se décrire sans erreur.
+  FOR r IN SELECT catalog_key FROM internal.v_ref_catalog LOOP
+    BEGIN
+      PERFORM api.get_ref_catalog(r.catalog_key);
+    EXCEPTION WHEN OTHERS THEN
+      RAISE EXCEPTION 'get_ref_catalog casse sur % : % (%)', r.catalog_key, SQLERRM, SQLSTATE;
+    END;
+  END LOOP;
 
   v_cat := api.get_ref_catalog('ref_legal_type');
   ASSERT jsonb_array_length(v_cat->'rows') = 20,
          format('ref_legal_type porte 20 valeurs ; obtenu %s', jsonb_array_length(v_cat->'rows'));
-  ASSERT (v_cat->'usage'->>(
-            SELECT id::text FROM ref_legal_type WHERE code = 'siret'))::integer = 2,
-         'le compteur d''usage doit voir les 2 lignes object_legal de type siret';
 
   RAISE NOTICE 'lecture assertions passed';
 END$$;
+
+-- Compteur d'usage : NON VACANT, et sur DEUX tables consommatrices DISTINCTES.
+-- ref_language est référencée par object_language ET object_review : c'est la FUSION
+-- entre deux FK entrantes qu'on teste ici, pas deux lignes dans la même table.
+DO $$
+DECLARE
+  v_lang uuid; v_key text; v_before bigint; v_after bigint;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  SELECT id INTO v_lang FROM ref_language WHERE code = 'fr';
+  v_key := v_lang::text;
+
+  v_before := COALESCE((api.get_ref_catalog('ref_language')->'usage'->>v_key)::bigint, 0);
+
+  INSERT INTO object (id, object_type, name, status)
+    VALUES ('CATMFK9999999901', 'HLO', 'Témoin multi-FK', 'draft');
+  INSERT INTO object_language (object_id, language_id) VALUES ('CATMFK9999999901', v_lang);
+  INSERT INTO object_review (object_id, language_id, rating)
+    VALUES ('CATMFK9999999901', v_lang, 5);
+
+  v_after := COALESCE((api.get_ref_catalog('ref_language')->'usage'->>v_key)::bigint, 0);
+
+  ASSERT v_after = v_before + 2,
+         format('le compteur doit FUSIONNER deux FK entrantes distinctes ; avant %s, après %s',
+                v_before, v_after);
+
+  RAISE NOTICE 'compteur multi-FK assertion passed';
+END$$;
 ```
+
+> Vérifier les colonnes obligatoires de `object_review` avant d'écrire l'INSERT témoin (le schéma peut exiger davantage que `rating`) ; adapter sans changer l'intention : deux tables **différentes** référençant la même valeur.
 
 - [ ] **Step 2: Lancer pour vérifier l'échec**
 
@@ -559,26 +543,104 @@ psql "$TBLS_DSN" -f "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql
 
 Attendu : `ERROR: function api.list_ref_catalogs() does not exist`.
 
-- [ ] **Step 3: Écrire les deux fonctions**
-
-Ajouter dans `migration_ref_catalog_admin.sql` :
+- [ ] **Step 3: Écrire les helpers dérivés**
 
 ```sql
--- ---------------------------------------------------------------------------
--- 3. Lecture. DEFINER : la vue lit pg_catalog et internal, hors de portée d'anon.
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION api.list_ref_catalogs()
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
+-- Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
+-- (12 des 32 tables n'ont pas de `name`), et chaque oubli produirait une ligne muette.
+-- Rend NULL pour les matrices : leur libellé se compose depuis la clé, côté front.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_label_column(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, internal
+AS $$
+  SELECT COALESCE(
+    (SELECT r.label_column FROM public.ref_catalog_registry r
+     WHERE r.catalog_key = p_catalog_key AND NULLIF(TRIM(r.label_column), '') IS NOT NULL),
+    (SELECT c->>'name' FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
+     WHERE v.catalog_key = p_catalog_key
+       AND c->>'name' = ANY (ARRAY['name','label','title','libelle'])
+     ORDER BY array_position(ARRAY['name','label','title','libelle'], c->>'name') LIMIT 1),
+    (SELECT 'code' FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
+     WHERE v.catalog_key = p_catalog_key AND c->>'name' = 'code' LIMIT 1));
+$$;
+
+-- Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
+-- oubliés au seed. Consommé par le maître ET par le détail — sans quoi une table sans
+-- clé primaire s'afficherait éditable dans la liste puis verrouillée à l'ouverture.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_access(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
 SET search_path = pg_catalog, public, api, internal
 AS $$
-DECLARE
-  v_out jsonb;
+  SELECT CASE
+    WHEN NOT v.is_identifiable THEN 'readonly'
+    WHEN v.kind = 'ref_code_domain'
+         AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE THEN 'readonly'
+    ELSE COALESCE((SELECT r.access FROM public.ref_catalog_registry r
+                   WHERE r.catalog_key = p_catalog_key), 'editable')
+  END
+  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
+$$;
+
+CREATE OR REPLACE FUNCTION internal.ref_catalog_readonly_reason(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, api, internal
+AS $$
+  SELECT CASE
+    WHEN NOT v.is_identifiable
+      THEN 'Aucune clé primaire : une ligne n''y est pas identifiable.'
+    WHEN v.kind = 'ref_code_domain' AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE
+      THEN 'Domaine structurel (taxonomie, hiérarchie ou couplage à un type d''objet). S''édite par migration.'
+    ELSE (SELECT r.readonly_reason FROM public.ref_catalog_registry r
+          WHERE r.catalog_key = p_catalog_key AND r.access = 'readonly')
+  END
+  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
+$$;
+
+-- NOTE sur la CLÉ CANONIQUE d'une ligne. Le front et le serveur doivent l'écrire à
+-- l'identique pour joindre `rows` et `usage`. Ce n'est délibérément PAS du JSON sérialisé :
+-- jsonb::text rend {"id": "x"} (avec une espace) là où JSON.stringify rend {"id":"x"}, et
+-- les deux ne se rejoindraient jamais. La règle est : joindre les valeurs de clé primaire,
+-- dans l'ordre de primary_key_columns, par le séparateur d'unité U+001F. Or `usage` n'existe
+-- que pour les catalogues à clé SIMPLE (une matrice n'est référencée par personne), donc la
+-- clé s'y réduit à la valeur en texte — c'est ce qu'écrivent les requêtes ci-dessous.
+
+-- Valeur castée au type découvert, réutilisée par l'INSERT, le SET et le WHERE.
+-- Sans cast, (p_values->>'is_required') rend du texte et une colonne booléenne le refuse.
+-- Le type vient de la VUE, jamais de l'appelant : un type fourni par le client serait une injection.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)
+RETURNS text LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT format('(%s->>%L)::%s', p_src, p_name,
+                COALESCE((SELECT c->>'type' FROM jsonb_array_elements(p_columns) c
+                          WHERE c->>'name' = p_name), 'text'));
+$$;
+
+CREATE OR REPLACE FUNCTION internal.ref_catalog_row_count(p_table text)
+RETURNS bigint LANGUAGE plpgsql STABLE
+SET search_path = pg_catalog, public, internal
+AS $$
+DECLARE v_n bigint;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog
+                 WHERE table_name = p_table AND kind = 'table') THEN
+    RETURN 0;
+  END IF;
+  EXECUTE format('SELECT count(*) FROM public.%I', p_table) INTO v_n;
+  RETURN v_n;
+END $$;
+```
+
+- [ ] **Step 4: Écrire les deux RPC de lecture**
+
+```sql
+CREATE OR REPLACE FUNCTION api.list_ref_catalogs()
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE v_out jsonb;
 BEGIN
   IF api.is_platform_superuser() IS NOT TRUE THEN
-    RAISE EXCEPTION 'Réservé aux super-administrateurs' USING ERRCODE = '42501';
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
   END IF;
 
   SELECT COALESCE(jsonb_agg(x ORDER BY x->>'family', x->>'label'), '[]'::jsonb) INTO v_out
@@ -589,43 +651,21 @@ BEGIN
       'label',           COALESCE(r.label, v.catalog_key),
       'family',          COALESCE(r.family, 'À classer'),
       'used_in',         r.used_in,
-      'access',          COALESCE(r.access, 'editable'),
-      'readonly_reason', r.readonly_reason,
-      'n_values',        CASE
-                           WHEN v.kind = 'ref_code_domain'
-                             THEN (SELECT count(*) FROM public.ref_code rc WHERE rc.domain = v.domain)
-                           ELSE internal.ref_catalog_row_count(v.table_name)
-                         END
+      -- Helpers DÉRIVÉS, comme le détail : sinon le maître et le détail divergent.
+      'access',          internal.ref_catalog_access(v.catalog_key),
+      'readonly_reason', internal.ref_catalog_readonly_reason(v.catalog_key),
+      'n_values',        CASE WHEN v.kind = 'ref_code_domain'
+                           THEN (SELECT count(*) FROM public.ref_code rc WHERE rc.domain = v.domain)
+                           ELSE internal.ref_catalog_row_count(v.table_name) END
     ) AS x
     FROM internal.v_ref_catalog v
     LEFT JOIN public.ref_catalog_registry r ON r.catalog_key = v.catalog_key
   ) s;
-
   RETURN v_out;
 END $$;
 
--- Compte les lignes d'une table-catalogue. Isolée pour garder list_ref_catalogs lisible ;
--- la table est résolue par regclass depuis la vue, jamais depuis l'appelant.
-CREATE OR REPLACE FUNCTION internal.ref_catalog_row_count(p_table text)
-RETURNS bigint
-LANGUAGE plpgsql
-STABLE
-SET search_path = pg_catalog, public
-AS $$
-DECLARE v_n bigint;
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE table_name = p_table AND kind = 'table') THEN
-    RETURN 0;
-  END IF;
-  EXECUTE format('SELECT count(*) FROM public.%I', p_table) INTO v_n;
-  RETURN v_n;
-END $$;
-
 CREATE OR REPLACE FUNCTION api.get_ref_catalog(p_catalog_key text)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal
 AS $$
 DECLARE
@@ -633,11 +673,11 @@ DECLARE
   v_reg  record;
   v_rows jsonb := '[]'::jsonb;
   v_use  jsonb := '{}'::jsonb;
+  v_part jsonb;
   f      record;
-  v_n    bigint;
 BEGIN
   IF api.is_platform_superuser() IS NOT TRUE THEN
-    RAISE EXCEPTION 'Réservé aux super-administrateurs' USING ERRCODE = '42501';
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
   END IF;
 
   SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
@@ -647,36 +687,31 @@ BEGIN
   SELECT * INTO v_reg FROM public.ref_catalog_registry WHERE catalog_key = p_catalog_key;
 
   IF v.kind = 'ref_code_domain' THEN
-    -- Délégation phase 7.5 : les domaines ont déjà leur lecture et leur comptage éprouvés.
     SELECT COALESCE(jsonb_agg(to_jsonb(rc) ORDER BY rc.position NULLS LAST, rc.name), '[]'::jsonb)
-      INTO v_rows
-    FROM public.ref_code rc WHERE rc.domain = v.domain;
+      INTO v_rows FROM public.ref_code rc WHERE rc.domain = v.domain;
+    -- Comptage délégué à la phase 7.5 (balayage de catalogue déjà mesuré). Sa sortie est
+    -- déjà indexée par ref_code.id, ce qui EST la clé canonique d'une clé primaire à une
+    -- colonne : aucune re-clé n'est nécessaire.
     v_use := api.ref_code_usage_counts(v.domain);
   ELSE
-    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t', v.table_name)
-      INTO v_rows;
+    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t',
+                   v.table_name) INTO v_rows;
 
-    -- Compteur d'usage : SOMME de TOUTES les FK entrantes découvertes, pas une choisie
-    -- à la main. C'est ce qui rend la corbeille honnête sur un catalogue référencé
-    -- depuis plusieurs tables (ref_classification_scheme en a six).
-    -- Le compteur ne sait travailler que sur une clé SIMPLE : une matrice à clé
-    -- composite n'est référencée par personne, son compteur reste vide.
+    -- Compteur : FUSION ADDITIVE de toutes les FK entrantes. L'écraser à chaque tour de
+    -- boucle est l'erreur naturelle ici — d'où l'accumulateur v_use et la variable v_part.
     IF jsonb_array_length(v.primary_key_columns) = 1 THEN
-      FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS x("table" text, "column" text) LOOP
+      FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS y(tbl text, col text) LOOP
         EXECUTE format(
           'SELECT COALESCE(jsonb_object_agg(k, n), ''{}''::jsonb) FROM ('
-          '  SELECT %I::text AS k, count(*) AS n FROM public.%I WHERE %I IS NOT NULL GROUP BY 1) s',
-          f."column", f."table", f."column")
-        INTO v_use
-        USING NULL;
-        -- fusion additive avec l'accumulateur
-        SELECT COALESCE(jsonb_object_agg(key, val), '{}'::jsonb) INTO v_use
-        FROM (
-          SELECT key, SUM(value::bigint) AS val
-          FROM (
-            SELECT key, value FROM jsonb_each_text(v_use)
-          ) u GROUP BY key
-        ) m;
+          '  SELECT x.%I::text AS k, count(*) AS n'
+          '  FROM public.%I x WHERE x.%I IS NOT NULL GROUP BY 1) s',
+          f.col, f.tbl, f.col)
+          INTO v_part;
+        SELECT COALESCE(jsonb_object_agg(key, total), '{}'::jsonb) INTO v_use
+        FROM (SELECT key, SUM(value::bigint) AS total
+              FROM (SELECT * FROM jsonb_each_text(v_use)
+                    UNION ALL SELECT * FROM jsonb_each_text(v_part)) u
+              GROUP BY key) m;
       END LOOP;
     END IF;
   END IF;
@@ -691,124 +726,25 @@ BEGIN
     'readonly_reason',     internal.ref_catalog_readonly_reason(v.catalog_key),
     'is_identifiable',     v.is_identifiable,
     'primary_key_columns', v.primary_key_columns,
-    -- Cascade, pas déclaration : 12 des 32 tables n'ont pas de colonne `name`.
     'label_column',        internal.ref_catalog_label_column(v.catalog_key),
     'columns',             v.columns,
     'outgoing_fk',         v.outgoing_fk,
     'rows',                v_rows,
-    'usage',               v_use
-  );
+    'usage',               v_use);
 END $$;
-
--- Résolution du libellé par CASCADE. Une déclaration par table serait la règle et non
--- l'exception (12 tables sur 32 n'ont pas de `name`), et chaque oubli produirait une ligne
--- sans libellé à l'écran.
-CREATE OR REPLACE FUNCTION internal.ref_catalog_label_column(p_catalog_key text)
-RETURNS text
-LANGUAGE sql STABLE
-SET search_path = pg_catalog, public, internal
-AS $$
-  SELECT COALESCE(
-    (SELECT r.label_column FROM public.ref_catalog_registry r
-     WHERE r.catalog_key = p_catalog_key AND NULLIF(TRIM(r.label_column), '') IS NOT NULL),
-    (SELECT c->>'name'
-     FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
-     WHERE v.catalog_key = p_catalog_key
-       AND c->>'name' = ANY (ARRAY['name','label','title','libelle'])
-     ORDER BY array_position(ARRAY['name','label','title','libelle'], c->>'name')
-     LIMIT 1),
-    (SELECT 'code' FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
-     WHERE v.catalog_key = p_catalog_key AND c->>'name' = 'code' LIMIT 1)
-  );
-$$;
-
--- Accès EFFECTIF = verrouillages dérivés d'abord, registre ensuite. Les dérivés ne peuvent
--- pas être oubliés au seed : une relation sans clé primaire, ou un domaine ref_code jugé
--- non éditable par la fonction que l'écran actuel utilise déjà, sont fermés d'office.
-CREATE OR REPLACE FUNCTION internal.ref_catalog_access(p_catalog_key text)
-RETURNS text
-LANGUAGE sql STABLE
-SET search_path = pg_catalog, public, api, internal
-AS $$
-  SELECT CASE
-    WHEN NOT v.is_identifiable THEN 'readonly'
-    WHEN v.kind = 'ref_code_domain'
-         AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE THEN 'readonly'
-    ELSE COALESCE((SELECT r.access FROM public.ref_catalog_registry r
-                   WHERE r.catalog_key = p_catalog_key), 'editable')
-  END
-  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
-$$;
-
-CREATE OR REPLACE FUNCTION internal.ref_catalog_readonly_reason(p_catalog_key text)
-RETURNS text
-LANGUAGE sql STABLE
-SET search_path = pg_catalog, public, api, internal
-AS $$
-  SELECT CASE
-    WHEN NOT v.is_identifiable
-      THEN 'Aucune clé primaire : une ligne n''y est pas identifiable.'
-    WHEN v.kind = 'ref_code_domain' AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE
-      THEN 'Domaine structurel (taxonomie, hiérarchie ou couplage à un type d''objet). S''édite par migration.'
-    ELSE (SELECT r.readonly_reason FROM public.ref_catalog_registry r
-          WHERE r.catalog_key = p_catalog_key AND r.access = 'readonly')
-  END
-  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
-$$;
 
 REVOKE ALL ON FUNCTION internal.ref_catalog_label_column(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.ref_catalog_access(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.ref_catalog_readonly_reason(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_cast_expr(jsonb, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_row_count(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION api.list_ref_catalogs() FROM PUBLIC;
 REVOKE ALL ON FUNCTION api.get_ref_catalog(text) FROM PUBLIC;
-REVOKE ALL ON FUNCTION internal.ref_catalog_row_count(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.list_ref_catalogs() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.get_ref_catalog(text) TO authenticated, service_role;
 ```
 
-> **À corriger pendant l'implémentation :** la boucle de fusion des compteurs ci-dessus est écrite en deux temps (calcul puis fusion) et l'écrasement de `v_use` à chaque tour est un bug — le premier `EXECUTE … INTO v_use` doit écrire dans une variable temporaire `v_part jsonb`, et la fusion additive doit combiner `v_use` et `v_part`. Écrire d'abord le test « un catalogue référencé depuis DEUX tables affiche la somme » (par exemple `ref_language`, référencé 4 fois), le voir échouer, puis corriger. C'est le point le plus facile à rater de cette tâche.
-
-- [ ] **Step 4: Écrire le test de la somme multi-FK**
-
-```sql
-DO $$
-DECLARE
-  v_cat  jsonb;
-  v_key  text;
-  v_type uuid;
-  v_before bigint;
-  v_after  bigint;
-BEGIN
-  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
-
-  -- NON VACANT : on POSE des références sur DEUX tables différentes et on exige la SOMME
-  -- exacte. L'assertion « la clé existe OU il y a des lignes » de la première rédaction
-  -- était vraie dès qu'un catalogue n'était pas vide : elle ne testait rien.
-  SELECT id INTO v_type FROM ref_legal_type WHERE code = 'kbis';
-  v_key := jsonb_build_object('id', v_type)::text;
-
-  v_cat := api.get_ref_catalog('ref_legal_type');
-  v_before := COALESCE((v_cat->'usage'->>v_key)::bigint, 0);
-
-  INSERT INTO object (id, object_type, name, status)
-    VALUES ('CATMFK9999999901', 'HLO', 'Témoin multi-FK', 'draft');
-  INSERT INTO object_legal (object_id, type_id, value)
-    VALUES ('CATMFK9999999901', v_type, '{}'::jsonb);
-  INSERT INTO object_legal (object_id, type_id, value)
-    VALUES ('CATMFK9999999901', v_type, '{"value":"2"}'::jsonb);
-
-  v_cat := api.get_ref_catalog('ref_legal_type');
-  v_after := COALESCE((v_cat->'usage'->>v_key)::bigint, 0);
-
-  ASSERT v_after = v_before + 2,
-         format('le compteur doit SOMMER les références ; avant %s, après %s (attendu %s)',
-                v_before, v_after, v_before + 2);
-
-  RAISE NOTICE 'compteur multi-FK assertion passed';
-END$$;
-```
-
-- [ ] **Step 5: Lancer, corriger la fusion, relancer**
+- [ ] **Step 5: Appliquer et relancer**
 
 ```bash
 psql "$TBLS_DSN" -f "Base de donnée DLL et API/migration_ref_catalog_admin.sql"
@@ -821,142 +757,118 @@ Attendu : `NOTICE: lecture assertions passed` et `NOTICE: compteur multi-FK asse
 
 ```bash
 git add "Base de donnée DLL et API/migration_ref_catalog_admin.sql" "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
-git commit -m "feat(§211): RPC de lecture des catalogues (maitre + detail)
+git commit -m "feat(211): RPC de lecture des catalogues + helpers derives
 
-list_ref_catalogs assemble decouverte et editorial ; get_ref_catalog decrit un
-catalogue, ses valeurs et son compteur d'usage. Le compteur SOMME toutes les FK
-entrantes decouvertes (ref_classification_scheme en a six) au lieu d'une choisie
-a la main. Les domaines ref_code delegent a la phase 7.5, deja eprouvee.
-Le test balaie les 103 catalogues : c'est lui qui attrapera une table dont la
-forme casse le generateur."
+Maitre ET detail lisent le MEME acces via internal.ref_catalog_access : sinon
+une table sans cle primaire s'affiche editable dans la liste puis verrouillee a
+l'ouverture. Les verrouillages structurels sont derives, le registre ne fait
+que restreindre. usage est indexe par la cle CANONIQUE de la ligne, la meme des
+deux cotes. Le compteur FUSIONNE toutes les FK entrantes (teste sur deux tables
+consommatrices distinctes, pas deux lignes de la meme table)."
 ```
 
 ---
 
-### Task 4: RPC d'écriture
+### Task 4: RPC d'écriture, de suppression et de réordonnancement
 
-**Files:**
-- Modify: `Base de donnée DLL et API/migration_ref_catalog_admin.sql`
-- Modify: `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql`
+**Files:** Modify `migration_ref_catalog_admin.sql` et `tests/test_ref_catalog_admin.sql`.
 
 **Interfaces:**
-- Consumes: `internal.v_ref_catalog`, `ref_catalog_registry`, les RPC phase 7.5.
 - Produces:
-  - `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb) RETURNS jsonb` (la ligne écrite). `p_key` NULL ⇒ création ; sinon la clé complète de la ligne, `{"metric_id":"…","object_type":"HLO"}` pour une matrice.
-  - `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb) RETURNS void`.
+  - `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb) → jsonb` — `p_key` NULL ⇒ création.
+  - `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb) → void`.
+  - `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb) → void` — `p_keys` = tableau JSON de clés dans l'ordre voulu.
 
-**Quatre exigences que la première rédaction avait manquées, toutes confirmées en base :**
+**Cinq exigences, toutes issues de la revue du plan :**
 
-1. **`p_key jsonb`, jamais `p_id uuid`.** 10 des 32 tables sortent du moule uuid simple. La clause `WHERE` se bâtit depuis **toutes** les colonnes de `primary_key_columns`, chacune citée `format(%I)` et castée au type découvert.
-2. **Délégation `ref_code` en arguments NOMMÉS et sur QUATRE fonctions.** La signature est `(p_domain, p_name, p_id, p_code, …)` — `p_name` avant `p_code`. Un appel positionnel inversé écrit le code dans le libellé sans lever d'erreur. Et déléguer la seule `rpc_upsert_ref_code` perdrait l'activation et le réordonnancement des 52 domaines au moment où `RefCodeEditor` est absorbé : câbler aussi `rpc_set_ref_code_active` (quand `p_values` porte `is_active`), `rpc_reorder_ref_code` et `rpc_delete_ref_code`.
-3. **`REQUIRED_HIDDEN_COLUMN` est une garde serveur réelle**, pas seulement un bouton grisé : à la création, une colonne obligatoire sans défaut absente du payload lève cette erreur. Sans elle, le code figurait dans la liste des erreurs de la spec sans exister nulle part.
-4. **Le `DELETE` intercepte `foreign_key_violation`.** Une référence peut naître entre le comptage et la suppression — le compteur est le message lisible, la contrainte est la garde. Zéro ligne supprimée ⇒ `ROW_NOT_FOUND`, jamais un succès silencieux.
+1. **`p_key jsonb`** — la clause `WHERE` se bâtit depuis **toutes** les colonnes de `primary_key_columns`.
+2. **Les colonnes de clé primaire SANS valeur par défaut sont SAISISSABLES à la création.** `ref_commune.insee_code`, `ref_capacity_applicability.metric_id` et `object_type` doivent être fournis — les exclure de la garde `REQUIRED_HIDDEN_COLUMN` était une erreur : `has_default` protège déjà les UUID générés, et rien d'autre ne doit être exempté.
+3. **Délégation `ref_code` en arguments nommés, sur les QUATRE fonctions** : upsert, activation, réordonnancement, suppression. En câbler trois ferait disparaître le réordonnancement au moment où `RefCodeEditor` est absorbé.
+4. **Le `DELETE` intercepte `foreign_key_violation`** — une référence peut naître entre le comptage et la suppression. Le compteur est le message lisible, la contrainte est la garde. Zéro ligne supprimée ⇒ `ROW_NOT_FOUND`.
+5. **`code` figé après création, mais renvoyer le MÊME code est toléré** — sinon aucun formulaire pré-rempli ne peut enregistrer.
 
-- [ ] **Step 1: Écrire les tests qui échouent — dont l'assertion de sécurité**
+- [ ] **Step 1: Écrire les tests qui échouent**
 
 ```sql
+-- (1) CYCLE RÉEL, clé uuid simple.
 DO $$
-DECLARE
-  v_id  uuid;
-  v_key jsonb;
-  v_ok  boolean;
+DECLARE v_id uuid; v_key jsonb; v_ok boolean;
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
-  -- (1) CYCLE RÉEL sur un catalogue à clé uuid simple.
   v_id := (api.rpc_upsert_ref_row('ref_legal_type', NULL,
             '{"code":"temoin_211","name":"Témoin §211","category":"business","is_required":false}'::jsonb)
            ->>'id')::uuid;
-  ASSERT v_id IS NOT NULL, 'la création doit rendre la ligne écrite';
   v_key := jsonb_build_object('id', v_id);
-
   -- Le cast typé fonctionne : sans lui, is_required (boolean) refuserait le texte de ->>.
   ASSERT (SELECT is_required FROM ref_legal_type WHERE id = v_id) = false,
-         'une colonne booléenne doit être castée au type découvert, pas écrite en texte';
+         'une colonne booléenne doit être castée au type découvert';
 
-  PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"name":"Témoin §211 modifié"}'::jsonb);
-  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin §211 modifié',
-         'l''édition doit persister';
+  PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"name":"Témoin modifié"}'::jsonb);
+  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin modifié', 'l''édition doit persister';
 
-  -- Le code RENVOYÉ À L'IDENTIQUE est toléré : sinon aucun formulaire pré-rempli n'enregistre.
+  -- Renvoyer le MÊME code est toléré (formulaire pré-rempli) ; un code différent est refusé.
   PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key,
-            '{"code":"temoin_211","name":"Témoin §211 bis"}'::jsonb);
-  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin §211 bis',
+            '{"code":"temoin_211","name":"Témoin bis"}'::jsonb);
+  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin bis',
          'renvoyer le même code ne doit pas bloquer l''enregistrement';
-
-  -- Un code DIFFÉRENT est refusé.
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"code":"autre_code"}'::jsonb);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%CODE_IMMUTABLE%';
-  END;
-  ASSERT v_ok, 'changer le code d''une ligne existante doit lever CODE_IMMUTABLE';
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"code":"autre"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%CODE_IMMUTABLE%'; END;
+  ASSERT v_ok, 'changer le code doit lever CODE_IMMUTABLE';
 
-  -- Colonne inconnue : ÉCHOUE, jamais ignorée en silence (piège d'écriture).
+  -- Colonne inconnue : ÉCHOUE, jamais ignorée (piège d'écriture).
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"colonne_qui_nexiste_pas":"x"}'::jsonb);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%UNKNOWN_COLUMN%';
-  END;
-  ASSERT v_ok, 'une colonne inconnue doit faire échouer l''appel, pas être ignorée';
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"nexiste_pas":"x"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%UNKNOWN_COLUMN%'; END;
+  ASSERT v_ok, 'une colonne inconnue doit faire échouer l''appel';
 
-  -- Colonne obligatoire sans défaut absente à la création ⇒ garde SERVEUR.
+  -- Colonne obligatoire sans défaut absente à la création : garde SERVEUR.
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_upsert_ref_row('ref_legal_type', NULL, '{"name":"Sans code"}'::jsonb);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%REQUIRED_HIDDEN_COLUMN%';
-  END;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', NULL, '{"name":"Sans code"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%REQUIRED_HIDDEN_COLUMN%'; END;
   ASSERT v_ok, 'une colonne obligatoire sans défaut absente doit lever REQUIRED_HIDDEN_COLUMN';
 
-  -- Suppression refusée tant que référencée, puis acceptée à 0.
-  INSERT INTO object (id, object_type, name, status) VALUES ('CATTST9999999901', 'HLO', 'Témoin', 'draft');
+  -- Suppression : refusée référencée, acceptée à 0, ROW_NOT_FOUND au second passage.
+  INSERT INTO object (id, object_type, name, status) VALUES ('CATTST9999999901','HLO','T','draft');
   INSERT INTO object_legal (object_id, type_id, value) VALUES ('CATTST9999999901', v_id, '{}'::jsonb);
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%STILL_REFERENCED%';
-  END;
+  BEGIN PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%STILL_REFERENCED%'; END;
   ASSERT v_ok, 'supprimer une valeur référencée doit lever STILL_REFERENCED';
 
   DELETE FROM object_legal WHERE type_id = v_id;
   PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
-  ASSERT NOT EXISTS (SELECT 1 FROM ref_legal_type WHERE id = v_id),
-         'à 0 référence, la suppression doit passer';
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_legal_type WHERE id = v_id), 'à 0 référence, la suppression passe';
 
-  -- Une seconde suppression ne doit PAS réussir en silence.
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ROW_NOT_FOUND%';
-  END;
-  ASSERT v_ok, 'supprimer une ligne inexistante doit lever ROW_NOT_FOUND';
+  BEGIN PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ROW_NOT_FOUND%'; END;
+  ASSERT v_ok, 'supprimer une ligne inexistante doit lever ROW_NOT_FOUND, pas réussir en silence';
 
   RAISE NOTICE 'cycle uuid assertions passed';
 END$$;
 
--- Le test qui prouve que p_key jsonb tient : clé NATURELLE non-uuid, et clé COMPOSITE.
+-- (2) L'IDENTITÉ GÉNÉRIQUE : clé naturelle non-uuid, clé composite, absence de clé.
 DO $$
 DECLARE v_ok boolean; v_metric uuid;
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
-  -- (a) clé naturelle varchar(5) — ref_commune. Un p_id uuid rendrait ce catalogue inéditable.
+  -- Clé naturelle varchar(5). insee_code est une colonne de PK SANS défaut : elle doit
+  -- être acceptée au payload de création, sinon ref_commune est inéditable.
   PERFORM api.rpc_upsert_ref_row('ref_commune', NULL,
             '{"insee_code":"97499","name":"Commune témoin §211"}'::jsonb);
   PERFORM api.rpc_upsert_ref_row('ref_commune', '{"insee_code":"97499"}'::jsonb,
-            '{"name":"Commune témoin modifiée"}'::jsonb);
-  ASSERT (SELECT name FROM ref_commune WHERE insee_code = '97499') = 'Commune témoin modifiée',
+            '{"name":"Commune modifiée"}'::jsonb);
+  ASSERT (SELECT name FROM ref_commune WHERE insee_code = '97499') = 'Commune modifiée',
          'une clé primaire naturelle varchar doit permettre l''édition';
   PERFORM api.rpc_delete_ref_row('ref_commune', '{"insee_code":"97499"}'::jsonb);
-  ASSERT NOT EXISTS (SELECT 1 FROM ref_commune WHERE insee_code = '97499'),
-         'une clé primaire naturelle varchar doit permettre la suppression';
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_commune WHERE insee_code = '97499'), 'et la suppression';
 
-  -- (b) clé COMPOSITE — ref_capacity_applicability (metric_id, object_type).
+  -- Clé COMPOSITE.
   SELECT id INTO v_metric FROM ref_capacity_metric LIMIT 1;
-  PERFORM api.rpc_delete_ref_row('ref_capacity_applicability',
-            jsonb_build_object('metric_id', v_metric, 'object_type', 'PRD'))
-    WHERE EXISTS (SELECT 1 FROM ref_capacity_applicability
-                  WHERE metric_id = v_metric AND object_type = 'PRD');
+  DELETE FROM ref_capacity_applicability WHERE metric_id = v_metric AND object_type = 'PRD';
   PERFORM api.rpc_upsert_ref_row('ref_capacity_applicability', NULL,
             jsonb_build_object('metric_id', v_metric, 'object_type', 'PRD'));
   ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability
@@ -965,79 +877,77 @@ BEGIN
   PERFORM api.rpc_delete_ref_row('ref_capacity_applicability',
             jsonb_build_object('metric_id', v_metric, 'object_type', 'PRD'));
   ASSERT NOT EXISTS (SELECT 1 FROM ref_capacity_applicability
-                     WHERE metric_id = v_metric AND object_type = 'PRD'),
-         'une matrice à clé composite doit être supprimable';
+                     WHERE metric_id = v_metric AND object_type = 'PRD'), 'et supprimable';
 
-  -- (c) relation SANS clé primaire : verrouillée d'office, sans ligne de registre.
+  -- Sans clé primaire : verrouillée d'office, sans ligne de registre.
   v_ok := false;
-  BEGIN
-    PERFORM api.rpc_upsert_ref_row('ref_interop_crosswalk', NULL, '{"source_system":"x"}'::jsonb);
-  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%LOCKED_CATALOG%';
-  END;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_interop_crosswalk', NULL, '{"source_system":"x"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%LOCKED_CATALOG%'; END;
   ASSERT v_ok, 'une relation sans clé primaire doit être verrouillée d''office';
 
-  RAISE NOTICE 'identité générique (naturelle, composite, absente) assertions passed';
+  RAISE NOTICE 'identité générique assertions passed';
 END$$;
 
--- Délégation ref_code : le NOM et le CODE ne doivent pas être inversés.
+-- (3) DÉLÉGATION ref_code : nom/code non inversés, activation ET réordonnancement câblés.
 DO $$
-DECLARE v_out jsonb; v_id uuid;
+DECLARE v_a uuid; v_b uuid;
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
-  v_out := api.rpc_upsert_ref_row('ref_code:cuisine_type', NULL,
-             '{"code":"temoin_211","name":"Cuisine témoin §211"}'::jsonb);
-  v_id := (v_out->>'id')::uuid;
-  ASSERT (SELECT code FROM ref_code WHERE id = v_id) = 'temoin_211',
+
+  v_a := (api.rpc_upsert_ref_row('ref_code:cuisine_type', NULL,
+           '{"code":"temoin_a_211","name":"Témoin A"}'::jsonb)->>'id')::uuid;
+  v_b := (api.rpc_upsert_ref_row('ref_code:cuisine_type', NULL,
+           '{"code":"temoin_b_211","name":"Témoin B"}'::jsonb)->>'id')::uuid;
+
+  ASSERT (SELECT code FROM ref_code WHERE id = v_a) = 'temoin_a_211',
          'le code doit atterrir dans `code` — un appel positionnel l''écrirait dans `name`';
-  ASSERT (SELECT name FROM ref_code WHERE id = v_id) = 'Cuisine témoin §211',
+  ASSERT (SELECT name FROM ref_code WHERE id = v_a) = 'Témoin A',
          'le libellé doit atterrir dans `name`';
 
-  -- L'activation passe par la délégation : sans elle, absorber RefCodeEditor la perdrait.
   PERFORM api.rpc_upsert_ref_row('ref_code:cuisine_type',
-            jsonb_build_object('id', v_id), '{"is_active":false}'::jsonb);
-  ASSERT (SELECT is_active FROM ref_code WHERE id = v_id) = false,
-         'l''interrupteur « actif » des domaines ref_code doit rester câblé';
+            jsonb_build_object('id', v_a), '{"is_active":false}'::jsonb);
+  ASSERT (SELECT is_active FROM ref_code WHERE id = v_a) = false,
+         'l''interrupteur « actif » des domaines doit rester câblé après absorption de RefCodeEditor';
 
-  PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_id));
+  PERFORM api.rpc_reorder_ref_rows('ref_code:cuisine_type',
+            jsonb_build_array(jsonb_build_object('id', v_b), jsonb_build_object('id', v_a)));
+  ASSERT (SELECT position FROM ref_code WHERE id = v_b)
+       < (SELECT position FROM ref_code WHERE id = v_a),
+         'le réordonnancement des domaines doit rester câblé';
+
+  PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_a));
+  PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_b));
   RAISE NOTICE 'délégation ref_code assertions passed';
 END$$;
 
--- ASSERTION DE SÉCURITÉ — la liste blanche refuse vraiment.
--- Si celle-ci disparaît, « un RPC en SQL dynamique » devient une écriture arbitraire.
+-- (4) ASSERTION DE SÉCURITÉ — si elle disparaît, le RPC devient une écriture arbitraire.
 DO $$
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
-
   BEGIN
     PERFORM api.rpc_upsert_ref_row('object', NULL, '{"name":"pwn"}'::jsonb);
-    RAISE EXCEPTION 'GARDE VACANTE : une écriture sur `object` a été acceptée';
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur `object` acceptée';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%UNKNOWN_CATALOG%' THEN RAISE; END IF;
   END;
-
   BEGIN
     PERFORM api.rpc_delete_ref_row('auth.users', '{"id":"00000000-0000-0000-0000-000000000000"}'::jsonb);
-    RAISE EXCEPTION 'GARDE VACANTE : une suppression dans auth.users a été acceptée';
+    RAISE EXCEPTION 'GARDE VACANTE : suppression dans auth.users acceptée';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%UNKNOWN_CATALOG%' THEN RAISE; END IF;
   END;
-
-  -- Un catalogue verrouillé par le REGISTRE refuse l'écriture.
   BEGIN
     PERFORM api.rpc_upsert_ref_row('ref_permission', NULL, '{"code":"x","name":"x"}'::jsonb);
-    RAISE EXCEPTION 'GARDE VACANTE : écriture acceptée sur un catalogue verrouillé';
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur un catalogue verrouillé acceptée';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%LOCKED_CATALOG%' THEN RAISE; END IF;
   END;
-
-  -- Un domaine verrouillé par DÉRIVATION (api.ref_code_domain_is_editable) aussi.
   BEGIN
     PERFORM api.rpc_upsert_ref_row('ref_code:taxonomy_hlo', NULL, '{"code":"x","name":"x"}'::jsonb);
-    RAISE EXCEPTION 'GARDE VACANTE : écriture acceptée sur une taxonomie';
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur une taxonomie acceptée';
   EXCEPTION WHEN OTHERS THEN
     IF SQLERRM NOT LIKE '%LOCKED_CATALOG%' THEN RAISE; END IF;
   END;
-
   RAISE NOTICE 'écriture assertions passed';
 END$$;
 ```
@@ -1050,47 +960,17 @@ psql "$TBLS_DSN" -f "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql
 
 Attendu : `ERROR: function api.rpc_upsert_ref_row(...) does not exist`.
 
-- [ ] **Step 3: Écrire les deux fonctions**
+- [ ] **Step 3: Écrire les trois RPC**
 
 ```sql
--- ---------------------------------------------------------------------------
--- 4. Écriture. SQL DYNAMIQUE — la discipline est non négociable :
---   (a) la relation est résolue CONTRE LA VUE, jamais contre la chaîne de l'appelant ;
---   (b) chaque clé du payload est validée contre les colonnes DÉCOUVERTES ; une
---       colonne inconnue fait ÉCHOUER l'appel — une valeur silencieusement jetée
---       est un piège d'écriture ;
---   (c) les identifiants passent par format(%I), les valeurs par USING, et chaque
---       valeur est castée au TYPE DÉCOUVERT (sans quoi une colonne booléenne refuse
---       le texte que rend l'opérateur ->>) ;
---   (d) `code` est figé après création — mais renvoyer le MÊME code est toléré,
---       sinon aucun formulaire pré-rempli ne peut enregistrer ;
---   (e) l'identité d'une ligne est p_key jsonb sur TOUTES les colonnes de clé primaire.
--- ---------------------------------------------------------------------------
-
--- Fragment « valeur castée au type découvert », réutilisé par l'INSERT, le SET et le WHERE.
--- Sans lui, (p_values->>'is_required') rend du texte et PostgreSQL refuse une colonne booléenne.
-CREATE OR REPLACE FUNCTION internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)
-RETURNS text
-LANGUAGE sql IMMUTABLE
-AS $$
-  SELECT format('(%s->>%L)::%s', p_src, p_name,
-                COALESCE((SELECT c->>'type' FROM jsonb_array_elements(p_columns) c
-                          WHERE c->>'name' = p_name), 'text'));
-$$;
-
 CREATE OR REPLACE FUNCTION api.rpc_upsert_ref_row(
-  p_catalog_key text,
-  p_key         jsonb,
-  p_values      jsonb
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
+  p_catalog_key text, p_key jsonb, p_values jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal
 AS $$
 DECLARE
   v      record;
-  v_key  text;
+  v_col  text;
   v_cols text[] := ARRAY[]::text[];
   v_args text[] := ARRAY[]::text[];
   v_sets text[] := ARRAY[]::text[];
@@ -1107,24 +987,20 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
   END IF;
-
   IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
     RAISE EXCEPTION 'LOCKED_CATALOG: % — %', p_catalog_key,
       COALESCE(internal.ref_catalog_readonly_reason(p_catalog_key), '') USING ERRCODE = '42501';
   END IF;
 
-  -- Délégation phase 7.5 — ARGUMENTS NOMMÉS OBLIGATOIRES : la signature réelle est
-  -- (p_domain, p_name, p_id, p_code, …), p_name AVANT p_code. Un appel positionnel qui
-  -- suppose l'ordre inverse écrit le code dans le libellé, SANS lever d'erreur SQL.
-  -- La délégation couvre l'activation ET le libellé : ne câbler que rpc_upsert_ref_code
-  -- ferait perdre l'interrupteur « actif » des 52 domaines au moment où RefCodeEditor
-  -- est absorbé — une régression fonctionnelle déguisée en refonte.
+  -- Délégation phase 7.5 — ARGUMENTS NOMMÉS : la signature est
+  -- (p_domain, p_name, p_id, p_code, …), p_name AVANT p_code. Un appel positionnel
+  -- inversé écrit le code dans le libellé SANS lever d'erreur SQL.
   IF v.kind = 'ref_code_domain' THEN
     IF p_values ? 'is_active' AND p_key IS NOT NULL THEN
       PERFORM api.rpc_set_ref_code_active(
         (p_key->>'id')::uuid, v.domain, (p_values->>'is_active')::boolean);
     END IF;
-    IF p_values ?| ARRAY['code', 'name', 'name_i18n', 'position'] THEN
+    IF p_values ?| ARRAY['code','name','name_i18n','position'] THEN
       RETURN api.rpc_upsert_ref_code(
         p_domain    => v.domain,
         p_name      => p_values->>'name',
@@ -1136,31 +1012,24 @@ BEGIN
     RETURN jsonb_build_object('id', p_key->>'id');
   END IF;
 
-  IF NOT v.is_identifiable THEN
-    RAISE EXCEPTION 'LOCKED_CATALOG: % — aucune clé primaire, une ligne n''y est pas identifiable',
-      p_catalog_key USING ERRCODE = '42501';
-  END IF;
-
-  -- (b) validation stricte des colonnes du payload
-  FOR v_key IN SELECT jsonb_object_keys(p_values) LOOP
-    IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = v_key) THEN
-      RAISE EXCEPTION 'UNKNOWN_COLUMN: % sur %', v_key, p_catalog_key USING ERRCODE = '22023';
+  -- (b) validation stricte du payload
+  FOR v_col IN SELECT jsonb_object_keys(p_values) LOOP
+    IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = v_col) THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: % sur %', v_col, p_catalog_key USING ERRCODE = '22023';
     END IF;
-    IF v_key IN ('created_at', 'updated_at')
-       OR (p_key IS NOT NULL AND EXISTS (
-             SELECT 1 FROM jsonb_array_elements(v.primary_key_columns) k
-             WHERE k->>'name' = v_key)) THEN
-      RAISE EXCEPTION 'UNKNOWN_COLUMN: % est verrouillée', v_key USING ERRCODE = '22023';
+    -- Une colonne de clé primaire est SAISISSABLE à la création (ref_commune.insee_code,
+    -- ref_capacity_applicability.metric_id) et verrouillée seulement en édition.
+    IF v_col IN ('created_at','updated_at')
+       OR (p_key IS NOT NULL AND EXISTS (SELECT 1 FROM jsonb_array_elements(v.primary_key_columns) k
+                                         WHERE k->>'name' = v_col)) THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: % est verrouillée', v_col USING ERRCODE = '22023';
     END IF;
 
-    -- (d) code figé — mais un renvoi À L'IDENTIQUE est toléré, sinon aucun formulaire
-    -- pré-rempli ne peut enregistrer une modification de libellé.
-    IF v_key = 'code' AND p_key IS NOT NULL THEN
-      EXECUTE format('SELECT code::text FROM public.%I WHERE %s',
-                     v.table_name,
-                     (SELECT string_agg(format('%I = %s', k->>'name',
-                                internal.ref_catalog_cast_expr(v.columns, k->>'name', '$1')), ' AND ')
-                      FROM jsonb_array_elements(v.primary_key_columns) k))
+    IF v_col = 'code' AND p_key IS NOT NULL THEN
+      EXECUTE format('SELECT code::text FROM public.%I WHERE %s', v.table_name,
+                (SELECT string_agg(format('%I = %s', k->>'name',
+                          internal.ref_catalog_cast_expr(v.columns, k->>'name', '$1')), ' AND ')
+                 FROM jsonb_array_elements(v.primary_key_columns) k))
         INTO v_cur USING p_key;
       IF v_cur IS DISTINCT FROM (p_values->>'code') THEN
         RAISE EXCEPTION 'CODE_IMMUTABLE: le code d''une valeur existante ne se change pas'
@@ -1169,33 +1038,28 @@ BEGIN
       CONTINUE;
     END IF;
 
-    v_cols := v_cols || quote_ident(v_key);
-    v_args := v_args || internal.ref_catalog_cast_expr(v.columns, v_key, '$1');
-    v_sets := v_sets || format('%I = %s', v_key,
-                               internal.ref_catalog_cast_expr(v.columns, v_key, '$1'));
+    v_cols := v_cols || quote_ident(v_col);
+    v_args := v_args || internal.ref_catalog_cast_expr(v.columns, v_col, '$1');
+    v_sets := v_sets || format('%I = %s', v_col,
+                               internal.ref_catalog_cast_expr(v.columns, v_col, '$1'));
   END LOOP;
 
   IF p_key IS NULL THEN
-    -- Garde SERVEUR « ajout impossible » : une colonne obligatoire sans valeur par défaut
-    -- absente du payload. Sans elle, REQUIRED_HIDDEN_COLUMN figurerait dans la liste des
-    -- erreurs de la spec sans exister nulle part, et son test serait vacant.
+    -- Garde SERVEUR « ajout impossible ». AUCUNE exemption pour les colonnes de clé
+    -- primaire : has_default protège déjà les UUID générés, et exempter les PK rendait
+    -- ref_commune / les matrices insérables sans identité.
     SELECT c->>'name' INTO v_miss
     FROM jsonb_array_elements(v.columns) c
-    WHERE (c->>'is_required')::boolean
-      AND NOT (c->>'has_default')::boolean
+    WHERE (c->>'is_required')::boolean AND NOT (c->>'has_default')::boolean
       AND NOT (p_values ? (c->>'name'))
-      AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.primary_key_columns) k
-                      WHERE k->>'name' = c->>'name')
     LIMIT 1;
     IF v_miss IS NOT NULL THEN
       RAISE EXCEPTION 'REQUIRED_HIDDEN_COLUMN: % est obligatoire et absente', v_miss
         USING ERRCODE = '22023';
     END IF;
-
     IF array_length(v_cols, 1) IS NULL THEN
       RAISE EXCEPTION 'UNKNOWN_COLUMN: aucune colonne à écrire' USING ERRCODE = '22023';
     END IF;
-
     EXECUTE format('INSERT INTO public.%I (%s) VALUES (%s) RETURNING to_jsonb(public.%I.*)',
                    v.table_name, array_to_string(v_cols, ', '),
                    array_to_string(v_args, ', '), v.table_name)
@@ -1204,16 +1068,12 @@ BEGIN
     IF array_length(v_sets, 1) IS NULL THEN
       RAISE EXCEPTION 'UNKNOWN_COLUMN: aucune colonne à écrire' USING ERRCODE = '22023';
     END IF;
-
     SELECT string_agg(format('%I = %s', k->>'name',
              internal.ref_catalog_cast_expr(v.columns, k->>'name', '$2')), ' AND ')
-      INTO v_cur
-    FROM jsonb_array_elements(v.primary_key_columns) k;
-
+      INTO v_cur FROM jsonb_array_elements(v.primary_key_columns) k;
     EXECUTE format('UPDATE public.%I SET %s WHERE %s RETURNING to_jsonb(public.%I.*)',
                    v.table_name, array_to_string(v_sets, ', '), v_cur, v.table_name)
       INTO v_out USING p_values, p_key;
-
     IF v_out IS NULL THEN
       RAISE EXCEPTION 'ROW_NOT_FOUND: % dans %', p_key, p_catalog_key USING ERRCODE = '22023';
     END IF;
@@ -1223,28 +1083,19 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal
 AS $$
 DECLARE
-  v       record;
-  f       record;
-  v_n     bigint;
-  v_total bigint := 0;
-  v_where text;
-  v_del   bigint;
+  v record; f record; v_n bigint; v_total bigint := 0; v_where text; v_del bigint;
 BEGIN
   IF api.is_platform_superuser() IS NOT TRUE THEN
     RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
   END IF;
-
   SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
   END IF;
-
   IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
     RAISE EXCEPTION 'LOCKED_CATALOG: % — %', p_catalog_key,
       COALESCE(internal.ref_catalog_readonly_reason(p_catalog_key), '') USING ERRCODE = '42501';
@@ -1255,14 +1106,11 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Le compteur est le MESSAGE LISIBLE (« 3 fiches »), pas la garde. Il ne sait compter
-  -- que sur une clé simple : une matrice à clé composite n'est référencée par personne.
+  -- Le compteur est le MESSAGE LISIBLE (« 3 fiches »), pas la garde.
   IF jsonb_array_length(v.primary_key_columns) = 1 THEN
-    FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS x(tbl text, col text) LOOP
-      EXECUTE format('SELECT count(*) FROM public.%I WHERE %I = %s',
-                     f.tbl, f.col,
-                     internal.ref_catalog_cast_expr(v.columns,
-                       v.primary_key_columns->0->>'name', '$1'))
+    FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS y(tbl text, col text) LOOP
+      EXECUTE format('SELECT count(*) FROM public.%I WHERE %I = %s', f.tbl, f.col,
+        internal.ref_catalog_cast_expr(v.columns, v.primary_key_columns->0->>'name', '$1'))
         INTO v_n USING p_key;
       v_total := v_total + v_n;
     END LOOP;
@@ -1273,8 +1121,7 @@ BEGIN
 
   SELECT string_agg(format('%I = %s', k->>'name',
            internal.ref_catalog_cast_expr(v.columns, k->>'name', '$1')), ' AND ')
-    INTO v_where
-  FROM jsonb_array_elements(v.primary_key_columns) k;
+    INTO v_where FROM jsonb_array_elements(v.primary_key_columns) k;
 
   -- La CONTRAINTE est la garde : une référence peut naître entre le comptage et le DELETE.
   BEGIN
@@ -1283,213 +1130,306 @@ BEGIN
   EXCEPTION WHEN foreign_key_violation THEN
     RAISE EXCEPTION 'STILL_REFERENCED: la valeur est référencée' USING ERRCODE = '23503';
   END;
-
   IF v_del = 0 THEN
     RAISE EXCEPTION 'ROW_NOT_FOUND: % dans %', p_key, p_catalog_key USING ERRCODE = '22023';
   END IF;
 END $$;
 
-REVOKE ALL ON FUNCTION internal.ref_catalog_cast_expr(jsonb, text, text) FROM PUBLIC;
+-- Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
+-- monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
+CREATE OR REPLACE FUNCTION api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE
+  v record; v_where text; i integer := 0; k jsonb;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+  SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
+  END IF;
+  IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
+    RAISE EXCEPTION 'LOCKED_CATALOG: %', p_catalog_key USING ERRCODE = '42501';
+  END IF;
+
+  IF v.kind = 'ref_code_domain' THEN
+    PERFORM api.rpc_reorder_ref_code(v.domain,
+      (SELECT array_agg((e->>'id')::uuid ORDER BY ord)
+       FROM jsonb_array_elements(p_keys) WITH ORDINALITY AS t(e, ord)));
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = 'position') THEN
+    RAISE EXCEPTION 'UNKNOWN_COLUMN: % n''a pas de colonne position', p_catalog_key
+      USING ERRCODE = '22023';
+  END IF;
+
+  SELECT string_agg(format('%I = %s', kc->>'name',
+           internal.ref_catalog_cast_expr(v.columns, kc->>'name', '$1')), ' AND ')
+    INTO v_where FROM jsonb_array_elements(v.primary_key_columns) kc;
+
+  FOR k IN SELECT * FROM jsonb_array_elements(p_keys) LOOP
+    i := i + 1;
+    EXECUTE format('UPDATE public.%I SET position = $2 WHERE %s', v.table_name, v_where)
+      USING k, i;
+  END LOOP;
+END $$;
+
 REVOKE ALL ON FUNCTION api.rpc_upsert_ref_row(text, jsonb, jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION api.rpc_delete_ref_row(text, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION api.rpc_reorder_ref_rows(text, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.rpc_upsert_ref_row(text, jsonb, jsonb) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.rpc_delete_ref_row(text, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.rpc_reorder_ref_rows(text, jsonb) TO authenticated, service_role;
 ```
 
-> **Le point le plus facile à rater ici** : `internal.ref_catalog_cast_expr` doit être écrite AVANT
-> les deux RPC, et le type qu'elle interpole vient de `v.columns` — donc de la vue, jamais de
-> l'appelant. Un type fourni par le client serait une injection. Écrire d'abord le test qui pose
-> `is_required = true` sur `ref_legal_type` : sans cast, PostgreSQL lève `column is_required is
-> of type boolean but expression is of type text`.
-
-- [ ] **Step 4: Vérifier que la garde d'ajout est bien SERVEUR**
-
-Le bloc de l'étape 1 couvre déjà `REQUIRED_HIDDEN_COLUMN` en **appelant le RPC**. La première
-rédaction de ce plan proposait ici un test qui interrogeait la vue sans appeler aucune fonction :
-il aurait été vert quelle que soit l'implémentation. Vérifier simplement que l'assertion de
-l'étape 1 rougit quand on retire le bloc `REQUIRED_HIDDEN_COLUMN` de la fonction.
-
-- [ ] **Step 5: Appliquer et relancer**
+- [ ] **Step 4: Appliquer et relancer**
 
 ```bash
 psql "$TBLS_DSN" -f "Base de donnée DLL et API/migration_ref_catalog_admin.sql"
 psql "$TBLS_DSN" -f "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
 ```
 
-Attendu : `NOTICE: écriture assertions passed`.
+Attendu : les quatre `NOTICE` du bloc d'écriture.
 
-- [ ] **Step 6: Vérifier la non-vacuité par sabotage**
+- [ ] **Step 5: Vérifier la non-vacuité par sabotage**
 
-Neutraliser temporairement la validation de colonne (commenter le `RAISE EXCEPTION 'UNKNOWN_COLUMN'`), réappliquer, relancer le test : il **doit** rougir. Puis remettre la garde et vérifier le vert. Même exercice en remplaçant la résolution `FROM internal.v_ref_catalog` par une acceptation directe de `p_catalog_key` : l'assertion de sécurité doit rougir.
+Trois sabotages, chacun doit faire **rougir** un test précis, puis être annulé :
 
-- [ ] **Step 7: Commit**
+| Sabotage | Test qui doit tomber |
+|---|---|
+| commenter le `RAISE EXCEPTION 'UNKNOWN_COLUMN'` | cycle uuid, « colonne inconnue » |
+| remplacer `FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key` par une acceptation directe | assertion de sécurité, écriture sur `object` |
+| retirer la synthèse `primary_key_columns` des domaines (tâche 1) | `ref_code:cuisine_type` doit être éditable |
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add "Base de donnée DLL et API/migration_ref_catalog_admin.sql" "Base de donnée DLL et API/tests/test_ref_catalog_admin.sql"
-git commit -m "feat(§211): RPC d'ecriture generique sur les catalogues
+git commit -m "feat(211): RPC d'ecriture, suppression et reordonnancement generiques
 
-SQL dynamique dont la liste blanche est la VUE d'introspection, jamais le
-registre : une relation absente de la vue n'est pas ecrivable, donc une erreur
-de seed ne peut pas ouvrir une ecriture vers object ou auth.users. Colonne
-inconnue = echec, jamais ignoree en silence. Code fige apres creation.
-Suppression refusee tant que reference, re-evaluee serveur.
-Garde verifiee non vacante par sabotage."
+Liste blanche = la VUE, jamais le registre. Identite = p_key jsonb sur toutes
+les colonnes de PK. Les colonnes de PK SANS defaut sont saisissables a la
+creation (ref_commune.insee_code, les matrices) et verrouillees en edition ;
+la garde REQUIRED_HIDDEN_COLUMN n'exempte plus les PK, has_default suffit.
+Delegation ref_code en arguments NOMMES sur les QUATRE fonctions : ne pas
+cabler le reordonnancement aurait fait disparaitre les fleches des 52 domaines.
+DELETE intercepte foreign_key_violation (course avec le comptage) et rend
+ROW_NOT_FOUND. Gardes verifiees non vacantes par trois sabotages."
 ```
 
 ---
 
 ### Task 5: Manifeste, runbook, garde CI
 
-**Files:**
-- Modify: `Base de donnée DLL et API/ci_fresh_apply.sql`
-- Modify: `docs/SQL_ROLLOUT_RUNBOOK.md`
-
-**Interfaces:**
-- Consumes: la migration et le test des tâches 1 à 4.
-- Produces: rien de programmatique — l'intégrité de déploiement.
+**Files:** Modify `ci_fresh_apply.sql`, `docs/SQL_ROLLOUT_RUNBOOK.md`.
 
 - [ ] **Step 1: Déclarer l'étape dans le driver CI**
 
-Dans `ci_fresh_apply.sql`, **avant** la ligne `\echo '== I4f-final-test …'` :
+Dans `ci_fresh_apply.sql`, **avant** `\echo '== I4f-final-test …'` :
 
 ```sql
-\echo '== 16u    migration_ref_catalog_admin.sql  (211 administration generee des catalogues de reference : vue d introspection internal.v_ref_catalog qui decouvre les 30 tables ref_* autonomes et les 71 domaines ref_code avec leur forme, registre editorial ref_catalog_registry (nom lisible, famille, verrouillage motive, CHECK readonly_reason obligatoire), 4 RPC DEFINER gated superuser dont deux en SQL dynamique dont la LISTE BLANCHE EST LA VUE et jamais le registre ; les domaines ref_code delegent aux fonctions de la phase 7.5) =='
+\echo '== 16u    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
 \ir migration_ref_catalog_admin.sql
 
-\echo '== 16u-test garde permanente 211 (decouverte des deux especes / registre coherent et verrouillages motives / balayage des 103 catalogues par get_ref_catalog / cycle reel creer-editer-refuser-supprimer / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
+\echo '== 16u-test garde permanente 211 (compte exact des catalogues / domaines editables et identifiables / cible de FK normalisee en catalog_key / maitre et detail jamais divergents / balayage exhaustif de get_ref_catalog / compteur fusionnant DEUX FK entrantes distinctes / cycle creer-editer-refuser-supprimer sur cle uuid, naturelle et composite / delegation ref_code non inversee avec activation et reordonnancement / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
 \ir tests/test_ref_catalog_admin.sql
 ```
 
 - [ ] **Step 2: Ajouter l'entrée de manifeste au runbook**
 
-Dans `docs/SQL_ROLLOUT_RUNBOOK.md`, ajouter une ligne `16u.` dans la liste numérotée (juste avant la ligne `14. REFRESH MATERIALIZED VIEW…`), puis une section détaillée `## 16u — …` en fin de fichier, sur le modèle de la section `16t` existante. La section doit dire : ce que fait la migration, l'invariant « liste blanche = la vue », les verrouillages seedés, le fait qu'elle n'est **pas foldée** dans `schema_unified.sql` (dépendance à `api.is_platform_superuser` de `rls_policies.sql`), et qu'un `NOTIFY pgrst, 'reload schema'` **est requis** (quatre fonctions `api` neuves).
+Une ligne `16u.` dans la liste numérotée (avant `14. REFRESH MATERIALIZED VIEW…`), puis une section `## 16u — …` en fin de fichier sur le modèle de `16t`. Elle doit dire : ce que fait la migration, l'invariant « liste blanche = la vue », les verrouillages **dérivés** vs **seedés**, l'absence de fold dans `schema_unified.sql`, et qu'un `NOTIFY pgrst, 'reload schema'` est **requis** (cinq fonctions `api` neuves).
 
-- [ ] **Step 3: Vérifier la cohérence du manifeste**
+- [ ] **Step 3: Vérifier**
 
 ```bash
 grep -n "16u" "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
 ```
 
-Attendu : au moins 2 occurrences dans le driver, 2 dans le runbook.
+Attendu : 2 occurrences dans le driver, 2 dans le runbook.
 
 - [ ] **Step 4: Commit**
 
 ```bash
 git add "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
-git commit -m "chore(§211): declare l'etape 16u au manifeste et au driver CI
-
-Sans cette declaration la migration serait une derive PROD-only, traitee comme
-un incident (CLAUDE.md, Deploy integrity)."
+git commit -m "chore(211): declare l'etape 16u au manifeste et au driver CI"
 ```
 
 ---
 
-### Task 6: Front pur — traduction colonne → contrôle
+### Task 6: Front pur — colonnes, identité, libellé
 
 **Files:**
 - Create: `bertel-tourism-ui/src/features/settings/catalog-fields.ts`
 - Test: `bertel-tourism-ui/src/features/settings/catalog-fields.test.ts`
 
 **Interfaces:**
-- Consumes: la forme JSON rendue par `api.get_ref_catalog` (tâche 3).
 - Produces:
   - `type CatalogColumn = { name: string; type: string; isRequired: boolean; hasDefault: boolean; enumValues: string[] | null }`
   - `type CatalogFk = { column: string; target: string }`
   - `type CatalogField = { name: string; kind: 'text' | 'i18n-text' | 'boolean' | 'number' | 'date' | 'select' | 'reference'; options?: string[]; target?: string; locked: boolean }`
-  - `buildCatalogFieldSpec(columns: CatalogColumn[], fks: CatalogFk[], primaryKeyColumns: string[]): CatalogField[]`
-  - `computeAddBlocked(columns: CatalogColumn[], fields: CatalogField[], primaryKeyColumns: string[]): string | null`
-  - `buildRowKey(row: Record<string, unknown>, primaryKeyColumns: string[]): Record<string, unknown>` — l'identité d'une ligne, à passer telle quelle en `p_key`.
+  - `buildCatalogFieldSpec(columns, fks, primaryKeyColumns: string[], mode: 'create' | 'edit'): CatalogField[]`
+  - `computeAddBlocked(columns, fields, primaryKeyColumns: string[]): string | null`
+  - `buildRowKey(row, primaryKeyColumns: string[]): Record<string, unknown>`
+  - `rowKeyString(row, primaryKeyColumns: string[]): string` — la clé canonique, **même forme que le serveur**
+  - `formatRowLabel(row, labelColumn: string | null, primaryKeyColumns: string[]): string`
 
-> **`primaryKeyColumns` est un tableau, pas un scalaire.** Cinq matrices ont une clé composite et
-> `ref_code_taxonomy_closure` en a trois. Une signature `primaryKey: string | null` rendrait ces
-> catalogues non éditables — c'est l'erreur que la revue du plan a rattrapée.
+> **La clé canonique n'est PAS du JSON sérialisé.** `jsonb::text` rend `{"id": "x"}` (avec espace) là où `JSON.stringify` rend `{"id":"x"}` : les deux ne se rejoindraient jamais. Le serveur et le front joignent donc les valeurs de clé primaire, **dans l'ordre de `primary_key_columns`**, par le séparateur d'unité `U+001F` — un caractère qui ne peut pas apparaître dans une valeur.
 
 - [ ] **Step 1: Écrire les tests qui échouent**
 
 ```typescript
-import { buildCatalogFieldSpec, computeAddBlocked } from './catalog-fields';
+import {
+  buildCatalogFieldSpec, computeAddBlocked, buildRowKey, rowKeyString, formatRowLabel,
+  type CatalogColumn,
+} from './catalog-fields';
 
-const col = (over: Partial<Parameters<typeof buildCatalogFieldSpec>[0][number]> = {}) => ({
+const col = (over: Partial<CatalogColumn> = {}): CatalogColumn => ({
   name: 'name', type: 'text', isRequired: false, hasDefault: false, enumValues: null, ...over,
 });
 
 describe('buildCatalogFieldSpec', () => {
   it('rend un champ texte pour text et varchar', () => {
-    const spec = buildCatalogFieldSpec([col({ name: 'label', type: 'character varying(50)' })], [], ['id']);
-    expect(spec[0]).toMatchObject({ name: 'label', kind: 'text' });
+    expect(buildCatalogFieldSpec([col({ name: 'label', type: 'character varying(50)' })], [], ['id'], 'edit')[0])
+      .toMatchObject({ name: 'label', kind: 'text' });
   });
 
-  it('rend un interrupteur pour boolean', () => {
-    const spec = buildCatalogFieldSpec([col({ name: 'is_public', type: 'boolean' })], [], ['id']);
-    expect(spec[0].kind).toBe('boolean');
-  });
-
-  it('rend un champ nombre pour integer et numeric', () => {
-    const spec = buildCatalogFieldSpec([col({ name: 'review_interval_days', type: 'integer' })], [], ['id']);
-    expect(spec[0].kind).toBe('number');
+  it('rend un interrupteur, un nombre, une date', () => {
+    const spec = buildCatalogFieldSpec([
+      col({ name: 'is_public', type: 'boolean' }),
+      col({ name: 'days', type: 'integer' }),
+      col({ name: 'valid_to', type: 'date' }),
+    ], [], ['id'], 'edit');
+    expect(spec.map((f) => f.kind)).toEqual(['boolean', 'number', 'date']);
   });
 
   it('rend une liste deroulante pour un enumere', () => {
-    const spec = buildCatalogFieldSpec(
-      [col({ name: 'kind', type: 'object_type', enumValues: ['HLO', 'RES'] })], [], ['id']);
-    expect(spec[0]).toMatchObject({ kind: 'select', options: ['HLO', 'RES'] });
+    expect(buildCatalogFieldSpec(
+      [col({ name: 'kind', type: 'object_type', enumValues: ['HLO', 'RES'] })], [], ['id'], 'edit')[0])
+      .toMatchObject({ kind: 'select', options: ['HLO', 'RES'] });
   });
 
   it('rend une reference pour une colonne portant une cle etrangere', () => {
-    const spec = buildCatalogFieldSpec(
+    expect(buildCatalogFieldSpec(
       [col({ name: 'family_id', type: 'uuid' })],
-      [{ column: 'family_id', target: 'ref_code_amenity_family' }], ['id']);
-    expect(spec[0]).toMatchObject({ kind: 'reference', target: 'ref_code_amenity_family' });
+      [{ column: 'family_id', target: 'ref_code:amenity_family' }], ['id'], 'edit')[0])
+      .toMatchObject({ kind: 'reference', target: 'ref_code:amenity_family' });
   });
 
-  it('associe un champ texte a son i18n frere', () => {
+  it('associe un champ texte a son i18n frere et masque le jsonb', () => {
     const spec = buildCatalogFieldSpec(
-      [col({ name: 'name' }), col({ name: 'name_i18n', type: 'jsonb' })], [], ['id']);
-    expect(spec.find((f) => f.name === 'name')?.kind).toBe('i18n-text');
-    expect(spec.find((f) => f.name === 'name_i18n')).toBeUndefined();
+      [col({ name: 'name' }), col({ name: 'name_i18n', type: 'jsonb' })], [], ['id'], 'edit');
+    expect(spec).toHaveLength(1);
+    expect(spec[0].kind).toBe('i18n-text');
   });
 
-  it('masque jsonb, tableaux et geometrie', () => {
-    const spec = buildCatalogFieldSpec([
+  it('masque jsonb libre, tableaux et geometrie', () => {
+    expect(buildCatalogFieldSpec([
       col({ name: 'metadata', type: 'jsonb' }),
       col({ name: 'tags', type: 'text[]' }),
       col({ name: 'geom', type: 'geometry' }),
-    ], [], ['id']);
-    expect(spec).toHaveLength(0);
+    ], [], ['id'], 'edit')).toHaveLength(0);
   });
 
-  it('verrouille la cle primaire et les horodatages', () => {
-    const spec = buildCatalogFieldSpec([
-      col({ name: 'id', type: 'uuid' }),
+  it('masque une cle primaire QUI A une valeur par defaut', () => {
+    expect(buildCatalogFieldSpec(
+      [col({ name: 'id', type: 'uuid', isRequired: true, hasDefault: true })], [], ['id'], 'create'))
+      .toHaveLength(0);
+  });
+
+  it('rend une cle primaire SANS defaut a la creation, et la verrouille en edition', () => {
+    const columns = [col({ name: 'insee_code', type: 'character varying(5)', isRequired: true })];
+    expect(buildCatalogFieldSpec(columns, [], ['insee_code'], 'create')[0])
+      .toMatchObject({ name: 'insee_code', locked: false });
+    expect(buildCatalogFieldSpec(columns, [], ['insee_code'], 'edit')[0])
+      .toMatchObject({ name: 'insee_code', locked: true });
+  });
+
+  it('rend une cle composite entierement saisissable a la creation', () => {
+    const columns = [
+      col({ name: 'metric_id', type: 'uuid', isRequired: true }),
+      col({ name: 'object_type', type: 'object_type', isRequired: true, enumValues: ['HLO', 'PRD'] }),
+    ];
+    const spec = buildCatalogFieldSpec(columns, [{ column: 'metric_id', target: 'ref_capacity_metric' }],
+      ['metric_id', 'object_type'], 'create');
+    expect(spec.map((f) => f.name)).toEqual(['metric_id', 'object_type']);
+  });
+
+  it('verrouille le code en edition, pas a la creation', () => {
+    const columns = [col({ name: 'code', isRequired: true })];
+    expect(buildCatalogFieldSpec(columns, [], ['id'], 'create')[0].locked).toBe(false);
+    expect(buildCatalogFieldSpec(columns, [], ['id'], 'edit')[0].locked).toBe(true);
+  });
+
+  it('masque toujours created_at et updated_at', () => {
+    expect(buildCatalogFieldSpec([
       col({ name: 'created_at', type: 'timestamp with time zone' }),
-      col({ name: 'code' }),
-    ], [], ['id']);
-    expect(spec.find((f) => f.name === 'id')).toBeUndefined();
-    expect(spec.find((f) => f.name === 'created_at')).toBeUndefined();
-    expect(spec.find((f) => f.name === 'code')?.locked).toBe(false);
+      col({ name: 'updated_at', type: 'timestamp with time zone' }),
+    ], [], ['id'], 'edit')).toHaveLength(0);
   });
 });
 
 describe('computeAddBlocked', () => {
+  const spec = (columns: CatalogColumn[], pk: string[]) =>
+    buildCatalogFieldSpec(columns, [], pk, 'create');
+
   it('rend null quand toute colonne obligatoire est rendable', () => {
     const columns = [col({ name: 'code', isRequired: true }), col({ name: 'name', isRequired: true })];
-    expect(computeAddBlocked(columns, buildCatalogFieldSpec(columns, [], ['id']), 'id')).toBeNull();
+    expect(computeAddBlocked(columns, spec(columns, ['id']), ['id'])).toBeNull();
+  });
+
+  it('rend null pour une cle primaire naturelle, desormais saisissable', () => {
+    const columns = [col({ name: 'insee_code', type: 'character varying(5)', isRequired: true }),
+                     col({ name: 'name', isRequired: true })];
+    expect(computeAddBlocked(columns, spec(columns, ['insee_code']), ['insee_code'])).toBeNull();
   });
 
   it('nomme la colonne obligatoire non rendable qui bloque la creation', () => {
-    const columns = [
-      col({ name: 'name', isRequired: true }),
-      col({ name: 'metadata', type: 'jsonb', isRequired: true, hasDefault: false }),
-    ];
-    expect(computeAddBlocked(columns, buildCatalogFieldSpec(columns, [], ['id']), 'id')).toBe('metadata');
+    const columns = [col({ name: 'name', isRequired: true }),
+                     col({ name: 'metadata', type: 'jsonb', isRequired: true })];
+    expect(computeAddBlocked(columns, spec(columns, ['id']), ['id'])).toBe('metadata');
   });
 
   it('ignore une colonne obligatoire qui a une valeur par defaut', () => {
-    const columns = [
-      col({ name: 'name', isRequired: true }),
-      col({ name: 'metadata', type: 'jsonb', isRequired: true, hasDefault: true }),
-    ];
-    expect(computeAddBlocked(columns, buildCatalogFieldSpec(columns, [], ['id']), 'id')).toBeNull();
+    const columns = [col({ name: 'name', isRequired: true }),
+                     col({ name: 'metadata', type: 'jsonb', isRequired: true, hasDefault: true })];
+    expect(computeAddBlocked(columns, spec(columns, ['id']), ['id'])).toBeNull();
+  });
+});
+
+describe('identite de ligne', () => {
+  it('buildRowKey extrait exactement les colonnes de cle primaire', () => {
+    expect(buildRowKey({ metric_id: 'm1', object_type: 'HLO', label: 'X' }, ['metric_id', 'object_type']))
+      .toEqual({ metric_id: 'm1', object_type: 'HLO' });
+  });
+
+  it('rowKeyString joint les valeurs dans l ordre de la cle, par le separateur d unite', () => {
+    expect(rowKeyString({ metric_id: 'm1', object_type: 'HLO' }, ['metric_id', 'object_type']))
+      .toBe('m1HLO');
+  });
+
+  it('rowKeyString ne depend pas de l ordre des cles de l objet', () => {
+    const a = rowKeyString({ object_type: 'HLO', metric_id: 'm1' }, ['metric_id', 'object_type']);
+    const b = rowKeyString({ metric_id: 'm1', object_type: 'HLO' }, ['metric_id', 'object_type']);
+    expect(a).toBe(b);
+  });
+});
+
+describe('formatRowLabel', () => {
+  it('utilise la colonne de libelle quand elle existe', () => {
+    expect(formatRowLabel({ name: 'Extrait KBIS', code: 'kbis' }, 'name', ['id'])).toBe('Extrait KBIS');
+  });
+
+  it('compose depuis la cle primaire quand aucune colonne de libelle n existe', () => {
+    expect(formatRowLabel({ metric_id: 'm1', object_type: 'HLO' }, null, ['metric_id', 'object_type']))
+      .toBe('m1 · HLO');
+  });
+
+  it('retombe sur la cle quand la colonne de libelle est vide', () => {
+    expect(formatRowLabel({ name: '', insee_code: '97401' }, 'name', ['insee_code'])).toBe('97401');
   });
 });
 ```
@@ -1506,16 +1446,13 @@ Attendu : `Cannot find module './catalog-fields'`.
 
 ```typescript
 /**
- * §211 — traduction PURE d'une colonne PostgreSQL en contrôle d'édition.
+ * §211 — partie PURE de l'administration des catalogues : traduction d'une colonne
+ * PostgreSQL en contrôle, identité d'une ligne, libellé de secours.
  *
- * C'est le « générateur » de l'administration des catalogues : aucune règle n'est
- * écrite par catalogue, tout se déduit du type remonté par api.get_ref_catalog.
- *
- * Les types non rendables (jsonb libre, tableaux, géométrie) sont MASQUÉS — arbitrage
- * PO du 2026-08-07. C'est ce qui rend `computeAddBlocked` indispensable : une colonne
- * masquée, obligatoire et sans valeur par défaut rendrait la création impossible, et
- * l'utilisateur buterait sur une erreur PostgreSQL brute. On désactive l'ajout en
- * nommant la colonne, plutôt que de laisser échouer l'enregistrement.
+ * Aucune règle n'est écrite par catalogue : tout se déduit de ce que rend
+ * api.get_ref_catalog. Les types non rendables (jsonb libre, tableaux, géométrie) sont
+ * MASQUÉS — arbitrage PO du 2026-08-07 — d'où `computeAddBlocked`, qui désactive l'ajout
+ * en NOMMANT la colonne fautive plutôt que de laisser buter sur une erreur PostgreSQL.
  */
 
 export interface CatalogColumn {
@@ -1539,13 +1476,16 @@ export interface CatalogField {
   kind: CatalogFieldKind;
   options?: string[];
   target?: string;
-  /** Saisissable à la création puis figé (cas de `code`). */
+  /** Saisissable à la création, figé ensuite (clé primaire naturelle, `code`). */
   locked: boolean;
 }
 
-/** Colonnes jamais éditables, quel que soit le catalogue. */
-const ALWAYS_HIDDEN = new Set(['created_at', 'updated_at']);
+export type CatalogFormMode = 'create' | 'edit';
 
+/** Séparateur d'unité : ne peut pas apparaître dans une valeur de clé primaire. */
+export const ROW_KEY_SEPARATOR = '';
+
+const ALWAYS_HIDDEN = new Set(['created_at', 'updated_at']);
 const NUMBER_TYPES = /^(smallint|integer|bigint|numeric|real|double precision)/;
 const DATE_TYPES = /^(date|timestamp)/;
 const TEXT_TYPES = /^(text|character varying|character|citext)/;
@@ -1563,9 +1503,11 @@ export function buildCatalogFieldSpec(
   columns: CatalogColumn[],
   fks: CatalogFk[],
   primaryKeyColumns: string[],
+  mode: CatalogFormMode,
 ): CatalogField[] {
-  const pk = new Set(primaryKeyColumns);
   const fkByColumn = new Map(fks.map((fk) => [fk.column, fk.target]));
+  const fkColumns = new Set(fkByColumn.keys());
+  const pk = new Set(primaryKeyColumns);
   const names = new Set(columns.map((c) => c.name));
   const i18nSiblings = new Set(
     columns.filter((c) => c.name.endsWith('_i18n') && names.has(c.name.slice(0, -5))).map((c) => c.name),
@@ -1573,90 +1515,113 @@ export function buildCatalogFieldSpec(
 
   const fields: CatalogField[] = [];
   for (const column of columns) {
-    if (pk.has(column.name)) continue;
     if (ALWAYS_HIDDEN.has(column.name)) continue;
     if (i18nSiblings.has(column.name)) continue;
-    if (!isRenderable(column, new Set(fkByColumn.keys()))) continue;
 
+    // Une clé primaire GÉNÉRÉE (uuid par défaut) n'a rien à saisir. Une clé primaire
+    // SANS défaut — ref_commune.insee_code, les matrices — doit être saisie à la
+    // création, sinon ces catalogues sont inéditables ; puis elle se fige.
+    if (pk.has(column.name)) {
+      if (column.hasDefault) continue;
+      if (!isRenderable(column, fkColumns)) continue;
+    } else if (!isRenderable(column, fkColumns)) {
+      continue;
+    }
+
+    const locked = mode === 'edit' && (pk.has(column.name) || column.name === 'code');
     const target = fkByColumn.get(column.name);
-    if (target) {
-      fields.push({ name: column.name, kind: 'reference', target, locked: false });
-      continue;
-    }
-    if (column.enumValues && column.enumValues.length > 0) {
-      fields.push({ name: column.name, kind: 'select', options: column.enumValues, locked: false });
-      continue;
-    }
-    if (column.type === 'boolean') {
-      fields.push({ name: column.name, kind: 'boolean', locked: false });
-      continue;
-    }
-    if (NUMBER_TYPES.test(column.type)) {
-      fields.push({ name: column.name, kind: 'number', locked: false });
-      continue;
-    }
-    if (DATE_TYPES.test(column.type)) {
-      fields.push({ name: column.name, kind: 'date', locked: false });
-      continue;
-    }
-    fields.push({
-      name: column.name,
-      kind: i18nSiblings.has(`${column.name}_i18n`) ? 'i18n-text' : 'text',
-      locked: false,
-    });
+
+    if (target) fields.push({ name: column.name, kind: 'reference', target, locked });
+    else if (column.enumValues?.length)
+      fields.push({ name: column.name, kind: 'select', options: column.enumValues, locked });
+    else if (column.type === 'boolean') fields.push({ name: column.name, kind: 'boolean', locked });
+    else if (NUMBER_TYPES.test(column.type)) fields.push({ name: column.name, kind: 'number', locked });
+    else if (DATE_TYPES.test(column.type)) fields.push({ name: column.name, kind: 'date', locked });
+    else
+      fields.push({
+        name: column.name,
+        kind: names.has(`${column.name}_i18n`) ? 'i18n-text' : 'text',
+        locked,
+      });
   }
   return fields;
 }
 
 /**
  * Nom de la colonne qui empêche la création depuis l'interface, ou null.
- * Bloquante = obligatoire, sans valeur par défaut, et non rendue.
+ * Bloquante = obligatoire, sans valeur par défaut, et non rendue. AUCUNE exemption pour
+ * les clés primaires : `hasDefault` protège déjà les UUID générés, et exempter les clés
+ * rendrait `ref_commune` « créable » alors que l'insertion échouerait côté serveur.
  */
 export function computeAddBlocked(
   columns: CatalogColumn[],
   fields: CatalogField[],
-  primaryKeyColumns: string[],
+  _primaryKeyColumns: string[],
 ): string | null {
   const rendered = new Set(fields.map((f) => f.name));
-  const pk = new Set(primaryKeyColumns);
   const blocking = columns.find(
-    (c) =>
-      c.isRequired &&
-      !c.hasDefault &&
-      !pk.has(c.name) &&
-      !ALWAYS_HIDDEN.has(c.name) &&
-      !rendered.has(c.name),
+    (c) => c.isRequired && !c.hasDefault && !ALWAYS_HIDDEN.has(c.name) && !rendered.has(c.name),
   );
   return blocking ? blocking.name : null;
 }
+
+/** L'identité d'une ligne, à passer telle quelle en `p_key`. */
+export function buildRowKey(
+  row: Record<string, unknown>,
+  primaryKeyColumns: string[],
+): Record<string, unknown> {
+  const key: Record<string, unknown> = {};
+  for (const name of primaryKeyColumns) key[name] = row[name];
+  return key;
+}
+
+/**
+ * Clé canonique d'une ligne — la MÊME que celle qui indexe `usage` côté serveur.
+ * Volontairement pas du JSON : `jsonb::text` rend `{"id": "x"}` (avec espace) là où
+ * `JSON.stringify` rend `{"id":"x"}`, et les deux ne se rejoindraient jamais.
+ */
+export function rowKeyString(row: Record<string, unknown>, primaryKeyColumns: string[]): string {
+  return primaryKeyColumns.map((name) => String(row[name] ?? '')).join(ROW_KEY_SEPARATOR);
+}
+
+/**
+ * Libellé affichable. Les matrices n'ont aucune colonne de libellé (`labelColumn` vaut
+ * null) : leur nom se compose depuis la clé primaire — c'est bien la seule information
+ * qu'elles portent.
+ */
+export function formatRowLabel(
+  row: Record<string, unknown>,
+  labelColumn: string | null,
+  primaryKeyColumns: string[],
+): string {
+  if (labelColumn) {
+    const value = row[labelColumn];
+    if (typeof value === 'string' && value.trim()) return value;
+    if (typeof value === 'number') return String(value);
+  }
+  return primaryKeyColumns.map((name) => String(row[name] ?? '')).join(' · ');
+}
 ```
 
-- [ ] **Step 4: Lancer les tests**
+- [ ] **Step 4: Lancer les tests et le type-check**
 
 ```bash
-npx jest src/features/settings/catalog-fields.test.ts
+npx jest src/features/settings/catalog-fields.test.ts && npx tsc --noEmit -p tsconfig.json
 ```
 
-Attendu : `Tests: 11 passed`.
+Attendu : `Tests: 20 passed`, puis sortie vide.
 
-- [ ] **Step 5: Vérifier les types**
-
-```bash
-npx tsc --noEmit -p tsconfig.json
-```
-
-Attendu : sortie vide.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/features/settings/catalog-fields.ts src/features/settings/catalog-fields.test.ts
-git commit -m "feat(§211): traduction pure colonne PostgreSQL vers controle d'edition
+git commit -m "feat(211): partie pure de l'admin des catalogues
 
-Aucune regle par catalogue : le type remonte par get_ref_catalog decide du
-controle. Les types non rendables sont masques (arbitrage PO), d'ou
-computeAddBlocked qui nomme la colonne obligatoire non rendue plutot que de
-laisser l'utilisateur buter sur une erreur PostgreSQL a l'enregistrement."
+Colonne -> controle, identite de ligne, libelle de secours. Une cle primaire
+SANS valeur par defaut est saisissable a la creation puis figee : sans cela
+ref_commune et les cinq matrices restent ineditables. La cle canonique joint les
+valeurs par U+001F et non par du JSON : jsonb::text et JSON.stringify ne
+produisent pas la meme chaine et ne se rejoindraient jamais."
 ```
 
 ---
@@ -1668,20 +1633,17 @@ laisser l'utilisateur buter sur une erreur PostgreSQL a l'enregistrement."
 - Test: `bertel-tourism-ui/src/services/ref-catalogs.test.ts`
 
 **Interfaces:**
-- Consumes: les 4 RPC (tâches 3-4), `CatalogColumn`/`CatalogFk` (tâche 6).
 - Produces:
-  - `listRefCatalogs(): Promise<RefCatalogSummary[]>` où `RefCatalogSummary = { catalogKey, kind, label, family, usedIn, access, readonlyReason, nValues }`
-  - `getRefCatalog(key: string): Promise<RefCatalogDetail>` où `RefCatalogDetail = { catalogKey, label, access, readonlyReason, isIdentifiable, primaryKeyColumns: string[], labelColumn, columns: CatalogColumn[], fks: CatalogFk[], rows: Record<string, unknown>[], usage: Record<string, number> }`
-  - `upsertRefRow(key: string, rowKey: Record<string, unknown> | null, values: Record<string, unknown>): Promise<void>`
-  - `deleteRefRow(key: string, rowKey: Record<string, unknown>): Promise<void>`
+  - `RefCatalogSummary = { catalogKey, kind, label, family, usedIn, access, readonlyReason, nValues }`
+  - `RefCatalogDetail = { catalogKey, kind, label, family, usedIn, access, readonlyReason, isIdentifiable, primaryKeyColumns: string[], labelColumn: string | null, columns: CatalogColumn[], fks: CatalogFk[], rows: Record<string, unknown>[], usage: Record<string, number> }`
+  - `listRefCatalogs(): Promise<RefCatalogSummary[]>`
+  - `getRefCatalog(key: string): Promise<RefCatalogDetail>`
+  - `upsertRefRow(key, rowKey: Record<string, unknown> | null, values: Record<string, unknown>): Promise<void>`
+  - `deleteRefRow(key, rowKey: Record<string, unknown>): Promise<void>`
+  - `reorderRefRows(key, rowKeys: Record<string, unknown>[]): Promise<void>`
+  - `groupByFamily(catalogs): { family, catalogs }[]` — **pure**, « À classer » en dernier.
 
-> `fks` vient de la clé `outgoing_fk` du RPC — **vérifier qu'elle est bien émise** avant d'écrire le
-> service : la première rédaction du plan l'attendait côté front sans que le SQL la renvoie, donc
-> aucune liste déroulante de référence n'aurait fonctionné.
-> `usage` est clé par l'identité JSON sérialisée de la ligne, pas par un uuid.
-  - `groupByFamily(catalogs: RefCatalogSummary[]): { family: string; catalogs: RefCatalogSummary[] }[]` — **pure**, « À classer » toujours en dernier.
-
-- [ ] **Step 1: Écrire le test qui échoue**
+- [ ] **Step 1: Écrire les tests qui échouent**
 
 ```typescript
 import { groupByFamily, type RefCatalogSummary } from './ref-catalogs';
@@ -1693,27 +1655,24 @@ const cat = (over: Partial<RefCatalogSummary>): RefCatalogSummary => ({
 
 describe('groupByFamily', () => {
   it('regroupe par famille et trie les familles alphabetiquement', () => {
-    const groups = groupByFamily([
+    expect(groupByFamily([
       cat({ label: 'B', family: 'Restauration' }),
       cat({ label: 'A', family: 'Hébergement' }),
-    ]);
-    expect(groups.map((g) => g.family)).toEqual(['Hébergement', 'Restauration']);
+    ]).map((g) => g.family)).toEqual(['Hébergement', 'Restauration']);
   });
 
   it('place « A classer » en dernier, quel que soit l alphabet', () => {
-    const groups = groupByFamily([
+    expect(groupByFamily([
       cat({ label: 'A', family: 'À classer' }),
       cat({ label: 'B', family: 'Restauration' }),
-    ]);
-    expect(groups.at(-1)?.family).toBe('À classer');
+    ]).at(-1)?.family).toBe('À classer');
   });
 
   it('trie les catalogues par libelle dans une famille', () => {
-    const groups = groupByFamily([
+    expect(groupByFamily([
       cat({ label: 'Zèbre', family: 'Hébergement' }),
       cat({ label: 'Abeille', family: 'Hébergement' }),
-    ]);
-    expect(groups[0].catalogs.map((c) => c.label)).toEqual(['Abeille', 'Zèbre']);
+    ])[0].catalogs.map((c) => c.label)).toEqual(['Abeille', 'Zèbre']);
   });
 });
 ```
@@ -1728,11 +1687,35 @@ Attendu : `Cannot find module './ref-catalogs'`.
 
 - [ ] **Step 3: Écrire le service**
 
-Suivre exactement le gabarit de `src/services/ref-codes.ts` : `requireClient()`, `.schema('api').rpc(...)`, `if (error) throw new Error(error.message)`, normalisation en camelCase. Ajouter :
+Suivre le gabarit de `src/services/ref-codes.ts` (`requireClient()`, `.schema('api').rpc(...)`, `if (error) throw new Error(error.message)`), avec :
 
 ```typescript
-/** Ordre des familles : alphabétique, « À classer » toujours en dernier — un catalogue
- *  non classé doit se voir, sans polluer le haut de la liste. */
+export async function upsertRefRow(
+  catalogKey: string,
+  rowKey: Record<string, unknown> | null,
+  values: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await requireClient().schema('api').rpc('rpc_upsert_ref_row', {
+    p_catalog_key: catalogKey,
+    p_key: rowKey,
+    p_values: values,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderRefRows(
+  catalogKey: string,
+  rowKeys: Record<string, unknown>[],
+): Promise<void> {
+  const { error } = await requireClient().schema('api').rpc('rpc_reorder_ref_rows', {
+    p_catalog_key: catalogKey,
+    p_keys: rowKeys,
+  });
+  if (error) throw new Error(error.message);
+}
+
+/** Familles alphabétiques, « À classer » toujours en dernier — un catalogue non classé
+ *  doit se voir sans polluer le haut de la liste. */
 export function groupByFamily(catalogs: RefCatalogSummary[]) {
   const byFamily = new Map<string, RefCatalogSummary[]>();
   for (const catalog of catalogs) {
@@ -1753,6 +1736,8 @@ export function groupByFamily(catalogs: RefCatalogSummary[]) {
 }
 ```
 
+La normalisation de `getRefCatalog` mappe `outgoing_fk` → `fks`, `primary_key_columns` → `primaryKeyColumns: string[]` (extraire `name`), `label_column` → `labelColumn` (peut être `null`), et laisse `usage` tel quel — ses clés sont déjà la clé canonique.
+
 - [ ] **Step 4: Lancer les tests et le type-check**
 
 ```bash
@@ -1765,67 +1750,317 @@ Attendu : `Tests: 3 passed`, puis sortie vide.
 
 ```bash
 git add src/services/ref-catalogs.ts src/services/ref-catalogs.test.ts
-git commit -m "feat(§211): service front des catalogues de reference
-
-Appels aux 4 RPC + groupByFamily (pur) : familles alphabetiques, « A classer »
-toujours en dernier — un catalogue non classe doit se voir sans polluer le haut
-de la liste."
+git commit -m "feat(211): service front des catalogues de reference"
 ```
 
 ---
 
-### Task 8: Écran `RefCatalogAdmin` et bascule dans les réglages
+### Task 8: Modale d'édition d'une ligne
+
+**Files:**
+- Create: `bertel-tourism-ui/src/views/RefCatalogRowModal.tsx`
+- Test: couvert par `RefCatalogAdmin.test.tsx` (tâche 9)
+
+**Interfaces:**
+- Consumes: `buildCatalogFieldSpec`, `buildRowKey` (tâche 6), `getRefCatalog`, `upsertRefRow` (tâche 7).
+- Produces: `RefCatalogRowModal({ catalog, row, onClose, onSaved })`.
+
+> **Les options des listes déroulantes de référence se chargent depuis `catalog.fks`.** Chaque
+> `target` est déjà un `catalog_key` exploitable (`ref_code:amenity_family`), grâce à la
+> normalisation de la tâche 1. Sans elle, on interrogerait `ref_code_amenity_family`, absent de la vue.
+
+- [ ] **Step 1: Écrire le composant**
+
+```tsx
+'use client';
+
+import { useMemo, useState } from 'react';
+import { useMutation, useQueries } from '@tanstack/react-query';
+import { Modal } from '../components/common/Modal';
+import {
+  buildCatalogFieldSpec, buildRowKey, formatRowLabel,
+  type CatalogField,
+} from '../features/settings/catalog-fields';
+import { getRefCatalog, upsertRefRow, type RefCatalogDetail } from '../services/ref-catalogs';
+
+interface Props {
+  catalog: RefCatalogDetail;
+  /** null ⇒ création. */
+  row: Record<string, unknown> | null;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+export function RefCatalogRowModal({ catalog, row, onClose, onSaved }: Props) {
+  const mode = row ? 'edit' : 'create';
+  const fields = useMemo(
+    () => buildCatalogFieldSpec(catalog.columns, catalog.fks, catalog.primaryKeyColumns, mode),
+    [catalog.columns, catalog.fks, catalog.primaryKeyColumns, mode],
+  );
+
+  const [draft, setDraft] = useState<Record<string, unknown>>(() => {
+    const initial: Record<string, unknown> = {};
+    for (const field of fields) initial[field.name] = row?.[field.name] ?? '';
+    return initial;
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  // Options des références : une requête par catalogue cible, mises en cache par TanStack.
+  const referenceTargets = useMemo(
+    () => [...new Set(fields.filter((f) => f.kind === 'reference').map((f) => f.target as string))],
+    [fields],
+  );
+  const referenceQueries = useQueries({
+    queries: referenceTargets.map((target) => ({
+      queryKey: ['ref-catalog', target],
+      queryFn: () => getRefCatalog(target),
+      staleTime: 5 * 60 * 1000,
+    })),
+  });
+  const optionsByTarget = new Map<string, { value: string; label: string }[]>();
+  referenceTargets.forEach((target, index) => {
+    const data = referenceQueries[index].data;
+    if (!data) return;
+    optionsByTarget.set(
+      target,
+      data.rows.map((r) => ({
+        value: String(r[data.primaryKeyColumns[0]] ?? ''),
+        label: formatRowLabel(r, data.labelColumn, data.primaryKeyColumns),
+      })),
+    );
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // On n'envoie QUE les champs rendus et non verrouillés : envoyer une colonne
+      // verrouillée ferait lever UNKNOWN_COLUMN côté serveur.
+      const values: Record<string, unknown> = {};
+      for (const field of fields) {
+        if (field.locked && mode === 'edit') continue;
+        const value = draft[field.name];
+        if (value === '' && mode === 'create') continue;
+        values[field.name] = field.kind === 'boolean' ? Boolean(value) : value;
+      }
+      await upsertRefRow(
+        catalog.catalogKey,
+        row ? buildRowKey(row, catalog.primaryKeyColumns) : null,
+        values,
+      );
+    },
+    onSuccess: () => { setError(null); onSaved(); },
+    onError: (err: Error) => setError(humaniseCatalogError(err.message)),
+  });
+
+  return (
+    <Modal open onClose={onClose} title={row ? 'Modifier la valeur' : 'Ajouter une valeur'}>
+      {error && <p role="alert" className="form-error">{error}</p>}
+      {fields.map((field) => (
+        <label key={field.name} className="field">
+          <span className="field__label">{field.name}</span>
+          {renderControl(field, draft[field.name], (value) =>
+            setDraft((current) => ({ ...current, [field.name]: value })),
+            optionsByTarget.get(field.target ?? ''))}
+        </label>
+      ))}
+      <div className="modal__actions">
+        <button type="button" onClick={onClose}>Annuler</button>
+        <button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
+          Enregistrer
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function renderControl(
+  field: CatalogField,
+  value: unknown,
+  onChange: (value: unknown) => void,
+  options?: { value: string; label: string }[],
+) {
+  if (field.kind === 'boolean') {
+    return <input type="checkbox" checked={Boolean(value)} disabled={field.locked}
+      onChange={(e) => onChange(e.target.checked)} aria-label={field.name} />;
+  }
+  if (field.kind === 'select' || field.kind === 'reference') {
+    const list = field.kind === 'select'
+      ? (field.options ?? []).map((o) => ({ value: o, label: o }))
+      : (options ?? []);
+    return (
+      <select value={String(value ?? '')} disabled={field.locked} aria-label={field.name}
+        onChange={(e) => onChange(e.target.value)}>
+        <option value="">—</option>
+        {list.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  }
+  const inputType = field.kind === 'number' ? 'number' : field.kind === 'date' ? 'date' : 'text';
+  return <input type={inputType} value={String(value ?? '')} disabled={field.locked}
+    aria-label={field.name} onChange={(e) => onChange(e.target.value)} />;
+}
+
+/** Les codes d'erreur du RPC deviennent des phrases : une erreur PostgreSQL brute ne
+ *  doit jamais remonter à l'utilisateur. */
+export function humaniseCatalogError(message: string): string {
+  if (message.includes('LOCKED_CATALOG')) return 'Ce catalogue est en lecture seule.';
+  if (message.includes('CODE_IMMUTABLE')) return "Le code d'une valeur existante ne se change pas.";
+  if (message.includes('STILL_REFERENCED')) return 'Cette valeur est utilisée par des fiches.';
+  if (message.includes('ROW_NOT_FOUND')) return 'Cette valeur a été supprimée entre-temps.';
+  if (message.includes('REQUIRED_HIDDEN_COLUMN')) return 'Une information obligatoire manque.';
+  if (message.includes('UNKNOWN_COLUMN')) return 'Ce champ ne peut pas être enregistré ici.';
+  return "L'enregistrement a échoué.";
+}
+```
+
+- [ ] **Step 2: Vérifier les types**
+
+```bash
+npx tsc --noEmit -p tsconfig.json
+```
+
+Attendu : sortie vide. (Adapter les props de `Modal` à sa signature réelle si elle diffère.)
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/views/RefCatalogRowModal.tsx
+git commit -m "feat(211): modale d'edition d'une ligne de catalogue
+
+Champs derives de la forme du catalogue ; les listes deroulantes de reference
+se chargent depuis catalog.fks, dont la cible est deja un catalog_key. Les
+colonnes verrouillees ne sont pas envoyees au serveur (elles y leveraient
+UNKNOWN_COLUMN). Les codes d'erreur du RPC deviennent des phrases francaises."
+```
+
+---
+
+### Task 9: Écran `RefCatalogAdmin` et bascule dans les réglages
 
 **Files:**
 - Create: `bertel-tourism-ui/src/views/RefCatalogAdmin.tsx`
 - Test: `bertel-tourism-ui/src/views/RefCatalogAdmin.test.tsx`
 - Modify: `bertel-tourism-ui/src/views/SettingsPage.tsx:786`
-- Delete: `bertel-tourism-ui/src/views/RefCodeEditor.tsx` et `src/views/RefCodeEditor.test.tsx` s'il existe
-
-**Interfaces:**
-- Consumes: `listRefCatalogs`, `getRefCatalog`, `upsertRefRow`, `deleteRefRow`, `groupByFamily` (tâche 7) ; `buildCatalogFieldSpec`, `computeAddBlocked` (tâche 6).
-- Produces: le composant `RefCatalogAdmin`.
+- Delete: `bertel-tourism-ui/src/views/RefCodeEditor.tsx`
 
 - [ ] **Step 1: Écrire les tests qui échouent**
 
 ```tsx
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RefCatalogAdmin } from './RefCatalogAdmin';
+import * as service from '../services/ref-catalogs';
 
 jest.mock('../services/ref-catalogs', () => ({
   ...jest.requireActual('../services/ref-catalogs'),
   listRefCatalogs: jest.fn(),
   getRefCatalog: jest.fn(),
+  upsertRefRow: jest.fn(),
+  deleteRefRow: jest.fn(),
+  reorderRefRows: jest.fn(),
 }));
 
-// … monter avec un QueryClientProvider, cf. le gabarit des autres tests de vues.
+const summary = (over = {}) => ({
+  catalogKey: 'ref_legal_type', kind: 'table', label: 'Documents juridiques',
+  family: 'Juridique et conformité', usedIn: '§18 Juridique', access: 'editable',
+  readonlyReason: null, nValues: 2, ...over,
+});
+
+const detail = (over = {}) => ({
+  catalogKey: 'ref_legal_type', kind: 'table', label: 'Documents juridiques',
+  family: 'Juridique et conformité', usedIn: '§18 Juridique', access: 'editable',
+  readonlyReason: null, isIdentifiable: true, primaryKeyColumns: ['id'], labelColumn: 'name',
+  columns: [
+    { name: 'id', type: 'uuid', isRequired: true, hasDefault: true, enumValues: null },
+    { name: 'code', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
+    { name: 'name', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
+  ],
+  fks: [],
+  rows: [
+    { id: 'u1', code: 'kbis', name: 'Extrait KBIS' },
+    { id: 'u2', code: 'siret', name: 'SIRET' },
+  ],
+  usage: { u2: 2 },
+  ...over,
+});
+
+function renderAdmin() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}><RefCatalogAdmin /></QueryClientProvider>);
+}
 
 describe('RefCatalogAdmin', () => {
-  it('affiche les familles avec leur compte, « A classer » en dernier', async () => {
-    // listRefCatalogs → 1 catalogue en « Juridique et conformité », 1 en « À classer »
-    render(<RefCatalogAdmin />);
-    const families = await screen.findAllByRole('button', { name: /catalogues$/ });
+  beforeEach(() => {
+    (service.listRefCatalogs as jest.Mock).mockResolvedValue([
+      summary(),
+      summary({ catalogKey: 'ref_orphan', label: 'Orphelin', family: 'À classer', nValues: 0 }),
+      summary({ catalogKey: 'ref_permission', label: 'Permissions', family: 'Structure',
+                access: 'readonly',
+                readonlyReason: 'Chaque code est lu en dur par le contrôle d’accès.' }),
+    ]);
+    (service.getRefCatalog as jest.Mock).mockResolvedValue(detail());
+    (service.upsertRefRow as jest.Mock).mockResolvedValue(undefined);
+    (service.deleteRefRow as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  it('range les catalogues par famille, « A classer » en dernier', async () => {
+    renderAdmin();
+    const families = await screen.findAllByRole('heading', { level: 3 });
     expect(families.at(-1)).toHaveTextContent('À classer');
   });
 
   it('affiche le motif de verrouillage d un catalogue en lecture seule', async () => {
-    render(<RefCatalogAdmin />);
-    expect(await screen.findByText(/lues en dur par le contrôle d'accès/)).toBeInTheDocument();
+    renderAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: /Permissions/ }));
+    (service.getRefCatalog as jest.Mock).mockResolvedValue(
+      detail({ access: 'readonly', readonlyReason: 'Chaque code est lu en dur par le contrôle d’accès.' }));
+    expect(await screen.findByText(/lu en dur par le contrôle/)).toBeInTheDocument();
+  });
+
+  it('grise la corbeille et affiche le compte tant que la valeur est referencee', async () => {
+    renderAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: /Documents juridiques/ }));
+    expect(await screen.findByText('2 fiches')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Supprimer SIRET' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer Extrait KBIS' })).toBeEnabled();
   });
 
   it('desactive l ajout et nomme la colonne bloquante', async () => {
-    // getRefCatalog → une colonne `metadata` jsonb obligatoire sans défaut
-    render(<RefCatalogAdmin />);
-    const add = await screen.findByRole('button', { name: /Ajouter/ });
-    expect(add).toBeDisabled();
+    (service.getRefCatalog as jest.Mock).mockResolvedValue(detail({
+      columns: [
+        { name: 'id', type: 'uuid', isRequired: true, hasDefault: true, enumValues: null },
+        { name: 'metadata', type: 'jsonb', isRequired: true, hasDefault: false, enumValues: null },
+      ],
+    }));
+    renderAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: /Documents juridiques/ }));
+    expect(await screen.findByRole('button', { name: /Ajouter/ })).toBeDisabled();
     expect(screen.getByText(/metadata/)).toBeInTheDocument();
   });
 
-  it('grise la corbeille tant que la valeur est referencee', async () => {
-    // getRefCatalog → usage { 'id-1': 3 }
-    render(<RefCatalogAdmin />);
-    expect(await screen.findByRole('button', { name: /Supprimer/ })).toBeDisabled();
-    expect(screen.getByText('3 fiches')).toBeInTheDocument();
+  it('cree une valeur sans cle et edite avec la cle de la ligne', async () => {
+    renderAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: /Documents juridiques/ }));
+
+    fireEvent.click(await screen.findByRole('button', { name: /Ajouter/ }));
+    fireEvent.change(screen.getByLabelText('code'), { target: { value: 'inpi' } });
+    fireEvent.change(screen.getByLabelText('name'), { target: { value: 'Extrait INPI' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(service.upsertRefRow).toHaveBeenCalledWith(
+      'ref_legal_type', null, expect.objectContaining({ code: 'inpi', name: 'Extrait INPI' })));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier Extrait KBIS' }));
+    fireEvent.change(screen.getByLabelText('name'), { target: { value: 'KBIS' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(service.upsertRefRow).toHaveBeenCalledWith(
+      'ref_legal_type', { id: 'u1' }, expect.objectContaining({ name: 'KBIS' })));
+  });
+
+  it('reordonne en envoyant les cles dans le nouvel ordre', async () => {
+    renderAdmin();
+    fireEvent.click(await screen.findByRole('button', { name: /Documents juridiques/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Descendre Extrait KBIS' }));
+    await waitFor(() => expect(service.reorderRefRows).toHaveBeenCalledWith(
+      'ref_legal_type', [{ id: 'u2' }, { id: 'u1' }]));
   });
 });
 ```
@@ -1838,42 +2073,208 @@ npx jest src/views/RefCatalogAdmin.test.tsx
 
 Attendu : `Cannot find module './RefCatalogAdmin'`.
 
-- [ ] **Step 3: Écrire le composant**
-
-Structure — reprendre la mécanique de `RefCodeEditor.tsx` (mêmes `useQuery`/`useMutation`, mêmes primitives `EmptyState`, `ConfirmDialog`, `Modal`, mêmes icônes `lucide-react`) et remplacer le maître à un niveau par un maître à deux niveaux :
-
-- colonne de gauche : `groupByFamily(catalogs)` → un bloc par famille, chaque catalogue cliquable, avec son compte ; « À classer » teinté avertissement ;
-- panneau de droite : en-tête (libellé, nom technique en `mono`, `used_in` s'il existe, bandeau de verrouillage avec `readonlyReason` si `access === 'readonly'`) ;
-- tableau des valeurs : libellé (colonne `labelColumn`), code en `mono`, « utilisé par N », boutons éditer / supprimer ;
-- modale d'édition : les champs viennent de `buildCatalogFieldSpec(columns, fks, primaryKey)`, un contrôle par `kind` ; le champ `code` est désactivé en édition ;
-- bouton « Ajouter » : désactivé si `access === 'readonly'`, ou si `computeAddBlocked(...)` rend un nom — dans ce cas afficher « Ajout impossible depuis l'interface : la colonne `<nom>` est obligatoire et non éditable ici » ;
-- recherche : filtre sur le libellé du catalogue **et** sur les libellés de valeurs.
-
-Après chaque mutation réussie : invalider `['ref-catalogs']`, `['ref-catalog', key]` **et** `REFERENCE_CATALOGS_QUERY_KEY` (cache de session d'une heure côté rédacteurs, persisté — sans cette invalidation ils continuent de voir l'ancien vocabulaire).
-
-- [ ] **Step 4: Basculer les réglages**
-
-Dans `src/views/SettingsPage.tsx`, remplacer l'import et l'usage :
+- [ ] **Step 3: Écrire l'écran**
 
 ```tsx
-import { RefCatalogAdmin } from './RefCatalogAdmin';
-```
+'use client';
 
-```tsx
-{activeSection === 'referentiels' && role === 'super_admin' && (
-  <article className="panel-card panel-card--wide">
-    <div className="panel-heading">
-      <div>
-        <h2>Listes &amp; référentiels</h2>
-        <p>Tous les catalogues de référence, rangés par famille. Les listes structurelles (taxonomies, registres, permissions) restent en lecture seule, avec leur motif.</p>
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, Lock, Pencil, Plus, Trash2 } from 'lucide-react';
+import { REFERENCE_CATALOGS_QUERY_KEY } from '../hooks/useReferenceCatalogsQuery';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { EmptyState } from '../components/common/EmptyState';
+import {
+  buildCatalogFieldSpec, buildRowKey, computeAddBlocked, formatRowLabel, rowKeyString,
+} from '../features/settings/catalog-fields';
+import { moveItem } from './ref-code-reorder';
+import {
+  deleteRefRow, getRefCatalog, groupByFamily, listRefCatalogs, reorderRefRows,
+} from '../services/ref-catalogs';
+import { RefCatalogRowModal, humaniseCatalogError } from './RefCatalogRowModal';
+
+export function RefCatalogAdmin() {
+  const queryClient = useQueryClient();
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [modalRow, setModalRow] = useState<Record<string, unknown> | null | 'add'>(null);
+  const [confirmRow, setConfirmRow] = useState<Record<string, unknown> | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const catalogsQuery = useQuery({ queryKey: ['ref-catalogs'], queryFn: listRefCatalogs });
+  const catalogs = useMemo(() => catalogsQuery.data ?? [], [catalogsQuery.data]);
+  const activeKey = selectedKey ?? catalogs[0]?.catalogKey ?? null;
+
+  const detailQuery = useQuery({
+    queryKey: ['ref-catalog', activeKey],
+    queryFn: () => getRefCatalog(activeKey as string),
+    enabled: Boolean(activeKey),
+  });
+  const detail = detailQuery.data ?? null;
+
+  const needle = search.trim().toLowerCase();
+  const groups = useMemo(
+    () => groupByFamily(
+      needle
+        ? catalogs.filter((c) => c.label.toLowerCase().includes(needle)
+            || c.catalogKey.toLowerCase().includes(needle))
+        : catalogs),
+    [catalogs, needle],
+  );
+
+  function refresh() {
+    void queryClient.invalidateQueries({ queryKey: ['ref-catalogs'] });
+    void queryClient.invalidateQueries({ queryKey: ['ref-catalog', activeKey] });
+    // Les rédacteurs gardent les catalogues en cache de session une heure (persisté) :
+    // sans cette invalidation ils continuent de voir l'ancien vocabulaire.
+    void queryClient.invalidateQueries({ queryKey: REFERENCE_CATALOGS_QUERY_KEY });
+  }
+
+  const removeRow = useMutation({
+    mutationFn: (row: Record<string, unknown>) =>
+      deleteRefRow(detail!.catalogKey, buildRowKey(row, detail!.primaryKeyColumns)),
+    onSuccess: () => { setActionError(null); setConfirmRow(null); refresh(); },
+    onError: (err: Error) => setActionError(humaniseCatalogError(err.message)),
+  });
+
+  const reorder = useMutation({
+    mutationFn: (rows: Record<string, unknown>[]) =>
+      reorderRefRows(detail!.catalogKey, rows.map((r) => buildRowKey(r, detail!.primaryKeyColumns))),
+    onSuccess: () => { setActionError(null); refresh(); },
+    onError: (err: Error) => setActionError(humaniseCatalogError(err.message)),
+  });
+
+  const fields = detail
+    ? buildCatalogFieldSpec(detail.columns, detail.fks, detail.primaryKeyColumns, 'create')
+    : [];
+  const addBlocked = detail ? computeAddBlocked(detail.columns, fields, detail.primaryKeyColumns) : null;
+  const isReadonly = detail?.access === 'readonly';
+  const canReorder = Boolean(detail?.columns.some((c) => c.name === 'position')) && !isReadonly;
+
+  return (
+    <div className="ref-admin">
+      <input type="search" value={search} placeholder="Rechercher un catalogue"
+        aria-label="Rechercher un catalogue" onChange={(e) => setSearch(e.target.value)} />
+
+      <div className="ref-admin__layout">
+        <nav className="ref-admin__rail" aria-label="Familles de catalogues">
+          {groups.map((group) => (
+            <section key={group.family}>
+              <h3>{group.family}</h3>
+              {group.catalogs.map((catalog) => (
+                <button key={catalog.catalogKey} type="button"
+                  aria-current={catalog.catalogKey === activeKey}
+                  onClick={() => setSelectedKey(catalog.catalogKey)}>
+                  {catalog.access === 'readonly' && <Lock size={13} aria-hidden />}
+                  {catalog.label}
+                  <span className="muted">{catalog.nValues}</span>
+                </button>
+              ))}
+            </section>
+          ))}
+        </nav>
+
+        <section className="ref-admin__detail">
+          {!detail && <EmptyState title="Choisissez un catalogue" />}
+          {detail && (
+            <>
+              <header>
+                <h2>{detail.label}</h2>
+                <p className="mono muted">{detail.catalogKey}</p>
+                {detail.usedIn && <p className="muted">Utilisé dans {detail.usedIn}</p>}
+                {isReadonly && (
+                  <p role="note" className="banner banner--warn">{detail.readonlyReason}</p>
+                )}
+              </header>
+
+              {actionError && <p role="alert" className="form-error">{actionError}</p>}
+
+              <table>
+                <tbody>
+                  {detail.rows.map((row, index) => {
+                    const label = formatRowLabel(row, detail.labelColumn, detail.primaryKeyColumns);
+                    const uses = detail.usage[rowKeyString(row, detail.primaryKeyColumns)] ?? 0;
+                    return (
+                      <tr key={rowKeyString(row, detail.primaryKeyColumns)}>
+                        <td>{label}</td>
+                        <td className="mono">{String(row.code ?? '')}</td>
+                        <td>{uses > 0 ? `${uses} fiche${uses > 1 ? 's' : ''}` : '—'}</td>
+                        <td>
+                          {canReorder && (
+                            <>
+                              <button type="button" aria-label={`Monter ${label}`} disabled={index === 0}
+                                onClick={() => reorder.mutate(moveItem(detail.rows, index, index - 1))}>
+                                <ArrowUp size={14} aria-hidden />
+                              </button>
+                              <button type="button" aria-label={`Descendre ${label}`}
+                                disabled={index === detail.rows.length - 1}
+                                onClick={() => reorder.mutate(moveItem(detail.rows, index, index + 1))}>
+                                <ArrowDown size={14} aria-hidden />
+                              </button>
+                            </>
+                          )}
+                          <button type="button" aria-label={`Modifier ${label}`} disabled={isReadonly}
+                            onClick={() => setModalRow(row)}>
+                            <Pencil size={14} aria-hidden />
+                          </button>
+                          <button type="button" aria-label={`Supprimer ${label}`}
+                            disabled={isReadonly || uses > 0}
+                            onClick={() => setConfirmRow(row)}>
+                            <Trash2 size={14} aria-hidden />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {!isReadonly && (
+                <>
+                  <button type="button" disabled={Boolean(addBlocked)}
+                    onClick={() => setModalRow('add')}>
+                    <Plus size={14} aria-hidden /> Ajouter
+                  </button>
+                  {addBlocked && (
+                    <p className="muted">
+                      Ajout impossible depuis l&apos;interface : la colonne <code>{addBlocked}</code>{' '}
+                      est obligatoire et ne peut pas être saisie ici.
+                    </p>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </section>
       </div>
+
+      {detail && modalRow !== null && (
+        <RefCatalogRowModal
+          catalog={detail}
+          row={modalRow === 'add' ? null : modalRow}
+          onClose={() => setModalRow(null)}
+          onSaved={() => { setModalRow(null); refresh(); }}
+        />
+      )}
+
+      {detail && confirmRow && (
+        <ConfirmDialog
+          open
+          title="Supprimer cette valeur ?"
+          onCancel={() => setConfirmRow(null)}
+          onConfirm={() => removeRow.mutate(confirmRow)}
+        />
+      )}
     </div>
-    <RefCatalogAdmin />
-  </article>
-)}
+  );
+}
 ```
 
-Puis supprimer `src/views/RefCodeEditor.tsx` (et son test s'il existe). Conserver `src/services/ref-codes.ts` et `src/views/ref-code-reorder.ts` : le réordonnancement et la modale i18n y sont réutilisés.
+- [ ] **Step 4: Basculer les réglages et supprimer l'ancien écran**
+
+Dans `src/views/SettingsPage.tsx` : remplacer l'import `RefCodeEditor` par `RefCatalogAdmin`, l'usage à la ligne 786, et le texte du bandeau par « Tous les catalogues de référence, rangés par famille. Les listes structurelles (taxonomies, registres, permissions) restent en lecture seule, avec leur motif. »
+
+Puis `git rm src/views/RefCodeEditor.tsx`. **Conserver** `src/services/ref-codes.ts` et `src/views/ref-code-reorder.ts` (`moveItem` est réutilisé).
 
 - [ ] **Step 5: Lancer la suite complète**
 
@@ -1881,139 +2282,122 @@ Puis supprimer `src/views/RefCodeEditor.tsx` (et son test s'il existe). Conserve
 npx tsc --noEmit -p tsconfig.json && npx jest --silent
 ```
 
-Attendu : `tsc` sans sortie ; suite verte, avec un nombre de suites supérieur d'au moins 3 au point de départ.
+Attendu : `tsc` sans sortie ; suite verte avec au moins 3 suites de plus qu'au départ.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/views/RefCatalogAdmin.tsx src/views/RefCatalogAdmin.test.tsx src/views/SettingsPage.tsx
 git rm src/views/RefCodeEditor.tsx
-git commit -m "feat(§211): ecran d'administration de tous les catalogues de reference
+git commit -m "feat(211): ecran d'administration de tous les catalogues de reference
 
 Maitre a deux niveaux (famille, catalogue) + detail des valeurs. Les 103
-catalogues sont ranges par famille metier, « A classer » en dernier ; un
-catalogue verrouille affiche son motif ; l'ajout est desactive en nommant la
-colonne bloquante plutot que de laisser echouer l'enregistrement.
+catalogues sont ranges par famille, « A classer » en dernier ; un catalogue
+verrouille affiche son motif ; l'ajout est desactive en NOMMANT la colonne
+bloquante ; la corbeille se grise sur le compte d'usage, et le refus est
+re-evalue serveur. Le reordonnancement reste cable pour les domaines ref_code.
 RefCodeEditor est absorbe, pas conserve en double."
 ```
 
 ---
 
-### Task 9: Déploiement live, vérification, documentation
+### Task 10: Déploiement live, vérification, documentation
 
-**Files:**
-- Modify: `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` (gitignored, local)
-- Modify: `CLAUDE.md` (gitignored, local)
-
-**Interfaces:**
-- Consumes: tout ce qui précède.
-- Produces: la trace de décision.
+**Files:** `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`, `CLAUDE.md` (tous deux gitignored, locaux).
 
 - [ ] **Step 1: Répétition sur la base live, annulée**
 
-Exécuter la migration entre `BEGIN;` et `ROLLBACK;` via le MCP Supabase, puis le corps du test, avant tout apply définitif. C'est la pratique maison : on ne découvre pas une erreur de forme en production.
+Exécuter la migration entre `BEGIN;` et `ROLLBACK;` via le MCP Supabase, puis le fichier de test. On ne découvre pas une erreur de forme en production.
 
 - [ ] **Step 2: Appliquer**
 
-```
-mcp__supabase__apply_migration  name: ref_catalog_admin
-```
-
-puis :
-
-```sql
-NOTIFY pgrst, 'reload schema';
-```
+`mcp__supabase__apply_migration name: ref_catalog_admin`, puis `NOTIFY pgrst, 'reload schema';` (cinq fonctions `api` neuves).
 
 - [ ] **Step 3: Vérifier sur la base live**
 
 ```sql
-SELECT count(*) FROM internal.v_ref_catalog;                       -- attendu : 103
-SELECT jsonb_array_length(api.list_ref_catalogs());                 -- attendu : identique
-SELECT count(*) FROM internal.v_ref_catalog v WHERE internal.ref_catalog_access(v.catalog_key) = 'readonly';  -- verrouilles derives + seedes
+SELECT count(*) FROM internal.v_ref_catalog;                              -- attendu : 103
+SELECT jsonb_array_length(api.list_ref_catalogs());                        -- identique
+SELECT count(*) FROM internal.v_ref_catalog v
+WHERE internal.ref_catalog_access(v.catalog_key) = 'readonly';             -- 19 taxos + 6 seeds + 1 sans PK
+SELECT api.get_ref_catalog('ref_code:cuisine_type')->>'access';            -- attendu : editable
 ```
-
-Puis rejouer le fichier de test complet en transaction annulée.
 
 - [ ] **Step 4: Vérifier l'advisor**
 
-```
-mcp__supabase__get_advisors  type: security
-```
-
-Attendu : les flags `0028/0029_*_security_definer_function_executable` sur les 4 nouvelles RPC — **c'est normal** (classe §36). Toute autre alerte neuve doit être traitée.
+`mcp__supabase__get_advisors type: security`. Les flags `0028/0029_*_security_definer_function_executable` sur les cinq RPC sont **attendus** (classe §36). Toute autre alerte neuve doit être traitée.
 
 - [ ] **Step 5: Écrire la décision §211**
 
-Ajouter une section `## §211 — …` au journal, couvrant : le constat de départ (l'éditeur existant ne couvrait que 52 des 103 catalogues), les six arbitrages PO du tableau §2 de la spec, l'invariant « liste blanche = la vue, jamais le registre » et pourquoi l'inverse serait un élargissement de privilège, la garde « ajout impossible » comme conséquence directe du masquage des colonnes techniques, et la vérification par sabotage.
+Couvrir : le constat (l'éditeur existant ne couvrait que 52 des 103 catalogues), les arbitrages PO, l'invariant « liste blanche = la vue », la séparation verrouillages dérivés / seedés, et **les quatre défauts rattrapés en revue** (§ ci-dessous) — c'est cette section qui a le plus de valeur pour la prochaine passe.
 
 - [ ] **Step 6: Proposer l'invariant CLAUDE.md**
-
-Ajouter une section, avant « Un concept filtrable n'a qu'UNE surface de saisie » :
 
 > ### Une écriture générique s'autorise par INTROSPECTION, jamais par configuration (§211)
 > Toute fonction qui écrit dans une relation nommée par l'appelant doit résoudre cette relation
 > **contre une vue d'introspection du catalogue PostgreSQL**, jamais contre une table de
 > configuration. Une allowlist de configuration transforme une erreur de seed en élargissement de
-> privilège : une ligne fautive ouvre l'écriture vers `object` ou `auth.users`. La configuration ne
-> doit pouvoir que **restreindre** (verrouiller un catalogue), jamais élargir. Corollaires :
-> `format(%I)` pour les identifiants et `USING` pour les valeurs — jamais de concaténation ; une clé
-> de payload absente des colonnes découvertes fait **échouer** l'appel, jamais ignorée en silence
-> (une valeur jetée sans bruit est un piège d'écriture) ; et la garde CI doit contenir l'assertion
-> « une écriture visant `object` lève `UNKNOWN_CATALOG` » — si elle disparaît, le RPC générique
-> devient une écriture arbitraire.
+> privilège. La configuration ne peut que **restreindre**. Corollaires : `format(%I)` pour les
+> identifiants, `USING` pour les valeurs, et le **type de cast vient de la vue, jamais de
+> l'appelant** ; une clé de payload absente des colonnes découvertes fait **échouer** l'appel, jamais
+> ignorée en silence ; la garde CI doit contenir l'assertion « une écriture visant `object` lève
+> `UNKNOWN_CATALOG` ». Et **tout ce qu'un générateur synthétise pour une espèce d'objet doit être
+> synthétisé ENTIÈREMENT** : une forme partielle (colonnes décrites mais clé primaire absente) ne
+> lève aucune erreur, elle rend simplement l'objet inerte — c'est le défaut le plus silencieux
+> rencontré ici, il aurait verrouillé 71 catalogues sur 103.
 
 - [ ] **Step 7: Commit**
 
 ```bash
 git add -A
-git commit -m "docs(§211): journal de decision et invariant d'ecriture generique"
+git commit -m "docs(211): journal de decision et invariant d'ecriture generique"
 ```
 
 ---
 
-## Révision du 2026-08-07 — ce qu'une revue a rattrapé
+## Révisions du 2026-08-07 — ce que deux revues ont rattrapé
 
-La première rédaction de ce plan était **non exécutable**. Quatre défauts bloquants, tous confirmés
-par requête sur la base avant correction. Ils sont consignés parce que chacun est un piège qui se
-reproduira dans le prochain générateur écrit contre un catalogue système :
+Ce plan a été réécrit deux fois. Les défauts sont consignés parce que chacun est **silencieux** :
+aucun ne lève d'erreur, tous rendent l'écran inerte ou les données fausses.
 
-1. **Le modèle d'identité ne couvrait pas les tables réelles.** Les RPC imposaient `p_id uuid` et une
-   clé primaire simple. Mesuré : 10 des 32 tables sortent de ce moule — `ref_commune` a une PK
-   `varchar(5)`, cinq matrices sont composites, `ref_code_taxonomy_closure` a trois colonnes, et
-   `ref_interop_crosswalk` **n'a aucune clé primaire**. Au moins quatre catalogues annoncés éditables
-   par la spec ne l'auraient pas été. Corrigé par `p_key jsonb` + `primary_key_columns[]` +
-   `is_identifiable`.
-2. **La délégation `ref_code` inversait le nom et le code.** La signature réelle est
-   `(p_domain, p_name, p_id, p_code, …)` ; l'appel positionnel du plan supposait l'inverse. Il aurait
-   écrit le code dans le libellé et le libellé dans le code, **sans lever la moindre erreur SQL** —
-   une corruption silencieuse sur 52 vocabulaires. Corrigé par des arguments nommés, désormais une
-   contrainte globale de ce plan.
-3. **Les domaines `ref_code` n'avaient aucune description de colonnes.** Leur `reloid` étant NULL,
-   `columns` valait `[]` et le générateur front n'aurait produit aucun champ de saisie pour
-   71 catalogues sur 103. Corrigé par la synthèse de la forme éditable de `ref_code`.
-4. **Le contrat oubliait les clés étrangères sortantes.** Le type front attendait `fks`, le RPC ne
-   renvoyait jamais `outgoing_fk` : toute colonne pointant vers un autre catalogue serait retombée en
-   saisie d'UUID à la main. Corrigé.
+**Première revue — quatre bloquants.** (1) `p_id uuid` ne couvrait pas les tables réelles : 10 des
+32 sortent du moule, et `ref_interop_crosswalk` n'a aucune clé primaire. (2) La délégation `ref_code`
+inversait `p_name` et `p_code`, ce qui aurait écrit le code dans le libellé **sans erreur SQL** sur
+52 vocabulaires. (3) Les domaines n'avaient aucune colonne décrite. (4) `outgoing_fk` n'était pas émis
+alors que le front l'attendait.
 
-Corrections importantes du même passage : le compte est **103** et non 101 (un filtre par nom perdait
-`ref_code_domain_registry` et `ref_code_taxonomy_closure`) ; deux tests étaient **vacants** (le
-compteur multi-FK passait dès qu'une ligne existait, et le test « ajout impossible » n'appelait aucune
-fonction — `REQUIRED_HIDDEN_COLUMN` n'existait nulle part) ; la résolution du libellé est une
-**cascade** et non une déclaration, puisque 12 tables sur 32 n'ont pas de colonne `name` et que
-`ref_sustainability_action` porte `label`, pas `title` ; la suppression intercepte
-`foreign_key_violation` pour la course entre comptage et `DELETE`, et rend `ROW_NOT_FOUND` plutôt
-qu'un succès silencieux ; l'absorption de `RefCodeEditor` délègue **quatre** fonctions de la phase 7.5
-et non une, sans quoi activation et réordonnancement disparaîtraient ; et le verrouillage des domaines
-suit `api.ref_code_domain_is_editable`, la fonction que l'écran actuel utilise déjà, plutôt qu'un
-critère `is_taxonomy` plus étroit qui aurait fait diverger l'écran du backend.
+**Seconde revue — six bloquants, tous nés de la correction précédente.** (1) La synthèse de forme des
+domaines avait été faite pour `columns` mais **pas** pour `primary_key_columns` : `is_identifiable`
+valait `false` et le helper d'accès verrouillait les 71 domaines, en silence. (2) `list_ref_catalogs`
+lisait encore le registre brut alors que `get_ref_catalog` passait par le helper dérivé : le maître et
+le détail auraient divergé. (3) Les colonnes de clé primaire étaient masquées dans le formulaire,
+rendant `ref_commune` et les cinq matrices non créables. (4) Le réordonnancement n'était pas délégué.
+(5) La cascade de libellé rendait `NULL` pour les matrices sans que rien ne compose de secours.
+(6) Les cibles de FK pointaient vers des partitions absentes de la vue.
+
+**Leçon transversale, désormais l'invariant CLAUDE.md de la tâche 10** : quand un générateur
+synthétise la forme d'une espèce d'objet, la synthèse doit être **entière**. Une forme partielle ne
+casse rien visiblement — elle rend l'objet inerte.
 
 ---
 
 ## Auto-revue
 
-**Couverture de la spec.** §1 problème → contexte du plan. §2 arbitrages → contraintes globales + tâches 2, 4, 6. §3.1 vue → tâche 1. §3.2 registre → tâche 2. §3.3 invariant de sécurité → tâche 4 étapes 1 et 6, plus l'invariant CLAUDE.md de la tâche 9. §3.4 verrouillages → seed tâche 2. §4.1 traduction → tâche 6. §4.2 colonnes verrouillées → tâches 4 et 6. §4.3 gardes → tâches 4 (serveur) et 6 (client). §4.4 délégation ref_code → tâches 3 et 4. §5 RPC + discipline → tâches 3 et 4. §5.1 erreurs typées → tâche 4. §6 front → tâches 6, 7, 8. §7 tests → réparti, les trois assertions non vacantes sont aux tâches 3 (balayage) et 4 (cycle, sécurité). §8 hors périmètre → non implémenté, par construction.
+**Couverture de la spec.** §1 problème → contexte. §2 arbitrages → contraintes globales + tâches 2, 4,
+6. §3.1 vue → tâche 1. §3.1 bis identité → tâches 1, 4, 6. §3.2 registre → tâche 2. §3.3 invariant de
+sécurité → tâche 4 (test) + tâche 10 (CLAUDE.md). §3.4 verrouillages dérivés vs seedés → tâches 2 et 3.
+§4.1 traduction → tâche 6. §4.2 colonnes verrouillées → tâches 4 et 6. §4.3 gardes → tâche 4 (serveur)
+et 6 (client). §4.4 délégation → tâches 3 et 4. §5 RPC → tâches 3 et 4. §5.1 erreurs typées → tâche 4
++ `humaniseCatalogError` (tâche 8). §6 front → tâches 6 à 9. §7 tests → réparti. §8 hors périmètre →
+non implémenté par construction.
 
-**Pièges signalés en encadré.** Deux passages avertissent d'un piège plutôt que de le laisser découvrir : la fusion additive des compteurs multi-FK (tâche 3) et l'ordre d'écriture de `internal.ref_catalog_cast_expr`, dont le type interpolé doit venir de la vue et jamais de l'appelant sous peine d'injection (tâche 4).
+**Cohérence des noms.** `catalog_key` partout ; `p_key` (SQL) ↔ `rowKey` / `buildRowKey` (front) ;
+`primary_key_columns` ↔ `primaryKeyColumns`, tableau des deux côtés ; la clé canonique est le join
+`U+001F` des deux côtés (`rowKeyString` ↔ la clé de `usage`) ; `label_column` ↔ `labelColumn`, nullable
+des deux côtés ; codes d'erreur identiques entre les fonctions, leurs tests, `humaniseCatalogError` et
+la liste de la spec §5.1.
 
-**Cohérence des noms.** `catalog_key` partout (SQL, service, composant) ; `p_key` / `rowKey` / `buildRowKey` désignent la même identité de bout en bout ; `primary_key_columns` (SQL) ↔ `primaryKeyColumns` (front) est un tableau des deux côtés ; `buildCatalogFieldSpec` / `computeAddBlocked` identiques entre tâches 6 et 8 ; `groupByFamily` entre 7 et 8 ; les codes d'erreur `UNKNOWN_CATALOG` / `LOCKED_CATALOG` / `UNKNOWN_COLUMN` / `CODE_IMMUTABLE` / `REQUIRED_HIDDEN_COLUMN` / `STILL_REFERENCED` / `ROW_NOT_FOUND` sont les mêmes dans les fonctions de la tâche 4, dans ses tests et dans la liste de la spec §5.1.
+**Ce que ce plan ne prétend pas être.** Les gabarits de `Modal`, `ConfirmDialog` et `EmptyState` sont
+supposés conformes à leur usage dans `RefCodeEditor` ; si leurs props diffèrent, adapter sans changer
+l'intention. Les libellés de colonnes affichés sont les noms techniques : les humaniser demanderait une
+table de traduction par colonne, hors périmètre.

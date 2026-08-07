@@ -9,8 +9,11 @@ import { useExplorerStore } from '../../store/explorer-store';
 // neutralise — ce test ne couvre que le rendu adaptatif de la barre.
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('@/services/lists', () => ({ createListFromSelection: jest.fn() }));
-jest.mock('@/services/selection-export', () => ({ exportSelectedObjectsCsv: jest.fn() }));
 jest.mock('../../services/rpc', () => ({ getObjectResource: jest.fn() }));
+jest.mock('@/features/explorer/export/ExportExcelModal', () => ({
+  ExportExcelModal: ({ open }: { open: boolean }) =>
+    open ? <div role="dialog" aria-label="Exporter en Excel" /> : null,
+}));
 
 describe('SelectionBar — barre adaptative', () => {
   beforeEach(() => {
@@ -25,7 +28,7 @@ describe('SelectionBar — barre adaptative', () => {
     expect(screen.getByRole('button', { name: /Sélection/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Créer une liste/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Imprimer/ })).toBeNull();
-    expect(screen.queryByRole('button', { name: /CSV/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Excel/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Vider/ })).toBeNull();
   });
 
@@ -35,9 +38,16 @@ describe('SelectionBar — barre adaptative', () => {
 
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Imprimer/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /CSV/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Excel/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Vider/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Créer une liste/ })).toBeInTheDocument();
+  });
+
+  it('« Excel » ouvre la modale de sélection de colonnes', async () => {
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
+    render(<SelectionBar />);
+    await userEvent.click(screen.getByRole('button', { name: /Excel/ }));
+    expect(screen.getByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
   });
 
   // Le plafond protège la préparation (une ressource complète chargée PAR fiche) : au-delà,

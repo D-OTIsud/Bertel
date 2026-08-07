@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { Download, ListPlus, Printer, ShoppingBag, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, ListPlus, Printer, ShoppingBag, Trash2 } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
-import { exportSelectedObjectsCsv } from '@/services/selection-export';
+import { ExportExcelModal } from '@/features/explorer/export/ExportExcelModal';
 import { createListFromSelection } from '@/services/lists';
 import { getObjectResource } from '../../services/rpc';
 import { OtiCarnetCard, type OtiPoi } from '@/features/lists/OtiTemplate';
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  * Positioned absolutely at the bottom of the parent (MapPanel's `.map-canvas`).
  * The bar adapts to the selection: with nothing selected it only shows the
  * count chip and « Sélection » (select all visible); the actions that need a
- * selection (Imprimer / CSV / Vider / Créer une liste) appear once at least
+ * selection (Imprimer / Excel / Vider / Créer une liste) appear once at least
  * one fiche is selected. `flex-wrap` keeps every button inside the rounded
  * bar on narrow panels (the CTA used to overflow past the bar's edge).
  */
@@ -29,7 +29,7 @@ export function SelectionBar() {
   const selectAllVisible = useExplorerStore((state) => state.selectAllVisible);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const langPrefs = useSessionStore((state) => state.langPrefs);
-  const [exporting, setExporting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [printing, setPrinting] = useState(false);
   // Cartes prêtes à imprimer : non-vide ⇒ le portail .oti-print-portal est monté.
@@ -86,16 +86,6 @@ export function SelectionBar() {
     window.print();
     return () => window.removeEventListener('afterprint', unmountPortal);
   }, [printPois]);
-
-  async function handleExportCsv() {
-    if (empty) return;
-    setExporting(true);
-    try {
-      await exportSelectedObjectsCsv(selectedObjectIds, langPrefs);
-    } finally {
-      setExporting(false);
-    }
-  }
 
   const idleAction =
     'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold transition';
@@ -168,12 +158,12 @@ export function SelectionBar() {
           </button>
           <button
             type="button"
-            disabled={exporting}
-            onClick={() => void handleExportCsv()}
-            className={exporting ? disabledAction : enabledAction}
+            onClick={() => setExportOpen(true)}
+            title="Exporter la sélection en Excel (choix des colonnes)"
+            className={enabledAction}
           >
-            <Download className="h-3.5 w-3.5 shrink-0" />
-            CSV
+            <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
+            Excel
           </button>
           <button type="button" onClick={() => clearSelection()} className={enabledAction}>
             <Trash2 className="h-3.5 w-3.5 shrink-0" />
@@ -199,6 +189,9 @@ export function SelectionBar() {
           </button>
         </>
       )}
+
+      {/* §208 : export Excel de la sélection — Modal gère lui-même son cycle de présence. */}
+      <ExportExcelModal open={exportOpen} onOpenChange={setExportOpen} />
 
       {/* Portail d'impression : les cartes carnet des fiches sélectionnées, rendues sous
           <body> et révélées uniquement à l'impression (cf. @media print, oti-template.css).

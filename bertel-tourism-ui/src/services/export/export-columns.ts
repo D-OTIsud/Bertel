@@ -69,8 +69,19 @@ export interface ExportColumnDef {
 /**
  * R1 — union des blocs requis par les colonnes cochées, pour p_options.fields.
  * `undefined` = au moins une colonne exige la fiche complète ⇒ pas de projection.
- * Mécanisme non étanche (certains legs sortent hors garde v_fields) : c'est une
- * optimisation de payload, jamais une garde.
+ *
+ * CONTRAT (api_views_functions.sql:3013) : `v_fields` vaut NULL SEULEMENT quand la
+ * clé `fields` est absente ; un TABLEAU VIDE n'est PAS NULL et restreint donc TOUT.
+ * Chaque leg gardé sort sous `IF v_fields IS NULL OR '<leg>' = ANY(v_fields)`. D'où
+ * la lecture, contre-intuitive, des trois annotations :
+ *   - `fields: ['<leg>']` = « garde ce leg dans la projection » — l'annotation SÛRE
+ *     dès qu'un leg gardé alimente la colonne ;
+ *   - `fields: []`        = « aucun leg gardé nécessaire » — vrai UNIQUEMENT si la
+ *     donnée sort hors de toute garde (ou n'est jamais émise) ;
+ *   - `fields` OMIS       = « désactive la projection » — toujours correct, jamais
+ *     faux, seulement plus lourd : c'est le repli en cas de doute.
+ * Un `[]` erroné vide la cellule EN SILENCE (aucune erreur) ; une omission ne coûte
+ * que du payload. Le mécanisme reste une optimisation, jamais une garde.
  */
 export function requiredFieldsFor(columnIds: string[]): string[] | undefined {
   const union = new Set<string>();
@@ -186,78 +197,114 @@ function legalValue(d: ParsedObjectDetail, typeCode: string): string {
   const value = entry.value;
   return typeof value === 'string' ? value.replace(/^"|"$/g, '') : value == null ? '' : String(value);
 }
+/**
+ * Sentinelles d'affichage de parseLegal (utils.ts:1187-1191) : le tiroir les AFFICHE (« Statut
+ * inconnu » y est une information), l'export ne doit JAMAIS les écrire — la contrainte §208 est
+ * qu'un champ absent rend '' , jamais un placeholder. Filtré ICI, à la colonne, exactement comme
+ * la sentinelle 'n/a' des tarifs : parseLegal garde ses défauts, dont l'UI dépend.
+ */
+const LEGAL_PLACEHOLDERS = new Set(['Document legal', 'Statut inconnu', 'non precisee', 'n/a']);
+function withoutPlaceholder(value: string): string {
+  return LEGAL_PLACEHOLDERS.has(value.trim()) ? '' : value;
+}
 function legalLine(l: { label: string; status: string }): string {
-  return joinParts([l.label, l.status && `(${l.status})`], ' ');
+  const status = withoutPlaceholder(l.status);
+  return joinParts([withoutPlaceholder(l.label), status && `(${status})`], ' ');
+}
+/**
+ * Jours avant échéance : le parser rend une CHAÎNE ('n/a' par défaut, mais '' si le serveur émet
+ * une chaîne vide — readString rend la chaîne telle quelle). Number('') vaut 0, donc la chaîne vide
+ * doit être écartée AVANT la conversion, sinon un document sans échéance passerait pour « à 0 jour ».
+ */
+function daysUntilExpiry(value: string): number | null {
+  const text = value.trim();
+  const days = text === '' ? Number.NaN : Number(text);
+  return Number.isFinite(days) ? days : null;
 }
 
 // ---------- Colonnes (Tâches 5-7) ----------
 
 export const EXPORT_COLUMNS: ExportColumnDef[] = [
   // ---------- Identité ----------
-  // R1 — fields:[] volontaire sur tout ce bloc (identité de base + adresse/location) : bien que
-  // 'id'/'name'/'address'/'location' portent chacun leur propre garde v_fields côté SQL, ce sont les
-  // champs qu'à peu près TOUT export sélectionne — les traiter comme projetables agressivement risque
-  // de faire disparaître 'id' d'une projection étroite (ex. seules des colonnes acteur_contacts,
-  // qui ne lisent que d.identity.id pour indexer ctx.actorContacts) et de casser silencieusement le
-  // lookup. Vérifié non vacant par le test R1 (requiredFieldsFor(['name','postcode']) === []).
-  { id: 'id', label: 'Identifiant', group: 'identite', clearance: 'public', fields: [], value: (d) => d.identity.id },
-  { id: 'name', label: 'Nom', group: 'identite', clearance: 'public', fields: [], value: (d) => d.identity.name },
-  { id: 'type_code', label: 'Code type', group: 'identite', clearance: 'public', fields: [], value: (d) => d.identity.type },
-  { id: 'type', label: 'Type', group: 'identite', clearance: 'public', fields: [], value: (d) => resolveTypeLabel(d.identity.type) },
-  { id: 'status', label: 'Statut', group: 'identite', clearance: 'public', fields: [], value: (d) => STATUS_LABELS[d.identity.status] ?? d.identity.status },
-  { id: 'commercial_visibility', label: 'Visibilité commerciale', group: 'identite', clearance: 'org', fields: [], value: (d) => d.identity.commercialVisibility },
-  { id: 'region_code', label: 'Territoire', group: 'identite', clearance: 'public', fields: [], value: (d) => d.identity.regionCode },
-  { id: 'created_at', label: 'Créée le', group: 'identite', clearance: 'public', fields: [], value: (d) => dateFr(d.identity.createdAt) },
-  { id: 'updated_at', label: 'Mise à jour le', group: 'identite', clearance: 'public', fields: [], value: (d) => dateFr(d.identity.updatedAt) },
-  { id: 'published_at', label: 'Publiée le', group: 'identite', clearance: 'public', fields: [], value: (d) => dateFr(d.identity.publishedAt) },
+  // R1 — CHAQUE champ d'identité porte SA PROPRE garde v_fields (api_views_functions.sql:3072-3104,
+  // un IF par clé). Les annoter `[]` produisait une projection non vide qui les OMETTAIT tous : les
+  // cellules Identifiant/Nom/Type/Statut/Mise à jour sortaient VIDES, sans la moindre erreur. Le leg
+  // porte le nom de la clé, sauf `type_code`/`type` qui dérivent tous deux d'`obj.object_type` (leg 'type').
+  { id: 'id', label: 'Identifiant', group: 'identite', clearance: 'public', fields: ['id'], value: (d) => d.identity.id },
+  { id: 'name', label: 'Nom', group: 'identite', clearance: 'public', fields: ['name'], value: (d) => d.identity.name },
+  { id: 'type_code', label: 'Code type', group: 'identite', clearance: 'public', fields: ['type'], value: (d) => d.identity.type },
+  { id: 'type', label: 'Type', group: 'identite', clearance: 'public', fields: ['type'], value: (d) => resolveTypeLabel(d.identity.type) },
+  { id: 'status', label: 'Statut', group: 'identite', clearance: 'public', fields: ['status'], value: (d) => STATUS_LABELS[d.identity.status] ?? d.identity.status },
+  { id: 'commercial_visibility', label: 'Visibilité commerciale', group: 'identite', clearance: 'org', fields: ['commercial_visibility'], value: (d) => d.identity.commercialVisibility },
+  { id: 'region_code', label: 'Territoire', group: 'identite', clearance: 'public', fields: ['region_code'], value: (d) => d.identity.regionCode },
+  { id: 'created_at', label: 'Créée le', group: 'identite', clearance: 'public', fields: ['created_at'], value: (d) => dateFr(d.identity.createdAt) },
+  { id: 'updated_at', label: 'Mise à jour le', group: 'identite', clearance: 'public', fields: ['updated_at'], value: (d) => dateFr(d.identity.updatedAt) },
+  { id: 'published_at', label: 'Publiée le', group: 'identite', clearance: 'public', fields: ['published_at'], value: (d) => dateFr(d.identity.publishedAt) },
   { id: 'taxonomy', label: 'Sous-catégorie', group: 'identite', clearance: 'public', fields: ['taxonomy'], value: (d) => itemLabels(groupItems(d, 'taxonomy')) },
   { id: 'tags', label: 'Étiquettes', group: 'identite', clearance: 'public', fields: ['tags'], value: (d) => itemLabels(groupItems(d, 'tags')) },
   { id: 'environment_tags', label: 'Cadre & environnement', group: 'identite', clearance: 'public', fields: ['environment_tags'], value: (d) => itemLabels(groupItems(d, 'environment')) },
 
   // ---------- Localisation ----------
-  { id: 'address', label: 'Adresse', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.address ?? '' },
-  { id: 'city', label: 'Commune', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.city ?? '' },
-  { id: 'postcode', label: 'Code postal', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.postcode ?? '' },
-  { id: 'lieu_dit', label: 'Lieu-dit', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.lieuDit ?? '' },
-  { id: 'direction', label: 'Accès / itinéraire', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.direction ?? '' },
-  { id: 'location_label', label: 'Localisation (ligne)', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.label ?? '' },
+  // R1 — DEUX legs gardés distincts sur la MÊME table object_location : 'address' émet raw.address
+  // (address1/postcode/city/code_insee/lieu_dit/direction — SQL:3107) et 'location' émet raw.location
+  // (latitude/longitude/altitude_m/geometry — SQL:3197). parseLocation lit les deux records ; chaque
+  // colonne déclare le ou les legs qu'elle touche RÉELLEMENT. Un `[]` ici vidait toute la localisation.
+  { id: 'address', label: 'Adresse', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => d.location?.address ?? '' },
+  { id: 'city', label: 'Commune', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => d.location?.city ?? '' },
+  { id: 'postcode', label: 'Code postal', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => d.location?.postcode ?? '' },
+  { id: 'lieu_dit', label: 'Lieu-dit', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => d.location?.lieuDit ?? '' },
+  { id: 'direction', label: 'Accès / itinéraire', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => d.location?.direction ?? '' },
+  // label = adresse · lieu-dit · CP ville, AVEC repli « lat, lon » quand tout est vide ⇒ les deux legs.
+  { id: 'location_label', label: 'Localisation (ligne)', group: 'localisation', clearance: 'public', fields: ['address', 'location'], value: (d) => d.location?.label ?? '' },
   // R1 — les DEUX seules colonnes numériques du registre (cellType 'number', valeur number|null).
-  { id: 'latitude', label: 'Latitude', group: 'localisation', clearance: 'public', cellType: 'number', fields: [], value: (d) => d.location?.latitude ?? null },
-  { id: 'longitude', label: 'Longitude', group: 'localisation', clearance: 'public', cellType: 'number', fields: [], value: (d) => d.location?.longitude ?? null },
-  { id: 'google_maps_url', label: 'Lien Google Maps', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.googleMapsUrl ?? '' },
-  { id: 'directions_url', label: 'Lien itinéraire', group: 'localisation', clearance: 'public', fields: [], value: (d) => d.location?.directionsUrl ?? '' },
-  { id: 'code_insee', label: 'Code INSEE', group: 'localisation', clearance: 'public', fields: [], value: (d) => rawStr(d, 'address', 'code_insee') },
-  { id: 'altitude_m', label: 'Altitude (m)', group: 'localisation', clearance: 'public', fields: [], value: (d) => rawStr(d, 'location', 'altitude_m') },
+  { id: 'latitude', label: 'Latitude', group: 'localisation', clearance: 'public', cellType: 'number', fields: ['location'], value: (d) => d.location?.latitude ?? null },
+  { id: 'longitude', label: 'Longitude', group: 'localisation', clearance: 'public', cellType: 'number', fields: ['location'], value: (d) => d.location?.longitude ?? null },
+  // URLs construites depuis lat/lon SI présentes, sinon depuis le label textuel ⇒ les deux legs.
+  { id: 'google_maps_url', label: 'Lien Google Maps', group: 'localisation', clearance: 'public', fields: ['address', 'location'], value: (d) => d.location?.googleMapsUrl ?? '' },
+  { id: 'directions_url', label: 'Lien itinéraire', group: 'localisation', clearance: 'public', fields: ['address', 'location'], value: (d) => d.location?.directionsUrl ?? '' },
+  { id: 'code_insee', label: 'Code INSEE', group: 'localisation', clearance: 'public', fields: ['address'], value: (d) => rawStr(d, 'address', 'code_insee') },
+  { id: 'altitude_m', label: 'Altitude (m)', group: 'localisation', clearance: 'public', fields: ['location'], value: (d) => rawStr(d, 'location', 'altitude_m') },
   { id: 'zones', label: 'Communes desservies', group: 'localisation', clearance: 'public', fields: ['object_zone'], value: (d) => namedList(d.raw.object_zone) },
   { id: 'places_count', label: 'Nombre de sous-lieux', group: 'localisation', clearance: 'public', fields: ['places'], value: (d) => (d.text.places.length ? String(d.text.places.length) : '') },
   { id: 'places', label: 'Sous-lieux', group: 'localisation', clearance: 'public', fields: ['places'], value: (d) => joinParts(d.text.places.map((p) => p.name)) },
 
   // ---------- Contacts ----------
-  // R1 — contacts.public agrège 3 legs gardés (contacts de la fiche, des acteurs, des organisations).
-  { id: 'phone', label: 'Téléphone', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'organizations'], value: (d) => firstPublicContact(d, (k) => PHONE_KINDS.has(k)) },
-  { id: 'mobile', label: 'Mobile', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'organizations'], value: (d) => firstPublicContact(d, (k) => MOBILE_KINDS.has(k)) },
-  { id: 'email', label: 'E-mail', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'organizations'], value: (d) => firstPublicContact(d, (k) => k === 'email') },
-  { id: 'website', label: 'Site web', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'organizations'], value: (d) => firstPublicContact(d, (k) => k === 'website') },
-  { id: 'contacts_public', label: 'Contacts publics', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'organizations'], value: (d) => joinParts(d.contacts.public.map(contactLine)) },
+  // R1 — contacts.public agrège TROIS sources (normalizeAggregatedContacts) : raw.contacts (leg
+  // 'contacts'), raw.actors[].contacts (leg 'actors') et les contacts d'organisation. Ces derniers
+  // sont cherchés dans raw.organizations / raw.parent_objects / raw.org_links — et get_object_resource
+  // n'émet QUE `org_links` : 'organizations' n'est PAS un nom de garde (aucun IF ne le teste), il ne
+  // contribuait donc rien à la projection. Le vrai leg est 'org_links'.
+  { id: 'phone', label: 'Téléphone', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'org_links'], value: (d) => firstPublicContact(d, (k) => PHONE_KINDS.has(k)) },
+  { id: 'mobile', label: 'Mobile', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'org_links'], value: (d) => firstPublicContact(d, (k) => MOBILE_KINDS.has(k)) },
+  { id: 'email', label: 'E-mail', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'org_links'], value: (d) => firstPublicContact(d, (k) => k === 'email') },
+  { id: 'website', label: 'Site web', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'org_links'], value: (d) => firstPublicContact(d, (k) => k === 'website') },
+  { id: 'contacts_public', label: 'Contacts publics', group: 'contacts', clearance: 'public', fields: ['contacts', 'actors', 'org_links'], value: (d) => joinParts(d.contacts.public.map(contactLine)) },
   { id: 'contacts_object', label: 'Contacts de la fiche (tous)', group: 'contacts', clearance: 'org', fields: ['contacts'], value: (d) => joinParts(d.contacts.object.map(contactLine)) },
-  { id: 'contacts_orgs', label: 'Contacts organisations', group: 'contacts', clearance: 'org', fields: ['organizations'], value: (d) => joinParts(d.contacts.organizations.map(contactLine)) },
+  { id: 'contacts_orgs', label: 'Contacts organisations', group: 'contacts', clearance: 'org', fields: ['org_links'], value: (d) => joinParts(d.contacts.organizations.map(contactLine)) },
   { id: 'web_channels', label: 'Réseaux & distribution', group: 'contacts', clearance: 'public', fields: ['web_channels'], value: (d) => joinParts(rawList(d, 'web_channels').map((w) => joinParts([readNamedValue(w.platform, ''), typeof w.url === 'string' ? w.url : ''], ' : '))) },
   { id: 'spoken_languages', label: 'Langues parlées', group: 'contacts', clearance: 'public', fields: ['languages'], value: (d) => itemLabels(groupItems(d, 'languages')) },
 
   // ---------- Descriptions ----------
-  // R1 — le leg unique 'description' porte description/chapo/adapted/mobile/edition/hors_zone/sanitary
-  // (get_object_resource les émet ensemble sous une même garde v_fields — vérifié dans le SQL).
-  { id: 'chapo', label: 'Accroche', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => d.text.chapo },
-  { id: 'description', label: 'Description', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => d.text.description },
-  { id: 'description_adapted', label: 'Description adaptée', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => d.text.adaptedDescription },
-  { id: 'description_mobile', label: 'Description mobile', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => d.text.mobileDescription },
-  { id: 'description_edition', label: 'Description édition', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => d.text.editorialDescription },
+  // R1 — le leg 'description' porte description/chapo/adapted/mobile/edition/hors_zone/sanitary
+  // (get_object_resource les émet ensemble sous une même garde v_fields — SQL:3227-3292). Les cinq
+  // champs typés du parser ont EN PLUS un repli sur raw.descriptions (parseText:714-746, leg
+  // 'descriptions') : ils déclarent donc les deux. Les deux lectures rawStr, elles, ne touchent que
+  // la clé de premier niveau du leg 'description'.
+  { id: 'chapo', label: 'Accroche', group: 'descriptions', clearance: 'public', fields: ['description', 'descriptions'], value: (d) => d.text.chapo },
+  { id: 'description', label: 'Description', group: 'descriptions', clearance: 'public', fields: ['description', 'descriptions'], value: (d) => d.text.description },
+  { id: 'description_adapted', label: 'Description adaptée', group: 'descriptions', clearance: 'public', fields: ['description', 'descriptions'], value: (d) => d.text.adaptedDescription },
+  { id: 'description_mobile', label: 'Description mobile', group: 'descriptions', clearance: 'public', fields: ['description', 'descriptions'], value: (d) => d.text.mobileDescription },
+  { id: 'description_edition', label: 'Description édition', group: 'descriptions', clearance: 'public', fields: ['description', 'descriptions'], value: (d) => d.text.editorialDescription },
   { id: 'description_hors_zone', label: 'Offre hors zone', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => rawStr(d, 'description_offre_hors_zone') },
   { id: 'sanitary_measures', label: 'Mesures sanitaires', group: 'descriptions', clearance: 'public', fields: ['description'], value: (d) => rawStr(d, 'sanitary_measures') },
   { id: 'descriptions_langs', label: 'Langues de description', group: 'descriptions', clearance: 'public', fields: ['descriptions'], value: (d) => joinParts([...new Set(d.text.descriptions.map((x) => x.language))]) },
 
   // ---------- Labels & classements ----------
   { id: 'classifications', label: 'Classements & labels', group: 'labels', clearance: 'public', fields: ['classifications'], value: (d) => joinParts(groupItems(d, 'classifications').map((i) => joinParts([i.label, i.meta], ' '))) },
+  // R1 — tracé jusqu'à parseTaxonomyGroups (utils.ts:1346-1347) : ces deux groupes lisent raw.labels /
+  // raw.badges, clés que get_object_resource N'ÉMET JAMAIS (0 occurrence dans la fonction). Aucun leg
+  // gardé ne les alimente ⇒ `[]` exact, et la cellule est vide avec OU sans projection. (Les labels
+  // réels de la fiche sortent par 'classifications' / 'sustainability_labels' / 'accessibility_labels'.)
   { id: 'labels_neutral', label: 'Labels', group: 'labels', clearance: 'public', fields: [], value: (d) => itemLabels(groupItems(d, 'labels')) },
   { id: 'badges', label: 'Badges', group: 'labels', clearance: 'public', fields: [], value: (d) => itemLabels(groupItems(d, 'badges')) },
   { id: 'sustainability_labels', label: 'Labels durabilité', group: 'labels', clearance: 'public', fields: ['sustainability_labels'], value: (d) => itemLabels(d.taxonomy.sustainability.labels) },
@@ -269,6 +316,9 @@ export const EXPORT_COLUMNS: ExportColumnDef[] = [
   { id: 'amenities', label: 'Équipements', group: 'equipements', clearance: 'public', fields: ['amenities'], value: (d) => joinParts(d.taxonomy.amenities) },
   { id: 'amenities_count', label: "Nombre d'équipements", group: 'equipements', clearance: 'public', fields: ['amenities'], value: (d) => (d.taxonomy.amenities.length ? String(d.taxonomy.amenities.length) : '') },
   { id: 'payment_methods', label: 'Moyens de paiement', group: 'equipements', clearance: 'public', fields: ['payment_methods'], value: (d) => itemLabels(groupItems(d, 'payments')) },
+  // R1 — le groupe 'practices' vient de raw.itinerary_details.practices (utils.ts:1358 ; raw.practices
+  // n'est jamais émis), et itinerary_details sort HORS de toute garde v_fields (SQL:4531, conditionné
+  // au seul object_type='ITI'). Idem cuisine_types/dietary_tags/allergens (SQL:4884-4930, RES/FMA).
   { id: 'practices', label: 'Pratiques', group: 'equipements', clearance: 'public', fields: [], value: (d) => itemLabels(groupItems(d, 'practices')) },
   { id: 'cuisine_types', label: 'Types de cuisine', group: 'equipements', clearance: 'public', fields: [], value: (d) => namedList(d.raw.cuisine_types) },
   { id: 'dietary_tags', label: 'Régimes alimentaires', group: 'equipements', clearance: 'public', fields: [], value: (d) => namedList(d.raw.dietary_tags) },
@@ -329,22 +379,32 @@ export const EXPORT_COLUMNS: ExportColumnDef[] = [
   { id: 'actor_roles', label: 'Acteur — rôle', group: 'acteur', clearance: 'actor_identity', fields: ['actors'], value: (d) => joinParts(d.relations.actors.map((a) => a.role)) },
   // R1 — MULTI-valué : la contrainte permet un principal PAR RÔLE, pas un par fiche.
   { id: 'actor_primary', label: 'Acteur(s) principal(aux)', group: 'acteur', clearance: 'actor_identity', fields: ['actors'], value: (d) => joinParts(d.relations.actors.filter((a) => a.isPrimary).map((a) => a.name)) },
-  { id: 'actor_phone', label: 'Acteur — téléphone', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => actorChannelValues(d, ctx, 'phone') },
-  { id: 'actor_mobile', label: 'Acteur — mobile', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => actorChannelValues(d, ctx, 'mobile') },
-  { id: 'actor_email', label: 'Acteur — e-mail', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => actorChannelValues(d, ctx, 'email') },
+  // R1 — ces colonnes ne lisent AUCUN leg acteur de la fiche (c'est le point de la garde 16t : la
+  // donnée vient de ctx.actorContacts, l'appel journalisé) — MAIS elles indexent cette Map par
+  // d.identity.id, donc elles ont besoin du leg 'id'. Sans lui, une sélection composée uniquement de
+  // colonnes acteur_contacts projetterait un payload sans `id` et le lookup rendrait '' pour tout.
+  { id: 'actor_phone', label: 'Acteur — téléphone', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => actorChannelValues(d, ctx, 'phone') },
+  { id: 'actor_mobile', label: 'Acteur — mobile', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => actorChannelValues(d, ctx, 'mobile') },
+  { id: 'actor_email', label: 'Acteur — e-mail', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => actorChannelValues(d, ctx, 'email') },
   // Colonne créée VIDE aujourd'hui (0 canal address en base) — §150 : la surface suit le modèle, pas la donnée.
-  { id: 'actor_address', label: 'Acteur — adresse', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => actorChannelValues(d, ctx, 'address') },
-  { id: 'actor_summary', label: 'Propriétaire (résumé)', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => joinParts([
+  { id: 'actor_address', label: 'Acteur — adresse', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => actorChannelValues(d, ctx, 'address') },
+  { id: 'actor_summary', label: 'Propriétaire (résumé)', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => joinParts([
       joinParts([r.displayName, r.roleName && `(${r.roleName})`], ' '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'phone' || c.kindCode === 'mobile').map((c) => c.value), ', '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'email').map((c) => c.value), ', '),
       joinParts(r.contacts.filter((c) => c.kindCode === 'address').map((c) => c.value), ', '),
     ], ' — '))) },
-  { id: 'actors_notes', label: 'Acteur — note', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: [], value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => r.note)) },
+  { id: 'actors_notes', label: 'Acteur — note', group: 'acteur', clearance: 'actor_contacts', requiresPurpose: true, fields: ['id'], value: (d, ctx) => joinParts(actorRows(d, ctx).map((r) => r.note)) },
 
   // ---------- Organisation éditrice ----------
   { id: 'publisher', label: 'Organisation éditrice', group: 'organisation', clearance: 'public', fields: ['org_links'], value: (d) => (d.relations.orgLinks.find((o) => /publisher|édit/i.test(o.linkType)) ?? d.relations.orgLinks[0])?.name ?? '' },
   { id: 'org_links', label: 'Organisations rattachées', group: 'organisation', clearance: 'public', fields: ['org_links'], value: (d) => joinParts(d.relations.orgLinks.map((o) => joinParts([o.name, o.linkType && `(${o.linkType})`], ' '))) },
+  // R1 — parentObjects vient de raw.parent_objects, et memberships de raw.memberships /
+  // raw.object_memberships (utils.ts:1143 et 1259) : AUCUNE de ces clés n'est émise par
+  // get_object_resource (l'adhésion sort sous la clé `current_membership`, forme et parseur
+  // différents). Aucun leg gardé ne les alimente ⇒ `[]` exact ; ces trois cellules sont vides
+  // avec ou sans projection (constat consigné, hors périmètre de cette passe : pas de changement
+  // de colonne).
   { id: 'parent_objects', label: 'Fiches parentes', group: 'organisation', clearance: 'public', fields: [], value: (d) => joinParts(d.relations.parentObjects.map((o) => o.name)) },
   { id: 'org_emails', label: 'E-mails organisations', group: 'organisation', clearance: 'org', fields: ['org_links'], value: (d) => joinParts(d.relations.organizations.flatMap((o) => o.emails)) },
   { id: 'memberships', label: 'Adhésions', group: 'organisation', clearance: 'org', fields: [], value: (d) => joinParts(d.relations.memberships.map((m) => joinParts([m.name, m.status && `(${m.status})`], ' '))) },
@@ -356,10 +416,14 @@ export const EXPORT_COLUMNS: ExportColumnDef[] = [
   { id: 'siret', label: 'SIRET', group: 'legal', clearance: 'public', fields: ['legal_records'], value: (d) => legalValue(d, 'siret') },
   { id: 'legal_records', label: 'Mentions légales (publiques)', group: 'legal', clearance: 'public', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.filter((l) => l.isPublic).map(legalLine)) },
   { id: 'legal_records_all', label: 'Mentions légales (tout)', group: 'legal', clearance: 'org', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.map(legalLine)) },
-  { id: 'legal_validity', label: 'Validité des documents', group: 'legal', clearance: 'org', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.map((l) => joinParts([l.label, l.validityMode], ' : '))) },
-  { id: 'legal_expiring', label: 'Documents à échéance (<90 j)', group: 'legal', clearance: 'org', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.filter((l) => l.daysUntilExpiry !== '' && Number(l.daysUntilExpiry) < 90).map((l) => l.label)) },
+  { id: 'legal_validity', label: 'Validité des documents', group: 'legal', clearance: 'org', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.map((l) => joinParts([withoutPlaceholder(l.label), withoutPlaceholder(l.validityMode)], ' : '))) },
+  // L'ancien garde-fou `daysUntilExpiry !== ''` ne se déclenchait JAMAIS (le défaut parser est 'n/a',
+  // pas '') : la colonne ne marchait que par accident, Number('n/a') valant NaN. Test de finitude explicite.
+  { id: 'legal_expiring', label: 'Documents à échéance (<90 j)', group: 'legal', clearance: 'org', fields: ['legal_records'], value: (d) => joinParts(d.internal.legalRecords.filter((l) => { const days = daysUntilExpiry(l.daysUntilExpiry); return days !== null && days < 90; }).map((l) => withoutPlaceholder(l.label))) },
 
   // ---------- Liens & références ----------
+  // R1 — outgoing_relations/incoming_relations sortent HORS de toute garde v_fields (SQL:4636) ;
+  // itinerary/itinerary_details aussi (SQL:4531 et 4679, conditionnés au seul object_type='ITI').
   { id: 'relations_out', label: 'Relations sortantes', group: 'liens', clearance: 'public', fields: [], value: (d) => joinParts(d.relations.outgoing.map((r) => joinParts([r.name, r.relationship && `(${r.relationship})`], ' '))) },
   { id: 'relations_in', label: 'Relations entrantes', group: 'liens', clearance: 'public', fields: [], value: (d) => joinParts(d.relations.incoming.map((r) => joinParts([r.name, r.relationship && `(${r.relationship})`], ' '))) },
   { id: 'external_ids', label: 'Identifiants externes', group: 'liens', clearance: 'org', fields: ['external_ids'], value: (d) => joinParts(d.internal.externalIds.map((e) => joinParts([e.source, e.externalId], ' : '))) },

@@ -81,6 +81,11 @@ function cardEditButton(): HTMLButtonElement {
 beforeEach(() => {
   jest.clearAllMocks();
   crmMock.listActorCrm.mockResolvedValue(snapshot);
+  crmMock.listActorSupport.mockResolvedValue({ defaultRole: { code: 'operator', name: 'Exploitant' }, documents: [] });
+  crmMock.listObjectDocumentTypes.mockResolvedValue([
+    { code: 'brochure', name: 'Brochure' },
+    { code: 'certificat', name: 'Certificat' },
+  ]);
   crmMock.listDemandTopics.mockResolvedValue([
     { code: 'demande_de_visite', name: 'Demande de visite' },
     { code: 'modification_infos_bdd', name: 'Modification infos BDD' },
@@ -118,6 +123,17 @@ beforeEach(() => {
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
+  it('affiche la bibliothèque documentaire et le rôle par défaut d’un acteur sans établissement', async () => {
+    crmMock.listActorCrm.mockResolvedValue({ ...snapshot, objects: [] });
+    crmMock.listActorSupport.mockResolvedValue({ defaultRole: { code: 'guide', name: 'Guide' }, documents: [] });
+
+    renderFiche();
+
+    expect(await screen.findByRole('heading', { name: "Documents d'accompagnement" })).toBeInTheDocument();
+    expect(await screen.findByText('Guide')).toBeInTheDocument();
+    expect(screen.getByText('Aucun document pour le moment.')).toBeInTheDocument();
+  });
+
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {
     renderFiche();
     expect(await screen.findByText('Mme Marie Hoarau')).toBeInTheDocument();

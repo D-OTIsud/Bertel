@@ -5,10 +5,15 @@ import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
 import { useCrmSearchStore } from '../../store/crm-search-store';
 import { topicTintOf } from './crm-view-utils';
+import { useObjectSearch } from '../object-editor/useObjectSearch';
 
 jest.mock('../../services/crm');
+jest.mock('../object-editor/useObjectSearch', () => ({
+  useObjectSearch: jest.fn(() => ({ results: [], loading: false, error: null })),
+}));
 
 const crmMock = crm as jest.Mocked<typeof crm>;
+const objectSearchMock = useObjectSearch as jest.MockedFunction<typeof useObjectSearch>;
 // L'automock remplace AUSSI les helpers purs (ils rendraient undefined) : on récupère la vraie
 // implémentation pour faire jouer au mock de service le rôle du serveur.
 const { matchesCrmDirectorySearch } = jest.requireActual<typeof crm>('../../services/crm');
@@ -39,9 +44,14 @@ beforeEach(() => {
     { code: 'phone', name: 'Téléphone' },
     { code: 'mobile', name: 'Mobile' },
   ]);
+  crmMock.listActorRoles.mockResolvedValue([
+    { code: 'operator', name: 'Exploitant', description: 'Gestionnaire opérationnel' },
+    { code: 'guide', name: 'Guide', description: 'Guide ou accompagnateur' },
+  ]);
   // Suggestions de contacts (PO point 2) — vide par défaut (les tests dédiés surchargent).
   crmMock.listObjectContactSuggestions.mockResolvedValue([]);
   crmMock.uploadActorPhoto.mockResolvedValue('https://cdn/actors/new-actor/x.jpg');
+  objectSearchMock.mockReturnValue({ results: [], loading: false, error: null });
 });
 
 describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
@@ -241,6 +251,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
         firstName: 'Test',
         lastName: 'Nouveau',
         objectId: 'obj-1',
+        roleCode: 'operator',
       }),
     );
     expect(crmMock.saveActorChannel).toHaveBeenCalledWith({
@@ -273,7 +284,7 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     expect(within(dialog).getByText('Mme Jocelyne Lebon')).toBeInTheDocument();
   });
 
-  it('Nouvel acteur : Créer bloqué tant que nom (composé) + établissement résolu manquent', async () => {
+  it('Nouvel acteur : une saisie établissement non résolue bloque, mais le champ vide est accepté', async () => {
     renderAnnuaire();
     await screen.findByText('Mme Marie Hoarau');
     fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
@@ -282,7 +293,70 @@ describe('CrmAnnuaire (§61 — annuaire des acteurs)', () => {
     fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Test' } });
     fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), { target: { value: 'Inconnu' } });
     expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeDisabled();
-    expect(within(dialog).getByText(/introuvable dans l.annuaire/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/établissement introuvable/i)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), { target: { value: '' } });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'projet@example.re' } });
+    expect(within(dialog).getByRole('button', { name: 'Créer' })).toBeEnabled();
+  });
+
+  it('Nouvel acteur en projet : crée sans établissement avec le rôle sélectionné', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('prospect-actor');
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Projet Lagon' } });
+    fireEvent.change(within(dialog).getByLabelText("Rôle de l'acteur"), { target: { value: 'guide' } });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), { target: { value: 'projet@lagon.re' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() => expect(crmMock.saveCrmActor).toHaveBeenCalledWith({
+      displayName: 'Projet Lagon',
+      lastName: 'Projet Lagon',
+      roleCode: 'guide',
+    }));
+  });
+
+  it('Nouvel acteur : recherche et sélectionne un établissement sans acteur existant', async () => {
+    crmMock.saveCrmActor.mockResolvedValue('new-actor');
+    objectSearchMock.mockImplementation((query) => ({
+      results: query.toLowerCase().includes('orphelin')
+        ? [{
+            id: 'obj-without-actor',
+            name: 'Gîte Orphelin',
+            type: 'HOT',
+            status: 'published',
+            city: 'Saint-Paul',
+            code: 'obj-without-actor',
+            card: { id: 'obj-without-actor', name: 'Gîte Orphelin', type: 'HOT' },
+          }]
+        : [],
+      loading: false,
+      error: null,
+    }));
+
+    renderAnnuaire();
+    await screen.findByText('Mme Marie Hoarau');
+    fireEvent.click(screen.getAllByRole('button', { name: /nouvel acteur/i })[0]);
+    const dialog = await screen.findByRole('dialog', { name: 'Nouvel acteur' });
+
+    fireEvent.change(within(dialog).getByLabelText('Nom'), { target: { value: 'Durand' } });
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'orphelin' },
+    });
+    expect(dialog.querySelector('option[value="Gîte Orphelin"]')).not.toBeNull();
+
+    fireEvent.change(within(dialog).getByLabelText('Établissement de rattachement'), {
+      target: { value: 'Gîte Orphelin' },
+    });
+    fireEvent.change(within(dialog).getByLabelText('Valeur du canal 1'), {
+      target: { value: 'durand@example.re' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+
+    await waitFor(() => expect(crmMock.saveCrmActor).toHaveBeenCalledWith(expect.objectContaining({
+      displayName: 'Durand',
+      objectId: 'obj-without-actor',
+    })));
   });
 
   // PO point 1 : l'e-mail est OBLIGATOIRE — Créer bloqué + raison visible tant qu'aucune

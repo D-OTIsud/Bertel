@@ -87,8 +87,9 @@ export function CrmAnnuaire({ canWrite, onOpenActor }: { canWrite: boolean; onOp
   });
   const entries = useMemo(() => directoryQuery.data ?? [], [directoryQuery.data]);
 
-  // Datalist du modal « Nouvel acteur » : toujours la liste NON filtrée (clé partagée
-  // avec le shell → déjà en cache ; sans filtre actif c'est la même query que ci-dessus).
+  // Amorçage du modal « Nouvel acteur » : la liste CRM non filtrée donne des suggestions
+  // immédiates. Elle n'est PAS exhaustive (un établissement sans acteur n'y figure pas) :
+  // CrmActorNewModal la complète à la frappe via la recherche objet Bertel.
   const baseDirectoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const newActorObjects = useMemo(() => {
     const byId = new Map<string, { objectId: string; objectName: string }>();

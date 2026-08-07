@@ -618,11 +618,149 @@ export async function deleteCrmInteraction(id: string): Promise<void> {
 }
 
 /* ===== Authoring acteur + canaux (§61 rectifs PO points 4+5) =====================
-   INSERT acteur : object_id REQUIS — l'acteur entre dans le périmètre CRM par son lien
-   actor_object_role (sans lui, le créateur ne pourrait ni le relire ni l'éditer).
-   role_code par défaut 'operator' côté serveur ; PAS de sélecteur de rôle en v1
-   (ref_actor_role est une table simple non-ref_code et les seeds ne portent
-   qu'operator — proposer un choix serait une fausse affordance). */
+   Un acteur peut être créé sans établissement (prospect/projet d'accompagnement). Le
+   serveur le rattache alors à l'ORG CRM active et conserve son rôle par défaut jusqu'au
+   premier lien actor_object_role. */
+
+export interface ActorRoleOption {
+  code: string;
+  name: string;
+  description: string | null;
+}
+
+/** Catalogue des rôles métier proposés à la création et au futur rattachement. */
+export async function listActorRoles(): Promise<ActorRoleOption[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return [
+      { code: 'operator', name: 'Exploitant', description: null },
+      { code: 'guide', name: 'Guide', description: null },
+      { code: 'sales_manager', name: 'Responsable commercial', description: null },
+    ];
+  }
+  const { data, error } = await client
+    .from('ref_actor_role')
+    .select('code, name, description')
+    .order('position', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    code: readString(row.code),
+    name: readString(row.name),
+    description: readNullableString(row.description),
+  }));
+}
+
+export interface ActorSupportDocument {
+  documentId: string;
+  title: string;
+  notes: string | null;
+  validFrom: string | null;
+  validTo: string | null;
+  status: 'active' | 'promoted' | 'archived';
+  intendedRoleCode: string | null;
+  intendedRoleName: string | null;
+  mimeType: string | null;
+  sizeBytes: number;
+  promotedToObjectId: string | null;
+  promotedDocumentId: string | null;
+  promotedAt: string | null;
+  createdAt: string | null;
+}
+
+export interface ActorSupportSnapshot {
+  defaultRole: { code: string; name: string } | null;
+  documents: ActorSupportDocument[];
+}
+
+export function parseActorSupport(payload: unknown): ActorSupportSnapshot {
+  const record = payload && typeof payload === 'object' ? payload as GenericRecord : {};
+  const role = record.default_role && typeof record.default_role === 'object'
+    ? record.default_role as GenericRecord
+    : null;
+  const statuses = new Set(['active', 'promoted', 'archived']);
+  return {
+    defaultRole: role ? { code: readString(role.code), name: readString(role.name) } : null,
+    documents: Array.isArray(record.documents)
+      ? record.documents
+          .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+          .map((row) => {
+            const status = readString(row.status);
+            return {
+              documentId: readString(row.document_id),
+              title: readString(row.title),
+              notes: readNullableString(row.notes),
+              validFrom: readNullableString(row.valid_from),
+              validTo: readNullableString(row.valid_to),
+              status: (statuses.has(status) ? status : 'active') as ActorSupportDocument['status'],
+              intendedRoleCode: readNullableString(row.intended_role_code),
+              intendedRoleName: readNullableString(row.intended_role_name),
+              mimeType: readNullableString(row.mime_type),
+              sizeBytes: readNumber(row.size_bytes),
+              promotedToObjectId: readNullableString(row.promoted_to_object_id),
+              promotedDocumentId: readNullableString(row.promoted_document_id),
+              promotedAt: readNullableString(row.promoted_at),
+              createdAt: readNullableString(row.created_at),
+            };
+          })
+      : [],
+  };
+}
+
+/** Rôle par défaut + bibliothèque documentaire privée de l'acteur. */
+export async function listActorSupport(actorId: string): Promise<ActorSupportSnapshot> {
+  const client = requireCrmClient();
+  if (!client) return { defaultRole: { code: 'operator', name: 'Exploitant' }, documents: [] };
+  const { data, error } = await client.schema('api').rpc('list_actor_support', { p_actor_id: actorId });
+  if (error) throw error;
+  return parseActorSupport(data);
+}
+
+export interface ObjectDocumentTypeOption {
+  code: string;
+  name: string;
+}
+
+/** Types disponibles sur object_document lors d'un transfert depuis la bibliothèque acteur. */
+export async function listObjectDocumentTypes(): Promise<ObjectDocumentTypeOption[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return [
+      { code: 'brochure', name: 'Brochure' },
+      { code: 'contract', name: 'Contrat' },
+      { code: 'certificate', name: 'Attestation / certificat' },
+    ];
+  }
+  const { data, error } = await client
+    .from('ref_code_document_type')
+    .select('code, name')
+    .eq('is_active', true)
+    .order('position', { ascending: true })
+    .order('name', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({ code: readString(row.code), name: readString(row.name) }));
+}
+
+export async function saveActorDocumentMetadata(input: {
+  actorId: string;
+  documentId: string;
+  title?: string;
+  notes?: string;
+  intendedRoleCode?: string;
+  validFrom?: string;
+  validTo?: string;
+}): Promise<void> {
+  const client = requireCrmClient();
+  if (!client) return;
+  const payload: GenericRecord = { actor_id: input.actorId, document_id: input.documentId };
+  if (input.title !== undefined) payload.title = input.title;
+  if (input.notes !== undefined) payload.notes = input.notes;
+  if (input.intendedRoleCode !== undefined) payload.intended_role_code = input.intendedRoleCode;
+  if (input.validFrom !== undefined) payload.valid_from = input.validFrom;
+  if (input.validTo !== undefined) payload.valid_to = input.validTo;
+  const { error } = await client.schema('api').rpc('save_actor_document', { p_payload: payload });
+  if (error) throw error;
+}
 
 export interface SaveCrmActorInput {
   id?: string;
@@ -634,9 +772,9 @@ export interface SaveCrmActorInput {
   gender?: string;
   firstName?: string | null;
   lastName?: string | null;
-  /** INSERT seulement. */
+  /** INSERT seulement ; facultatif pour un acteur en projet. */
   objectId?: string;
-  /** INSERT seulement — défaut serveur 'operator'. */
+  /** Rôle métier par défaut ; repris sur le lien si objectId est fourni ou ajouté plus tard. */
   roleCode?: string;
   /**
    * Portrait acteur (PO point 4) — l'URL est normalement posée par la route d'upload

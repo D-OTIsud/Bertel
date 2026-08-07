@@ -25,7 +25,9 @@ Résumé pour l'exécutant :
 6. Performance : projection `fields` par union des colonnes cochées, concurrence
    bornée à 2 lots, aplatissement immédiat + libération du JSON (T3, T7, T8) ;
    cibles d'acceptation mesurées (T17).
-7. Matrice des colonnes **validée par le PO avant** le code du registre (T4 Step 0).
+7. Matrice des colonnes **validée par le PO avant** le code du registre (T4 Step 0) —
+   ✅ **faite et validée le 2026-07-31** : 122 colonnes, `capacity_max` sans repli,
+   « public » conservé. Ce STOP est levé ; il en reste **un seul** (T17, application live).
 8. Journal multi-ORG : `org_object_ids[]` + `org_attributions` (T12, T14).
 
 **Révision R2 (2e passe de revue, même jour) :**
@@ -543,17 +545,25 @@ et annulation par AbortSignal ; jamais de null dans p_ids."
   - helpers : `SEP`, `joinParts`, `itemLabels`, `groupItems`, `rawRecord`, `rawStr`, `rawList`, `namedList`, `dateFr`, `openingToText`, `EXPORT_GROUP_LABELS`, `requiredFieldsFor(columnIds): string[] | undefined`
 - **Interdit :** aucune colonne ne lit `privateNote`/`privateNotes` (constrainte globale — un test le verrouille en Tâche 7).
 
-- [ ] **Step 0 (R1) : la matrice des colonnes, validée par le PO AVANT le code**
+- [x] **Step 0 (R1) : la matrice des colonnes — ✅ VALIDÉE PAR LE PO le 2026-07-31**
 
-Produire `docs/superpowers/specs/2026-07-31-export-excel-columns-matrix.md` : un tableau
-UNE LIGNE PAR COLONNE du registre (celles des Tâches 5-7, qui servent de source), aux
-colonnes : `id | libellé FR | groupe | source (chemin ParsedObjectDetail ou raw.*) |
-type XLSX (text/number) | capacité requise | règle d'agrégation (jointure « | », comptage,
-premier…) | si absent (rend '') | caractère (public / partenaire / interne / personnel)`.
-Les colonnes `actor_*` portent « personnel » ; les colonnes `org`-clearance portent
-« interne ». Committer le fichier, puis **STOP : présenter la matrice au PO et attendre
-sa validation explicite avant d'exécuter les Tâches 5-7.** Toute correction du PO
-s'applique à la matrice ET aux blocs de code des tâches concernées avant de continuer.
+La matrice vit dans `docs/superpowers/specs/2026-07-31-export-excel-columns-matrix.md`
+(122 colonnes, une ligne chacune : `id | libellé FR | groupe | source | type XLSX |
+capacité requise | règle d'agrégation | si absent | caractère`). **Le STOP est levé** —
+les Tâches 5-7 peuvent s'exécuter. **Trois arbitrages PO sont déjà intégrés aux blocs
+de code de ce plan ; ne pas les défaire :**
+
+1. **122 colonnes, définitif.** L'écart avec les « ~140 » de la conception est une
+   estimation pré-implémentation, pas une perte. **N'ajouter AUCUNE colonne** pour
+   atteindre ce chiffre.
+2. **`capacity_max` : aucun repli** (Tâche 6). Pas de métrique sémantiquement « capacité »
+   ⇒ cellule vide. Un test dédié verrouille ce comportement.
+3. **« public » reste « public »** — la distinction « partenaire » n'existe pas dans le
+   modèle ; elle est précisée documentairement dans la matrice, pas encodée.
+
+Autres signalements validés en l'état : `readNamedValue` reçoit son `export` manquant
+au Step 3 ci-dessous ; `unhandled_keys` est classée **interne** ; les 6 colonnes
+`actor_contacts` lisent **exclusivement** `ctx.actorContacts`.
 
 - [ ] **Step 1 : écrire le test des helpers (échec attendu)**
 
@@ -1065,6 +1075,20 @@ describe('registre — labels/équipements/capacité/tarifs/horaires/médias (§
     expect(val('capacity')).toContain('Chambres');
     expect(val('group_min')).toBe('10');
   });
+  it("capacity_max — AUCUN repli : sans métrique « capacité », la cellule est VIDE (arbitrage PO)", () => {
+    // La fiche porte bien des métriques, mais aucune n'est une capacité d'accueil.
+    // Servir « 18 » (le nombre de chambres) sous « Capacité maximale » serait une
+    // donnée FAUSSE — un export se lit sans son contexte.
+    const noCapacityMetric = buildFixtureDetail({
+      capacities: [
+        { metric_code: 'bedrooms', metric_name: 'Chambres', value: 18 },
+        { metric_code: 'meeting_rooms', metric_name: 'Salles de séminaire', value: 2 },
+      ],
+    });
+    expect(getExportColumn('capacity_max')!.value(noCapacityMetric, EMPTY_CTX)).toBe('');
+    // La colonne « Capacités » (liste complète), elle, rend bien les deux métriques.
+    expect(getExportColumn('capacity')!.value(noCapacityMetric, EMPTY_CTX)).toContain('Chambres');
+  });
   it("tarifs — 'n/a' n'entre jamais dans un min (piège maison)", () => {
     expect(val('price_min')).toBe('90');
     expect(val('prices')).toContain('Chambre double');
@@ -1122,7 +1146,11 @@ Remplacer `// PLAN-TACHE-6-ICI` par (marqueur suivant en queue) :
 
   // ---------- Capacité & politiques ----------
   { id: 'capacity', label: 'Capacités', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.capacities.map((c) => `${c.label} : ${c.value}`)) },
-  { id: 'capacity_max', label: 'Capacité maximale', group: 'capacite', clearance: 'public', value: (d) => d.operations.capacities.find((c) => /capacit/i.test(c.label))?.value ?? d.operations.capacities[0]?.value ?? '' },
+  // Arbitrage PO (validation matrice) : AUCUN repli. Si aucune métrique ne dit
+  // sémantiquement « capacité », la cellule est VIDE. Servir « Chambres : 18 »
+  // sous l'en-tête « Capacité maximale » n'est pas une approximation, c'est une
+  // donnée fausse — et un export est lu sans son contexte.
+  { id: 'capacity_max', label: 'Capacité maximale', group: 'capacite', clearance: 'public', value: (d) => d.operations.capacities.find((c) => /capacit/i.test(c.label))?.value ?? '' },
   { id: 'rooms_count', label: 'Types de chambres', group: 'capacite', clearance: 'public', value: (d) => (d.operations.roomTypes.length ? String(d.operations.roomTypes.length) : '') },
   { id: 'room_types', label: 'Chambres', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.roomTypes.map((r) => joinParts([r.name, r.quantity && `×${r.quantity}`, r.capacityAdults && `${r.capacityAdults} pers.`], ' '))) },
   { id: 'meeting_rooms_count', label: 'Salles de séminaire', group: 'capacite', clearance: 'public', value: (d) => (d.operations.meetingRooms.length ? String(d.operations.meetingRooms.length) : '') },
@@ -1169,7 +1197,7 @@ const DISABILITY_LABELS: Record<string, string> = {
 };
 ```
 
-Note `capacity_max` : `CapacityItem` ne porte pas `metric_code` (il est retiré au dédoublonnage, utils.ts:1320) — le match se fait sur le libellé (`/capacit/i`), repli premier item. C'est assumé et commenté sur place.
+Note `capacity_max` : `CapacityItem` ne porte pas `metric_code` (retiré au dédoublonnage, `utils.ts:1320`) — le match se fait donc sur le **libellé** (`/capacit/i`), qui est déjà résolu en français par le serveur. **Aucun repli** (arbitrage PO) : pas de correspondance ⇒ cellule vide. Une cellule vide se lit comme « non renseigné » ; une autre métrique sous cet en-tête se lit comme un fait, et c'en serait un faux.
 
 - [ ] **Step 4 : vert + typecheck + commit**
 
@@ -3887,5 +3915,5 @@ git commit -m "docs(§208): decision log export Excel + garde 16t, differes trac
 - **Couverture R2.1 :** capacités acteur retirées de `clearanceLevels` et décidées par le seul préflight, `availableColumns(session, caps)`/`presetColumnIds(…, caps)`/`applyPreset(…, caps)` threadés avec défaut fermé (T4/T7/T9/T10) + 2 tests unitaires (ouverture sans ORG, fermeture avec ORG) + 1 cas RTL persona I3 ; `search_path` durci sur les 3 fonctions neuves (créées) et les 2 feuilles (par `ALTER FUNCTION`, corps intouchés) + sources corrigées (T12 Step 1bis) + relations qualifiées + sabotage temp-table (T14 J, vérifié rouge en T14 Step 3 sabotage B) ; T12 Produces liste les 5 surfaces ; runbook « 3 fonctions api neuves ».
 - **Écarts assumés vs revue (consignés §208, T18) :** `cellType` implémenté en champ optionnel (défaut `text`) plutôt qu'obligatoire — équivalent, moins de bruit ; la sélection mixte tolérée par le RPC sauf tout-refusé (`FORBIDDEN`), conformément à « les lignes autorisées sont remplies » ; le préflight rend des booléens AGRÉGÉS sur la sélection (∃ une fiche accessible ⇒ colonne offerte, les fiches refusées restent vides — cohérent avec la sélection mixte).
 - **Cohérence de types vérifiée :** `ActorContactsRow`/`ActorContactChannel`/`ExportCellValue`/`ActorCapabilities`/`CLOSED_ACTOR_CAPS` définis en T4/T7, consommés T7/T8/T9/T10/T16 ; `ActorContactsExportResult` identique T8 (squelette) / T16 (réel) ; `runSelectionXlsxExport` signature identique T8/T10 ; `callExportActorContactsRpc(ids, reason, meta, options)` identique T16 service/test ; `availableColumns(session, caps?)` et `presetColumnIds(presetId, session, caps?)` identiques T7/T9/T10 (caps optionnel, défaut fermé) ; `applyPreset(presetId, session, caps?)` identique T9/T10 ; `getExportActorCapabilities` rend `{actorIdentityAvailable, actorContactsAvailable}` = `ActorCapabilities` (T10) ; `requiredFieldsFor` défini T4, testé T7 Step 3bis, consommé T8.
-- **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) + mesures ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle). **Deux STOP PO :** T4 Step 0 (matrice) et T17 (live).
+- **Ordre d'exécution :** T1→T11 livrables sans SQL (les colonnes acteur échouent explicitement — squelette T8) ; T12→T15 = le SQL ; T16 branche le réel ; T17 séquence live (SQL avant front) + mesures ; T18 clôture. Un déploiement front AVANT 16t est sûr (erreur explicite, pas de fuite nouvelle). **STOP PO restant : UN SEUL — T17 (application live).** Celui de T4 Step 0 (matrice) est levé : validée le 2026-07-31, 122 colonnes, `capacity_max` sans repli, « public » conservé.
 

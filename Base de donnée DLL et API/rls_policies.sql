@@ -141,7 +141,11 @@ $$;
 CREATE OR REPLACE FUNCTION api.current_user_extended_object_ids()
 RETURNS SETOF text
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+-- §208/R2.1 : `pg_temp` EXPLICITEMENT EN DERNIER. Sans lui PostgreSQL cherche le
+-- schéma temporaire EN PREMIER pour les relations, donc un `CREATE TEMP TABLE
+-- user_org_membership` par n'importe quel `authenticated` accorderait ce périmètre
+-- sur n'importe quel objet. Cette feuille décide de ~40 policies de lecture.
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
   -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
   SELECT aor.object_id FROM actor_object_role aor

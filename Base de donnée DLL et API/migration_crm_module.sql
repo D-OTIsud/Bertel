@@ -269,7 +269,10 @@ CREATE INDEX IF NOT EXISTS idx_crm_interaction_parent
 CREATE OR REPLACE FUNCTION api.current_user_crm_object_ids()
 RETURNS SETOF text
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+-- §208/R2.1 : `pg_temp` EXPLICITEMENT EN DERNIER (sinon PostgreSQL cherche le schéma
+-- temporaire EN PREMIER pour les relations, et un `CREATE TEMP TABLE user_org_membership`
+-- accorderait le périmètre CRM — et la garde des coordonnées d'acteur — sur tout objet).
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
   SELECT ool.object_id
   FROM user_org_membership uom

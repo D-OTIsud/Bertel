@@ -49,6 +49,9 @@ function option(partial: Partial<ObjectWorkspaceLegalTypeOption> & { code: strin
   return {
     id: `id-${partial.code}`,
     label: partial.code,
+    // §209 — `description` est une aide de catalogue rendue par la modale ; aucune des fonctions
+    // pures testées ici ne la lit (buildNewDocumentRecord ne la recopie pas dans la ligne).
+    description: '',
     category: 'business',
     isPublic: false,
     isRequired: false,

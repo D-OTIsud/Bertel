@@ -146,6 +146,11 @@ const STATUS_LABELS: Record<string, string> = {
   published: 'Publiée', draft: 'Brouillon', hidden: 'Hors ligne', archived: 'Archivée',
 };
 
+/** Types de handicap (`domain.ts:81`) — aucune table de libellés côté serveur pour ces 4 codes. */
+const DISABILITY_LABELS: Record<string, string> = {
+  motor: 'Moteur', hearing: 'Auditif', visual: 'Visuel', cognitive: 'Mental / cognitif',
+};
+
 const PHONE_KINDS = new Set(['phone', 'tel', 'telephone', 'telephone_fixe']);
 const MOBILE_KINDS = new Set(['mobile', 'telephone_mobile']);
 
@@ -154,6 +159,18 @@ function firstPublicContact(d: ParsedObjectDetail, match: (kindCode: string) => 
 }
 function contactLine(c: { kind: string; value: string }): string {
   return c.kind ? `${c.kind} : ${c.value}` : c.value;
+}
+
+function priceAmounts(d: ParsedObjectDetail): number[] {
+  // object_price.amount vaut la CHAÎNE 'n/a' quand absent — filtrer avant tout Math.min (piège maison).
+  return d.operations.prices.map((p) => Number(p.amount)).filter((n) => Number.isFinite(n));
+}
+function priceLine(p: { label: string; amount: string; currency: string; periodLabel: string }): string {
+  const amount = Number.isFinite(Number(p.amount)) ? `${p.amount} ${p.currency || 'EUR'}` : '';
+  return joinParts([p.label, amount, p.periodLabel], ' — ');
+}
+function triState(value: boolean | null | undefined, yes: string, no: string): string {
+  return value == null ? '' : value ? yes : no;
 }
 
 // ---------- Colonnes (Tâches 5-7) ----------
@@ -212,7 +229,66 @@ export const EXPORT_COLUMNS: ExportColumnDef[] = [
   { id: 'description_hors_zone', label: 'Offre hors zone', group: 'descriptions', clearance: 'public', value: (d) => rawStr(d, 'description_offre_hors_zone') },
   { id: 'sanitary_measures', label: 'Mesures sanitaires', group: 'descriptions', clearance: 'public', value: (d) => rawStr(d, 'sanitary_measures') },
   { id: 'descriptions_langs', label: 'Langues de description', group: 'descriptions', clearance: 'public', value: (d) => joinParts([...new Set(d.text.descriptions.map((x) => x.language))]) },
-  // PLAN-TACHE-6-ICI
+
+  // ---------- Labels & classements ----------
+  { id: 'classifications', label: 'Classements & labels', group: 'labels', clearance: 'public', value: (d) => joinParts(groupItems(d, 'classifications').map((i) => joinParts([i.label, i.meta], ' '))) },
+  { id: 'labels_neutral', label: 'Labels', group: 'labels', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'labels')) },
+  { id: 'badges', label: 'Badges', group: 'labels', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'badges')) },
+  { id: 'sustainability_labels', label: 'Labels durabilité', group: 'labels', clearance: 'public', value: (d) => itemLabels(d.taxonomy.sustainability.labels) },
+  { id: 'sustainability_actions', label: 'Actions durabilité', group: 'labels', clearance: 'public', value: (d) => itemLabels(d.taxonomy.sustainability.actions) },
+  { id: 'accessibility_labels', label: 'Labels accessibilité', group: 'labels', clearance: 'public', value: (d) => namedList(d.raw.accessibility_labels) },
+  { id: 'disability_types', label: 'Handicaps couverts', group: 'labels', clearance: 'public', value: (d) => joinParts(rawList(d, 'accessibility_labels').flatMap((l) => (Array.isArray(l.disability_types_covered) ? (l.disability_types_covered as unknown[]).map((t) => DISABILITY_LABELS[String(t)] ?? String(t)) : []))) },
+
+  // ---------- Équipements ----------
+  { id: 'amenities', label: 'Équipements', group: 'equipements', clearance: 'public', value: (d) => joinParts(d.taxonomy.amenities) },
+  { id: 'amenities_count', label: "Nombre d'équipements", group: 'equipements', clearance: 'public', value: (d) => (d.taxonomy.amenities.length ? String(d.taxonomy.amenities.length) : '') },
+  { id: 'payment_methods', label: 'Moyens de paiement', group: 'equipements', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'payments')) },
+  { id: 'practices', label: 'Pratiques', group: 'equipements', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'practices')) },
+  { id: 'cuisine_types', label: 'Types de cuisine', group: 'equipements', clearance: 'public', value: (d) => namedList(d.raw.cuisine_types) },
+  { id: 'dietary_tags', label: 'Régimes alimentaires', group: 'equipements', clearance: 'public', value: (d) => namedList(d.raw.dietary_tags) },
+  { id: 'allergens', label: 'Allergènes', group: 'equipements', clearance: 'public', value: (d) => namedList(d.raw.allergens) },
+
+  // ---------- Capacité & politiques ----------
+  { id: 'capacity', label: 'Capacités', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.capacities.map((c) => `${c.label} : ${c.value}`)) },
+  // Note capacity_max : CapacityItem ne porte pas metric_code (retiré au dédoublonnage, utils.ts:1320) —
+  // le match se fait sur le libellé (/capacit/i), repli premier item. Assumé (§208) — AUCUN autre repli
+  // (bedrooms/pitches/…) : une fiche sans métrique « capacité » rend une cellule VIDE, jamais une valeur fausse.
+  { id: 'capacity_max', label: 'Capacité maximale', group: 'capacite', clearance: 'public', value: (d) => d.operations.capacities.find((c) => /capacit/i.test(c.label))?.value ?? d.operations.capacities[0]?.value ?? '' },
+  { id: 'rooms_count', label: 'Types de chambres', group: 'capacite', clearance: 'public', value: (d) => (d.operations.roomTypes.length ? String(d.operations.roomTypes.length) : '') },
+  { id: 'room_types', label: 'Chambres', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.roomTypes.map((r) => joinParts([r.name, r.quantity && `×${r.quantity}`, r.capacityAdults && `${r.capacityAdults} pers.`], ' '))) },
+  { id: 'meeting_rooms_count', label: 'Salles de séminaire', group: 'capacite', clearance: 'public', value: (d) => (d.operations.meetingRooms.length ? String(d.operations.meetingRooms.length) : '') },
+  { id: 'meeting_rooms', label: 'Salles (détail)', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.meetingRooms.map((m) => joinParts([m.name, m.areaM2 && `${m.areaM2} m²`, m.capacityTheatre && `théâtre ${m.capacityTheatre}`], ' — '))) },
+  { id: 'group_min', label: 'Groupe — taille min', group: 'capacite', clearance: 'public', value: (d) => d.operations.groupPolicy?.minSize ?? '' },
+  { id: 'group_max', label: 'Groupe — taille max', group: 'capacite', clearance: 'public', value: (d) => d.operations.groupPolicy?.maxSize ?? '' },
+  { id: 'group_only', label: 'Groupes uniquement', group: 'capacite', clearance: 'public', value: (d) => (d.operations.groupPolicy ? triState(d.operations.groupPolicy.groupOnly, 'Oui', 'Non') : '') },
+  { id: 'group_notes', label: 'Groupe — conditions', group: 'capacite', clearance: 'public', value: (d) => d.operations.groupPolicy?.notes ?? '' },
+  { id: 'pets_accepted', label: 'Animaux acceptés', group: 'capacite', clearance: 'public', value: (d) => triState(d.operations.petPolicy?.accepted, 'Oui', 'Non') },
+  { id: 'pets_conditions', label: 'Animaux — conditions', group: 'capacite', clearance: 'public', value: (d) => joinParts(d.operations.petPolicy?.details ?? []) },
+  { id: 'checkin', label: "Heure d'arrivée", group: 'capacite', clearance: 'public', value: (d) => joinParts([rawStr(d, 'stay_policy', 'checkin_from'), rawStr(d, 'stay_policy', 'checkin_to')], ' – ') },
+  { id: 'checkout', label: 'Heure de départ', group: 'capacite', clearance: 'public', value: (d) => rawStr(d, 'stay_policy', 'checkout_until') },
+
+  // ---------- Tarifs ----------
+  { id: 'prices', label: 'Tarifs', group: 'tarifs', clearance: 'public', value: (d) => joinParts(d.operations.prices.map(priceLine)) },
+  { id: 'price_min', label: 'Tarif minimum', group: 'tarifs', clearance: 'public', value: (d) => { const a = priceAmounts(d); return a.length ? String(Math.min(...a)) : ''; } },
+  { id: 'currency', label: 'Devise', group: 'tarifs', clearance: 'public', value: (d) => d.operations.prices.find((p) => p.currency)?.currency ?? '' },
+  { id: 'discounts_count', label: 'Réductions (nombre)', group: 'tarifs', clearance: 'public', value: (d) => (d.operations.discounts.length ? String(d.operations.discounts.length) : '') },
+  { id: 'discounts', label: 'Réductions', group: 'tarifs', clearance: 'public', value: (d) => joinParts(d.operations.discounts.map((x) => readNamedValue(x, ''))) },
+  { id: 'promotions', label: 'Promotions', group: 'tarifs', clearance: 'org', value: (d) => namedList(d.raw.promotions) },
+
+  // ---------- Horaires ----------
+  { id: 'openings', label: "Horaires d'ouverture", group: 'horaires', clearance: 'public', value: (d) => joinParts(d.operations.openings.map(openingToText)) },
+  { id: 'openings_count', label: "Périodes d'ouverture", group: 'horaires', clearance: 'public', value: (d) => (d.operations.openings.length ? String(d.operations.openings.length) : '') },
+  { id: 'open_all_year', label: "Ouvert toute l'année", group: 'horaires', clearance: 'public', value: (d) => (d.operations.openings.length === 0 ? '' : d.operations.openings.some((o) => o.allYears) ? 'Oui' : 'Non') },
+
+  // ---------- Médias ----------
+  { id: 'photo_main', label: 'Photo principale (URL)', group: 'medias', clearance: 'public', value: (d) => d.media.hero?.url ?? '' },
+  { id: 'photo_main_credit', label: 'Crédit photo principale', group: 'medias', clearance: 'public', value: (d) => d.media.hero?.credit ?? '' },
+  { id: 'media_count', label: 'Nombre de médias', group: 'medias', clearance: 'public', value: (d) => (d.media.items.length ? String(d.media.items.length) : '') },
+  { id: 'media_urls', label: 'URLs des médias', group: 'medias', clearance: 'public', value: (d) => joinParts(d.media.items.map((m) => m.url)) },
+  { id: 'media_credits', label: 'Crédits médias', group: 'medias', clearance: 'public', value: (d) => joinParts([...new Set(d.media.items.map((m) => m.credit).filter(Boolean))]) },
+  { id: 'media_tags', label: 'Tags médias', group: 'medias', clearance: 'public', value: (d) => joinParts(d.media.tagCloud) },
+  { id: 'media_private_count', label: 'Médias non publics', group: 'medias', clearance: 'org', value: (d) => { const n = d.media.items.filter((m) => m.visibility && m.visibility !== 'public').length; return n ? String(n) : ''; } },
+  // PLAN-TACHE-7-ICI
 ];
 
 export const EXPORT_COLUMN_IDS: string[] = EXPORT_COLUMNS.map((c) => c.id);

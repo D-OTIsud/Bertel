@@ -12,21 +12,27 @@
 
 ## 1. Le problème
 
-Le projet compte **101 catalogues de référence**, et un seul tiers d'entre eux est administrable :
+Le projet compte **103 catalogues de référence**, et un seul tiers d'entre eux est administrable :
 
 | Espèce | Nombre | Administrable aujourd'hui |
 |---|---|---|
 | Domaines plats de `ref_code` | 52 | **oui** — `RefCodeEditor` (phase 7.5, §119) |
 | Domaines taxonomiques de `ref_code` | 19 | non, et c'est voulu (triggers d'applicabilité + closure) |
-| Tables `public.ref_*` autonomes | 30 | **non** |
+| Tables `public.ref_*` autonomes | 32 | **non** |
+
+> Chiffres mesurés le 2026-08-07 : `SELECT count(DISTINCT domain) FROM ref_code` = 71, et 32 relations
+> ordinaires `public.ref_*` qui ne sont pas des partitions. Les 32 incluent
+> `ref_code_domain_registry` et `ref_code_taxonomy_closure`, qui portent le préfixe `ref_code_` sans
+> être des partitions — un filtre par nom les perdrait en silence, le test doit être `pg_inherits`.
 
 L'éditeur existant est déjà générique *pour ce qu'il couvre* : il ne porte pas une ligne de code par
-vocabulaire, il dérive son maître de la base. Le trou est ailleurs — les 30 tables autonomes, dont
+vocabulaire, il dérive son maître de la base. Le trou est ailleurs — les 32 tables autonomes, dont
 `ref_legal_type`, `ref_amenity`, `ref_language`, `ref_classification_scheme`, n'ont aucune surface.
 
-Ces 30 tables **n'ont pas la même forme** : 15 portent le quatuor `code`/`name`/`position`,
-`ref_sustainability_action` n'a pas de colonne `name`, `ref_commune` n'a pas de `code`, et trois d'entre
-elles ne sont que des matrices à deux colonnes. C'est ce qui rend « une interface pour tous les
+Ces 32 tables **n'ont pas la même forme**, et l'écart est plus large qu'il n'y paraît : **12 n'ont
+aucune colonne `name`** (`ref_sustainability_action` porte `label`), `ref_commune` n'a pas de `code` et
+sa clé primaire est un `varchar(5)` naturel, cinq sont des matrices à clé composite, une
+(`ref_interop_crosswalk`) n'a **aucune clé primaire**. C'est ce qui rend « une interface pour tous les
 catalogues » non trivial : tout ce qui s'appelle `ref_*` n'a pas la même nature.
 
 ---
@@ -64,12 +70,40 @@ Pour chaque catalogue elle expose :
 |---|---|---|
 | `catalog_key` | nom de table, ou `ref_code:<domain>` | identifiant stable côté front et RPC |
 | `columns[]` (nom, type, obligatoire, défaut, position) | `information_schema.columns` | générer les contrôles (§4) |
-| `primary_key` | `pg_constraint` | cibler une ligne |
+| `primary_key_columns[]` (nom + type) | `pg_constraint` | **identifier une ligne — voir §3.2 bis** |
+| `is_identifiable` | dérivé | `false` si la relation n'a aucune clé primaire ⇒ lecture seule d'office |
 | `outgoing_fk[]` (colonne → catalogue cible) | `pg_constraint` | rendre une liste déroulante alimentée par l'autre catalogue |
 | `incoming_fk[]` (table, colonne) | `pg_constraint` | compter « utilisé par N » et bloquer la suppression |
 | `enum_values[]` | `pg_enum` | rendre une liste déroulante d'énuméré |
 
 Rien de tout cela n'est écrit à la main : la base décrit sa propre forme.
+
+Pour l'espèce `ref_code_domain`, `columns[]` n'est pas lue de `pg_attribute` (un domaine n'est pas une
+relation) mais **synthétisée** sur la forme éditable de `ref_code` : `code`, `name`, `name_i18n`,
+`position`, `is_active`. Sans cette synthèse, 71 catalogues sur 103 seraient décrits sans aucune
+colonne et l'écran ne produirait aucun champ de saisie.
+
+### 3.1 bis — Identité d'une ligne : `p_key jsonb`, jamais un `uuid`
+
+Mesuré sur la base : **10 des 32 tables** ne portent pas une clé primaire `uuid` simple.
+
+| Forme | Catalogues |
+|---|---|
+| PK naturelle `text`/`varchar` | `ref_commune` (`insee_code varchar(5)`), `ref_facet_registry` (`facet_table`), `ref_code_domain_registry` (`domain`) |
+| PK composite à 2 colonnes | `ref_capacity_applicability`, `ref_classification_scheme_applicability`, `ref_classification_equivalent_action`, `ref_classification_equivalent_group`, `ref_facet_applicability` |
+| PK composite à 3 colonnes | `ref_code_taxonomy_closure` |
+| **Aucune clé primaire** | `ref_interop_crosswalk` |
+
+Conséquences non négociables :
+
+- l'identité d'une ligne circule en **`p_key jsonb`** (`{"scheme_id": "...", "object_type": "HLO"}`),
+  jamais en `p_id uuid`. Un `p_id uuid` rendrait au moins dix catalogues non éditables, dont quatre
+  que la spec annonce éditables ;
+- la clause `WHERE` de mise à jour et de suppression est bâtie depuis **toutes** les colonnes de PK,
+  chacune citée par `format(%I)` et castée à son type découvert ;
+- **une relation sans clé primaire est en lecture seule d'office**, motif dérivé (« aucune clé
+  primaire : une ligne n'y est pas identifiable »). La règle est *dérivée*, pas seedée dans le
+  registre — une future table sans PK ne peut donc pas passer entre les mailles.
 
 ### 3.2 `ref_catalog_registry` — l'éditorial (une ligne par exception)
 
@@ -81,13 +115,20 @@ Ne porte que ce que la base ne peut pas deviner :
 | `label` | nom lisible (« Documents juridiques », pas `ref_legal_type`) |
 | `family` | famille métier — voir l'annexe A |
 | `used_in` | section de fiche où le vocabulaire apparaît, ex. « §18 Juridique » (texte libre, nullable) |
-| `label_column` | colonne de libellé quand ce n'est pas `name` (cas `ref_sustainability_action`) |
+| `label_column` | **surcharge** de la colonne de libellé ; la résolution par défaut est une cascade (voir ci-dessous) |
 | `access` | `editable` (défaut) ou `readonly` |
 | `readonly_reason` | **obligatoire si `access = 'readonly'`** — la phrase affichée à l'écran |
 | `position` | ordre dans la famille |
 
 **Une table absente du registre reste visible et éditable**, dans la famille « À classer ». C'est
 délibéré : un catalogue oublié doit gêner, pas disparaître. Le registre ne peut que **restreindre**.
+
+**La colonne de libellé se résout par cascade, pas par déclaration.** Mesuré : **12 des 32 tables**
+n'ont pas de colonne `name` — `ref_sustainability_action` porte `label`, pas `title`. Une déclaration
+par table dans le registre serait donc la règle et non l'exception, et chaque oubli produirait une
+ligne sans libellé. Ordre de résolution : `label_column` du registre s'il existe, sinon la première
+colonne texte présente parmi `name`, `label`, `title`, `libelle`, sinon `code`, sinon la concaténation
+des colonnes de clé primaire (cas des matrices, dont le libellé est composé par nature).
 
 ### 3.3 L'invariant de sécurité qui découle de cette séparation
 
@@ -102,12 +143,21 @@ Le RPC n'accepte d'écrire que dans une relation que `internal.v_ref_catalog` a 
 - inverser les deux (allowlist = registre) transformerait une erreur de seed en élargissement de
   privilège. C'est le piège à ne pas recréer.
 
-### 3.4 Verrouillages initiaux (seed du registre)
+### 3.4 Verrouillages initiaux
+
+Deux mécanismes, et il faut préférer le premier chaque fois qu'il s'applique.
+
+**Verrouillages DÉRIVÉS** (aucune ligne de registre, donc rien à oublier) :
+`is_identifiable = false` ⇒ lecture seule, motif « Aucune clé primaire : une ligne n'y est pas
+identifiable » — c'est le cas de `ref_interop_crosswalk` ; et pour l'espèce `ref_code_domain`,
+`api.ref_code_domain_is_editable(domain) = false` ⇒ lecture seule.
+
+**Verrouillages SEEDÉS** (le registre, quand la raison est métier et non structurelle) :
 
 | Catalogue | `access` | `readonly_reason` |
 |---|---|---|
 | `ref_permission` | `readonly` | « Chaque code est lu en dur par le contrôle d'accès : en retirer un ferme des droits sans qu'aucun test ne rougisse. » |
-| les 19 domaines `taxonomy_*` | `readonly` | « Les taxonomies sont régies par les triggers d'applicabilité et la closure de parenté. Elles s'éditent par migration. » |
+| les domaines `ref_code` **non éditables** | `readonly` | « Domaine structurel : taxonomie, hiérarchie ou couplage à un type d'objet. S'édite par migration. » — le critère est **`api.ref_code_domain_is_editable(domain)`**, la fonction que l'éditeur actuel utilise déjà, et non `is_taxonomy` seul : elle exclut aussi les domaines hiérarchiques et ceux couplés à un `object_type`. Reprendre un critère plus étroit ferait diverger l'écran du backend au premier domaine hiérarchique non taxonomique |
 | `ref_facet_registry`, `ref_facet_applicability` | `readonly` | « Registre type→facette : source de vérité du trigger `trg_assert_facet_applicable`. » |
 | `ref_document` | `readonly` | « Ce ne sont pas des valeurs de vocabulaire mais les fichiers déposés par les rédacteurs. » |
 
@@ -152,6 +202,11 @@ opaque que ce projet refuse.
 découvertes, pas une choisie à la main. La corbeille s'active à 0 ; sinon elle affiche le nombre et
 reste inerte. Le refus est **ré-évalué serveur** : l'UI grisée n'est pas la garde.
 
+Le comptage serveur ne suffit pourtant pas : une référence peut naître **entre le comptage et le
+`DELETE`**. Le `DELETE` doit donc être enveloppé d'un `EXCEPTION WHEN foreign_key_violation` qui rend
+le même `STILL_REFERENCED` — le compteur est le message lisible, la contrainte est la garde. Un
+`DELETE` qui n'affecte aucune ligne rend `ROW_NOT_FOUND`, jamais un succès silencieux.
+
 ### 4.4 Les domaines `ref_code` ne sont pas réimplémentés
 
 Le RPC générique reconnaît `kind = 'ref_code_domain'` et **délègue aux fonctions de la phase 7.5**
@@ -171,9 +226,22 @@ un `GRANT` ciblé ne le retire pas), `SET search_path = public, api, internal` e
 | RPC | Rôle |
 |---|---|
 | `api.list_ref_catalogs()` | familles, catalogues, compteurs de valeurs, accès + motif |
-| `api.get_ref_catalog(p_catalog_key)` | schéma de colonnes rendu, valeurs, compteur d'usage par ligne |
-| `api.rpc_upsert_ref_row(p_catalog_key, p_id, p_values jsonb)` | création / édition |
-| `api.rpc_delete_ref_row(p_catalog_key, p_id)` | suppression, refusée si référencée |
+| `api.get_ref_catalog(p_catalog_key)` | colonnes, **clés étrangères sortantes** (pour les listes déroulantes), valeurs, compteur d'usage par ligne |
+| `api.rpc_upsert_ref_row(p_catalog_key, p_key jsonb, p_values jsonb)` | création (`p_key` NULL) / édition |
+| `api.rpc_delete_ref_row(p_catalog_key, p_key jsonb)` | suppression, refusée si référencée |
+
+`get_ref_catalog` **doit** émettre `outgoing_fk` : sans lui le front ne peut pas alimenter les listes
+déroulantes de référence, et une colonne pointant vers un autre catalogue retomberait en champ texte
+libre — c'est-à-dire en saisie d'UUID à la main.
+
+**Délégation `ref_code` — appels en arguments NOMMÉS obligatoires.** La signature existante est
+`api.rpc_upsert_ref_code(p_domain, p_name, p_id, p_code, p_name_i18n, p_position)` : `p_name` **avant**
+`p_code`. Un appel positionnel qui suppose l'ordre inverse écrit le code dans le libellé et le libellé
+dans le code, sans erreur SQL. Écrire `api.rpc_upsert_ref_code(p_domain => …, p_code => …, p_name => …)`.
+La délégation couvre **quatre** fonctions, pas une : `rpc_upsert_ref_code`, `rpc_set_ref_code_active`,
+`rpc_reorder_ref_code`, `rpc_delete_ref_code`. Ne déléguer que la première ferait perdre l'activation
+et le réordonnancement des 52 domaines au moment où `RefCodeEditor` est absorbé — une régression
+fonctionnelle déguisée en refonte.
 
 **Discipline, non négociable :**
 
@@ -207,7 +275,7 @@ L'écran affiche une phrase française ; une erreur PostgreSQL brute ne remonte 
 - `src/services/ref-catalogs.ts` — appels aux 4 RPC ; `src/services/ref-codes.ts` conservé (le RPC
   générique délègue, mais le front n'a plus à connaître la distinction).
 - Recherche plein texte sur le nom de catalogue **et** sur les libellés de valeurs — c'est ce qui rend
-  101 catalogues navigables.
+  103 catalogues navigables.
 - Invalidation : toute écriture invalide `REFERENCE_CATALOGS_QUERY_KEY` (cache de session 1 h,
   persisté), sinon les rédacteurs continuent de voir l'ancien vocabulaire jusqu'à expiration.
 
@@ -225,12 +293,27 @@ La garde qui compte n'est pas « le registre contient des lignes » — ça ne p
 2. **La liste blanche refuse vraiment** : un appel visant `object`, `auth.users` ou `staging.*` doit
    lever `UNKNOWN_CATALOG`. **C'est l'assertion de sécurité du fichier** — si elle disparaît, l'approche
    A devient une écriture arbitraire.
-3. **Balayage des 101** : chaque catalogue découvert par la vue doit se lister par `get_ref_catalog`
+3. **Balayage exhaustif** : chaque catalogue découvert par la vue doit se lister par `get_ref_catalog`
    sans erreur. C'est ce qui attrape une table dont la forme casse le générateur (clé primaire
-   composite, absence de clé primaire, type exotique).
+   composite, absence de clé primaire, type exotique). Le compte attendu est **calculé dans le test**
+   (`(SELECT count(*) FROM internal.v_ref_catalog)`), jamais écrit en dur ni comparé en `>=` — un
+   `>= 80` masquerait la disparition de vingt catalogues.
 
-Assertions complémentaires : un catalogue `readonly` refuse l'écriture ; `code` figé ⇒ `CODE_IMMUTABLE` ;
-`access = 'readonly'` sans `readonly_reason` est rejeté par une contrainte `CHECK`.
+Assertions complémentaires : un catalogue `readonly` refuse l'écriture ; `code` figé ⇒ `CODE_IMMUTABLE`
+(mais renvoyer le **même** code doit être toléré, sinon aucun formulaire pré-rempli ne peut enregistrer) ;
+`access = 'readonly'` sans `readonly_reason` est rejeté par un `CHECK` ; une ligne identifiée par une
+clé composite (`ref_capacity_applicability`) et une ligne à clé naturelle texte (`ref_commune`) sont
+toutes deux éditables et supprimables — c'est le test qui prouve que `p_key jsonb` fonctionne.
+
+**`REQUIRED_HIDDEN_COLUMN` est une garde SERVEUR, pas seulement une désactivation d'écran.** À la
+création, une colonne obligatoire sans valeur par défaut absente du payload lève cette erreur. Sans
+implémentation serveur, l'erreur n'existerait que dans la liste des codes de §5.1 et le test
+correspondant serait vacant — il n'appellerait aucune fonction.
+
+**Aucune assertion ne doit pouvoir passer sur un ensemble vide ou sur une condition triviale.** Un
+`ASSERT x ? k OR jsonb_array_length(rows) > 0` est vrai dès qu'il y a une ligne : il ne teste rien.
+Le test du compteur multi-FK doit **poser** des références connues sur deux tables différentes et
+exiger la **somme exacte**.
 
 **Front :** un test par type de colonne sur `buildCatalogFieldSpec` ; `computeAddBlocked` nomme la
 colonne fautive ; le rendu affiche le motif de verrouillage d'un catalogue `readonly`.
@@ -289,4 +372,4 @@ monospace, « utilisé par N fiches », édition et corbeille (grisée à N > 0)
 catalogue s'ouvrent dans la fiche de la valeur, pas dans la ligne du tableau.
 
 La maquette affichait « 82 catalogues » : elle a été faite avant que les 19 domaines taxonomiques
-soient intégrés à la liste en lecture seule. Le compte cible est **101**.
+soient intégrés à la liste en lecture seule. Le compte cible est **103**.

@@ -394,6 +394,16 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_classification_regroup_network_labels.sql"
 
+      - name: "§211 E1 — dynamic-list resolver split (internal engine reaches 205, public contract still capped at 200, internal helper not executable by anon/authenticated)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_list_resolver_internal.sql"
+
+      - name: "§211 E1 — Listes module non-regression (get_list / list_my_lists unchanged by the resolver split)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_list.sql"
+
       - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch incl. save_object_rooms)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

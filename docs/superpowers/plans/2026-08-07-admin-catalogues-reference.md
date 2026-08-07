@@ -18,7 +18,7 @@
 - **`SET search_path = pg_catalog, public, api, internal`**, donc `gen_random_uuid()` et jamais `uuid_generate_v4()`.
 - **Garde fail-closed : `IF api.is_platform_superuser() IS NOT TRUE THEN RAISE`** — `IS NOT TRUE`, pas `NOT` : la fonction rend `NULL` hors contexte HTTP.
 - **Identité d'une ligne = `p_key jsonb`.** 10 des 32 tables sortent du moule `uuid` simple : `ref_commune` a une PK `varchar(5)`, cinq matrices sont composites, `ref_code_taxonomy_closure` a trois colonnes, `ref_facet_registry` et `ref_code_domain_registry` ont une PK `text`, et **`ref_interop_crosswalk` n'a aucune clé primaire**.
-- **La clé canonique d'une ligne est `jsonb_build_object(<cols PK>)::text`**, des deux côtés — `usage` en est indexé, `p_key` en est la forme désérialisée. Une valeur de PK brute comme clé serait ambiguë dès qu'une PK est composite.
+- **`usage` n'existe que pour les catalogues à clé SIMPLE** (une matrice n'est référencée par personne), et sa clé y est la **valeur de la clé primaire en texte**, écrite à l'identique par le serveur et par `rowKeyString`. Ce n'est délibérément PAS du JSON sérialisé : `jsonb::text` rend `{"id": "x"}` (avec une espace) là où `JSON.stringify` rend `{"id":"x"}`, et les deux ne se rejoindraient jamais. Si un jour `usage` couvre les clés composites, ne pas joindre par un séparateur — `U+001F` peut exister dans une clé textuelle — mais préfixer chaque segment de sa longueur.
 - **Tout appel aux RPC de la phase 7.5 se fait en arguments NOMMÉS.** La signature est `api.rpc_upsert_ref_code(p_domain, p_name, p_id, p_code, p_name_i18n, p_position)` — `p_name` **avant** `p_code`. Un appel positionnel inversé écrit le code dans le libellé **sans lever d'erreur SQL**.
 - **Aucune assertion de test en `>=` sur un compte de catalogues**, aucune assertion satisfaite par un ensemble non vide, aucune assertion qui ne fasse pas tourner le code testé.
 - Le SQL vit dans `Base de donnée DLL et API/` (espaces dans le chemin : guillemets obligatoires en shell). Front depuis `bertel-tourism-ui/` : `npx tsc --noEmit -p tsconfig.json`, `npx jest <chemin>`.
@@ -445,7 +445,7 @@ entre les mailles d'un seed oublie. Le test l'asserte."
 
 > **Le maître et le détail doivent lire le MÊME accès.** Si `list_ref_catalogs` rend `COALESCE(r.access,'editable')` pendant que `get_ref_catalog` passe par le helper dérivé, une table sans clé primaire s'affiche éditable dans la liste puis verrouillée à l'ouverture. Les deux appellent les helpers.
 
-> **`usage` est indexé par la clé CANONIQUE de la ligne** — `jsonb_build_object('id', …)::text` — et non par la valeur brute de la PK. Une valeur brute serait ambiguë dès qu'une PK est composite, et le front n'aurait pas de clé commune entre `rows` et `usage`.
+> **`usage` n'est calculé que pour les catalogues à clé SIMPLE**, et sa clé y est la valeur de la clé primaire en texte — la même que `rowKeyString` côté front. Les matrices n'ont pas de compteur : rien ne les référence.
 
 - [ ] **Step 1: Écrire les tests qui échouent**
 
@@ -694,7 +694,15 @@ BEGIN
     -- colonne : aucune re-clé n'est nécessaire.
     v_use := api.ref_code_usage_counts(v.domain);
   ELSE
-    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) FROM public.%I t',
+    -- ORDER BY EXPLICITE. Sans lui, jsonb_agg rend l'ordre physique du heap : l'écran
+    -- afficherait un ordre qui n'est pas celui de `position`, et les flèches
+    -- monter/descendre enverraient une permutation fondée sur un ordre faux.
+    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY %s), ''[]''::jsonb) FROM public.%I t',
+                   CASE WHEN EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c
+                                     WHERE c->>'name' = 'position')
+                     THEN 't.position NULLS LAST, ' ELSE '' END
+                   || (SELECT string_agg(format('t.%I', k->>'name'), ', ')
+                       FROM jsonb_array_elements(v.primary_key_columns) k),
                    v.table_name) INTO v_rows;
 
     -- Compteur : FUSION ADDITIVE de toutes les FK entrantes. L'écraser à chaque tour de
@@ -910,14 +918,61 @@ BEGIN
          'l''interrupteur « actif » des domaines doit rester câblé après absorption de RefCodeEditor';
 
   PERFORM api.rpc_reorder_ref_rows('ref_code:cuisine_type',
-            jsonb_build_array(jsonb_build_object('id', v_b), jsonb_build_object('id', v_a)));
-  ASSERT (SELECT position FROM ref_code WHERE id = v_b)
-       < (SELECT position FROM ref_code WHERE id = v_a),
-         'le réordonnancement des domaines doit rester câblé';
+            (SELECT jsonb_agg(jsonb_build_object('id', rc.id) ORDER BY rc.id)
+             FROM ref_code rc WHERE rc.domain = 'cuisine_type'));
+  ASSERT (SELECT count(DISTINCT position) FROM ref_code WHERE domain = 'cuisine_type')
+       = (SELECT count(*) FROM ref_code WHERE domain = 'cuisine_type'),
+         'le réordonnancement des domaines doit rester câblé et produire des rangs distincts';
 
   PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_a));
   PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_b));
   RAISE NOTICE 'délégation ref_code assertions passed';
+END$$;
+
+-- Réordonnancement d'une TABLE : permutation sous index unique partiel, et refus des
+-- listes incomplètes, dupliquées ou porteuses d'une clé inconnue.
+DO $$
+DECLARE v_keys jsonb; v_ok boolean; v_first uuid; v_second uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  -- ref_language porte uq_ref_language_position (UNIQUE partiel) : une écriture en une
+  -- seule passe violerait l'unicité dès la première permutation. C'est CE test qui
+  -- rougit si l'écriture en deux phases disparaît.
+  SELECT jsonb_agg(jsonb_build_object('id', l.id) ORDER BY l.position NULLS LAST, l.id)
+    INTO v_keys FROM ref_language l;
+  SELECT (v_keys->0->>'id')::uuid, (v_keys->1->>'id')::uuid INTO v_first, v_second;
+
+  PERFORM api.rpc_reorder_ref_rows('ref_language',
+    jsonb_build_array(v_keys->1, v_keys->0) || (SELECT COALESCE(jsonb_agg(e), '[]'::jsonb)
+      FROM jsonb_array_elements(v_keys) WITH ORDINALITY AS t(e, ord) WHERE ord > 2));
+  ASSERT (SELECT position FROM ref_language WHERE id = v_second)
+       < (SELECT position FROM ref_language WHERE id = v_first),
+         'la permutation doit passer malgré l''index unique partiel sur position';
+
+  -- Liste INCOMPLÈTE : refusée, sinon on réordonnerait silencieusement de travers.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language', jsonb_build_array(v_keys->0));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
+  ASSERT v_ok, 'une liste partielle doit lever INCOMPLETE_ORDER';
+
+  -- DOUBLON : refusé.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language',
+    (SELECT jsonb_agg(e) FROM jsonb_array_elements(v_keys || jsonb_build_array(v_keys->0)) e));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
+  ASSERT v_ok, 'une liste avec doublon doit lever INCOMPLETE_ORDER';
+
+  -- Clé INCONNUE : refusée.
+  v_ok := false;
+  BEGIN
+    PERFORM api.rpc_reorder_ref_rows('ref_language',
+      (SELECT jsonb_agg(e) FROM jsonb_array_elements(v_keys) WITH ORDINALITY AS t(e, ord)
+       WHERE ord > 1) || jsonb_build_array(jsonb_build_object('id', gen_random_uuid())));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%UNKNOWN_ROW%'; END;
+  ASSERT v_ok, 'une clé inconnue doit lever UNKNOWN_ROW';
+
+  RAISE NOTICE 'réordonnancement assertions passed';
 END$$;
 
 -- (4) ASSERTION DE SÉCURITÉ — si elle disparaît, le RPC devient une écriture arbitraire.
@@ -1137,12 +1192,27 @@ END $$;
 
 -- Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
 -- monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
+--
+-- DEUX PIÈGES, tous deux vérifiés en base :
+--   (a) `ref_language` porte `uq_ref_language_position` — un index UNIQUE PARTIEL sur
+--       position. Permuter 1↔2 par deux UPDATE successifs viole l'unicité au premier.
+--       L'écriture est donc EN DEUX PHASES : on pousse d'abord tout le monde dans une
+--       plage libre (1 000 000 + rang), puis on redescend sur le rang final.
+--   (b) une liste partielle ou dupliquée réordonnerait silencieusement de travers : on
+--       exige l'ensemble EXACT des lignes du catalogue, sans doublon.
 CREATE OR REPLACE FUNCTION api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)
 RETURNS void LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal
 AS $$
 DECLARE
-  v record; v_where text; i integer := 0; k jsonb;
+  v        record;
+  v_where  text;
+  v_n      bigint;
+  v_given  integer;
+  v_uniq   integer;
+  v_found  bigint;
+  i        integer := 0;
+  k        jsonb;
 BEGIN
   IF api.is_platform_superuser() IS NOT TRUE THEN
     RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
@@ -1155,7 +1225,26 @@ BEGIN
     RAISE EXCEPTION 'LOCKED_CATALOG: %', p_catalog_key USING ERRCODE = '42501';
   END IF;
 
+  -- Aucun doublon dans la liste reçue.
+  v_given := jsonb_array_length(p_keys);
+  SELECT count(DISTINCT e::text) INTO v_uniq FROM jsonb_array_elements(p_keys) e;
+  IF v_uniq <> v_given THEN
+    RAISE EXCEPTION 'INCOMPLETE_ORDER: la liste contient des doublons' USING ERRCODE = '22023';
+  END IF;
+
   IF v.kind = 'ref_code_domain' THEN
+    SELECT count(*) INTO v_n FROM public.ref_code WHERE domain = v.domain;
+    IF v_given <> v_n THEN
+      RAISE EXCEPTION 'INCOMPLETE_ORDER: % clés pour % valeurs', v_given, v_n USING ERRCODE = '22023';
+    END IF;
+    SELECT count(*) INTO v_found FROM public.ref_code rc
+    WHERE rc.domain = v.domain
+      AND rc.id IN (SELECT (e->>'id')::uuid FROM jsonb_array_elements(p_keys) e);
+    IF v_found <> v_n THEN
+      RAISE EXCEPTION 'UNKNOWN_ROW: une clé ne correspond à aucune valeur du domaine'
+        USING ERRCODE = '22023';
+    END IF;
+    -- rpc_reorder_ref_code (phase 7.5) gère déjà sa propre écriture.
     PERFORM api.rpc_reorder_ref_code(v.domain,
       (SELECT array_agg((e->>'id')::uuid ORDER BY ord)
        FROM jsonb_array_elements(p_keys) WITH ORDINALITY AS t(e, ord)));
@@ -1167,10 +1256,30 @@ BEGIN
       USING ERRCODE = '22023';
   END IF;
 
+  EXECUTE format('SELECT count(*) FROM public.%I', v.table_name) INTO v_n;
+  IF v_given <> v_n THEN
+    RAISE EXCEPTION 'INCOMPLETE_ORDER: % clés pour % lignes', v_given, v_n USING ERRCODE = '22023';
+  END IF;
+
   SELECT string_agg(format('%I = %s', kc->>'name',
            internal.ref_catalog_cast_expr(v.columns, kc->>'name', '$1')), ' AND ')
     INTO v_where FROM jsonb_array_elements(v.primary_key_columns) kc;
 
+  -- PHASE 1 : plage libre. Le compteur de lignes touchées vérifie au passage que chaque
+  -- clé désigne bien une ligne existante — une clé inconnue laisse ROW_COUNT à 0.
+  FOR k IN SELECT * FROM jsonb_array_elements(p_keys) LOOP
+    i := i + 1;
+    EXECUTE format('UPDATE public.%I SET position = $2 WHERE %s', v.table_name, v_where)
+      USING k, 1000000 + i;
+    GET DIAGNOSTICS v_found = ROW_COUNT;
+    IF v_found = 0 THEN
+      RAISE EXCEPTION 'UNKNOWN_ROW: % ne correspond à aucune ligne de %', k, p_catalog_key
+        USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+
+  -- PHASE 2 : rang final. Aucune collision possible, la plage 1..N est entièrement libre.
+  i := 0;
   FOR k IN SELECT * FROM jsonb_array_elements(p_keys) LOOP
     i := i + 1;
     EXECUTE format('UPDATE public.%I SET position = $2 WHERE %s', v.table_name, v_where)
@@ -1783,15 +1892,23 @@ import {
 } from '../features/settings/catalog-fields';
 import { getRefCatalog, upsertRefRow, type RefCatalogDetail } from '../services/ref-catalogs';
 
+/** Langues traduisibles, alignées sur RefCodeEditor (le libellé est le FR canonique). */
+const I18N_LANGS: Array<{ code: string; label: string }> = [
+  { code: 'en', label: 'Anglais (EN)' },
+  { code: 'de', label: 'Allemand (DE)' },
+];
+
 interface Props {
   catalog: RefCatalogDetail;
-  /** null ⇒ création. */
+  /** `null` ⇒ création. */
   row: Record<string, unknown> | null;
-  onClose: () => void;
+  /** `false` ⇒ la modale se ferme ; elle reste MONTÉE le temps de son animation de sortie. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }
 
-export function RefCatalogRowModal({ catalog, row, onClose, onSaved }: Props) {
+export function RefCatalogRowModal({ catalog, row, open, onOpenChange, onSaved }: Props) {
   const mode = row ? 'edit' : 'create';
   const fields = useMemo(
     () => buildCatalogFieldSpec(catalog.columns, catalog.fks, catalog.primaryKeyColumns, mode),
@@ -1800,12 +1917,19 @@ export function RefCatalogRowModal({ catalog, row, onClose, onSaved }: Props) {
 
   const [draft, setDraft] = useState<Record<string, unknown>>(() => {
     const initial: Record<string, unknown> = {};
-    for (const field of fields) initial[field.name] = row?.[field.name] ?? '';
+    for (const field of fields) {
+      initial[field.name] = row?.[field.name] ?? '';
+      if (field.kind === 'i18n-text') {
+        initial[`${field.name}_i18n`] = row?.[`${field.name}_i18n`] ?? {};
+      }
+    }
     return initial;
   });
   const [error, setError] = useState<string | null>(null);
 
-  // Options des références : une requête par catalogue cible, mises en cache par TanStack.
+  // Options des références : une requête par catalogue cible, mise en cache par TanStack.
+  // Chaque `target` est déjà un catalog_key exploitable (ref_code:amenity_family) grâce à
+  // la normalisation de la vue — sans elle on interrogerait une partition absente.
   const referenceTargets = useMemo(
     () => [...new Set(fields.filter((f) => f.kind === 'reference').map((f) => f.target as string))],
     [fields],
@@ -1821,25 +1945,25 @@ export function RefCatalogRowModal({ catalog, row, onClose, onSaved }: Props) {
   referenceTargets.forEach((target, index) => {
     const data = referenceQueries[index].data;
     if (!data) return;
-    optionsByTarget.set(
-      target,
-      data.rows.map((r) => ({
-        value: String(r[data.primaryKeyColumns[0]] ?? ''),
-        label: formatRowLabel(r, data.labelColumn, data.primaryKeyColumns),
-      })),
-    );
+    optionsByTarget.set(target, data.rows.map((r) => ({
+      value: String(r[data.primaryKeyColumns[0]] ?? ''),
+      label: formatRowLabel(r, data.labelColumn, data.primaryKeyColumns),
+    })));
   });
 
   const save = useMutation({
     mutationFn: async () => {
-      // On n'envoie QUE les champs rendus et non verrouillés : envoyer une colonne
-      // verrouillée ferait lever UNKNOWN_COLUMN côté serveur.
       const values: Record<string, unknown> = {};
       for (const field of fields) {
-        if (field.locked && mode === 'edit') continue;
+        // Une colonne verrouillée n'est pas renvoyée : le serveur lèverait UNKNOWN_COLUMN.
+        if (field.locked) continue;
         const value = draft[field.name];
-        if (value === '' && mode === 'create') continue;
-        values[field.name] = field.kind === 'boolean' ? Boolean(value) : value;
+        // Un champ vidé doit partir en `null`, PAS en chaîne vide : `(p_values->>'x')::integer`
+        // sur '' lève `invalid input syntax for type integer`. Une chaîne JSON null rend NULL.
+        values[field.name] = coerceEmpty(field, value);
+        if (field.kind === 'i18n-text') {
+          values[`${field.name}_i18n`] = draft[`${field.name}_i18n`] ?? {};
+        }
       }
       await upsertRefRow(
         catalog.catalogKey,
@@ -1852,24 +1976,65 @@ export function RefCatalogRowModal({ catalog, row, onClose, onSaved }: Props) {
   });
 
   return (
-    <Modal open onClose={onClose} title={row ? 'Modifier la valeur' : 'Ajouter une valeur'}>
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={row ? 'Modifier la valeur' : 'Ajouter une valeur'}
+      footer={
+        <>
+          <button type="button" onClick={() => onOpenChange(false)}>Annuler</button>
+          <button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
+            Enregistrer
+          </button>
+        </>
+      }
+    >
       {error && <p role="alert" className="form-error">{error}</p>}
       {fields.map((field) => (
-        <label key={field.name} className="field">
-          <span className="field__label">{field.name}</span>
-          {renderControl(field, draft[field.name], (value) =>
-            setDraft((current) => ({ ...current, [field.name]: value })),
+        <div key={field.name} className="field-block">
+          <label htmlFor={`catalog-field-${field.name}`}>{field.name}</label>
+          {renderControl(field, draft[field.name],
+            (value) => setDraft((current) => ({ ...current, [field.name]: value })),
             optionsByTarget.get(field.target ?? ''))}
-        </label>
+
+          {/* Traductions EN LIGNE plutôt qu'en modale imbriquée : Modal garde une modale
+              sortante montée le temps de son animation, deux modales simultanées se
+              marchent dessus. C'est ce qui préserve l'i18n de RefCodeEditor. */}
+          {field.kind === 'i18n-text' && (
+            <details className="field-block__i18n">
+              <summary>Traductions</summary>
+              {I18N_LANGS.map((lang) => (
+                <div key={lang.code} className="field-block">
+                  <label htmlFor={`i18n-${field.name}-${lang.code}`}>{lang.label}</label>
+                  <input
+                    id={`i18n-${field.name}-${lang.code}`}
+                    aria-label={`${field.name} — ${lang.label}`}
+                    value={String(
+                      (draft[`${field.name}_i18n`] as Record<string, string>)?.[lang.code] ?? '')}
+                    placeholder={String(draft[field.name] ?? '')}
+                    onChange={(e) => setDraft((current) => ({
+                      ...current,
+                      [`${field.name}_i18n`]: {
+                        ...(current[`${field.name}_i18n`] as Record<string, string>),
+                        [lang.code]: e.target.value,
+                      },
+                    }))}
+                  />
+                </div>
+              ))}
+            </details>
+          )}
+        </div>
       ))}
-      <div className="modal__actions">
-        <button type="button" onClick={onClose}>Annuler</button>
-        <button type="button" onClick={() => save.mutate()} disabled={save.isPending}>
-          Enregistrer
-        </button>
-      </div>
     </Modal>
   );
+}
+
+/** Un champ vidé rend `null` pour tout ce qui n'est pas du texte libre. */
+function coerceEmpty(field: CatalogField, value: unknown): unknown {
+  if (field.kind === 'boolean') return Boolean(value);
+  if (value === '' || value === undefined) return null;
+  return value;
 }
 
 function renderControl(
@@ -1878,16 +2043,17 @@ function renderControl(
   onChange: (value: unknown) => void,
   options?: { value: string; label: string }[],
 ) {
+  const id = `catalog-field-${field.name}`;
   if (field.kind === 'boolean') {
-    return <input type="checkbox" checked={Boolean(value)} disabled={field.locked}
-      onChange={(e) => onChange(e.target.checked)} aria-label={field.name} />;
+    return <input id={id} type="checkbox" checked={Boolean(value)} disabled={field.locked}
+      aria-label={field.name} onChange={(e) => onChange(e.target.checked)} />;
   }
   if (field.kind === 'select' || field.kind === 'reference') {
     const list = field.kind === 'select'
       ? (field.options ?? []).map((o) => ({ value: o, label: o }))
       : (options ?? []);
     return (
-      <select value={String(value ?? '')} disabled={field.locked} aria-label={field.name}
+      <select id={id} value={String(value ?? '')} disabled={field.locked} aria-label={field.name}
         onChange={(e) => onChange(e.target.value)}>
         <option value="">—</option>
         {list.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1895,12 +2061,12 @@ function renderControl(
     );
   }
   const inputType = field.kind === 'number' ? 'number' : field.kind === 'date' ? 'date' : 'text';
-  return <input type={inputType} value={String(value ?? '')} disabled={field.locked}
+  return <input id={id} type={inputType} value={String(value ?? '')} disabled={field.locked}
     aria-label={field.name} onChange={(e) => onChange(e.target.value)} />;
 }
 
-/** Les codes d'erreur du RPC deviennent des phrases : une erreur PostgreSQL brute ne
- *  doit jamais remonter à l'utilisateur. */
+/** Les codes d'erreur du RPC deviennent des phrases : une erreur PostgreSQL brute ne doit
+ *  jamais remonter à l'utilisateur. */
 export function humaniseCatalogError(message: string): string {
   if (message.includes('LOCKED_CATALOG')) return 'Ce catalogue est en lecture seule.';
   if (message.includes('CODE_IMMUTABLE')) return "Le code d'une valeur existante ne se change pas.";
@@ -1908,6 +2074,7 @@ export function humaniseCatalogError(message: string): string {
   if (message.includes('ROW_NOT_FOUND')) return 'Cette valeur a été supprimée entre-temps.';
   if (message.includes('REQUIRED_HIDDEN_COLUMN')) return 'Une information obligatoire manque.';
   if (message.includes('UNKNOWN_COLUMN')) return 'Ce champ ne peut pas être enregistré ici.';
+  if (message.includes('INCOMPLETE_ORDER')) return 'La liste a changé : rechargez avant de réordonner.';
   return "L'enregistrement a échoué.";
 }
 ```
@@ -1973,11 +2140,15 @@ const detail = (over = {}) => ({
     { name: 'id', type: 'uuid', isRequired: true, hasDefault: true, enumValues: null },
     { name: 'code', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
     { name: 'name', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
+    // `position` est INDISPENSABLE au test de réordonnancement : sans cette colonne
+    // `canReorder` est faux et les boutons Monter/Descendre ne sont jamais rendus —
+    // le test passerait sur un bouton absent, donc ne testerait rien.
+    { name: 'position', type: 'integer', isRequired: false, hasDefault: true, enumValues: null },
   ],
   fks: [],
   rows: [
-    { id: 'u1', code: 'kbis', name: 'Extrait KBIS' },
-    { id: 'u2', code: 'siret', name: 'SIRET' },
+    { id: 'u1', code: 'kbis', name: 'Extrait KBIS', position: 1 },
+    { id: 'u2', code: 'siret', name: 'SIRET', position: 2 },
   ],
   usage: { u2: 2 },
   ...over,
@@ -2114,13 +2285,23 @@ export function RefCatalogAdmin() {
 
   const needle = search.trim().toLowerCase();
   const groups = useMemo(
-    () => groupByFamily(
-      needle
-        ? catalogs.filter((c) => c.label.toLowerCase().includes(needle)
-            || c.catalogKey.toLowerCase().includes(needle))
-        : catalogs),
+    () => groupByFamily(needle
+      ? catalogs.filter((c) => c.label.toLowerCase().includes(needle)
+          || c.catalogKey.toLowerCase().includes(needle))
+      : catalogs),
     [catalogs, needle],
   );
+
+  // La recherche porte AUSSI sur les valeurs du catalogue ouvert. Elle ne peut pas porter
+  // sur les valeurs des 103 catalogues à la fois : il faudrait un RPC de recherche
+  // transverse, hors périmètre — la limite est dite à l'écran plutôt que devinée.
+  const visibleRows = useMemo(() => {
+    if (!detail) return [];
+    if (!needle) return detail.rows;
+    return detail.rows.filter((row) =>
+      formatRowLabel(row, detail.labelColumn, detail.primaryKeyColumns).toLowerCase().includes(needle)
+      || String(row.code ?? '').toLowerCase().includes(needle));
+  }, [detail, needle]);
 
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['ref-catalogs'] });
@@ -2144,17 +2325,23 @@ export function RefCatalogAdmin() {
     onError: (err: Error) => setActionError(humaniseCatalogError(err.message)),
   });
 
-  const fields = detail
+  const createFields = detail
     ? buildCatalogFieldSpec(detail.columns, detail.fks, detail.primaryKeyColumns, 'create')
     : [];
-  const addBlocked = detail ? computeAddBlocked(detail.columns, fields, detail.primaryKeyColumns) : null;
+  const addBlocked = detail
+    ? computeAddBlocked(detail.columns, createFields, detail.primaryKeyColumns) : null;
   const isReadonly = detail?.access === 'readonly';
-  const canReorder = Boolean(detail?.columns.some((c) => c.name === 'position')) && !isReadonly;
+  // Le réordonnancement porte sur la liste COMPLÈTE : l'offrir sur une liste filtrée
+  // enverrait un ordre partiel, que le RPC refuse (INCOMPLETE_ORDER).
+  const canReorder = Boolean(detail?.columns.some((c) => c.name === 'position'))
+    && !isReadonly && !needle;
 
   return (
     <div className="ref-admin">
-      <input type="search" value={search} placeholder="Rechercher un catalogue"
-        aria-label="Rechercher un catalogue" onChange={(e) => setSearch(e.target.value)} />
+      <input type="search" value={search}
+        placeholder="Rechercher un catalogue ou une valeur"
+        aria-label="Rechercher un catalogue ou une valeur"
+        onChange={(e) => setSearch(e.target.value)} />
 
       <div className="ref-admin__layout">
         <nav className="ref-admin__rail" aria-label="Familles de catalogues">
@@ -2175,7 +2362,10 @@ export function RefCatalogAdmin() {
         </nav>
 
         <section className="ref-admin__detail">
-          {!detail && <EmptyState title="Choisissez un catalogue" />}
+          {!detail && (
+            <EmptyState mode="no-data" title="Choisissez un catalogue"
+              description="La colonne de gauche range les 103 catalogues par famille." />
+          )}
           {detail && (
             <>
               <header>
@@ -2189,45 +2379,55 @@ export function RefCatalogAdmin() {
 
               {actionError && <p role="alert" className="form-error">{actionError}</p>}
 
-              <table>
-                <tbody>
-                  {detail.rows.map((row, index) => {
-                    const label = formatRowLabel(row, detail.labelColumn, detail.primaryKeyColumns);
-                    const uses = detail.usage[rowKeyString(row, detail.primaryKeyColumns)] ?? 0;
-                    return (
-                      <tr key={rowKeyString(row, detail.primaryKeyColumns)}>
-                        <td>{label}</td>
-                        <td className="mono">{String(row.code ?? '')}</td>
-                        <td>{uses > 0 ? `${uses} fiche${uses > 1 ? 's' : ''}` : '—'}</td>
-                        <td>
-                          {canReorder && (
-                            <>
-                              <button type="button" aria-label={`Monter ${label}`} disabled={index === 0}
-                                onClick={() => reorder.mutate(moveItem(detail.rows, index, index - 1))}>
-                                <ArrowUp size={14} aria-hidden />
-                              </button>
-                              <button type="button" aria-label={`Descendre ${label}`}
-                                disabled={index === detail.rows.length - 1}
-                                onClick={() => reorder.mutate(moveItem(detail.rows, index, index + 1))}>
-                                <ArrowDown size={14} aria-hidden />
-                              </button>
-                            </>
-                          )}
-                          <button type="button" aria-label={`Modifier ${label}`} disabled={isReadonly}
-                            onClick={() => setModalRow(row)}>
-                            <Pencil size={14} aria-hidden />
-                          </button>
-                          <button type="button" aria-label={`Supprimer ${label}`}
-                            disabled={isReadonly || uses > 0}
-                            onClick={() => setConfirmRow(row)}>
-                            <Trash2 size={14} aria-hidden />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              {visibleRows.length === 0 ? (
+                <EmptyState
+                  mode={needle ? 'filtered' : 'no-data'}
+                  title={needle ? 'Aucune valeur ne correspond' : 'Ce catalogue est vide'}
+                  description={needle
+                    ? 'La recherche ne porte que sur le catalogue ouvert.'
+                    : undefined} />
+              ) : (
+                <table>
+                  <tbody>
+                    {visibleRows.map((row, index) => {
+                      const label = formatRowLabel(row, detail.labelColumn, detail.primaryKeyColumns);
+                      const uses = detail.usage[rowKeyString(row, detail.primaryKeyColumns)] ?? 0;
+                      return (
+                        <tr key={rowKeyString(row, detail.primaryKeyColumns)}>
+                          <td>{label}</td>
+                          <td className="mono">{String(row.code ?? '')}</td>
+                          <td>{uses > 0 ? `${uses} fiche${uses > 1 ? 's' : ''}` : '—'}</td>
+                          <td>
+                            {canReorder && (
+                              <>
+                                <button type="button" aria-label={`Monter ${label}`}
+                                  disabled={index === 0}
+                                  onClick={() => reorder.mutate(moveItem(detail.rows, index, index - 1))}>
+                                  <ArrowUp size={14} aria-hidden />
+                                </button>
+                                <button type="button" aria-label={`Descendre ${label}`}
+                                  disabled={index === detail.rows.length - 1}
+                                  onClick={() => reorder.mutate(moveItem(detail.rows, index, index + 1))}>
+                                  <ArrowDown size={14} aria-hidden />
+                                </button>
+                              </>
+                            )}
+                            <button type="button" aria-label={`Modifier ${label}`} disabled={isReadonly}
+                              onClick={() => setModalRow(row)}>
+                              <Pencil size={14} aria-hidden />
+                            </button>
+                            <button type="button" aria-label={`Supprimer ${label}`}
+                              disabled={isReadonly || uses > 0}
+                              onClick={() => setConfirmRow(row)}>
+                              <Trash2 size={14} aria-hidden />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
 
               {!isReadonly && (
                 <>
@@ -2248,23 +2448,31 @@ export function RefCatalogAdmin() {
         </section>
       </div>
 
-      {detail && modalRow !== null && (
+      {/* Modal et ConfirmDialog sont montés SANS condition et pilotés par `open` : les
+          démonter aussitôt fermés supprimerait leur animation de sortie (cf. le commentaire
+          d'en-tête de Modal.tsx). */}
+      {detail && (
         <RefCatalogRowModal
           catalog={detail}
-          row={modalRow === 'add' ? null : modalRow}
-          onClose={() => setModalRow(null)}
+          row={modalRow === 'add' || modalRow === null ? null : modalRow}
+          open={modalRow !== null}
+          onOpenChange={(next) => { if (!next) setModalRow(null); }}
           onSaved={() => { setModalRow(null); refresh(); }}
         />
       )}
 
-      {detail && confirmRow && (
-        <ConfirmDialog
-          open
-          title="Supprimer cette valeur ?"
-          onCancel={() => setConfirmRow(null)}
-          onConfirm={() => removeRow.mutate(confirmRow)}
-        />
-      )}
+      <ConfirmDialog
+        open={Boolean(confirmRow)}
+        title="Supprimer définitivement cette valeur ?"
+        tone="danger"
+        confirmLabel="Supprimer définitivement"
+        busy={removeRow.isPending}
+        message={confirmRow && detail
+          ? `La valeur « ${formatRowLabel(confirmRow, detail.labelColumn, detail.primaryKeyColumns)} » sera supprimée de façon irréversible. Cette action n'est possible que parce qu'aucune fiche ne la référence.`
+          : ''}
+        onCancel={() => setConfirmRow(null)}
+        onConfirm={() => confirmRow && removeRow.mutate(confirmRow)}
+      />
     </div>
   );
 }
@@ -2397,7 +2605,16 @@ non implémenté par construction.
 des deux côtés ; codes d'erreur identiques entre les fonctions, leurs tests, `humaniseCatalogError` et
 la liste de la spec §5.1.
 
-**Ce que ce plan ne prétend pas être.** Les gabarits de `Modal`, `ConfirmDialog` et `EmptyState` sont
-supposés conformes à leur usage dans `RefCodeEditor` ; si leurs props diffèrent, adapter sans changer
-l'intention. Les libellés de colonnes affichés sont les noms techniques : les humaniser demanderait une
-table de traduction par colonne, hors périmètre.
+**Props UI — vérifiées dans le code, plus supposées.** `Modal` prend `open` / `title` /
+`onOpenChange` / `children` / `footer?` — **pas** `onClose`, et son en-tête avertit explicitement que
+l'appelant ne doit PAS faire `if (!open) return null`, sinon l'animation de sortie ne joue jamais.
+`ConfirmDialog` exige `message` (et accepte `tone`, `busy`, `confirmLabel`). `EmptyState` exige `mode`
+(`no-data` / `filtered` / `coming-soon` / `error`) en plus de `title`. Les deux dialogues sont montés
+**sans condition** et pilotés par `open`.
+
+**Limites assumées.** La recherche porte sur tous les catalogues **et** sur les valeurs du catalogue
+ouvert — pas sur les valeurs des 103 à la fois, ce qui demanderait un RPC de recherche transverse ; la
+limite est écrite à l'écran. Le réordonnancement est masqué tant qu'une recherche filtre la liste : un
+ordre partiel serait refusé par `INCOMPLETE_ORDER`. Les libellés de colonnes restent les noms
+techniques ; une humanisation générique (`review_interval_days` → « Review interval days ») pourra
+être ajoutée plus tard sans table de traduction.

@@ -933,6 +933,8 @@ export interface ObjectWorkspaceLegalTypeOption {
   id: string;
   code: string;
   label: string;
+  /** `ref_legal_type.description` — dans quelle situation cette pièce est demandée (§209). */
+  description: string;
   category: string;
   isPublic: boolean;
   isRequired: boolean;
@@ -3086,6 +3088,9 @@ function parseWorkspaceLegalModule(raw: Record<string, unknown>): ObjectWorkspac
       id: source?.typeId || option.id,
       code: option.code,
       label: option.label,
+      // Ce chemin dégradé reconstruit les types DEPUIS les lignes déjà saisies : une ligne ne porte
+      // pas la description du catalogue, l'aide « quand demander » reste donc vide ici.
+      description: '',
       category: source?.category ?? '',
       isPublic: source?.isPublic ?? false,
       isRequired: source?.isRequired ?? false,

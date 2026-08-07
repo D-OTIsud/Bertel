@@ -404,6 +404,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_object_list.sql"
 
+      - name: "§211 E2 — bulk email export (operator→object cascade, publisher scope isolates a PUBLISHED foreign-ORG object, expired/future/private/non-operator links ignored, consent refusal honoured, PT400/PT404/PT413 contracts, reader refused)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_selection_emails.sql"
+
       - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch incl. save_object_rooms)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

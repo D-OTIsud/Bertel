@@ -132,6 +132,21 @@ COMMENT ON FUNCTION api.can_read_actor_contacts(text) IS
 --    mêmes personas — sinon l'offre de colonnes diverge de ce que la fiche laisse voir
 --    sans qu'aucune erreur ne se lève. Le jour où ce leg devient appelable, l'APPELER ici
 --    (comme on appelle déjà api.can_read_actor_contacts) et supprimer la transcription.
+--    ► ÉTAT APRÈS LA TÂCHE 13 (2026-08-07) — la transcription reste EXACTE, et voici
+--      pourquoi, précisément : la tâche 13 n'a PAS touché à la garde de LIGNE du leg. Elle
+--      a ajouté un gate de CHAMP (PII + canaux sous api.can_read_actor_contacts) À
+--      L'INTÉRIEUR de lignes dont le prédicat de sélection est resté
+--      `WHERE aor.object_id = obj.id AND (v_can_read_extended OR aor.visibility = 'public')`,
+--      octet pour octet. Or c'est CE prédicat, et lui seul, que la clé
+--      `actor_identity_available` retranscrit ⇒ aucune divergence introduite.
+--      Le prédicat de COORDONNÉES, lui, est désormais littéralement le même appel des deux
+--      côtés (le leg appelle api.can_read_actor_contacts, comme cette clé).
+--      ⚠ CE QUI RESTE À SURVEILLER : « identité » veut dire, dans le leg patché,
+--      `id + display_name + rôle + dates + visibility` — PAS `first_name`/`last_name`/
+--      `gender`/`note`, qui sont passés du côté COORDONNÉES. Un consommateur qui offrirait
+--      une colonne « prénom » sur la foi de `actor_identity_available` offrirait du vide :
+--      ces quatre champs suivent `actor_contacts_available`. La tâche 14 doit asserter
+--      l'égalité SUR LE PÉRIMÈTRE AINSI DÉFINI, pas sur le mot « identité ».
 --
 --    COÛT — pourquoi le PLAFOND, et pourquoi le seul ordre des bras ne suffit pas (§204) :
 --    api.can_read_actor_contacts est SECURITY DEFINER, donc NON INLINABLE — chaque appel

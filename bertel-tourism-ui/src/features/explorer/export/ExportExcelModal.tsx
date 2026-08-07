@@ -13,7 +13,7 @@ import {
   type ExportColumnDef, type ExportGroupId,
 } from '../../../services/export/export-columns';
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
-import { getExportActorCapabilities } from '../../../services/rpc';
+import { fetchActorExportCapabilities } from '../../../services/export/export-actor-contacts';
 import { cn } from '@/lib/utils';
 
 /** R2 — capacités acteur par défaut : FERMÉES tant que le serveur n'a pas répondu. */
@@ -48,7 +48,14 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
 
   // R2 — préflight serveur à l'ouverture : l'offre de colonnes acteur suit la
   // consultation RÉELLE de la sélection (mêmes prédicats que les gates). Échec
-  // ⇒ fermé. Garde anti-course : une réponse d'une sélection périmée est ignorée.
+  // ⇒ fermé. Le RPC plafonne à 500 ids : `fetchActorExportCapabilities` DÉCOUPE
+  // (même constante que l'export) et réduit par OR — sans quoi un « tout
+  // sélectionner » sur le corpus publié faisait lever BATCH_TOO_LARGE et retirait
+  // les colonnes acteur en silence (revue 3e vague).
+  // Garde anti-course : `stale` est passé AU DÉCOUPAGE, pas seulement testé à
+  // l'arrivée — avec plusieurs lots, « périmé » signifie « TOUT lot d'une
+  // sélection remplacée » : dès la bascule, aucun lot supplémentaire n'est posé
+  // et aucun verdict, même partiel, n'est appliqué.
   useEffect(() => {
     if (!open || selectedObjectIds.length === 0) {
       setCaps(CLOSED_CAPS);
@@ -56,7 +63,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
     }
     let stale = false;
     setCaps(CLOSED_CAPS);
-    getExportActorCapabilities(selectedObjectIds)
+    fetchActorExportCapabilities(selectedObjectIds, { isStale: () => stale })
       .then((result) => { if (!stale) setCaps(result); })
       .catch(() => { if (!stale) setCaps(CLOSED_CAPS); });
     return () => { stale = true; };

@@ -1,8 +1,9 @@
 # Export Excel de la sélection — matrice exhaustive des colonnes (§208)
 
 **Date** : 2026-07-31 · **Chantier** : §208 (export Excel de la sélection de l'Exploreur)
-**Statut** : matrice à valider par le PO **AVANT** l'écriture du registre `export-columns.ts`
-(Tâches 5-7 du plan) — c'est le Step 0 de la Tâche 4.
+**Statut** : ✅ **VALIDÉE PAR LE PO le 2026-07-31** — 122 colonnes acceptées, avec trois
+arbitrages rendus en séance (voir « Statut » plus bas). Le Step 0 de la Tâche 4 est levé :
+l'écriture du registre `export-columns.ts` (Tâches 5-7) peut commencer.
 **Conception** : [`docs/superpowers/specs/2026-07-31-explorer-export-excel-design.md`](2026-07-31-explorer-export-excel-design.md)
 **Plan** : `.superpowers/sdd/x208/` (task-4-brief.md à task-7-brief.md pour le registre)
 **Source des colonnes** : le code `ExportColumnDef` tel qu'écrit dans task-5-brief.md,
@@ -20,6 +21,10 @@ code FAIT, il n'invente ni n'ajoute de colonne.
 3. **Caractère** — `public` / `partenaire` / `interne` / `personnel`. Les colonnes `actor_*`
    portent **« personnel »** ; les colonnes de niveau `org` portent **« interne »** (imposé
    par le plan). Pour les autres, déduit honnêtement de la nature de la donnée.
+   **« public » = la classe technique `clearance: public` et l'accessibilité par la
+   ressource publiée** — le serveur rend le champ à tout lecteur de la fiche. Cela ne
+   garantit PAS qu'il soit affiché aujourd'hui dans le tiroir public (arbitrage PO,
+   voir la section Statut ci-dessous).
 4. **Capacités** — `clearance` (`public`/`org`/`actor_identity`/`actor_contacts`/`superuser`)
    **FILTRE l'offre** de colonnes dans la modale (ergonomie) — **ce n'est jamais la garde**.
    La garde reste serveur (RLS + gates `SECURITY DEFINER` + la migration 16t pour les
@@ -168,7 +173,7 @@ bruts réservés à l'éditeur), pas de `is_editing`/`updated_at_source`, aucune
 | id | libellé FR | groupe | source | type XLSX | capacité requise | règle d'agrégation | si absent | caractère |
 |---|---|---|---|---|---|---|---|---|
 | `capacity` | Capacités | capacite | `operations.capacities[].{label,value}` | text | public | jointure (espace-pipe-espace) de « label : value » | `''` | public |
-| `capacity_max` | Capacité maximale | capacite | `operations.capacities[].{label,value}` | text | public | recherche du libellé contenant « capacit » (regex), repli sur le PREMIER élément de la liste si aucun ne matche (assumé — pas de `metric_code` sur `CapacityItem`, cf. Points à trancher) | `''` | public |
+| `capacity_max` | Capacité maximale | capacite | `operations.capacities[].{label,value}` | text | public | recherche du libellé contenant « capacit » (regex `/capacit/i` sur le libellé FR résolu par le serveur — `CapacityItem` ne porte pas de `metric_code`, retiré au dédoublonnage `utils.ts:1320`). **AUCUN repli** (arbitrage PO) : pas de correspondance ⇒ cellule vide | `''` | public |
 | `rooms_count` | Types de chambres | capacite | `operations.roomTypes.length` | text | public | comptage (`0` ⇒ `''`) | `''` | public |
 | `room_types` | Chambres | capacite | `operations.roomTypes[].{name,quantity,capacityAdults}` | text | public | jointure (espace-pipe-espace) de « nom ×qté N pers. » | `''` | public |
 | `meeting_rooms_count` | Salles de séminaire | capacite | `operations.meetingRooms.length` | text | public | comptage (`0` ⇒ `''`) | `''` | public |
@@ -297,7 +302,37 @@ Propriétaire / acteur 9 · Organisation éditrice 6 · Légal 5 · Liens & réf
 
 ---
 
-## Points à trancher par le PO
+## Statut : MATRICE VALIDÉE PAR LE PO (2026-07-31)
+
+Les 122 colonnes sont **acceptées telles quelles**. Trois arbitrages rendus en séance,
+qui priment sur la formulation d'origine des points ci-dessous :
+
+| # | Décision |
+|---|---|
+| **2** | **122 colonnes : accepté.** L'écart avec les « ~140 » de la conception est une estimation pré-implémentation, pas une perte. **Ne PAS ajouter de colonnes artificiellement pour atteindre ce chiffre.** Les absences sont toutes expliquées par une exclusion ou un regroupement explicite (`open_now`, `remplissage`, Markdown éditeur, `grade`, détails FMA non vérifiés, notes privées). |
+| **3** | **`capacity_max` : le repli est SUPPRIMÉ.** Si aucune métrique ne correspond sémantiquement à une capacité d'accueil, la colonne rend `''`. Une cellule vide est correcte ; une autre métrique présentée comme capacité maximale est une **donnée fausse**. Test dédié ajouté au plan (Tâche 6). |
+| **4** | **« public » conservé**, sans distinction « partenaire » : cette garde n'existe pas dans le modèle, l'inventer dans la matrice serait trompeur. Précision documentaire ajoutée ci-dessous. |
+
+**Précision sur le caractère « public » (arbitrage 4).** Dans la colonne *Caractère*,
+« public » désigne **la classe technique `clearance: public` et l'accessibilité par la
+ressource publiée** — c'est-à-dire : le serveur rend ce champ à tout lecteur de la fiche.
+**Cela ne garantit pas que le champ soit actuellement affiché dans le tiroir public** de
+l'Exploreur, ni sur un site de destination. Un champ peut être techniquement public et
+n'avoir aujourd'hui aucune surface d'affichage grand public (heures d'arrivée/départ,
+communes desservies, handicaps couverts, état du sentier…). La distinction
+« public grand public » / « public partenaire » **n'existe pas dans le code** : les deux
+chemins consomment le même `get_object_resource` avec la même garde de publication. La
+créer serait une décision de modélisation à part entière.
+
+Les points 1, 5, 6, 7 et 8 restent des signalements — validés en l'état :
+`readNamedValue` reçoit son `export` manquant à l'implémentation (Tâche 4),
+`unhandled_keys` est classée **interne**, les 6 colonnes `actor_contacts` sont alimentées
+**exclusivement** par `ctx.actorContacts`, et le risque des lectures `raw.*` reste celui
+déjà accepté en conception (§8, risque 3).
+
+---
+
+## Points à trancher par le PO *(formulation d'origine — voir les arbitrages ci-dessus)*
 
 1. **`readNamedValue` n'est pas exporté par `object-drawer/utils.ts` — bloquant à la
    compilation.** La fonction vit à `utils.ts:374` sans mot-clé `export`
@@ -325,13 +360,14 @@ Propriétaire / acteur 9 · Organisation éditrice 6 · Légal 5 · Liens & réf
    davantage de colonnes légales ou de liens) qui auraient été perdues entre la conception
    et l'écriture des briefs ?
 
-3. **`capacity_max` : repli sur le premier élément quel qu'il soit.** En l'absence d'un
-   `metric_code` sur `CapacityItem` (retiré au dédoublonnage, `utils.ts:1320`), la colonne
-   cherche un libellé contenant « capacit » (regex `/capacit/i`) et, à défaut, replie sur
-   le PREMIER élément de `operations.capacities` — qui peut être n'importe quelle métrique
-   (ex. « Chambres : 18 » affiché sous l'étiquette « Capacité maximale » si aucun libellé ne
-   contient « capacit »). Le brief documente lui-même cette limite comme assumée. Signalé
-   pour information — pas nécessairement à corriger dans ce chantier.
+3. ~~**`capacity_max` : repli sur le premier élément quel qu'il soit.**~~
+   **TRANCHÉ — repli SUPPRIMÉ.** En l'absence d'un `metric_code` sur `CapacityItem`
+   (retiré au dédoublonnage, `utils.ts:1320`), la colonne cherchait un libellé contenant
+   « capacit » et, à défaut, repliait sur le PREMIER élément de `operations.capacities` —
+   affichant par exemple « Chambres : 18 » sous l'étiquette « Capacité maximale ».
+   **Décision PO : pas de correspondance ⇒ cellule vide.** Motif : une cellule vide se lit
+   « non renseigné », tandis qu'une autre métrique sous cet en-tête se lit comme un fait —
+   et un export circule sans son contexte. Test dédié ajouté (Tâche 6 du plan).
 
 4. **Caractère « public » appliqué uniformément à toutes les colonnes `clearance: 'public'`.**
    Le code ne distingue structurellement PAS une donnée « publique » (site public) d'une

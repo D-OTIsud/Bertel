@@ -103,7 +103,7 @@ describe('buildOrgLinksPayload', () => {
 const actorLink = (over: Partial<ObjectWorkspaceRelationshipsModule['actors'][number]> = {}) => ({
   id: 'a1', displayName: 'Marie Guide', firstName: 'Marie', lastName: 'Guide', gender: '',
   roleId: 'r-op', roleCode: 'operator', roleLabel: 'Exploitant', visibility: 'public',
-  isPrimary: false, validFrom: '', validTo: '', note: '', contacts: [], ...over,
+  isPrimary: false, validFrom: '', validTo: '', note: '', contacts: [], contactsRestricted: false, ...over,
 });
 
 describe('buildActorLinksPayload', () => {

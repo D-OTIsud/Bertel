@@ -3111,7 +3111,15 @@ function TeamSection({ actors }: { actors: ActorItem[] }) {
               <strong>{actor.name}</strong>
               {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
             </div>
-            {actor.contacts[0] && <p className="detail-mini-card__meta">{actor.contacts[0]}</p>}
+            {actor.contacts[0] ? (
+              <p className="detail-mini-card__meta">{actor.contacts[0]}</p>
+            ) : (
+              // §208 — contacts_restricted distingue « réservé » de « rien saisi » : ne jamais
+              // laisser un vide silencieux quand la vraie raison est un refus d'accès serveur.
+              actor.contactsRestricted && (
+                <p className="detail-mini-card__meta">Coordonnées réservées à l&apos;organisation éditrice.</p>
+              )
+            )}
           </div>
         ))}
       </div>

@@ -56,6 +56,11 @@ export function addActorLink(
       validTo: '',
       note: '',
       contacts: [],
+      // §208 — pas de signal serveur pour un lien pas encore enregistré : on reprend l'état
+      // des liens déjà chargés pour CETTE fiche (contactsRestricted est un verdict par
+      // appelant+objet, identique sur toutes les lignes reçues), à défaut `false` (comportement
+      // antérieur à §208 — pas de régression quand la fiche n'a encore aucun acteur).
+      contactsRestricted: actors[0]?.contactsRestricted ?? false,
     },
   ];
 }

@@ -33,6 +33,9 @@ export interface ActorItem {
   visibility: string;
   isPrimary: boolean;
   note: string;
+  /** §208 — TRUE quand api.can_read_actor_contacts a refusé au CALLEUR : `contacts` est alors
+   * [] parce que réservé, pas parce que rien n'a été saisi. Distinct de « pas de contact ». */
+  contactsRestricted: boolean;
 }
 
 export interface OrganizationItem {
@@ -1132,6 +1135,7 @@ export function parseActors(raw: Record<string, unknown>): ActorItem[] {
     visibility: readString(actor.visibility, 'public'),
     isPrimary: readBoolean(actor.is_primary) === true,
     note: readString(actor.note),
+    contactsRestricted: actor.contacts_restricted === true,
   }));
 }
 

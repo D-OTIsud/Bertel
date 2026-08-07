@@ -75,6 +75,13 @@ describe('object drawer utils', () => {
     expect(actors[0].contacts).toContain('Professionnel: jean@example.com');
   });
 
+  it('§208 — contacts_restricted est distinct de « pas de contact saisi »', () => {
+    const [restricted] = parseActors({ actors: [{ id: 'a1', display_name: 'X', contacts: [], contacts_restricted: true }] });
+    const [empty] = parseActors({ actors: [{ id: 'a2', display_name: 'Y', contacts: [] }] });
+    expect(restricted.contactsRestricted).toBe(true);
+    expect(empty.contactsRestricted).toBe(false);
+  });
+
   it('flattens nested price periods and opening schedules from backend payloads', () => {
     const raw = {
       object_prices: [

@@ -30,6 +30,7 @@ function actor(partial: Partial<ObjectWorkspaceActorLinkItem> & { id: string }):
     validTo: '',
     note: '',
     contacts: [],
+    contactsRestricted: false,
     ...partial,
   };
 }
@@ -63,6 +64,17 @@ describe('addActorLink', () => {
 
   test('does not fabricate a row when no role catalog is available', () => {
     expect(addActorLink([], picked, [])).toEqual([]);
+  });
+
+  test('§208 — a brand-new link has no server verdict yet: defaults contactsRestricted to false on an empty fiche', () => {
+    const next = addActorLink([], picked, ROLE_OPTIONS);
+    expect(next[0].contactsRestricted).toBe(false);
+  });
+
+  test('§208 — a brand-new link inherits contactsRestricted from the already-loaded links (same caller+object verdict)', () => {
+    const existing = [actor({ id: 'a1', roleCode: 'guide', roleId: 'r-guide', contactsRestricted: true })];
+    const next = addActorLink(existing, picked, ROLE_OPTIONS);
+    expect(next[1].contactsRestricted).toBe(true);
   });
 });
 

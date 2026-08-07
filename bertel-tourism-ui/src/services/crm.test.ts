@@ -10,6 +10,7 @@ import {
   listObjectContactSuggestions,
   matchesCrmDirectorySearch,
   parseActorCrmSnapshot,
+  parseActorSupport,
   parseContactSuggestion,
   parseCrmAssignee,
   parseCrmDirectoryEntry,
@@ -47,6 +48,23 @@ function fakeRpcClient(result: unknown = null) {
 }
 
 describe('crm parsers', () => {
+  it('parse le rôle par défaut et les documents privés d’un acteur en accompagnement', () => {
+    expect(parseActorSupport({
+      default_role: { code: 'guide', name: 'Guide' },
+      documents: [{
+        document_id: 'doc-1', title: 'Prévisionnel.pdf', status: 'active',
+        intended_role_code: 'brochure', intended_role_name: 'Brochure',
+        mime_type: 'application/pdf', size_bytes: 2048, created_at: '2026-08-07T10:00:00Z',
+      }],
+    })).toEqual({
+      defaultRole: { code: 'guide', name: 'Guide' },
+      documents: [expect.objectContaining({
+        documentId: 'doc-1', title: 'Prévisionnel.pdf', status: 'active',
+        intendedRoleCode: 'brochure', sizeBytes: 2048,
+      })],
+    });
+  });
+
   it('parse une tâche RPC en CrmTask (snake_case → camelCase, enums DB, rattachement acteur)', () => {
     const task = parseCrmTask({
       id: 't1', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Rappeler',
@@ -498,13 +516,21 @@ describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO point
     mockedGetApiClient.mockReset();
   });
 
-  it('INSERT acteur : display_name + object_id (requis — le lien objet le met en périmètre) + identité', async () => {
+  it('INSERT acteur : display_name + object_id facultatif + identité', async () => {
     const rpc = fakeRpcClient({ id: 'new-actor' });
     await expect(
       saveCrmActor({ displayName: 'M. Jean Payet', firstName: 'Jean', lastName: 'Payet', objectId: 'HOT123' }),
     ).resolves.toBe('new-actor');
     expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
       p_payload: { display_name: 'M. Jean Payet', first_name: 'Jean', last_name: 'Payet', object_id: 'HOT123' },
+    });
+  });
+
+  it('INSERT acteur en projet : rôle sans object_id', async () => {
+    const rpc = fakeRpcClient({ id: 'prospect-actor' });
+    await saveCrmActor({ displayName: 'Projet Lagon', roleCode: 'guide' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_actor', {
+      p_payload: { display_name: 'Projet Lagon', role_code: 'guide' },
     });
   });
 

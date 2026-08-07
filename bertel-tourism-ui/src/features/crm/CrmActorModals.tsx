@@ -22,11 +22,12 @@
 //   En cas d'échec d'un canal après création de l'acteur, le retry ne recrée PAS
 //   l'acteur (réfs idempotentes).
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ImagePlus, MapPinCheck, Plus, Trash2, UserRound } from 'lucide-react';
 import {
   deleteActorChannel,
+  listActorRoles,
   listContactKinds,
   listObjectContactSuggestions,
   saveActorChannel,
@@ -37,6 +38,7 @@ import {
 } from '../../services/crm';
 import { AddressBanCombobox } from '../object-editor/widgets/AddressBanCombobox';
 import { geocodeAddress, type GeocodeHit } from '../object-editor/widgets/geocode-address';
+import { useObjectSearch } from '../object-editor/useObjectSearch';
 import { CrmModal } from './CrmModal';
 
 /** kind_code des canaux qui sont des ADRESSES POSTALES (édités dans le bloc « Adresses », pas les canaux). */
@@ -672,7 +674,7 @@ export function CrmActorNewModal({
   onClose,
   onCreated,
 }: {
-  /** Datalist de rattachement — objets du périmètre (annuaire non filtré). */
+  /** Suggestions immédiates issues du CRM ; la recherche Bertel complète cette liste à la frappe. */
   objectOptions: Array<{ objectId: string; objectName: string }>;
   onClose: () => void;
   /** Appelé APRÈS création confirmée avec l'id du nouvel acteur (refresh + ouverture fiche). */
@@ -683,6 +685,7 @@ export function CrmActorNewModal({
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const displayName = composeDisplayName(gender, firstName, lastName);
+  const [roleCode, setRoleCode] = useState('operator');
   const [objectName, setObjectName] = useState('');
   // Repeater de canaux (PO point 3) : 1re ligne par défaut = e-mail (PO point 1 : requis).
   const [rows, setRows] = useState<ChannelRow[]>(() => [
@@ -701,9 +704,25 @@ export function CrmActorNewModal({
 
   const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
   const kinds = kindsQuery.data ?? [];
+  const rolesQuery = useQuery({ queryKey: ['crm-actor-roles'], queryFn: listActorRoles });
+  const roles = rolesQuery.data ?? [];
+
+  // L'annuaire CRM ne contient que les établissements qui ont DÉJÀ un acteur. Il reste utile
+  // comme cache immédiat, mais ne peut pas être la source exhaustive lors de la création du
+  // premier acteur d'un établissement. La recherche objet interroge donc l'index Bertel complet
+  // (fiches publiées + brouillons autorisés) à mesure que l'utilisateur saisit le nom.
+  const objectSearch = useObjectSearch(objectName, { limit: 20 });
+  const availableObjects = useMemo(() => {
+    const byId = new Map<string, { objectId: string; objectName: string }>();
+    for (const object of objectOptions) byId.set(object.objectId, object);
+    for (const result of objectSearch.results) {
+      byId.set(result.id, { objectId: result.id, objectName: result.name });
+    }
+    return [...byId.values()].sort((a, b) => a.objectName.localeCompare(b.objectName));
+  }, [objectOptions, objectSearch.results]);
 
   const resolvedObject =
-    objectOptions.find((object) => object.objectName.trim().toLowerCase() === objectName.trim().toLowerCase()) ?? null;
+    availableObjects.find((object) => object.objectName.trim().toLowerCase() === objectName.trim().toLowerCase()) ?? null;
 
   // Suggestions de contacts (PO point 2) : dès que l'établissement résout, on propose ses
   // contacts connus. Clé par objectId ; 42501/vide → [] (le bloc se masque, pas d'erreur).
@@ -746,7 +765,6 @@ export function CrmActorNewModal({
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!resolvedObject) throw new Error('Établissement non résolu');
       const actorId =
         createdActorRef.current ??
         (await saveCrmActor({
@@ -755,7 +773,8 @@ export function CrmActorNewModal({
           ...(gender ? { gender } : {}),
           ...(firstName.trim() ? { firstName: firstName.trim() } : {}),
           ...(lastName.trim() ? { lastName: lastName.trim() } : {}),
-          objectId: resolvedObject.objectId,
+          roleCode,
+          ...(resolvedObject ? { objectId: resolvedObject.objectId } : {}),
         }));
       createdActorRef.current = actorId;
 
@@ -789,9 +808,10 @@ export function CrmActorNewModal({
     },
   });
 
-  // PO point 1 / §66 : nom affiché composé non vide (prénom OU nom) + établissement résolu +
-  // e-mail OBLIGATOIRE (au moins une ligne e-mail non vide).
-  const canSubmit = displayName.length > 0 && Boolean(resolvedObject) && hasEmail && !createMutation.isPending;
+  // Acteur en projet : établissement facultatif. Une saisie établissement incomplète reste
+  // toutefois invalide (il faut choisir un résultat ou vider le champ).
+  const establishmentIsValid = objectName.trim() === '' || Boolean(resolvedObject);
+  const canSubmit = displayName.length > 0 && Boolean(roleCode) && establishmentIsValid && hasEmail && !createMutation.isPending;
 
   function kindOptionsFor(row: ChannelRow) {
     if (row.kindCode && !kinds.some((kind) => kind.code === row.kindCode)) {
@@ -847,6 +867,24 @@ export function CrmActorNewModal({
         Nom affiché : {displayName ? <strong>{displayName}</strong> : <em>(renseignez prénom/nom)</em>}
       </p>
 
+      <label className="crm-field">
+        Rôle de l&apos;acteur (requis)
+        <select
+          className="crm-select"
+          aria-label="Rôle de l'acteur"
+          value={roleCode}
+          onChange={(event) => setRoleCode(event.target.value)}
+        >
+          {roles.map((role) => (
+            <option key={role.code} value={role.code}>{role.name}</option>
+          ))}
+          {roles.length === 0 && <option value="operator">Exploitant</option>}
+        </select>
+        {roles.find((role) => role.code === roleCode)?.description && (
+          <p className="crm-field__hint">{roles.find((role) => role.code === roleCode)?.description}</p>
+        )}
+      </label>
+
       {/* Portrait (PO point 4) : aperçu + bouton de choix de fichier (optionnel). */}
       <div className="crm-field">
         Portrait (optionnel)
@@ -870,7 +908,7 @@ export function CrmActorNewModal({
       </div>
 
       <label className="crm-field">
-        Établissement de rattachement (requis)
+        Établissement de rattachement (facultatif)
         <input
           aria-label="Établissement de rattachement"
           placeholder="Établissement (nom exact)"
@@ -879,15 +917,20 @@ export function CrmActorNewModal({
           onChange={(event) => setObjectName(event.target.value)}
         />
         <datalist id="crm-actor-new-objects">
-          {objectOptions.map((object) => (
+          {availableObjects.map((object) => (
             <option key={object.objectId} value={object.objectName} />
           ))}
         </datalist>
       </label>
-      {objectName.trim() !== '' && !resolvedObject && (
-        <p className="crm-field__hint">Établissement introuvable dans l&apos;annuaire — choisissez un nom de la liste.</p>
+      {objectSearch.loading && objectName.trim().length >= 2 && (
+        <p className="crm-field__hint">Recherche dans les établissements Bertel…</p>
       )}
-      <p className="crm-field__hint">L&apos;acteur entre dans votre périmètre CRM par ce lien (rôle : exploitant).</p>
+      {objectName.trim().length >= 2 && !objectSearch.loading && !resolvedObject && (
+        <p className="crm-field__hint">Établissement introuvable — choisissez un nom retourné par la recherche.</p>
+      )}
+      <p className="crm-field__hint">
+        Laissez vide pour créer un acteur en projet. Il restera dans le périmètre CRM de votre organisation et pourra être rattaché plus tard.
+      </p>
 
       {/* Suggestions de contacts de l'établissement (PO point 2) — ajout en un clic. */}
       {resolvedObject && suggestions.length > 0 && (

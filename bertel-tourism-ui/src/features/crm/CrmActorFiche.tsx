@@ -25,6 +25,7 @@ import {
   deleteCrmInteraction,
   linkActorToObject,
   listActorCrm,
+  listActorSupport,
   listCrmDirectory,
   listDemandTopics,
   listObjectAddresses,
@@ -35,6 +36,7 @@ import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
+import { CrmActorDocuments } from './CrmActorDocuments';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
 
@@ -70,7 +72,7 @@ type FicheModal = 'interaction' | 'task' | 'edit' | 'assign' | null;
 
 /**
  * Modal « Affecter un établissement » (§66) — rattache l'acteur à un établissement EXISTANT de
- * l'annuaire CRM (crée le lien actor_object_role, rôle serveur 'operator'). Limite connue et
+ * l'annuaire CRM (crée le lien actor_object_role avec le rôle par défaut de l'acteur). Limite connue et
  * ACCEPTÉE : seuls les objets DÉJÀ présents dans l'annuaire CRM sont sélectionnables (datalist
  * dérivée de list_crm_directory) ; le RPC valide de toute façon le droit d'écriture côté serveur.
  * Les établissements déjà liés à l'acteur sont exclus de la liste. `linked=false` (déjà rattaché)
@@ -174,7 +176,7 @@ function CrmAssignObjectModal({
         <p className="crm-field__hint">Établissement introuvable dans l&apos;annuaire.</p>
       )}
       <p className="crm-rail__note">
-        Rôle attribué : exploitant. Seuls les établissements déjà suivis dans le CRM sont proposés.
+        Le rôle choisi à la création de l&apos;acteur sera repris. Seuls les établissements déjà suivis dans le CRM sont proposés.
       </p>
       {alreadyLinked && (
         <p className="crm-field__hint" role="status">
@@ -297,6 +299,7 @@ export function CrmActorFiche({
 }) {
   const queryClient = useQueryClient();
   const actorQuery = useQuery({ queryKey: ['crm-actor', actorId], queryFn: () => listActorCrm(actorId) });
+  const supportQuery = useQuery({ queryKey: ['crm-actor-support', actorId], queryFn: () => listActorSupport(actorId) });
   const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
 
   // §19 — adresses des établissements rattachés, proposées en un clic dans l'éditeur d'identité.
@@ -415,7 +418,8 @@ export function CrmActorFiche({
   const topicOptions = topicsQuery.data ?? [];
   // Sous-ligne de la carte = les RÔLES distincts de l'acteur (le prénom/nom dupliquerait le nom
   // affiché — rectif PO). Ex. « Exploitant » ou « Exploitant · Gérant ».
-  const identitySubline = [...new Set(objects.map((object) => object.roleName).filter(Boolean))].join(' · ');
+  const linkedRoles = [...new Set(objects.map((object) => object.roleName).filter(Boolean))].join(' · ');
+  const identitySubline = linkedRoles || supportQuery.data?.defaultRole?.name || '';
 
   return (
     <div className="crm-body">
@@ -450,6 +454,12 @@ export function CrmActorFiche({
               <Plus size={13} aria-hidden /> Nouvelle interaction
             </button>
           </div>
+
+          <CrmActorDocuments
+            actorId={actorId}
+            canWrite={canWrite}
+            objects={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
+          />
 
           <div className="crm-panel">
             <div className="crm-panel__body">

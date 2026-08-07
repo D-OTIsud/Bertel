@@ -36,7 +36,10 @@ BEGIN;
 CREATE OR REPLACE FUNCTION api.current_user_extended_object_ids()
 RETURNS SETOF text
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+-- §208/R2.1 : `pg_temp` EXPLICITEMENT EN DERNIER — MÊME forme que rls_policies.sql.
+-- Ce fichier (8i) est rejoué APRÈS rls_policies.sql (étape 6) : sans cette ligne il
+-- recréerait la forme faible et défairait le durcissement de la source amont.
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $fn$
   -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
   SELECT aor.object_id FROM actor_object_role aor

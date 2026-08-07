@@ -9,15 +9,12 @@ import { useExplorerStore } from '../../../store/explorer-store';
 import { useSessionStore } from '../../../store/session-store';
 import { useExplorerExportStore } from '../../../store/explorer-export-store';
 import {
-  availableColumns, EXPORT_GROUP_LABELS, EXPORT_PRESETS, presetColumnIds, purposeRequired,
+  availableColumns, CLOSED_ACTOR_CAPS, EXPORT_GROUP_LABELS, EXPORT_PRESETS, presetColumnIds, purposeRequired,
   type ExportColumnDef, type ExportGroupId,
 } from '../../../services/export/export-columns';
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
 import { fetchActorExportCapabilities } from '../../../services/export/export-actor-contacts';
 import { cn } from '@/lib/utils';
-
-/** R2 — capacités acteur par défaut : FERMÉES tant que le serveur n'a pas répondu. */
-const CLOSED_CAPS = { actorIdentityAvailable: false, actorContactsAvailable: false };
 
 /**
  * §208 — modale de l'export Excel de la sélection. L'offre de colonnes est
@@ -43,7 +40,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
 
   const [purpose, setPurpose] = useState('');
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [caps, setCaps] = useState(CLOSED_CAPS);
+  const [caps, setCaps] = useState(CLOSED_ACTOR_CAPS);
   const abortRef = useRef<AbortController | null>(null);
 
   // R2 — préflight serveur à l'ouverture : l'offre de colonnes acteur suit la
@@ -58,14 +55,14 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
   // et aucun verdict, même partiel, n'est appliqué.
   useEffect(() => {
     if (!open || selectedObjectIds.length === 0) {
-      setCaps(CLOSED_CAPS);
+      setCaps(CLOSED_ACTOR_CAPS);
       return;
     }
     let stale = false;
-    setCaps(CLOSED_CAPS);
+    setCaps(CLOSED_ACTOR_CAPS);
     fetchActorExportCapabilities(selectedObjectIds, { isStale: () => stale })
       .then((result) => { if (!stale) setCaps(result); })
-      .catch(() => { if (!stale) setCaps(CLOSED_CAPS); });
+      .catch(() => { if (!stale) setCaps(CLOSED_ACTOR_CAPS); });
     return () => { stale = true; };
   }, [open, selectedObjectIds]);
 

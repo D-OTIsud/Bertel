@@ -31,9 +31,15 @@ interface LegalDocumentEditModalProps {
  * scalar). Captures the type, reference, validity window, status, a free note and an optional
  * justificatif file (ref_document via /api/document/upload → document_id).
  *
- * "Obligatoire" is read-only: it reflects the document type's `ref_legal_type.is_required` and
- * has no per-row column to persist (decision 2026-06-17), so an editable toggle would be a
- * write-trap. It is shown as a disabled checkbox with a hint.
+ * Le sélecteur de type affiche sous lui la `description` du type — dans quelle situation la pièce
+ * est demandée (§209). C'est ce qui permet à l'agent de choisir entre KBIS, extrait INPI, avis
+ * SIRENE et statuts d'association sans connaître le droit des sociétés.
+ *
+ * Il n'y a PLUS de case « Obligatoire » : depuis §209 aucun document n'est `is_required` (l'obligation
+ * dépend de la situation de l'exploitant — meublé ≠ association ≠ restaurant), la case était donc un
+ * contrôle désactivé bloqué sur « Non ». Le signal survit là où il compte : la pastille « Obligatoire »
+ * de la liste §18 ne se rend que si `record.isRequired`, donc un futur type marqué obligatoire en base
+ * reste visible sans rien recâbler.
  */
 export function LegalDocumentEditModal({
   open,
@@ -72,6 +78,11 @@ export function LegalDocumentEditModal({
     ...typeOptions.map((option) => ({ v: option.code, l: option.label })),
   ];
 
+  // « Quand demander cette pièce » — vide pour un code hérité absent du catalogue (le Field masque
+  // alors son hint plutôt que d'afficher une ligne vide).
+  const selectedTypeDescription =
+    typeOptions.find((option) => option.code === draft.typeCode)?.description ?? '';
+
   // Preserve an imported status the everyday set does not cover (suspended/revoked/requested).
   const statusOptions = LEGAL_DOCUMENT_STATUS_OPTIONS.some((option) => option.v === draft.status)
     ? LEGAL_DOCUMENT_STATUS_OPTIONS
@@ -98,27 +109,14 @@ export function LegalDocumentEditModal({
       saveDisabled={saveDisabled}
       size="lg"
     >
-      <div className="grid-2">
-        <Field label="Type de document" required>
-          <Select
-            aria-label="Type de document"
-            value={draft.typeCode}
-            options={typeSelectOptions}
-            onChange={selectType}
-          />
-        </Field>
-        <Field label="Obligatoire" hint="Défini par le type de document — non modifiable par document.">
-          <label className="legal-required-flag">
-            <input
-              type="checkbox"
-              checked={draft.isRequired}
-              disabled
-              aria-label="Document obligatoire (défini par le type)"
-            />
-            <span>{draft.isRequired ? 'Oui — document obligatoire' : 'Non — facultatif'}</span>
-          </label>
-        </Field>
-      </div>
+      <Field label="Type de document" required hint={selectedTypeDescription || undefined}>
+        <Select
+          aria-label="Type de document"
+          value={draft.typeCode}
+          options={typeSelectOptions}
+          onChange={selectType}
+        />
+      </Field>
 
       <Field label="N° / référence">
         <Input

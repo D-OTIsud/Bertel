@@ -1,4 +1,9 @@
-import { fetchReferenceCatalogs, REF_CODE_DOMAINS, REFERENCE_TABLES } from './reference-catalogs';
+import {
+  fetchReferenceCatalogs,
+  REF_CODE_DOMAINS,
+  REFERENCE_TABLES,
+  REFERENCE_TABLE_SELECT,
+} from './reference-catalogs';
 
 const inSpy = jest.fn();
 const selectSpy = jest.fn();
@@ -79,5 +84,11 @@ describe('fetchReferenceCatalogs', () => {
     for (const table of REFERENCE_TABLES) {
       expect(Array.isArray(catalogs.tables[table])).toBe(true);
     }
+  });
+  // §209 — l'aide « quand demander cette pièce » du sélecteur §18 vient de
+  // ref_legal_type.description. La colonne est portée par ce select GROUPÉ : l'oublier ne casse
+  // rien visiblement, l'aide disparaît simplement de toutes les modales de document juridique.
+  test('le select ref_legal_type embarque description (aide « quand demander » du §18)', () => {
+    expect(REFERENCE_TABLE_SELECT.ref_legal_type.split(/\s*,\s*/)).toContain('description');
   });
 });

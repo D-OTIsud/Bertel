@@ -13,7 +13,7 @@ function legalModule(overrides: Partial<ObjectWorkspaceLegalModule> = {}): Objec
       { id: 'id-rs', code: 'raison_sociale', label: 'Raison sociale', category: 'business', isPublic: false, isRequired: false },
       { id: 'id-vat', code: 'vat_number', label: 'Numéro TVA', category: 'business', isPublic: false, isRequired: false },
       { id: 'id-tax', code: 'tourist_tax', label: 'Taxe de séjour', category: 'accommodation', isPublic: true, isRequired: true },
-      { id: 'id-li', code: 'liability_insurance', label: 'Assurance RC', category: 'insurance', isPublic: false, isRequired: true },
+      { id: 'id-li', code: 'attestation_assurance', label: "Attestation d'assurance", category: 'insurance', isPublic: false, isRequired: false },
     ],
     records: [
       {
@@ -83,14 +83,14 @@ describe('SectionLegal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} />);
 
-    const documentsBefore = result.current.draft.legal.records.filter((record) => record.typeCode === 'liability_insurance');
+    const documentsBefore = result.current.draft.legal.records.filter((record) => record.typeCode === 'attestation_assurance');
     expect(documentsBefore).toHaveLength(0);
 
     // Opening the modal must NOT mutate state — only saving commits the row.
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Ajouter un document/ }));
     });
-    expect(result.current.draft.legal.records.filter((r) => r.typeCode === 'liability_insurance')).toHaveLength(0);
+    expect(result.current.draft.legal.records.filter((r) => r.typeCode === 'attestation_assurance')).toHaveLength(0);
     expect(screen.getByLabelText('Type de document')).toBeInTheDocument();
 
     act(() => {
@@ -99,13 +99,13 @@ describe('SectionLegal', () => {
 
     const documentsAfter = result.current.draft.legal.records.filter((record) => !['siret', 'siren', 'raison_sociale', 'vat_number'].includes(record.typeCode));
     expect(documentsAfter).toHaveLength(1);
-    expect(documentsAfter[0].typeCode).toBe('liability_insurance');
+    expect(documentsAfter[0].typeCode).toBe('attestation_assurance');
     expect(documentsAfter[0].validityMode).toBe('forever');
   });
 
   it('shows an "Obligatoire" chip and an expiry flag, and raises the §18 alert pill for an expired mandatory document', () => {
     const expiredInsurance: ObjectWorkspaceLegalModule['records'][number] = {
-      recordId: 'r-li', typeId: 'id-li', typeCode: 'liability_insurance', typeLabel: 'Assurance RC', category: 'insurance',
+      recordId: 'r-li', typeId: 'id-li', typeCode: 'attestation_assurance', typeLabel: "Attestation d'assurance", category: 'insurance',
       isPublic: false, isRequired: true, valueJson: JSON.stringify({ value: 'POL-1' }), documentId: '',
       documentUrl: '', documentTitle: '', validFrom: '2024-01-01', validTo: '2000-01-01', validityMode: 'fixed_end_date',
       status: 'active', documentRequestedAt: '', documentDeliveredAt: '', note: '', daysUntilExpiry: '',
@@ -116,7 +116,7 @@ describe('SectionLegal', () => {
     });
     render(<SectionLegal editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getByText('Assurance RC')).toBeInTheDocument();
+    expect(screen.getByText("Attestation d'assurance")).toBeInTheDocument();
     expect(screen.getByText('Obligatoire')).toBeInTheDocument();
     expect(screen.getByText('Expiré')).toBeInTheDocument();
     expect(screen.getByText('Document obligatoire expiré')).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('SectionLegal', () => {
 
   it('opens the edit modal on a document row and commits changes via "Enregistrer"', () => {
     const insurance: ObjectWorkspaceLegalModule['records'][number] = {
-      recordId: 'r-li', typeId: 'id-li', typeCode: 'liability_insurance', typeLabel: 'Assurance RC', category: 'insurance',
+      recordId: 'r-li', typeId: 'id-li', typeCode: 'attestation_assurance', typeLabel: "Attestation d'assurance", category: 'insurance',
       isPublic: false, isRequired: true, valueJson: '', documentId: '', documentUrl: '', documentTitle: '',
       validFrom: '', validTo: '', validityMode: 'forever', status: 'active', documentRequestedAt: '',
       documentDeliveredAt: '', note: '', daysUntilExpiry: '',
@@ -145,7 +145,7 @@ describe('SectionLegal', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
     });
 
-    const saved = result.current.draft.legal.records.find((r) => r.typeCode === 'liability_insurance');
+    const saved = result.current.draft.legal.records.find((r) => r.typeCode === 'attestation_assurance');
     expect(saved?.valueJson).toBe(JSON.stringify({ value: 'POL-2026-99' }));
   });
 

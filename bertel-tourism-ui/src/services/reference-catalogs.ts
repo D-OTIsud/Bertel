@@ -77,7 +77,9 @@ export const REFERENCE_TABLE_SELECT = {
   ref_actor_role: 'id, code, name',
   ref_iti_assoc_role: 'id, code, name, position',
   ref_tag: 'id, slug, name, color, position',
-  ref_legal_type: 'id, code, name, category, is_public, is_required',
+  // `description` = quand demander la pièce (§209) ; rendue en aide sous le sélecteur du §18.
+  // Colonne ajoutée au select DÉJÀ groupé ⇒ zéro requête supplémentaire.
+  ref_legal_type: 'id, code, name, description, category, is_public, is_required',
   ref_capacity_metric: 'id, code, name, position',
   // `object_type` est necessaire : les appelants filtraient cote serveur, ils
   // filtrent desormais en memoire sur la table entiere (elle est petite).

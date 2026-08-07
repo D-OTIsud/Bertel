@@ -75,8 +75,21 @@ END$$;
 -- les 3 feuilles qu'elles consultent doivent porter la forme durcie ; une seule
 -- feuille laissée en forme faible rouvre le trou par en dessous.
 DO $$
-DECLARE v_bad text;
+DECLARE v_bad text; v_n int;
 BEGIN
+  -- Anti-vacuite du balayage lui-meme : une fonction absente de la liste ne
+  -- contribue AUCUNE ligne au NOT EXISTS ci-dessous — elle passerait le
+  -- sweep par ABSENCE, pas par conformite. Les 6 feuilles de la chaine
+  -- d'autorisation doivent toutes exister avant de faire confiance a v_bad.
+  SELECT count(*) INTO v_n
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'api'
+     AND p.proname IN ('can_read_actor_contacts', 'export_actor_capabilities', 'export_actor_contacts',
+                       'current_user_crm_object_ids', 'current_user_extended_object_ids',
+                       'current_user_readable_object_ids');
+  ASSERT v_n = 6,
+    format('§208/R2.1: le balayage pg_temp ne voit que %s/6 fonctions attendues — une absente rendrait le sweep VACANT pour elle', v_n);
+
   SELECT string_agg(n.nspname || '.' || p.proname || ' → ' ||
                     COALESCE(array_to_string(p.proconfig, ' | '), '(aucun search_path)'), ', ' ORDER BY p.proname)
     INTO v_bad
@@ -194,6 +207,8 @@ BEGIN
     FROM (VALUES ('email',  'jean.sentinelle16u@exemple-16u.test', TRUE),
                  ('mobile', '0692SENTINELLE16U',                   FALSE)) AS v(kind, value, is_primary)
     JOIN ref_code_contact_kind k ON k.code = v.kind;
+  ASSERT (SELECT count(*) FROM actor_channel WHERE actor_id = v_actor) = 2,
+    'fixture: actor_channel n a pas recu les 2 canaux (email/mobile) — ref_code_contact_kind incomplet ferait echouer A2c 24 lignes plus loin pour la mauvaise raison';
 
   PERFORM set_config('request.jwt.claims', NULL, true);
   RAISE NOTICE '16u fixtures: 1 ORG, 2 fiches (publisher/reader), 3 users, 1 acteur, 2 canaux.';
@@ -281,7 +296,8 @@ BEGIN
   SET LOCAL ROLE anon;
 
   r := api.get_object_resource('HOTRUN00000016U1', ARRAY['fr'], 'none', '{}'::jsonb)::jsonb;
-  ASSERT r IS NOT NULL, 'C0 FAIL: anon ne lit meme pas la fiche PUBLIEE — le test serait vacant';
+  ASSERT r->>'id' = 'HOTRUN00000016U1',
+    format('C0 FAIL: anon ne lit meme pas la fiche PUBLIEE (id recu: %s) — le test serait vacant', r->>'id');
   ASSERT jsonb_array_length(COALESCE(r->'actors', '[]'::jsonb)) = 0,
     format('C1 FAIL: anon voit une ligne acteur a lien partners, recu %s', r->'actors');
   ASSERT jsonb_array_length(COALESCE(r->'render'->'actor_lines', '[]'::jsonb)) = 0,
@@ -292,6 +308,37 @@ BEGIN
 
   RESET ROLE;
   RAISE NOTICE '16u C: anon = 0 ligne structuree, 0 actor_line, aucune trace d identite.';
+END$$;
+
+-- ---------------------------------------------------------------------
+-- D0. SERVICE_ROLE sur lien PARTNERS (avant le flip D) : la garde ROW ne doit
+--     rien montrer non plus — c'est l'état RÉEL des routes partenaires.
+-- ---------------------------------------------------------------------
+-- Bloc D ne teste `service_role` que sur un lien déjà basculé `public` (:323).
+-- L'état `partners` — celui dans lequel toutes les fixtures de ce fichier
+-- naissent, et celui dans lequel les routes partenaires tournent en pratique —
+-- n'était éprouvé nulle part sous ce rôle. `api.current_user_extended_object_ids()`
+-- (migration_explorer_rls_setbased.sql) résout ses 5 bras via `api.user_actor_ids()`
+-- ou `auth.uid()` ; sous `{"role":"service_role"}` sans `sub`, les 5 sont vides
+-- aujourd'hui. Si un bras `service_role` y était un jour ajouté, la ligne acteur
+-- d'un lien `partners` fuiterait vers les routes partenaires SANS qu'aucune
+-- assertion de ce fichier ne rougisse — D ne peut pas le voir, il a déjà basculé
+-- le lien en `public` avant d'interroger. Ce bloc ferme ce trou.
+DO $$
+DECLARE r jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  SET LOCAL ROLE service_role;
+
+  r := api.get_object_resource('HOTRUN00000016U1', ARRAY['fr'], 'none', '{}'::jsonb)::jsonb;
+  ASSERT jsonb_array_length(COALESCE(r->'actors', '[]'::jsonb)) = 0,
+    format('D0a FAIL: service_role voit une ligne acteur a lien PARTNERS (avant tout flip) — un bras service_role a fuite dans le perimetre etendu, recu %s', r->'actors');
+  ASSERT jsonb_array_length(COALESCE(r->'render'->'actor_lines', '[]'::jsonb)) = 0,
+    format('D0b FAIL: render.actor_lines fuit un nom de personne a service_role sur un lien PARTNERS, recu %s',
+           r->'render'->'actor_lines');
+
+  RESET ROLE;
+  RAISE NOTICE '16u D0: service_role x lien partners = 0 ligne structuree, 0 actor_line (etat reel des routes partenaires).';
 END$$;
 
 -- ---------------------------------------------------------------------
@@ -637,6 +684,14 @@ END$$;
 --   · POSITIVE — elles ÉMETTENT TOUJOURS les champs que §208 caviarde ailleurs.
 --     Sans cette moitié, quelqu'un pourrait « harmoniser » ces fonctions en
 --     supprimant la PII sans qu'aucune assertion ne bouge.
+-- LIMITE (à ne pas lire comme une preuve d'identité) : H1-H3 ne pincent que des
+-- JETONS — l'absence des 5 pinnés et l'arrivée des 3 bannis (H1/H2) — jamais la
+-- SÉMANTIQUE du corps. Une RESTRICTION en plein milieu qui laisse tous les jetons
+-- intacts (ex. `AND aor.visibility = 'public'` ajouté sur la jointure acteur,
+-- `AND ac.is_primary` glissé après `FROM actor_channel ac`, ou un nouveau `WHERE`
+-- externe) n'est PAS détectée par ce bloc. La preuve d'IDENTITÉ complète est le
+-- diff one-shot HEAD↔arbre de la tâche 13 ; H n'en est que le complément PARTIEL
+-- et PERMANENT (jetons, pas sémantique).
 -- Et `get_objects_with_deep_data` doit rester SECURITY INVOKER : sa seule
 -- protection est la RLS ; la passer en DEFINER l'évaporerait en silence, sans
 -- changer sa signature.

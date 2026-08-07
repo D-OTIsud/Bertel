@@ -78,4 +78,37 @@ BEGIN
 
   RAISE NOTICE 'v_ref_catalog assertions passed';
 END$$;
+
+DO $$
+BEGIN
+  -- Un verrouillage sans motif est refusé : un écran qui dit « lecture seule » sans
+  -- dire pourquoi transforme une décision en mystère.
+  BEGIN
+    INSERT INTO ref_catalog_registry (catalog_key, label, family, access)
+    VALUES ('ref_legal_type', 'Test', 'Juridique', 'readonly');
+    RAISE EXCEPTION 'GARDE VACANTE : access=readonly sans readonly_reason accepté';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+
+  ASSERT (SELECT access FROM ref_catalog_registry WHERE catalog_key = 'ref_permission') = 'readonly',
+         'ref_permission : ses codes sont lus en dur par le contrôle d''accès';
+  ASSERT (SELECT length(readonly_reason) FROM ref_catalog_registry
+          WHERE catalog_key = 'ref_permission') > 20,
+         'le motif doit être une phrase affichable, pas un mot';
+
+  -- Les verrouillages DÉRIVÉS ne doivent PAS être seedés : les dupliquer ferait croire
+  -- que le seed est la garde, et un oubli deviendrait une ouverture.
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_catalog_registry WHERE catalog_key = 'ref_interop_crosswalk'),
+         'sans clé primaire = verrouillage DÉRIVÉ, pas une ligne de registre';
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_catalog_registry WHERE catalog_key LIKE 'ref_code:taxonomy%'),
+         'domaine non éditable = verrouillage DÉRIVÉ via api.ref_code_domain_is_editable';
+
+  -- Le registre ne référence QUE des catalogues réels.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM ref_catalog_registry r
+    WHERE NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog v WHERE v.catalog_key = r.catalog_key)),
+    'le registre contient une clé qui ne correspond à aucun catalogue découvert';
+
+  RAISE NOTICE 'ref_catalog_registry assertions passed';
+END$$;
 ROLLBACK;

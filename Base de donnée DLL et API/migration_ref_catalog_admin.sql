@@ -299,4 +299,241 @@ INSERT INTO public.ref_catalog_registry (catalog_key, label, family, used_in) VA
 ON CONFLICT (catalog_key) DO UPDATE SET
   label = EXCLUDED.label, family = EXCLUDED.family, used_in = EXCLUDED.used_in, updated_at = now();
 
+-- ============================================================================
+-- Tâche 3 — helpers dérivés + RPC de lecture.
+--
+-- Le maître (api.list_ref_catalogs) ET le détail (api.get_ref_catalog) lisent le
+-- MÊME accès via les helpers dérivés internal.ref_catalog_access /
+-- internal.ref_catalog_readonly_reason. Les verrouillages STRUCTURELS (pas de PK,
+-- domaine ref_code non éditable) sont dérivés d'abord ; le registre ne fait que
+-- restreindre ensuite. Sans cette discipline, une table sans clé primaire
+-- s'afficherait éditable dans la liste puis verrouillée à l'ouverture.
+-- ============================================================================
+
+-- Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
+-- (12 des 32 tables n'ont pas de `name`), et chaque oubli produirait une ligne muette.
+-- Rend NULL pour les matrices : leur libellé se compose depuis la clé, côté front.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_label_column(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, internal
+AS $$
+  SELECT COALESCE(
+    (SELECT r.label_column FROM public.ref_catalog_registry r
+     WHERE r.catalog_key = p_catalog_key AND NULLIF(TRIM(r.label_column), '') IS NOT NULL),
+    (SELECT c->>'name' FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
+     WHERE v.catalog_key = p_catalog_key
+       AND c->>'name' = ANY (ARRAY['name','label','title','libelle'])
+     ORDER BY array_position(ARRAY['name','label','title','libelle'], c->>'name') LIMIT 1),
+    (SELECT 'code' FROM internal.v_ref_catalog v, jsonb_array_elements(v.columns) c
+     WHERE v.catalog_key = p_catalog_key AND c->>'name' = 'code' LIMIT 1));
+$$;
+
+-- Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
+-- oubliés au seed. Consommé par le maître ET par le détail — sans quoi une table sans
+-- clé primaire s'afficherait éditable dans la liste puis verrouillée à l'ouverture.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_access(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, api, internal
+AS $$
+  SELECT CASE
+    WHEN NOT v.is_identifiable THEN 'readonly'
+    WHEN v.kind = 'ref_code_domain'
+         AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE THEN 'readonly'
+    ELSE COALESCE((SELECT r.access FROM public.ref_catalog_registry r
+                   WHERE r.catalog_key = p_catalog_key), 'editable')
+  END
+  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
+$$;
+
+CREATE OR REPLACE FUNCTION internal.ref_catalog_readonly_reason(p_catalog_key text)
+RETURNS text LANGUAGE sql STABLE
+SET search_path = pg_catalog, public, api, internal
+AS $$
+  SELECT CASE
+    WHEN NOT v.is_identifiable
+      THEN 'Aucune clé primaire : une ligne n''y est pas identifiable.'
+    WHEN v.kind = 'ref_code_domain' AND api.ref_code_domain_is_editable(v.domain) IS NOT TRUE
+      THEN 'Domaine structurel (taxonomie, hiérarchie ou couplage à un type d''objet). S''édite par migration.'
+    ELSE (SELECT r.readonly_reason FROM public.ref_catalog_registry r
+          WHERE r.catalog_key = p_catalog_key AND r.access = 'readonly')
+  END
+  FROM internal.v_ref_catalog v WHERE v.catalog_key = p_catalog_key;
+$$;
+
+-- NOTE sur la CLÉ CANONIQUE d'une ligne. Le front et le serveur doivent l'écrire à
+-- l'identique pour joindre `rows` et `usage`. Ce n'est délibérément PAS du JSON sérialisé :
+-- jsonb::text rend {"id": "x"} (avec une espace) là où JSON.stringify rend {"id":"x"}, et
+-- les deux ne se rejoindraient jamais. La règle est : joindre les valeurs de clé primaire,
+-- dans l'ordre de primary_key_columns, par le séparateur d'unité U+001F. Or `usage` n'existe
+-- que pour les catalogues à clé SIMPLE (une matrice n'est référencée par personne), donc la
+-- clé s'y réduit à la valeur en texte — c'est ce qu'écrivent les requêtes ci-dessous.
+
+-- Valeur castée au type découvert, réutilisée par l'INSERT, le SET et le WHERE.
+-- Sans cast, (p_values->>'is_required') rend du texte et une colonne booléenne le refuse.
+-- Le type vient de la VUE, jamais de l'appelant : un type fourni par le client serait une injection.
+CREATE OR REPLACE FUNCTION internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)
+RETURNS text LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT format('(%s->>%L)::%s', p_src, p_name,
+                COALESCE((SELECT c->>'type' FROM jsonb_array_elements(p_columns) c
+                          WHERE c->>'name' = p_name), 'text'));
+$$;
+
+CREATE OR REPLACE FUNCTION internal.ref_catalog_row_count(p_table text)
+RETURNS bigint LANGUAGE plpgsql STABLE
+SET search_path = pg_catalog, public, internal
+AS $$
+DECLARE v_n bigint;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM internal.v_ref_catalog
+                 WHERE table_name = p_table AND kind = 'table') THEN
+    RETURN 0;
+  END IF;
+  EXECUTE format('SELECT count(*) FROM public.%I', p_table) INTO v_n;
+  RETURN v_n;
+END $$;
+
+CREATE OR REPLACE FUNCTION api.list_ref_catalogs()
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE v_out jsonb;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(x ORDER BY x->>'family', x->>'label'), '[]'::jsonb) INTO v_out
+  FROM (
+    SELECT jsonb_build_object(
+      'catalog_key',     v.catalog_key,
+      'kind',            v.kind,
+      'label',           COALESCE(r.label, v.catalog_key),
+      'family',          COALESCE(r.family, 'À classer'),
+      'used_in',         r.used_in,
+      -- Helpers DÉRIVÉS, comme le détail : sinon le maître et le détail divergent.
+      'access',          internal.ref_catalog_access(v.catalog_key),
+      'readonly_reason', internal.ref_catalog_readonly_reason(v.catalog_key),
+      'n_values',        CASE WHEN v.kind = 'ref_code_domain'
+                           THEN (SELECT count(*) FROM public.ref_code rc WHERE rc.domain = v.domain)
+                           ELSE internal.ref_catalog_row_count(v.table_name) END
+    ) AS x
+    FROM internal.v_ref_catalog v
+    LEFT JOIN public.ref_catalog_registry r ON r.catalog_key = v.catalog_key
+  ) s;
+  RETURN v_out;
+END $$;
+
+CREATE OR REPLACE FUNCTION api.get_ref_catalog(p_catalog_key text)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE
+  v      record;
+  v_reg  record;
+  v_rows jsonb := '[]'::jsonb;
+  v_use  jsonb := '{}'::jsonb;
+  v_part jsonb;
+  v_order text;
+  f      record;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_reg FROM public.ref_catalog_registry WHERE catalog_key = p_catalog_key;
+
+  IF v.kind = 'ref_code_domain' THEN
+    SELECT COALESCE(jsonb_agg(to_jsonb(rc) ORDER BY rc.position NULLS LAST, rc.name), '[]'::jsonb)
+      INTO v_rows FROM public.ref_code rc WHERE rc.domain = v.domain;
+    -- Comptage délégué à la phase 7.5 (balayage de catalogue déjà mesuré). Sa sortie est
+    -- déjà indexée par ref_code.id, ce qui EST la clé canonique d'une clé primaire à une
+    -- colonne : aucune re-clé n'est nécessaire.
+    v_use := api.ref_code_usage_counts(v.domain);
+  ELSE
+    -- ORDER BY EXPLICITE. Sans lui, jsonb_agg rend l'ordre physique du heap : l'écran
+    -- afficherait un ordre qui n'est pas celui de `position`, et les flèches
+    -- monter/descendre enverraient une permutation fondée sur un ordre faux.
+    --
+    -- CORRECTIF (revue en cours de tâche) : la concaténation littérale du brief
+    -- (CASE ... || string_agg(...)) rend NULL dès que primary_key_columns est vide
+    -- (string_agg sur zéro ligne = NULL, et texte || NULL = NULL en SQL) — exactement
+    -- le cas de ref_interop_crosswalk (0 colonne de clé primaire, is_identifiable=false
+    -- mais toujours listé). Le %s de format() reçoit alors une chaîne vide et produit
+    -- « ORDER BY  FROM ... » : erreur de syntaxe 42601, qui casse le balayage exhaustif.
+    -- On construit donc les fragments d'ORDER BY comme un ENSEMBLE (UNION ALL) agrégé par
+    -- string_agg, jamais par concaténation directe : un ensemble vide donne proprement
+    -- NULL, qu'on retombe alors sur un ORDER BY constant (ordre non signifiant, mais SQL
+    -- valide — ce catalogue est de toute façon verrouillé en lecture par is_identifiable).
+    SELECT string_agg(frag, ', ') INTO v_order FROM (
+      SELECT 't.position NULLS LAST' AS frag
+      WHERE EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = 'position')
+      UNION ALL
+      SELECT format('t.%I', k->>'name') FROM jsonb_array_elements(v.primary_key_columns) k
+    ) frags;
+    IF v_order IS NULL THEN
+      v_order := '(SELECT 1)';
+    END IF;
+
+    EXECUTE format('SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY %s), ''[]''::jsonb) FROM public.%I t',
+                   v_order, v.table_name) INTO v_rows;
+
+    -- Compteur : FUSION ADDITIVE de toutes les FK entrantes. L'écraser à chaque tour de
+    -- boucle est l'erreur naturelle ici — d'où l'accumulateur v_use et la variable v_part.
+    --
+    -- CORRECTIF (revue en cours de tâche) : internal.v_ref_catalog (tâche 1) sérialise
+    -- incoming_fk avec les clés JSON 'table'/'column' (jsonb_build_object('table', ...,
+    -- 'column', ...)). Le brief lisait AS y(tbl text, col text) — noms de colonnes SANS
+    -- rapport avec les clés JSON réelles — donc jsonb_to_recordset rendait f.tbl et f.col
+    -- NULL sur CHAQUE ligne, et format('%I', NULL) échouait (22004) sur 27 catalogues à
+    -- clé simple (ref_language, ref_legal_type, ref_amenity, ref_permission, etc.). On
+    -- nomme l'enregistrement d'après les clés JSON réelles, entre guillemets (mots réservés).
+    IF jsonb_array_length(v.primary_key_columns) = 1 THEN
+      FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS y("table" text, "column" text) LOOP
+        EXECUTE format(
+          'SELECT COALESCE(jsonb_object_agg(k, n), ''{}''::jsonb) FROM ('
+          '  SELECT x.%I::text AS k, count(*) AS n'
+          '  FROM public.%I x WHERE x.%I IS NOT NULL GROUP BY 1) s',
+          f."column", f."table", f."column")
+          INTO v_part;
+        SELECT COALESCE(jsonb_object_agg(key, total), '{}'::jsonb) INTO v_use
+        FROM (SELECT key, SUM(value::bigint) AS total
+              FROM (SELECT * FROM jsonb_each_text(v_use)
+                    UNION ALL SELECT * FROM jsonb_each_text(v_part)) u
+              GROUP BY key) m;
+      END LOOP;
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'catalog_key',         v.catalog_key,
+    'kind',                v.kind,
+    'label',               COALESCE(v_reg.label, v.catalog_key),
+    'family',              COALESCE(v_reg.family, 'À classer'),
+    'used_in',             v_reg.used_in,
+    'access',              internal.ref_catalog_access(v.catalog_key),
+    'readonly_reason',     internal.ref_catalog_readonly_reason(v.catalog_key),
+    'is_identifiable',     v.is_identifiable,
+    'primary_key_columns', v.primary_key_columns,
+    'label_column',        internal.ref_catalog_label_column(v.catalog_key),
+    'columns',             v.columns,
+    'outgoing_fk',         v.outgoing_fk,
+    'rows',                v_rows,
+    'usage',               v_use);
+END $$;
+
+REVOKE ALL ON FUNCTION internal.ref_catalog_label_column(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_access(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_readonly_reason(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_cast_expr(jsonb, text, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.ref_catalog_row_count(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION api.list_ref_catalogs() FROM PUBLIC;
+REVOKE ALL ON FUNCTION api.get_ref_catalog(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.list_ref_catalogs() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_ref_catalog(text) TO authenticated, service_role;
+
 COMMIT;

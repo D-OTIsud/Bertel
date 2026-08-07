@@ -111,4 +111,95 @@ BEGIN
 
   RAISE NOTICE 'ref_catalog_registry assertions passed';
 END$$;
+
+-- ----------------------------------------------------------------------------
+-- Tâche 3 — RPC de lecture + helpers dérivés.
+-- ----------------------------------------------------------------------------
+DO $$
+DECLARE v_list jsonb; v_cat jsonb; r record;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  v_list := api.list_ref_catalogs();
+  ASSERT jsonb_array_length(v_list) = (SELECT count(*) FROM internal.v_ref_catalog),
+         'le maître doit lister TOUS les catalogues découverts';
+
+  -- Le maître et le détail ne doivent JAMAIS diverger sur l'accès.
+  FOR r IN SELECT catalog_key FROM internal.v_ref_catalog LOOP
+    ASSERT (SELECT c->>'access' FROM jsonb_array_elements(v_list) c
+            WHERE c->>'catalog_key' = r.catalog_key)
+           = (api.get_ref_catalog(r.catalog_key)->>'access'),
+           format('accès divergent entre maître et détail sur %s', r.catalog_key);
+  END LOOP;
+
+  -- LE PIÈGE : un domaine plat doit être ÉDITABLE.
+  ASSERT api.get_ref_catalog('ref_code:cuisine_type')->>'access' = 'editable',
+         'un domaine ref_code plat doit rester éditable — is_identifiable synthétisé';
+  -- … et un domaine structurel verrouillé PAR DÉRIVATION.
+  ASSERT api.get_ref_catalog('ref_code:taxonomy_hlo')->>'access' = 'readonly',
+         'un domaine non éditable selon api.ref_code_domain_is_editable est verrouillé';
+  ASSERT api.get_ref_catalog('ref_interop_crosswalk')->>'access' = 'readonly',
+         'une relation sans clé primaire est verrouillée d''office';
+
+  -- outgoing_fk émis ET normalisé : sans lui, saisie d'UUID à la main.
+  ASSERT (SELECT f->>'target'
+          FROM jsonb_array_elements(api.get_ref_catalog('ref_amenity')->'outgoing_fk') f
+          WHERE f->>'column' = 'family_id') = 'ref_code:amenity_family',
+         'la cible de FK doit être un catalog_key exploitable par le front';
+
+  -- Cascade de libellé.
+  ASSERT api.get_ref_catalog('ref_sustainability_action')->>'label_column' = 'label',
+         'la cascade doit trouver `label` quand `name` est absente';
+  ASSERT api.get_ref_catalog('ref_capacity_applicability')->>'label_column' IS NULL,
+         'une matrice n''a pas de colonne de libellé : le front compose depuis la clé';
+
+  -- BALAYAGE EXHAUSTIF : chaque catalogue doit se décrire sans erreur.
+  FOR r IN SELECT catalog_key FROM internal.v_ref_catalog LOOP
+    BEGIN
+      PERFORM api.get_ref_catalog(r.catalog_key);
+    EXCEPTION WHEN OTHERS THEN
+      RAISE EXCEPTION 'get_ref_catalog casse sur % : % (%)', r.catalog_key, SQLERRM, SQLSTATE;
+    END;
+  END LOOP;
+
+  v_cat := api.get_ref_catalog('ref_legal_type');
+  ASSERT jsonb_array_length(v_cat->'rows') = 20,
+         format('ref_legal_type porte 20 valeurs ; obtenu %s', jsonb_array_length(v_cat->'rows'));
+
+  RAISE NOTICE 'lecture assertions passed';
+END$$;
+
+-- Compteur d'usage : NON VACANT, et sur DEUX tables consommatrices DISTINCTES.
+-- ref_language est référencée par object_language ET object_review : c'est la FUSION
+-- entre deux FK entrantes qu'on teste ici, pas deux lignes dans la même table.
+DO $$
+DECLARE
+  v_lang uuid; v_key text; v_before bigint; v_after bigint; v_source uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  SELECT id INTO v_lang FROM ref_language WHERE code = 'fr';
+  v_key := v_lang::text;
+
+  v_before := COALESCE((api.get_ref_catalog('ref_language')->'usage'->>v_key)::bigint, 0);
+
+  INSERT INTO object (id, object_type, name, status)
+    VALUES ('CATMFK9999999901', 'HLO', 'Témoin multi-FK', 'draft');
+  INSERT INTO object_language (object_id, language_id) VALUES ('CATMFK9999999901', v_lang);
+  -- object_review.source_id est NOT NULL (FK ref_review_source) : ref_legal_type était
+  -- le seul champ obligatoire cité par le brief, mais le schéma réel exige aussi une
+  -- source d'avis. On prend une source seedée existante — l'intention du test (deux
+  -- tables DISTINCTES référençant ref_language) n'en est pas changée.
+  SELECT id INTO v_source FROM ref_review_source LIMIT 1;
+  INSERT INTO object_review (object_id, source_id, language_id, rating)
+    VALUES ('CATMFK9999999901', v_source, v_lang, 5);
+
+  v_after := COALESCE((api.get_ref_catalog('ref_language')->'usage'->>v_key)::bigint, 0);
+
+  ASSERT v_after = v_before + 2,
+         format('le compteur doit FUSIONNER deux FK entrantes distinctes ; avant %s, après %s',
+                v_before, v_after);
+
+  RAISE NOTICE 'compteur multi-FK assertion passed';
+END$$;
+
 ROLLBACK;

@@ -58,8 +58,18 @@ BEGIN;
 --    ensembliste ne planifie/exécute le périmètre qu'une fois (InitPlan).
 --    ⇒ Toute évolution de la règle se fait ICI D'ABORD, puis dans cette unique
 --      forme ensembliste. Le test permanent (tâche 14) doit asserter que les deux
---      rendent le MÊME ensemble sur les mêmes personas — sans cette assertion, la
---      divergence ne lève aucune erreur : elle donne juste une réponse fausse.
+--      s'accordent sur les mêmes personas — sans cette assertion, la divergence ne
+--      lève aucune erreur : elle donne juste une réponse fausse.
+--    ⚠ ÉNONCÉ EXACT de l'équivalence à asserter (M2) — les deux ne sont PAS égaux
+--      partout : ils le sont **sur les ids qui EXISTENT dans `object`**, la forme
+--      ensembliste exigeant EN PLUS l'existence (son bras superuser porte
+--      `WHERE EXISTS (SELECT 1 FROM public.object o WHERE o.id = t.id)`, que cette
+--      garde n'a pas — elle rend TRUE à un superuser sur n'importe quelle chaîne).
+--      L'écart est du côté FAIL-CLOSED : c'est la forme qui laisse RÉELLEMENT sortir
+--      la PII qui est la plus stricte. NE PAS « corriger » la garde en lui ajoutant
+--      un contrôle d'existence : elle n'a pas à le porter (elle répond « cette règle
+--      autorise-t-elle ? », pas « cette fiche existe-t-elle ? »), et une assertion
+--      d'égalité NON BORNÉE enverrait la tâche 14 au rouge pour cette seule raison.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.can_read_actor_contacts(p_object_id text)
 RETURNS boolean
@@ -113,25 +123,60 @@ COMMENT ON FUNCTION api.can_read_actor_contacts(text) IS
 --    C'est en outre ce que fait le vrai leg : il ne s'exécute QUE sur une fiche déjà
 --    atteinte (published ∪ extended) ; sans la conjonction, l'offre serait plus large
 --    que la garde qu'elle prétend refléter et les colonnes reviendraient vides.
---    Coût (§204) : la sonde par fiche s'arrête au PREMIER id qui répond TRUE ; le pire
---    cas (sélection entièrement refusée) est N évaluations, borné par la taille de la
---    sélection. Appel one-shot à l'ouverture de la modale, hors chemin chaud.
+--
+--    ⚠ M5 (à épingler par les tâches 13/14) : le prédicat d'IDENTITÉ ci-dessous reste une
+--    RETRANSCRIPTION à la main du leg `actors` de la lecture de fiche — contrairement au
+--    prédicat de coordonnées, ce leg n'a AUCUNE source appelable (il est inliné dans
+--    api.get_object_resource). La tâche 13 réécrit précisément ce leg : les deux DOIVENT
+--    être modifiés dans la même passe, et la tâche 14 doit asserter leur égalité sur les
+--    mêmes personas — sinon l'offre de colonnes diverge de ce que la fiche laisse voir
+--    sans qu'aucune erreur ne se lève. Le jour où ce leg devient appelable, l'APPELER ici
+--    (comme on appelle déjà api.can_read_actor_contacts) et supprimer la transcription.
+--
+--    COÛT — pourquoi le PLAFOND, et pourquoi le seul ordre des bras ne suffit pas (§204) :
+--    api.can_read_actor_contacts est SECURITY DEFINER, donc NON INLINABLE — chaque appel
+--    ré-exécute api.current_user_crm_object_ids() et l'EXISTS sur app_user_profile. Chaque
+--    id peut en coûter DEUX (un par clé). L'`EXISTS` s'arrête au premier TRUE, donc le PIRE
+--    cas est la sélection INTÉGRALEMENT REFUSÉE — exactement le cas d'un appelant hostile —
+--    et le dédoublonnage ne borne rien : N ids fabriqués sont N ids distincts (aucun
+--    contrôle d'existence). La fonction est PostgREST-exécutable par tout `authenticated`
+--    ⇒ un seul appel pourrait brûler jusqu'au statement_timeout, en boucle. Classe §210
+--    (fan-out par élément sur un point d'entrée piloté par l'appelant, 500 déguisé en
+--    timeout). Le commentaire « ensembles d'abord, sonde par fiche en dernier » ci-dessous
+--    décrit une INTENTION que SQL ne garantit pas — l'ordre d'évaluation des bras d'un `OR`
+--    est un choix de coût du planificateur, jamais une promesse. Ce qui rend la borne
+--    RÉELLE est le PLAFOND DUR de 500 ids, identique (forme du message ET SQLSTATE) à celui
+--    de api.export_actor_contacts (§3) : les deux entrées du même chantier refusent la même
+--    taille de la même façon. Appel one-shot à l'ouverture de la modale, hors chemin chaud.
+--    LANGUAGE plpgsql (et non sql) uniquement pour pouvoir LEVER ce plafond.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.export_actor_capabilities(p_object_ids text[])
 RETURNS jsonb
-LANGUAGE sql STABLE SECURITY DEFINER
+LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = pg_catalog, public, api, auth, pg_temp   -- R2.1 : pg_temp EN DERNIER
 AS $$
-  WITH ids AS (
-    SELECT DISTINCT btrim(t.id) AS id
-      FROM unnest(p_object_ids) AS t(id)
-     WHERE btrim(coalesce(t.id, '')) <> ''
-  )
+DECLARE
+  v_ids    text[];
+  v_result jsonb;
+BEGIN
+  -- Dédoublonnage / nettoyage serveur, IDENTIQUE à celui de api.export_actor_contacts.
+  SELECT COALESCE(array_agg(DISTINCT btrim(t.id)), '{}') INTO v_ids
+    FROM unnest(p_object_ids) AS t(id)
+   WHERE btrim(coalesce(t.id, '')) <> '';
+
+  -- PLAFOND DUR — même message et même SQLSTATE que api.export_actor_contacts (§3).
+  -- C'est LUI, et non l'ordre des bras du `OR`, qui borne le fan-out 2N décrit ci-dessus.
+  IF coalesce(array_length(v_ids, 1), 0) > 500 THEN
+    RAISE EXCEPTION 'BATCH_TOO_LARGE: 500 max apres dedoublonnage (recu %)', array_length(v_ids, 1)
+      USING ERRCODE = '22023';
+  END IF;
+
   SELECT jsonb_build_object(
     'actor_identity_available',
       EXISTS (
-        SELECT 1 FROM ids i
-         -- ensembles d'abord (un seul InitPlan chacun), sonde par fiche en dernier
+        SELECT 1 FROM unnest(v_ids) AS i(id)
+         -- Ensembles d'abord, sonde par fiche en dernier : une INDICATION de lecture, pas
+         -- une garantie d'exécution (cf. l'entête — le plafond est la vraie borne).
          WHERE i.id IN (SELECT api.current_user_extended_object_ids())
             OR (i.id IN (SELECT api.current_user_readable_object_ids())
                 AND EXISTS (SELECT 1 FROM public.actor_object_role aor
@@ -140,16 +185,19 @@ AS $$
             OR COALESCE(api.can_read_actor_contacts(i.id), FALSE)),
     'actor_contacts_available',
       EXISTS (
-        SELECT 1 FROM ids i
+        SELECT 1 FROM unnest(v_ids) AS i(id)
          WHERE COALESCE(api.can_read_actor_contacts(i.id), FALSE))
-  );
+  ) INTO v_result;
+
+  RETURN v_result;
+END;
 $$;
 
 REVOKE ALL     ON FUNCTION api.export_actor_capabilities(text[]) FROM PUBLIC, anon, service_role;
 GRANT  EXECUTE ON FUNCTION api.export_actor_capabilities(text[]) TO   authenticated;
 
 COMMENT ON FUNCTION api.export_actor_capabilities(text[]) IS
-  'Préflight ERGONOMIQUE (§208 R2) de la modale d''export : deux booléens agrégés sur la sélection réelle — l''offre de colonnes acteur suit la consultation effective, pas un proxy « membre d''une ORG ». N''est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c''est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l''appelant (§36) — aucun oracle d''existence sur un id non lu.';
+  'Préflight ERGONOMIQUE (§208 R2) de la modale d''export : deux booléens agrégés sur la sélection réelle — l''offre de colonnes acteur suit la consultation effective, pas un proxy « membre d''une ORG ». N''est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c''est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l''appelant (§36) — aucun oracle d''existence sur un id non lu. PLAFOND DUR de 500 ids après dédoublonnage (BATCH_TOO_LARGE, SQLSTATE 22023), identique à celui de api.export_actor_contacts : la garde appelée est SECURITY DEFINER donc non inlinable, et le pire cas (sélection intégralement refusée, le cas d''un appelant hostile) coûte 2 évaluations par id — le plafond est ce qui borne réellement ce fan-out, pas l''ordre des bras du OR.';
 
 -- ---------------------------------------------------------------------
 -- 1ter. R2.1 — durcissement du search_path des feuilles d'autorisation dont
@@ -171,12 +219,31 @@ ALTER FUNCTION api.current_user_extended_object_ids()
 -- `object` SANS qualification, donc sous la forme faible (`public, api, auth`) un
 -- `CREATE TEMP TABLE object` par n'importe quel `authenticated` injecterait des ids
 -- arbitraires dans l'ensemble « lisible » — exactement l'oracle que la conjonction
--- ferme. Sa SOURCE (migration_cards_batch_authorize_definer.sql, étape 8j) n'est PAS
--- modifiée : 8j s'applique AVANT ce fichier, donc une base fraîche naît durcie par cet
--- ALTER. ⚠ Caveat à consigner au runbook (tâche 15) : rejouer 8j sur une base vive
--- dé-durcit la fonction — il faut alors rejouer cet ALTER.
+-- ferme. Sa SOURCE (migration_cards_batch_authorize_definer.sql, étape 8j) est corrigée
+-- DANS LA MÊME PASSE (M4) : les trois feuilles d'autorisation sont désormais durcies à
+-- la source ET par cet ALTER, sans asymétrie. L'ALTER reste néanmoins nécessaire pour
+-- converger une base DÉJÀ déployée avec l'ancienne forme de 8j.
 ALTER FUNCTION api.current_user_readable_object_ids()
   SET search_path = pg_catalog, public, api, auth, pg_temp;
+
+-- ⚠ CAVEAT DE REJEU — à reprendre VERBATIM au runbook (tâche 15).
+--    Le risque n'est PAS l'étape 8j (sa source est durcie depuis M4 : la rejouer
+--    recrée déjà la bonne forme). Le risque est l'étape 5, `api_views_functions.sql` :
+--    elle porte, vers la ligne 7613, une DÉCLARATION ANTICIPÉE de
+--    api.current_user_readable_object_ids() sous forme de STUB —
+--    `AS $stub$ SELECT NULL::text WHERE false $stub$`, sans SECURITY DEFINER et sans
+--    search_path (elle n'existe que pour que le corps SQL de api.list_object_markers
+--    valide au CREATE, la vraie définition arrivant en 8j).
+--    Conséquence sur une base VIVE : re-déployer api_views_functions.sql ne « dé-durcit »
+--    pas la feuille, il la REMPLACE par une fonction qui rend l'ENSEMBLE VIDE — et vide
+--    donc silencieusement api.list_object_markers (la carte de l'Exploreur perd tous ses
+--    pins) en plus de fermer le bras « lien public » de ce préflight.
+--    ⇒ ORDRE OBLIGATOIRE après tout re-déploiement de `api_views_functions.sql` sur une
+--      base vive : rejouer d'ABORD `migration_cards_batch_authorize_definer.sql` (8j,
+--      qui réinstalle le vrai corps DEFINER durci), PUIS les `ALTER FUNCTION` de ce
+--      fichier (§1ter, pour converger les deux autres feuilles si elles ont aussi été
+--      re-créées par une re-application de rls_policies.sql / 8i / migration_crm_module.sql).
+--    Une base FRAÎCHE n'est pas concernée : le manifeste applique 5 → 8j → ce fichier.
 
 -- ---------------------------------------------------------------------
 -- 2. Journal des exports de coordonnées (modèle : object_deletion_log).
@@ -277,16 +344,32 @@ CREATE POLICY actor_contact_export_log_read ON public.actor_contact_export_log
 -- contournés par BYPASSRLS ⇒ on retire explicitement l'écriture aux deux rôles
 -- clients (les privilèges par défaut de Supabase les accordent sur toute table neuve
 -- de `public`, donc le REVOKE FROM PUBLIC, anon ci-dessous ne suffit pas).
--- TRUNCATE est inclus : il efface la preuve aussi sûrement que DELETE.
+-- REVOKE ALL plutôt qu'une ÉNUMÉRATION de verbes : énumérer INSERT/UPDATE/DELETE/TRUNCATE
+-- laissait derrière TRIGGER et REFERENCES, que les privilèges par défaut de Supabase
+-- accordent aussi sur toute table neuve de `public` (REFERENCES permet d'ancrer une FK sur
+-- le journal — donc d'en contraindre la suppression ; TRIGGER d'y poser du code). On retire
+-- TOUT aux quatre destinataires, puis on re-GRANT le SELECT, seul privilège voulu.
+-- C'est plus court, complet, et conforme à la doctrine « ceinture + bretelles » du fichier.
 -- Le RPC est SECURITY DEFINER et insère donc en tant que PROPRIÉTAIRE de la table
--- (le rôle qui applique ce fichier) : il conserve INSERT, et le propriétaire n'est
--- pas soumis à la RLS de sa table (pas de FORCE ROW LEVEL SECURITY).
+-- (le rôle qui applique ce fichier) : REVOKE … FROM <rôles> ne nomme PAS le propriétaire,
+-- dont les privilèges sont IMPLICITES (l'ACL d'une table neuve est `proprio=arwdDxt/proprio`,
+-- ou NULL = « tout au propriétaire ») — REVOKE ALL les laisse donc intacts. Et le
+-- propriétaire n'est pas soumis à la RLS de sa table (pas de FORCE ROW LEVEL SECURITY).
 -- LIMITE ASSUMÉE : aucun trigger append-only. Ce propriétaire, et tout superuser
 -- PostgreSQL, peuvent encore modifier ou supprimer une ligne. Le journal est
 -- inviolable POUR LES RÔLES CLIENTS, pas contre un accès administrateur à la base.
-REVOKE ALL    ON public.actor_contact_export_log FROM PUBLIC, anon;
-REVOKE INSERT, UPDATE, DELETE, TRUNCATE
-              ON public.actor_contact_export_log FROM authenticated, service_role;
+REVOKE ALL    ON public.actor_contact_export_log FROM PUBLIC, anon, authenticated, service_role;
+-- M6 — service_role garde le SELECT alors qu'il se voit délibérément REFUSER l'export
+-- (§3 : « un export de PII est imputable à une personne »). Asymétrie ASSUMÉE mais
+-- inconfortable : porteur de BYPASSRLS, service_role lit le journal ENTIER, la policy de
+-- lecture ne lui opposant rien. Recherche faite le 2026-08-07 sur tout le dépôt
+-- (`grep -rn "actor_contact_export_log"`) : AUCUN consommateur — ni route serveur, ni
+-- service front, ni tâche cron ; les seules occurrences sont ce fichier et les documents
+-- de plan/spec §208. Le GRANT n'est donc PAS retiré dans cette passe (le retirer serait un
+-- changement de surface sans besoin établi, et il faudrait le rendre si une future route
+-- d'administration lit le journal), mais il est à ARBITRER : si aucun consommateur
+-- n'apparaît d'ici la mise en service, `REVOKE SELECT … FROM service_role` referme
+-- l'asymétrie sans rien casser.
 GRANT  SELECT ON public.actor_contact_export_log TO authenticated, service_role;
 
 -- ---------------------------------------------------------------------
@@ -366,8 +449,14 @@ BEGIN
   -- n'est calculé qu'une fois (InitPlan). Ce n'est PAS « un miroir » libre de dériver :
   -- ajouter un bras à la garde SANS l'ajouter ici change ce que le préflight offre et
   -- ce que la tâche 13 autorise, sans changer ce que l'export laisse réellement sortir
-  -- — aucune erreur ne se lève, la réponse est simplement fausse. La tâche 14 doit
-  -- asserter l'égalité des deux ensembles sur les mêmes personas.
+  -- — aucune erreur ne se lève, la réponse est simplement fausse.
+  -- ⚠ ÉNONCÉ EXACT de l'équivalence (M2) : les deux formes s'accordent **sur les ids qui
+  -- EXISTENT dans `object`**. Le bras superuser ci-dessous exige EN PLUS l'existence
+  -- (`EXISTS (SELECT 1 FROM public.object …)`), que api.can_read_actor_contacts n'a pas —
+  -- elle rend TRUE à un superuser sur n'importe quelle chaîne. Écart DÉLIBÉRÉ et
+  -- fail-closed : c'est ce bras-ci, celui qui laisse réellement sortir la PII, qui est le
+  -- plus strict. La tâche 14 doit asserter l'accord des deux formes SUR CE PÉRIMÈTRE, et
+  -- surtout ne pas « réparer » la garde en lui ajoutant un contrôle d'existence.
   IF v_super THEN
     SELECT COALESCE(array_agg(t.id), '{}') INTO v_scope
       FROM unnest(v_ids) AS t(id)
@@ -530,12 +619,13 @@ NOTIFY pgrst, 'reload schema';
 --   -- ⚠ Le journal est une trace RGPD : ne le supprimer que si l'on assume la
 --   --   perte de la preuve des exports déjà réalisés.
 --   -- DROP TABLE IF EXISTS public.actor_contact_export_log;
---   -- Si la table est CONSERVÉE alors que le RPC est retiré, ses privilèges retirés
---   --   (INSERT/UPDATE/DELETE/TRUNCATE à authenticated et service_role) le restent :
---   --   c'est l'état voulu (personne ne doit écrire sans passer par le RPC). Pour
---   --   revenir strictement à l'état antérieur des privilèges par défaut Supabase :
---   --   GRANT INSERT, UPDATE, DELETE, TRUNCATE ON public.actor_contact_export_log
---   --     TO authenticated, service_role;   -- ⚠ rouvre l'écriture du journal
+--   -- Si la table est CONSERVÉE alors que le RPC est retiré, les privilèges retirés
+--   --   (REVOKE ALL à PUBLIC/anon/authenticated/service_role, seul SELECT re-GRANTé)
+--   --   le restent : c'est l'état voulu (personne ne doit écrire sans passer par le
+--   --   RPC). Pour revenir strictement à l'état antérieur des privilèges par défaut
+--   --   Supabase (les 7 verbes, TRIGGER et REFERENCES compris) :
+--   --   GRANT ALL ON public.actor_contact_export_log TO authenticated, service_role;
+--   --     -- ⚠ rouvre l'écriture du journal
 --   -- Le renommage channel_count -> emitted_contact_count :
 --   --   ALTER TABLE public.actor_contact_export_log
 --   --     RENAME COLUMN emitted_contact_count TO channel_count;   -- ⚠ nom trompeur

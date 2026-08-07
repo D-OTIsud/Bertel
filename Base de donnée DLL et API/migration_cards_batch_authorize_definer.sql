@@ -46,7 +46,19 @@ BEGIN;
 CREATE OR REPLACE FUNCTION api.current_user_readable_object_ids()
 RETURNS SETOF text
 LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public, api, auth
+-- §208 / R2.1 (2026-08-07) — search_path SÛR pour une fonction DEFINER : `pg_temp`
+-- EXPLICITEMENT EN DERNIER. Sans lui, PostgreSQL cherche le schéma temporaire EN PREMIER
+-- pour les relations (doc CREATE FUNCTION §Security), donc un `CREATE TEMP TABLE object`
+-- par n'importe quel `authenticated` injecterait des ids arbitraires dans l'ensemble
+-- « lisible » que cette fonction est censée définir. `public` précède `pg_temp` ⇒ le
+-- `object` non qualifié du corps résout bien vers `public.object`.
+-- Les deux autres feuilles d'autorisation de la même famille
+-- (api.current_user_extended_object_ids, api.current_user_crm_object_ids) portent la même
+-- forme depuis leurs sources respectives ; migration_actor_contacts_org_gate.sql (§1ter)
+-- porte en plus les `ALTER FUNCTION` qui convergent une base déjà déployée.
+-- Retour arrière (sans intérêt de sécurité, pour iso-état seulement) :
+--   ALTER FUNCTION api.current_user_readable_object_ids() SET search_path = public, api, auth;
+SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $fn$
   SELECT o.id FROM object o WHERE o.status = 'published'
   UNION

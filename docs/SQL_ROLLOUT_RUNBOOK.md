@@ -244,6 +244,8 @@ PERM1. `migration_object_workspace_permissions_rpc.sql` — **Agrégateur des 8 
 
 PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` — **Correctif accès juridique des éditeurs (2026-07-31)** : ajoute la neuvième sonde `api.user_can_manage_object_legal(p_object_id)` à l'agrégat `api.get_object_workspace_permissions`. Sans cette clé, le frontend recevait bien les huit droits historiques mais rabattait la section juridique sur le seul rôle global `owner|super_admin` ; un éditeur portant pourtant `manage_legal_compliance` voyait donc les champs, l'ajout et le dépôt de justificatifs verrouillés. La sonde reste isolée et fail-closed, l'agrégateur reste `SECURITY INVOKER`, et le frontend utilise désormais la clé objet `legal` comme source de vérité. Couvert par `tests/test_object_workspace_permissions_rpc.sql` et `object-workspace.legal-permissions.test.ts`.
 
+16t. `migration_legal_document_catalog.sql` — **Catalogue des documents juridiques réellement demandés aux prestataires (§209 ; liste PO du 2026-08-07)** (après `schema_unified.sql` pour `ref_legal_type`/`object_legal` et `api_views_functions.sql` pour le test ; **foldé** dans `schema_unified.sql` ⇒ **no-op sur une base fraîche**). Le catalogue d'origine portait 12 types de « documents » **inventés** (Licence d'hébergement, Assurance cyber, Gestion des déchets…) qu'aucun prestataire ne fournit, et **aucune** des 12 pièces réellement exigées à l'entrée en base. Mesuré avant écriture : `object_legal` ne portait que **5 lignes** sur toute la base (siret ×2, siren ×2, liability_insurance ×1) ⇒ restructuration sans perte. **2 renommages porteurs** faits par `UPDATE` du `code` — l'`id` est préservé donc les lignes rattachées **suivent** : `liability_insurance` → `attestation_assurance` (terme OTI ; porte la ligne live de `LOIRUN00000001C5`) et `tourism_license` → `immatriculation_atout_france` (la « licence tourisme » n'existe plus depuis 2009 ; la pièce réelle est l'immatriculation Atout France). **2 réétiquetages** des types ERP conservés parce que non redondants et réellement exigibles (`fire_safety`, `accessibility`). **8 types génériques retirés fail-closed** (`business_license`, `accommodation_license`, `safety_certificate`, `property_insurance`, `cyber_insurance`, `waste_management`, `environmental_permit`, `guide_license`) : la migration **échoue** si l'un porte encore une ligne, plutôt que de violer la FK `RESTRICT`. **11 documents installés** (le 12ᵉ arrive par renommage). **Arbitrages PO :** `is_required = false` sur tous — l'obligation dépend de la situation de l'exploitant (meublé ≠ association ≠ restaurant) ⇒ la pastille rouge « Document obligatoire expiré » du §18 devient dormante, le drapeau d'expiration **par ligne** reste actif car indépendant de `is_required` ; `is_public = false` sur tous — pièces administratives jamais diffusées par l'API partenaire ni le site public. Les 5 codes d'IDENTITÉ (`siret`, `siren`, `raison_sociale`, `vat_number`, `tourist_tax`) sont hors périmètre et gardent leur visibilité arbitrée le 2026-07-31 ; seule la dérive live↔source `siren.is_required` (posée à `false` par `migration_legal_siret_canonical.sql`, encore `true` sur live) est reconvergée. Garde de convergence en fin de transaction : exactement 5 identités + 15 documents, aucun obligatoire ni public. **Aucun `NOTIFY pgrst`** (aucune fonction/colonne touchée), aucun MV concerné (`mv_ref_data_json` ne porte pas `ref_legal_type`). Live-applied 2026-08-07 (MCP `legal_document_catalog` ; vérifié : 20 types, `attestation_assurance` porte bien sa ligne, 0 orphelin). Couvert par `tests/test_legal_document_catalog.sql` — garde **non vacante**, vérifiée rouge par sabotage (renommage de `kbis`, `attestation_assurance` repassé public). Détail en section « 16t » ci-dessous ; décision log §209.
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -445,3 +447,60 @@ session des catalogues côté frontend (TTL 1 h) se purge tout seul.
 **Vérification.** `tests/test_classification_labels_expansion.sql` doit passer : il exige
 désormais **4** classements officiels §71 et **l'absence** de `auberge_collective_stars`
 (garde anti-réintroduction par un futur re-collage de seeds).
+
+## 16t — `migration_legal_document_catalog.sql` (§209, catalogue des documents juridiques demandés aux prestataires)
+
+Signalement PO du 2026-08-07 : le catalogue `ref_legal_type` livré à l'origine portait 12 types de
+« documents » **inventés** (Licence d'hébergement, Assurance cyber, Gestion des déchets…) qu'aucun
+prestataire ne fournit jamais, et **aucun** des 12 documents réellement demandés à l'entrée en base.
+Mesuré avant écriture : sur toute la base, `object_legal` ne portait que **5 lignes** (siret ×2,
+siren ×2, liability_insurance ×1) — catalogue quasi vierge, donc restructurable sans perte.
+
+Position dans l'ordre d'application : **en fin de manifeste** (après 16s-test) — sans contrainte
+réelle d'ordre au-delà de `schema_unified.sql` (`ref_legal_type` + `object_legal`) et de
+`api_views_functions.sql` (le test appelle `api.get_object_legal_data`).
+
+Contenu :
+
+- **2 renommages porteurs**, faits par `UPDATE` du `code` : l'`id` est préservé, donc les lignes
+  `object_legal` déjà rattachées **suivent** (aucune donnée perdue, aucune FK cassée) —
+  `liability_insurance` → `attestation_assurance` (terme employé par l'OTI ; porte la ligne live de
+  `LOIRUN00000001C5`) et `tourism_license` → `immatriculation_atout_france` (la « licence tourisme »
+  n'existe plus depuis 2009 : la pièce réelle est l'immatriculation au registre des opérateurs de
+  voyages tenu par Atout France) ;
+- **2 réétiquetages** des types ERP conservés parce que non redondants et réellement exigibles :
+  `fire_safety` → « Attestation de sécurité incendie (ERP) », `accessibility` → « Attestation
+  d'accessibilité (ERP) » ;
+- **retrait fail-closed de 8 types génériques** (`business_license`, `accommodation_license`,
+  `safety_certificate`, `property_insurance`, `cyber_insurance`, `waste_management`,
+  `environmental_permit`, `guide_license`) : si l'un d'eux porte encore une ligne `object_legal`, la
+  migration **échoue** plutôt que de violer la FK `RESTRICT` ou d'effacer une saisie ;
+- **11 documents installés** (le 12ᵉ, l'attestation d'assurance, arrive par renommage) : avis de
+  situation SIRENE, KBIS, extrait INPI, statuts d'association, CERFA meublé de tourisme, CERFA
+  chambre d'hôtes, récépissé de déclaration en mairie, permis d'exploitation, licence restaurant,
+  diplôme d'activité, carte professionnelle ;
+- **arbitrages PO** : `is_required = false` sur **tous** les documents (l'obligation dépend de la
+  situation de l'exploitant — meublé ≠ association ≠ restaurant ; la pastille rouge « Document
+  obligatoire expiré » du §18 devient donc dormante, le drapeau d'expiration **par ligne** reste
+  actif car il ne dépend pas de `is_required`) et `is_public = false` sur **tous** (pièces
+  administratives, jamais diffusées par l'API partenaire ni le site public). Les 5 codes d'IDENTITÉ
+  (`siret`, `siren`, `raison_sociale`, `vat_number`, `tourist_tax`) sont **hors périmètre** et
+  gardent leur visibilité arbitrée le 2026-07-31 ; seule exception, la dérive live↔source sur
+  `siren.is_required` (`migration_legal_siret_canonical.sql` la pose à `false`, la base live portait
+  encore `true`) est reconvergée ici ;
+- **garde de convergence** en fin de transaction : exactement 5 identités + 15 documents, et aucun
+  document obligatoire ou public.
+
+Le nouveau catalogue est **foldé dans `schema_unified.sql`** (bloc « Insert common legal types »,
+réécrit et commenté) ⇒ **no-op complet sur une base fraîche**.
+
+**Après application :** rien — aucune fonction/vue/colonne touchée (pas de `NOTIFY pgrst`), aucun MV
+concerné (`mv_ref_data_json` ne porte pas `ref_legal_type`, que le frontend lit en direct via
+PostgREST). Le cache de session des catalogues côté frontend se purge au rechargement de page.
+
+**Vérification.** `tests/test_legal_document_catalog.sql` (étape 16t-test) : les 12 pièces OTI
+présentes sous le bon libellé, les 8 génériques **et** les 2 anciens codes renommés absents, aucune
+ligne `object_legal` orpheline, aucun document obligatoire ou public, les 5 codes d'identité intacts,
+et — **non-vacuité** — une ligne témoin qui traverse réellement la FK et ressort de
+`api.get_object_legal_data` avec son libellé humain et `is_public = false`. Vérifié rouge par
+sabotage (renommage de `kbis` ; `attestation_assurance` repassé public).

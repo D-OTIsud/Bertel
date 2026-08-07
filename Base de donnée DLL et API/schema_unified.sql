@@ -5870,33 +5870,80 @@ CREATE TABLE IF NOT EXISTS ref_legal_type (
 );
 
 -- Insert common legal types
+--
+-- Deux familles, et elles ne se comportent PAS pareil (cf. §209, migration_legal_document_catalog.sql) :
+--  - IDENTITÉ (siret, siren, raison_sociale, vat_number, tourist_tax) : une valeur scalaire, sans
+--    expiration, rendue comme champ plat par l'éditeur §18 (LEGAL_IDENTITY_TYPE_CODES). SIRET/SIREN/
+--    taxe de séjour restent `is_public` (arbitrage PO 2026-07-31 : ils sortent déjà par l'API partenaire).
+--  - DOCUMENTS (le reste) : pièces justificatives demandées aux prestataires, rendues comme répéteur
+--    avec validité + justificatif uploadé. TOUS `is_required = false` (l'obligation dépend de la
+--    situation de l'exploitant : meublé ≠ association ≠ restaurant) et TOUS `is_public = false`
+--    (pièces administratives, jamais diffusées par l'API partenaire ni le site public).
+-- `review_interval_days` = périodicité indicative de re-demande, pas une règle bloquante.
 INSERT INTO ref_legal_type (code, name, description, category, is_required, is_public, review_interval_days) VALUES
-  -- Business legal types
+  -- Identité de la personne morale ------------------------------------------------------
   ('siret', 'SIRET', 'Identifiant établissement (14 chiffres = SIREN 9 + NIC 5). Une seule ligne object_legal par fiche.', 'business', true, true, NULL),
   ('siren', 'SIREN', 'Identifiant entreprise (9 chiffres). Optionnel si SIRET renseigné (dérivable des 9 premiers chiffres). Ne pas dupliquer une ligne SIRET.', 'business', false, true, NULL),
   ('raison_sociale', 'Raison sociale', 'Dénomination ou raison sociale de la personne morale exploitante', 'business', false, false, NULL),
   ('vat_number', 'Numéro TVA', 'Numéro de TVA intracommunautaire', 'business', false, false, NULL),
-  ('business_license', 'Licence commerciale', 'Licence d''exploitation commerciale', 'business', false, true, 365),
-  
-  -- Accommodation legal types
-  ('tourist_tax', 'Taxe de séjour', 'Autorisation de collecte de la taxe de séjour', 'accommodation', true, true, 365),
-  ('accommodation_license', 'Licence d''hébergement', 'Licence d''exploitation d''hébergement', 'accommodation', true, true, 1095), -- 3 years
-  ('safety_certificate', 'Certificat de sécurité', 'Certificat de conformité sécurité', 'accommodation', true, true, 365),
-  ('fire_safety', 'Sécurité incendie', 'Attestation de sécurité incendie', 'accommodation', true, true, 365),
-  ('accessibility', 'Accessibilité', 'Attestation d''accessibilité', 'accommodation', false, true, 1095),
-  
-  -- Insurance types
-  ('liability_insurance', 'Assurance responsabilité civile', 'Assurance responsabilité civile professionnelle', 'insurance', true, false, 365),
-  ('property_insurance', 'Assurance biens', 'Assurance des biens et équipements', 'insurance', true, false, 365),
-  ('cyber_insurance', 'Assurance cyber', 'Assurance cybersécurité', 'insurance', false, false, 365),
-  
-  -- Environmental types
-  ('environmental_permit', 'Permis environnemental', 'Autorisation environnementale', 'environment', false, true, 1095),
-  ('waste_management', 'Gestion des déchets', 'Autorisation de gestion des déchets', 'environment', false, true, 365),
-  
-  -- Tourism specific
-  ('tourism_license', 'Licence tourisme', 'Licence d''exploitation touristique', 'tourism', false, true, 1095),
-  ('guide_license', 'Licence guide', 'Licence de guide touristique', 'tourism', false, true, 365)
+  ('tourist_tax', 'Taxe de séjour', 'Numéro d''enregistrement ou d''autorisation de collecte de la taxe de séjour', 'accommodation', true, true, 365),
+
+  -- Existence juridique de l'exploitant -------------------------------------------------
+  ('avis_situation_sirene', 'Avis de situation au répertoire SIRENE',
+   'Attestation INSEE d''inscription au répertoire SIRENE. Justificatif d''existence le plus universel : accepté pour tout exploitant immatriculé (entreprise individuelle, micro-entrepreneur, société, association employeuse). Demandé de moins de 3 mois.',
+   'business', false, false, 90),
+  ('kbis', 'Extrait KBIS',
+   'Extrait d''immatriculation au registre du commerce et des sociétés — carte d''identité des sociétés et commerçants. Demandé de moins de 3 mois. Ne concerne PAS les associations (statuts) ni les professions libérales (extrait INPI / avis SIRENE).',
+   'business', false, false, 90),
+  ('extrait_inpi', 'Extrait INPI',
+   'Extrait du registre national des entreprises (INPI), guichet unique depuis 2023. Équivalent du KBIS pour les exploitants non inscrits au RCS : artisans, agriculteurs, professions libérales. Demandé de moins de 3 mois.',
+   'business', false, false, 90),
+  ('statuts_association', 'Statuts d''association',
+   'Statuts déposés de l''association loi 1901 exploitante, accompagnés le cas échéant du récépissé de déclaration en préfecture. Pièce d''existence des exploitants associatifs, en lieu et place du KBIS.',
+   'business', false, false, NULL),
+
+  -- Déclaration d'hébergement -----------------------------------------------------------
+  ('cerfa_meuble_tourisme', 'CERFA de déclaration de meublé de tourisme',
+   'Déclaration en mairie d''un meublé de tourisme (CERFA 14004). Obligatoire pour toute location saisonnière de logement meublé. À rapprocher du récépissé de déclaration en mairie, qui en accuse le dépôt.',
+   'accommodation', false, false, NULL),
+  ('cerfa_chambre_hotes', 'CERFA de déclaration de chambre d''hôtes',
+   'Déclaration en mairie d''une activité de chambres d''hôtes (CERFA 13566). Obligatoire dès la première chambre ; distincte de la déclaration de meublé de tourisme.',
+   'accommodation', false, false, NULL),
+  ('recepisse_declaration_mairie', 'Récépissé de déclaration en mairie',
+   'Accusé de réception délivré par la commune à la suite d''une déclaration (meublé de tourisme, chambres d''hôtes, occupation du domaine public…). Preuve que la déclaration a bien été déposée.',
+   'accommodation', false, false, NULL),
+
+  -- Restauration / débit de boissons ----------------------------------------------------
+  ('permis_exploitation', 'Permis d''exploitation',
+   'Attestation de la formation obligatoire préalable à l''exploitation d''un débit de boissons ou d''un établissement de restauration servant de l''alcool. Valable 10 ans.',
+   'restauration', false, false, 3650),
+  ('licence_restaurant', 'Licence restaurant',
+   'Licence de débit de boissons à consommer sur place attachée au service des repas (petite licence restaurant ou licence restaurant). Délivrée après déclaration en mairie ; attachée à l''établissement.',
+   'restauration', false, false, NULL),
+
+  -- Encadrement d'activité --------------------------------------------------------------
+  ('diplome_activite', 'Diplôme d''activité',
+   'Diplôme ou titre professionnel autorisant l''encadrement contre rémunération de l''activité proposée (BPJEPS, DEJEPS, BEES, brevet fédéral reconnu…). Une pièce par activité encadrée.',
+   'activite', false, false, NULL),
+  ('carte_professionnelle', 'Carte professionnelle',
+   'Carte professionnelle en cours de validité : guide-conférencier, moniteur, agent immobilier (loi Hoguet, pour les intermédiaires de location)… Précise la profession concernée dans la référence.',
+   'activite', false, false, NULL),
+  ('immatriculation_atout_france', 'Immatriculation Atout France',
+   'Immatriculation au registre des opérateurs de voyages et de séjours tenu par Atout France, exigée dès qu''un prestataire vend un forfait ou combine plusieurs prestations. Remplace depuis 2009 l''ancienne « licence tourisme ». Renouvellement triennal.',
+   'activite', false, false, 1095),
+
+  -- Assurance ---------------------------------------------------------------------------
+  ('attestation_assurance', 'Attestation d''assurance',
+   'Attestation d''assurance en cours de validité couvrant l''activité : responsabilité civile professionnelle, et le cas échéant multirisque de l''établissement. Pièce demandée à tout prestataire, quelle que soit sa situation. Renouvellement annuel.',
+   'insurance', false, false, 365),
+
+  -- Établissement recevant du public ----------------------------------------------------
+  ('fire_safety', 'Attestation de sécurité incendie (ERP)',
+   'Attestation ou procès-verbal de la commission de sécurité pour un établissement recevant du public. Périodicité de visite variable selon la catégorie et le type d''ERP.',
+   'erp', false, false, 365),
+  ('accessibility', 'Attestation d''accessibilité (ERP)',
+   'Attestation d''accessibilité d''un établissement recevant du public, ou agenda d''accessibilité programmée (Ad''AP). Distincte du label Tourisme & Handicap, qui est une distinction volontaire saisie en §10.',
+   'erp', false, false, 1095)
 ON CONFLICT (code) DO NOTHING;
 
 -- =====================================================

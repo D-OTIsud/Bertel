@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ExportExcelModal } from './ExportExcelModal';
 import { useExplorerStore } from '../../../store/explorer-store';
@@ -115,5 +115,59 @@ describe('ExportExcelModal (§208)', () => {
     const nameBox = screen.getByLabelText<HTMLInputElement>(/^Nom$/);
     expect(nameBox).toBeChecked();
     expect(nameBox).toBeDisabled();
+  });
+
+  it('Finding 1 (revue tâche 10) — la finalité ne survit PAS à une réouverture (justification par export, jamais rejouée)', async () => {
+    const { rerender } = setup();
+    await userEvent.click(await screen.findByLabelText(/Acteur — mobile/));
+    await userEvent.type(screen.getByLabelText(/Finalité/), 'Campagne relance adhésions 2026');
+    const download = screen.getByRole('button', { name: /Télécharger/ });
+    expect(download).toBeEnabled();
+    await userEvent.click(download);
+    // Laisse l'export mocké (résolu) traverser son try/finally avant de rouvrir.
+    await waitFor(() => expect(screen.queryByText(/Chargement/)).not.toBeInTheDocument());
+
+    // Fermeture puis réouverture : seul `open` change, le composant reste MONTÉ
+    // (Modal possède son propre cycle de présence, cf. usePresence) — c'est
+    // exactement le scénario du finding, pas un démontage/remontage complet.
+    rerender(<ExportExcelModal open={false} onOpenChange={jest.fn()} />);
+    rerender(<ExportExcelModal open onOpenChange={jest.fn()} />);
+
+    // La case Acteur — mobile reste cochée (persistance VOULUE du store des
+    // préférences), mais la finalité — justification PAR EXPORT — repart vide
+    // et redésactive Télécharger tant qu'elle n'est pas retapée.
+    expect(await screen.findByLabelText(/Finalité/)).toHaveValue('');
+    expect(screen.getByRole('button', { name: /Télécharger/ })).toBeDisabled();
+  });
+
+  it('Finding 2 (revue tâche 10) — sélection stockée devenue entièrement invisible (bascule de clearance) : message explicite, pas un blocage muet', async () => {
+    // Le garde-fou « jamais 0 colonne » du store (explorer-export-store.ts) porte
+    // sur les ids STOCKÉS, pas sur ceux réellement OFFERTS pour la session/caps
+    // courants : une sélection qui ne survit à aucune colonne offerte est un état
+    // atteignable (bascule vers une fiche dont le préflight refuse l'identité).
+    mockCaps.mockResolvedValue({ actorIdentityAvailable: false, actorContactsAvailable: false });
+    useExplorerStore.setState({ selectedObjectIds: ['a', 'b', 'c'] });
+    useSessionStore.setState({ orgId: 'ORG', orgName: 'OTI du Sud', canEditObjects: true, role: 'tourism_agent', langPrefs: ['fr'] });
+    useExplorerExportStore.setState({ presetId: 'custom', columnIds: ['actor_names'] });
+
+    render(<ExportExcelModal open onOpenChange={jest.fn()} />);
+
+    expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
+    expect(screen.getByText(/Aucune colonne disponible pour cette sélection/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Télécharger/ })).toBeDisabled();
+    // Le groupe acteur, seul détenteur de la sélection invisible, ne s'affiche pas non plus.
+    expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull();
+  });
+
+  it('Finding 3 (revue tâche 10) — le préréglage actif est signalé par aria-pressed, pas seulement par la couleur', async () => {
+    setup();
+    await screen.findByRole('dialog', { name: /Exporter en Excel/ });
+    expect(screen.getByRole('button', { name: /^Essentiel$/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Diffusion partenaire/ })).toHaveAttribute('aria-pressed', 'false');
+
+    await userEvent.click(screen.getByRole('button', { name: /Diffusion partenaire/ }));
+
+    expect(screen.getByRole('button', { name: /Diffusion partenaire/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^Essentiel$/ })).toHaveAttribute('aria-pressed', 'false');
   });
 });

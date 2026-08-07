@@ -62,6 +62,16 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
     return () => { stale = true; };
   }, [open, selectedObjectIds]);
 
+  // Finding 1 (revue tâche 10) — la finalité est une justification PAR EXPORT,
+  // inscrite au journal serveur (16t) : le composant reste MONTÉ entre deux
+  // ouvertures (Modal possède son propre cycle de présence), donc sans ce reset
+  // un texte tapé pour un export survivrait, pré-rempli et déjà valide, à la
+  // réouverture suivante — journalisant une justification périmée contre une
+  // toute autre sélection de fiches. Toute ouverture repart d'une finalité vide.
+  useEffect(() => {
+    if (open) setPurpose('');
+  }, [open]);
+
   // R2.1 — `caps` est passé À availableColumns (il OUVRE les clearances acteur),
   // il ne filtre pas une liste déjà amputée par la session.
   const offered = useMemo(() => availableColumns(session, caps), [session, caps]);
@@ -118,7 +128,14 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
           <span className="mr-auto text-[12.5px] text-ink-3">
             {exporting
               ? `Chargement ${progress.done}/${progress.total}…`
-              : `${effectiveIds.length} colonne${effectiveIds.length > 1 ? 's' : ''} · ${selectedObjectIds.length} ligne${selectedObjectIds.length > 1 ? 's' : ''}`}
+              : effectiveIds.length === 0
+                // Finding 2 (revue tâche 10) — une sélection stockée peut devenir entièrement
+                // invisible après une bascule de clearance (le garde-fou « jamais 0 colonne »
+                // du store porte sur les ids STOCKÉS, pas sur ceux réellement OFFERTS pour la
+                // session/caps courants) : le bouton se désactive sans qu'aucun groupe ne
+                // s'affiche pour l'expliquer. Dire la raison plutôt que de bloquer en silence.
+                ? 'Aucune colonne disponible pour cette sélection — choisissez un préréglage.'
+                : `${effectiveIds.length} colonne${effectiveIds.length > 1 ? 's' : ''} · ${selectedObjectIds.length} ligne${selectedObjectIds.length > 1 ? 's' : ''}`}
           </span>
           {exporting ? (
             <button type="button" className="ghost-button" onClick={handleCancel}>Annuler l'export</button>
@@ -138,11 +155,12 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
       <div className="flex flex-wrap gap-2" role="group" aria-label="Partir d'un modèle">
         {EXPORT_PRESETS.map((preset) => (
           <button key={preset.id} type="button"
+            aria-pressed={presetId === preset.id}
             className={cn('rounded-[9px] border px-3 py-1.5 text-[12.5px] font-semibold transition',
               presetId === preset.id ? 'border-teal bg-teal-soft text-teal' : 'border-line text-ink-3 hover:text-ink')}
             onClick={() => applyPreset(preset.id, session, caps)}
           >
-            {preset.label}{preset.locked ? ' 🔒' : ''}
+            {preset.label}{preset.locked ? <span aria-hidden="true"> 🔒</span> : null}
           </button>
         ))}
       </div>
@@ -169,7 +187,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
                 <label key={col.id} className={cn('flex items-center gap-2 py-0.5 text-[12.5px]', locked ? 'text-ink-4' : 'text-ink')}>
                   <input type="checkbox" checked={effectiveIds.includes(col.id)} disabled={locked} onChange={() => toggleColumn(col.id)} />
                   {col.label}
-                  {col.requiresPurpose ? <span className="rounded-[6px] bg-orange-soft px-1.5 text-[10.5px] font-semibold text-orange">tracé</span> : null}
+                  {col.requiresPurpose ? <span aria-hidden="true" className="rounded-[6px] bg-orange-soft px-1.5 text-[10.5px] font-semibold text-orange">tracé</span> : null}
                 </label>
               ))}
             </div>

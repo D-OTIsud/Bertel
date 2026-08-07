@@ -65,6 +65,17 @@ BEGIN
                  WHERE v.catalog_key = 'ref_legal_type' AND f->>'table' = 'object_legal'),
          'object_legal référence ref_legal_type : la FK entrante doit être découverte';
 
+  -- Angle mort de la première revue : l'espèce 'table' (ref_legal_type ci-dessus) a un
+  -- reloid direct et « marchait déjà » ; l'espèce 'ref_code_domain' pose reloid=NULL dans le
+  -- CTE cat, donc `k.confrelid = cat.reloid` n'était jamais vrai et incoming_fk valait '[]'
+  -- pour LES 71 DOMAINES, quelles que soient leurs FK entrantes réelles. object_cuisine_type
+  -- référence bien ref_code_cuisine_type(id) (schema_unified.sql) : nommer cette table précise
+  -- rend l'assertion non vacante (un simple compte > 0 aurait pu passer par accident).
+  ASSERT EXISTS (SELECT 1 FROM internal.v_ref_catalog v, jsonb_array_elements(v.incoming_fk) f
+                 WHERE v.catalog_key = 'ref_code:cuisine_type' AND f->>'table' = 'object_cuisine_type'),
+         'object_cuisine_type référence ref_code_cuisine_type : un domaine ref_code doit '
+         'découvrir ses FK entrantes via sa partition, pas rester vide faute de reloid';
+
   RAISE NOTICE 'v_ref_catalog assertions passed';
 END$$;
 ROLLBACK;

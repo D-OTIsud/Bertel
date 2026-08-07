@@ -87,7 +87,7 @@ SELECT
              'target', CASE
                WHEN EXISTS (SELECT 1 FROM pg_inherits i
                             WHERE i.inhrelid = pt.oid AND i.inhparent = 'public.ref_code'::regclass)
-                 THEN 'ref_code:' || substring(pt.relname from 10)
+                 THEN 'ref_code:' || substring(pt.relname from length('ref_code_') + 1)
                ELSE pt.relname END))
     FROM pg_constraint k
     JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = k.conkey[1]
@@ -95,12 +95,23 @@ SELECT
     WHERE k.conrelid = cat.reloid AND k.contype = 'f' AND array_length(k.conkey, 1) = 1
   ), '[]'::jsonb) AS outgoing_fk,
 
+  -- Un domaine (espèce 'ref_code_domain') n'a pas de reloid propre : cat.reloid est NULL
+  -- CAR CE N'EST PAS UNE RELATION, c'est une valeur distincte de la colonne ref_code.domain
+  -- (cf. le CTE cat ci-dessus). Comparer k.confrelid à un reloid NULL n'est jamais vrai, donc
+  -- SANS ce COALESCE incoming_fk valait '[]' pour LES 71 DOMAINES quelles que soient leurs FK
+  -- entrantes réelles (ex. object_cuisine_type/object_menu_item_cuisine_type → ref_code_cuisine_type).
+  -- On résout ici, seulement pour ce champ, l'OID de la PARTITION ref_code_<domaine> qui porte
+  -- ces FK ; to_regclass rend NULL sans erreur si la partition n'existe pas (incoming_fk reste
+  -- alors '[]' à bon droit). outgoing_fk/columns/primary_key_columns/is_identifiable ne sont
+  -- volontairement PAS touchés : ils branchent déjà sur cat.kind et se synthétisent pour un
+  -- domaine, un changement de cat.reloid global les aurait fait dériver sans rapport avec ce défaut.
   COALESCE((
     SELECT jsonb_agg(jsonb_build_object('table', ct.relname, 'column', a.attname))
     FROM pg_constraint k
     JOIN pg_class ct ON ct.oid = k.conrelid
     JOIN pg_attribute a ON a.attrelid = k.conrelid AND a.attnum = k.conkey[1]
-    WHERE k.confrelid = cat.reloid AND k.contype = 'f' AND array_length(k.conkey, 1) = 1
+    WHERE k.confrelid = COALESCE(cat.reloid, to_regclass('public.ref_code_' || cat.domain)::oid)
+      AND k.contype = 'f' AND array_length(k.conkey, 1) = 1
   ), '[]'::jsonb) AS incoming_fk
 FROM cat;
 

@@ -1,6 +1,6 @@
 import { CLOSED_ACTOR_CAPS, type ActorCapabilities, type ActorContactsRow } from './export-columns';
 import { chunkIds } from './export-fetch';
-import { getExportActorCapabilities } from '../rpc';
+import { getExportActorCapabilitiesResult } from '../rpc';
 
 export const ACTOR_EXPORT_BATCH = 500; // plafond PAR APPEL du RPC (16t) — au-delà on découpe : N lignes de journal, pas une. Aucun plafond fonctionnel d'export (R1).
 
@@ -32,8 +32,16 @@ export const ACTOR_EXPORT_BATCH = 500; // plafond PAR APPEL du RPC (16t) — au-
  * ergonomique. Un seul lot en vol à la fois est aussi ce qui rend l'interruption
  * ci-dessous trivialement correcte.
  *
- * FAIL-CLOSED — le rejet d'un lot N'EST PAS avalé : il remonte, l'appelant referme
- * TOUTES les capacités. Jamais d'agrégat partiel présenté comme un verdict.
+ * FAIL-CLOSED (corrigé revue 4e vague) — `getExportActorCapabilities` (single-call,
+ * rpc.ts) ne rejette JAMAIS : elle avale toute erreur PostgREST/réseau/client-absent et
+ * rend un verdict {false,false}, contrat single-call INTACT et non touché ici. Ce
+ * verdict fermé était donc INDISTINGUABLE d'un échec de lot — le découpage ci-dessous
+ * réduisait par OR même sur un lot en échec, laissant les lots accordés l'emporter
+ * (agrégat PARTIEL présenté comme un verdict). Le correctif consomme la variante bas
+ * niveau `getExportActorCapabilitiesResult`, dont le champ `ok` distingue RÉELLEMENT
+ * un échec (`{ok:false}`) d'un verdict fermé légitime (`{ok:true, caps:{false,false}}`) :
+ * `!result.ok` abandonne IMMÉDIATEMENT la boucle et renvoie les capacités closes, sans
+ * OR-er les lots déjà accordés. Jamais d'agrégat partiel présenté comme un verdict.
  *
  * INTERRUPTION — `isStale` est consulté AVANT chaque lot et APRÈS chaque réponse :
  * dès qu'une sélection en remplace une autre, plus aucun lot n'est posé et le
@@ -49,11 +57,15 @@ export async function fetchActorExportCapabilities(
   // chunkIds dédoublonne et écarte les ids vides — le même nettoyage que le serveur
   // refait de son côté avant de compter contre son plafond.
   for (const chunk of chunkIds(ids, ACTOR_EXPORT_BATCH)) {
-    if (opts.isStale?.()) return CLOSED_ACTOR_CAPS;
-    const caps = await getExportActorCapabilities(chunk);
-    if (opts.isStale?.()) return CLOSED_ACTOR_CAPS;
-    identity = identity || caps.actorIdentityAvailable;
-    contacts = contacts || caps.actorContactsAvailable;
+    if (opts.isStale?.()) return { ...CLOSED_ACTOR_CAPS };
+    const result = await getExportActorCapabilitiesResult(chunk);
+    if (opts.isStale?.()) return { ...CLOSED_ACTOR_CAPS };
+    // Un lot en ÉCHEC (client absent, erreur PostgREST, exception) n'est pas un verdict
+    // {false,false} : abandonner ici évite de le faire contribuer `false` puis de laisser
+    // un lot suivant l'OR-er en un agrégat partiel présenté comme un verdict complet.
+    if (!result.ok) return { ...CLOSED_ACTOR_CAPS };
+    identity = identity || result.caps.actorIdentityAvailable;
+    contacts = contacts || result.caps.actorContactsAvailable;
   }
   return { actorIdentityAvailable: identity, actorContactsAvailable: contacts };
 }

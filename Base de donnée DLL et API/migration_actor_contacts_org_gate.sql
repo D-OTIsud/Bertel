@@ -163,6 +163,16 @@ COMMENT ON FUNCTION api.can_read_actor_contacts(text) IS
 --    la modale, jamais par ligne). Un appelant qui envoie la sélection entière SANS
 --    découper ne « voit » pas d'erreur utile : il reçoit 22023 et referme ses capacités —
 --    les colonnes acteur disparaissent SANS SIGNAL. C'est la panne qui a été corrigée.
+--    CORRIGÉ REVUE 4E VAGUE — cette dernière phrase ÉNONÇAIT le contrat sans que le code
+--    l'implémente : le RPC ct-serveur ne rejette jamais côté client (PostgREST rend un
+--    objet `{error}`, jamais un rejet), et le premier découpage réduisait par OR MÊME sur
+--    un lot en échec — un lot mort contribuait silencieusement `false` puis un lot suivant
+--    accordé rouvrait l'offre en un agrégat PARTIEL, jamais fermé. Le fix ajoute une
+--    variante bas niveau côté service (`getExportActorCapabilitiesResult`, rpc.ts) qui rend
+--    un résultat DISCRIMINÉ (`{ok:false}` sur toute erreur vs `{ok:true,caps}` sur un
+--    verdict réel) ; c'est ce champ `ok`, et non une promesse rejetée, que le découpage lit
+--    pour abandonner la boucle SANS OR-er les lots déjà accordés. Le contrat ci-dessus est
+--    désormais RÉELLEMENT tenu, pas seulement documenté.
 --
 --    ⚠ FORME AMONT, non retenue dans cette passe (à reprendre quand ce chantier rouvrira) :
 --    la vraie sortie est une forme ENSEMBLISTE autoritaire —

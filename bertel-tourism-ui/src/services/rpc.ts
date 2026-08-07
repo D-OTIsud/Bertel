@@ -572,31 +572,61 @@ export async function getObjectResourcesBatch(
 }
 
 /**
+ * R2 (bas niveau, ajouté revue 4e vague) — même appel/mêmes prédicats fail-closed que
+ * `getExportActorCapabilities` ci-dessous, mais rend un résultat DISCRIMINÉ que
+ * l'appelant peut distinguer d'un verdict réel : `{ ok: false }` sur client absent,
+ * erreur PostgREST (`{ error }` sans rejet — c'est la branche qui tire réellement
+ * pré-16t, RPC absent = 404/42883 côté PostgREST) ou exception, jamais
+ * `{ ok: true, caps: {false,false} }`. Nécessaire pour le découpage par lots
+ * (`fetchActorExportCapabilities`, export-actor-contacts.ts) : réduire des CAPACITÉS
+ * closes par `OR` ne distingue pas « ce lot n'a AUCUNE des deux capacités » (verdict
+ * légitime) d'« un échec du lot lui-même » — les deux rendaient `{false,false}` avant
+ * cette variante, donc un lot en échec contribuait silencieusement `false` au lieu
+ * d'abandonner l'agrégat.
+ */
+export async function getExportActorCapabilitiesResult(
+  objectIds: string[],
+): Promise<
+  | { ok: true; caps: { actorIdentityAvailable: boolean; actorContactsAvailable: boolean } }
+  | { ok: false }
+> {
+  const client = requireRpcClient();
+  if (!client) return { ok: false };
+  try {
+    const { data, error } = await client.schema('api').rpc('export_actor_capabilities', {
+      p_object_ids: objectIds,
+    });
+    if (error) return { ok: false };
+    const payload = (data ?? {}) as Record<string, unknown>;
+    return {
+      ok: true,
+      caps: {
+        actorIdentityAvailable: payload.actor_identity_available === true,
+        actorContactsAvailable: payload.actor_contacts_available === true,
+      },
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/**
  * R2 — préflight de l'offre de colonnes acteur : le SERVEUR dit si la sélection
  * donne accès à l'identité / aux coordonnées (mêmes prédicats que les gates).
  * ERGONOMIE seulement — la garde reste 16t, fiche par fiche. Tout échec (RPC
  * absent avant 16t, réseau) rend {false, false} : offre fail-closed, jamais
  * un crash ni une offre par défaut.
+ * Simple projection de `getExportActorCapabilitiesResult` (ci-dessus) : CE contrat
+ * single-call — avaler toute erreur, ne jamais rejeter, ne jamais rendre autre chose
+ * qu'un verdict {bool, bool} — reste EXACTEMENT celui vérifié tâche 10 (§208) ; seul
+ * l'appelant par lots a besoin de distinguer un échec d'un verdict fermé légitime.
  */
 export async function getExportActorCapabilities(
   objectIds: string[],
 ): Promise<{ actorIdentityAvailable: boolean; actorContactsAvailable: boolean }> {
   const closed = { actorIdentityAvailable: false, actorContactsAvailable: false };
-  const client = requireRpcClient();
-  if (!client) return closed;
-  try {
-    const { data, error } = await client.schema('api').rpc('export_actor_capabilities', {
-      p_object_ids: objectIds,
-    });
-    if (error) return closed;
-    const payload = (data ?? {}) as Record<string, unknown>;
-    return {
-      actorIdentityAvailable: payload.actor_identity_available === true,
-      actorContactsAvailable: payload.actor_contacts_available === true,
-    };
-  } catch {
-    return closed;
-  }
+  const result = await getExportActorCapabilitiesResult(objectIds);
+  return result.ok ? result.caps : closed;
 }
 
 /** Lit `payload.itinerary.track` — chaîne non vide, sinon ''. */

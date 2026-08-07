@@ -5,12 +5,30 @@ import { useExplorerStore } from '../../../store/explorer-store';
 import { useSessionStore } from '../../../store/session-store';
 import { useExplorerExportStore } from '../../../store/explorer-export-store';
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
-import { getExportActorCapabilities } from '../../../services/rpc';
+import { getExportActorCapabilitiesResult } from '../../../services/rpc';
 
 jest.mock('../../../services/export/export-workbook', () => ({ runSelectionXlsxExport: jest.fn() }));
-jest.mock('../../../services/rpc', () => ({ getExportActorCapabilities: jest.fn() }));
+// R2 (revue 4e vague) — le découpage par lots (`fetchActorExportCapabilities`) consomme
+// la variante BAS NIVEAU `getExportActorCapabilitiesResult`, pas le wrapper single-call
+// `getExportActorCapabilities` : c'est elle qu'il faut mocker pour exercer le VRAI chemin
+// que la modale emprunte (cf. rpc.ts). Mocker l'ancien wrapper ferait passer ces tests
+// sans jamais exercer la logique d'abandon sur `!result.ok`.
+jest.mock('../../../services/rpc', () => ({ getExportActorCapabilitiesResult: jest.fn() }));
 const mockRun = runSelectionXlsxExport as jest.Mock;
-const mockCaps = getExportActorCapabilities as jest.Mock;
+const mockCaps = getExportActorCapabilitiesResult as jest.Mock;
+
+/** Verdict RÉEL réussi — la forme que rend `getExportActorCapabilitiesResult` sur succès. */
+const capsOk = (caps: { actorIdentityAvailable: boolean; actorContactsAvailable: boolean }) => ({ ok: true as const, caps });
+/**
+ * Signal d'ÉCHEC RÉEL (revue 4e vague) — `getExportActorCapabilitiesResult` n'AVALE
+ * jamais une erreur en la laissant remonter comme un rejet : client absent, erreur
+ * PostgREST (`{error}` sans rejet — la branche qui tire réellement pré-16t) ou exception
+ * catchée y rendent toutes `{ ok: false }`. Un mock qui REJETTERAIT à la place testerait
+ * un chemin que le vrai code n'emprunte jamais (c'était le défaut de cette suite avant la
+ * revue 4e vague : le test « un seul lot en échec » passait alors même que le chunker
+ * n'aurait JAMAIS pu observer un rejet en production).
+ */
+const capsFail = () => ({ ok: false as const });
 
 function setup(
   session: Partial<ReturnType<typeof useSessionStore.getState>> = {},
@@ -35,7 +53,7 @@ describe('ExportExcelModal (§208)', () => {
   beforeEach(() => {
     mockRun.mockReset().mockResolvedValue({ exported: 3, requested: 3 });
     // R2 : par défaut le préflight ouvre tout (membre publisher) — les cas contraires le surchargent.
-    mockCaps.mockReset().mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: true });
+    mockCaps.mockReset().mockResolvedValue(capsOk({ actorIdentityAvailable: true, actorContactsAvailable: true }));
   });
 
   it('affiche le compte, les 3 préréglages et les groupes repliables', async () => {
@@ -57,7 +75,7 @@ describe('ExportExcelModal (§208)', () => {
   });
 
   it('R2 — préflight serveur : capacités refusées ⇒ colonnes acteur ABSENTES malgré la session ORG', async () => {
-    mockCaps.mockResolvedValue({ actorIdentityAvailable: false, actorContactsAvailable: false });
+    mockCaps.mockResolvedValue(capsOk({ actorIdentityAvailable: false, actorContactsAvailable: false }));
     setup();
     expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
     expect(mockCaps).toHaveBeenCalledWith(['a', 'b', 'c']);
@@ -66,7 +84,7 @@ describe('ExportExcelModal (§208)', () => {
   });
 
   it('R2 — identité disponible mais pas les coordonnées : nom/rôle offerts, mobile absent', async () => {
-    mockCaps.mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: false });
+    mockCaps.mockResolvedValue(capsOk({ actorIdentityAvailable: true, actorContactsAvailable: false }));
     setup();
     expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
     expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
@@ -74,7 +92,7 @@ describe('ExportExcelModal (§208)', () => {
 
   it('R2.1 — persona I3 : lecteur SANS ORG + identité accordée par le serveur ⇒ « Acteur — nom » VISIBLE', async () => {
     // C'est le cas que la R2 laissait mort-né : la session filtrait avant le préflight.
-    mockCaps.mockResolvedValue({ actorIdentityAvailable: true, actorContactsAvailable: false });
+    mockCaps.mockResolvedValue(capsOk({ actorIdentityAvailable: true, actorContactsAvailable: false }));
     setup({ orgId: null, orgName: null, canEditObjects: false, role: null });
     expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Acteur\(s\) principal\(aux\)/)).toBeInTheDocument();
@@ -84,6 +102,11 @@ describe('ExportExcelModal (§208)', () => {
   });
 
   it('R2 — préflight en échec (ex. 16t pas encore déployée) : offre FAIL-CLOSED, pas de crash', async () => {
+    // Rejet volontairement IRRÉALISTE (la vraie `getExportActorCapabilitiesResult` n'en
+    // produit jamais — elle avale tout et rend `{ok:false}`) : ce test couvre la COUCHE
+    // COMPOSANT, le `.catch()` de défense en profondeur de l'effet R2 dans ExportExcelModal
+    // (Task 10 : deux couches fail-closed indépendantes, service ET composant). La couche
+    // service, elle, est couverte par `capsFail()`/`{ok:false}` dans les tests ci-dessous.
     mockCaps.mockRejectedValue(new Error('function api.export_actor_capabilities does not exist'));
     setup();
     expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
@@ -98,9 +121,12 @@ describe('ExportExcelModal (§208)', () => {
   const batchesOf = (m: jest.Mock) => (m.mock.calls as Array<[string[]]>).map(([batch]) => batch);
 
   it('R2 (revue 3e vague) — sélection > 500 : le préflight est DÉCOUPÉ, les colonnes acteur restent OFFERTES', async () => {
-    // Le mock REPRODUIT le refus serveur au-delà de 500 ids (BATCH_TOO_LARGE / 22023) :
-    // sans cela le test passerait aussi SANS découpage — vacuité. Avec, la version non
-    // découpée (un seul appel de 1 200 ids) part en rejet ⇒ capacités fermées ⇒ ROUGE.
+    // Le mock REPRODUIT le refus serveur au-delà de 500 ids (BATCH_TOO_LARGE / 22023) — un
+    // rejet reste légitime ICI : ce n'est pas un verdict `{ok:false}` que le vrai RPC
+    // produirait, c'est un garde-fou de test prouvant qu'AUCUN appel réel n'envoie plus de
+    // 500 ids (si le découpage régressait, un appel de 1 200 ids partirait en rejet non
+    // catché par `fetchActorExportCapabilities` ⇒ capacités fermées ⇒ ROUGE). Sans lui, le
+    // test passerait aussi SANS découpage — vacuité.
     mockCaps.mockReset().mockImplementation((batch: string[]) => {
       if (batch.length > 500) {
         return Promise.reject(new Error(`BATCH_TOO_LARGE: 500 max apres dedoublonnage (recu ${batch.length})`));
@@ -108,7 +134,7 @@ describe('ExportExcelModal (§208)', () => {
       // N'accorde QUE sur le DERNIER lot : prouve à la fois que TOUS les lots sont posés
       // et que la réduction est un OR entre lots (jamais « le premier lot fait foi »).
       const granted = batch.includes('obj-1199');
-      return Promise.resolve({ actorIdentityAvailable: granted, actorContactsAvailable: granted });
+      return Promise.resolve(capsOk({ actorIdentityAvailable: granted, actorContactsAvailable: granted }));
     });
     setup({}, OVER_CAP_IDS);
 
@@ -117,17 +143,24 @@ describe('ExportExcelModal (§208)', () => {
     expect(batchesOf(mockCaps).map((b) => b.length)).toEqual([500, 500, 200]);
   });
 
-  it("R2 (revue 3e vague) — un SEUL lot en échec referme TOUTES les capacités (jamais un agrégat partiel)", async () => {
+  it("R2 (revue 4e vague) — un SEUL lot en ÉCHEC referme TOUTES les capacités (jamais un agrégat partiel)", async () => {
+    // `capsFail()` = `{ ok: false }` — le signal RÉEL qu'un lot en échec produit (client
+    // absent, erreur PostgREST, exception catchée : `getExportActorCapabilitiesResult` ne
+    // rejette JAMAIS, cf. rpc.ts). AVANT la revue 4e vague ce test mockait un REJET, que le
+    // module réel n'émet jamais : il passait sans exercer le moindre code de production —
+    // preuve de non-vacuité dans le rapport de tâche (RED quand le chunker ignore `ok`,
+    // GREEN une fois la lecture de `ok` restaurée).
     mockCaps.mockReset().mockImplementation((batch: string[]) => (
       batch.includes('obj-1199')
-        ? Promise.reject(new Error('réseau indisponible'))
-        : Promise.resolve({ actorIdentityAvailable: true, actorContactsAvailable: true })
+        ? Promise.resolve(capsFail())
+        : Promise.resolve(capsOk({ actorIdentityAvailable: true, actorContactsAvailable: true }))
     ));
     setup({}, OVER_CAP_IDS);
 
     expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
     await waitFor(() => expect(batchesOf(mockCaps)).toHaveLength(3));
-    // Les DEUX premiers lots accordaient tout : sans le fail-closed, l'offre resterait ouverte.
+    // Les DEUX premiers lots accordaient tout : sans l'abandon sur `!ok`, l'OR entre lots
+    // laisserait l'offre ouverte (c'est EXACTEMENT le défaut corrigé par la revue 4e vague).
     await waitFor(() => expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull());
     expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
     expect(screen.getByLabelText(/^Nom$/)).toBeInTheDocument(); // le reste de la modale vit normalement
@@ -190,7 +223,7 @@ describe('ExportExcelModal (§208)', () => {
     // sur les ids STOCKÉS, pas sur ceux réellement OFFERTS pour la session/caps
     // courants : une sélection qui ne survit à aucune colonne offerte est un état
     // atteignable (bascule vers une fiche dont le préflight refuse l'identité).
-    mockCaps.mockResolvedValue({ actorIdentityAvailable: false, actorContactsAvailable: false });
+    mockCaps.mockResolvedValue(capsOk({ actorIdentityAvailable: false, actorContactsAvailable: false }));
     useExplorerStore.setState({ selectedObjectIds: ['a', 'b', 'c'] });
     useSessionStore.setState({ orgId: 'ORG', orgName: 'OTI du Sud', canEditObjects: true, role: 'tourism_agent', langPrefs: ['fr'] });
     useExplorerExportStore.setState({ presetId: 'custom', columnIds: ['actor_names'] });

@@ -365,6 +365,12 @@ ROLLBACK;
 \echo '== 16s-test garde permanente 206 + enrolement du test 14d, orphelin depuis sa creation (jamais joue en CI — la derive §176 logis→graded_label y etait invisible) : 4 classements officiels §71, absence de auberge_collective_stars, 6 labels qualite, 3 graded_label §176, valeurs presentes, QTIR 2 valeurs, logis multiple =='
 \ir tests/test_classification_labels_expansion.sql
 
+\echo '== 16t    migration_legal_document_catalog.sql  (209 catalogue des documents juridiques reellement demandes aux prestataires: renomme liability_insurance -> attestation_assurance et tourism_license -> immatriculation_atout_france en PRESERVANT l id donc les lignes object_legal rattachees, retire fail-closed les 8 types generiques inventes (echoue si l un porte encore une ligne), installe les 11 pieces manquantes de la liste OTI, is_required=false et is_public=false sur TOUS les documents; folde dans schema_unified.sql donc no-op sur base fraiche) =='
+\ir migration_legal_document_catalog.sql
+
+\echo '== 16t-test garde permanente 209 (A les 12 pieces OTI presentes sous le bon libelle / B+C les 8 generiques et les 2 anciens codes renommes sont partis, aucun object_legal orphelin / D aucun document obligatoire ni public / E les 5 codes d identite des champs plats du 18 intacts / F non-vacuite: une ligne temoin traverse la FK et ressort de api.get_object_legal_data avec libelle et visibilite) =='
+\ir tests/test_legal_document_catalog.sql
+
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
 

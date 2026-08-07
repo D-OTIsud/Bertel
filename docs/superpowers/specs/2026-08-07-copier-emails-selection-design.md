@@ -183,11 +183,27 @@ trois titres :
 Une liste dynamique « toute la base » aurait donc fourni **200 ids** à une modale affichant un
 compte crédible : un envoi partiel sans le moindre signal.
 
-**Correctif minimal** : relever le seul **plafond** interne de `resolve_list_object_ids` de
-`200` à `2001`, en laissant `COALESCE(p_limit, 200)` intact. `list_effective_object_ids` passe
-le littéral `200`, donc `get_list` et `list_my_lists` gardent exactement leur comportement
-actuel ; seul le nouveau RPC demande davantage. Le commentaire `ponytail:` du helper est mis à
-jour en conséquence.
+**Correctif écarté après revue : ne PAS relever le plafond de `api.resolve_list_object_ids`.**
+Cette fonction est `SECURITY DEFINER`, exposée en RPC PostgREST et **`GRANT EXECUTE … TO
+authenticated`**. Elle délègue à `api.get_filtered_object_ids`, qui lit `FROM object o` **sans
+intersection avec l'ensemble lisible** sur son chemin vif. Un utilisateur authentifié peut donc
+l'appeler en direct avec `p_published_only = false` et obtenir des ids d'objets hors de son
+périmètre. Relever son plafond de 200 à 2 001 multiplierait par dix une exposition existante —
+inacceptable pour un besoin qui ne la requiert pas (cf. §9, constat pré-existant).
+
+**Correctif retenu — extraire le moteur, garder le contrat public inchangé :**
+
+1. `internal.resolve_list_object_ids(p_buckets, p_published_only, p_limit)` — le moteur actuel,
+   déplacé tel quel, plafond interne **2 001**. Non exposé (schéma `internal`),
+   `REVOKE ALL … FROM PUBLIC, anon, authenticated`.
+2. `api.resolve_list_object_ids(...)` — devient un mince passe-plat qui appelle le moteur en
+   **replafonnant à 200** (`LEAST(GREATEST(COALESCE(p_limit,200),1), 200)`). Contrat public,
+   grants et comportement strictement inchangés.
+3. Appelants du moteur : `list_effective_object_ids` (module Listes) avec **200**,
+   `list_selection_emails` avec **2 001**.
+
+Aucune duplication de `get_filtered_object_ids` — une seule source de vérité — et la variante
+haute capacité n'est joignable que depuis un `DEFINER` qui a déjà appliqué D4 et D5.
 
 *Écarté* : une résolution dédiée dupliquant `get_filtered_object_ids` (deuxième source de
 vérité) ; relever le **défaut** à 2 000 (changerait le comportement du module livré).
@@ -252,9 +268,12 @@ deux côtés qui est une erreur d'appel.
   immense tableau de doublons ne doit pas être déplié pour être ensuite réduit. Puis
   `unnest(…) WITH ORDINALITY`, ids dédoublonnés en conservant la **première** ordinalité, qui
   **est** l'ordre de sortie (§5.2).
-- `p_list_id` : `api.user_can_read_list(p_list_id)` d'abord (sinon `42501`), puis résolution
-  interne — items ordonnés par `position` pour une liste statique,
-  `resolve_list_object_ids(filters, TRUE, 2001) WITH ORDINALITY` pour une dynamique (D8).
+- `p_list_id` : `api.user_can_read_list(p_list_id)` d'abord (sinon `42501`), liste inexistante
+  ⇒ `RAISE EXCEPTION 'LIST_NOT_FOUND'`. Puis résolution interne :
+  - statique — `object_list_item ORDER BY position **LIMIT 2001**`. La borne est posée **dans
+    la lecture**, pas après : une liste statique n'a pas de plafond de composition, rien ne
+    garantit qu'elle tienne en mémoire avant d'être comptée ;
+  - dynamique — `internal.resolve_list_object_ids(filters, TRUE, 2001) WITH ORDINALITY` (D8).
 - Au-delà de **2 000** ids (ou si la 2 001ᵉ ligne existe) : `RAISE EXCEPTION
   'TOO_MANY_OBJECTS'`. Jamais de troncature — un export tronqué se lit comme un export complet.
 
@@ -299,7 +318,10 @@ une vraie erreur.
 }
 ```
 
-`rows` est trié par `ord`. `missing` ne contient que des fiches **éligibles** sans adresse — une
+`rows` **et `missing`** sont triés par `ord` — `ord` n'est pas exposé sur les objets `missing`,
+mais l'ordre de la liste des fiches muettes doit rester celui de la sélection, sinon la liste
+dépliable de la modale se réordonne d'une ouverture à l'autre sans raison visible.
+`missing` ne contient que des fiches **éligibles** sans adresse — une
 fiche hors périmètre n'y figure pas, elle est comptée dans `excluded_count`. Le nom n'est
 conservé que sur `missing` (il vaut `object.name`) : il faut nommer les fiches muettes pour
 aller les compléter, et la sortie copiée ne contient que des adresses (D3).
@@ -342,8 +364,16 @@ Ces deux fonctions pures portent toute la logique, donc tout le test.
   sélectionnable pour un Ctrl+C manuel — jamais de « Copié » sur un presse-papiers vide ;
 - garde de réponse obsolète : une fermeture/réouverture rapide ne doit pas laisser la réponse
   du premier chargement écraser l'état du second (`AbortController` ou jeton de requête) ;
-- sur `42501`, la modale affiche « Réservé aux éditeurs » à la place du contenu (défense en
-  profondeur : le bouton est déjà masqué aux lecteurs).
+- **contrat d'erreur** — la modale branche sur le message stable, jamais sur le texte
+  PostgREST :
+
+| Erreur serveur | Message affiché à la place du contenu |
+|---|---|
+| `FORBIDDEN_EMAIL_EXPORT` (`42501`) | « Réservé aux éditeurs. » — défense en profondeur, le bouton est déjà masqué aux lecteurs |
+| `TOO_MANY_OBJECTS` | « Sélection trop large (plus de 2 000 fiches). Affinez le filtre, ou copiez en deux fois. » |
+| `LIST_NOT_FOUND` | « Cette liste n'existe plus. » |
+| `INVALID_ARGUMENT` | « Une erreur technique empêche la copie. » — bug d'appel, jamais provoquable par l'utilisateur ; le détail va en console, pas à l'écran |
+| autre / réseau | « Chargement impossible. » + bouton Réessayer |
 
 Points d'entrée, même composant, **tous deux masqués si `!canEditObjects`** :
 1. `SelectionBar` — bouton `Mail` « E-mails », dans le groupe qui n'apparaît qu'avec une
@@ -393,7 +423,10 @@ ignorée après fermeture/réouverture ; bouton absent **dans les deux surfaces*
 | `p_object_ids` **et** `p_list_id` tous deux `NULL`, ou tous deux fournis | `INVALID_ARGUMENT` |
 | `p_list_id` dynamique de **plus de 200** membres | plus de 200 ids résolus — garde anti-régression du plafond D8 |
 | `get_list` sur la même liste dynamique | **toujours 200** — garde de non-régression du module Listes |
-| Privilèges `PUBLIC` / `anon` / `authenticated` | `EXECUTE` révoqué sauf `authenticated`, `service_role` |
+| `api.resolve_list_object_ids(…, 2001)` appelé **en tant qu'`authenticated`** | **toujours 200** — le contrat public reste plafonné (D8) |
+| `internal.resolve_list_object_ids` appelé en tant qu'`authenticated` | `EXECUTE` refusé |
+| Liste inexistante | `LIST_NOT_FOUND` |
+| Privilèges `PUBLIC` / `anon` / `authenticated` sur `list_selection_emails` | `EXECUTE` révoqué sauf `authenticated`, `service_role` |
 
 La garde D5 est éprouvée par **`request.jwt.claims`, jamais par `SET ROLE` seul** : sans JWT le
 bras éditeur n'est pas emprunté et le test n'asserte que du vide — vacuité parfaite (§204).
@@ -406,3 +439,29 @@ lecteur.
 - Journalisation CRM de l'export.
 - Nouveau mécanisme de sélection : les listes `static`/`dynamic` couvrent le besoin.
 - Pagination au-delà de 2 000 fiches (le plafond lève une erreur explicite).
+- La fermeture du RPC public `api.resolve_list_object_ids` (§9).
+
+## 9. Constat pré-existant, hors périmètre — `api.resolve_list_object_ids` non borné au lisible
+
+Découvert en instruisant D8, **antérieur à cette fonctionnalité et non causé par elle** :
+
+`api.resolve_list_object_ids(jsonb, boolean, int)` est `SECURITY DEFINER`, exposé en RPC
+PostgREST et `GRANT EXECUTE … TO authenticated`. Il délègue à `api.get_filtered_object_ids`,
+dont le chemin vif lit `FROM object o` **sans intersection avec l'ensemble lisible**. Un
+utilisateur authentifié peut donc l'appeler directement avec `p_published_only = false` et
+obtenir jusqu'à **200 ids** d'objets hors de son périmètre.
+
+**Portée réelle** : des identifiants d'objets, pas de contenu ni de PII — la lecture des
+données de ces objets reste gated par RLS et par les RPC. L'information qui fuit est
+« quelles fiches non publiées existent », pas leur contenu.
+
+**Pourquoi ce n'est pas corrigé ici** : refermer ce RPC signifie ajouter l'intersection lisible
+à une fonction du module Listes déjà en production, dont les effets sur `get_list` et
+`list_my_lists` doivent être mesurés — un chantier distinct de l'export d'e-mails. La présente
+spec se contente de **ne pas l'aggraver** (D8 : le contrat public reste à 200, la variante
+2 001 vit dans `internal`).
+
+**Arbitrage attendu** : à porter au journal de décisions et à la liste des différés, avec pour
+correctif pressenti l'ajout de
+`AND object_id IN (SELECT api.current_user_readable_object_ids())` dans le passe-plat public —
+à valider contre le comportement attendu de `get_list` pour un membre de l'ORG propriétaire.

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { FileSpreadsheet, ListPlus, Printer, ShoppingBag, Trash2 } from 'lucide-react';
+import { FileSpreadsheet, ListPlus, Mail, Printer, ShoppingBag, Trash2 } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import { ExportExcelModal } from '@/features/explorer/export/ExportExcelModal';
@@ -12,6 +12,7 @@ import { createListFromSelection } from '@/services/lists';
 import { getObjectResource } from '../../services/rpc';
 import { OtiCarnetCard, type OtiPoi } from '@/features/lists/OtiTemplate';
 import { MAX_PRINT_SELECTION, preloadImages, selectionDetailToOtiPoi } from './selection-print';
+import { CopyEmailsModal } from './CopyEmailsModal';
 import { cn } from '@/lib/utils';
 
 /**
@@ -29,7 +30,9 @@ export function SelectionBar() {
   const selectAllVisible = useExplorerStore((state) => state.selectAllVisible);
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const langPrefs = useSessionStore((state) => state.langPrefs);
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
   const [exportOpen, setExportOpen] = useState(false);
+  const [emailsOpen, setEmailsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [printing, setPrinting] = useState(false);
   // Cartes prêtes à imprimer : non-vide ⇒ le portail .oti-print-portal est monté.
@@ -165,6 +168,20 @@ export function SelectionBar() {
             <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
             Excel
           </button>
+          {/* Réservé aux éditeurs : l'adresse du prestataire est une donnée
+              `partners`, non publique. Le masquage est du confort — la vraie
+              garde est celle du RPC (§211). */}
+          {canEditObjects && (
+            <button
+              type="button"
+              onClick={() => setEmailsOpen(true)}
+              title="Copier la liste des e-mails des fiches sélectionnées"
+              className={enabledAction}
+            >
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              E-mails
+            </button>
+          )}
           <button type="button" onClick={() => clearSelection()} className={enabledAction}>
             <Trash2 className="h-3.5 w-3.5 shrink-0" />
             Vider
@@ -192,6 +209,9 @@ export function SelectionBar() {
 
       {/* §208 : export Excel de la sélection — Modal gère lui-même son cycle de présence. */}
       <ExportExcelModal open={exportOpen} onOpenChange={setExportOpen} />
+
+      {/* §211 : copie des e-mails de la sélection. */}
+      <CopyEmailsModal objectIds={selectedObjectIds} open={emailsOpen} onOpenChange={setEmailsOpen} />
 
       {/* Portail d'impression : les cartes carnet des fiches sélectionnées, rendues sous
           <body> et révélées uniquement à l'impression (cf. @media print, oti-template.css).

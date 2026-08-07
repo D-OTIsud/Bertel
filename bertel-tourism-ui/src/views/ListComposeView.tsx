@@ -13,6 +13,7 @@ import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
 import type { OtiMapSnapshot } from '@/features/lists/oti-map-utils';
 import ChannelFrame from '@/features/lists/ChannelFrame';
 import { Modal } from '@/components/common/Modal';
+import { CopyEmailsModal } from '@/components/explorer/CopyEmailsModal';
 import { ACCENT_INK } from '@/features/lists/type-meta';
 import { useObjectSearch, type ObjectSearchResult } from '@/features/object-editor/useObjectSearch';
 import { useSessionStore } from '@/store/session-store';
@@ -45,6 +46,29 @@ const ACCENTS: Array<{ k: ListAccent; label: string }> = [
   { k: 'gold', label: 'Or' },
   { k: 'terra', label: 'Terracotta' },
 ];
+
+/**
+ * Bouton « E-mails » de la barre d'en-tête. Passe le `listId`, JAMAIS les ids
+ * résolus par la page : une liste dynamique est plafonnée à 200 côté page, et
+ * l'export doit pouvoir en résoudre 2 000 (§211).
+ */
+export function ListComposeEmailsButton({ listId }: { listId: string }) {
+  const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  const [open, setOpen] = useState(false);
+  if (!canEditObjects) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5"
+      >
+        <Mail className="h-4 w-4" /> E-mails
+      </button>
+      <CopyEmailsModal listId={listId} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
 
 export default function ListComposeView({ listId }: { listId: string }) {
   const router = useRouter();
@@ -305,6 +329,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
           <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5">
             <Printer className="h-4 w-4" /> Imprimer
           </button>
+          <ListComposeEmailsButton listId={detail.id} />
           <button
             type="button"
             disabled={sending}

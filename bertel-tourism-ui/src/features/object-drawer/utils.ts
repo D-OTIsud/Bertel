@@ -371,7 +371,7 @@ export function readBoolean(value: unknown): boolean | null {
   return null;
 }
 
-function readNamedValue(value: unknown, fallback = ''): string {
+export function readNamedValue(value: unknown, fallback = ''): string {
   if (typeof value === 'string' || typeof value === 'number') {
     return readString(value, fallback);
   }

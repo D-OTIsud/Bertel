@@ -1,6 +1,7 @@
 import { readNamedValue } from '../../features/object-drawer/utils';
 import type { OpeningItem, TaxonomyItem } from '../../features/object-drawer/utils';
 import type { ParsedObjectDetail } from '../object-detail-parser';
+import { resolveTypeLabel } from '../../utils/labels';
 
 /**
  * §208 — REGISTRE UNIQUE des colonnes d'export Excel de l'Exploreur.
@@ -140,10 +141,78 @@ export function openingToText(o: OpeningItem): string {
   return joinParts([o.label !== period ? o.label : '', period, days, (o.details ?? []).join(', ')], ' — ');
 }
 
+/** Vocabulaire statut — même contenu que table-columns.tsx:19 (non exporté là-bas ; la vue Table reste intouchée). */
+const STATUS_LABELS: Record<string, string> = {
+  published: 'Publiée', draft: 'Brouillon', hidden: 'Hors ligne', archived: 'Archivée',
+};
+
+const PHONE_KINDS = new Set(['phone', 'tel', 'telephone', 'telephone_fixe']);
+const MOBILE_KINDS = new Set(['mobile', 'telephone_mobile']);
+
+function firstPublicContact(d: ParsedObjectDetail, match: (kindCode: string) => boolean): string {
+  return d.contacts.public.find((c) => match(c.kindCode))?.value ?? '';
+}
+function contactLine(c: { kind: string; value: string }): string {
+  return c.kind ? `${c.kind} : ${c.value}` : c.value;
+}
+
 // ---------- Colonnes (Tâches 5-7) ----------
 
 export const EXPORT_COLUMNS: ExportColumnDef[] = [
-  // PLAN-TACHE-5-ICI
+  // ---------- Identité ----------
+  { id: 'id', label: 'Identifiant', group: 'identite', clearance: 'public', value: (d) => d.identity.id },
+  { id: 'name', label: 'Nom', group: 'identite', clearance: 'public', value: (d) => d.identity.name },
+  { id: 'type_code', label: 'Code type', group: 'identite', clearance: 'public', value: (d) => d.identity.type },
+  { id: 'type', label: 'Type', group: 'identite', clearance: 'public', value: (d) => resolveTypeLabel(d.identity.type) },
+  { id: 'status', label: 'Statut', group: 'identite', clearance: 'public', value: (d) => STATUS_LABELS[d.identity.status] ?? d.identity.status },
+  { id: 'commercial_visibility', label: 'Visibilité commerciale', group: 'identite', clearance: 'org', value: (d) => d.identity.commercialVisibility },
+  { id: 'region_code', label: 'Territoire', group: 'identite', clearance: 'public', value: (d) => d.identity.regionCode },
+  { id: 'created_at', label: 'Créée le', group: 'identite', clearance: 'public', value: (d) => dateFr(d.identity.createdAt) },
+  { id: 'updated_at', label: 'Mise à jour le', group: 'identite', clearance: 'public', value: (d) => dateFr(d.identity.updatedAt) },
+  { id: 'published_at', label: 'Publiée le', group: 'identite', clearance: 'public', value: (d) => dateFr(d.identity.publishedAt) },
+  { id: 'taxonomy', label: 'Sous-catégorie', group: 'identite', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'taxonomy')) },
+  { id: 'tags', label: 'Étiquettes', group: 'identite', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'tags')) },
+  { id: 'environment_tags', label: 'Cadre & environnement', group: 'identite', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'environment')) },
+
+  // ---------- Localisation ----------
+  { id: 'address', label: 'Adresse', group: 'localisation', clearance: 'public', value: (d) => d.location?.address ?? '' },
+  { id: 'city', label: 'Commune', group: 'localisation', clearance: 'public', value: (d) => d.location?.city ?? '' },
+  { id: 'postcode', label: 'Code postal', group: 'localisation', clearance: 'public', value: (d) => d.location?.postcode ?? '' },
+  { id: 'lieu_dit', label: 'Lieu-dit', group: 'localisation', clearance: 'public', value: (d) => d.location?.lieuDit ?? '' },
+  { id: 'direction', label: 'Accès / itinéraire', group: 'localisation', clearance: 'public', value: (d) => d.location?.direction ?? '' },
+  { id: 'location_label', label: 'Localisation (ligne)', group: 'localisation', clearance: 'public', value: (d) => d.location?.label ?? '' },
+  // R1 — les DEUX seules colonnes numériques du registre (cellType 'number', valeur number|null).
+  { id: 'latitude', label: 'Latitude', group: 'localisation', clearance: 'public', cellType: 'number', value: (d) => d.location?.latitude ?? null },
+  { id: 'longitude', label: 'Longitude', group: 'localisation', clearance: 'public', cellType: 'number', value: (d) => d.location?.longitude ?? null },
+  { id: 'google_maps_url', label: 'Lien Google Maps', group: 'localisation', clearance: 'public', value: (d) => d.location?.googleMapsUrl ?? '' },
+  { id: 'directions_url', label: 'Lien itinéraire', group: 'localisation', clearance: 'public', value: (d) => d.location?.directionsUrl ?? '' },
+  { id: 'code_insee', label: 'Code INSEE', group: 'localisation', clearance: 'public', value: (d) => rawStr(d, 'address', 'code_insee') },
+  { id: 'altitude_m', label: 'Altitude (m)', group: 'localisation', clearance: 'public', value: (d) => rawStr(d, 'location', 'altitude_m') },
+  { id: 'zones', label: 'Communes desservies', group: 'localisation', clearance: 'public', value: (d) => namedList(d.raw.object_zone) },
+  { id: 'places_count', label: 'Nombre de sous-lieux', group: 'localisation', clearance: 'public', value: (d) => (d.text.places.length ? String(d.text.places.length) : '') },
+  { id: 'places', label: 'Sous-lieux', group: 'localisation', clearance: 'public', value: (d) => joinParts(d.text.places.map((p) => p.name)) },
+
+  // ---------- Contacts ----------
+  { id: 'phone', label: 'Téléphone', group: 'contacts', clearance: 'public', value: (d) => firstPublicContact(d, (k) => PHONE_KINDS.has(k)) },
+  { id: 'mobile', label: 'Mobile', group: 'contacts', clearance: 'public', value: (d) => firstPublicContact(d, (k) => MOBILE_KINDS.has(k)) },
+  { id: 'email', label: 'E-mail', group: 'contacts', clearance: 'public', value: (d) => firstPublicContact(d, (k) => k === 'email') },
+  { id: 'website', label: 'Site web', group: 'contacts', clearance: 'public', value: (d) => firstPublicContact(d, (k) => k === 'website') },
+  { id: 'contacts_public', label: 'Contacts publics', group: 'contacts', clearance: 'public', value: (d) => joinParts(d.contacts.public.map(contactLine)) },
+  { id: 'contacts_object', label: 'Contacts de la fiche (tous)', group: 'contacts', clearance: 'org', value: (d) => joinParts(d.contacts.object.map(contactLine)) },
+  { id: 'contacts_orgs', label: 'Contacts organisations', group: 'contacts', clearance: 'org', value: (d) => joinParts(d.contacts.organizations.map(contactLine)) },
+  { id: 'web_channels', label: 'Réseaux & distribution', group: 'contacts', clearance: 'public', value: (d) => joinParts(rawList(d, 'web_channels').map((w) => joinParts([readNamedValue(w.platform, ''), typeof w.url === 'string' ? w.url : ''], ' : '))) },
+  { id: 'spoken_languages', label: 'Langues parlées', group: 'contacts', clearance: 'public', value: (d) => itemLabels(groupItems(d, 'languages')) },
+
+  // ---------- Descriptions ----------
+  { id: 'chapo', label: 'Accroche', group: 'descriptions', clearance: 'public', value: (d) => d.text.chapo },
+  { id: 'description', label: 'Description', group: 'descriptions', clearance: 'public', value: (d) => d.text.description },
+  { id: 'description_adapted', label: 'Description adaptée', group: 'descriptions', clearance: 'public', value: (d) => d.text.adaptedDescription },
+  { id: 'description_mobile', label: 'Description mobile', group: 'descriptions', clearance: 'public', value: (d) => d.text.mobileDescription },
+  { id: 'description_edition', label: 'Description édition', group: 'descriptions', clearance: 'public', value: (d) => d.text.editorialDescription },
+  { id: 'description_hors_zone', label: 'Offre hors zone', group: 'descriptions', clearance: 'public', value: (d) => rawStr(d, 'description_offre_hors_zone') },
+  { id: 'sanitary_measures', label: 'Mesures sanitaires', group: 'descriptions', clearance: 'public', value: (d) => rawStr(d, 'sanitary_measures') },
+  { id: 'descriptions_langs', label: 'Langues de description', group: 'descriptions', clearance: 'public', value: (d) => joinParts([...new Set(d.text.descriptions.map((x) => x.language))]) },
+  // PLAN-TACHE-6-ICI
 ];
 
 export const EXPORT_COLUMN_IDS: string[] = EXPORT_COLUMNS.map((c) => c.id);

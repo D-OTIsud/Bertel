@@ -3020,6 +3020,14 @@ DECLARE
   v_tmp_json JSONB;
   v_omit_empty BOOLEAN := COALESCE((p_options->>'omit_empty')::boolean, FALSE);
   v_can_read_extended BOOLEAN := FALSE;
+  -- §208 (migration_actor_contacts_org_gate.sql) : sonde PARESSEUSE des coordonnées
+  -- d'acteur — NULL = « pas encore évaluée ». Évaluée AU PLUS UNE FOIS, et seulement
+  -- si le leg `actors` (structuré ou render) est réellement demandé : la garde est
+  -- SECURITY DEFINER donc non inlinable, on ne la paie pas sur les fiches sans acteur
+  -- ni sur une projection `fields` qui ne demande pas les acteurs.
+  -- Tout lecteur de cette variable garde la forme FAIL-CLOSED (`CASE WHEN v THEN <PII>`) :
+  -- NULL n'ouvre jamais un bras, contrairement à `CASE WHEN NOT v THEN …` (§204).
+  v_actor_contacts BOOLEAN := NULL;
 BEGIN
   v_can_read_extended := api.can_read_extended(p_object_id);
 
@@ -4020,7 +4028,24 @@ BEGIN
   END IF;
 
   -- Actors (enriched with contacts)
+  -- §208 (migration_actor_contacts_org_gate.sql) : les LIGNES restent gardées par la
+  -- visibilité du LIEN (v_can_read_extended OR aor.visibility = 'public'), mais la PII
+  -- (prénom / nom / genre / note du lien) et les CANAUX (actor_channel — la table n'a NI
+  -- is_public NI visibility, classe §49 : rien à composer sur la ligne) exigent EN PLUS
+  -- api.can_read_actor_contacts = membre d'une ORG publisher de la fiche ou superuser
+  -- plateforme, JAMAIS auth.role() (une clé de service n'est pas une personne : les routes
+  -- partenaires appellent get_object_resource en service-role).
+  -- `CASE WHEN v_actor_contacts THEN …` court-circuite (§197) : la corrélée actor_channel
+  -- n'est JAMAIS exécutée sur le chemin public/partenaire. Forme volontairement POSITIVE
+  -- (jamais `WHEN NOT v_actor_contacts`) : si la sonde valait NULL, `NOT NULL` = NULL, le
+  -- bras ELSE serait pris et la garde deviendrait FAIL-OPEN (§204).
+  -- `contacts_restricted` distingue « réservé » de « pas saisi » : un tableau vide ne dit
+  -- pas pourquoi il est vide, et le consommateur (modale d'export, éditeur) doit savoir
+  -- que la valeur existe mais lui est refusée — pas qu'elle n'a pas été saisie.
   IF v_fields IS NULL OR 'actors' = ANY(v_fields) THEN
+    IF v_actor_contacts IS NULL THEN
+      v_actor_contacts := COALESCE(api.can_read_actor_contacts(p_object_id), FALSE);
+    END IF;
     js := js || jsonb_build_object(
       'actors',
       COALESCE((
@@ -4028,9 +4053,9 @@ BEGIN
         jsonb_build_object(
           'id', a.id,
           'display_name', a.display_name,
-          'first_name', a.first_name,
-          'last_name', a.last_name,
-          'gender', a.gender,
+          'first_name', CASE WHEN v_actor_contacts THEN a.first_name END,
+          'last_name',  CASE WHEN v_actor_contacts THEN a.last_name END,
+          'gender',     CASE WHEN v_actor_contacts THEN a.gender END,
           'role', jsonb_build_object(
             'id', aor.role_id,
             'code', rar.code,
@@ -4040,8 +4065,9 @@ BEGIN
           'valid_from', aor.valid_from,
           'valid_to', aor.valid_to,
           'visibility', aor.visibility,
-          'note', aor.note,
-          'contacts', COALESCE((
+          'note', CASE WHEN v_actor_contacts THEN aor.note END,
+          'contacts_restricted', NOT COALESCE(v_actor_contacts, FALSE),
+          'contacts', CASE WHEN v_actor_contacts THEN COALESCE((
             SELECT jsonb_agg(
               jsonb_build_object(
                 'id', ac.id,
@@ -4066,7 +4092,7 @@ BEGIN
             JOIN ref_code_contact_kind rck ON rck.id = ac.kind_id
             LEFT JOIN ref_contact_role rcr ON rcr.id = ac.role_id
             WHERE ac.actor_id = a.id
-          ), '[]'::jsonb)
+          ), '[]'::jsonb) ELSE '[]'::jsonb END
         )
         ORDER BY aor.is_primary DESC, aor.valid_from DESC, a.display_name
       )
@@ -5042,7 +5068,12 @@ BEGIN
         FROM contact_channel c
         JOIN ref_code_contact_kind rc ON rc.id = c.kind_id
         LEFT JOIN ref_contact_role rcr ON rcr.id = c.role_id
+        -- §208 : composer le drapeau de champ AVEC l'arm publié (§49), exactement comme
+        -- le leg structuré `contacts` plus haut. Ce sous-select n'avait aucune garde et
+        -- rendait les canaux is_public = FALSE (ligne directe, portable du gérant…) à tout
+        -- appelant, y compris anon.
         WHERE c.object_id = obj.id
+          AND (v_can_read_extended OR c.is_public IS TRUE)
       ) lines;
       v_render := v_render || jsonb_build_object('contact_lines', COALESCE(v_tmp_json, '[]'::jsonb));
     END IF;
@@ -5273,7 +5304,13 @@ BEGIN
         FROM actor a
         JOIN actor_object_role aor ON aor.actor_id = a.id
         LEFT JOIN ref_actor_role rar ON rar.id = aor.role_id
+        -- §208 : MÊME garde de LIGNE que le leg structuré ci-dessus. Avant ce patch, ce
+        -- sous-select n'en avait AUCUNE : il livrait à anon les noms de personnes
+        -- physiques rattachées par un lien 'private'/'partners' (mesuré §208 : 760 fiches
+        -- publiées). Une projection en texte n'est pas une projection en clair : deux
+        -- surfaces qui rendent le même fait portent la même garde.
         WHERE aor.object_id = obj.id
+          AND (v_can_read_extended OR aor.visibility = 'public')
       ) lines;
       v_render := v_render || jsonb_build_object('actor_lines', COALESCE(v_tmp_json, '[]'::jsonb));
     END IF;

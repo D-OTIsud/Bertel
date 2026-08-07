@@ -7,8 +7,13 @@ import {
 
 /**
  * §208 — préférences de l'export Excel, mémorisées SUR LE POSTE (même mécanique
- * que explorer-view-store : persist + merge qui filtre les ids inconnus et
- * retombe sur le défaut si vide ; garde « jamais 0 colonne »).
+ * que explorer-view-store : persist + merge qui filtre les ids inconnus).
+ * Garde « jamais 0 colonne » tenue à QUATRE endroits : `merge` (rehydratation —
+ * repli sur `essentialFallback()` si le disque ne contient plus aucun id valide),
+ * `setColumns` (repli sur l'état précédent si la liste proposée est entièrement
+ * périmée), `toggleColumn` (refuse de décocher la dernière colonne) et
+ * `applyPreset('custom')` (rien à recalculer pour 'custom' ⇒ la sélection en
+ * cours est conservée telle quelle, jamais vidée).
  * Le préréglage « diffusion » n'est JAMAIS restauré tel quel : la modale le
  * recalcule du code à chaque ouverture (préréglage verrouillé).
  */
@@ -29,13 +34,31 @@ function sanitize(ids: string[]): string[] {
   return ids.filter((id) => EXPORT_COLUMN_IDS.includes(id));
 }
 
+/**
+ * Repli statique de la garde « jamais 0 colonne ». Ni `merge` (rehydratation) ni
+ * `setColumns` n'ont de session appelante sous la main : on ne DEVINE donc pas une
+ * session, on retombe sur le préréglage essentiel calculé pour une session fermée
+ * (même politique fail-closed que `caps = CLOSED_ACTOR_CAPS`). Les 16 ids
+ * d'ESSENTIEL_IDS sont tous de clearance 'public' (cf. export-columns.ts) : ce
+ * repli est donc stable et non vide indépendamment de la session réelle.
+ */
+const UNPRIVILEGED_SESSION = { orgId: null, canEditObjects: false, role: null };
+function essentialFallback(): string[] {
+  return presetColumnIds('essentiel', UNPRIVILEGED_SESSION, CLOSED_ACTOR_CAPS);
+}
+
 export const useExplorerExportStore = create<ExplorerExportState>()(
   persist(
     (set) => ({
       presetId: 'essentiel',
       columnIds: [],
       applyPreset: (presetId, session, caps = CLOSED_ACTOR_CAPS) =>
-        set({ presetId, columnIds: presetId === 'custom' ? [] : presetColumnIds(presetId, session, caps) }),
+        set((state) => ({
+          presetId,
+          // 'custom' n'a rien à recalculer depuis le code : la sélection en cours
+          // est conservée telle quelle, jamais vidée (revue §208 tâche 9, finding 3).
+          columnIds: presetId === 'custom' ? state.columnIds : presetColumnIds(presetId, session, caps),
+        })),
       toggleColumn: (id) =>
         set((state) => {
           if (!EXPORT_COLUMN_IDS.includes(id)) return state;
@@ -49,7 +72,14 @@ export const useExplorerExportStore = create<ExplorerExportState>()(
           const columnIds = at < 0 ? [...state.columnIds, id] : [...state.columnIds.slice(0, at), id, ...state.columnIds.slice(at)];
           return { presetId: 'custom', columnIds };
         }),
-      setColumns: (ids) => set({ presetId: 'custom', columnIds: sanitize(ids) }),
+      setColumns: (ids) =>
+        set((state) => {
+          const columnIds = sanitize(ids);
+          // jamais 0 colonne : une liste entièrement périmée garde l'état précédent
+          // plutôt que de vider la sélection (revue §208 tâche 9, finding 2).
+          if (columnIds.length === 0) return state;
+          return { presetId: 'custom', columnIds };
+        }),
     }),
     {
       name: 'bertel-explorer-export',
@@ -57,7 +87,10 @@ export const useExplorerExportStore = create<ExplorerExportState>()(
       partialize: (state) => ({ presetId: state.presetId, columnIds: state.columnIds }),
       merge: (persisted, current) => {
         const saved = (persisted as Partial<ExplorerExportState> | undefined) ?? {};
-        const columnIds = Array.isArray(saved.columnIds) ? sanitize(saved.columnIds) : current.columnIds;
+        const sanitized = Array.isArray(saved.columnIds) ? sanitize(saved.columnIds) : current.columnIds;
+        // jamais 0 colonne au réveil : un id disparu du registre entre deux sessions
+        // ne doit pas rehydrater un état sans aucune colonne cochée (finding 1).
+        const columnIds = sanitized.length > 0 ? sanitized : essentialFallback();
         return { ...current, ...saved, columnIds };
       },
     },

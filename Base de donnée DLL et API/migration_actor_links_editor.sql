@@ -13,6 +13,11 @@
 --     for non-admin editors). Existence is now FK-enforced (actor_object_role.actor_id → actor(id));
 --     authorization stays workspace_assert_can_write_object (object-write). So ANY object editor can
 --     associate ANY existing actor — not just the superadmin.
+--     §208/T13b: `note` is CARRIED OVER from the pre-delete rows (key = (actor_id, role_id)) whenever
+--     api.can_read_actor_contacts is false for the caller — otherwise the T13 redaction (note→NULL in
+--     api.get_object_resource) would turn this delete-all + re-insert branch into a silent DESTRUCTION
+--     of every actor-link note on the record. Authorization is UNCHANGED: only the VALUE written for
+--     ONE column changes, never who may write. CI guard: tests/test_actor_link_note_carryover.sql.
 -- (c) api.search_actors(p_query): SECURITY DEFINER picker, gated on api.current_user_can_edit_objects()
 --     so read-only members cannot enumerate actor PII. §95: scope is the FULL actor directory for any
 --     editor (was admin/superuser → all, else self ∪ extended) — the save path no longer RLS-filters
@@ -53,6 +58,11 @@ CREATE POLICY "ext_actor_object_role_read" ON actor_object_role FOR SELECT USING
 
 -- == 3. save_object_relations: real `actors` branch (replaces the skip) ==
 -- Body identical to object_workspace_safe_write_rpcs.sql (fold there too — fresh == live).
+-- ⚠ DEPENDENCY (§208/T13b): the `actors` branch calls api.can_read_actor_contacts(text), created by
+--   migration_actor_contacts_org_gate.sql (manifest 16u). The reference is resolved at RUNTIME, not at
+--   CREATE time (plpgsql validates syntax only), so a fresh apply in manifest order is fine — nothing
+--   between 8r and 16u calls this RPC. On a LIVE database, apply 16u BEFORE (or in the same pass as)
+--   any re-apply of this file or of step 7, or the actors branch raises 42883 at the first save.
 CREATE OR REPLACE FUNCTION api.save_object_relations(p_object_id text, p_payload jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -67,6 +77,9 @@ DECLARE
   v_id uuid;
   v_deleted integer;
   v_inserted integer;
+  -- §208/T13b — anti-clobber de actor_object_role.note (voir la branche `actors`).
+  v_actor_notes_writable boolean;
+  v_actor_notes_before   jsonb := '{}'::jsonb;
 BEGIN
   PERFORM internal.workspace_assert_can_write_object(p_object_id);
   p_payload := COALESCE(p_payload, '{}'::jsonb);
@@ -149,6 +162,29 @@ BEGIN
   END IF;
   -- §48/§95: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
   IF p_payload ? 'actors' THEN
+    -- §208/T13b — ANTI-CLOBBER de `note`. api.get_object_resource REDACTE actor_object_role.note
+    -- (NULL) pour tout appelant qui échoue api.can_read_actor_contacts (§208/T13). Cette branche
+    -- étant delete-all + re-insert, prendre `note` du payload DÉTRUIRAIT la note de CHAQUE lien
+    -- acteur de la fiche pour un tel appelant : il charge NULL, il enregistre, la note disparaît —
+    -- sans erreur, sans signal, et sans qu'il ait jamais vu le champ. Ce n'est pas une saisie
+    -- ignorée, c'est une PERTE DE DONNÉE. Le correctif vit ICI, dans le writer PARTAGÉ : une garde
+    -- côté appelant n'en couvrirait qu'un (le RPC est aussi re-dispatché par la modération, 8u).
+    -- Sonde évaluée UNE SEULE FOIS — p_object_id est constant pour tout l'appel et la garde est
+    -- SECURITY DEFINER donc NON inlinable : la mettre par ligne rejouerait current_user_crm_object_ids
+    -- à chaque lien (§35/§204). Elle est en outre PARESSEUSE : corps d'un IF plpgsql, donc ni planifiée
+    -- ni exécutée quand le payload ne porte pas `actors`.
+    -- COALESCE(…, FALSE) : une sonde à trois valeurs en position booléenne est fail-OPEN sans lui
+    -- (§204), et « ouvert » signifierait ici « écrire le NULL du payload », c.-à-d. effacer.
+    v_actor_notes_writable := COALESCE(api.can_read_actor_contacts(p_object_id), FALSE);
+    IF NOT v_actor_notes_writable THEN
+      -- INSTANTANÉ PRIS AVANT LE DELETE (après, il n'y a plus rien à reporter).
+      -- Clé = (actor_id, role_id) : c'est la PK (actor_id, object_id, role_id) moins object_id,
+      -- constant sur tout l'appel — donc unique par ligne, jamais de collision d'agrégat.
+      SELECT COALESCE(jsonb_object_agg(aor.actor_id::text || '|' || aor.role_id::text, to_jsonb(aor.note)), '{}'::jsonb)
+        INTO v_actor_notes_before
+        FROM public.actor_object_role aor
+       WHERE aor.object_id = p_object_id;
+    END IF;
     DELETE FROM public.actor_object_role WHERE object_id = p_object_id;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     v_inserted := 0;
@@ -182,7 +218,15 @@ BEGIN
         NULLIF(v_row->>'valid_from', '')::date,
         NULLIF(v_row->>'valid_to', '')::date,
         COALESCE(NULLIF(v_row->>'visibility', ''), 'public'),
-        NULLIF(v_row->>'note', '')
+        -- §208/T13b : le payload ne fait autorité sur `note` que si l'appelant l'a réellement LU.
+        -- Sinon on REPORTE l'existant, tel quel (pas de NULLIF : on préserve, on ne normalise pas).
+        -- Clé absente = lien NOUVEAU pour cet appelant ⇒ NULL. Conséquence assumée et connue : une
+        -- note SAISIE par un appelant restreint sur un lien neuf n'est pas écrite — l'éditeur doit
+        -- désactiver le champ quand `contacts_restricted` est vrai (voir le rapport T13b).
+        CASE
+          WHEN v_actor_notes_writable THEN NULLIF(v_row->>'note', '')
+          ELSE v_actor_notes_before ->> (internal.workspace_uuid(v_row->>'actor_id')::text || '|' || v_id::text)
+        END
       );
       v_inserted := v_inserted + 1;
     END LOOP;

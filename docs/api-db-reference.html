@@ -18,12 +18,12 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <div class="grid cards">
 <article class="mini-card"><div class="metric">370</div><b>tables</b><p class="muted">13 vues · 9 enums</p></article>
 <article class="mini-card"><div class="metric">374</div><b>fonctions/RPC</b><p class="muted">537 policies · 565 triggers</p></article>
-<article class="mini-card"><div class="metric">2905</div><b>valeurs référentielles</b><p class="muted">live si disponible, seeds sinon</p></article>
+<article class="mini-card"><div class="metric">2907</div><b>valeurs référentielles</b><p class="muted">live si disponible, seeds sinon</p></article>
 <article class="mini-card"><div class="metric">3466</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent du fichier live <code>db-graph-out/reference_live.json</code> quand il existe, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>
 <p class="muted">État source live au moment de la génération : Supabase MCP JSON=db-graph-out/reference_live.json. Workflow conseillé : lancer <code>tools/db-graph/db_reference_audit.sql</code> via Supabase MCP <code>execute_sql</code>, récupérer l'URL projet et une clé publishable via MCP, exécuter <code>tools/db-graph/export_reference_live_rest.py</code>, puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>. Le dump MCP pur <code>tools/db-graph/db_reference_extract.sql</code> reste disponible si le client MCP accepte le volume complet.</p>
-<p class="muted">Lecture live MCP vérifiée + REST Supabase publishable effectuée sur 26 tables publiques de référence. 2439 lignes seed SQL restent disponibles comme filet de secours. 3 écart(s) de visibilité REST, seeds conservés pour ces tables.</p>
+<p class="muted">Lecture live MCP vérifiée + REST Supabase publishable effectuée sur 26 tables publiques de référence. 2454 lignes seed SQL restent disponibles comme filet de secours. 3 écart(s) de visibilité REST, seeds conservés pour ces tables.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
 <tr><td>Fonctions sans source SQL retrouvée</td><td>31</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.purge_expired_staging_batches(p_limit integer DEFAULT 500)</code>, <code>api.purge_staging_batch(p_batch_id text, p_force boolean DEFAULT false)</code>, <code>api.resolve_staging_dependencies(p_batch_id text)</code>, <code>api.retry_failed_media_downloads(p_limit integer DEFAULT 200)</code>, <code>api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)</code>, <code>api.run_staging_dedup(p_batch_id text, p_distance_meters integer DEFAULT 50, p_name_similarity real DEFAULT 0.45)</code>, <code>api.validate_object_hotel_positioning()</code>, <code>api.watchdog_mark_stale_batches(p_stale_minutes integer DEFAULT 30, p_limit integer DEFAULT 200)</code> <span class="muted">+19</span></td></tr>
@@ -159,7 +159,7 @@ Function to audit legal compliance across all objects
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6378</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6425</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-object_org_link"><code>public.object_org_link</code></a></td><td>high</td></tr>
@@ -363,7 +363,7 @@ Exécutée par le cron quotidien capture-metric-snapshots.</blockquote>
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6095</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6142</code></p>
 </div>
 <blockquote>Trigger : garantit que org_object_id pointe vers un objet de type &#x27;ORG&#x27;.
 Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
@@ -409,7 +409,7 @@ Function to check if an object has all required legal records
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6277</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6324</code></p>
 </div>
 <blockquote>Trigger : garantit que org_object_id pointe vers un objet de type &#x27;ORG&#x27;.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -423,7 +423,7 @@ Function to check if an object has all required legal records
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6529</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6576</code></p>
 </div>
 <blockquote>Trigger : garantit que org_object_id pointe vers un objet de type &#x27;ORG&#x27;.
 Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
@@ -928,7 +928,7 @@ it, so only service/admin or an existing platform owner may change roles.</block
 <p><b>Retour</b><br><code>trigger</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6132</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6179</code></p>
 </div>
 <blockquote>Trigger : contrainte &quot;1 user tourism_agent = 1 ORG active&quot;.
 Un index partiel unique WHERE is_active = TRUE s&#x27;appliquerait à TOUS les users,
@@ -2117,7 +2117,7 @@ differs only on noise. Kept byte-identical to DIFF_IGNORE_KEYS in object-version
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br><span class="muted">standard</span></p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql:30</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql:32</code></p>
 </div>
 <blockquote>Agrege en un appel les 8 sondes de permission de l&#x27;editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front.</blockquote>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
@@ -3842,7 +3842,7 @@ Rang : la cible doit avoir un rang admin strictement inférieur à l&#x27;appela
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_gdpr_erasure.sql:92</code><br><code>Base de donnée DLL et API/schema_unified.sql:6642</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_gdpr_erasure.sql:92</code><br><code>Base de donnée DLL et API/schema_unified.sql:6689</code></p>
 </div>
 <blockquote>Effacement/anonymisation RGPD Art. 17 d&#x27;un sujet. Anonymise (défaut) ou supprime, rédige le journal d&#x27;audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -5477,7 +5477,7 @@ object_version rows are product data (version restore §98/14r), never dropped h
 <p><b>Retour</b><br><code>integer</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>helper / privé</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6621</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/schema_unified.sql:6668</code></p>
 </div>
 <blockquote>Rédaction ciblée du journal d&#x27;audit : retire les clés PII d&#x27;un sujet (row_pk OU before_data-&gt;&gt;key,
 ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.</blockquote>
@@ -9688,7 +9688,7 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>type_hot</code></td><td>Type d&#x27;hôtel</td><td>selection=single</td><td><code>supabase-rest:public.ref_classification_scheme</code></td></tr>
 <tr><td><code>village_vacances_stars</code></td><td>Classement village de vacances</td><td>Classement officiel Atout France des villages de vacances (étoiles) · selection=single · display_group=official_classification</td><td><code>supabase-rest:public.ref_classification_scheme</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.ref_classification_scheme_applicability</code> (33 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
+<details><summary><code>public.ref_classification_scheme_applicability</code> (32 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
 <tr><td><code>LBL_ATR</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>LBL_CLEF_VERTE</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>LBL_DESTINATION_EXCELLENCE</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
@@ -9701,7 +9701,6 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>LBL_TOURISME_HANDICAP</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>accueil_paysan</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>accueil_velo</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
-<tr><td><code>auberge_collective_stars</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>bienvenue_ferme</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>camp_stars</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
 <tr><td><code>clevacances_keys</code></td><td></td><td></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:89</code></td></tr>
@@ -10532,24 +10531,27 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>zh</code></td><td>Chinois</td><td></td><td><code>supabase-rest:public.ref_language</code></td></tr>
 <tr><td><code>zu</code></td><td>Zoulou</td><td></td><td><code>supabase-rest:public.ref_language</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.ref_legal_type</code> (17 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
-<tr><td><code>accessibility</code></td><td>Accessibilité</td><td>Attestation d&#x27;accessibilité · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>accommodation_license</code></td><td>Licence d&#x27;hébergement</td><td>Licence d&#x27;exploitation d&#x27;hébergement · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>business_license</code></td><td>Licence commerciale</td><td>Licence d&#x27;exploitation commerciale · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>cyber_insurance</code></td><td>Assurance cyber</td><td>Assurance cybersécurité · category=insurance</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>environmental_permit</code></td><td>Permis environnemental</td><td>Autorisation environnementale · category=environment</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>fire_safety</code></td><td>Sécurité incendie</td><td>Attestation de sécurité incendie · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>guide_license</code></td><td>Licence guide</td><td>Licence de guide touristique · category=tourism</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>liability_insurance</code></td><td>Assurance responsabilité civile</td><td>Assurance responsabilité civile professionnelle · category=insurance</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>property_insurance</code></td><td>Assurance biens</td><td>Assurance des biens et équipements · category=insurance</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<details><summary><code>public.ref_legal_type</code> (20 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
+<tr><td><code>accessibility</code></td><td>Attestation d&#x27;accessibilité (ERP)</td><td>Attestation d&#x27;accessibilité d&#x27;un établissement recevant du public, ou agenda d&#x27;accessibilité programmée (Ad&#x27;AP). Distincte du label Tourisme &amp; Handicap, qui est une distinction volontaire saisie en §10. · category=erp</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>attestation_assurance</code></td><td>Attestation d&#x27;assurance</td><td>Attestation d&#x27;assurance en cours de validité couvrant l&#x27;activité : responsabilité civile professionnelle, et le cas échéant multirisque de l&#x27;établissement. Pièce demandée à tout prestataire, quelle que soit sa situation. Renouvellement annuel. · category=insurance</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>avis_situation_sirene</code></td><td>Avis de situation au répertoire SIRENE</td><td>Attestation INSEE d&#x27;inscription au répertoire SIRENE. Justificatif d&#x27;existence le plus universel : accepté pour tout exploitant immatriculé (entreprise individuelle, micro-entrepreneur, société, association employeuse). Demandé de moins de 3 mois. · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>carte_professionnelle</code></td><td>Carte professionnelle</td><td>Carte professionnelle en cours de validité : guide-conférencier, moniteur, agent immobilier (loi Hoguet, pour les intermédiaires de location)… Précise la profession concernée dans la référence. · category=activite</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>cerfa_chambre_hotes</code></td><td>CERFA de déclaration de chambre d&#x27;hôtes</td><td>Déclaration en mairie d&#x27;une activité de chambres d&#x27;hôtes (CERFA 13566). Obligatoire dès la première chambre ; distincte de la déclaration de meublé de tourisme. · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>cerfa_meuble_tourisme</code></td><td>CERFA de déclaration de meublé de tourisme</td><td>Déclaration en mairie d&#x27;un meublé de tourisme (CERFA 14004). Obligatoire pour toute location saisonnière de logement meublé. À rapprocher du récépissé de déclaration en mairie, qui en accuse le dépôt. · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>diplome_activite</code></td><td>Diplôme d&#x27;activité</td><td>Diplôme ou titre professionnel autorisant l&#x27;encadrement contre rémunération de l&#x27;activité proposée (BPJEPS, DEJEPS, BEES, brevet fédéral reconnu…). Une pièce par activité encadrée. · category=activite</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>extrait_inpi</code></td><td>Extrait INPI</td><td>Extrait du registre national des entreprises (INPI), guichet unique depuis 2023. Équivalent du KBIS pour les exploitants non inscrits au RCS : artisans, agriculteurs, professions libérales. Demandé de moins de 3 mois. · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>fire_safety</code></td><td>Attestation de sécurité incendie (ERP)</td><td>Attestation ou procès-verbal de la commission de sécurité pour un établissement recevant du public. Périodicité de visite variable selon la catégorie et le type d&#x27;ERP. · category=erp</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>immatriculation_atout_france</code></td><td>Immatriculation Atout France</td><td>Immatriculation au registre des opérateurs de voyages et de séjours tenu par Atout France, exigée dès qu&#x27;un prestataire vend un forfait ou combine plusieurs prestations. Remplace depuis 2009 l&#x27;ancienne « licence tourisme ». Renouvellement triennal. · category=activite</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>kbis</code></td><td>Extrait KBIS</td><td>Extrait d&#x27;immatriculation au registre du commerce et des sociétés — carte d&#x27;identité des sociétés et commerçants. Demandé de moins de 3 mois. Ne concerne PAS les associations (statuts) ni les professions libérales (extrait INPI / avis SIRENE). · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>licence_restaurant</code></td><td>Licence restaurant</td><td>Licence de débit de boissons à consommer sur place attachée au service des repas (petite licence restaurant ou licence restaurant). Délivrée après déclaration en mairie ; attachée à l&#x27;établissement. · category=restauration</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>permis_exploitation</code></td><td>Permis d&#x27;exploitation</td><td>Attestation de la formation obligatoire préalable à l&#x27;exploitation d&#x27;un débit de boissons ou d&#x27;un établissement de restauration servant de l&#x27;alcool. Valable 10 ans. · category=restauration</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 <tr><td><code>raison_sociale</code></td><td>Raison sociale</td><td>Dénomination ou raison sociale de la personne morale exploitante · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>safety_certificate</code></td><td>Certificat de sécurité</td><td>Certificat de conformité sécurité · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>recepisse_declaration_mairie</code></td><td>Récépissé de déclaration en mairie</td><td>Accusé de réception délivré par la commune à la suite d&#x27;une déclaration (meublé de tourisme, chambres d&#x27;hôtes, occupation du domaine public…). Preuve que la déclaration a bien été déposée. · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 <tr><td><code>siren</code></td><td>SIREN</td><td>Système d&#x27;identification du répertoire des entreprises · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 <tr><td><code>siret</code></td><td>SIRET</td><td>Système d&#x27;identification du répertoire des établissements · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>tourism_license</code></td><td>Licence tourisme</td><td>Licence d&#x27;exploitation touristique · category=tourism</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
+<tr><td><code>statuts_association</code></td><td>Statuts d&#x27;association</td><td>Statuts déposés de l&#x27;association loi 1901 exploitante, accompagnés le cas échéant du récépissé de déclaration en préfecture. Pièce d&#x27;existence des exploitants associatifs, en lieu et place du KBIS. · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 <tr><td><code>tourist_tax</code></td><td>Taxe de séjour</td><td>Autorisation de collecte de la taxe de séjour · category=accommodation</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 <tr><td><code>vat_number</code></td><td>Numéro TVA</td><td>Numéro de TVA intracommunautaire · category=business</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
-<tr><td><code>waste_management</code></td><td>Gestion des déchets</td><td>Autorisation de gestion des déchets · category=environment</td><td><code>supabase-rest:public.ref_legal_type</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_object_relation_type</code> (10 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
 <tr><td><code>based_at_site</code></td><td>Se pratique sur le site</td><td>Une ACT se déroule sur un PNA (canyoning, plongée, parapente)</td><td><code>supabase-rest:public.ref_object_relation_type</code></td></tr>
@@ -10564,14 +10566,14 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>uses_itinerary</code></td><td>Suit l&#x27;itinéraire</td><td>Une ACT emprunte un tracé ITI (randonnée guidée, VTT guidé)</td><td><code>supabase-rest:public.ref_object_relation_type</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_org_admin_role</code> (3 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
-<tr><td><code>org_admin</code></td><td>Administrateur ORG</td><td>Niveau administratif le plus élevé dans l&#x27;ORG, sans dépasser le super_admin plateforme</td><td><code>Base de donnée DLL et API/seeds_data.sql:4193</code></td></tr>
-<tr><td><code>org_manager</code></td><td>Gestionnaire ORG</td><td>Administration opérationnelle de l&#x27;ORG — peut gérer les membres de rang inférieur</td><td><code>Base de donnée DLL et API/seeds_data.sql:4193</code></td></tr>
-<tr><td><code>team_lead</code></td><td>Référent équipe</td><td>Premier niveau de délégation administrative dans l&#x27;ORG</td><td><code>Base de donnée DLL et API/seeds_data.sql:4193</code></td></tr>
+<tr><td><code>org_admin</code></td><td>Administrateur ORG</td><td>Niveau administratif le plus élevé dans l&#x27;ORG, sans dépasser le super_admin plateforme</td><td><code>Base de donnée DLL et API/seeds_data.sql:4194</code></td></tr>
+<tr><td><code>org_manager</code></td><td>Gestionnaire ORG</td><td>Administration opérationnelle de l&#x27;ORG — peut gérer les membres de rang inférieur</td><td><code>Base de donnée DLL et API/seeds_data.sql:4194</code></td></tr>
+<tr><td><code>team_lead</code></td><td>Référent équipe</td><td>Premier niveau de délégation administrative dans l&#x27;ORG</td><td><code>Base de donnée DLL et API/seeds_data.sql:4194</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_org_business_role</code> (3 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
-<tr><td><code>contributor</code></td><td>Contributeur</td><td>Saisie, enrichissement, mise à jour dans le périmètre autorisé. Sans validation éditoriale.</td><td><code>Base de donnée DLL et API/seeds_data.sql:4179</code></td></tr>
-<tr><td><code>editor</code></td><td>Éditeur</td><td>Contrôle qualité, correction, validation éditoriale dans le périmètre autorisé</td><td><code>Base de donnée DLL et API/seeds_data.sql:4179</code></td></tr>
-<tr><td><code>viewer</code></td><td>Lecteur</td><td>Consultation uniquement dans le périmètre accessible à l&#x27;ORG et au user</td><td><code>Base de donnée DLL et API/seeds_data.sql:4179</code></td></tr>
+<tr><td><code>contributor</code></td><td>Contributeur</td><td>Saisie, enrichissement, mise à jour dans le périmètre autorisé. Sans validation éditoriale.</td><td><code>Base de donnée DLL et API/seeds_data.sql:4180</code></td></tr>
+<tr><td><code>editor</code></td><td>Éditeur</td><td>Contrôle qualité, correction, validation éditoriale dans le périmètre autorisé</td><td><code>Base de donnée DLL et API/seeds_data.sql:4180</code></td></tr>
+<tr><td><code>viewer</code></td><td>Lecteur</td><td>Consultation uniquement dans le périmètre accessible à l&#x27;ORG et au user</td><td><code>Base de donnée DLL et API/seeds_data.sql:4180</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_org_role</code> (3 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
 <tr><td><code>contributor</code></td><td>ORG contributrice</td><td>ORG contributrice — enrichissement propre uniquement, pas d&#x27;accès à la donnée canonique</td><td><code>supabase-rest:public.ref_org_role</code></td></tr>
@@ -10579,18 +10581,18 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>reader</code></td><td>ORG lectrice</td><td>ORG lectrice — accès en lecture via lien explicite seulement</td><td><code>supabase-rest:public.ref_org_role</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_permission</code> (12 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
-<tr><td><code>attach_documents</code></td><td>Attacher des documents</td><td>Permet d&#x27;attacher des fichiers et documents à un objet · category=media</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>create_object</code></td><td>Créer un objet</td><td>Permet de créer un nouvel objet tourisme dans le périmètre de l&#x27;ORG · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>edit_canonical_when_publisher</code></td><td>Modifier le canonique (ORG publisher)</td><td>Permet de modifier la donnée canonique d&#x27;un objet dont l&#x27;ORG est publisher principal via object_org_link · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>edit_gallery</code></td><td>Modifier la galerie</td><td>Permet d&#x27;ajouter, modifier ou supprimer des photos dans la galerie d&#x27;un objet · category=media</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>edit_hours</code></td><td>Modifier les horaires</td><td>Permet de modifier les plages horaires et calendriers d&#x27;ouverture d&#x27;un objet · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>edit_org_enrichment</code></td><td>Modifier l&#x27;enrichissement ORG</td><td>Permet de modifier la couche d&#x27;enrichissement propre à l&#x27;ORG, sans toucher aux données canoniques · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>edit_pricing</code></td><td>Modifier les tarifs</td><td>Permet de modifier la grille tarifaire et les conditions de prix d&#x27;un objet · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
+<tr><td><code>attach_documents</code></td><td>Attacher des documents</td><td>Permet d&#x27;attacher des fichiers et documents à un objet · category=media</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>create_object</code></td><td>Créer un objet</td><td>Permet de créer un nouvel objet tourisme dans le périmètre de l&#x27;ORG · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>edit_canonical_when_publisher</code></td><td>Modifier le canonique (ORG publisher)</td><td>Permet de modifier la donnée canonique d&#x27;un objet dont l&#x27;ORG est publisher principal via object_org_link · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>edit_gallery</code></td><td>Modifier la galerie</td><td>Permet d&#x27;ajouter, modifier ou supprimer des photos dans la galerie d&#x27;un objet · category=media</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>edit_hours</code></td><td>Modifier les horaires</td><td>Permet de modifier les plages horaires et calendriers d&#x27;ouverture d&#x27;un objet · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>edit_org_enrichment</code></td><td>Modifier l&#x27;enrichissement ORG</td><td>Permet de modifier la couche d&#x27;enrichissement propre à l&#x27;ORG, sans toucher aux données canoniques · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>edit_pricing</code></td><td>Modifier les tarifs</td><td>Permet de modifier la grille tarifaire et les conditions de prix d&#x27;un objet · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
 <tr><td><code>manage_legal_compliance</code></td><td>Gérer la conformité juridique</td><td>Permet de gérer le SIRET, le SIREN, la raison sociale, les licences, assurances, certificats et justificatifs administratifs · category=legal</td><td><code>Base de donnée DLL et API/migration_unblock_team_legal_access.sql:30</code></td></tr>
-<tr><td><code>manage_team_messages</code></td><td>Gérer les messages d&#x27;équipe</td><td>Permet d&#x27;envoyer et gérer les messages d&#x27;équipe liés à un objet · category=team</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>publish_object</code></td><td>Publier / dépublier un objet</td><td>Permet de passer un objet au statut published ou de le dépublier · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>validate_changes</code></td><td>Valider des modifications en attente</td><td>Permet de valider ou rejeter des modifications soumises par un contributeur dans le workflow éditorial · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
-<tr><td><code>write_crm_notes</code></td><td>Écrire des notes CRM</td><td>Permet de rédiger et modifier des notes CRM associées à un objet · category=crm</td><td><code>Base de donnée DLL et API/seeds_data.sql:4211</code></td></tr>
+<tr><td><code>manage_team_messages</code></td><td>Gérer les messages d&#x27;équipe</td><td>Permet d&#x27;envoyer et gérer les messages d&#x27;équipe liés à un objet · category=team</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>publish_object</code></td><td>Publier / dépublier un objet</td><td>Permet de passer un objet au statut published ou de le dépublier · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>validate_changes</code></td><td>Valider des modifications en attente</td><td>Permet de valider ou rejeter des modifications soumises par un contributeur dans le workflow éditorial · category=content</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
+<tr><td><code>write_crm_notes</code></td><td>Écrire des notes CRM</td><td>Permet de rédiger et modifier des notes CRM associées à un objet · category=crm</td><td><code>Base de donnée DLL et API/seeds_data.sql:4212</code></td></tr>
 </tbody></table></details>
 <details><summary><code>public.ref_review_source</code> (7 valeurs)</summary><table><thead><tr><th>Code/CID</th><th>Libellé</th><th>Description / contexte</th><th>Source</th></tr></thead><tbody>
 <tr><td><code>airbnb</code></td><td>Airbnb</td><td></td><td><code>supabase-rest:public.ref_review_source</code></td></tr>
@@ -10970,28 +10972,28 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 </tbody></table></details>
 <details><summary>Sources dérivées non listées ligne par ligne (77)</summary><table><thead><tr><th>Table</th><th>Source</th><th>Note</th></tr></thead><tbody>
 <tr><td><code>public.ref_amenity</code></td><td><code>Base de donnée DLL et API/migration_motorhome_service_amenities.sql:40</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_amenity</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:4015</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_amenity</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:4016</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_amenity</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:532</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_amenity</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:694</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_capacity_applicability</code></td><td><code>Base de donnée DLL et API/migration_capacity_applicability_seed.sql:21</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_capacity_applicability</code></td><td><code>Base de donnée DLL et API/migration_capacity_applicability_seed.sql:28</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3415</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3552</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3699</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3849</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_equivalent_group</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3217</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3416</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3553</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3700</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_equivalent_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3850</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_equivalent_group</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3218</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1185</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2096</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2528</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3872</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_scheme_applicability</code></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:180</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:105</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:45</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:53</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:61</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:69</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:76</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:92</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2097</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2529</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_scheme</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3873</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_scheme_applicability</code></td><td><code>Base de donnée DLL et API/migration_classification_scheme_applicability.sql:179</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:106</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:46</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:54</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:62</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:70</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:77</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/migration_classification_labels_expansion.sql:93</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1191</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1215</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1228</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
@@ -10999,17 +11001,17 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1261</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1279</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1289</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1328</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1335</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1342</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1349</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1355</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1370</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1381</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2105</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2554</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3889</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3930</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1329</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1336</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1343</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1350</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1356</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1371</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:1382</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2106</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2555</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3890</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3931</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_classification_value</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:736</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/migration_act_taxonomy_recategorization.sql:44</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/migration_iti_section06_vocab.sql:74</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
@@ -11030,21 +11032,21 @@ cron), mirror of audit.ensure_future_partitions.</blockquote>
 <tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/migration_taxonomy_seeds_coverage.sql:63</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/migration_trail_referential.sql:20</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/migration_trail_referential.sql:49</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2217</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2236</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2279</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2322</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2365</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3954</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2218</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2237</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2280</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2323</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2366</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_code</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3955</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_code_taxonomy_closure</code></td><td><code>Base de donnée DLL et API/schema_unified.sql:1737</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_facet_applicability</code></td><td><code>Base de donnée DLL et API/migration_facet_applicability.sql:66</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.ref_object_relation_type</code></td><td><code>Base de donnée DLL et API/migration_taxonomy_seeds_coverage.sql:191</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2751</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2850</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2911</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3006</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action_category</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2578</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
-<tr><td><code>public.ref_sustainability_action_group</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2670</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2752</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2851</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2912</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:3007</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action_category</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2579</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
+<tr><td><code>public.ref_sustainability_action_group</code></td><td><code>Base de donnée DLL et API/seeds_data.sql:2671</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 <tr><td><code>public.tag_link</code></td><td><code>Base de donnée DLL et API/migration_tags_curated_seed.sql:155</code></td><td>INSERT derives values through SELECT/CTE; row values are not guessed.</td></tr>
 </tbody></table></details>
 </section>

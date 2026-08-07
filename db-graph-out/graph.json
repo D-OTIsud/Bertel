@@ -42838,12 +42838,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6621
+      "line": 6668
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6621
+     "line": 6668
     }
    }
   },
@@ -42867,7 +42867,7 @@
      },
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6642
+      "line": 6689
      }
     ]
    }
@@ -43453,12 +43453,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6378
+      "line": 6425
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6378
+     "line": 6425
     }
    }
   },
@@ -46461,12 +46461,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6529
+      "line": 6576
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6529
+     "line": 6576
     }
    }
   },
@@ -46541,12 +46541,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6095
+      "line": 6142
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6095
+     "line": 6142
     }
    }
   },
@@ -47850,12 +47850,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6277
+      "line": 6324
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6277
+     "line": 6324
     }
    }
   },
@@ -49499,12 +49499,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 6132
+      "line": 6179
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/schema_unified.sql",
-     "line": 6132
+     "line": 6179
     }
    }
   },
@@ -50382,12 +50382,12 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql",
-      "line": 30
+      "line": 32
      }
     ],
     "source": {
      "path": "Base de donnée DLL et API/migration_object_workspace_permissions_rpc.sql",
-     "line": 30
+     "line": 32
     }
    }
   },

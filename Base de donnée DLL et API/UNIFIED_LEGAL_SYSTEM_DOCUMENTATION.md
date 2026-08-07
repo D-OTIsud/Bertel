@@ -5,6 +5,14 @@
 > - `Base de donnée DLL et API/api_views_functions.sql`
 > - `Base de donnée DLL et API/schema_unified.sql`
 > - `docs/index.html`
+>
+> ⚠️ **Les codes `ref_legal_type` cités dans ce fichier sont PÉRIMÉS depuis §209 (2026-08-07).**
+> Le catalogue a été refait sur les pièces réellement demandées aux prestataires : `liability_insurance`
+> est devenu `attestation_assurance`, `tourism_license` est devenu `immatriculation_atout_france`, et
+> `accommodation_license` / `business_license` / `safety_certificate` / `property_insurance` /
+> `cyber_insurance` / `waste_management` / `environmental_permit` / `guide_license` **n'existent plus**.
+> Catalogue courant : `Base de donnée DLL et API/migration_legal_document_catalog.sql` (manifeste 16t)
+> et le bloc « Insert common legal types » de `schema_unified.sql`.
 
 ## Overview
 

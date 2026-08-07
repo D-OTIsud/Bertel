@@ -147,8 +147,33 @@ COMMENT ON FUNCTION api.can_read_actor_contacts(text) IS
 --    est un choix de coût du planificateur, jamais une promesse. Ce qui rend la borne
 --    RÉELLE est le PLAFOND DUR de 500 ids, identique (forme du message ET SQLSTATE) à celui
 --    de api.export_actor_contacts (§3) : les deux entrées du même chantier refusent la même
---    taille de la même façon. Appel one-shot à l'ouverture de la modale, hors chemin chaud.
+--    taille de la même façon.
 --    LANGUAGE plpgsql (et non sql) uniquement pour pouvoir LEVER ce plafond.
+--
+--    CONTRAT D'APPEL — ce n'est PAS un appel « one-shot » (ce que ce commentaire affirmait
+--    à tort jusqu'à la revue 3e vague, alors que le plafond venait d'être posé) : au-delà
+--    de 500 ids, c'est à l'APPELANT de DÉCOUPER et de réduire les deux booléens par `OR`
+--    entre lots. C'est légitime et exact, pas une approximation : les deux clés sont des
+--    `EXISTS` sur l'ensemble reçu, et `EXISTS(A ∪ B) = EXISTS(A) OR EXISTS(B)` — le
+--    découpage rend donc EXACTEMENT ce qu'un appel unique non plafonné aurait rendu.
+--    Un « tout sélectionner » sur le corpus publié (~840 fiches) en pose deux ; l'appelant
+--    de référence (modale d'export, `fetchActorExportCapabilities`) découpe avec la MÊME
+--    constante que l'export lui-même (ACTOR_EXPORT_BATCH = 500), séquentiellement, et
+--    referme TOUT si un seul lot échoue. L'appel reste hors chemin chaud (à l'ouverture de
+--    la modale, jamais par ligne). Un appelant qui envoie la sélection entière SANS
+--    découper ne « voit » pas d'erreur utile : il reçoit 22023 et referme ses capacités —
+--    les colonnes acteur disparaissent SANS SIGNAL. C'est la panne qui a été corrigée.
+--
+--    ⚠ FORME AMONT, non retenue dans cette passe (à reprendre quand ce chantier rouvrira) :
+--    la vraie sortie est une forme ENSEMBLISTE autoritaire —
+--    `api.can_read_actor_contacts_ids(text[]) RETURNS SETOF text` — appelée À LA FOIS par
+--    ce préflight et par le bloc « autorise-une-fois » de api.export_actor_contacts. Elle
+--    donnerait un seul InitPlan au lieu d'un fan-out par id : plus de plafond, donc plus de
+--    découpage côté appelant, et surtout plus de RETRANSCRIPTION à la main (M5 ci-dessus) —
+--    l'égalité garde↔export deviendrait une TAUTOLOGIE au lieu d'une paire que la tâche 14
+--    doit asserter sur des personas. Non faite ici parce qu'elle réécrit le corps du RPC
+--    d'export de PII (déjà revu, journalisé, et hors du périmètre d'un correctif de revue) :
+--    c'est sa propre passe, avec ses propres tests de non-régression.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION api.export_actor_capabilities(p_object_ids text[])
 RETURNS jsonb
@@ -371,6 +396,53 @@ REVOKE ALL    ON public.actor_contact_export_log FROM PUBLIC, anon, authenticate
 -- n'apparaît d'ici la mise en service, `REVOKE SELECT … FROM service_role` referme
 -- l'asymétrie sans rien casser.
 GRANT  SELECT ON public.actor_contact_export_log TO authenticated, service_role;
+
+-- ⚠ GARDE D'APPLICATION (revue 3e vague) — « immuable » doit ÉCHOUER FORT, jamais
+-- s'éteindre en avertissement. Sur un REJEU, le `CREATE TABLE IF NOT EXISTS` ci-dessus
+-- est un NO-OP : le rôle qui applique peut alors n'être NI propriétaire de la table NI
+-- porteur du grant option, et PostgreSQL répond au REVOKE par un simple
+-- `WARNING: no privileges could be revoked` — que `ON_ERROR_STOP=1` NE RATTRAPE PAS.
+-- Le déploiement serait déclaré VERT avec un journal encore INSCRIPTIBLE par
+-- `authenticated`/`service_role` : exactement la panne silencieuse que ce bloc REVOKE
+-- existe pour empêcher. On asserte donc l'EFFET (et non un proxy comme la propriété :
+-- l'effet couvre aussi toute autre cause, et reste vrai si un passage antérieur avait
+-- déjà révoqué). Lecture par `aclexplode(relacl)` et non par information_schema :
+-- ce dernier ne montre que les privilèges dont le rôle courant est grantor/grantee,
+-- donc il pourrait RATER la fuite qu'on cherche précisément à voir.
+DO $$
+DECLARE
+  v_owner name;
+  v_leak  text;
+BEGIN
+  SELECT pg_catalog.pg_get_userbyid(c.relowner)
+    INTO v_owner
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+   WHERE n.nspname = 'public' AND c.relname = 'actor_contact_export_log';
+
+  IF v_owner IS NULL THEN
+    RAISE EXCEPTION 'public.actor_contact_export_log introuvable : le REVOKE d''immuabilite n''a pas pu etre applique';
+  END IF;
+
+  SELECT string_agg(DISTINCT format('%s=%s',
+           CASE WHEN a.grantee = 0 THEN 'PUBLIC' ELSE pg_catalog.pg_get_userbyid(a.grantee) END,
+           a.privilege_type), ', ')
+    INTO v_leak
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) AS a
+   WHERE n.nspname = 'public'
+     AND c.relname = 'actor_contact_export_log'
+     AND (a.grantee = 0
+          OR pg_catalog.pg_get_userbyid(a.grantee) IN ('anon', 'authenticated', 'service_role'))
+     AND a.privilege_type <> 'SELECT';
+
+  IF v_leak IS NOT NULL THEN
+    RAISE EXCEPTION 'journal actor_contact_export_log ENCORE inscriptible par un role client (%) — le REVOKE n''a PAS pris', v_leak
+      USING HINT = format('Appliquer ce fichier en tant que proprietaire de la table (%s), ou lui redonner le grant option.', v_owner);
+  END IF;
+END
+$$;
 
 -- ---------------------------------------------------------------------
 -- 3. L'export : autorise-une-fois (§36 — la liste d'ids du client n'est jamais

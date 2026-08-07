@@ -12,11 +12,14 @@ jest.mock('../../../services/rpc', () => ({ getExportActorCapabilities: jest.fn(
 const mockRun = runSelectionXlsxExport as jest.Mock;
 const mockCaps = getExportActorCapabilities as jest.Mock;
 
-function setup(session: Partial<ReturnType<typeof useSessionStore.getState>> = {}) {
+function setup(
+  session: Partial<ReturnType<typeof useSessionStore.getState>> = {},
+  selectedObjectIds: string[] = ['a', 'b', 'c'],
+) {
   // role: as const — sinon le littéral s'élargit en `string`, incompatible avec le type
   // UserRole strict de SessionState une fois fusionné avec `...session` (Partial<SessionState>).
   const merged = { orgId: 'ORG', orgName: 'OTI du Sud', canEditObjects: true, role: 'tourism_agent' as const, langPrefs: ['fr'], ...session };
-  useExplorerStore.setState({ selectedObjectIds: ['a', 'b', 'c'] });
+  useExplorerStore.setState({ selectedObjectIds });
   useSessionStore.setState(merged);
   useExplorerExportStore.setState({ presetId: 'essentiel', columnIds: [] });
   // Le préréglage initial part de la session RÉELLE du cas (pas d'ORG codée en
@@ -85,6 +88,48 @@ describe('ExportExcelModal (§208)', () => {
     setup();
     expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull();
+    expect(screen.getByLabelText(/^Nom$/)).toBeInTheDocument(); // le reste de la modale vit normalement
+  });
+
+  // ---- Revue 3e vague : le plafond serveur de 500 ids ne doit PAS amputer le « tout sélectionner » ----
+
+  /** 1 200 ids = 3 lots (500/500/200) — au-dessus du plafond, comme un « tout sélectionner » du corpus. */
+  const OVER_CAP_IDS = Array.from({ length: 1200 }, (_, i) => `obj-${i}`);
+  const batchesOf = (m: jest.Mock) => (m.mock.calls as Array<[string[]]>).map(([batch]) => batch);
+
+  it('R2 (revue 3e vague) — sélection > 500 : le préflight est DÉCOUPÉ, les colonnes acteur restent OFFERTES', async () => {
+    // Le mock REPRODUIT le refus serveur au-delà de 500 ids (BATCH_TOO_LARGE / 22023) :
+    // sans cela le test passerait aussi SANS découpage — vacuité. Avec, la version non
+    // découpée (un seul appel de 1 200 ids) part en rejet ⇒ capacités fermées ⇒ ROUGE.
+    mockCaps.mockReset().mockImplementation((batch: string[]) => {
+      if (batch.length > 500) {
+        return Promise.reject(new Error(`BATCH_TOO_LARGE: 500 max apres dedoublonnage (recu ${batch.length})`));
+      }
+      // N'accorde QUE sur le DERNIER lot : prouve à la fois que TOUS les lots sont posés
+      // et que la réduction est un OR entre lots (jamais « le premier lot fait foi »).
+      const granted = batch.includes('obj-1199');
+      return Promise.resolve({ actorIdentityAvailable: granted, actorContactsAvailable: granted });
+    });
+    setup({}, OVER_CAP_IDS);
+
+    expect(await screen.findByLabelText(/Acteur — mobile/)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Acteur — nom/)).toBeInTheDocument();
+    expect(batchesOf(mockCaps).map((b) => b.length)).toEqual([500, 500, 200]);
+  });
+
+  it("R2 (revue 3e vague) — un SEUL lot en échec referme TOUTES les capacités (jamais un agrégat partiel)", async () => {
+    mockCaps.mockReset().mockImplementation((batch: string[]) => (
+      batch.includes('obj-1199')
+        ? Promise.reject(new Error('réseau indisponible'))
+        : Promise.resolve({ actorIdentityAvailable: true, actorContactsAvailable: true })
+    ));
+    setup({}, OVER_CAP_IDS);
+
+    expect(await screen.findByRole('dialog', { name: /Exporter en Excel/ })).toBeInTheDocument();
+    await waitFor(() => expect(batchesOf(mockCaps)).toHaveLength(3));
+    // Les DEUX premiers lots accordaient tout : sans le fail-closed, l'offre resterait ouverte.
+    await waitFor(() => expect(screen.queryByLabelText(/Acteur — nom/)).toBeNull());
+    expect(screen.queryByLabelText(/Acteur — mobile/)).toBeNull();
     expect(screen.getByLabelText(/^Nom$/)).toBeInTheDocument(); // le reste de la modale vit normalement
   });
 

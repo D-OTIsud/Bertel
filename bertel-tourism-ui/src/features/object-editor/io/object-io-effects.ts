@@ -1,5 +1,5 @@
 /** Browser-only IO side effects, isolated so the serializers stay pure and testable.
- *  Download follows services/selection-export.ts (Blob + transient anchor + revoke). */
+ *  Download uses the standard Blob + transient anchor + revoke pattern. */
 
 export function downloadTextFile(filename: string, mime: string, content: string): void {
   const blob = new Blob([content], { type: `${mime};charset=utf-8;` });

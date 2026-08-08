@@ -371,6 +371,9 @@ ROLLBACK;
 \echo '== 16t-test garde permanente 209 (A les 12 pieces OTI presentes sous le bon libelle / B+C les 8 generiques et les 2 anciens codes renommes sont partis, aucun object_legal orphelin / D aucun document obligatoire ni public / E les 5 codes d identite des champs plats du 18 intacts / F non-vacuite: une ligne temoin traverse la FK et ressort de api.get_object_legal_data avec libelle et visibilite) =='
 \ir tests/test_legal_document_catalog.sql
 
+\echo '== 16b    migration_ref_code_admin_rpcs.sql  (Phase 7.5 editeur de referentiels ref_code : api.ref_code_domain_is_editable + rpc_upsert/set_active/reorder/delete_ref_code + list_ref_code_domains + ref_code_usage_count(s). DOCUMENTEE au runbook depuis sa creation mais JAMAIS declaree ici : trou d integrite de deploiement preexistant, revele par la tache 5 de 211 dont l etape 16u delegue a ces fonctions et echouerait donc sur base fraiche. Depend de rls_policies.sql (is_platform_superuser) et de schema_unified.sql (ref_code, ref_code_domain_registry)) =='
+\ir migration_ref_code_admin_rpcs.sql
+
 \echo '== 16u    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
 \ir migration_ref_catalog_admin.sql
 

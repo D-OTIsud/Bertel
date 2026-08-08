@@ -1311,7 +1311,7 @@ Trois sabotages, chacun doit faire **rougir** un test précis, puis être annul�
 |---|---|
 | commenter le `RAISE EXCEPTION 'UNKNOWN_COLUMN'` | cycle uuid, « colonne inconnue » |
 | remplacer `FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key` par une acceptation directe | assertion de sécurité, écriture sur `object` |
-| retirer la synthèse `primary_key_columns` des domaines (tâche 1) | `ref_code:cuisine_type` doit être éditable |
+| retirer la synthèse `primary_key_columns` **ET** `is_identifiable` des domaines (tâche 1) | `ref_code:cuisine_type` doit être éditable — **saboter `primary_key_columns` seul est VACANT** : aucune des trois RPC ne la consulte pour un domaine (upsert et delete court-circuitent vers la délégation, reorder interroge `ref_code` par `domain`), et c'est `is_identifiable` seul qui conditionne le verrouillage |
 
 - [ ] **Step 6: Commit**
 

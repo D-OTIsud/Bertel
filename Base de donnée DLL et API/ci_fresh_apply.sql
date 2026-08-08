@@ -379,6 +379,15 @@ ROLLBACK;
 \echo '== 16t-test garde permanente 209 (A les 12 pieces OTI presentes sous le bon libelle / B+C les 8 generiques et les 2 anciens codes renommes sont partis, aucun object_legal orphelin / D aucun document obligatoire ni public / E les 5 codes d identite des champs plats du 18 intacts / F non-vacuite: une ligne temoin traverse la FK et ressort de api.get_object_legal_data avec libelle et visibilite) =='
 \ir tests/test_legal_document_catalog.sql
 
+\echo '== 16u    migration_actor_contacts_org_gate.sql  (§208 : garde api.can_read_actor_contacts — membre d une ORG publisher (api.current_user_crm_object_ids, 8z), JAMAIS auth.role() ; PII+canaux du leg actors de get_object_resource sous CASE paresseux + contacts_restricted ; render.actor_lines/contact_lines gates (classe §49 — fuyait des noms de personnes a anon sur 760 fiches publiees) ; journal immuable actor_contact_export_log SANS aucune valeur de coordonnee ; RPC export_actor_contacts authorize-once + journalise, finalite/format/plafond 500 valides serveur, authenticated seulement (jamais service_role : une cle de service n est pas une personne) ; preflight export_actor_capabilities ; durcit par ALTER FUNCTION le search_path (pg_temp en dernier) des 3 feuilles d autorisation dont dependent ces fonctions (current_user_crm_object_ids, current_user_extended_object_ids, current_user_readable_object_ids) ; REVOKE PUBLIC d hygiene sur get_object_resources_batch ; NOTIFY pgrst. Creneau : le plan §208 designait cette etape « 16t », deja pris par §209 (migration_legal_document_catalog.sql, commite avant) — 16u est le premier creneau 16x libre. Ordre requis : APRES api_views_functions.sql (5/13, leg actors patche) et APRES migration_cards_batch_authorize_definer.sql (8j, qui installe la 3e feuille non-STUB) — deja le cas, tres en amont dans ce manifeste) =='
+\ir migration_actor_contacts_org_gate.sql
+
+\echo '== 16u-test garde permanente §208 (4 personas par request.jwt.claims : membre ORG publisher / authentifie etranger / anon / service_role ; equivalence garde/forme ensembliste M2 sur 9 couples persona x fiche ; journal sans AUCUNE valeur de coordonnee ; verifie rouge par sabotage D2 (retrait du CASE du champ contacts) et J (usurpation de app_user_profile/user_org_membership par relation TEMP sans pg_temp en dernier)) =='
+\ir tests/test_actor_contacts_org_gate.sql
+
+\echo '== 16u-test2 §208/T13b garde permanente : api.save_object_relations (7, 8r) reporte actor_object_role.note depuis l instantane pre-DELETE (jamais efface) quand l appelant echoue api.can_read_actor_contacts, l ecrit quand il peut ; depend de 8r ET de 16u ; verifie rouge sans le report =='
+\ir tests/test_actor_link_note_carryover.sql
+
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
 

@@ -250,6 +250,8 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 16t. `migration_legal_document_catalog.sql` — **Catalogue des documents juridiques réellement demandés aux prestataires (§209 ; liste PO du 2026-08-07)** (après `schema_unified.sql` pour `ref_legal_type`/`object_legal` et `api_views_functions.sql` pour le test ; **foldé** dans `schema_unified.sql` ⇒ **no-op sur une base fraîche**). Le catalogue d'origine portait 12 types de « documents » **inventés** (Licence d'hébergement, Assurance cyber, Gestion des déchets…) qu'aucun prestataire ne fournit, et **aucune** des 12 pièces réellement exigées à l'entrée en base. Mesuré avant écriture : `object_legal` ne portait que **5 lignes** sur toute la base (siret ×2, siren ×2, liability_insurance ×1) ⇒ restructuration sans perte. **2 renommages porteurs** faits par `UPDATE` du `code` — l'`id` est préservé donc les lignes rattachées **suivent** : `liability_insurance` → `attestation_assurance` (terme OTI ; porte la ligne live de `LOIRUN00000001C5`) et `tourism_license` → `immatriculation_atout_france` (la « licence tourisme » n'existe plus depuis 2009 ; la pièce réelle est l'immatriculation Atout France). **2 réétiquetages** des types ERP conservés parce que non redondants et réellement exigibles (`fire_safety`, `accessibility`). **8 types génériques retirés fail-closed** (`business_license`, `accommodation_license`, `safety_certificate`, `property_insurance`, `cyber_insurance`, `waste_management`, `environmental_permit`, `guide_license`) : la migration **échoue** si l'un porte encore une ligne, plutôt que de violer la FK `RESTRICT`. **11 documents installés** (le 12ᵉ arrive par renommage). **Arbitrages PO :** `is_required = false` sur tous — l'obligation dépend de la situation de l'exploitant (meublé ≠ association ≠ restaurant) ⇒ la pastille rouge « Document obligatoire expiré » du §18 devient dormante, le drapeau d'expiration **par ligne** reste actif car indépendant de `is_required` ; `is_public = false` sur tous — pièces administratives jamais diffusées par l'API partenaire ni le site public. Les 5 codes d'IDENTITÉ (`siret`, `siren`, `raison_sociale`, `vat_number`, `tourist_tax`) sont hors périmètre et gardent leur visibilité arbitrée le 2026-07-31 ; seule la dérive live↔source `siren.is_required` (posée à `false` par `migration_legal_siret_canonical.sql`, encore `true` sur live) est reconvergée. Garde de convergence en fin de transaction : exactement 5 identités + 15 documents, aucun obligatoire ni public. **Aucun `NOTIFY pgrst`** (aucune fonction/colonne touchée), aucun MV concerné (`mv_ref_data_json` ne porte pas `ref_legal_type`). Live-applied 2026-08-07 (MCP `legal_document_catalog` ; vérifié : 20 types, `attestation_assurance` porte bien sa ligne, 0 orphelin). Couvert par `tests/test_legal_document_catalog.sql` — garde **non vacante**, vérifiée rouge par sabotage (renommage de `kbis`, `attestation_assurance` repassé public). Détail en section « 16t » ci-dessous ; décision log §209.
 
+16u. `migration_actor_contacts_org_gate.sql` — **Garde des coordonnées d'acteur + journal RGPD + RPC d'export journalisé (§208)** (après `api_views_functions.sql` (5/13) dont le leg `actors` est patché, et après `migration_cards_batch_authorize_definer.sql` (8j) qui installe la 3ᵉ feuille d'autorisation non-STUB). **Le plan §208 désignait cette étape « 16t » — créneau déjà pris par §209 ; 16u est le premier libre.** Crée `api.can_read_actor_contacts` (membre d'une ORG *publisher* via `api.current_user_crm_object_ids`, **jamais** `auth.role()` : une clé de service n'est pas une personne), le préflight `api.export_actor_capabilities` (plafonné à 500 ids, **jamais une garde** — il façonne l'offre de colonnes, l'export réautorise fiche par fiche), le RPC journalisé `api.export_actor_contacts` (authorize-once §36, finalité/format/plafond validés serveur) et le journal **immuable** `actor_contact_export_log` (aucune FK ⇒ survit à la suppression de l'objet ; **aucune valeur de coordonnée** n'y est écrite ; `REVOKE ALL` + garde `DO` qui **échoue fort** si le REVOKE n'a pas pris — un re-apply non-propriétaire ne rend qu'un `WARNING` qu'`ON_ERROR_STOP` ne rattrape pas). Durcit par `ALTER FUNCTION` le `search_path` (**`pg_temp` en dernier**) des 3 feuilles d'autorisation dont tout ceci dépend. Ferme au passage **trois voies qui fuyaient** dans `api.get_object_resource` (classe §49) : le leg structuré `actors`, `render.actor_lines` (aucune garde de ligne — un anonyme recevait des noms de personnes) et `render.contact_lines` (`is_public` non composé). `api.get_object_with_deep_data` / `api.get_objects_with_deep_data` sont **intouchées** (R1, prouvé par comparaison des définitions complètes). `NOTIFY pgrst` requis (3 fonctions exposées neuves). Couvert par `tests/test_actor_contacts_org_gate.sql` (16u-test) et `tests/test_actor_link_note_carryover.sql` (16u-test2) — gardes **non vacantes**, vérifiées rouges par sabotage. Détail en section « 16u » ci-dessous ; décision log §208.
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -508,3 +510,95 @@ ligne `object_legal` orpheline, aucun document obligatoire ou public, les 5 code
 et — **non-vacuité** — une ligne témoin qui traverse réellement la FK et ressort de
 `api.get_object_legal_data` avec son libellé humain et `is_public = false`. Vérifié rouge par
 sabotage (renommage de `kbis` ; `attestation_assurance` repassé public).
+
+---
+
+## 16u — `migration_actor_contacts_org_gate.sql` (§208, garde des coordonnées d'acteur)
+
+**Créneau.** Le plan §208 désignait cette étape « 16t ». Ce créneau était **déjà pris** par §209
+(`migration_legal_document_catalog.sql`, commité avant) : la migration prend **16u**, premier créneau
+`16x` libre. Le nom de fichier, la bannière du manifeste et cette section disent tous 16u.
+
+**Position dans l'ordre d'application — deux contraintes réelles, pas cosmétiques :**
+
+1. **APRÈS `api_views_functions.sql` (5/13).** Le leg `actors` de `api.get_object_resource` y est
+   patché ; 16u en dépend.
+2. **APRÈS `migration_cards_batch_authorize_definer.sql` (8j).** 16u durcit par `ALTER FUNCTION` le
+   `search_path` de `api.current_user_readable_object_ids`, dont **8j installe le corps réel**. Les
+   `ALTER` ne portent **pas** d'`IF EXISTS` : un ordre incorrect échoue **bruyamment**, plutôt que de
+   sauter le durcissement en silence. C'est voulu.
+
+Dans le manifeste, ces deux étapes sont très en amont — la contrainte est donc déjà satisfaite.
+
+### ⚠ Caveat de rejeu n°1 — re-déployer `api_views_functions.sql` sur une base LIVE
+
+`api_views_functions.sql` (étape 5) contient une **déclaration anticipée** de
+`api.current_user_readable_object_ids` sous forme de **STUB** : `SELECT NULL::text WHERE false`, sans
+`SECURITY DEFINER` et sans `search_path`. Le re-déployer sur une base vivante ne se contente donc pas
+de **dé-durcir** la feuille : il remplace son corps par une fonction qui rend **l'ensemble VIDE**.
+
+Conséquences, aucune ne produisant d'erreur :
+
+- la garde §208 se ferme (fail-closed — acceptable) ;
+- **`api.list_object_markers` se vide aussi** : tous les pins de la carte disparaissent, sans message
+  nulle part. C'est un bug d'interface sans trace, pas une panne visible.
+
+**Après tout re-déploiement de l'étape 5 sur live :** rejouer **8j**, *puis* les `ALTER FUNCTION` de
+16u. Dans cet ordre.
+
+### ⚠ Caveat de rejeu n°2 — appliquer 16u AVANT tout re-apply des étapes 7 / 8r
+
+`api.save_object_relations` (défini en **7** `migration_actor_links_editor.sql` et en **8r**
+`object_workspace_safe_write_rpcs.sql`, deux copies synchronisées) appelle désormais
+`api.can_read_actor_contacts`, créée par 16u. Re-appliquer 7 ou 8r sur une base où 16u n'est pas
+encore passée échoue en **`42883`** (fonction inexistante). Sur live : **16u d'abord**.
+
+### Ce que la migration installe
+
+- `api.can_read_actor_contacts(object_id)` — la garde. Membre d'une ORG **publisher**
+  (`api.current_user_crm_object_ids`, 8z) ou superutilisateur plateforme lu **directement** dans
+  `public.app_user_profile.role` — délibérément **pas** `api.is_platform_superuser()`, dont le premier
+  bras est `auth.role() IN ('service_role','admin')` : ce serait exactement la classe d'appelant que
+  ce chantier existe pour arrêter. Fail-closed sur `auth.uid() IS NULL`.
+- `api.export_actor_capabilities(ids)` — le **préflight**. Façonne l'**offre** de colonnes de la
+  modale ; **ce n'est jamais une garde** (l'export réautorise fiche par fiche). Plafonné à 500 ids —
+  au-delà, l'appelant découpe. Le front est fail-closed tant qu'il n'a pas répondu.
+- `api.export_actor_contacts(…)` — la lecture **journalisée**, authorize-once (§36), finalité /
+  format / plafond validés serveur, `authenticated` uniquement.
+- `public.actor_contact_export_log` — le journal **immuable** : aucune FK (il survit à la suppression
+  de l'objet et à l'effacement RGPD), **aucune valeur de coordonnée** n'y est écrite, `REVOKE ALL`
+  sur les rôles clients, et une garde `DO` qui **échoue fort** si le REVOKE n'a pas pris (un re-apply
+  par un rôle non propriétaire ne rend qu'un `WARNING`, qu'`ON_ERROR_STOP=1` ne rattrape pas).
+  `export_run_id` / `batch_index` / `batch_count` sont des **assertions de l'appelant**, pas des faits :
+  seuls `performed_by`, `object_ids` et `performed_at` sont probants.
+- Trois voies qui **fuyaient** dans `api.get_object_resource` (classe §49) sont fermées : le leg
+  structuré `actors` (PII + canaux), `render.actor_lines` (qui n'avait **aucune** garde de ligne — un
+  anonyme recevait des noms de personnes) et `render.contact_lines` (`is_public` non composé). Les
+  deux fuites ont été **reproduites avant correctif**.
+- `api.get_object_with_deep_data` / `api.get_objects_with_deep_data` sont **intouchées** (invariant R1
+  du plan), prouvé par comparaison des **définitions complètes** — un `grep deep_data` sur le diff
+  aurait laissé passer une modification mi-corps.
+
+**Après application :** `NOTIFY pgrst` **requis** (trois fonctions exposées neuves). Aucun MV concerné.
+
+### Vérification
+
+`tests/test_actor_contacts_org_gate.sql` (16u-test) — 4 personas pilotées par `request.jwt.claims`
+(**`SET ROLE` seul ne suffit pas** : `auth.uid()`/`auth.role()` sont NULL en session psql, tous les
+personas s'effondrent sur la même branche fail-closed et le test n'asserte que des ensembles vides).
+Équivalence garde ↔ **forme ensembliste de l'export** (pas la paire garde↔préflight, devenue
+tautologique) sur 9 couples persona × fiche **existante**, plus un cas épinglant la divergence voulue
+sur un id inexistant. Vérifié **rouge** par deux sabotages : **D2** (retrait du `CASE` sur le champ
+`contacts` ⇒ les valeurs sentinelles ressortent) et **J1** (usurpation de `app_user_profile` /
+`user_org_membership` par une relation TEMP quand `pg_temp` n'est pas en dernier).
+
+`tests/test_actor_link_note_carryover.sql` (16u-test2) — `api.save_object_relations` **reporte**
+`actor_object_role.note` depuis l'instantané pris **avant** le DELETE quand l'appelant échoue la
+garde, et l'écrit normalement quand il la passe. Sans ce report, la rédaction de `note` en lecture
+transformait le save en **destruction silencieuse**. Vérifié rouge sans le report.
+
+> **État du gate CI au 2026-08-08 :** `sql-fresh-apply` est **rouge sur `master`** pour des raisons
+> **antérieures et étrangères à §208** — taxonomie §192 vs seeds (×2), plus `object_hotel_positioning`,
+> `ref_classification_scheme_applicability` et `opening_period.is_closure` créés par
+> `supabase/migrations` mais absents du manifeste. Tant qu'il n'est pas réparé (passe dédiée), ces deux
+> gardes ne protègent **rien automatiquement**.

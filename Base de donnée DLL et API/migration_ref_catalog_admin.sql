@@ -581,7 +581,9 @@ BEGIN
   IF v.kind = 'ref_code_domain' THEN
     IF p_values ? 'is_active' AND p_key IS NOT NULL THEN
       PERFORM api.rpc_set_ref_code_active(
-        (p_key->>'id')::uuid, v.domain, (p_values->>'is_active')::boolean);
+        p_id     => (p_key->>'id')::uuid,
+        p_domain => v.domain,
+        p_active => (p_values->>'is_active')::boolean);
     END IF;
     IF p_values ?| ARRAY['code','name','name_i18n','position'] THEN
       RETURN api.rpc_upsert_ref_code(
@@ -685,7 +687,7 @@ BEGIN
   END IF;
 
   IF v.kind = 'ref_code_domain' THEN
-    PERFORM api.rpc_delete_ref_code(v.domain, (p_key->>'id')::uuid);
+    PERFORM api.rpc_delete_ref_code(p_domain => v.domain, p_id => (p_key->>'id')::uuid);
     RETURN;
   END IF;
 
@@ -751,6 +753,16 @@ BEGIN
   IF api.is_platform_superuser() IS NOT TRUE THEN
     RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
   END IF;
+
+  -- Garde à TROIS VALEURS (piège documenté du dépôt) : jsonb_array_length(NULL) rend NULL,
+  -- donc tout `v_given <> v_n` en aval s'évalue à NULL — qu'un IF traite comme faux, jamais
+  -- comme un rejet. Un p_keys NULL sauterait ainsi la garde INCOMPLETE_ORDER et
+  -- jsonb_array_elements(NULL) bouclerait zéro fois : succès silencieux, rien réordonné.
+  IF p_keys IS NULL THEN
+    RAISE EXCEPTION 'INCOMPLETE_ORDER: p_keys est requis (aucun tableau fourni)'
+      USING ERRCODE = '22023';
+  END IF;
+
   SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
@@ -779,9 +791,10 @@ BEGIN
         USING ERRCODE = '22023';
     END IF;
     -- rpc_reorder_ref_code (phase 7.5) gère déjà sa propre écriture.
-    PERFORM api.rpc_reorder_ref_code(v.domain,
-      (SELECT array_agg((e->>'id')::uuid ORDER BY ord)
-       FROM jsonb_array_elements(p_keys) WITH ORDINALITY AS t(e, ord)));
+    PERFORM api.rpc_reorder_ref_code(
+      p_domain => v.domain,
+      p_ids    => (SELECT array_agg((e->>'id')::uuid ORDER BY ord)
+                   FROM jsonb_array_elements(p_keys) WITH ORDINALITY AS t(e, ord)));
     RETURN;
   END IF;
 

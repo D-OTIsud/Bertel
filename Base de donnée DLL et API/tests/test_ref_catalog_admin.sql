@@ -369,6 +369,15 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
   ASSERT v_ok, 'une liste partielle doit lever INCOMPLETE_ORDER';
 
+  -- p_keys NULL : piège à trois valeurs. jsonb_array_length(NULL) rend NULL, donc
+  -- `v_given <> v_n` s'évalue à NULL et un IF non gardé le traite comme faux — succès
+  -- silencieux, rien réordonné. Sans la garde explicite `p_keys IS NULL`, cet appel ne
+  -- lève RIEN (PERFORM réussit) et l'ASSERT ci-dessous tombe sur `v_ok = false`.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language', NULL);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
+  ASSERT v_ok, 'p_keys NULL doit lever INCOMPLETE_ORDER, pas réussir en silence';
+
   -- DOUBLON : refusé.
   v_ok := false;
   BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language',

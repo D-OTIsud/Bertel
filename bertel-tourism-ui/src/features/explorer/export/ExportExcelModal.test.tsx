@@ -50,7 +50,20 @@ function setup(
 }
 
 describe('ExportExcelModal (§208)', () => {
+  // Perf (revue 18b) — l'API statique `userEvent.click/type` s'auto-`setup()` avec le
+  // délai PAR DÉFAUT (`delay: 0`), qui insère malgré tout un `setTimeout` réel entre
+  // chaque événement (pointerdown/up, ou chaque frappe pour `.type`). Sous contention
+  // CPU (suite complète, 382 fichiers en parallèle) ces ticks réels s'étirent et la
+  // saisie de 31 caractères de « Finalité » dépasse le timeout Jest de 5000 ms — alors
+  // que le fichier est vert en isolation. `delay: null` rend CHAQUE appel synchrone
+  // (même séquence d'événements réelle, juste sans le `setTimeout` inter-étapes) : la
+  // recette RTL standard pour désensibiliser un test à la charge machine, sans toucher
+  // à une seule assertion. `user` est réinstancié à chaque test (état interne — ex.
+  // presse-papiers — non partagé entre tests).
+  let user: ReturnType<typeof userEvent.setup>;
+
   beforeEach(() => {
+    user = userEvent.setup({ delay: null });
     mockRun.mockReset().mockResolvedValue({ exported: 3, requested: 3 });
     // R2 : par défaut le préflight ouvre tout (membre publisher) — les cas contraires le surchargent.
     mockCaps.mockReset().mockResolvedValue(capsOk({ actorIdentityAvailable: true, actorContactsAvailable: true }));
@@ -169,7 +182,7 @@ describe('ExportExcelModal (§208)', () => {
   it('sans colonne à finalité : télécharge directement, sans champ finalité', async () => {
     setup();
     expect(screen.queryByLabelText(/Finalité/)).toBeNull();
-    await userEvent.click(screen.getByRole('button', { name: /Télécharger/ }));
+    await user.click(screen.getByRole('button', { name: /Télécharger/ }));
     expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({ ids: ['a', 'b', 'c'], purpose: '' }));
   });
 
@@ -178,18 +191,18 @@ describe('ExportExcelModal (§208)', () => {
     // Le préflight R2 est asynchrone (véritable appel réseau en production) : la case
     // n'existe qu'une fois la promesse résolue — findBy attend cette résolution avant
     // le clic, plutôt qu'un getBy synchrone qui daterait d'avant la réponse serveur.
-    await userEvent.click(await screen.findByLabelText(/Acteur — mobile/));
+    await user.click(await screen.findByLabelText(/Acteur — mobile/));
     const download = screen.getByRole('button', { name: /Télécharger/ });
     expect(download).toBeDisabled(); // finalité vide ⇒ pas d'export
-    await userEvent.type(screen.getByLabelText(/Finalité/), 'Campagne relance adhésions 2026');
+    await user.type(screen.getByLabelText(/Finalité/), 'Campagne relance adhésions 2026');
     expect(download).toBeEnabled();
-    await userEvent.click(download);
+    await user.click(download);
     expect(mockRun).toHaveBeenCalledWith(expect.objectContaining({ purpose: 'Campagne relance adhésions 2026' }));
   });
 
   it('préréglage Diffusion : cases désactivées (verrouillé), colonnes recalculées du code', async () => {
     setup();
-    await userEvent.click(screen.getByRole('button', { name: /Diffusion partenaire/ }));
+    await user.click(screen.getByRole('button', { name: /Diffusion partenaire/ }));
     const nameBox = screen.getByLabelText<HTMLInputElement>(/^Nom$/);
     expect(nameBox).toBeChecked();
     expect(nameBox).toBeDisabled();
@@ -197,11 +210,11 @@ describe('ExportExcelModal (§208)', () => {
 
   it('Finding 1 (revue tâche 10) — la finalité ne survit PAS à une réouverture (justification par export, jamais rejouée)', async () => {
     const { rerender } = setup();
-    await userEvent.click(await screen.findByLabelText(/Acteur — mobile/));
-    await userEvent.type(screen.getByLabelText(/Finalité/), 'Campagne relance adhésions 2026');
+    await user.click(await screen.findByLabelText(/Acteur — mobile/));
+    await user.type(screen.getByLabelText(/Finalité/), 'Campagne relance adhésions 2026');
     const download = screen.getByRole('button', { name: /Télécharger/ });
     expect(download).toBeEnabled();
-    await userEvent.click(download);
+    await user.click(download);
     // Laisse l'export mocké (résolu) traverser son try/finally avant de rouvrir.
     await waitFor(() => expect(screen.queryByText(/Chargement/)).not.toBeInTheDocument());
 
@@ -243,7 +256,7 @@ describe('ExportExcelModal (§208)', () => {
     expect(screen.getByRole('button', { name: /^Essentiel$/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /Diffusion partenaire/ })).toHaveAttribute('aria-pressed', 'false');
 
-    await userEvent.click(screen.getByRole('button', { name: /Diffusion partenaire/ }));
+    await user.click(screen.getByRole('button', { name: /Diffusion partenaire/ }));
 
     expect(screen.getByRole('button', { name: /Diffusion partenaire/ })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /^Essentiel$/ })).toHaveAttribute('aria-pressed', 'false');

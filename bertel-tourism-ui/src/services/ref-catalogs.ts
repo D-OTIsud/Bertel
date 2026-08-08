@@ -6,39 +6,32 @@
 // erreur = Error(error.message)).
 
 import { getSupabaseClient } from '../lib/supabase';
+import type { CatalogColumn, CatalogFk } from '../features/settings/catalog-fields';
+
+// `kind`/`access` sont contraints côté SQL (CHECK chk_ref_catalog_access ; `kind` ne peut
+// valoir que 'table' ou 'ref_code_domain' — internal.v_ref_catalog, tâche 1) : unions
+// littérales plutôt que `string`, pour que tsc refuse une troisième valeur au premier appelant.
+export type RefCatalogKind = 'table' | 'ref_code_domain';
+export type RefCatalogAccess = 'editable' | 'readonly';
 
 export interface RefCatalogSummary {
   catalogKey: string;
-  kind: string;
+  kind: RefCatalogKind;
   label: string;
   family: string;
   usedIn: string | null;
-  access: string;
+  access: RefCatalogAccess;
   readonlyReason: string | null;
   nValues: number;
 }
 
-export interface CatalogColumn {
-  name: string;
-  type: string;
-  isRequired: boolean;
-  hasDefault: boolean;
-  position: number;
-  enumValues: string[] | null;
-}
-
-export interface CatalogFk {
-  column: string;
-  target: string;
-}
-
 export interface RefCatalogDetail {
   catalogKey: string;
-  kind: string;
+  kind: RefCatalogKind;
   label: string;
   family: string;
   usedIn: string | null;
-  access: string;
+  access: RefCatalogAccess;
   readonlyReason: string | null;
   isIdentifiable: boolean;
   primaryKeyColumns: string[];
@@ -64,14 +57,35 @@ export async function listRefCatalogs(): Promise<RefCatalogSummary[]> {
   if (error) throw new Error(error.message);
   return ((data as Array<Record<string, unknown>>) ?? []).map((c) => ({
     catalogKey: String(c.catalog_key),
-    kind: String(c.kind),
+    kind: String(c.kind) as RefCatalogKind,
     label: String(c.label),
     family: String(c.family),
     usedIn: c.used_in == null ? null : String(c.used_in),
-    access: String(c.access),
+    access: String(c.access) as RefCatalogAccess,
     readonlyReason: c.readonly_reason == null ? null : String(c.readonly_reason),
     nValues: Number(c.n_values ?? 0),
   }));
+}
+
+/**
+ * Garde de forme (constat 3, revue T7) : `get_ref_catalog` rend un objet JSON dont chaque
+ * scalaire est ensuite passé à `String(...)`. Sans cette garde, une réponse malformée (clé
+ * absente, RPC renommé côté serveur) produirait silencieusement la chaîne littérale
+ * `"undefined"` propagée jusqu'à l'écran au lieu d'échouer bruyamment. On ne vérifie que les
+ * champs scalaires TOUJOURS présents (jamais `null` côté SQL) — `used_in`/`readonly_reason`/
+ * `label_column` sont nullables par contrat et donc exclus de cette liste.
+ */
+function assertRefCatalogDetailShape(
+  d: Record<string, unknown>,
+  catalogKey: string,
+): void {
+  const required = ['catalog_key', 'kind', 'label', 'family', 'access', 'is_identifiable'];
+  const missing = required.filter((key) => d[key] === undefined);
+  if (missing.length > 0) {
+    throw new Error(
+      `Réponse malformée de get_ref_catalog('${catalogKey}') : champ(s) manquant(s) ${missing.join(', ')}.`,
+    );
+  }
 }
 
 /** Détail : forme (colonnes, clé primaire, FK sortantes), lignes et carte d'usage. */
@@ -81,6 +95,7 @@ export async function getRefCatalog(catalogKey: string): Promise<RefCatalogDetai
     .rpc('get_ref_catalog', { p_catalog_key: catalogKey });
   if (error) throw new Error(error.message);
   const d = (data as Record<string, unknown>) ?? {};
+  assertRefCatalogDetailShape(d, catalogKey);
 
   // primary_key_columns est un tableau d'objets {name, type} : on extrait `name`, DANS
   // L'ORDRE — la clé canonique d'une ligne (jointure rows <-> usage, p_key des écritures)
@@ -89,12 +104,14 @@ export async function getRefCatalog(catalogKey: string): Promise<RefCatalogDetai
     (k) => String(k.name),
   );
 
-  const columns = ((d.columns as Array<Record<string, unknown>>) ?? []).map((c) => ({
+  // `position` (ordinal de colonne, tâche 1) n'est consommé par aucun appelant : les colonnes
+  // sont déjà rendues triées par `attnum` côté SQL, l'ordre du tableau suffit. Ne pas le
+  // reporter dans CatalogColumn — cf. constat 1, revue T7.
+  const columns: CatalogColumn[] = ((d.columns as Array<Record<string, unknown>>) ?? []).map((c) => ({
     name: String(c.name),
     type: String(c.type),
     isRequired: Boolean(c.is_required),
     hasDefault: Boolean(c.has_default),
-    position: Number(c.position ?? 0),
     enumValues:
       c.enum_values == null ? null : (c.enum_values as unknown[]).map((v) => String(v)),
   }));
@@ -110,11 +127,11 @@ export async function getRefCatalog(catalogKey: string): Promise<RefCatalogDetai
 
   return {
     catalogKey: String(d.catalog_key),
-    kind: String(d.kind),
+    kind: String(d.kind) as RefCatalogKind,
     label: String(d.label),
     family: String(d.family),
     usedIn: d.used_in == null ? null : String(d.used_in),
-    access: String(d.access),
+    access: String(d.access) as RefCatalogAccess,
     readonlyReason: d.readonly_reason == null ? null : String(d.readonly_reason),
     isIdentifiable: Boolean(d.is_identifiable),
     primaryKeyColumns,

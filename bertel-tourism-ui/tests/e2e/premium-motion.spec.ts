@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
  *  6. Same modal/drawer checks under `prefers-reduced-motion: reduce` — no delayed exit.
  *
  * Note on scenario 2's "ConfirmDialog via a destructive action in /settings": every
- * ConfirmDialog consumer actually mounted under /settings (RefCodeEditor, TeamAdminPage,
+ * ConfirmDialog consumer actually mounted under /settings (RefCatalogAdmin, TeamAdminPage,
  * AiProviderSettings, OrgBrandingForm) calls a live Supabase client directly with no
  * `session.demoMode` branch, and this worktree has no .env.local — so none of them can
  * render usable content in this demo-mode-only E2E run. `ModerationPage` (services/moderation.ts)

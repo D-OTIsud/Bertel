@@ -190,7 +190,15 @@ ON CONFLICT (catalog_key) DO UPDATE SET
 -- Surcharge de libellé : ref_sustainability_action porte `label` (pas `name`, pas `title`).
 -- La cascade de la tâche 3 la trouverait seule ; la ligne existe pour le nom lisible.
 INSERT INTO public.ref_catalog_registry (catalog_key, label, family) VALUES
-  ('ref_sustainability_action', 'Actions de durabilité', 'Labels, classements, durabilité')
+  ('ref_sustainability_action', 'Actions de durabilité', 'Labels, classements, durabilité'),
+  -- Le registre SE DECOUVRE LUI-MEME : c'est une table public.ref_* non partitionnee, donc
+  -- internal.v_ref_catalog l'emet comme n'importe quel catalogue (d'ou 33 tables et non 32).
+  -- Consequence assumee, pas un defaut : renommer un catalogue ou le reclasser depuis l'ecran
+  -- est precisement le service que ce registre rend. On le classe donc explicitement, plutot
+  -- que de le laisser en « À classer » ou son role serait illisible. Il reste EDITABLE ; le
+  -- seul faux pas possible est qu'un superutilisateur s'y pose lui-meme access='readonly',
+  -- ce qui verrouille l'ecran d'administration du registre et se repare en SQL.
+  ('ref_catalog_registry', 'Rangement des catalogues', 'Structure')
 ON CONFLICT (catalog_key) DO UPDATE SET
   label = EXCLUDED.label, family = EXCLUDED.family, updated_at = now();
 
@@ -373,6 +381,11 @@ $$;
 -- Le type vient de la VUE, jamais de l'appelant : un type fourni par le client serait une injection.
 CREATE OR REPLACE FUNCTION internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)
 RETURNS text LANGUAGE sql IMMUTABLE
+-- search_path figé comme ses quatre soeurs : elle ne resout que des fonctions de pg_catalog,
+-- mais une fonction sans search_path explicite est signalee par l'advisor (lint 0011) et,
+-- surtout, elle construit du SQL dynamique — c'est le dernier endroit ou laisser flotter la
+-- resolution de noms.
+SET search_path = pg_catalog
 AS $$
   SELECT format('(%s->>%L)::%s', p_src, p_name,
                 COALESCE((SELECT c->>'type' FROM jsonb_array_elements(p_columns) c

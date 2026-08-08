@@ -4103,6 +4103,7 @@ a {
 .ref-admin__table-wrap { max-width: 100%; overflow-x: auto; }
 .ref-admin__table { table-layout: auto; }
 .ref-admin__table td { vertical-align: middle; }
+.ref-admin__table tr.is-inactive td { opacity: 0.55; }
 .ref-admin__code { color: var(--ink-3); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
 .ref-admin__usage { color: var(--ink-2); font-size: 13px; white-space: nowrap; }
 .ref-admin__usage.is-zero { color: var(--text-muted); }

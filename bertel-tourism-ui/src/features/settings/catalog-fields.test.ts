@@ -1,5 +1,6 @@
 import {
   buildCatalogFieldSpec, computeAddBlocked, buildRowKey, rowKeyString, formatRowLabel,
+  isRowInactive,
   type CatalogColumn,
 } from './catalog-fields';
 
@@ -142,6 +143,22 @@ describe('identite de ligne', () => {
     const a = rowKeyString({ object_type: 'HLO', metric_id: 'm1' }, ['metric_id', 'object_type']);
     const b = rowKeyString({ metric_id: 'm1', object_type: 'HLO' }, ['metric_id', 'object_type']);
     expect(a).toBe(b);
+  });
+});
+
+describe('isRowInactive', () => {
+  const columnsWithActive = [col({ name: 'is_active', type: 'boolean' })];
+
+  it('signale une ligne desactivee quand le catalogue porte is_active', () => {
+    expect(isRowInactive({ is_active: false }, columnsWithActive)).toBe(true);
+  });
+
+  it('ne signale pas une ligne active', () => {
+    expect(isRowInactive({ is_active: true }, columnsWithActive)).toBe(false);
+  });
+
+  it('ne signale jamais rien quand le catalogue ne porte pas la colonne is_active', () => {
+    expect(isRowInactive({ is_active: false }, [col({ name: 'name' })])).toBe(false);
   });
 });
 

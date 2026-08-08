@@ -141,6 +141,16 @@ export function rowKeyString(row: Record<string, unknown>, primaryKeyColumns: st
 }
 
 /**
+ * Signal « valeur désactivée » (revue T9, constat 2) : `is_active` n'existe que sur une
+ * minorité de catalogues (surtout les domaines ref_code) — le signal ne doit apparaître
+ * QUE quand la colonne est réellement déclarée dans `columns`, jamais par la seule présence
+ * d'une clé `is_active` sur la ligne (qui pourrait être une donnée fortuite non gérée ici).
+ */
+export function isRowInactive(row: Record<string, unknown>, columns: CatalogColumn[]): boolean {
+  return columns.some((c) => c.name === 'is_active') && row.is_active === false;
+}
+
+/**
  * Libellé affichable. Les matrices n'ont aucune colonne de libellé (`labelColumn` vaut
  * null) : leur nom se compose depuis la clé primaire — c'est bien la seule information
  * qu'elles portent.

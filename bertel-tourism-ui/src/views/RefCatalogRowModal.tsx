@@ -8,11 +8,11 @@
 // et non dans une modale imbriquee : Modal garde une modale sortante montee le temps de son
 // animation de sortie, et deux modales simultanees se marchent dessus.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueries } from '@tanstack/react-query';
 import { Modal } from '../components/common/Modal';
 import {
-  buildCatalogFieldSpec, buildRowKey, formatRowLabel,
+  buildCatalogFieldSpec, buildRowKey, formatRowLabel, rowKeyString,
   type CatalogField,
 } from '../features/settings/catalog-fields';
 import { getRefCatalog, upsertRefRow, type RefCatalogDetail } from '../services/ref-catalogs';
@@ -33,6 +33,28 @@ interface Props {
   onSaved: () => void;
 }
 
+/** Etat brut d'un champ, avant saisie — factorise car reconstruit a deux endroits
+ *  (etat initial paresseux + resynchronisation, voir plus bas). */
+function buildInitialDraft(
+  fields: CatalogField[],
+  row: Record<string, unknown> | null,
+): Record<string, unknown> {
+  const initial: Record<string, unknown> = {};
+  for (const field of fields) {
+    initial[field.name] = row?.[field.name] ?? '';
+    if (field.kind === 'i18n-text') {
+      initial[`${field.name}_i18n`] = row?.[`${field.name}_i18n`] ?? {};
+    }
+  }
+  return initial;
+}
+
+interface ReferenceOptionsState {
+  options: { value: string; label: string }[];
+  isLoading: boolean;
+  isError: boolean;
+}
+
 export function RefCatalogRowModal({ catalog, row, open, onOpenChange, onSaved }: Props) {
   const mode = row ? 'edit' : 'create';
   const fields = useMemo(
@@ -40,17 +62,27 @@ export function RefCatalogRowModal({ catalog, row, open, onOpenChange, onSaved }
     [catalog.columns, catalog.fks, catalog.primaryKeyColumns, mode],
   );
 
-  const [draft, setDraft] = useState<Record<string, unknown>>(() => {
-    const initial: Record<string, unknown> = {};
-    for (const field of fields) {
-      initial[field.name] = row?.[field.name] ?? '';
-      if (field.kind === 'i18n-text') {
-        initial[`${field.name}_i18n`] = row?.[`${field.name}_i18n`] ?? {};
-      }
-    }
-    return initial;
-  });
+  const [draft, setDraft] = useState<Record<string, unknown>>(() => buildInitialDraft(fields, row));
   const [error, setError] = useState<string | null>(null);
+
+  // §211 revue T8, constat 1 (CRITIQUE) : Modal reste MONTEE par contrat (son en-tete
+  // interdit `if (!open) return null`), donc l'initialiseur paresseux de useState ci-dessus
+  // ne s'execute qu'au tout premier montage. Sans resynchronisation explicite, annuler sur
+  // la ligne A puis rouvrir sur la ligne B laisse `draft` porter les valeurs de A —
+  // « Enregistrer » cible bien B (buildRowKey lit `row`) mais y ECRIT les valeurs de A.
+  // On resynchronise sur la transition d'ouverture / le changement de ligne (identifie par
+  // sa cle canonique, PAS la reference d'objet — un simple refetch qui recree `row` ne doit
+  // pas ecraser une saisie en cours) ou de catalogue, jamais a chaque rendu (ce qui
+  // detruirait la saisie en cours pendant que la modale reste ouverte sur la meme ligne).
+  const rowSignature = row ? rowKeyString(row, catalog.primaryKeyColumns) : null;
+  useEffect(() => {
+    if (!open) return;
+    setDraft(buildInitialDraft(fields, row));
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `fields`/`row` volontairement
+    // absents : le vrai signal de « nouvelle ligne a editer » est rowSignature (+ catalogue),
+    // pas leurs references d'objet qui changent a chaque rendu.
+  }, [open, rowSignature, catalog.catalogKey]);
 
   // Options des references : une requete par catalogue cible, mise en cache par TanStack.
   // Chaque `target` est deja un catalog_key exploitable (ref_code:amenity_family) grace a
@@ -66,15 +98,34 @@ export function RefCatalogRowModal({ catalog, row, open, onOpenChange, onSaved }
       staleTime: 5 * 60 * 1000,
     })),
   });
-  const optionsByTarget = new Map<string, { value: string; label: string }[]>();
-  referenceTargets.forEach((target, index) => {
-    const data = referenceQueries[index].data;
-    if (!data) return;
-    optionsByTarget.set(target, data.rows.map((r) => ({
-      value: String(r[data.primaryKeyColumns[0]] ?? ''),
-      label: formatRowLabel(r, data.labelColumn, data.primaryKeyColumns),
-    })));
-  });
+
+  // §211 revue T8, constat 3 (mineur) : `useQueries` rend un NOUVEAU tableau conteneur a
+  // chaque rendu meme quand aucune requete n'a change d'etat (ex. une frappe dans un champ
+  // texte re-rend tout le composant) — deriver la Map directement sur `referenceQueries`
+  // annulerait donc toute memoisation. `referenceStateKey` resume l'etat REEL (statut +
+  // horodatage de derniere reussite) de chaque requete ; c'est LUI la dependance utile.
+  const referenceStateKey = referenceQueries.map((q) => `${q.status}:${q.dataUpdatedAt}`).join('|');
+  const optionsByTarget = useMemo(() => {
+    const map = new Map<string, ReferenceOptionsState>();
+    referenceTargets.forEach((target, index) => {
+      const query = referenceQueries[index];
+      const data = query.data;
+      map.set(target, {
+        isLoading: query.isLoading,
+        isError: query.isError,
+        options: data
+          ? data.rows.map((r) => ({
+              value: String(r[data.primaryKeyColumns[0]] ?? ''),
+              label: formatRowLabel(r, data.labelColumn, data.primaryKeyColumns),
+            }))
+          : [],
+      });
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `referenceStateKey` resume deja
+    // (statut + dataUpdatedAt) l'etat pertinent de chaque requete ; `referenceQueries` en
+    // dependance directe recreerait la Map a chaque rendu (voir commentaire ci-dessus).
+  }, [referenceTargets, referenceStateKey]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -166,17 +217,18 @@ function renderControl(
   field: CatalogField,
   value: unknown,
   onChange: (value: unknown) => void,
-  options?: { value: string; label: string }[],
+  refState?: ReferenceOptionsState,
 ) {
   const id = `catalog-field-${field.name}`;
   if (field.kind === 'boolean') {
     return <input id={id} type="checkbox" checked={Boolean(value)} disabled={field.locked}
       aria-label={field.name} onChange={(e) => onChange(e.target.checked)} />;
   }
-  if (field.kind === 'select' || field.kind === 'reference') {
-    const list = field.kind === 'select'
-      ? (field.options ?? []).map((o) => ({ value: o, label: o }))
-      : (options ?? []);
+  if (field.kind === 'reference') {
+    return renderReferenceSelect(field, value, onChange, refState);
+  }
+  if (field.kind === 'select') {
+    const list = (field.options ?? []).map((o) => ({ value: o, label: o }));
     return (
       <select id={id} value={String(value ?? '')} disabled={field.locked} aria-label={field.name}
         onChange={(e) => onChange(e.target.value)}>
@@ -190,8 +242,55 @@ function renderControl(
     aria-label={field.name} onChange={(e) => onChange(e.target.value)} />;
 }
 
+/**
+ * §211 revue T8, constat 2 (important) : distingue « en cours de chargement », « en echec »
+ * et « vide » — le code precedent traitait les trois identiquement (`if (!data) return`),
+ * offrant un `<select>` avec la seule option vide sans jamais dire pourquoi. En edition, si
+ * la valeur courante pointe vers une cible pas encore chargee (ou dont le chargement a
+ * echoue), l'utilisateur voyait « — » alors que `draft` porte toujours la vraie valeur —
+ * l'ecran mentait sur l'etat reel. Une option de secours (portant la valeur brute) est donc
+ * injectee des que la valeur courante n'apparait pas dans la liste chargee, qu'elle qu'en
+ * soit la raison (chargement, echec, ou valeur retiree du catalogue cible).
+ */
+function renderReferenceSelect(
+  field: CatalogField,
+  value: unknown,
+  onChange: (value: unknown) => void,
+  refState: ReferenceOptionsState | undefined,
+) {
+  const id = `catalog-field-${field.name}`;
+  const isLoading = refState?.isLoading ?? false;
+  const isError = refState?.isError ?? false;
+  const options = refState?.options ?? [];
+  const stringValue = String(value ?? '');
+  const hasCurrentInList = stringValue === '' || options.some((o) => o.value === stringValue);
+  const fallbackLabel = isLoading
+    ? `${stringValue} (chargement…)`
+    : isError
+      ? `${stringValue} (liste indisponible)`
+      : stringValue;
+
+  return (
+    <>
+      <select id={id} value={stringValue} disabled={field.locked || isLoading}
+        aria-label={field.name} aria-busy={isLoading}
+        onChange={(e) => onChange(e.target.value)}>
+        <option value="">—</option>
+        {!hasCurrentInList && <option value={stringValue}>{fallbackLabel}</option>}
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      {isLoading && <span role="status" className="field-block__hint">Chargement…</span>}
+      {isError && (
+        <span role="alert" className="field-block__error">
+          Impossible de charger les valeurs de reference.
+        </span>
+      )}
+    </>
+  );
+}
+
 /** Les codes d'erreur du RPC deviennent des phrases : une erreur PostgreSQL brute ne doit
- *  jamais remonter a l'utilisateur. */
+ *  jamais remonter à l'utilisateur. */
 export function humaniseCatalogError(message: string): string {
   if (message.includes('LOCKED_CATALOG')) return 'Ce catalogue est en lecture seule.';
   if (message.includes('CODE_IMMUTABLE')) return "Le code d'une valeur existante ne se change pas.";

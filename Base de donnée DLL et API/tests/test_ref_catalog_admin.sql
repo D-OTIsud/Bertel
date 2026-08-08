@@ -202,4 +202,221 @@ BEGIN
   RAISE NOTICE 'compteur multi-FK assertion passed';
 END$$;
 
+-- ----------------------------------------------------------------------------
+-- Tâche 4 — RPC d'écriture, de suppression et de réordonnancement.
+-- ----------------------------------------------------------------------------
+
+-- (1) CYCLE RÉEL, clé uuid simple.
+DO $$
+DECLARE v_id uuid; v_key jsonb; v_ok boolean;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  v_id := (api.rpc_upsert_ref_row('ref_legal_type', NULL,
+            '{"code":"temoin_211","name":"Témoin §211","category":"business","is_required":false}'::jsonb)
+           ->>'id')::uuid;
+  v_key := jsonb_build_object('id', v_id);
+  -- Le cast typé fonctionne : sans lui, is_required (boolean) refuserait le texte de ->>.
+  ASSERT (SELECT is_required FROM ref_legal_type WHERE id = v_id) = false,
+         'une colonne booléenne doit être castée au type découvert';
+
+  PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"name":"Témoin modifié"}'::jsonb);
+  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin modifié', 'l''édition doit persister';
+
+  -- Renvoyer le MÊME code est toléré (formulaire pré-rempli) ; un code différent est refusé.
+  PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key,
+            '{"code":"temoin_211","name":"Témoin bis"}'::jsonb);
+  ASSERT (SELECT name FROM ref_legal_type WHERE id = v_id) = 'Témoin bis',
+         'renvoyer le même code ne doit pas bloquer l''enregistrement';
+  v_ok := false;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"code":"autre"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%CODE_IMMUTABLE%'; END;
+  ASSERT v_ok, 'changer le code doit lever CODE_IMMUTABLE';
+
+  -- Colonne inconnue : ÉCHOUE, jamais ignorée (piège d'écriture).
+  v_ok := false;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', v_key, '{"nexiste_pas":"x"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%UNKNOWN_COLUMN%'; END;
+  ASSERT v_ok, 'une colonne inconnue doit faire échouer l''appel';
+
+  -- Colonne obligatoire sans défaut absente à la création : garde SERVEUR.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_legal_type', NULL, '{"name":"Sans code"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%REQUIRED_HIDDEN_COLUMN%'; END;
+  ASSERT v_ok, 'une colonne obligatoire sans défaut absente doit lever REQUIRED_HIDDEN_COLUMN';
+
+  -- Suppression : refusée référencée, acceptée à 0, ROW_NOT_FOUND au second passage.
+  INSERT INTO object (id, object_type, name, status) VALUES ('CATTST9999999901','HLO','T','draft');
+  -- ÉCART constaté avec le brief (schéma réel) : validity_mode défaut = 'fixed_end_date'
+  -- et chk_fixed_end_date_validity exige alors valid_to NOT NULL. Le brief insérait sans
+  -- préciser validity_mode ; on force 'forever' (chk_forever_validity n'exige rien de plus
+  -- que valid_to NULL, déjà le cas) pour isoler l'intention du test (une référence existe).
+  INSERT INTO object_legal (object_id, type_id, value, validity_mode)
+    VALUES ('CATTST9999999901', v_id, '{}'::jsonb, 'forever');
+  v_ok := false;
+  BEGIN PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%STILL_REFERENCED%'; END;
+  ASSERT v_ok, 'supprimer une valeur référencée doit lever STILL_REFERENCED';
+
+  DELETE FROM object_legal WHERE type_id = v_id;
+  PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_legal_type WHERE id = v_id), 'à 0 référence, la suppression passe';
+
+  v_ok := false;
+  BEGIN PERFORM api.rpc_delete_ref_row('ref_legal_type', v_key);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%ROW_NOT_FOUND%'; END;
+  ASSERT v_ok, 'supprimer une ligne inexistante doit lever ROW_NOT_FOUND, pas réussir en silence';
+
+  RAISE NOTICE 'cycle uuid assertions passed';
+END$$;
+
+-- (2) L'IDENTITÉ GÉNÉRIQUE : clé naturelle non-uuid, clé composite, absence de clé.
+DO $$
+DECLARE v_ok boolean; v_metric uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  -- Clé naturelle varchar(5). insee_code est une colonne de PK SANS défaut : elle doit
+  -- être acceptée au payload de création, sinon ref_commune est inéditable.
+  PERFORM api.rpc_upsert_ref_row('ref_commune', NULL,
+            '{"insee_code":"97499","name":"Commune témoin §211"}'::jsonb);
+  PERFORM api.rpc_upsert_ref_row('ref_commune', '{"insee_code":"97499"}'::jsonb,
+            '{"name":"Commune modifiée"}'::jsonb);
+  ASSERT (SELECT name FROM ref_commune WHERE insee_code = '97499') = 'Commune modifiée',
+         'une clé primaire naturelle varchar doit permettre l''édition';
+  PERFORM api.rpc_delete_ref_row('ref_commune', '{"insee_code":"97499"}'::jsonb);
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_commune WHERE insee_code = '97499'), 'et la suppression';
+
+  -- Clé COMPOSITE.
+  SELECT id INTO v_metric FROM ref_capacity_metric LIMIT 1;
+  DELETE FROM ref_capacity_applicability WHERE metric_id = v_metric AND object_type = 'PRD';
+  PERFORM api.rpc_upsert_ref_row('ref_capacity_applicability', NULL,
+            jsonb_build_object('metric_id', v_metric, 'object_type', 'PRD'));
+  ASSERT EXISTS (SELECT 1 FROM ref_capacity_applicability
+                 WHERE metric_id = v_metric AND object_type = 'PRD'),
+         'une matrice à clé composite doit être créable';
+  PERFORM api.rpc_delete_ref_row('ref_capacity_applicability',
+            jsonb_build_object('metric_id', v_metric, 'object_type', 'PRD'));
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_capacity_applicability
+                     WHERE metric_id = v_metric AND object_type = 'PRD'), 'et supprimable';
+
+  -- Sans clé primaire : verrouillée d'office, sans ligne de registre.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_upsert_ref_row('ref_interop_crosswalk', NULL, '{"source_system":"x"}'::jsonb);
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%LOCKED_CATALOG%'; END;
+  ASSERT v_ok, 'une relation sans clé primaire doit être verrouillée d''office';
+
+  RAISE NOTICE 'identité générique assertions passed';
+END$$;
+
+-- (3) DÉLÉGATION ref_code : nom/code non inversés, activation ET réordonnancement câblés.
+DO $$
+DECLARE v_a uuid; v_b uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  v_a := (api.rpc_upsert_ref_row('ref_code:cuisine_type', NULL,
+           '{"code":"temoin_a_211","name":"Témoin A"}'::jsonb)->>'id')::uuid;
+  v_b := (api.rpc_upsert_ref_row('ref_code:cuisine_type', NULL,
+           '{"code":"temoin_b_211","name":"Témoin B"}'::jsonb)->>'id')::uuid;
+
+  ASSERT (SELECT code FROM ref_code WHERE id = v_a) = 'temoin_a_211',
+         'le code doit atterrir dans `code` — un appel positionnel l''écrirait dans `name`';
+  ASSERT (SELECT name FROM ref_code WHERE id = v_a) = 'Témoin A',
+         'le libellé doit atterrir dans `name`';
+
+  PERFORM api.rpc_upsert_ref_row('ref_code:cuisine_type',
+            jsonb_build_object('id', v_a), '{"is_active":false}'::jsonb);
+  ASSERT (SELECT is_active FROM ref_code WHERE id = v_a) = false,
+         'l''interrupteur « actif » des domaines doit rester câblé après absorption de RefCodeEditor';
+
+  PERFORM api.rpc_reorder_ref_rows('ref_code:cuisine_type',
+            (SELECT jsonb_agg(jsonb_build_object('id', rc.id) ORDER BY rc.id)
+             FROM ref_code rc WHERE rc.domain = 'cuisine_type'));
+  ASSERT (SELECT count(DISTINCT position) FROM ref_code WHERE domain = 'cuisine_type')
+       = (SELECT count(*) FROM ref_code WHERE domain = 'cuisine_type'),
+         'le réordonnancement des domaines doit rester câblé et produire des rangs distincts';
+
+  PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_a));
+  PERFORM api.rpc_delete_ref_row('ref_code:cuisine_type', jsonb_build_object('id', v_b));
+  RAISE NOTICE 'délégation ref_code assertions passed';
+END$$;
+
+-- Réordonnancement d'une TABLE : permutation sous index unique partiel, et refus des
+-- listes incomplètes, dupliquées ou porteuses d'une clé inconnue.
+DO $$
+DECLARE v_keys jsonb; v_ok boolean; v_first uuid; v_second uuid;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+
+  -- ref_language porte uq_ref_language_position (UNIQUE partiel) : une écriture en une
+  -- seule passe violerait l'unicité dès la première permutation. C'est CE test qui
+  -- rougit si l'écriture en deux phases disparaît.
+  SELECT jsonb_agg(jsonb_build_object('id', l.id) ORDER BY l.position NULLS LAST, l.id)
+    INTO v_keys FROM ref_language l;
+  SELECT (v_keys->0->>'id')::uuid, (v_keys->1->>'id')::uuid INTO v_first, v_second;
+
+  PERFORM api.rpc_reorder_ref_rows('ref_language',
+    jsonb_build_array(v_keys->1, v_keys->0) || (SELECT COALESCE(jsonb_agg(e), '[]'::jsonb)
+      FROM jsonb_array_elements(v_keys) WITH ORDINALITY AS t(e, ord) WHERE ord > 2));
+  ASSERT (SELECT position FROM ref_language WHERE id = v_second)
+       < (SELECT position FROM ref_language WHERE id = v_first),
+         'la permutation doit passer malgré l''index unique partiel sur position';
+
+  -- Liste INCOMPLÈTE : refusée, sinon on réordonnerait silencieusement de travers.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language', jsonb_build_array(v_keys->0));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
+  ASSERT v_ok, 'une liste partielle doit lever INCOMPLETE_ORDER';
+
+  -- DOUBLON : refusé.
+  v_ok := false;
+  BEGIN PERFORM api.rpc_reorder_ref_rows('ref_language',
+    (SELECT jsonb_agg(e) FROM jsonb_array_elements(v_keys || jsonb_build_array(v_keys->0)) e));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%INCOMPLETE_ORDER%'; END;
+  ASSERT v_ok, 'une liste avec doublon doit lever INCOMPLETE_ORDER';
+
+  -- Clé INCONNUE : refusée.
+  v_ok := false;
+  BEGIN
+    PERFORM api.rpc_reorder_ref_rows('ref_language',
+      (SELECT jsonb_agg(e) FROM jsonb_array_elements(v_keys) WITH ORDINALITY AS t(e, ord)
+       WHERE ord > 1) || jsonb_build_array(jsonb_build_object('id', gen_random_uuid())));
+  EXCEPTION WHEN OTHERS THEN v_ok := SQLERRM LIKE '%UNKNOWN_ROW%'; END;
+  ASSERT v_ok, 'une clé inconnue doit lever UNKNOWN_ROW';
+
+  RAISE NOTICE 'réordonnancement assertions passed';
+END$$;
+
+-- (4) ASSERTION DE SÉCURITÉ — si elle disparaît, le RPC devient une écriture arbitraire.
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  BEGIN
+    PERFORM api.rpc_upsert_ref_row('object', NULL, '{"name":"pwn"}'::jsonb);
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur `object` acceptée';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%UNKNOWN_CATALOG%' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM api.rpc_delete_ref_row('auth.users', '{"id":"00000000-0000-0000-0000-000000000000"}'::jsonb);
+    RAISE EXCEPTION 'GARDE VACANTE : suppression dans auth.users acceptée';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%UNKNOWN_CATALOG%' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM api.rpc_upsert_ref_row('ref_permission', NULL, '{"code":"x","name":"x"}'::jsonb);
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur un catalogue verrouillé acceptée';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%LOCKED_CATALOG%' THEN RAISE; END IF;
+  END;
+  BEGIN
+    PERFORM api.rpc_upsert_ref_row('ref_code:taxonomy_hlo', NULL, '{"code":"x","name":"x"}'::jsonb);
+    RAISE EXCEPTION 'GARDE VACANTE : écriture sur une taxonomie acceptée';
+  EXCEPTION WHEN OTHERS THEN
+    IF SQLERRM NOT LIKE '%LOCKED_CATALOG%' THEN RAISE; END IF;
+  END;
+  RAISE NOTICE 'écriture assertions passed';
+END$$;
+
 ROLLBACK;

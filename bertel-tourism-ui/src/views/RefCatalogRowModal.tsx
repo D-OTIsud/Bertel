@@ -17,7 +17,7 @@ import {
 } from '../features/settings/catalog-fields';
 import { getRefCatalog, upsertRefRow, type RefCatalogDetail } from '../services/ref-catalogs';
 
-/** Langues traduisibles, alignees sur RefCodeEditor (le libelle est le FR canonique). */
+/** Langues traduisibles ; le libelle saisi hors traduction reste le FR canonique. */
 const I18N_LANGS: Array<{ code: string; label: string }> = [
   { code: 'en', label: 'Anglais (EN)' },
   { code: 'de', label: 'Allemand (DE)' },
@@ -175,7 +175,7 @@ export function RefCatalogRowModal({ catalog, row, open, onOpenChange, onSaved }
 
           {/* Traductions EN LIGNE plutot qu'en modale imbriquee : Modal garde une modale
               sortante montee le temps de son animation, deux modales simultanees se
-              marchent dessus. C'est ce qui preserve l'i18n de RefCodeEditor. */}
+              marchent dessus. C'est ce qui preserve la saisie i18n en ligne. */}
           {field.kind === 'i18n-text' && (
             <details className="field-block__i18n">
               <summary>Traductions</summary>
@@ -290,8 +290,12 @@ function renderReferenceSelect(
 }
 
 /** Les codes d'erreur du RPC deviennent des phrases : une erreur PostgreSQL brute ne doit
- *  jamais remonter à l'utilisateur. */
+ *  jamais remonter à l'utilisateur. Couvre aussi bien les échecs d'ECRITURE (upsert/delete/
+ *  reorder) que de LECTURE (list_ref_catalogs/get_ref_catalog) — FORBIDDEN et UNKNOWN_CATALOG
+ *  sont levés par les cinq RPC, revue T9 constat 1. */
 export function humaniseCatalogError(message: string): string {
+  if (message.includes('FORBIDDEN')) return 'Accès réservé aux super-administrateurs.';
+  if (message.includes('UNKNOWN_CATALOG')) return 'Ce catalogue est introuvable.';
   if (message.includes('LOCKED_CATALOG')) return 'Ce catalogue est en lecture seule.';
   if (message.includes('CODE_IMMUTABLE')) return "Le code d'une valeur existante ne se change pas.";
   if (message.includes('STILL_REFERENCED')) return 'Cette valeur est utilisee par des fiches.';

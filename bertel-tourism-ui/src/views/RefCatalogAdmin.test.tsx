@@ -158,13 +158,23 @@ describe('RefCatalogAdmin', () => {
     ));
   });
 
-  it('reordonne en envoyant toutes les cles dans le nouvel ordre', async () => {
+  it('reordonne en envoyant toutes les cles dans le nouvel ordre, pas seulement celles deplacees', async () => {
+    // Avec seulement 2 lignes, « toutes les cles » et « seules les cles deplacees »
+    // produisent le meme payload — la 3e ligne (u3, non deplacee) est ce qui distingue
+    // les deux comportements : un envoi partiel omettrait sa cle, l'envoi complet la garde.
+    mock.getRefCatalog.mockResolvedValue(detail({
+      rows: [
+        { id: 'u1', code: 'kbis', name: 'Extrait KBIS', position: 1 },
+        { id: 'u2', code: 'siret', name: 'SIRET', position: 2 },
+        { id: 'u3', code: 'assurance', name: 'Attestation assurance', position: 3 },
+      ],
+    }));
     renderAdmin();
     fireEvent.click(await screen.findByRole('button', { name: 'Descendre Extrait KBIS' }));
 
     await waitFor(() => expect(mock.reorderRefRows).toHaveBeenCalledWith(
       'ref_legal_type',
-      [{ id: 'u2' }, { id: 'u1' }],
+      [{ id: 'u2' }, { id: 'u1' }, { id: 'u3' }],
     ));
   });
 
@@ -196,5 +206,57 @@ describe('RefCatalogAdmin', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Catalogues indisponibles');
     expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
+  });
+
+  // Constat 1 (revue T9) : les chemins d'ECRITURE passaient deja par humaniseCatalogError,
+  // mais les deux chemins de LECTURE affichaient `(error as Error).message` brut — du texte
+  // PostgREST/PostgreSQL non traduit, rendu dans un role="alert" visible a l'ecran.
+  it('humanise l erreur de lecture des catalogues au lieu d afficher le code brut', async () => {
+    mock.listRefCatalogs.mockRejectedValue(
+      new Error('FORBIDDEN: réservé aux super-administrateurs'),
+    );
+    renderAdmin();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('FORBIDDEN');
+    expect(alert).toHaveTextContent(/réservés? aux super-administrateurs/i);
+  });
+
+  it('humanise l erreur de lecture d un catalogue introuvable au lieu d afficher le code brut', async () => {
+    mock.getRefCatalog.mockRejectedValue(new Error('UNKNOWN_CATALOG: ref_orphan'));
+    renderAdmin();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('UNKNOWN_CATALOG');
+    expect(alert).toHaveTextContent(/introuvable/i);
+  });
+
+  // Constat 2 (revue T9) : `is_active` n existe que sur une minorite de catalogues — le
+  // signal visuel ne doit apparaitre QUE quand la colonne est reellement presente.
+  it('signale visuellement une valeur desactivee quand le catalogue porte is_active', async () => {
+    mock.getRefCatalog.mockResolvedValue(detail({
+      columns: [
+        { name: 'id', type: 'uuid', isRequired: true, hasDefault: true, enumValues: null },
+        { name: 'code', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
+        { name: 'name', type: 'text', isRequired: true, hasDefault: false, enumValues: null },
+        { name: 'is_active', type: 'boolean', isRequired: false, hasDefault: true, enumValues: null },
+      ],
+      rows: [
+        { id: 'u1', code: 'kbis', name: 'Extrait KBIS', is_active: true },
+        { id: 'u2', code: 'siret', name: 'SIRET', is_active: false },
+      ],
+    }));
+    renderAdmin();
+
+    const activeRow = (await screen.findByText('Extrait KBIS')).closest('tr');
+    const inactiveRow = screen.getByText('SIRET').closest('tr');
+    expect(activeRow).not.toHaveClass('is-inactive');
+    expect(inactiveRow).toHaveClass('is-inactive');
+  });
+
+  it('n affiche aucun signal is_active pour un catalogue qui ne porte pas la colonne', async () => {
+    renderAdmin();
+    const row = (await screen.findByText('Extrait KBIS')).closest('tr');
+    expect(row).not.toHaveClass('is-inactive');
   });
 });

@@ -14,6 +14,7 @@ import {
   buildRowKey,
   computeAddBlocked,
   formatRowLabel,
+  isRowInactive,
   rowKeyString,
 } from '../features/settings/catalog-fields';
 import { REFERENCE_CATALOGS_QUERY_KEY } from '../hooks/useReferenceCatalogsQuery';
@@ -133,7 +134,7 @@ export function RefCatalogAdmin() {
       <EmptyState
         mode="error"
         title="Catalogues indisponibles"
-        description={(catalogsQuery.error as Error).message}
+        description={humaniseCatalogError((catalogsQuery.error as Error).message)}
         action={{ label: 'Réessayer', onClick: () => void catalogsQuery.refetch() }}
       />
     );
@@ -197,7 +198,7 @@ export function RefCatalogAdmin() {
             <EmptyState
               mode="error"
               title="Catalogue indisponible"
-              description={(detailQuery.error as Error).message}
+              description={humaniseCatalogError((detailQuery.error as Error).message)}
               action={{ label: 'Réessayer', onClick: () => void detailQuery.refetch() }}
             />
           )}
@@ -258,7 +259,10 @@ export function RefCatalogAdmin() {
                         const deleteBlocked = isReadonly || uses > 0 || removeRow.isPending;
 
                         return (
-                          <tr key={rowKey}>
+                          <tr
+                            key={rowKey}
+                            className={isRowInactive(row, detail.columns) ? 'is-inactive' : undefined}
+                          >
                             <td>{label}</td>
                             <td><code className="ref-admin__code">{String(row.code ?? '')}</code></td>
                             <td>

@@ -114,6 +114,17 @@ describe('computeAddBlocked', () => {
                      col({ name: 'metadata', type: 'jsonb', isRequired: true, hasDefault: true })];
     expect(computeAddBlocked(columns, spec(columns, ['id']), ['id'])).toBeNull();
   });
+
+  // L'invariant « aucune exemption pour les cles primaires » : une cle primaire sans valeur
+  // par defaut et d'un type non rendable (uuid nu, sans cle etrangere) doit BLOQUER l'ajout.
+  // L'exempter ferait croire le catalogue creable alors que l'insertion echouerait serveur.
+  it('nomme une cle primaire non rendable et sans defaut comme bloquante', () => {
+    const columns = [col({ name: 'owner_id', type: 'uuid', isRequired: true }),
+                     col({ name: 'name', isRequired: true })];
+    const fields = spec(columns, ['owner_id']);
+    expect(fields.map((f) => f.name)).toEqual(['name']);
+    expect(computeAddBlocked(columns, fields, ['owner_id'])).toBe('owner_id');
+  });
 });
 
 describe('identite de ligne', () => {

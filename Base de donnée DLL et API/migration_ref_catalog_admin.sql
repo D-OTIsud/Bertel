@@ -536,4 +536,296 @@ REVOKE ALL ON FUNCTION api.get_ref_catalog(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION api.list_ref_catalogs() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.get_ref_catalog(text) TO authenticated, service_role;
 
+-- ============================================================================
+-- Tâche 4 — RPC d'écriture, de suppression et de réordonnancement.
+--
+-- Liste blanche = internal.v_ref_catalog, JAMAIS ref_catalog_registry (cf. invariant
+-- de sécurité en tête de fichier). p_key jsonb identifie une ligne par TOUTES les
+-- colonnes de primary_key_columns — c'est ce qui rend le RPC générique aussi bien
+-- pour une clé uuid simple (ref_legal_type) qu'une clé naturelle (ref_commune.
+-- insee_code) ou composite (ref_capacity_applicability).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION api.rpc_upsert_ref_row(
+  p_catalog_key text, p_key jsonb, p_values jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE
+  v      record;
+  v_col  text;
+  v_cols text[] := ARRAY[]::text[];
+  v_args text[] := ARRAY[]::text[];
+  v_sets text[] := ARRAY[]::text[];
+  v_miss text;
+  v_cur  text;
+  v_out  jsonb;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+
+  -- (a) liste blanche = la vue
+  SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
+  END IF;
+  IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
+    RAISE EXCEPTION 'LOCKED_CATALOG: % — %', p_catalog_key,
+      COALESCE(internal.ref_catalog_readonly_reason(p_catalog_key), '') USING ERRCODE = '42501';
+  END IF;
+
+  -- Délégation phase 7.5 — ARGUMENTS NOMMÉS : la signature est
+  -- (p_domain, p_name, p_id, p_code, …), p_name AVANT p_code. Un appel positionnel
+  -- inversé écrit le code dans le libellé SANS lever d'erreur SQL.
+  IF v.kind = 'ref_code_domain' THEN
+    IF p_values ? 'is_active' AND p_key IS NOT NULL THEN
+      PERFORM api.rpc_set_ref_code_active(
+        (p_key->>'id')::uuid, v.domain, (p_values->>'is_active')::boolean);
+    END IF;
+    IF p_values ?| ARRAY['code','name','name_i18n','position'] THEN
+      RETURN api.rpc_upsert_ref_code(
+        p_domain    => v.domain,
+        p_name      => p_values->>'name',
+        p_id        => NULLIF(p_key->>'id', '')::uuid,
+        p_code      => p_values->>'code',
+        p_name_i18n => p_values->'name_i18n',
+        p_position  => NULLIF(p_values->>'position', '')::integer);
+    END IF;
+    RETURN jsonb_build_object('id', p_key->>'id');
+  END IF;
+
+  -- (b) validation stricte du payload
+  FOR v_col IN SELECT jsonb_object_keys(p_values) LOOP
+    IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = v_col) THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: % sur %', v_col, p_catalog_key USING ERRCODE = '22023';
+    END IF;
+    -- Une colonne de clé primaire est SAISISSABLE à la création (ref_commune.insee_code,
+    -- ref_capacity_applicability.metric_id) et verrouillée seulement en édition.
+    IF v_col IN ('created_at','updated_at')
+       OR (p_key IS NOT NULL AND EXISTS (SELECT 1 FROM jsonb_array_elements(v.primary_key_columns) k
+                                         WHERE k->>'name' = v_col)) THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: % est verrouillée', v_col USING ERRCODE = '22023';
+    END IF;
+
+    IF v_col = 'code' AND p_key IS NOT NULL THEN
+      EXECUTE format('SELECT code::text FROM public.%I WHERE %s', v.table_name,
+                (SELECT string_agg(format('%I = %s', k->>'name',
+                          internal.ref_catalog_cast_expr(v.columns, k->>'name', '$1')), ' AND ')
+                 FROM jsonb_array_elements(v.primary_key_columns) k))
+        INTO v_cur USING p_key;
+      IF v_cur IS DISTINCT FROM (p_values->>'code') THEN
+        RAISE EXCEPTION 'CODE_IMMUTABLE: le code d''une valeur existante ne se change pas'
+          USING ERRCODE = '22023';
+      END IF;
+      CONTINUE;
+    END IF;
+
+    v_cols := v_cols || quote_ident(v_col);
+    v_args := v_args || internal.ref_catalog_cast_expr(v.columns, v_col, '$1');
+    v_sets := v_sets || format('%I = %s', v_col,
+                               internal.ref_catalog_cast_expr(v.columns, v_col, '$1'));
+  END LOOP;
+
+  IF p_key IS NULL THEN
+    -- Garde SERVEUR « ajout impossible ». AUCUNE exemption pour les colonnes de clé
+    -- primaire : has_default protège déjà les UUID générés, et exempter les PK rendait
+    -- ref_commune / les matrices insérables sans identité.
+    SELECT c->>'name' INTO v_miss
+    FROM jsonb_array_elements(v.columns) c
+    WHERE (c->>'is_required')::boolean AND NOT (c->>'has_default')::boolean
+      AND NOT (p_values ? (c->>'name'))
+    LIMIT 1;
+    IF v_miss IS NOT NULL THEN
+      RAISE EXCEPTION 'REQUIRED_HIDDEN_COLUMN: % est obligatoire et absente', v_miss
+        USING ERRCODE = '22023';
+    END IF;
+    IF array_length(v_cols, 1) IS NULL THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: aucune colonne à écrire' USING ERRCODE = '22023';
+    END IF;
+    EXECUTE format('INSERT INTO public.%I (%s) VALUES (%s) RETURNING to_jsonb(public.%I.*)',
+                   v.table_name, array_to_string(v_cols, ', '),
+                   array_to_string(v_args, ', '), v.table_name)
+      INTO v_out USING p_values;
+  ELSE
+    IF array_length(v_sets, 1) IS NULL THEN
+      RAISE EXCEPTION 'UNKNOWN_COLUMN: aucune colonne à écrire' USING ERRCODE = '22023';
+    END IF;
+    SELECT string_agg(format('%I = %s', k->>'name',
+             internal.ref_catalog_cast_expr(v.columns, k->>'name', '$2')), ' AND ')
+      INTO v_cur FROM jsonb_array_elements(v.primary_key_columns) k;
+    EXECUTE format('UPDATE public.%I SET %s WHERE %s RETURNING to_jsonb(public.%I.*)',
+                   v.table_name, array_to_string(v_sets, ', '), v_cur, v.table_name)
+      INTO v_out USING p_values, p_key;
+    IF v_out IS NULL THEN
+      RAISE EXCEPTION 'ROW_NOT_FOUND: % dans %', p_key, p_catalog_key USING ERRCODE = '22023';
+    END IF;
+  END IF;
+
+  RETURN v_out;
+END $$;
+
+CREATE OR REPLACE FUNCTION api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE
+  v record; f record; v_n bigint; v_total bigint := 0; v_where text; v_del bigint;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+  SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
+  END IF;
+  IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
+    RAISE EXCEPTION 'LOCKED_CATALOG: % — %', p_catalog_key,
+      COALESCE(internal.ref_catalog_readonly_reason(p_catalog_key), '') USING ERRCODE = '42501';
+  END IF;
+
+  IF v.kind = 'ref_code_domain' THEN
+    PERFORM api.rpc_delete_ref_code(v.domain, (p_key->>'id')::uuid);
+    RETURN;
+  END IF;
+
+  -- Le compteur est le MESSAGE LISIBLE (« 3 fiches »), pas la garde.
+  IF jsonb_array_length(v.primary_key_columns) = 1 THEN
+    -- CORRECTIF (bug déjà rencontré à la tâche 3) : internal.v_ref_catalog sérialise
+    -- incoming_fk avec les clés JSON 'table'/'column' (jsonb_build_object('table', ...,
+    -- 'column', ...)). jsonb_to_recordset apparie PAR NOM DE CHAMP : un alias AS y(tbl
+    -- text, col text) sans rapport avec ces clés JSON rend f.tbl/f.col NULL sur chaque
+    -- ligne, et format('%I', NULL) échoue (22004). On nomme l'enregistrement d'après
+    -- les clés JSON réelles, entre guillemets (mots réservés).
+    FOR f IN SELECT * FROM jsonb_to_recordset(v.incoming_fk) AS y("table" text, "column" text) LOOP
+      EXECUTE format('SELECT count(*) FROM public.%I WHERE %I = %s', f."table", f."column",
+        internal.ref_catalog_cast_expr(v.columns, v.primary_key_columns->0->>'name', '$1'))
+        INTO v_n USING p_key;
+      v_total := v_total + v_n;
+    END LOOP;
+    IF v_total > 0 THEN
+      RAISE EXCEPTION 'STILL_REFERENCED: % référence(s)', v_total USING ERRCODE = '23503';
+    END IF;
+  END IF;
+
+  SELECT string_agg(format('%I = %s', k->>'name',
+           internal.ref_catalog_cast_expr(v.columns, k->>'name', '$1')), ' AND ')
+    INTO v_where FROM jsonb_array_elements(v.primary_key_columns) k;
+
+  -- La CONTRAINTE est la garde : une référence peut naître entre le comptage et le DELETE.
+  BEGIN
+    EXECUTE format('DELETE FROM public.%I WHERE %s', v.table_name, v_where) USING p_key;
+    GET DIAGNOSTICS v_del = ROW_COUNT;
+  EXCEPTION WHEN foreign_key_violation THEN
+    RAISE EXCEPTION 'STILL_REFERENCED: la valeur est référencée' USING ERRCODE = '23503';
+  END;
+  IF v_del = 0 THEN
+    RAISE EXCEPTION 'ROW_NOT_FOUND: % dans %', p_key, p_catalog_key USING ERRCODE = '22023';
+  END IF;
+END $$;
+
+-- Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
+-- monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
+--
+-- DEUX PIÈGES, tous deux vérifiés en base :
+--   (a) `ref_language` porte `uq_ref_language_position` — un index UNIQUE PARTIEL sur
+--       position. Permuter 1↔2 par deux UPDATE successifs viole l'unicité au premier.
+--       L'écriture est donc EN DEUX PHASES : on pousse d'abord tout le monde dans une
+--       plage libre (1 000 000 + rang), puis on redescend sur le rang final.
+--   (b) une liste partielle ou dupliquée réordonnerait silencieusement de travers : on
+--       exige l'ensemble EXACT des lignes du catalogue, sans doublon.
+CREATE OR REPLACE FUNCTION api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal
+AS $$
+DECLARE
+  v        record;
+  v_where  text;
+  v_n      bigint;
+  v_given  integer;
+  v_uniq   integer;
+  v_found  bigint;
+  i        integer := 0;
+  k        jsonb;
+BEGIN
+  IF api.is_platform_superuser() IS NOT TRUE THEN
+    RAISE EXCEPTION 'FORBIDDEN: réservé aux super-administrateurs' USING ERRCODE = '42501';
+  END IF;
+  SELECT * INTO v FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'UNKNOWN_CATALOG: %', p_catalog_key USING ERRCODE = '22023';
+  END IF;
+  IF internal.ref_catalog_access(p_catalog_key) = 'readonly' THEN
+    RAISE EXCEPTION 'LOCKED_CATALOG: %', p_catalog_key USING ERRCODE = '42501';
+  END IF;
+
+  -- Aucun doublon dans la liste reçue.
+  v_given := jsonb_array_length(p_keys);
+  SELECT count(DISTINCT e::text) INTO v_uniq FROM jsonb_array_elements(p_keys) e;
+  IF v_uniq <> v_given THEN
+    RAISE EXCEPTION 'INCOMPLETE_ORDER: la liste contient des doublons' USING ERRCODE = '22023';
+  END IF;
+
+  IF v.kind = 'ref_code_domain' THEN
+    SELECT count(*) INTO v_n FROM public.ref_code WHERE domain = v.domain;
+    IF v_given <> v_n THEN
+      RAISE EXCEPTION 'INCOMPLETE_ORDER: % clés pour % valeurs', v_given, v_n USING ERRCODE = '22023';
+    END IF;
+    SELECT count(*) INTO v_found FROM public.ref_code rc
+    WHERE rc.domain = v.domain
+      AND rc.id IN (SELECT (e->>'id')::uuid FROM jsonb_array_elements(p_keys) e);
+    IF v_found <> v_n THEN
+      RAISE EXCEPTION 'UNKNOWN_ROW: une clé ne correspond à aucune valeur du domaine'
+        USING ERRCODE = '22023';
+    END IF;
+    -- rpc_reorder_ref_code (phase 7.5) gère déjà sa propre écriture.
+    PERFORM api.rpc_reorder_ref_code(v.domain,
+      (SELECT array_agg((e->>'id')::uuid ORDER BY ord)
+       FROM jsonb_array_elements(p_keys) WITH ORDINALITY AS t(e, ord)));
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v.columns) c WHERE c->>'name' = 'position') THEN
+    RAISE EXCEPTION 'UNKNOWN_COLUMN: % n''a pas de colonne position', p_catalog_key
+      USING ERRCODE = '22023';
+  END IF;
+
+  EXECUTE format('SELECT count(*) FROM public.%I', v.table_name) INTO v_n;
+  IF v_given <> v_n THEN
+    RAISE EXCEPTION 'INCOMPLETE_ORDER: % clés pour % lignes', v_given, v_n USING ERRCODE = '22023';
+  END IF;
+
+  SELECT string_agg(format('%I = %s', kc->>'name',
+           internal.ref_catalog_cast_expr(v.columns, kc->>'name', '$1')), ' AND ')
+    INTO v_where FROM jsonb_array_elements(v.primary_key_columns) kc;
+
+  -- PHASE 1 : plage libre. Le compteur de lignes touchées vérifie au passage que chaque
+  -- clé désigne bien une ligne existante — une clé inconnue laisse ROW_COUNT à 0.
+  FOR k IN SELECT * FROM jsonb_array_elements(p_keys) LOOP
+    i := i + 1;
+    EXECUTE format('UPDATE public.%I SET position = $2 WHERE %s', v.table_name, v_where)
+      USING k, 1000000 + i;
+    GET DIAGNOSTICS v_found = ROW_COUNT;
+    IF v_found = 0 THEN
+      RAISE EXCEPTION 'UNKNOWN_ROW: % ne correspond à aucune ligne de %', k, p_catalog_key
+        USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+
+  -- PHASE 2 : rang final. Aucune collision possible, la plage 1..N est entièrement libre.
+  i := 0;
+  FOR k IN SELECT * FROM jsonb_array_elements(p_keys) LOOP
+    i := i + 1;
+    EXECUTE format('UPDATE public.%I SET position = $2 WHERE %s', v.table_name, v_where)
+      USING k, i;
+  END LOOP;
+END $$;
+
+REVOKE ALL ON FUNCTION api.rpc_upsert_ref_row(text, jsonb, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION api.rpc_delete_ref_row(text, jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION api.rpc_reorder_ref_rows(text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION api.rpc_upsert_ref_row(text, jsonb, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.rpc_delete_ref_row(text, jsonb) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.rpc_reorder_ref_rows(text, jsonb) TO authenticated, service_role;
+
 COMMIT;

@@ -428,4 +428,28 @@ BEGIN
   RAISE NOTICE 'écriture assertions passed';
 END$$;
 
+DO $$
+BEGIN
+  -- Le registre SE DECOUVRE LUI-MEME : c'est une table public.ref_* non partitionnee, donc la
+  -- vue l'emet comme n'importe quel catalogue. Consequence assumee de la conception (33 tables,
+  -- pas 32) — mais il doit etre CLASSE, sinon il apparait en « A classer » ou son role est
+  -- illisible pour l'agent qui ouvre l'ecran.
+  ASSERT EXISTS (SELECT 1 FROM internal.v_ref_catalog WHERE catalog_key = 'ref_catalog_registry'),
+         'le registre doit se decouvrir lui-meme : c''est une table public.ref_* comme une autre';
+  ASSERT (SELECT family FROM public.ref_catalog_registry WHERE catalog_key = 'ref_catalog_registry')
+         = 'Structure',
+         'le registre doit etre classe explicitement, pas laisse en « A classer »';
+  ASSERT internal.ref_catalog_access('ref_catalog_registry') = 'editable',
+         'le registre reste editable : reclasser un catalogue depuis l''ecran est son service meme';
+
+  -- Les cinq helpers internes figent leur search_path. ref_catalog_cast_expr construit du SQL
+  -- dynamique : c'est le dernier endroit ou laisser flotter la resolution de noms.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'internal' AND p.proname LIKE 'ref\_catalog%' AND p.proconfig IS NULL),
+    'un helper interne sans SET search_path : la resolution de noms doit etre figee partout';
+
+  RAISE NOTICE 'auto-decouverte et search_path assertions passed';
+END$$;
+
 ROLLBACK;

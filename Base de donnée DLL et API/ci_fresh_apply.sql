@@ -221,8 +221,12 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== E1     migration_list_resolver_internal.sql  (§211 splits the dynamic-list resolver: internal.resolve_list_object_ids engine capped 2001, REVOKEd from anon/authenticated; api.resolve_list_object_ids becomes a pass-through re-capped at 200 — public contract, grants and behaviour unchanged. Needed by E2, which must resolve up to 2001 without widening an exposed DEFINER RPC. After L1) =='
 \ir migration_list_resolver_internal.sql
 
-\echo '== E2     migration_selection_emails.sql  (§211 api.list_selection_emails: editor-gated + publisher-scoped bulk email export for an Explorer selection or a saved list; operator-actor -> object-contact cascade; needs E1 internal resolver, api_views current_user_can_edit_objects, rls_policies is_platform_superuser, CRM current_user_crm_object_ids) =='
-\ir migration_selection_emails.sql
+-- E2 moved AFTER 16u (migration_actor_contacts_org_gate.sql) — tache 7 / §208
+-- alignment: api.list_selection_emails now INSERTs into public.actor_contact_export_log,
+-- created by 16u. A plpgsql function body's static SQL is validated at CREATE
+-- time (check_function_bodies), so applying E2 before 16u would fail fresh-apply
+-- with "relation public.actor_contact_export_log does not exist". See E2 below,
+-- after the 16u block.
 
 \echo '== I4     migration_object_jsonld_schemaorg.sql  (audit API Phase 2: ref_interop_crosswalk table-driven object_type->schema.org class (profile-keyed) + api.get_object_jsonld service-role-only published-gated JSON-LD serializer; needs api.strip_markdown/i18n_pick from api_views + rls_policies is_platform_superuser) =='
 \ir migration_object_jsonld_schemaorg.sql
@@ -387,6 +391,9 @@ ROLLBACK;
 
 \echo '== 16u-test2 §208/T13b garde permanente : api.save_object_relations (7, 8r) reporte actor_object_role.note depuis l instantane pre-DELETE (jamais efface) quand l appelant echoue api.can_read_actor_contacts, l ecrit quand il peut ; depend de 8r ET de 16u ; verifie rouge sans le report =='
 \ir tests/test_actor_link_note_carryover.sql
+
+\echo '== E2     migration_selection_emails.sql  (§211 api.list_selection_emails: editor-gated + publisher-scoped bulk email export for an Explorer selection or a saved list; operator-actor -> object-contact cascade; needs E1 internal resolver, api_views current_user_can_edit_objects, CRM current_user_crm_object_ids. MOVED AFTER 16u (tache 7, §208 alignment): p_reason now first/mandatory, VOLATILE, writes public.actor_contact_export_log (created by 16u) only when the actor arm emits, superuser arm aligned on api.can_read_actor_contacts (never is_platform_superuser), GRANT authenticated only) =='
+\ir migration_selection_emails.sql
 
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql

@@ -7289,14 +7289,34 @@ AS $$
       -- p_track_format is always 'none' here; media behavior flows through p_filters (p_options).
       -- p_include_media is retained in the outer signature for backward compat but must NOT
       -- be passed into p_track_format, which expects 'kml'/'gpx'/'none' only.
-      'object', api.get_object_resource(o.id, p_languages, 'none', p_filters),
+      'object', res.data,
       'parent_objects', COALESCE(parents.data, '[]'::jsonb),
-      'actors', COALESCE(actors.data, '[]'::jsonb),
+      -- §213 — `actors` N'EST PLUS une seconde surface. Cette clé était un
+      -- DUPLICATA maison du leg `actors` de get_object_resource, et ce duplicata
+      -- était NON GARDÉ : ni la garde de LIGNE (aor.visibility), ni la garde de
+      -- CHAMP §208 (api.can_read_actor_contacts), ni la clé contacts_restricted.
+      -- Or c'est CE chemin que le tiroir et l'éditeur empruntent (getObjectDetail
+      -- appelle get_object_with_deep_data d'abord), et le front préférait la
+      -- version non gardée : la garde §208 déployée était donc contournée sur le
+      -- chemin réel — mesuré en production, un membre d'une ORG non éditrice
+      -- recevait le prénom et la note libre de l'exploitant d'une autre ORG.
+      -- Le leg gardé est DÉJÀ calculé dans `res.data` : on le rend, tel quel.
+      -- Doctrine du projet, écrite dans le patch §208 lui-même : « deux surfaces
+      -- qui rendent le même fait portent la même garde » — ici on supprime la
+      -- seconde surface plutôt que de dupliquer la garde, ce qui rend la
+      -- divergence structurellement impossible. Bonus : un sous-arbre LATERAL
+      -- (et son LATERAL imbriqué sur actor_channel) en moins par fiche.
+      'actors', COALESCE(res.data::jsonb->'actors', '[]'::jsonb),
       'organizations', COALESCE(orgs.data, '[]'::jsonb)
     )
     ORDER BY array_position(p_object_ids, o.id)
   ), '[]'::json)
   FROM object o
+  -- La ressource est calculée UNE fois et consommée deux fois (`object` et
+  -- `actors`) : jamais deux appels à get_object_resource par fiche.
+  LEFT JOIN LATERAL (
+    SELECT api.get_object_resource(o.id, p_languages, 'none', p_filters) AS data
+  ) res ON TRUE
   LEFT JOIN LATERAL (
     SELECT jsonb_agg(
       jsonb_build_object(
@@ -7318,59 +7338,6 @@ AS $$
     LEFT JOIN ref_object_relation_type rt ON rt.id = r.relation_type_id
     WHERE r.source_object_id = o.id
   ) parents ON TRUE
-  LEFT JOIN LATERAL (
-    SELECT jsonb_agg(
-      jsonb_build_object(
-        'id', a.id,
-        'display_name', a.display_name,
-        'first_name', a.first_name,
-        'last_name', a.last_name,
-        'gender', a.gender,
-        'role', jsonb_build_object(
-          'id', aor.role_id,
-          'code', rar.code,
-          'name', rar.name
-        ),
-        'is_primary', aor.is_primary,
-        'valid_from', aor.valid_from,
-        'valid_to', aor.valid_to,
-        'visibility', aor.visibility,
-        'note', aor.note,
-        'contacts', COALESCE(actor_contacts.contacts, '[]'::jsonb)
-      )
-      ORDER BY aor.is_primary DESC, aor.created_at
-    ) as data
-    FROM actor_object_role aor
-    JOIN actor a ON a.id = aor.actor_id
-    LEFT JOIN ref_actor_role rar ON rar.id = aor.role_id
-    LEFT JOIN LATERAL (
-      SELECT jsonb_agg(
-        jsonb_build_object(
-          'id', ac.id,
-          'kind', jsonb_build_object(
-            'code', rck.code,
-            'name', rck.name,
-            'description', rck.description,
-            'icon_url', rck.icon_url
-          ),
-          'value', ac.value,
-          'is_primary', ac.is_primary,
-          'role', jsonb_build_object(
-            'code', rcr.code,
-            'name', rcr.name
-          ),
-          'position', ac.position,
-          'extra', ac.extra
-        )
-        ORDER BY ac.is_primary DESC, ac.position NULLS LAST, ac.created_at
-      ) as contacts
-      FROM actor_channel ac
-      JOIN ref_code_contact_kind rck ON rck.id = ac.kind_id
-      LEFT JOIN ref_contact_role rcr ON rcr.id = ac.role_id
-      WHERE ac.actor_id = a.id
-    ) actor_contacts ON TRUE
-    WHERE aor.object_id = o.id
-  ) actors ON TRUE
   LEFT JOIN LATERAL (
     SELECT jsonb_agg(
       jsonb_build_object(

@@ -221,12 +221,25 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== E1     migration_list_resolver_internal.sql  (§211 splits the dynamic-list resolver: internal.resolve_list_object_ids engine capped 2001, REVOKEd from anon/authenticated; api.resolve_list_object_ids becomes a pass-through re-capped at 200 — public contract, grants and behaviour unchanged. Needed by E2, which must resolve up to 2001 without widening an exposed DEFINER RPC. After L1) =='
 \ir migration_list_resolver_internal.sql
 
--- E2 moved AFTER 16u (migration_actor_contacts_org_gate.sql) — tache 7 / §208
--- alignment: api.list_selection_emails now INSERTs into public.actor_contact_export_log,
--- created by 16u. A plpgsql function body's static SQL is validated at CREATE
--- time (check_function_bodies), so applying E2 before 16u would fail fresh-apply
--- with "relation public.actor_contact_export_log does not exist". See E2 below,
--- after the 16u block.
+-- E2 est appliquée APRÈS 16u (migration_actor_contacts_org_gate.sql) — tâche 7 / §208 :
+-- api.list_selection_emails écrit (INSERT) dans public.actor_contact_export_log, table créée
+-- par 16u.
+-- ATTENTION à la JUSTIFICATION de cet ordre — mesuré sur PG 17.6, check_function_bodies=on :
+-- un corps **plpgsql** dont une requête statique vise une relation ABSENTE, ou appelle une
+-- fonction ABSENTE, se crée SANS AUCUNE ERREUR. Énoncé exact (ne pas le généraliser en
+-- « seuls X et Y échouent », c'est cette généralisation qui a produit l'erreur d'origine) :
+-- le validateur plpgsql NE RÉSOUT PAS les noms de relations ni de fonctions (résolution
+-- différée à l'EXÉCUTION) ; il échoue en revanche sur la SYNTAXE et sur les TYPES (signature
+-- et `DECLARE`). Un corps LANGUAGE sql, lui, est validé entièrement au CREATE (42P01 / 42883).
+-- api.list_selection_emails EST plpgsql : appliquer E2 avant 16u ne ferait donc PAS rougir le
+-- fresh-apply, la création réussirait en silence. Et il faut être précis sur la SUITE, sinon on
+-- remplace une erreur par une autre : DANS UN FRESH-APPLY, aucune erreur ne sortirait NULLE
+-- PART — 16u passe de toute façon plus loin dans le même run, donc la table existe bien avant
+-- le moindre appel (les tests sont joués après le manifeste complet). Le 42P01 n'existe QUE sur
+-- une base LIVE où 16u n'a pas été appliquée.
+-- L'ordre E2-après-16u reste requis, mais pour une raison de DÉPENDANCE LOGIQUE et de
+-- lisibilité du manifeste (une étape ne précède pas ce qu'elle utilise) — jamais parce que le
+-- moteur l'imposerait. Voir E2 plus bas, après le bloc 16u.
 
 \echo '== I4     migration_object_jsonld_schemaorg.sql  (audit API Phase 2: ref_interop_crosswalk table-driven object_type->schema.org class (profile-keyed) + api.get_object_jsonld service-role-only published-gated JSON-LD serializer; needs api.strip_markdown/i18n_pick from api_views + rls_policies is_platform_superuser) =='
 \ir migration_object_jsonld_schemaorg.sql

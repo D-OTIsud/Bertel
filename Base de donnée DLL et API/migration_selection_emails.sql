@@ -22,8 +22,19 @@
 --
 -- Apply order (ci_fresh_apply.sql) : E2 vient désormais APRÈS
 -- migration_actor_contacts_org_gate.sql (16u), qui crée
--- public.actor_contact_export_log — cette fonction y écrit, et une fonction
--- plpgsql valide ses requêtes statiques (dont l'INSERT) À LA CRÉATION.
+-- public.actor_contact_export_log — cette fonction y écrit.
+-- La raison de cet ordre est une DÉPENDANCE LOGIQUE (et la lisibilité du
+-- manifeste : une étape ne précède pas ce qu'elle utilise), PAS une contrainte
+-- du moteur. Mesuré sur PG 17.6, check_function_bodies=on : un corps plpgsql
+-- qui vise une relation absente ou appelle une fonction absente SE CRÉE SANS
+-- ERREUR. Énoncé exact : le validateur plpgsql NE RÉSOUT PAS les noms de
+-- relations ni de fonctions (résolution différée à l'EXÉCUTION) ; il échoue en
+-- revanche sur la SYNTAXE et sur les TYPES (signature et `DECLARE`). Un corps
+-- LANGUAGE sql, lui, est validé entièrement au CREATE (42P01 / 42883).
+-- Cette fonction ÉTANT plpgsql, l'appliquer avant 16u réussirait EN SILENCE.
+-- Sur base FRAÎCHE cela reste sans conséquence (16u passe plus loin dans le
+-- même run, avant tout appel) ; le 42P01 n'existe QUE sur une base LIVE où 16u
+-- n'a pas été appliquée — un piège pire qu'un déploiement rouge.
 --
 -- Signature CHANGÉE (tâche 7) : p_reason est désormais le PREMIER paramètre,
 -- OBLIGATOIRE (pas de défaut — une finalité oubliée doit être une erreur

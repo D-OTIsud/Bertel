@@ -46,17 +46,39 @@ describe('exportActorContacts (§208/R1)', () => {
   // `crypto.randomUUID` est réservé aux contextes SÉCURISÉS (et absent avant Safari 15.4) :
   // en HTTP simple il vaut `undefined` et l'export mourait sur un TypeError, sans fichier.
   // jest.setup.ts le polyfille — donc SEUL un test qui le retire peut voir ce chemin.
-  it("génère un export_run_id même sans crypto.randomUUID (contexte non sécurisé)", async () => {
-    const original = globalThis.crypto.randomUUID;
-    Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+  //
+  // La forme N'EST PAS libre : `api.export_actor_contacts.p_export_run_id` est de type **uuid**,
+  // donc une chaîne non-UUID est rejetée en 22P02 dès la PLANIFICATION et fait échouer l'export
+  // ENTIER — pas seulement son journal. Asserter « une chaîne non vide » ne garde donc RIEN :
+  // c'est la regex UUID v4 (version `4`, variante `8|9|a|b`) qui est la vraie garde.
+  const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+  // Neutralise les sources d'aléa nommées, joue l'export, rend le run id transmis au RPC.
+  const runIdWithout = async (...missing: ('randomUUID' | 'getRandomValues')[]) => {
+    const saved = missing.map((name) => [name, (globalThis.crypto as Record<string, unknown>)[name]] as const);
+    missing.forEach((name) => Object.defineProperty(globalThis.crypto, name, { value: undefined, configurable: true }));
     try {
       mockRpc.mockResolvedValue({ log_id: 'j1', export_run_id: 'run', authorized_object_ids: ['a'], denied_object_ids: [], rows: [] });
       const result = await exportActorContacts(['a'], 'Campagne 2026', {});
-      expect(typeof result.exportRunId).toBe('string');
-      expect(result.exportRunId.length).toBeGreaterThan(8);
-      expect(mockRpc.mock.calls[0][2].exportRunId).toBe(result.exportRunId);
+      // Le run id RENDU et celui ENVOYÉ au RPC sont la même valeur : c'est ce qui recolle
+      // le résultat client aux lignes de journal serveur.
+      // `.at(-1)` et non `[0]` : l'appelant peut boucler, et le mock n'est réinitialisé qu'entre TESTS.
+      expect(mockRpc.mock.calls.at(-1)?.[2].exportRunId).toBe(result.exportRunId);
+      return result.exportRunId;
     } finally {
-      Object.defineProperty(globalThis.crypto, 'randomUUID', { value: original, configurable: true });
+      saved.forEach(([name, value]) => Object.defineProperty(globalThis.crypto, name, { value, configurable: true }));
+    }
+  };
+
+  it("sans crypto.randomUUID (contexte non sécurisé), le run id reste un UUID v4 valide", async () => {
+    expect(await runIdWithout('randomUUID')).toMatch(UUID_V4);
+  });
+
+  it("sans getRandomValues non plus, le repli Math.random rend TOUJOURS un UUID v4 valide", async () => {
+    // Dernier étage du repli : on accepte un aléa faible, jamais un format que PostgreSQL refuse.
+    // Plusieurs tirages, car les octets 6 et 8 (version/variante) doivent être forcés à CHAQUE fois.
+    for (let i = 0; i < 20; i += 1) {
+      expect(await runIdWithout('randomUUID', 'getRandomValues')).toMatch(UUID_V4);
     }
   });
 

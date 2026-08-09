@@ -105,12 +105,31 @@ function toRow(raw: Record<string, unknown>): ActorContactsRow {
  * `crypto.randomUUID` n'existe QUE en contexte sécurisé (et pas avant Safari 15.4) : en HTTP
  * simple il vaut `undefined` et l'export mourait sur un `TypeError` illisible, SANS fichier —
  * panne qu'aucun test ne pouvait voir (jest.setup.ts polyfille la méthode). D'où le repli.
- * La valeur est une ASSERTION DE L'APPELANT servant à recoller les lots entre eux, jamais une
- * preuve : n'importe quelle chaîne suffisamment peu collisionnante convient (pas de dépendance
- * crypto pour ça). Le journal serveur, lui, est la seule pièce probante.
+ *
+ * LE FORMAT N'EST PAS LIBRE — c'est le piège que le repli d'origine (`run-<base36>-<base36>`)
+ * avait manqué : `api.export_actor_contacts.p_export_run_id` est de type **uuid** (vérifié via
+ * `pg_get_function_arguments`), donc PostgreSQL rejette toute chaîne non-UUID en **22P02 dès la
+ * PLANIFICATION** — avant toute exécution. La conséquence n'est pas « le journal perd son
+ * corrélateur » mais « l'export ENTIER échoue », y compris le premier lot : le repli censé
+ * sauver le contexte non sécurisé le condamnait à coup sûr. Toute valeur rendue ici DOIT donc
+ * être un UUID v4 syntaxiquement valide.
+ *
+ * En revanche la QUALITÉ de l'aléa reste secondaire : la valeur est une ASSERTION DE L'APPELANT
+ * servant à recoller les lots entre eux, jamais une preuve (le journal serveur est la seule
+ * pièce probante). D'où la dégradation en trois étages — `randomUUID`, puis `getRandomValues`
+ * (bien plus largement disponible, et présent hors contexte sécurisé), puis `Math.random` en
+ * dernier recours : on accepte un aléa faible, jamais un format invalide.
  */
 function newExportRunId(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `run-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  const webCrypto = globalThis.crypto;
+  if (typeof webCrypto?.randomUUID === 'function') return webCrypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  if (typeof webCrypto?.getRandomValues === 'function') webCrypto.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4 — sinon la valeur n'est pas un UUID *v4*
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // variante RFC 4122 (8/9/a/b)
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 /**

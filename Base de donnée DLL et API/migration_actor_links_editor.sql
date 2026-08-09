@@ -24,10 +24,35 @@
 --     existence, so the picker need not be restricted to the caller's own/extended actors. LIKE
 --     wildcards escaped ('%'/'_'/'\') so '%%' cannot bypass the min-2-char guard; LIMIT 20.
 --     Advisor will flag the DEFINER — expected (§36 precedent).
+--     ⚠ CORRECTIF POST-MISE EN PRODUCTION §208/§211/§213 (audit du 2026-08-09) — la colonne `email`
+--     est désormais GATÉE PAR ACTEUR. Elle ne l'était pas : §95b (2026-06-17) l'a ajoutée pour enrichir
+--     la carte du sélecteur, à une époque où la seule garde discutée était « éditeur vs lecteur ».
+--     L'arbitrage PO de §208 — « coordonnées d'acteur complètes RÉSERVÉES aux membres de l'ORG
+--     éditrice » — est POSTÉRIEUR, et ce DEFINER l'ignorait : mesuré en production, un éditeur d'une
+--     ORG sans aucune fiche publisher recevait 18 e-mails sur 20 lignes rendues (681 acteurs porteurs
+--     d'e-mail sur 696). Même classe que la fuite refermée par §213 sur get_objects_with_deep_data.
+--     Forme retenue, et pourquoi : la garde §208 `api.can_read_actor_contacts(p_object_id)` prend un
+--     OBJET, or le sélecteur n'a AUCUN contexte objet. Le transposé fidèle est donc « l'appelant
+--     peut-il voir les coordonnées de cet acteur via AU MOINS UNE de ses fiches ? » = superuser
+--     plateforme (MÊME lecture que la garde : `app_user_profile.role IN ('owner','super_admin')`)
+--     OU ∃ un `actor_object_role` reliant l'acteur à une fiche de `api.current_user_crm_object_ids()`
+--     (le périmètre publisher, celui de §211/D4 — PAS `readable_object_ids` : lire une fiche publiée
+--     d'une autre ORG ne donne aucun droit sur l'e-mail de son exploitant).
+--     La LIGNE n'est jamais masquée et l'appel ne lève jamais : hors périmètre, `email` vaut NULL.
+--     C'est délibéré — §95 (arbitrage PO) autorise tout éditeur à chercher tout le répertoire par NOM
+--     pour rattacher un prestataire ; on ne referme que la coordonnée, pas l'annuaire. Masquer la
+--     ligne casserait le rattachement ; lever une exception ferait du sélecteur un oracle d'existence.
 -- PREREQUISITES: rls_policies.sql (step 6 — also defines api.current_user_can_edit_objects),
 --   object_workspace_safe_write_rpcs.sql (step 7 — helpers + save_object_relations baseline),
 --   migration_permission_write_paths.sql (8b — user_can_write_object_canonical).
 --   Manifest step 8r.
+-- ⚠ DÉPENDANCE DIFFÉRÉE, IDENTIQUE À CELLE DÉJÀ DOCUMENTÉE POUR 16u (voir le bloc ⚠ du § 3) :
+--   `api.search_actors` appelle désormais `api.current_user_crm_object_ids()`, créée par
+--   migration_crm_module.sql (créneau 8z, donc APRÈS ce fichier). C'est sans danger sur une base
+--   fraîche : plpgsql ne résout ses références qu'à l'EXÉCUTION (vérifié par une sonde en
+--   BEGIN/ROLLBACK le 2026-08-09 — un CREATE FUNCTION plpgsql citant une fonction inexistante
+--   RÉUSSIT), et rien n'appelle le sélecteur entre 8r et 8z. Sur une base VIVE en revanche, ne
+--   ré-appliquer ce fichier qu'une fois 8z passée, sinon le premier appel du sélecteur lève 42883.
 -- IDEMPOTENT: DROP POLICY IF EXISTS + CREATE POLICY; CREATE OR REPLACE FUNCTION.
 -- REVERSIBLE: re-create ext_actor_object_role_read / admin_actor_object_role_write from
 --   rls_policies.sql (Actor system tables block); re-apply step 7's
@@ -244,34 +269,107 @@ DROP FUNCTION IF EXISTS api.search_actors(text);
 CREATE FUNCTION api.search_actors(p_query text)
 RETURNS TABLE(id uuid, display_name text, first_name text, last_name text, gender text, email text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER
-SET search_path = public, api
+-- `pg_temp` EXPLICITEMENT EN DERNIER (invariant §208/R2.1) : sans lui, PostgreSQL cherche le schéma
+-- temporaire EN PREMIER pour les RELATIONS, et n'importe quel `authenticated` peut alors masquer
+-- `app_user_profile` ou `actor_object_role` — c.-à-d. la table qui décide de l'autorisation
+-- ci-dessous. Toutes les relations sont en outre schéma-qualifiées : ceinture ET bretelles.
+SET search_path = public, api, pg_temp
 AS $fn$
 DECLARE
   v_pattern text;
+  -- Verdict d'autorisation de la COLONNE `email`, calculé UNE SEULE FOIS par appel (voir plus bas).
+  v_is_superuser  boolean;
+  v_scoped_actors uuid[] := ARRAY[]::uuid[];
 BEGIN
   -- Editors only: read-only ORG members must not enumerate actor PII through this DEFINER.
-  IF NOT api.current_user_can_edit_objects() THEN
+  -- COALESCE OBLIGATOIRE (§204) : `api.current_user_can_edit_objects()` est à TROIS valeurs — sa
+  -- chaîne de OR passe par `auth.role()`, NULL hors contexte HTTP. Sans le COALESCE, `NOT NULL`
+  -- vaut NULL, la branche n'est pas prise, et cette garde devient FAIL-OPEN. Reproduit en
+  -- production le 2026-08-09, session sans claim : `SELECT count(*), count(email) FROM
+  -- api.search_actors('ma')` rendait 20 lignes / 18 e-mails SANS lever 42501. Portée réelle
+  -- bornée (anon est REVOKE, et tout JWT PostgREST pose `role`), mais l'invariant est documenté
+  -- et n'a aucune raison d'être laissé ouvert dans la fonction même qu'on durcit.
+  IF NOT COALESCE(api.current_user_can_edit_objects(), FALSE) THEN
     RAISE EXCEPTION 'Actor search requires editor rights' USING ERRCODE = '42501';
   END IF;
   IF p_query IS NULL OR length(btrim(p_query)) < 2 THEN
     RETURN;
   END IF;
   -- Escape LIKE wildcards: '%%' must not enumerate the whole table past the length guard.
-  v_pattern := '%' || replace(replace(replace(immutable_unaccent(lower(btrim(p_query))), '\', '\\'), '%', '\%'), '_', '\_') || '%';
+  v_pattern := '%' || replace(replace(replace(public.immutable_unaccent(lower(btrim(p_query))), '\', '\\'), '%', '\%'), '_', '\_') || '%';
+
+  -- ------------------------------------------------------------------
+  -- Périmètre des COORDONNÉES (correctif post-prod §208/§211/§213)
+  -- ------------------------------------------------------------------
+  -- Bras 1 — superuser plateforme. On relit `app_user_profile` EXACTEMENT comme
+  -- `api.can_read_actor_contacts` (rôle IN ('owner','super_admin')), et NON via
+  -- `api.is_platform_superuser()` qui ajoute le bras `auth.role() IN ('service_role','admin')` :
+  -- §208 a arbitré qu'une CLÉ DE SERVICE N'EST PAS UNE PERSONNE et ne lit pas de PII d'acteur.
+  -- Passer par is_platform_superuser rouvrirait cette porte-là, en douce, par une autre fonction.
+  -- EXISTS ne rend jamais NULL ⇒ pas de piège à trois valeurs ici (§204) ; hors contexte HTTP
+  -- `auth.uid()` est NULL, aucune ligne ne matche, et le verdict tombe naturellement à FALSE.
+  v_is_superuser := EXISTS (
+    SELECT 1 FROM public.app_user_profile p
+     WHERE p.id = (SELECT auth.uid())
+       AND p.role IN ('owner', 'super_admin'));
+
+  -- Bras 2 — « cet acteur est-il rattaché à AU MOINS UNE de mes fiches ? ». C'est le transposé de
+  -- la garde §208 (qui, elle, prend un objet) au sélecteur, qui n'a aucun contexte objet.
+  --
+  -- ⚠ ÉCART ASSUMÉ, À NE PAS DÉCOUVRIR EN AUDIT. Ce bras accepte N'IMPORTE QUEL
+  -- `actor_object_role` : ni filtre `visibility`, ni `valid_from`/`valid_to`, ni refus de
+  -- consentement. Il est donc FIDÈLE à `api.can_read_actor_contacts` (qui n'a aucun des trois)
+  -- mais PAS à `api.list_selection_emails`, qui applique les trois. L'écart est délibéré :
+  -- afficher une carte UNITAIRE à un éditeur qui va rattacher ce prestataire n'est pas la même
+  -- opération qu'EXTRAIRE des coordonnées EN LOT pour écrire à tout le monde (invariant §211).
+  -- Mesuré au 2026-08-09 : l'écart est VACANT EN DONNÉES (778 liens, 0 `private`, 0 `valid_to`
+  -- échu, 0 refus de consentement) — c'est un piège de maintenance, pas une fuite vive.
+  -- Cette fonction devient la QUATRIÈME formulation du périmètre « qui voit les coordonnées d'un
+  -- acteur » : voir le COMMENT de `api.can_read_actor_contacts`, qui les recense. Les quatre
+  -- évoluent ensemble.
+  -- PERFORMANCE (§35/§204) : `api.current_user_crm_object_ids()` est SECURITY DEFINER, donc NON
+  -- inlinable — l'appeler par ligne rejouerait la jointure membership×org_link à chaque acteur.
+  -- On la joue UNE fois et on réduit tout de suite à l'ensemble des ACTEURS autorisés, gardé en
+  -- tableau : le prédicat par ligne devient une simple appartenance à un tableau, sans sous-plan.
+  -- Mesuré en production le 2026-08-09, persona à 846 fiches publisher : la SRF seule = 2,34 ms,
+  -- l'agrégat complet = 3,31 ms, et le coût total du sélecteur passe de 1,30 à 4,06 ms par appel.
+  -- Le surcoût EST la SRF : aucune forme moins chère n'existe sans transcrire son prédicat, ce que
+  -- §208 a explicitement payé pour ne plus faire (« prédicat transcrit trois fois »).
+  -- PARESSE : le bloc est le corps d'un IF plpgsql placé APRÈS la garde des 2 caractères — une
+  -- frappe courte, et un superuser, ne le planifient ni ne l'exécutent (§204).
+  IF NOT v_is_superuser THEN
+    SELECT COALESCE(array_agg(DISTINCT aor.actor_id), ARRAY[]::uuid[])
+      INTO v_scoped_actors
+      FROM public.actor_object_role aor
+     WHERE aor.object_id IN (SELECT api.current_user_crm_object_ids());
+  END IF;
+
   -- §95: ANY editor (current_user_can_edit_objects gate above) may search the FULL actor directory to
   -- associate a prestataire — NOT only admin/superuser. The save path (api.save_object_relations) no
   -- longer RLS-filters actor existence (FK-enforced), so the picker is not restricted to the caller's
   -- own/extended actors. Bounded by editor rights + min-2-char + LIKE-escape + LIMIT 20.
   -- (Privacy tradeoff per PO request 2026-06-17 — editors can name-search all actors. See decision log §95.)
   -- §95b: DEFINER bypasses actor_channel RLS, so the email subquery resolves for any editor.
+  -- ⚠ Ce contrat de LIGNE est INCHANGÉ : le rattachement d'un prestataire en dépend. Seule la
+  -- COLONNE `email` est gatée, et par une VALEUR NULL — jamais par une ligne retirée (qui casserait
+  -- le rattachement) ni par une exception (qui ferait du sélecteur un oracle d'existence).
   RETURN QUERY
   SELECT a.id, a.display_name, a.first_name, a.last_name, a.gender,
-    (SELECT ac.value
-       FROM public.actor_channel ac
-       JOIN public.ref_code_contact_kind k ON k.id = ac.kind_id
-      WHERE ac.actor_id = a.id AND lower(k.code) = 'email'
-      ORDER BY ac.is_primary DESC, ac.position NULLS LAST, ac.created_at
-      LIMIT 1) AS email
+    -- CASE, jamais un `AND` dans le WHERE de la sous-requête : PostgreSQL court-circuite CASE
+    -- (§197), donc la lecture d'`actor_channel` n'est même pas évaluée hors périmètre. La branche
+    -- absente rend NULL implicitement — c'est le contrat voulu, pas un oubli d'ELSE.
+    CASE WHEN v_is_superuser OR a.id = ANY (v_scoped_actors) THEN
+      (SELECT ac.value
+         FROM public.actor_channel ac
+         JOIN public.ref_code_contact_kind k ON k.id = ac.kind_id
+        WHERE ac.actor_id = a.id AND lower(k.code) = 'email'
+        -- NULLS LAST : `actor_channel.is_primary` est NULLABLE et `DESC` place les NULL EN PREMIER
+        -- (invariant §211) — sans lui, un drapeau non renseigné passe devant le canal explicitement
+        -- principal. Sans effet sur les 681 lignes actuelles (toutes is_primary=TRUE), mais aligne
+        -- le sélecteur sur `api.export_actor_contacts`, qui choisit déjà de cette façon.
+        ORDER BY ac.is_primary DESC NULLS LAST, ac.position NULLS LAST, ac.created_at
+        LIMIT 1)
+    END AS email
   FROM public.actor a
   WHERE (a.display_name_normalized LIKE v_pattern
       OR a.last_name_normalized    LIKE v_pattern

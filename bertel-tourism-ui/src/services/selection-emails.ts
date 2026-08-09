@@ -29,8 +29,20 @@ export const SELECTION_EMAIL_ERROR_MESSAGES: Record<string, string> = {
   '42501': 'Réservé aux éditeurs.',
   PT413: 'Sélection trop large (plus de 2 000 fiches). Affinez le filtre, ou copiez en deux fois.',
   PT404: "Cette liste n'existe plus.",
+  // PT400 couvre INVALID_ARGUMENT **et** REASON_REQUIRED : le SQLSTATE ne les
+  // distingue pas, et on ne branche jamais sur le texte du message. La modale
+  // garde la finalité côté client (≥ 5 caractères), donc en pratique un PT400
+  // qui remonte ici n'est plus une finalité manquante.
   PT400: 'Une erreur technique empêche la copie.',
 };
+
+/**
+ * Longueur minimale de la finalité — miroir de la borne serveur
+ * (`PT400/REASON_REQUIRED`, 5–500 caractères). Le serveur reste la garde ; ceci
+ * n'est que l'ergonomie, pour ne pas déclencher un aller-retour perdu d'avance.
+ */
+export const SELECTION_EMAIL_REASON_MIN = 5;
+export const SELECTION_EMAIL_REASON_MAX = 500;
 
 const SEPARATORS: Record<EmailSeparator, string> = {
   comma: ', ',
@@ -58,16 +70,23 @@ export function formatEmailList(emails: string[], separator: EmailSeparator): st
   return emails.join(SEPARATORS[separator]);
 }
 
+/**
+ * `reason` = la finalité de l'export, PREMIER paramètre obligatoire du RPC
+ * (§208) : le serveur la valide (5–500 caractères) et l'inscrit au journal
+ * `actor_contact_export_log` dès qu'une adresse provient d'un prestataire. Elle
+ * n'est pas optionnelle ici — un défaut de paramètre transformerait un export
+ * de PII en accès anonyme.
+ */
 export async function fetchSelectionEmails(
-  input: { objectIds: string[] } | { listId: string },
+  input: ({ objectIds: string[] } | { listId: string }) & { reason: string },
 ): Promise<SelectionEmailsResult> {
   const client = getApiClient();
   if (!client) throw new Error('Client API indisponible.');
 
   const params =
     'listId' in input
-      ? { p_object_ids: null, p_list_id: input.listId }
-      : { p_object_ids: input.objectIds, p_list_id: null };
+      ? { p_reason: input.reason, p_object_ids: null, p_list_id: input.listId }
+      : { p_reason: input.reason, p_object_ids: input.objectIds, p_list_id: null };
 
   const { data, error } = await client.schema('api').rpc('list_selection_emails', params);
   if (error) {

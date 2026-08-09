@@ -17,6 +17,8 @@ import {
   fetchSelectionEmails,
   formatEmailList,
   SELECTION_EMAIL_ERROR_MESSAGES,
+  SELECTION_EMAIL_REASON_MAX,
+  SELECTION_EMAIL_REASON_MIN,
   type EmailSeparator,
   type SelectionEmailsResult,
 } from '@/services/selection-emails';
@@ -45,6 +47,9 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
   const [attempt, setAttempt] = useState(0);
   const [separator, setSeparator] = useState<EmailSeparator>('comma');
   const [copyState, setCopyState] = useState<CopyState>('idle');
+  const [reason, setReason] = useState('');
+  /** La finalité SOUMISE — `null` tant qu'aucun chargement n'a été demandé. */
+  const [submittedReason, setSubmittedReason] = useState<string | null>(null);
   // Jeton de requête : une fermeture/réouverture rapide ne doit pas laisser la
   // réponse du premier chargement écraser l'état du second.
   const requestToken = useRef(0);
@@ -59,15 +64,41 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
     [key],
   );
 
+  const canSubmit = reason.trim().length >= SELECTION_EMAIL_REASON_MIN;
+
+  // Finalité PAR EXTRACTION : toute ouverture — et tout changement de sélection
+  // — repart d'un champ vide et d'un chargement non déclenché.
+  //
+  // La remise à zéro se fait PENDANT LE RENDU, pas dans un effet : deux effets
+  // du même commit lisent tous deux l'état d'AVANT, donc l'effet de chargement
+  // relancerait une extraction — et une ligne de journal (§208) — avec la
+  // finalité de l'ouverture précédente avant que la remise à zéro n'atterrisse.
+  // C'est l'ajustement d'état sur changement de prop documenté par React : le
+  // re-rendu est immédiat, et l'effet ne voit que la valeur corrigée.
+  const sessionKey = open ? key : null;
+  const [prevSessionKey, setPrevSessionKey] = useState<string | null>(sessionKey);
+  if (sessionKey !== prevSessionKey) {
+    setPrevSessionKey(sessionKey);
+    setReason('');
+    setSubmittedReason(null);
+    setResult(null);
+    setErrorMessage(null);
+    setRetryable(false);
+    setCopyState('idle');
+  }
+
   useEffect(() => {
-    if (!open) return;
+    // Rien ne part tant que la finalité n'a pas été soumise : le RPC ÉCRIT
+    // (journal §208), un chargement automatique à l'ouverture journaliserait un
+    // export que personne n'a demandé.
+    if (!open || submittedReason === null) return;
     const token = ++requestToken.current;
     setResult(null);
     setErrorMessage(null);
     setRetryable(false);
     setCopyState('idle');
 
-    fetchSelectionEmails(input)
+    fetchSelectionEmails({ ...input, reason: submittedReason })
       .then((res) => {
         if (requestToken.current !== token) return;
         setResult(res);
@@ -79,7 +110,7 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
         setErrorMessage(known ?? 'Chargement impossible.');
         setRetryable(!known);
       });
-  }, [open, input, attempt]);
+  }, [open, input, submittedReason, attempt]);
 
   const emails = useMemo(() => dedupeEmails(result?.rows ?? []), [result]);
   const text = useMemo(() => formatEmailList(emails, separator), [emails, separator]);
@@ -103,7 +134,41 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Copier les e-mails">
-      {errorMessage ? (
+      {submittedReason === null ? (
+        // Étape 1 — la finalité. Le RPC ne rend AUCUNE adresse sans elle
+        // (`PT400/REASON_REQUIRED`) : la demander avant de charger, plutôt
+        // qu'échouer après, est la seule forme honnête.
+        <div className="flex flex-col gap-3">
+          <label
+            className="flex flex-col gap-1 text-[12.5px] font-semibold text-ink"
+            htmlFor="copy-emails-reason"
+          >
+            Finalité de l'extraction (obligatoire — inscrite au journal)
+            <textarea
+              id="copy-emails-reason"
+              rows={2}
+              value={reason}
+              maxLength={SELECTION_EMAIL_REASON_MAX}
+              onChange={(e) => setReason(e.target.value)}
+              className="rounded-lg border p-2 text-[12.5px] font-normal"
+              placeholder="Campagne relance adhésions 2026"
+            />
+          </label>
+          <p className="text-[11.5px] text-ink/60">
+            Ces adresses sont des coordonnées de personnes. Dès qu&apos;une provient d&apos;un
+            prestataire, l&apos;extraction est tracée&nbsp;: qui, quand, quelles fiches — jamais
+            les adresses elles-mêmes.
+          </p>
+          <button
+            type="button"
+            onClick={() => setSubmittedReason(reason.trim())}
+            disabled={!canSubmit}
+            className="self-start rounded-lg bg-orange px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
+          >
+            Afficher les adresses
+          </button>
+        </div>
+      ) : errorMessage ? (
         <div className="flex flex-col items-start gap-2">
           <p className="text-[13px] text-ink/70">{errorMessage}</p>
           {retryable && (

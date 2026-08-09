@@ -6,6 +6,32 @@
 
 ---
 
+> ## ⚠ Contrat PÉRIMÉ sur deux points — mise à jour du 2026-08-09
+>
+> Ce document reste la référence de **conception** (besoin, gisements de données, cascade
+> prestataire → fiche, déterminisme, comptes rendus), et `CLAUDE.md` le cite à ce titre. Mais
+> l'alignement de §211 sur le régime PII de §208 (tâche 7, 2026-08-08) puis la mise en production
+> du 2026-08-09 ont **changé le contrat du RPC** sur deux points que la suite du document décrit
+> encore dans leur forme d'origine. Ce qui vit en production, vérifié en base le 2026-08-09 :
+>
+> | Point | Ce que dit ce document | Ce qui EST en production |
+> |---|---|---|
+> | Signature (§ 5.1) | `api.list_selection_emails(p_object_ids text[], p_list_id uuid)` — 2 arguments | `api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL, p_list_id uuid DEFAULT NULL)` — **3 arguments, `p_reason` en PREMIER et OBLIGATOIRE** (sans défaut : une finalité oubliée doit être une erreur d'appel, jamais une chaîne vide) |
+> | Privilèges (§ 5.1 fin, tableau § 8) | `GRANT EXECUTE TO authenticated, service_role` | **`authenticated` SEUL** — `REVOKE ALL … FROM PUBLIC, anon, service_role` : un export de PII est imputable à une **personne**, jamais à une clé de service |
+>
+> La fonction est aussi devenue **`VOLATILE`** (elle écrit une ligne dans
+> `public.actor_contact_export_log` quand — et seulement quand — le bras acteur émet réellement une
+> adresse) et son bras superuser est aligné sur `api.can_read_actor_contacts`, jamais
+> `api.is_platform_superuser()`.
+>
+> **Le contrat qui fait foi est celui de §213** (journal canonique
+> `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`), avec §211 et §208 pour la conception,
+> et l'entrée **E2** de `docs/SQL_ROLLOUT_RUNBOOK.md` pour le détail d'application. Ce document n'a
+> pas été réécrit : une spec réécrite après coup perd la trace de ce qui a changé, or c'est
+> précisément cette trace qui empêche la prochaine passe de rétablir l'ancienne forme.
+
+---
+
 ## 1. Le besoin
 
 Un conseiller de l'OTI doit pouvoir écrire à un sous-ensemble de prestataires — toute la base,

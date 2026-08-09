@@ -674,8 +674,22 @@ BEGIN
 END$$;
 
 -- ---------------------------------------------------------------------
--- H (R1). Les fonctions « deep » sont HORS PÉRIMÈTRE — et le restent
+-- H (§213). Les fonctions « deep » NE DUPLIQUENT PLUS le leg acteur
 -- ---------------------------------------------------------------------
+-- ⚠ CE BLOC A ÉTÉ RETOURNÉ LE 2026-08-09 (§213). Il assertait auparavant que
+-- `api.get_objects_with_deep_data` émettait TOUJOURS `a.first_name`,
+-- `a.last_name`, `a.gender`, `aor.note` et lisait `actor_channel` — une clôture
+-- de PÉRIMÈTRE de la tâche 13 (« ne pas toucher à cette fonction »), écrite
+-- quand on croyait que le tiroir et l'éditeur lisaient `get_object_resource`.
+-- Ils ne le font pas : `getObjectDetail` appelle `get_object_with_deep_data`
+-- D'ABORD (rpc.ts), et le front préférait sa patte `actors`. Cette clôture de
+-- périmètre était donc devenue une assertion qui ÉPINGLAIT LA FUITE OUVERTE :
+-- mesuré en production, un membre d'une ORG NON éditrice recevait le prénom et
+-- la note libre de l'exploitant d'une autre ORG, sur le chemin de lecture réel.
+-- §213 supprime le duplicata : la clé `actors` est désormais RENDUE depuis le
+-- leg déjà gardé de `get_object_resource` (une seule surface, donc divergence
+-- structurellement impossible). Les assertions ci-dessous gardent ce nouvel
+-- invariant, et H4/H5 (délégation + INVOKER) sont conservées telles quelles.
 -- Complément PERMANENT de la preuve d'identité one-shot de la tâche 13
 -- (comparaison des définitions complètes HEAD↔arbre). On lit `prosrc`, c'est-à-
 -- dire le CORPS ENTIER : une modification en PLEIN MILIEU du corps est donc
@@ -705,24 +719,35 @@ BEGIN
   ASSERT v_src IS NOT NULL AND v_wrapper IS NOT NULL,
     'H0 FAIL: une fonction deep a disparu';
 
-  ASSERT v_src NOT LIKE '%can_read_actor_contacts%' AND v_wrapper NOT LIKE '%can_read_actor_contacts%',
-    'H1 FAIL: une fonction deep reference la garde 16u — elles sont HORS PERIMETRE (R1)';
-  ASSERT v_src NOT LIKE '%contacts_restricted%' AND v_src NOT LIKE '%v_actor_contacts%',
-    'H2 FAIL: un marqueur du contrat 16u a migre dans une fonction deep (R1)';
+  -- H1 (§213). AUCUNE lecture directe de la PII acteur ni des canaux : la
+  -- fonction ne doit plus construire de patte `actors` maison. Ces cinq jetons
+  -- etaient EXIGES avant §213 ; ils sont desormais BANNIS. Un seul suffit a
+  -- prouver que le duplicata est revenu.
+  ASSERT v_src NOT LIKE '%a.first_name%'
+     AND v_src NOT LIKE '%a.last_name%'
+     AND v_src NOT LIKE '%a.gender%'
+     AND v_src NOT LIKE '%aor.note%'
+     AND v_src NOT LIKE '%FROM actor_channel%',
+    'H1 FAIL: get_objects_with_deep_data a RECREE une patte acteur maison — cette seconde surface est NON GARDEE par construction (elle ne passe pas par api.can_read_actor_contacts) et c est le chemin de lecture reel du tiroir et de l editeur (§213)';
 
-  ASSERT v_src LIKE '%''first_name'', a.first_name%'
-     AND v_src LIKE '%''last_name'', a.last_name%'
-     AND v_src LIKE '%''gender'', a.gender%'
-     AND v_src LIKE '%''note'', aor.note%'
-     AND v_src LIKE '%FROM actor_channel ac%',
-    'H3 FAIL: le corps de get_objects_with_deep_data a change en son MILIEU — la PII acteur ou les canaux ne sont plus emis inconditionnellement (R1: cette fonction ne devait pas etre touchee)';
+  -- H2 (§213). La cle `actors` doit etre DERIVEE de la ressource deja gardee.
+  -- Sans ce jeton, la cle pourrait etre alimentee par n importe quelle autre
+  -- source sans qu aucune assertion ne bouge.
+  ASSERT v_src LIKE '%''actors'', COALESCE(res.data::jsonb->''actors''%',
+    'H2 FAIL: la cle actors de get_objects_with_deep_data ne provient plus du leg garde de get_object_resource (§213)';
+
+  -- H3 (§213). get_object_resource reste appelee UNE SEULE FOIS par fiche : la
+  -- cle `object` et la cle `actors` consomment le MEME LATERAL. Deux appels
+  -- doubleraient le cout de la fonction la plus chere du projet.
+  ASSERT (length(v_src) - length(replace(v_src, 'api.get_object_resource(', ''))) / length('api.get_object_resource(') = 1,
+    'H3 FAIL: get_object_resource est appelee plus d une fois par fiche dans get_objects_with_deep_data — le LATERAL res doit etre l unique appel (§213)';
   ASSERT v_wrapper LIKE '%get_objects_with_deep_data%',
     'H4 FAIL: le wrapper deep ne delegue plus a get_objects_with_deep_data';
 
   ASSERT NOT (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                WHERE n.nspname = 'api' AND p.proname = 'get_objects_with_deep_data'),
     'H5 FAIL: get_objects_with_deep_data est passee SECURITY DEFINER — sa seule protection est la RLS, elle vient de disparaitre';
-  RAISE NOTICE '16u H: fonctions deep intouchees (aucun marqueur 16u, PII toujours emise, INVOKER preserve).';
+  RAISE NOTICE '§213 H: fonctions deep sans patte acteur maison (actors derive du leg garde, un seul appel a get_object_resource, INVOKER preserve).';
 END$$;
 
 -- ---------------------------------------------------------------------

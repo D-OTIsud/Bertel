@@ -4127,7 +4127,7 @@ a {
 .app-modal {
   background: var(--surface);
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-lg);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-m);
   width: 100%;
   max-width: 520px;
@@ -4198,6 +4198,169 @@ a {
 
 /* §208 — variante large (sélecteur de colonnes d'export). */
 .app-modal--wide { max-width: 720px; }
+
+/* Modales d'extraction Explorer — composition métier fondée uniquement sur les
+   tokens et primitives globaux. Les couleurs suivent donc le thème ORG. */
+.export-modal__intro,
+.copy-emails-modal p {
+  margin: 0;
+}
+.export-modal__intro,
+.export-modal__summary,
+.copy-emails-modal__breakdown,
+.copy-emails-modal__status {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.export-modal__summary {
+  margin-right: auto;
+  min-width: 0;
+}
+.export-modal__presets,
+.copy-emails-modal__separators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.export-modal__preset {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.export-modal__preset.is-active {
+  background: var(--accent-soft);
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+  box-shadow: none;
+}
+.export-modal__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+.export-modal__column {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-block: 3px;
+  color: var(--ink);
+  font-size: 12.5px;
+}
+.export-modal__column.is-locked { color: var(--ink-4); }
+.export-modal__column input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--theme-primary);
+}
+.export-modal__trace-badge {
+  flex: none;
+  border-radius: 6px;
+  padding: 1px 6px;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.export-modal__notice,
+.copy-emails-modal__privacy,
+.copy-emails-modal__notice {
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-ink);
+  padding: 12px;
+}
+.export-modal__purpose,
+.copy-emails-modal__field {
+  gap: 6px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.export-modal__purpose .textarea,
+.copy-emails-modal__field .textarea,
+.copy-emails-modal__addresses {
+  border-color: var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.export-modal__purpose .textarea:focus,
+.copy-emails-modal__field .textarea:focus,
+.copy-emails-modal__addresses:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+  outline: 0;
+}
+.export-modal__notice .pref__hint { display: block; margin-top: 6px; }
+.copy-emails-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.copy-emails-modal__privacy,
+.copy-emails-modal__notice { font-size: 12px; }
+.copy-emails-modal__summary {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.copy-emails-modal__separator {
+  min-height: 32px;
+  padding: 5px 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.copy-emails-modal__addresses {
+  min-height: 132px;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+.copy-emails-modal__status--error,
+.copy-emails-modal__copy-error {
+  color: var(--danger-ink);
+}
+.copy-emails-modal__missing-summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.copy-emails-modal__missing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.copy-emails-modal__missing-link {
+  color: var(--theme-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.copy-emails-modal__missing-link:hover { text-decoration: underline; }
+
+@media (max-width: 600px) {
+  .app-modal-overlay { padding: 12px; }
+  .app-modal { max-height: calc(100dvh - 24px); }
+  .app-modal__head,
+  .app-modal__body,
+  .app-modal__foot { padding-inline: 14px; }
+  .app-modal__foot { flex-wrap: wrap; }
+  .export-modal__summary { flex-basis: 100%; }
+  .export-modal__columns { grid-template-columns: minmax(0, 1fr); }
+  .export-modal__preset { flex: 1 1 calc(50% - 4px); }
+  .copy-emails-modal .app-modal__foot > .ghost-button,
+  .copy-emails-modal .app-modal__foot > .primary-button {
+    flex: 1 1 0;
+  }
+}
 
 /* Motion pass — presence-phase transitions (usePresence via Modal.tsx). Overlay
    fades; centered modal fades+lifts+scales; drawer fades+slides from the right.

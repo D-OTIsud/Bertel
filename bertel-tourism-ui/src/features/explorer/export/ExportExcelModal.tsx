@@ -129,12 +129,12 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
           // pouvoir OUVRIR l'offre, pas seulement l'annoncer sous un repli.
           defaultOpen={checkedCount > 0 || groupId === 'acteur'}
         >
-          <div className="grid grid-cols-2 gap-x-4">
+          <div className="export-modal__columns">
             {cols.map((col) => (
-              <label key={col.id} className={cn('flex items-center gap-2 py-0.5 text-[12.5px]', locked ? 'text-ink-4' : 'text-ink')}>
+              <label key={col.id} className={cn('export-modal__column', locked && 'is-locked')}>
                 <input type="checkbox" checked={effectiveIds.includes(col.id)} disabled={locked} onChange={() => toggleColumn(col.id)} />
                 {col.label}
-                {col.requiresPurpose ? <span aria-hidden="true" className="rounded-[6px] bg-orange-soft px-1.5 text-[10.5px] font-semibold text-orange">tracé</span> : null}
+                {col.requiresPurpose ? <span aria-hidden="true" className="export-modal__trace-badge">tracé</span> : null}
               </label>
             ))}
           </div>
@@ -174,10 +174,10 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
   }
 
   return (
-    <Modal open={open} title="Exporter en Excel" onOpenChange={onOpenChange} size="wide"
+    <Modal open={open} title="Exporter en Excel" onOpenChange={onOpenChange} size="wide" className="export-modal"
       footer={
         <>
-          <span className="mr-auto text-[12.5px] text-ink-3">
+          <span className="export-modal__summary">
             {exporting
               ? `Chargement ${progress.done}/${progress.total}…`
               : effectiveIds.length === 0
@@ -200,16 +200,15 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
         </>
       }
     >
-      <p className="text-[12.5px] text-ink-3">
+      <p className="export-modal__intro">
         {selectedObjectIds.length} fiche{selectedObjectIds.length > 1 ? 's' : ''} sélectionnée{selectedObjectIds.length > 1 ? 's' : ''} — une ligne par fiche, valeurs en clair.
       </p>
 
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Partir d'un modèle">
+      <div className="export-modal__presets" role="group" aria-label="Partir d'un modèle">
         {EXPORT_PRESETS.map((preset) => (
           <button key={preset.id} type="button"
             aria-pressed={presetId === preset.id}
-            className={cn('rounded-[9px] border px-3 py-1.5 text-[12.5px] font-semibold transition',
-              presetId === preset.id ? 'border-teal bg-teal-soft text-teal' : 'border-line text-ink-3 hover:text-ink')}
+            className={cn('ghost-button export-modal__preset', presetId === preset.id && 'is-active')}
             onClick={() => applyPreset(preset.id, session, caps)}
           >
             {preset.label}{preset.locked ? <span aria-hidden="true"> 🔒</span> : null}
@@ -220,14 +219,14 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
       {groupsContent}
 
       {needsPurpose ? (
-        <div className="rounded-[10px] border border-orange/40 bg-orange-soft/40 p-3">
-          <label className="flex flex-col gap-1 text-[12.5px] font-semibold text-ink" htmlFor="export-purpose">
+        <div className="export-modal__notice">
+          <label className="field-block export-modal__purpose" htmlFor="export-purpose">
             Finalité de l'export (obligatoire — inscrite au journal)
             <textarea id="export-purpose" rows={2} value={purpose} onChange={(e) => setPurpose(e.target.value)}
-              className="rounded-[8px] border border-line bg-surface p-2 text-[12.5px] font-normal"
+              className="textarea"
               placeholder="Campagne relance adhésions 2026" />
           </label>
-          <p className="mt-1 text-[11.5px] text-ink-3">
+          <p className="pref__hint">
             Colonnes réservées à votre organisation — cet export de coordonnées est tracé (qui, quand, quelles fiches).
           </p>
         </div>

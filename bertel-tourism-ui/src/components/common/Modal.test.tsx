@@ -17,25 +17,25 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
   });
 
   it('variant="drawer" applique les classes tiroir en restant un dialog', () => {
-    const { container } = render(
+    render(
       <Modal title="Permissions" variant="drawer" open onOpenChange={jest.fn()}>
         <p>x</p>
       </Modal>,
     );
     expect(screen.getByRole('dialog', { name: 'Permissions' })).toHaveClass('app-modal--drawer');
-    expect(container.querySelector('.app-modal-overlay')).toHaveClass('app-modal-overlay--drawer');
+    expect(document.querySelector('.app-modal-overlay')).toHaveClass('app-modal-overlay--drawer');
   });
 
   it('Escape, clic overlay et bouton Fermer appellent onOpenChange(false)', () => {
     const onOpenChange = jest.fn();
-    const { container } = render(
+    render(
       <Modal title="T" open onOpenChange={onOpenChange}>
         <input aria-label="C" />
       </Modal>,
     );
     fireEvent.keyDown(screen.getByRole('dialog', { name: 'T' }), { key: 'Escape' });
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    fireEvent.mouseDown(container.querySelector('.app-modal-overlay') as HTMLElement);
+    fireEvent.mouseDown(document.querySelector('.app-modal-overlay') as HTMLElement);
     expect(onOpenChange).toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
@@ -99,6 +99,19 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
       </Modal>,
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('rend le dialogue dans document.body pour échapper aux contextes transformés du déclencheur', () => {
+    const { container } = render(
+      <div style={{ transform: 'translateX(-50%)' }}>
+        <Modal title="Portail" open onOpenChange={jest.fn()}>contenu</Modal>
+      </div>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Portail' });
+    expect(container.contains(dialog)).toBe(false);
+    expect(dialog.parentElement).toBe(document.querySelector('.app-modal-overlay'));
+    expect(document.body.contains(dialog)).toBe(true);
   });
 
   it('stays in the DOM with data-motion-phase="exiting" during the exit window, then unmounts', () => {

@@ -12,6 +12,7 @@
 // l'animation de sortie n'a jamais l'occasion de jouer.
 
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { usePresence } from '../../hooks/usePresence';
 import { cn } from '@/lib/utils';
@@ -74,6 +75,7 @@ export function Modal({
   footer,
   variant = 'modal',
   size = 'default',
+  className,
 }: {
   open: boolean;
   title: string;
@@ -83,6 +85,8 @@ export function Modal({
   variant?: 'modal' | 'drawer';
   /** 'wide' = 720px (sélecteur de colonnes d'export §208) — la carte centrée par défaut fait 520px. */
   size?: 'default' | 'wide';
+  /** Classe de contexte pour composer une modale métier avec les tokens de styles.css. */
+  className?: string;
 }) {
   const { shouldRender, phase } = usePresence(open, MODAL_EXIT_MS_BY_VARIANT[variant]);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -144,9 +148,13 @@ export function Modal({
     }
   }
 
-  if (!shouldRender) return null;
+  if (!shouldRender || typeof document === 'undefined') return null;
 
-  return (
+  // Le portail est indispensable lorsque le déclencheur vit dans un élément
+  // transformé (ex. SelectionBar avec translate-x). Sans lui, `position: fixed`
+  // se cale sur cet ancêtre au lieu du viewport : la carte paraît attachée à la
+  // barre et le scrim ne couvre qu'une partie de l'écran.
+  return createPortal(
     <div
       className={variant === 'drawer' ? 'app-modal-overlay app-modal-overlay--drawer' : 'app-modal-overlay'}
       data-motion-phase={phase}
@@ -159,6 +167,7 @@ export function Modal({
         className={cn(
           variant === 'drawer' ? 'app-modal app-modal--drawer' : 'app-modal',
           size === 'wide' && 'app-modal--wide',
+          className,
         )}
         data-motion-phase={phase}
         role="dialog"
@@ -175,6 +184,7 @@ export function Modal({
         <div className="app-modal__body">{children}</div>
         {footer && <div className="app-modal__foot">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

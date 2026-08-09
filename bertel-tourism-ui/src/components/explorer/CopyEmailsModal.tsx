@@ -75,16 +75,23 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
   // finalité de l'ouverture précédente avant que la remise à zéro n'atterrisse.
   // C'est l'ajustement d'état sur changement de prop documenté par React : le
   // re-rendu est immédiat, et l'effet ne voit que la valeur corrigée.
+  //
+  // La remise à zéro n'a lieu qu'à l'(RÉ)OUVERTURE, jamais à la fermeture :
+  // `Modal` reste MONTÉ pendant son animation de sortie (~220 ms), donc vider
+  // l'état en fermant faisait réapparaître l'étape 1 — le champ Finalité vide —
+  // par-dessus les adresses qu'on venait de copier, le temps du fondu.
   const sessionKey = open ? key : null;
   const [prevSessionKey, setPrevSessionKey] = useState<string | null>(sessionKey);
   if (sessionKey !== prevSessionKey) {
     setPrevSessionKey(sessionKey);
-    setReason('');
-    setSubmittedReason(null);
-    setResult(null);
-    setErrorMessage(null);
-    setRetryable(false);
-    setCopyState('idle');
+    if (open) {
+      setReason('');
+      setSubmittedReason(null);
+      setResult(null);
+      setErrorMessage(null);
+      setRetryable(false);
+      setCopyState('idle');
+    }
   }
 
   useEffect(() => {
@@ -115,6 +122,16 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
   const emails = useMemo(() => dedupeEmails(result?.rows ?? []), [result]);
   const text = useMemo(() => formatEmailList(emails, separator), [emails, separator]);
 
+  // Le clic sur « Afficher les adresses » DÉMONTE l'étape 1, donc le seul
+  // élément focusable du corps disparaît et le focus retombe sur <body> : au
+  // clavier comme au lecteur d'écran, on se retrouve nulle part. On le porte sur
+  // la zone d'adresses, qui est à la fois le résultat attendu et la cible d'un
+  // Ctrl+C manuel si le presse-papiers est refusé.
+  const addressesRef = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    if (result) addressesRef.current?.focus();
+  }, [result]);
+
   const viaActor = (result?.rows ?? []).filter((row) => row.source === 'actor').length;
   const viaObject = (result?.rows ?? []).length - viaActor;
 
@@ -132,15 +149,62 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
     }
   }
 
+  const footer = submittedReason === null ? (
+    <>
+      <button type="button" className="ghost-button" onClick={() => onOpenChange(false)}>Annuler</button>
+      <button
+        type="button"
+        onClick={() => setSubmittedReason(reason.trim())}
+        disabled={!canSubmit}
+        className="primary-button"
+      >
+        Afficher les adresses
+      </button>
+    </>
+  ) : result ? (
+    <>
+      <button type="button" className="ghost-button" onClick={() => onOpenChange(false)}>Fermer</button>
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        disabled={emails.length === 0 || copyState === 'copying'}
+        className="primary-button"
+      >
+        {copyState === 'copied' ? (
+          <><Check className="h-4 w-4" /> Copié</>
+        ) : copyState === 'copying' ? (
+          <><Copy className="h-4 w-4" /> Copie…</>
+        ) : (
+          <><Copy className="h-4 w-4" /> Copier</>
+        )}
+      </button>
+    </>
+  ) : (
+    <>
+      <button type="button" className="ghost-button" onClick={() => onOpenChange(false)}>Fermer</button>
+      {retryable && errorMessage ? (
+        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="primary-button">
+          Réessayer
+        </button>
+      ) : null}
+    </>
+  );
+
   return (
-    <Modal open={open} onOpenChange={onOpenChange} title="Copier les e-mails">
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Copier les e-mails"
+      className="copy-emails-modal"
+      footer={footer}
+    >
       {submittedReason === null ? (
         // Étape 1 — la finalité. Le RPC ne rend AUCUNE adresse sans elle
         // (`PT400/REASON_REQUIRED`) : la demander avant de charger, plutôt
         // qu'échouer après, est la seule forme honnête.
-        <div className="flex flex-col gap-3">
+        <div className="copy-emails-modal__content">
           <label
-            className="flex flex-col gap-1 text-[12.5px] font-semibold text-ink"
+            className="field-block copy-emails-modal__field"
             htmlFor="copy-emails-reason"
           >
             Finalité de l'extraction (obligatoire — inscrite au journal)
@@ -150,42 +214,28 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
               value={reason}
               maxLength={SELECTION_EMAIL_REASON_MAX}
               onChange={(e) => setReason(e.target.value)}
-              className="rounded-lg border p-2 text-[12.5px] font-normal"
+              className="textarea"
               placeholder="Campagne relance adhésions 2026"
             />
           </label>
-          <p className="text-[11.5px] text-ink/60">
+          <p className="copy-emails-modal__privacy">
             Ces adresses sont des coordonnées de personnes. Dès qu&apos;une provient d&apos;un
             prestataire, l&apos;extraction est tracée&nbsp;: qui, quand, quelles fiches — jamais
             les adresses elles-mêmes.
           </p>
-          <button
-            type="button"
-            onClick={() => setSubmittedReason(reason.trim())}
-            disabled={!canSubmit}
-            className="self-start rounded-lg bg-orange px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
-          >
-            Afficher les adresses
-          </button>
         </div>
       ) : errorMessage ? (
-        <div className="flex flex-col items-start gap-2">
-          <p className="text-[13px] text-ink/70">{errorMessage}</p>
-          {retryable && (
-            <button
-              type="button"
-              onClick={() => setAttempt((n) => n + 1)}
-              className="rounded-lg border px-3 py-1.5 text-[12px] font-semibold text-ink/80 hover:bg-ink/5"
-            >
-              Réessayer
-            </button>
-          )}
+        <div className="copy-emails-modal__status copy-emails-modal__status--error" role="alert">
+          <p>{errorMessage}</p>
         </div>
       ) : !result ? (
-        <p className="text-[13px] text-ink/60">Chargement…</p>
+        <p className="copy-emails-modal__status" role="status">Chargement…</p>
       ) : (
-        <div className="flex flex-col gap-3">
-          <p className="text-[13px] font-semibold text-ink">
+        <div className="copy-emails-modal__content">
+          {/* `role="status"` : les compteurs sont le resultat de l'action, pas une
+              decoration. Sans region live, un lecteur d'ecran ne les annonce
+              jamais — l'utilisateur ne sait pas combien d'adresses il copie. */}
+          <p className="copy-emails-modal__summary" role="status">
             {result.excludedCount > 0
               ? `${result.eligibleCount} fiches éligibles sur ${result.requestedCount}`
               : `${result.eligibleCount} fiches éligibles`}
@@ -195,27 +245,23 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
             {result.missing.length} sans e-mail
           </p>
 
-          <p className="text-[12px] text-ink/60">
+          <p className="copy-emails-modal__breakdown">
             {viaActor} fiche{viaActor > 1 ? 's' : ''} résolue{viaActor > 1 ? 's' : ''} via le
             prestataire, {viaObject} via la fiche
           </p>
 
-          <p className="rounded-lg bg-orange/10 px-3 py-2 text-[12px] text-ink/80">
+          <p className="copy-emails-modal__notice">
             Collez ces adresses dans le champ Cci, pour ne pas les divulguer aux autres
             destinataires.
           </p>
 
-          <div className="flex gap-1" role="group" aria-label="Séparateur">
+          <div className="copy-emails-modal__separators" role="group" aria-label="Séparateur">
             {SEPARATOR_LABELS.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => setSeparator(option.value)}
-                className={
-                  separator === option.value
-                    ? 'rounded-lg bg-ink px-2.5 py-1.5 text-[12px] font-semibold text-white'
-                    : 'rounded-lg border px-2.5 py-1.5 text-[12px] font-semibold text-ink/70'
-                }
+                className={`chip copy-emails-modal__separator${separator === option.value ? ' chip--active' : ''}`}
               >
                 {option.label}
               </button>
@@ -223,24 +269,25 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
           </div>
 
           <textarea
+            ref={addressesRef}
             aria-label="Adresses à copier"
             readOnly
             value={text}
             rows={6}
-            className="w-full rounded-lg border p-2 font-mono text-[12px]"
+            className="textarea copy-emails-modal__addresses"
           />
 
           {result.missing.length > 0 && (
             <details>
-              <summary className="cursor-pointer text-[12px] font-semibold text-ink/70">
+              <summary className="copy-emails-modal__missing-summary">
                 {result.missing.length} fiche{result.missing.length > 1 ? 's' : ''} sans e-mail
               </summary>
-              <ul className="mt-2 flex flex-col gap-1">
+              <ul className="copy-emails-modal__missing-list">
                 {result.missing.map((item) => (
                   <li key={item.objectId}>
                     <Link
                       href={`/objects/${item.objectId}/edit`}
-                      className="text-[12px] text-orange hover:underline"
+                      className="copy-emails-modal__missing-link"
                     >
                       {item.name}
                     </Link>
@@ -251,34 +298,11 @@ export function CopyEmailsModal({ objectIds, listId, open, onOpenChange }: Props
           )}
 
           {copyState === 'refused' && (
-            <p className="text-[12px] text-red-600">
+            <p className="copy-emails-modal__copy-error" role="alert">
               Copie refusée par le navigateur — sélectionnez le texte ci-dessus et faites Ctrl+C.
             </p>
           )}
 
-          {/* L'état `copying` est VISIBLE et désactive le bouton : sans cela un
-              double-clic relance une écriture presse-papiers concurrente, et
-              l'utilisateur n'a aucun retour pendant l'attente. */}
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            disabled={emails.length === 0 || copyState === 'copying'}
-            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-orange px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-50"
-          >
-            {copyState === 'copied' ? (
-              <>
-                <Check className="h-4 w-4" /> Copié
-              </>
-            ) : copyState === 'copying' ? (
-              <>
-                <Copy className="h-4 w-4" /> Copie…
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" /> Copier
-              </>
-            )}
-          </button>
         </div>
       )}
     </Modal>

@@ -99,6 +99,49 @@ describe('CopyEmailsModal', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  it('porte le focus sur les adresses après soumission — il retombait sur <body>', async () => {
+    mockFetch.mockResolvedValue(RESULT);
+    render(<CopyEmailsModal objectIds={['o1']} open onOpenChange={jest.fn()} />);
+
+    await submitReason();
+
+    // L'étape 1 est démontée par la soumission : sans reprise explicite, le seul
+    // focusable du corps disparaît et le focus part sur <body>.
+    const zone = await screen.findByLabelText(/Adresses à copier/);
+    await waitFor(() => expect(document.activeElement).toBe(zone));
+  });
+
+  it('annonce les compteurs et les erreurs dans une région live', async () => {
+    mockFetch.mockResolvedValue(RESULT);
+    const { unmount } = render(<CopyEmailsModal objectIds={['o1']} open onOpenChange={jest.fn()} />);
+    await submitReason();
+
+    const compteurs = await screen.findByText(/4 fiches éligibles sur 5/);
+    expect(compteurs).toHaveAttribute('role', 'status');
+    unmount();
+
+    mockFetch.mockRejectedValue(Object.assign(new Error('x'), { code: '42501' }));
+    render(<CopyEmailsModal objectIds={['o1']} open onOpenChange={jest.fn()} />);
+    await submitReason();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Réservé aux éditeurs.');
+  });
+
+  it('ne repasse PAS à l étape 1 pendant l animation de sortie de la modale', async () => {
+    mockFetch.mockResolvedValue(RESULT);
+    const { rerender } = render(
+      <CopyEmailsModal objectIds={['o1']} open onOpenChange={jest.fn()} />,
+    );
+    await submitReason();
+    await screen.findByLabelText(/Adresses à copier/);
+
+    // `Modal` reste MONTÉ le temps de son animation de sortie : remettre l'état
+    // à zéro sur `open=false` ferait clignoter le champ Finalité par-dessus les
+    // adresses. Le contenu doit survivre à la fermeture.
+    rerender(<CopyEmailsModal objectIds={['o1']} open={false} onOpenChange={jest.fn()} />);
+    expect(screen.getByLabelText(/Adresses à copier/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Finalité de l'extraction/)).toBeNull();
+  });
+
   it('annonce les compteurs, dont la mention « sur N » quand des fiches sont écartées', async () => {
     mockFetch.mockResolvedValue(RESULT);
     // Cinq ids, parce que le faux annonce cinq demandes : un test dont l'entrée

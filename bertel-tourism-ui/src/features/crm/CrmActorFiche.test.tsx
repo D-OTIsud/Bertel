@@ -123,15 +123,29 @@ beforeEach(() => {
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
-  it('affiche la bibliothèque documentaire et le rôle par défaut d’un acteur sans établissement', async () => {
+  it('affiche la bibliothèque dans un onglet dédié et la drop zone dans le rail droit', async () => {
     crmMock.listActorCrm.mockResolvedValue({ ...snapshot, objects: [] });
     crmMock.listActorSupport.mockResolvedValue({ defaultRole: { code: 'guide', name: 'Guide' }, documents: [] });
 
     renderFiche();
 
-    expect(await screen.findByRole('heading', { name: "Documents d'accompagnement" })).toBeInTheDocument();
     expect(await screen.findByText('Guide')).toBeInTheDocument();
+    const activityTab = screen.getByRole('tab', { name: 'Activité' });
+    const documentsTab = screen.getByRole('tab', { name: /Documents d'accompagnement/ });
+    expect(activityTab).toHaveAttribute('aria-selected', 'true');
+    expect(documentsTab).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('heading', { name: "Documents d'accompagnement" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('tablist', { name: 'Sections de la fiche acteur' }), { key: 'ArrowRight' });
+
+    expect(documentsTab).toHaveAttribute('aria-selected', 'true');
+    const main = document.querySelector('.crm-actor-grid__main') as HTMLElement;
+    const side = document.querySelector('.crm-actor-grid__side') as HTMLElement;
+    expect(within(main).getByRole('heading', { name: "Documents d'accompagnement" })).toBeInTheDocument();
     expect(screen.getByText('Aucun document pour le moment.')).toBeInTheDocument();
+    expect(within(side).getByRole('heading', { name: 'Ajouter un document' })).toBeInTheDocument();
+    expect(within(side).getByRole('button', { name: /Déposez un fichier ici/ })).toHaveClass('crm-actor-docs-dropzone');
+    expect(within(side).queryByText('Interactions · 12 mois')).not.toBeInTheDocument();
   });
 
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {

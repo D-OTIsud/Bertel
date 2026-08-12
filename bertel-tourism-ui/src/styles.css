@@ -11635,6 +11635,53 @@ a {
 .crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .crm-app .crm-actor-grid__side { min-width: 0; }
 
+/* Navigation interne de la fiche : la bibliothèque documentaire est une vue dédiée. */
+.crm-app .crm-actor-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  margin-bottom: 14px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+}
+.crm-app .crm-actor-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  margin-bottom: -1px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.crm-app .crm-actor-tabs button:hover { color: var(--ink); }
+.crm-app .crm-actor-tabs button.is-on { border-bottom-color: var(--accent); color: var(--accent-deep); }
+.crm-app .crm-actor-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px 4px 0 0;
+}
+.crm-app .crm-actor-tabs .n {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+}
+.crm-app .crm-actor-tabs button.is-on .n { background: var(--bg-tint); color: var(--accent-deep); }
+
 /* Rangée d'actions en tête de la colonne principale (« Nouvelle tâche » / « Nouvelle interaction »). */
 .crm-app .crm-actor-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -11756,7 +11803,6 @@ a {
   font-size: 10.5px;
   font-weight: 700;
 }
-.crm-app .crm-actor-docs .crm-panel__head .crm-btn { margin-left: auto; }
 .crm-app .crm-actor-docs__file-input { display: none; }
 .crm-app .crm-actor-docs__body { display: flex; flex-direction: column; gap: 12px; }
 .crm-app .crm-actor-docs__intro { margin: 0; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
@@ -11787,6 +11833,41 @@ a {
 .crm-app .crm-actor-docs__meta strong { color: var(--ink); font-size: 12.5px; }
 .crm-app .crm-actor-docs__meta small { margin-top: 2px; color: var(--ink-4); font-size: 10.5px; }
 .crm-app .crm-actor-docs__actions { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+
+/* Ajout documentaire dans le rail droit de l'onglet Documents. */
+.crm-app .crm-actor-docs-upload { display: flex; flex-direction: column; gap: 12px; }
+.crm-app .crm-actor-docs-upload h4 { margin-bottom: 0; }
+.crm-app .crm-actor-docs-dropzone {
+  width: 100%;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-tint);
+  color: var(--accent-deep);
+  font-family: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.crm-app .crm-actor-docs-dropzone:hover:not(:disabled),
+.crm-app .crm-actor-docs-dropzone.is-dragging {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+  transform: translateY(-1px);
+}
+.crm-app .crm-actor-docs-dropzone:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.crm-app .crm-actor-docs-dropzone:disabled { cursor: not-allowed; opacity: 0.58; }
+.crm-app .crm-actor-docs-dropzone strong { font-size: 13px; color: var(--ink); }
+.crm-app .crm-actor-docs-dropzone span { font-size: 11.5px; color: var(--ink-3); }
+.crm-app .crm-actor-docs-dropzone small { margin-top: 8px; font-size: 10.5px; line-height: 1.5; color: var(--ink-4); }
+.crm-app .crm-actor-docs-upload .inline-alert { margin: 0; }
 
 @media (max-width: 720px) {
   .crm-app .crm-actor-docs__row { align-items: flex-start; flex-wrap: wrap; }

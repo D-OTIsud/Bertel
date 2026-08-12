@@ -41,6 +41,104 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
 }
 
+function useActorDocumentAccessToken() {
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const client = getSupabaseClient();
+    if (!client) return;
+    void client.auth.getSession().then(({ data }) => {
+      if (alive) setAccessToken(data.session?.access_token ?? null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return accessToken;
+}
+
+/** Zone d'ajout dédiée au rail droit de l'onglet Documents. */
+export function CrmActorDocumentDropzone({
+  actorId,
+  canWrite,
+}: {
+  actorId: string;
+  canWrite: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const accessToken = useActorDocumentAccessToken();
+  const [isDragging, setIsDragging] = useState(false);
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!accessToken) throw new Error('Session expirée. Reconnectez-vous pour ajouter un document.');
+      return uploadActorDocument({ actorId, file, accessToken });
+    },
+    onSuccess: () => {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      void refresh();
+    },
+  });
+
+  const canUpload = canWrite && Boolean(accessToken) && !uploadMutation.isPending;
+  const disabledReason = !canWrite
+    ? CRM_READ_ONLY_REASON
+    : !accessToken
+      ? 'Session indisponible. Reconnectez-vous pour ajouter un document.'
+      : undefined;
+
+  function addFile(file: File | undefined) {
+    if (file && canUpload) uploadMutation.mutate(file);
+  }
+
+  return (
+    <section className="rcard crm-actor-docs-upload" aria-labelledby="crm-actor-documents-upload-title">
+      <h4 id="crm-actor-documents-upload-title">Ajouter un document</h4>
+      <button
+        type="button"
+        className={'crm-actor-docs-dropzone' + (isDragging ? ' is-dragging' : '')}
+        disabled={!canUpload}
+        title={disabledReason}
+        onClick={() => fileInputRef.current?.click()}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          if (canUpload) setIsDragging(true);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          setIsDragging(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragging(false);
+          addFile(event.dataTransfer.files?.[0]);
+        }}
+      >
+        <Upload size={22} aria-hidden />
+        <strong>{uploadMutation.isPending ? 'Ajout en cours…' : 'Déposez un fichier ici'}</strong>
+        <span>ou cliquez pour le sélectionner</span>
+        <small>JPG, PNG, WebP · 2 000 px max<br />PDF · 5 Mo max</small>
+      </button>
+      <input
+        ref={fileInputRef}
+        className="crm-actor-docs__file-input"
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp"
+        aria-label="Sélectionner un document à ajouter"
+        onChange={(event) => addFile(event.target.files?.[0])}
+      />
+      {uploadMutation.isError && (
+        <div className="inline-alert" role="alert">{errorMessage(uploadMutation.error)}</div>
+      )}
+    </section>
+  );
+}
+
 /**
  * Bibliothèque privée d'un acteur en accompagnement. Un fichier reste indépendant de tout
  * établissement jusqu'à son transfert explicite vers object_document.
@@ -55,8 +153,7 @@ export function CrmActorDocuments({
   objects: LinkedObjectOption[];
 }) {
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const accessToken = useActorDocumentAccessToken();
   const [promotion, setPromotion] = useState<PromotionDraft | null>(null);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
@@ -70,30 +167,7 @@ export function CrmActorDocuments({
     queryFn: listObjectDocumentTypes,
   });
 
-  useEffect(() => {
-    let alive = true;
-    const client = getSupabaseClient();
-    if (!client) return;
-    void client.auth.getSession().then(({ data }) => {
-      if (alive) setAccessToken(data.session?.access_token ?? null);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
-
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      if (!accessToken) throw new Error('Session expirée. Reconnectez-vous pour ajouter un document.');
-      return uploadActorDocument({ actorId, file, accessToken });
-    },
-    onSuccess: () => {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      void refresh();
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async (documentId: string) => {
@@ -145,7 +219,7 @@ export function CrmActorDocuments({
   const canPromote = Boolean(
     promotion && promotion.objectId && selectedPromotionType && promotion.title.trim() && !promoteMutation.isPending,
   );
-  const mutationError = uploadMutation.error ?? deleteMutation.error ?? promoteMutation.error;
+  const mutationError = deleteMutation.error ?? promoteMutation.error;
 
   return (
     <>
@@ -154,31 +228,10 @@ export function CrmActorDocuments({
           <FileText size={15} aria-hidden />
           <h3 id="crm-actor-documents-title">Documents d&apos;accompagnement</h3>
           <span className="crm-actor-docs__count">{documents.length}</span>
-          <button
-            type="button"
-            className="crm-btn sm"
-            disabled={!canWrite || !accessToken || uploadMutation.isPending}
-            title={!canWrite ? CRM_READ_ONLY_REASON : undefined}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={12} aria-hidden /> {uploadMutation.isPending ? 'Ajout…' : 'Ajouter'}
-          </button>
-          <input
-            ref={fileInputRef}
-            className="crm-actor-docs__file-input"
-            type="file"
-            accept="application/pdf,image/jpeg,image/png,image/webp"
-            aria-label="Ajouter un document à l'acteur"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) uploadMutation.mutate(file);
-            }}
-          />
         </div>
         <div className="crm-panel__body crm-actor-docs__body">
           <p className="crm-actor-docs__intro">
             Espace privé pour réunir les pièces du projet avant la création ou le rattachement à un établissement.
-            Les images sont optimisées à 2 000 px maximum (ratio conservé) et les PDF limités à 5 Mo.
           </p>
           {supportQuery.isLoading && <p className="crm-rail__empty">Chargement des documents…</p>}
           {supportQuery.isError && <div className="inline-alert">{errorMessage(supportQuery.error)}</div>}

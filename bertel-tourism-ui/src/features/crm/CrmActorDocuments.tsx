@@ -342,12 +342,24 @@ export function CrmActorDocuments({
           <label className="crm-field">
             Type de document
             <select
+              className="crm-select"
               aria-label="Type du document transféré"
               value={selectedPromotionType}
+              disabled={documentTypesQuery.isLoading || documentTypesQuery.isError || documentTypes.length === 0}
               onChange={(event) => setPromotion({ ...promotion, roleCode: event.target.value })}
             >
+              {documentTypesQuery.isLoading && <option value="">Chargement des types…</option>}
+              {documentTypesQuery.isError && <option value="">Types indisponibles</option>}
+              {!documentTypesQuery.isLoading && !documentTypesQuery.isError && documentTypes.length === 0 && (
+                <option value="">Aucun type disponible</option>
+              )}
               {documentTypes.map((type) => <option key={type.code} value={type.code}>{type.name}</option>)}
             </select>
+            {documentTypesQuery.isError && (
+              <span className="crm-field__hint" role="alert">
+                Impossible de charger les types de document. Fermez puis rouvrez cette fenêtre pour réessayer.
+              </span>
+            )}
           </label>
           <label className="crm-field">
             Titre

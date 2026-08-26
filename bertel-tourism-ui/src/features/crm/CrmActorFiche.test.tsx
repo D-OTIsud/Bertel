@@ -148,6 +148,39 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(within(side).queryByText('Interactions · 12 mois')).not.toBeInTheDocument();
   });
 
+  it('transfert documentaire : affiche les libellés des types dans la liste', async () => {
+    crmMock.listActorSupport.mockResolvedValue({
+      defaultRole: { code: 'operator', name: 'Exploitant' },
+      documents: [{
+        documentId: 'doc-1',
+        title: 'accessibilite.png',
+        notes: null,
+        validFrom: null,
+        validTo: null,
+        status: 'active',
+        intendedRoleCode: null,
+        intendedRoleName: null,
+        mimeType: 'image/png',
+        sizeBytes: 2048,
+        promotedToObjectId: null,
+        promotedDocumentId: null,
+        promotedAt: null,
+        createdAt: '2026-08-12T08:00:00Z',
+      }],
+    });
+
+    renderFiche();
+    fireEvent.click(await screen.findByRole('tab', { name: /Documents d'accompagnement/ }));
+    const documentRow = (await screen.findByText('accessibilite.png')).closest('.crm-actor-docs__row') as HTMLElement;
+    fireEvent.click(within(documentRow).getByRole('button', { name: 'Transférer' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Transférer vers un établissement' });
+    const typeSelect = within(dialog).getByLabelText('Type du document transféré');
+    expect(within(typeSelect).getByRole('option', { name: 'Brochure' })).toHaveValue('brochure');
+    expect(within(typeSelect).getByRole('option', { name: 'Certificat' })).toHaveValue('certificat');
+    expect(typeSelect).toHaveValue('brochure');
+  });
+
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {
     renderFiche();
     expect(await screen.findByText('Mme Marie Hoarau')).toBeInTheDocument();

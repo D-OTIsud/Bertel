@@ -263,7 +263,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_bed.sql"
 
-      - name: opening period type test (§81 14i — ref_code_opening_period_type partition + seeds + opening_period.period_type_id FK + read-helper code)
+      - name: opening period test (§81/§92 14i+14o — final 3-type catalog + recurrence/closure + FK + read helper)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_opening_period_type.sql"

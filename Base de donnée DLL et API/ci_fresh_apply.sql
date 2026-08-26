@@ -408,6 +408,12 @@ ROLLBACK;
 \echo '== E2     migration_selection_emails.sql  (§211 api.list_selection_emails: editor-gated + publisher-scoped bulk email export for an Explorer selection or a saved list; operator-actor -> object-contact cascade; needs E1 internal resolver, api_views current_user_can_edit_objects, CRM current_user_crm_object_ids. MOVED AFTER 16u (tache 7, §208 alignment): p_reason now first/mandatory, VOLATILE, writes public.actor_contact_export_log (created by 16u) only when the actor arm emits, superuser arm aligned on api.can_read_actor_contacts (never is_platform_superuser), GRANT authenticated only) =='
 \ir migration_selection_emails.sql
 
+\echo '== 16v    migration_org_link_reconcile.sql  (214 api.save_object_relations : la branche org_links devient un RECONCILE non destructif. Le delete-all + re-insert detruisait la ligne object_org_link qui PORTE le droit d ecrire d un editeur (user_can_write_canonical = permission + EXISTS lien publisher), donc le WITH CHECK de canonical_ins_object_org_link refusait la re-insertion : 42501 pour TOUT editeur, invisible pour un superuser (qui passe par is_object_owner). Symptome utilisateur : « impossible de rattacher un prestataire » — 15/17/19 partagent le module relationships et donc cet appel. Ordre impose : resoudre sans ecrire, demarquer le principal, UPSERT, supprimer le reliquat EN DERNIER. SECURITY INVOKER inchange, aucune policy touchee. Doit passer APRES 7, 8r, 8b, 8o et 16u) =='
+\ir migration_org_link_reconcile.sql
+
+\echo '== 16v-test garde permanente 214 (persona editeur reel par request.jwt.claims + SET LOCAL ROLE : B l editeur enregistre le module relationships et le lien publisher SURVIT / B2 deux enregistrements de suite / C le superuser ecrit toujours / D un authentifie sans membership reste refuse 42501 / E un lien omis du payload est bien supprime / F la bascule du principal ne heurte pas uq_object_primary_org / G un doublon payload leve toujours 23505 ; verifie ROUGE contre le corps delete-all) =='
+\ir tests/test_org_link_reconcile_editor.sql
+
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
 

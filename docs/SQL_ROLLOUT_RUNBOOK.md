@@ -617,3 +617,103 @@ transformait le save en **destruction silencieuse**. Vérifié rouge sans le rep
 > `ref_classification_scheme_applicability` et `opening_period.is_closure` créés par
 > `supabase/migrations` mais absents du manifeste. Tant qu'il n'est pas réparé (passe dédiée), ces deux
 > gardes ne protègent **rien automatiquement**.
+
+---
+
+## 16v — `migration_org_link_reconcile.sql` (§214, l'écriture ne détruit plus le droit d'écrire)
+
+**Créneau.** Après `E2` dans le manifeste, premier `16x` libre après 16u. Doit passer **APRÈS**
+les étapes 7 et 8r (elles installent le corps de `api.save_object_relations` — les ré-appliquer
+après 16v **rouvrirait le défaut**), après 8b (`api.user_can_write_object_canonical`), après 8o
+(la famille d'écriture par commande de `object_org_link`) et après 16u (la branche `actors`
+appelle `api.can_read_actor_contacts`).
+
+### Le défaut
+
+La branche `org_links` faisait `DELETE FROM object_org_link WHERE object_id = …` puis ré-insérait
+tout. Or pour un **éditeur** — ni superuser, ni propriétaire — le droit d'écrire **EST** ce lien :
+
+```
+api.user_can_write_canonical = user_has_permission('edit_canonical_when_publisher')
+                               AND EXISTS(object_org_link publisher → api.current_user_org_id())
+```
+
+Après le DELETE, cet `EXISTS` est faux **dès l'instruction suivante**. Le `WITH CHECK` de
+`canonical_ins_object_org_link` refuse donc la ré-insertion :
+
+```
+42501  new row violates row-level security policy for table "object_org_link"
+```
+
+Toute la transaction est annulée. **La fonction détruisait le droit qui l'autorise.**
+
+Le symptôme utilisateur était « je ne peux pas rattacher un prestataire » : §15 (relations),
+§17 (rattachements ORG) et §19 (prestataires) sont **un seul module front**, `relationships`, donc
+un seul appel RPC — qui porte `org_links` dès que le chargeur a pu les lire (le cas nominal).
+Le front mappait le 42501 sur « Cette action n'est pas autorisée avec vos droits actuels »
+(`mapMutationError`), affiché sous le libellé du module, « Liens vers fiches ».
+
+**Un administrateur ne le voyait jamais** : il passe par `api.is_object_owner` →
+`api.is_platform_superuser()`, qui ne lit pas `object_org_link`.
+
+### Le correctif
+
+Réconcile non destructif, dans cet ordre — chacune des 4 étapes a une raison :
+
+1. résoudre le payload **sans écrire** (une référence invalide ne doit rien avoir touché) ;
+2. **retirer le drapeau principal devenu obsolète AVANT d'en poser un nouveau** — sinon l'unique
+   partiel `uq_object_primary_org` (un seul principal par fiche) refuserait l'état transitoire :
+   ce serait une régression **introduite par le correctif**, que le delete-all n'avait pas ;
+3. `INSERT … ON CONFLICT DO UPDATE` du jeu cible — la ligne qui autorise l'appel n'est jamais
+   supprimée ;
+4. supprimer **en dernier** ce que le payload n'a pas repris (un retrait délibéré reste possible).
+
+La fonction reste **`SECURITY INVOKER`** : modèle de sécurité inchangé, la RLS gate toujours chaque
+ligne écrite, l'autorisation d'entrée reste `internal.workspace_assert_can_write_object`. **Aucune
+policy n'est touchée.** Les branches `object_relations`, `incoming_relations` et `actors` (dont le
+report §208/T13b de `actor_object_role.note`) sont reprises **à l'identique** du corps vif
+(`prosrc` md5 `ada466d11941fa7017558a9f63d8513b`, diff §213 effectué avant toute écriture).
+
+**Effet de bord souhaitable :** une ligne inchangée n'est plus supprimée puis recréée — elle garde
+son `created_at`, et `audit.log_row_changes` cesse d'enregistrer un DELETE + un INSERT à chaque
+enregistrement du module.
+
+**Après application :** `NOTIFY pgrst` (émis dans la transaction). Aucun MV concerné, aucune DDL.
+
+### ⚠ Caveat de rejeu — 16v est le DERNIER mot sur ce corps
+
+`object_workspace_safe_write_rpcs.sql` (7) et `migration_actor_links_editor.sql` (8r) portent tous
+deux une copie du corps. Elle est **repliée** (les trois sont désormais byte-identiques ; les
+copies 7 et 8r avaient divergé sur un bloc de commentaires, corrigé au passage). Si l'un des deux
+est ré-appliqué à une base vive, **re-jouer 16v derrière** — sinon le delete-all revient.
+
+### Jumeau connu, délibérément hors périmètre
+
+La branche `actors` a la **même forme destructrice**, et `actor_object_role` porte lui aussi un
+droit d'écriture (`api.is_object_owner` = lien acteur **primaire** dont l'e-mail est celui de
+l'appelant). Un utilisateur dont ce serait l'**unique** titre subirait le même 42501. Mesuré sur la
+base vive le 2026-08-26 : **0 utilisateur** dans ce cas. C'est un piège de maintenance, pas une
+fuite vive — à refermer par un réconcile de même forme le jour où cette branche sera retouchée.
+
+### Vérification
+
+`tests/test_org_link_reconcile_editor.sql` (16v-test) — persona éditeur **réel** (`request.jwt.claims`
+**et** `SET LOCAL ROLE authenticated` : `SET ROLE` seul rend `auth.uid()` NULL et le test devient
+vacant ; `set_config` seul laisse le harnais en BYPASSRLS, or c'est précisément la RLS qui est
+l'objet du test). Le témoin ne porte **que** `edit_canonical_when_publisher` — ni rôle plateforme,
+ni rang admin, ni lien acteur primaire, chacun lui donnant le droit par un **autre** chemin.
+
+B l'éditeur enregistre et le lien publisher **survit** · B2 deux enregistrements de suite (le droit
+n'est pas consommé) · C le superuser écrit **toujours** (la garde se mesure des deux côtés, §213) ·
+D un authentifié sans membership reste refusé en 42501 (le correctif n'ouvre rien) · E un lien omis
+du payload est bien supprimé (pas de sur-correction) · F la bascule du principal ne heurte pas
+`uq_object_primary_org` · G un doublon dans le payload lève toujours 23505, jamais absorbé en
+silence (§212).
+
+Vérifié **rouge** contre le corps delete-all (`new row violates row-level security policy for table
+"object_org_link"`), **vert** avec 16v appliquée — les deux exécutions en transaction annulée contre
+la base vive, le 2026-08-26.
+
+> **État du gate CI :** `sql-fresh-apply` reste **rouge sur `master`** pour des raisons antérieures
+> et étrangères à §214 (cf. l'encadré de 16u). Cette garde a donc été rejouée **à la main** contre le
+> déployé ; elle ne protège rien automatiquement tant que le manifeste n'est pas réparé.

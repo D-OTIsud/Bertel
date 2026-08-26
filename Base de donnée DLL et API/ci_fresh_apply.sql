@@ -198,6 +198,15 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 14m    migration_object_web_channel.sql  (§90 object-scoped réseaux sociaux + distribution OTA: object_web_channel — composite FK (kind_id,kind_domain)->ref_code(id,domain) for social_network|distribution_channel; §49 split read gate + per-command canonical write + updated_at/audit triggers; get_object_resource web_channels key folded in api_views_functions.sql; editor §03 read/write via direct PostgREST; retires §20) =='
 \ir migration_object_web_channel.sql
 
+\echo '== 14o    migration_opening_period_recurrence.sql  (§92 périodes récurrentes et fermetures prioritaires; DDL + fonctions non foldés) =='
+\ir migration_opening_period_recurrence.sql
+
+\echo '== 14x    migration_object_hard_delete.sql  (§108 suppression définitive admin-only + journal immuable; non foldé) =='
+\ir migration_object_hard_delete.sql
+
+\echo '== 14x-test garde transactionnelle de la suppression définitive =='
+\ir tests/test_object_hard_delete.sql
+
 \echo '== 15e    migration_iti_section06_vocab.sql  (§111 Section 06 ITI editor vocab: ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind ref_code partitions + house RLS + seeds; idempotent, self-contained) =='
 \ir migration_iti_section06_vocab.sql
 
@@ -278,6 +287,18 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
 \echo '== 16m    migration_classification_graded_label_group.sql  (§176 groupe dedie graded_label « Labels notes »: gites_epics + clevacances_keys + logis = distinctions NOTEES de reseau prive (echelle numerique), ni classement officiel Etat ni label binaire; supersede le placement 16l; DONNEE de reference seule; inerte pour les RPC; folde dans seeds_data.sql => no-op sur base fraiche; CI = tests/test_classification_regroup_network_labels.sql assert graded_label) =='
 \ir migration_classification_graded_label_group.sql
+
+\echo '== 16n    migration_classification_scheme_applicability.sql  (applicabilité des distinctions par type; DDL + seed non foldés) =='
+\ir migration_classification_scheme_applicability.sql
+
+\echo '== 16n-test garde permanente de l applicabilité des distinctions =='
+\ir tests/test_classification_scheme_applicability.sql
+
+\echo '== 16o    migration_capacity_metric_bounds.sql  (bornes observées des capacités par type; vue security_invoker non foldée) =='
+\ir migration_capacity_metric_bounds.sql
+
+\echo '== 16q-logo migration_classification_scheme_logos.sql  (URLs des logos de distinctions; DML de référence non foldé) =='
+\ir migration_classification_scheme_logos.sql
 
 \echo '== SURF1  migration_activity_contract_fix.sql  (object_act.equipment_provided_details + CHECK detail only when boolean true; get_object_resource activity block unchanged shape) =='
 \ir migration_activity_contract_fix.sql

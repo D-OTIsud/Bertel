@@ -872,6 +872,13 @@ export function sortExplorerCards(cards: ObjectCard[]): ObjectCard[] {
         return leftRank - rightRank;
       }
     }
+    // Spec 2026-08-26 — la pertinence serveur prime sur l'alphabétique. Sans terme de
+    // recherche elle vaut 0 partout et ce bloc est neutre (ordre historique préservé).
+    const leftRelevance = typeof left.relevance === 'number' ? left.relevance : 0;
+    const rightRelevance = typeof right.relevance === 'number' ? right.relevance : 0;
+    if (leftRelevance !== rightRelevance) {
+      return rightRelevance - leftRelevance;
+    }
     const nameCompare = left.name.localeCompare(right.name, 'fr', { sensitivity: 'base' });
     if (nameCompare !== 0) {
       return nameCompare;

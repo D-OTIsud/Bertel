@@ -553,6 +553,45 @@ describe('sortExplorerCards', () => {
 
     expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['certified', 'evidence']);
   });
+
+  it('classe par relevance décroissante avant le nom (recherche active)', () => {
+    const cards = [
+      makeCard({ id: 'b', type: 'HLO', name: 'A la Kaz', relevance: 2.1 }),
+      makeCard({ id: 'a', type: 'HLO', name: 'Le Jardin Créole', relevance: 5.2 }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['a', 'b']);
+  });
+
+  it("sans relevance (ou 0 partout), conserve l'ordre alphabétique historique", () => {
+    const cards = [
+      makeCard({ id: 'b', type: 'HLO', name: 'Zebre', relevance: 0 }),
+      makeCard({ id: 'a', type: 'HLO', name: 'Abri' }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['a', 'b']);
+  });
+
+  it("le rang label prime toujours sur la relevance (miroir de l'ORDER BY SQL)", () => {
+    const cards = [
+      makeCard({
+        id: 'ev',
+        type: 'HLO',
+        name: 'B',
+        relevance: 5.5,
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 1, source: 'accessibility_amenity', evidence_count: 1 },
+      }),
+      makeCard({
+        id: 'ce',
+        type: 'HLO',
+        name: 'Z',
+        relevance: 2.2,
+        label_match: { scheme_code: 'LBL_CLEF_VERTE', rank: 0, source: 'certified_label', evidence_count: 1 },
+      }),
+    ];
+
+    expect(sortExplorerCards(cards).map((card) => card.id)).toEqual(['ce', 'ev']);
+  });
 });
 
 describe('buildBucketRpcFilters — cadre & environnement (§154, transverse)', () => {

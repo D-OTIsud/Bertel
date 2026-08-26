@@ -109,8 +109,6 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir migration_crm_module.sql
 \echo '== 8z2    migration_crm_directory_search.sql  (recherche acteurs de l annuaire CRM: p_search sur list_crm_directory (4->5 args, DROP de l arite 4 = ambiguite PostgREST); nom/prenom/nom de famille/etablissement rattache en sous-chaine + trigrammes pg_trgm seuil 0.45 calibre live, telephone/e-mail structures sans flou; classement pertinence puis recence; search_path etendu a `extensions` (pg_trgm) — depend de 8z) =='
 \ir migration_crm_directory_search.sql
-\echo '== 8z3    actor prospects + private document library (optional establishment, default role, actor-documents bucket) =='
-\ir ../supabase/migrations/20260807124408_actor_prospects_documents.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='
@@ -169,6 +167,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
 \echo '== A-LEGAL migration_unblock_team_legal_access.sql  (dedicated legal permission + private-document metadata + role hardening) =='
 \ir migration_unblock_team_legal_access.sql
+
+\echo '== 8z3    actor prospects + private document library (after A-LEGAL creates ref_document.access_scope; optional establishment, default role, actor-documents bucket) =='
+\ir ../supabase/migrations/20260807124408_actor_prospects_documents.sql
 
 \echo '== A-LEGAL2 migration_fix_legal_workspace_permission.sql  (expose the object-scoped legal gate to the editor) =='
 \ir migration_fix_legal_workspace_permission.sql

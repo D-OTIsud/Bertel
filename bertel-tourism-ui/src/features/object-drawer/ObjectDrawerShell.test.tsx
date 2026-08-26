@@ -12,11 +12,16 @@ const detailSpy = jest.fn();
 const workspaceSpy = jest.fn();
 const prefetchWorkspaceSpy = jest.fn();
 
+// Payload par défaut du chargeur léger — mutable pour que chaque test puisse
+// poser son propre `raw` (ex. la taxonomie de l'en-tête), remis à zéro en beforeEach.
+const baseDetailData = { id: 'RESRUN0000000001', name: 'Chez Testeur', type: 'RES', raw: {} as Record<string, unknown> };
+let mockDetailData = baseDetailData;
+
 jest.mock('../../hooks/useExplorerQueries', () => ({
   useObjectDetailQuery: (objectId: string | null) => {
     detailSpy(objectId);
     return {
-      data: { id: 'RESRUN0000000001', name: 'Chez Testeur', type: 'RES', raw: {} },
+      data: mockDetailData,
       isError: false,
       error: null,
       isLoading: false,
@@ -55,6 +60,7 @@ describe('ObjectDrawerShell', () => {
     workspaceSpy.mockClear();
     mockPrefetch.mockClear();
     prefetchWorkspaceSpy.mockClear();
+    mockDetailData = baseDetailData;
     // `canEditObjects` gate le prechargement ET le bouton « Modifier ».
     useSessionStore.setState({ role: 'tourism_agent', canEditObjects: true });
   });
@@ -71,6 +77,52 @@ describe('ObjectDrawerShell', () => {
 
     expect(screen.getByRole('heading', { name: 'Chez Testeur' })).toBeInTheDocument();
     expect(screen.getByTestId('detail-view')).toHaveTextContent('Chez Testeur');
+  });
+
+  // Demande CES : le type seul (« Gîtes, meublés & chambres d'hôtes ») ne dit pas
+  // si la fiche est un meublé, une chambre d'hôtes… La nature taxonomique
+  // (assigned_node) s'affiche en pastille à côté du type, chemin complet en title.
+  test('affiche la nature taxonomique à côté du type quand la fiche en porte une', () => {
+    mockDetailData = {
+      id: 'HLORUN00000000U4',
+      name: 'La Maison des Hôtes',
+      type: 'HLO',
+      raw: {
+        taxonomy: {
+          domains: [
+            {
+              domain: 'taxonomy_hlo',
+              path: [
+                { code: 'hebergement_locatif', name: 'Hébergement locatif', depth: 0 },
+                { code: 'chambre_d_hotes', name: "Chambre d'hôtes", depth: 1 },
+              ],
+              assigned_node: { code: 'chambre_d_hotes', name: "Chambre d'hôtes", depth: 1 },
+            },
+          ],
+        },
+      },
+    };
+
+    render(<ObjectDrawerShell objectId="HLORUN00000000U4" onClose={() => {}} />, { wrapper });
+
+    const chip = screen.getByText("Chambre d'hôtes");
+    expect(chip).toHaveClass('drawer-header__nature');
+    expect(chip).toHaveAttribute('title', "Hébergement locatif › Chambre d'hôtes");
+    // La pastille vit dans la rangée type + catégorie de l'en-tête.
+    expect(chip.closest('.drawer-header__eyebrow-row')).not.toBeNull();
+  });
+
+  test('pas de pastille sans taxonomie, ni quand la nature répète le libellé de type', () => {
+    render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+    expect(document.querySelector('.drawer-header__nature')).toBeNull();
+
+    // Nature « Restaurant » sur une fiche RES (« Restaurant ») : rien à apprendre.
+    mockDetailData = {
+      ...baseDetailData,
+      raw: { taxonomy: { domains: [{ path: [{ name: 'Restaurant' }], assigned_node: { name: 'Restaurant' } }] } },
+    };
+    render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={() => {}} />, { wrapper });
+    expect(document.querySelector('.drawer-header__nature')).toBeNull();
   });
 
   test('precharge la route editeur a l ouverture du tiroir', () => {

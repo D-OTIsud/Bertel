@@ -414,6 +414,15 @@ ROLLBACK;
 \echo '== 16v-test garde permanente 214 (personas reels par request.jwt.claims + SET LOCAL ROLE. Temoin editeur ne portant QUE edit_canonical_when_publisher : B il enregistre le module relationships et le lien publisher SURVIT / B2 deux enregistrements de suite / C le superuser ecrit toujours / D un authentifie sans membership reste refuse 42501 / E un lien omis du payload est bien supprime / F la bascule du principal ne heurte pas uq_object_primary_org / G un doublon payload leve toujours 23505. Temoin proprietaire PAR LIEN ACTEUR (claim email -> user_actor_ids) : H il enregistre et le lien qui porte son droit survit. I le report de note 208/T13b survit au reconcile. Verifie ROUGE contre le corps delete-all, sur les DEUX tables : 42501 object_org_link (bloc B) et 42501 actor_object_role (bloc H)) =='
 \ir tests/test_org_link_reconcile_editor.sql
 
+\echo '== 16b    migration_ref_code_admin_rpcs.sql  (Phase 7.5 editeur de referentiels ref_code : api.ref_code_domain_is_editable + rpc_upsert/set_active/reorder/delete_ref_code + list_ref_code_domains + ref_code_usage_count(s). DOCUMENTEE au runbook depuis sa creation mais JAMAIS declaree ici : trou d integrite de deploiement preexistant, revele par la tache 5 de 211 dont l etape 16w delegue a ces fonctions et echouerait donc sur base fraiche. Depend de rls_policies.sql (is_platform_superuser) et de schema_unified.sql (ref_code, ref_code_domain_registry)) =='
+\ir migration_ref_code_admin_rpcs.sql
+
+\echo '== 16w    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
+\ir migration_ref_catalog_admin.sql
+
+\echo '== 16w-test garde permanente 211 (compte exact des catalogues / domaines editables et identifiables / cible de FK normalisee en catalog_key / maitre et detail jamais divergents / balayage exhaustif de get_ref_catalog / compteur fusionnant DEUX FK entrantes distinctes / cycle creer-editer-refuser-supprimer sur cle uuid, naturelle et composite / delegation ref_code non inversee avec activation et reordonnancement / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
+\ir tests/test_ref_catalog_admin.sql
+
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
 

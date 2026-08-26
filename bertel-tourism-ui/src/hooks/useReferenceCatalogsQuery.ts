@@ -12,7 +12,7 @@ export const REFERENCE_CATALOGS_QUERY_KEY = ['reference-catalogs'] as const;
  * resolvent des codes vers des identifiants depuis ces catalogues, donc un
  * catalogue trop vieux ferait rater un code fraichement ajoute par un
  * administrateur. L'editeur de `ref_code` invalide en plus cette cle
- * explicitement (voir RefCodeEditor).
+ * explicitement (voir RefCatalogAdmin).
  *
  * `meta.persist` fait retenir l'entree par le persisteur localStorage
  * (Providers.tsx) : apres un rechargement de page, 0 requete de catalogue.

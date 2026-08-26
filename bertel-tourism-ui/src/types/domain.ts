@@ -307,6 +307,12 @@ export interface ObjectCard {
   /** §09 colored tag chips (curated display layer), set by normalizeExplorerCard. */
   tagChips?: ObjectCardTagChip[];
   label_match?: ObjectCardLabelMatch | null;
+  /**
+   * Pertinence serveur (spec 2026-08-26) : étages nom exact [5,6) > préfixe [4,5) >
+   * contenu [3,4) > plein texte [2,3) > flou [0,1] ; 0 sans terme de recherche.
+   * Toujours émise par list_object_resources_filtered_page ; absente des marqueurs.
+   */
+  relevance?: number | null;
   tags?: ObjectCardTag[];
   badges?: ObjectCardBadge[];
   taxonomy?: ObjectCardTaxonomy[];

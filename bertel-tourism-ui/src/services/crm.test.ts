@@ -7,6 +7,7 @@ import {
   listCrmDirectory,
   listCrmTimeline,
   listDemandTopics,
+  listObjectDocumentTypes,
   listObjectContactSuggestions,
   matchesCrmDirectorySearch,
   parseActorCrmSnapshot,
@@ -898,6 +899,46 @@ describe('listContactKinds', () => {
   it('hors démo sans client Supabase configuré : renvoie [] (fail-soft)', async () => {
     useSessionStore.setState({ demoMode: false });
     await expect(listContactKinds()).resolves.toEqual([]);
+  });
+});
+
+// Les partitions ref_code_* ne figurent pas dans le cache PostgREST : le vocabulaire
+// document_type doit impérativement passer par la table parente ref_code + filtre domain.
+describe('listObjectDocumentTypes', () => {
+  afterEach(() => {
+    mockedGetSupabaseClient.mockReset();
+  });
+
+  it('interroge ref_code avec domain=document_type et restitue les libellés', async () => {
+    const query = {
+      select: jest.fn(),
+      eq: jest.fn(),
+      order: jest.fn(),
+    };
+    query.select.mockReturnValue(query);
+    query.eq.mockReturnValue(query);
+    query.order
+      .mockReturnValueOnce(query)
+      .mockResolvedValueOnce({
+        data: [
+          { code: 'carte', name: 'Carte / menu (PDF)' },
+          { code: 'brochure', name: 'Brochure' },
+        ],
+        error: null,
+      });
+    const from = jest.fn(() => query);
+    mockedGetSupabaseClient.mockReturnValue({ from } as unknown as ReturnType<typeof getSupabaseClient>);
+
+    await expect(listObjectDocumentTypes()).resolves.toEqual([
+      { code: 'carte', name: 'Carte / menu (PDF)' },
+      { code: 'brochure', name: 'Brochure' },
+    ]);
+    expect(from).toHaveBeenCalledWith('ref_code');
+    expect(query.select).toHaveBeenCalledWith('code, name');
+    expect(query.eq).toHaveBeenNthCalledWith(1, 'domain', 'document_type');
+    expect(query.eq).toHaveBeenNthCalledWith(2, 'is_active', true);
+    expect(query.order).toHaveBeenNthCalledWith(1, 'position', { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(2, 'name', { ascending: true });
   });
 });
 

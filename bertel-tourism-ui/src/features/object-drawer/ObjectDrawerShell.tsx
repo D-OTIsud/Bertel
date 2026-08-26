@@ -10,6 +10,7 @@ import { usePresenceRoom } from '../../hooks/usePresenceRoom';
 import { useSessionStore } from '../../store/session-store';
 import { resolveTypeLabel } from '../../utils/labels';
 import { ObjectDetailView } from './ObjectDetailView';
+import { parseTaxonomyEyebrow } from './utils';
 
 /**
  * Delai avant le prechargement automatique de l'editeur, en millisecondes.
@@ -113,6 +114,15 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
   const typeLineUpper = typeLabel ? typeLabel.toUpperCase() : '';
   const title = resolvedData?.name ?? 'Chargement…';
 
+  // Nature/sous-catégorie taxonomique (demande CES) : le type seul ne dit pas si
+  // une fiche HLO est un meublé, une chambre d'hôtes… On n'affiche pas une nature
+  // qui répète mot pour mot le libellé de type (« RESTAURANT · Restaurant »).
+  const taxonomyEyebrow = resolvedData ? parseTaxonomyEyebrow(previewRaw as Record<string, unknown>) : null;
+  const natureChip =
+    taxonomyEyebrow && taxonomyEyebrow.label.trim().toLowerCase() !== typeLabel.trim().toLowerCase()
+      ? taxonomyEyebrow
+      : null;
+
   // Le bouton « Modifier » est un <button> + router.push, donc Next ne precharge
   // PAS la route (il ne le fait que pour les <Link>). Le bundle de l'editeur
   // (~253 Ko JS+CSS, 20-21 sections importees statiquement) partait au clic. On
@@ -166,8 +176,13 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
         ) : (
           <div className="drawer-header__left">
             {resolvedData && (
-              <div className="drawer-header__eyebrow-row" aria-label="Type">
+              <div className="drawer-header__eyebrow-row" aria-label="Type et catégorie">
                 <span className="drawer-header__type-line">{typeLineUpper}</span>
+                {natureChip && (
+                  <span className="drawer-header__nature" title={natureChip.title}>
+                    {natureChip.label}
+                  </span>
+                )}
               </div>
             )}
             <h2 className="font-display text-2xl font-semibold">{title}</h2>

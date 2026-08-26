@@ -2832,6 +2832,7 @@ a {
 .drawer-header__eyebrow-row {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
 }
@@ -2842,6 +2843,22 @@ a {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--ink-3);
+}
+
+/* Nature taxonomique (demande CES) : la sous-catégorie de la fiche — « Chambre
+   d'hôtes », « Camping », « Restaurant traditionnel »… — lisible au premier
+   coup d'œil à côté du type. Teinte thème (suit le branding d'ORG). */
+.drawer-header__nature {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--theme-primary-rgb), 0.28);
+  background: rgba(var(--theme-primary-rgb), 0.08);
+  color: var(--theme-primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .drawer-header__mode-eyebrow {

@@ -937,6 +937,48 @@ function buildObjectTaxonomyItems(value: unknown): TaxonomyItem[] {
     .filter((item): item is TaxonomyItem => item !== null);
 }
 
+/** Nature taxonomique pour l'en-tête du tiroir — libellé court + chemin complet (tooltip). */
+export interface TaxonomyEyebrow {
+  /** Nœud(s) affecté(s), ex. « Chambre d'hôtes » (joints par « · » si plusieurs domaines). */
+  label: string;
+  /** Chemin(s) complet(s), ex. « Hébergement locatif › Chambre d'hôtes ». */
+  title: string;
+}
+
+/**
+ * Nature/sous-catégorie affichable dans l'en-tête de fiche (demande CES :
+ * « hôtel, meublé, chambre d'hôtes ou camping ? » doit se voir au premier coup
+ * d'œil — le libellé de TYPE seul ne discrimine pas, ex. HLO = « Gîtes, meublés
+ * & chambres d'hôtes »). Source : `raw.taxonomy.domains` — même clé et même
+ * forme sur les DEUX voies de lecture du tiroir (get_object_with_deep_data sous
+ * l'enveloppe `object`, repli get_object_resource à plat). Le nœud AFFECTÉ
+ * (`assigned_node.name`, repli : dernier segment du `path`) fait le libellé ;
+ * le chemin complet part dans `title`. Corpus vérifié 2026-08 : au plus UN
+ * domaine par objet publié — la jointure « · » est une ceinture.
+ */
+export function parseTaxonomyEyebrow(raw: Record<string, unknown>): TaxonomyEyebrow | null {
+  const domains = readArray(readRecord(raw.taxonomy).domains);
+  const labels: string[] = [];
+  const titles: string[] = [];
+
+  for (const domain of domains) {
+    const path = readArray(domain.path)
+      .map((entry) => readNamedValue(entry))
+      .filter(Boolean);
+    const assigned = readNamedValue(domain.assigned_node) || path[path.length - 1] || '';
+    if (!assigned || labels.some((label) => label.toLowerCase() === assigned.toLowerCase())) {
+      continue;
+    }
+    labels.push(assigned);
+    titles.push(path.length > 1 ? path.join(' › ') : assigned);
+  }
+
+  if (!labels.length) {
+    return null;
+  }
+  return { label: labels.join(' · '), title: titles.join(' — ') };
+}
+
 function buildSustainabilityItems(value: unknown): TaxonomyItem[] {
   return readArray(value)
     .map((item, index) => {

@@ -630,8 +630,9 @@ appelle `api.can_read_actor_contacts`).
 
 ### Le défaut
 
-La branche `org_links` faisait `DELETE FROM object_org_link WHERE object_id = …` puis ré-insérait
-tout. Or pour un **éditeur** — ni superuser, ni propriétaire — le droit d'écrire **EST** ce lien :
+**Les deux branches `org_links` et `actors`** faisaient `DELETE FROM … WHERE object_id = …` puis
+ré-inséraient tout. Le défaut **vif** était sur `org_links` ; le jumeau `actors` est décrit plus bas.
+Or pour un **éditeur** — ni superuser, ni propriétaire — le droit d'écrire **EST** ce lien :
 
 ```
 api.user_can_write_canonical = user_has_permission('edit_canonical_when_publisher')
@@ -687,13 +688,33 @@ deux une copie du corps. Elle est **repliée** (les trois sont désormais byte-i
 copies 7 et 8r avaient divergé sur un bloc de commentaires, corrigé au passage). Si l'un des deux
 est ré-appliqué à une base vive, **re-jouer 16v derrière** — sinon le delete-all revient.
 
-### Jumeau connu, délibérément hors périmètre
+### Le jumeau `actors`, refermé dans la même passe
 
-La branche `actors` a la **même forme destructrice**, et `actor_object_role` porte lui aussi un
-droit d'écriture (`api.is_object_owner` = lien acteur **primaire** dont l'e-mail est celui de
-l'appelant). Un utilisateur dont ce serait l'**unique** titre subirait le même 42501. Mesuré sur la
-base vive le 2026-08-26 : **0 utilisateur** dans ce cas. C'est un piège de maintenance, pas une
-fuite vive — à refermer par un réconcile de même forme le jour où cette branche sera retouchée.
+La branche `actors` avait **exactement la même forme**, et `actor_object_role` porte lui aussi un
+droit d'écriture : `api.is_object_owner` est vrai pour qui détient sur la fiche un lien acteur
+**primaire** dont l'e-mail est le sien (`api.user_actor_ids` fait le pont par `actor_channel`).
+Un appelant dont ce serait l'**unique** titre subissait le même 42501, dans l'autre table.
+
+Mesuré sur la base vive le 2026-08-26 : **0 utilisateur** dans ce cas — c'était donc un piège de
+maintenance, pas une fuite vive. Il est fermé ici sur demande PO pour que la **classe entière**
+disparaisse, pas parce qu'il blessait quelqu'un. Preuve qu'il était réel : le bloc H du test,
+joué seul contre le corps `delete-all`, échoue en
+`42501 … for table "actor_object_role"`.
+
+**Le report de note §208/T13b y est préservé — et simplifié.** Il n'existait que pour compenser le
+`DELETE` : un appelant qui échoue `api.can_read_actor_contacts` charge `note: null` (rédaction T13)
+et l'aurait donc effacée en enregistrant ; l'ancien corps prenait un instantané **avant** le DELETE
+pour la réinjecter. Sans DELETE, « reporter » se réduit à **ne pas écrire la colonne** : la ligne
+conservée garde sa note en base. Même garantie, un mécanisme de moins — l'instantané
+`v_actor_notes_before` a disparu. La sonde reste évaluée **une** fois avec son `COALESCE(…, FALSE)`
+(§204), forme assertée par `tests/test_actor_link_note_carryover.sql` (16u-test2), **rejoué vert**
+contre le nouveau corps.
+
+### Limite assumée, préexistante et non aggravée
+
+Un appelant qui retire **délibérément** le lien portant son propre droit (son ORG publisher, ou son
+propre drapeau primaire) se verrouille : l'appel échoue en 42501 à l'étape 2 ou 4. C'est honnête et
+bruyant, et c'est le « last-publisher self-lock-out » déjà inscrit au registre des différés.
 
 ### Vérification
 
@@ -710,9 +731,16 @@ du payload est bien supprimé (pas de sur-correction) · F la bascule du princip
 `uq_object_primary_org` · G un doublon dans le payload lève toujours 23505, jamais absorbé en
 silence (§212).
 
-Vérifié **rouge** contre le corps delete-all (`new row violates row-level security policy for table
-"object_org_link"`), **vert** avec 16v appliquée — les deux exécutions en transaction annulée contre
-la base vive, le 2026-08-26.
+Un **second témoin** couvre le jumeau : propriétaire **par lien acteur** (claim `email` →
+`api.user_actor_ids`), sans membership ni permission — H il enregistre ses prestataires et le lien
+qui porte son droit **survit**. I le report de note §208/T13b survit au réconcile.
+
+Vérifié **rouge** contre le corps delete-all, **sur les deux tables** : `42501 … for table
+"object_org_link"` (bloc B) et `42501 … for table "actor_object_role"` (bloc H, rejoué seul).
+**Vert** avec 16v appliquée. Rejoués verts contre le nouveau corps :
+`test_actor_link_note_carryover.sql`, `test_actor_links_editor.sql`,
+`test_actor_contacts_org_gate.sql`. Toutes ces exécutions en transaction annulée contre la base
+vive, le 2026-08-26.
 
 > **État du gate CI :** `sql-fresh-apply` reste **rouge sur `master`** pour des raisons antérieures
 > et étrangères à §214 (cf. l'encadré de 16u). Cette garde a donc été rejouée **à la main** contre le

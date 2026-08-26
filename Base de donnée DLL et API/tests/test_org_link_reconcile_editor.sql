@@ -387,5 +387,110 @@ BEGIN
 END$$;
 RESET ROLE;
 
+-- ---------------------------------------------------------------------
+-- H. LE JUMEAU `actors` — un appelant dont le SEUL titre est un lien acteur
+-- ---------------------------------------------------------------------
+-- `api.is_object_owner` est vrai pour qui detient sur la fiche un lien acteur PRIMAIRE dont
+-- l'e-mail est le sien (api.user_actor_ids fait le pont par actor_channel[email]). La branche
+-- `actors` etant elle aussi un delete-all + re-insert, un tel appelant voyait son propre droit
+-- disparaitre avec le DELETE, puis le WITH CHECK de canonical_ins_actor_object_role refuser la
+-- re-insertion : le MEME 42501 que sur `org_links`, dans une autre table.
+-- Le persona porte un claim `email` : `api.current_user_email()` le lit dans le JWT, pas dans
+-- auth.users — sans lui, `user_actor_ids()` rend vide et le bloc serait VACANT.
+-- Il n'a NI membership NI permission : son unique titre est ce lien (asserte en H1).
+DO $$
+DECLARE
+  v_owner uuid := '16b00000-0000-4000-8000-000000000004';
+  v_act_b uuid := '16b00000-0000-4000-8000-00000000000b';
+  v_role  uuid;
+  v_kind  uuid;
+  v jsonb;
+BEGIN
+  SELECT id INTO v_role FROM ref_actor_role WHERE code = 'operator' LIMIT 1;
+  SELECT id INTO v_kind FROM ref_code_contact_kind WHERE code = 'email' LIMIT 1;
+  ASSERT v_kind IS NOT NULL, 'fixture H: ref_code_contact_kind[email] manquant — le pont user_actor_ids serait vacant';
+
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  INSERT INTO auth.users (id, email) VALUES (v_owner, 'proprio16v@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role, display_name) VALUES (v_owner, 'tourism_agent', 'Proprio 16v')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, display_name = EXCLUDED.display_name;
+  INSERT INTO actor (id, display_name) VALUES (v_act_b, 'Exploitant temoin 16v');
+  INSERT INTO actor_channel (actor_id, kind_id, value, is_primary)
+    VALUES (v_act_b, v_kind, 'proprio16v@test.local', TRUE);
+  -- Son lien PRIMAIRE sur la fiche : c'est TOUT son droit d'ecrire.
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+    VALUES (v_act_b, 'HOTRUN00000016V1', v_role, TRUE, 'public');
+  PERFORM set_config('request.jwt.claims', NULL, true);
+END$$;
+
+DO $$
+DECLARE v jsonb; v_n int;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    '{"role":"authenticated","sub":"16b00000-0000-4000-8000-000000000004","email":"proprio16v@test.local"}', true);
+  SET LOCAL ROLE authenticated;
+
+  ASSERT COALESCE(api.is_object_owner('HOTRUN00000016V1'), FALSE),
+    'H1a FAIL: le pont e-mail -> acteur -> lien primaire ne fonctionne pas — le bloc serait VACANT';
+  ASSERT NOT COALESCE(api.user_can_write_canonical('HOTRUN00000016V1'), FALSE),
+    'H1b FAIL: le temoin ne doit avoir AUCUN autre titre que son lien acteur';
+
+  -- Il conserve son propre lien et rattache un second prestataire, non principal.
+  v := api.save_object_relations('HOTRUN00000016V1', jsonb_build_object(
+        'actors', jsonb_build_array(
+          jsonb_build_object('actor_id','16b00000-0000-4000-8000-00000000000b',
+                             'role_code','operator','is_primary',true,'visibility','public'),
+          jsonb_build_object('actor_id','16b00000-0000-4000-8000-00000000000a',
+                             'role_code','operator','is_primary',false,'visibility','public'))));
+  ASSERT v->>'success' = 'true',
+    format('H2 FAIL: un proprietaire par lien acteur doit pouvoir enregistrer ses prestataires, recu %s', v);
+
+  RESET ROLE;
+  ASSERT EXISTS (SELECT 1 FROM actor_object_role
+                  WHERE object_id = 'HOTRUN00000016V1'
+                    AND actor_id = '16b00000-0000-4000-8000-00000000000b' AND is_primary),
+    'H3 FAIL: le lien qui PORTE son droit doit avoir survecu a l enregistrement';
+  SELECT count(*) INTO v_n FROM actor_object_role WHERE object_id = 'HOTRUN00000016V1';
+  ASSERT v_n = 2, format('H4 FAIL: les 2 liens acteur doivent exister, trouve %s', v_n);
+END$$;
+RESET ROLE;
+
+-- ---------------------------------------------------------------------
+-- I. Le report de note §208/T13b survit au reconcile
+-- ---------------------------------------------------------------------
+-- La garde dediee est tests/test_actor_link_note_carryover.sql (16u-test2) et elle reste la
+-- reference. On re-asserte ici le seul point que le RECONCILE aurait pu casser en silence : une
+-- ligne CONSERVEE ne doit pas perdre sa note quand l'appelant ne peut pas la lire. Sans DELETE,
+-- « reporter » se reduit a NE PAS ECRIRE la colonne — encore faut-il que le DO UPDATE ne l'ecrase
+-- pas avec le NULL du payload.
+DO $$
+DECLARE v jsonb; v_note text;
+BEGIN
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  UPDATE actor_object_role SET note = 'NOTE 16v A PRESERVER'
+   WHERE object_id = 'HOTRUN00000016V1' AND actor_id = '16b00000-0000-4000-8000-00000000000b';
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  -- Persona service_role : ECRIT (bras auth.role() de is_object_owner) et LIT les lignes, mais
+  -- ECHOUE api.can_read_actor_contacts (elle court-circuite sur auth.uid() IS NULL). C'est
+  -- exactement l'appelant que T13b protege.
+  PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
+  SET LOCAL ROLE authenticated;
+  ASSERT NOT COALESCE(api.can_read_actor_contacts('HOTRUN00000016V1'), FALSE),
+    'I1 FAIL: le persona doit ECHOUER la garde des coordonnees — sinon le bloc ne teste rien';
+  v := api.save_object_relations('HOTRUN00000016V1', jsonb_build_object(
+        'actors', jsonb_build_array(
+          jsonb_build_object('actor_id','16b00000-0000-4000-8000-00000000000b',
+                             'role_code','operator','is_primary',true,'visibility','public',
+                             'note', NULL))));
+  ASSERT v->>'success' = 'true', format('I2 FAIL: enregistrement refuse, recu %s', v);
+  RESET ROLE;
+  SELECT note INTO v_note FROM actor_object_role
+   WHERE object_id = 'HOTRUN00000016V1' AND actor_id = '16b00000-0000-4000-8000-00000000000b';
+  ASSERT v_note = 'NOTE 16v A PRESERVER',
+    format('I3 FAIL: la note a ete EFFACEE par le reconcile (regression §208/T13b), valeur = %s', COALESCE(v_note, '(null)'));
+END$$;
+RESET ROLE;
+
 ROLLBACK;
 \echo '== test_org_link_reconcile_editor.sql OK =='

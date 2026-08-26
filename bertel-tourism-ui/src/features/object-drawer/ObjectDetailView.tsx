@@ -1,15 +1,13 @@
-import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   Archive,
   Award,
   CalendarDays,
-  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  Copy,
   CornerDownRight,
   FileText,
   Pencil,
@@ -40,6 +38,7 @@ import { buildEventDisplayData, type EventDateRange, type EventDisplayData } fro
 import { buildRestaurantMenuData } from './restaurant-menu';
 import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
 import { buildActivityFacts } from './activity-facts';
+import { CopyButton } from '../../components/common/CopyButton';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
 import {
@@ -3003,21 +3002,8 @@ function WebChannelsSection({ channels }: { channels: ContactItem[] }) {
 }
 
 function ContactCard({ contact }: { contact: ContactItem }) {
-  const [copied, setCopied] = useState(false);
   const [iconFailed, setIconFailed] = useState(false);
   const Icon = getContactIcon(contact.kindCode, contact.value);
-
-  const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(contact.value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1000);
-    } catch {
-      /* clipboard may be denied */
-    }
-  };
 
   // Favicon when available (resolved web platform or payload icon); on load error fall
   // back to the lucide icon so a broken image is never shown. Shared by both layouts.
@@ -3044,11 +3030,9 @@ function ContactCard({ contact }: { contact: ContactItem }) {
     </span>
   );
 
-  const copyButton = (
-    <button type="button" className="detail-contact-row__copy" onClick={handleCopy} aria-label="Copier dans le presse-papiers">
-      {copied ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2} />}
-    </button>
-  );
+  // Copie mutualisée (composant partagé avec le rail CRM) — même classe, même
+  // aria-label qu'avant l'extraction : le style .detail-contact-row__copy ne bouge pas.
+  const copyButton = <CopyButton value={contact.value} className="detail-contact-row__copy" />;
 
   if (contact.href) {
     return (

@@ -4046,27 +4046,40 @@ a {
   .settings-rail { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 
-/* Phase 7.5 — éditeur de référentiels (ref_code) : maître (domaines) / détail (valeurs). */
-.refcode-editor {
+/* §211 — administration generee des catalogues : familles / catalogue / valeurs. */
+.ref-admin { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ref-admin__toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ref-admin__search { flex: 1 1 320px; max-width: 560px; }
+.ref-admin__search-note { margin: 0; font-size: 12px; }
+.ref-admin__layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: 20px;
   align-items: start;
 }
-.refcode-master {
+.ref-admin__rail {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 460px;
+  gap: 14px;
+  max-height: 620px;
   overflow-y: auto;
+  padding-right: 6px;
 }
-.refcode-master__item {
+.ref-admin__family { display: flex; flex-direction: column; gap: 3px; }
+.ref-admin__family h3 {
+  margin: 0 0 3px;
+  color: var(--ink-4);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ref-admin__catalog {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  text-align: left;
   padding: 7px 9px;
   border: 0;
   border-radius: 8px;
@@ -4075,42 +4088,42 @@ a {
   font: inherit;
   font-size: 12.5px;
   font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
-.refcode-master__item:hover { background: var(--surface-2); color: var(--ink); }
-.refcode-master__item.is-active { background: var(--teal-soft); color: var(--teal-deep); }
-.refcode-master__count { font-size: 11px; color: var(--ink-4); font-weight: 600; }
-.refcode-detail { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.refcode-table { table-layout: auto; }
-.refcode-table td { vertical-align: middle; }
-.refcode-table tr.is-inactive td { opacity: 0.55; }
-.refcode-code { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); white-space: nowrap; }
-.refcode-name-cell { display: flex; align-items: center; gap: 8px; }
-.refcode-name-input { width: 100%; min-width: 120px; }
-.refcode-save-btn { padding: 5px 10px; font-size: 12px; min-height: 0; }
-.refcode-i18n-btn { padding: 4px 9px; font-size: 12px; min-height: 0; gap: 5px; }
-.refcode-usage { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
-.refcode-usage.is-zero { color: var(--text-muted); }
-.refcode-row-actions { display: inline-flex; gap: 2px; justify-content: flex-end; }
-.refcode-icon-btn { padding: 4px 6px; min-height: 0; }
-.refcode-delete-btn { color: var(--destructive); }
-.refcode-delete-btn:disabled { color: var(--text-muted); }
-.refcode-code-input { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
-.refcode-create {
-  display: grid;
-  grid-template-columns: auto 130px minmax(0, 1fr) auto;
-  gap: 8px;
+.ref-admin__catalog:hover { background: var(--surface-2); color: var(--ink); }
+.ref-admin__catalog.is-active { background: var(--teal-soft); color: var(--teal-deep); }
+.ref-admin__catalog-label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.ref-admin__catalog-count { color: var(--ink-4); font-size: 11px; font-weight: 700; }
+.ref-admin__detail { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.ref-admin__detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.ref-admin__detail-head h2,
+.ref-admin__detail-head p { margin: 0; }
+.ref-admin__detail-head .mono { margin-top: 3px; font-size: 11.5px; }
+.ref-admin__table-wrap { max-width: 100%; overflow-x: auto; }
+.ref-admin__table { table-layout: auto; }
+.ref-admin__table td { vertical-align: middle; }
+.ref-admin__table tr.is-inactive td { opacity: 0.55; }
+.ref-admin__code { color: var(--ink-3); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.ref-admin__usage { color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.ref-admin__usage.is-zero { color: var(--text-muted); }
+.ref-admin__row-actions { display: inline-flex; justify-content: flex-end; gap: 2px; }
+.ref-admin__icon-button,
+.refcode-icon-btn { min-height: 0; padding: 4px 6px; }
+.ref-admin__delete-button { color: var(--destructive); }
+.ref-admin__delete-button[aria-disabled="true"] { color: var(--text-muted); cursor: not-allowed; opacity: 0.65; }
+.ref-admin__add {
+  display: flex;
   align-items: center;
-  margin-top: 6px;
+  gap: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--line-soft);
 }
-.refcode-create__title { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
-.refcode-note { font-size: 12px; }
-@media (max-width: 860px) {
-  .refcode-editor { grid-template-columns: 1fr; }
-  .refcode-master { flex-direction: row; flex-wrap: wrap; max-height: none; }
-  .refcode-table { font-size: 13px; }
+.ref-admin__add p { margin: 0; font-size: 12px; }
+@media (max-width: 900px) {
+  .ref-admin__layout { grid-template-columns: 1fr; }
+  .ref-admin__rail { max-height: 280px; }
+  .ref-admin__detail-head { flex-direction: column; gap: 4px; }
 }
 
 /* Modal/drawer MAISON générique (remplace les primitives shadcn Dialog/Sheet — unification

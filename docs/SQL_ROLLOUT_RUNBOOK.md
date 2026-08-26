@@ -251,6 +251,9 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 16t. `migration_legal_document_catalog.sql` — **Catalogue des documents juridiques réellement demandés aux prestataires (§209 ; liste PO du 2026-08-07)** (après `schema_unified.sql` pour `ref_legal_type`/`object_legal` et `api_views_functions.sql` pour le test ; **foldé** dans `schema_unified.sql` ⇒ **no-op sur une base fraîche**). Le catalogue d'origine portait 12 types de « documents » **inventés** (Licence d'hébergement, Assurance cyber, Gestion des déchets…) qu'aucun prestataire ne fournit, et **aucune** des 12 pièces réellement exigées à l'entrée en base. Mesuré avant écriture : `object_legal` ne portait que **5 lignes** sur toute la base (siret ×2, siren ×2, liability_insurance ×1) ⇒ restructuration sans perte. **2 renommages porteurs** faits par `UPDATE` du `code` — l'`id` est préservé donc les lignes rattachées **suivent** : `liability_insurance` → `attestation_assurance` (terme OTI ; porte la ligne live de `LOIRUN00000001C5`) et `tourism_license` → `immatriculation_atout_france` (la « licence tourisme » n'existe plus depuis 2009 ; la pièce réelle est l'immatriculation Atout France). **2 réétiquetages** des types ERP conservés parce que non redondants et réellement exigibles (`fire_safety`, `accessibility`). **8 types génériques retirés fail-closed** (`business_license`, `accommodation_license`, `safety_certificate`, `property_insurance`, `cyber_insurance`, `waste_management`, `environmental_permit`, `guide_license`) : la migration **échoue** si l'un porte encore une ligne, plutôt que de violer la FK `RESTRICT`. **11 documents installés** (le 12ᵉ arrive par renommage). **Arbitrages PO :** `is_required = false` sur tous — l'obligation dépend de la situation de l'exploitant (meublé ≠ association ≠ restaurant) ⇒ la pastille rouge « Document obligatoire expiré » du §18 devient dormante, le drapeau d'expiration **par ligne** reste actif car indépendant de `is_required` ; `is_public = false` sur tous — pièces administratives jamais diffusées par l'API partenaire ni le site public. Les 5 codes d'IDENTITÉ (`siret`, `siren`, `raison_sociale`, `vat_number`, `tourist_tax`) sont hors périmètre et gardent leur visibilité arbitrée le 2026-07-31 ; seule la dérive live↔source `siren.is_required` (posée à `false` par `migration_legal_siret_canonical.sql`, encore `true` sur live) est reconvergée. Garde de convergence en fin de transaction : exactement 5 identités + 15 documents, aucun obligatoire ni public. **Aucun `NOTIFY pgrst`** (aucune fonction/colonne touchée), aucun MV concerné (`mv_ref_data_json` ne porte pas `ref_legal_type`). Live-applied 2026-08-07 (MCP `legal_document_catalog` ; vérifié : 20 types, `attestation_assurance` porte bien sa ligne, 0 orphelin). Couvert par `tests/test_legal_document_catalog.sql` — garde **non vacante**, vérifiée rouge par sabotage (renommage de `kbis`, `attestation_assurance` repassé public). Détail en section « 16t » ci-dessous ; décision log §209.
 
 16u. `migration_actor_contacts_org_gate.sql` — **Garde des coordonnées d'acteur + journal RGPD + RPC d'export journalisé (§208)** (après `api_views_functions.sql` (5/13) dont le leg `actors` est patché, et après `migration_cards_batch_authorize_definer.sql` (8j) qui installe la 3ᵉ feuille d'autorisation non-STUB). **Le plan §208 désignait cette étape « 16t » — créneau déjà pris par §209 ; 16u est le premier libre.** Crée `api.can_read_actor_contacts` (membre d'une ORG *publisher* via `api.current_user_crm_object_ids`, **jamais** `auth.role()` : une clé de service n'est pas une personne), le préflight `api.export_actor_capabilities` (plafonné à 500 ids, **jamais une garde** — il façonne l'offre de colonnes, l'export réautorise fiche par fiche), le RPC journalisé `api.export_actor_contacts` (authorize-once §36, finalité/format/plafond validés serveur) et le journal **immuable** `actor_contact_export_log` (aucune FK ⇒ survit à la suppression de l'objet ; **aucune valeur de coordonnée** n'y est écrite ; `REVOKE ALL` + garde `DO` qui **échoue fort** si le REVOKE n'a pas pris — un re-apply non-propriétaire ne rend qu'un `WARNING` qu'`ON_ERROR_STOP` ne rattrape pas). Durcit par `ALTER FUNCTION` le `search_path` (**`pg_temp` en dernier**) des 3 feuilles d'autorisation dont tout ceci dépend. Ferme au passage **trois voies qui fuyaient** dans `api.get_object_resource` (classe §49) : le leg structuré `actors`, `render.actor_lines` (aucune garde de ligne — un anonyme recevait des noms de personnes) et `render.contact_lines` (`is_public` non composé). `api.get_object_with_deep_data` / `api.get_objects_with_deep_data` sont **intouchées** (R1, prouvé par comparaison des définitions complètes). `NOTIFY pgrst` requis (3 fonctions exposées neuves). Couvert par `tests/test_actor_contacts_org_gate.sql` (16u-test) et `tests/test_actor_link_note_carryover.sql` (16u-test2) — gardes **non vacantes**, vérifiées rouges par sabotage. Détail en section « 16u » ci-dessous ; décision log §208.
+16v. `migration_org_link_reconcile.sql` — **Réconciliation non destructive des liens ORG et acteurs (§214)** (après 7, 8r, 8b, 8o et 16u). Remplace les cycles DELETE/INSERT par résolution, UPSERT puis suppression du reliquat, afin qu'un éditeur ne détruise jamais le lien qui porte son propre droit d'écriture. Couvert par `tests/test_org_link_reconcile_editor.sql` ; détail en section « 16v » ci-dessous.
+
+16w. `migration_ref_catalog_admin.sql` — **Administration générée des catalogues de référence (§211)** (après `migration_ref_code_admin_rpcs.sql` [16b] et `rls_policies.sql` pour `api.is_platform_superuser` ; **non foldé** dans `schema_unified.sql` ; idempotent). Découverte + registre éditorial + 5 RPC `api` neuves (dont 3 en SQL dynamique dont la **liste blanche est la vue**, jamais le registre) ⇒ **`NOTIFY pgrst, 'reload schema';` requis**. Détail en section « 16w » ci-dessous ; décision log §211.
 
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
@@ -745,3 +748,80 @@ vive, le 2026-08-26.
 > **État du gate CI :** `sql-fresh-apply` reste **rouge sur `master`** pour des raisons antérieures
 > et étrangères à §214 (cf. l'encadré de 16u). Cette garde a donc été rejouée **à la main** contre le
 > déployé ; elle ne protège rien automatiquement tant que le manifeste n'est pas réparé.
+---
+
+## 16w — `migration_ref_catalog_admin.sql` (§211, administration générée des catalogues de référence)
+
+Livre en un seul fichier une interface d'administration générée pour tous les catalogues `ref_*` du
+projet, plutôt qu'un écran dédié par catalogue (103 catalogues à date). Deux sources, une liste :
+
+- **`internal.v_ref_catalog`** — la DÉCOUVERTE, zéro configuration. Un CTE `UNION ALL` réunit les
+  **32 tables** `public.ref_*` qui ne sont pas des partitions (le test `pg_inherits`, pas le nom,
+  écarte les 55 partitions `ref_code_<domaine>` tout en gardant `ref_code_domain_registry` et
+  `ref_code_taxonomy_closure`, qui portent le même préfixe sans en être) et les **71 domaines**
+  distincts de `ref_code`. Pour un domaine, qui n'est pas une relation (`reloid` NULL), la vue
+  **synthétise** sa forme éditable (5 colonnes : `code`, `name`, `name_i18n`, `position`,
+  `is_active`) et sa clé primaire (`ref_code.id`) — sans cette synthèse, `primary_key_columns` vaut
+  `[]` et `is_identifiable` vaut `false` pour les 71 domaines, qui se verrouilleraient **en silence**.
+  La cible d'une FK sortante est normalisée en `catalog_key` (`ref_code:<domaine>`, jamais le nom de
+  partition), et les FK entrantes d'un domaine sont résolues via l'OID de sa partition — sans quoi
+  elles restent vides pour les 71 domaines quelles que soient leurs FK réelles.
+- **`public.ref_catalog_registry`** — l'ÉDITORIAL : nom lisible, famille de rangement, et
+  verrouillage **métier** motivé (`readonly_reason` obligatoire par contrainte `CHECK`). Ne seede
+  QUE les verrouillages métier (ex. `ref_permission`, lu en dur par le contrôle d'accès) ; une table
+  absente du registre reste visible et éditable, rangée en « À classer ».
+
+**Verrouillages DÉRIVÉS vs SEEDÉS.** `internal.ref_catalog_access` calcule l'accès effectif en deux
+temps : d'abord les verrouillages **structurels**, dérivés à chaque appel — relation sans clé
+primaire (`ref_interop_crosswalk`), domaine non éditable selon `api.ref_code_domain_is_editable`
+(les 19 domaines `taxonomy_*`) — puis, seulement si aucun des deux ne s'applique, le verrouillage
+**seedé** du registre. Les verrouillages structurels ne sont délibérément PAS dans le registre : les
+y dupliquer ferait croire que le seed est la garde, et un oubli de seed futur deviendrait une
+ouverture. `api.list_ref_catalogs` (maître) et `api.get_ref_catalog` (détail) consomment le même
+helper dérivé — sans quoi une table sans clé primaire s'afficherait éditable dans la liste puis se
+verrouillerait à l'ouverture.
+
+**Invariant de sécurité.** La liste blanche des 3 RPC d'écriture (`api.rpc_upsert_ref_row`,
+`api.rpc_delete_ref_row`, `api.rpc_reorder_ref_rows`, tous en SQL dynamique) est **la vue
+`internal.v_ref_catalog`, jamais le registre** `ref_catalog_registry`. Un registre vide laisse le
+système fonctionnel, seulement dégradé (tout rangé en « À classer », rien de nouveau verrouillé) ;
+un registre **corrompu** ne peut donc pas ouvrir une écriture hors `public.ref_*`. Inverser les deux
+— faire du registre la liste blanche — transformerait une simple erreur de seed en élargissement de
+privilège. Chaque RPC revalide en outre le payload colonne par colonne contre `v.columns` (une
+colonne absente de la vue lève `UNKNOWN_COLUMN`) et refuse toute cible hors catalogue découvert
+(`UNKNOWN_CATALOG`) — vérifié par sabotage contre `object` et `auth.users` dans le test.
+
+Les 3 RPC d'écriture délèguent, pour l'espèce `ref_code_domain`, aux RPC existantes de
+`migration_ref_code_admin_rpcs.sql` (`api.rpc_upsert_ref_code`, `api.rpc_set_ref_code_active`,
+`api.rpc_delete_ref_code`, `api.rpc_reorder_ref_code`) plutôt que de réécrire l'écriture des 71
+domaines — c'est aussi pourquoi cette migration ne peut s'appliquer qu'après elle.
+
+**Non foldé.** Comme les autres migrations récentes de cette famille, `migration_ref_catalog_admin.sql`
+n'est **pas** repliée dans `schema_unified.sql` : elle dépend de `api.is_platform_superuser`, définie
+dans `rls_policies.sql`, qui s'applique après le schéma de base dans l'ordre du manifeste.
+
+**Après application :** `NOTIFY pgrst, 'reload schema';` est **requis** — cinq fonctions du schéma
+`api` sont neuves (`api.list_ref_catalogs`, `api.get_ref_catalog`, `api.rpc_upsert_ref_row`,
+`api.rpc_delete_ref_row`, `api.rpc_reorder_ref_rows`), toutes `REVOKE ALL FROM PUBLIC` puis `GRANT
+EXECUTE TO authenticated, service_role` (pas `anon`). Le flag advisor
+`0028/0029_*_security_definer_function_executable` sur ces 5 RPC est **attendu** : c'est la classe
+des fonctions `SECURITY DEFINER` publiquement exécutables qui s'auto-autorisent (chacune vérifie
+`api.is_platform_superuser()` en première ligne et lève `FORBIDDEN` sinon), au même titre que les
+RPC authorize-once déjà documentées (§36). Aucun MV concerné.
+
+**Vérification.** `tests/test_ref_catalog_admin.sql` (étape 16w-test) prouve, sur les tâches 1 à 4 :
+le compte EXACT des catalogues découverts (32 tables + 71 domaines, calculé — pas un seuil `>=` qui
+masquerait une disparition) ; qu'un domaine `ref_code` est identifiable et décrit avec sa forme
+synthétisée à 5 colonnes ; les formes de clé primaire réelles (simple, naturelle non-uuid comme
+`ref_commune.insee_code`, composite, absente) ; la normalisation de cible de FK en `catalog_key` ; la
+non-divergence entre le maître et le détail sur `access`, catalogue par catalogue ; un balayage
+EXHAUSTIF de `api.get_ref_catalog` sur les 103 catalogues (aucun ne doit lever d'erreur) ; un
+compteur d'usage qui FUSIONNE deux FK entrantes distinctes vers `ref_language` (`object_language` et
+`object_review`) plutôt que d'être une simple somme sur une seule table ; le cycle complet
+créer/éditer/refuser-de-changer-le-code/supprimer sur les trois formes de clé (uuid simple,
+naturelle, composite) ; la délégation `ref_code` avec arguments NOMMÉS (un appel positionnel
+inverserait silencieusement code et libellé) et l'activation/le réordonnancement toujours câblés
+après absorption de l'éditeur historique ; le réordonnancement d'une table sous index unique partiel
+(écriture en deux phases, `ref_language`) et le refus des listes incomplètes, dupliquées, `NULL` ou
+porteuses d'une clé inconnue ; et l'**assertion de sécurité** — une écriture ou une suppression
+visant `object` ou `auth.users` lève `UNKNOWN_CATALOG`, jamais un succès silencieux.

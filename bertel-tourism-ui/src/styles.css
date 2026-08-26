@@ -11697,6 +11697,25 @@ a {
   outline-offset: 2px;
   border-radius: 3px;
 }
+/* Bouton copier par canal (demande CES) : un lien mailto:/tel: n'est pas
+   sélectionnable à la souris (le drag déclenche un glisser de lien) — ce bouton
+   est LA voie de copie. Poussé au bord droit, discret, feedback Copy→Check. */
+.crm-app .coord-row__copy {
+  margin-left: auto;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.crm-app .coord-row__copy:hover { background: var(--surface-2); color: var(--accent-deep); }
+.crm-app .coord-row__copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .crm-app .crm-actor-coords__empty { font-size: 12.5px; color: var(--ink-4); }
 
 /* KPI compacts dans la colonne étroite : 2×2. Réutilise .crm-kpi (accent + valeur). */

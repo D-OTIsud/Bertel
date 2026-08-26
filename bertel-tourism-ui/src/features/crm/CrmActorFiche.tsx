@@ -37,6 +37,7 @@ import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
 import { CrmActorDocuments } from './CrmActorDocuments';
+import { CopyButton } from '../../components/common/CopyButton';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
 
@@ -205,7 +206,9 @@ interface ActorChannel {
  * Une ligne de coordonnées — UN canal par ligne (liste verticale, rectif PO §66+). Le canal
  * devient cliquable selon son kind (mailto / tel / lien externe) via channelHrefOf ; le texte
  * du lien EST la valeur (accessible). Un kind non actionnable retombe sur du texte brut. L'icône
- * de kind et le badge « principal » sont conservés.
+ * de kind et le badge « principal » sont conservés. Chaque canal porte un bouton « copier »
+ * (demande CES) : un lien mailto:/tel: n'est pas sélectionnable à la souris — le drag déclenche
+ * un glisser de lien — et les URL restent cliquables ET copiables.
  */
 function CoordRow({ channel }: { channel: ActorChannel }) {
   const Icon = CHANNEL_ICONS[channel.kindCode] ?? Link2;
@@ -225,6 +228,9 @@ function CoordRow({ channel }: { channel: ActorChannel }) {
         <span className="val">{channel.value}</span>
       )}
       {channel.isPrimary && <span className="pill-mini principal">principal</span>}
+      {channel.value.trim() !== '' && (
+        <CopyButton value={channel.value} className="coord-row__copy" label={`Copier ${channel.value}`} size={14} />
+      )}
     </li>
   );
 }

@@ -361,7 +361,10 @@ ROLLBACK;
 \echo '== taxo6b-test garde permanente (catalogue exact, ancien libelle absent, anciennes formes HLO retirees, alias Gite rural preserve) =='
 \ir tests/test_accommodation_unit_type_catalog_v2.sql
 
-\echo '== taxo7  migration_motorhome_service_amenities.sql  (§201 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
+\echo '== taxo7  20260729114447_hotel_positioning_axis.sql  (axe Positionnement hôtelier multi-valué; après taxo6, avant les corps Explorer qui lisent object_hotel_positioning) =='
+\ir ../supabase/migrations/20260729114447_hotel_positioning_axis.sql
+
+\echo '== taxo8  migration_motorhome_service_amenities.sql  (§201 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
 \ir migration_motorhome_service_amenities.sql
 
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='

@@ -1,5 +1,5 @@
 -- =====================================================================
--- test_org_link_reconcile_editor.sql — garde 16v, personas réelles
+-- test_org_link_reconcile_editor.sql — garde 16x, personas réelles
 -- =====================================================================
 -- Ce que ce fichier protège, en une phrase : **une fonction d'écriture ne doit
 -- jamais détruire la ligne qui PORTE le droit d'écrire de son appelant.**
@@ -23,7 +23,7 @@
 -- Dépendances d'exécution : le manifeste complet (step 7 + 8r pour le corps de
 -- `api.save_object_relations`, 8b pour `user_can_write_object_canonical`, 16u
 -- pour `can_read_actor_contacts` que la branche `actors` appelle), PUIS
--- `migration_org_link_reconcile.sql` (créneau 16v). Le bloc S0 le dit en clair
+-- `migration_org_link_reconcile.sql` (créneau 16x). Le bloc S0 le dit en clair
 -- plutôt que de laisser un 42883 illisible tomber au milieu du fichier.
 --
 -- HARNAIS — pourquoi `request.jwt.claims` ET `SET LOCAL ROLE`, jamais l'un sans
@@ -66,9 +66,9 @@ BEGIN
              AND policyname IN ('canonical_ins_object_org_link',
                                 'canonical_upd_object_org_link',
                                 'canonical_del_object_org_link')) = 3,
-    '16v: la famille d ecriture par commande de object_org_link est incomplete — le test serait vacant';
+    '16x: la famille d ecriture par commande de object_org_link est incomplete — le test serait vacant';
   ASSERT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.object_org_link'::regclass),
-    '16v: RLS desactivee sur object_org_link — le test serait vacant';
+    '16x: RLS desactivee sur object_org_link — le test serait vacant';
 END$$;
 
 -- ---------------------------------------------------------------------
@@ -104,20 +104,20 @@ BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
 
   INSERT INTO object (id, object_type, name, status) VALUES
-    (v_org, 'ORG', 'ORG temoin 16v',   'published'),
-    (v_obj, 'HOT', 'Hotel temoin 16v', 'published');
+    (v_org, 'ORG', 'ORG temoin 16x',   'published'),
+    (v_obj, 'HOT', 'Hotel temoin 16x', 'published');
   INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary, note) VALUES
-    (v_obj, v_org, v_role_pub, TRUE, 'note publisher 16v');
+    (v_obj, v_org, v_role_pub, TRUE, 'note publisher 16x');
 
   INSERT INTO auth.users (id, email) VALUES
-    (v_editor,   'editeur16v@test.local'),
-    (v_stranger, 'etranger16v@test.local'),
-    (v_super,    'super16v@test.local')
+    (v_editor,   'editeur16x@test.local'),
+    (v_stranger, 'etranger16x@test.local'),
+    (v_super,    'super16x@test.local')
   ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id, role, display_name) VALUES
-    (v_editor,   'tourism_agent', 'Editeur 16v'),
-    (v_stranger, 'tourism_agent', 'Etranger 16v'),
-    (v_super,    'owner',         'Superuser 16v')
+    (v_editor,   'tourism_agent', 'Editeur 16x'),
+    (v_stranger, 'tourism_agent', 'Etranger 16x'),
+    (v_super,    'owner',         'Superuser 16x')
   ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, display_name = EXCLUDED.display_name;
 
   -- SEUL l editeur est membre de l ORG publisher. L etranger est membre de RIEN :
@@ -126,10 +126,10 @@ BEGIN
   INSERT INTO user_permission (user_id, permission_id, is_active) VALUES (v_editor, v_perm, TRUE)
   ON CONFLICT (user_id, permission_id) DO UPDATE SET is_active = TRUE;
 
-  INSERT INTO actor (id, display_name) VALUES (v_actor, 'Prestataire temoin 16v');
+  INSERT INTO actor (id, display_name) VALUES (v_actor, 'Prestataire temoin 16x');
 
   PERFORM set_config('request.jwt.claims', NULL, true);
-  RAISE NOTICE '16v fixtures: 1 ORG publisher, 1 fiche, 3 users (editeur/etranger/superuser), 1 acteur.';
+  RAISE NOTICE '16x fixtures: 1 ORG publisher, 1 fiche, 3 users (editeur/etranger/superuser), 1 acteur.';
 END$$;
 
 -- ---------------------------------------------------------------------
@@ -179,7 +179,7 @@ BEGIN
           'role_id',       v_role_pub::text,
           'role_code',     'publisher',
           'is_primary',    true,
-          'note',          'note publisher 16v')),
+          'note',          'note publisher 16x')),
         'actors', jsonb_build_array(jsonb_build_object(
           'actor_id',   '16b00000-0000-4000-8000-00000000000a',
           'role_code',  'operator',
@@ -220,13 +220,13 @@ BEGIN
           'role_id',       v_role_pub::text,
           'role_code',     'publisher',
           'is_primary',    true,
-          'note',          'note publisher 16v modifiee')),
+          'note',          'note publisher 16x modifiee')),
         'actors', '[]'::jsonb));
   ASSERT v->>'success' = 'true', format('B4 FAIL: le second enregistrement doit passer aussi, recu %s', v);
   RESET ROLE;
   ASSERT (SELECT note FROM object_org_link
            WHERE object_id = 'HOTRUN00000016V1' AND org_object_id = 'ORGRUN00000016V1')
-         = 'note publisher 16v modifiee',
+         = 'note publisher 16x modifiee',
     'B5 FAIL: la reconciliation doit METTRE A JOUR la ligne conservee (note), pas l ignorer';
 END$$;
 RESET ROLE;
@@ -248,7 +248,7 @@ BEGIN
           'role_id',       v_role_pub::text,
           'role_code',     'publisher',
           'is_primary',    true,
-          'note',          'note publisher 16v'))));
+          'note',          'note publisher 16x'))));
   ASSERT v->>'success' = 'true', format('C1 FAIL: le superuser doit continuer a enregistrer, recu %s', v);
 END$$;
 RESET ROLE;
@@ -411,12 +411,12 @@ BEGIN
   ASSERT v_kind IS NOT NULL, 'fixture H: ref_code_contact_kind[email] manquant — le pont user_actor_ids serait vacant';
 
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
-  INSERT INTO auth.users (id, email) VALUES (v_owner, 'proprio16v@test.local') ON CONFLICT (id) DO NOTHING;
-  INSERT INTO app_user_profile (id, role, display_name) VALUES (v_owner, 'tourism_agent', 'Proprio 16v')
+  INSERT INTO auth.users (id, email) VALUES (v_owner, 'proprio16x@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role, display_name) VALUES (v_owner, 'tourism_agent', 'Proprio 16x')
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role, display_name = EXCLUDED.display_name;
-  INSERT INTO actor (id, display_name) VALUES (v_act_b, 'Exploitant temoin 16v');
+  INSERT INTO actor (id, display_name) VALUES (v_act_b, 'Exploitant temoin 16x');
   INSERT INTO actor_channel (actor_id, kind_id, value, is_primary)
-    VALUES (v_act_b, v_kind, 'proprio16v@test.local', TRUE);
+    VALUES (v_act_b, v_kind, 'proprio16x@test.local', TRUE);
   -- Son lien PRIMAIRE sur la fiche : c'est TOUT son droit d'ecrire.
   INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
     VALUES (v_act_b, 'HOTRUN00000016V1', v_role, TRUE, 'public');
@@ -427,7 +427,7 @@ DO $$
 DECLARE v jsonb; v_n int;
 BEGIN
   PERFORM set_config('request.jwt.claims',
-    '{"role":"authenticated","sub":"16b00000-0000-4000-8000-000000000004","email":"proprio16v@test.local"}', true);
+    '{"role":"authenticated","sub":"16b00000-0000-4000-8000-000000000004","email":"proprio16x@test.local"}', true);
   SET LOCAL ROLE authenticated;
 
   ASSERT COALESCE(api.is_object_owner('HOTRUN00000016V1'), FALSE),
@@ -467,7 +467,7 @@ DO $$
 DECLARE v jsonb; v_note text;
 BEGIN
   PERFORM set_config('request.jwt.claims', '{"role":"service_role"}', true);
-  UPDATE actor_object_role SET note = 'NOTE 16v A PRESERVER'
+  UPDATE actor_object_role SET note = 'NOTE 16x A PRESERVER'
    WHERE object_id = 'HOTRUN00000016V1' AND actor_id = '16b00000-0000-4000-8000-00000000000b';
   PERFORM set_config('request.jwt.claims', NULL, true);
 
@@ -487,7 +487,7 @@ BEGIN
   RESET ROLE;
   SELECT note INTO v_note FROM actor_object_role
    WHERE object_id = 'HOTRUN00000016V1' AND actor_id = '16b00000-0000-4000-8000-00000000000b';
-  ASSERT v_note = 'NOTE 16v A PRESERVER',
+  ASSERT v_note = 'NOTE 16x A PRESERVER',
     format('I3 FAIL: la note a ete EFFACEE par le reconcile (regression §208/T13b), valeur = %s', COALESCE(v_note, '(null)'));
 END$$;
 RESET ROLE;

@@ -11,7 +11,7 @@
 -- corrompu ne peut PAS ouvrir une écriture hors public.ref_*. Inverser les deux
 -- transformerait une erreur de seed en élargissement de privilège.
 --
--- Manifeste 16w. NON foldé dans schema_unified.sql. Idempotent.
+-- Manifeste 16y. NON foldé dans schema_unified.sql. Idempotent.
 -- ============================================================================
 
 BEGIN;

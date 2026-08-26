@@ -102,6 +102,8 @@ DECLARE
   v_id uuid;
   v_deleted integer;
   v_inserted integer;
+  -- §214 - jeu cible resolu du reconcile `org_links` (voir cette branche).
+  v_targets jsonb;
   -- §208/T13b — anti-clobber de actor_object_role.note (voir la branche `actors`).
   v_actor_notes_writable boolean;
   v_actor_notes_before   jsonb := '{}'::jsonb;
@@ -154,9 +156,23 @@ BEGIN
       RAISE EXCEPTION 'Only one primary organization link is allowed per object' USING ERRCODE = '23505';
     END IF;
 
-    DELETE FROM public.object_org_link WHERE object_id = p_object_id;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    v_inserted := 0;
+    -- §214 - RECONCILE NON DESTRUCTIF. Ne JAMAIS revenir a un delete-all + re-insert ici :
+    -- object_org_link PORTE le droit d'ecrire de l'appelant (api.user_can_write_canonical =
+    -- edit_canonical_when_publisher AND EXISTS(lien publisher -> mon ORG)). Un DELETE global rend
+    -- cet EXISTS faux des l'instruction SUIVANTE, et le WITH CHECK de canonical_ins_object_org_link
+    -- refuse alors la re-insertion : 42501 pour TOUT editeur, et invisible pour un superuser (qui
+    -- passe par api.is_object_owner, lequel ne lit pas cette table). Reproduit en production le
+    -- 2026-08-26 ; le symptome utilisateur etait « je ne peux pas rattacher un prestataire », car
+    -- §15/§17/§19 partagent le module `relationships` et donc CET appel. Garde permanente :
+    -- tests/test_org_link_reconcile_editor.sql.
+    -- L'ordre des 4 etapes est impose :
+    --   1. resoudre le payload SANS ecrire (une reference invalide ne doit rien avoir touche) ;
+    --   2. retirer le drapeau principal devenu obsolete AVANT d'en poser un nouveau - sinon
+    --      l'unique partiel uq_object_primary_org (un seul principal par fiche) refuserait l'etat
+    --      transitoire, une regression que le delete-all n'avait pas ;
+    --   3. UPSERT du jeu cible - la ligne qui autorise l'appel n'est jamais supprimee ;
+    --   4. supprimer EN DERNIER ce que le payload n'a pas repris.
+    v_targets := '[]'::jsonb;
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'org_links')) AS t(value) LOOP
       IF NOT EXISTS (SELECT 1 FROM public.object WHERE id = v_row->>'org_object_id') THEN
         RAISE EXCEPTION 'Unknown org_object_id: %', v_row->>'org_object_id' USING ERRCODE = '23503';
@@ -168,16 +184,55 @@ BEGIN
       IF v_id IS NULL THEN
         RAISE EXCEPTION 'Unknown org role reference: %', v_row USING ERRCODE = '23503';
       END IF;
-      INSERT INTO public.object_org_link (object_id, org_object_id, role_id, is_primary, note)
-      VALUES (
-        p_object_id,
-        v_row->>'org_object_id',
-        v_id,
-        COALESCE(NULLIF(v_row->>'is_primary', '')::boolean, false),
-        NULLIF(v_row->>'note', '')
-      );
-      v_inserted := v_inserted + 1;
+      -- Doublon (org, role) dans le payload : l'ancien corps levait 23505 sur la PK. On leve le
+      -- MEME code, explicitement. Laisser faire l'ON CONFLICT rendrait 21000 (« cannot affect row
+      -- a second time »), illisible ; l'absorber en silence serait un piege d'ecriture (§212).
+      IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+                  WHERE t.value->>'org_object_id' = v_row->>'org_object_id'
+                    AND (t.value->>'role_id')::uuid = v_id) THEN
+        RAISE EXCEPTION 'Duplicate organization link in payload (org %, role %)',
+          v_row->>'org_object_id', v_id USING ERRCODE = '23505';
+      END IF;
+      v_targets := v_targets || jsonb_build_array(jsonb_build_object(
+        'org_object_id', v_row->>'org_object_id',
+        'role_id',       v_id,
+        'is_primary',    COALESCE(NULLIF(v_row->>'is_primary', '')::boolean, false),
+        'note',          NULLIF(v_row->>'note', '')
+      ));
     END LOOP;
+
+    UPDATE public.object_org_link ool
+       SET is_primary = FALSE
+     WHERE ool.object_id = p_object_id
+       AND ool.is_primary
+       AND NOT EXISTS (
+             SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+              WHERE t.value->>'org_object_id' = ool.org_object_id
+                AND (t.value->>'role_id')::uuid = ool.role_id
+                AND (t.value->>'is_primary')::boolean);
+
+    INSERT INTO public.object_org_link (object_id, org_object_id, role_id, is_primary, note)
+    SELECT p_object_id,
+           t.value->>'org_object_id',
+           (t.value->>'role_id')::uuid,
+           (t.value->>'is_primary')::boolean,
+           t.value->>'note'
+      FROM jsonb_array_elements(v_targets) AS t(value)
+    ON CONFLICT (object_id, org_object_id, role_id) DO UPDATE
+       SET is_primary = EXCLUDED.is_primary,
+           note       = EXCLUDED.note;
+    GET DIAGNOSTICS v_inserted = ROW_COUNT;
+
+    DELETE FROM public.object_org_link ool
+     WHERE ool.object_id = p_object_id
+       AND NOT EXISTS (
+             SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+              WHERE t.value->>'org_object_id' = ool.org_object_id
+                AND (t.value->>'role_id')::uuid = ool.role_id);
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    -- Semantique des compteurs (aucun consommateur front - verifie par grep) : `_inserted` = lignes
+    -- du jeu cible persistees (insert OU update), `_deleted` = liens REELLEMENT retires. Avant §214
+    -- ils valaient « tout supprime / tout reinsere » a chaque enregistrement.
     v_counts := v_counts || jsonb_build_object('object_org_link_deleted', v_deleted, 'object_org_link_inserted', v_inserted);
   END IF;
 

@@ -106,7 +106,6 @@ DECLARE
   v_targets jsonb;
   -- §208/T13b — anti-clobber de actor_object_role.note (voir la branche `actors`).
   v_actor_notes_writable boolean;
-  v_actor_notes_before   jsonb := '{}'::jsonb;
 BEGIN
   PERFORM internal.workspace_assert_can_write_object(p_object_id);
   p_payload := COALESCE(p_payload, '{}'::jsonb);
@@ -242,32 +241,33 @@ BEGIN
   END IF;
   -- §48/§95: actor links (actor_object_role only — actor_channel/actor_consent stay out of contract).
   IF p_payload ? 'actors' THEN
-    -- §208/T13b — ANTI-CLOBBER de `note`. api.get_object_resource REDACTE actor_object_role.note
-    -- (NULL) pour tout appelant qui échoue api.can_read_actor_contacts (§208/T13). Cette branche
-    -- étant delete-all + re-insert, prendre `note` du payload DÉTRUIRAIT la note de CHAQUE lien
-    -- acteur de la fiche pour un tel appelant : il charge NULL, il enregistre, la note disparaît —
-    -- sans erreur, sans signal, et sans qu'il ait jamais vu le champ. Ce n'est pas une saisie
-    -- ignorée, c'est une PERTE DE DONNÉE. Le correctif vit ICI, dans le writer PARTAGÉ : une garde
-    -- côté appelant n'en couvrirait qu'un (le RPC est aussi re-dispatché par la modération, 8u).
-    -- Sonde évaluée UNE SEULE FOIS — p_object_id est constant pour tout l'appel et la garde est
-    -- SECURITY DEFINER donc NON inlinable : la mettre par ligne rejouerait current_user_crm_object_ids
-    -- à chaque lien (§35/§204). Elle est en outre PARESSEUSE : corps d'un IF plpgsql, donc ni planifiée
-    -- ni exécutée quand le payload ne porte pas `actors`.
-    -- COALESCE(…, FALSE) : une sonde à trois valeurs en position booléenne est fail-OPEN sans lui
-    -- (§204), et « ouvert » signifierait ici « écrire le NULL du payload », c.-à-d. effacer.
+    -- §208/T13b + §214 - ANTI-CLOBBER de `note`, ET anti-destruction du droit d'ecrire.
+    -- (a) api.get_object_resource REDACTE actor_object_role.note (NULL) pour tout appelant qui
+    --     echoue api.can_read_actor_contacts (§208/T13). Prendre `note` du payload DETRUIRAIT donc
+    --     la note de chaque lien acteur pour un tel appelant : il charge NULL, il enregistre, la
+    --     note disparait - sans erreur, sans signal, et sans qu'il ait jamais vu le champ. Ce n'est
+    --     pas une saisie ignoree, c'est une PERTE DE DONNEE. Le correctif vit ICI, dans le writer
+    --     PARTAGE : une garde cote appelant n'en couvrirait qu'un (le RPC est aussi re-dispatche
+    --     par la moderation, 8u).
+    -- (b) §214 - cette branche etait, comme `org_links`, un delete-all + re-insert. Or
+    --     actor_object_role PORTE lui aussi un droit d'ecrire : api.is_object_owner est vrai pour
+    --     qui detient sur la fiche un lien acteur PRIMAIRE dont l'e-mail est le sien
+    --     (api.user_actor_ids). Un appelant dont ce serait l'UNIQUE titre voyait donc son propre
+    --     droit disparaitre avec le DELETE, puis le WITH CHECK de canonical_ins_actor_object_role
+    --     refuser la re-insertion : 42501, exactement le defaut referme sur `org_links`.
+    --     Le reconcile ci-dessous supprime les DEUX problemes d'un coup - et rend (a) plus simple :
+    --     une ligne conservee n'est plus detruite puis recreee, donc « reporter » la note se reduit
+    --     a NE PAS ECRIRE la colonne. Plus d'instantane pre-DELETE a tenir.
+    -- Sonde evaluee UNE SEULE FOIS - p_object_id est constant pour tout l'appel et la garde est
+    -- SECURITY DEFINER donc NON inlinable : la mettre par ligne rejouerait
+    -- current_user_crm_object_ids a chaque lien (§35/§204). Elle est en outre PARESSEUSE : corps
+    -- d'un IF plpgsql, donc ni planifiee ni executee quand le payload ne porte pas `actors`.
+    -- COALESCE(..., FALSE) : une sonde a trois valeurs en position booleenne est fail-OPEN sans lui
+    -- (§204), et « ouvert » signifierait ici « ecrire le NULL du payload », c.-a-d. effacer.
     v_actor_notes_writable := COALESCE(api.can_read_actor_contacts(p_object_id), FALSE);
-    IF NOT v_actor_notes_writable THEN
-      -- INSTANTANÉ PRIS AVANT LE DELETE (après, il n'y a plus rien à reporter).
-      -- Clé = (actor_id, role_id) : c'est la PK (actor_id, object_id, role_id) moins object_id,
-      -- constant sur tout l'appel — donc unique par ligne, jamais de collision d'agrégat.
-      SELECT COALESCE(jsonb_object_agg(aor.actor_id::text || '|' || aor.role_id::text, to_jsonb(aor.note)), '{}'::jsonb)
-        INTO v_actor_notes_before
-        FROM public.actor_object_role aor
-       WHERE aor.object_id = p_object_id;
-    END IF;
-    DELETE FROM public.actor_object_role WHERE object_id = p_object_id;
-    GET DIAGNOSTICS v_deleted = ROW_COUNT;
-    v_inserted := 0;
+
+    -- 1. Resolution + validation SANS ecrire (une reference invalide ne doit rien avoir touche).
+    v_targets := '[]'::jsonb;
     FOR v_row IN SELECT value FROM jsonb_array_elements(internal.workspace_jsonb_array(p_payload->'actors')) AS t(value) LOOP
       -- §95: existence is enforced by actor_object_role.actor_id -> actor(id) FK (RLS-independent).
       -- Do NOT add an EXISTS over public.actor here: this fn is SECURITY INVOKER, so that probe is
@@ -288,28 +288,73 @@ BEGIN
       IF COALESCE(NULLIF(v_row->>'visibility', ''), 'public') NOT IN ('public', 'private', 'partners') THEN
         RAISE EXCEPTION 'Invalid actor link visibility: %', v_row->>'visibility' USING ERRCODE = '22023';
       END IF;
-      -- ≤1 primary per (object, role) is enforced by uq_actor_object_role_primary (unique partial index).
-      INSERT INTO public.actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to, visibility, note)
-      VALUES (
-        internal.workspace_uuid(v_row->>'actor_id'),
-        p_object_id,
-        v_id,
-        COALESCE(NULLIF(v_row->>'is_primary', '')::boolean, false),
-        NULLIF(v_row->>'valid_from', '')::date,
-        NULLIF(v_row->>'valid_to', '')::date,
-        COALESCE(NULLIF(v_row->>'visibility', ''), 'public'),
-        -- §208/T13b : le payload ne fait autorité sur `note` que si l'appelant l'a réellement LU.
-        -- Sinon on REPORTE l'existant, tel quel (pas de NULLIF : on préserve, on ne normalise pas).
-        -- Clé absente = lien NOUVEAU pour cet appelant ⇒ NULL. Conséquence assumée et connue : une
-        -- note SAISIE par un appelant restreint sur un lien neuf n'est pas écrite — l'éditeur doit
-        -- désactiver le champ quand `contacts_restricted` est vrai (voir le rapport T13b).
-        CASE
-          WHEN v_actor_notes_writable THEN NULLIF(v_row->>'note', '')
-          ELSE v_actor_notes_before ->> (internal.workspace_uuid(v_row->>'actor_id')::text || '|' || v_id::text)
-        END
-      );
-      v_inserted := v_inserted + 1;
+      -- Doublon (acteur, role) : c'est la PK moins object_id (constant). L'ancien corps levait 23505
+      -- au re-INSERT ; on leve le MEME code explicitement plutot que de laisser l'ON CONFLICT rendre
+      -- 21000, illisible - et surtout jamais d'absorption silencieuse (§212).
+      IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+                  WHERE (t.value->>'actor_id')::uuid = internal.workspace_uuid(v_row->>'actor_id')
+                    AND (t.value->>'role_id')::uuid = v_id) THEN
+        RAISE EXCEPTION 'Duplicate actor link in payload (actor %, role %)',
+          v_row->>'actor_id', v_id USING ERRCODE = '23505';
+      END IF;
+      v_targets := v_targets || jsonb_build_array(jsonb_build_object(
+        'actor_id',   internal.workspace_uuid(v_row->>'actor_id'),
+        'role_id',    v_id,
+        'is_primary', COALESCE(NULLIF(v_row->>'is_primary', '')::boolean, false),
+        'valid_from', NULLIF(v_row->>'valid_from', ''),
+        'valid_to',   NULLIF(v_row->>'valid_to', ''),
+        'visibility', COALESCE(NULLIF(v_row->>'visibility', ''), 'public'),
+        'note',       NULLIF(v_row->>'note', '')
+      ));
     END LOOP;
+
+    -- 2. Demarquer AVANT de marquer : uq_actor_object_role_primary est un UNIQUE partiel sur
+    --    (object_id, role_id) WHERE is_primary - un seul principal PAR ROLE. Sans cette etape,
+    --    deplacer le principal d'un acteur a l'autre heurterait l'etat transitoire.
+    UPDATE public.actor_object_role aor
+       SET is_primary = FALSE
+     WHERE aor.object_id = p_object_id
+       AND aor.is_primary
+       AND NOT EXISTS (
+             SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+              WHERE (t.value->>'actor_id')::uuid = aor.actor_id
+                AND (t.value->>'role_id')::uuid = aor.role_id
+                AND (t.value->>'is_primary')::boolean);
+
+    -- 3. UPSERT du jeu cible. La ligne qui porte eventuellement le droit d'ecrire de l'appelant
+    --    (lien primaire a son e-mail) est MISE A JOUR, jamais supprimee.
+    --    `note` : le payload ne fait autorite que si l'appelant l'a reellement LU. Sinon on laisse
+    --    la valeur EN BASE telle quelle (c'est le « report » de T13b, desormais structurel - il n'y
+    --    a plus de suppression a compenser). Sur un lien NOUVEAU pour un appelant restreint, la
+    --    colonne reste NULL : consequence assumee et inchangee, l'editeur desactive le champ quand
+    --    `contacts_restricted` est vrai (voir le rapport T13b).
+    INSERT INTO public.actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to, visibility, note)
+    SELECT (t.value->>'actor_id')::uuid,
+           p_object_id,
+           (t.value->>'role_id')::uuid,
+           (t.value->>'is_primary')::boolean,
+           (t.value->>'valid_from')::date,
+           (t.value->>'valid_to')::date,
+           t.value->>'visibility',
+           CASE WHEN v_actor_notes_writable THEN t.value->>'note' END
+      FROM jsonb_array_elements(v_targets) AS t(value)
+    ON CONFLICT (actor_id, object_id, role_id) DO UPDATE
+       SET is_primary = EXCLUDED.is_primary,
+           valid_from = EXCLUDED.valid_from,
+           valid_to   = EXCLUDED.valid_to,
+           visibility = EXCLUDED.visibility,
+           note       = CASE WHEN v_actor_notes_writable THEN EXCLUDED.note
+                             ELSE public.actor_object_role.note END;
+    GET DIAGNOSTICS v_inserted = ROW_COUNT;
+
+    -- 4. Supprimer EN DERNIER ce que le payload n'a pas repris (un detachement reste possible).
+    DELETE FROM public.actor_object_role aor
+     WHERE aor.object_id = p_object_id
+       AND NOT EXISTS (
+             SELECT 1 FROM jsonb_array_elements(v_targets) AS t(value)
+              WHERE (t.value->>'actor_id')::uuid = aor.actor_id
+                AND (t.value->>'role_id')::uuid = aor.role_id);
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
     v_counts := v_counts || jsonb_build_object('actor_object_role_deleted', v_deleted, 'actor_object_role_inserted', v_inserted);
   END IF;
 

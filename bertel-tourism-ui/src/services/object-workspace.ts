@@ -6539,9 +6539,21 @@ export async function saveObjectWorkspaceContacts(objectId: string, input: Objec
 
     let contactId = item.id;
     if (existingIds.has(item.id)) {
-      const { error } = await client.from('contact_channel').update(payload).eq('id', item.id);
+      // WRITE-TRAP SILENCIEUX (corrigé 2026-08-28, chantier 1). Sans `.select()`, un UPDATE
+      // écarté par la RLS rend `{ data: null, error: null }` : 0 ligne touchée, aucune erreur —
+      // la sauvegarde PARAÎT réussir et la modification (typiquement la bascule Public/Interne)
+      // est perdue en silence au rechargement. La branche INSERT juste en dessous avait bien son
+      // `.select('id')` ; celle-ci ne l'avait pas.
+      const { data, error } = await client
+        .from('contact_channel')
+        .update(payload)
+        .eq('id', item.id)
+        .select('id');
       if (error) {
         throw mapMutationError(error, "Impossible d'enregistrer un contact objet.");
+      }
+      if (!Array.isArray(data) || data.length === 0) {
+        throw new Error("Cette action n'est pas autorisée avec vos droits actuels.");
       }
     } else {
       const { data, error } = await client.from('contact_channel').insert(payload).select('id').single();

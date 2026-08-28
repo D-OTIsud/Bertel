@@ -345,9 +345,12 @@ describe('parseActorCrmSnapshot', () => {
       photoUrl: null,
     });
     // Canaux de contact (rectif PO point 4) — PII du périmètre publisher, déjà gated par le RPC.
+    // 17e — `isPublic` : la fixture ne porte pas `is_public` (backend antérieur), et le parseur
+    // doit alors retomber sur PRIVÉ. Fail-closed : une clé absente ne rend jamais diffusable une
+    // coordonnée de personne.
     expect(snapshot.channels).toEqual([
-      { id: 'c1', kindCode: 'email', kindName: 'Email', value: 'jocelyne@palmistes.re', isPrimary: true },
-      { id: 'c2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false },
+      { id: 'c1', kindCode: 'email', kindName: 'Email', value: 'jocelyne@palmistes.re', isPrimary: true, isPublic: false },
+      { id: 'c2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false, isPublic: false },
     ]);
     expect(snapshot.objects).toEqual([{
       objectId: 'HLORUN00000000QB', objectName: 'Les Palmistes', objectType: 'HLO',
@@ -1121,5 +1124,47 @@ describe('userCanWriteCrmNotes — parité avec la garde serveur (chantier 2026-
     const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
     mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
     await expect(userCanWriteCrmNotes()).resolves.toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°1, sous-lot 1b (17e) — visibilité d'un canal d'acteur.
+// Ce n'était pas une garde trop stricte : c'était une fonctionnalité ABSENTE aux trois étages
+// (pas de colonne, pas de clé RPC, pas de contrôle UI). Marquer un canal comme privé était
+// impossible pour TOUT LE MONDE, superuser compris.
+// ---------------------------------------------------------------------------------------
+describe('saveActorChannel — visibilité du canal (17e)', () => {
+  it('relaie is_public quand la clé est fournie', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'ch-1' });
+    await saveActorChannel({ id: 'ch-1', isPublic: true });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { id: 'ch-1', is_public: true },
+    });
+  });
+
+  it('N’ENVOIE PAS la clé quand elle est absente — sinon corriger une valeur repasserait le canal en privé', async () => {
+    // Le RPC est appelé champ par champ et interprète la clé absente comme « ne touche pas à la
+    // visibilité » (garde `p_payload ? 'is_public'` côté SQL). Envoyer systématiquement `false`
+    // écraserait la visibilité à chaque correction : c'est le piège que ce test verrouille.
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 'ch-1' });
+    await saveActorChannel({ id: 'ch-1', value: 'corrige@test.re' });
+    expect(rpc).toHaveBeenCalledWith('save_actor_channel', {
+      p_payload: { id: 'ch-1', value: 'corrige@test.re' },
+    });
+  });
+
+  it('parse is_public depuis le RPC, et retombe sur PRIVÉ si la clé manque (fail-closed)', () => {
+    const snapshot = parseActorCrmSnapshot({
+      actor: { id: 'a1', display_name: 'A' },
+      channels: [
+        { id: 'c1', kind_code: 'email', value: 'diffusable@test.re', is_public: true },
+        { id: 'c2', kind_code: 'email', value: 'interne@test.re', is_public: false },
+        { id: 'c3', kind_code: 'email', value: 'sans-cle@test.re' },
+        { id: 'c4', kind_code: 'email', value: 'valeur-inattendue@test.re', is_public: 'oui' },
+      ],
+    });
+    expect(snapshot.channels.map((c) => c.isPublic)).toEqual([true, false, false, false]);
   });
 });

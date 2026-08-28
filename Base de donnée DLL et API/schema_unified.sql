@@ -2105,6 +2105,13 @@ CREATE TABLE IF NOT EXISTS actor_channel (
   kind_id UUID NOT NULL REFERENCES ref_code_contact_kind(id) ON DELETE RESTRICT,
   value TEXT NOT NULL,
   is_primary BOOLEAN DEFAULT FALSE,
+  -- Visibilité du canal (chantier 2026-08-28, manifeste 17e). DÉFAUT PRIVÉ, à l'inverse de
+  -- `contact_channel.is_public` (DEFAULT TRUE) : celui-ci porte une coordonnée d'ÉTABLISSEMENT,
+  -- celui-là une coordonnée de PERSONNE. Le drapeau ne gate que les surfaces de DIFFUSION ; le
+  -- CRM et l'éditeur continuent d'émettre tous les canaux aux membres autorisés (le périmètre
+  -- est déjà gardé par api.can_read_actor_contacts, §208) — sans quoi le déploiement aurait
+  -- vidé les fiches de tous les agents le jour même.
+  is_public BOOLEAN NOT NULL DEFAULT FALSE,
   role_id UUID REFERENCES ref_contact_role(id) ON DELETE SET NULL,
   position INTEGER DEFAULT 0,
   extra JSONB,

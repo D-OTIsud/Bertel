@@ -108,6 +108,8 @@ describe('CrmActorEditModal — §19 adresses prestataire', () => {
           kindCode: 'address',
           value: '38 Chemin Dijoux, 97414 Entre-Deux',
           isPrimary: false,
+          // 17e — une adresse postale d'acteur est un canal comme un autre : privée par défaut.
+          isPublic: false,
         }),
       );
     } finally {

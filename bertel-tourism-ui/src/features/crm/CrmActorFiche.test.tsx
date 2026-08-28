@@ -529,6 +529,9 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       kindCode: 'phone',
       value: '0692 11 22 33',
       isPrimary: false,
+      // 17e — un canal d'acteur neuf naît PRIVÉ : c'est une coordonnée de PERSONNE, sa
+      // diffusion se demande explicitement.
+      isPublic: false,
     });
     // Refresh fiche + annuaire après écriture confirmée.
     await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
@@ -618,6 +621,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       kindCode: 'phone',
       value: '0692 11 22 33',
       isPrimary: false,
+      isPublic: false,
     });
   });
 

@@ -381,6 +381,16 @@ export interface ActorCrmChannel {
   kindName: string;
   value: string;
   isPrimary: boolean;
+  /**
+   * Diffusable hors du CRM (17e). Défaut PRIVÉ, à l'inverse de `contact_channel.isPublic` :
+   * celui-ci porte une coordonnée d'ÉTABLISSEMENT, celui-là une coordonnée de PERSONNE.
+   *
+   * Le drapeau ne gate QUE les surfaces de diffusion — le CRM et l'éditeur affichent tous les
+   * canaux aux membres autorisés (le périmètre est déjà gardé serveur, §208). Aucune voie de
+   * lecture ne le filtre à ce jour : c'est une déclaration saisissable dès maintenant, honorée
+   * par la première surface de diffusion qui verra le jour.
+   */
+  isPublic: boolean;
 }
 
 export interface ActorCrmSnapshot {
@@ -441,6 +451,9 @@ export function parseActorCrmSnapshot(payload: unknown): ActorCrmSnapshot {
             kindName: readString(row.kind_name),
             value: readString(row.value),
             isPrimary: row.is_primary === true,
+            // Fail-closed : une clé absente (backend antérieur à 17e) ou une valeur inattendue
+            // ne doit JAMAIS rendre une coordonnée de personne diffusable.
+            isPublic: row.is_public === true,
           }))
       : [],
     interactions: Array.isArray(record.interactions)
@@ -866,6 +879,13 @@ export interface SaveActorChannelInput {
   kindCode?: string;
   value?: string;
   isPrimary?: boolean;
+  /**
+   * Visibilité du canal (17e). OPTIONNELLE, et c'est structurant : le RPC est appelé champ par
+   * champ, et la clé absente signifie « ne touche pas à la visibilité ». L'envoyer
+   * systématiquement (par exemple à `false` par défaut) repasserait un canal diffusable en privé
+   * à chaque correction de valeur.
+   */
+  isPublic?: boolean;
 }
 
 export async function saveActorChannel(input: SaveActorChannelInput): Promise<string> {
@@ -879,6 +899,7 @@ export async function saveActorChannel(input: SaveActorChannelInput): Promise<st
   if (input.kindCode !== undefined) payload.kind_code = input.kindCode;
   if (input.value !== undefined) payload.value = input.value;
   if (input.isPrimary !== undefined) payload.is_primary = input.isPrimary;
+  if (input.isPublic !== undefined) payload.is_public = input.isPublic;
   const { data, error } = await client.schema('api').rpc('save_actor_channel', { p_payload: payload });
   if (error) {
     throw error;

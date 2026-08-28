@@ -133,12 +133,17 @@ BEGIN
   -- ce qui la rend sans risque de faux positif sur des données vivantes.
   ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
          'B0: aucune tâche avec owner dans le corpus — l''assertion de reprise serait vacante';
+  -- L'identité de l'assigné EST l'invariant : une ligne quelconque sur la bonne tâche ne
+  -- prouve rien (une reprise qui assignerait tout le monde à un autre utilisateur valide
+  -- passerait). La correspondance testée est donc `a.user_id = ct.owner`.
   ASSERT NOT EXISTS (
     SELECT 1 FROM crm_task ct
     WHERE ct.owner IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a WHERE a.task_id = ct.id)),
-    'B0: une tâche porte un owner sans ligne crm_task_assignee — LA MIGRATION n''a pas '
-    'appelé internal.crm_backfill_assignees_from_owner()';
+      AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a
+                       WHERE a.task_id = ct.id AND a.user_id = ct.owner)),
+    'B0: une tâche porte un owner sans ligne crm_task_assignee POUR CET OWNER — soit LA '
+    'MIGRATION n''a pas appelé internal.crm_backfill_assignees_from_owner(), soit la reprise '
+    'a assigné quelqu''un d''autre';
 
   -- ── Témoins ────────────────────────────────────────────────────────────────────────────
   -- Première rédaction : « une ligne backfillée = une tâche dont created_by IS NULL ».
@@ -173,9 +178,17 @@ BEGIN
   PERFORM internal.crm_backfill_assignees_from_owner();
 
   -- B1. Une ligne reprise depuis `owner` ne porte AUCUNE provenance : ni qui, ni quand.
+  -- Identité ET absence de ligne surnuméraire : `count(*) = 2` sur des lignes toutes
+  -- contraintes à `user_id = v_userA` (l'owner des deux témoins) ferme les deux côtés.
   ASSERT (SELECT count(*) FROM crm_task_assignee
            WHERE task_id IN (v_t_bf_neuve, v_t_bf_modif)) = 2,
-         'B1 (prémisse): les deux témoins doivent avoir été repris';
+         'B1 (prémisse): les deux témoins doivent avoir été repris, sans ligne surnuméraire';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task ct
+    JOIN crm_task_assignee a ON a.task_id = ct.id
+    WHERE ct.id IN (v_t_bf_neuve, v_t_bf_modif) AND a.user_id <> ct.owner),
+    'B1: un témoin est assigné à quelqu''un qui n''est PAS son owner — la reprise doit '
+    'transposer crm_task.owner, pas un utilisateur quelconque';
   ASSERT NOT EXISTS (
     SELECT 1 FROM crm_task_assignee
     WHERE task_id IN (v_t_bf_neuve, v_t_bf_modif) AND assigned_by IS NOT NULL),

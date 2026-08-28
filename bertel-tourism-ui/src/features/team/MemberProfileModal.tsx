@@ -129,8 +129,13 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
     }
   }
 
-  const initials = (name.trim() || '?').split(/\s+/).filter(Boolean).slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
+  // Comme ProfileEditModal (§149) : `name` peut valoir l'e-mail quand aucun vrai nom n'est
+  // enregistré (repli côté serveur) — ne pas en tirer des initiales trompeuses.
+  const trimmedName = name.trim();
+  const hasRealName = trimmedName !== '' && trimmedName !== (member?.email ?? '').trim();
+  const initials = hasRealName
+    ? trimmedName.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?'
+    : '?';
 
   return (
     <Modal
@@ -140,8 +145,9 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
       footer={
         <>
           <button type="button" className="ghost-button" onClick={onClose} disabled={busy}>Annuler</button>
-          <button type="button" className="primary-button" onClick={() => void save()} disabled={busy || name.trim() === ''}>
-            {busy ? 'Enregistrement…' : 'Enregistrer'}
+          <button type="button" className="primary-button" onClick={() => void save()}
+            disabled={busy || name.trim() === '' || loaded === null}>
+            {busy ? 'Enregistrement…' : loaded === null ? 'Chargement du profil…' : 'Enregistrer'}
           </button>
         </>
       }
@@ -150,7 +156,7 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
         avatarUrl={avatarUrl}
         alt={`Photo de ${member?.displayName ?? member?.email ?? 'ce membre'}`}
         initials={initials}
-        busy={avatarBusy}
+        disabled={avatarBusy}
         buttonContent={avatarBusy ? 'Envoi…' : avatarUrl ? 'Changer la photo' : 'Ajouter une photo'}
         onFileSelected={(file) => void onAvatarSelected(file)}
       />

@@ -113,8 +113,7 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
           avatarUrl={avatarUrl}
           alt="Votre photo de profil"
           initials={avatarInitials}
-          busy={avatarBusy}
-          disabled={demoMode}
+          disabled={avatarBusy || demoMode}
           buttonContent={
             avatarBusy ? (
               'Envoi…'
@@ -129,8 +128,9 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
             )
           }
           onFileSelected={(file) => void handleAvatarChange(file)}
-        />
-        {demoMode ? <p className="pref__hint">Photo indisponible en mode démo (aucune session réelle).</p> : null}
+        >
+          {demoMode ? <p className="pref__hint">Photo indisponible en mode démo (aucune session réelle).</p> : null}
+        </AvatarPicker>
 
         <div className="field-block">
           <label htmlFor="profileEditName">Nom affiché</label>

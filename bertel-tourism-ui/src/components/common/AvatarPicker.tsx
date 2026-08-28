@@ -14,10 +14,10 @@ export function AvatarPicker({
   avatarUrl,
   alt,
   initials,
-  busy,
   disabled = false,
   buttonContent,
   onFileSelected,
+  children,
 }: {
   /** URL de la photo posée, ou `null` pour retomber sur les initiales. */
   avatarUrl: string | null;
@@ -25,13 +25,16 @@ export function AvatarPicker({
   alt: string;
   /** Initiales de repli, déjà résolues par l'appelant (chaque appelant a sa propre règle de repli). */
   initials: string;
-  /** Envoi en cours — désactive l'input. */
-  busy: boolean;
-  /** Désactivation supplémentaire indépendante de `busy` (ex. mode démo sans session réelle). */
+  /** Désactive l'input — un seul signal ; l'appelant compose `busy || autreRaison` lui-même s'il a
+   *  plusieurs causes de désactivation (envoi en cours, mode démo sans session réelle…). */
   disabled?: boolean;
   /** Contenu du bouton/label, choisi par l'appelant ("Envoi…", flash succès, libellé par défaut…). */
   buttonContent: ReactNode;
   onFileSelected: (file: File) => void;
+  /** Contenu optionnel inséré ENTRE le bouton et l'aide générique ("JPEG, PNG…") — permet à un
+   *  appelant (ex. ProfileEditModal, note mode démo) de garder son ordre d'origine sans dupliquer
+   *  le bloc photo/bouton. */
+  children?: ReactNode;
 }) {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -76,11 +79,12 @@ export function AvatarPicker({
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="sr-only"
-            disabled={busy || disabled}
+            disabled={disabled}
             onChange={handleChange}
           />
         </label>
       </div>
+      {children}
       <p className="pref__hint">
         JPEG, PNG ou WebP — ≤ 5 Mo. Redimensionnée et nettoyée (métadonnées EXIF/GPS supprimées) automatiquement.
       </p>

@@ -163,8 +163,9 @@ BEGIN
   END LOOP;
 
   v_cat := api.get_ref_catalog('ref_legal_type');
-  ASSERT jsonb_array_length(v_cat->'rows') = 20,
-         format('ref_legal_type porte 20 valeurs ; obtenu %s', jsonb_array_length(v_cat->'rows'));
+  -- 5 identités + 16 documents (15 §209 du 2026-08-07 + courrier_fermeture du 2026-08-28).
+  ASSERT jsonb_array_length(v_cat->'rows') = 21,
+         format('ref_legal_type porte 21 valeurs ; obtenu %s', jsonb_array_length(v_cat->'rows'));
 
   RAISE NOTICE 'lecture assertions passed';
 END$$;

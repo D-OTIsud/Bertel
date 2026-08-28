@@ -5943,7 +5943,14 @@ INSERT INTO ref_legal_type (code, name, description, category, is_required, is_p
    'erp', false, false, 365),
   ('accessibility', 'Attestation d''accessibilité (ERP)',
    'Attestation d''accessibilité d''un établissement recevant du public, ou agenda d''accessibilité programmée (Ad''AP). Distincte du label Tourisme & Handicap, qui est une distinction volontaire saisie en §10.',
-   'erp', false, false, 1095)
+   'erp', false, false, 1095),
+
+  -- Cycle de vie de l'établissement -----------------------------------------------------
+  -- Ajout du 2026-08-28 (lot de corrections, chantier 2 — demande PO ; manifeste 17a). Seule pièce
+  -- de SORTIE du catalogue : le §18 devient le porte-documents administratif de la fiche.
+  ('courrier_fermeture', 'Courrier de fermeture',
+   'Courrier attestant la fermeture de l''établissement (cessation d''activité, fermeture administrative ou définitive). À joindre lorsqu''une fiche est retirée de la diffusion : il documente la date d''effet et l''origine de la décision.',
+   'business', false, false, NULL)
 ON CONFLICT (code) DO NOTHING;
 
 -- =====================================================

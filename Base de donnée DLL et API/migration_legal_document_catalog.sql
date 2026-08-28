@@ -23,6 +23,12 @@
 --   (4) Installe les 11 documents manquants de la liste PO (SIRENE, KBIS, CERFA meublé, CERFA chambre
 --       d'hôtes, permis d'exploitation, diplôme, carte professionnelle, licence restaurant, récépissé
 --       mairie, extrait INPI, statuts association).
+--   (5) AJOUT ULTÉRIEUR (2026-08-28, lot de corrections chantier 2, demande PO) : `courrier_fermeture`,
+--       16e document et seule pièce de SORTIE du catalogue. La ligne vit ICI (et non dans la seule
+--       migration 17a) parce que la garde de convergence ci-dessous compte le catalogue À CE POINT
+--       du manifeste : si la ligne n'était installée qu'après, une base fraîche échouerait ici.
+--       `migration_legal_type_courrier_fermeture.sql` (17a) porte la même ligne pour la base LIVE,
+--       qui a déjà joué cette migration dans sa version à 15 documents.
 --
 -- ARBITRAGES PO (2026-08-07)
 --   * `is_required = false` sur TOUS les documents : l'obligation dépend de la situation du prestataire
@@ -90,7 +96,7 @@ BEGIN
 END $$;
 
 -- =====================================================
--- 3. Catalogue cible des DOCUMENTS juridiques (15 types)
+-- 3. Catalogue cible des DOCUMENTS juridiques (16 types : 15 §209 + courrier_fermeture 2026-08-28)
 --    Convergent : DO UPDATE réaligne libellé/description/catégorie/drapeaux sur une base déjà seedée
 --    (c'est ce qui réétiquette fire_safety/accessibility et finalise les 2 renommages du bloc 1).
 --    `review_interval_days` = périodicité indicative de re-demande, pas une règle bloquante.
@@ -151,7 +157,14 @@ INSERT INTO ref_legal_type (code, name, description, category, is_required, is_p
    'erp', false, false, 365),
   ('accessibility', 'Attestation d''accessibilité (ERP)',
    'Attestation d''accessibilité d''un établissement recevant du public, ou agenda d''accessibilité programmée (Ad''AP). Distincte du label Tourisme & Handicap, qui est une distinction volontaire saisie en §10.',
-   'erp', false, false, 1095)
+   'erp', false, false, 1095),
+
+  -- Cycle de vie de l'établissement -----------------------------------------------------
+  -- Ajout du 2026-08-28 (lot de corrections, chantier 2 — demande PO). Seule pièce de SORTIE du
+  -- catalogue : le §18 devient le porte-documents administratif de la fiche, entrée ET sortie.
+  ('courrier_fermeture', 'Courrier de fermeture',
+   'Courrier attestant la fermeture de l''établissement (cessation d''activité, fermeture administrative ou définitive). À joindre lorsqu''une fiche est retirée de la diffusion : il documente la date d''effet et l''origine de la décision.',
+   'business', false, false, NULL)
 ON CONFLICT (code) DO UPDATE SET
   name                 = EXCLUDED.name,
   description          = EXCLUDED.description,
@@ -162,7 +175,7 @@ ON CONFLICT (code) DO UPDATE SET
   updated_at           = NOW();
 
 -- =====================================================
--- 4. Garde de convergence — le catalogue doit valoir exactement 5 identités + 15 documents
+-- 4. Garde de convergence — le catalogue doit valoir exactement 5 identités + 16 documents
 -- =====================================================
 DO $$
 DECLARE
@@ -173,8 +186,9 @@ BEGIN
   FROM ref_legal_type
   WHERE code NOT IN ('siret', 'siren', 'raison_sociale', 'vat_number', 'tourist_tax');
 
-  IF v_docs <> 15 THEN
-    RAISE EXCEPTION 'migration_legal_document_catalog: % types de documents apres convergence, 15 attendus.', v_docs;
+  -- 15 documents §209 (2026-08-07) + 1 ajouté le 2026-08-28 (courrier_fermeture, manifeste 17a).
+  IF v_docs <> 16 THEN
+    RAISE EXCEPTION 'migration_legal_document_catalog: % types de documents apres convergence, 16 attendus.', v_docs;
   END IF;
 
   SELECT string_agg(code, ', ' ORDER BY code) INTO v_leftovers

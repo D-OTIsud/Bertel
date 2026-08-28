@@ -1,8 +1,8 @@
 import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPublicationCards } from '../data/mock';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
-import type { AuditQuestion, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
-import { buildBucketRpcFilters, dedupeExplorerCards, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
+import type { AuditQuestion, BackendObjectTypeCode, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
+import { buildBucketRpcFilters, canMergeExplorerBuckets, dedupeExplorerCards, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
 
@@ -164,13 +164,26 @@ async function tryGetObjectWithDeepData(
   return normalizeObjectDetailPayload(data, objectId);
 }
 
-export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPageResponse<ObjectCard>> {
-  const session = useSessionStore.getState();
-  const pageSize = input.pageSize ?? 20;
+/**
+ * Cœur d'appel de la page cartes, partagé par le chemin PAR BUCKET et le chemin
+ * FUSIONNÉ (B2, spec 2026-08-26) : `types` et `rpcFilters` sont fournis explicitement
+ * au lieu d'être dérivés d'un bucket. Une seule copie de la lecture de `meta`, de
+ * `withAbort` et de `normalizeExplorerCards` — deux copies divergeraient.
+ */
+async function listExplorerPageForTypes(
+  types: BackendObjectTypeCode[],
+  rpcFilters: Record<string, unknown>,
+  input: {
+    cursor?: string | null;
+    pageSize: number;
+    filters: ExplorerFilters;
+    langPrefs: string[];
+    signal?: AbortSignal;
+  },
+): Promise<RpcPageResponse<ObjectCard>> {
   const client = requireRpcClient();
-
-  if (session.demoMode || !client) {
-    return paginateMock(filterMockCards(input.filters, input.bucket), input.cursor, pageSize);
+  if (!client) {
+    throw new Error('Client Supabase indisponible pour la page explorer.');
   }
 
   // The store carries the resolved statuses (cf. useExplorerCardsQuery →
@@ -185,11 +198,11 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
     client.schema('api').rpc('list_object_resources_filtered_page', {
       p_cursor: input.cursor ?? null,
       p_lang_prefs: input.langPrefs,
-      p_page_size: pageSize,
-      p_filters: buildBucketRpcFilters(input.filters, input.bucket),
+      p_page_size: input.pageSize,
+      p_filters: rpcFilters,
       // Subtypes are pushed into p_types (server-side) instead of being filtered client-side,
       // so lazy server pagination returns exactly the rows the user asked for (§125).
-      p_types: getEffectiveBackendTypesForBucket(input.filters, input.bucket),
+      p_types: types,
       p_status: pStatus,
       p_search: input.filters.common.search || null,
       p_track_format: 'none',
@@ -211,6 +224,28 @@ export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPag
     meta: payload.meta,
     data: Array.isArray(payload.data) ? normalizeExplorerCards(payload.data as ObjectCard[]) : [],
   };
+}
+
+export async function listExplorerPage(input: ExplorerPageInput): Promise<RpcPageResponse<ObjectCard>> {
+  const session = useSessionStore.getState();
+  const pageSize = input.pageSize ?? 20;
+  const client = requireRpcClient();
+
+  if (session.demoMode || !client) {
+    return paginateMock(filterMockCards(input.filters, input.bucket), input.cursor, pageSize);
+  }
+
+  return listExplorerPageForTypes(
+    getEffectiveBackendTypesForBucket(input.filters, input.bucket),
+    buildBucketRpcFilters(input.filters, input.bucket),
+    {
+      cursor: input.cursor,
+      pageSize,
+      filters: input.filters,
+      langPrefs: input.langPrefs,
+      signal: input.signal,
+    },
+  );
 }
 
 // Page size kept small on purpose: the server-side enrichment in
@@ -354,8 +389,7 @@ export async function listObjectMarkers(
   const statuses = filters.common.statuses;
   const pStatus = statuses.length > 0 ? statuses : null;
 
-  const perBucket = await mapWithConcurrency(buckets, EXPLORER_BUCKET_CONCURRENCY, async (bucket) => {
-    const types = getEffectiveBackendTypesForBucket(filters, bucket);
+  const callMarkers = async (types: BackendObjectTypeCode[], rpcFilters: Record<string, unknown>) => {
     if (types.length === 0) {
       return [] as ObjectCard[];
     }
@@ -363,7 +397,7 @@ export async function listObjectMarkers(
       client.schema('api').rpc('list_object_markers', {
         p_types: types,
         p_status: pStatus,
-        p_filters: buildBucketRpcFilters(filters, bucket),
+        p_filters: rpcFilters,
         p_search: filters.common.search || null,
       }),
       signal,
@@ -372,7 +406,25 @@ export async function listObjectMarkers(
       throw error;
     }
     return normalizeMarkerCards(data);
-  });
+  };
+
+  // B2 (spec 2026-08-26) — un SEUL appel quand les payloads par bucket sont identiques.
+  //
+  // ⚠️ L'ENSEMBLE RENDU NE CHANGE PAS, et ce n'est pas un détail : ces marqueurs
+  // alimentent `visibleObjectIds`, donc « Tout sélectionner » de la SelectionBar, donc
+  // Export Excel / Copier les e-mails / Créer une liste. L'union des types sur un
+  // payload de filtres identique rend exactement la concaténation des sept appels —
+  // le `p_types` est le SEUL paramètre qui différait.
+  if (canMergeExplorerBuckets(filters)) {
+    const mergedTypes = [
+      ...new Set(buckets.flatMap((bucket) => getEffectiveBackendTypesForBucket(filters, bucket))),
+    ];
+    return dedupeExplorerCards(await callMarkers(mergedTypes, buildBucketRpcFilters(filters, buckets[0])));
+  }
+
+  const perBucket = await mapWithConcurrency(buckets, EXPLORER_BUCKET_CONCURRENCY, (bucket) =>
+    callMarkers(getEffectiveBackendTypesForBucket(filters, bucket), buildBucketRpcFilters(filters, bucket)),
+  );
 
   return dedupeExplorerCards(perBucket.flat());
 }
@@ -386,7 +438,17 @@ export async function listObjectMarkers(
 // tipped the 8s authenticated statement_timeout under contention.
 // ---------------------------------------------------------------------------
 export const EXPLORER_BUCKET_CURSOR_DONE = '__DONE__';
-export type ExplorerBucketCursorMap = Partial<Record<ExplorerBucketKey, string | null>>;
+/**
+ * B2 (spec 2026-08-26) — clé de curseur du chemin FUSIONNÉ. Quand tous les buckets
+ * partagent le même payload de filtres, il n'y a plus qu'UN appel, donc UN curseur :
+ * il vit sous cette clé synthétique, dans la même map (aucune signature ne change).
+ * Sa PRÉSENCE dans la map suffit à reconnaître qu'une pagination fusionnée est en
+ * cours — pas de drapeau séparé qui pourrait désynchroniser.
+ */
+export const EXPLORER_MERGED_CURSOR_KEY = '__ALL__';
+export type ExplorerBucketCursorMap = Partial<
+  Record<ExplorerBucketKey | typeof EXPLORER_MERGED_CURSOR_KEY, string | null>
+>;
 export interface ExplorerCardsPage {
   cards: ObjectCard[];
   cursors: ExplorerBucketCursorMap;
@@ -414,6 +476,42 @@ export async function fetchExplorerCardsPage(
 ): Promise<ExplorerCardsPage> {
   const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets);
   const cursors: ExplorerBucketCursorMap = {};
+
+  // B2 (spec 2026-08-26) — un SEUL appel quand les payloads par bucket sont identiques
+  // (le cas par défaut). 7 allers-retours deviennent 1 : à ~250 ms de serveur + ~250 ms
+  // de réseau chacun, c'est l'essentiel des ~2,3 s perçues à chaque frappe validée.
+  // Le mode démo garde le chemin par bucket (le mock est servi par listExplorerPage).
+  if (!useSessionStore.getState().demoMode && canMergeExplorerBuckets(filters)) {
+    const mergedTypes = [
+      ...new Set(buckets.flatMap((bucket) => getEffectiveBackendTypesForBucket(filters, bucket))),
+    ];
+    if (pageParam[EXPLORER_MERGED_CURSOR_KEY] === EXPLORER_BUCKET_CURSOR_DONE || mergedTypes.length === 0) {
+      return {
+        cards: [],
+        cursors: { [EXPLORER_MERGED_CURSOR_KEY]: EXPLORER_BUCKET_CURSOR_DONE },
+        labelRankCounts: { labelled: 0, equivalent: 0 },
+        totalCount: 0,
+      };
+    }
+
+    const page = await listExplorerPageForTypes(
+      mergedTypes,
+      // Les payloads sont identiques par construction (c'est la condition d'armement) :
+      // celui du premier bucket EST celui de tous.
+      buildBucketRpcFilters(filters, buckets[0]),
+      { cursor: pageParam[EXPLORER_MERGED_CURSOR_KEY] ?? null, pageSize: EXPLORER_BUCKET_PAGE_SIZE, filters, langPrefs, signal },
+    );
+
+    return {
+      cards: page.data,
+      cursors: { [EXPLORER_MERGED_CURSOR_KEY]: page.meta.next_cursor ?? EXPLORER_BUCKET_CURSOR_DONE },
+      labelRankCounts: {
+        labelled: page.meta.label_rank_counts?.labelled ?? 0,
+        equivalent: page.meta.label_rank_counts?.equivalent ?? 0,
+      },
+      totalCount: page.meta.total ?? 0,
+    };
+  }
 
   // Buckets that are exhausted, or carry no effective types (a stale/empty subtype
   // selection), contribute nothing and are marked DONE so pagination can terminate.
@@ -459,6 +557,12 @@ export function explorerCardsHasNextPage(
   filters: ExplorerFilters,
   cursors: ExplorerBucketCursorMap,
 ): boolean {
+  // B2 — pagination fusionnée : un seul curseur décide. Testé EN TÊTE, car la map ne
+  // porte alors aucune clé de bucket et la boucle ci-dessous conclurait « il reste des
+  // pages » pour tous les buckets, à l'infini.
+  if (EXPLORER_MERGED_CURSOR_KEY in cursors) {
+    return cursors[EXPLORER_MERGED_CURSOR_KEY] !== EXPLORER_BUCKET_CURSOR_DONE;
+  }
   return getEffectiveSelectedBuckets(filters.selectedBuckets).some(
     (bucket) =>
       cursors[bucket] !== EXPLORER_BUCKET_CURSOR_DONE &&

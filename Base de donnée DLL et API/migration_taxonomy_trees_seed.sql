@@ -313,6 +313,19 @@ INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i
 INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i18n,description_i18n,icon_url) VALUES ('taxonomy_vil','town_center','Bourg / centre-ville','Centre urbain, chef-lieu','3','t','{"fr": "Bourg / centre-ville"}'::jsonb,'{"fr": "Centre urbain, chef-lieu"}'::jsonb,NULL) ON CONFLICT (domain,code) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,position=EXCLUDED.position,is_assignable=EXCLUDED.is_assignable,name_i18n=EXCLUDED.name_i18n,description_i18n=EXCLUDED.description_i18n,icon_url=EXCLUDED.icon_url;
 INSERT INTO ref_code (domain,code,name,description,position,is_assignable,name_i18n,description_i18n,icon_url) VALUES ('taxonomy_vil','islet','Îlet','Îlet habité (cirques, vallées)','4','t','{"fr": "Îlet"}'::jsonb,'{"fr": "Îlet habité (cirques, vallées)"}'::jsonb,NULL) ON CONFLICT (domain,code) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,position=EXCLUDED.position,is_assignable=EXCLUDED.is_assignable,name_i18n=EXCLUDED.name_i18n,description_i18n=EXCLUDED.description_i18n,icon_url=EXCLUDED.icon_url;
 
+-- Le snapshot est rejoué après les migrations d'hygiène (§187/§189). Comme les
+-- INSERT ci-dessus ne transportent historiquement que `is_assignable`, ils ne
+-- doivent pas réactiver les trois anciens nœuds HLO retirés avant ce seed.
+UPDATE ref_code
+   SET is_active = FALSE,
+       is_assignable = FALSE,
+       updated_at = NOW()
+ WHERE (domain, code) IN (
+   ('taxonomy_hlo', 'auberge'),
+   ('taxonomy_hlo', 'chambre'),
+   ('taxonomy_hlo', 'gite_d_etape_et_de_randonnee')
+ );
+
 -- Phase 2 — resolve parent_id by code (order-independent)
 UPDATE ref_code c SET parent_id = p.id
 FROM (VALUES

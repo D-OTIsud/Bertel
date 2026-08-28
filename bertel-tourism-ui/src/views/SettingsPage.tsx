@@ -22,7 +22,7 @@ import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
 import TeamAdminPage from './TeamAdminPage';
-import { RefCodeEditor } from './RefCodeEditor';
+import { RefCatalogAdmin } from './RefCatalogAdmin';
 import { canAdministerTeam } from '@/store/session-selectors';
 import { useSessionStore } from '../store/session-store';
 import { useThemeStore } from '../store/theme-store';
@@ -774,16 +774,16 @@ export default function SettingsPage() {
 
       )}
 
-      {/* 7.5 — Listes & référentiels (ref_code) : éditeur maître/détail super-admin. */}
+      {/* §211 — tous les catalogues de reference : editeur maitre/detail super-admin. */}
       {activeSection === 'referentiels' && role === 'super_admin' && (
         <article className="panel-card panel-card--wide">
           <div className="panel-heading">
             <div>
               <h2>Listes & référentiels</h2>
-              <p>Vocabulaires plats (ref_code) : libellé, ordre et activation. Les taxonomies et listes structurelles restent en lecture seule.</p>
+              <p>Tous les catalogues de référence, rangés par famille. Les listes structurelles (taxonomies, registres, permissions) restent en lecture seule, avec leur motif.</p>
             </div>
           </div>
-          <RefCodeEditor />
+          <RefCatalogAdmin />
         </article>
       )}
 

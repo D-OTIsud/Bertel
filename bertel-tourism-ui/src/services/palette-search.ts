@@ -1,34 +1,50 @@
 import type { ObjectCard } from '../types/domain';
-import { listObjectMarkers } from './rpc';
-import { useSessionStore } from '../store/session-store';
-import { DEFAULT_EXPLORER_FILTERS, resolveExplorerStatuses } from '../utils/facets';
+import { NAME_MATCH_MIN_CHARS, searchObjectsByName, type NameMatch } from './name-search';
 
-export const PALETTE_SEARCH_MIN_CHARS = 2;
+/**
+ * Seuil d'armement, aligné sur le service : UNE seule valeur, pas deux
+ * (`CommandPalette` l'importe pour gater sa requête).
+ */
+export const PALETTE_SEARCH_MIN_CHARS = NAME_MATCH_MIN_CHARS;
 const PALETTE_SEARCH_LIMIT = 8;
 
 /**
- * D24 — recherche d'objets de la palette ⌘K : réutilise le RPC markers
- * (authorize-once, corpus complet en ~100 ms, cf. §125) avec les filtres par
- * défaut + le terme — c'est le tsvector `object.search_document` qui matche.
- * Statuts résolus comme l'Explorer : un éditeur retrouve aussi ses brouillons.
- * ponytail: le RPC markers ne renvoie que les fiches GÉOLOCALISÉES — une fiche
- * sans coordonnées n'est pas trouvable ici ; le propre est un RPC de recherche
- * léger dédié (remonté à la session API).
+ * D24 — recherche d'objets de la palette ⌘K.
+ *
+ * Passe par `searchObjectsByName` (RPC `api.search_objects_by_name`) et NON
+ * plus par le RPC des marqueurs de carte. Ce que ça change :
+ *
+ * - la limite `ponytail:` précédente est **LEVÉE** : le RPC markers ne rendait
+ *   que les fiches GÉOLOCALISÉES, donc une fiche sans coordonnées était tout
+ *   simplement introuvable à la palette. La recherche par nom porte sur tout
+ *   le corpus visible, coordonnées ou pas ;
+ * - un seul aller-retour léger (~20 ms mesuré) remplace le socle marqueurs
+ *   (~250 ms) et son appel PAR BUCKET.
+ *
+ * Le PÉRIMÈTRE est auto-gardé CÔTÉ SERVEUR (publié pour tous, + les brouillons
+ * du périmètre étendu pour un éditeur) : aucune résolution de statut ici — en
+ * remettre une recréerait une seconde source de vérité.
  */
 export async function searchPaletteObjects(query: string): Promise<ObjectCard[]> {
-  const trimmed = query.trim();
-  if (trimmed.length < PALETTE_SEARCH_MIN_CHARS) {
+  if (query.trim().length < PALETTE_SEARCH_MIN_CHARS) {
     return [];
   }
-  const canEditObjects = useSessionStore.getState().canEditObjects;
-  const filters = {
-    ...DEFAULT_EXPLORER_FILTERS,
-    common: {
-      ...DEFAULT_EXPLORER_FILTERS.common,
-      search: trimmed,
-      statuses: resolveExplorerStatuses([], canEditObjects),
-    },
+  const matches = await searchObjectsByName(query);
+  return matches.slice(0, PALETTE_SEARCH_LIMIT).map(toObjectCard);
+}
+
+/**
+ * La palette n'affiche que le nom, le type et la commune : les autres champs de
+ * `ObjectCard` sont ABSENTS parce que la recherche par nom ne les rend pas —
+ * `open_now: null` dit « inconnu », jamais « fermé » (§133).
+ */
+function toObjectCard(match: NameMatch): ObjectCard {
+  return {
+    id: match.id,
+    type: match.type,
+    name: match.name,
+    image: match.imageUrl,
+    open_now: null,
+    location: { lat: null, lon: null, city: match.city },
   };
-  const markers = await listObjectMarkers(filters);
-  return markers.slice(0, PALETTE_SEARCH_LIMIT);
 }

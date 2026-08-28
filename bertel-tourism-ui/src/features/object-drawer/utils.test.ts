@@ -18,6 +18,7 @@ import {
   parseMeetingRooms,
   parseRelatedObjects,
   parseRoomTypes,
+  parseTaxonomyEyebrow,
   parseTaxonomyGroups,
 } from './utils';
 
@@ -640,5 +641,66 @@ describe('logos de labels', () => {
     const item = groups.find((group) => group.key === 'classifications')?.items[0];
     expect(item?.label).toBeTruthy();
     expect(item?.iconUrl).toBeUndefined();
+  });
+});
+
+/**
+ * Nature taxonomique de l'en-tête (demande CES) — la forme du payload est celle
+ * observée sur les DEUX voies de lecture (deep sous `object`, resource à plat),
+ * relevée sur une fiche réelle (HLO « chambre d'hôtes ») le 2026-08-26.
+ */
+describe('parseTaxonomyEyebrow', () => {
+  it('libellé = nœud affecté, tooltip = chemin complet', () => {
+    const eyebrow = parseTaxonomyEyebrow({
+      taxonomy: {
+        domains: [
+          {
+            domain: 'taxonomy_hlo',
+            domain_name: 'Taxonomie HLO',
+            path: [
+              { code: 'hebergement_locatif', name: 'Hébergement locatif', depth: 0 },
+              { code: 'chambre_d_hotes', name: "Chambre d'hôtes", depth: 1 },
+            ],
+            assigned_node: { code: 'chambre_d_hotes', name: "Chambre d'hôtes", depth: 1 },
+          },
+        ],
+      },
+    });
+
+    expect(eyebrow).toEqual({
+      label: "Chambre d'hôtes",
+      title: "Hébergement locatif › Chambre d'hôtes",
+    });
+  });
+
+  it('sans assigned_node, retombe sur le dernier segment du chemin', () => {
+    const eyebrow = parseTaxonomyEyebrow({
+      taxonomy: {
+        domains: [{ path: [{ name: 'Restauration' }, { name: 'Restaurant traditionnel' }] }],
+      },
+    });
+
+    expect(eyebrow?.label).toBe('Restaurant traditionnel');
+    expect(eyebrow?.title).toBe('Restauration › Restaurant traditionnel');
+  });
+
+  it('null sans taxonomie (clé absente, domaines vides ou nœuds sans nom)', () => {
+    expect(parseTaxonomyEyebrow({})).toBeNull();
+    expect(parseTaxonomyEyebrow({ taxonomy: { domains: [] } })).toBeNull();
+    expect(parseTaxonomyEyebrow({ taxonomy: { domains: [{ path: [] }] } })).toBeNull();
+  });
+
+  it('plusieurs domaines : jointure « · » et dédoublonnage insensible à la casse', () => {
+    const eyebrow = parseTaxonomyEyebrow({
+      taxonomy: {
+        domains: [
+          { assigned_node: { name: 'Chambre d’hôtes' }, path: [{ name: 'Hébergement locatif' }, { name: 'Chambre d’hôtes' }] },
+          { assigned_node: { name: 'CHAMBRE D’HÔTES' }, path: [] },
+          { assigned_node: { name: 'Table d’hôtes' }, path: [] },
+        ],
+      },
+    });
+
+    expect(eyebrow?.label).toBe('Chambre d’hôtes · Table d’hôtes');
   });
 });

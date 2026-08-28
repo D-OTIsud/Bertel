@@ -818,5 +818,54 @@ END$$;
 DROP TABLE IF EXISTS pg_temp.app_user_profile;
 DROP TABLE IF EXISTS pg_temp.user_org_membership;
 
+-- ---------------------------------------------------------------------
+-- K (§213). api.get_actor_data — TROISIÈME surface de la PII acteur
+-- ---------------------------------------------------------------------
+-- get_actor_data est SECURITY INVOKER, exposée à anon/authenticated, et émettait
+-- first_name / last_name / gender / note SANS la garde §208. La RLS d'actor_channel
+-- vide les CANAUX pour un non-autorisé, mais actor_object_role est lisible par tout
+-- membre du périmètre ÉTENDU — donc un authentifié qui LIT la fiche sans être dans
+-- l'ORG publisher voyait la PII. Fuite mesurée en production, fermée par §213.
+-- La garde est NON VACANTE : v_u1 est PUBLISHER de v_obj1 (voit) et seulement LECTEUR
+-- de v_obj2 (ne voit pas) — même acteur, même note sentinelle, seul le périmètre change.
+DO $$
+DECLARE
+  v_obj1  text := 'HOTRUN00000016U1';  -- ORG1 publisher ⇒ v_u1 voit la PII
+  v_obj2  text := 'HOTRUN00000016U2';  -- ORG1 lecteur (étendu) ⇒ v_u1 ne la voit PAS
+  v_u1    text := '16000000-0000-4000-8000-000000000001';
+  j1 jsonb; j2 jsonb; ja jsonb;
+BEGIN
+  PERFORM set_config('request.jwt.claims',
+    format('{"role":"authenticated","sub":"%s"}', v_u1), true);
+  SET LOCAL ROLE authenticated;
+
+  -- K1 — PUBLISHER : PII visible, contacts_restricted = false.
+  j1 := api.get_actor_data(v_obj1)::jsonb;
+  ASSERT jsonb_array_length(j1) = 1, 'K1a FAIL: le lien acteur devrait etre visible au publisher';
+  ASSERT j1->0->>'first_name' = 'Jean', 'K1b FAIL: le publisher doit voir first_name';
+  ASSERT j1->0->>'note' = 'NOTE CRM SENSIBLE 16u', 'K1c FAIL: le publisher doit voir la note du lien';
+  ASSERT (j1->0->>'contacts_restricted')::boolean IS FALSE, 'K1d FAIL: contacts_restricted doit etre false pour le publisher';
+
+  -- K2 — LECTEUR ÉTENDU (hors ORG publisher) : la LIGNE reste visible (il lit la fiche),
+  -- mais la PII est caviardée et la note sentinelle n'apparait NULLE PART.
+  j2 := api.get_actor_data(v_obj2)::jsonb;
+  ASSERT jsonb_array_length(j2) = 1, 'K2a FAIL: la ligne acteur doit rester visible a un lecteur etendu (il lit la fiche)';
+  ASSERT j2->0->>'first_name' IS NULL, 'K2b FAIL: FUITE — un lecteur hors ORG publisher voit first_name';
+  ASSERT j2->0->>'note' IS NULL, 'K2c FAIL: FUITE — un lecteur hors ORG publisher voit la note du lien';
+  ASSERT (j2->0->>'contacts_restricted')::boolean IS TRUE, 'K2d FAIL: contacts_restricted doit etre true hors perimetre';
+  ASSERT (j2::text NOT LIKE '%NOTE CRM SENSIBLE 16u%'), 'K2e FAIL: la note sentinelle a fuite dans le payload d un lecteur non autorise';
+  ASSERT j2->0->>'display_name' IS NOT NULL, 'K2f FAIL: le display_name (non-PII) doit rester visible';
+
+  -- K3 — ANON : la RLS d actor_object_role (lien partners) masque la LIGNE entiere.
+  PERFORM set_config('request.jwt.claims', '{"role":"anon"}', true);
+  SET LOCAL ROLE anon;
+  ja := api.get_actor_data(v_obj1)::jsonb;
+  ASSERT jsonb_array_length(ja) = 0, 'K3 FAIL: anon ne doit voir AUCUN lien acteur (RLS partners)';
+
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  RAISE NOTICE '16u K: get_actor_data gate la PII par la garde §208 (publisher voit, lecteur etendu caviarde, anon rien).';
+END$$;
+
 SELECT 'test_actor_contacts_org_gate: OK' AS result;
 ROLLBACK;

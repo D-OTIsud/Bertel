@@ -3,6 +3,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
+import { NameMatchBand } from '../components/explorer/NameMatchBand';
 import { ResultsTableView } from '../components/explorer/ResultsTableView';
 import { ExplorerViewSwitch } from '../components/explorer/ExplorerViewSwitch';
 import { SelectionBar } from '../components/explorer/SelectionBar';
@@ -127,6 +128,7 @@ export default function ExplorerPage() {
           labelRankCounts={labelRankCounts}
           totalCount={totalCount}
           gradeSection={gradeSection}
+          banner={<NameMatchBand />}
         />
       );
     }
@@ -222,6 +224,7 @@ export default function ExplorerPage() {
               labelRankCounts={labelRankCounts}
               totalCount={totalCount}
               gradeSection={gradeSection}
+              banner={<NameMatchBand />}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}
@@ -236,6 +239,7 @@ export default function ExplorerPage() {
               labelRankCounts={labelRankCounts}
               totalCount={totalCount}
               gradeSection={gradeSection}
+              banner={<NameMatchBand />}
               headerActions={<ExplorerViewSwitch />}
             />
           ) : null}

@@ -6992,11 +6992,27 @@ CREATE OR REPLACE FUNCTION api.get_actor_data(p_object_id TEXT)
 RETURNS JSONB
 LANGUAGE plpgsql
 STABLE
-
-SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+-- §213 — `pg_temp` EXPLICITEMENT EN DERNIER (R2.1) : la garde §208 ci-dessous a
+-- son propre search_path durci, mais cette fonction résout `actor`/`actor_object_role`
+-- contre CE search_path ; sans `pg_temp` en dernier, une TEMP table homonyme les
+-- masquerait. Bretelles (les relations restent qualifiables) + ceinture.
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref, pg_temp
 AS $$
 DECLARE
   v_actor_data JSONB;
+  -- §213 — MÊME garde §208 que le leg `actors` de get_object_resource. get_actor_data
+  -- est SECURITY INVOKER (la RLS d'actor_channel bloque déjà les CANAUX pour un
+  -- non-autorisé — mesuré : 0 contact), MAIS actor_object_role est lisible par tout
+  -- membre du périmètre ÉTENDU (published ∪ extended), et un tel appelant n'est PAS
+  -- forcément dans l'ORG publisher. Sans cette garde, first_name / last_name / gender
+  -- et surtout `note` (la note libre du lien) fuitaient à un lecteur hors périmètre —
+  -- mesuré en production : « Benoît Guiseppe » / « Propriétaire » rendus à un
+  -- authentifié dont api.can_read_actor_contacts dit FALSE. Troisième surface du même
+  -- fait (après le leg get_object_resource et le duplicata supprimé de
+  -- get_objects_with_deep_data) : elle porte donc la MÊME garde, pas une variante.
+  -- COALESCE(…, FALSE) : la garde est à trois valeurs (§204), et NULL en position
+  -- booléenne ferait FAIL-OPEN. Évaluée UNE fois (p_object_id constant).
+  v_can_read BOOLEAN := COALESCE(api.can_read_actor_contacts(p_object_id), FALSE);
 BEGIN
   -- Optimized: Use CTEs and jsonb_agg to eliminate nested loops
   WITH actors_with_contacts AS (
@@ -7053,9 +7069,12 @@ BEGIN
     jsonb_build_object(
       'id', id,
       'display_name', display_name,
-      'first_name', first_name,
-      'last_name', last_name,
-      'gender', gender,
+      -- §213 — PII gatée par la garde §208, forme POSITIVE (jamais `WHEN NOT`, qui
+      -- serait fail-open si la garde valait NULL). `contacts_restricted` distingue
+      -- « réservé » de « pas saisi » — même contrat que le leg get_object_resource.
+      'first_name', CASE WHEN v_can_read THEN first_name END,
+      'last_name',  CASE WHEN v_can_read THEN last_name END,
+      'gender',     CASE WHEN v_can_read THEN gender END,
       'role', jsonb_build_object(
         'id', role_id,
         'code', role_code,
@@ -7065,8 +7084,11 @@ BEGIN
       'valid_from', valid_from,
       'valid_to', valid_to,
       'visibility', visibility,
-      'note', note,
-      'contacts', contacts
+      'note', CASE WHEN v_can_read THEN note END,
+      'contacts_restricted', NOT v_can_read,
+      -- La RLS d'actor_channel (INVOKER) vide déjà les canaux pour un non-autorisé ;
+      -- on compose la garde par-dessus (§49 : un drapeau compose, il ne substitue pas).
+      'contacts', CASE WHEN v_can_read THEN contacts ELSE '[]'::jsonb END
     )
   ), '[]'::jsonb)
   INTO v_actor_data

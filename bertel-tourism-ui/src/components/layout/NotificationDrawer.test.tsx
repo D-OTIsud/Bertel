@@ -1,5 +1,7 @@
 // Garde du tiroir de notifications (16w) : états (chargement / vide / erreur), marquage
-// lu, et navigation vers le kanban. La boîte n'est chargée que tiroir OUVERT.
+// lu, et navigation vers le kanban. Le tiroir partage l'entrée de cache de la veille
+// (`notificationInboxQueryOptions`) : il ne peut pas afficher une boîte différente de ce
+// que compte la pastille.
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,7 +13,6 @@ import type { AppNotification } from '../../services/notifications';
 jest.mock('../../services/notifications', () => ({
   ...jest.requireActual('../../services/notifications'),
   listMyNotifications: jest.fn(),
-  countMyUnreadNotifications: jest.fn(),
   markNotificationRead: jest.fn(),
   markAllNotificationsRead: jest.fn(),
 }));
@@ -69,9 +70,13 @@ describe('notificationLabel', () => {
 });
 
 describe('NotificationDrawer', () => {
-  it('tiroir FERMÉ : aucune requête (une boîte fermée ne coûte rien)', () => {
+  it('tiroir FERMÉ : la boîte est déjà chargée (cache partagé avec la pastille)', async () => {
+    // Le tiroir ne fait plus sa propre requête : il lit l'entrée de cache que la veille
+    // alimente. Elle est donc peuplée AVANT l'ouverture — le tiroir s'ouvre plein, et il ne
+    // peut pas afficher une boîte différente de ce que compte la cloche.
     renderDrawer(false);
-    expect(mocked.listMyNotifications).not.toHaveBeenCalled();
+    await waitFor(() => expect(mocked.listMyNotifications).toHaveBeenCalled());
+    expect(screen.queryByText(/Rappeler le directeur/)).not.toBeInTheDocument();
   });
 
   it('liste les notifications avec leur contexte', async () => {

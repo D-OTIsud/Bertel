@@ -98,16 +98,27 @@ BEGIN
     WHERE table_schema='public' AND table_name IN ('crm_task_assignee','app_notification')
       AND grantee IN ('anon','authenticated','PUBLIC')),
     'A: crm_task_assignee/app_notification ne doivent porter AUCUN grant anon/authenticated';
-  -- Les 4 RPCs de notification ne sont pas exécutables par anon.
+  -- Les 3 RPCs de notification ne sont pas exécutables par anon.
   ASSERT NOT EXISTS (
     SELECT 1 FROM information_schema.role_routine_grants
     WHERE routine_schema='api'
-      AND routine_name IN ('list_my_notifications','count_my_unread_notifications',
+      AND routine_name IN ('list_my_notifications',
                            'mark_notification_read','mark_all_notifications_read')
       AND grantee IN ('anon','PUBLIC')),
     'A: les RPCs de notification ne doivent pas être exécutables par anon/PUBLIC';
+  -- Pas de RPC de comptage séparé : une CARDINALITÉ ne dit pas de QUOI la boîte est faite
+  -- (lire une ancienne pendant qu'une neuve arrive laisse le compte identique), donc la
+  -- pastille se lit dans `unread_count` de la liste. Le ré-introduire ré-ouvrirait le trou.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname='api' AND p.proname='count_my_unread_notifications'),
+    'A: api.count_my_unread_notifications ne doit pas exister (la pastille vient de la liste)';
 
-  -- ═══════════════ B. BACKFILL (invariant de corpus, non vacant) ═══════════════
+  -- ═══════════════ B. BACKFILL — existence ET métadonnées ═══════════════
+  -- Le backfill ne se contente pas d'exister : il ne doit RIEN inventer. Sans les deux
+  -- assertions de provenance ci-dessous, un futur `assigned_by = created_by` ou un
+  -- `assigned_at = now()` passerait sans bruit — c'est exactement la classe de défaut que
+  -- §A refuse.
   ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
          'B: aucune tâche avec owner dans le corpus — l''assertion de backfill serait vacante';
   ASSERT NOT EXISTS (
@@ -115,6 +126,60 @@ BEGIN
     WHERE ct.owner IS NOT NULL
       AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a WHERE a.task_id = ct.id)),
     'B: une tâche porte un owner sans aucune ligne crm_task_assignee (backfill incomplet)';
+
+  -- B1. `assigned_by` est TOUJOURS NULL sur une ligne backfillée : personne ne sait qui a
+  -- assigné. (Les lignes créées par api.save_crm_task portent, elles, un assigned_by — le
+  -- bloc C1 le vérifie, donc cette assertion ne peut pas être satisfaite par vacuité.)
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee a
+    JOIN crm_task ct ON ct.id = a.task_id
+    WHERE ct.created_by IS NULL          -- ligne antérieure à 16w
+      AND a.assigned_by IS NOT NULL),
+    'B1: une ligne backfillée porte un assigned_by — le backfill a inventé un auteur';
+
+  -- B2. `assigned_at` n'est renseigné QUE sur une tâche JAMAIS MODIFIÉE (là, et là seulement,
+  -- `owner` est la valeur d'insertion, donc `created_at` EST l'instant de l'assignation) ;
+  -- et il vaut alors EXACTEMENT `created_at`. Sur une tâche modifiée, `owner` a pu changer :
+  -- toute date y serait une invention. C'est le défaut corrigé en revue.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee a
+    JOIN crm_task ct ON ct.id = a.task_id
+    WHERE ct.created_by IS NULL          -- ligne antérieure à 16w, donc backfillée
+      AND a.assigned_at IS NOT NULL
+      AND a.assigned_at <> ct.created_at),
+    'B2: une ligne backfillée porte un assigned_at qui n''est pas created_at (date inventée)';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee a
+    JOIN crm_task ct ON ct.id = a.task_id
+    WHERE ct.created_by IS NULL
+      AND ct.updated_at <> ct.created_at
+      AND a.assigned_at IS NOT NULL),
+    'B2bis: une tâche MODIFIÉE (donc potentiellement réassignée) porte une date '
+    'd''assignation — created_at n''y est pas l''instant de l''assignation';
+
+  -- B3. Non-vacuité de B1/B2 sur les DEUX branches : le corpus doit contenir à la fois une
+  -- tâche backfillée jamais modifiée (date attendue) et une modifiée (NULL attendu). Sans
+  -- ce contrôle, B2/B2bis pourraient passer sur un corpus qui ne les exerce pas.
+  ASSERT (SELECT count(*) FROM crm_task_assignee a JOIN crm_task ct ON ct.id = a.task_id
+           WHERE ct.created_by IS NULL AND ct.updated_at = ct.created_at) > 0,
+         'B3a: aucune tâche backfillée jamais modifiée — B2 serait vacante';
+  ASSERT (SELECT count(*) FROM crm_task_assignee a JOIN crm_task ct ON ct.id = a.task_id
+           WHERE ct.created_by IS NULL AND ct.updated_at <> ct.created_at) > 0,
+         'B3b: aucune tâche backfillée modifiée — B2bis serait vacante';
+  -- Et la date attendue est bien POSÉE quand elle est connue (sinon « tout NULL » passerait).
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee a
+    JOIN crm_task ct ON ct.id = a.task_id
+    WHERE ct.created_by IS NULL
+      AND ct.updated_at = ct.created_at
+      AND a.assigned_at IS DISTINCT FROM ct.created_at),
+    'B3c: une tâche backfillée jamais modifiée devrait porter created_at';
+
+  -- B4. `assigned_at` DOIT être nullable : c'est ce qui permet de dire « on ne sait pas ».
+  ASSERT (SELECT is_nullable FROM information_schema.columns
+           WHERE table_schema='public' AND table_name='crm_task_assignee'
+             AND column_name='assigned_at') = 'YES',
+         'B4: crm_task_assignee.assigned_at doit être NULLABLE (NULL = date inconnue)';
 
   -- ═══════════════ Fixture ═══════════════
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code='publisher' LIMIT 1;
@@ -413,6 +478,11 @@ BEGIN
          'H3 (prémisse): le lien tâche→interaction doit bien avoir été posé';
 
   -- ═══════════════ F. CLOISONNEMENT DES NOTIFICATIONS ═══════════════
+  -- Compté HORS persona : sous `SET LOCAL ROLE authenticated`, app_notification ne porte
+  -- aucun grant et la lecture directe lèverait « permission denied » (cf. bloc F1).
+  SELECT count(*) INTO v_before FROM app_notification
+   WHERE recipient_id = v_userC AND read_at IS NULL;
+
   -- userC lit SA boîte (il n'a pas write_crm_notes : lire ses notifications n'en dépend pas).
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userC,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -444,8 +514,11 @@ BEGIN
            'F1: created_by_name doit être joint à la lecture';
     ASSERT (v_inbox->'items'->0->>'task_title') IS NOT NULL,
            'F1: le titre de la tâche doit être joint à la lecture';
-    ASSERT (v_inbox->>'unread_count')::int = api.count_my_unread_notifications(),
-           'F1: unread_count de la liste et le compteur dédié doivent concorder';
+    -- `unread_count` porte sur TOUTES les non-lues, pas seulement sur la page rendue :
+    -- la pastille reste juste même si la boîte dépasse le plafond de la liste.
+    ASSERT (v_inbox->>'unread_count')::int = v_before,
+           'F1: unread_count doit compter TOUTES les non-lues de l''appelant';
+    ASSERT v_before > 0, 'F1 (prémisse): userC doit avoir des non-lues, sinon l''assertion est vide';
     -- Le plus récent d'abord.
     ASSERT (v_inbox->'items'->0->>'created_at')::timestamptz
            >= (v_inbox->'items'->1->>'created_at')::timestamptz,
@@ -472,16 +545,18 @@ BEGIN
   -- userC marque la sienne : 1 mise à jour, puis le compteur baisse ; re-marquer rend 0.
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userC,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
-    v_n := api.count_my_unread_notifications();
+    v_n := (api.list_my_notifications(50)->>'unread_count')::int;
+    ASSERT v_n > 0, 'F3 (prémisse): userC doit avoir des non-lues à marquer';
     ASSERT (api.mark_notification_read(v_notif_c)->>'updated')::int = 1,
            'F3: le destinataire doit pouvoir marquer sa notification lue';
-    ASSERT api.count_my_unread_notifications() = v_n - 1,
+    ASSERT (api.list_my_notifications(50)->>'unread_count')::int = v_n - 1,
            'F3: le compteur de non-lues doit décroître de 1';
     ASSERT (api.mark_notification_read(v_notif_c)->>'updated')::int = 0,
            'F3: re-marquer une notification déjà lue doit rendre 0 (idempotent)';
     ASSERT (api.mark_all_notifications_read()->>'updated')::int = v_n - 1,
            'F3: mark_all doit marquer exactement le reste des non-lues';
-    ASSERT api.count_my_unread_notifications() = 0, 'F3: plus aucune non-lue après mark_all';
+    ASSERT (api.list_my_notifications(50)->>'unread_count')::int = 0,
+           'F3: plus aucune non-lue après mark_all';
   RESET ROLE;
   -- mark_all n'a touché QUE la boîte de userC.
   ASSERT (SELECT count(*) FROM app_notification WHERE recipient_id=v_userD AND read_at IS NULL) >= 1,
@@ -492,7 +567,8 @@ BEGIN
   SET LOCAL ROLE authenticated;
     ASSERT jsonb_array_length(api.list_my_notifications(50)->'items') = 0,
            'F4: sans identité, la boîte doit être vide';
-    ASSERT api.count_my_unread_notifications() = 0, 'F4: sans identité, 0 non-lue';
+    ASSERT (api.list_my_notifications(50)->>'unread_count')::int = 0,
+           'F4: sans identité, 0 non-lue';
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
 

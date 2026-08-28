@@ -1,11 +1,12 @@
-// Garde de la veille des notifications (16w). Le point le plus facile à casser sans que
-// personne ne s'en aperçoive : la PREMIÈRE lecture ne doit annoncer AUCUNE notification.
-// Sinon chaque rechargement de page rejouerait toutes les non-lues en toasts — exactement
-// le bruit que la règle « on ne se notifie pas soi-même » cherche déjà à éviter.
+// Garde de la veille des notifications (16w).
 //
-// Le rafraîchissement est piloté ICI par un `refetchQueries` explicite plutôt que par un
-// évènement de focus : on éprouve la LOGIQUE d'annonce, pas le gestionnaire de focus de
-// React Query (le tester reviendrait à tester la librairie, avec la flakiness en prime).
+// Deux propriétés, et la seconde est celle qu'une revue a trouvée manquante :
+//  1. la PREMIÈRE lecture n'annonce RIEN — sinon chaque rechargement de page rejouerait
+//     toutes les non-lues en attente ;
+//  2. une arrivée est annoncée **même quand le nombre de non-lues ne bouge pas**. La
+//     première rédaction déduisait « il y a du neuf » d'une HAUSSE du compteur : lire une
+//     ancienne notification pendant qu'une neuve arrive laisse le compte identique, et la
+//     neuve passait à la trappe, sans erreur. On observe donc les ids, pas la cardinalité.
 
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,7 +18,6 @@ import * as notifications from '../services/notifications';
 jest.mock('../services/notifications', () => ({
   ...jest.requireActual('../services/notifications'),
   listMyNotifications: jest.fn(),
-  countMyUnreadNotifications: jest.fn(),
 }));
 
 const info = jest.fn();
@@ -40,12 +40,12 @@ async function pollAgain() {
   });
 }
 
-function inboxItem(id: string) {
+function item(id: string, readAt: string | null = null) {
   return {
     id,
     kind: 'crm_task_assigned' as const,
     createdAt: '2026-08-28T10:00:00Z',
-    readAt: null,
+    readAt,
     taskId: 't1',
     taskTitle: `Tâche ${id}`,
     objectId: 'obj-1',
@@ -55,119 +55,111 @@ function inboxItem(id: string) {
   };
 }
 
+const inbox = (items: ReturnType<typeof item>[]) => ({
+  items,
+  unreadCount: items.filter((i) => !i.readAt).length,
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   useSessionStore.setState({ userId: 'u-me', demoMode: false } as never);
-  mocked.countMyUnreadNotifications.mockResolvedValue(0);
-  mocked.listMyNotifications.mockResolvedValue({ items: [], unreadCount: 0 });
+  mocked.listMyNotifications.mockResolvedValue(inbox([]));
 });
 
 it('la PREMIÈRE lecture ne toaste rien, même avec des non-lues en attente', async () => {
-  mocked.countMyUnreadNotifications.mockResolvedValue(3);
-  mocked.listMyNotifications.mockResolvedValue({ items: [inboxItem('n1')], unreadCount: 3 });
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('n1'), item('n2'), item('n3')]));
   const { result } = renderHook(() => useNotificationInbox(), { wrapper });
   await waitFor(() => expect(result.current.unreadCount).toBe(3));
-  // Un relevé SILENCIEUX part pour mémoriser les ids déjà là…
-  await waitFor(() => expect(mocked.listMyNotifications).toHaveBeenCalledTimes(1));
-  // …et rien n'est annoncé : ces 3 non-lues existaient avant l'ouverture de l'onglet.
-  expect(info).not.toHaveBeenCalled();
-});
-
-it('boîte vide à l’ouverture : pas même de relevé (aucun id à mémoriser)', async () => {
-  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(mocked.countMyUnreadNotifications).toHaveBeenCalled());
-  await waitFor(() => expect(result.current.unreadCount).toBe(0));
-  expect(mocked.listMyNotifications).not.toHaveBeenCalled();
+  // La pastille dit 3… et rien n'est annoncé : ces 3 existaient avant l'ouverture de l'onglet.
   expect(info).not.toHaveBeenCalled();
 });
 
 it('les non-lues DÉJÀ là ne sont pas rejouées quand une neuve arrive', async () => {
-  // Le cas qui rend le relevé initial nécessaire : trois non-lues traînent depuis hier.
-  // Sans lui, la première arrivée réelle produirait QUATRE toasts au lieu d'un.
-  mocked.countMyUnreadNotifications.mockResolvedValue(3);
-  mocked.listMyNotifications.mockResolvedValue({
-    items: [inboxItem('vieille-1'), inboxItem('vieille-2'), inboxItem('vieille-3')],
-    unreadCount: 3,
-  });
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('vieille-1'), item('vieille-2')]));
   const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(mocked.listMyNotifications).toHaveBeenCalledTimes(1));
-  expect(info).not.toHaveBeenCalled();
+  await waitFor(() => expect(result.current.unreadCount).toBe(2));
 
-  mocked.countMyUnreadNotifications.mockResolvedValue(4);
-  mocked.listMyNotifications.mockResolvedValue({
-    items: [inboxItem('neuve'), inboxItem('vieille-1'), inboxItem('vieille-2'), inboxItem('vieille-3')],
-    unreadCount: 4,
-  });
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('neuve'), item('vieille-1'), item('vieille-2')]));
   await pollAgain();
-  await waitFor(() => expect(result.current.unreadCount).toBe(4));
   await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
   expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche neuve');
 });
 
-it('une notification qui ARRIVE ensuite est annoncée, une seule fois', async () => {
+// ── Le défaut trouvé en revue ────────────────────────────────────────────────────────────
+it('annonce une arrivée même quand le NOMBRE de non-lues ne bouge pas', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('a'), item('b')]));
   const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(mocked.countMyUnreadNotifications).toHaveBeenCalled());
-  await waitFor(() => expect(result.current.unreadCount).toBe(0));
+  await waitFor(() => expect(result.current.unreadCount).toBe(2));
   expect(info).not.toHaveBeenCalled();
 
-  // Le compteur MONTE : la sonde d'ids part et nomme la nouvelle.
-  mocked.countMyUnreadNotifications.mockResolvedValue(1);
-  mocked.listMyNotifications.mockResolvedValue({ items: [inboxItem('n-neuve')], unreadCount: 1 });
-  await pollAgain();
-  await waitFor(() => expect(result.current.unreadCount).toBe(1));
-  await waitFor(() => expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche n-neuve'));
-  expect(info).toHaveBeenCalledTimes(1);
-
-  // Le compteur remonte encore, mais la boîte porte le MÊME id : pas de seconde annonce.
-  mocked.countMyUnreadNotifications.mockResolvedValue(2);
-  mocked.listMyNotifications.mockResolvedValue({ items: [inboxItem('n-neuve')], unreadCount: 2 });
-  await pollAgain();
-  await waitFor(() => expect(result.current.unreadCount).toBe(2));
-  expect(info).toHaveBeenCalledTimes(1);
-});
-
-it('n’annonce que les NON LUES : une déjà lue dans la sonde reste muette', async () => {
-  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(mocked.countMyUnreadNotifications).toHaveBeenCalled());
-  await waitFor(() => expect(result.current.unreadCount).toBe(0));
-  mocked.countMyUnreadNotifications.mockResolvedValue(1);
-  mocked.listMyNotifications.mockResolvedValue({
-    items: [{ ...inboxItem('n-lue'), readAt: '2026-08-28T11:00:00Z' }, inboxItem('n-fraiche')],
-    unreadCount: 1,
-  });
+  // « a » est lue ailleurs ET « c » arrive dans le même intervalle : le compte reste 2.
+  // Une veille qui déduit le neuf d'une hausse ne verrait RIEN ici.
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('c'), item('a', '2026-08-28T11:00:00Z'), item('b')]));
   await pollAgain();
   await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
-  expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche n-fraiche');
+  expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche c');
+  expect(result.current.unreadCount).toBe(2);
 });
 
-it('un compteur qui BAISSE (lecture ailleurs) n’annonce rien', async () => {
-  mocked.countMyUnreadNotifications.mockResolvedValue(4);
+it('annonce même quand le compte BAISSE, si un id neuf est apparu', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('a'), item('b'), item('c')]));
   const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(result.current.unreadCount).toBe(4));
-  mocked.countMyUnreadNotifications.mockResolvedValue(1);
-  const probesBefore = mocked.listMyNotifications.mock.calls.length;
+  await waitFor(() => expect(result.current.unreadCount).toBe(3));
+
+  // Deux lues, une neuve : 3 → 2, et pourtant « d » doit être annoncée.
+  mocked.listMyNotifications.mockResolvedValue(
+    inbox([item('d'), item('a', '2026-08-28T11:00:00Z'), item('b', '2026-08-28T11:00:00Z'), item('c')]),
+  );
   await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
+  expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche d');
+});
+
+it('une notification n’est annoncée qu’UNE fois, même si la boîte est relue', async () => {
+  // On part d'une boîte NON VIDE : `unreadCount` vaut 0 aussi pendant que la requête est en
+  // vol, donc l'attendre à 0 ne prouverait pas que le relevé initial a eu lieu.
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('deja-la')]));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
   await waitFor(() => expect(result.current.unreadCount).toBe(1));
-  expect(info).not.toHaveBeenCalled();
-  // Aucune sonde SUPPLÉMENTAIRE : une baisse ne demande aucun id.
-  expect(mocked.listMyNotifications).toHaveBeenCalledTimes(probesBefore);
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('n'), item('deja-la')]));
+  await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
+  await pollAgain();
+  await pollAgain();
+  expect(info).toHaveBeenCalledTimes(1);
+});
+
+it('n’annonce que les NON LUES : une ligne déjà lue reste muette', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('deja-la')]));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+  mocked.listMyNotifications.mockResolvedValue(
+    inbox([item('lue', '2026-08-28T11:00:00Z'), item('fraiche'), item('deja-la')]),
+  );
+  await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
+  expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche fraiche');
+});
+
+it('la pastille vient du SERVEUR, pas du nombre de lignes rendues', async () => {
+  // `unread_count` porte sur toute la boîte ; la page, elle, est plafonnée.
+  mocked.listMyNotifications.mockResolvedValue({ items: [item('a')], unreadCount: 137 });
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(result.current.unreadCount).toBe(137));
 });
 
 it('sans identité de session : aucune requête (une boîte anonyme n’existe pas)', async () => {
   useSessionStore.setState({ userId: null } as never);
   const { result } = renderHook(() => useNotificationInbox(), { wrapper });
   await waitFor(() => expect(result.current.unreadCount).toBe(0));
-  expect(mocked.countMyUnreadNotifications).not.toHaveBeenCalled();
+  expect(mocked.listMyNotifications).not.toHaveBeenCalled();
 });
 
-it('l’échec de la sonde d’ids ne casse pas la pastille (elle vient du compteur)', async () => {
-  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
-  await waitFor(() => expect(mocked.countMyUnreadNotifications).toHaveBeenCalled());
-  await waitFor(() => expect(result.current.unreadCount).toBe(0));
-  mocked.countMyUnreadNotifications.mockResolvedValue(2);
+it('une erreur de chargement ne casse rien et n’annonce rien', async () => {
   mocked.listMyNotifications.mockRejectedValue(new Error('réseau coupé'));
-  await pollAgain();
-  await waitFor(() => expect(result.current.unreadCount).toBe(2));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(mocked.listMyNotifications).toHaveBeenCalled());
+  expect(result.current.unreadCount).toBe(0);
   expect(info).not.toHaveBeenCalled();
 });

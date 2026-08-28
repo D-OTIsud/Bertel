@@ -8,19 +8,20 @@
 // PostgREST direct et n'est pas publiée en Realtime — ajouter un canal exigerait des grants
 // et une publication qui ouvriraient la table bien au-delà de ce tiroir.
 //
-// La liste complète n'est chargée QUE tiroir ouvert ; le compteur non-lues, lui, est
-// interrogé en fond par AppShell (c'est lui qui porte la pastille).
+// Le tiroir NE FAIT PAS SA PROPRE REQUÊTE : il consomme l'entrée de cache que la veille
+// (`useNotificationInbox`, montée par AppShell) alimente déjà. Deux requêtes distinctes
+// pourraient montrer deux boîtes différentes — la pastille disant 3, la liste en montrant 2.
 
 import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BellOff, CheckCheck, X } from 'lucide-react';
 import {
-  listMyNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   notificationKeys,
   type AppNotification,
 } from '../../services/notifications';
+import { notificationInboxQueryOptions } from '../../hooks/useNotificationInbox';
 import { useSessionStore } from '../../store/session-store';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { SkeletonBlock } from '../common/SkeletonBlock';
@@ -55,16 +56,12 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
 
-  // Chargée seulement tiroir ouvert (`enabled`) : une boîte fermée ne coûte rien.
-  const inboxQuery = useQuery({
-    queryKey: notificationKeys.inbox(userId),
-    queryFn: () => listMyNotifications(50),
-    enabled: open && Boolean(userId),
-  });
+  // MÊME entrée de cache que la veille de la pastille (AppShell) : le tiroir s'ouvre déjà
+  // rempli, et il ne peut pas afficher une boîte différente de ce que compte la cloche.
+  const inboxQuery = useQuery(notificationInboxQueryOptions(userId));
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: notificationKeys.inbox(userId) });
-    void queryClient.invalidateQueries({ queryKey: notificationKeys.unread(userId) });
   }
 
   const readOneMutation = useMutation({

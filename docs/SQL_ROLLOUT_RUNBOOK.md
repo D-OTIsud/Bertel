@@ -772,9 +772,21 @@ Brief d'origine : `docs/superpowers/plans/2026-08-28-crm-kanban-task-improvement
 | `app_notification` | Générique (`kind`, CHECK fail-closed), `recipient_id` = **frontière de sécurité**. Index `(recipient_id, read_at, created_at DESC)` + `(task_id)`. |
 | `api.save_crm_task` | Contrat `assignee_ids` (tableau JSON d'uuid) ; réconcile non destructif ; notification des seuls entrants. |
 | `api.list_crm_tasks`, `api.list_object_crm` | **Même** contrat de tâche : `assignees[]` (jamais `null`), `created_by_id`, `created_by_name`. |
-| `api.list_my_notifications`, `count_my_unread_notifications`, `mark_notification_read`, `mark_all_notifications_read` | Boîte de réception. Destinataire **toujours** `auth.uid()`, jamais un paramètre. |
+| `api.list_my_notifications`, `mark_notification_read`, `mark_all_notifications_read` | Boîte de réception. Destinataire **toujours** `auth.uid()`, jamais un paramètre. `list` rend `{items, unread_count}` — **pas de RPC de comptage séparé** (voir décision 5). |
 
-### Quatre décisions qui ne sont pas des détails
+### Cinq décisions qui ne sont pas des détails
+
+**0. `assigned_at` n'est renseigné que lorsque la ligne le PROUVE** (corrigé en revue).
+Première rédaction : `assigned_at = crm_task.created_at`, présenté comme « le seul instant
+observé ». C'était faux — `crm_task.owner` est **modifiable**, donc sur une tâche réassignée
+`created_at` est la naissance de la TÂCHE, pas celle de l'assignation. C'était exactement le
+défaut que la décision 1 refuse par ailleurs, commis deux paragraphes plus bas. Le backfill ne
+pose désormais `created_at` que si `updated_at = created_at` (jamais modifiée ⇒ `owner` est la
+valeur d'insertion) ; sinon **NULL = on ne sait pas**, et la colonne est donc NULLABLE.
+Le journal d'audit (`trg_audit_crm_task`) pourrait en récupérer davantage — vérifié sur live :
+les 2 tâches modifiées ont un journal continu et sans changement d'`owner`. Branche
+délibérément NON implémentée : elle rendrait 2 horodatages qu'aucun consommateur ne lit, contre
+une règle trop grosse pour être gardée sans témoins synthétiques (donc une garde vacante).
 
 **1. `created_by` n'est PAS backfillé** (écart assumé au brief §4.1, qui proposait
 `created_by = owner` en « approximation best-effort »). L'historique du créateur n'existe
@@ -801,7 +813,15 @@ contexte HTTP** (psql, pooler, service_role) : `u <> auth.uid()` vaut alors NULL
 les lignes et le `WHERE` n'en garde **aucune** — personne ne serait notifié, sans erreur.
 Même famille que le piège à trois valeurs de `api.current_user_can_edit_objects()` (§204).
 
-**4. `app_notification.payload` ne contient AUCUN nom de personne.** Tout libellé
+**4. Pas de RPC de comptage séparé** (corrigé en revue). Un `count_my_unread_notifications`
+interrogé toutes les 30 s semblait l'option économe ; il ouvrait un trou silencieux : une
+**cardinalité ne dit pas de quoi la boîte est faite**. Lire une ancienne notification pendant
+qu'une neuve arrive laisse le compte identique, et l'arrivée n'était jamais annoncée. Le front
+observe donc la liste (`{items, unread_count}`), et `unread_count` — calculé sur TOUTES les
+non-lues, indépendamment de `p_limit` — garde la pastille exacte. La garde 16w-test assère
+désormais que ce RPC **n'existe pas** : le ré-introduire ré-ouvrirait le trou.
+
+**5. `app_notification.payload` ne contient AUCUN nom de personne.** Tout libellé
 (destinataire, créateur, titre de tâche) est **joint à la lecture** depuis `app_user_profile`
 / `crm_task`. C'est ce qui met ces libellés dans la portée de
 `api.rpc_gdpr_erase_subject` (branche `'user'`, qui anonymise `app_user_profile`) **sans
@@ -840,7 +860,7 @@ backfill non vacant (le corpus contient des tâches avec `owner`) ; sentinelle d
 (`assigned_at` écrit à `2001-01-01`) — comparer à `now()` ne distinguerait rien, `now()`
 étant figé sur toute la transaction.
 
-**Vérifié ROUGE par 5 sabotages** (migration + test rejoués en transaction annulée contre la
+**Vérifié ROUGE par 8 sabotages** (migration + test rejoués en transaction annulée contre la
 base vive, 2026-08-28) :
 
 | Sabotage | Assertion qui tombe |
@@ -850,6 +870,9 @@ base vive, 2026-08-28) :
 | `ORDER BY a.user_id` au lieu du nom | C2 tri par nom affiché |
 | `created_by` modifiable par l'UPDATE | G immuabilité |
 | `WHERE TRUE` au lieu de `IS DISTINCT FROM p_actor` | E1 pas d'auto-notification |
+| `assigned_at = created_at` inconditionnel (la rédaction d'origine) | B2bis date sur une tâche modifiée |
+| `assigned_by = ct.owner` (auteur inventé) | B1 assigned_by sur une ligne backfillée |
+| `assigned_at = now()` | B2 assigned_at ≠ created_at |
 
 ### Application
 
@@ -857,7 +880,7 @@ base vive, 2026-08-28) :
 node .tmp_pgapply/run_sql_file.cjs "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql"
 ```
 
-puis `NOTIFY pgrst, 'reload schema';` (5 fonctions `api.*` neuves) — le fichier le fait déjà
+puis `NOTIFY pgrst, 'reload schema';` (4 fonctions `api.*` neuves) — le fichier le fait déjà
 après son `COMMIT`. **Ordre de déploiement : base d'abord, front ensuite** — les nouvelles
 clés de lecture sont additives et `owner_id`/`owner_name` survivent, donc le front déployé
 pendant la fenêtre continue de fonctionner.

@@ -17,8 +17,8 @@
 --      DESTRUCTIF + notification des SEULS entrants + garde de concurrence.
 --   5. `api.list_crm_tasks` / `api.list_object_crm` — clés `assignees[]`, `created_by_id`,
 --      `created_by_name` (forme stable, `[]` jamais `null`).
---   6. `api.list_my_notifications` / `count_my_unread_notifications` /
---      `mark_notification_read` / `mark_all_notifications_read`.
+--   6. `api.list_my_notifications` (items + unread_count) / `mark_notification_read` /
+--      `mark_all_notifications_read`.
 --
 -- ────────────────────────────────────────────────────────────────────────────────────────
 -- §A — POURQUOI `created_by` N'EST PAS BACKFILLÉ (écart assumé au brief §4.1)
@@ -32,9 +32,26 @@
 -- honnêtes : le change n'en vaut pas la peine, et il serait irréversible (rien ne distingue
 -- ensuite l'approximation du fait). Corollaire : `crm_task_assignee.assigned_by` est NULL
 -- sur les lignes backfillées — personne ne sait qui a assigné.
--- `assigned_at` est en revanche backfillé à `crm_task.created_at` : c'est le seul instant
--- OBSERVÉ auquel l'assignation existait déjà (owner est posé à l'insert). `now()` (le
--- défaut) affirmerait « assignée aujourd'hui », strictement plus faux.
+--
+-- **`assigned_at` suit la MÊME règle, et n'est rempli que lorsque la base le PROUVE.**
+-- Première rédaction : `assigned_at = crm_task.created_at`, « le seul instant observé ».
+-- C'était faux, et c'était le défaut que ce même paragraphe refuse par ailleurs :
+-- `crm_task.owner` est une colonne MODIFIABLE. Sur une tâche réassignée, `created_at` est la
+-- naissance de la TÂCHE, pas celle de l'assignation — une date inventée, dans une colonne de
+-- provenance, exactement comme un créateur inventé. Le backfill ne pose donc `created_at`
+-- que sur les lignes dont la ligne elle-même établit que `owner` n'a pas bougé :
+-- **`updated_at = created_at`**, c'est-à-dire jamais modifiée depuis l'insertion. Tout le
+-- reste vaut NULL = « on ne sait pas quand ». `assigned_at` est donc NULLABLE : son défaut
+-- `now()` ne couvre que les lignes écrites par `api.save_crm_task`.
+--
+-- Le journal d'audit de `crm_task` (`trg_audit_crm_task`, §61) pourrait en récupérer
+-- davantage — vérifié sur live le 2026-08-28 : les 2 tâches modifiées ont un journal continu
+-- et à jour qui ne porte AUCUN changement d'`owner`, donc leur `created_at` serait exact.
+-- Cette branche n'est délibérément PAS implémentée : elle rendrait 2 horodatages qu'AUCUN
+-- consommateur ne lit, contre une règle trop grosse pour être gardée sans témoins
+-- synthétiques — donc une garde vacante, exactement ce que le projet proscrit. Qui aura
+-- besoin de ces dates les retrouvera dans `audit.audit_log` ; NULL dit « inconnu ici »,
+-- il n'affirme rien de faux.
 --
 -- ────────────────────────────────────────────────────────────────────────────────────────
 -- §B — LE RÉCONCILE EST NON DESTRUCTIF (invariant CLAUDE.md §214)
@@ -103,7 +120,10 @@ CREATE TABLE IF NOT EXISTS public.crm_task_assignee (
   task_id     uuid        NOT NULL REFERENCES public.crm_task(id) ON DELETE CASCADE,
   user_id     uuid        NOT NULL REFERENCES auth.users(id)      ON DELETE CASCADE,
   assigned_by uuid                 REFERENCES auth.users(id)      ON DELETE SET NULL,
-  assigned_at timestamptz NOT NULL DEFAULT now(),
+  -- NULLABLE à dessein : NULL = « date d'assignation inconnue » (ligne antérieure à 16w dont
+  -- la base ne prouve pas que `owner` n'a pas bougé — voir §A). Le défaut couvre toutes les
+  -- lignes écrites par api.save_crm_task, qui ne renseigne jamais la colonne explicitement.
+  assigned_at timestamptz          DEFAULT now(),
   PRIMARY KEY (task_id, user_id)
 );
 
@@ -115,16 +135,24 @@ COMMENT ON TABLE public.crm_task_assignee IS
 COMMENT ON COLUMN public.crm_task_assignee.assigned_by IS
   'Qui a posé cette assignation. NULL = inconnu (lignes backfillées depuis crm_task.owner, '
   'ou écriture hors contexte HTTP où auth.uid() est NULL).';
+COMMENT ON COLUMN public.crm_task_assignee.assigned_at IS
+  'Quand l''assignation a été posée. NULL = inconnu : ligne backfillée depuis crm_task.owner '
+  'sur une tâche dont la base ne prouve pas que `owner` n''a pas changé depuis l''insertion. '
+  'Ne JAMAIS y écrire une date approchée — c''est une colonne de provenance (§A).';
 
 -- « Mes tâches » interroge par personne : l'index commence donc par user_id (la PK
 -- (task_id,user_id) ne sert que le sens inverse).
 CREATE INDEX IF NOT EXISTS idx_crm_task_assignee_user
   ON public.crm_task_assignee (user_id, task_id);
 
--- Backfill : une ligne par owner non nul. `assigned_at` = création de la tâche (§A),
--- `assigned_by` laissé NULL (inconnu). ON CONFLICT ⇒ rejouable.
+-- Backfill : une ligne par owner non nul. `assigned_by` toujours NULL (personne ne sait qui
+-- a assigné). `assigned_at` = `created_at` UNIQUEMENT si la base prouve que `owner` n'a pas
+-- changé depuis l'insertion (§A) ; NULL sinon. ON CONFLICT ⇒ rejouable.
 INSERT INTO public.crm_task_assignee (task_id, user_id, assigned_by, assigned_at)
-SELECT ct.id, ct.owner, NULL, ct.created_at
+SELECT ct.id, ct.owner, NULL,
+       -- Jamais modifiée ⇒ `owner` est la valeur d'insertion, donc `created_at` EST
+       -- l'instant de l'assignation. Modifiée ⇒ `owner` a pu changer : on ne sait pas.
+       CASE WHEN ct.updated_at = ct.created_at THEN ct.created_at ELSE NULL END
 FROM public.crm_task ct
 WHERE ct.owner IS NOT NULL
 ON CONFLICT (task_id, user_id) DO NOTHING;
@@ -708,17 +736,11 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION api.count_my_unread_notifications()
-RETURNS integer
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path TO 'public', 'api', 'auth'
-AS $function$
-  -- auth.uid() NULL (anon / hors contexte HTTP) ⇒ `recipient_id = NULL` ne matche jamais,
-  -- donc 0 sans branche dédiée.
-  SELECT count(*)::integer FROM app_notification n
-  WHERE n.recipient_id = auth.uid() AND n.read_at IS NULL;
-$function$;
+-- Pas de RPC de comptage séparé : `list_my_notifications` rend DÉJÀ `unread_count`, calculé
+-- sur TOUTES les non-lues (indépendant de `p_limit`), donc la pastille reste exacte. Un
+-- compteur interrogé seul était une fausse économie : une CARDINALITÉ ne dit pas quelles
+-- notifications composent la boîte — lire une ancienne pendant qu'une neuve arrive laisse le
+-- compte identique, et l'arrivée passait inaperçue. Le front observe donc la liste.
 
 CREATE OR REPLACE FUNCTION api.mark_notification_read(p_id uuid)
 RETURNS jsonb
@@ -765,11 +787,9 @@ $function$;
 -- REVOKE FROM PUBLIC obligatoire sur toute fonction DEFINER neuve (PostgreSQL accorde
 -- EXECUTE à PUBLIC par défaut, et un GRANT ciblé ne le retire pas).
 REVOKE ALL ON FUNCTION api.list_my_notifications(integer)      FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION api.count_my_unread_notifications()     FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION api.mark_notification_read(uuid)        FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION api.mark_all_notifications_read()       FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_my_notifications(integer)  TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION api.count_my_unread_notifications() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.mark_notification_read(uuid)    TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.mark_all_notifications_read()   TO authenticated, service_role;
 
@@ -779,5 +799,5 @@ COMMENT ON FUNCTION api.list_my_notifications(integer) IS
 
 COMMIT;
 
--- PostgREST doit recharger son cache de schéma : 5 fonctions api.* neuves.
+-- PostgREST doit recharger son cache de schéma : 4 fonctions api.* neuves.
 NOTIFY pgrst, 'reload schema';

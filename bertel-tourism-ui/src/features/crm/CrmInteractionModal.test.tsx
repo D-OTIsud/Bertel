@@ -238,3 +238,58 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
     expect(props.onSaved).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°5 — SUITE À DONNER. La modale n'envoyait aucun `status` et le serveur
+// retombait sur « traitée » : toute demande naissait close, invisible du filtre « Actives ».
+// Le PO a tranché pour un choix EXPLICITE, dont la position initiale est dérivée du sujet.
+// ---------------------------------------------------------------------------------------
+describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => {
+  it('sans sujet : la position initiale est « Déjà traitée » et le payload porte status=done', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+
+    expect(screen.getByRole('button', { name: /déjà traitée/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Compte rendu' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
+    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
+  });
+
+  it('un sujet choisi bascule la position initiale sur « À traiter » et envoie status=planned', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+
+    pickFromCombobox('Sujet normalisé', 'Demande de visite');
+    expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Demande reçue' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
+    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'planned' }));
+  });
+
+  it('le choix de l’agent PRIME et ne rebascule pas quand le sujet change ensuite', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+
+    // L'agent force « À traiter » AVANT de choisir un sujet…
+    fireEvent.click(screen.getByRole('button', { name: /à traiter/i }));
+    expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'true');
+
+    // …puis choisit un sujet, ce qui ne doit RIEN changer (le dérivé ne reprend jamais la main).
+    pickFromCombobox('Sujet normalisé', 'Demande de visite');
+    expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'true');
+
+    // Et l'inverse : forcer « Déjà traitée » sur une interaction AVEC sujet doit tenir.
+    fireEvent.click(screen.getByRole('button', { name: /déjà traitée/i }));
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Réglé au téléphone' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
+    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'done', topicCode: 'demande_de_visite' }),
+    );
+  });
+});

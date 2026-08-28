@@ -839,6 +839,9 @@ DECLARE
   v_root_parent uuid;      -- parent du parent (NULL si le parent EST la racine)
   v_root_object text;      -- contexte objet hérité de la racine
   v_root_actor uuid;       -- contexte acteur hérité de la racine
+  -- Statut effectivement inséré (chantier 2026-08-28, manifeste 17b) : résolu AVANT l'INSERT
+  -- parce qu'il pilote AUSSI `resolved_at`. Voir le commentaire de la branche RACINE.
+  v_new_status crm_status;
 BEGIN
   IF NULLIF(p_payload->>'topic_code','') IS NOT NULL THEN
     SELECT id INTO v_topic_id FROM ref_code_demand_topic
@@ -946,16 +949,22 @@ BEGIN
 
     v_id := gen_random_uuid();
     -- Une réponse hérite acteur+contexte de la racine (payload actor_id/object_id ignoré) ;
-    -- statut 'done' par défaut (une réponse n'est pas une demande en attente) ; topic NULL sauf
-    -- topic_code fourni ; owner = auteur de la réponse.
+    -- statut 'done' par défaut (une réponse n'est pas une demande en attente — décision §66,
+    -- INCHANGÉE par le chantier 2026-08-28, qui ne corrige que la naissance des RACINES) ;
+    -- topic NULL sauf topic_code fourni ; owner = auteur de la réponse.
+    v_new_status := COALESCE(NULLIF(p_payload->>'status','')::crm_status, 'done'::crm_status);
     INSERT INTO crm_interaction (id, parent_interaction_id, object_id, actor_id,
-                                 interaction_type, direction, status,
+                                 interaction_type, direction, status, resolved_at,
                                  subject, body, occurred_at,
                                  demand_topic_id, request_sentiment_id, owner, source)
     VALUES (v_id, v_root_id, v_root_object, v_root_actor,
             COALESCE(NULLIF(p_payload->>'interaction_type',''),'note')::crm_interaction_type,
             COALESCE(NULLIF(p_payload->>'direction',''),'internal')::crm_direction,
-            COALESCE(NULLIF(p_payload->>'status',''),'done')::crm_status,
+            v_new_status,
+            -- Cohérence : une ligne qui NAÎT « traitée » porte sa date de résolution. Sans cela
+            -- elle reste dans un état (done, resolved_at NULL) que le cycle §66 ne produit
+            -- JAMAIS — c'est exactement l'état des 1 721 lignes d'import héritées.
+            CASE WHEN v_new_status = 'done' THEN NOW() ELSE NULL END,
             NULLIF(p_payload->>'subject',''),
             NULLIF(p_payload->>'body',''),
             COALESCE(NULLIF(p_payload->>'occurred_at','')::timestamptz, NOW()),
@@ -980,14 +989,39 @@ BEGIN
     RAISE EXCEPTION 'Écriture CRM non autorisée' USING ERRCODE = '42501';
   END IF;
 
+  -- Statut de naissance d'une RACINE (chantier 2026-08-28, manifeste 17b).
+  --
+  -- AVANT : le COALESCE retombait sur 'done'. La même modale crée les DEMANDES et les NOTES
+  -- internes, et le front n'envoyait jamais `status` : toute demande naissait donc « traitée »,
+  -- invisible du chip « Actives » (qui filtre p_status='active' → 'planned'). Mesuré en
+  -- production : les 3 seules interactions créées par l'UI ont été rebasculées à la main dans
+  -- les secondes suivantes (18 s, 15 s avec 5 allers-retours, 5 s) — 100 % de reprise manuelle.
+  --
+  -- APRÈS : le client fournit `status` explicitement (la modale porte le choix « À traiter /
+  -- Déjà traitée », arbitrage PO 2026-08-28). CE DÉFAUT RESTE LE FILET pour tout autre appelant
+  -- — un front tiers, un futur appel RPC — et il doit dire la MÊME chose que la modale : un
+  -- sujet de demande renseigné ⇒ c'est une DEMANDE, elle naît « en attente » ; sans sujet, c'est
+  -- une note interne (compte rendu d'un échange déjà clos), elle naît « traitée ».
+  -- Sans ce discriminant, basculer le défaut sur 'planned' aurait transformé toutes les notes
+  -- en demandes en attente — l'erreur symétrique de celle qu'on corrige.
+  --
+  -- v_topic_id est résolu en tête de fonction (avant les 3 branches), donc lisible ici.
+  v_new_status := COALESCE(
+    NULLIF(p_payload->>'status','')::crm_status,
+    CASE WHEN v_topic_id IS NOT NULL THEN 'planned'::crm_status ELSE 'done'::crm_status END);
+
   v_id := gen_random_uuid();
-  INSERT INTO crm_interaction (id, object_id, interaction_type, direction, status,
+  INSERT INTO crm_interaction (id, object_id, interaction_type, direction, status, resolved_at,
                                subject, body, occurred_at, actor_id,
                                demand_topic_id, request_sentiment_id, owner, source)
   VALUES (v_id, v_object_id,
           COALESCE(NULLIF(p_payload->>'interaction_type',''),'note')::crm_interaction_type,
           COALESCE(NULLIF(p_payload->>'direction',''),'internal')::crm_direction,
-          COALESCE(NULLIF(p_payload->>'status',''),'done')::crm_status,
+          v_new_status,
+          -- Cohérence : une ligne qui naît « traitée » porte sa date de résolution. Le bras
+          -- UPDATE (cycle « marquer traitée / rouvrir », §66) la pose déjà ; l'INSERT ne le
+          -- faisait pas, d'où des lignes (done, resolved_at NULL) que le cycle ne produit jamais.
+          CASE WHEN v_new_status = 'done' THEN NOW() ELSE NULL END,
           NULLIF(p_payload->>'subject',''),
           NULLIF(p_payload->>'body',''),
           COALESCE(NULLIF(p_payload->>'occurred_at','')::timestamptz, NOW()),

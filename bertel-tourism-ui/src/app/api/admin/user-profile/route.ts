@@ -32,11 +32,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const { data: authUser, error: authErr } = await server.auth.admin.getUserById(userId);
   if (authErr || !authUser?.user) return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
 
-  const { data: profile } = await server
+  const { data: profile, error: profileErr } = await server
     .from('app_user_profile')
     .select('display_name, avatar_url, role')
     .eq('id', userId)
     .maybeSingle<TargetProfile>();
+  // Même raisonnement que le PATCH (garde profile_read_failed) : un incident de lecture ne doit
+  // pas se travestir en "profil vide" aux yeux de l'admin qui consulte l'écran.
+  if (profileErr) {
+    return NextResponse.json({ error: 'profile_read_failed', detail: profileErr.message }, { status: 500 });
+  }
 
   return NextResponse.json({
     displayName: profile?.display_name ?? null,
@@ -53,8 +58,18 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   const { server } = auth;
 
   let body: Record<string, unknown>;
-  try { body = (await req.json()) as Record<string, unknown>; }
-  catch { return NextResponse.json({ error: 'bad_json' }, { status: 400 }); }
+  try {
+    const parsed: unknown = await req.json();
+    // `null` est un JSON valide (donc hors du catch) mais `Object.keys(null)` lève — sans cette
+    // garde le 500 qui en résulte contredirait le try/catch juste au-dessus, censé couvrir tout
+    // corps mal formé. Un tableau n'est pas non plus l'objet à plat attendu par PATCH_FIELDS.
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return NextResponse.json({ error: 'bad_json' }, { status: 400 });
+    }
+    body = parsed as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ error: 'bad_json' }, { status: 400 });
+  }
 
   // Une clé inconnue FAIT ÉCHOUER l'appel : une valeur jetée en silence est un piège d'écriture.
   const unknown = Object.keys(body).find((k) => !PATCH_FIELDS.has(k));
@@ -91,6 +106,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (authTargetErr || !authTarget?.user) {
     return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
   }
+
+  // Une adresse identique à celle du compte n'est PAS un changement : ni la garde acteur ni
+  // l'écriture GoTrue n'ont lieu d'être. Un formulaire complet renvoie souvent le champ inchangé.
+  const currentEmail = (authTarget.user.email ?? '').trim().toLowerCase();
+  const emailChanged = email !== undefined && email !== currentEmail;
 
   const { data: profile, error: profileErr } = await server
     .from('app_user_profile')
@@ -129,15 +149,22 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  if (email !== undefined && !auth.isSuper) {
+  // `email !== undefined` est redondant avec `emailChanged` (qui l'implique déjà) mais préserve
+  // le rétrécissement de type TypeScript sur `email` dans ce bloc — `emailChanged` est un simple
+  // booléen, il ne porte pas l'information de type jusqu'ici.
+  if (email !== undefined && emailChanged && !auth.isSuper) {
     // Poser sur un compte l'adresse d'un canal acteur lui donne la propriété des fiches de cet
     // acteur (api.user_actor_ids → api.is_object_owner), y compris hors de l'ORG de l'appelant.
     // Le rattachement est parfois légitime (c'est ainsi qu'un vrai prestataire devient propriétaire
     // de sa fiche), mais c'est une attribution de droits : réservé au superuser plateforme.
+    // `ilike` interprète `_`/`%` comme des jokers SQL : sans échappement, une adresse comme
+    // `jean_dupont@oti.re` matcherait `jeanXdupont@...` pour n'importe quel X et produirait un
+    // 403 fantôme. Pas de filtre sur le type de canal : délibérément sur-inclusif (fail-closed).
+    const escapedEmail = email.replace(/[\\%_]/g, (c) => `\\${c}`);
     const { data: claimed, error: claimedErr } = await server
       .from('actor_channel')
       .select('id')
-      .ilike('value', email)
+      .ilike('value', escapedEmail)
       .limit(1);
     if (claimedErr) {
       return NextResponse.json({ error: 'actor_check_failed', detail: claimedErr.message }, { status: 500 });
@@ -154,8 +181,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  let emailChanged = false;
-  if (email !== undefined) {
+  if (email !== undefined && emailChanged) {
     // email_confirm: true ⇒ changement IMMÉDIAT, pas de courriel de confirmation. L'e-mail est
     // aussi ce que api.is_object_owner compare à actor_channel : changer l'adresse peut changer
     // les fiches que ce membre possède. La modale l'annonce à l'utilisateur.
@@ -169,7 +195,6 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
         { status: taken ? 409 : 500 },
       );
     }
-    emailChanged = true;
   }
 
   const patch: Record<string, unknown> = {};

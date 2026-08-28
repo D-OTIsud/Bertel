@@ -557,9 +557,15 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
 }
 
 /* ===== Assignables (PO point 4 — api.list_crm_assignees) ========================
-   Membres actifs de(s) l'ORG du caller, candidats au référent d'une tâche. Aujourd'hui
-   1 seul utilisateur seedé — la liste à 1 entrée doit fonctionner (le sélecteur la
-   pré-coche). `save_crm_task.owner` valide que l'id choisi est bien un membre. */
+   Membres actifs de(s) l'ORG du caller QUI PEUVENT AGIR DANS LE CRM (17c) : le RPC filtre
+   sur `api.user_can_act_in_crm` — superuser plateforme, rang admin d'ORG, ou permission
+   `write_crm_notes` (directe ou héritée), l'ORG devant par ailleurs publier au moins une
+   fiche. Avant 17c la liste rendait TOUS les co-membres, y compris des lecteurs seuls que
+   `/crm` redirige : on pouvait leur confier une tâche qu'ils ne verraient jamais.
+   La liste et la garde d'écriture partagent le même prédicat — aucun choix proposé ici
+   n'est refusé à l'enregistrement (sinon : piège d'écriture).
+   NB le filtre par personne du kanban UNIT cette liste aux porteurs réels de tâches : une
+   personne devenue inéligible mais encore assignée reste donc filtrable (CrmTaches.tsx). */
 // Même forme que l'assigné d'une tâche (16w) — un seul type, pas un jumeau qui dérivera.
 export type CrmAssignee = CrmTaskAssignee;
 
@@ -578,7 +584,7 @@ const MOCK_CRM_ASSIGNEES: CrmAssignee[] = [
   { userId: 'usr-local-luc', displayName: 'Luc T.' },
 ];
 
-/** RPC `api.list_crm_assignees` — membres assignables de l'ORG du caller. */
+/** RPC `api.list_crm_assignees` — co-membres de l'appelant CAPABLES d'agir dans le CRM (17c). */
 export async function listCrmAssignees(): Promise<CrmAssignee[]> {
   const client = requireCrmClient();
   if (!client) {

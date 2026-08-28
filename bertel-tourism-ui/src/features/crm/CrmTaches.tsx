@@ -145,9 +145,13 @@ export function CrmTaches({
   // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
   const hiddenCount = tasks.filter((task) => task.status === 'canceled' || task.status === 'blocked').length;
 
-  // Options du filtre : les assignables de l'ORG ∪ les personnes réellement portées par une
-  // tâche visible. L'union est nécessaire — une tâche assignée à quelqu'un qui a quitté la
-  // liste des assignables resterait sinon inatteignable par le filtre. Clé = UUID.
+  // Options du filtre : les assignables ∪ les personnes réellement portées par une tâche
+  // visible. L'union est nécessaire — une tâche assignée à quelqu'un qui a quitté la liste
+  // des assignables resterait sinon inatteignable par le filtre. Clé = UUID.
+  // 17c l'a rendue PORTEUSE et non plus seulement prudente : `list_crm_assignees` ne rend
+  // désormais que les personnes capables d'agir dans le CRM, donc une tâche confiée avant la
+  // restriction (ou à quelqu'un qui a perdu ses droits) DÉPEND de cette union pour rester
+  // visible. Gardé par un test dédié.
   const assigneeOptions = useMemo(() => {
     const byId = new Map<string, string>();
     for (const assignee of assigneesQuery.data ?? []) byId.set(assignee.userId, assignee.displayName);

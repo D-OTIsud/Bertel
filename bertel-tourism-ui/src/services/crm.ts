@@ -65,6 +65,8 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     status: TASK_STATUSES.includes(status) ? status : 'todo',
     priority: TASK_PRIORITIES.includes(priority) ? priority : 'medium',
     dueAt: readNullableString(record.due_at),
+    // Base alternative de la période du kanban (la clé est émise par le RPC depuis 16w).
+    createdAt: readNullableString(record.created_at),
     // 16w — assignation multiple + provenance du créateur.
     assignees: parseCrmTaskAssignees(record.assignees),
     createdById: readNullableString(record.created_by_id),

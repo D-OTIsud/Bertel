@@ -31,6 +31,13 @@ function toggleAssignee(optionName: string | RegExp) {
   fireEvent.click(pickerListbox(trigger).getByRole('option', { name: optionName }));
 }
 
+// Bascule la base de la période. Nommé « La période porte sur » et non « Échéance » :
+// le modal de création porte déjà un champ « Échéance », deux homonymes rendraient les
+// requêtes par libellé ambiguës.
+function setBasis(value: 'due' | 'created') {
+  fireEvent.change(screen.getByLabelText('La période porte sur'), { target: { value } });
+}
+
 // Le kanban filtre par défaut sur « mes tâches » : la plupart des cas historiques veulent
 // voir tout le tableau.
 function showEveryone() {
@@ -52,17 +59,17 @@ const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).t
 // `ownerId` reste renseigné volontairement : un code resté sur l'ancienne clé passerait
 // inaperçu si la fixture l'avait supprimé.
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), createdAt: iso(-3), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
   // Tâche CONJOINTE : elle doit remonter sous le filtre de Marie ET sous celui de Jean.
-  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
+  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), createdAt: iso(-1), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
   // Créateur inconnu (createdById null) : la carte doit dire « Créateur inconnu ».
-  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), createdAt: iso(-60), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
   // Sans échéance : visible par défaut (case « Inclure sans échéance » cochée).
-  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, createdAt: iso(-4), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
   // Assignée à quelqu'un d'AUTRE : invisible sous le filtre par défaut « mes tâches ».
-  { id: 'task-autre', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Tâche de Luc', description: null, status: 'todo', priority: 'low', dueAt: iso(1), assignees: [LUC], createdById: 'usr-local-luc', createdByName: 'Luc T.', ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-autre', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Tâche de Luc', description: null, status: 'todo', priority: 'low', dueAt: iso(1), createdAt: iso(-2), assignees: [LUC], createdById: 'usr-local-luc', createdByName: 'Luc T.', ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
   // Échéance HORS fenêtre par défaut (+40 j) : masquée tant que la plage n'est pas élargie.
-  { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
 ];
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {
@@ -321,6 +328,66 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
         jest.useRealTimers();
       }
     });
+
+    it('« Réinitialiser » remet aussi la base sur Échéance', async () => {
+      renderTaches();
+      await screen.findByLabelText('La période porte sur');
+      setBasis('created');
+      expect(screen.getByLabelText('La période porte sur')).toHaveValue('created');
+      fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser' }));
+      expect(screen.getByLabelText('La période porte sur')).toHaveValue('due');
+      expect(screen.getByLabelText('Échéance à partir du')).toBeInTheDocument();
+    });
+  });
+
+  // Le défaut signalé : en production aucune tâche « à faire »/« en cours » n'a d'échéance,
+  // donc la période ne faisait bouger que la colonne « Terminées ». La fixture reproduit ce
+  // cas via `task-later` (sans échéance, colonne À faire).
+  describe('base de la période — Création', () => {
+    it('sous Échéance, une tâche sans échéance échappe à la période quelle que soit la plage', async () => {
+      renderTaches();
+      await screen.findByText('Préparer la convention');
+      // Plage volontairement absurde : rien de daté ne peut y tomber…
+      fireEvent.change(screen.getByLabelText('Échéance à partir du'), { target: { value: '2099-01-01' } });
+      fireEvent.change(screen.getByLabelText('Échéance jusqu’au'), { target: { value: '2099-12-31' } });
+      // …et pourtant la sans-échéance reste là. C'est exactement ce que l'utilisateur lisait
+      // comme « le filtre ne fait rien sur la colonne À faire ».
+      expect(screen.getByText('Préparer la convention')).toBeInTheDocument();
+      expect(screen.queryByText('Rappeler le directeur')).not.toBeInTheDocument();
+    });
+
+    it('bascule sur Création : la colonne « À faire » réagit enfin à la période', async () => {
+      renderTaches();
+      await screen.findByText('Préparer la convention');
+      setBasis('created');
+      // task-later est créée il y a 4 jours ⇒ dans la fenêtre par défaut.
+      expect(screen.getByText('Préparer la convention')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Création jusqu’au'), { target: { value: '2000-01-01' } });
+      fireEvent.change(screen.getByLabelText('Création à partir du'), { target: { value: '1999-01-01' } });
+      // Elle OBÉIT désormais à la plage — ce qu'aucune valeur de la fenêtre d'échéance
+      // ne pouvait obtenir.
+      expect(screen.queryByText('Préparer la convention')).not.toBeInTheDocument();
+    });
+
+    it('les libellés des bornes suivent la base : figés, ils mentiraient', async () => {
+      renderTaches();
+      await screen.findByLabelText('Échéance à partir du');
+      setBasis('created');
+      expect(screen.getByLabelText('Création à partir du')).toBeInTheDocument();
+      expect(screen.getByLabelText('Création jusqu’au')).toBeInTheDocument();
+      expect(screen.queryByLabelText('Échéance à partir du')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Inclure sans date de création')).toBeInTheDocument();
+    });
+
+    it('les tâches qui échappent à la période faute de date sont COMPTÉES et affichées', async () => {
+      renderTaches();
+      await screen.findByText('Préparer la convention');
+      // Sous Échéance : task-later (assignée à moi, sans échéance) échappe.
+      expect(screen.getByText('1 sans date, hors période')).toBeInTheDocument();
+      // Sous Création toutes mes tâches sont datées ⇒ plus rien n'échappe, le compteur part.
+      setBasis('created');
+      expect(screen.queryByText(/sans date, hors période/)).not.toBeInTheDocument();
+    });
   });
 
   describe('16w — carte : assignés et créateur', () => {
@@ -540,7 +607,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('Avancer in_progress→done (bouton) d une tâche liée OUVERTE → prompt sur le chemin bouton aussi', async () => {
     // Une tâche in_progress liée à une interaction encore ouverte.
     crmMock.listCrmTasks.mockResolvedValue([
-      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
+      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
     ]);
     renderTaches();
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Suivi médiation »' }));
@@ -599,7 +666,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {
     crmMock.listCrmTasks.mockResolvedValue([
       ...tasks,
-      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, assignees: [ME], createdById: null, createdByName: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: null, createdByName: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
     ]);
     renderTaches();
     await screen.findByText('Rappeler le directeur');

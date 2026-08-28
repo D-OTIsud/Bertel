@@ -19,29 +19,69 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 interface TargetProfile { display_name: string | null; avatar_url: string | null; role: string | null }
 
 /**
- * Rang d'administration ORG actif de la CIBLE (`null` si elle n'a aucun rôle admin actif).
+ * ORG(s) actifs partagés par l'appelant ET la cible.
+ *
+ * Re-revue (bloquant) — nécessaire pour scoper `resolveTargetAdminRank` à l'ORG précise, comme le
+ * fait la règle SQL RANK_VIOLATION (rls_policies.sql : rpc_set_admin_role / rpc_revoke_admin_role /
+ * rpc_deactivate_membership, §2.6) : le rang de la cible n'y est JAMAIS résolu tous ORG confondus,
+ * mais dans l'ORG du membership manipulé — c'est-à-dire l'ORG que l'appelant et la cible partagent.
+ *
+ * `sharesActiveOrg` (_authorize.ts) rend déjà un booléen équivalent pour la garde `out_of_scope`,
+ * mais pas la liste des ORG, et changer sa signature est hors du périmètre de cette passe. Lecture
+ * propre à cette route ; son échec doit REFUSER (jamais continuer comme si aucune ORG n'était
+ * partagée, ce qui viderait silencieusement le scope de `resolveTargetAdminRank` et ferait retomber
+ * sur « aucun rang trouvé » = garde franchie).
+ */
+async function resolveSharedActiveOrgIds(
+  server: SupabaseClient,
+  callerId: string,
+  targetUserId: string,
+): Promise<{ orgIds: string[] } | { error: string }> {
+  const { data, error } = await server
+    .from('user_org_membership')
+    .select('user_id, org_object_id')
+    .in('user_id', [callerId, targetUserId])
+    .eq('is_active', true);
+  if (error) return { error: error.message };
+  const rows = (data ?? []) as Array<{ user_id: string; org_object_id: string }>;
+  const callerOrgs = new Set(rows.filter((r) => r.user_id === callerId).map((r) => r.org_object_id));
+  const orgIds = rows
+    .filter((r) => r.user_id === targetUserId && callerOrgs.has(r.org_object_id))
+    .map((r) => r.org_object_id);
+  return { orgIds };
+}
+
+/**
+ * Rang d'administration ORG actif de la CIBLE, SCOPÉ aux `orgIds` partagés avec l'appelant (`null`
+ * si elle n'a aucun rôle admin actif dans ces ORG).
  *
  * Correctif revue finale (bloquant) : cette route était la SEULE surface d'administration
  * d'équipe qui ne comparait aucun rang — un admin d'ORG de rang 30 pouvait réécrire l'identité
  * (nom, e-mail, rôle plateforme) d'un administrateur d'ORG de rang 50. Même prédicat que
  * RANK_VIOLATION côté SQL (rls_policies.sql : rpc_set_admin_role / rpc_set_business_role /
  * rpc_revoke_admin_role, §2.6) : gestion vers le bas SEULEMENT, superuser exempté — appliqué ici
- * par l'appelant (voir le `if (!auth.isSuper …)` au site d'appel).
+ * par l'appelant (voir le `if (!auth.isSuper …)` au site d'appel, qui saute ce bloc entièrement
+ * pour un superuser plateforme).
  *
- * Un seul aller-retour (embed PostgREST à deux niveaux) : « un seul membership actif par
- * utilisateur » est la doctrine MVP de ce projet, donc pas besoin de désambiguïser par ORG comme
- * le fait la RPC (dont le rang cible est scopé à l'ORG précise de la ligne `user_org_membership`
- * modifiée).
+ * Re-revue (bloquant) : la version précédente retenait le PREMIER rôle actif TOUS ORG CONFONDUS
+ * (`.flatMap(...).find(...)` sans filtre d'ORG) — ce que la règle SQL ne fait JAMAIS : elle résout
+ * toujours le rang cible DANS l'ORG du membership manipulé. Un prédicat non scopé dépend de l'ordre
+ * des lignes rendues par PostgREST et peut REFUSER À TORT en remontant un rang porté dans une ORG
+ * étrangère à celle que l'appelant et la cible partagent. `orgIds` (voir `resolveSharedActiveOrgIds`
+ * ci-dessus) est cette ORG partagée — jamais `Math.max` sur toutes les ORG de la cible, qui serait
+ * plus strict que le SQL et inventerait des refus.
  */
 async function resolveTargetAdminRank(
   server: SupabaseClient,
   targetUserId: string,
+  orgIds: string[],
 ): Promise<{ rank: number | null } | { error: string }> {
   const { data, error } = await server
     .from('user_org_membership')
     .select('user_org_admin_role(is_active, ref_org_admin_role(rank))')
     .eq('user_id', targetUserId)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .in('org_object_id', orgIds);
   if (error) return { error: error.message };
   type Row = {
     user_org_admin_role: Array<{ is_active: boolean; ref_org_admin_role: { rank: number } | null }> | null;
@@ -54,7 +94,21 @@ async function resolveTargetAdminRank(
   const activeRole = ((data ?? []) as unknown as Row[])
     .flatMap((row) => row.user_org_admin_role ?? [])
     .find((r) => r.is_active);
-  return { rank: activeRole?.ref_org_admin_role?.rank ?? null };
+  if (!activeRole) return { rank: null };
+  // Re-revue (bloquant) : un rôle admin ACTIF dont le rang catalogue est introuvable ou non
+  // numérique (relation absente, forme inattendue) valait auparavant `?? null` = « aucun rang » et
+  // franchissait la garde EN SILENCE — exactement la forme des gardes fail-open déjà produites par
+  // ce chantier. Aujourd'hui inatteignable en pratique (FK NOT NULL sur `ref_org_admin_role.rank`),
+  // mais fail-closed par construction : on valide le TYPE via `unknown` avant de s'en servir, jamais
+  // un `??` qui absorbe silencieusement une forme inattendue.
+  const rank: unknown = activeRole.ref_org_admin_role?.rank;
+  if (typeof rank !== 'number' || !Number.isFinite(rank)) {
+    return {
+      error:
+        "un rôle d'administration actif de la cible porte un rang catalogue introuvable ou non numérique (forme inattendue) — refus fail-closed",
+    };
+  }
+  return { rank };
 }
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -132,7 +186,15 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   // Gate TOUT PATCH (nom, e-mail, rôle plateforme), pas seulement les champs sensibles : la faille
   // était qu'un rang 30 pouvait réécrire l'identité d'un rang 50 par un simple renommage.
   if (!auth.isSuper) {
-    const targetRank = await resolveTargetAdminRank(server, userId);
+    // Re-revue (bloquant) : scoper le rang de la cible à l'ORG PARTAGÉE avec l'appelant — jamais
+    // tous ORG confondus (voir resolveSharedActiveOrgIds / resolveTargetAdminRank ci-dessus). Lecture
+    // dont dépend une garde : un échec doit REFUSER, jamais continuer comme si aucune ORG n'était
+    // partagée.
+    const sharedOrgs = await resolveSharedActiveOrgIds(server, auth.callerId, userId);
+    if ('error' in sharedOrgs) {
+      return NextResponse.json({ error: 'target_rank_check_failed', detail: sharedOrgs.error }, { status: 500 });
+    }
+    const targetRank = await resolveTargetAdminRank(server, userId, sharedOrgs.orgIds);
     // Lecture dont dépend une garde : un échec doit REFUSER, jamais continuer comme si la cible
     // n'avait aucun rang admin (ce qui rendrait la garde fail-open).
     if ('error' in targetRank) {

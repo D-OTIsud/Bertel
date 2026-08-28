@@ -62,9 +62,15 @@ const DEFAULT_AUTH_USER = { email: 'target@oti.re', last_sign_in_at: null };
  * objet ⇒ compte trouvé avec CES valeurs.
  * `profileError`: force `maybeSingle()` du profil cible à rendre une erreur (au lieu de `data`).
  * `targetAdminRoleRows`: omis ⇒ `[]` (la cible n'a AUCUN rôle admin actif — cas nominal des tests
- * préexistants, qui ne connaissent pas cette sonde). Forme attendue par `resolveTargetAdminRank` :
- * `[{ user_org_admin_role: [{ is_active, ref_org_admin_role: { rank } }] }]` (embed PostgREST à
- * deux niveaux depuis `user_org_membership`).
+ * préexistants, qui ne connaissent pas cette sonde). Forme attendue par `resolveTargetAdminRank`
+ * (scopée §IMPORTANT 2 — re-revue) : `[{ org_object_id, user_org_admin_role: [{ is_active,
+ * ref_org_admin_role: { rank } }] }]`. Le mock FILTRE réellement par `org_object_id` (pas un simple
+ * canned-return) : c'est ce filtrage qui prouve que le scoping par ORG partagée fonctionne, pas
+ * juste que la comparaison de rang en aval fonctionne.
+ * `sharedOrgIdsError`: force le 2e appel à la requête `.in('user_id',…).eq('is_active', true)` sur
+ * `user_org_membership` (le 1er sert `sharesActiveOrg` pour la garde `out_of_scope`, le 2e sert la
+ * nouvelle lecture propre à la route `resolveSharedActiveOrgIds`, §IMPORTANT 2) à échouer — sans
+ * jamais toucher au 1er appel, pour isoler la garde du volet rang de celle du volet périmètre.
  */
 function serverMock(opts: {
   memberships?: Array<{ user_id: string; org_object_id: string }>;
@@ -73,8 +79,12 @@ function serverMock(opts: {
   authUser?: { email: string; last_sign_in_at: string | null } | null;
   actorClaims?: Array<{ id: string }>;
   actorClaimsError?: { message: string } | null;
-  targetAdminRoleRows?: Array<{ user_org_admin_role: Array<{ is_active: boolean; ref_org_admin_role: { rank: number } | null }> }>;
+  targetAdminRoleRows?: Array<{
+    org_object_id: string;
+    user_org_admin_role: Array<{ is_active: boolean; ref_org_admin_role: { rank: number } | null }>;
+  }>;
   targetAdminRoleRowsError?: { message: string } | null;
+  sharedOrgIdsError?: { message: string } | null;
   updateUserById?: jest.Mock;
   upsert?: jest.Mock;
   ilike?: jest.Mock;
@@ -89,17 +99,38 @@ function serverMock(opts: {
     jest.fn().mockReturnValue({
       limit: async () => ({ data: opts.actorClaims ?? [], error: opts.actorClaimsError ?? null }),
     });
+  // Compte les appels de la requête .in('user_id',…).eq('is_active', true) sur user_org_membership,
+  // TOUS APPELS CONFONDUS d'une même requête PATCH/GET (donc déclaré hors de `from`, qui est
+  // ré-invoqué à chaque `.from('user_org_membership')`) : 1er = sharesActiveOrg, 2e =
+  // resolveSharedActiveOrgIds. Ordre garanti — les deux sont `await`és séquentiellement, jamais en
+  // parallèle, dans route.ts.
+  let sharedQueryCalls = 0;
   const from = jest.fn((table: string) => {
     if (table === 'user_org_membership') {
       return {
         select: () => ({
-          // sharesActiveOrg (_authorize.ts) : .in('user_id', [...]).eq('is_active', true)
-          in: () => ({ eq: async () => ({ data: memberships, error: null }) }),
-          // resolveTargetAdminRank (route.ts, volet rang d'ORG) : .eq('user_id', X).eq('is_active', true)
+          // sharesActiveOrg (_authorize.ts) ET resolveSharedActiveOrgIds (route.ts, §IMPORTANT 2) :
+          // .in('user_id', [...]).eq('is_active', true) — même forme de requête, même source
+          // `memberships` par défaut (cohérent par construction : le scope de rang dérive de ce que
+          // sharesActiveOrg a déjà constaté).
+          in: () => ({
+            eq: async () => {
+              sharedQueryCalls += 1;
+              if (sharedQueryCalls === 2 && opts.sharedOrgIdsError) {
+                return { data: null, error: opts.sharedOrgIdsError };
+              }
+              return { data: memberships, error: null };
+            },
+          }),
+          // resolveTargetAdminRank (route.ts, volet rang d'ORG, scopé §IMPORTANT 2) :
+          // .eq('user_id', X).eq('is_active', true).in('org_object_id', orgIds) — le 3e maillon
+          // FILTRE réellement par org_object_id.
           eq: () => ({
-            eq: async () => ({
-              data: opts.targetAdminRoleRows ?? [],
-              error: opts.targetAdminRoleRowsError ?? null,
+            eq: () => ({
+              in: async (_col: string, orgIds: string[]) => {
+                const rows = (opts.targetAdminRoleRows ?? []).filter((r) => orgIds.includes(r.org_object_id));
+                return { data: rows, error: opts.targetAdminRoleRowsError ?? null };
+              },
             }),
           }),
         }),
@@ -532,6 +563,29 @@ describe('PATCH /api/admin/user-profile', () => {
     expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
   });
 
+  // Re-revue (bloquant, §IMPORTANT 1) — la garde `owner_required_for_email` n'a délibérément PAS de
+  // `!auth.isSuper` : un super_admin plateforme (isSuper===true) qui n'est pas owner doit lui aussi
+  // être refusé. Aucun test existant n'exerçait ce persona précis sur le VOLET E-MAIL (seul le volet
+  // rôle l'était, via "403 owner_required : un superuser NON owner...") : ajouter `!auth.isSuper &&`
+  // devant la garde aurait laissé la suite VERTE tout en rouvrant l'escalade super_admin → owner.
+  it('403 owner_required_for_email : un super_admin plateforme NON owner ne peut pas non plus changer l’e-mail d’un owner', async () => {
+    const updateUserById = jest.fn();
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Owner Actuel', avatar_url: null, role: 'owner' },
+      updateUserById,
+      upsert,
+    }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: false });
+    mockedCreate.mockReturnValue(probe as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'attaquant@ext.re' }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('owner_required_for_email');
+    expect(updateUserById).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+    expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
+  });
+
   it('la sonde api.is_platform_owner n’est appelée qu’UNE fois quand la garde rôle ET la garde e-mail sont concernées dans le même appel', async () => {
     // platformRole ET email changent tous les deux sur une cible déjà privilégiée (super_admin) :
     // touchesPrivilegedRole et touchesPrivilegedEmail sont TOUS LES DEUX vrais. Un copier-coller
@@ -567,7 +621,9 @@ describe('PATCH /api/admin/user-profile', () => {
       profile: { display_name: 'Bob', avatar_url: null, role: 'tourism_agent' },
       upsert,
       updateUserById,
-      targetAdminRoleRows: [{ user_org_admin_role: [{ is_active: true, ref_org_admin_role: { rank: 50 } }] }],
+      targetAdminRoleRows: [
+        { org_object_id: 'ORG1', user_org_admin_role: [{ is_active: true, ref_org_admin_role: { rank: 50 } }] },
+      ],
     }) as never);
     mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
     const res = await PATCH(patchReq({ userId: TARGET, displayName: 'Nouveau nom' }));
@@ -595,6 +651,107 @@ describe('PATCH /api/admin/user-profile', () => {
     mockedServer.mockReturnValue(serverMock({
       upsert,
       targetAdminRoleRowsError: { message: 'timeout' },
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'X' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('target_rank_check_failed');
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  // Re-revue (bloquant, §IMPORTANT 1) — rien ne couvrait le filtre `.find(r => r.is_active)` de
+  // resolveTargetAdminRank : un rôle admin de rang ÉLEVÉ mais INACTIF ne doit PAS bloquer un rang 30
+  // (c'est précisément ce filtre qui évite qu'un rang historique bloque à tort).
+  it('200 : rang 30 peut modifier une cible dont le rôle admin de rang élevé est INACTIF (le filtre is_active empêche un rang historique de bloquer à tort)', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Bob', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+      targetAdminRoleRows: [
+        { org_object_id: 'ORG1', user_org_admin_role: [{ is_active: false, ref_org_admin_role: { rank: 90 } }] },
+      ],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'Nouveau nom' }));
+    expect(res.status).toBe(200);
+    expect(upsert).toHaveBeenCalledWith({ id: TARGET, display_name: 'Nouveau nom' }, { onConflict: 'id' });
+  });
+
+  // ===========================================================================================
+  // Re-revue (bloquant, §IMPORTANT 2) — resolveTargetAdminRank retenait le PREMIER rôle actif TOUS
+  // ORG CONFONDUS, alors que la règle SQL RANK_VIOLATION (rpc_set_admin_role, §2.6) résout toujours
+  // le rang cible DANS l'ORG du membership manipulé. Un rang élevé porté par la cible dans une ORG
+  // ÉTRANGÈRE à celle partagée avec l'appelant ne doit PAS la rendre intouchable.
+  // ===========================================================================================
+
+  it('200 : rang 30 peut modifier une cible dont le rang admin élevé est dans une AUTRE ORG que l’ORG partagée (le rang ne se scope pas tous ORG confondus)', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      memberships: [
+        { user_id: CALLER, org_object_id: 'ORG1' },
+        { user_id: TARGET, org_object_id: 'ORG1' },
+        { user_id: TARGET, org_object_id: 'ORG2' },
+      ],
+      profile: { display_name: 'Bob', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+      targetAdminRoleRows: [
+        // Rang élevé et ACTIF, mais dans ORG2 — l'appelant et la cible ne partagent que ORG1.
+        { org_object_id: 'ORG2', user_org_admin_role: [{ is_active: true, ref_org_admin_role: { rank: 90 } }] },
+      ],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'Nouveau nom' }));
+    expect(res.status).toBe(200);
+    expect(upsert).toHaveBeenCalledWith({ id: TARGET, display_name: 'Nouveau nom' }, { onConflict: 'id' });
+  });
+
+  it('403 rank_violation : rang 30 ne peut PAS modifier une cible dont le rang admin élevé est bien dans l’ORG PARTAGÉE (le scoping ne doit pas non plus fail-open)', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      memberships: [
+        { user_id: CALLER, org_object_id: 'ORG1' },
+        { user_id: TARGET, org_object_id: 'ORG1' },
+        { user_id: TARGET, org_object_id: 'ORG2' },
+      ],
+      profile: { display_name: 'Bob', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+      targetAdminRoleRows: [
+        { org_object_id: 'ORG1', user_org_admin_role: [{ is_active: true, ref_org_admin_role: { rank: 90 } }] },
+        { org_object_id: 'ORG2', user_org_admin_role: [{ is_active: true, ref_org_admin_role: { rank: 10 } }] },
+      ],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'Nouveau nom' }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('rank_violation');
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('500 target_rank_check_failed quand la résolution de l’ORG partagée échoue (nouvelle lecture propre à la route, doit refuser)', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      upsert,
+      sharedOrgIdsError: { message: 'timeout' },
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'X' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('target_rank_check_failed');
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  // Re-revue (bloquant, §IMPORTANT 3) — un rôle admin ACTIF dont le rang catalogue est absent
+  // (relation `ref_org_admin_role` NULL) valait auparavant `?? null` = « aucun rang » : la garde
+  // était franchie EN SILENCE. Aujourd'hui inatteignable en pratique (FK NOT NULL), mais c'est
+  // exactement la forme des gardes fail-open déjà produites par ce chantier — doit REFUSER (500).
+  it('500 target_rank_check_failed : un rôle admin actif de la cible porte un rang catalogue introuvable (forme inattendue), aucune écriture', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Bob', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+      targetAdminRoleRows: [
+        { org_object_id: 'ORG1', user_org_admin_role: [{ is_active: true, ref_org_admin_role: null }] },
+      ],
     }) as never);
     mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
     const res = await PATCH(patchReq({ userId: TARGET, displayName: 'X' }));

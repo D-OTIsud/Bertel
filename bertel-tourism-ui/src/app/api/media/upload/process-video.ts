@@ -34,11 +34,18 @@ export interface ValidatedVideo {
  * /api/media/upload) and the RESTRICTIVE bucket policy fully apply.
  */
 export function validateVideo({ mimeType, byteLength }: ValidateVideoInput): ValidatedVideo {
+  // Messages en FRANÇAIS (chantier 2026-08-28 n°4) : ils atteignent l'écran via `detail`.
   if (!(ALLOWED_VIDEO_MIME_TYPES as readonly string[]).includes(mimeType)) {
-    throw new MediaProcessingError('mime', `Unsupported video MIME type: ${mimeType}`);
+    throw new MediaProcessingError(
+      'mime',
+      `Format vidéo non pris en charge (reçu : ${mimeType}). Formats acceptés : MP4, WebM, MOV.`,
+    );
   }
   if (byteLength > MAX_VIDEO_INPUT_BYTES) {
-    throw new MediaProcessingError('size', `Video exceeds ${MAX_VIDEO_INPUT_BYTES} bytes`);
+    throw new MediaProcessingError(
+      'size',
+      `Vidéo trop volumineuse (max ${Math.round(MAX_VIDEO_INPUT_BYTES / (1024 * 1024))} Mo).`,
+    );
   }
   return { ext: EXT_BY_MIME[mimeType as AllowedVideoMime], mimeType: mimeType as AllowedVideoMime };
 }

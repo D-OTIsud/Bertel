@@ -1058,7 +1058,11 @@ describe('uploadActorPhoto', () => {
     expect(body.get('file')).toBeInstanceOf(File);
   });
 
-  it('non-2xx → throw avec le détail serveur (pas d échec silencieux)', async () => {
+  // Chantier 2026-08-28 n°4 — assertion RETOURNÉE À DESSEIN : elle épinglait le pass-through du
+  // `detail` ANGLAIS de la route (« caller cannot edit this actor »), que l'utilisateur lisait
+  // littéralement. L'exigence de fond — ne pas échouer en silence — est préservée : on lève
+  // toujours, avec un message français.
+  it('non-2xx → throw avec un message FRANÇAIS (pas d échec silencieux, pas de brut anglais)', async () => {
     useSessionStore.setState({ demoMode: false });
     mockedGetSupabaseClient.mockReturnValue({
       auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-123' } } }) },
@@ -1066,9 +1070,11 @@ describe('uploadActorPhoto', () => {
     global.fetch = (async () => ({
       ok: false,
       status: 403,
-      json: async () => ({ detail: 'caller cannot edit this actor' }),
+      json: async () => ({ error: 'forbidden', detail: 'caller cannot edit this actor' }),
     })) as unknown as typeof fetch;
-    await expect(uploadActorPhoto('a1', makeFile())).rejects.toThrow(/caller cannot edit this actor/);
+    const promise = uploadActorPhoto('a1', makeFile());
+    await expect(promise).rejects.toThrow(/pas autorisée avec vos droits actuels/);
+    await expect(promise).rejects.not.toThrow(/caller cannot edit this actor/);
   });
 
   it('mode démo : renvoie une URL locale sans appel réseau', async () => {

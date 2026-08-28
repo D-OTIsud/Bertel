@@ -18,6 +18,7 @@ import type {
   ObjectWorkspaceCrmInteractionItem,
   ObjectWorkspaceCrmTopicCount,
 } from './object-workspace-parser';
+import { apiError } from './api-error';
 
 const TASK_STATUSES: CrmTaskStatus[] = ['todo', 'in_progress', 'done', 'canceled', 'blocked'];
 const TASK_PRIORITIES: CrmTaskPriority[] = ['low', 'medium', 'high', 'urgent'];
@@ -1273,14 +1274,7 @@ export async function uploadActorPhoto(actorId: string, file: File): Promise<str
     body,
   });
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const payload = (await response.json()) as { detail?: string; error?: string };
-      detail = payload.detail ?? payload.error ?? detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail);
+    throw await apiError(response);
   }
   const payload = (await response.json()) as { url?: string };
   if (!payload.url) {

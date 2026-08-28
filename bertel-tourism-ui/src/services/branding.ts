@@ -3,6 +3,7 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { coerceThemeSettings, type ThemeSettings } from '../lib/theme';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectTypeCode } from '../types/domain';
+import { readApiErrorMessage } from './api-error';
 
 interface BrandingRpcPayload {
   brandName?: unknown;
@@ -129,7 +130,7 @@ async function uploadBrandLogo(
     if (res.status === 403) {
       throw new Error('Seuls les super-admins peuvent modifier le branding.');
     }
-    throw new Error(`Upload du logo impossible: ${payload.detail || payload.error || `HTTP ${res.status}`}`);
+    throw new Error(readApiErrorMessage(payload, res.status));
   }
 
   const uploaded = (await res.json()) as {

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
   if (!url || !anon) {
     return NextResponse.json(
-      { error: 'server_misconfigured', detail: 'NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing' },
+      { error: 'server_misconfigured' } /* cause serveur : NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY missing */,
       { status: 500 },
     );
   }

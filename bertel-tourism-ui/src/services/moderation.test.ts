@@ -147,9 +147,21 @@ describe('approvePendingChange / rejectPendingChange', () => {
     expect(rpc).toHaveBeenCalledWith('approve_pending_change', { p_id: 'pc-1', p_review_note: 'OK terrain' });
   });
 
-  it('approve surfaces backend errors (e.g. déjà résolu / droits)', async () => {
-    rpc.mockResolvedValue({ data: null, error: { message: 'Droits de modération insuffisants' } });
-    await expect(approvePendingChange('pc-1')).rejects.toThrow(/modération|résolue|approuv/i);
+  // Chantier 2026-08-28 n°4 — le mock portait un message SANS `code`, ce que PostgREST ne produit
+  // jamais. Avec le code réel du `RAISE` SQL, le message métier français passe désormais tel quel :
+  // c'est le contrat (nos RAISE sont rédigés pour l'utilisateur).
+  it('approve remonte le message métier du RPC quand il en porte un', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'P0001', message: 'Droits de modération insuffisants' } });
+    await expect(approvePendingChange('pc-1')).rejects.toThrow(/Droits de modération insuffisants/);
+  });
+
+  // Et l'inverse, qui est le vrai apport du lot A : une erreur technique SANS message
+  // exploitable ne remonte plus le brut anglais, mais le repli FRANÇAIS du site d'appel.
+  it('approve replie sur le message français quand l’erreur est technique', async () => {
+    rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'internal error: relation does not exist' } });
+    const promise = approvePendingChange('pc-1');
+    await expect(promise).rejects.toThrow('Approbation impossible.');
+    await expect(promise).rejects.not.toThrow(/relation does not exist/);
   });
 
   it('reject requires a non-empty note client-side (never calls the RPC empty)', async () => {

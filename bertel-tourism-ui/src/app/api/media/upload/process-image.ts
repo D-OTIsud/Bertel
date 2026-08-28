@@ -47,11 +47,20 @@ export class MediaProcessingError extends Error {
  * Throws MediaProcessingError with `code` in {'mime','size','decode'}.
  */
 export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENSION_PX, outputFormat = 'jpeg' }: ProcessImageInput): Promise<ProcessImageResult> {
+  // Messages en FRANÇAIS (chantier 2026-08-28 n°4) : ils remontent tels quels jusqu'à l'écran —
+  // route.ts:95 les met dans `detail`, que le client affiche. Gravité 1 : ce sont eux que
+  // l'utilisateur lit sous le champ d'upload, en `role="alert"`.
   if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(mimeType)) {
-    throw new MediaProcessingError('mime', `Unsupported MIME type: ${mimeType}`);
+    throw new MediaProcessingError(
+      'mime',
+      `Format d'image non pris en charge (reçu : ${mimeType}). Formats acceptés : JPEG, PNG, WebP.`,
+    );
   }
   if (buffer.byteLength > MAX_INPUT_BYTES) {
-    throw new MediaProcessingError('size', `Input exceeds ${MAX_INPUT_BYTES} bytes`);
+    throw new MediaProcessingError(
+      'size',
+      `Image trop volumineuse (max ${Math.round(MAX_INPUT_BYTES / (1024 * 1024))} Mo).`,
+    );
   }
   const maxDim = Number.isFinite(maxDimension) && maxDimension > 0 ? Math.floor(maxDimension) : MAX_DIMENSION_PX;
 
@@ -60,7 +69,7 @@ export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENS
 
     const meta = await pipeline.metadata();
     if (!meta.width || !meta.height) {
-      throw new MediaProcessingError('decode', 'Unable to read image dimensions.');
+      throw new MediaProcessingError('decode', "Les dimensions de l'image n'ont pas pu être lues : fichier corrompu ?");
     }
 
     const needsResize = meta.width > maxDim || meta.height > maxDim;
@@ -98,6 +107,9 @@ export async function processImage({ buffer, mimeType, maxDimension = MAX_DIMENS
     };
   } catch (err) {
     if (err instanceof MediaProcessingError) throw err;
-    throw new MediaProcessingError('decode', err instanceof Error ? err.message : String(err));
+    // Le message brut de sharp est anglais et technique : il part au journal serveur, pas à
+    // l'écran (il atteignait l'utilisateur via `detail`).
+    console.warn('[process-image] échec sharp non mappé', err);
+    throw new MediaProcessingError('decode', "Cette image n'a pas pu être traitée. Réessayez avec un autre fichier.");
   }
 }

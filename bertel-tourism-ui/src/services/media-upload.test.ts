@@ -35,7 +35,10 @@ describe('uploadMedia', () => {
     expect(fd.get('file')).toBeInstanceOf(File);
   });
 
-  it('throws on non-2xx response with the server error body', async () => {
+  // Chantier 2026-08-28 n°4 — cette assertion est RETOURNÉE À DESSEIN. Elle épinglait
+  // auparavant le pass-through du `detail` anglais du serveur : c'est précisément le défaut
+  // corrigé (l'utilisateur lisait littéralement « Unsupported MIME type: image/svg+xml »).
+  it('traduit le code d’erreur du serveur en français, sans relayer le detail brut', async () => {
     globalThis.fetch = jest.fn(async () => ({
       ok: false,
       status: 415,
@@ -43,7 +46,8 @@ describe('uploadMedia', () => {
     } as unknown as Response)) as unknown as typeof fetch;
 
     const file = new File([new Uint8Array([1])], 'logo.svg', { type: 'image/svg+xml' });
-    await expect(uploadMedia({ file, objectId: 'obj-1', accessToken: 't' }))
-      .rejects.toThrow(/Unsupported MIME type/);
+    const promise = uploadMedia({ file, objectId: 'obj-1', accessToken: 't' });
+    await expect(promise).rejects.toThrow(/Format de fichier non pris en charge/);
+    await expect(promise).rejects.not.toThrow(/Unsupported MIME type/);
   });
 });

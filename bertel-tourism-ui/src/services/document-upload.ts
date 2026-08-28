@@ -1,3 +1,5 @@
+import { apiError } from './api-error';
+
 export interface UploadDocumentInput {
   file: File;
   objectId: string;
@@ -27,14 +29,7 @@ export async function uploadDocument({ file, objectId, accessToken }: UploadDocu
   });
 
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const payload = (await response.json()) as { detail?: string; error?: string };
-      detail = payload.detail ?? payload.error ?? detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail);
+    throw await apiError(response);
   }
 
   return (await response.json()) as UploadedDocument;

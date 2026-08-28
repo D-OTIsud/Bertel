@@ -8,6 +8,7 @@
 //   * DYNAMIQUE — filtres Explorer sauvegardés (filters jsonb), ré-résolus live à chaque accès.
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
+import { mapDatabaseError, readApiErrorMessage } from './api-error';
 import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import { buildBucketRpcFilters, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets } from '../utils/facets';
 
@@ -245,14 +246,14 @@ export async function listMyLists(): Promise<ObjectListCard[]> {
   const client = getApiClient();
   if (!client) return [];
   const { data, error } = await client.schema('api').rpc('list_my_lists');
-  if (error) throw new Error(error.message || 'Chargement des listes impossible.');
+  if (error) throw mapDatabaseError(error, 'Chargement des listes impossible.');
   return Array.isArray(data) ? data.map((row) => parseListCard(row as GenericRecord)) : [];
 }
 
 export async function getList(listId: string): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('get_list', { p_list_id: listId });
-  if (error) throw new Error(error.message || 'Liste introuvable.');
+  if (error) throw mapDatabaseError(error, 'Liste introuvable.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
@@ -268,7 +269,7 @@ export async function createListFromSelection(name: string, objectIds: string[])
     p_filters: null,
     p_filters_url: null,
   });
-  if (error) throw new Error(error.message || 'Création de la liste impossible.');
+  if (error) throw mapDatabaseError(error, 'Création de la liste impossible.');
   if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
   return data;
 }
@@ -359,7 +360,7 @@ export async function createDynamicList(
     p_filters: filters,
     p_filters_url: filtersUrl,
   });
-  if (error) throw new Error(error.message || 'Création de la liste dynamique impossible.');
+  if (error) throw mapDatabaseError(error, 'Création de la liste dynamique impossible.');
   if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
   return data;
 }
@@ -368,7 +369,7 @@ export async function createDynamicList(
 export async function updateList(listId: string, patch: ListPatch): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('update_list', { p_list_id: listId, p_patch: patch });
-  if (error) throw new Error(error.message || 'Mise à jour impossible.');
+  if (error) throw mapDatabaseError(error, 'Mise à jour impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
@@ -376,7 +377,7 @@ export async function updateList(listId: string, patch: ListPatch): Promise<Obje
 export async function setListItems(listId: string, items: ListItemInput[]): Promise<ObjectListDetail | null> {
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('set_list_items', { p_list_id: listId, p_items: items });
-  if (error) throw new Error(error.message || 'Enregistrement des lieux impossible.');
+  if (error) throw mapDatabaseError(error, 'Enregistrement des lieux impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
 }
@@ -389,7 +390,7 @@ export async function getPublicList(token: string): Promise<PublicList | null> {
   const client = getApiClient();
   if (!client) return null;
   const { data, error } = await client.schema('api').rpc('get_public_list_by_token', { p_token: token });
-  if (error) throw new Error(error.message || 'Liste indisponible.');
+  if (error) throw mapDatabaseError(error, 'Liste indisponible.');
   const row = asRecord(data);
   if (!row) return null;
   const items = Array.isArray(row.items) ? row.items : [];
@@ -413,7 +414,7 @@ export async function getPublicList(token: string): Promise<PublicList | null> {
 export async function deleteList(listId: string): Promise<void> {
   const client = requireApiClient();
   const { error } = await client.schema('api').rpc('delete_list', { p_list_id: listId });
-  if (error) throw new Error(error.message || 'Suppression impossible.');
+  if (error) throw mapDatabaseError(error, 'Suppression impossible.');
 }
 
 // ---------- envoi e-mail ----------
@@ -435,7 +436,7 @@ export async function sendListByEmail(listId: string, toEmail: string): Promise<
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
     if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
-    throw new Error(j.detail || j.error || "Échec de l'envoi.");
+    throw new Error(readApiErrorMessage(j, res.status));
   }
 }
 
@@ -451,7 +452,7 @@ export async function shareList(
     p_enable: enable,
     p_expires_at: expiresAt,
   });
-  if (error) throw new Error(error.message || 'Partage impossible.');
+  if (error) throw mapDatabaseError(error, 'Partage impossible.');
   const row = asRecord(data) ?? {};
   return {
     shareToken: readNullableString(row.share_token),

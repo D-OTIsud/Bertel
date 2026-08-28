@@ -6,6 +6,7 @@
 // metadata->>'rpc' (whitelisté). Le front ne dispatche RIEN — il dépose juste l'enveloppe
 // (payload + metadata.rpc) via submit, puis approuve/rejette par id.
 import { getApiClient } from '../lib/supabase';
+import { mapDatabaseError } from './api-error';
 import { useSessionStore } from '../store/session-store';
 import { mockPendingChanges } from '../data/mock';
 import type { PendingChangeItem } from '../types/domain';
@@ -70,7 +71,7 @@ export async function listPendingChanges(
     p_offset: offset,
   });
   if (error) {
-    throw new Error(error.message || 'File de modération indisponible.');
+    throw mapDatabaseError(error, 'File de modération indisponible.');
   }
   return Array.isArray(data) ? data.map((row) => parsePendingChange(row as GenericRecord)) : [];
 }
@@ -96,7 +97,7 @@ export async function submitPendingChange(input: SubmitPendingChangeInput): Prom
     p_metadata: input.metadata ?? null,
   });
   if (error) {
-    throw new Error(error.message || 'Soumission de la suggestion impossible.');
+    throw mapDatabaseError(error, 'Soumission de la suggestion impossible.');
   }
   if (typeof data !== 'string') {
     throw new Error('Réponse RPC sans id');
@@ -111,7 +112,7 @@ export async function approvePendingChange(id: string, reviewNote: string | null
     p_review_note: reviewNote,
   });
   if (error) {
-    throw new Error(error.message || 'Approbation impossible.');
+    throw mapDatabaseError(error, 'Approbation impossible.');
   }
 }
 
@@ -126,6 +127,6 @@ export async function rejectPendingChange(id: string, reviewNote: string): Promi
     p_review_note: reviewNote,
   });
   if (error) {
-    throw new Error(error.message || 'Refus impossible.');
+    throw mapDatabaseError(error, 'Refus impossible.');
   }
 }

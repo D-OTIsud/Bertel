@@ -1,5 +1,6 @@
 // RGPD Art. 17 — client service. Calls POST /api/rgpd/erase, which runs the SQL erasure RPC
 // as the caller (superuser-gated) then deletes the reported Storage files / auth account.
+import { apiError } from './api-error';
 
 export const ERASURE_SUBJECT_KINDS = [
   'actor',
@@ -65,14 +66,7 @@ export async function requestErasure(input: ErasureInput): Promise<ErasureResult
   });
 
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const payload = (await response.json()) as { detail?: string; error?: string };
-      detail = payload.detail ?? payload.error ?? detail;
-    } catch {
-      /* ignore */
-    }
-    throw new Error(detail);
+    throw await apiError(response);
   }
 
   return (await response.json()) as ErasureResult;

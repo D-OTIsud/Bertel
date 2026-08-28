@@ -48,15 +48,31 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // storage tourne en service-role, donc cette validation EST la frontière.
   const targetRaw = form.get('targetUserId');
   const target = typeof targetRaw === 'string' && targetRaw.trim() !== '' ? targetRaw.trim() : callerId;
-  const isAdminBranch = target !== callerId;
+  // toLowerCase() : un appelant qui renvoie son propre id dans une autre casse ne doit pas
+  // basculer dans le bras admin (sinon la clé storage dérivée de cette casse dupliquerait
+  // l'objet canonique — cf. constat de revue ci-dessous sur la dérivation du chemin).
+  const isAdminBranch = target.toLowerCase() !== callerId.toLowerCase();
+  let userId = target;
   if (isAdminBranch) {
+    // authorizeAdminRoute refait sa propre résolution client/JWT (getServerSupabaseClient +
+    // auth.getUser) au lieu de réutiliser celles ci-dessus — acceptable pour la réutilisation de
+    // la garde rang/scope, mais `auth.server`/`auth.callerId` sont donc des instances distinctes
+    // de `server`/`callerId` déjà en portée ici, pas les mêmes objets.
     const auth = await authorizeAdminRoute(req);
     if (!auth.ok) return auth.response;
     if (!auth.isSuper && !(await sharesActiveOrg(server, callerId, target))) {
       return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
     }
+    // Le chemin storage est dérivé du target VALIDE, pour les DEUX arms (superuser ET admin
+    // d'ORG) : sans ce contrôle, un id malformé créerait une clé arbitraire dans le bucket (le
+    // superuser ne validait jusqu'ici RIEN), et un id inexistant rendrait 201 sur une écriture
+    // qui n'a persisté nulle part (`update().eq()` matche 0 ligne SANS erreur).
+    const { data: authTarget, error: authTargetErr } = await auth.server.auth.admin.getUserById(target);
+    if (authTargetErr || !authTarget?.user) {
+      return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
+    }
+    userId = authTarget.user.id; // valeur canonique rendue par GoTrue, jamais la chaîne du formulaire
   }
-  const userId = target;
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());
 
@@ -94,7 +110,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // d'ORG n'y passerait pas, et sa légitimité a déjà été établie ci-dessus).
   let profErr: { message: string } | null = null;
   if (isAdminBranch) {
-    ({ error: profErr } = await server.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
+    // upsert (pas update) : une cible peut légitimement ne pas encore avoir de ligne
+    // `app_user_profile` (compte invité) — un update() y serait un no-op silencieux (0 ligne
+    // matchée, aucune erreur) et la route rendrait 201 sur une écriture qui n'a rien persisté.
+    ({ error: profErr } = await server
+      .from('app_user_profile')
+      .upsert({ id: userId, avatar_url: url }, { onConflict: 'id' }));
   } else {
     const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
     const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();

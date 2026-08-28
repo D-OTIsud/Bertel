@@ -31,27 +31,55 @@ function req(fields: Record<string, string> = {}): never {
   } as never;
 }
 
-function serverMock(opts: { memberships?: Array<{ user_id: string; org_object_id: string }>; update?: jest.Mock }) {
+function serverMock(opts: {
+  memberships?: Array<{ user_id: string; org_object_id: string }>;
+  update?: jest.Mock;
+  getUserById?: jest.Mock;
+}) {
   const memberships = opts.memberships ?? [
     { user_id: CALLER, org_object_id: 'ORG1' },
     { user_id: TARGET, org_object_id: 'ORG1' },
   ];
   const update = opts.update ?? jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+  // upsert et upload sont hissés dans la fabrique (comme __update l'était déjà) : storage.from()
+  // rend un objet NEUF à chaque appel dans l'implémentation d'origine, donc sans ce hissage
+  // l'espion n'est observable par AUCUN test — cf. constat de revue « aucun fichier écrit n'est
+  // asserté nulle part ».
+  const upsert = jest.fn().mockResolvedValue({ error: null });
+  const upload = jest.fn().mockResolvedValue({ error: null });
+  const getUserById =
+    opts.getUserById ?? jest.fn().mockResolvedValue({ data: { user: { id: TARGET } }, error: null });
   return {
     __update: update,
-    auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: CALLER } }, error: null }) },
+    __upsert: upsert,
+    __upload: upload,
+    auth: {
+      getUser: jest.fn().mockResolvedValue({ data: { user: { id: CALLER } }, error: null }),
+      admin: { getUserById },
+    },
     from: jest.fn((table: string) =>
       table === 'user_org_membership'
         ? { select: () => ({ in: () => ({ eq: async () => ({ data: memberships, error: null }) }) }) }
-        : { update },
+        : { update, upsert },
     ),
     storage: {
       from: () => ({
-        upload: jest.fn().mockResolvedValue({ error: null }),
+        upload,
         getPublicUrl: (p: string) => ({ data: { publicUrl: `https://cdn/${p}` } }),
       }),
     },
   };
+}
+
+/** Sonde d'autorisation admin : isSuper puis rank, dans CET ordre (Promise.all évalue les deux
+ * appels `.rpc(...)` avant de les attendre — cf. `authorizeAdminRoute`). `rpc` doit être déclaré
+ * HORS de la fabrique `schema()` : `schema('api')` est appelé une fois par élément du tableau, et
+ * une fabrique qui recrée `rpc` à chaque appel perdrait la file `mockResolvedValueOnce`. */
+function adminProbeMock(isSuper: boolean, rank: number) {
+  const rpc = jest.fn()
+    .mockResolvedValueOnce({ data: isSuper, error: null })
+    .mockResolvedValueOnce({ data: rank, error: null });
+  return { schema: () => ({ rpc }) } as never;
 }
 
 beforeEach(() => {
@@ -72,21 +100,56 @@ it('sans targetUserId : écrit son propre avatar, persisté en tant qu’appelan
   expect((await res.json()).url).toContain(`${CALLER}/avatar.jpg`);
   expect(asCallerUpdate).toHaveBeenCalled();
   expect(server.__update).not.toHaveBeenCalled();
+  expect(server.__upsert).not.toHaveBeenCalled();
 });
 
-it('targetUserId d’un membre de la même ORG : chemin de la CIBLE, persisté en service-role', async () => {
+it.each(['', '   '])(
+  'targetUserId vide ou blanc (%j) : reste le bras "soi-même"',
+  async (blank) => {
+    const server = serverMock({});
+    mockedServer.mockReturnValue(server as never);
+    const asCallerUpdate = jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) });
+    mockedCreate.mockReturnValue({ from: () => ({ update: asCallerUpdate }) } as never);
+
+    const res = await POST(req({ targetUserId: blank }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).url).toContain(`${CALLER}/avatar.jpg`);
+    expect(asCallerUpdate).toHaveBeenCalled();
+    // Le bras admin (authorizeAdminRoute, sonde rang/scope) ne doit pas être emprunté.
+    expect(server.__upsert).not.toHaveBeenCalled();
+  },
+);
+
+it('targetUserId d’un admin d’ORG (rang 30, non superuser) sur un membre de la même ORG : chemin de la CIBLE, persisté en upsert service-role', async () => {
   const server = serverMock({});
   mockedServer.mockReturnValue(server as never);
-  // 1er createClient = sonde d'autorisation (superuser true) ; on rend le même objet aux deux.
-  mockedCreate.mockReturnValue({
-    schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: true, error: null }) }),
-    from: () => ({ update: jest.fn().mockReturnValue({ eq: jest.fn().mockResolvedValue({ error: null }) }) }),
-  } as never);
+  // isSuper=false, rank=30 : l'admission ne peut passer QUE par sharesActiveOrg (memberships
+  // partagent ORG1) — sans quoi ce test resterait vacant sur le chemin qui justifie la
+  // fonctionnalité (cf. constat de revue « le test du bras admin est VACANT »).
+  mockedCreate.mockReturnValue(adminProbeMock(false, 30));
 
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(201);
   expect((await res.json()).url).toContain(`${TARGET}/avatar.jpg`);
-  expect(server.__update).toHaveBeenCalledWith({ avatar_url: expect.stringContaining(`${TARGET}/avatar.jpg`) });
+  expect(server.__upsert).toHaveBeenCalledWith(
+    { id: TARGET, avatar_url: expect.stringContaining(`${TARGET}/avatar.jpg`) },
+    { onConflict: 'id' },
+  );
+  expect(server.__update).not.toHaveBeenCalled();
+});
+
+it('targetUserId avec un superuser plateforme : chemin de la CIBLE, persisté en upsert service-role', async () => {
+  const server = serverMock({});
+  mockedServer.mockReturnValue(server as never);
+  mockedCreate.mockReturnValue(adminProbeMock(true, 0));
+
+  const res = await POST(req({ targetUserId: TARGET }));
+  expect(res.status).toBe(201);
+  expect((await res.json()).url).toContain(`${TARGET}/avatar.jpg`);
+  expect(server.__upsert).toHaveBeenCalledWith(
+    { id: TARGET, avatar_url: expect.stringContaining(`${TARGET}/avatar.jpg`) },
+    { onConflict: 'id' },
+  );
 });
 
 it('targetUserId hors périmètre : 403, aucun fichier écrit', async () => {
@@ -94,12 +157,26 @@ it('targetUserId hors périmètre : 403, aucun fichier écrit', async () => {
     memberships: [{ user_id: CALLER, org_object_id: 'ORG1' }, { user_id: TARGET, org_object_id: 'ORG2' }],
   });
   mockedServer.mockReturnValue(server as never);
-  const rpc = jest.fn()
-    .mockResolvedValueOnce({ data: false, error: null })
-    .mockResolvedValueOnce({ data: 30, error: null });
-  mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+  mockedCreate.mockReturnValue(adminProbeMock(false, 30));
 
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(403);
   expect((await res.json()).error).toBe('out_of_scope');
+  // L'exigence la plus dure de cette tâche : un fichier écrit PUIS refusé est déjà un dépôt non
+  // autorisé. La garde doit s'exécuter AVANT tout upload, jamais après.
+  expect(server.__upload).not.toHaveBeenCalled();
+});
+
+it('targetUserId superuser mais cible inexistante : 404, aucun fichier écrit', async () => {
+  const server = serverMock({
+    getUserById: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+  });
+  mockedServer.mockReturnValue(server as never);
+  mockedCreate.mockReturnValue(adminProbeMock(true, 0));
+
+  const res = await POST(req({ targetUserId: TARGET }));
+  expect(res.status).toBe(404);
+  expect((await res.json()).error).toBe('user_not_found');
+  expect(server.__upload).not.toHaveBeenCalled();
+  expect(server.__upsert).not.toHaveBeenCalled();
 });

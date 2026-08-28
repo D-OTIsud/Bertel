@@ -9,6 +9,7 @@ import {
   isRangeInverted,
   isTaskAssignedTo,
   isTaskInDateRange,
+  taskDateKey,
   taskDueDateKey,
   toLocalDateKey,
 } from './crm-task-filters';
@@ -18,7 +19,9 @@ function task(over: Partial<CrmTask> = {}): CrmTask {
   return {
     id: 't', objectId: 'o', objectName: 'Obj', actorId: null, actorName: null,
     title: 'T', description: null, status: 'todo', priority: 'medium',
-    dueAt: null, assignees: [], createdById: null, createdByName: null,
+    dueAt: null,
+    createdAt: null,
+    assignees: [], createdById: null, createdByName: null,
     ownerId: null, ownerName: null,
     relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null,
     ...over,
@@ -114,6 +117,58 @@ describe('isTaskInDateRange', () => {
     expect(isRangeInverted({ from: '', to: '2026-08-05' })).toBe(false);
     expect(isRangeInverted({ from: '2026-08-05', to: '' })).toBe(false);
     expect(isRangeInverted({ from: '2026-08-05', to: '2026-08-05' })).toBe(false);
+  });
+});
+
+// La base de date répond au défaut constaté en production : aucune tâche « à faire » ni
+// « en cours » n'ayant d'échéance, la période ne faisait bouger que « Terminées ».
+describe('base de date de la période (échéance vs création)', () => {
+  const range = { from: '2026-08-05', to: '2026-09-04' };
+
+  it('taskDateKey lit la colonne de la base demandée, jamais l’autre', () => {
+    const t = task({ dueAt: at('2026-08-10'), createdAt: at('2026-01-02') });
+    expect(taskDateKey(t, 'due')).toBe('2026-08-10');
+    expect(taskDateKey(t, 'created')).toBe('2026-01-02');
+  });
+
+  // LE cas qui rougit si le dispatch est inversé ou si l'un retombe sur l'autre : la même
+  // tâche est DANS la fenêtre par une base et DEHORS par l'autre, dans les deux sens.
+  it('une même tâche peut être dans la fenêtre par échéance et hors par création', () => {
+    const t = task({ dueAt: at('2026-08-10'), createdAt: at('2026-01-02') });
+    expect(isTaskInDateRange(t, range, true, 'due')).toBe(true);
+    expect(isTaskInDateRange(t, range, true, 'created')).toBe(false);
+  });
+
+  it('…et l’inverse : hors par échéance, dans la fenêtre par création', () => {
+    const t = task({ dueAt: at('2027-05-20'), createdAt: at('2026-08-20') });
+    expect(isTaskInDateRange(t, range, true, 'due')).toBe(false);
+    expect(isTaskInDateRange(t, range, true, 'created')).toBe(true);
+  });
+
+  // Le cœur du chantier : sans échéance, la tâche ÉCHAPPE au filtre sous 'due' (c'est
+  // pourquoi les colonnes « À faire »/« En cours » semblaient insensibles) ; sous 'created'
+  // elle a une date et OBÉIT enfin à la période.
+  it('une tâche sans échéance échappe à la période sous « due » mais lui obéit sous « created »', () => {
+    const dansLaFenetre = task({ dueAt: null, createdAt: at('2026-08-20') });
+    const horsFenetre = task({ dueAt: null, createdAt: at('2026-01-02') });
+    expect(isTaskInDateRange(dansLaFenetre, range, true, 'due')).toBe(true);
+    expect(isTaskInDateRange(horsFenetre, range, true, 'due')).toBe(true); // échappée
+    expect(isTaskInDateRange(dansLaFenetre, range, true, 'created')).toBe(true);
+    expect(isTaskInDateRange(horsFenetre, range, true, 'created')).toBe(false); // filtrée
+  });
+
+  // AUCUN repli : une création absente ne retombe pas sur l'échéance, même quand celle-ci
+  // est parfaitement dans la fenêtre. Ce test rougit si un `?? task.dueAt` réapparaît.
+  it('createdAt absent en base « created » ⇒ sans date (suit includeUndated), jamais un repli sur dueAt', () => {
+    const t = task({ dueAt: at('2026-08-10'), createdAt: null });
+    expect(isTaskInDateRange(t, range, true, 'created')).toBe(true);
+    expect(isTaskInDateRange(t, range, false, 'created')).toBe(false);
+  });
+
+  it('la base par défaut est « échéance » (décision produit, pas une commodité)', () => {
+    const t = task({ dueAt: at('2026-08-10'), createdAt: at('2026-01-02') });
+    expect(isTaskInDateRange(t, range, true)).toBe(isTaskInDateRange(t, range, true, 'due'));
+    expect(isTaskInDateRange(t, range, true)).toBe(true);
   });
 });
 

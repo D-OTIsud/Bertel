@@ -24,6 +24,9 @@ import {
   isRangeInverted,
   isTaskAssignedTo,
   isTaskInDateRange,
+  TASK_DATE_BASIS_LABELS,
+  taskDateKey,
+  type TaskDateBasis,
   type TaskDateRange,
 } from './crm-task-filters';
 
@@ -66,8 +69,14 @@ export function CrmTaches({
   // 16w — fenêtre glissante -15/+15 jours, calculée UNE FOIS au montage (l'initialiseur
   // paresseux ne se rejoue pas) : la recalculer à chaque rendu ferait glisser les bornes.
   const [dateRange, setDateRange] = useState<TaskDateRange>(() => defaultTaskDateRange());
-  // Les tâches sans échéance restent visibles par défaut : elles ne concernent pas le
+  // Sur quelle date la période porte. Défaut 'due' = comportement historique préservé.
+  // Existe parce qu'en production AUCUNE tâche « à faire »/« en cours » n'a d'échéance :
+  // la période ne faisait donc bouger que « Terminées » (cf. crm-task-filters.ts).
+  const [dateBasis, setDateBasis] = useState<TaskDateBasis>('due');
+  // Les tâches sans date restent visibles par défaut : elles ne concernent pas le
   // filtre de date, et les masquer ferait disparaître du travail réel en silence.
+  // L'échappement est COMPTÉ et affiché plus bas — une case à cocher qu'on ne remarque pas
+  // ne suffit pas à expliquer pourquoi le filtre semble sans effet.
   const [includeUndated, setIncludeUndated] = useState(true);
   // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
   // datalist conservée, erreurs visibles dans le modal.
@@ -159,10 +168,18 @@ export function CrmTaches({
       tasks.filter((task) => {
         if (task.status === 'canceled' || task.status === 'blocked') return false;
         if (!isTaskAssignedTo(task, assigneeFilter)) return false;
-        if (!isTaskInDateRange(task, dateRange, includeUndated)) return false;
+        if (!isTaskInDateRange(task, dateRange, includeUndated, dateBasis)) return false;
         return true;
       }),
-    [tasks, assigneeFilter, dateRange, includeUndated],
+    [tasks, assigneeFilter, dateRange, includeUndated, dateBasis],
+  );
+
+  // Combien de tâches AFFICHÉES échappent à la période faute de date sur la base choisie.
+  // Calculé sur `visibleTasks` (et non `tasks`) pour que le chiffre corresponde exactement
+  // à ce qui est à l'écran ; il tombe naturellement à 0 quand la case est décochée.
+  const undatedShown = useMemo(
+    () => visibleTasks.filter((task) => taskDateKey(task, dateBasis) === null).length,
+    [visibleTasks, dateBasis],
   );
 
   // Objets distincts de l'annuaire → datalist du formulaire + résolution nom → id.
@@ -346,13 +363,31 @@ export function CrmTaches({
           </select>
         </label>
 
-        {/* Fenêtre d'échéance, bornes INCLUSES. */}
+        {/* Base de la période : elle gouverne le SENS de Du/Au, donc elle se lit avant eux.
+            Nommée « La période porte sur » et non « Échéance » : le modal de création porte
+            déjà un champ nommé « Échéance », et deux contrôles homonymes rendraient toute
+            requête par libellé ambiguë. */}
+        <label className="crm-filter">
+          <span className="crm-filter__label">La période porte sur</span>
+          <select
+            className="crm-select"
+            aria-label="La période porte sur"
+            value={dateBasis}
+            onChange={(event) => setDateBasis(event.target.value as TaskDateBasis)}
+          >
+            <option value="due">{TASK_DATE_BASIS_LABELS.due.option}</option>
+            <option value="created">{TASK_DATE_BASIS_LABELS.created.option}</option>
+          </select>
+        </label>
+
+        {/* Fenêtre de dates, bornes INCLUSES. Les libellés suivent la base : figés, ils
+            mentiraient dès la bascule sur Création. */}
         <label className="crm-filter">
           <span className="crm-filter__label">Du</span>
           <input
             type="date"
             className="crm-input-date"
-            aria-label="Échéance à partir du"
+            aria-label={TASK_DATE_BASIS_LABELS[dateBasis].from}
             value={dateRange.from}
             onChange={(event) => setDateRange((range) => ({ ...range, from: event.target.value }))}
           />
@@ -362,7 +397,7 @@ export function CrmTaches({
           <input
             type="date"
             className="crm-input-date"
-            aria-label="Échéance jusqu’au"
+            aria-label={TASK_DATE_BASIS_LABELS[dateBasis].to}
             value={dateRange.to}
             onChange={(event) => setDateRange((range) => ({ ...range, to: event.target.value }))}
           />
@@ -373,7 +408,7 @@ export function CrmTaches({
             checked={includeUndated}
             onChange={(event) => setIncludeUndated(event.target.checked)}
           />
-          Inclure sans échéance
+          {TASK_DATE_BASIS_LABELS[dateBasis].undated}
         </label>
         <button
           type="button"
@@ -381,6 +416,7 @@ export function CrmTaches({
           onClick={() => {
             setDateRange(defaultTaskDateRange());
             setIncludeUndated(true);
+            setDateBasis('due');
           }}
         >
           Réinitialiser
@@ -389,6 +425,15 @@ export function CrmTaches({
         <div className="crm-toolbar__right">
           {!canWrite && <span>{CRM_READ_ONLY_REASON}</span>}
           {hiddenCount > 0 && <span className="pill-mini">{hiddenCount} annulée(s)/bloquée(s)</span>}
+          {/* Échappement RENDU VISIBLE : sans lui, une période sans effet apparent sur une
+              colonne se lit comme un filtre cassé, alors que ces tâches n'ont simplement
+              aucune date sur la base choisie. C'est le cas de TOUTES les tâches « à faire »
+              en production au 2026-08-28. */}
+          {undatedShown > 0 && (
+            <span className="pill-mini" title="Ces tâches n’ont pas de date sur la base choisie : elles traversent la période. Décochez « Inclure sans… » pour les masquer.">
+              {undatedShown} sans date, hors période
+            </span>
+          )}
           <span>{remaining} à traiter</span>
           <button
             type="button"

@@ -25,6 +25,7 @@ function makeTask(over: Partial<CrmTask> = {}): CrmTask {
     id: 't1', objectId: 'obj-1', objectName: 'Hôtel Test', actorId: null, actorName: null,
     title: 'Rappeler le directeur', description: null, status: 'todo', priority: 'high',
     dueAt: null,
+  createdAt: null,
     // 16w — la fixture porte la clé qui décide désormais de « mes tâches ». `ownerId` reste
     // renseigné pour prouver qu'il n'est PLUS consulté (une fixture qui l'omettrait laisserait
     // passer un code resté sur l'ancienne clé).

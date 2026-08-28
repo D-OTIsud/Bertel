@@ -529,6 +529,13 @@ export interface CrmTask {
   priority: CrmTaskPriority;
   dueAt: string | null;
   /**
+   * Date de CRÉATION serveur (`crm_task.created_at`, déjà émise par `api.list_crm_tasks`).
+   * Base ALTERNATIVE de la période du kanban — jamais un repli automatique de `dueAt` :
+   * `null` signifie « date inconnue » et suit alors « inclure sans date », comme une
+   * échéance absente. À ne pas confondre avec `createdById`/`createdByName` (la personne).
+   */
+  createdAt: string | null;
+  /**
    * 16w — les personnes à qui la tâche est confiée. Toujours un tableau (jamais null) ;
    * vide pour une tâche née hors saisie (trigger incident_report). Trié serveur par nom
    * affiché puis uuid. C'est LA source pour « mes tâches » et le filtre par personne.

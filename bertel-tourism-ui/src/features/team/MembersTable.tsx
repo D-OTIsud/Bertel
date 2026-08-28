@@ -44,6 +44,10 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
           const count = effectiveCodes.size;
           const inheritedCount = m.inheritedPermissionCodes.length;
           const lastSeen = formatLastSeen(m.lastSeenAt);
+          // Task 6 (revue) : trois boutons « Modifier » identiques se répètent d'une ligne à
+          // l'autre — le nom accessible doit nommer le membre, comme RoleSelect le fait déjà
+          // pour ses labels (`Rôle métier de ${…}`). Le texte VISIBLE reste « Modifier ».
+          const modifyLabel = `Modifier le profil de ${m.displayName ?? m.email ?? 'ce membre'}`;
           return (
             <tr key={m.membershipId}>
               <td>
@@ -122,9 +126,10 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                 {!isSelf && onEditProfile && (
                   <button
                     type="button"
-                    className="ghost-button"
+                    className="ghost-button members-perm-btn"
                     onClick={() => onEditProfile(m)}
-                    title="Modifier le profil de ce membre"
+                    aria-label={modifyLabel}
+                    title={modifyLabel}
                   >
                     Modifier
                   </button>

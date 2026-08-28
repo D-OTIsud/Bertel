@@ -776,17 +776,25 @@ Brief d'origine : `docs/superpowers/plans/2026-08-28-crm-kanban-task-improvement
 
 ### Cinq décisions qui ne sont pas des détails
 
-**0. `assigned_at` n'est renseigné que lorsque la ligne le PROUVE** (corrigé en revue).
-Première rédaction : `assigned_at = crm_task.created_at`, présenté comme « le seul instant
-observé ». C'était faux — `crm_task.owner` est **modifiable**, donc sur une tâche réassignée
-`created_at` est la naissance de la TÂCHE, pas celle de l'assignation. C'était exactement le
-défaut que la décision 1 refuse par ailleurs, commis deux paragraphes plus bas. Le backfill ne
-pose désormais `created_at` que si `updated_at = created_at` (jamais modifiée ⇒ `owner` est la
-valeur d'insertion) ; sinon **NULL = on ne sait pas**, et la colonne est donc NULLABLE.
-Le journal d'audit (`trg_audit_crm_task`) pourrait en récupérer davantage — vérifié sur live :
-les 2 tâches modifiées ont un journal continu et sans changement d'`owner`. Branche
-délibérément NON implémentée : elle rendrait 2 horodatages qu'aucun consommateur ne lit, contre
-une règle trop grosse pour être gardée sans témoins synthétiques (donc une garde vacante).
+**0. `assigned_at` n'est JAMAIS backfillé** (corrigé deux fois en revue). Trois rédactions :
+1. `assigned_at = crm_task.created_at`, « le seul instant observé » — faux : `crm_task.owner`
+   est **modifiable**, donc sur une tâche réassignée `created_at` est la naissance de la
+   TÂCHE. C'était exactement le défaut que la décision 1 refuse, commis deux paragraphes plus
+   bas dans le même fichier.
+2. `created_at` seulement si `updated_at = created_at` (« jamais modifiée ») — faux aussi :
+   `update_updated_at_column()` et `api.save_crm_task` posent `NOW()`, le timestamp de
+   **transaction**, constant. Une création suivie d'une réassignation **dans la même
+   transaction** laisse l'égalité intacte. Reproduit sur live (transaction annulée) : témoin
+   réassigné de A à B, `updated_at = created_at` toujours vrai.
+3. Retenu : **NULL pour toute ligne reprise**, `assigned_at` NULLABLE pour pouvoir le dire.
+   Il n'existe pas de test bon marché qui sépare « jamais réassignée » de « réassignée dans
+   sa transaction de création » ; on cesse donc de dériver. `audit.audit_log` garde la
+   réponse pour qui en aurait besoin — aucun consommateur ne lit `assigned_at`.
+
+La règle vit dans `internal.crm_backfill_assignees_from_owner()`, **fonction nommée et non
+INSERT en ligne**, parce que c'est la seule forme que la garde puisse éprouver : un test qui
+recopie l'INSERT vérifie sa propre copie, et 5 sabotages du backfill passaient au vert.
+Le test fabrique ses témoins puis appelle cette fonction.
 
 **1. `created_by` n'est PAS backfillé** (écart assumé au brief §4.1, qui proposait
 `created_by = owner` en « approximation best-effort »). L'historique du créateur n'existe
@@ -794,9 +802,8 @@ pas ; une approximation écrite dans une colonne de **provenance** devient indis
 fait au premier lecteur suivant, et rien ne permet ensuite de l'en distinguer. Les 4 tâches
 antérieures (mesuré sur live le 2026-08-28) restent `NULL` et l'UI affiche « Créateur
 inconnu » — une information vraie. Symétriquement `crm_task_assignee.assigned_by` est NULL
-sur les lignes backfillées. Seul `assigned_at` est backfillé, à `crm_task.created_at` :
-c'est le seul instant **observé** auquel l'assignation existait déjà (`owner` est posé à
-l'insert) ; le défaut `now()` affirmerait « assignée aujourd'hui », strictement plus faux.
+sur les lignes backfillées — **et `assigned_at` aussi** : voir la décision 0 ci-dessus, qui
+est la seule version à jour de cette règle.
 
 **2. Le réconcile est non destructif** — ordre imposé : résoudre → **calculer le diff** →
 `INSERT … ON CONFLICT DO NOTHING` → `DELETE` du reliquat **en dernier**. Un
@@ -843,7 +850,7 @@ copie de PII hors de portée de l'effacement.
 RLS activée sur les deux tables neuves + famille **par commande** `admin_{read,ins,upd,del}_*`
 réservée `service_role`/`admin` (forme enveloppée `(SELECT auth.role())`, §39), **et**
 `REVOKE ALL … FROM PUBLIC, anon, authenticated` : la lecture PostgREST directe est fermée par
-le grant lui-même, avant même la RLS. Les 4 RPCs de notification portent
+le grant lui-même, avant même la RLS. Les 3 RPCs de notification portent
 `REVOKE … FROM PUBLIC, anon` + `GRANT … TO authenticated, service_role`.
 `api.notify_task_assignees` n'est accordée qu'à `service_role` (fonction d'écriture interne,
 jamais appelable depuis le navigateur). **Pas de Realtime** sur `app_notification` : la
@@ -852,7 +859,13 @@ publication Realtime.
 
 ### Garde
 
-`tests/test_crm_task_multi_assignee.sql` (16w-test) — personas **réels** par
+`tests/test_crm_task_multi_assignee.sql` (16w-test). Le backfill est éprouvé sur des
+**témoins fabriqués** (une tâche jamais modifiée, une tâche modifiée) passés à
+`internal.crm_backfill_assignees_from_owner()` — jamais par déduction sur le corpus. La
+rédaction précédente déduisait « ligne backfillée » de `created_by IS NULL` : faux à
+retardement, car le trigger `incident_report` crée des tâches sans créateur **après** 16w, et
+la garde aurait rougi dès qu'une d'elles serait assignée normalement (bloc B6, qui encode
+maintenant ce cas). Personas **réels** par
 `request.jwt.claims` (jamais `SET ROLE` seul : sans JWT `auth.uid()` est NULL et toutes les
 assertions deviendraient vides). Blocs A→H, dont : ordre des assignés prouvé **par le nom**
 au moyen d'un témoin dont l'ordre alphabétique **contredit** l'ordre des uuid ; invariant de
@@ -860,7 +873,7 @@ backfill non vacant (le corpus contient des tâches avec `owner`) ; sentinelle d
 (`assigned_at` écrit à `2001-01-01`) — comparer à `now()` ne distinguerait rien, `now()`
 étant figé sur toute la transaction.
 
-**Vérifié ROUGE par 8 sabotages** (migration + test rejoués en transaction annulée contre la
+**Vérifié ROUGE par 11 sabotages** (migration + test rejoués en transaction annulée contre la
 base vive, 2026-08-28) :
 
 | Sabotage | Assertion qui tombe |
@@ -870,9 +883,12 @@ base vive, 2026-08-28) :
 | `ORDER BY a.user_id` au lieu du nom | C2 tri par nom affiché |
 | `created_by` modifiable par l'UPDATE | G immuabilité |
 | `WHERE TRUE` au lieu de `IS DISTINCT FROM p_actor` | E1 pas d'auto-notification |
-| `assigned_at = created_at` inconditionnel (la rédaction d'origine) | B2bis date sur une tâche modifiée |
+| `assigned_at = created_at` inconditionnel (rédaction 1) | B2 date sur une ligne backfillée |
+| `created_at` si `updated_at = created_at` (rédaction 2) | B2 idem — l'égalité ne prouve rien |
 | `assigned_by = ct.owner` (auteur inventé) | B1 assigned_by sur une ligne backfillée |
-| `assigned_at = now()` | B2 assigned_at ≠ created_at |
+| colonne `assigned_at` omise ⇒ DEFAULT `now()` | B2 date posée par omission |
+| backfill en `DO UPDATE` (il réécrit) | B5 un second passage ne doit rien réécrire |
+| `api.count_my_unread_notifications` ré-introduite | A ce RPC ne doit pas exister |
 
 ### Application
 

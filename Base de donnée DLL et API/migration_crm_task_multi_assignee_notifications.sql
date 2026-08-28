@@ -33,25 +33,24 @@
 -- ensuite l'approximation du fait). Corollaire : `crm_task_assignee.assigned_by` est NULL
 -- sur les lignes backfillées — personne ne sait qui a assigné.
 --
--- **`assigned_at` suit la MÊME règle, et n'est rempli que lorsque la base le PROUVE.**
--- Première rédaction : `assigned_at = crm_task.created_at`, « le seul instant observé ».
--- C'était faux, et c'était le défaut que ce même paragraphe refuse par ailleurs :
--- `crm_task.owner` est une colonne MODIFIABLE. Sur une tâche réassignée, `created_at` est la
--- naissance de la TÂCHE, pas celle de l'assignation — une date inventée, dans une colonne de
--- provenance, exactement comme un créateur inventé. Le backfill ne pose donc `created_at`
--- que sur les lignes dont la ligne elle-même établit que `owner` n'a pas bougé :
--- **`updated_at = created_at`**, c'est-à-dire jamais modifiée depuis l'insertion. Tout le
--- reste vaut NULL = « on ne sait pas quand ». `assigned_at` est donc NULLABLE : son défaut
--- `now()` ne couvre que les lignes écrites par `api.save_crm_task`.
---
--- Le journal d'audit de `crm_task` (`trg_audit_crm_task`, §61) pourrait en récupérer
--- davantage — vérifié sur live le 2026-08-28 : les 2 tâches modifiées ont un journal continu
--- et à jour qui ne porte AUCUN changement d'`owner`, donc leur `created_at` serait exact.
--- Cette branche n'est délibérément PAS implémentée : elle rendrait 2 horodatages qu'AUCUN
--- consommateur ne lit, contre une règle trop grosse pour être gardée sans témoins
--- synthétiques — donc une garde vacante, exactement ce que le projet proscrit. Qui aura
--- besoin de ces dates les retrouvera dans `audit.audit_log` ; NULL dit « inconnu ici »,
--- il n'affirme rien de faux.
+-- **`assigned_at` N'EST JAMAIS BACKFILLÉ : toute ligne reprise depuis `owner` vaut NULL.**
+-- Deux rédactions successives ont voulu être plus malignes, deux fois à tort :
+--   1. `assigned_at = crm_task.created_at` — faux, `crm_task.owner` est MODIFIABLE : sur une
+--      tâche réassignée, `created_at` est la naissance de la TÂCHE, pas celle de
+--      l'assignation. Exactement le créateur inventé que ce paragraphe refuse, deux lignes
+--      plus haut.
+--   2. `created_at` seulement si `updated_at = created_at` (« jamais modifiée ») — faux
+--      aussi : `update_updated_at_column()` et `api.save_crm_task` posent `NOW()`, le
+--      timestamp de TRANSACTION, constant du début à la fin. Une création suivie d'une
+--      réassignation DANS LA MÊME TRANSACTION laisse donc l'égalité intacte tout en ayant
+--      changé d'assigné. Reproduit sur live le 2026-08-28 (transaction annulée) : témoin
+--      réassigné de A à B, `updated_at = created_at` toujours vrai.
+-- Il n'existe pas de test bon marché qui distingue « jamais réassignée » de « réassignée
+-- dans la transaction de création ». On cesse donc de dériver : NULL = « on ne sait pas
+-- quand », ce qui est vrai et le restera. `assigned_at` est NULLABLE pour pouvoir le dire ;
+-- son défaut `now()` ne couvre que les lignes écrites par `api.save_crm_task`.
+-- Le journal `audit.audit_log` (`trg_audit_crm_task`, §61) garde la réponse pour qui en
+-- aurait besoin un jour — aucun consommateur ne lit `assigned_at` aujourd'hui.
 --
 -- ────────────────────────────────────────────────────────────────────────────────────────
 -- §B — LE RÉCONCILE EST NON DESTRUCTIF (invariant CLAUDE.md §214)
@@ -82,7 +81,16 @@
 --     le neutralise sans qu'aucune purge de `payload` soit nécessaire. Ne JAMAIS y
 --     recopier un display_name (ce serait une copie de PII hors de portée de l'effacement).
 --
--- Idempotent (IF NOT EXISTS / CREATE OR REPLACE / DO $$ gardés) — rejouable.
+-- Idempotent (IF NOT EXISTS / CREATE OR REPLACE / DO $$ gardés) : ré-appliquer CETTE
+-- version est un no-op. Portée exacte de cette promesse : le backfill est en
+-- `ON CONFLICT DO NOTHING`, donc il ne RÉPARE pas une base où un brouillon antérieur aurait
+-- écrit des `assigned_at` datés — il les laisse tels quels. Aucun environnement n'a joué de
+-- brouillon (PROD vérifiée vierge de 16w le 2026-08-28) ; si cela devait arriver, la
+-- remise en état tient en une ligne :
+--   UPDATE crm_task_assignee SET assigned_at = NULL, assigned_by = NULL
+--    WHERE (task_id, user_id) IN (SELECT id, owner FROM crm_task WHERE owner IS NOT NULL);
+-- à n'exécuter QUE sur une base n'ayant jamais servi (elle effacerait sinon la provenance
+-- des assignations écrites depuis par api.save_crm_task).
 -- Ordre requis : APRÈS 8z (`migration_crm_module.sql` : crm_task, api.user_can_assign_crm,
 -- api.user_can_write_crm, api.list_crm_tasks, api.list_object_crm, api.save_crm_task).
 -- NON foldé dans `schema_unified.sql` : les corps référencent des fonctions de 8z.
@@ -145,17 +153,45 @@ COMMENT ON COLUMN public.crm_task_assignee.assigned_at IS
 CREATE INDEX IF NOT EXISTS idx_crm_task_assignee_user
   ON public.crm_task_assignee (user_id, task_id);
 
--- Backfill : une ligne par owner non nul. `assigned_by` toujours NULL (personne ne sait qui
--- a assigné). `assigned_at` = `created_at` UNIQUEMENT si la base prouve que `owner` n'a pas
--- changé depuis l'insertion (§A) ; NULL sinon. ON CONFLICT ⇒ rejouable.
-INSERT INTO public.crm_task_assignee (task_id, user_id, assigned_by, assigned_at)
-SELECT ct.id, ct.owner, NULL,
-       -- Jamais modifiée ⇒ `owner` est la valeur d'insertion, donc `created_at` EST
-       -- l'instant de l'assignation. Modifiée ⇒ `owner` a pu changer : on ne sait pas.
-       CASE WHEN ct.updated_at = ct.created_at THEN ct.created_at ELSE NULL END
-FROM public.crm_task ct
-WHERE ct.owner IS NOT NULL
-ON CONFLICT (task_id, user_id) DO NOTHING;
+-- Backfill : une ligne par owner non nul, SANS provenance — ni qui, ni quand (§A).
+--
+-- La règle vit dans une FONCTION NOMMÉE, et non en ligne, pour une seule raison : c'est la
+-- seule forme que la garde puisse réellement éprouver. Un test qui recopierait l'INSERT
+-- vérifierait sa propre copie — saboter la migration ne le ferait pas rougir (constaté :
+-- 5 sabotages du backfill passaient au vert). Le test fabrique donc ses témoins puis appelle
+-- CETTE fonction ; toute dérive du corps se voit.
+--
+-- Les deux colonnes de provenance sont posées EXPLICITEMENT à NULL : `assigned_at` porte un
+-- DEFAULT `now()` qui, par simple omission de la colonne, daterait toute la reprise du jour
+-- du déploiement. ON CONFLICT DO NOTHING : une ligne déjà présente appartient à
+-- `api.save_crm_task` et garde sa provenance — le backfill ne réécrit jamais rien.
+CREATE OR REPLACE FUNCTION internal.crm_backfill_assignees_from_owner()
+RETURNS integer
+LANGUAGE plpgsql
+SET search_path TO 'public', 'internal'
+AS $function$
+DECLARE
+  v_n integer;
+BEGIN
+  INSERT INTO public.crm_task_assignee (task_id, user_id, assigned_by, assigned_at)
+  SELECT ct.id, ct.owner, NULL, NULL
+  FROM public.crm_task ct
+  WHERE ct.owner IS NOT NULL
+  ON CONFLICT (task_id, user_id) DO NOTHING;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  RETURN v_n;
+END;
+$function$;
+
+COMMENT ON FUNCTION internal.crm_backfill_assignees_from_owner() IS
+  'Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS '
+  'provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que '
+  'tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.';
+
+-- Interne : jamais appelable depuis le navigateur.
+REVOKE ALL ON FUNCTION internal.crm_backfill_assignees_from_owner() FROM PUBLIC, anon, authenticated;
+
+SELECT internal.crm_backfill_assignees_from_owner();
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════
 -- 3. NOTIFICATIONS APPLICATIVES PERSISTANTES
@@ -735,6 +771,11 @@ BEGIN
   RETURN jsonb_build_object('items', v_items, 'unread_count', v_unread);
 END;
 $function$;
+
+-- Un brouillon antérieur de 16w exposait `api.count_my_unread_notifications` : la retirer
+-- explicitement, sinon elle SURVIT à une ré-application (rien ne supprime une fonction qu'on
+-- a cessé d'écrire) et reste exécutable par `authenticated`.
+DROP FUNCTION IF EXISTS api.count_my_unread_notifications();
 
 -- Pas de RPC de comptage séparé : `list_my_notifications` rend DÉJÀ `unread_count`, calculé
 -- sur TOUTES les non-lues (indépendant de `p_limit`), donc la pastille reste exacte. Un

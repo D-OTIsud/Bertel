@@ -909,7 +909,38 @@ node .tmp_pgapply/run_sql_file.cjs "Base de donnée DLL et API/migration_crm_tas
 ```
 
 puis `NOTIFY pgrst, 'reload schema';` (4 fonctions `api.*` neuves) — le fichier le fait déjà
-après son `COMMIT`. **Ordre de déploiement : base d'abord, front ensuite** — les nouvelles
+après son `COMMIT`.
+
+### ✅ APPLIQUÉE EN PRODUCTION le 2026-08-28
+
+Appliquée via `run_sql_file.cjs` (le fichier EXACT du dépôt, sha `8e9e94b`), puis
+**ré-appliquée intégralement** pour prouver l'idempotence sur la base vive : aucun
+changement au second passage. Vérifications :
+
+| Contrôle | Résultat |
+| --- | --- |
+| Reprise depuis `owner` | 4 lignes pour 4 tâches ; `user_id = ct.owner` sur les 4 ; 0 `assigned_by`, 0 `assigned_at` (aucune provenance inventée) |
+| `crm_task` | 4 tâches intactes ; `max(updated_at)` **inchangé** (aucun trigger déclenché ⇒ aucun faux signal de reprise pour les partenaires) |
+| `created_by` | 0 ligne backfillée — conforme à §A |
+| Structures | 2 tables, 3 index, 8 policies par commande, RLS ON, **0 grant** anon/authenticated |
+| Contrat de lecture | `owner_id`/`owner_name` TOUJOURS émis (le front déployé est l'ANCIEN) **et** `assignees[]` + `created_by_*` présents |
+| Garde 16w | rejouée **verte** contre le déployé, en transaction annulée ; harnais prouvé non vacant par un `ASSERT FALSE` témoin |
+| PostgREST (HTTP réel, clé anon) | `list_my_notifications`, `mark_all_notifications_read` ⇒ **401 `42501`** (exposées mais anon refusé) ; `count_my_unread_notifications` ⇒ **404 `PGRST202`** (retirée de la surface d'API) |
+
+**Advisors après application** — 0 ERROR.
+- Sécurité : 6 `authenticated_security_definer_function_executable` sur les RPC 16w —
+  **attendus** (classe §36, DEFINER auto-autorisants). Un 7e lint,
+  `function_search_path_mutable` sur `api.crm_user_label`, était **introduit par cette
+  passe** : corrigé immédiatement (`SET search_path TO 'pg_catalog'`, le corps n'utilise que
+  des primitives `pg_catalog`) et la migration ré-appliquée.
+- Performance : 2 `unindexed_foreign_keys` INFO sur `crm_task_assignee.assigned_by` et
+  `app_notification.created_by`. **Volontairement non indexées** : ce sont des colonnes de
+  provenance, aucun chemin de lecture ne filtre dessus (même arbitrage que 16g pour les
+  petites tables). À revoir si un écran d'imputabilité les interroge un jour.
+
+**Reste à faire : déployer le frontend** (la branche n'est pas poussée). Jusque-là PROD
+tourne l'ANCIEN front sur le NOUVEAU backend — configuration prévue et vérifiée ci-dessus.
+Ensuite seulement : régénérer `dbdoc/` + `db-graph-out/` et `graphify update .`. **Ordre de déploiement : base d'abord, front ensuite** — les nouvelles
 clés de lecture sont additives et `owner_id`/`owner_name` survivent, donc le front déployé
 pendant la fenêtre continue de fonctionner.
 

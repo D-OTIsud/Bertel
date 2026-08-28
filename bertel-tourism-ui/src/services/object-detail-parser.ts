@@ -517,6 +517,47 @@ function normalizePhoneValue(value: string): string {
   return trimmed.replace(/[^\d]/g, '');
 }
 
+/**
+ * Clé de COMPARAISON entre deux coordonnées de provenances différentes (dédup d'affichage).
+ *
+ * Pourquoi une fonction dédiée et non `normalizePhoneValue` : cette dernière conserve le `+`
+ * (`+262…` ≠ `0262…`) et sert à fabriquer les `href tel:` — la modifier casserait le composeur.
+ * La normalisation §195 est du SQL, non réutilisable ici.
+ *
+ * La comparaison porte sur la VALEUR SEULE pour les téléphones et les e-mails, jamais sur le
+ * couple (kind, valeur) : le même numéro est couramment saisi `phone` sur la fiche et `mobile`
+ * sur l'acteur — comparer le couple raterait précisément le doublon qu'on cherche.
+ *
+ * Ne JAMAIS utiliser cette clé pour construire un `href` : elle est lossy par conception.
+ */
+export function contactComparisonKey(kindCode: string, value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+  // « Ressemble à un téléphone » = assez de chiffres ET rien d'autre que de la ponctuation
+  // d'appel. La seconde condition écarte les valeurs riches en chiffres qui n'en sont pas
+  // (un SIRET, une adresse, un e-mail numérique) : dès qu'une lettre subsiste après avoir
+  // retiré la ponctuation, la longueur dépasse celle des seuls chiffres.
+  const withoutPhonePunctuation = trimmed.replace(/[\s.\-()+]/g, '');
+  const looksPhone = digits.length >= 8 && digits.length >= withoutPhonePunctuation.length;
+
+  if (looksPhone) {
+    // Replie l'indicatif Réunion (+262 / 00262) sur la forme nationale 0XXXXXXXXX, la seule
+    // forme sous laquelle fixe et mobile se comparent entre saisies.
+    const national = digits.replace(/^(?:00)?262(?=\d{9}$)/, '0');
+    return `tel:${national}`;
+  }
+
+  if (trimmed.includes('@')) {
+    return `mail:${trimmed.toLowerCase()}`;
+  }
+
+  return `${kindCode.trim().toLowerCase()}:${trimmed.toLowerCase()}`;
+}
+
 function isPhoneKind(kindCode: string): boolean {
   return ['phone', 'mobile', 'fax', 'tel', 'telephone', 'telephone_fixe', 'telephone_mobile'].includes(kindCode)
     || /(^|[_-])(phone|mobile|fax|tel)([_-]|$)/.test(kindCode);

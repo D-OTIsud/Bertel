@@ -1,4 +1,51 @@
-import { cleanSustainabilityNote, normalizeUrlValue, parseObjectDetail } from './object-detail-parser';
+import {
+  cleanSustainabilityNote,
+  contactComparisonKey,
+  normalizeUrlValue,
+  parseObjectDetail,
+} from './object-detail-parser';
+
+describe('contactComparisonKey (chantier 3a — dédup inter-sources)', () => {
+  it('replie les trois écritures réunionnaises du MÊME fixe sur une seule clé', () => {
+    const national = contactComparisonKey('phone', '0262 49 64 59');
+    expect(contactComparisonKey('mobile', '+262 262 49 64 59')).toBe(national);
+    expect(contactComparisonKey('phone', '00262262496459')).toBe(national);
+    expect(contactComparisonKey('phone', '0262.49.64.59')).toBe(national);
+    expect(national).toBe('tel:0262496459');
+  });
+
+  it('replie aussi un MOBILE saisi en national et en international', () => {
+    expect(contactComparisonKey('mobile', '+262 692 12 34 56')).toBe(contactComparisonKey('phone', '0692 12 34 56'));
+  });
+
+  it('compare la VALEUR seule, jamais le couple (kind, valeur) — le même numéro est saisi phone ici et mobile là', () => {
+    expect(contactComparisonKey('phone', '0262 49 64 59')).toBe(contactComparisonKey('mobile', '0262 49 64 59'));
+  });
+
+  it('ignore la casse des e-mails', () => {
+    expect(contactComparisonKey('email', 'Contact@Example.COM')).toBe(contactComparisonKey('mail', 'contact@example.com'));
+    expect(contactComparisonKey('email', 'contact@example.com')).toBe('mail:contact@example.com');
+  });
+
+  it('ne prend PAS une valeur riche en chiffres pour un téléphone', () => {
+    // Un SIRET a 14 chiffres : sans la seconde condition il deviendrait « tel: ».
+    expect(contactComparisonKey('siret', 'SIRET 123 456 789 01234')).not.toMatch(/^tel:/);
+    // Un e-mail dont la partie locale est un numéro reste un e-mail.
+    expect(contactComparisonKey('email', '0262496459@sms.example')).toBe('mail:0262496459@sms.example');
+  });
+
+  it('distingue deux valeurs différentes et rend une clé vide sur une saisie vide', () => {
+    expect(contactComparisonKey('phone', '0262 49 64 59')).not.toBe(contactComparisonKey('phone', '0262 49 64 58'));
+    expect(contactComparisonKey('phone', '   ')).toBe('');
+    // Une clé vide ne doit jamais entrer dans un Set de dédup : elle collapserait tout.
+    expect(contactComparisonKey('email', '')).toBe('');
+  });
+
+  it('reste distinct par kind pour les valeurs qui ne sont ni téléphone ni e-mail', () => {
+    expect(contactComparisonKey('website', 'https://exemple.re')).toBe('website:https://exemple.re');
+    expect(contactComparisonKey('booking', 'https://exemple.re')).not.toBe(contactComparisonKey('website', 'https://exemple.re'));
+  });
+});
 
 describe('normalizeUrlValue (SEC-7 — only http/https may reach an <a href>)', () => {
   it('keeps http/https and defaults a bare host to https', () => {

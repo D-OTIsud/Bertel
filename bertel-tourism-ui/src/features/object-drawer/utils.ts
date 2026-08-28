@@ -25,11 +25,23 @@ export interface ContactItem {
   visibility: string;
 }
 
+/** Une coordonnée d'acteur AVANT aplatissement en chaîne « Label: valeur ». Porte de quoi
+ *  comparer la valeur à celle d'un contact de la fiche (dédup d'affichage du tiroir). */
+export interface ActorContactEntry {
+  label: string;
+  kindCode: string;
+  value: string;
+}
+
 export interface ActorItem {
   id: string;
   name: string;
   role: string;
+  /** Forme aplatie « Label: valeur », conservée pour les consommateurs historiques. */
   contacts: string[];
+  /** Même contenu que `contacts`, mais STRUCTURÉ. `contacts` en est dérivé : une seule
+   *  lecture du payload, donc les deux formes ne peuvent pas diverger. */
+  contactEntries: ActorContactEntry[];
   visibility: string;
   isPrimary: boolean;
   note: string;
@@ -632,15 +644,24 @@ function formatDateRange(start: unknown, end: unknown, fallback: string): string
   return fallback;
 }
 
-function mapContactLines(value: unknown): string[] {
+/** Lecture STRUCTURÉE des coordonnées d'un porteur (acteur ou organisation). `mapContactLines`
+ *  en dérive l'aplatissement : une seule lecture du payload pour les deux formes. */
+function mapContactEntries(value: unknown): ActorContactEntry[] {
   return readArray(value)
     .map((item) => {
       const kind = readNamedValue(item.kind, readString(item.kind_code));
       const label = readNamedValue(item.role, kind || 'Contact');
-      const rawValue = readString(item.value);
-      return rawValue ? `${label}: ${rawValue}` : '';
+      return {
+        label,
+        kindCode: readString(item.kind_code, readString(readRecord(item.kind).code)).toLowerCase(),
+        value: readString(item.value),
+      };
     })
-    .filter(Boolean);
+    .filter((entry) => entry.value !== '');
+}
+
+function mapContactLines(value: unknown): string[] {
+  return mapContactEntries(value).map((entry) => `${entry.label}: ${entry.value}`);
 }
 
 function normalizeOrganizationEntry(organization: Record<string, unknown>, index: number, source: OrganizationItem['source']): OrganizationItem {
@@ -1169,16 +1190,20 @@ export function parseWebChannels(raw: Record<string, unknown>): ContactItem[] {
 }
 
 export function parseActors(raw: Record<string, unknown>): ActorItem[] {
-  return readArray(raw.actors).map((actor, index) => ({
-    id: readString(actor.id, `actor-${index}`),
-    name: readString(actor.display_name, readString(actor.name, 'Acteur sans nom')),
-    role: readNamedValue(actor.role, readString(actor.role_code, 'Role non precise')),
-    contacts: mapContactLines(actor.contacts),
-    visibility: readString(actor.visibility, 'public'),
-    isPrimary: readBoolean(actor.is_primary) === true,
-    note: readString(actor.note),
-    contactsRestricted: actor.contacts_restricted === true,
-  }));
+  return readArray(raw.actors).map((actor, index) => {
+    const contactEntries = mapContactEntries(actor.contacts);
+    return {
+      id: readString(actor.id, `actor-${index}`),
+      name: readString(actor.display_name, readString(actor.name, 'Acteur sans nom')),
+      role: readNamedValue(actor.role, readString(actor.role_code, 'Role non precise')),
+      contactEntries,
+      contacts: contactEntries.map((entry) => `${entry.label}: ${entry.value}`),
+      visibility: readString(actor.visibility, 'public'),
+      isPrimary: readBoolean(actor.is_primary) === true,
+      note: readString(actor.note),
+      contactsRestricted: actor.contacts_restricted === true,
+    };
+  });
 }
 
 export function parseOrganizations(raw: Record<string, unknown>): OrganizationItem[] {

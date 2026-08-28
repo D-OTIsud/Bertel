@@ -1073,8 +1073,31 @@ function normalizeAggregatedContacts(raw: Record<string, unknown>, organizations
       });
     }),
   );
+  // Chantier 3b (2026-08-28) — DÉDUP INTER-SOURCES des vues dérivées.
+  //
+  // L'ancienne clé était `${source}-${sourceName}-${kindCode}-${value}` : elle contenait la
+  // PROVENANCE, donc deux entrées de même valeur mais de sources différentes survivaient toutes
+  // les deux. Or `ContactCard` ne rend AUCUN marqueur de provenance — la même coordonnée
+  // apparaissait deux fois d'affilée, visuellement identique, et consommait un des 6 emplacements
+  // affichés (un contact légitime pouvait donc être repoussé hors de la fenêtre).
+  //
+  // La dédup s'applique AVANT le tri, sur l'ordre de concaténation (objet → acteurs → orgs) :
+  // `dedupeByKey` garde la PREMIÈRE occurrence, donc **la fiche gagne** sur l'acteur, qui gagne
+  // sur l'organisation. C'est l'ordre voulu — la coordonnée de l'établissement fait foi.
+  //
+  // Les trois legs `object` / `actors` / `organizations` restent INTACTS : ce sont les inventaires
+  // par provenance, et l'éditeur comme l'export par clearance s'appuient dessus.
+  //
+  // Repli sur l'ancienne clé quand la clé de comparaison est vide : `dedupeByKey` écarte les clés
+  // falsy, et une valeur vide serait alors SUPPRIMÉE au lieu d'être conservée telle quelle.
+  // (`mapOwnerContacts` filtre déjà les valeurs vides — ceinture et bretelles.)
   const all = sortContacts(
-    dedupeByKey([...objectContacts, ...actorContacts, ...organizationContacts], (item) => `${item.source}-${item.sourceName}-${item.kindCode}-${item.value}`),
+    dedupeByKey(
+      [...objectContacts, ...actorContacts, ...organizationContacts],
+      (item) =>
+        contactComparisonKey(item.kindCode, item.value)
+        || `${item.source}-${item.sourceName}-${item.kindCode}-${item.value}`,
+    ),
   );
 
   return {

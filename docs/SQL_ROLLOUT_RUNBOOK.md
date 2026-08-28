@@ -862,6 +862,9 @@ publication Realtime.
 `tests/test_crm_task_multi_assignee.sql` (16w-test). **L'ordre du bloc B est critique** : B0
 vérifie la complétude du corpus AVANT que le test n'appelle lui-même la fonction de reprise —
 cet appel réparerait tout et masquerait une migration qui aurait oublié la sienne (constaté).
+B0 et B1 vérifient l'IDENTITÉ de l'assigné (`a.user_id = ct.owner`), pas seulement l'existence
+d'une ligne : une reprise qui assignerait tout le monde à un autre utilisateur valide passait
+sinon au vert. Avec `count(*) = 2` sur les témoins, cela ferme aussi les lignes surnuméraires.
 B5 compare la LIGNE ENTIÈRE (`to_jsonb`) et non une colonne : une rédaction antérieure ne
 regardait que `assigned_at`, si bien qu'un `DO UPDATE SET assigned_by = NULL` passait au vert.
 Le backfill est ensuite éprouvé sur des
@@ -878,7 +881,7 @@ backfill non vacant (le corpus contient des tâches avec `owner`) ; sentinelle d
 (`assigned_at` écrit à `2001-01-01`) — comparer à `now()` ne distinguerait rien, `now()`
 étant figé sur toute la transaction.
 
-**Vérifié ROUGE par 13 sabotages** (migration + test rejoués en transaction annulée contre la
+**Vérifié ROUGE par 15 sabotages** (migration + test rejoués en transaction annulée contre la
 base vive, 2026-08-28) :
 
 | Sabotage | Assertion qui tombe |
@@ -896,6 +899,8 @@ base vive, 2026-08-28) :
 | `api.count_my_unread_notifications` ré-introduite | A ce RPC ne doit pas exister |
 | l'appel de la reprise retiré de la MIGRATION | B0 corpus incomplet avant l'appel du test |
 | backfill en `DO UPDATE SET assigned_by = NULL` | B5 ligne entière comparée, pas une colonne |
+| reprise vers un AUTRE utilisateur valide | B0 la ligne doit exister pour `ct.owner` |
+| ligne surnuméraire en plus du bon owner | B1 `count(*) = 2` + `user_id = ct.owner` |
 
 ### Application
 

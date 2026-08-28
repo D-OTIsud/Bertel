@@ -76,7 +76,7 @@
 -- PREREQUISITES: object_workspace_safe_write_rpcs.sql (7), migration_actor_links_editor.sql (8r),
 --   migration_permission_write_paths.sql (8b), migration_write_policy_percommand.sql (8o),
 --   migration_actor_contacts_org_gate.sql (16u - la branche `actors` appelle
---   api.can_read_actor_contacts, resolue a l'EXECUTION). Manifest step 16v.
+--   api.can_read_actor_contacts, resolue a l'EXECUTION). Manifest step 16x.
 -- IDEMPOTENT: CREATE OR REPLACE FUNCTION.
 -- REVERSIBLE: re-appliquer migration_actor_links_editor.sql (8r), qui reinstalle le corps delete-all
 --   - et REOUVRE le defaut. Ne le faire que pour un diagnostic, jamais comme etat cible.

@@ -51,11 +51,20 @@ jobs:
       - name: Ensure psql is available
         run: psql --version || (sudo apt-get update && sudo apt-get install -y postgresql-client)
 
+      - name: Prepare blank Supabase bootstrap project
+        # This gate tests ci_fresh_apply.sql as the single source of truth. Starting
+        # from the checkout would auto-run supabase/migrations first; those files are
+        # incremental PROD patches and legitimately depend on tables created by the
+        # canonical manifest (for example ref_code).
+        run: |
+          mkdir -p "$RUNNER_TEMP/bertel-fresh/supabase"
+          cp supabase/config.toml "$RUNNER_TEMP/bertel-fresh/supabase/config.toml"
+
       - name: Start Supabase local database
         # Boots the Supabase-flavoured Postgres (DB image provides the auth/storage
         # schemas, the anon/authenticated/service_role roles, and the extensions the
         # manifest depends on). config.toml pins major_version 17 to match PROD.
-        run: supabase start
+        run: supabase start --workdir "$RUNNER_TEMP/bertel-fresh"
 
       - name: Apply the canonical fresh-install manifest (aborts on first error)
         env:
@@ -254,7 +263,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_room_type_bed.sql"
 
-      - name: opening period type test (§81 14i — ref_code_opening_period_type partition + seeds + opening_period.period_type_id FK + read-helper code)
+      - name: opening period test (§81/§92 14i+14o — final 3-type catalog + recurrence/closure + FK + read helper)
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_opening_period_type.sql"
@@ -426,4 +435,4 @@ jobs:
 
       - name: Stop Supabase
         if: always()
-        run: supabase stop
+        run: supabase stop --workdir "$RUNNER_TEMP/bertel-fresh"

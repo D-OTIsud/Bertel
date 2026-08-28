@@ -17,6 +17,13 @@ interface ResultsListProps {
   loading: boolean;
   isRefreshing?: boolean;
   headerActions?: ReactNode;
+  /**
+   * Bandeau rendu SOUS l'en-tête, au-dessus de la liste (spec 2026-08-26 : les
+   * concordances directes). C'est un slot et non une insertion dans ExplorerPage
+   * parce que la colonne de résultats est une CELLULE DE GRILLE : un frère y
+   * ajouterait une cellule et casserait la mise en page.
+   */
+  banner?: ReactNode;
   variant?: 'panel' | 'column';
   /** Lazy pagination (§125): load the next server page when the user nears the bottom. */
   hasMore?: boolean;
@@ -76,6 +83,7 @@ export function ResultsList({
   loading,
   isRefreshing = false,
   headerActions,
+  banner,
   variant = 'column',
   hasMore = false,
   isLoadingMore = false,
@@ -272,6 +280,8 @@ export function ResultsList({
           {headerActions}
         </div>
       </div>
+
+      {banner}
 
       {showLoading ? <ResultsListSkeleton /> : null}
 

@@ -1,5 +1,5 @@
 -- migration_crm_task_multi_assignee_notifications.sql
--- Manifest 16w — CRM Kanban : provenance du créateur, assignation MULTIPLE, notifications
+-- Manifest 16z — CRM Kanban : provenance du créateur, assignation MULTIPLE, notifications
 -- persistantes (brief docs/superpowers/plans/2026-08-28-crm-kanban-task-improvements.md).
 --
 -- Ce que la passe installe :
@@ -85,7 +85,7 @@
 -- version est un no-op. Portée exacte de cette promesse : le backfill est en
 -- `ON CONFLICT DO NOTHING`, donc il ne RÉPARE pas une base où un brouillon antérieur aurait
 -- écrit des `assigned_at` datés — il les laisse tels quels. Aucun environnement n'a joué de
--- brouillon (PROD vérifiée vierge de 16w le 2026-08-28) ; si cela devait arriver, la
+-- brouillon (PROD vérifiée vierge de 16z le 2026-08-28) ; si cela devait arriver, la
 -- remise en état tient en une ligne :
 --   UPDATE crm_task_assignee SET assigned_at = NULL, assigned_by = NULL
 --    WHERE (task_id, user_id) IN (SELECT id, owner FROM crm_task WHERE owner IS NOT NULL);
@@ -118,7 +118,7 @@ END$$;
 COMMENT ON COLUMN public.crm_task.created_by IS
   'Créateur de la tâche (auth.users). Posé UNE FOIS à l''INSERT par api.save_crm_task et '
   'jamais modifiable par un payload d''UPDATE. NULL = créateur inconnu : lignes antérieures '
-  'à 16w (jamais backfillées — voir §A de migration_crm_task_multi_assignee_notifications.sql) '
+  'à 16z (jamais backfillées — voir §A de migration_crm_task_multi_assignee_notifications.sql) '
   'ou tâches nées du trigger incident_report. Le créateur N''EST PAS un assigné.';
 
 -- ═══════════════════════════════════════════════════════════════════════════════════════
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS public.crm_task_assignee (
   task_id     uuid        NOT NULL REFERENCES public.crm_task(id) ON DELETE CASCADE,
   user_id     uuid        NOT NULL REFERENCES auth.users(id)      ON DELETE CASCADE,
   assigned_by uuid                 REFERENCES auth.users(id)      ON DELETE SET NULL,
-  -- NULLABLE à dessein : NULL = « date d'assignation inconnue » (ligne antérieure à 16w dont
+  -- NULLABLE à dessein : NULL = « date d'assignation inconnue » (ligne antérieure à 16z dont
   -- la base ne prouve pas que `owner` n'a pas bougé — voir §A). Le défaut couvre toutes les
   -- lignes écrites par api.save_crm_task, qui ne renseigne jamais la colonne explicitement.
   assigned_at timestamptz          DEFAULT now(),
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS public.crm_task_assignee (
 );
 
 COMMENT ON TABLE public.crm_task_assignee IS
-  'Assignation MULTIPLE d''une tâche CRM (16w). SOURCE DE VÉRITÉ de « qui doit faire la '
+  'Assignation MULTIPLE d''une tâche CRM (16z). SOURCE DE VÉRITÉ de « qui doit faire la '
   'tâche » ; crm_task.owner n''est plus qu''une valeur de compatibilité de déploiement. '
   'Écrite UNIQUEMENT par api.save_crm_task (réconcile non destructif, §B). Aucun accès '
   'PostgREST direct : RLS + REVOKE.';
@@ -184,7 +184,7 @@ END;
 $function$;
 
 COMMENT ON FUNCTION internal.crm_backfill_assignees_from_owner() IS
-  'Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS '
+  'Reprise des assignations depuis crm_task.owner (16z) : une ligne par owner non nul, SANS '
   'provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que '
   'tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.';
 
@@ -222,7 +222,7 @@ BEGIN
 END$$;
 
 COMMENT ON TABLE public.app_notification IS
-  'Notifications applicatives persistantes (16w). `recipient_id` EST la frontière de '
+  'Notifications applicatives persistantes (16z). `recipient_id` EST la frontière de '
   'sécurité : aucune décision d''autorisation ne se lit dans `payload`. `payload` ne '
   'contient JAMAIS de nom de personne — tout libellé est joint à la lecture depuis '
   'app_user_profile, pour rester dans la portée de l''effacement RGPD (§C). Aucun accès '
@@ -325,7 +325,7 @@ DECLARE
   v_priority crm_task_priority;
   v_title text := NULLIF(btrim(COALESCE(p_payload->>'title','')),'');
   v_actor uuid := auth.uid();
-  -- Assignation (16w)
+  -- Assignation (16z)
   v_has_assignees boolean := p_payload ? 'assignee_ids';
   v_requested uuid[];          -- ensemble demandé, dédoublonné, trié
   v_new_assignees uuid[];      -- entrants SEULS (diff calculé AVANT toute écriture, §B)
@@ -578,10 +578,10 @@ BEGIN
       'status', ct.status, 'priority', ct.priority,
       'due_at', ct.due_at, 'created_at', ct.created_at,
       -- owner_id/owner_name : contrat HÉRITÉ conservé pour la fenêtre de déploiement
-      -- (16w). Valeur de compatibilité = 1er assigné par uuid croissant. Le front ≥16w
+      -- (16z). Valeur de compatibilité = 1er assigné par uuid croissant. Le front ≥16z
       -- lit `assignees`, jamais ces deux clés.
       'owner_id', ct.owner, 'owner_name', p.display_name,
-      -- 16w — assignation multiple. Ordre STABLE : nom affiché insensible à la casse puis
+      -- 16z — assignation multiple. Ordre STABLE : nom affiché insensible à la casse puis
       -- uuid (deux homonymes ne peuvent pas permuter d'un appel à l'autre). Jamais NULL.
       'assignees', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
@@ -591,7 +591,7 @@ BEGIN
         FROM crm_task_assignee a
         LEFT JOIN app_user_profile ap ON ap.id = a.user_id
         WHERE a.task_id = ct.id), '[]'::jsonb),
-      -- 16w — provenance. NULL assumé = créateur inconnu (§A) ; le front affiche
+      -- 16z — provenance. NULL assumé = créateur inconnu (§A) ; le front affiche
       -- « Créateur inconnu », il ne devine JAMAIS un nom depuis les assignés.
       'created_by_id', ct.created_by,
       'created_by_name', api.crm_user_label(ct.created_by, cp.display_name),
@@ -664,7 +664,7 @@ BEGIN
     ORDER BY ci.occurred_at DESC NULLS LAST, ci.id DESC
   ) qi;
 
-  -- 16w — MÊME contrat de tâche que list_crm_tasks (une seule forme de tâche dans l'API).
+  -- 16z — MÊME contrat de tâche que list_crm_tasks (une seule forme de tâche dans l'API).
   SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_tasks
   FROM (
     SELECT jsonb_build_object(
@@ -777,7 +777,7 @@ BEGIN
 END;
 $function$;
 
--- Un brouillon antérieur de 16w exposait `api.count_my_unread_notifications` : la retirer
+-- Un brouillon antérieur de 16z exposait `api.count_my_unread_notifications` : la retirer
 -- explicitement, sinon elle SURVIT à une ré-application (rien ne supprime une fonction qu'on
 -- a cessé d'écrire) et reste exécutable par `authenticated`.
 DROP FUNCTION IF EXISTS api.count_my_unread_notifications();

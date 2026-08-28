@@ -1,5 +1,5 @@
 -- test_crm_task_multi_assignee.sql
--- Garde permanente du manifeste 16w (migration_crm_task_multi_assignee_notifications.sql) :
+-- Garde permanente du manifeste 16z (migration_crm_task_multi_assignee_notifications.sql) :
 -- provenance du créateur, assignation MULTIPLE, notifications persistantes.
 --
 -- A) STRUCTURE — colonnes/tables/index/FK/CHECK présents ; RLS activée et AUCUN grant
@@ -27,7 +27,7 @@
 --    refusées ; passer une tâche en `done` ne clôture RIEN en SQL (la clôture reste un
 --    geste explicite de l'UI) ; une tâche sans assigné rend `assignees: []`, jamais null.
 --
--- Contre une base sans 16w : échec immédiat (bloc A). Auto-contenu + transactionnel.
+-- Contre une base sans 16z : échec immédiat (bloc A). Auto-contenu + transactionnel.
 -- Personas RÉELS par `request.jwt.claims` (jamais `SET ROLE` seul : sans JWT, auth.uid()
 -- est NULL et toutes les assertions deviendraient vides — vacuité parfaite, cf. §204).
 -- Plage de fixtures dédiée 09xx (08xx = test_crm_module.sql).
@@ -71,7 +71,7 @@ BEGIN
   -- ═══════════════ A. STRUCTURE ═══════════════
   ASSERT EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_schema='public' AND table_name='crm_task' AND column_name='created_by'),
-         'A: colonne crm_task.created_by absente (16w non appliquée)';
+         'A: colonne crm_task.created_by absente (16z non appliquée)';
   ASSERT EXISTS (SELECT 1 FROM pg_constraint
                  WHERE conname='crm_task_created_by_fkey' AND confrelid='auth.users'::regclass
                    AND confdeltype='n'),
@@ -89,7 +89,7 @@ BEGIN
   -- Le CHECK doit réellement refuser une espèce inconnue (sinon il ne garde rien).
   v_denied := false;
   BEGIN
-    INSERT INTO auth.users (id, email) VALUES (v_userA, 'crm16w_a@test.local') ON CONFLICT (id) DO NOTHING;
+    INSERT INTO auth.users (id, email) VALUES (v_userA, 'crm16z_a@test.local') ON CONFLICT (id) DO NOTHING;
     INSERT INTO app_notification (recipient_id, kind) VALUES (v_userA, 'espece_inventee');
   EXCEPTION WHEN check_violation THEN v_denied := true;
   END;
@@ -148,14 +148,14 @@ BEGIN
   -- ── Témoins ────────────────────────────────────────────────────────────────────────────
   -- Première rédaction : « une ligne backfillée = une tâche dont created_by IS NULL ».
   -- FAUX, et à retardement : le trigger `api.create_crm_artifacts_from_incident` crée des
-  -- tâches SANS créateur APRÈS 16w ; dès qu'une d'elles sera assignée par api.save_crm_task,
+  -- tâches SANS créateur APRÈS 16z ; dès qu'une d'elles sera assignée par api.save_crm_task,
   -- elle portera un `assigned_by` parfaitement légitime et la garde rougirait sur une donnée
   -- saine (bloc B6). On éprouve donc la RÈGLE sur des témoins qu'on fabrique.
   --
   -- Les témoins couvrent les DEUX formes qu'une rédaction antérieure croyait pouvoir
   -- distinguer : jamais modifiée, et modifiée. La règle actuelle les traite identiquement —
   -- c'est précisément ce que ce bloc verrouille.
-  INSERT INTO auth.users (id, email) VALUES (v_userA,'crm16w_a@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO auth.users (id, email) VALUES (v_userA,'crm16z_a@test.local') ON CONFLICT (id) DO NOTHING;
   INSERT INTO object (id, object_type, name, status)
   VALUES (v_objBF,'HOT','Hôtel témoin backfill','draft') ON CONFLICT (id) DO NOTHING;
 
@@ -226,8 +226,8 @@ BEGIN
   IF v_perm IS NULL THEN RAISE EXCEPTION 'fixture: ref_permission[write_crm_notes] manquant'; END IF;
 
   INSERT INTO auth.users (id, email) VALUES
-    (v_userA,'crm16w_a@test.local'), (v_userB,'crm16w_b@test.local'),
-    (v_userC,'crm16w_c@test.local'), (v_userD,'crm16w_d@test.local')
+    (v_userA,'crm16z_a@test.local'), (v_userB,'crm16z_b@test.local'),
+    (v_userC,'crm16z_c@test.local'), (v_userD,'crm16z_d@test.local')
     ON CONFLICT (id) DO NOTHING;
   -- display_name choisis pour que l'ordre alphabétique CONTREDISE l'ordre des uuid.
   INSERT INTO app_user_profile (id, role, display_name) VALUES
@@ -237,9 +237,9 @@ BEGIN
     (v_userD,'tourism_agent','Alice Ah-Fat')
     ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role, display_name=EXCLUDED.display_name;
   INSERT INTO object (id, object_type, name, status) VALUES
-    (v_orgA,'ORG','ORG A 16w','published'), (v_orgB,'ORG','ORG B 16w','published'),
-    (v_objA,'HOT','Hôtel 16w A','draft'), (v_objA2,'HOT','Hôtel 16w A2','draft'),
-    (v_objB,'HOT','Hôtel 16w B','draft')
+    (v_orgA,'ORG','ORG A 16z','published'), (v_orgB,'ORG','ORG B 16z','published'),
+    (v_objA,'HOT','Hôtel 16z A','draft'), (v_objA2,'HOT','Hôtel 16z A2','draft'),
+    (v_objB,'HOT','Hôtel 16z B','draft')
     ON CONFLICT (id) DO NOTHING;
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
     (v_objA,v_orgA,v_pub_role), (v_objA2,v_orgA,v_pub_role), (v_objB,v_orgB,v_pub_role)
@@ -327,10 +327,10 @@ BEGIN
     -- statut OUVERT explicite : sans lui l'interaction naît déjà « done » et l'assertion H3
     -- (« terminer la tâche ne clôture pas l'interaction ») serait vraie sans rien prouver.
     v_payload := api.save_crm_interaction(jsonb_build_object(
-      'object_id', v_objA, 'interaction_type','call','body','Appel 16w','status','planned'));
+      'object_id', v_objA, 'interaction_type','call','body','Appel 16z','status','planned'));
     v_int_id := (v_payload->>'id')::uuid;
     v_payload := api.save_crm_interaction(jsonb_build_object(
-      'object_id', v_objA2, 'interaction_type','call','body','Appel 16w autre objet'));
+      'object_id', v_objA2, 'interaction_type','call','body','Appel 16z autre objet'));
     v_int_other := (v_payload->>'id')::uuid;
     v_denied := false;
     BEGIN
@@ -354,7 +354,7 @@ BEGIN
   -- ═══════════════ Vérifications d'état (superuser, lecture directe) ═══════════════
   -- NB : toute lecture directe de table doit se faire ICI, hors persona — sous
   -- `SET LOCAL ROLE authenticated` la RLS rendrait 0 ligne (crm_*) ou une erreur de
-  -- permission (les deux tables 16w n'ont AUCUN grant), et l'assertion serait vide.
+  -- permission (les deux tables 16z n'ont AUCUN grant), et l'assertion serait vide.
   --
   -- H3 (prémisse) : l'interaction témoin est bien OUVERTE avant qu'on termine la tâche.
   -- Sans cette prémisse, « elle n'est pas done à la fin » serait vrai sans rien prouver
@@ -504,7 +504,7 @@ BEGIN
            'C2: list_object_crm doit porter created_by_id';
 
       -- B6 (contre-épreuve du faux positif). Une tâche née du trigger incident_report a
-    -- légitimement `created_by IS NULL` APRÈS 16w. Quand elle est assignée par la voie
+    -- légitimement `created_by IS NULL` APRÈS 16z. Quand elle est assignée par la voie
     -- normale, elle porte un `assigned_by` parfaitement valide. Une garde qui déduirait
     -- « backfillée » de `created_by IS NULL` rougirait ici, sur une donnée saine — c'est
     -- exactement le défaut relevé en revue.
@@ -627,6 +627,6 @@ BEGIN
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
 
-  RAISE NOTICE '16w CRM tâches (créateur immuable, assignation multiple, notifications persistantes) : assertions passées.';
+  RAISE NOTICE '16z CRM tâches (créateur immuable, assignation multiple, notifications persistantes) : assertions passées.';
 END$$;
 ROLLBACK;

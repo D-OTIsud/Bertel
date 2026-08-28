@@ -30,6 +30,8 @@ interface ResultsTableViewProps {
   totalCount?: number;
   /** Actions injectées dans le header (ex. ExplorerViewSwitch — plus de barre dédiée). */
   headerActions?: ReactNode;
+  /** Bandeau sous l en-tete (spec 2026-08-26) — cf. ResultsList.banner. */
+  banner?: ReactNode;
   /**
    * §174 — quand un scheme de classement gradué est actif (≥2 valeurs résolues côté
    * ExplorerPage), les sections deviennent des niveaux de classement (buildGradeSections)
@@ -147,6 +149,7 @@ export function ResultsTableView({
   labelRankCounts,
   totalCount,
   headerActions,
+  banner,
   gradeSection,
 }: ResultsTableViewProps) {
   const openDrawer = useUiStore((state) => state.openDrawer);
@@ -274,6 +277,8 @@ export function ResultsTableView({
           {headerActions}
         </div>
       </div>
+
+      {banner}
 
       {loading ? (
         <div className="p-4 text-sm text-ink-3" aria-hidden="true">

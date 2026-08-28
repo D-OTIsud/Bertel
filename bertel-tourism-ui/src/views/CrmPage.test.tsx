@@ -201,6 +201,32 @@ describe('deep-link ?tab= (hub personnel)', () => {
     renderPage();
     expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
   });
+
+  it('?acteur= ouvre directement la fiche de cet acteur', async () => {
+    window.history.replaceState(null, '', '/crm?acteur=actor-1');
+    renderPage();
+    // « Appel tarifs » est l'interaction du mock actorSnapshot : elle n'est rendue QUE par
+    // la fiche acteur. Ne pas asserter sur « Mme Marie Hoarau » — ce nom est aussi une ligne
+    // de l'annuaire, donc il ne distingue pas les deux vues.
+    expect(await screen.findByText('Appel tarifs')).toBeInTheDocument();
+    expect(crmMock.listActorCrm).toHaveBeenCalledWith('actor-1');
+  });
+
+  it('?acteur= prime sur ?tab= (intention la plus précise) et sur le nav persisté', async () => {
+    localStorage.setItem('bertel-crm-nav-v2', JSON.stringify({ view: 'timeline' }));
+    window.history.replaceState(null, '', '/crm?tab=taches&acteur=actor-1');
+    renderPage();
+    expect(await screen.findByText('Appel tarifs')).toBeInTheDocument();
+    // Le retour de la fiche nomme l'onglet passé en ?tab= (vue de repli), pas l'annuaire.
+    expect(screen.getByRole('button', { name: /tâches & relances/i })).toBeInTheDocument();
+  });
+
+  it('?acteur= vide → aucune fiche acteur, repli sur le comportement actuel', async () => {
+    window.history.replaceState(null, '', '/crm?acteur=');
+    renderPage();
+    expect(await screen.findByText('Acteurs suivis')).toBeInTheDocument();
+    expect(crmMock.listActorCrm).not.toHaveBeenCalled();
+  });
 });
 
 // Portée de la recherche du header (PO 2026-07-27) : elle ne concerne que l'annuaire, donc

@@ -75,9 +75,22 @@ export default function CrmPage() {
     // Deep-link d'onglet (hub personnel 2026-07-03) : ?tab= prime sur le nav persisté —
     // même esprit que ?fiche= (§142). Lu via window.location au mount (pas de
     // useSearchParams : évite la contrainte Suspense, le nav est déjà hydraté client-only).
-    const tab = new URLSearchParams(window.location.search).get('tab');
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
     const isValidTab = tab === 'annuaire' || tab === 'taches' || tab === 'timeline';
-    setNav(isValidTab ? { view: tab as CrmView } : loadNav());
+    // Deep-link d'ACTEUR (2026-08-28) : la carte d'acteur du tiroir de fiche y mène.
+    // ?acteur= prime sur ?tab= — c'est l'intention la plus précise, et l'onglet ne sert
+    // alors qu'à choisir la vue de repli du bouton « Retour » de la fiche.
+    // Validation minimale (chaîne non vide, comme loadNav) : le format uuid est éprouvé
+    // par le serveur, et un id fabriqué à la main n'est pas un cas à instrumenter ici.
+    const actorId = params.get('acteur')?.trim();
+    const fallbackView: CrmView = isValidTab ? (tab as CrmView) : 'annuaire';
+
+    if (actorId) {
+      setNav({ view: fallbackView, actorId });
+    } else {
+      setNav(isValidTab ? { view: tab as CrmView } : loadNav());
+    }
     setHydrated(true);
   }, []);
 

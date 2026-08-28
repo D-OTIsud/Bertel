@@ -8489,6 +8489,48 @@ a {
   text-decoration: underline;
 }
 
+/* ── Boîte de réception (16w) — même langage que les tâches du hub personnel. Le non-lu se
+   lit à DEUX signaux : la pastille colorée ET la graisse ; la couleur seule ne suffit pas. */
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.notif-item {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Même teinte de survol que .profile-drawer__task (littérale, comme sa voisine). */
+.notif-item:hover { background: rgba(24, 49, 59, 0.05); }
+.notif-item__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+}
+.notif-item.is-unread .notif-item__title { font-weight: 700; }
+.notif-item__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.notif-item__meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 @media (max-width: 960px) {
   .topbar-shell {
     grid-template-columns: 52px minmax(130px, 180px) minmax(0, 1fr) auto 52px;
@@ -11342,6 +11384,22 @@ a {
 /* .crm-search retiré (PO 2026-07-27) : la recherche acteurs vit dans le champ de la TopBar,
    il n'y a plus de champ local dans l'annuaire — 0 consommateur restant. */
 .crm-app .crm-toolbar__sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+/* 16w — barre de filtres du kanban : personne + fenêtre d'échéance + sans-échéance. */
+.crm-app .crm-toolbar--tasks { gap: 8px 12px; }
+.crm-app .crm-filter { display: inline-flex; align-items: center; gap: 6px; }
+.crm-app .crm-filter__label { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.crm-app .crm-filter--check { font-size: 12px; color: var(--ink-3); gap: 5px; }
+.crm-app .crm-filter--check input { accent-color: var(--accent); }
+.crm-app .crm-input-date {
+  height: 30px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-tint); color: var(--ink);
+  font-size: 12px;
+}
+.crm-app .crm-input-date:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.crm-app .crm-toolbar--tasks .crm-select { height: 30px; font-size: 12px; }
 .crm-app .crm-toolbar__right {
   margin-left: auto;
   display: flex;
@@ -12482,6 +12540,16 @@ a {
   margin-top: 10px;
 }
 .crm-app .ticket__who { display: inline-flex; align-items: center; }
+/* 16w — pile d'assignés : les avatars se chevauchent légèrement, le « +N » ferme la pile.
+   L'information accessible reste le texte .sr-only qui énumère TOUS les noms. */
+.crm-app .ticket__who--stack .agav + .agav { margin-left: -6px; }
+.crm-app .ticket__who-more {
+  margin-left: 3px; padding: 0 5px; border-radius: 999px;
+  background: var(--bg-tint); color: var(--ink-3);
+  font-size: 10px; font-weight: 700; line-height: 18px;
+}
+/* 16w — provenance : ligne discrète, jamais confondue avec la liste des assignés. */
+.crm-app .ticket__author { margin-top: 6px; font-size: 11px; color: var(--ink-4); }
 .crm-app .ticket__actions { margin-left: auto; display: inline-flex; gap: 6px; }
 .crm-app .crm-btn.sm { height: 24px; padding: 0 9px; font-size: 11px; border-radius: 7px; }
 .crm-app .due {
@@ -12991,6 +13059,33 @@ a {
 }
 /* Grouped options sit slightly indented under their header. */
 .picker__group .picker__option { padding-left: 24px; }
+
+/* ── SearchMultiSelect (16w) — sélection multiple : puces retirables sous le déclencheur ──
+   Réutilise le déclencheur/popover/option de SearchSelect ; n'ajoute que les puces et la
+   colonne de coche. `is-on` garde le fond accent de l'option cochée. */
+.picker--multi .picker__chips {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 6px 0 0; padding: 0; list-style: none;
+}
+.picker__chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 4px 3px 9px; border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-tint); color: var(--ink-2);
+  font-size: 12px; font-weight: 600;
+}
+.picker__chip-label { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker__chip-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: var(--ink-4);
+  font-size: 13px; line-height: 1; cursor: pointer;
+}
+.picker__chip-remove:hover { background: var(--surface-2); color: var(--ink); }
+.picker__chip-remove:disabled { cursor: not-allowed; opacity: 0.5; }
+/* La coche occupe une gouttière FIXE : les libellés restent alignés, cochés ou non. */
+.picker--multi .picker__option { display: flex; align-items: center; gap: 8px; }
+.picker__option-check { flex: none; width: 12px; font-size: 11px; font-weight: 700; }
 
 
 /* ── Markdown content (adapted description) — shared editor card + drawer ───────── */

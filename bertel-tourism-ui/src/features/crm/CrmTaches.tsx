@@ -10,13 +10,22 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, GripVertical, Link2, Plus } from 'lucide-react';
-import { listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
+import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
+import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
-import { AgAv, Seg } from './crm-primitives';
+import { AgAv } from './crm-primitives';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, dueBadgeClassOf, formatShort } from './crm-view-utils';
+import {
+  ALL_ASSIGNEES,
+  defaultTaskDateRange,
+  isRangeInverted,
+  isTaskAssignedTo,
+  isTaskInDateRange,
+  type TaskDateRange,
+} from './crm-task-filters';
 
 // §66 — une interaction « clôturable » : ni déjà traitée ni annulée. Le prompt de clôture ne
 // se déclenche que pour ces statuts (pas de proposition redondante).
@@ -30,7 +39,8 @@ const KANBAN_COLUMNS: Array<{ key: CrmTaskStatus; label: string; cls: string }> 
   { key: 'done', label: 'Terminées', cls: 'done' },
 ];
 
-const ALL_OWNERS = 'Toutes';
+/** Nombre d'avatars rendus avant de replier le reste derrière un « +N ». */
+const MAX_VISIBLE_AVATARS = 3;
 
 export function CrmTaches({
   canWrite,
@@ -42,11 +52,23 @@ export function CrmTaches({
   onOpenActor: (actorId: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const currentUserId = useSessionStore((state) => state.userId);
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
   // Annuaire (cache partagé, NON filtré) — fournit la datalist établissements du formulaire.
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
+  // Personnes assignables — alimente le filtre par personne (cache partagé avec les modals).
+  const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees });
 
-  const [owner, setOwner] = useState<string>(ALL_OWNERS);
+  // 16w — défaut « mes tâches » : on filtre sur l'UUID de session, jamais sur un nom
+  // affiché (deux personnes peuvent être homonymes, et un nom change). Sans identité de
+  // session on retombe sur « toutes les personnes » plutôt que sur un tableau vide.
+  const [assigneeFilter, setAssigneeFilter] = useState<string>(() => currentUserId ?? ALL_ASSIGNEES);
+  // 16w — fenêtre glissante -15/+15 jours, calculée UNE FOIS au montage (l'initialiseur
+  // paresseux ne se rejoue pas) : la recalculer à chaque rendu ferait glisser les bornes.
+  const [dateRange, setDateRange] = useState<TaskDateRange>(() => defaultTaskDateRange());
+  // Les tâches sans échéance restent visibles par défaut : elles ne concernent pas le
+  // filtre de date, et les masquer ferait disparaître du travail réel en silence.
+  const [includeUndated, setIncludeUndated] = useState(true);
   // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
   // datalist conservée, erreurs visibles dans le modal.
   const [taskModalOpen, setTaskModalOpen] = useState(false);
@@ -113,19 +135,34 @@ export function CrmTaches({
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
   const hiddenCount = tasks.filter((task) => task.status === 'canceled' || task.status === 'blocked').length;
-  const owners = useMemo(
-    () => [...new Set(tasks.map((task) => task.ownerName).filter((name): name is string => Boolean(name)))].sort(),
-    [tasks],
-  );
+
+  // Options du filtre : les assignables de l'ORG ∪ les personnes réellement portées par une
+  // tâche visible. L'union est nécessaire — une tâche assignée à quelqu'un qui a quitté la
+  // liste des assignables resterait sinon inatteignable par le filtre. Clé = UUID.
+  const assigneeOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const assignee of assigneesQuery.data ?? []) byId.set(assignee.userId, assignee.displayName);
+    for (const task of tasks) {
+      for (const assignee of task.assignees) {
+        if (!byId.has(assignee.userId)) byId.set(assignee.userId, assignee.displayName);
+      }
+    }
+    return [...byId.entries()]
+      .map(([userId, displayName]) => ({ userId, displayName }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, 'fr'));
+  }, [assigneesQuery.data, tasks]);
+
+  const rangeInverted = isRangeInverted(dateRange);
 
   const visibleTasks = useMemo(
     () =>
       tasks.filter((task) => {
         if (task.status === 'canceled' || task.status === 'blocked') return false;
-        if (owner !== ALL_OWNERS && task.ownerName !== owner) return false;
+        if (!isTaskAssignedTo(task, assigneeFilter)) return false;
+        if (!isTaskInDateRange(task, dateRange, includeUndated)) return false;
         return true;
       }),
-    [tasks, owner],
+    [tasks, assigneeFilter, dateRange, includeUndated],
   );
 
   // Objets distincts de l'annuaire → datalist du formulaire + résolution nom → id.
@@ -160,6 +197,14 @@ export function CrmTaches({
 
   function renderTicket(task: CrmTask) {
     const dueCls = dueBadgeClassOf(task.dueAt, task.status);
+    // 16w — la pile d'avatars est décorative : l'information accessible est la LISTE
+    // COMPLÈTE des noms, portée par un texte lisible aux lecteurs d'écran (le « +N » ne dit
+    // pas qui manque). Les avatars restent aria-hidden côté AgAv.
+    const assigneeNames = task.assignees.map((assignee) => assignee.displayName);
+    const assigneeLabel =
+      assigneeNames.length === 0 ? 'Personne assignée' : `Assignée à ${assigneeNames.join(', ')}`;
+    const shown = task.assignees.slice(0, MAX_VISIBLE_AVATARS);
+    const overflow = task.assignees.length - shown.length;
     return (
       <div
         key={task.id}
@@ -217,13 +262,26 @@ export function CrmTaches({
             </button>
           )}
         </div>
+        {/* 16w — le créateur est une information SÉPARÉE des assignés. Créateur inconnu =
+            on le dit ; on ne devine jamais un nom depuis la liste des assignés. */}
+        <div className="ticket__author">Créée par {task.createdByName ?? 'Créateur inconnu'}</div>
         <div className="ticket__foot">
           <span className={'due ' + dueCls}>
             {dueCls === 'late' && <Bell size={11} aria-hidden />}
             {task.dueAt ? formatShort(task.dueAt) : '—'}
           </span>
-          <span className="ticket__who" title={task.ownerName ?? undefined}>
-            <AgAv name={task.ownerName} />
+          <span className="ticket__who ticket__who--stack" title={assigneeLabel}>
+            {shown.length === 0 ? (
+              <AgAv name={null} />
+            ) : (
+              shown.map((assignee) => <AgAv key={assignee.userId} name={assignee.displayName} />)
+            )}
+            {overflow > 0 && (
+              <span className="ticket__who-more" aria-hidden>
+                +{overflow}
+              </span>
+            )}
+            <span className="sr-only">{assigneeLabel}</span>
           </span>
           <span className="ticket__actions">
             {task.status === 'in_progress' && (
@@ -269,8 +327,65 @@ export function CrmTaches({
 
   return (
     <div className="crm-body">
-      <div className="crm-toolbar">
-        <Seg items={[ALL_OWNERS, ...owners]} value={owner} onChange={setOwner} />
+      <div className="crm-toolbar crm-toolbar--tasks">
+        {/* Filtre par personne — valeur = UUID, jamais un nom affiché. */}
+        <label className="crm-filter">
+          <span className="crm-filter__label">Personne</span>
+          <select
+            className="crm-select"
+            aria-label="Filtrer par personne"
+            value={assigneeFilter}
+            onChange={(event) => setAssigneeFilter(event.target.value)}
+          >
+            <option value={ALL_ASSIGNEES}>Toutes les personnes</option>
+            {assigneeOptions.map((assignee) => (
+              <option key={assignee.userId} value={assignee.userId}>
+                {assignee.userId === currentUserId ? `${assignee.displayName} (moi)` : assignee.displayName}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {/* Fenêtre d'échéance, bornes INCLUSES. */}
+        <label className="crm-filter">
+          <span className="crm-filter__label">Du</span>
+          <input
+            type="date"
+            className="crm-input-date"
+            aria-label="Échéance à partir du"
+            value={dateRange.from}
+            onChange={(event) => setDateRange((range) => ({ ...range, from: event.target.value }))}
+          />
+        </label>
+        <label className="crm-filter">
+          <span className="crm-filter__label">Au</span>
+          <input
+            type="date"
+            className="crm-input-date"
+            aria-label="Échéance jusqu’au"
+            value={dateRange.to}
+            onChange={(event) => setDateRange((range) => ({ ...range, to: event.target.value }))}
+          />
+        </label>
+        <label className="crm-filter crm-filter--check">
+          <input
+            type="checkbox"
+            checked={includeUndated}
+            onChange={(event) => setIncludeUndated(event.target.checked)}
+          />
+          Inclure sans échéance
+        </label>
+        <button
+          type="button"
+          className="crm-btn sm"
+          onClick={() => {
+            setDateRange(defaultTaskDateRange());
+            setIncludeUndated(true);
+          }}
+        >
+          Réinitialiser
+        </button>
+
         <div className="crm-toolbar__right">
           {!canWrite && <span>{CRM_READ_ONLY_REASON}</span>}
           {hiddenCount > 0 && <span className="pill-mini">{hiddenCount} annulée(s)/bloquée(s)</span>}
@@ -286,6 +401,14 @@ export function CrmTaches({
           </button>
         </div>
       </div>
+
+      {/* Plage inversée : on le DIT et on n'applique pas la plage (le tableau ne se vide pas
+          pendant que l'utilisateur saisit sa seconde borne). */}
+      {rangeInverted && (
+        <div className="inline-alert" role="alert">
+          La date de début est postérieure à la date de fin : la plage n’est pas appliquée.
+        </div>
+      )}
 
       {moveMutation.isError && (
         <div className="inline-alert">Échec de la mise à jour : {(moveMutation.error as Error).message}</div>

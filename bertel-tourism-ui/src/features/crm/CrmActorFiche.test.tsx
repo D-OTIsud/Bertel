@@ -412,7 +412,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
 
   // Rectif PO point 3 + assignation PO point 4 : nouvelle tâche DEPUIS la fiche, ancrée
   // objet + rattachée acteur + assignée (défaut = utilisateur courant, ici Marie).
-  it('Nouvelle tâche depuis la fiche → saveCrmTask({objectId, actorId, title, dueAt, owner})', async () => {
+  it('Nouvelle tâche depuis la fiche → saveCrmTask({objectId, actorId, title, dueAt, assigneeIds})', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
@@ -421,7 +421,8 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     pickInDialog(dialog, 'Établissement', 'Le Comptoir des Epices');
     fireEvent.change(within(dialog).getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
     // Assignation par défaut = utilisateur courant (usr-local-marie) ; attendre la liste chargée.
-    await within(dialog).findByLabelText('Attribuer à');
+    const trigger = await within(dialog).findByRole('combobox', { name: 'Attribuer à' });
+    await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
@@ -429,23 +430,29 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         actorId: 'actor-1',
         title: 'Relancer les photos',
         dueAt: '2026-06-20',
-        owner: 'usr-local-marie',
+        // 16w — TABLEAU d'assignés, même quand il n'y en a qu'un.
+        assigneeIds: ['usr-local-marie'],
       }),
     );
   });
 
-  // Assignation PO point 4 : le sélecteur « Attribuer à » change le owner envoyé.
-  it('Assigner à un autre membre → saveCrmTask owner = membre choisi', async () => {
+  // 16w — la fiche acteur, comme l'onglet Tâches, sait confier une tâche à PLUSIEURS personnes.
+  it('Assigner à plusieurs membres → saveCrmTask assigneeIds contient les deux', async () => {
     renderFiche();
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle tâche' });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
     pickInDialog(dialog, 'Établissement', 'Hotel Basalte & Lagon');
-    fireEvent.change(await within(dialog).findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
+    const trigger = await within(dialog).findByRole('combobox', { name: 'Attribuer à' });
+    await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
+    fireEvent.click(trigger);
+    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Jean P.' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
-      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ owner: 'usr-local-jean' })),
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({ assigneeIds: ['usr-local-marie', 'usr-local-jean'] }),
+      ),
     );
   });
 

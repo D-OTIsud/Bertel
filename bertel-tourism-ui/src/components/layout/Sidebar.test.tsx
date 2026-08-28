@@ -24,11 +24,18 @@ function makePending(n: number): PendingChangeItem[] {
   }));
 }
 
-function renderSidebar(onOpenProfile: () => void = () => {}) {
+function renderSidebar(
+  onOpenProfile: () => void = () => {},
+  extra: { onOpenNotifications?: () => void; unreadNotifications?: number } = {},
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <Sidebar onOpenProfile={onOpenProfile} />
+      <Sidebar
+        onOpenProfile={onOpenProfile}
+        onOpenNotifications={extra.onOpenNotifications ?? (() => {})}
+        unreadNotifications={extra.unreadNotifications ?? 0}
+      />
     </QueryClientProvider>,
   );
 }
@@ -139,6 +146,35 @@ describe('Sidebar', () => {
       renderSidebar();
       expect(screen.queryByRole('link', { name: /Moderation/i })).not.toBeInTheDocument();
       await waitFor(() => expect(mockedRpc.listPendingChanges).not.toHaveBeenCalled());
+    });
+  });
+
+  describe('cloche de notifications (16w)', () => {
+    it('rend la cloche et remonte la demande d’ouverture', () => {
+      const onOpenNotifications = jest.fn();
+      renderSidebar(() => {}, { onOpenNotifications });
+      fireEvent.click(screen.getByRole('button', { name: 'Notifications' }));
+      expect(onOpenNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('le libellé accessible DIT le nombre de non-lues (la pastille seule ne le dit pas)', () => {
+      renderSidebar(() => {}, { unreadNotifications: 3 });
+      expect(screen.getByRole('button', { name: 'Notifications, 3 non lues' })).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument();
+    });
+
+    it('singulier à 1, plafond à 99+ au-delà de 99', () => {
+      const { unmount } = renderSidebar(() => {}, { unreadNotifications: 1 });
+      expect(screen.getByRole('button', { name: 'Notifications, 1 non lue' })).toBeInTheDocument();
+      unmount();
+      renderSidebar(() => {}, { unreadNotifications: 150 });
+      expect(screen.getByText('99+')).toBeInTheDocument();
+    });
+
+    it('aucune pastille à 0 — et le libellé ne mentionne alors aucun nombre', () => {
+      renderSidebar(() => {}, { unreadNotifications: 0 });
+      expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /non lue/i })).not.toBeInTheDocument();
     });
   });
 });

@@ -38,11 +38,20 @@ function initialsFromName(value: string | null | undefined): string {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
-/** Tâches ouvertes assignées à l'utilisateur : todo/in_progress, échéance croissante (nulls en dernier), 4 max. */
+/**
+ * Tâches ouvertes assignées à l'utilisateur : todo/in_progress, échéance croissante (nulls
+ * en dernier), 4 max.
+ * 16w — une tâche peut avoir PLUSIEURS assignés : elle remonte dès que l'utilisateur figure
+ * parmi eux (deux personnes voient donc la même tâche conjointe dans leur hub).
+ */
 export function selectMyOpenTasks(tasks: CrmTask[], userId: string | null): CrmTask[] {
   if (!userId) return [];
   return tasks
-    .filter((task) => task.ownerId === userId && (task.status === 'todo' || task.status === 'in_progress'))
+    .filter(
+      (task) =>
+        task.assignees.some((assignee) => assignee.userId === userId) &&
+        (task.status === 'todo' || task.status === 'in_progress'),
+    )
     .sort((a, b) => {
       if (!a.dueAt && !b.dueAt) return 0;
       if (!a.dueAt) return 1;

@@ -73,6 +73,13 @@ describe('crm parsers', () => {
       due_at: '2026-06-12T09:00:00Z', owner_id: 'u-42', owner_name: 'Marie', related_interaction_subject: null,
       related_interaction_id: null, related_interaction_status: null,
       actor_id: 'a1', actor_name: 'Mme Marie Hoarau',
+      // 16w — la fixture est calquée sur une sortie RÉELLE de list_crm_tasks : elle porte
+      // les assignés et le créateur, sinon le test court-circuiterait ce qu'il éprouve.
+      assignees: [
+        { user_id: 'u-42', display_name: 'Marie D.' },
+        { user_id: 'u-7', display_name: 'Jean P.' },
+      ],
+      created_by_id: 'u-7', created_by_name: 'Jean P.',
     });
     expect(task).toEqual({
       id: 't1', objectId: 'HOT123', objectName: 'Hôtel Test', title: 'Rappeler',
@@ -80,6 +87,49 @@ describe('crm parsers', () => {
       dueAt: '2026-06-12T09:00:00Z', ownerId: 'u-42', ownerName: 'Marie', relatedInteractionSubject: null,
       relatedInteractionId: null, relatedInteractionStatus: null,
       actorId: 'a1', actorName: 'Mme Marie Hoarau',
+      assignees: [
+        { userId: 'u-42', displayName: 'Marie D.' },
+        { userId: 'u-7', displayName: 'Jean P.' },
+      ],
+      createdById: 'u-7', createdByName: 'Jean P.',
+    });
+  });
+
+  describe('16w — assignés et créateur', () => {
+    it('clé absente, null ou malformée ⇒ [] (jamais null : le kanban itère dessus)', () => {
+      const base = { id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' };
+      expect(parseCrmTask(base).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: null }).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: 'pas-un-tableau' }).assignees).toEqual([]);
+      expect(parseCrmTask({ ...base, assignees: {} }).assignees).toEqual([]);
+    });
+
+    it('une entrée abîmée est IGNORÉE, les autres survivent (pas de kanban vide)', () => {
+      const task = parseCrmTask({
+        id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+        assignees: [
+          null,
+          'texte',
+          { display_name: 'Sans id' },
+          { user_id: '', display_name: 'Id vide' },
+          { user_id: 'u-ok', display_name: 'Valide' },
+        ],
+      });
+      expect(task.assignees).toEqual([{ userId: 'u-ok', displayName: 'Valide' }]);
+    });
+
+    it('un assigné sans nom garde son uuid (identité) et un libellé vide', () => {
+      const task = parseCrmTask({
+        id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
+        assignees: [{ user_id: 'u-ok' }],
+      });
+      expect(task.assignees).toEqual([{ userId: 'u-ok', displayName: '' }]);
+    });
+
+    it('créateur absent ⇒ null (l’UI dira « Créateur inconnu », elle ne devinera pas)', () => {
+      const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo' });
+      expect(task.createdById).toBeNull();
+      expect(task.createdByName).toBeNull();
     });
   });
 
@@ -767,15 +817,43 @@ describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
     });
   });
 
-  // Assignation (PO point 4) : `owner` passe en clé payload (validé serveur — membre de
-  // l'ORG du caller, sinon 22023). Omis = défaut serveur (self).
-  it('passe owner quand fourni (assignation explicite à un membre de l ORG)', async () => {
+  // Contrat HÉRITÉ, conservé le temps de la fenêtre de déploiement : un front antérieur à
+  // 16w continue d'envoyer `owner`, que le serveur traite comme un ensemble d'une personne.
+  it('passe owner quand fourni (contrat mono-assigné hérité, encore accepté)', async () => {
     useSessionStore.setState({ demoMode: false });
     const rpc = fakeRpcClient({ id: 't1' });
     await saveCrmTask({ objectId: 'HOT123', title: 'Rappeler', dueAt: '2026-06-20', owner: 'usr-jean' });
     expect(rpc).toHaveBeenCalledWith('save_crm_task', {
       p_payload: { object_id: 'HOT123', title: 'Rappeler', due_at: '2026-06-20', owner: 'usr-jean' },
     });
+  });
+
+  // 16w — assignation MULTIPLE : le tableau part tel quel sous `assignee_ids`.
+  it('passe assignee_ids quand assigneeIds est fourni (plusieurs personnes)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ objectId: 'HOT123', title: 'Rappeler', assigneeIds: ['u-a', 'u-b'] });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', {
+      p_payload: { object_id: 'HOT123', title: 'Rappeler', assignee_ids: ['u-a', 'u-b'] },
+    });
+  });
+
+  // Clé ABSENTE = assignations inchangées côté serveur : c'est ce qui rend le drag & drop
+  // du kanban (statut seul) incapable de toucher aux assignés.
+  it('assigneeIds omis : assignee_ids absent du payload (un move ne réassigne rien)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', status: 'in_progress' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', status: 'in_progress' } });
+  });
+
+  // Un tableau VIDE est transmis TEL QUEL : le refus est une décision serveur (22023), pas
+  // un filtrage silencieux du client — sinon l'UI et la base ne diraient pas la même chose.
+  it('un tableau vide est transmis (le refus appartient au serveur, pas au client)', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({ id: 't1' });
+    await saveCrmTask({ id: 't1', assigneeIds: [] });
+    expect(rpc).toHaveBeenCalledWith('save_crm_task', { p_payload: { id: 't1', assignee_ids: [] } });
   });
 
   // §66 — lien tâche → interaction : relatedInteractionId → related_interaction_id (clé

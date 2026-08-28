@@ -24,7 +24,13 @@ function makeTask(over: Partial<CrmTask> = {}): CrmTask {
   return {
     id: 't1', objectId: 'obj-1', objectName: 'Hôtel Test', actorId: null, actorName: null,
     title: 'Rappeler le directeur', description: null, status: 'todo', priority: 'high',
-    dueAt: null, ownerId: 'u-me', ownerName: 'David', relatedInteractionId: null,
+    dueAt: null,
+    // 16w — la fixture porte la clé qui décide désormais de « mes tâches ». `ownerId` reste
+    // renseigné pour prouver qu'il n'est PLUS consulté (une fixture qui l'omettrait laisserait
+    // passer un code resté sur l'ancienne clé).
+    assignees: [{ userId: 'u-me', displayName: 'David P.' }],
+    createdById: 'u-me', createdByName: 'David P.',
+    ownerId: 'u-me', ownerName: 'David', relatedInteractionId: null,
     relatedInteractionSubject: null, relatedInteractionStatus: null,
     ...over,
   };
@@ -60,11 +66,13 @@ beforeEach(() => {
 });
 
 describe('selectMyOpenTasks / isTaskOverdue (purs)', () => {
-  it('filtre owner+statut, trie par échéance (nulls en dernier), 4 max', () => {
+  it('filtre assignés+statut, trie par échéance (nulls en dernier), 4 max', () => {
     const tasks = [
       makeTask({ id: 'a', dueAt: null }),
       makeTask({ id: 'b', dueAt: '2026-07-10T09:00:00Z' }),
-      makeTask({ id: 'autre', ownerId: 'u-other' }),
+      // 16w — assignée à quelqu'un d'AUTRE, tout en gardant ownerId='u-me' : un code resté
+      // sur l'ancienne clé la ferait remonter à tort, et ce test le dirait.
+      makeTask({ id: 'autre', assignees: [{ userId: 'u-other', displayName: 'Autre' }] }),
       makeTask({ id: 'finie', status: 'done' }),
       makeTask({ id: 'c', dueAt: '2026-07-01T09:00:00Z' }),
       makeTask({ id: 'd', dueAt: '2026-07-05T09:00:00Z', status: 'in_progress' }),
@@ -72,6 +80,27 @@ describe('selectMyOpenTasks / isTaskOverdue (purs)', () => {
     ];
     expect(selectMyOpenTasks(tasks, 'u-me').map((t) => t.id)).toEqual(['c', 'd', 'e', 'b']);
     expect(selectMyOpenTasks(tasks, null)).toEqual([]);
+  });
+
+  it('16w — une tâche CONJOINTE remonte dans le hub des DEUX assignés', () => {
+    const jointe = makeTask({
+      id: 'jointe',
+      dueAt: '2026-07-02T09:00:00Z',
+      assignees: [
+        { userId: 'u-me', displayName: 'David P.' },
+        { userId: 'u-other', displayName: 'Marie D.' },
+      ],
+      // owner de compatibilité = un seul des deux : s'en servir en priverait l'autre.
+      ownerId: 'u-me',
+    });
+    expect(selectMyOpenTasks([jointe], 'u-me').map((t) => t.id)).toEqual(['jointe']);
+    expect(selectMyOpenTasks([jointe], 'u-other').map((t) => t.id)).toEqual(['jointe']);
+    expect(selectMyOpenTasks([jointe], 'u-tiers')).toEqual([]);
+  });
+
+  it('16w — une tâche SANS assigné (née d’un incident) n’est à personne', () => {
+    const orpheline = makeTask({ id: 'orpheline', assignees: [], ownerId: null, createdById: null, createdByName: null });
+    expect(selectMyOpenTasks([orpheline], 'u-me')).toEqual([]);
   });
 
   it('isTaskOverdue : échéance passée = vrai, sans échéance = faux', () => {
@@ -108,10 +137,15 @@ describe('ProfileDrawer (hub personnel)', () => {
     expect(screen.queryByText('Vous êtes le seul connecté.')).not.toBeInTheDocument();
   });
 
-  it('mes tâches : filtrées (owner + statut ouvert), badge « En retard », liens /crm?tab=taches', async () => {
+  it('mes tâches : filtrées (assignés + statut ouvert), badge « En retard », liens /crm?tab=taches', async () => {
     crmMock.listCrmTasks.mockResolvedValue([
       makeTask({ id: 't1', title: 'Rappeler le directeur', dueAt: '2020-01-01T09:00:00Z' }),
-      makeTask({ id: 't2', title: 'Tâche d’un collègue', ownerId: 'u-other' }),
+      // 16w — c'est `assignees` qui décide, pas `ownerId` (laissé sur moi à dessein).
+      makeTask({
+        id: 't2',
+        title: 'Tâche d’un collègue',
+        assignees: [{ userId: 'u-other', displayName: 'Collègue' }],
+      }),
       makeTask({ id: 't3', title: 'Tâche terminée', status: 'done' }),
     ]);
     renderDrawer();

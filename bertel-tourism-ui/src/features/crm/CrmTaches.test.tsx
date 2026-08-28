@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaches } from './CrmTaches';
 import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
+import { useSessionStore } from '../../store/session-store';
 import type { CrmTask } from '../../types/domain';
 
 jest.mock('../../services/crm');
@@ -15,6 +16,27 @@ function pickEstablishment(optionName: string | RegExp) {
   fireEvent.click(screen.getByRole('option', { name: optionName }));
 }
 
+// 16w — « Attribuer à » est un SearchMultiSelect : le popover reste ouvert et chaque clic
+// BASCULE une personne (on peut donc en ajouter plusieurs d'affilée, ou en retirer une).
+function toggleAssignee(optionName: string | RegExp) {
+  const trigger = screen.getByRole('combobox', { name: 'Attribuer à' });
+  if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
+  // La recherche est bornée au popover : le <select> « Filtrer par personne » de la barre
+  // d'outils porte les MÊMES noms d'option (role="option" natif) et les rendrait ambigus.
+  const picker = trigger.closest('.picker') as HTMLElement;
+  fireEvent.click(within(picker).getByRole('option', { name: optionName }));
+}
+
+// Le kanban filtre par défaut sur « mes tâches » : la plupart des cas historiques veulent
+// voir tout le tableau.
+function showEveryone() {
+  fireEvent.change(screen.getByLabelText('Filtrer par personne'), { target: { value: '__all__' } });
+}
+
+const ME = { userId: 'usr-local-marie', displayName: 'Marie D.' };
+const JEAN = { userId: 'usr-local-jean', displayName: 'Jean P.' };
+const LUC = { userId: 'usr-local-luc', displayName: 'Luc T.' };
+
 const DAY_MS = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).toISOString();
 
@@ -22,11 +44,21 @@ const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).t
 // §66 — task-late est LIÉE à une interaction encore OUVERTE (planned) ⇒ son move→done doit
 // proposer la clôture ; task-doing est liée à une interaction DÉJÀ traitée (done) ⇒ pas de
 // prompt ; task-later/task-done sont NON liées ⇒ jamais de prompt.
+// 16w — chaque tâche porte ses ASSIGNÉS (c'est eux que le filtre lit) et son créateur.
+// `ownerId` reste renseigné volontairement : un code resté sur l'ancienne clé passerait
+// inaperçu si la fixture l'avait supprimé.
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), ownerId: null, ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
-  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), ownerId: null, ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
-  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), ownerId: null, ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
-  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, ownerId: null, ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
+  // Tâche CONJOINTE : elle doit remonter sous le filtre de Marie ET sous celui de Jean.
+  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
+  // Créateur inconnu (createdById null) : la carte doit dire « Créateur inconnu ».
+  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  // Sans échéance : visible par défaut (case « Inclure sans échéance » cochée).
+  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  // Assignée à quelqu'un d'AUTRE : invisible sous le filtre par défaut « mes tâches ».
+  { id: 'task-autre', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Tâche de Luc', description: null, status: 'todo', priority: 'low', dueAt: iso(1), assignees: [LUC], createdById: 'usr-local-luc', createdByName: 'Luc T.', ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  // Échéance HORS fenêtre par défaut (+40 j) : masquée tant que la plage n'est pas élargie.
+  { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
 ];
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {
@@ -47,11 +79,11 @@ beforeEach(() => {
   crmMock.saveCrmTask.mockResolvedValue('task-1');
   // §66 — clôture suggérée de l'interaction liée après un move→done.
   crmMock.saveCrmInteraction.mockResolvedValue('int-9');
-  // Assignation (PO point 4) : le 1er = utilisateur courant démo (usr-local-marie).
-  crmMock.listCrmAssignees.mockResolvedValue([
-    { userId: 'usr-local-marie', displayName: 'Marie D.' },
-    { userId: 'usr-local-jean', displayName: 'Jean P.' },
-  ]);
+  // Assignation : le 1er = utilisateur courant démo (usr-local-marie).
+  crmMock.listCrmAssignees.mockResolvedValue([ME, JEAN, LUC]);
+  // 16w — le filtre par défaut du kanban est « mes tâches » : l'identité de session doit
+  // donc être posée explicitement, sinon les assertions dépendraient d'un défaut d'env.
+  useSessionStore.setState({ userId: 'usr-local-marie', userName: 'Marie D.' } as never);
 });
 
 describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
@@ -183,14 +215,143 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(doneCard).toHaveClass('is-done');
   });
 
-  it('filtre Seg par agent (ownerName distincts + « Toutes »)', async () => {
-    renderTaches();
-    await screen.findByText('Rappeler le directeur');
-    fireEvent.click(screen.getByRole('button', { name: 'Marie' }));
-    expect(screen.getByText('Rappeler le directeur')).toBeInTheDocument();
-    expect(screen.queryByText('Valider le contrat photo')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Toutes' }));
-    expect(screen.getByText('Valider le contrat photo')).toBeInTheDocument();
+  describe('16w — filtre par personne (UUID, jamais un nom)', () => {
+    it('par défaut : les tâches de l’utilisateur connecté, celles des autres masquées', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      expect(screen.getByLabelText('Filtrer par personne')).toHaveValue('usr-local-marie');
+      expect(screen.queryByText('Tâche de Luc')).not.toBeInTheDocument();
+    });
+
+    it('« Toutes les personnes » révèle celles des autres', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      showEveryone();
+      expect(screen.getByText('Tâche de Luc')).toBeInTheDocument();
+    });
+
+    it('une tâche CONJOINTE remonte sous le filtre de CHACUN de ses assignés', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      // Marie (défaut) la voit…
+      expect(screen.getByText('Valider le contrat photo')).toBeInTheDocument();
+      // …et Jean aussi, alors que crm_task.owner ne peut désigner qu'une seule personne.
+      fireEvent.change(screen.getByLabelText('Filtrer par personne'), { target: { value: 'usr-local-jean' } });
+      expect(screen.getByText('Valider le contrat photo')).toBeInTheDocument();
+      // Une tâche qui n'est PAS la sienne reste masquée : le filtre n'est pas décoratif.
+      expect(screen.queryByText('Rappeler le directeur')).not.toBeInTheDocument();
+    });
+
+    it('le filtre porte sur l’UUID : deux HOMONYMES restent distincts', async () => {
+      // Deux personnes, MÊME nom affiché, uuid différents : filtrer sur l'une ne doit
+      // jamais faire remonter la tâche de l'autre.
+      crmMock.listCrmAssignees.mockResolvedValue([
+        { userId: 'u-dupont-1', displayName: 'Jean Dupont' },
+        { userId: 'u-dupont-2', displayName: 'Jean Dupont' },
+      ]);
+      crmMock.listCrmTasks.mockResolvedValue([
+        { ...tasks[0], id: 'h1', title: 'Tâche du premier Dupont', assignees: [{ userId: 'u-dupont-1', displayName: 'Jean Dupont' }] },
+        { ...tasks[0], id: 'h2', title: 'Tâche du second Dupont', assignees: [{ userId: 'u-dupont-2', displayName: 'Jean Dupont' }] },
+      ]);
+      // On EST le premier Dupont : le filtre par défaut doit ne montrer que sa tâche.
+      useSessionStore.setState({ userId: 'u-dupont-1' } as never);
+      renderTaches();
+      await screen.findByText('Tâche du premier Dupont');
+      expect(screen.queryByText('Tâche du second Dupont')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Filtrer par personne'), { target: { value: 'u-dupont-2' } });
+      expect(screen.getByText('Tâche du second Dupont')).toBeInTheDocument();
+      expect(screen.queryByText('Tâche du premier Dupont')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('16w — fenêtre d’échéance', () => {
+    it('par défaut : -15/+15 jours calendaires autour d’aujourd’hui', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-20T10:00:00'));
+      try {
+        renderTaches();
+        await screen.findByLabelText('Échéance à partir du');
+        expect(screen.getByLabelText('Échéance à partir du')).toHaveValue('2026-08-05');
+        expect(screen.getByLabelText('Échéance jusqu’au')).toHaveValue('2026-09-04');
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('une échéance hors fenêtre est masquée, et réapparaît quand on élargit', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      expect(screen.queryByText('Tâche lointaine')).not.toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Échéance jusqu’au'), { target: { value: '' } });
+      expect(screen.getByText('Tâche lointaine')).toBeInTheDocument();
+    });
+
+    it('les tâches SANS échéance sont incluses par défaut et peuvent être masquées', async () => {
+      renderTaches();
+      await screen.findByText('Préparer la convention');
+      fireEvent.click(screen.getByLabelText('Inclure sans échéance'));
+      expect(screen.queryByText('Préparer la convention')).not.toBeInTheDocument();
+      // …et les datées restent là : la case ne filtre QUE les sans-échéance.
+      expect(screen.getByText('Rappeler le directeur')).toBeInTheDocument();
+    });
+
+    it('plage inversée : message d’erreur, et la plage n’est PAS appliquée', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      fireEvent.change(screen.getByLabelText('Échéance à partir du'), { target: { value: '2030-01-01' } });
+      expect(screen.getByRole('alert')).toHaveTextContent(/postérieure à la date de fin/i);
+      // Le tableau ne se vide pas pendant que l'utilisateur saisit sa seconde borne.
+      expect(screen.getByText('Rappeler le directeur')).toBeInTheDocument();
+    });
+
+    it('« Réinitialiser » remet la fenêtre par défaut et recoche les sans-échéance', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-08-20T10:00:00'));
+      try {
+        renderTaches();
+        await screen.findByLabelText('Échéance à partir du');
+        fireEvent.change(screen.getByLabelText('Échéance à partir du'), { target: { value: '2026-01-01' } });
+        fireEvent.click(screen.getByLabelText('Inclure sans échéance'));
+        fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser' }));
+        expect(screen.getByLabelText('Échéance à partir du')).toHaveValue('2026-08-05');
+        expect(screen.getByLabelText('Inclure sans échéance')).toBeChecked();
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
+
+  describe('16w — carte : assignés et créateur', () => {
+    it('énumère TOUS les assignés dans le libellé accessible', async () => {
+      renderTaches();
+      await screen.findByText('Valider le contrat photo');
+      const card = screen.getByText('Valider le contrat photo').closest('.ticket');
+      expect(within(card as HTMLElement).getByText('Assignée à Marie D., Jean P.')).toBeInTheDocument();
+    });
+
+    it('replie au-delà de 3 assignés en « +N », sans perdre les noms', async () => {
+      crmMock.listCrmTasks.mockResolvedValue([
+        {
+          ...tasks[0],
+          assignees: [ME, JEAN, LUC, { userId: 'u-4', displayName: 'Zoé Z.' }, { userId: 'u-5', displayName: 'Yann Y.' }],
+        },
+      ]);
+      renderTaches();
+      const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket');
+      expect(within(card as HTMLElement).getByText('+2')).toBeInTheDocument();
+      // Le « +N » ne dit pas QUI manque : le texte accessible, lui, les nomme tous.
+      expect(
+        within(card as HTMLElement).getByText('Assignée à Marie D., Jean P., Luc T., Zoé Z., Yann Y.'),
+      ).toBeInTheDocument();
+    });
+
+    it('affiche le créateur séparément, et « Créateur inconnu » quand il l’est', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      const card = screen.getByText('Rappeler le directeur').closest('.ticket');
+      // Créateur ≠ assigné : la tâche est assignée à Marie mais créée par Jean.
+      expect(within(card as HTMLElement).getByText('Créée par Jean P.')).toBeInTheDocument();
+      const done = screen.getByText('Confirmer les horaires').closest('.ticket');
+      expect(within(done as HTMLElement).getByText('Créée par Créateur inconnu')).toBeInTheDocument();
+    });
   });
 
   it('clic sur l établissement d une carte → onOpenObject(objectId)', async () => {
@@ -214,33 +375,67 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer les photos' } });
     pickEstablishment('Hotel Basalte & Lagon');
     fireEvent.change(screen.getByLabelText('Échéance'), { target: { value: '2026-06-20' } });
-    // Attendre le chargement des assignables (le owner par défaut en dépend).
-    await screen.findByLabelText('Attribuer à');
+    // Attendre le chargement des assignables (la pré-sélection par défaut en dépend).
+    await screen.findByRole('combobox', { name: 'Attribuer à' });
+    // Le libellé du déclencheur bascule sur la personne pré-sélectionnée : c'est le signal
+    // que la liste des assignables est arrivée (« Marie D. » apparaît AUSSI en puce, donc un
+    // getByText nu trouverait deux noeuds).
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
-      // Assignation PO point 4 : owner par défaut = utilisateur courant (usr-local-marie).
+      // 16w : assignés par défaut = utilisateur courant, envoyés en TABLEAU.
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
         objectId: 'obj-1',
         title: 'Relancer les photos',
         dueAt: '2026-06-20',
-        owner: 'usr-local-marie',
+        assigneeIds: ['usr-local-marie'],
       }),
     );
   });
 
-  // Assignation PO point 4 : le sélecteur « Attribuer à » est présent et change le owner.
-  it('onglet Tâches : « Attribuer à » change le owner envoyé', async () => {
+  // 16w — « Attribuer à » accepte PLUSIEURS personnes, et le save les envoie toutes.
+  it('onglet Tâches : plusieurs assignés partent dans le même save', async () => {
     renderTaches();
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
     pickEstablishment('Hotel Basalte & Lagon');
-    // Le select n'apparaît qu'une fois la liste des assignables chargée (async).
-    fireEvent.change(await screen.findByLabelText('Attribuer à'), { target: { value: 'usr-local-jean' } });
+    await screen.findByRole('combobox', { name: 'Attribuer à' });
+    // Le libellé du déclencheur bascule sur la personne pré-sélectionnée : c'est le signal
+    // que la liste des assignables est arrivée (« Marie D. » apparaît AUSSI en puce, donc un
+    // getByText nu trouverait deux noeuds).
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
+    );
+    toggleAssignee('Jean P.'); // s'AJOUTE à Marie (pré-sélectionnée), il ne la remplace pas
     fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
-      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ owner: 'usr-local-jean' })),
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({ assigneeIds: ['usr-local-marie', 'usr-local-jean'] }),
+      ),
     );
+  });
+
+  it('onglet Tâches : aucun assigné ⇒ « Créer » reste bloqué (jamais de tableau vide)', async () => {
+    renderTaches();
+    await screen.findByText('Rappeler le directeur');
+    fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
+    fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    pickEstablishment('Hotel Basalte & Lagon');
+    await screen.findByRole('combobox', { name: 'Attribuer à' });
+    // Le libellé du déclencheur bascule sur la personne pré-sélectionnée : c'est le signal
+    // que la liste des assignables est arrivée (« Marie D. » apparaît AUSSI en puce, donc un
+    // getByText nu trouverait deux noeuds).
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
+    );
+    toggleAssignee('Marie D.'); // on décoche la seule personne sélectionnée
+    expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled();
+    expect(screen.getByText('Choisissez au moins une personne.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
   });
 
   // §66 — l'établissement est REQUIS : « Créer » reste bloqué tant qu'aucun établissement
@@ -341,7 +536,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('Avancer in_progress→done (bouton) d une tâche liée OUVERTE → prompt sur le chemin bouton aussi', async () => {
     // Une tâche in_progress liée à une interaction encore ouverte.
     crmMock.listCrmTasks.mockResolvedValue([
-      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, ownerId: null, ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
+      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
     ]);
     renderTaches();
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Suivi médiation »' }));
@@ -400,7 +595,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {
     crmMock.listCrmTasks.mockResolvedValue([
       ...tasks,
-      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, assignees: [ME], createdById: null, createdByName: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
     ]);
     renderTaches();
     await screen.findByText('Rappeler le directeur');

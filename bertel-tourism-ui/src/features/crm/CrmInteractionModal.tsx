@@ -17,14 +17,14 @@
 // relance (tâche liée) se crée APRÈS l'enregistrement, via deux mutations distinctes —
 // l'interaction n'est jamais re-créée si la relance échoue (idempotence naturelle).
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Mail, MapPin, Phone, Plus, StickyNote } from 'lucide-react';
 import { listCrmAssignees, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CRM_SENTIMENT_OPTIONS } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
-import { SearchSelect } from '../../components/ui/pickers';
+import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 
 // Kinds du composer v2 : Appel / E-mail / Visite terrain / Note interne.
 const COMPOSER_KINDS = [
@@ -77,7 +77,9 @@ export function CrmInteractionModal({
   const [taskTitle, setTaskTitle] = useState('');
   const [taskTitleTouched, setTaskTitleTouched] = useState(false);
   const [taskDue, setTaskDue] = useState('');
-  const [taskOwner, setTaskOwner] = useState('');
+  // 16w — `null` = pas encore choisi (le défaut dérivé s'applique, même si la liste des
+  // assignables arrive après l'ouverture) ; `[]` = tout décoché, donc soumission bloquée.
+  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(null);
 
   // Assignables (PO point 4) — défaut = utilisateur courant. Chargé seulement quand on ouvre
   // la relance (le select n'apparaît qu'alors).
@@ -87,12 +89,14 @@ export function CrmInteractionModal({
   const objectId = fixedContext ? fixedContext.objectId : ctx || undefined;
   const anchorActorId = actorId ?? (pickedActor || undefined);
 
-  // Owner effectif : choix explicite > utilisateur courant (s'il est assignable) > 1er
-  // assignable > aucun (omis ⇒ le backend retombe sur self). Jamais bloquant.
-  const resolvedOwner =
-    taskOwner ||
-    (currentUserId && assignees.some((a) => a.userId === currentUserId) ? currentUserId : assignees[0]?.userId) ||
-    '';
+  // Assignés effectifs : choix explicite > utilisateur courant (s'il est assignable) > 1er
+  // assignable. Dérivé, donc le défaut s'applique quand la liste finit de charger.
+  const defaultAssignees = useMemo(() => {
+    if (assignees.length === 0) return [];
+    if (currentUserId && assignees.some((a) => a.userId === currentUserId)) return [currentUserId];
+    return [assignees[0].userId];
+  }, [assignees, currentUserId]);
+  const selectedAssignees = pickedAssignees ?? defaultAssignees;
 
   // Titre de relance effectif : valeur saisie si l'utilisateur l'a touchée, sinon prérempli
   // depuis le sujet choisi (à défaut un défaut court). Toujours éditable.
@@ -127,7 +131,9 @@ export function CrmInteractionModal({
         ...(anchorActorId ? { actorId: anchorActorId } : {}),
         title: effectiveTaskTitle.trim(),
         ...(taskDue ? { dueAt: taskDue } : {}),
-        ...(resolvedOwner ? { owner: resolvedOwner } : {}),
+        // 16w — la relance part avec TOUS les assignés choisis, en même temps que son lien
+        // vers l'interaction consignée (les deux voyagent dans le même save).
+        assigneeIds: selectedAssignees,
         relatedInteractionId: savedInteractionId as string,
       }),
     onSuccess: () => {
@@ -140,7 +146,8 @@ export function CrmInteractionModal({
   // §66 — établissement requis : `objectId` obligatoire (en plus du corps) pour consigner.
   const canConsign = body.trim().length > 0 && Boolean(objectId) && !interactionMutation.isPending;
   const taskTitleMissing = effectiveTaskTitle.trim().length === 0;
-  const canSaveRelance = !taskTitleMissing && !taskMutation.isPending;
+  const assigneesMissing = selectedAssignees.length === 0;
+  const canSaveRelance = !taskTitleMissing && !assigneesMissing && !taskMutation.isPending;
 
   const isComposing = savedInteractionId === null;
 
@@ -292,25 +299,29 @@ export function CrmInteractionModal({
                   Échéance
                   <input aria-label="Échéance" type="date" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} />
                 </label>
-                {assignees.length > 0 && (
-                  <label className="crm-field">
-                    Attribuer à
-                    <select
-                      className="crm-select"
-                      aria-label="Attribuer à"
-                      value={resolvedOwner}
-                      onChange={(event) => setTaskOwner(event.target.value)}
-                    >
-                      {assignees.map((assignee) => (
-                        <option key={assignee.userId} value={assignee.userId}>
-                          {assignee.displayName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
+                <label className="crm-field">
+                  Attribuer à
+                  <SearchMultiSelect
+                    aria-label="Attribuer à"
+                    values={selectedAssignees}
+                    options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))}
+                    onChange={setPickedAssignees}
+                    placeholder="— Choisir une ou plusieurs personnes —"
+                    searchPlaceholder="Rechercher une personne…"
+                    emptyLabel={
+                      assigneesQuery.isLoading
+                        ? 'Chargement des personnes…'
+                        : assigneesQuery.isError
+                          ? 'Impossible de charger les personnes.'
+                          : 'Aucune personne assignable'
+                    }
+                  />
+                </label>
               </div>
               {taskTitleMissing && <p className="crm-field__hint">Renseignez un titre de tâche.</p>}
+              {assigneesMissing && !assigneesQuery.isLoading && (
+                <p className="crm-field__hint">Choisissez au moins une personne.</p>
+              )}
               <div className="composer__row composer__row--end">
                 <button type="button" className="crm-btn" onClick={onClose}>
                   Plus tard

@@ -549,6 +549,35 @@ export function normalizeExplorerObjectType(type: string): ObjectTypeCode {
   return upper in EXPLORER_TYPE_CODE_FAMILIES ? (upper as ObjectTypeCode) : 'ACT';
 }
 
+/**
+ * B2 (spec 2026-08-26) — les appels PAR BUCKET peuvent-ils être fusionnés en UN SEUL ?
+ *
+ * L'Exploreur émet une RPC par bucket (7 quand aucun n'est sélectionné) pour les cartes,
+ * et autant pour les marqueurs : 14 allers-retours par frappe validée, à ~250 ms de
+ * serveur + ~250 ms de réseau chacun. Or dans le cas par DÉFAUT les 7 payloads de filtres
+ * sont IDENTIQUES — seul `p_types` diffère, et un seul appel avec l'union des types rend
+ * exactement le même ensemble.
+ *
+ * Les sous-types restreints ne bloquent PAS la fusion : ils vivent dans `p_types`, que
+ * l'union porte, et non dans `p_filters`. Ce qui la bloque, ce sont les facettes PROPRES
+ * à un bucket (les blocs `if (bucket === …)` ci-dessous), qui ajoutent une clé au payload
+ * d'un seul bucket.
+ *
+ * `JSON.stringify` suffit à comparer : `buildBucketRpcFilters` insère ses clés dans le
+ * même ordre pour tous les buckets (un unique chemin de code, les branches par bucket ne
+ * faisant qu'AJOUTER des clés en fin de parcours).
+ */
+export function canMergeExplorerBuckets(filters: ExplorerFilters): boolean {
+  const buckets = getEffectiveSelectedBuckets(filters.selectedBuckets).filter(
+    (bucket) => getEffectiveBackendTypesForBucket(filters, bucket).length > 0,
+  );
+  if (buckets.length <= 1) {
+    return true;
+  }
+  const reference = JSON.stringify(buildBucketRpcFilters(filters, buckets[0]));
+  return buckets.every((bucket) => JSON.stringify(buildBucketRpcFilters(filters, bucket)) === reference);
+}
+
 export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: ExplorerBucketKey): Record<string, unknown> {
   const payload: Record<string, unknown> = {};
   const normalizedFilters = normalizeExplorerFilters(filters);

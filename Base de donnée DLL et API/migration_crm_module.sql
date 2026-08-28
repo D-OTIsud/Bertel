@@ -1254,7 +1254,12 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'id', ch.id, 'kind_code', k.code, 'kind_name', k.name,
-      'value', ch.value, 'is_primary', ch.is_primary
+      'value', ch.value, 'is_primary', ch.is_primary,
+      -- 17e — visibilité du canal. ÉMISE, jamais filtrée ici : cette voie sert le CRM et
+      -- l'édition, dont le périmètre est déjà gardé (api.can_read_actor_contacts, §208). Le
+      -- drapeau ne gate que les futures surfaces de DIFFUSION, et il devra alors composer
+      -- DANS le bras autorisé, jamais s'y substituer (invariant §49).
+      'is_public', ch.is_public
     ) AS item
     FROM actor_channel ch
     JOIN ref_code_contact_kind k ON k.id = ch.kind_id
@@ -1479,6 +1484,9 @@ BEGIN
       value      = CASE WHEN p_payload ? 'value' THEN v_value ELSE value END,
       kind_id    = CASE WHEN p_payload ? 'kind_code' THEN v_kind_id ELSE kind_id END,
       is_primary = CASE WHEN p_payload ? 'is_primary' THEN COALESCE((p_payload->>'is_primary')::boolean, FALSE) ELSE is_primary END,
+      -- 17e — gardé par `p_payload ? 'is_public'` comme ses voisins : un enregistrement partiel
+      -- ne doit pas écraser la visibilité avec NULL (le RPC est appelé champ par champ).
+      is_public  = CASE WHEN p_payload ? 'is_public'  THEN COALESCE((p_payload->>'is_public')::boolean, FALSE) ELSE is_public END,
       updated_at = NOW()
     WHERE id = v_id;
     RETURN jsonb_build_object('id', v_id);
@@ -1498,9 +1506,13 @@ BEGIN
   END IF;
 
   v_id := gen_random_uuid();
-  INSERT INTO actor_channel (id, actor_id, kind_id, value, is_primary)
+  INSERT INTO actor_channel (id, actor_id, kind_id, value, is_primary, is_public)
   VALUES (v_id, v_actor_id, v_kind_id, v_value,
-          COALESCE((p_payload->>'is_primary')::boolean, FALSE));
+          COALESCE((p_payload->>'is_primary')::boolean, FALSE),
+          -- 17e — défaut PRIVÉ, à l'inverse de `contact_channel` (donnée d'ÉTABLISSEMENT, défaut
+          -- public) : un canal d'acteur est une coordonnée de PERSONNE. Le client doit demander
+          -- explicitement la diffusion, jamais l'obtenir par omission.
+          COALESCE((p_payload->>'is_public')::boolean, FALSE));
   RETURN jsonb_build_object('id', v_id);
 END;
 $$;

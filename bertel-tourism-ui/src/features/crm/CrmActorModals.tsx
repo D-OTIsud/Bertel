@@ -142,9 +142,11 @@ interface ChannelRow {
   kindCode: string;
   value: string;
   isPrimary: boolean;
+  /** 17e — diffusable hors du CRM. Défaut PRIVÉ : c'est une coordonnée de PERSONNE. */
+  isPublic: boolean;
   deleted: boolean;
   /** État initial des lignes existantes — un UPDATE n'est envoyé que si modifié. */
-  initial?: { kindCode: string; value: string; isPrimary: boolean };
+  initial?: { kindCode: string; value: string; isPrimary: boolean; isPublic: boolean };
 }
 
 /** Séquence des clés client des nouvelles lignes (unicité intra-modal suffisante). */
@@ -157,8 +159,14 @@ function rowsFromChannels(channels: ActorCrmChannel[]): ChannelRow[] {
     kindCode: channel.kindCode,
     value: channel.value,
     isPrimary: channel.isPrimary,
+    isPublic: channel.isPublic,
     deleted: false,
-    initial: { kindCode: channel.kindCode, value: channel.value, isPrimary: channel.isPrimary },
+    initial: {
+      kindCode: channel.kindCode,
+      value: channel.value,
+      isPrimary: channel.isPrimary,
+      isPublic: channel.isPublic,
+    },
   }));
 }
 
@@ -353,11 +361,14 @@ export function CrmActorEditModal({
         } else if (
           row.id &&
           row.initial &&
-          (row.value.trim() !== row.initial.value || row.kindCode !== row.initial.kindCode || row.isPrimary !== row.initial.isPrimary)
+          (row.value.trim() !== row.initial.value
+            || row.kindCode !== row.initial.kindCode
+            || row.isPrimary !== row.initial.isPrimary
+            || row.isPublic !== row.initial.isPublic)
         ) {
           const channelId = row.id;
           const initial = row.initial;
-          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary };
+          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary, isPublic: row.isPublic };
           ops.push({
             acquiresPrimary: saved.isPrimary && (!initial.isPrimary || initial.kindCode !== saved.kindCode),
             run: async () => {
@@ -366,7 +377,7 @@ export function CrmActorEditModal({
             },
           });
         } else if (!row.id && !row.deleted && row.value.trim()) {
-          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary };
+          const saved = { kindCode: row.kindCode, value: row.value.trim(), isPrimary: row.isPrimary, isPublic: row.isPublic };
           ops.push({
             acquiresPrimary: saved.isPrimary,
             run: async () => {
@@ -443,7 +454,8 @@ export function CrmActorEditModal({
   function addAddress(value = '') {
     setRows((current) => [
       ...current,
-      { key: `new-${newChannelRowSeq++}`, id: null, kindCode: ADDRESS_KIND, value, isPrimary: false, deleted: false },
+      // 17e — privée par défaut, comme tout canal d'acteur neuf.
+      { key: `new-${newChannelRowSeq++}`, id: null, kindCode: ADDRESS_KIND, value, isPrimary: false, isPublic: false, deleted: false },
     ]);
   }
 
@@ -570,6 +582,27 @@ export function CrmActorEditModal({
               />
               principal
             </label>
+            {/* 17e — visibilité du canal. Vocabulaire BINAIRE « Visible publiquement / Interne »,
+                repris de ContactChannelEditModal : ne PAS créer un 3e dialecte à côté du trio
+                Public/Interne/Partenaires, qui porte sur `actor_object_role` et `media`, pas ici.
+                Le drapeau ne gate que les surfaces de DIFFUSION : cocher ne change rien à ce que
+                le CRM affiche, il autorise la sortie de la coordonnée. */}
+            <label
+              className="chan-row__primary"
+              title={
+                row.isPublic
+                  ? 'Visible publiquement — cette coordonnée pourra être diffusée hors du CRM'
+                  : 'Interne — coordonnée réservée à l’organisation, jamais diffusée'
+              }
+            >
+              <input
+                type="checkbox"
+                aria-label={`Canal ${index + 1} visible publiquement`}
+                checked={row.isPublic}
+                onChange={(event) => patchRow(index, { isPublic: event.target.checked })}
+              />
+              {row.isPublic ? 'public' : 'interne'}
+            </label>
             <button
               type="button"
               className="crm-btn sm"
@@ -593,7 +626,9 @@ export function CrmActorEditModal({
           onClick={() =>
             setRows((current) => [
               ...current,
-              { key: `new-${newChannelRowSeq++}`, id: null, kindCode: commKinds[0]?.code ?? '', value: '', isPrimary: false, deleted: false },
+              // 17e — un nouveau canal naît PRIVÉ : la diffusion d'une coordonnée de personne se
+              // demande, elle ne s'obtient jamais par omission (même règle que le défaut SQL).
+              { key: `new-${newChannelRowSeq++}`, id: null, kindCode: commKinds[0]?.code ?? '', value: '', isPrimary: false, isPublic: false, deleted: false },
             ])
           }
         >
@@ -689,7 +724,7 @@ export function CrmActorNewModal({
   const [objectName, setObjectName] = useState('');
   // Repeater de canaux (PO point 3) : 1re ligne par défaut = e-mail (PO point 1 : requis).
   const [rows, setRows] = useState<ChannelRow[]>(() => [
-    { key: `new-${newChannelRowSeq++}`, id: null, kindCode: 'email', value: '', isPrimary: true, deleted: false },
+    { key: `new-${newChannelRowSeq++}`, id: null, kindCode: 'email', value: '', isPrimary: true, isPublic: false, deleted: false },
   ]);
   // Portrait (PO point 4) — fichier optionnel uploadé APRÈS la création de l'acteur.
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -740,7 +775,7 @@ export function CrmActorNewModal({
   function addRow(kindCode: string, value = '') {
     setRows((current) => [
       ...current,
-      { key: `new-${newChannelRowSeq++}`, id: null, kindCode, value, isPrimary: false, deleted: false },
+      { key: `new-${newChannelRowSeq++}`, id: null, kindCode, value, isPrimary: false, isPublic: false, deleted: false },
     ]);
   }
 

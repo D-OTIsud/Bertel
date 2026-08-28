@@ -708,3 +708,91 @@ describe('parseObjectDetail', () => {
     expect(parsed.coverage.unhandledKeys).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Chantier 3b (2026-08-28) — dédup INTER-SOURCES des vues dérivées `public` / `all`.
+// L'ancienne clé de dédup contenait la PROVENANCE (`source`-`sourceName`-…), donc elle était
+// STRUCTURELLEMENT incapable de collapser la même coordonnée portée par la fiche ET par son
+// exploitant — et `ContactCard` ne rend aucun marqueur de provenance : le lecteur voyait deux
+// lignes visuellement identiques, dont l'une consommait un des 6 emplacements affichés.
+//
+// Impact mesuré en production avant d'écrire : 2 lignes, sur 2 fiches (Villa Les Margosiers et
+// Au Fil de la Broderie), dans les deux cas un e-mail identique au caractère près.
+// ---------------------------------------------------------------------------------------
+describe('contacts.public — dédup inter-sources (chantier 3b)', () => {
+  /** Payload minimal : une fiche, ses contacts, et un acteur lié en visibilité `public`
+   *  (seule visibilité qui fait entrer un canal d'acteur dans `contacts.public`). */
+  function parseWithActor(objectContacts: unknown[], actorContacts: unknown[]) {
+    return parseObjectDetail({
+      id: 'HOT1',
+      name: 'Hôtel Témoin',
+      contacts: objectContacts,
+      actors: [{ id: 'a1', display_name: 'M. Exploitant', visibility: 'public', contacts: actorContacts }],
+    });
+  }
+
+  it('le même numéro porté par la fiche ET par l’acteur ne sort qu’UNE fois — la FICHE gagne', () => {
+    const parsed = parseWithActor(
+      [{ id: 'o1', kind_code: 'phone', value: '0262 12 34 56' }],
+      [{ id: 'a1c1', kind_code: 'mobile', value: '+262 262 12 34 56' }],
+    );
+    const phones = parsed.contacts.public.filter((c) => c.value.replace(/\D/g, '').length >= 8);
+    expect(phones).toHaveLength(1);
+    // L'ordre de concaténation (objet → acteurs → orgs) décide du gagnant : la coordonnée de
+    // l'établissement fait foi.
+    expect(phones[0].source).toBe('object');
+    expect(phones[0].value).toBe('0262 12 34 56');
+  });
+
+  it('les e-mails ne diffèrent que par la casse ⇒ une seule entrée', () => {
+    const parsed = parseWithActor(
+      [{ id: 'o1', kind_code: 'email', value: 'Contact@Hotel.RE' }],
+      [{ id: 'a1c1', kind_code: 'email', value: 'contact@hotel.re' }],
+    );
+    expect(parsed.contacts.public.filter((c) => c.kindCode === 'email')).toHaveLength(1);
+  });
+
+  it('une valeur portée par le SEUL acteur reste présente — on dédoublonne, on ne censure pas', () => {
+    const parsed = parseWithActor(
+      [{ id: 'o1', kind_code: 'phone', value: '0262 12 34 56' }],
+      [{ id: 'a1c1', kind_code: 'email', value: 'exploitant@hotel.re' }],
+    );
+    expect(parsed.contacts.public.map((c) => c.value)).toEqual(
+      expect.arrayContaining(['0262 12 34 56', 'exploitant@hotel.re']),
+    );
+  });
+
+  it('les LEGS par provenance restent INTACTS — ce sont les inventaires, pas des vues', () => {
+    // C'est ce qui garantit que l'éditeur et les colonnes d'export par clearance
+    // (`contacts_object`, `contacts_orgs`) continuent de voir la totalité.
+    const parsed = parseWithActor(
+      [{ id: 'o1', kind_code: 'phone', value: '0262 12 34 56' }],
+      [{ id: 'a1c1', kind_code: 'mobile', value: '+262 262 12 34 56' }],
+    );
+    expect(parsed.contacts.object).toHaveLength(1);
+    expect(parsed.contacts.actors).toHaveLength(1);
+    expect(parsed.contacts.actors[0].value).toBe('+262 262 12 34 56');
+  });
+
+  it('deux numéros DIFFÉRENTS ne sont jamais collapsés', () => {
+    const parsed = parseWithActor(
+      [{ id: 'o1', kind_code: 'phone', value: '0262 12 34 56' }],
+      [{ id: 'a1c1', kind_code: 'mobile', value: '0692 99 88 77' }],
+    );
+    expect(parsed.contacts.public).toHaveLength(2);
+  });
+
+  it('un canal NON PUBLIC de l’acteur ne pouvait de toute façon pas entrer : la fiche seule sort', () => {
+    // `mapOwnerContacts` : ownerVisibility !== 'public' ⇒ isPublic false. C'est le cas de
+    // 783 des 785 liens acteurs en production — le doublon visible y est celui de 3a.
+    const parsed = parseObjectDetail({
+      id: 'HOT1',
+      name: 'Hôtel Témoin',
+      contacts: [{ id: 'o1', kind_code: 'phone', value: '0262 12 34 56' }],
+      actors: [{ id: 'a1', display_name: 'M. Exploitant', visibility: 'partners', contacts: [{ id: 'a1c1', kind_code: 'mobile', value: '+262 262 12 34 56' }] }],
+    });
+    expect(parsed.contacts.public).toHaveLength(1);
+    // Le leg acteur, lui, conserve la ligne (elle alimente §19 et l'export par clearance).
+    expect(parsed.contacts.actors).toHaveLength(1);
+  });
+});

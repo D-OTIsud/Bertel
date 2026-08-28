@@ -305,3 +305,51 @@ describe('registre — acteur/organisation/légal/liens + clearance + prérégla
     expect(check('iti_open_status')).toBe('ouvert');
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Chantier 3b (2026-08-28) — la dédup inter-sources de `contacts.public` change le contenu
+// d'un fichier Excel LIVRÉ. Impact mesuré en production AVANT d'écrire : 2 lignes, sur 2
+// fiches, dans les deux cas un e-mail identique au caractère près (donc aucun changement de
+// format). Ces gardes verrouillent ce que la dédup doit et ne doit PAS toucher.
+// ---------------------------------------------------------------------------------------
+describe('export — dédup inter-sources de contacts.public (chantier 3b)', () => {
+  /** Fiche témoin + un acteur lié en visibilité `public` (seule visibilité qui fait entrer un
+   *  canal d'acteur dans `contacts.public`) portant l'e-mail DÉJÀ présent sur la fiche. */
+  const dup = buildFixtureDetail({
+    actors: [{
+      id: 'a-dup', display_name: 'Jean Payet', role: { code: 'operator', name: 'Exploitant' },
+      is_primary: true, visibility: 'public',
+      contacts: [
+        { id: 'ad1', kind: { code: 'email', name: 'E-mail' }, value: 'contact@temoin.re' },
+        { id: 'ad2', kind: { code: 'mobile', name: 'Mobile' }, value: '0692 55 44 33' },
+      ],
+    }],
+  });
+  const dupVal = (id: string) => getExportColumn(id)!.value(dup, EMPTY_CTX);
+
+  it('« Contacts publics » ne liste la valeur dupliquée qu’UNE fois', () => {
+    const occurrences = dupVal('contacts_public').toString().split('contact@temoin.re').length - 1;
+    expect(occurrences).toBe(1);
+  });
+
+  it('la coordonnée portée par le SEUL acteur reste exportée — on dédoublonne, on ne censure pas', () => {
+    expect(dupVal('contacts_public')).toContain('0692 55 44 33');
+  });
+
+  it('les colonnes atomiques sont INCHANGÉES : elles rendent toujours la valeur de la FICHE', () => {
+    // `firstPublicContact` prend la première entrée du kind demandé. La dédup garde l'entrée
+    // de la fiche (ordre de concaténation objet → acteurs), donc la valeur exportée ne bouge
+    // pas — c'est le point sensible du 3b, et il est ici verrouillé.
+    expect(dupVal('email')).toBe('contact@temoin.re');
+    expect(dupVal('phone')).toBe('0262 27 00 00');
+    expect(dupVal('website')).toBe('https://temoin.re');
+  });
+
+  it('la colonne « Contacts de la fiche (tous) » reste un INVENTAIRE non dédupliqué', () => {
+    // clearance 'org' : elle lit le leg `contacts.object`, que la dédup ne touche pas.
+    expect(dupVal('contacts_object')).toContain('contact@temoin.re');
+    // Et le contact NON public de la fiche y figure toujours, contrairement à la colonne publique.
+    expect(dupVal('contacts_object')).toContain('0692 00 00 00');
+    expect(dupVal('contacts_public')).not.toContain('0692 00 00 00');
+  });
+});

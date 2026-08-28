@@ -1,6 +1,7 @@
 -- test_legal_document_catalog.sql
 -- Prouve migration_legal_document_catalog.sql (§209, étape manifeste 16t) :
---   (A) les 12 documents demandés par l'OTI sont au catalogue, sous les libellés attendus ;
+--   (A) les 12 documents demandés par l'OTI (2026-08-07) + « Courrier de fermeture » (2026-08-28)
+--       sont au catalogue, sous les libellés attendus ;
 --   (B) les 8 types génériques inventés sont partis — un seul qui revient et le sélecteur du §18
 --       réoffre une pièce qu'aucun prestataire ne fournira jamais ;
 --   (C) les 2 renommages ont préservé l'id (donc les lignes object_legal rattachées) — l'ancien code
@@ -19,7 +20,7 @@
 BEGIN;
 DO $$
 DECLARE
-  -- Les 12 pièces listées par l'OTI (2026-08-07), code → libellé attendu.
+  -- Les 12 pièces listées par l'OTI (2026-08-07) + la 13e ajoutée le 2026-08-28, code → libellé attendu.
   v_expected CONSTANT TEXT[][] := ARRAY[
     ['avis_situation_sirene',        'Avis de situation au répertoire SIRENE'],
     ['kbis',                         'Extrait KBIS'],
@@ -32,7 +33,12 @@ DECLARE
     ['licence_restaurant',           'Licence restaurant'],
     ['recepisse_declaration_mairie', 'Récépissé de déclaration en mairie'],
     ['extrait_inpi',                 'Extrait INPI'],
-    ['statuts_association',          'Statuts d''association']
+    ['statuts_association',          'Statuts d''association'],
+    -- 13e entrée : ajoutée le 2026-08-28 (lot de corrections, chantier 2 — demande PO).
+    -- Provenance DIFFÉRENTE des 12 ci-dessus : ce n'est pas une pièce de la liste OTI du 2026-08-07
+    -- mais une pièce de SORTIE demandée depuis. Le dire ici évite qu'un lecteur ultérieur croie
+    -- qu'elle figurait dans l'arbitrage d'origine.
+    ['courrier_fermeture',           'Courrier de fermeture']
   ];
   v_retired CONSTANT TEXT[] := ARRAY[
     'business_license', 'accommodation_license', 'safety_certificate', 'property_insurance',
@@ -110,6 +116,6 @@ BEGIN
   ASSERT (v_payload -> 0 -> 'type' ->> 'is_public')::boolean = false,
          'un extrait KBIS ne doit jamais ressortir comme document public';
 
-  RAISE NOTICE 'legal document catalog assertions passed (12 pièces OTI + 8 génériques retirés + 2 renommages sans orphelin + aucun obligatoire/public + identité intacte + RPC non vacant).';
+  RAISE NOTICE 'legal document catalog assertions passed (12 pièces OTI + courrier de fermeture + 8 génériques retirés + 2 renommages sans orphelin + aucun obligatoire/public + identité intacte + RPC non vacant).';
 END$$;
 ROLLBACK;

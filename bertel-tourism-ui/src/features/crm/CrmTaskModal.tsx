@@ -9,16 +9,17 @@
 //   Si l'acteur n'a QU'UN établissement, il est pré-sélectionné (PO point 3).
 // - onglet Tâches (picker='datalist') : annuaire complet, sans rattachement acteur et SANS
 //   pré-sélection (le choix reste explicite parmi tout l'annuaire).
-// Les DEUX entrées portent un sélecteur « Attribuer à » (PO point 4) — défaut = utilisateur
-// courant ; l'id choisi part en `owner` (validé serveur, membre de l'ORG).
+// Les DEUX entrées portent un sélecteur « Attribuer à » — 16w : sélection MULTIPLE, défaut =
+// utilisateur courant ; les ids choisis partent en `assigneeIds` (chacun validé serveur comme
+// membre de l'ORG ; un ensemble vide est refusé côté serveur ET côté bouton).
 // Toujours ouvert sous gating write_crm_notes (boutons d'ouverture désactivés sinon).
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
-import { SearchSelect } from '../../components/ui/pickers';
+import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 
 export function CrmTaskModal({
   actorId,
@@ -46,21 +47,22 @@ export function CrmTaskModal({
     picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '',
   );
   const [dueAt, setDueAt] = useState('');
-  // Assignation PO point 4 : défaut = utilisateur courant tant qu'il n'a pas choisi ('' →
-  // résolu au submit pour préférer l'utilisateur courant s'il est dans la liste, sinon le
-  // 1er option ; liste vide ⇒ owner omis, le backend retombe sur self).
-  const [owner, setOwner] = useState<string>('');
+  // 16w — `null` = « l'utilisateur n'a encore rien choisi », distinct de `[]` = « il a tout
+  // décoché ». La sélection effective est DÉRIVÉE : le défaut s'applique donc même si la
+  // liste des assignables arrive APRÈS l'ouverture du modal (aucune sélection perdue), et
+  // le moindre geste de l'utilisateur l'emporte définitivement.
+  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(null);
 
   // Les deux modes (fiche acteur / onglet Tâches) résolvent désormais par objectId : le
   // SearchSelect ne rend que des options valides (plus de saisie libre nom → id fragile).
   const resolvedObject = objectOptions.find((object) => object.objectId === objectId) ?? null;
 
-  // Owner effectif : choix explicite > utilisateur courant (s'il figure dans la liste) >
-  // 1er assignable > aucun (omis). Jamais bloquant.
-  const resolvedOwner =
-    owner ||
-    (currentUserId && assignees.some((a) => a.userId === currentUserId) ? currentUserId : assignees[0]?.userId) ||
-    '';
+  const defaultAssignees = useMemo(() => {
+    if (assignees.length === 0) return [];
+    if (currentUserId && assignees.some((a) => a.userId === currentUserId)) return [currentUserId];
+    return [assignees[0].userId];
+  }, [assignees, currentUserId]);
+  const selectedAssignees = pickedAssignees ?? defaultAssignees;
 
   const createMutation = useMutation({
     mutationFn: () => {
@@ -70,7 +72,7 @@ export function CrmTaskModal({
         ...(actorId ? { actorId } : {}),
         title: title.trim(),
         dueAt: dueAt || null,
-        ...(resolvedOwner ? { owner: resolvedOwner } : {}),
+        assigneeIds: selectedAssignees,
       });
     },
     onSuccess: () => {
@@ -79,7 +81,13 @@ export function CrmTaskModal({
     },
   });
 
-  const canSubmit = Boolean(title.trim()) && Boolean(resolvedObject) && !createMutation.isPending;
+  // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
+  // un tableau vide « pour voir ».
+  const canSubmit =
+    Boolean(title.trim()) &&
+    Boolean(resolvedObject) &&
+    selectedAssignees.length > 0 &&
+    !createMutation.isPending;
 
   return (
     <CrmModal
@@ -123,24 +131,28 @@ export function CrmTaskModal({
         <input aria-label="Échéance" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
       </label>
 
-      {/* Assignation PO point 4 : référent de la tâche. Pré-sélectionne l'utilisateur
-          courant (resolvedOwner). Rendu seulement si l'on connaît au moins un assignable. */}
-      {assignees.length > 0 && (
-        <label className="crm-field">
-          Attribuer à
-          <select
-            className="crm-select"
-            aria-label="Attribuer à"
-            value={resolvedOwner}
-            onChange={(event) => setOwner(event.target.value)}
-          >
-            {assignees.map((assignee) => (
-              <option key={assignee.userId} value={assignee.userId}>
-                {assignee.displayName}
-              </option>
-            ))}
-          </select>
-        </label>
+      {/* 16w — assignation MULTIPLE. Le champ reste rendu même en chargement/erreur : le
+          masquer ferait disparaître une contrainte de soumission sans l'expliquer. */}
+      <label className="crm-field">
+        Attribuer à
+        <SearchMultiSelect
+          aria-label="Attribuer à"
+          values={selectedAssignees}
+          options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))}
+          onChange={setPickedAssignees}
+          placeholder="— Choisir une ou plusieurs personnes —"
+          searchPlaceholder="Rechercher une personne…"
+          emptyLabel={
+            assigneesQuery.isLoading
+              ? 'Chargement des personnes…'
+              : assigneesQuery.isError
+                ? 'Impossible de charger les personnes.'
+                : 'Aucune personne assignable'
+          }
+        />
+      </label>
+      {selectedAssignees.length === 0 && !assigneesQuery.isLoading && (
+        <p className="crm-field__hint">Choisissez au moins une personne.</p>
       )}
 
       {createMutation.isError && (

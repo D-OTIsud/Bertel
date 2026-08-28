@@ -8,6 +8,7 @@ import type {
   CrmInteraction,
   CrmInteractionReply,
   CrmTask,
+  CrmTaskAssignee,
   CrmTaskPriority,
   CrmTaskStatus,
   CrmTimelinePage,
@@ -31,6 +32,24 @@ function readNullableString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
+/**
+ * `assignees` (16w) — tolérant : clé absente, null ou malformée ⇒ []. Une entrée sans
+ * `user_id` exploitable est IGNORÉE plutôt que de faire tomber toute la liste de tâches
+ * (une seule ligne abîmée ne doit pas vider le kanban). L'ordre serveur est conservé.
+ */
+export function parseCrmTaskAssignees(value: unknown): CrmTaskAssignee[] {
+  if (!Array.isArray(value)) return [];
+  const assignees: CrmTaskAssignee[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as GenericRecord;
+    const userId = readNullableString(record.user_id);
+    if (!userId) continue;
+    assignees.push({ userId, displayName: readString(record.display_name) });
+  }
+  return assignees;
+}
+
 export function parseCrmTask(record: GenericRecord): CrmTask {
   const status = readString(record.status) as CrmTaskStatus;
   const priority = readString(record.priority) as CrmTaskPriority;
@@ -46,6 +65,11 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     status: TASK_STATUSES.includes(status) ? status : 'todo',
     priority: TASK_PRIORITIES.includes(priority) ? priority : 'medium',
     dueAt: readNullableString(record.due_at),
+    // 16w — assignation multiple + provenance du créateur.
+    assignees: parseCrmTaskAssignees(record.assignees),
+    createdById: readNullableString(record.created_by_id),
+    createdByName: readNullableString(record.created_by_name),
+    // @deprecated 16w — compat de déploiement (cf. domain.ts). Aucune logique neuve ici.
     ownerId: readNullableString(record.owner_id),
     ownerName: readNullableString(record.owner_name),
     // §66 — lien interaction de suivi : id + subject (badge) + status (gate du prompt de clôture).
@@ -475,8 +499,16 @@ export interface SaveCrmTaskInput {
   priority?: CrmTaskPriority;
   dueAt?: string | null;
   /**
-   * Assignation (PO point 4) — référent de la tâche. UUID d'un membre de l'ORG du caller ;
-   * le serveur valide l'appartenance (sinon 22023). Omis = défaut serveur (le saisisseur).
+   * Assignation 16w — LES personnes à qui la tâche est confiée. UUIDs de membres de l'ORG
+   * du caller ; le serveur valide chacun (sinon 22023), dédoublonne, et REFUSE un tableau
+   * vide (une tâche a toujours au moins un responsable). Clé absente = assignations
+   * inchangées — c'est ce qui rend le drag & drop du kanban (statut seul) inoffensif.
+   */
+  assigneeIds?: string[];
+  /**
+   * @deprecated 16w — contrat mono-assigné hérité, conservé pour la fenêtre de déploiement
+   * et les tests de compatibilité. Le serveur le traite comme `assigneeIds: [owner]`.
+   * Aucun appelant neuf ne doit l'utiliser.
    */
   owner?: string;
   /**
@@ -506,6 +538,8 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (input.status !== undefined) payload.status = input.status;
   if (input.priority !== undefined) payload.priority = input.priority;
   if (input.dueAt !== undefined) payload.due_at = input.dueAt;
+  // 16w — clé présente = réconcile exact vers cet ensemble ; absente = pas de changement.
+  if (input.assigneeIds !== undefined) payload.assignee_ids = input.assigneeIds;
   if (input.owner !== undefined) payload.owner = input.owner;
   // §66 — clé présente = écrite ('' = détachement) ; absente = pas de changement.
   if (input.relatedInteractionId !== undefined) payload.related_interaction_id = input.relatedInteractionId;
@@ -524,10 +558,8 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
    Membres actifs de(s) l'ORG du caller, candidats au référent d'une tâche. Aujourd'hui
    1 seul utilisateur seedé — la liste à 1 entrée doit fonctionner (le sélecteur la
    pré-coche). `save_crm_task.owner` valide que l'id choisi est bien un membre. */
-export interface CrmAssignee {
-  userId: string;
-  displayName: string;
-}
+// Même forme que l'assigné d'une tâche (16w) — un seul type, pas un jumeau qui dérivera.
+export type CrmAssignee = CrmTaskAssignee;
 
 export function parseCrmAssignee(record: GenericRecord): CrmAssignee {
   return {
@@ -536,10 +568,12 @@ export function parseCrmAssignee(record: GenericRecord): CrmAssignee {
   };
 }
 
-// Démo : 2 personnes mock (le sélecteur d'assignation a de quoi varier sans backend).
+// Démo : 3 personnes mock (le sélecteur d'assignation a de quoi varier sans backend, et
+// couvre les assignés des tâches mock — sinon le filtre par personne aurait des angles morts).
 const MOCK_CRM_ASSIGNEES: CrmAssignee[] = [
   { userId: 'usr-local-marie', displayName: 'Marie D.' },
   { userId: 'usr-local-jean', displayName: 'Jean P.' },
+  { userId: 'usr-local-luc', displayName: 'Luc T.' },
 ];
 
 /** RPC `api.list_crm_assignees` — membres assignables de l'ORG du caller. */

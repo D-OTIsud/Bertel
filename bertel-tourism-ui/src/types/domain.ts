@@ -504,6 +504,12 @@ export interface FieldLock {
 export type CrmTaskStatus = 'todo' | 'in_progress' | 'done' | 'canceled' | 'blocked';
 export type CrmTaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 
+/** Une personne assignée à une tâche CRM (16w). Identité STABLE : le uuid, jamais le nom. */
+export interface CrmTaskAssignee {
+  userId: string;
+  displayName: string;
+}
+
 export interface CrmTask {
   id: string;
   objectId: string;
@@ -516,8 +522,22 @@ export interface CrmTask {
   status: CrmTaskStatus;
   priority: CrmTaskPriority;
   dueAt: string | null;
-  /** Uuid de l'assigné (crm_task.owner) — filtre « mes tâches » du hub personnel. */
+  /**
+   * 16w — les personnes à qui la tâche est confiée. Toujours un tableau (jamais null) ;
+   * vide pour une tâche née hors saisie (trigger incident_report). Trié serveur par nom
+   * affiché puis uuid. C'est LA source pour « mes tâches » et le filtre par personne.
+   */
+  assignees: CrmTaskAssignee[];
+  /** 16w — créateur. `null` = créateur inconnu : ne JAMAIS le deviner depuis les assignés. */
+  createdById: string | null;
+  createdByName: string | null;
+  /**
+   * @deprecated 16w — `crm_task.owner` n'est plus qu'une valeur de compatibilité de
+   * déploiement (le 1er assigné par uuid croissant). Conservé le temps de la fenêtre de
+   * déploiement ; aucune logique neuve ne doit s'en servir — utiliser `assignees`.
+   */
   ownerId: string | null;
+  /** @deprecated 16w — voir `ownerId`. Un nom n'est de toute façon pas une identité. */
   ownerName: string | null;
   // §66 — lien optionnel vers l'interaction de suivi (related_interaction_id). Le `subject`
   // alimente le badge de la carte, le `status` décide du prompt de clôture (move→done).

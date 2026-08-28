@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import * as crm from '../../services/crm';
@@ -141,13 +141,51 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
         actorId: 'a1',
         title: 'Rappeler le directeur',
         dueAt: '2026-06-20',
-        owner: 'usr-local-marie',
+        // 16w — la relance part avec le TABLEAU des assignés (défaut : l'utilisateur
+        // courant), en même temps que son lien vers l'interaction consignée.
+        assigneeIds: ['usr-local-marie'],
         relatedInteractionId: 'int-new',
       }),
     );
     const interactionOrder = crmMock.saveCrmInteraction.mock.invocationCallOrder[0];
     const taskOrder = crmMock.saveCrmTask.mock.invocationCallOrder[0];
     expect(interactionOrder).toBeLessThan(taskOrder);
+  });
+
+  // 16w — la voie « relance » accepte PLUSIEURS personnes, comme la voie « Nouvelle tâche ».
+  it('relance : plusieurs assignés partent avec le lien vers l’interaction', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
+    const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
+    await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
+    fireEvent.click(trigger);
+    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Jean P.' }));
+    fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          assigneeIds: ['usr-local-marie', 'usr-local-jean'],
+          relatedInteractionId: 'int-new',
+        }),
+      ),
+    );
+  });
+
+  it('relance : aucun assigné ⇒ enregistrement bloqué avec raison visible', async () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
+    const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
+    await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
+    fireEvent.click(trigger);
+    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Marie D.' }));
+    fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
+    expect(screen.getByRole('button', { name: /enregistrer la relance/i })).toBeDisabled();
+    expect(screen.getByText('Choisissez au moins une personne.')).toBeInTheDocument();
   });
 
   it('relance : titre vidé ⇒ « Enregistrer la relance » bloqué avec raison visible', async () => {

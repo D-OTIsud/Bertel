@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { CircleHelp, Settings2 } from 'lucide-react';
+import { Bell, CircleHelp, Settings2 } from 'lucide-react';
 import { NAV_ITEMS, visibleNavItems } from '../../config/nav-items';
 import { listPendingChanges } from '../../services/rpc';
 import { useSessionStore } from '../../store/session-store';
@@ -29,9 +29,13 @@ function initialsFromName(value: string | null | undefined): string {
 
 interface SidebarProps {
   onOpenProfile: () => void;
+  /** 16w — ouvre la boîte de réception (l'état du tiroir vit dans AppShell). */
+  onOpenNotifications: () => void;
+  /** 16w — non-lues de l'utilisateur connecté ; 0 ⇒ aucune pastille. */
+  unreadNotifications: number;
 }
 
-export function Sidebar({ onOpenProfile }: SidebarProps) {
+export function Sidebar({ onOpenProfile, onOpenNotifications, unreadNotifications }: SidebarProps) {
   const pathname = usePathname();
   const role = useSessionStore((state) => state.role);
   const demoMode = useSessionStore((state) => state.demoMode);
@@ -127,8 +131,30 @@ export function Sidebar({ onOpenProfile }: SidebarProps) {
             </span>
             <span className="app-sidebar__label">Aide</span>
           </Link>
-          {/* D26 : la cloche « Notifications » (aucun handler, pastille factice) est retirée —
-              elle reviendra avec la table notification (D27, backend, remonté session API). */}
+          {/* 16w — la cloche revient, adossée à `app_notification` (D26 l'avait retirée tant
+              qu'elle n'était qu'une pastille factice sans backend). Même motif visuel de
+              pastille que la modération ; le libellé accessible DIT le nombre. */}
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className="app-sidebar__item"
+            aria-label={
+              unreadNotifications > 0
+                ? `Notifications, ${unreadNotifications} non lue${unreadNotifications > 1 ? 's' : ''}`
+                : 'Notifications'
+            }
+            title="Notifications"
+          >
+            <span className="app-sidebar__iconbox">
+              <Bell className="app-sidebar__icon" strokeWidth={1.8} aria-hidden />
+              {unreadNotifications > 0 && (
+                <span key={unreadNotifications} className={cn('app-sidebar__badge', 'motion-pop')} aria-hidden>
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
+            </span>
+            <span className="app-sidebar__label">Notifications</span>
+          </button>
           <button
             type="button"
             onClick={onOpenProfile}

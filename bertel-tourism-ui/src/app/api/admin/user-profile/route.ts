@@ -64,8 +64,9 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (!userId) return NextResponse.json({ error: 'invalid_user_id' }, { status: 422 });
 
   // Anti-self : un owner qui se rétrograde se verrouille dehors, et son identité a déjà sa
-  // surface (Réglages → Mon compte).
-  if (userId === auth.callerId) {
+  // surface (Réglages → Mon compte). Comparaison insensible à la casse : PostgreSQL normalise
+  // les uuid, un `userId` reçu en majuscules ne doit pas passer la garde.
+  if (userId.toLowerCase() === auth.callerId.toLowerCase()) {
     return NextResponse.json({ error: 'self_edit_forbidden' }, { status: 403 });
   }
   if (!auth.isSuper && !(await sharesActiveOrg(server, auth.callerId, userId))) {
@@ -83,17 +84,37 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'invalid_platform_role' }, { status: 422 });
   }
 
-  const { data: profile } = await server
+  // Le GET vérifie l'existence du compte auth ; le PATCH doit le faire aussi, et AVANT toute
+  // écriture — sinon un userId inexistant sort en 500 (échec de l'upsert plus bas), qui ment
+  // sur la cause.
+  const { data: authTarget, error: authTargetErr } = await server.auth.admin.getUserById(userId);
+  if (authTargetErr || !authTarget?.user) {
+    return NextResponse.json({ error: 'user_not_found' }, { status: 404 });
+  }
+
+  const { data: profile, error: profileErr } = await server
     .from('app_user_profile')
     .select('display_name, avatar_url, role')
     .eq('id', userId)
     .maybeSingle<TargetProfile>();
+  // L'erreur n'est PAS ignorable : `profile` vaudrait null, la garde owner_required ci-dessous
+  // conclurait « la cible n'a aucun rôle privilégié » et ne sonderait pas — un admin de rang 30
+  // destituerait un owner par un simple incident de lecture. Fail-closed. `maybeSingle()` rend
+  // `{ data: null, error: null }` quand la ligne n'existe pas (compte invité) : ce cas-là reste
+  // légitime et ne doit PAS échouer.
+  if (profileErr) {
+    return NextResponse.json({ error: 'profile_read_failed', detail: profileErr.message }, { status: 500 });
+  }
 
-  // Garde n° 4 — transcription littérale du trigger api.enforce_app_user_profile_role_change,
-  // que l'écriture service-role ci-dessous NEUTRALISE (le trigger traite service_role comme un
-  // owner et sort d'emblée sans JWT). Sans cette sonde, un super_admin ou un admin de rang 30
-  // distribuerait le rang plateforme. Le sens compte dans les DEUX directions : retirer
-  // 'owner'/'super_admin' à quelqu'un est aussi privilégié que le lui donner.
+  // Garde n° 4 — reflète le trigger api.enforce_app_user_profile_role_change côté DB (que
+  // l'écriture service-role ci-dessous NEUTRALISE : le trigger traite service_role comme un owner
+  // et sort d'emblée sans JWT). PAS une transcription littérale : le trigger reconnaît AUSSI
+  // `raw_user_meta_data->>'role' = 'admin'` comme owner, ce que cette route ne reconnaît pas — la
+  // route est donc STRICTEMENT plus stricte que le trigger, et c'est voulu (un admin par métadonnée
+  // ne doit pas suffire à distribuer le rang plateforme depuis l'API). Sans cette sonde, un
+  // super_admin ou un admin de rang 30 distribuerait le rang plateforme. Le sens compte dans les
+  // DEUX directions : retirer 'owner'/'super_admin' à quelqu'un est aussi privilégié que le lui
+  // donner.
   if (platformRole !== undefined && platformRole !== (profile?.role ?? null)) {
     const touchesPrivileged =
       PRIVILEGED_ROLES.has(platformRole) || PRIVILEGED_ROLES.has(profile?.role ?? '');
@@ -108,14 +129,47 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  if (email !== undefined && !auth.isSuper) {
+    // Poser sur un compte l'adresse d'un canal acteur lui donne la propriété des fiches de cet
+    // acteur (api.user_actor_ids → api.is_object_owner), y compris hors de l'ORG de l'appelant.
+    // Le rattachement est parfois légitime (c'est ainsi qu'un vrai prestataire devient propriétaire
+    // de sa fiche), mais c'est une attribution de droits : réservé au superuser plateforme.
+    const { data: claimed, error: claimedErr } = await server
+      .from('actor_channel')
+      .select('id')
+      .ilike('value', email)
+      .limit(1);
+    if (claimedErr) {
+      return NextResponse.json({ error: 'actor_check_failed', detail: claimedErr.message }, { status: 500 });
+    }
+    if (claimed && claimed.length > 0) {
+      return NextResponse.json(
+        {
+          error: 'email_claims_actor',
+          detail:
+            'Cette adresse est celle d’un prestataire : la poser sur ce compte lui donnerait la propriété de ses fiches. Réservé à un superuser plateforme.',
+        },
+        { status: 403 },
+      );
+    }
+  }
+
+  let emailChanged = false;
   if (email !== undefined) {
     // email_confirm: true ⇒ changement IMMÉDIAT, pas de courriel de confirmation. L'e-mail est
     // aussi ce que api.is_object_owner compare à actor_channel : changer l'adresse peut changer
     // les fiches que ce membre possède. La modale l'annonce à l'utilisateur.
     const { error: mailErr } = await server.auth.admin.updateUserById(userId, { email, email_confirm: true });
     if (mailErr) {
-      return NextResponse.json({ error: 'email_update_failed', detail: mailErr.message }, { status: 500 });
+      // La faute de frappe la plus banale de cet écran : une adresse déjà prise par un autre
+      // compte ne doit pas sortir en 500 (qui laisse croire à un incident serveur).
+      const taken = /already|exists|registered|duplicate/i.test(mailErr.message);
+      return NextResponse.json(
+        { error: taken ? 'email_taken' : 'email_update_failed', detail: mailErr.message },
+        { status: taken ? 409 : 500 },
+      );
     }
+    emailChanged = true;
   }
 
   const patch: Record<string, unknown> = {};
@@ -127,7 +181,12 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       .from('app_user_profile')
       .upsert({ id: userId, ...patch }, { onConflict: 'id' });
     if (profErr) {
-      return NextResponse.json({ error: 'profile_update_failed', detail: profErr.message }, { status: 500 });
+      // Écriture partielle : si l'e-mail a déjà été changé dans ce même appel, l'adresse de
+      // connexion a bougé même si le reste échoue — la réponse doit le dire.
+      const detail = emailChanged
+        ? `${profErr.message} (l’adresse de connexion a déjà été changée dans cet appel)`
+        : profErr.message;
+      return NextResponse.json({ error: 'profile_update_failed', detail }, { status: 500 });
     }
   }
 

@@ -30,23 +30,40 @@ function getReq(userId: string, headers: Record<string, string> = { authorizatio
 /**
  * Client "en tant qu'appelant". `rpc` répond dans l'ordre des appels de la route :
  * is_platform_superuser, current_user_admin_rank, puis (si sondé) is_platform_owner.
+ *
+ * Le `rpc` mock est aussi exposé au niveau racine du retour (pas seulement derrière `schema()`)
+ * pour que les tests puissent asserter le NOM de la sonde effectivement appelée (garde §IMPORTANT
+ * 4 : un copier-coller qui swap `is_platform_owner` → `is_platform_superuser` doit faire rougir
+ * un test, pas rester invisible derrière un mock ordinal).
  */
 function callerProbe(opts: { isSuper?: boolean; rank?: number | null; isOwner?: boolean }) {
   const rpc = jest.fn()
     .mockResolvedValueOnce({ data: opts.isSuper ?? false, error: null })
     .mockResolvedValueOnce({ data: opts.rank ?? null, error: null })
     .mockResolvedValueOnce({ data: opts.isOwner ?? false, error: null });
-  return { schema: () => ({ rpc }) };
+  return { schema: () => ({ rpc }), rpc };
 }
+
+/** Valeurs par défaut du compte auth cible quand un test ne se soucie pas de son contenu. */
+const DEFAULT_AUTH_USER = { email: 'target@oti.re', last_sign_in_at: null };
 
 /**
  * Client service-role. `memberships` alimente sharesActiveOrg, `profile` la lecture du profil
- * cible, `authUser` la lecture auth.users. `updateUserById` / `upsert` sont observables.
+ * cible, `authUser` la lecture auth.users, `actorClaims` la sonde `actor_channel` du garde-fou
+ * email_claims_actor. `updateUserById` / `upsert` sont observables.
+ *
+ * `authUser`: omis (undefined) ⇒ compte trouvé avec des valeurs par défaut (la plupart des tests
+ * ne testent pas l'existence du compte cible) ; `null` explicite ⇒ compte introuvable (404) ; un
+ * objet ⇒ compte trouvé avec CES valeurs.
+ * `profileError`: force `maybeSingle()` du profil cible à rendre une erreur (au lieu de `data`).
  */
 function serverMock(opts: {
   memberships?: Array<{ user_id: string; org_object_id: string }>;
   profile?: { display_name: string | null; avatar_url: string | null; role: string | null } | null;
+  profileError?: { message: string } | null;
   authUser?: { email: string; last_sign_in_at: string | null } | null;
+  actorClaims?: Array<{ id: string }>;
+  actorClaimsError?: { message: string } | null;
   updateUserById?: jest.Mock;
   upsert?: jest.Mock;
 }) {
@@ -59,12 +76,29 @@ function serverMock(opts: {
     if (table === 'user_org_membership') {
       return { select: () => ({ in: () => ({ eq: async () => ({ data: memberships, error: null }) }) }) };
     }
+    if (table === 'actor_channel') {
+      return {
+        select: () => ({
+          ilike: () => ({
+            limit: async () => ({ data: opts.actorClaims ?? [], error: opts.actorClaimsError ?? null }),
+          }),
+        }),
+      };
+    }
     // app_user_profile
     return {
-      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: opts.profile ?? null, error: null }) }) }),
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: opts.profileError ? null : (opts.profile ?? null),
+            error: opts.profileError ?? null,
+          }),
+        }),
+      }),
       upsert,
     };
   });
+  const authUserFound = opts.authUser !== null;
   return {
     __upsert: upsert,
     from,
@@ -72,8 +106,8 @@ function serverMock(opts: {
       getUser: jest.fn().mockResolvedValue({ data: { user: { id: CALLER } }, error: null }),
       admin: {
         getUserById: jest.fn().mockResolvedValue(
-          opts.authUser
-            ? { data: { user: { id: TARGET, ...opts.authUser } }, error: null }
+          authUserFound
+            ? { data: { user: { id: TARGET, ...(opts.authUser ?? DEFAULT_AUTH_USER) } }, error: null }
             : { data: { user: null }, error: { message: 'not found' } },
         ),
         updateUserById: opts.updateUserById ?? jest.fn().mockResolvedValue({ data: {}, error: null }),
@@ -171,11 +205,15 @@ describe('PATCH /api/admin/user-profile', () => {
       profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
       upsert,
     }) as never);
-    mockedCreate.mockReturnValue(callerProbe({ isSuper: true, isOwner: false }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: false });
+    mockedCreate.mockReturnValue(probe as never);
     const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'super_admin' }));
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('owner_required');
     expect(upsert).not.toHaveBeenCalled();
+    // Asserte le NOM de la sonde : un copier-coller vers is_platform_superuser laisserait ce
+    // test vert alors que la garde serait fail-open (§IMPORTANT 4).
+    expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
   });
 
   it('403 owner_required : retirer un rôle privilégié exige aussi owner', async () => {
@@ -184,10 +222,12 @@ describe('PATCH /api/admin/user-profile', () => {
       profile: { display_name: 'Alice', avatar_url: null, role: 'super_admin' },
       upsert,
     }) as never);
-    mockedCreate.mockReturnValue(callerProbe({ isSuper: true, isOwner: false }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: false });
+    mockedCreate.mockReturnValue(probe as never);
     const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'tourism_agent' }));
     expect(res.status).toBe(403);
     expect(upsert).not.toHaveBeenCalled();
+    expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
   });
 
   it('200 : un owner attribue super_admin', async () => {
@@ -196,10 +236,120 @@ describe('PATCH /api/admin/user-profile', () => {
       profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
       upsert,
     }) as never);
-    mockedCreate.mockReturnValue(callerProbe({ isSuper: true, isOwner: true }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: true });
+    mockedCreate.mockReturnValue(probe as never);
     const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'super_admin' }));
     expect(res.status).toBe(200);
     expect(upsert).toHaveBeenCalledWith({ id: TARGET, role: 'super_admin' }, { onConflict: 'id' });
+    expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
+  });
+
+  it('500 quand la lecture du profil cible échoue (owner_required ne doit pas devenir fail-open)', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profileError: { message: 'boom' },
+      upsert,
+    }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: false });
+    mockedCreate.mockReturnValue(probe as never);
+    const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'tourism_agent' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('profile_read_failed');
+    expect(upsert).not.toHaveBeenCalled();
+    // La sonde owner n'est même pas atteinte : l'échec de lecture coupe AVANT, jamais après.
+    expect(probe.rpc).not.toHaveBeenCalledWith('is_platform_owner');
+  });
+
+  it('422 sur un rôle plateforme inconnu, aucune écriture', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({ upsert }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'role_invente' }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe('invalid_platform_role');
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it('404 quand le compte cible n’existe pas côté auth, aucune écriture', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const updateUserById = jest.fn();
+    mockedServer.mockReturnValue(serverMock({
+      authUser: null,
+      upsert,
+      updateUserById,
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, displayName: 'Bob' }));
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('user_not_found');
+    expect(upsert).not.toHaveBeenCalled();
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  it('409 email_taken quand l’adresse est déjà prise par un autre compte', async () => {
+    const updateUserById = jest.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'Email address already registered' },
+    });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      updateUserById,
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'prise@oti.re' }));
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe('email_taken');
+  });
+
+  it('403 email_claims_actor : un admin de rang 30 ne peut pas rattacher l’adresse d’un prestataire', async () => {
+    const updateUserById = jest.fn().mockResolvedValue({ data: {}, error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      updateUserById,
+      actorClaims: [{ id: 'ac-1' }],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'prestataire@ext.re' }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('email_claims_actor');
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
+  it('200 : un superuser PEUT rattacher l’adresse d’un prestataire (la garde ne coupe pas qui a le droit)', async () => {
+    const updateUserById = jest.fn().mockResolvedValue({ data: {}, error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      updateUserById,
+      actorClaims: [{ id: 'ac-1' }],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'prestataire@ext.re' }));
+    expect(res.status).toBe(200);
+    expect(updateUserById).toHaveBeenCalledWith(TARGET, { email: 'prestataire@ext.re', email_confirm: true });
+  });
+
+  it('403 anti-self insensible à la casse', async () => {
+    mockedServer.mockReturnValue(serverMock({}) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: CALLER.toUpperCase(), displayName: 'Moi' }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('self_edit_forbidden');
+  });
+
+  it('500 profile_update_failed signale que l’e-mail a déjà changé quand l’upsert échoue ensuite', async () => {
+    const upsert = jest.fn().mockResolvedValue({ error: { message: 'db down' } });
+    const updateUserById = jest.fn().mockResolvedValue({ data: {}, error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+      updateUserById,
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'nouvelle@oti.re', displayName: 'Alice M' }));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toBe('profile_update_failed');
+    expect(body.detail).toMatch(/adresse de connexion a déjà été changée/);
   });
 
   it('200 : renomme sans toucher au rôle ni à l’e-mail', async () => {

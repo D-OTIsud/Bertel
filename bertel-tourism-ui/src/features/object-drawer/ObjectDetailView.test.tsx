@@ -1337,6 +1337,11 @@ describe('ObjectDetailView', () => {
           role: { name: 'Exploitant' },
           contacts: [{ kind: { code: 'mobile', name: 'Mobile' }, value: '0692068575' }],
           contacts_restricted: false,
+          // `visibility: 'partners'` (pas 'public') tient le mobile de l'acteur HORS de
+          // « Contact » (chantier 3a) : sinon la dédup §3a le retire de la carte équipe car
+          // il serait déjà visible ailleurs, et le test ci-dessous ne pourrait rien asserter
+          // sur la ligne meta À L'INTÉRIEUR du lien.
+          visibility: 'partners',
         },
       ],
     },
@@ -1347,10 +1352,28 @@ describe('ObjectDetailView', () => {
 
     renderDetail(actorLinkData);
 
-    const link = screen.getByRole('link', { name: /fiche CRM de Mme Mélissa Fontaine/i });
+    // Nom accessible EXACT : si l'icône (censée être aria-hidden) fuyait du texte, le nom
+    // accessible ne serait plus cette chaîne pile — getByRole avec une chaîne exacte (pas une
+    // regex) est donc lui-même une assertion sur l'icône, en plus du test dédié ci-dessous.
+    const link = screen.getByRole('link', { name: 'Ouvrir la fiche CRM de Mme Mélissa Fontaine' });
     expect(link).toHaveAttribute('href', '/crm?acteur=actor-42');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
+    // Finding 1 (revue) : sans ça, un mousedown sur le <a> démarre un drag de lien natif
+    // (Chrome/Firefox) qui avale la sélection à la souris de la coordonnée affichée dans la carte.
+    expect(link).toHaveAttribute('draggable', 'false');
+
+    // Finding 2 (revue) : l'invariant de conception est que la branche <a> rend EXACTEMENT le
+    // même contenu que la branche <div> (rôle + coordonnée) — le lien ne change que l'affordance,
+    // jamais l'information. On l'assert avec within(link) pour prouver que ce contenu est bien
+    // À L'INTÉRIEUR de l'ancre, pas seulement présent ailleurs sur la page.
+    expect(within(link).getByText('Exploitant')).toBeInTheDocument();
+    expect(within(link).getByText('Mobile: 0692068575')).toBeInTheDocument();
+
+    // Finding 3 (revue) : l'icône CRM ne doit jamais devenir annonçable au lecteur d'écran.
+    const icon = link.querySelector('svg');
+    expect(icon).not.toBeNull();
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('lecteur seul (canEditObjects=false) : pas de lien, mais l’acteur reste affiché', () => {

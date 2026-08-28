@@ -404,3 +404,46 @@ describe("§201 — création guidée d'un hébergement", () => {
     expect(screen.getByText(/au nom proche/i)).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°4, lot B — validation PAR CHAMP.
+// `validation.errors` n'était jamais lu : les trois messages français de
+// `create-object-options.ts` étaient du CODE MORT, et l'agent voyait un bouton grisé sans
+// savoir quel champ manquait. C'est le gain le plus direct du chantier : les messages
+// existaient déjà, il manquait leur rendu.
+// ---------------------------------------------------------------------------------------
+describe('CreateObjectDialog — validation par champ (chantier 2026-08-28)', () => {
+  it('ne reproche RIEN sur un formulaire vierge', () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    expect(screen.queryByText('Le nom est obligatoire.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Choisissez un type de fiche.')).not.toBeInTheDocument();
+  });
+
+  it('dit QUEL champ manque une fois le champ Nom quitté', () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    const input = screen.getByLabelText(/nom de la fiche/i);
+    fireEvent.blur(input);
+    expect(screen.getByText('Le nom est obligatoire.')).toBeInTheDocument();
+    // Le contrôle lui-même est marqué invalide et relié à son message (contrat de Field).
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'create-object-name-error');
+  });
+
+  it('signale le type manquant seulement une fois le nom saisi (étape 2, pas avant)', () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    expect(screen.queryByText('Choisissez un type de fiche.')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/nom de la fiche/i), { target: { value: 'Hôtel des Cimes' } });
+    expect(screen.getByText('Choisissez un type de fiche.')).toBeInTheDocument();
+  });
+
+  it('les deux reproches disparaissent quand la saisie devient valide', () => {
+    render(<CreateObjectDialog open onClose={() => {}} onCreated={() => {}} />);
+    fireEvent.blur(screen.getByLabelText(/nom de la fiche/i));
+    expect(screen.getByText('Le nom est obligatoire.')).toBeInTheDocument();
+    selectTypeAndName('Hôtel des Cimes');
+    expect(screen.queryByText('Le nom est obligatoire.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Choisissez un type de fiche.')).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/nom de la fiche/i)).not.toHaveAttribute('aria-invalid');
+    expect(screen.getByRole('button', { name: /créer la fiche/i })).toBeEnabled();
+  });
+});

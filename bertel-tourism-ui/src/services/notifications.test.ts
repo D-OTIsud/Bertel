@@ -3,7 +3,6 @@
 // destinataire est décidé serveur (auth.uid()) et n'apparaît DANS AUCUN paramètre.
 
 import {
-  countMyUnreadNotifications,
   listMyNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -99,13 +98,9 @@ describe('contrat RPC', () => {
     // Le destinataire est décidé serveur (auth.uid()) : aucun argument ne le nomme.
     expect(JSON.stringify(rpc.mock.calls[0])).not.toContain('u-me');
     expect(inbox.items).toHaveLength(1);
-  });
-
-  it('count : rend le nombre, et 0 si le RPC ne rend pas un nombre', async () => {
-    fakeRpcClient(4);
-    await expect(countMyUnreadNotifications()).resolves.toBe(4);
-    fakeRpcClient(null);
-    await expect(countMyUnreadNotifications()).resolves.toBe(0);
+    // La pastille se lit ICI : il n'existe plus de RPC de comptage séparé (une cardinalité
+    // interrogée seule ne dit pas de QUOI la boîte est faite — cf. useNotificationInbox).
+    expect(inbox.unreadCount).toBe(1);
   });
 
   it('mark one : passe l’id et rend le nombre de lignes réellement marquées', async () => {
@@ -137,16 +132,15 @@ describe('mode démo', () => {
     useSessionStore.setState({ demoMode: true } as never);
     const rpc = fakeRpcClient({ items: [{ id: 'n1' }], unread_count: 9 });
     await expect(listMyNotifications()).resolves.toEqual({ items: [], unreadCount: 0 });
-    await expect(countMyUnreadNotifications()).resolves.toBe(0);
     await expect(markNotificationRead('n1')).resolves.toBe(0);
     expect(rpc).not.toHaveBeenCalled();
   });
 });
 
 describe('clés de cache', () => {
-  it('portent l’id utilisateur : une boîte ne survit pas à un changement de compte', () => {
+  it('porte l’id utilisateur : une boîte ne survit pas à un changement de compte', () => {
     expect(notificationKeys.inbox('u-a')).not.toEqual(notificationKeys.inbox('u-b'));
-    expect(notificationKeys.unread('u-a')).not.toEqual(notificationKeys.inbox('u-a'));
+    expect(notificationKeys.inbox('u-a')[1]).toBe('u-a');
     expect(notificationKeys.inbox('u-a')[0]).toBe('notifications');
   });
 });

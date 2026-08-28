@@ -92,14 +92,6 @@ export async function listMyNotifications(limit = 50): Promise<AppNotificationIn
   return parseAppNotificationInbox(data);
 }
 
-export async function countMyUnreadNotifications(): Promise<number> {
-  const client = requireNotificationClient();
-  if (!client) return 0;
-  const { data, error } = await client.schema('api').rpc('count_my_unread_notifications', {});
-  if (error) throw error;
-  return typeof data === 'number' ? data : 0;
-}
-
 /**
  * Marque UNE notification lue. Un id inconnu et un id appartenant à quelqu'un d'autre
  * rendent tous deux `0` côté serveur : il n'y a aucun moyen de sonder l'existence d'une
@@ -124,11 +116,12 @@ export async function markAllNotificationsRead(): Promise<number> {
 }
 
 /**
- * Clés de cache — TOUJOURS portées par l'id utilisateur. Une boîte de réception ne doit
+ * Clé de cache — UNE seule, TOUJOURS portée par l'id utilisateur. La pastille et le tiroir
+ * partagent cette entrée : deux requêtes distinctes pourraient afficher deux vérités.
+ * Elle est TOUJOURS portée par l'id utilisateur. Une boîte de réception ne doit
  * jamais survivre à un changement de compte dans le même onglet : sans l'id dans la clé,
  * le cache React Query de l'utilisateur précédent serait re-servi au suivant.
  */
 export const notificationKeys = {
   inbox: (userId: string | null) => ['notifications', userId, 'inbox'] as const,
-  unread: (userId: string | null) => ['notifications', userId, 'unread'] as const,
 };

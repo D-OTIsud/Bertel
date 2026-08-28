@@ -252,6 +252,10 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 16u. `migration_actor_contacts_org_gate.sql` — **Garde des coordonnées d'acteur + journal RGPD + RPC d'export journalisé (§208)** (après `api_views_functions.sql` (5/13) dont le leg `actors` est patché, et après `migration_cards_batch_authorize_definer.sql` (8j) qui installe la 3ᵉ feuille d'autorisation non-STUB). **Le plan §208 désignait cette étape « 16t » — créneau déjà pris par §209 ; 16u est le premier libre.** Crée `api.can_read_actor_contacts` (membre d'une ORG *publisher* via `api.current_user_crm_object_ids`, **jamais** `auth.role()` : une clé de service n'est pas une personne), le préflight `api.export_actor_capabilities` (plafonné à 500 ids, **jamais une garde** — il façonne l'offre de colonnes, l'export réautorise fiche par fiche), le RPC journalisé `api.export_actor_contacts` (authorize-once §36, finalité/format/plafond validés serveur) et le journal **immuable** `actor_contact_export_log` (aucune FK ⇒ survit à la suppression de l'objet ; **aucune valeur de coordonnée** n'y est écrite ; `REVOKE ALL` + garde `DO` qui **échoue fort** si le REVOKE n'a pas pris — un re-apply non-propriétaire ne rend qu'un `WARNING` qu'`ON_ERROR_STOP` ne rattrape pas). Durcit par `ALTER FUNCTION` le `search_path` (**`pg_temp` en dernier**) des 3 feuilles d'autorisation dont tout ceci dépend. Ferme au passage **trois voies qui fuyaient** dans `api.get_object_resource` (classe §49) : le leg structuré `actors`, `render.actor_lines` (aucune garde de ligne — un anonyme recevait des noms de personnes) et `render.contact_lines` (`is_public` non composé). `api.get_object_with_deep_data` / `api.get_objects_with_deep_data` sont **intouchées** (R1, prouvé par comparaison des définitions complètes). `NOTIFY pgrst` requis (3 fonctions exposées neuves). Couvert par `tests/test_actor_contacts_org_gate.sql` (16u-test) et `tests/test_actor_link_note_carryover.sql` (16u-test2) — gardes **non vacantes**, vérifiées rouges par sabotage. Détail en section « 16u » ci-dessous ; décision log §208.
 
+16v. `migration_org_link_reconcile.sql` — voir la section dédiée **16v** plus bas (§214 : les branches `org_links` et `actors` de `api.save_object_relations` deviennent des réconciles non destructifs). Après 7, 8r, 8b, 8o et 16u.
+
+16w. `migration_crm_task_multi_assignee_notifications.sql` — voir la section dédiée **16w** plus bas (CRM kanban : `crm_task.created_by` immuable, table de liaison `crm_task_assignee`, `app_notification`, contrat `assignee_ids` de `api.save_crm_task`, 4 RPCs de boîte de réception). Après 8z. `NOTIFY pgrst` requis.
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -745,3 +749,120 @@ vive, le 2026-08-26.
 > **État du gate CI :** `sql-fresh-apply` reste **rouge sur `master`** pour des raisons antérieures
 > et étrangères à §214 (cf. l'encadré de 16u). Cette garde a donc été rejouée **à la main** contre le
 > déployé ; elle ne protège rien automatiquement tant que le manifeste n'est pas réparé.
+
+---
+
+## 16w — `migration_crm_task_multi_assignee_notifications.sql` (CRM kanban : créateur, assignation multiple, notifications)
+
+**Créneau.** Après `16v`, premier `16x` libre. Doit passer **APRÈS 8z**
+(`migration_crm_module.sql`, qui installe `crm_task`, `api.user_can_assign_crm`,
+`api.user_can_write_crm`, `api.save_crm_task`, `api.list_crm_tasks`,
+`api.list_object_crm`). **NON foldé** dans `schema_unified.sql` : les corps référencent des
+fonctions de 8z, folder casserait la passe fresh-apply en 42883.
+
+Brief d'origine : `docs/superpowers/plans/2026-08-28-crm-kanban-task-improvements.md`.
+
+### Ce que la passe installe
+
+| Objet | Contrat |
+| --- | --- |
+| `crm_task.created_by` | Provenance **immuable** : posée à l'INSERT (`auth.uid()`), jamais réécrite par un payload d'UPDATE même s'il porte la clé. |
+| `crm_task_assignee(task_id, user_id, assigned_by, assigned_at)` | Source de vérité de « qui doit faire la tâche ». PK `(task_id,user_id)`, index `(user_id, task_id)` pour « mes tâches ». |
+| `crm_task.owner` | **Conservé** — valeur de compatibilité de déploiement = plus petit uuid de l'ensemble. Sa suppression est une migration de **contraction ultérieure**, jamais celle-ci. |
+| `app_notification` | Générique (`kind`, CHECK fail-closed), `recipient_id` = **frontière de sécurité**. Index `(recipient_id, read_at, created_at DESC)` + `(task_id)`. |
+| `api.save_crm_task` | Contrat `assignee_ids` (tableau JSON d'uuid) ; réconcile non destructif ; notification des seuls entrants. |
+| `api.list_crm_tasks`, `api.list_object_crm` | **Même** contrat de tâche : `assignees[]` (jamais `null`), `created_by_id`, `created_by_name`. |
+| `api.list_my_notifications`, `count_my_unread_notifications`, `mark_notification_read`, `mark_all_notifications_read` | Boîte de réception. Destinataire **toujours** `auth.uid()`, jamais un paramètre. |
+
+### Quatre décisions qui ne sont pas des détails
+
+**1. `created_by` n'est PAS backfillé** (écart assumé au brief §4.1, qui proposait
+`created_by = owner` en « approximation best-effort »). L'historique du créateur n'existe
+pas ; une approximation écrite dans une colonne de **provenance** devient indiscernable d'un
+fait au premier lecteur suivant, et rien ne permet ensuite de l'en distinguer. Les 4 tâches
+antérieures (mesuré sur live le 2026-08-28) restent `NULL` et l'UI affiche « Créateur
+inconnu » — une information vraie. Symétriquement `crm_task_assignee.assigned_by` est NULL
+sur les lignes backfillées. Seul `assigned_at` est backfillé, à `crm_task.created_at` :
+c'est le seul instant **observé** auquel l'assignation existait déjà (`owner` est posé à
+l'insert) ; le défaut `now()` affirmerait « assignée aujourd'hui », strictement plus faux.
+
+**2. Le réconcile est non destructif** — ordre imposé : résoudre → **calculer le diff** →
+`INSERT … ON CONFLICT DO NOTHING` → `DELETE` du reliquat **en dernier**. Un
+delete-all + re-insert (a) réécrit `assigned_at`/`assigned_by` des assignés **inchangés** à
+chaque édition de titre, et (b) fait redevenir « nouveau » tout le monde, donc **re-notifie
+l'équipe entière à chaque enregistrement**. Le motif §214 stricto sensu (« ne jamais
+détruire la ligne qui porte le droit d'écrire ») ne s'applique pas ici —
+`api.user_can_write_crm` probe l'**objet**, pas l'assignation — mais l'ordre reste le même
+parce qu'il est le bon par ailleurs. Un verrou `FOR UPDATE` sur la ligne tâche sérialise
+deux réconciles concurrents.
+
+**3. `IS DISTINCT FROM`, jamais `<>`, pour exclure l'auteur.** `auth.uid()` est **NULL hors
+contexte HTTP** (psql, pooler, service_role) : `u <> auth.uid()` vaut alors NULL pour toutes
+les lignes et le `WHERE` n'en garde **aucune** — personne ne serait notifié, sans erreur.
+Même famille que le piège à trois valeurs de `api.current_user_can_edit_objects()` (§204).
+
+**4. `app_notification.payload` ne contient AUCUN nom de personne.** Tout libellé
+(destinataire, créateur, titre de tâche) est **joint à la lecture** depuis `app_user_profile`
+/ `crm_task`. C'est ce qui met ces libellés dans la portée de
+`api.rpc_gdpr_erase_subject` (branche `'user'`, qui anonymise `app_user_profile`) **sans
+qu'aucune purge de `payload` soit nécessaire**. Y recopier un `display_name` créerait une
+copie de PII hors de portée de l'effacement.
+
+### Consommateurs non cités par le brief, vérifiés sur live avant écriture
+
+- **`api.create_crm_artifacts_from_incident`** (TRIGGER sur `incident_report`) insère dans
+  `crm_task` **en direct**, sans passer par `api.save_crm_task` : les tâches d'incident
+  naissent sans assigné et sans créateur. Le contrat tient (`assignees: []`, jamais `null`) ;
+  conséquence produit **assumée** : elles ne remontent pas dans le filtre « mes tâches » et
+  se voient via « Toutes les personnes ». Ne pas leur inventer d'assigné.
+- **`api.rpc_gdpr_erase_subject`** — voir décision 4 ci-dessus. Les deux tables neuves
+  référencent `auth.users` en `ON DELETE CASCADE` : une suppression de compte les nettoie.
+
+### Accès
+
+RLS activée sur les deux tables neuves + famille **par commande** `admin_{read,ins,upd,del}_*`
+réservée `service_role`/`admin` (forme enveloppée `(SELECT auth.role())`, §39), **et**
+`REVOKE ALL … FROM PUBLIC, anon, authenticated` : la lecture PostgREST directe est fermée par
+le grant lui-même, avant même la RLS. Les 4 RPCs de notification portent
+`REVOKE … FROM PUBLIC, anon` + `GRANT … TO authenticated, service_role`.
+`api.notify_task_assignees` n'est accordée qu'à `service_role` (fonction d'écriture interne,
+jamais appelable depuis le navigateur). **Pas de Realtime** sur `app_notification` : la
+première version fonctionne par polling RPC, ce qui évite d'exposer la table à une
+publication Realtime.
+
+### Garde
+
+`tests/test_crm_task_multi_assignee.sql` (16w-test) — personas **réels** par
+`request.jwt.claims` (jamais `SET ROLE` seul : sans JWT `auth.uid()` est NULL et toutes les
+assertions deviendraient vides). Blocs A→H, dont : ordre des assignés prouvé **par le nom**
+au moyen d'un témoin dont l'ordre alphabétique **contredit** l'ordre des uuid ; invariant de
+backfill non vacant (le corpus contient des tâches avec `owner`) ; sentinelle de provenance
+(`assigned_at` écrit à `2001-01-01`) — comparer à `now()` ne distinguerait rien, `now()`
+étant figé sur toute la transaction.
+
+**Vérifié ROUGE par 5 sabotages** (migration + test rejoués en transaction annulée contre la
+base vive, 2026-08-28) :
+
+| Sabotage | Assertion qui tombe |
+| --- | --- |
+| réconcile destructif (`DELETE` tout puis `INSERT`) | E3 `assigned_at` d'un assigné inchangé |
+| notifier `v_requested` au lieu de `v_new_assignees` | E3/E4 aucune notification supplémentaire |
+| `ORDER BY a.user_id` au lieu du nom | C2 tri par nom affiché |
+| `created_by` modifiable par l'UPDATE | G immuabilité |
+| `WHERE TRUE` au lieu de `IS DISTINCT FROM p_actor` | E1 pas d'auto-notification |
+
+### Application
+
+```
+node .tmp_pgapply/run_sql_file.cjs "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql"
+```
+
+puis `NOTIFY pgrst, 'reload schema';` (5 fonctions `api.*` neuves) — le fichier le fait déjà
+après son `COMMIT`. **Ordre de déploiement : base d'abord, front ensuite** — les nouvelles
+clés de lecture sont additives et `owner_id`/`owner_name` survivent, donc le front déployé
+pendant la fenêtre continue de fonctionner.
+
+> **État du gate CI :** `sql-fresh-apply` reste **rouge sur `master`** pour des raisons
+> antérieures et étrangères à 16w (cf. l'encadré de 16u). Cette garde a donc été jouée **à la
+> main** contre le déployé (migration + test dans une transaction annulée) ; elle ne protège
+> rien automatiquement tant que le manifeste n'est pas réparé.

@@ -12627,8 +12627,11 @@ a {
 }
 
 /* ---------- Modals (rectifs PO points 3+4+5 — CrmModal + formulaires) ----------
-   Carte surface shadow-m max 560px ; pas de canvas thémé en dur (garde-fou org-theme :
-   seul l'overlay porte un voile rgba fixe). */
+   Carte surface shadow-m max 640px ; pas de canvas thémé en dur (garde-fou org-theme :
+   seul l'overlay porte un voile rgba fixe).
+   640 et non 560 (arbitrage PO 2026-08-28) : les formulaires de tâche et d'interaction
+   portent des puces d'assignés qui s'empilent, et 560 les serrait. La variante --drawer
+   ci-dessous garde sa propre largeur (440) et n'est PAS concernée. */
 .crm-app .crm-modal-overlay {
   position: fixed;
   inset: 0;
@@ -12644,7 +12647,7 @@ a {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-m);
   width: 100%;
-  max-width: 560px;
+  max-width: 640px;
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -13069,10 +13072,16 @@ a {
 .picker__trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker__chevron { flex: none; font-size: 10px; color: var(--ink-4); }
 
+/* Le panneau est PORTALISÉ sous <body> et positionné en `fixed` par usePickerPopover :
+   position/top/left/z-index/pointer-events viennent du style inline, PAS d'ici (un
+   `right: 0` résiduel se battrait avec le `left` calculé). Le z-index inline vaut 200 —
+   il doit battre les overlays de modal (.crm-modal-overlay et .app-modal-overlay = 80)
+   ET le z-50 de Radix, puisque le panneau n'est plus dans leur contexte d'empilement.
+   `max-height` DOIT rester égal à PICKER_PANEL_MAX_HEIGHT (usePickerPopover.ts) : c'est
+   cette hauteur qui décide de la bascule au-dessus du déclencheur. */
 .picker__panel {
-  position: absolute; z-index: 50; top: calc(100% + 4px); left: 0; right: 0;
   display: flex; flex-direction: column; gap: 6px;
-  max-height: 280px; padding: 8px;
+  max-height: 280px; max-width: calc(100vw - 16px); padding: 8px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r-md); box-shadow: var(--shadow-m, 0 8px 24px rgba(0, 0, 0, 0.12));
 }

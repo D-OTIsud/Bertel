@@ -11,9 +11,11 @@
 // Les options sont identifiées par leur `code` (un uuid côté CRM) : deux personnes
 // homonymes restent deux entrées distinctes, et rien ne dépend du nom affiché.
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { fold } from './fold';
 import type { SearchSelectOption } from './SearchSelect';
+import { usePickerPopover } from './usePickerPopover';
 
 interface SearchMultiSelectProps {
   /** Codes sélectionnés. L'ordre d'affichage des puces suit celui des options. */
@@ -41,9 +43,13 @@ export function SearchMultiSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
-  const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
+  // Popover PORTALISÉ (voir usePickerPopover). Le ref de mesure est celui du DÉCLENCHEUR,
+  // jamais la racine `.picker` : celle-ci englobe aussi la liste de puces, et la mesurer
+  // poserait le panneau sous les puces au lieu de sous le bouton.
+  const close = useCallback(() => setOpen(false), []);
+  const { mounted, triggerRef, panelRef, panelStyle } = usePickerPopover(open, close, query);
 
   const selectedSet = useMemo(() => new Set(values), [values]);
   // Les puces suivent l'ordre des OPTIONS (stable, tri serveur), pas l'ordre de clic.
@@ -70,15 +76,6 @@ export function SearchMultiSelect({
     } else {
       setQuery('');
     }
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocMouseDown(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
   }, [open]);
 
   // Le popover reste OUVERT après un basculement : on en choisit plusieurs d'affilée.
@@ -115,8 +112,9 @@ export function SearchMultiSelect({
         : `${selectedOptions.length} personnes`;
 
   return (
-    <div className="picker picker--multi" ref={rootRef}>
+    <div className="picker picker--multi">
       <button
+        ref={triggerRef}
         type="button"
         className={`picker__trigger${selectedOptions.length ? '' : ' is-empty'}`}
         role="combobox"
@@ -150,8 +148,8 @@ export function SearchMultiSelect({
         </ul>
       )}
 
-      {open && (
-        <div className="picker__panel">
+      {mounted && open && createPortal(
+        <div className="picker__panel" ref={panelRef} style={panelStyle}>
           <input
             ref={searchRef}
             className="picker__search"
@@ -184,7 +182,8 @@ export function SearchMultiSelect({
             })}
             {filtered.length === 0 && <p className="picker__empty">{emptyLabel}</p>}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

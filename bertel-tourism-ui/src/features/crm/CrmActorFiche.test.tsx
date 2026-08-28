@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmActorFiche } from './CrmActorFiche';
 import * as crm from '../../services/crm';
 import type { ActorCrmSnapshot } from '../../services/crm';
+import { pickerListbox } from '../../components/ui/pickers/pickers.test-utils';
 
 jest.mock('../../services/crm');
 
@@ -10,9 +11,12 @@ const crmMock = crm as jest.Mocked<typeof crm>;
 
 // Les champs longs (Contexte / Sujet / Acteur / Établissement) sont des SearchSelect
 // (combobox + popover), plus des <select> natifs : on ouvre puis on clique l'option.
+// Le popover étant PORTALISÉ sous <body>, ses options ne sont plus dans le sous-arbre du
+// dialogue : le déclencheur s'y cherche, les options se cherchent via `pickerListbox`.
 function pickInDialog(dialog: HTMLElement, name: string | RegExp, optionName: string | RegExp) {
-  fireEvent.click(within(dialog).getByRole('combobox', { name }));
-  fireEvent.click(within(dialog).getByRole('option', { name: optionName }));
+  const trigger = within(dialog).getByRole('combobox', { name });
+  fireEvent.click(trigger);
+  fireEvent.click(pickerListbox(trigger).getByRole('option', { name: optionName }));
 }
 
 const snapshot: ActorCrmSnapshot = {
@@ -447,7 +451,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const trigger = await within(dialog).findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
     fireEvent.click(trigger);
-    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Jean P.' }));
+    fireEvent.click(pickerListbox(trigger).getByRole('option', { name: 'Jean P.' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(

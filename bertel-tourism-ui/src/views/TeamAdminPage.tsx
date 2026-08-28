@@ -25,6 +25,7 @@ import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
 import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { MemberProfileModal } from '@/features/team/MemberProfileModal';
 import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
@@ -69,6 +70,8 @@ export default function TeamAdminPage() {
   const [orgPerms, setOrgPerms] = useState<string[]>([]);
   // ID of the membership whose permissions drawer is open (null = closed).
   const [managingId, setManagingId] = useState<string | null>(null);
+  // ID du membership dont la modale de profil est ouverte (null = fermée).
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   // Membre en attente de confirmation de désactivation (null = aucune ; remplace window.confirm).
   const [confirmDeactivate, setConfirmDeactivate] = useState<OrgMember | null>(null);
   const [deactivateBusy, setDeactivateBusy] = useState(false);
@@ -102,6 +105,7 @@ export default function TeamAdminPage() {
 
   // Derive the live member object from managingId so the drawer reflects freshly reloaded data.
   const managing = members.find((m) => m.membershipId === managingId) ?? null;
+  const editingProfile = members.find((m) => m.membershipId === editingProfileId) ?? null;
 
   // Org-defaults section visible only to org_admin rank >= 30, owner, or superuser.
   const canManageOrgDefaults = role === 'owner' || role === 'super_admin' || (adminRank ?? 0) >= 30;
@@ -260,6 +264,7 @@ export default function TeamAdminPage() {
             members={members}
             currentUserId={userId}
             onManagePermissions={(m) => setManagingId(m.membershipId)}
+            onEditProfile={canManageOrgDefaults ? (m) => setEditingProfileId(m.membershipId) : undefined}
             onDeactivate={(m) => setConfirmDeactivate(m)}
             onDelete={canManageOrgDefaults ? (m) => setConfirmDelete(m) : undefined}
           >
@@ -296,6 +301,12 @@ export default function TeamAdminPage() {
         canManageOrgDefaults={canManageOrgDefaults}
         onClose={() => setManagingId(null)}
         onChanged={reload}
+      />
+      <MemberProfileModal
+        member={editingProfile}
+        canEditPlatformRole={role === 'owner'}
+        onClose={() => setEditingProfileId(null)}
+        onSaved={reload}
       />
 
       <ConfirmDialog

@@ -80,3 +80,24 @@ describe('MembersTable — provenance de l’accès (chantier 2026-08-28)', () =
     expect(screen.queryByText(/dont \d+ héritée/)).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// Task 6 — câblage de la modale de profil (MemberProfileModal, Task 5) depuis la liste des
+// membres. Même règle que « Désactiver »/« Supprimer » : jamais sur sa propre ligne (son
+// propre profil s'édite dans Réglages → Mon compte, pas ici).
+// ---------------------------------------------------------------------------------------
+describe('MembersTable — action Modifier', () => {
+  it('rend le bouton Modifier sur une autre ligne que la sienne', () => {
+    render(
+      <MembersTable members={[base]} currentUserId="autre" onManagePermissions={() => {}} onEditProfile={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
+  });
+
+  it('n’offre PAS Modifier sur sa propre ligne', () => {
+    render(
+      <MembersTable members={[base]} currentUserId="u1" onManagePermissions={() => {}} onEditProfile={() => {}} />,
+    );
+    expect(screen.queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
+  });
+});

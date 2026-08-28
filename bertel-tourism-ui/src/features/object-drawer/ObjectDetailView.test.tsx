@@ -68,6 +68,7 @@ describe('ObjectDetailView', () => {
     useSessionStore.setState({
       status: 'ready',
       role: 'super_admin',
+      canEditObjects: true,
       userId: 'usr-1',
       email: 'admin@example.com',
       userName: 'Admin',
@@ -1316,6 +1317,95 @@ describe('ObjectDetailView', () => {
         expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
       }
     });
+  });
+
+  // ---------------------------------------------------------------------------------------
+  // 2026-08-28 — la carte d'acteur mène à sa fiche CRM. Deux gardes : accès au module /crm
+  // (éditeur ou plus, via le registre NAV_ITEMS) ET périmètre CRM sur cette fiche
+  // (contacts_restricted, qui EST le prédicat api.can_read_actor_contacts).
+  // ---------------------------------------------------------------------------------------
+  const actorLinkData: ObjectDetail = {
+    id: 'hotel-crm-link',
+    name: 'Hotel Lien CRM',
+    type: 'HOT',
+    raw: {
+      descriptions: { description: 'Hotel dont l acteur mene au CRM.' },
+      actors: [
+        {
+          id: 'actor-42',
+          display_name: 'Mme Mélissa Fontaine',
+          role: { name: 'Exploitant' },
+          contacts: [{ kind: { code: 'mobile', name: 'Mobile' }, value: '0692068575' }],
+          contacts_restricted: false,
+        },
+      ],
+    },
+  };
+
+  it('éditeur + acteur dans le périmètre CRM : la carte est un lien vers /crm?acteur=', () => {
+    useSessionStore.setState({ role: 'super_admin', canEditObjects: true });
+
+    renderDetail(actorLinkData);
+
+    const link = screen.getByRole('link', { name: /fiche CRM de Mme Mélissa Fontaine/i });
+    expect(link).toHaveAttribute('href', '/crm?acteur=actor-42');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
+  });
+
+  it('lecteur seul (canEditObjects=false) : pas de lien, mais l’acteur reste affiché', () => {
+    // Membre d'ORG en lecture seule : il voit l'équipe (son e-mail est celui de l'ORG)
+    // mais /crm lui est masqué — la garde retire l'AFFORDANCE, jamais l'information.
+    useSessionStore.setState({
+      role: 'tourism_agent',
+      email: 'membre@oti.re',
+      canEditObjects: false,
+    });
+
+    renderDetail({
+      ...actorLinkData,
+      id: 'hotel-crm-readonly',
+      raw: {
+        ...actorLinkData.raw,
+        organizations: [
+          {
+            id: 'org-1',
+            name: 'OTI du Sud',
+            link_type: 'Editeur',
+            contacts: [{ kind_code: 'email', value: 'membre@oti.re' }],
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Mme Mélissa Fontaine')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /fiche CRM/i })).not.toBeInTheDocument();
+  });
+
+  it('éditeur hors périmètre CRM (contacts_restricted) : pas de lien, message §208 conservé', () => {
+    useSessionStore.setState({ role: 'super_admin', canEditObjects: true });
+
+    renderDetail({
+      id: 'hotel-crm-restricted',
+      name: 'Hotel Hors Perimetre',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Fiche publiee par une autre ORG.' },
+        actors: [
+          {
+            id: 'actor-43',
+            display_name: 'Jean Dupont',
+            role: { name: 'Direction' },
+            contacts: [],
+            contacts_restricted: true,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Jean Dupont')).toBeInTheDocument();
+    expect(screen.getByText("Coordonnées réservées à l'organisation éditrice.")).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /fiche CRM/i })).not.toBeInTheDocument();
   });
 });
 

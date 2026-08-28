@@ -8,6 +8,7 @@ DECLARE
   v_stop TEXT := 'HLORUN9999990193';
   v_fallback TEXT := 'HLORUN9999990194';
   v_json JSONB;
+  v_inserted INTEGER;
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
@@ -36,8 +37,8 @@ BEGIN
   END IF;
 
   INSERT INTO object(id, object_type, name, status) VALUES
-    (v_cdh, 'HLO', 'Fixture maison d''hôtes', 'published'),
-    (v_meuble, 'HLO', 'Fixture maison autonome', 'published'),
+    (v_cdh, 'HLO', 'Fixture chambre d''hôtes', 'published'),
+    (v_meuble, 'HLO', 'Fixture meublé de tourisme', 'published'),
     (v_group, 'HLO', 'Fixture gîte de groupe', 'published'),
     (v_stop, 'HLO', 'Fixture gîte d''étape', 'published'),
     (v_fallback, 'HLO', 'Fixture sans taxonomie', 'published');
@@ -45,21 +46,28 @@ BEGIN
   INSERT INTO object_taxonomy(object_id, domain, ref_code_id, source)
   SELECT fixture.object_id, 'taxonomy_hlo', rc.id, 'test_leafaware'
   FROM (VALUES
-    (v_cdh, 'cdh_maison'),
-    (v_meuble, 'maison'),
+    -- Les anciennes formes cdh_maison / maison ont été extraites vers
+    -- accommodation_unit_type puis supprimées par taxo6b. Les natures restent
+    -- les points d'ancrage stables des crosswalks partenaires.
+    (v_cdh, 'chambre_d_hotes'),
+    (v_meuble, 'location_saisonniere'),
     (v_group, 'gite_de_groupe'),
     (v_stop, 'gite_de_randonnee')
   ) fixture(object_id, code)
   JOIN ref_code rc ON rc.domain = 'taxonomy_hlo' AND rc.code = fixture.code;
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+  IF v_inserted <> 4 THEN
+    RAISE EXCEPTION 'leaf-aware fixtures incomplete: expected 4 taxonomy assignments, got %', v_inserted;
+  END IF;
 
   v_json := api.get_object_interop(v_cdh, 'datatourisme');
   IF NOT (v_json->'@type' @> '["Guesthouse"]'::JSONB) THEN
-    RAISE EXCEPTION 'cdh descendant should resolve Guesthouse, got %', v_json->'@type';
+    RAISE EXCEPTION 'chambre_d_hotes should resolve Guesthouse, got %', v_json->'@type';
   END IF;
 
   v_json := api.get_object_interop(v_meuble, 'datatourisme');
   IF NOT (v_json->'@type' @> '["SelfCateringAccommodation"]'::JSONB) THEN
-    RAISE EXCEPTION 'meuble descendant should resolve SelfCateringAccommodation, got %', v_json->'@type';
+    RAISE EXCEPTION 'location_saisonniere should resolve SelfCateringAccommodation, got %', v_json->'@type';
   END IF;
 
   v_json := api.get_object_interop(v_group, 'datatourisme');

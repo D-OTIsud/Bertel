@@ -1,6 +1,6 @@
 /** Rubrique « Paramètres & RGPD » — branding ORG/plateforme, compte, référentiels, effacement RGPD,
  *  documentation partenaires. Vérifié contre `SettingsPage.tsx`, `settings-nav.ts`
- *  (Paramètres → Mon compte / Mon organisation / Plateforme), `RefCodeEditor.tsx`,
+ *  (Paramètres → Mon compte / Mon organisation / Plateforme), `RefCatalogAdmin.tsx`,
  *  `RgpdErasurePage.tsx` (garde owner/super_admin), mémoire §166 / §149 / §172,
  *  et `docs/guide-partenaires.md` (guide partenaires API). */
 import type { FaqEntry } from './types';

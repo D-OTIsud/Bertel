@@ -241,8 +241,11 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   }
   const targetDocumentId = String((targetDocument as { id: string }).id);
   const { data: role } = await auth.server
-    .from('ref_code_document_type')
+    // Les partitions ref_code_* ne sont pas exposées directement par PostgREST :
+    // résoudre le rôle via la table parente et son domaine explicite.
+    .from('ref_code')
     .select('id')
+    .eq('domain', 'document_type')
     .eq('code', roleCode)
     .eq('is_active', true)
     .maybeSingle();

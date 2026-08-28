@@ -55,7 +55,7 @@ describe('exportActorContacts (§208/R1)', () => {
 
   // Neutralise les sources d'aléa nommées, joue l'export, rend le run id transmis au RPC.
   const runIdWithout = async (...missing: ('randomUUID' | 'getRandomValues')[]) => {
-    const saved = missing.map((name) => [name, (globalThis.crypto as Record<string, unknown>)[name]] as const);
+    const saved = missing.map((name) => [name, globalThis.crypto[name]] as const);
     missing.forEach((name) => Object.defineProperty(globalThis.crypto, name, { value: undefined, configurable: true }));
     try {
       mockRpc.mockResolvedValue({ log_id: 'j1', export_run_id: 'run', authorized_object_ids: ['a'], denied_object_ids: [], rows: [] });

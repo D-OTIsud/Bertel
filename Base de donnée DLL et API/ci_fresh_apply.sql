@@ -33,7 +33,7 @@ SET search_path TO "$user", public, extensions;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS postgis   WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS unaccent  WITH SCHEMA extensions;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm   WITH SCHEMA extensions;
 CREATE EXTENSION IF NOT EXISTS btree_gist;
 CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
@@ -109,8 +109,6 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \ir migration_crm_module.sql
 \echo '== 8z2    migration_crm_directory_search.sql  (recherche acteurs de l annuaire CRM: p_search sur list_crm_directory (4->5 args, DROP de l arite 4 = ambiguite PostgREST); nom/prenom/nom de famille/etablissement rattache en sous-chaine + trigrammes pg_trgm seuil 0.45 calibre live, telephone/e-mail structures sans flou; classement pertinence puis recence; search_path etendu a `extensions` (pg_trgm) — depend de 8z) =='
 \ir migration_crm_directory_search.sql
-\echo '== 8z3    actor prospects + private document library (optional establishment, default role, actor-documents bucket) =='
-\ir ../supabase/migrations/20260807124408_actor_prospects_documents.sql
 \echo '== 9/13  ui_whitelabel_branding.sql  (defines api.is_platform_admin) =='
 \ir ui_whitelabel_branding.sql
 \echo '== 10/13 media_bucket.sql  (storage bucket + RESTRICTIVE write RLS) =='
@@ -170,6 +168,9 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== A-LEGAL migration_unblock_team_legal_access.sql  (dedicated legal permission + private-document metadata + role hardening) =='
 \ir migration_unblock_team_legal_access.sql
 
+\echo '== 8z3    actor prospects + private document library (after A-LEGAL creates ref_document.access_scope; optional establishment, default role, actor-documents bucket) =='
+\ir ../supabase/migrations/20260807124408_actor_prospects_documents.sql
+
 \echo '== A-LEGAL2 migration_fix_legal_workspace_permission.sql  (expose the object-scoped legal gate to the editor) =='
 \ir migration_fix_legal_workspace_permission.sql
 
@@ -196,6 +197,15 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 
 \echo '== 14m    migration_object_web_channel.sql  (§90 object-scoped réseaux sociaux + distribution OTA: object_web_channel — composite FK (kind_id,kind_domain)->ref_code(id,domain) for social_network|distribution_channel; §49 split read gate + per-command canonical write + updated_at/audit triggers; get_object_resource web_channels key folded in api_views_functions.sql; editor §03 read/write via direct PostgREST; retires §20) =='
 \ir migration_object_web_channel.sql
+
+\echo '== 14o    migration_opening_period_recurrence.sql  (§92 périodes récurrentes et fermetures prioritaires; DDL + fonctions non foldés) =='
+\ir migration_opening_period_recurrence.sql
+
+\echo '== 14x    migration_object_hard_delete.sql  (§108 suppression définitive admin-only + journal immuable; non foldé) =='
+\ir migration_object_hard_delete.sql
+
+\echo '== 14x-test garde transactionnelle de la suppression définitive =='
+\ir tests/test_object_hard_delete.sql
 
 \echo '== 15e    migration_iti_section06_vocab.sql  (§111 Section 06 ITI editor vocab: ref_iti_assoc_role seed + iti_difficulty/iti_open_status/iti_stage_kind ref_code partitions + house RLS + seeds; idempotent, self-contained) =='
 \ir migration_iti_section06_vocab.sql
@@ -278,6 +288,18 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16m    migration_classification_graded_label_group.sql  (§176 groupe dedie graded_label « Labels notes »: gites_epics + clevacances_keys + logis = distinctions NOTEES de reseau prive (echelle numerique), ni classement officiel Etat ni label binaire; supersede le placement 16l; DONNEE de reference seule; inerte pour les RPC; folde dans seeds_data.sql => no-op sur base fraiche; CI = tests/test_classification_regroup_network_labels.sql assert graded_label) =='
 \ir migration_classification_graded_label_group.sql
 
+\echo '== 16n    migration_classification_scheme_applicability.sql  (applicabilité des distinctions par type; DDL + seed non foldés) =='
+\ir migration_classification_scheme_applicability.sql
+
+\echo '== 16n-test garde permanente de l applicabilité des distinctions =='
+\ir tests/test_classification_scheme_applicability.sql
+
+\echo '== 16o    migration_capacity_metric_bounds.sql  (bornes observées des capacités par type; vue security_invoker non foldée) =='
+\ir migration_capacity_metric_bounds.sql
+
+\echo '== 16q-logo migration_classification_scheme_logos.sql  (URLs des logos de distinctions; DML de référence non foldé) =='
+\ir migration_classification_scheme_logos.sql
+
 \echo '== SURF1  migration_activity_contract_fix.sql  (object_act.equipment_provided_details + CHECK detail only when boolean true; get_object_resource activity block unchanged shape) =='
 \ir migration_activity_contract_fix.sql
 \echo '== SURF2  migration_save_object_places_reconcile.sql  (save_object_places places arm: reconcile by id, preserve media unless explicit media key; zones arm unchanged) =='
@@ -315,11 +337,11 @@ ROLLBACK;
 \echo '== taxo4  migration_taxonomy_accommodation_vocabulary.sql  (§192 canonical accommodation vocabulary; semantic axes, Berta aliases, no object reassignment; self-asserting and fresh-safe) =='
 \ir migration_taxonomy_accommodation_vocabulary.sql
 
-\echo '== taxo4-test permanent §192 guards (axes declared, family resolves, canonical labels held, alias indexing wired) =='
-\ir tests/test_taxonomy_accommodation_vocabulary.sql
-
 \echo '== taxo5  migration_taxonomy_accommodation_hierarchy_v2.sql  (§201 hiérarchie v2 : familles campings_terrains + aires_haltes_plein_air, plein_air retiree, 3 natures collectives HLO passees de sous_type a nature (libelles Auberge/Gite), declared_campground parent reel de farm_camping/homestay_camping, residential_leisure_park, bivouac_area, motorhome_night_stop, outdoor_glamping hors axe nature ; 2 reprises object_taxonomy gardees ; auto-assertive, idempotente et fresh-safe) =='
 \ir migration_taxonomy_accommodation_hierarchy_v2.sql
+
+\echo '== taxo4-test permanent §192 guards, après enrichissement taxo5 des nœuds déjà présents dans le snapshot cible (axes declared, family resolves, canonical labels held, alias indexing wired) =='
+\ir tests/test_taxonomy_accommodation_vocabulary.sql
 
 \echo '== taxo5-test garde permanente §201 (5 familles actives, sous-types = vrais enfants same-domain, closure depth=1, ET filtre parent NON VACANT via api.get_filtered_object_ids sur porteurs temoins) =='
 \ir tests/test_taxonomy_accommodation_hierarchy_v2.sql
@@ -339,7 +361,10 @@ ROLLBACK;
 \echo '== taxo6b-test garde permanente (catalogue exact, ancien libelle absent, anciennes formes HLO retirees, alias Gite rural preserve) =='
 \ir tests/test_accommodation_unit_type_catalog_v2.sql
 
-\echo '== taxo7  migration_motorhome_service_amenities.sql  (§201 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
+\echo '== taxo7  20260729114447_hotel_positioning_axis.sql  (axe Positionnement hôtelier multi-valué; après taxo6, avant les corps Explorer qui lisent object_hotel_positioning) =='
+\ir ../supabase/migrations/20260729114447_hotel_positioning_axis.sql
+
+\echo '== taxo8  migration_motorhome_service_amenities.sql  (§201 lot 6 : les 3 capacites camping-car (eau / vidange / electricite) creees DISTINCTES dans ref_amenity et non dans une taxonomie ; l aire de SERVICES reste taxonomy_spu.motorhome_services et ne prouve jamais la nuitee ; aucun code gratuit/payant, le prix vit dans object_price ; auto-assertive et idempotente) =='
 \ir migration_motorhome_service_amenities.sql
 
 \echo '== I4d    migration_interop_crosswalk_leafaware.sql  (§190 DATAtourisme: nearest mapped taxonomy ancestor depth ASC + type fallback; composite FK and paired-null check) =='
@@ -419,6 +444,21 @@ ROLLBACK;
 
 \echo '== E2     migration_selection_emails.sql  (§211 api.list_selection_emails: editor-gated + publisher-scoped bulk email export for an Explorer selection or a saved list; operator-actor -> object-contact cascade; needs E1 internal resolver, api_views current_user_can_edit_objects, CRM current_user_crm_object_ids. MOVED AFTER 16u (tache 7, §208 alignment): p_reason now first/mandatory, VOLATILE, writes public.actor_contact_export_log (created by 16u) only when the actor arm emits, superuser arm aligned on api.can_read_actor_contacts (never is_platform_superuser), GRANT authenticated only) =='
 \ir migration_selection_emails.sql
+
+\echo '== 16x    migration_org_link_reconcile.sql  (214 api.save_object_relations : les branches org_links ET actors deviennent des RECONCILES non destructifs. Invariant : une ecriture ne doit jamais supprimer la ligne qui participe au predicat qui l autorise - la RLS est re-evaluee PAR LIGNE ECRITE, donc APRES la destruction. org_links (defaut VIF) : le delete-all detruisait le lien publisher que user_can_write_canonical probe, donc canonical_ins_object_org_link refusait la re-insertion en 42501 pour TOUT editeur - invisible pour un superuser qui passe par is_object_owner. Symptome : « impossible de rattacher un prestataire », 15/17/19 partageant le module relationships. actors (jumeau, 0 utilisateur concerne mesure le 2026-08-26, ferme sur demande PO) : actor_object_role porte is_object_owner (lien acteur PRIMAIRE a l e-mail de l appelant). Ordre impose des deux cotes : resoudre sans ecrire, demarquer le principal, UPSERT, supprimer le reliquat EN DERNIER. Le report de note 208/T13b est PRESERVE et simplifie (sans DELETE, reporter = ne pas ecrire la colonne). SECURITY INVOKER inchange, aucune policy touchee. Doit passer APRES 7, 8r, 8b, 8o et 16u) =='
+\ir migration_org_link_reconcile.sql
+
+\echo '== 16x-test garde permanente 214 (personas reels par request.jwt.claims + SET LOCAL ROLE. Temoin editeur ne portant QUE edit_canonical_when_publisher : B il enregistre le module relationships et le lien publisher SURVIT / B2 deux enregistrements de suite / C le superuser ecrit toujours / D un authentifie sans membership reste refuse 42501 / E un lien omis du payload est bien supprime / F la bascule du principal ne heurte pas uq_object_primary_org / G un doublon payload leve toujours 23505. Temoin proprietaire PAR LIEN ACTEUR (claim email -> user_actor_ids) : H il enregistre et le lien qui porte son droit survit. I le report de note 208/T13b survit au reconcile. Verifie ROUGE contre le corps delete-all, sur les DEUX tables : 42501 object_org_link (bloc B) et 42501 actor_object_role (bloc H)) =='
+\ir tests/test_org_link_reconcile_editor.sql
+
+\echo '== 16b    migration_ref_code_admin_rpcs.sql  (Phase 7.5 editeur de referentiels ref_code : api.ref_code_domain_is_editable + rpc_upsert/set_active/reorder/delete_ref_code + list_ref_code_domains + ref_code_usage_count(s). DOCUMENTEE au runbook depuis sa creation mais JAMAIS declaree ici : trou d integrite de deploiement preexistant, revele par la tache 5 de 211 dont l etape 16y delegue a ces fonctions et echouerait donc sur base fraiche. Depend de rls_policies.sql (is_platform_superuser) et de schema_unified.sql (ref_code, ref_code_domain_registry)) =='
+\ir migration_ref_code_admin_rpcs.sql
+
+\echo '== 16y    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
+\ir migration_ref_catalog_admin.sql
+
+\echo '== 16y-test garde permanente 211 (compte exact des catalogues / domaines editables et identifiables / cible de FK normalisee en catalog_key / maitre et detail jamais divergents / balayage exhaustif de get_ref_catalog / compteur fusionnant DEUX FK entrantes distinctes / cycle creer-editer-refuser-supprimer sur cle uuid, naturelle et composite / delegation ref_code non inversee avec activation et reordonnancement / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
+\ir tests/test_ref_catalog_admin.sql
 
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql

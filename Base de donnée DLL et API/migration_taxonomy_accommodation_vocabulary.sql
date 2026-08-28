@@ -329,6 +329,16 @@ BEGIN
     FROM ref_code
    WHERE domain IN ('taxonomy_hlo','taxonomy_hot','taxonomy_camp','taxonomy_hpa','taxonomy_rva')
      AND is_active AND parent_id IS NOT NULL
+     -- Le snapshot cible contient déjà ces quatre nœuds de §201, mais leur axe
+     -- et leur famille ne peuvent être posés qu'à taxo5, après la création des
+     -- familles campings_terrains / aires_haltes_plein_air. La garde permanente
+     -- complète est donc rejouée après taxo5 dans ci_fresh_apply.sql.
+     AND (domain, code) NOT IN (
+       ('taxonomy_hpa', 'declared_campground'),
+       ('taxonomy_hpa', 'residential_leisure_park'),
+       ('taxonomy_hpa', 'bivouac_area'),
+       ('taxonomy_hpa', 'motorhome_night_stop')
+     )
      AND metadata->>'axis' IS NULL;
   IF v_n > 0 THEN
     RAISE EXCEPTION '§192: % nœud(s) hébergement actif(s) sans metadata.axis', v_n;

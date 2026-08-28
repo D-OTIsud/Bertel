@@ -123,15 +123,62 @@ beforeEach(() => {
 });
 
 describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
-  it('affiche la bibliothèque documentaire et le rôle par défaut d’un acteur sans établissement', async () => {
+  it('affiche la bibliothèque dans un onglet dédié et la drop zone dans le rail droit', async () => {
     crmMock.listActorCrm.mockResolvedValue({ ...snapshot, objects: [] });
     crmMock.listActorSupport.mockResolvedValue({ defaultRole: { code: 'guide', name: 'Guide' }, documents: [] });
 
     renderFiche();
 
-    expect(await screen.findByRole('heading', { name: "Documents d'accompagnement" })).toBeInTheDocument();
     expect(await screen.findByText('Guide')).toBeInTheDocument();
+    const activityTab = screen.getByRole('tab', { name: 'Activité' });
+    const documentsTab = screen.getByRole('tab', { name: /Documents d'accompagnement/ });
+    expect(activityTab).toHaveAttribute('aria-selected', 'true');
+    expect(documentsTab).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('heading', { name: "Documents d'accompagnement" })).not.toBeInTheDocument();
+
+    fireEvent.keyDown(screen.getByRole('tablist', { name: 'Sections de la fiche acteur' }), { key: 'ArrowRight' });
+
+    expect(documentsTab).toHaveAttribute('aria-selected', 'true');
+    const main = document.querySelector('.crm-actor-grid__main') as HTMLElement;
+    const side = document.querySelector('.crm-actor-grid__side') as HTMLElement;
+    expect(within(main).getByRole('heading', { name: "Documents d'accompagnement" })).toBeInTheDocument();
     expect(screen.getByText('Aucun document pour le moment.')).toBeInTheDocument();
+    expect(within(side).getByRole('heading', { name: 'Ajouter un document' })).toBeInTheDocument();
+    expect(within(side).getByRole('button', { name: /Déposez un fichier ici/ })).toHaveClass('crm-actor-docs-dropzone');
+    expect(within(side).queryByText('Interactions · 12 mois')).not.toBeInTheDocument();
+  });
+
+  it('transfert documentaire : affiche les libellés des types dans la liste', async () => {
+    crmMock.listActorSupport.mockResolvedValue({
+      defaultRole: { code: 'operator', name: 'Exploitant' },
+      documents: [{
+        documentId: 'doc-1',
+        title: 'accessibilite.png',
+        notes: null,
+        validFrom: null,
+        validTo: null,
+        status: 'active',
+        intendedRoleCode: null,
+        intendedRoleName: null,
+        mimeType: 'image/png',
+        sizeBytes: 2048,
+        promotedToObjectId: null,
+        promotedDocumentId: null,
+        promotedAt: null,
+        createdAt: '2026-08-12T08:00:00Z',
+      }],
+    });
+
+    renderFiche();
+    fireEvent.click(await screen.findByRole('tab', { name: /Documents d'accompagnement/ }));
+    const documentRow = (await screen.findByText('accessibilite.png')).closest('.crm-actor-docs__row') as HTMLElement;
+    fireEvent.click(within(documentRow).getByRole('button', { name: 'Transférer' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Transférer vers un établissement' });
+    const typeSelect = within(dialog).getByLabelText('Type du document transféré');
+    expect(within(typeSelect).getByRole('option', { name: 'Brochure' })).toHaveValue('brochure');
+    expect(within(typeSelect).getByRole('option', { name: 'Certificat' })).toHaveValue('certificat');
+    expect(typeSelect).toHaveValue('brochure');
   });
 
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {

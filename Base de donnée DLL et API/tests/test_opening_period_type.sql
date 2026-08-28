@@ -1,7 +1,9 @@
 -- test_opening_period_type.sql
--- Proves migration_opening_period_type.sql (§81): the ref_code_opening_period_type partition
--- (4 seeds + ref_* RLS pair + uq id/code), the opening_period.period_type_id FK, the read
--- helper emitting period_type_code, and anon read / write-deny on the catalog.
+-- Proves the final §81 + §92 opening-period contract: the
+-- ref_code_opening_period_type partition (3 active seasonal types after §92
+-- retires the redundant `year_round` code), recurrence/closure support, the
+-- opening_period.period_type_id FK, the read helper emitting period_type_code,
+-- and anon read / write-deny on the catalog.
 -- Run AFTER the full manifest. Self-contained + transactional (ROLLBACK; nothing persists).
 \set ON_ERROR_STOP on
 BEGIN;
@@ -28,14 +30,19 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.opening_period'::regclass AND contype='f'
                  AND pg_get_constraintdef(oid) ILIKE '%ref_code_opening_period_type%'),
          'opening_period.period_type_id FK to ref_code_opening_period_type missing';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema='public' AND table_name='opening_period' AND column_name='is_closure'),
+         'opening_period.is_closure missing (§92 recurrence migration not applied)';
+  ASSERT to_regprocedure('api.opening_period_rank(boolean,boolean,date,date)') IS NOT NULL,
+         'api.opening_period_rank missing (§92 recurrence migration not applied)';
 
   -- ---------- Seed ----------
-  ASSERT (SELECT count(*) FROM ref_code_opening_period_type WHERE is_active) = 4,
-         'expected 4 active opening period types';
+  ASSERT (SELECT count(*) FROM ref_code_opening_period_type WHERE is_active) = 3,
+         'expected 3 active opening period types after year_round retirement';
   ASSERT (SELECT name FROM ref_code_opening_period_type WHERE code='high_season') = 'Haute saison',
          'high_season must be Haute saison';
-  ASSERT (SELECT metadata->>'all_year' FROM ref_code_opening_period_type WHERE code='year_round') = 'true',
-         'year_round must carry metadata.all_year = true (drives the date UI)';
+  ASSERT NOT EXISTS (SELECT 1 FROM ref_code_opening_period_type WHERE code='year_round'),
+         'year_round is redundant with all_years and must stay retired by §92';
   ASSERT (SELECT count(*) FROM ref_code_opening_period_type WHERE COALESCE(metadata->>'color','') = '') = 0,
          'every seeded type must carry a ribbon colour';
 
@@ -62,7 +69,7 @@ BEGIN
   -- ---------- ANON: reads the public catalog, cannot write ----------
   PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
   SET LOCAL ROLE anon;
-    ASSERT (SELECT count(*) FROM ref_code_opening_period_type WHERE is_active) = 4,
+    ASSERT (SELECT count(*) FROM ref_code_opening_period_type WHERE is_active) = 3,
            'anon MUST read the period-type catalog';
     v_inserted := false;
     BEGIN
@@ -73,6 +80,6 @@ BEGIN
     ASSERT NOT v_inserted, 'anon MUST NOT write the period-type catalog';
   RESET ROLE;
 
-  RAISE NOTICE 'opening_period_type assertions passed (partition/RLS/seed/FK + read-helper code + anon read / write-deny).';
+  RAISE NOTICE 'opening_period_type assertions passed (partition/RLS/final seed/recurrence/FK + read-helper code + anon read / write-deny).';
 END$$;
 ROLLBACK;

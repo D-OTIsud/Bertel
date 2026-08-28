@@ -247,8 +247,17 @@ BEGIN
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA,v_orgA,TRUE), (v_userB,v_orgB,TRUE), (v_userC,v_orgA,TRUE), (v_userD,v_orgA,TRUE)
     ON CONFLICT DO NOTHING;
+  -- 17c — userC et userD reçoivent AUSSI `write_crm_notes`. Ce n'était pas nécessaire avant :
+  -- `api.user_can_assign_crm` ne vérifiait QUE le partage d'organisation, si bien qu'un
+  -- co-membre sans aucune permission était assignable. Cette prémisse était fausse en produit
+  -- (le CRM redirige un lecteur seul : il aurait été notifié pour un écran inaccessible), et
+  -- 17c l'a corrigée. Ces deux témoins représentent des COLLÈGUES à qui l'on confie du travail :
+  -- ils doivent donc pouvoir agir dans le CRM. Le témoin « hors périmètre » reste `userB`
+  -- (autre ORG), et le témoin « co-membre inéligible » vit dans `test_crm_assignee_eligibility.sql`.
   INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at)
-  VALUES (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
+  VALUES (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
+         (v_userC, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
+         (v_userD, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
     ON CONFLICT DO NOTHING;
 
   -- Tâche insérée EN DIRECT, comme le fait le trigger api.create_crm_artifacts_from_incident :

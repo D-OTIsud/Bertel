@@ -273,6 +273,25 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
       expect(screen.getByText('Tâche du second Dupont')).toBeInTheDocument();
       expect(screen.queryByText('Tâche du premier Dupont')).not.toBeInTheDocument();
     });
+
+    // 17c — la liste des ASSIGNABLES se restreint aux personnes qui peuvent agir dans le CRM.
+    // L'union avec les porteurs réels de tâches devient donc porteuse : sans elle, une tâche
+    // confiée avant la restriction (ou à quelqu'un qui a perdu ses droits) deviendrait
+    // INATTEIGNABLE par le filtre — du travail réel disparaîtrait de l'écran.
+    it('une personne portant une tâche reste filtrable même absente des assignables', async () => {
+      crmMock.listCrmAssignees.mockResolvedValue([ME]);
+      crmMock.listCrmTasks.mockResolvedValue([
+        { ...tasks[0], id: 'orph', title: 'Tâche d’un ancien collègue',
+          assignees: [{ userId: 'u-parti', displayName: 'Ancien Collègue' }] },
+      ]);
+      renderTaches();
+      // Le filtre par défaut est « mes tâches » : la tâche de l'autre n'est pas visible…
+      await screen.findByLabelText('Filtrer par personne');
+      expect(screen.queryByText('Tâche d’un ancien collègue')).not.toBeInTheDocument();
+      // …mais la personne reste PROPOSÉE dans le filtre, et la sélectionner la retrouve.
+      fireEvent.change(screen.getByLabelText('Filtrer par personne'), { target: { value: 'u-parti' } });
+      expect(screen.getByText('Tâche d’un ancien collègue')).toBeInTheDocument();
+    });
   });
 
   describe('16w — fenêtre d’échéance', () => {

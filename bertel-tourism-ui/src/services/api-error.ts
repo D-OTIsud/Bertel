@@ -48,6 +48,15 @@ export const API_ERROR_LABELS: Record<string, string> = {
   forbidden: "Cette action n'est pas autorisée avec vos droits actuels.",
   self_delete_forbidden: 'Vous ne pouvez pas supprimer votre propre compte.',
   rate_limited: 'Trop de tentatives. Patientez une minute avant de réessayer.',
+  // Panneau Équipe (/api/admin/user-profile) — un admin ne peut pas s'auto-éditer depuis cet
+  // écran : son identité a sa propre surface (Réglages → Mon compte).
+  self_edit_forbidden: 'Vous ne pouvez pas modifier votre propre profil depuis cet écran — utilisez Réglages → Mon compte.',
+  out_of_scope: "Ce membre n'appartient pas à votre organisation.",
+  // Le mot « owner » reste littéral : c'est le nom du rôle plateforme tel qu'exposé ailleurs
+  // dans l'écran (PLATFORM_ROLES), pas une simple décoration.
+  owner_required: 'Seul un propriétaire (owner) de la plateforme peut attribuer ou retirer un rang plateforme.',
+  email_claims_actor:
+    "Cette adresse est celle d'un prestataire : l'attribuer à ce compte lui donnerait la propriété de ses fiches. Réservé à un superuser plateforme.",
 
   // --- Requête malformée ------------------------------------------------------------------
   bad_json: 'Requête invalide. Rechargez la page et réessayez.',
@@ -61,6 +70,10 @@ export const API_ERROR_LABELS: Record<string, string> = {
   invalid_object_id: 'Identifiant de fiche invalide.',
   invalid_user_id: 'Identifiant utilisateur invalide.',
   invalid_subject_kind: 'Type de personne concernée inconnu.',
+  invalid_platform_role: 'Rôle plateforme inconnu.',
+  // `detail` porte le nom du champ inconnu envoyé par le client — jamais affiché (règle 1) : un
+  // champ inattendu vient d'un formulaire désynchronisé de la route, rien que recharger ne répare.
+  unknown_field: 'Requête invalide : un champ inattendu a été envoyé. Rechargez la page et réessayez.',
   missing_confirm_name: 'Saisissez le nom exact de la fiche pour confirmer.',
   missing_object_id: 'Aucune fiche cible fournie.',
   missing_subject_id: 'Aucune personne concernée fournie.',
@@ -76,6 +89,10 @@ export const API_ERROR_LABELS: Record<string, string> = {
   already_active: 'Ce compte est déjà actif.',
   already_promoted: 'Ce document a déjà été rattaché à la fiche.',
   promoted_document: 'Ce document a déjà été rattaché à la fiche.',
+  // Panneau Équipe : le compte visé peut avoir été supprimé entre le chargement du roster et
+  // l'action (§209/§211 : la liste n'est jamais la garde, seulement une lecture antérieure).
+  user_not_found: "Ce compte n'existe plus — la liste est peut-être obsolète, rechargez la page.",
+  email_taken: 'Cette adresse est déjà utilisée par un autre compte.',
 
   // --- Médias / fichiers --------------------------------------------------------------------
   upload_failed: "Le téléversement a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
@@ -105,6 +122,11 @@ export const API_ERROR_LABELS: Record<string, string> = {
   object_link_failed: 'Le rattachement à la fiche a échoué.',
   history_update_failed: "La mise à jour de l'historique a échoué.",
   profile_update_failed: 'La mise à jour du profil a échoué.',
+  // Ces trois-là relaient un `detail` technique (message Postgres/GoTrue brut, potentiellement en
+  // anglais) — le mapper ici est ce qui empêche ce brut d'atteindre l'écran (règle 1).
+  profile_read_failed: "La lecture du profil a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  actor_check_failed: "La vérification de l'adresse a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  email_update_failed: "La mise à jour de l'adresse e-mail a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
 
   // --- Configuration serveur ------------------------------------------------------------------
   // Ne JAMAIS relayer le `detail` associé : il nomme la variable d'environnement manquante.

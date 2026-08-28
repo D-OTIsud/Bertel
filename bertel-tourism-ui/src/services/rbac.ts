@@ -162,7 +162,7 @@ export async function deleteUserAccount(userId: string): Promise<void> {
  * ci-dessous traduit BEAUCOUP mieux. On la consulte donc d'abord, et on ne retombe sur la table
  * générique que si aucun code métier n'est reconnu.
  */
-function rbacRouteError(body: { detail?: string; error?: string } | null | undefined, status: number): Error {
+export function rbacRouteError(body: { detail?: string; error?: string } | null | undefined, status: number): Error {
   const raw = typeof body?.detail === 'string' ? body.detail : '';
   for (const [code, friendly] of FRIENDLY) {
     if (raw.includes(code)) return new Error(friendly);

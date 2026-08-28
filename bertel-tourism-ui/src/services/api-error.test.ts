@@ -54,6 +54,59 @@ describe('readApiErrorMessage — matrice du chantier 2026-08-28 n°4', () => {
   });
 });
 
+describe('codes du panneau Équipe — /api/admin/user-profile + /api/avatar/upload (Task 4)', () => {
+  it('les 11 codes ajoutés ont tous une entrée FR', () => {
+    const codes = [
+      'unknown_field',
+      'invalid_platform_role',
+      'self_edit_forbidden',
+      'out_of_scope',
+      'owner_required',
+      'email_claims_actor',
+      'user_not_found',
+      'email_taken',
+      'profile_read_failed',
+      'actor_check_failed',
+      'email_update_failed',
+    ];
+    for (const code of codes) {
+      expect(typeof API_ERROR_LABELS[code]).toBe('string');
+      expect(API_ERROR_LABELS[code].length).toBeGreaterThan(0);
+    }
+  });
+
+  it('owner_required contient bien "owner" (le nom du rôle exposé ailleurs dans l’écran)', () => {
+    // Garde le contrat consommé par team-profile.test.ts (`rejects.toThrow(/owner/i)`) : si ce
+    // libellé perd le mot, la traduction change silencieusement de comportement pour cet écran.
+    expect(readApiErrorMessage({ error: 'owner_required' }, 403)).toMatch(/owner/i);
+  });
+
+  it('profile_read_failed / actor_check_failed / email_update_failed ne relaient JAMAIS le detail technique', () => {
+    // Ces trois codes portent en pratique un message Postgres/GoTrue brut (souvent anglais).
+    expect(readApiErrorMessage({ error: 'profile_read_failed', detail: 'permission denied for table app_user_profile' }, 500))
+      .not.toContain('permission denied');
+    expect(readApiErrorMessage({ error: 'actor_check_failed', detail: 'connection reset by peer' }, 500))
+      .not.toContain('connection reset');
+    expect(readApiErrorMessage({ error: 'email_update_failed', detail: 'AuthApiError: unexpected failure' }, 500))
+      .not.toContain('AuthApiError');
+  });
+
+  it('email_taken ne relaie pas le message GoTrue brut derrière la détection "déjà pris"', () => {
+    const message = readApiErrorMessage(
+      { error: 'email_taken', detail: 'A user with this email address has already been registered' },
+      409,
+    );
+    expect(message).toBe(API_ERROR_LABELS.email_taken);
+    expect(message).not.toContain('already been registered');
+  });
+
+  it('unknown_field ne relaie pas le nom du champ envoyé par le client', () => {
+    const message = readApiErrorMessage({ error: 'unknown_field', detail: 'isPlatformSuperuser' }, 422);
+    expect(message).toBe(API_ERROR_LABELS.unknown_field);
+    expect(message).not.toContain('isPlatformSuperuser');
+  });
+});
+
 describe('apiError', () => {
   it('lit le corps JSON et rend une Error FR', async () => {
     const error = await apiError(jsonResponse({ error: 'not_found' }, 404));

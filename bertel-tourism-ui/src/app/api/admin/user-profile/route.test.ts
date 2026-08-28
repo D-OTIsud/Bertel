@@ -36,11 +36,15 @@ function getReq(userId: string, headers: Record<string, string> = { authorizatio
  * 4 : un copier-coller qui swap `is_platform_owner` → `is_platform_superuser` doit faire rougir
  * un test, pas rester invisible derrière un mock ordinal).
  */
-function callerProbe(opts: { isSuper?: boolean; rank?: number | null; isOwner?: boolean }) {
+function callerProbe(opts: { isSuper?: boolean; rank?: number | null; isOwner?: boolean | null }) {
+  // `isOwner` distingue "non fourni" (undefined ⇒ false, valeur par défaut des tests qui ne
+  // testent pas cette sonde) de "fourni à NULL" (api.is_platform_owner est à TROIS valeurs en
+  // base : `??` collapserait `null` sur `false` et rendrait le cas NULL impossible à représenter).
+  const isOwner = opts.isOwner === undefined ? false : opts.isOwner;
   const rpc = jest.fn()
     .mockResolvedValueOnce({ data: opts.isSuper ?? false, error: null })
     .mockResolvedValueOnce({ data: opts.rank ?? null, error: null })
-    .mockResolvedValueOnce({ data: opts.isOwner ?? false, error: null });
+    .mockResolvedValueOnce({ data: isOwner, error: null });
   return { schema: () => ({ rpc }), rpc };
 }
 
@@ -163,6 +167,25 @@ describe('GET /api/admin/user-profile', () => {
     expect(res.status).toBe(403);
     expect((await res.json()).error).toBe('out_of_scope');
   });
+
+  it('422 sur un userId vide', async () => {
+    mockedServer.mockReturnValue(serverMock({}) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await GET(getReq(''));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe('invalid_user_id');
+  });
+
+  it('500 profile_read_failed quand la lecture du profil échoue (le GET avalait cette erreur avant)', async () => {
+    mockedServer.mockReturnValue(serverMock({
+      profileError: { message: 'boom' },
+      authUser: { email: 'alice@oti.re', last_sign_in_at: null },
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await GET(getReq(TARGET));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('profile_read_failed');
+  });
 });
 
 describe('PATCH /api/admin/user-profile', () => {
@@ -197,6 +220,23 @@ describe('PATCH /api/admin/user-profile', () => {
     mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
     const res = await PATCH(patchReq({ userId: TARGET, email: 'pas-une-adresse' }));
     expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe('invalid_email');
+  });
+
+  it('422 sur un userId vide', async () => {
+    mockedServer.mockReturnValue(serverMock({}) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq({ userId: '', displayName: 'X' }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe('invalid_user_id');
+  });
+
+  it('400 bad_json sur un corps JSON `null` (JSON valide, mais Object.keys(null) lève)', async () => {
+    mockedServer.mockReturnValue(serverMock({}) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: true }) as never);
+    const res = await PATCH(patchReq(null));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe('bad_json');
   });
 
   it('403 owner_required : un superuser NON owner ne peut pas attribuer super_admin', async () => {
@@ -228,6 +268,22 @@ describe('PATCH /api/admin/user-profile', () => {
     expect(res.status).toBe(403);
     expect(upsert).not.toHaveBeenCalled();
     expect(probe.rpc).toHaveBeenCalledWith('is_platform_owner');
+  });
+
+  it('403 owner_required : is_platform_owner NULL (sonde à trois valeurs hors contexte HTTP) reste fail-closed', async () => {
+    // `isOwner !== true` couvre `false` ET `null` — une réécriture en `=== false` resterait verte
+    // pour `false` mais laisserait passer `null`. Ce test échouerait alors seul.
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      upsert,
+    }) as never);
+    const probe = callerProbe({ isSuper: true, isOwner: null });
+    mockedCreate.mockReturnValue(probe as never);
+    const res = await PATCH(patchReq({ userId: TARGET, platformRole: 'super_admin' }));
+    expect(res.status).toBe(403);
+    expect((await res.json()).error).toBe('owner_required');
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it('200 : un owner attribue super_admin', async () => {
@@ -315,6 +371,23 @@ describe('PATCH /api/admin/user-profile', () => {
     expect(updateUserById).not.toHaveBeenCalled();
   });
 
+  it('500 actor_check_failed quand la lecture actor_channel échoue, aucune écriture (la garde ne doit pas être fail-open)', async () => {
+    // Reproduit le défaut du tour précédent : une erreur de lecture avalée ferait écrire l'e-mail
+    // quand même. `actorClaimsError` existait déjà dans serverMock mais n'était exercée par aucun
+    // test — une option de mock qu'aucun test n'utilise est une garde qui n'existe pas.
+    const updateUserById = jest.fn();
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      updateUserById,
+      actorClaimsError: { message: 'timeout' },
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'prestataire@ext.re' }));
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('actor_check_failed');
+    expect(updateUserById).not.toHaveBeenCalled();
+  });
+
   it('200 : un superuser PEUT rattacher l’adresse d’un prestataire (la garde ne coupe pas qui a le droit)', async () => {
     const updateUserById = jest.fn().mockResolvedValue({ data: {}, error: null });
     mockedServer.mockReturnValue(serverMock({
@@ -377,5 +450,26 @@ describe('PATCH /api/admin/user-profile', () => {
     const res = await PATCH(patchReq({ userId: TARGET, email: 'Nouvelle@OTI.re' }));
     expect(res.status).toBe(200);
     expect(updateUserById).toHaveBeenCalledWith(TARGET, { email: 'nouvelle@oti.re', email_confirm: true });
+  });
+
+  it('200 : une adresse inchangée (casse différente) n’active ni la garde acteur ni l’écriture GoTrue', async () => {
+    // `authTarget.user.email` (défaut du mock : target@oti.re) et le payload ne diffèrent que par
+    // la casse : après normalisation ils sont identiques, donc ce n'est PAS un changement.
+    // `actorClaims` renvoie tout de même un lien acteur pour prouver que la garde n'est même pas
+    // ATTEINTE (elle refuserait sinon, rank 30 non-super) — pas juste qu'elle n'a rien trouvé.
+    const upsert = jest.fn().mockResolvedValue({ error: null });
+    const updateUserById = jest.fn();
+    mockedServer.mockReturnValue(serverMock({
+      profile: { display_name: 'Alice', avatar_url: null, role: 'tourism_agent' },
+      authUser: { email: 'target@oti.re', last_sign_in_at: null },
+      upsert,
+      updateUserById,
+      actorClaims: [{ id: 'ac-1' }],
+    }) as never);
+    mockedCreate.mockReturnValue(callerProbe({ isSuper: false, rank: 30 }) as never);
+    const res = await PATCH(patchReq({ userId: TARGET, email: 'TARGET@OTI.RE', displayName: 'Alice M' }));
+    expect(res.status).toBe(200);
+    expect(updateUserById).not.toHaveBeenCalled();
+    expect(upsert).toHaveBeenCalledWith({ id: TARGET, display_name: 'Alice M' }, { onConflict: 'id' });
   });
 });

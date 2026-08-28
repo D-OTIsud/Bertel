@@ -288,6 +288,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   const groups = useMemo(() => buildCreateTypeOptions(), []);
   const [type, setType] = useState('');
   const [name, setName] = useState('');
+  const [nameTouched, setNameTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -343,6 +344,14 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   }, [groups, taxonomies]);
 
   const validation = validateCreateObjectInput({ type: effectiveType, name });
+  // Chantier 2026-08-28 n°4, lot B — `validation.errors` n'était JAMAIS lu : les trois messages
+  // français de `create-object-options.ts` étaient du code mort, et l'agent voyait un bouton
+  // grisé sans savoir quel champ manquait. On les rend, mais pas trop tôt :
+  //  · le NOM ne se reproche qu'une fois le champ quitté (sinon on accuse un formulaire vierge) ;
+  //  · le TYPE ne se reproche qu'une fois le nom saisi — c'est l'étape 2, il serait absurde de la
+  //    signaler avant que l'agent ne l'ait atteinte.
+  const nameError = nameTouched ? validation.errors.name : undefined;
+  const typeError = name.trim() ? validation.errors.type : undefined;
   const selectedArchetype = groups.find((g) => g.types.some((t) => t.code === effectiveType))?.archetype ?? null;
   const accent = selectedArchetype ? ARCHETYPE_VISUAL[selectedArchetype] : null;
 
@@ -353,6 +362,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
   function reset() {
     setType('');
     setName('');
+    setNameTouched(false);
     setError(null);
     setNotice(null);
     setBusy(false);
@@ -438,11 +448,22 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
             value={name}
             maxLength={MAX_OBJECT_NAME_LENGTH}
             onChange={(event) => setName(event.target.value)}
+            onBlur={() => setNameTouched(true)}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? 'create-object-name-error' : undefined}
             placeholder="ex. Hôtel des Cimes"
             autoComplete="off"
             autoFocus
-            className="h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow focus:border-ink-3 focus:ring-2 focus:ring-lineStrong"
+            className={
+              'h-11 w-full rounded-xl border bg-surface px-3.5 text-[14px] text-ink outline-none transition-shadow focus:ring-2 focus:ring-lineStrong ' +
+              (nameError ? 'border-red-500 focus:border-red-500' : 'border-line focus:border-ink-3')
+            }
           />
+          {nameError ? (
+            <p id="create-object-name-error" role="alert" className="mt-1.5 text-[12px] font-semibold text-red-600">
+              {nameError}
+            </p>
+          ) : null}
 
           {showMatches ? (
             <div
@@ -496,6 +517,11 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
         {/* 2 · Type — the scrollable region (clearly the main content) */}
         <div className="flex items-baseline justify-between px-6 pb-1.5 pt-4">
           <p className="text-[13px] font-semibold text-ink">Catégorie de fiche</p>
+          {typeError ? (
+            <p role="alert" className="text-[12px] font-semibold text-red-600">
+              {typeError}
+            </p>
+          ) : null}
         </div>
         <div className="relative min-h-0">
           <div className="max-h-[38vh] space-y-5 overflow-y-auto px-6 pb-6 pt-1">

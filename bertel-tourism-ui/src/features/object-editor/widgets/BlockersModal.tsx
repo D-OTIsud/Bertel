@@ -53,15 +53,40 @@ export function BlockersModal({
           {saveErrors.length > 0 && (
             <section className="blockers-group">
               <h4 className="blockers-group__head">Erreurs d'enregistrement</h4>
-              {saveErrors.map((issue) => (
-                <div key={`${issue.section}-${issue.message}`} className="issue issue--static">
-                  <span className="issue__dot req" />
-                  <span className="issue__body">
-                    <strong>{issue.section}</strong>
-                    <small>{issue.message}</small>
-                  </span>
-                </div>
-              ))}
+              {/* Chantier 2026-08-28 n°4, lot C — ce bloc était STATIQUE, sans bouton « Aller › »,
+                  faute de numéro de section exploitable : `issue.section` y est un LIBELLÉ de
+                  module. `issue.nums` fournit désormais la cible ; on saute à la première section
+                  du module (plusieurs modules en couvrent légitimement plusieurs). Une erreur sans
+                  numéro reste rendue en statique — lisible, simplement sans action. */}
+              {saveErrors.map((issue) => {
+                const target = issue.nums?.[0];
+                if (!target) {
+                  return (
+                    <div key={`${issue.section}-${issue.message}`} className="issue issue--static">
+                      <span className="issue__dot req" />
+                      <span className="issue__body">
+                        <strong>{issue.section}</strong>
+                        <small>{issue.message}</small>
+                      </span>
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    type="button"
+                    key={`${issue.section}-${issue.message}`}
+                    className="issue"
+                    onClick={() => onGoToSection(target)}
+                  >
+                    <span className="issue__dot req" />
+                    <span className="issue__body">
+                      <strong>{issue.section}</strong>
+                      <small>{issue.message}</small>
+                    </span>
+                    <span className="issue__go">Aller ›</span>
+                  </button>
+                );
+              })}
             </section>
           )}
 

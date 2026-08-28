@@ -73,3 +73,36 @@ describe('BlockersModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+// Chantier 2026-08-28 n°4, lot C — le bloc « Erreurs d'enregistrement » était le SEUL sans
+// bouton « Aller › », faute de numéro de section exploitable dans `Issue.section` (un libellé
+// de module). `Issue.nums` fournit la cible.
+describe('BlockersModal — saut depuis une erreur d’enregistrement (chantier 2026-08-28)', () => {
+  it('offre « Aller › » et saute à la première section du module', () => {
+    const onGoToSection = jest.fn();
+    render(
+      <BlockersModal
+        {...baseProps}
+        context="save"
+        saveErrors={[{ section: 'Localisation', message: 'Refus RLS.', tone: 'req', nums: ['02'] }]}
+        onGoToSection={onGoToSection}
+      />,
+    );
+    const row = screen.getByRole('button', { name: /Localisation/ });
+    expect(row).toHaveTextContent('Aller ›');
+    fireEvent.click(row);
+    expect(onGoToSection).toHaveBeenCalledWith('02');
+  });
+
+  it('reste STATIQUE quand aucune section n’est rattachée — lisible, simplement sans action', () => {
+    render(
+      <BlockersModal
+        {...baseProps}
+        context="save"
+        saveErrors={[{ section: 'Module inconnu', message: 'Erreur.', tone: 'req' }]}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Module inconnu/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Module inconnu')).toBeInTheDocument();
+  });
+});

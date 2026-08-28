@@ -290,9 +290,16 @@
 /* D2 : hint visible (plus seulement un title au survol) + erreur inline. */
 .object-editor .field__hint { margin: 0; font-size: 11px; line-height: 1.35; color: var(--ink-3); }
 .object-editor .field__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--red); }
+/* Chantier 2026-08-28 n°4, lot B — la bordure rouge seule se confond avec un simple survol sur
+   un formulaire dense. Le halo la rend repérable en balayant la page. `--red-soft` est un token
+   EXISTANT (rgba littérale) : aucun `rgba(var(--…-rgb), α)` n'est introduit ici — cette forme est
+   silencieusement éliminée au parse (§215/§216) et la garde `styles.guard.test.ts` l'interdit. */
 .object-editor .input[aria-invalid='true'],
 .object-editor .textarea[aria-invalid='true'],
-.object-editor .select[aria-invalid='true'] { border-color: var(--red); }
+.object-editor .select[aria-invalid='true'] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-soft);
+}
 
 .object-editor .input,
 .object-editor .textarea,

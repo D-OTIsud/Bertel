@@ -7,9 +7,25 @@ import { spokenCodeToDescKey } from './sections/spoken-languages';
 export type ValidationTone = 'req' | 'warn';
 
 export interface Issue {
+  /**
+   * ⚠️ CHAMP SURCHARGÉ, et c'est délibéré : il porte un NUMÉRO de section pour les blocages de
+   * publication et les alertes (regroupés par `groupIssuesBySection`), mais un LIBELLÉ DE MODULE
+   * pour les erreurs d'enregistrement (un module couvre légitimement plusieurs sections).
+   * Ne pas s'en servir pour naviguer — utiliser `nums`.
+   */
   section: string;
   message: string;
   tone: ValidationTone;
+  /**
+   * Sections vers lesquelles sauter, dans l'ordre de pertinence (chantier 2026-08-28 n°4, lot C).
+   *
+   * C'est la SURCHARGE de `section` ci-dessus qui empêchait les erreurs d'enregistrement d'offrir
+   * un bouton « Aller › » : leur `section` est un libellé, et `document.getElementById('section-'
+   * + label)` ne désigne rien. Un champ séparé règle le problème sans toucher au regroupement
+   * existant. Absent ⇒ pas de saut (une erreur qui ne se rattache à aucune section reste lisible,
+   * elle n'offre simplement pas d'action).
+   */
+  nums?: string[];
 }
 
 type ValidationRule = (input: {

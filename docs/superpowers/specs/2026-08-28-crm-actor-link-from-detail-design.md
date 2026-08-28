@@ -32,8 +32,11 @@ priorité sur le nav persisté en `localStorage`) :
 - `?acteur=<id>` → `{ view: 'annuaire', actorId: id }` ⇒ `CrmActorFiche` s'ouvre ; le bouton
   « Retour » de la fiche ramène à l'annuaire (comportement `backFromActor` existant).
 - `?tab=` continue de fonctionner à l'identique.
-- Si les deux sont présents, `?acteur=` gagne (c'est l'intention la plus précise) et `?tab=`
-  ne sert qu'à choisir la vue de repli du retour, si valide.
+- Si les deux sont présents, `?acteur=` gagne à la fois sur `?tab=` et sur le nav persisté
+  (c'est l'intention la plus précise) : `?tab=` est alors simplement ignoré. Le bouton
+  « Retour » de la fiche ramène **toujours** à l'annuaire (`backFromActor` le fige en dur,
+  il ne lit pas `nav.view`) — il n'y a pas de « vue de repli » à choisir. (Une version
+  antérieure de cette conception promettait à tort un tel repli ; le code ne l'a jamais eu.)
 
 Pas de risque d'éjection : l'effet qui renvoie vers l'annuaire quand une recherche CRM est
 active ne se déclenche que si `effectiveCrmSearch(...)` est défini, or `useCrmSearchStore`

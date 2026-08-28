@@ -79,15 +79,15 @@ export default function CrmPage() {
     const tab = params.get('tab');
     const isValidTab = tab === 'annuaire' || tab === 'taches' || tab === 'timeline';
     // Deep-link d'ACTEUR (2026-08-28) : la carte d'acteur du tiroir de fiche y mène.
-    // ?acteur= prime sur ?tab= — c'est l'intention la plus précise, et l'onglet ne sert
-    // alors qu'à choisir la vue de repli du bouton « Retour » de la fiche.
+    // ?acteur= prime sur ?tab= ET sur le nav persisté — c'est l'intention la plus précise.
+    // ?tab= est alors simplement ignoré : le retour de la fiche acteur revient toujours à
+    // l'annuaire (backFromActor le fige en dur), il n'y a pas de vue de repli à choisir.
     // Validation minimale (chaîne non vide, comme loadNav) : le format uuid est éprouvé
     // par le serveur, et un id fabriqué à la main n'est pas un cas à instrumenter ici.
     const actorId = params.get('acteur')?.trim();
-    const fallbackView: CrmView = isValidTab ? (tab as CrmView) : 'annuaire';
 
     if (actorId) {
-      setNav({ view: fallbackView, actorId });
+      setNav({ view: 'annuaire', actorId });
     } else {
       setNav(isValidTab ? { view: tab as CrmView } : loadNav());
     }

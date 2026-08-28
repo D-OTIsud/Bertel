@@ -216,9 +216,12 @@ describe('deep-link ?tab= (hub personnel)', () => {
     localStorage.setItem('bertel-crm-nav-v2', JSON.stringify({ view: 'timeline' }));
     window.history.replaceState(null, '', '/crm?tab=taches&acteur=actor-1');
     renderPage();
+    // La fiche acteur (?acteur=) est bien affichée...
     expect(await screen.findByText('Appel tarifs')).toBeInTheDocument();
-    // Le retour de la fiche nomme l'onglet passé en ?tab= (vue de repli), pas l'annuaire.
-    expect(screen.getByRole('button', { name: /tâches & relances/i })).toBeInTheDocument();
+    // ...et ni la vue Tâches (?tab=taches) ni la vue Timeline (nav persisté) ne le sont :
+    // la victoire de ?acteur= porte sur les DEUX sources concurrentes à la fois.
+    expect(screen.queryByText('Rappeler le directeur')).not.toBeInTheDocument();
+    expect(screen.queryByText('Appel de suivi')).not.toBeInTheDocument();
   });
 
   it('?acteur= vide → aucune fiche acteur, repli sur le comportement actuel', async () => {

@@ -7,10 +7,12 @@ import { formatLastSeen } from './format-last-seen';
 /** Shape returned by the `children` render-prop — controls both role cells. */
 export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
 
-export function MembersTable({ members, currentUserId, onManagePermissions, onDeactivate, onDelete, children }: {
+export function MembersTable({ members, currentUserId, onManagePermissions, onEditProfile, onDeactivate, onDelete, children }: {
   members: OrgMember[];
   currentUserId: string | null;
   onManagePermissions: (m: OrgMember) => void;
+  /** Called when the admin clicks "Modifier" (identity modal) on a non-self row. */
+  onEditProfile?: (m: OrgMember) => void;
   /** Called when the admin clicks "Désactiver" on a non-self row. */
   onDeactivate?: (m: OrgMember) => void;
   /** Called when the admin clicks "Supprimer" (hard delete) on a non-self row. */
@@ -117,6 +119,16 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
                 )}
               </td>
               <td className="data-table__actions">
+                {!isSelf && onEditProfile && (
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={() => onEditProfile(m)}
+                    title="Modifier le profil de ce membre"
+                  >
+                    Modifier
+                  </button>
+                )}
                 {!isSelf && onDeactivate && (
                   <button type="button" className="ghost-button members-deactivate" onClick={() => onDeactivate(m)}>
                     Désactiver

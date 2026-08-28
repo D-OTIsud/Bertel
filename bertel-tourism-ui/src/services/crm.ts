@@ -1283,6 +1283,19 @@ export async function uploadActorPhoto(actorId: string, file: File): Promise<str
   return payload.url;
 }
 
+/**
+ * Chantier 2026-08-28 n°1 (sous-lot 1d) — cette sonde était PLUS STRICTE que le serveur.
+ *
+ * Elle ne testait que `user_has_permission('write_crm_notes')`, alors que la garde d'écriture
+ * `api.user_can_write_crm` / `api.user_can_write_crm_actor` accepte AUSSI le rang d'administration
+ * d'ORG. Un admin d'ORG sans ce code de permission voyait donc TOUT le module CRM en « Lecture
+ * seule » — 2 comptes de production dans ce cas. C'est l'inverse d'une fuite, mais c'est la même
+ * divergence front/serveur que §214, et elle se paie en travail impossible à faire.
+ *
+ * On appelle désormais `api.current_user_can_write_crm_notes()`, qui EST la source de vérité
+ * (manifeste 17c). Re-transcrire la chaîne de `OR` en TypeScript recréerait la divergence au
+ * premier changement de règle — c'est précisément ce qui s'est passé.
+ */
 export async function userCanWriteCrmNotes(): Promise<boolean> {
   const session = useSessionStore.getState();
   if (session.demoMode || session.role === 'owner' || session.role === 'super_admin') {
@@ -1292,13 +1305,13 @@ export async function userCanWriteCrmNotes(): Promise<boolean> {
   if (!client) {
     return false;
   }
-  const { data, error } = await client.schema('api').rpc('user_has_permission', {
-    p_permission_code: 'write_crm_notes',
-  });
+  const { data, error } = await client.schema('api').rpc('current_user_can_write_crm_notes');
   if (error) {
     // Fail-closed (lecture seule) mais loggué : un échec RPC ne doit pas passer inaperçu.
     console.warn('userCanWriteCrmNotes:', error.message);
     return false;
   }
+  // La fonction SQL garantit un booléen (COALESCE(…, FALSE), §204) ; on reste néanmoins strict
+  // ici : un `data` inattendu ne doit pas ouvrir l'écriture.
   return data === true;
 }

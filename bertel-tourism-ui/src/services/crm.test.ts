@@ -24,6 +24,7 @@ import {
   saveCrmInteraction,
   saveCrmTask,
   uploadActorPhoto,
+  userCanWriteCrmNotes,
 } from './crm';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { mockCrmDirectory } from '../data/mock';
@@ -1083,5 +1084,42 @@ describe('uploadActorPhoto', () => {
     global.fetch = fetchMock as unknown as typeof fetch;
     await expect(uploadActorPhoto('a1', makeFile())).resolves.toEqual(expect.any(String));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Chantier 2026-08-28 n°1, sous-lot 1d — la sonde d'interface était PLUS STRICTE que le
+// serveur : elle ne testait que `write_crm_notes`, alors que la garde SQL accepte aussi le
+// rang d'administration d'ORG. Un admin d'ORG voyait tout le CRM en « Lecture seule ».
+// ---------------------------------------------------------------------------------------
+describe('userCanWriteCrmNotes — parité avec la garde serveur (chantier 2026-08-28)', () => {
+  it('interroge la sonde SQL unique, jamais user_has_permission', async () => {
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+
+    await expect(userCanWriteCrmNotes()).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith('current_user_can_write_crm_notes');
+    // Re-transcrire la chaîne de OR côté client est exactement ce qui a créé la divergence.
+    expect(rpc).not.toHaveBeenCalledWith('user_has_permission', expect.anything());
+  });
+
+  it('fail-closed : une erreur RPC laisse en lecture seule, sans passer inaperçue', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+
+    await expect(userCanWriteCrmNotes()).resolves.toBe(false);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('une réponse inattendue n’ouvre PAS l’écriture', async () => {
+    useSessionStore.setState({ demoMode: false, role: 'tourism_agent' });
+    // La fonction SQL garantit un booléen (COALESCE, §204) ; le client reste strict quand même.
+    const rpc = jest.fn().mockResolvedValue({ data: null, error: null });
+    mockedGetApiClient.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    await expect(userCanWriteCrmNotes()).resolves.toBe(false);
   });
 });

@@ -180,3 +180,45 @@ it('targetUserId superuser mais cible inexistante : 404, aucun fichier écrit', 
   expect(server.__upload).not.toHaveBeenCalled();
   expect(server.__upsert).not.toHaveBeenCalled();
 });
+
+it('targetUserId superuser mais la lecture GoTrue échoue (user présent, error non-null) : 404, aucun fichier écrit', async () => {
+  // Isole la jambe `authTargetErr` du `if (authTargetErr || !authTarget?.user)` : `user` est
+  // présent ici, donc seul le test de `error` peut faire tomber cette requête en 404. Si cette
+  // moitié de la garde disparaissait silencieusement, ce test (et lui seul) rougirait.
+  const server = serverMock({
+    getUserById: jest.fn().mockResolvedValue({ data: { user: { id: TARGET } }, error: { message: 'boom' } }),
+  });
+  mockedServer.mockReturnValue(server as never);
+  mockedCreate.mockReturnValue(adminProbeMock(true, 0));
+
+  const res = await POST(req({ targetUserId: TARGET }));
+  expect(res.status).toBe(404);
+  expect((await res.json()).error).toBe('user_not_found');
+  expect(server.__upload).not.toHaveBeenCalled();
+  expect(server.__upsert).not.toHaveBeenCalled();
+});
+
+it('targetUserId égal à son propre id en MAJUSCULES (non-admin) : reste le bras "soi-même", chemin dérivé du JWT (callerId canonique), persistance en tant qu’appelant', async () => {
+  // Constat de revue : `userId` ne doit JAMAIS être alimenté par la chaîne cliente `target` sur
+  // le bras "soi-même" — seulement par `callerId` (JWT). Avant le correctif (`let userId =
+  // target`), ce test rougit : le chemin storage et l'update `.eq()` portent la casse envoyée
+  // par le client au lieu de l'id canonique du JWT.
+  const server = serverMock({});
+  mockedServer.mockReturnValue(server as never);
+  const asCallerEq = jest.fn().mockResolvedValue({ error: null });
+  const asCallerUpdate = jest.fn().mockReturnValue({ eq: asCallerEq });
+  mockedCreate.mockReturnValue({ from: () => ({ update: asCallerUpdate }) } as never);
+
+  const res = await POST(req({ targetUserId: CALLER.toUpperCase() }));
+  expect(res.status).toBe(201);
+  const body = await res.json();
+  expect(body.url).toContain(`${CALLER}/avatar.jpg`);
+  expect(body.url).not.toContain(CALLER.toUpperCase());
+  // Chemin storage dérivé du JWT, jamais de la chaîne cliente en majuscules.
+  expect(server.__upload).toHaveBeenCalledWith(`${CALLER}/avatar.jpg`, expect.anything(), expect.anything());
+  // Persistance EN TANT QU'APPELANT (policy self-update), pas le client service-role.
+  expect(asCallerUpdate).toHaveBeenCalled();
+  expect(asCallerEq).toHaveBeenCalledWith('id', CALLER);
+  expect(server.__update).not.toHaveBeenCalled();
+  expect(server.__upsert).not.toHaveBeenCalled();
+});

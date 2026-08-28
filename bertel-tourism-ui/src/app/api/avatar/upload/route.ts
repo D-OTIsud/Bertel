@@ -49,10 +49,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const targetRaw = form.get('targetUserId');
   const target = typeof targetRaw === 'string' && targetRaw.trim() !== '' ? targetRaw.trim() : callerId;
   // toLowerCase() : un appelant qui renvoie son propre id dans une autre casse ne doit pas
-  // basculer dans le bras admin (sinon la clé storage dérivée de cette casse dupliquerait
-  // l'objet canonique — cf. constat de revue ci-dessous sur la dérivation du chemin).
+  // basculer dans le bras admin.
   const isAdminBranch = target.toLowerCase() !== callerId.toLowerCase();
-  let userId = target;
+  // Chemin dérivé du JWT (callerId) sur le bras "soi-même", JAMAIS de la chaîne cliente `target` —
+  // sinon une casse différente de son propre id produirait une clé storage distincte de l'objet
+  // canonique (doublon dans le bucket). Sur le bras admin, `target` n'est qu'une valeur
+  // PROVISOIRE : elle est écrasée plus bas par la valeur canonique rendue par `getUserById`
+  // avant tout usage (chemin storage, upsert profil).
+  let userId = isAdminBranch ? target : callerId;
   if (isAdminBranch) {
     // authorizeAdminRoute refait sa propre résolution client/JWT (getServerSupabaseClient +
     // auth.getUser) au lieu de réutiliser celles ci-dessus — acceptable pour la réutilisation de

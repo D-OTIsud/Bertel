@@ -254,7 +254,7 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 16v. `migration_org_link_reconcile.sql` — voir la section dédiée **16v** plus bas (§214 : les branches `org_links` et `actors` de `api.save_object_relations` deviennent des réconciles non destructifs). Après 7, 8r, 8b, 8o et 16u.
 
-16w. `migration_crm_task_multi_assignee_notifications.sql` — voir la section dédiée **16w** plus bas (CRM kanban : `crm_task.created_by` immuable, table de liaison `crm_task_assignee`, `app_notification`, contrat `assignee_ids` de `api.save_crm_task`, 4 RPCs de boîte de réception). Après 8z. `NOTIFY pgrst` requis.
+16w. `migration_crm_task_multi_assignee_notifications.sql` — voir la section dédiée **16w** plus bas (CRM kanban : `crm_task.created_by` immuable, table de liaison `crm_task_assignee`, `app_notification`, contrat `assignee_ids` de `api.save_crm_task`, 3 RPCs de boîte de réception). Après 8z. `NOTIFY pgrst` requis.
 
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
@@ -774,7 +774,7 @@ Brief d'origine : `docs/superpowers/plans/2026-08-28-crm-kanban-task-improvement
 | `api.list_crm_tasks`, `api.list_object_crm` | **Même** contrat de tâche : `assignees[]` (jamais `null`), `created_by_id`, `created_by_name`. |
 | `api.list_my_notifications`, `mark_notification_read`, `mark_all_notifications_read` | Boîte de réception. Destinataire **toujours** `auth.uid()`, jamais un paramètre. `list` rend `{items, unread_count}` — **pas de RPC de comptage séparé** (voir décision 5). |
 
-### Cinq décisions qui ne sont pas des détails
+### Six décisions qui ne sont pas des détails
 
 **0. `assigned_at` n'est JAMAIS backfillé** (corrigé deux fois en revue). Trois rédactions :
 1. `assigned_at = crm_task.created_at`, « le seul instant observé » — faux : `crm_task.owner`
@@ -859,7 +859,12 @@ publication Realtime.
 
 ### Garde
 
-`tests/test_crm_task_multi_assignee.sql` (16w-test). Le backfill est éprouvé sur des
+`tests/test_crm_task_multi_assignee.sql` (16w-test). **L'ordre du bloc B est critique** : B0
+vérifie la complétude du corpus AVANT que le test n'appelle lui-même la fonction de reprise —
+cet appel réparerait tout et masquerait une migration qui aurait oublié la sienne (constaté).
+B5 compare la LIGNE ENTIÈRE (`to_jsonb`) et non une colonne : une rédaction antérieure ne
+regardait que `assigned_at`, si bien qu'un `DO UPDATE SET assigned_by = NULL` passait au vert.
+Le backfill est ensuite éprouvé sur des
 **témoins fabriqués** (une tâche jamais modifiée, une tâche modifiée) passés à
 `internal.crm_backfill_assignees_from_owner()` — jamais par déduction sur le corpus. La
 rédaction précédente déduisait « ligne backfillée » de `created_by IS NULL` : faux à
@@ -873,7 +878,7 @@ backfill non vacant (le corpus contient des tâches avec `owner`) ; sentinelle d
 (`assigned_at` écrit à `2001-01-01`) — comparer à `now()` ne distinguerait rien, `now()`
 étant figé sur toute la transaction.
 
-**Vérifié ROUGE par 11 sabotages** (migration + test rejoués en transaction annulée contre la
+**Vérifié ROUGE par 13 sabotages** (migration + test rejoués en transaction annulée contre la
 base vive, 2026-08-28) :
 
 | Sabotage | Assertion qui tombe |
@@ -889,6 +894,8 @@ base vive, 2026-08-28) :
 | colonne `assigned_at` omise ⇒ DEFAULT `now()` | B2 date posée par omission |
 | backfill en `DO UPDATE` (il réécrit) | B5 un second passage ne doit rien réécrire |
 | `api.count_my_unread_notifications` ré-introduite | A ce RPC ne doit pas exister |
+| l'appel de la reprise retiré de la MIGRATION | B0 corpus incomplet avant l'appel du test |
+| backfill en `DO UPDATE SET assigned_by = NULL` | B5 ligne entière comparée, pas une colonne |
 
 ### Application
 

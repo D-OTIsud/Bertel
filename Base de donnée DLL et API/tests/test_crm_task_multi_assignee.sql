@@ -4,10 +4,12 @@
 --
 -- A) STRUCTURE — colonnes/tables/index/FK/CHECK présents ; RLS activée et AUCUN grant
 --    anon/authenticated sur les deux tables neuves (l'accès PostgREST direct est fermé).
--- B) BACKFILL — éprouvé sur des TÉMOINS fabriqués (jamais par déduction sur le corpus) :
---    une ligne reprise depuis `owner` ne porte NI `assigned_by` NI `assigned_at`, que la
---    tâche ait été modifiée ou non ; la colonne est NULLABLE ; un second passage ne réécrit
---    rien. Plus une assertion de complétude sur le corpus réel (existence seulement).
+-- B) BACKFILL — B0 prouve d'abord que LA MIGRATION a fait la reprise (complétude du corpus,
+--    AVANT que ce test n'appelle lui-même la fonction, sans quoi cet appel la masquerait) ;
+--    puis B1→B5 éprouvent la RÈGLE sur des témoins fabriqués (jamais par déduction sur le
+--    corpus) : une ligne reprise ne porte NI `assigned_by` NI `assigned_at`, que la tâche ait
+--    été modifiée ou non ; la colonne est NULLABLE ; un second passage ne réécrit RIEN (ligne
+--    entière comparée, pas une colonne).
 -- C) CRÉATION — sans clé d'assignation ⇒ le saisisseur est assigné ET enregistré comme
 --    créateur ; avec deux assignés ⇒ les deux sortent, ordonnés PAR NOM (le témoin est
 --    construit pour que l'ordre des noms CONTREDISE l'ordre des uuid) ; doublons ⇒ une
@@ -64,6 +66,7 @@ DECLARE
   v_denied boolean;
   v_n int;
   v_before int;
+  v_prov jsonb;       -- ligne de provenance d'un témoin, comparée à l'identique (B5)
 BEGIN
   -- ═══════════════ A. STRUCTURE ═══════════════
   ASSERT EXISTS (SELECT 1 FROM information_schema.columns
@@ -119,13 +122,30 @@ BEGIN
     WHERE n.nspname='api' AND p.proname='count_my_unread_notifications'),
     'A: api.count_my_unread_notifications ne doit pas exister (la pastille vient de la liste)';
 
-  -- ═══════════════ B. BACKFILL — sur des TÉMOINS, pas sur une heuristique ═══════════════
+  -- ═══════════════ B. BACKFILL ═══════════════
+  -- ORDRE CRITIQUE. B0 s'exécute AVANT que ce test n'appelle lui-même la fonction de
+  -- reprise : cet appel-là réparerait tout le corpus et masquerait une migration qui aurait
+  -- OUBLIÉ d'appeler la sienne (constaté — en retirant le `SELECT internal.crm_backfill…`
+  -- de la migration, la garde restait verte). B0 prouve donc que LA MIGRATION a fait la
+  -- reprise ; B1→B5 éprouvent ensuite la RÈGLE sur des témoins fabriqués.
+
+  -- B0. Complétude du corpus, AVANT tout appel de ce test. Ne parle que d'existence : c'est
+  -- ce qui la rend sans risque de faux positif sur des données vivantes.
+  ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
+         'B0: aucune tâche avec owner dans le corpus — l''assertion de reprise serait vacante';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task ct
+    WHERE ct.owner IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a WHERE a.task_id = ct.id)),
+    'B0: une tâche porte un owner sans ligne crm_task_assignee — LA MIGRATION n''a pas '
+    'appelé internal.crm_backfill_assignees_from_owner()';
+
+  -- ── Témoins ────────────────────────────────────────────────────────────────────────────
   -- Première rédaction : « une ligne backfillée = une tâche dont created_by IS NULL ».
   -- FAUX, et à retardement : le trigger `api.create_crm_artifacts_from_incident` crée des
   -- tâches SANS créateur APRÈS 16w ; dès qu'une d'elles sera assignée par api.save_crm_task,
   -- elle portera un `assigned_by` parfaitement légitime et la garde rougirait sur une donnée
-  -- saine. On éprouve donc la RÈGLE sur des témoins qu'on fabrique, jamais le corpus par
-  -- déduction.
+  -- saine (bloc B6). On éprouve donc la RÈGLE sur des témoins qu'on fabrique.
   --
   -- Les témoins couvrent les DEUX formes qu'une rédaction antérieure croyait pouvoir
   -- distinguer : jamais modifiée, et modifiée. La règle actuelle les traite identiquement —
@@ -173,24 +193,18 @@ BEGIN
              AND column_name='assigned_at') = 'YES',
          'B3: crm_task_assignee.assigned_at doit être NULLABLE (NULL = date inconnue)';
 
-  -- B4. Complétude, sur le corpus RÉEL cette fois — cette assertion-là n'a aucun risque de
-  -- faux positif : elle ne parle que d'existence.
-  ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
-         'B4: aucune tâche avec owner dans le corpus — l''assertion de backfill serait vacante';
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM crm_task ct
-    WHERE ct.owner IS NOT NULL
-      AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a WHERE a.task_id = ct.id)),
-    'B4: une tâche porte un owner sans aucune ligne crm_task_assignee (backfill incomplet)';
-
-  -- B5. Le backfill ne RÉÉCRIT jamais une ligne existante : une assignation déjà écrite par
-  -- api.save_crm_task garde sa provenance si le backfill repasse (ON CONFLICT DO NOTHING).
+  -- B5. Le backfill ne RÉÉCRIT jamais une ligne existante. On compare la LIGNE ENTIÈRE,
+  -- pas une colonne : une rédaction antérieure ne regardait que `assigned_at`, si bien qu'un
+  -- `DO UPDATE SET assigned_by = NULL` passait au vert. `to_jsonb` couvre aussi les colonnes
+  -- qui seront ajoutées plus tard.
   UPDATE crm_task_assignee SET assigned_by = v_userA, assigned_at = TIMESTAMPTZ '2001-01-01 00:00:00+00'
    WHERE task_id = v_t_bf_neuve;
+  SELECT to_jsonb(a) INTO v_prov FROM crm_task_assignee a WHERE a.task_id = v_t_bf_neuve;
+  ASSERT v_prov IS NOT NULL, 'B5 (prémisse): la ligne témoin doit exister avant le second passage';
   PERFORM internal.crm_backfill_assignees_from_owner();
-  ASSERT (SELECT assigned_at FROM crm_task_assignee WHERE task_id = v_t_bf_neuve)
-         = TIMESTAMPTZ '2001-01-01 00:00:00+00',
-         'B5: un second passage du backfill ne doit RIEN réécrire (ON CONFLICT DO NOTHING)';
+  ASSERT (SELECT to_jsonb(a) FROM crm_task_assignee a WHERE a.task_id = v_t_bf_neuve) = v_prov,
+         'B5: un second passage du backfill ne doit RIEN réécrire d''une ligne existante '
+         '(ON CONFLICT DO NOTHING) — ni assigned_by, ni assigned_at, ni quoi que ce soit';
 
   -- ═══════════════ Fixture ═══════════════
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code='publisher' LIMIT 1;

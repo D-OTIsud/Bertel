@@ -601,6 +601,108 @@ describe('ObjectDetailView', () => {
     expect(screen.getByText("Coordonnées réservées à l'organisation éditrice.")).toBeInTheDocument();
   });
 
+  // ---------------------------------------------------------------------------------------
+  // Chantier 3a (2026-08-28) — doublon de contacts entre « Contact » et « Équipe interne ».
+  // Les liens acteurs sont `partners` dans 783 cas sur 785 en production : leurs coordonnées
+  // n'entrent donc PAS dans contacts.public, et le doublon visible est bien celui-ci —
+  // la carte d'acteur qui répète un numéro déjà affiché en « Contact ».
+  // ---------------------------------------------------------------------------------------
+  it('3a — l\'équipe interne ne répète pas un numéro déjà affiché en « Contact » et montre le suivant', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-dup-contact',
+      name: 'Hotel Doublon',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Hotel dont l exploitant porte le meme numero que la fiche.' },
+        contacts: [{ id: 'contact-1', label: 'Accueil', kind_code: 'phone', value: '0262 49 64 59' }],
+        actors: [
+          {
+            id: 'actor-1',
+            display_name: 'Marie Exploitante',
+            role: { name: 'Direction' },
+            visibility: 'partners',
+            contacts: [
+              // MÊME numéro que la fiche, saisi au format international et sous un autre `kind`.
+              { kind_code: 'mobile', value: '+262 262 49 64 59' },
+              { kind_code: 'email', value: 'marie@doublon.re' },
+            ],
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    // La fiche affiche bien son numéro…
+    expect(screen.getByText('0262 49 64 59')).toBeInTheDocument();
+    // …et la carte d'acteur ne le répète pas sous sa forme internationale.
+    expect(screen.queryByText(/\+262 262 49 64 59/)).not.toBeInTheDocument();
+    // Elle affiche la coordonnée SUIVANTE, qui, elle, n'est visible nulle part ailleurs.
+    expect(screen.getByText('Marie Exploitante')).toBeInTheDocument();
+    expect(screen.getByText(/marie@doublon\.re/)).toBeInTheDocument();
+  });
+
+  it('3a — un contact de fiche NON PUBLIC ne masque rien : le doublon n\'existe pas à l\'écran', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-private-contact',
+      name: 'Hotel Contact Interne',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'Le numero de la fiche est interne, celui de l acteur reste utile.' },
+        contacts: [{ id: 'contact-1', label: 'Ligne interne', kind_code: 'phone', value: '0262 49 64 59', is_public: false }],
+        actors: [
+          {
+            id: 'actor-1',
+            display_name: 'Marie Exploitante',
+            role: { name: 'Direction' },
+            visibility: 'partners',
+            contacts: [{ kind_code: 'mobile', value: '+262 262 49 64 59' }],
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    // Le contact interne n'est pas rendu en « Contact »…
+    expect(screen.queryByText('0262 49 64 59')).not.toBeInTheDocument();
+    // …donc la ligne de l'acteur DOIT rester : la masquer priverait le lecteur de la seule
+    // occurrence visible de cette coordonnée.
+    expect(screen.getByText(/\+262 262 49 64 59/)).toBeInTheDocument();
+  });
+
+  it('3a — un acteur dont toutes les coordonnées sont déjà visibles garde sa carte, SANS le message « réservées »', () => {
+    const data: ObjectDetail = {
+      id: 'hotel-all-dup',
+      name: 'Hotel Tout Doublon',
+      type: 'HOT',
+      raw: {
+        descriptions: { description: 'L exploitant ne porte que des coordonnees deja affichees.' },
+        contacts: [{ id: 'contact-1', label: 'Accueil', kind_code: 'phone', value: '0262 49 64 59' }],
+        actors: [
+          {
+            id: 'actor-1',
+            display_name: 'Marie Exploitante',
+            role: { name: 'Direction' },
+            visibility: 'partners',
+            contacts: [{ kind_code: 'mobile', value: '+262 262 49 64 59' }],
+            contacts_restricted: false,
+          },
+        ],
+      },
+    };
+
+    renderDetail(data);
+
+    expect(screen.getByText('Marie Exploitante')).toBeInTheDocument();
+    expect(screen.getByText('Direction')).toBeInTheDocument();
+    expect(screen.queryByText(/\+262 262 49 64 59/)).not.toBeInTheDocument();
+    // §208 — le message « réservées » signifie un REFUS SERVEUR. L'employer ici serait un
+    // mensonge sur la cause : le serveur a bien émis la coordonnée, elle est simplement
+    // déjà sous les yeux du lecteur.
+    expect(screen.queryByText("Coordonnées réservées à l'organisation éditrice.")).not.toBeInTheDocument();
+  });
+
   it('shows only the three most recent team notes by default and lets the user expand the list', () => {
     const data: ObjectDetail = {
       id: 'hotel-notes',

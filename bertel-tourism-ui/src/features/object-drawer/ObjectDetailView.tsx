@@ -50,6 +50,7 @@ import {
 import { DEFAULT_APP_MAP_STYLE } from '../../lib/map-style';
 import {
   type PrivateNoteEntry,
+  contactComparisonKey,
   parseObjectDetail,
   type ParsedAmenityItem,
   type ParsedLocation,
@@ -2963,6 +2964,11 @@ function PracticalSection({ facts, openings }: { facts: PracticalFact[]; opening
   );
 }
 
+/** Nombre de cartes réellement rendues par « Contact ». Exporté au module parce que la dédup
+ *  de « Équipe interne » doit comparer aux contacts VISIBLES, pas à la liste entière : masquer
+ *  une ligne d'acteur à cause d'un contact que le lecteur ne voit pas serait un mensonge. */
+const CONTACT_CARDS_SHOWN = 6;
+
 function ContactSection({ contacts }: { contacts: ContactItem[] }) {
   if (!contacts.length) {
     return null;
@@ -2972,7 +2978,7 @@ function ContactSection({ contacts }: { contacts: ContactItem[] }) {
     <Section title="Contact" aside>
       <div className="detail-contact-list">
         <div className="detail-contact-card detail-contact-card--deck">
-          {contacts.slice(0, 6).map((contact) => (
+          {contacts.slice(0, CONTACT_CARDS_SHOWN).map((contact) => (
             <ContactCard key={contact.id} contact={contact} />
           ))}
         </div>
@@ -3081,7 +3087,23 @@ function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
   );
 }
 
-function TeamSection({ actors }: { actors: ActorItem[] }) {
+/**
+ * Chantier 3a (2026-08-28) — un même numéro porté par la fiche ET par son exploitant s'affichait
+ * DEUX FOIS d'affilée : une carte dans « Contact » (sans marqueur de provenance) et la ligne meta
+ * de la carte d'acteur. On saute donc, sur la carte d'acteur, la première coordonnée déjà VISIBLE
+ * dans « Contact », et on affiche la suivante.
+ *
+ * `shownContactKeys` vient des contacts réellement rendus par ContactSection — jamais de
+ * `parsed.contacts.object`, qui contient aussi les contacts internes : masquer une ligne d'acteur
+ * à cause d'un contact que le lecteur ne voit nulle part serait un mensonge, pas une dédup.
+ * La dédup s'applique APRÈS la garde `canSeeActors` (le registre passe `[]` sinon) : elle ne peut
+ * donc pas servir d'oracle sur des acteurs masqués.
+ *
+ * ponytail: la comparaison est par ACTEUR, pas globale — deux acteurs distincts portant la même
+ * valeur absente de la fiche l'afficheront tous les deux. C'est voulu : cette valeur n'est alors
+ * affichée nulle part ailleurs, et la masquer sur l'un des deux serait arbitraire.
+ */
+function TeamSection({ actors, shownContactKeys }: { actors: ActorItem[]; shownContactKeys: ReadonlySet<string> }) {
   if (!actors.length) {
     return null;
   }
@@ -3089,23 +3111,33 @@ function TeamSection({ actors }: { actors: ActorItem[] }) {
   return (
     <Section title="Equipe interne" aside restricted>
       <div className="detail-card-list">
-        {actors.slice(0, 5).map((actor) => (
-          <div key={actor.id} className="detail-mini-card">
-            <div className="detail-mini-card__header">
-              <strong>{actor.name}</strong>
-              {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
+        {actors.slice(0, 5).map((actor) => {
+          const line = actor.contactEntries.find(
+            (entry) => !shownContactKeys.has(contactComparisonKey(entry.kindCode, entry.value)),
+          );
+
+          return (
+            <div key={actor.id} className="detail-mini-card">
+              <div className="detail-mini-card__header">
+                <strong>{actor.name}</strong>
+                {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
+              </div>
+              {line ? (
+                <p className="detail-mini-card__meta">{`${line.label}: ${line.value}`}</p>
+              ) : (
+                // §208 — contacts_restricted distingue « réservé » de « rien saisi » : ne jamais
+                // laisser un vide silencieux quand la vraie raison est un refus d'accès serveur.
+                // La condition porte sur ce que le SERVEUR a émis (contactEntries), jamais sur le
+                // résultat de la dédup : un acteur dont toutes les coordonnées sont déjà visibles
+                // n'est pas un refus d'accès, et le dire serait un mensonge sur la cause.
+                actor.contactEntries.length === 0 &&
+                actor.contactsRestricted && (
+                  <p className="detail-mini-card__meta">Coordonnées réservées à l&apos;organisation éditrice.</p>
+                )
+              )}
             </div>
-            {actor.contacts[0] ? (
-              <p className="detail-mini-card__meta">{actor.contacts[0]}</p>
-            ) : (
-              // §208 — contacts_restricted distingue « réservé » de « rien saisi » : ne jamais
-              // laisser un vide silencieux quand la vraie raison est un refus d'accès serveur.
-              actor.contactsRestricted && (
-                <p className="detail-mini-card__meta">Coordonnées réservées à l&apos;organisation éditrice.</p>
-              )
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </Section>
   );
@@ -3760,6 +3792,19 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
+  // Chantier 3a — clés des coordonnées RÉELLEMENT rendues par « Contact » (donc la tranche
+  // affichée, pas la liste entière) : « Équipe interne » s'en sert pour ne pas répéter une
+  // valeur déjà sous les yeux du lecteur.
+  const shownContactKeys = useMemo(
+    () =>
+      new Set(
+        preview.contacts
+          .slice(0, CONTACT_CARDS_SHOWN)
+          .map((contact) => contactComparisonKey(contact.kindCode, contact.value))
+          .filter(Boolean),
+      ),
+    [preview.contacts],
+  );
   const taxonomyGroups = useMemo(
     () => pickGroups(preview.taxonomyGroups, ['classifications', 'labels', 'badges', 'sustainability']),
     [preview.taxonomyGroups],
@@ -3958,7 +4003,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     { key: 'web-channels', id: '', label: '', placement: 'aside', render: () => <WebChannelsSection channels={preview.webChannels} /> },
     { key: 'practical', id: '', label: '', placement: 'aside', render: () => <PracticalSection facts={practicalFacts} openings={preview.openings} /> },
     { key: 'related', id: '', label: '', placement: 'aside', render: () => <RelatedObjectsSection items={preview.relatedObjects} /> },
-    { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} /> },
+    { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} shownContactKeys={shownContactKeys} /> },
     { key: 'network', id: '', label: '', placement: 'aside', render: () => <NetworkSection organizations={preview.organizations} memberships={preview.memberships} /> },
   ];
 

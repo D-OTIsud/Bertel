@@ -41,6 +41,7 @@ import { buildActivityFacts } from './activity-facts';
 import { CopyButton } from '../../components/common/CopyButton';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
 import { getMarkerImageId } from '../../config/map-markers';
+import { visibleNavItems } from '../../config/nav-items';
 import {
   useAddObjectPrivateNoteMutation,
   useDeleteObjectPrivateNoteMutation,
@@ -3103,7 +3104,15 @@ function RelatedObjectsSection({ items }: { items: RelatedObjectItem[] }) {
  * valeur absente de la fiche l'afficheront tous les deux. C'est voulu : cette valeur n'est alors
  * affichée nulle part ailleurs, et la masquer sur l'un des deux serait arbitraire.
  */
-function TeamSection({ actors, shownContactKeys }: { actors: ActorItem[]; shownContactKeys: ReadonlySet<string> }) {
+function TeamSection({
+  actors,
+  shownContactKeys,
+  crmHrefFor,
+}: {
+  actors: ActorItem[];
+  shownContactKeys: ReadonlySet<string>;
+  crmHrefFor: (actor: ActorItem) => string | null;
+}) {
   if (!actors.length) {
     return null;
   }
@@ -3115,26 +3124,58 @@ function TeamSection({ actors, shownContactKeys }: { actors: ActorItem[]; shownC
           const line = actor.contactEntries.find(
             (entry) => !shownContactKeys.has(contactComparisonKey(entry.kindCode, entry.value)),
           );
+          const crmHref = crmHrefFor(actor);
+
+          const header = (
+            <div className="detail-mini-card__header">
+              <strong>{actor.name}</strong>
+              <span className="detail-mini-card__header-end">
+                {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
+                {crmHref && <ExternalLink size={14} aria-hidden className="detail-mini-card__crm-icon" />}
+              </span>
+            </div>
+          );
+
+          const meta = line ? (
+            <p className="detail-mini-card__meta">{`${line.label}: ${line.value}`}</p>
+          ) : (
+            // §208 — contacts_restricted distingue « réservé » de « rien saisi » : ne jamais
+            // laisser un vide silencieux quand la vraie raison est un refus d'accès serveur.
+            // La condition porte sur ce que le SERVEUR a émis (contactEntries), jamais sur le
+            // résultat de la dédup : un acteur dont toutes les coordonnées sont déjà visibles
+            // n'est pas un refus d'accès, et le dire serait un mensonge sur la cause.
+            actor.contactEntries.length === 0 &&
+            actor.contactsRestricted && (
+              <p className="detail-mini-card__meta">Coordonnées réservées à l&apos;organisation éditrice.</p>
+            )
+          );
+
+          // Lien vers la fiche CRM (2026-08-28) : un vrai <a href>, pas un onClick — ⌘/ctrl-clic
+          // et clic-milieu doivent marcher. `target="_blank"` préserve le tiroir, les filtres et
+          // la sélection de l'Explorer : consulter le CRM d'un exploitant est une consultation
+          // LATÉRALE, pas un abandon de la fiche en cours. L'aria-label est obligatoire : sans
+          // lui le lecteur d'écran annonce le contenu concaténé de la carte, qui ne dit pas où
+          // le lien mène.
+          if (crmHref) {
+            return (
+              <a
+                key={actor.id}
+                href={crmHref}
+                target="_blank"
+                rel="noreferrer"
+                className="detail-mini-card detail-mini-card--crm"
+                aria-label={`Ouvrir la fiche CRM de ${actor.name}`}
+              >
+                {header}
+                {meta}
+              </a>
+            );
+          }
 
           return (
             <div key={actor.id} className="detail-mini-card">
-              <div className="detail-mini-card__header">
-                <strong>{actor.name}</strong>
-                {actor.role && <span className="detail-chip detail-chip--soft">{actor.role}</span>}
-              </div>
-              {line ? (
-                <p className="detail-mini-card__meta">{`${line.label}: ${line.value}`}</p>
-              ) : (
-                // §208 — contacts_restricted distingue « réservé » de « rien saisi » : ne jamais
-                // laisser un vide silencieux quand la vraie raison est un refus d'accès serveur.
-                // La condition porte sur ce que le SERVEUR a émis (contactEntries), jamais sur le
-                // résultat de la dédup : un acteur dont toutes les coordonnées sont déjà visibles
-                // n'est pas un refus d'accès, et le dire serait un mensonge sur la cause.
-                actor.contactEntries.length === 0 &&
-                actor.contactsRestricted && (
-                  <p className="detail-mini-card__meta">Coordonnées réservées à l&apos;organisation éditrice.</p>
-                )
-              )}
+              {header}
+              {meta}
             </div>
           );
         })}
@@ -3792,6 +3833,35 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
   const canSeeActors = useActorVisibility(preview.organizations);
+
+  // Lien « carte d'acteur → fiche CRM » (2026-08-28). DEUX gardes, aucune requête réseau :
+  //
+  // (a) Accès au module — on interroge le registre UNIQUE des modules navigables plutôt que
+  //     de retranscrire une 4e fois `roles + requiresEdit` (sidebar, ⌘K, nav mobile le lisent
+  //     déjà). C'est le signal « éditeur ou plus » : canEditObjects =
+  //     api.current_user_can_edit_objects() (superuser, admin d'ORG, ou l'une des 4
+  //     permissions éditables).
+  //
+  // (b) Périmètre CRM sur CET acteur — `contacts_restricted` du payload EST le prédicat
+  //     `NOT api.can_read_actor_contacts(objet)` = `NOT (superuser OR objet ∈
+  //     current_user_crm_object_ids())`. Or api.list_actor_crm autorise si `superuser OR
+  //     acteur ∈ current_user_crm_actor_ids()`, ensemble qui contient tout acteur lié par
+  //     actor_object_role à un objet du périmètre — et cet acteur est rendu ici PRÉCISÉMENT
+  //     parce qu'il porte ce lien vers cet objet. Donc `!contactsRestricted` ⇒ le CRM
+  //     autorisera : aucun lien affiché ne peut retomber sur un 42501.
+  //     Ce n'est pas un second palier de droits, c'est la garde anti-lien-mort.
+  const sessionRoleForCrm = useSessionStore((state) => state.role);
+  const demoModeForCrm = useSessionStore((state) => state.demoMode);
+  const canEditForCrm = useSessionStore((state) => state.canEditObjects);
+  const canReachCrm = useMemo(
+    () => visibleNavItems(sessionRoleForCrm, demoModeForCrm, canEditForCrm).some((item) => item.to === '/crm'),
+    [sessionRoleForCrm, demoModeForCrm, canEditForCrm],
+  );
+  const crmHrefFor = useCallback(
+    (actor: ActorItem) =>
+      canReachCrm && !actor.contactsRestricted ? `/crm?acteur=${encodeURIComponent(actor.id)}` : null,
+    [canReachCrm],
+  );
   // Chantier 3a — clés des coordonnées RÉELLEMENT rendues par « Contact » (donc la tranche
   // affichée, pas la liste entière) : « Équipe interne » s'en sert pour ne pas répéter une
   // valeur déjà sous les yeux du lecteur.
@@ -4003,7 +4073,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     { key: 'web-channels', id: '', label: '', placement: 'aside', render: () => <WebChannelsSection channels={preview.webChannels} /> },
     { key: 'practical', id: '', label: '', placement: 'aside', render: () => <PracticalSection facts={practicalFacts} openings={preview.openings} /> },
     { key: 'related', id: '', label: '', placement: 'aside', render: () => <RelatedObjectsSection items={preview.relatedObjects} /> },
-    { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} shownContactKeys={shownContactKeys} /> },
+    { key: 'team', id: '', label: '', placement: 'aside', render: () => <TeamSection actors={canSeeActors ? preview.actors : []} shownContactKeys={shownContactKeys} crmHrefFor={crmHrefFor} /> },
     { key: 'network', id: '', label: '', placement: 'aside', render: () => <NetworkSection organizations={preview.organizations} memberships={preview.memberships} /> },
   ];
 

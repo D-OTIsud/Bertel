@@ -71,8 +71,23 @@ lecture seule reste `tourism_agent` mais ne voit ni l'entrée CRM du menu, ni ce
 Ce n'est **pas un second palier de droits** : c'est la garde qui empêche d'offrir un lien
 menant à une erreur. Un éditeur de l'ORG A regardant une fiche publiée par l'ORG B est bien
 « éditeur ou plus », mais `api.list_actor_crm` lui répondra `42501` sur les acteurs de cette
-fiche. La garde est **gratuite** (l'information est déjà dans le payload) et ne retire le
-lien à aucun éditeur qui aurait pu s'en servir.
+fiche. La garde est **gratuite** (l'information est déjà dans le payload).
+
+La condition est **suffisante** (démonstration en 4 points ci-dessous) mais **pas
+nécessaire** : elle est délibérément plus étroite que le périmètre propre de
+`api.list_actor_crm` (`current_user_crm_actor_ids()`), qui ajoute par UNION tout acteur
+portant une `crm_interaction` sur un objet du périmètre CRM de l'appelant, indépendamment de
+tout lien `actor_object_role`. `contacts_restricted` ne voit que le lien `actor_object_role`
+de CET objet ; il ne voit rien du reste du périmètre acteur de la session.
+
+Perte concrète : l'ORG de l'appelant détient un lien NON-publisher sur la fiche Y (la section
+« Équipe interne » s'y affiche quand même, via le bras e-mail d'ORG de `canRevealActors`), et
+l'acteur P y est aussi rattaché. Si P est par ailleurs lié à une fiche X publiée par cette
+même ORG, sa fiche CRM EST lisible (P ∈ `current_user_crm_actor_ids()` via X) — pourtant le
+lien sur la carte de la fiche Y reste supprimé, puisque `contacts_restricted` n'y évalue que
+Y, jamais X. La perte tombe toujours du bon côté : un lien manquant, jamais un lien cassé.
+L'élargir demanderait une sonde par acteur (`user_can_read_crm_actor`), que la section 4
+exclut explicitement.
 
 Démonstration que la condition est **suffisante** (donc qu'aucun lien affiché ne peut échouer) :
 
@@ -97,7 +112,12 @@ par carte.**
 ## 3. Rendu
 
 Quand les deux conditions tiennent, la carte est rendue comme un `<a>` ; sinon elle reste le
-`<div>` actuel, **strictement inchangé** (mêmes classes, même contenu, même dédup §3a).
+`<div>` actuel. Ce qui reste identique dans les deux branches : l'information affichée (nom,
+pastille de rôle, coordonnée, dédup §3a) et la classe de base `detail-mini-card`. Ce qui
+change dans **les deux** branches : la pastille de rôle est désormais toujours enveloppée
+dans `<span class="detail-mini-card__header-end">` (pour se grouper avec l'icône sortante
+côté lien) — sans effet visuel, l'en-tête étant `display:flex; justify-content:space-between`
+et le wrapper de largeur nulle quand il ne porte rien.
 
 - `class="detail-mini-card detail-mini-card--crm"` — la classe de base ne bouge pas, la
   modifieuse ne porte que l'affordance (curseur, hover, focus).
@@ -107,10 +127,13 @@ Quand les deux conditions tiennent, la carte est rendue comme un `<a>` ; sinon e
 - `aria-label="Ouvrir la fiche CRM de {nom}"` — sans lui, le lecteur d'écran annonce le
   contenu concaténé de la carte (« Mme Mélissa Fontaine Exploitant Mobile: 0692… lien »),
   qui ne dit pas où le lien mène.
-- Une icône `ArrowUpRight` (lucide, 14 px, `aria-hidden`) dans l'en-tête, à côté de la
-  pastille de rôle : seul signal **visible** que le lien est sortant.
-- CSS : hover + `:where(:focus-visible)` (règle maison §139, `NEVER revert`), sans décalage
-  de layout au survol.
+- Une icône `ExternalLink` (lucide, 14 px, `aria-hidden`) dans l'en-tête, à côté de la
+  pastille de rôle : seul signal **visible** que le lien est sortant. Pas `ArrowUpRight`
+  (l'icône envisagée initialement) : `ExternalLink` était déjà importée dans le fichier pour
+  un autre usage, et la réutiliser évite une dépendance de plus pour un signal identique.
+- CSS : hover uniquement. Pas de règle `:focus-visible` locale : l'anneau vient de la règle
+  globale `:where(:focus-visible)` de `styles.css` (§139, `NEVER revert`) — en ajouter une
+  ici la doublerait. Le survol translate (`transform`), sans décalage de layout.
 
 La ligne meta n'est que du texte brut — ni `mailto:`/`tel:`, ni `CopyButton` (contrairement à
 `ContactCard`) — donc rendre la carte entière cliquable ne capture aucun geste existant.
@@ -128,20 +151,46 @@ La ligne meta n'est que du texte brut — ni `mailto:`/`tel:`, ni `CopyButton` (
 
 ## 5. Vérification
 
-Quatre tests RTL, aucun framework ni fixture nouveaux (`useSessionStore.setState` est déjà le
-levier de persona des tests de ce fichier) :
+Six tests RTL, aucun framework ni fixture nouveaux — trois dans
+`ObjectDetailView.test.tsx` (`useSessionStore.setState` est déjà le levier de persona de ce
+fichier), trois dans `CrmPage.test.tsx` (à la fin du bloc `describe('deep-link ?tab= (hub
+personnel)')`, qui a déjà le `beforeEach`/`afterEach` nécessaires). Le témoin d'acteur réel
+est `Mme Mélissa Fontaine` / `actor-42` (pas `Jean Dupont` / `actor-1` — cette dernière
+identité sert au troisième cas, hors périmètre CRM).
 
-1. **Éditeur, acteur dans le périmètre** (`canEditObjects: true`, `contacts_restricted`
-   absent/false) → `getByRole('link', { name: /fiche CRM de Jean Dupont/i })` avec
-   `href="/crm?acteur=actor-1"` et `target="_blank"`.
-2. **Lecteur seul** (`canEditObjects: false`) → aucun lien, **et le nom reste affiché** : la
-   garde retire l'affordance, pas l'information.
+**`ObjectDetailView.test.tsx`**
+
+1. **Éditeur, acteur dans le périmètre** (`canEditObjects: true`, `contacts_restricted:
+   false`) → `getByRole('link', { name: 'Ouvrir la fiche CRM de Mme Mélissa Fontaine' })`
+   avec `href="/crm?acteur=actor-42"`, `target="_blank"`, `rel` contenant `noreferrer`, et
+   `draggable="false"` (correctif trouvé en exécution — voir « défauts trouvés » du journal
+   de décision §225). Une assertion `within(link)` prouve que la pastille de rôle et la
+   ligne meta (coordonnée) sont bien À L'INTÉRIEUR de l'ancre, pas seulement présentes
+   ailleurs sur la page. Une dernière assertion vérifie que l'icône SVG porte
+   `aria-hidden="true"` (elle ne doit jamais devenir annonçable).
+2. **Lecteur seul** (`canEditObjects: false`) → aucun lien, et le nom reste affiché : la
+   garde retire l'affordance, pas l'information. C'est la garde non vacante pour la
+   condition (a) : neutraliser `canReachCrm` dans `crmHrefFor` a été vérifié faire rougir ce
+   test avant de committer la tâche.
 3. **Éditeur hors périmètre** (`contacts_restricted: true`) → aucun lien, et le message
-   « Coordonnées réservées à l'organisation éditrice. » reste (non-régression §208).
-4. **`CrmPage`** : monté avec `?acteur=<id>` → la fiche acteur est ouverte ; monté avec
-   `?tab=taches` → l'onglet Tâches, inchangé.
+   « Coordonnées réservées à l'organisation éditrice. » reste affiché (non-régression §208).
 
-Le test 2 est la garde non vacante : neutraliser la condition (a) doit le faire rougir.
+**`CrmPage.test.tsx`**
+
+4. `?acteur=actor-1` (fixture pré-existante `actorSnapshot` du fichier, pas une fixture
+   neuve) → la fiche acteur s'ouvre (`findByText('Appel tarifs')`, une interaction que seule
+   cette vue rend) et `listActorCrm` est appelé avec `'actor-1'`.
+5. `?tab=taches&acteur=actor-1` avec un nav persisté `{ view: 'timeline' }` → `?acteur=`
+   gagne sur les deux sources concurrentes : la fiche acteur s'affiche, et ni la vue Tâches
+   ni la vue Timeline ne sont rendues.
+6. `?acteur=` vide → aucune fiche acteur, comportement actuel inchangé (annuaire),
+   `listActorCrm` non appelé.
+
+Une découverte de fixture pendant l'exécution avait rendu l'assertion `within(link)` du
+test 1 vacante par construction dans une première version : le mobile du témoin était
+l'UNIQUE contact public de la fiche, donc la dédup §3a le retirait de la carte équipe avant
+que le test ne puisse l'y voir. Corrigé en passant `visibility: 'partners'` sur le lien de
+l'acteur (valeur réaliste : 783 liens acteurs sur 785 le sont en production).
 
 ## 6. Fichiers touchés
 
@@ -149,6 +198,6 @@ Le test 2 est la garde non vacante : neutraliser la condition (a) doit le faire 
 |---|---|
 | `src/features/object-drawer/ObjectDetailView.tsx` | `TeamSection` accepte `crmHrefFor: (actor) => string \| null` ; le registre le calcule depuis `visibleNavItems` |
 | `src/views/CrmPage.tsx` | lecture de `?acteur=` au mount, en miroir de `?tab=` |
-| `src/styles.css` | `.detail-mini-card--crm` (hover + focus-visible) |
+| `src/styles.css` | `.detail-mini-card--crm` (hover uniquement — le focus vient de la règle globale `:where(:focus-visible)`) |
 | `src/features/object-drawer/ObjectDetailView.test.tsx` | tests 1–3 |
-| `src/views/CrmPage` (test) | test 4 |
+| `src/views/CrmPage.test.tsx` | tests 4–6 |

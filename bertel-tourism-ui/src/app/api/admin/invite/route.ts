@@ -1,32 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { authorizeAdminRoute } from '../_authorize';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const server = getServerSupabaseClient();
-  if (!server) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 });
-
-  const authHeader = req.headers.get('authorization') ?? '';
-  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  const { data: caller, error: callerErr } = await server.auth.getUser(jwt);
-  if (callerErr || !caller?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-
-  // Authorize AS THE CALLER (service-role bypasses RLS, so this gate is the boundary).
-  const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-  const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  const [{ data: isSuper }, { data: rank }] = await Promise.all([
-    asCaller.schema('api').rpc('is_platform_superuser'),
-    asCaller.schema('api').rpc('current_user_admin_rank'),
-  ]);
-  const authorized = isSuper === true || (typeof rank === 'number' && rank >= 30);
-  if (!authorized) return NextResponse.json({ error: 'forbidden', detail: 'org_admin (rank ≥ 30) or platform superuser required' }, { status: 403 });
+  const auth = await authorizeAdminRoute(req);
+  if (!auth.ok) return auth.response;
+  const { server } = auth;
 
   // Intentionally consumes only `email` (+ `resend`); membership + roles + permissions are wired
   // client-side as the admin via the rank-gated RPCs (see InviteMemberDialog).

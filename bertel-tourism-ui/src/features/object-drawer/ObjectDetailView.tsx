@@ -3163,6 +3163,12 @@ function TeamSection({
                 href={crmHref}
                 target="_blank"
                 rel="noreferrer"
+                // Chantier revue (2026-08-28, §215) : Chrome/Firefox démarrent un drag de lien
+                // natif au mousedown sur un <a>, ce qui avale la sélection à la souris de la
+                // coordonnée de l'acteur (mobile/e-mail dans `meta`) — exactement le persona
+                // qui gagne ce lien (éditeur du périmètre CRM) est celui qui veut la copier.
+                // `draggable={false}` coupe ce drag natif sans toucher au clic de navigation.
+                draggable={false}
                 className="detail-mini-card detail-mini-card--crm"
                 aria-label={`Ouvrir la fiche CRM de ${actor.name}`}
               >

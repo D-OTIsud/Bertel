@@ -29,6 +29,10 @@ beforeEach(() => {
   ]);
   crmMock.saveCrmInteraction.mockResolvedValue('new-reply');
   crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
+  // Le modal de tâche liée a besoin des deux : sans eux, « Créer » resterait désactivé et
+  // le test rougirait pour une raison sans rapport avec ce qu'il éprouve.
+  crmMock.saveCrmTask.mockResolvedValue('new-task');
+  crmMock.listCrmAssignees.mockResolvedValue([{ userId: 'usr-local-marie', displayName: 'Marie D.' }]);
 });
 
 describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () => {
@@ -175,5 +179,38 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
     expect(within(card).getByText(/et sa 1 réponse|et ses 1 réponse|1 réponse/i)).toBeInTheDocument();
     fireEvent.click(within(card).getByRole('button', { name: /^oui$/i }));
     await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('evt-1'));
+  });
+});
+
+describe('CrmTimelineView — créer une tâche depuis une demande', () => {
+  it('crée la tâche liée avec l’établissement et l’acteur de la carte', async () => {
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    fireEvent.click(screen.getAllByRole('button', { name: /créer une tâche/i })[0]);
+
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer la photo' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({ objectId: 'obj-1', actorId: 'actor-1', relatedInteractionId: 'evt-1' }),
+      ),
+    );
+  });
+
+  // C'est la SEULE surface où `objectId` peut être null par construction (interaction
+  // « Générale »). L'affordance reste RENDUE et expliquée, elle ne disparaît pas.
+  it('demande sans établissement : bouton désactivé AVEC raison, pas absent', async () => {
+    crmMock.listCrmTimeline.mockResolvedValue({
+      ...mockCrmTimeline,
+      items: [{ ...mockCrmTimeline.items[0], objectId: null, objectName: null }],
+    });
+    renderTimeline();
+    await screen.findByText('Appel de suivi');
+    const button = screen.getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toMatch(/aucun établissement/i);
   });
 });

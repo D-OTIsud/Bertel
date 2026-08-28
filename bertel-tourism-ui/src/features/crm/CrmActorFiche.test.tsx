@@ -845,3 +845,50 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(assignBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 });
+
+describe('CrmActorFiche — créer une tâche depuis une demande', () => {
+  it('crée la tâche liée avec l’établissement de la demande et l’acteur de la FICHE', async () => {
+    renderFiche();
+    await screen.findByText('Appel tarifs');
+    // i1 est ancrée sur obj-1 ; i2 sur obj-2 — on cible la carte d'i1 par son corps.
+    const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
+    fireEvent.click(within(card).getByRole('button', { name: /créer une tâche/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
+    // Établissement imposé : pas de picker (le serveur refuserait un autre objet, 22023).
+    expect(within(dialog).queryByRole('combobox', { name: 'Établissement' })).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Rappeler' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          objectId: 'obj-1',
+          relatedInteractionId: 'i1',
+          // L'acteur vient de la ROUTE : les cartes de cette fiche ne portent pas d'actorId.
+          actorId: 'actor-1',
+          title: 'Rappeler',
+        }),
+      ),
+    );
+  });
+
+  // i3 est l'interaction « Générale » (objectId null) de la fixture : témoin prêt.
+  it('demande « Générale » (sans établissement) : bouton désactivé avec raison', async () => {
+    renderFiche();
+    const card = (await screen.findByText('Tour d’horizon.')).closest('.tl-card') as HTMLElement;
+    const button = within(card).getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toMatch(/aucun établissement/i);
+  });
+
+  it('lecture seule : bouton désactivé, aucune écriture possible', async () => {
+    renderFiche({ canWrite: false });
+    await screen.findByText('Appel tarifs');
+    expect(screen.getAllByRole('button', { name: /créer une tâche/i })[0]).toBeDisabled();
+    expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
+  });
+});

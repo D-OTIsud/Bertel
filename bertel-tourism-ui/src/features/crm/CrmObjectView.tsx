@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
 import { deleteCrmInteraction, listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
+import { CrmTaskFromInteractionModal } from './CrmTaskModal';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 
@@ -42,6 +43,10 @@ export function CrmObjectView({
   const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
   const topicsQuery = useQuery({ queryKey: ['crm-demand-topics'], queryFn: listDemandTopics });
   const [composerOpen, setComposerOpen] = useState(false);
+  // Demande depuis laquelle une tâche est en cours de création. Le modal est monté par la
+  // VUE, jamais par la carte : crm-primitives est une primitive de présentation SANS accès
+  // service (cf. son en-tête), et sa suite de tests n'a ni provider ni mock de service.
+  const [taskFromInteraction, setTaskFromInteraction] = useState<CrmTimelineCardItem | null>(null);
 
   const resolved = useMemo(() => {
     for (const entry of directoryQuery.data ?? []) {
@@ -70,8 +75,13 @@ export function CrmObjectView({
         topicName: item.topicName,
         sentimentCode: item.sentimentCode,
         sentimentName: item.sentimentName,
-        objectId: null,
-        objectName: null,
+        // Le contexte objet est celui de la VUE. Il était posé à null en dur — raccourci
+        // d'affichage devenu inutile (`showContext={false}` empêche déjà le rendu du
+        // CtxTag) mais qui rendait la donnée fausse : toute action ayant besoin de
+        // l'établissement de la carte (« Créer une tâche ») s'y désactivait en silence,
+        // précisément sur la surface où l'établissement est le mieux connu.
+        objectId,
+        objectName,
         ownerName: item.ownerName,
         actorName: item.actorName,
         actorId: item.actorId,
@@ -194,6 +204,7 @@ export function CrmObjectView({
               onResolve={handleResolve}
               onEditInteraction={handleEditInteraction}
               onDeleteInteraction={handleDeleteInteraction}
+              onCreateTask={setTaskFromInteraction}
             />
           </div>
         </div>
@@ -229,6 +240,16 @@ export function CrmObjectView({
           topics={topicsQuery.data ?? []}
           onClose={() => setComposerOpen(false)}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-object', objectId] })}
+        />
+      )}
+
+      {taskFromInteraction && canWrite && (
+        <CrmTaskFromInteractionModal
+          interaction={taskFromInteraction}
+          onClose={() => setTaskFromInteraction(null)}
+          // Une tâche n'est pas une interaction : cette vue ne l'affiche pas, on n'invalide
+          // donc PAS son propre snapshot — seulement le kanban.
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
         />
       )}
     </div>

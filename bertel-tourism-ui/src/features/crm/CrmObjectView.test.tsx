@@ -72,6 +72,10 @@ beforeEach(() => {
   crmMock.listDemandTopics.mockResolvedValue([{ code: 'demande_de_visite', name: 'Demande de visite' }]);
   crmMock.saveCrmInteraction.mockResolvedValue('new-interaction');
   crmMock.deleteCrmInteraction.mockResolvedValue(undefined);
+  // Sans ces deux-là, le modal « Créer une tâche » s'ouvrirait avec une liste d'assignés vide
+  // ⇒ « Créer » désactivé, et le test rougirait pour une raison ÉTRANGÈRE à ce qu'il teste.
+  crmMock.saveCrmTask.mockResolvedValue('new-task');
+  crmMock.listCrmAssignees.mockResolvedValue([{ userId: 'usr-local-marie', displayName: 'Marie D.' }]);
 });
 
 describe('CrmObjectView (§61 — vue établissement)', () => {
@@ -264,5 +268,74 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     fireEvent.click(within(reply).getByRole('button', { name: /^supprimer$/i }));
     fireEvent.click(within(reply).getByRole('button', { name: /^oui$/i }));
     await waitFor(() => expect(crmMock.deleteCrmInteraction).toHaveBeenCalledWith('i1-r1'));
+  });
+});
+
+describe('CrmObjectView — créer une tâche depuis une demande', () => {
+  // NON-RÉGRESSION du correctif : les cartes de cette vue portaient `objectId: null` en dur.
+  // Sans ce test, un revert repasserait au VERT tout en désactivant l'action sur toute la
+  // surface — précisément celle où l'établissement est le mieux connu.
+  it('les cartes portent l’établissement de la vue (l’action n’est donc pas désactivée ici)', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    const button = screen.getAllByRole('button', { name: /créer une tâche/i })[0];
+    expect(button).toBeEnabled();
+  });
+
+  it('crée la tâche liée : établissement imposé (lecture seule) + relatedInteractionId', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getAllByRole('button', { name: /créer une tâche/i })[0]);
+
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
+    // L'établissement n'est PAS un picker : il est imposé par la demande (le serveur refuse
+    // un autre objet, 22023). On assère donc son ABSENCE en tant que combobox.
+    expect(within(dialog).queryByRole('combobox', { name: 'Établissement' })).not.toBeInTheDocument();
+    expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
+        expect.objectContaining({ objectId: 'obj-1', relatedInteractionId: 'i1', title: 'Relancer' }),
+      ),
+    );
+  });
+
+  it('reprend l’acteur de la demande quand elle en a un', async () => {
+    renderView();
+    await screen.findByText('Appel tarifs');
+    fireEvent.click(screen.getAllByRole('button', { name: /créer une tâche/i })[0]);
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée/i });
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() =>
+      expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ actorId: 'actor-1' })),
+    );
+  });
+
+  // i2 porte actorId null : la clé ne doit alors PAS être émise (et surtout pas à null, que le
+  // RPC lirait comme un détachement explicite d'acteur).
+  it('demande sans acteur : aucune clé actorId dans le payload', async () => {
+    renderView();
+    await screen.findByText('Adhésion 2026');
+    const cards = screen.getAllByRole('button', { name: /créer une tâche/i });
+    fireEvent.click(cards[cards.length - 1]);
+    const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée/i });
+    fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Suivi adhésion' } });
+    await within(dialog).findByLabelText('Attribuer à');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalled());
+    expect(crmMock.saveCrmTask.mock.calls[0][0]).not.toHaveProperty('actorId');
+    expect(crmMock.saveCrmTask.mock.calls[0][0]).toMatchObject({ relatedInteractionId: 'i2' });
+  });
+
+  it('lecture seule : le bouton est désactivé avec sa raison', async () => {
+    renderView({ canWrite: false });
+    await screen.findByText('Appel tarifs');
+    expect(screen.getAllByRole('button', { name: /créer une tâche/i })[0]).toBeDisabled();
   });
 });

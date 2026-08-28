@@ -19,12 +19,58 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
+import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
+
+/**
+ * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le
+ * verrou d'établissement et le lien d'interaction déjà posés — les trois surfaces qui
+ * rendent un fil (fiche acteur, vue établissement, timeline) la montent à l'identique, ce
+ * qui évite trois copies du même câblage et donc trois occasions de diverger.
+ *
+ * Ne rend RIEN si l'interaction n'a pas d'établissement : le serveur refuserait le lien
+ * (22023). Ce cas est déjà annoncé côté carte par un bouton désactivé avec sa raison, il
+ * n'est donc pas silencieux.
+ */
+export function CrmTaskFromInteractionModal({
+  interaction,
+  actorId,
+  onClose,
+  onSaved,
+}: {
+  interaction: CrmTimelineCardItem;
+  /** Force l'acteur (la fiche acteur le connaît par sa route ; ses cartes ne le portent pas). */
+  actorId?: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  if (!interaction.objectId) return null;
+  const fixedObject = {
+    objectId: interaction.objectId,
+    objectName: interaction.objectName ?? interaction.objectId,
+  };
+  const resolvedActorId = actorId ?? interaction.actorId ?? undefined;
+  return (
+    <CrmTaskModal
+      picker="select"
+      // `fixedObject` verrouille l'affichage ; `objectOptions` fait résoudre `resolvedObject`
+      // (sans quoi « Créer » resterait grisé sans explication).
+      fixedObject={fixedObject}
+      objectOptions={[fixedObject]}
+      relatedInteractionId={interaction.id}
+      {...(resolvedActorId ? { actorId: resolvedActorId } : {})}
+      onClose={onClose}
+      onSaved={onSaved}
+    />
+  );
+}
 
 export function CrmTaskModal({
   actorId,
   objectOptions,
   picker,
+  fixedObject,
+  relatedInteractionId,
   onClose,
   onSaved,
 }: {
@@ -32,6 +78,20 @@ export function CrmTaskModal({
   actorId?: string;
   objectOptions: Array<{ objectId: string; objectName: string }>;
   picker: 'select' | 'datalist';
+  /**
+   * Établissement IMPOSÉ (création depuis une demande) : rendu en lecture seule au lieu du
+   * picker. Le verrou est ÉNONCÉ, pas subi — passer une seule option verrouillerait de fait
+   * aujourd'hui (pré-sélection + pas de ligne « Aucun »), mais un futur `allowClear` ou une
+   * seconde option rouvrirait le refus serveur 22023 sans que rien ne le signale.
+   * L'hôte doit AUSSI le passer dans `objectOptions`, sinon `resolvedObject` reste nul et
+   * le bouton « Créer » est mort sans explication.
+   */
+  fixedObject?: { objectId: string; objectName: string };
+  /**
+   * Interaction de suivi à lier (§66). `api.save_crm_task` valide que son `object_id` est
+   * celui de la tâche — d'où `fixedObject`, qui rend ce refus impossible côté UI.
+   */
+  relatedInteractionId?: string;
   onClose: () => void;
   /** Appelé APRÈS écriture confirmée — la vue invalide ses queries. */
   onSaved: () => void;
@@ -43,9 +103,10 @@ export function CrmTaskModal({
   const [title, setTitle] = useState('');
   // Auto-sélection PO point 3 : en mode select avec UN SEUL établissement, on le pré-coche
   // (le champ est requis ⇒ formulaire plus proche du submit). Sinon vide (choix explicite).
-  const [objectId, setObjectId] = useState(() =>
-    picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '',
-  );
+  const [objectId, setObjectId] = useState(() => {
+    if (fixedObject) return fixedObject.objectId;
+    return picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '';
+  });
   const [dueAt, setDueAt] = useState('');
   // 16w — `null` = « l'utilisateur n'a encore rien choisi », distinct de `[]` = « il a tout
   // décoché ». La sélection effective est DÉRIVÉE : le défaut s'applique donc même si la
@@ -70,6 +131,9 @@ export function CrmTaskModal({
       return saveCrmTask({
         objectId: resolvedObject.objectId,
         ...(actorId ? { actorId } : {}),
+        // Clé ABSENTE quand il n'y a pas de lien : le RPC lit `payload ? 'related_interaction_id'`,
+        // une clé présente à '' vaudrait un détachement explicite.
+        ...(relatedInteractionId ? { relatedInteractionId } : {}),
         title: title.trim(),
         dueAt: dueAt || null,
         assigneeIds: selectedAssignees,
@@ -91,7 +155,9 @@ export function CrmTaskModal({
 
   return (
     <CrmModal
-      title="Nouvelle tâche"
+      // Le titre DIT le lien : c'est la seule chose qui distingue ce formulaire du formulaire
+      // libre, et l'établissement en lecture seule serait autrement inexpliqué.
+      title={relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
       onClose={onClose}
       footer={
         <>
@@ -116,14 +182,22 @@ export function CrmTaskModal({
 
       <label className="crm-field">
         Établissement
-        <SearchSelect
-          aria-label="Établissement"
-          value={objectId}
-          options={objectOptions.map((object) => ({ code: object.objectId, label: object.objectName }))}
-          onChange={setObjectId}
-          placeholder="— Choisir un établissement —"
-          searchPlaceholder="Rechercher un établissement…"
-        />
+        {fixedObject ? (
+          // Lecture seule assumée : la tâche hérite de l'établissement de la demande, et le
+          // serveur refuserait tout autre choix (22023). On ne rend PAS un picker désactivé —
+          // SearchSelect n'a pas de prop `disabled`, et lui en ajouter une toucherait un
+          // composant partagé bien au-delà du CRM.
+          <span className="crm-field__static">{fixedObject.objectName}</span>
+        ) : (
+          <SearchSelect
+            aria-label="Établissement"
+            value={objectId}
+            options={objectOptions.map((object) => ({ code: object.objectId, label: object.objectName }))}
+            onChange={setObjectId}
+            placeholder="— Choisir un établissement —"
+            searchPlaceholder="Rechercher un établissement…"
+          />
+        )}
       </label>
 
       <label className="crm-field">

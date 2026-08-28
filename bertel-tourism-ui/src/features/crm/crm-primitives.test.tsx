@@ -623,3 +623,72 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
     expect(await findByText(/refus RLS/)).toBeInTheDocument();
   });
 });
+
+// « Créer une tâche » depuis une demande. La primitive ne monte AUCUN modal (elle n'a pas
+// d'accès service, cf. l'en-tête du fichier) : elle remonte la carte à l'hôte, qui décide.
+describe('TlThreadActions — créer une tâche depuis la demande', () => {
+  it('sans onCreateTask : aucun bouton (l’action n’existe pas pour cet hôte)', () => {
+    const { queryByRole } = render(<CrmTimeline items={[makeItem()]} canWrite onReply={jest.fn()} />);
+    expect(queryByRole('button', { name: /créer une tâche/i })).not.toBeInTheDocument();
+  });
+
+  it('remonte la carte ENTIÈRE à l’hôte (objectId/objectName/id sont ce dont le modal a besoin)', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'int-42' })]} canWrite onCreateTask={onCreateTask} />,
+    );
+    fireEvent.click(getByRole('button', { name: /créer une tâche/i }));
+    expect(onCreateTask).toHaveBeenCalledTimes(1);
+    expect(onCreateTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'int-42', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon' }),
+    );
+  });
+
+  it('lecture seule : bouton DÉSACTIVÉ avec la raison, jamais masqué (no-write-trap)', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline
+        items={[makeItem()]}
+        canWrite={false}
+        readOnlyReason="Vous n’avez pas la permission."
+        onCreateTask={onCreateTask}
+      />,
+    );
+    const button = getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', 'Vous n’avez pas la permission.');
+  });
+
+  // Une interaction « Générale » n'a pas d'établissement ; `api.save_crm_task` refuserait le
+  // lien (22023, cohérence d'objet). On le DIT au lieu de laisser un bouton qui échouerait.
+  it('demande sans établissement : bouton désactivé avec SA raison propre', () => {
+    const onCreateTask = jest.fn();
+    const { getByRole } = render(
+      <CrmTimeline items={[makeItem({ objectId: null, objectName: null })]} canWrite onCreateTask={onCreateTask} />,
+    );
+    const button = getByRole('button', { name: /créer une tâche/i });
+    expect(button).toBeDisabled();
+    expect(button.getAttribute('title')).toMatch(/aucun établissement/i);
+    fireEvent.click(button);
+    expect(onCreateTask).not.toHaveBeenCalled();
+  });
+
+  // Même invariant que les autres contrôles du fil : un <button> dans un role="button" est
+  // invalide (ARIA/clavier). Le test global l'exige déjà à 0 contrôle sous la région, mais on
+  // le nomme ici pour que la cause soit lisible si ce bouton-ci régresse.
+  it('a11y : le bouton est un FRÈRE de la région role=button, pas son descendant', () => {
+    const { container, getByRole } = render(
+      <CrmTimeline items={[makeItem()]} canWrite onCreateTask={jest.fn()} onOpenActor={jest.fn()} />,
+    );
+    const nav = container.querySelector('.tl-card__nav') as HTMLElement;
+    expect(nav).toHaveAttribute('role', 'button');
+    expect(nav.contains(getByRole('button', { name: /créer une tâche/i }))).toBe(false);
+  });
+
+  // La barre d'actions ne doit pas dépendre de la PRÉSENCE d'une autre action : un hôte qui
+  // ne passerait que `onCreateTask` doit quand même la voir (piège de câblage `hasThreadActions`).
+  it('seule action du fil : la barre d’actions est tout de même rendue', () => {
+    const { getByRole } = render(<CrmTimeline items={[makeItem()]} canWrite onCreateTask={jest.fn()} />);
+    expect(getByRole('button', { name: /créer une tâche/i })).toBeInTheDocument();
+  });
+});

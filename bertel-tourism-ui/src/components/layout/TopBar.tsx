@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, Fragment } from 'react';
+import { useEffect, useMemo, useState, Fragment, type KeyboardEvent } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, Search } from 'lucide-react';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
@@ -10,6 +10,11 @@ import { useUiStore } from '../../store/ui-store';
 import { Input } from '@/components/ui/input';
 import { LivePresenceIndicator } from './LivePresenceIndicator';
 import { CreateObjectButton } from '../../features/object-editor/create/CreateObjectButton';
+import { ExplorerSearchSuggestions, shouldShowSuggestions } from './ExplorerSearchSuggestions';
+import { useNameMatchQuery } from '../../hooks/useNameMatchQuery';
+import type { NameMatch } from '../../services/name-search';
+
+const SUGGESTIONS_LISTBOX_ID = 'explorer-search-suggestions';
 
 function pageLabelFromPath(pathname: string | null): string {
   if (!pathname || pathname === '/') return 'Accueil';
@@ -49,12 +54,84 @@ export function TopBar() {
   const search = isCrm ? crmSearch : explorerSearch;
   const setSearch = isCrm ? setCrmSearch : setExplorerSearch;
   const drawerObjectId = useUiStore((state) => state.drawerObjectId);
+  const openDrawer = useUiStore((state) => state.openDrawer);
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const setCommandPaletteOpen = useUiStore((state) => state.setCommandPaletteOpen);
   const setMobileNavOpen = useUiStore((state) => state.setMobileNavOpen);
   const drawerDirty = useObjectDrawerStore((state) =>
     drawerObjectId ? Boolean(state.dirtyObjects[drawerObjectId]) : false,
   );
+
+  // ---------------------------------------------------------------------------
+  // Concordances directes (spec 2026-08-26) — EXPLOREUR SEULEMENT. Le CRM garde sa
+  // recherche serveur d'acteurs (§195) : `isCrm` coupe tout ce bloc.
+  //
+  // La liste vit dans ExplorerSearchSuggestions, mais le CLAVIER vit ici : c'est
+  // l'`<Input>` qui porte le focus, et un menu ne doit jamais le lui voler.
+  // ---------------------------------------------------------------------------
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [suggestionIndex, setSuggestionIndex] = useState(-1);
+  const suggestionTerm = isCrm ? '' : search;
+  // Même hook, même clé de requête que le composant : TanStack sert les deux depuis
+  // le cache, il n'y a donc pas de second aller-retour.
+  const { data: suggestions } = useNameMatchQuery(suggestionsOpen ? suggestionTerm : '');
+  const suggestionsVisible = !isCrm && shouldShowSuggestions(suggestionsOpen, suggestionTerm, suggestions.length);
+
+  // Remise à zéro de l'index QUAND LE TERME CHANGE, faite PENDANT LE RENDU et non
+  // dans un `useEffect` (doctrine §213) : deux effets du même commit liraient tous
+  // deux l'état d'AVANT, et une flèche pressée juste après une frappe viserait la
+  // ligne de la saisie précédente. L'ajustement d'état re-rend immédiatement.
+  const [prevSuggestionTerm, setPrevSuggestionTerm] = useState(suggestionTerm);
+  if (prevSuggestionTerm !== suggestionTerm) {
+    setPrevSuggestionTerm(suggestionTerm);
+    setSuggestionIndex(-1);
+  }
+
+  const closeSuggestions = () => {
+    setSuggestionsOpen(false);
+    setSuggestionIndex(-1);
+  };
+
+  const pickSuggestion = (match: NameMatch) => {
+    // Ouvre la fiche SANS toucher aux filtres : c'est de la navigation. L'URL
+    // `?fiche=` suit toute seule (mécanique D25) — rien à écrire ici.
+    openDrawer(match.id);
+    closeSuggestions();
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (!suggestionsVisible) {
+      // Échap ferme le menu même quand il vient de disparaître ; les autres touches
+      // suivent leur cours normal (la recherche complète reste pilotée par le store).
+      if (event.key === 'Escape') {
+        closeSuggestions();
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const delta = event.key === 'ArrowDown' ? 1 : -1;
+      setSuggestionIndex((prev) => (prev + delta + suggestions.length) % suggestions.length);
+      return;
+    }
+    if (event.key === 'Enter') {
+      const picked = suggestionIndex >= 0 ? suggestions[suggestionIndex] : undefined;
+      if (picked) {
+        // Une ligne est sélectionnée : Entrée y va. Sinon on ne fait RIEN de
+        // spécial — la recherche complète continue, le store porte déjà le terme.
+        event.preventDefault();
+        pickSuggestion(picked);
+      } else {
+        closeSuggestions();
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSuggestions();
+    }
+  };
 
   const [now, setNow] = useState(() => new Date());
   const [isMounted, setIsMounted] = useState(false);
@@ -117,14 +194,25 @@ export function TopBar() {
           <span className="text-ink">{pageLabel}</span>
         </div>
 
-        <label className="flex h-10 w-full max-w-[860px] items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3.5">
+        <label className="relative flex h-10 w-full max-w-[860px] items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3.5">
           <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
           <Input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onFocus={() => setSuggestionsOpen(true)}
+            onBlur={closeSuggestions}
+            onKeyDown={handleSearchKeyDown}
             placeholder={isCrm ? CRM_SEARCH_PLACEHOLDER : EXPLORER_SEARCH_PLACEHOLDER}
             aria-label={isCrm ? 'Rechercher un acteur' : 'Rechercher une fiche'}
+            role={isCrm ? undefined : 'combobox'}
+            aria-expanded={isCrm ? undefined : suggestionsVisible}
+            aria-controls={isCrm ? undefined : SUGGESTIONS_LISTBOX_ID}
+            aria-activedescendant={
+              suggestionsVisible && suggestionIndex >= 0
+                ? `${SUGGESTIONS_LISTBOX_ID}-${suggestionIndex}`
+                : undefined
+            }
             className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
           {/* D24 : le raccourci affiché n'est plus décoratif — il ouvre la palette. */}
@@ -137,6 +225,15 @@ export function TopBar() {
           >
             ⌘K
           </button>
+          {isCrm ? null : (
+            <ExplorerSearchSuggestions
+              query={suggestionTerm}
+              open={suggestionsOpen}
+              activeIndex={suggestionIndex}
+              onPick={pickSuggestion}
+              listboxId={SUGGESTIONS_LISTBOX_ID}
+            />
+          )}
         </label>
 
         <div className="flex items-center gap-2">

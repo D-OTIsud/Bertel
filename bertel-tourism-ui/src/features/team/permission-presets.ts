@@ -43,3 +43,42 @@ const PRESETS: Record<string, string[]> = {
 export function presetPermissionsFor(roleCode: string): string[] {
   return PRESETS[roleCode] ?? [];
 }
+
+/** Écart entre les droits d'un membre et le préréglage de son (nouveau) rôle métier. */
+export interface RoleChangeReview {
+  /** Codes du préréglage que le membre n'a PAS (ni individuellement, ni par héritage d'ORG). */
+  missing: string[];
+  /** Droits INDIVIDUELS au-delà du préréglage — les seuls qu'on puisse révoquer depuis /team. */
+  excess: string[];
+}
+
+/**
+ * D5 (2026-08-28) — changer le rôle métier n'appliquait RIEN.
+ *
+ * `rpc_set_business_role` ne touche pas aux permissions, et rien ne rejoue le préréglage : un
+ * membre passé Lecteur → Éditeur gardait **0 permission** (l'étiquette changeait, les droits non),
+ * et un Éditeur → Lecteur gardait les **12**. L'écran n'en disait rien.
+ *
+ * Cette fonction ne décide de rien : elle CONSTATE l'écart pour que l'écran puisse le dire.
+ *
+ * **Le préréglage reste strictement ADDITIF** (arbitrage : c'est l'architecture documentée —
+ * « le rôle métier ne confère aucun droit implicite »). Aucune révocation automatique à la
+ * rétrogradation, et c'est délibéré : `rpc_list_org_members` ne rend AUCUNE provenance de grant,
+ * donc on ne peut pas distinguer un droit venu du préréglage d'un droit accordé exprès. Révoquer
+ * en masse retirerait des droits que quelqu'un a choisi d'accorder.
+ *
+ * `excess` ne contient que les droits INDIVIDUELS : un droit hérité de l'ORG ne se retire pas
+ * depuis la fiche d'un membre, et le proposer serait un piège.
+ */
+export function reviewRoleChange(
+  roleCode: string,
+  individualCodes: readonly string[],
+  inheritedCodes: readonly string[] = [],
+): RoleChangeReview {
+  const preset = new Set(presetPermissionsFor(roleCode));
+  const effective = new Set([...individualCodes, ...inheritedCodes]);
+  return {
+    missing: [...preset].filter((code) => !effective.has(code)).sort(),
+    excess: individualCodes.filter((code) => !preset.has(code)).sort(),
+  };
+}

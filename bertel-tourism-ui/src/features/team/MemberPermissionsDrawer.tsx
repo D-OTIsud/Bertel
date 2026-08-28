@@ -27,12 +27,16 @@ interface MemberPermissionsDrawerProps {
   onChanged: () => void;
 }
 
-// Human-readable category labels (categories: content / crm / team / media).
+// Libellés humains des catégories de `ref_permission`.
+// `legal` a été ajoutée par `migration_unblock_team_legal_access.sql` (§193) sans être traduite
+// ici : le titre de groupe s'affichait en code brut « legal » (D2, corrigé le 2026-08-28).
+// Le CHECK de `ref_permission.category` est la source — toute nouvelle catégorie doit atterrir ici.
 const CATEGORY_LABELS: Record<string, string> = {
   content: 'Contenu',
   crm: 'CRM',
   team: 'Équipe',
   media: 'Médias',
+  legal: 'Juridique',
 };
 
 function groupByCategory(permissions: RefPermission[]): Array<{ category: string; label: string; perms: RefPermission[] }> {
@@ -141,18 +145,35 @@ export function MemberPermissionsDrawer({
                   {perms.map((p) => {
                     const userHas = member.permissionCodes.includes(p.code);
                     const orgHas = orgPermissions.includes(p.code);
+                    // D1 (2026-08-28) — une case DÉCOCHÉE sous un badge « héritée de l'ORG » se
+                    // lisait comme « ce droit manque » : un admin la cochait « pour réparer » et
+                    // créait un DOUBLON (un droit individuel redondant que plus rien ne
+                    // distinguera de l'héritage). L'état indéterminé dit la vérité : le droit
+                    // est ACQUIS, mais pas par cette case — qui, elle, ne pilote que
+                    // `user_permission` et ne peut pas retirer l'héritage.
+                    const inheritedOnly = orgHas && !userHas;
                     return (
                       <li key={p.code} className="perm-row">
                         <input
                           type="checkbox"
                           id={`perm-user-${p.code}`}
                           checked={userHas}
+                          ref={(el) => {
+                            if (el) el.indeterminate = inheritedOnly;
+                          }}
+                          aria-describedby={orgHas ? `perm-inherit-${p.code}` : undefined}
                           onChange={() => void toggleUserPermission(p.code, userHas)}
                           className="perm-check"
                         />
                         <label htmlFor={`perm-user-${p.code}`} className="perm-row__label">
                           {p.name}
-                          {orgHas && <span className="perm-inherit">héritée de l’ORG</span>}
+                          {orgHas && (
+                            <span id={`perm-inherit-${p.code}`} className="perm-inherit">
+                              {inheritedOnly
+                                ? 'déjà acquise via l’ORG — inutile de la cocher'
+                                : 'héritée de l’ORG (l’octroi individuel fait doublon)'}
+                            </span>
+                          )}
                         </label>
                       </li>
                     );

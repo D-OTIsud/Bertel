@@ -35,7 +35,12 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
         {members.map((m) => {
           const isSelf = m.userId === currentUserId;
           const cells = children ? children(m, isSelf) : null;
-          const count = m.permissionCodes.length;
+          // D1 (2026-08-28) — le compteur ignorait l'héritage d'ORG : un membre pouvait afficher
+          // « 0 permission » tout en en ayant. On compte l'UNION (un droit à la fois hérité et
+          // accordé individuellement ne compte qu'une fois).
+          const effectiveCodes = new Set([...m.permissionCodes, ...m.inheritedPermissionCodes]);
+          const count = effectiveCodes.size;
+          const inheritedCount = m.inheritedPermissionCodes.length;
           const lastSeen = formatLastSeen(m.lastSeenAt);
           return (
             <tr key={m.membershipId}>
@@ -69,6 +74,37 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onDe
                 >
                   <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}
                 </button>
+                {/* D4 (2026-08-28) — l'écran ne montrait pas l'accès qui compte le plus. Un rôle
+                    d'administration d'ORG ouvre TOUTE l'écriture CRM et le statut superuser ouvre
+                    tout, indépendamment des permissions : en production, les 6 Éditeurs tiennent
+                    leurs droits CRM de leur rôle, pas de leurs cases à cocher. Le compteur pouvait
+                    donc afficher un chiffre rassurant à côté d'un accès total. */}
+                <div className="members-table__access">
+                  {m.isPlatformSuperuser && (
+                    <span
+                      className="badge badge--warn badge--xs"
+                      title="Superuser plateforme : accès total, indépendamment des permissions et du rôle d’ORG"
+                    >
+                      superuser
+                    </span>
+                  )}
+                  {m.adminRoleCode && (
+                    <span
+                      className="badge badge--info badge--xs"
+                      title="Un rôle d’administration d’ORG ouvre notamment toute l’écriture CRM, sans passer par les permissions"
+                    >
+                      + rôle admin
+                    </span>
+                  )}
+                  {inheritedCount > 0 && (
+                    <span
+                      className="badge badge--xs"
+                      title="Droits accordés à toute l’organisation — ils ne se retirent pas depuis cette fiche"
+                    >
+                      dont {inheritedCount} héritée{inheritedCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
               </td>
               <td>
                 {lastSeen ? (

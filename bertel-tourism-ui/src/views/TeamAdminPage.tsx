@@ -15,6 +15,7 @@ import {
   deactivateMembership,
   deleteUserAccount,
   friendlyRbacError,
+  grantUserPermission,
   type OrgMember,
   type RefRole,
   type RefPermission,
@@ -24,6 +25,7 @@ import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
 import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export default function TeamAdminPage() {
@@ -104,10 +106,68 @@ export default function TeamAdminPage() {
   // Org-defaults section visible only to org_admin rank >= 30, owner, or superuser.
   const canManageOrgDefaults = role === 'owner' || role === 'super_admin' || (adminRank ?? 0) >= 30;
 
+  /**
+   * D5 (2026-08-28) — dire ce que le changement de rôle N'A PAS fait.
+   *
+   * `rpc_set_business_role` ne touche pas aux permissions et rien ne rejoue le préréglage : un
+   * membre promu Lecteur → Éditeur gardait 0 permission (l'étiquette changeait, les droits non).
+   * L'écran restait muet. On l'annonce désormais, sans jamais agir tout seul :
+   *  · PROMOTION → on PROPOSE d'appliquer le préréglage (additif) ;
+   *  · RÉTROGRADATION → on LISTE les droits en excès, à révoquer À LA MAIN dans le tiroir.
+   *    Aucune révocation automatique : `rpc_list_org_members` ne rend aucune provenance de grant,
+   *    donc on ne peut pas distinguer un droit venu du préréglage d'un droit accordé exprès —
+   *    révoquer en masse retirerait des droits que quelqu'un a choisi d'accorder.
+   */
+  function announceRoleGap(m: OrgMember, code: string) {
+    const { missing, excess } = reviewRoleChange(code, m.permissionCodes, m.inheritedPermissionCodes);
+    const roleLabel = businessRoleLabel(code);
+
+    if (missing.length > 0) {
+      toast.warning(
+        `${m.displayName ?? m.email ?? 'Ce membre'} n’a pas les ${missing.length} permission${missing.length > 1 ? 's' : ''} du rôle ${roleLabel}.`,
+        {
+          duration: Infinity,
+          description: 'Le rôle seul n’accorde aucun droit — les droits passent par les permissions.',
+          action: {
+            label: 'Appliquer le préréglage',
+            onClick: () => {
+              void (async () => {
+                const results = await Promise.allSettled(
+                  missing.map((permission) => grantUserPermission(m.userId, permission)),
+                );
+                const failed = results.filter((r) => r.status === 'rejected').length;
+                if (failed > 0) {
+                  // Un échec d'octroi ne doit plus disparaître dans un console.warn : c'est
+                  // précisément ainsi qu'un membre se retrouve avec un rôle sans ses droits.
+                  toast.error(`${failed} permission${failed > 1 ? 's' : ''} n’${failed > 1 ? 'ont' : 'a'} pas pu être accordée${failed > 1 ? 's' : ''}.`);
+                } else {
+                  toast.success('Préréglage appliqué.');
+                }
+                await reload();
+              })();
+            },
+          },
+        },
+      );
+      return;
+    }
+
+    if (excess.length > 0) {
+      toast.info(
+        `${m.displayName ?? m.email ?? 'Ce membre'} conserve ${excess.length} permission${excess.length > 1 ? 's' : ''} au-delà du rôle ${roleLabel}.`,
+        {
+          duration: Infinity,
+          description: `Rien n’est retiré automatiquement. À révoquer dans « Permissions » : ${excess.join(', ')}.`,
+        },
+      );
+    }
+  }
+
   async function changeBusinessRole(m: OrgMember, code: string) {
     try {
       await setBusinessRole(m.membershipId, code);
       toast.success('Rôle métier mis à jour.');
+      announceRoleGap(m, code);
     } catch (e) {
       toast.error(friendlyRbacError(e as { message?: string }));
     }

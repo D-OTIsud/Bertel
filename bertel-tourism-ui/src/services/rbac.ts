@@ -10,9 +10,24 @@ export interface OrgMember {
   isActive: boolean;
   businessRoleCode: string | null;
   adminRoleCode: string | null;
+  /** Droits accordés INDIVIDUELLEMENT (`user_permission`) — ce que pilotent les cases à cocher. */
   permissionCodes: string[];
   /** Dernière activité (ISO) = dernière connexion OU dernier refresh de session, au plus récent. */
   lastSeenAt: string | null;
+  /**
+   * Droits venus de `org_permission`, hérités par TOUS les membres actifs de l'ORG (17d).
+   *
+   * Champ SÉPARÉ de `permissionCodes`, et c'est structurant : la case à cocher pilote
+   * `user_permission` et ne doit jamais prétendre piloter l'héritage. Les fusionner rendrait la
+   * case menteuse — la décocher ne retirerait pas le droit hérité.
+   */
+  inheritedPermissionCodes: string[];
+  /**
+   * Superuser plateforme (`app_user_profile.role`) — ouvre TOUT, indépendamment des permissions
+   * et du rôle d'ORG (17d). Avec `adminRoleCode`, c'est l'accès que l'écran ne montrait pas :
+   * en production, les 6 Éditeurs tiennent leurs droits CRM de leur rôle d'administration.
+   */
+  isPlatformSuperuser: boolean;
 }
 export interface RefRole { code: string; name: string; rank: number | null; position: number | null; }
 export interface RefPermission { code: string; name: string; category: string; }
@@ -43,6 +58,12 @@ export async function listOrgMembers(orgObjectId: string): Promise<OrgMember[]> 
     adminRoleCode: (r.admin_role_code as string) ?? null,
     permissionCodes: Array.isArray(r.permission_codes) ? (r.permission_codes as string[]) : [],
     lastSeenAt: (r.last_seen_at as string) ?? null,
+    // 17d — tolérant : un backend antérieur à la migration ne porte pas ces clés, et l'écran
+    // doit alors se comporter comme avant plutôt que casser.
+    inheritedPermissionCodes: Array.isArray(r.inherited_permission_codes)
+      ? (r.inherited_permission_codes as string[])
+      : [],
+    isPlatformSuperuser: r.is_platform_superuser === true,
   }));
 }
 

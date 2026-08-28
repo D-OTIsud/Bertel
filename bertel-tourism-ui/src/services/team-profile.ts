@@ -9,6 +9,8 @@
 
 import { getSupabaseClient } from '../lib/supabase';
 import { rbacRouteError } from './rbac';
+import { requestPasswordReset, toFriendlyAuthError } from './auth';
+import { uploadAvatar } from './user-profile';
 
 export interface MemberProfile {
   displayName: string | null;
@@ -56,20 +58,13 @@ export async function updateMemberProfile(input: {
   if (!res.ok) throw rbacRouteError(await res.json().catch(() => ({})), res.status);
 }
 
-/** Pose la photo de profil d'un AUTRE membre (même pipeline que la sienne : ≤ 512 px, EXIF strippé). */
+/**
+ * Pose la photo de profil d'un AUTRE membre (même pipeline que la sienne : ≤ 512 px, EXIF strippé).
+ * Délègue à `uploadAvatar` (user-profile.ts) — même route, même message 415, même contrôle de la
+ * réponse ; seul le `targetUserId` change (MINEUR 4, revue Task 4).
+ */
 export async function uploadMemberAvatar(userId: string, file: File): Promise<string> {
-  const body = new FormData();
-  body.append('file', file);
-  body.append('targetUserId', userId);
-  const res = await fetch('/api/avatar/upload', { method: 'POST', headers: await authHeader(), body });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    if (res.status === 415) throw new Error("Format d'image non supporté (JPEG, PNG ou WebP, ≤ 5 Mo).");
-    throw rbacRouteError(json, res.status);
-  }
-  const url = (json as { url?: string }).url;
-  if (!url) throw new Error("Réponse invalide du serveur d'avatar.");
-  return url;
+  return uploadAvatar(file, userId);
 }
 
 /**
@@ -79,12 +74,10 @@ export async function uploadMemberAvatar(userId: string, file: File): Promise<st
  * détruirait les permissions individuelles du membre.
  */
 export async function sendMemberSignInLink(email: string): Promise<void> {
-  const client = getSupabaseClient();
-  if (!client) throw new Error('Supabase non configuré.');
-  const { error } = await client.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/set-password`,
-  });
-  if (error) throw new Error(error.message);
+  // Délégation pure (IMPORTANT 1, revue Task 4) : cette fonction dupliquait requestPasswordReset
+  // d'auth.ts sans passer par toFriendlyAuthError, donc le brut anglais de GoTrue (ex. la limite de
+  // débit) remontait tel quel. auth.ts traduit déjà correctement — on le réutilise.
+  await requestPasswordReset(email);
 }
 
 /** Lien de connexion à usage unique. shouldCreateUser: false — sinon une faute de frappe dans
@@ -96,5 +89,5 @@ export async function sendMemberMagicLink(email: string): Promise<void> {
     email,
     options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/` },
   });
-  if (error) throw new Error(error.message);
+  if (error) throw toFriendlyAuthError(error);
 }

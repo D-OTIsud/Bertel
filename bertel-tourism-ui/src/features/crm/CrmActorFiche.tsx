@@ -34,7 +34,7 @@ import {
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
-import { CrmTaskModal } from './CrmTaskModal';
+import { CrmTaskFromInteractionModal, CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
 import { CrmActorDocumentDropzone, CrmActorDocuments } from './CrmActorDocuments';
 import { CopyButton } from '../../components/common/CopyButton';
@@ -325,6 +325,9 @@ export function CrmActorFiche({
   const [ctxFilter, setCtxFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<FicheTab>('activity');
   const [modal, setModal] = useState<FicheModal>(null);
+  // Demande depuis laquelle une tâche est en cours de création. État SÉPARÉ de `modal` :
+  // celui-ci est une simple chaîne, incapable de transporter l'interaction d'origine.
+  const [taskFromInteraction, setTaskFromInteraction] = useState<CrmTimelineCardItem | null>(null);
   // Repli mobile (rectif PO §66+) : sur petit écran, seule la carte acteur est visible ; ce toggle
   // déplie KPI + Établissements + Sujets. Défaut REPLIÉ (mobile). Au-dessus du breakpoint, une media
   // query force la région visible et masque le toggle ⇒ le desktop ignore cet état JS.
@@ -559,6 +562,7 @@ export function CrmActorFiche({
                     onResolve={handleResolve}
                     onEditInteraction={handleEditInteraction}
                     onDeleteInteraction={handleDeleteInteraction}
+                    onCreateTask={setTaskFromInteraction}
                   />
                 </div>
               </div>
@@ -674,6 +678,16 @@ export function CrmActorFiche({
           picker="select"
           objectOptions={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
           onClose={() => setModal(null)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+        />
+      )}
+      {taskFromInteraction && canWrite && (
+        <CrmTaskFromInteractionModal
+          interaction={taskFromInteraction}
+          // L'acteur vient de la ROUTE, pas de la carte : les items de cette fiche ne portent
+          // pas d'actorId (délibéré — pas d'auto-lien vers la fiche où l'on est déjà).
+          actorId={actorId}
+          onClose={() => setTaskFromInteraction(null)}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
         />
       )}

@@ -7,7 +7,7 @@
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, CornerDownRight, Mail, MapPin, Pencil, Phone, RotateCcw, StickyNote, Trash2 } from 'lucide-react';
+import { Check, CornerDownRight, ListChecks, Mail, MapPin, Pencil, Phone, RotateCcw, StickyNote, Trash2 } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
 import { resolveTypeLabel } from '../../utils/labels';
 import {
@@ -48,6 +48,19 @@ export interface CrmThreadActions {
    * confirmation l'avertit. Absent ⇒ pas de contrôle « Supprimer » rendu.
    */
   onDeleteInteraction?: (id: string) => Promise<void> | void;
+  /**
+   * Crée une tâche RATTACHÉE à cette demande. L'hôte reçoit la carte entière et monte
+   * lui-même le modal — cette primitive reste sans accès service (cf. en-tête du fichier).
+   *
+   * La tâche héritera de l'établissement de l'interaction : `api.save_crm_task` REFUSE
+   * (22023) un `related_interaction_id` dont l'objet diffère de celui de la tâche. Une
+   * carte sans `objectId` (interaction « Générale ») ne peut donc pas en porter — l'hôte
+   * DÉSACTIVE alors le bouton avec une raison, il ne le masque pas (doctrine no-write-trap
+   * du module : on explique l'affordance, on ne la fait pas disparaître).
+   */
+  onCreateTask?: (item: CrmTimelineCardItem) => void;
+  /** Raison affichée quand « Créer une tâche » est désactivé pour une raison PROPRE à la carte. */
+  createTaskDisabledReason?: string;
 }
 
 /**
@@ -574,6 +587,7 @@ function TlEditDeleteButtons({
  */
 function TlThreadActions({
   rootId,
+  item,
   isResolved,
   actions,
   onOpenComposer,
@@ -581,6 +595,8 @@ function TlThreadActions({
   onOpenDelete,
 }: {
   rootId: string;
+  /** La carte entière — `onCreateTask` la reçoit (objectId/objectName/actorId/subject). */
+  item: CrmTimelineCardItem;
   isResolved: boolean;
   actions: CrmThreadActions;
   onOpenComposer: () => void;
@@ -591,8 +607,13 @@ function TlThreadActions({
 }) {
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const { canWrite, readOnlyReason, onReply, onResolve } = actions;
+  const { canWrite, readOnlyReason, onReply, onResolve, onCreateTask, createTaskDisabledReason } = actions;
   const gateTitle = canWrite === false ? readOnlyReason : undefined;
+  // Une interaction SANS établissement ne peut pas porter de tâche : le serveur refuse le
+  // lien (22023, cohérence d'objet). Le bouton reste RENDU mais désactivé avec sa raison —
+  // le masquer laisserait l'utilisateur chercher une action qui n'apparaît jamais.
+  const noContextReason = item.objectId ? undefined : 'Cette demande n’est rattachée à aucun établissement : une tâche ne peut pas y être liée.';
+  const createTaskReason = gateTitle ?? noContextReason ?? createTaskDisabledReason;
 
   async function toggleResolve() {
     if (!onResolve || resolving) return;
@@ -643,6 +664,20 @@ function TlThreadActions({
               <Check size={11} aria-hidden /> Marquer traitée
             </>
           )}
+        </button>
+      ) : null}
+      {onCreateTask ? (
+        <button
+          type="button"
+          className="crm-btn sm"
+          disabled={Boolean(createTaskReason)}
+          title={createTaskReason}
+          onClick={(event) => {
+            event.stopPropagation();
+            onCreateTask(item);
+          }}
+        >
+          <ListChecks size={11} aria-hidden /> Créer une tâche
         </button>
       ) : null}
       {/* Édition / suppression du commentaire racine (§66) — « comme le super admin ». */}
@@ -714,7 +749,9 @@ function TlCard({
   // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
   // rendues que si un consommateur passe des callbacks (onReply/onResolve).
   const [composerOpen, setComposerOpen] = useState(false);
-  const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve));
+  // `onCreateTask` compte comme une action de fil : sans lui ici, une carte dont ce serait
+  // la SEULE action ne rendrait aucune barre d'actions — silencieusement.
+  const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve || actions.onCreateTask));
   // Édition / suppression d'un commentaire (§66) — un SEUL éditeur et une SEULE confirmation
   // ouverts à la fois DANS cette carte, identifiés par l'id (racine OU réponse). L'isolation
   // inter-cartes est naturelle (état local à chaque TlCard) ; l'id distingue racine vs réponse.
@@ -882,6 +919,7 @@ function TlCard({
         {hasActionsRow && actions ? (
           <TlThreadActions
             rootId={item.id}
+            item={item}
             isResolved={isResolved}
             actions={actions}
             onOpenComposer={() => setComposerOpen(true)}
@@ -936,6 +974,8 @@ export function CrmTimeline({
   onResolve,
   onEditInteraction,
   onDeleteInteraction,
+  onCreateTask,
+  createTaskDisabledReason,
 }: {
   items: CrmTimelineCardItem[];
   showActor?: boolean;
@@ -948,9 +988,12 @@ export function CrmTimeline({
   // Les callbacks d'écriture du fil (§65/§66 + §66 édition) sont passés à chaque carte racine.
   // Absents ⇒ chaque carte reste en lecture seule (aucun contrôle Répondre / Marquer traitée /
   // Modifier / Supprimer rendu). Édition/suppression couvrent racine ET réponses (même callback).
+  // `onCreateTask` figure dans la GARDE autant que dans le littéral : ne l'ajouter qu'au
+  // littéral marcherait par accident aujourd'hui (les trois hôtes passent aussi `onReply`)
+  // et casserait au premier hôte qui ne passerait que cette action-là.
   const threadActions: CrmThreadActions | undefined =
-    onReply || onResolve || onEditInteraction || onDeleteInteraction
-      ? { canWrite, readOnlyReason, onReply, onResolve, onEditInteraction, onDeleteInteraction }
+    onReply || onResolve || onEditInteraction || onDeleteInteraction || onCreateTask
+      ? { canWrite, readOnlyReason, onReply, onResolve, onEditInteraction, onDeleteInteraction, onCreateTask, createTaskDisabledReason }
       : undefined;
   let lastMonth: string | null = null;
   return (

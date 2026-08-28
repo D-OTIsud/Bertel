@@ -14,6 +14,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import { deleteCrmInteraction, listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
+import { CrmTaskFromInteractionModal } from './CrmTaskModal';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 import {
@@ -39,6 +40,8 @@ export function CrmTimelineView({
 }) {
   const queryClient = useQueryClient();
   const [olderPages, setOlderPages] = useState<CrmInteraction[][]>([]);
+  // Demande depuis laquelle une tâche est en cours de création (modal monté par la VUE).
+  const [taskFromInteraction, setTaskFromInteraction] = useState<CrmTimelineCardItem | null>(null);
   const [cursor, setCursor] = useState<{ before: string; beforeId: string } | null>(null);
   // Filtres partagés (PO points 6+7) — défaut Toutes + Tout = timeline complète (fix point 7).
   const [topicCode, setTopicCode] = useState('');
@@ -194,6 +197,7 @@ export function CrmTimelineView({
                 onResolve={handleResolve}
                 onEditInteraction={handleEditInteraction}
                 onDeleteInteraction={handleDeleteInteraction}
+                onCreateTask={setTaskFromInteraction}
               />
               {timelineQuery.data?.hasMore && (
                 <button type="button" className="crm-btn crm-load-more" onClick={loadMore}>
@@ -207,6 +211,15 @@ export function CrmTimelineView({
           )}
         </div>
       </div>
+
+      {taskFromInteraction && canWrite && (
+        <CrmTaskFromInteractionModal
+          interaction={taskFromInteraction}
+          onClose={() => setTaskFromInteraction(null)}
+          // Le kanban seul : une tâche n'apparaît pas dans la timeline des interactions.
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+        />
+      )}
     </div>
   );
 }

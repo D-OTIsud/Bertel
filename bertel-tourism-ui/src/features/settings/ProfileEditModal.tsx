@@ -11,6 +11,7 @@ import { Check } from 'lucide-react';
 import { updateCurrentUserProfile, uploadAvatar } from '../../services/user-profile';
 import { useSessionStore } from '../../store/session-store';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AvatarPicker } from '@/components/common/AvatarPicker';
 
 interface ProfileEditModalProps {
   open: boolean;
@@ -84,10 +85,7 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
     }
   };
 
-  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = ''; // permet de re-sélectionner le même fichier
-    if (!file) return;
+  const handleAvatarChange = async (file: File) => {
     setAvatarBusy(true);
     try {
       const url = await uploadAvatar(file);
@@ -111,26 +109,14 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="inline-actions" style={{ alignItems: 'center', gap: 16 }}>
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- avatar CDN Supabase
-            <img
-              src={avatarUrl}
-              alt="Votre photo de profil"
-              width={64}
-              height={64}
-              style={{ width: 64, height: 64, borderRadius: 999, objectFit: 'cover', flex: 'none' }}
-            />
-          ) : (
-            <span
-              aria-hidden
-              style={{ width: 64, height: 64, borderRadius: 999, flex: 'none', display: 'grid', placeItems: 'center', background: 'var(--accent, #1f7a6d)', color: '#fff', fontWeight: 700, fontSize: 22 }}
-            >
-              {avatarInitials}
-            </span>
-          )}
-          <label className="ghost-button marker-upload-button cursor-pointer">
-            {avatarBusy ? (
+        <AvatarPicker
+          avatarUrl={avatarUrl}
+          alt="Votre photo de profil"
+          initials={avatarInitials}
+          busy={avatarBusy}
+          disabled={demoMode}
+          buttonContent={
+            avatarBusy ? (
               'Envoi…'
             ) : avatarJustUploaded ? (
               <>
@@ -140,18 +126,11 @@ export function ProfileEditModal({ open, onOpenChange }: ProfileEditModalProps) 
               'Changer la photo'
             ) : (
               'Ajouter une photo'
-            )}
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="sr-only"
-              disabled={avatarBusy || demoMode}
-              onChange={(event) => void handleAvatarChange(event)}
-            />
-          </label>
-        </div>
+            )
+          }
+          onFileSelected={(file) => void handleAvatarChange(file)}
+        />
         {demoMode ? <p className="pref__hint">Photo indisponible en mode démo (aucune session réelle).</p> : null}
-        <p className="pref__hint">JPEG, PNG ou WebP — ≤ 5 Mo. Redimensionnée et nettoyée (métadonnées EXIF/GPS supprimées) automatiquement.</p>
 
         <div className="field-block">
           <label htmlFor="profileEditName">Nom affiché</label>

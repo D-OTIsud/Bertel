@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { authorizeAdminRoute, sharesActiveOrg } from '../_authorize';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,45 @@ const PRIVILEGED_ROLES = new Set(['super_admin', 'owner']);
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 interface TargetProfile { display_name: string | null; avatar_url: string | null; role: string | null }
+
+/**
+ * Rang d'administration ORG actif de la CIBLE (`null` si elle n'a aucun rôle admin actif).
+ *
+ * Correctif revue finale (bloquant) : cette route était la SEULE surface d'administration
+ * d'équipe qui ne comparait aucun rang — un admin d'ORG de rang 30 pouvait réécrire l'identité
+ * (nom, e-mail, rôle plateforme) d'un administrateur d'ORG de rang 50. Même prédicat que
+ * RANK_VIOLATION côté SQL (rls_policies.sql : rpc_set_admin_role / rpc_set_business_role /
+ * rpc_revoke_admin_role, §2.6) : gestion vers le bas SEULEMENT, superuser exempté — appliqué ici
+ * par l'appelant (voir le `if (!auth.isSuper …)` au site d'appel).
+ *
+ * Un seul aller-retour (embed PostgREST à deux niveaux) : « un seul membership actif par
+ * utilisateur » est la doctrine MVP de ce projet, donc pas besoin de désambiguïser par ORG comme
+ * le fait la RPC (dont le rang cible est scopé à l'ORG précise de la ligne `user_org_membership`
+ * modifiée).
+ */
+async function resolveTargetAdminRank(
+  server: SupabaseClient,
+  targetUserId: string,
+): Promise<{ rank: number | null } | { error: string }> {
+  const { data, error } = await server
+    .from('user_org_membership')
+    .select('user_org_admin_role(is_active, ref_org_admin_role(rank))')
+    .eq('user_id', targetUserId)
+    .eq('is_active', true);
+  if (error) return { error: error.message };
+  type Row = {
+    user_org_admin_role: Array<{ is_active: boolean; ref_org_admin_role: { rank: number } | null }> | null;
+  };
+  // `server` n'est pas typé contre un schéma généré (`SupabaseClient` nu) : l'inférence structurelle
+  // de `.select()` sur une chaîne littérale devine `ref_org_admin_role` en TABLEAU (relation
+  // to-many par défaut, faute de connaître la FK réelle). En réalité `user_org_admin_role.role_id`
+  // référence `ref_org_admin_role.id` (many-to-one) : PostgREST rend un objet unique à l'exécution.
+  // D'où le passage par `unknown` — c'est un désaccord de TYPAGE, pas de comportement runtime.
+  const activeRole = ((data ?? []) as unknown as Row[])
+    .flatMap((row) => row.user_org_admin_role ?? [])
+    .find((r) => r.is_active);
+  return { rank: activeRole?.ref_org_admin_role?.rank ?? null };
+}
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const auth = await authorizeAdminRoute(req);
@@ -79,13 +119,34 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   if (!userId) return NextResponse.json({ error: 'invalid_user_id' }, { status: 422 });
 
   // Anti-self : un owner qui se rétrograde se verrouille dehors, et son identité a déjà sa
-  // surface (Réglages → Mon compte). Comparaison insensible à la casse : PostgreSQL normalise
+  // surface (Paramètres → Mon compte). Comparaison insensible à la casse : PostgreSQL normalise
   // les uuid, un `userId` reçu en majuscules ne doit pas passer la garde.
   if (userId.toLowerCase() === auth.callerId.toLowerCase()) {
     return NextResponse.json({ error: 'self_edit_forbidden' }, { status: 403 });
   }
   if (!auth.isSuper && !(await sharesActiveOrg(server, auth.callerId, userId))) {
     return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
+  }
+
+  // Volet rang d'ORG (revue finale, correctif bloquant) — voir resolveTargetAdminRank ci-dessus.
+  // Gate TOUT PATCH (nom, e-mail, rôle plateforme), pas seulement les champs sensibles : la faille
+  // était qu'un rang 30 pouvait réécrire l'identité d'un rang 50 par un simple renommage.
+  if (!auth.isSuper) {
+    const targetRank = await resolveTargetAdminRank(server, userId);
+    // Lecture dont dépend une garde : un échec doit REFUSER, jamais continuer comme si la cible
+    // n'avait aucun rang admin (ce qui rendrait la garde fail-open).
+    if ('error' in targetRank) {
+      return NextResponse.json({ error: 'target_rank_check_failed', detail: targetRank.error }, { status: 500 });
+    }
+    if (targetRank.rank !== null && targetRank.rank >= auth.rank) {
+      return NextResponse.json(
+        {
+          error: 'rank_violation',
+          detail: `Rang d'administration de la cible (${targetRank.rank}) supérieur ou égal au vôtre (${auth.rank}).`,
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : undefined;
@@ -135,17 +196,37 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   // super_admin ou un admin de rang 30 distribuerait le rang plateforme. Le sens compte dans les
   // DEUX directions : retirer 'owner'/'super_admin' à quelqu'un est aussi privilégié que le lui
   // donner.
-  if (platformRole !== undefined && platformRole !== (profile?.role ?? null)) {
-    const touchesPrivileged =
-      PRIVILEGED_ROLES.has(platformRole) || PRIVILEGED_ROLES.has(profile?.role ?? '');
-    if (touchesPrivileged) {
-      const { data: isOwner } = await auth.asCaller.schema('api').rpc('is_platform_owner');
-      if (isOwner !== true) {
+  const touchesPrivilegedRole =
+    platformRole !== undefined &&
+    platformRole !== (profile?.role ?? null) &&
+    (PRIVILEGED_ROLES.has(platformRole) || PRIVILEGED_ROLES.has(profile?.role ?? ''));
+
+  // CRITIQUE (revue finale) — changer l'e-mail de connexion d'un owner/super_admin, c'est PRENDRE
+  // son compte : le lien « Mot de passe oublié ? » (ou la réinitialisation envoyée depuis la
+  // modale) atterrit alors à la NOUVELLE adresse. La garde ci-dessus ne protège QUE le champ
+  // platformRole ; sans celle-ci, un admin d'ORG de rang 30 pose l'e-mail de connexion d'un owner
+  // sur une adresse qu'il contrôle, sans jamais toucher platformRole.
+  const touchesPrivilegedEmail = emailChanged && PRIVILEGED_ROLES.has(profile?.role ?? '');
+
+  if (touchesPrivilegedRole || touchesPrivilegedEmail) {
+    // Sondée AU PLUS UNE FOIS par requête, même quand les deux gardes ci-dessus sont concernées
+    // dans le même appel — la sonde coûte un aller-retour.
+    const { data: isOwner } = await auth.asCaller.schema('api').rpc('is_platform_owner');
+    if (isOwner !== true) {
+      if (touchesPrivilegedRole) {
         return NextResponse.json(
           { error: 'owner_required', detail: 'Seul un owner peut attribuer ou retirer le rang plateforme.' },
           { status: 403 },
         );
       }
+      return NextResponse.json(
+        {
+          error: 'owner_required_for_email',
+          detail:
+            "Ce compte a un rang plateforme privilégié (owner ou super administrateur) : seul un owner de la plateforme peut changer son adresse de connexion.",
+        },
+        { status: 403 },
+      );
     }
   }
 

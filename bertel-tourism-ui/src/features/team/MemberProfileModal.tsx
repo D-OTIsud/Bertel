@@ -40,6 +40,12 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
   const [busy, setBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  // BLOQUANT 5 (revue finale) — distingue « en cours de chargement » d'« a échoué » : avant ce
+  // correctif, un échec de getMemberProfile laissait `loaded === null` pour toujours, donc le
+  // bouton restait bloqué sur « Chargement du profil… » indéfiniment (motif énoncé devenu FAUX)
+  // alors que plus rien ne chargeait, et rien ne permettait de réessayer.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // Resynchronisation PENDANT LE RENDU sur l'IDENTITÉ de la ligne. Modal reste monté pendant son
   // animation de sortie : un état figé au montage écrirait les valeurs du membre précédent sur la
@@ -49,6 +55,8 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
   if (member && member.userId !== syncedUserId) {
     setSyncedUserId(member.userId);
     setLoaded(null);
+    setLoadFailed(false);
+    setLoadAttempt(0);
     setName(member.displayName ?? '');
     setEmail(member.email ?? '');
     setPlatformRole('tourism_agent');
@@ -59,6 +67,7 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
+    setLoadFailed(false);
     getMemberProfile(userId)
       .then((p) => {
         if (cancelled) return;
@@ -68,9 +77,19 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
         setPlatformRole(p.platformRole ?? 'tourism_agent');
         setAvatarUrl(p.avatarUrl);
       })
-      .catch((e: Error) => { if (!cancelled) toast.error(e.message); });
+      .catch((e: Error) => {
+        if (cancelled) return;
+        setLoadFailed(true);
+        toast.error(e.message);
+      });
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, loadAttempt]);
+
+  /** Réessai — chargement idempotent (GET), donc bon marché : on relance le même effet. */
+  function retryLoad() {
+    setLoadFailed(false);
+    setLoadAttempt((n) => n + 1);
+  }
 
   const neverConnected = member?.lastSeenAt === null;
   const signInLabel = neverConnected ? 'Renvoyer l’invitation' : 'Réinitialiser le mot de passe';
@@ -145,13 +164,24 @@ export function MemberProfileModal({ member, canEditPlatformRole, onClose, onSav
       footer={
         <>
           <button type="button" className="ghost-button" onClick={onClose} disabled={busy}>Annuler</button>
-          <button type="button" className="primary-button" onClick={() => void save()}
-            disabled={busy || name.trim() === '' || loaded === null}>
-            {busy ? 'Enregistrement…' : loaded === null ? 'Chargement du profil…' : 'Enregistrer'}
+          <button type="button" className="primary-button"
+            onClick={() => { if (loadFailed) { retryLoad(); return; } void save(); }}
+            // BLOQUANT 5 — un échec de chargement n'est PAS un chargement en cours : le bouton doit
+            // rester actionnable (il réessaie) plutôt que désactivé avec un motif devenu faux.
+            disabled={busy || (!loadFailed && (name.trim() === '' || loaded === null))}
+            aria-describedby={loadFailed ? 'memberProfileLoadError' : undefined}>
+            {busy ? 'Enregistrement…' : loadFailed ? 'Réessayer le chargement' : loaded === null ? 'Chargement du profil…' : 'Enregistrer'}
           </button>
         </>
       }
     >
+      {loadFailed && (
+        <p className="pref__hint" role="alert" id="memberProfileLoadError">
+          Le chargement du profil a échoué. Le formulaire ci-dessous ne peut pas être enregistré tant
+          que le chargement n’a pas réussi — cliquez sur « Réessayer le chargement ».
+        </p>
+      )}
+
       <AvatarPicker
         avatarUrl={avatarUrl}
         alt={`Photo de ${member?.displayName ?? member?.email ?? 'ce membre'}`}

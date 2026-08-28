@@ -15,6 +15,13 @@ const mockedCreate = jest.mocked(createClient);
 
 const CALLER = 'caller-1';
 const TARGET = 'target-1';
+// MINEUR (revue finale) — le mock `getUserById` rendait EXACTEMENT l'identifiant envoyé par le
+// formulaire : une régression qui ré-introduirait `userId = target` (chaîne cliente brute) sur le
+// bras admin au lieu de `authTarget.user.id` (valeur canonique GoTrue) ne ferait alors rougir
+// AUCUN test — c'est précisément la régression réellement survenue pendant ce chantier (cf. le
+// test "casse différente" du bras "soi-même" plus bas, qui l'éprouve déjà pour l'autre branche).
+// Une casse DIFFÉRENTE du posté force le chemin storage/upsert à ne pouvoir provenir QUE du GoTrue.
+const TARGET_CANONICAL = TARGET.toUpperCase();
 
 function file(): File {
   return new File([new Uint8Array([1, 2, 3])], 'a.jpg', { type: 'image/jpeg' });
@@ -48,7 +55,7 @@ function serverMock(opts: {
   const upsert = jest.fn().mockResolvedValue({ error: null });
   const upload = jest.fn().mockResolvedValue({ error: null });
   const getUserById =
-    opts.getUserById ?? jest.fn().mockResolvedValue({ data: { user: { id: TARGET } }, error: null });
+    opts.getUserById ?? jest.fn().mockResolvedValue({ data: { user: { id: TARGET_CANONICAL } }, error: null });
   return {
     __update: update,
     __upsert: upsert,
@@ -130,9 +137,10 @@ it('targetUserId d’un admin d’ORG (rang 30, non superuser) sur un membre de 
 
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(201);
-  expect((await res.json()).url).toContain(`${TARGET}/avatar.jpg`);
+  // Valeur CANONIQUE (getUserById), jamais la chaîne cliente `TARGET` — cf. TARGET_CANONICAL.
+  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar.jpg`);
   expect(server.__upsert).toHaveBeenCalledWith(
-    { id: TARGET, avatar_url: expect.stringContaining(`${TARGET}/avatar.jpg`) },
+    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar.jpg`) },
     { onConflict: 'id' },
   );
   expect(server.__update).not.toHaveBeenCalled();
@@ -145,9 +153,10 @@ it('targetUserId avec un superuser plateforme : chemin de la CIBLE, persisté en
 
   const res = await POST(req({ targetUserId: TARGET }));
   expect(res.status).toBe(201);
-  expect((await res.json()).url).toContain(`${TARGET}/avatar.jpg`);
+  // Valeur CANONIQUE (getUserById), jamais la chaîne cliente `TARGET` — cf. TARGET_CANONICAL.
+  expect((await res.json()).url).toContain(`${TARGET_CANONICAL}/avatar.jpg`);
   expect(server.__upsert).toHaveBeenCalledWith(
-    { id: TARGET, avatar_url: expect.stringContaining(`${TARGET}/avatar.jpg`) },
+    { id: TARGET_CANONICAL, avatar_url: expect.stringContaining(`${TARGET_CANONICAL}/avatar.jpg`) },
     { onConflict: 'id' },
   );
 });

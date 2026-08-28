@@ -77,7 +77,7 @@ export const EQUIPE_FAQ: FaqEntry[] = [
     related: ['equipe-roles', 'equipe-mdp-collegue'],
     answer: `Le bouton **« Modifier »** de la table Équipe ouvre la fiche d'identité du membre : **nom affiché**, **photo**, **e-mail de connexion**, et propose d'envoyer un **lien d'accès** (invitation ou réinitialisation du mot de passe selon que le compte s'est déjà connecté, ou lien de connexion à usage unique).
 
-**Qui peut l'utiliser ?** Un superuser plateforme, ou un administrateur d'ORG de rang ≥ 30 — jamais sur son propre compte (votre profil s'édite depuis Réglages → Mon compte).
+**Qui peut l'utiliser ?** Un superuser plateforme, ou un administrateur d'ORG de rang ≥ 30 — jamais sur son propre compte (votre profil s'édite depuis Paramètres → Mon compte).
 
 **Le rang plateforme est à part.** Le champ **Rôle plateforme** (Agent sans rang / Super administrateur / Propriétaire) ne se modifie que par un **owner** de la plateforme : les autres administrateurs le voient, désactivé, avec le motif affiché.
 

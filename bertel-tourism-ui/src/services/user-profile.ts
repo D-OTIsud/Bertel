@@ -133,7 +133,17 @@ export async function uploadAvatar(file: File, targetUserId?: string): Promise<s
     if (res.status === 415) throw new Error("Format d'image non supporté (JPEG, PNG ou WebP, ≤ 5 Mo).");
     throw new Error(readApiErrorMessage(j, res.status));
   }
-  const j = (await res.json()) as { url?: string };
+  // BLOQUANT 3 (revue finale) — un 2xx au corps illisible (page HTML d'un proxy, corps vide) levait
+  // une SyntaxError ANGLAISE non traduite jusqu'à l'utilisateur : régression sur la propre règle
+  // « français pour tout message affiché » de ce chantier. Même message que le garde-fou juste en
+  // dessous (`!j.url`) : un corps illisible et un corps sans `url` sont la même classe d'incident
+  // du point de vue de l'utilisateur.
+  let j: { url?: string };
+  try {
+    j = (await res.json()) as { url?: string };
+  } catch {
+    throw new Error("Réponse invalide du serveur d'avatar.");
+  }
   if (!j.url) throw new Error("Réponse invalide du serveur d'avatar.");
   return j.url;
 }

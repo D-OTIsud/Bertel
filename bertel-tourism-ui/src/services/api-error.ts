@@ -49,14 +49,23 @@ export const API_ERROR_LABELS: Record<string, string> = {
   self_delete_forbidden: 'Vous ne pouvez pas supprimer votre propre compte.',
   rate_limited: 'Trop de tentatives. Patientez une minute avant de réessayer.',
   // Panneau Équipe (/api/admin/user-profile) — un admin ne peut pas s'auto-éditer depuis cet
-  // écran : son identité a sa propre surface (Réglages → Mon compte).
-  self_edit_forbidden: 'Vous ne pouvez pas modifier votre propre profil depuis cet écran — utilisez Réglages → Mon compte.',
+  // écran : son identité a sa propre surface (Paramètres → Mon compte).
+  self_edit_forbidden: 'Vous ne pouvez pas modifier votre propre profil depuis cet écran — utilisez Paramètres → Mon compte.',
   out_of_scope: "Ce membre n'appartient pas à votre organisation.",
   // Le mot « owner » reste littéral : c'est le nom du rôle plateforme tel qu'exposé ailleurs
   // dans l'écran (PLATFORM_ROLES), pas une simple décoration.
   owner_required: 'Seul un propriétaire (owner) de la plateforme peut attribuer ou retirer un rang plateforme.',
   email_claims_actor:
     "Cette adresse est celle d'un prestataire : l'attribuer à ce compte lui donnerait la propriété de ses fiches. Réservé à un superuser plateforme.",
+  // CRITIQUE (revue finale 2026-08-29) — changer l'e-mail de connexion d'un owner/super_admin
+  // équivaut à prendre son compte (le lien de réinitialisation part à la nouvelle adresse).
+  owner_required_for_email:
+    "Ce compte a un rang plateforme privilégié : seul un propriétaire (owner) de la plateforme peut changer son adresse de connexion.",
+  // Volet rang d'ORG (revue finale) — même famille que RANK_VIOLATION côté RPC (rbac.ts/FRIENDLY),
+  // ici pour la route /api/admin/user-profile qui n'émet pas de RAISE SQL.
+  rank_violation: 'Action impossible sur un membre dont le rang d’administration est égal ou supérieur au vôtre.',
+  target_rank_check_failed:
+    "La vérification du rang d'administration a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
 
   // --- Requête malformée ------------------------------------------------------------------
   bad_json: 'Requête invalide. Rechargez la page et réessayez.',

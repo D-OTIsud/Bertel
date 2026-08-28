@@ -46,15 +46,25 @@ it('rend le nom chargé du membre', async () => {
   await waitFor(() => expect(screen.getByLabelText(/Nom affiché/i)).toHaveValue('Alice'));
 });
 
-it('resynchronise le formulaire quand la modale rouvre sur un AUTRE membre', async () => {
+it('resynchronise le formulaire quand la modale rouvre sur un AUTRE membre — AVANT toute résolution de chargement', async () => {
+  // Le chargement ne résout JAMAIS : si le test passait grâce au useEffect(userId) qui
+  // reposerait 'Bob' une fois getMemberProfile('u2') résolu, il rougirait ici. Ce qui doit
+  // porter la valeur de Bob, c'est la resynchronisation PENDANT LE RENDU, pas le chargement.
+  mockedGet.mockImplementation(() => new Promise(() => {}));
+
   const { rerender } = renderModal(alice);
   await waitFor(() => expect(screen.getByLabelText(/Nom affiché/i)).toHaveValue('Alice'));
+
+  // L'état diverge visiblement des props initiales — un useEffect(userId) sur le membre
+  // PRÉCÉDENT ne le corrigerait jamais (userId ne change pas tant qu'on reste sur Alice).
+  fireEvent.change(screen.getByLabelText(/Nom affiché/i), { target: { value: 'Alice Martin' } });
 
   // Fermeture puis réouverture sur Bob SANS démontage (Modal reste monté pour son animation).
   rerender(<MemberProfileModal member={null} canEditPlatformRole onClose={() => {}} onSaved={() => {}} />);
   rerender(<MemberProfileModal member={bob} canEditPlatformRole onClose={() => {}} onSaved={() => {}} />);
 
   await waitFor(() => expect(screen.getByLabelText(/Nom affiché/i)).toHaveValue('Bob'));
+  expect(screen.getByLabelText(/Nom affiché/i)).not.toHaveValue('Alice Martin');
 });
 
 it('libelle « Renvoyer l’invitation » pour un compte jamais connecté', async () => {
@@ -84,6 +94,9 @@ it('désactive le rôle plateforme avec un motif accessible pour un non-owner', 
   const select = await screen.findByLabelText(/Rôle plateforme/i);
   expect(select).toBeDisabled();
   expect(screen.getByText(/Seul un owner/i)).toBeInTheDocument();
+  // Le motif doit être ACCESSIBLE (aria-describedby pointant le paragraphe), pas seulement
+  // visible à côté du select : sans l'attribut, ce texte resterait invisible aux lecteurs d'écran.
+  expect(select).toHaveAccessibleDescription(/Seul un owner/i);
 });
 
 it('affiche l’avertissement sur la conséquence d’un changement d’e-mail', async () => {
@@ -93,8 +106,29 @@ it('affiche l’avertissement sur la conséquence d’un changement d’e-mail',
 
 it('n’envoie que les champs modifiés à l’enregistrement', async () => {
   renderModal(alice);
-  await waitFor(() => expect(screen.getByLabelText(/Nom affiché/i)).toHaveValue('Alice'));
+  // Attend la fin du chargement AVANT d'éditer (le libellé « Enregistrer » n'apparaît qu'une
+  // fois `loaded` posé — le bouton reste « Chargement du profil… » avant). Éditer PLUS TÔT
+  // serait écrasé par le setName(p.displayName) du chargement une fois celui-ci résolu pendant
+  // l'attente qui suit.
+  await screen.findByRole('button', { name: /^Enregistrer$/i });
   fireEvent.change(screen.getByLabelText(/Nom affiché/i), { target: { value: 'Alice Martin' } });
   fireEvent.click(screen.getByRole('button', { name: /^Enregistrer$/i }));
   await waitFor(() => expect(mockedUpdate).toHaveBeenCalledWith({ userId: 'u1', displayName: 'Alice Martin' }));
+});
+
+it('désactive Enregistrer tant que le profil n’a pas fini de charger (couvre aussi l’échec de chargement)', () => {
+  mockedGet.mockImplementation(() => new Promise(() => {})); // ne résout jamais
+  renderModal(alice);
+  const saveButton = screen.getByRole('button', { name: /Chargement du profil/i });
+  expect(saveButton).toBeDisabled();
+  fireEvent.click(saveButton);
+  expect(mockedUpdate).not.toHaveBeenCalled();
+});
+
+it('n’affiche pas des initiales tirées de l’e-mail quand aucun nom réel n’est enregistré', () => {
+  mockedGet.mockImplementation(() => new Promise(() => {})); // fige l'état posé par la resync
+  const noRealName: OrgMember = { ...alice, displayName: alice.email };
+  renderModal(noRealName);
+  expect(screen.getByLabelText(/Nom affiché/i)).toHaveValue(alice.email);
+  expect(screen.getByText('?')).toBeInTheDocument();
 });

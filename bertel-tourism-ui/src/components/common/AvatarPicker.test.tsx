@@ -8,7 +8,6 @@ describe('AvatarPicker', () => {
         avatarUrl={null}
         alt="Photo de David"
         initials="DP"
-        busy={false}
         buttonContent="Ajouter une photo"
         onFileSelected={jest.fn()}
       />,
@@ -23,7 +22,6 @@ describe('AvatarPicker', () => {
         avatarUrl="https://cdn.example/avatar.jpg"
         alt="Photo de David"
         initials="DP"
-        busy={false}
         buttonContent="Changer la photo"
         onFileSelected={jest.fn()}
       />,
@@ -40,7 +38,6 @@ describe('AvatarPicker', () => {
         avatarUrl={null}
         alt="Photo de David"
         initials="DP"
-        busy={false}
         buttonContent="Ajouter une photo"
         onFileSelected={onFileSelected}
       />,
@@ -59,7 +56,6 @@ describe('AvatarPicker', () => {
         avatarUrl={null}
         alt="Photo de David"
         initials="DP"
-        busy={false}
         buttonContent={<span data-testid="custom-button-content">Envoi…</span>}
         onFileSelected={jest.fn()}
       />,
@@ -67,33 +63,18 @@ describe('AvatarPicker', () => {
     expect(screen.getByTestId('custom-button-content')).toHaveTextContent('Envoi…');
   });
 
-  it('désactive l’input quand busy', () => {
+  it('désactive l’input quand `disabled` est posé (envoi en cours, mode démo, etc. — un seul signal)', () => {
     render(
       <AvatarPicker
         avatarUrl={null}
         alt="Photo de David"
         initials="DP"
-        busy
+        disabled
         buttonContent="Envoi…"
         onFileSelected={jest.fn()}
       />,
     );
     expect(screen.getByLabelText(/Envoi…/i)).toBeDisabled();
-  });
-
-  it('désactive l’input quand `disabled` est posé indépendamment de busy (ex. mode démo)', () => {
-    render(
-      <AvatarPicker
-        avatarUrl={null}
-        alt="Photo de David"
-        initials="DP"
-        busy={false}
-        disabled
-        buttonContent="Ajouter une photo"
-        onFileSelected={jest.fn()}
-      />,
-    );
-    expect(screen.getByLabelText(/ajouter une photo/i)).toBeDisabled();
   });
 
   it('n’appelle pas onFileSelected si la sélection est annulée (aucun fichier)', () => {
@@ -103,7 +84,6 @@ describe('AvatarPicker', () => {
         avatarUrl={null}
         alt="Photo de David"
         initials="DP"
-        busy={false}
         buttonContent="Ajouter une photo"
         onFileSelected={onFileSelected}
       />,

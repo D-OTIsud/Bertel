@@ -13,7 +13,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const server = getServerSupabaseClient();
   if (!server) {
     return NextResponse.json(
-      { error: 'server_misconfigured', detail: 'SUPABASE_SERVICE_ROLE_KEY missing' },
+      { error: 'server_misconfigured' } /* cause serveur : SUPABASE_SERVICE_ROLE_KEY missing */,
       { status: 500 },
     );
   }

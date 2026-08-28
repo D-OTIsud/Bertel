@@ -1,5 +1,6 @@
 import { getApiClient } from '../lib/supabase';
 import { getSupabaseClient } from '../lib/supabase';
+import { readApiErrorMessage } from './api-error';
 
 export interface OrgMember {
   membershipId: string;
@@ -110,7 +111,7 @@ export async function inviteUser(input: { email: string; orgObjectId: string; bu
   if (res.status === 409 && body?.userId) {
     return { userId: body.userId, alreadyExisted: true, neverSignedIn: body.neverSignedIn === true };
   }
-  if (!res.ok) throw new Error(body?.detail || body?.error || 'invite_failed');
+  if (!res.ok) throw rbacRouteError(body, res.status);
   return { userId: body.userId, alreadyExisted: false };
 }
 
@@ -126,8 +127,26 @@ export async function deleteUserAccount(userId: string): Promise<void> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.detail || body?.error || 'delete_failed');
+    throw rbacRouteError(body, res.status);
   }
+}
+
+/**
+ * Erreur FR d'une route `/api/admin/*` (chantier 2026-08-28 n°4).
+ *
+ * Ces deux sites étaient les SEULS de tout `src/` dont le repli terminal n'était pas français mais
+ * un code machine (`invite_failed`, `delete_failed`). Le correctif ne peut pas se contenter
+ * d'appeler `readApiErrorMessage` : le `detail` de ces routes relaie souvent un `RAISE` de RPC
+ * portant un code métier (`SELF_ACTION_FORBIDDEN`, `INSUFFICIENT_RANK`…) que la table `FRIENDLY`
+ * ci-dessous traduit BEAUCOUP mieux. On la consulte donc d'abord, et on ne retombe sur la table
+ * générique que si aucun code métier n'est reconnu.
+ */
+function rbacRouteError(body: { detail?: string; error?: string } | null | undefined, status: number): Error {
+  const raw = typeof body?.detail === 'string' ? body.detail : '';
+  for (const [code, friendly] of FRIENDLY) {
+    if (raw.includes(code)) return new Error(friendly);
+  }
+  return new Error(readApiErrorMessage(body, status));
 }
 
 const FRIENDLY: Array<[string, string]> = [

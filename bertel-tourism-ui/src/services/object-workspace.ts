@@ -76,6 +76,7 @@ import {
 } from './object-workspace-parser';
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
 import { listObjectCrm } from './crm';
+import { mapDatabaseError } from './api-error';
 
 // Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
@@ -142,27 +143,20 @@ export interface ObjectWorkspaceResource {
   permissions: ObjectWorkspacePermissions;
 }
 
-function readErrorMessage(error: unknown, fallback: string): Error {
-  if (error instanceof Error) {
-    return error;
-  }
-
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    return new Error(error.message);
-  }
-
-  return new Error(fallback);
-}
-
+/**
+ * Chantier 2026-08-28 n°4 — la PRIORITÉ est inversée, et c'est tout l'enjeu.
+ *
+ * AVANT : seule la famille RLS/42501 était traduite ; tout le reste renvoyait `resolved`, c'est-à-dire
+ * le message PostgREST BRUT (anglais). Or les 101 sites d'appel passent tous un `fallback` FRANÇAIS
+ * — 101 beaux messages qui n'étaient donc quasi jamais atteints, `error.message` n'étant presque
+ * jamais vide. C'était du code mort de fait.
+ *
+ * APRÈS : `mapDatabaseError` mappe les SQLSTATE connus, laisse passer nos propres `P0001` (déjà
+ * français) et, à défaut, rend le `fallback` du site d'appel — le brut partant au `console.warn`.
+ * Un seul mappeur, partagé avec `lists`, `moderation` et `selection-emails`.
+ */
 function mapMutationError(error: unknown, fallback: string): Error {
-  const resolved = readErrorMessage(error, fallback);
-  const normalized = resolved.message.toLowerCase();
-
-  if (normalized.includes('row-level security') || normalized.includes('42501')) {
-    return new Error("Cette action n'est pas autorisee avec vos droits actuels.");
-  }
-
-  return resolved;
+  return mapDatabaseError(error, fallback);
 }
 
 function toNullableText(value: string): string | null {

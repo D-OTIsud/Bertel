@@ -1,6 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
 import type { UserRole } from '../types/domain';
+import { readApiErrorMessage } from './api-error';
 
 export interface AppUserProfileRow {
   id: string;
@@ -124,7 +125,7 @@ export async function uploadAvatar(file: File): Promise<string> {
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
     if (res.status === 415) throw new Error("Format d'image non supporté (JPEG, PNG ou WebP, ≤ 5 Mo).");
-    throw new Error(j.detail || j.error || "Échec de l'envoi de l'avatar.");
+    throw new Error(readApiErrorMessage(j, res.status));
   }
   const j = (await res.json()) as { url?: string };
   if (!j.url) throw new Error("Réponse invalide du serveur d'avatar.");

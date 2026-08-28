@@ -4,6 +4,7 @@
 // le formatage vivent ici, en fonctions PURES, pour que changer le séparateur
 // dans la modale ne coûte aucun aller-retour serveur.
 import { getApiClient } from '../lib/supabase';
+import { mapDatabaseError } from './api-error';
 
 export type EmailSeparator = 'comma' | 'semicolon' | 'newline';
 
@@ -90,9 +91,11 @@ export async function fetchSelectionEmails(
 
   const { data, error } = await client.schema('api').rpc('list_selection_emails', params);
   if (error) {
-    // On propage le SQLSTATE : la modale branche dessus, jamais sur le message.
-    const wrapped = new Error(error.message || 'Export des e-mails impossible.');
-    (wrapped as Error & { code?: string }).code = error.code;
+    // On propage le SQLSTATE : la modale branche dessus, jamais sur le message. Le message, lui,
+    // passe par le mappeur FR (chantier 2026-08-28 n°4) — `error.message || '<FR>'` ne tombait
+    // sur le français que si le message était vide, donc jamais.
+    const wrapped = mapDatabaseError(error, 'Export des e-mails impossible.') as Error & { code?: string };
+    wrapped.code = error.code;
     throw wrapped;
   }
 

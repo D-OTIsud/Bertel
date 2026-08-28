@@ -1,3 +1,5 @@
+import { apiError } from './api-error';
+
 export interface ActorDocumentActionInput {
   actorId: string;
   documentId: string;
@@ -52,16 +54,11 @@ export async function promoteActorDocument(input: ActorDocumentActionInput & {
   return readResponse(response);
 }
 
+/** Helper MUTUALISÉ : sert createActorDocument, getActorDocumentUrl, deleteActorDocument,
+ *  promoteActorDocument et le PATCH. Le corriger corrige les cinq d'un coup. */
 async function readResponse<T = Record<string, unknown>>(response: Response): Promise<T> {
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const payload = await response.json() as { detail?: string; error?: string };
-      detail = payload.detail ?? payload.error ?? detail;
-    } catch {
-      // Keep HTTP status fallback.
-    }
-    throw new Error(detail);
+    throw await apiError(response);
   }
   return await response.json() as T;
 }

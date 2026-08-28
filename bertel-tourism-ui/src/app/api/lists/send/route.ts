@@ -22,7 +22,7 @@ const nstr = (v: unknown): string | null => (typeof v === 'string' && v.length >
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const server = getServerSupabaseClient();
   if (!server) {
-    return NextResponse.json({ error: 'server_misconfigured', detail: 'SUPABASE_SERVICE_ROLE_KEY missing' }, { status: 500 });
+    return NextResponse.json({ error: 'server_misconfigured' } /* cause serveur : SUPABASE_SERVICE_ROLE_KEY missing */, { status: 500 });
   }
 
   // 1. Auth : Bearer JWT de l'appelant.

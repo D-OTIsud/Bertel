@@ -182,6 +182,9 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
         objectId: 'obj-1',
         interactionType: 'call',
         body: 'Point annuel.',
+        // Chantier 2026-08-28 n°5 — la modale envoie DÉSORMAIS toujours la suite à donner.
+        // Sans sujet, la position initiale est « Déjà traitée » : c'est une note interne.
+        status: 'done',
       }),
     );
     // Refresh de la vue objet après écriture confirmée.

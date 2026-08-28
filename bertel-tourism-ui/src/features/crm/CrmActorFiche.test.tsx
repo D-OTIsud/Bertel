@@ -356,6 +356,10 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         body: 'Demande de RDV photo.',
         topicCode: 'demande_de_visite',
         sentimentCode: 'positif',
+        // Chantier 2026-08-28 n°5 — la modale envoie DÉSORMAIS toujours la suite à donner, et
+        // un SUJET de demande place la position initiale sur « À traiter ». C'est exactement le
+        // cas qui naissait « traitée » en production et qu'un agent rouvrait à la main.
+        status: 'planned',
       }),
     );
     // Refresh après écriture : la fiche est rechargée depuis le RPC. Phase 5.2 — le modal
@@ -397,6 +401,8 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       objectId: 'obj-1',
       interactionType: 'call',
       body: 'Point établissement.',
+      // Chantier 2026-08-28 n°5 — suite à donner toujours envoyée ; sans sujet ⇒ note interne.
+      status: 'done',
     });
   });
 

@@ -26,8 +26,12 @@ BEGIN
   INSERT INTO actor_channel(actor_id, kind_id, value)
     VALUES (v_actor, v_email_kind, 'jean.test@example.com')
     RETURNING id INTO v_chan;
-  INSERT INTO crm_interaction(object_id, actor_id, interaction_type, subject, body)
-    VALUES (v_obj, v_actor, 'note', 'Sujet test', 'Note privée mentionnant Jean Dupont')
+  -- `status` explicite : la colonne n'a plus de DEFAULT depuis le chantier 2026-08-28
+  -- (manifeste 17b) — une écriture directe sans statut ÉCHOUE désormais, au lieu de deviner.
+  -- 'planned' au départ pour que l'UPDATE ci-dessous soit une vraie mutation (c'est lui qui
+  -- déclenche le trigger d'audit AFTER UPDATE dont ce test a besoin).
+  INSERT INTO crm_interaction(object_id, actor_id, interaction_type, status, subject, body)
+    VALUES (v_obj, v_actor, 'note', 'planned', 'Sujet test', 'Note privée mentionnant Jean Dupont')
     RETURNING id INTO v_int;
 
   -- --- Générer des lignes de journal d'audit (triggers AFTER UPDATE) portant la PII ---

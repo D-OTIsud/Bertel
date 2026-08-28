@@ -70,6 +70,22 @@ export function CrmInteractionModal({
   const [sentimentCode, setSentimentCode] = useState<string>('');
   const [body, setBody] = useState<string>('');
 
+  // Chantier 2026-08-28 — SUITE À DONNER, choix EXPLICITE (arbitrage PO).
+  //
+  // Cette modale crée deux choses de nature différente : des DEMANDES (à traiter) et des NOTES
+  // internes (compte rendu d'un échange déjà clos). Elle n'envoyait aucun statut, et le serveur
+  // retombait sur « traitée » : toute demande naissait donc close, invisible du filtre
+  // « Actives », et les agents la rouvraient à la main dans les secondes suivantes (mesuré sur
+  // les 3 interactions réellement créées par l'UI en production).
+  //
+  // La position INITIALE du bouton est dérivée du sujet — un sujet de demande renseigné ⇒
+  // « À traiter » — pour que le cas courant soit juste sans rien cliquer ; c'est exactement la
+  // règle que `api.save_crm_interaction` applique en l'absence de statut. Dès que l'agent
+  // touche le bouton, SON choix gagne et ne bouge plus, même s'il change de sujet ensuite.
+  const [statusTouched, setStatusTouched] = useState(false);
+  const [statusChoice, setStatusChoice] = useState<'planned' | 'done'>('done');
+  const effectiveStatus: 'planned' | 'done' = statusTouched ? statusChoice : topicCode ? 'planned' : 'done';
+
   // Phase 5.2 — flux 2-temps : `savedInteractionId` non-null ⇒ l'interaction est consignée,
   // on passe à l'état « relance ». `addingRelance` ⇒ les champs de la relance sont révélés.
   const [savedInteractionId, setSavedInteractionId] = useState<string | null>(null);
@@ -114,6 +130,9 @@ export function CrmInteractionModal({
         body: body.trim(),
         ...(topicCode ? { topicCode } : {}),
         ...(sentimentCode ? { sentimentCode } : {}),
+        // Toujours explicite : le défaut serveur reste le filet pour les AUTRES appelants,
+        // il n'a pas à décider à la place d'un agent qui a le bouton sous les yeux.
+        status: effectiveStatus,
       }),
     onSuccess: (interactionId) => {
       setSavedInteractionId(interactionId);
@@ -235,6 +254,41 @@ export function CrmInteractionModal({
                 ))}
               </select>
             </label>
+          </div>
+
+          {/* Chantier 2026-08-28 — suite à donner. Position initiale dérivée du sujet ; le
+              choix de l'agent prime dès qu'il touche le bouton. */}
+          <div className="crm-field" role="group" aria-label="Suite à donner">
+            <span>Suite à donner</span>
+            <div className="composer__kinds">
+              <button
+                type="button"
+                className={'kind-chip' + (effectiveStatus === 'planned' ? ' is-on' : '')}
+                aria-pressed={effectiveStatus === 'planned'}
+                onClick={() => {
+                  setStatusTouched(true);
+                  setStatusChoice('planned');
+                }}
+              >
+                <Plus size={12} aria-hidden /> À traiter
+              </button>
+              <button
+                type="button"
+                className={'kind-chip' + (effectiveStatus === 'done' ? ' is-on' : '')}
+                aria-pressed={effectiveStatus === 'done'}
+                onClick={() => {
+                  setStatusTouched(true);
+                  setStatusChoice('done');
+                }}
+              >
+                <Check size={12} aria-hidden /> Déjà traitée
+              </button>
+            </div>
+            <p className="crm-field__note">
+              {effectiveStatus === 'planned'
+                ? 'Restera dans les demandes actives jusqu’à ce qu’elle soit marquée traitée.'
+                : 'Simple compte rendu : rien ne reste à faire.'}
+            </p>
           </div>
 
           {/* PO point 2 : champ multi-lignes (5 lignes — c'est un modal, autant utiliser la

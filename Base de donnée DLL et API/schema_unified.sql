@@ -2195,7 +2195,14 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   parent_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE CASCADE,
   interaction_type crm_interaction_type NOT NULL DEFAULT 'note',
   direction crm_direction NOT NULL DEFAULT 'internal',
-  status crm_status NOT NULL DEFAULT 'done',
+  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done', ce qui faisait naître
+  -- « traitée » toute demande créée sans statut explicite. Le remplacer par 'planned' aurait
+  -- contredit la règle par-sujet de `api.save_crm_interaction` pour toute écriture DIRECTE ;
+  -- l'absence de défaut, la colonne étant NOT NULL, fait ÉCHOUER une écriture directe sans
+  -- statut au lieu de deviner. Les 3 seules fonctions qui insèrent ici passent toutes `status`
+  -- explicitement (vérifié sur pg_proc : save_crm_interaction, create_crm_artifacts_from_incident,
+  -- log_publication_proof_interaction).
+  status crm_status NOT NULL,
   subject TEXT,
   body TEXT,
   source TEXT,

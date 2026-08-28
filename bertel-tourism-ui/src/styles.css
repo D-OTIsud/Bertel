@@ -7274,6 +7274,42 @@ a {
   border: 1px solid rgba(24, 49, 59, 0.08);
 }
 
+/* Carte d'acteur cliquable vers sa fiche CRM (2026-08-28). La carte devient un <a> : on
+   neutralise l'habillage de lien du navigateur (couleur, soulignement) pour que la typo de
+   la carte ne bouge pas, et on n'ajoute QUE l'affordance. Pas de règle :focus-visible ici —
+   l'anneau global de styles.css (`:where(:focus-visible)`) s'en charge, et une règle locale
+   le doublerait. */
+.detail-mini-card--crm {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.detail-mini-card--crm:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+  border-color: rgb(var(--theme-primary-rgb) / 0.28);
+}
+
+/* L'en-tête de la mini-carte est un flex `space-between` : la pastille de rôle et l'icône
+   « sortant » sont regroupées à droite pour ne pas se disputer l'espace avec le nom. */
+.detail-mini-card__header-end {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.detail-mini-card__crm-icon {
+  color: var(--theme-primary);
+  opacity: 0.65;
+  flex: none;
+}
+
+.detail-mini-card--crm:hover .detail-mini-card__crm-icon {
+  opacity: 1;
+}
+
 .detail-gallery {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

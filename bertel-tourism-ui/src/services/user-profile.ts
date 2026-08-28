@@ -107,8 +107,13 @@ export async function updateCurrentUserProfile(
  * EXIF/GPS strippé serveur, écriture storage en service-role). La route persiste
  * elle-même `avatar_url` (self-update RLS). Retourne l'URL publique (avec ?v= de
  * cache-bust) à réappliquer sur la session.
+ *
+ * `targetUserId` optionnel : absent, comportement inchangé (upload de SA PROPRE photo) ; fourni,
+ * il est ajouté au FormData — c'est ce que `uploadMemberAvatar` (team-profile.ts) utilise pour
+ * poser la photo d'un AUTRE membre depuis le panneau Équipe (MINEUR 4, revue Task 4 : les deux
+ * fonctions étaient des quasi-clones, ne différant que par ce champ et leur traducteur d'erreur).
  */
-export async function uploadAvatar(file: File): Promise<string> {
+export async function uploadAvatar(file: File, targetUserId?: string): Promise<string> {
   const client = getSupabaseClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();
@@ -117,6 +122,7 @@ export async function uploadAvatar(file: File): Promise<string> {
 
   const body = new FormData();
   body.append('file', file);
+  if (targetUserId !== undefined) body.append('targetUserId', targetUserId);
   const res = await fetch('/api/avatar/upload', {
     method: 'POST',
     headers: { authorization: `Bearer ${token}` },

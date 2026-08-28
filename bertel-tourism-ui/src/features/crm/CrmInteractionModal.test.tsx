@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import * as crm from '../../services/crm';
+import { pickerListbox } from '../../components/ui/pickers/pickers.test-utils';
 
 jest.mock('../../services/crm');
 
@@ -161,7 +162,7 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
     const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
     fireEvent.click(trigger);
-    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Jean P.' }));
+    fireEvent.click(pickerListbox(trigger).getByRole('option', { name: 'Jean P.' }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
     fireEvent.click(screen.getByRole('button', { name: /enregistrer la relance/i }));
     await waitFor(() =>
@@ -182,7 +183,7 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
     const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
     fireEvent.click(trigger);
-    fireEvent.click(within(trigger.closest('.picker') as HTMLElement).getByRole('option', { name: 'Marie D.' }));
+    fireEvent.click(pickerListbox(trigger).getByRole('option', { name: 'Marie D.' }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
     expect(screen.getByRole('button', { name: /enregistrer la relance/i })).toBeDisabled();
     expect(screen.getByText('Choisissez au moins une personne.')).toBeInTheDocument();

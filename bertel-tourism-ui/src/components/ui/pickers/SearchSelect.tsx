@@ -10,8 +10,10 @@
 // COLLAPSIBLE category sections (headers toggle their options) so a long catalog
 // isn't overwhelming. Typing in the search filters across every group at once.
 
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { fold } from './fold';
+import { usePickerPopover } from './usePickerPopover';
 
 export interface SearchSelectOption {
   code: string;
@@ -47,9 +49,12 @@ export function SearchSelect({
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const rootRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listId = useId();
+  // Popover PORTALISÉ (voir usePickerPopover) : sans lui le panneau est découpé par le
+  // premier ancêtre scrollable — un corps de modal, typiquement.
+  const close = useCallback(() => setOpen(false), []);
+  const { mounted, triggerRef, panelRef, panelStyle } = usePickerPopover(open, close, query);
 
   const selected = options.find((o) => o.code === value) ?? null;
   // Always render the current value: a code absent from options (stale/legacy) shows itself
@@ -118,16 +123,6 @@ export function SearchSelect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Outside mousedown closes the popover.
-  useEffect(() => {
-    if (!open) return;
-    function onDocMouseDown(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, [open]);
-
   function commit(code: string) {
     onChange(code);
     setOpen(false);
@@ -180,8 +175,9 @@ export function SearchSelect({
   }
 
   return (
-    <div className="picker picker--single" ref={rootRef}>
+    <div className="picker picker--single">
       <button
+        ref={triggerRef}
         type="button"
         className={`picker__trigger${selected ? '' : ' is-empty'}`}
         role="combobox"
@@ -195,8 +191,8 @@ export function SearchSelect({
         <span className="picker__chevron" aria-hidden>▾</span>
       </button>
 
-      {open && (
-        <div className="picker__panel">
+      {mounted && open && createPortal(
+        <div className="picker__panel" ref={panelRef} style={panelStyle}>
           <input
             ref={searchRef}
             className="picker__search"
@@ -243,7 +239,8 @@ export function SearchSelect({
               : filtered.map(renderOption)}
             {showEmpty && <p className="picker__empty">Aucun résultat</p>}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

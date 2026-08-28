@@ -5,15 +5,19 @@ import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask } from '../../types/domain';
+import { pickerListbox } from '../../components/ui/pickers/pickers.test-utils';
 
 jest.mock('../../services/crm');
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
 // L'établissement est un SearchSelect (combobox + popover) : ouvrir puis cliquer l'option.
+// Borné au listbox du picker comme `toggleAssignee` — le popover est portalisé sous <body>
+// et `screen` y côtoierait les <option> natives du <select> « Filtrer par personne ».
 function pickEstablishment(optionName: string | RegExp) {
-  fireEvent.click(screen.getByRole('combobox', { name: 'Établissement' }));
-  fireEvent.click(screen.getByRole('option', { name: optionName }));
+  const trigger = screen.getByRole('combobox', { name: 'Établissement' });
+  fireEvent.click(trigger);
+  fireEvent.click(pickerListbox(trigger).getByRole('option', { name: optionName }));
 }
 
 // 16w — « Attribuer à » est un SearchMultiSelect : le popover reste ouvert et chaque clic
@@ -23,8 +27,8 @@ function toggleAssignee(optionName: string | RegExp) {
   if (trigger.getAttribute('aria-expanded') !== 'true') fireEvent.click(trigger);
   // La recherche est bornée au popover : le <select> « Filtrer par personne » de la barre
   // d'outils porte les MÊMES noms d'option (role="option" natif) et les rendrait ambigus.
-  const picker = trigger.closest('.picker') as HTMLElement;
-  fireEvent.click(within(picker).getByRole('option', { name: optionName }));
+  // Le scope passe par `aria-controls` : le panneau est portalisé, `.picker` ne le contient plus.
+  fireEvent.click(pickerListbox(trigger).getByRole('option', { name: optionName }));
 }
 
 // Le kanban filtre par défaut sur « mes tâches » : la plupart des cas historiques veulent

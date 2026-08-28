@@ -1,7 +1,7 @@
 # CRM Kanban — implementation brief for task filtering, provenance, notifications, multi-assignment, and request linkage
 
-**Audience:** junior developer, reviewed by a senior before database deployment  
-**Scope:** CRM task/Kanban feature only  
+**Audience:** junior developer, reviewed by a senior before database deployment
+**Scope:** CRM task/Kanban feature only
 **Important:** implement in the order below. Do not start with the visual changes because the current API cannot represent a creator or several assignees.
 
 ## 1. What the investigation found

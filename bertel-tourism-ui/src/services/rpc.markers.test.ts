@@ -77,8 +77,19 @@ describe('listObjectMarkers (§125 — map data source)', () => {
   });
 });
 
+// Depuis B2 (spec 2026-08-26), des filtres identiques entre buckets sont servis par UN
+// SEUL appel, dont le curseur vit sous la clé synthétique `__ALL__` (couvert par
+// rpc.merged.test.ts). La machinerie de curseurs PAR BUCKET testée ici n'est donc plus
+// empruntée que sur le chemin NON fusionnable — d'où `nonMergeableFilters` : deux buckets
+// dont les payloads divergent réellement (la facette ITI n'existe que pour le bucket ITI).
+// Sans cette bascule, ces tests n'épingleraient plus le chemin qu'ils prétendent garder.
 describe('fetchExplorerCardsPage + explorerCardsHasNextPage (§125 — composite cursor)', () => {
   const rpc = jest.fn();
+
+  const nonMergeableFilters = (): ExplorerFilters => ({
+    ...buildFilters({ selectedBuckets: ['RES', 'ITI'] }),
+    iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true },
+  });
 
   beforeEach(() => {
     rpc.mockReset();
@@ -93,10 +104,10 @@ describe('fetchExplorerCardsPage + explorerCardsHasNextPage (§125 — composite
       error: null,
     });
 
-    const filters = buildFilters({ selectedBuckets: ['RES'] });
+    const filters = nonMergeableFilters();
     const page = await fetchExplorerCardsPage(filters, ['fr'], {});
 
-    expect(page.cards.map((c) => c.id)).toEqual(['RESRUN1']);
+    expect(page.cards.map((c) => c.id)).toEqual(['RESRUN1', 'RESRUN1']);
     expect(page.cursors.RES).toBe('cursor-2');
     expect(explorerCardsHasNextPage(filters, page.cursors)).toBe(true);
   });
@@ -107,7 +118,7 @@ describe('fetchExplorerCardsPage + explorerCardsHasNextPage (§125 — composite
       error: null,
     });
 
-    const filters = buildFilters({ selectedBuckets: ['RES'] });
+    const filters = nonMergeableFilters();
     const page = await fetchExplorerCardsPage(filters, ['fr'], {});
 
     expect(page.cursors.RES).toBe(EXPLORER_BUCKET_CURSOR_DONE);
@@ -137,7 +148,7 @@ describe('fetchExplorerCardsPage + explorerCardsHasNextPage (§125 — composite
       error: null,
     });
 
-    const page = await fetchExplorerCardsPage(buildFilters({ selectedBuckets: ['RES', 'HOT'] }), ['fr'], {});
+    const page = await fetchExplorerCardsPage(nonMergeableFilters(), ['fr'], {});
 
     // Two buckets, 20 each → 40 corpus-wide (independent of deduped card count).
     expect(page.totalCount).toBe(40);

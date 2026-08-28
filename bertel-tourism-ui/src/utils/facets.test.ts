@@ -2,6 +2,7 @@ import type { ExplorerFilters, ExplorerReferenceOption, ObjectCard } from '../ty
 import {
   applyClientPreviewFilters,
   buildBucketRpcFilters,
+  canMergeExplorerBuckets,
   filterOptionsBySelectedBuckets,
   resolveCapacityBounds,
   DEFAULT_EXPLORER_FILTERS,
@@ -947,5 +948,43 @@ describe('resolveExplorerStatuses', () => {
 describe('EXPLORER_STATUS_OPTIONS', () => {
   test('vocabulaire = published/draft/archived — jamais hidden (invariant Explorer)', () => {
     expect(EXPLORER_STATUS_OPTIONS.map((option) => option.code)).toEqual(['published', 'draft', 'archived']);
+  });
+});
+
+// B2 (spec 2026-08-26) — la condition d'armement de la fusion des appels par bucket.
+// L'enjeu : fusionner à tort enverrait un filtre propre à un bucket à TOUS les autres.
+describe('canMergeExplorerBuckets', () => {
+  it('arme la fusion par défaut (aucune facette propre à un bucket)', () => {
+    expect(canMergeExplorerBuckets(DEFAULT_EXPLORER_FILTERS)).toBe(true);
+  });
+
+  it('arme la fusion quand un seul bucket est sélectionné (fusion triviale)', () => {
+    const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, selectedBuckets: ['HOT'] };
+    expect(canMergeExplorerBuckets(filters)).toBe(true);
+  });
+
+  it('DÉSARME la fusion dès qu une facette propre à un bucket diverge', () => {
+    const filters: ExplorerFilters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true },
+    };
+
+    // Garde anti-vacuité : on prouve d'abord que les payloads DIVERGENT réellement.
+    // Sans elle, un `false` pourrait venir d'autre chose et le test ne prouverait rien.
+    const itiPayload = buildBucketRpcFilters(filters, 'ITI');
+    const hotPayload = buildBucketRpcFilters(filters, 'HOT');
+    expect(itiPayload).toHaveProperty('itinerary');
+    expect(hotPayload).not.toHaveProperty('itinerary');
+
+    expect(canMergeExplorerBuckets(filters)).toBe(false);
+  });
+
+  it('garde la fusion armée quand la facette ITI est active mais ITI est le seul bucket', () => {
+    const filters: ExplorerFilters = {
+      ...DEFAULT_EXPLORER_FILTERS,
+      selectedBuckets: ['ITI'],
+      iti: { ...DEFAULT_EXPLORER_FILTERS.iti, isLoop: true },
+    };
+    expect(canMergeExplorerBuckets(filters)).toBe(true);
   });
 });

@@ -18,7 +18,7 @@
 // Gating page-wide write_crm_notes : boutons désactivés AVEC raison (no-write-trap).
 // Gate `canWrite` fourni par l'hôte (page-wide sur /crm ; per-objet dans le tiroir éditeur).
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, CalendarPlus, ChevronDown, ChevronLeft, Globe, Link2, MapPin, Mail, Pencil, Phone, Plus } from 'lucide-react';
 import {
@@ -36,7 +36,7 @@ import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
-import { CrmActorDocuments } from './CrmActorDocuments';
+import { CrmActorDocumentDropzone, CrmActorDocuments } from './CrmActorDocuments';
 import { CopyButton } from '../../components/common/CopyButton';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
@@ -70,6 +70,7 @@ function errorMessageOf(error: unknown): string {
 }
 
 type FicheModal = 'interaction' | 'task' | 'edit' | 'assign' | null;
+type FicheTab = 'activity' | 'documents';
 
 /**
  * Modal « Affecter un établissement » (§66) — rattache l'acteur à un établissement EXISTANT de
@@ -322,6 +323,7 @@ export function CrmActorFiche({
 
   // 'all' | 'general' | <objectId> — filtre de contexte de la timeline.
   const [ctxFilter, setCtxFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<FicheTab>('activity');
   const [modal, setModal] = useState<FicheModal>(null);
   // Repli mobile (rectif PO §66+) : sur petit écran, seule la carte acteur est visible ; ce toggle
   // déplie KPI + Établissements + Sujets. Défaut REPLIÉ (mobile). Au-dessus du breakpoint, une media
@@ -427,90 +429,147 @@ export function CrmActorFiche({
   const linkedRoles = [...new Set(objects.map((object) => object.roleName).filter(Boolean))].join(' · ');
   const identitySubline = linkedRoles || supportQuery.data?.defaultRole?.name || '';
 
+  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    let nextTab: FicheTab | null = null;
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      nextTab = activeTab === 'activity' ? 'documents' : 'activity';
+    } else if (event.key === 'Home') {
+      nextTab = 'activity';
+    } else if (event.key === 'End') {
+      nextTab = 'documents';
+    }
+    if (!nextTab) return;
+    event.preventDefault();
+    setActiveTab(nextTab);
+    document.getElementById(`crm-actor-tab-${nextTab}`)?.focus();
+  }
+
   return (
     <div className="crm-body">
       <button type="button" className="crm-back" onClick={onBack}>
         <ChevronLeft size={12} aria-hidden /> {backLabel}
       </button>
 
+      <div
+        className="crm-actor-tabs"
+        role="tablist"
+        aria-label="Sections de la fiche acteur"
+        onKeyDown={handleTabKeyDown}
+      >
+        <button
+          id="crm-actor-tab-activity"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'activity'}
+          aria-controls="crm-actor-panel-activity"
+          tabIndex={activeTab === 'activity' ? 0 : -1}
+          className={activeTab === 'activity' ? 'is-on' : ''}
+          onClick={() => setActiveTab('activity')}
+        >
+          Activité
+        </button>
+        <button
+          id="crm-actor-tab-documents"
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'documents'}
+          aria-controls="crm-actor-panel-documents"
+          tabIndex={activeTab === 'documents' ? 0 : -1}
+          className={activeTab === 'documents' ? 'is-on' : ''}
+          onClick={() => setActiveTab('documents')}
+        >
+          Documents d&apos;accompagnement
+          <span className="n">{supportQuery.data?.documents.length ?? 0}</span>
+        </button>
+      </div>
+
       {/* Deux colonnes (rectif PO) : main (actions + timeline) à GAUCHE, rail (acteur + KPI + listes)
           à DROITE. Sur mobile la grille s'effondre en 1 colonne avec le rail (order: -1) AVANT la
           colonne main — voir styles.css .crm-actor-grid. */}
-      <div className="crm-actor-grid">
+      <div
+        id={`crm-actor-panel-${activeTab}`}
+        className="crm-actor-grid"
+        role="tabpanel"
+        aria-labelledby={`crm-actor-tab-${activeTab}`}
+      >
         <div className="crm-actor-grid__main">
-          {!canWrite && <p className="crm-readonly-note">{CRM_READ_ONLY_REASON}</p>}
-          {/* Actions en tête de la colonne principale. */}
-          <div className="crm-actor-actions">
-            <button
-              type="button"
-              className="crm-btn"
-              disabled={!canWrite || !hasEstablishment}
-              title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
-              onClick={() => setModal('task')}
-            >
-              <CalendarPlus size={13} aria-hidden /> Nouvelle tâche
-            </button>
-            <button
-              type="button"
-              className="crm-btn primary"
-              disabled={!canWrite || !hasEstablishment}
-              title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
-              onClick={() => setModal('interaction')}
-            >
-              <Plus size={13} aria-hidden /> Nouvelle interaction
-            </button>
-          </div>
-
-          <CrmActorDocuments
-            actorId={actorId}
-            canWrite={canWrite}
-            objects={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
-          />
-
-          <div className="crm-panel">
-            <div className="crm-panel__body">
-              <div className="chip-row crm-ctx-filters" role="group" aria-label="Filtrer par contexte">
+          {activeTab === 'activity' ? (
+            <>
+              {!canWrite && <p className="crm-readonly-note">{CRM_READ_ONLY_REASON}</p>}
+              {/* Actions en tête de la colonne principale. */}
+              <div className="crm-actor-actions">
                 <button
                   type="button"
-                  className={'crm-chip' + (ctxFilter === 'all' ? ' is-on' : '')}
-                  aria-pressed={ctxFilter === 'all'}
-                  onClick={() => setCtxFilter('all')}
+                  className="crm-btn"
+                  disabled={!canWrite || !hasEstablishment}
+                  title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
+                  onClick={() => setModal('task')}
                 >
-                  Tous
+                  <CalendarPlus size={13} aria-hidden /> Nouvelle tâche
                 </button>
-                {objects.map((object) => (
-                  <button
-                    key={object.objectId}
-                    type="button"
-                    className={'crm-chip' + (ctxFilter === object.objectId ? ' is-on' : '')}
-                    aria-pressed={ctxFilter === object.objectId}
-                    onClick={() => setCtxFilter(object.objectId)}
-                  >
-                    {object.objectName}
-                  </button>
-                ))}
                 <button
                   type="button"
-                  className={'crm-chip' + (ctxFilter === 'general' ? ' is-on' : '')}
-                  aria-pressed={ctxFilter === 'general'}
-                  onClick={() => setCtxFilter('general')}
+                  className="crm-btn primary"
+                  disabled={!canWrite || !hasEstablishment}
+                  title={!canWrite ? CRM_READ_ONLY_REASON : !hasEstablishment ? NO_ESTABLISHMENT_REASON : undefined}
+                  onClick={() => setModal('interaction')}
                 >
-                  Général
+                  <Plus size={13} aria-hidden /> Nouvelle interaction
                 </button>
               </div>
 
-              <CrmTimeline
-                items={timelineItems}
-                onOpenObject={onOpenObject}
-                canWrite={canWrite}
-                readOnlyReason={CRM_READ_ONLY_REASON}
-                onReply={handleReply}
-                onResolve={handleResolve}
-                onEditInteraction={handleEditInteraction}
-                onDeleteInteraction={handleDeleteInteraction}
-              />
-            </div>
-          </div>
+              <div className="crm-panel">
+                <div className="crm-panel__body">
+                  <div className="chip-row crm-ctx-filters" role="group" aria-label="Filtrer par contexte">
+                    <button
+                      type="button"
+                      className={'crm-chip' + (ctxFilter === 'all' ? ' is-on' : '')}
+                      aria-pressed={ctxFilter === 'all'}
+                      onClick={() => setCtxFilter('all')}
+                    >
+                      Tous
+                    </button>
+                    {objects.map((object) => (
+                      <button
+                        key={object.objectId}
+                        type="button"
+                        className={'crm-chip' + (ctxFilter === object.objectId ? ' is-on' : '')}
+                        aria-pressed={ctxFilter === object.objectId}
+                        onClick={() => setCtxFilter(object.objectId)}
+                      >
+                        {object.objectName}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className={'crm-chip' + (ctxFilter === 'general' ? ' is-on' : '')}
+                      aria-pressed={ctxFilter === 'general'}
+                      onClick={() => setCtxFilter('general')}
+                    >
+                      Général
+                    </button>
+                  </div>
+
+                  <CrmTimeline
+                    items={timelineItems}
+                    onOpenObject={onOpenObject}
+                    canWrite={canWrite}
+                    readOnlyReason={CRM_READ_ONLY_REASON}
+                    onReply={handleReply}
+                    onResolve={handleResolve}
+                    onEditInteraction={handleEditInteraction}
+                    onDeleteInteraction={handleDeleteInteraction}
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <CrmActorDocuments
+              actorId={actorId}
+              canWrite={canWrite}
+              objects={objects.map((object) => ({ objectId: object.objectId, objectName: object.objectName }))}
+            />
+          )}
         </div>
 
         <aside className="crm-actor-grid__side crm-rail" aria-label="Synthèse de l'acteur">
@@ -525,24 +584,28 @@ export function CrmActorFiche({
             onEdit={() => setModal('edit')}
           />
 
-          {/* Toggle MOBILE-ONLY (masqué ≥ breakpoint par media query) : déplie KPI + listes. */}
-          <button
-            type="button"
-            className="crm-actor-side-toggle"
-            aria-expanded={sideExpanded}
-            aria-controls="crm-actor-side-collapsible"
-            onClick={() => setSideExpanded((open) => !open)}
-          >
-            {sideExpanded ? 'Masquer les indicateurs' : 'Voir les indicateurs'}
-            <ChevronDown size={13} aria-hidden className={'chev' + (sideExpanded ? ' is-open' : '')} />
-          </button>
+          {activeTab === 'documents' ? (
+            <CrmActorDocumentDropzone actorId={actorId} canWrite={canWrite} />
+          ) : (
+            <>
+              {/* Toggle MOBILE-ONLY (masqué ≥ breakpoint par media query) : déplie KPI + listes. */}
+              <button
+                type="button"
+                className="crm-actor-side-toggle"
+                aria-expanded={sideExpanded}
+                aria-controls="crm-actor-side-collapsible"
+                onClick={() => setSideExpanded((open) => !open)}
+              >
+                {sideExpanded ? 'Masquer les indicateurs' : 'Voir les indicateurs'}
+                <ChevronDown size={13} aria-hidden className={'chev' + (sideExpanded ? ' is-open' : '')} />
+              </button>
 
-          {/* Région repliable : KPI + Établissements + Sujets. Sur mobile l'état JS pilote
-              l'affichage ; ≥ breakpoint la media query la force visible (is-open ignoré). */}
-          <div
-            id="crm-actor-side-collapsible"
-            className={'crm-actor-collapsible' + (sideExpanded ? ' is-open' : '')}
-          >
+              {/* Région repliable : KPI + Établissements + Sujets. Sur mobile l'état JS pilote
+                  l'affichage ; ≥ breakpoint la media query la force visible (is-open ignoré). */}
+              <div
+                id="crm-actor-side-collapsible"
+                className={'crm-actor-collapsible' + (sideExpanded ? ' is-open' : '')}
+              >
             {/* KPI compacts (rectif PO §66+) — 4 accents cyclés teal / orange / bleu / prune.
                Sans légende : les chiffres/dates se suffisent ; les captions doublonnaient l'en-tête (rectif PO). */}
             <div className="crm-actor-kpis">
@@ -590,7 +653,9 @@ export function CrmActorFiche({
                 </div>
               </div>
             )}
-          </div>
+              </div>
+            </>
+          )}
         </aside>
       </div>
 

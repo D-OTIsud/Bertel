@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Numéro de décision : §211.** §209 et §210 sont pris. Re-grepper `^## §` dans `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md` avant de figer le numéro.
-- **Étape de manifeste : `16u`**, à déclarer dans `docs/SQL_ROLLOUT_RUNBOOK.md` ET dans `Base de donnée DLL et API/ci_fresh_apply.sql`. Sans cela la migration est une dérive PROD-only, traitée comme un incident (CLAUDE.md, « Deploy integrity »).
+- **Étape de manifeste : `16y`**, à déclarer dans `docs/SQL_ROLLOUT_RUNBOOK.md` ET dans `Base de donnée DLL et API/ci_fresh_apply.sql`. Sans cela la migration est une dérive PROD-only, traitée comme un incident (CLAUDE.md, « Deploy integrity »).
 - **`REVOKE ALL ON FUNCTION … FROM PUBLIC`** sur chaque fonction neuve — PostgreSQL accorde `EXECUTE` à `PUBLIC` par défaut et un `GRANT` ciblé ne le retire pas.
 - **`SET search_path = pg_catalog, public, api, internal`**, donc `gen_random_uuid()` et jamais `uuid_generate_v4()`.
 - **Garde fail-closed : `IF api.is_platform_superuser() IS NOT TRUE THEN RAISE`** — `IS NOT TRUE`, pas `NOT` : la fonction rend `NULL` hors contexte HTTP.
@@ -32,7 +32,7 @@
 
 | Fichier | Responsabilité |
 |---|---|
-| `Base de donnée DLL et API/migration_ref_catalog_admin.sql` | vue, registre, seed, helpers dérivés, 5 RPC. **Non foldé** dans `schema_unified.sql` (dépend de `api.is_platform_superuser` de `rls_policies.sql`) ⇒ étape `16u`. |
+| `Base de donnée DLL et API/migration_ref_catalog_admin.sql` | vue, registre, seed, helpers dérivés, 5 RPC. **Non foldé** dans `schema_unified.sql` (dépend de `api.is_platform_superuser` de `rls_policies.sql`) ⇒ étape `16y`. |
 | `Base de donnée DLL et API/tests/test_ref_catalog_admin.sql` | garde CI permanente. |
 
 **Créés — front**
@@ -165,7 +165,7 @@ Attendu : `ERROR: relation "internal.v_ref_catalog" does not exist`.
 -- corrompu ne peut PAS ouvrir une écriture hors public.ref_*. Inverser les deux
 -- transformerait une erreur de seed en élargissement de privilège.
 --
--- Manifeste 16u. NON foldé dans schema_unified.sql. Idempotent.
+-- Manifeste 16y. NON foldé dans schema_unified.sql. Idempotent.
 -- ============================================================================
 
 BEGIN;
@@ -439,7 +439,6 @@ entre les mailles d'un seed oublie. Le test l'asserte."
 - Produces:
   - `internal.ref_catalog_label_column(text) → text` — cascade `label_column` du registre → `name`/`label`/`title`/`libelle` → `code` → `NULL` (matrices : le libellé se compose côté front).
   - `internal.ref_catalog_access(text) → text` et `internal.ref_catalog_readonly_reason(text) → text` — verrouillages **dérivés d'abord**, registre ensuite.
-  - `internal.ref_catalog_row_key_expr(jsonb) → text` — fragment SQL bâtissant la clé canonique d'une ligne.
   - `api.list_ref_catalogs() → jsonb` : `[{catalog_key, kind, label, family, used_in, access, readonly_reason, n_values}]`.
   - `api.get_ref_catalog(text) → jsonb` : `{catalog_key, kind, label, family, used_in, access, readonly_reason, is_identifiable, primary_key_columns[], label_column, columns[], outgoing_fk[], rows[], usage}`.
 
@@ -1312,7 +1311,7 @@ Trois sabotages, chacun doit faire **rougir** un test précis, puis être annul�
 |---|---|
 | commenter le `RAISE EXCEPTION 'UNKNOWN_COLUMN'` | cycle uuid, « colonne inconnue » |
 | remplacer `FROM internal.v_ref_catalog WHERE catalog_key = p_catalog_key` par une acceptation directe | assertion de sécurité, écriture sur `object` |
-| retirer la synthèse `primary_key_columns` des domaines (tâche 1) | `ref_code:cuisine_type` doit être éditable |
+| retirer la synthèse `primary_key_columns` **ET** `is_identifiable` des domaines (tâche 1) | `ref_code:cuisine_type` doit être éditable — **saboter `primary_key_columns` seul est VACANT** : aucune des trois RPC ne la consulte pour un domaine (upsert et delete court-circuitent vers la délégation, reorder interroge `ref_code` par `domain`), et c'est `is_identifiable` seul qui conditionne le verrouillage |
 
 - [ ] **Step 6: Commit**
 
@@ -1341,21 +1340,21 @@ ROW_NOT_FOUND. Gardes verifiees non vacantes par trois sabotages."
 Dans `ci_fresh_apply.sql`, **avant** `\echo '== I4f-final-test …'` :
 
 ```sql
-\echo '== 16u    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
+\echo '== 16y    migration_ref_catalog_admin.sql  (211 administration generee des catalogues : vue d introspection internal.v_ref_catalog (32 tables ref_* + 71 domaines ref_code, forme et cle primaire SYNTHETISEES pour les domaines sans quoi ils seraient tous verrouilles en silence), registre editorial, helpers d acces DERIVES, 5 RPC DEFINER gated superuser dont trois en SQL dynamique dont la LISTE BLANCHE EST LA VUE) =='
 \ir migration_ref_catalog_admin.sql
 
-\echo '== 16u-test garde permanente 211 (compte exact des catalogues / domaines editables et identifiables / cible de FK normalisee en catalog_key / maitre et detail jamais divergents / balayage exhaustif de get_ref_catalog / compteur fusionnant DEUX FK entrantes distinctes / cycle creer-editer-refuser-supprimer sur cle uuid, naturelle et composite / delegation ref_code non inversee avec activation et reordonnancement / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
+\echo '== 16y-test garde permanente 211 (compte exact des catalogues / domaines editables et identifiables / cible de FK normalisee en catalog_key / maitre et detail jamais divergents / balayage exhaustif de get_ref_catalog / compteur fusionnant DEUX FK entrantes distinctes / cycle creer-editer-refuser-supprimer sur cle uuid, naturelle et composite / delegation ref_code non inversee avec activation et reordonnancement / ASSERTION DE SECURITE : une ecriture visant object ou auth.users leve UNKNOWN_CATALOG) =='
 \ir tests/test_ref_catalog_admin.sql
 ```
 
 - [ ] **Step 2: Ajouter l'entrée de manifeste au runbook**
 
-Une ligne `16u.` dans la liste numérotée (avant `14. REFRESH MATERIALIZED VIEW…`), puis une section `## 16u — …` en fin de fichier sur le modèle de `16t`. Elle doit dire : ce que fait la migration, l'invariant « liste blanche = la vue », les verrouillages **dérivés** vs **seedés**, l'absence de fold dans `schema_unified.sql`, et qu'un `NOTIFY pgrst, 'reload schema'` est **requis** (cinq fonctions `api` neuves).
+Une ligne `16y.` dans la liste numérotée (avant `14. REFRESH MATERIALIZED VIEW…`), puis une section `## 16y — …` en fin de fichier sur le modèle de `16t`. Elle doit dire : ce que fait la migration, l'invariant « liste blanche = la vue », les verrouillages **dérivés** vs **seedés**, l'absence de fold dans `schema_unified.sql`, et qu'un `NOTIFY pgrst, 'reload schema'` est **requis** (cinq fonctions `api` neuves).
 
 - [ ] **Step 3: Vérifier**
 
 ```bash
-grep -n "16u" "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
+grep -n "16y" "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
 ```
 
 Attendu : 2 occurrences dans le driver, 2 dans le runbook.
@@ -1364,7 +1363,7 @@ Attendu : 2 occurrences dans le driver, 2 dans le runbook.
 
 ```bash
 git add "Base de donnée DLL et API/ci_fresh_apply.sql" docs/SQL_ROLLOUT_RUNBOOK.md
-git commit -m "chore(211): declare l'etape 16u au manifeste et au driver CI"
+git commit -m "chore(211): declare l'etape 16y au manifeste et au driver CI"
 ```
 
 ---

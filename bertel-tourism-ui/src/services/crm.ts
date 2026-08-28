@@ -731,9 +731,13 @@ export async function listObjectDocumentTypes(): Promise<ObjectDocumentTypeOptio
       { code: 'certificate', name: 'Attestation / certificat' },
     ];
   }
+  // Les partitions ref_code_* ne sont pas exposées directement dans le cache PostgREST.
+  // Lire la table parente et borner explicitement le domaine (même contrat que les autres
+  // vocabulaires ref_code consommés par le frontend).
   const { data, error } = await client
-    .from('ref_code_document_type')
+    .from('ref_code')
     .select('code, name')
+    .eq('domain', 'document_type')
     .eq('is_active', true)
     .order('position', { ascending: true })
     .order('name', { ascending: true });

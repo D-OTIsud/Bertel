@@ -199,6 +199,21 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
       description: 'Hotel panoramique avec spa, grande capacite et vue sur l ocean.',
       descriptions: { fr: 'Hotel panoramique avec spa, grande capacite et vue sur l ocean.' },
       location: { lat: -21.135, lon: 55.472, address: 'Front de mer, Saint-Pierre' },
+      // Meme forme que le vif (get_object_with_deep_data / get_object_resource) :
+      // nourrit la pastille de nature de l'en-tete du tiroir (parseTaxonomyEyebrow).
+      taxonomy: {
+        domains: [
+          {
+            domain: 'taxonomy_hot',
+            domain_name: 'Taxonomie HOT',
+            path: [
+              { code: 'hotellerie', name: 'Hotellerie', depth: 0 },
+              { code: 'hotel_de_charme', name: 'Hotel de charme', depth: 1 },
+            ],
+            assigned_node: { code: 'hotel_de_charme', name: 'Hotel de charme', depth: 1 },
+          },
+        ],
+      },
       contacts: [
         { id: 'cnt-1', label: 'Reception', kind: 'phone', value: '+262 262 10 10 10' },
         { id: 'cnt-2', label: 'Reservations', kind: 'email', value: 'resa@basalte-lagon.re' },

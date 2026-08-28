@@ -91,13 +91,16 @@ describe('MembersTable — action Modifier', () => {
     render(
       <MembersTable members={[base]} currentUserId="autre" onManagePermissions={() => {}} onEditProfile={() => {}} />,
     );
-    expect(screen.getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
+    // Le nom accessible nomme le membre (trois boutons "Modifier" identiques se répètent
+    // d'une ligne à l'autre) — le texte VISIBLE reste "Modifier".
+    expect(screen.getByRole('button', { name: 'Modifier le profil de Alice' })).toBeInTheDocument();
+    expect(screen.getByText('Modifier')).toBeInTheDocument();
   });
 
   it('n’offre PAS Modifier sur sa propre ligne', () => {
     render(
       <MembersTable members={[base]} currentUserId="u1" onManagePermissions={() => {}} onEditProfile={() => {}} />,
     );
-    expect(screen.queryByRole('button', { name: 'Modifier' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Modifier le profil de Alice' })).not.toBeInTheDocument();
   });
 });

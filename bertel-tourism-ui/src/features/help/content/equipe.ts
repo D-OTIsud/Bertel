@@ -1,11 +1,14 @@
 /** Rubrique « Équipe & rôles » — gestion des membres d'organisation, invitations,
- *  rôles métier/admin. Vérifié contre `TeamAdminPage.tsx` (accessible depuis
- *  Paramètres → Mon organisation → Équipe, plus de route dédiée), `InviteMemberDialog.tsx`
- *  (invitation multi-adresses, un seul rôle appliqué au lot, récap par adresse, bouton
- *  Renvoyer), `permission-presets.ts` (rôles métier : Lecteur/Contributeur/Éditeur),
- *  `seeds_data.sql` (rôles admin ORG : Référent équipe/Gestionnaire ORG/Administrateur
- *  ORG), `MembersTable.tsx` (suppression définitive, jamais sur soi-même), et mémoire
- *  §164 (invitation par e-mail, hard delete). */
+ *  rôles métier/admin, modification d'identité. Vérifié contre `TeamAdminPage.tsx`
+ *  (accessible depuis Paramètres → Mon organisation → Équipe, plus de route dédiée),
+ *  `InviteMemberDialog.tsx` (invitation multi-adresses, un seul rôle appliqué au lot,
+ *  récap par adresse, bouton Renvoyer), `permission-presets.ts` (rôles métier :
+ *  Lecteur/Contributeur/Éditeur), `seeds_data.sql` (rôles admin ORG : Référent
+ *  équipe/Gestionnaire ORG/Administrateur ORG), `MembersTable.tsx` (bouton Modifier,
+ *  suppression définitive, jamais sur soi-même), `MemberProfileModal.tsx` (Task 6 :
+ *  identité d'un membre — nom, e-mail de connexion, rang plateforme réservé à un
+ *  owner, envoi de liens d'accès), et mémoire §164 (invitation par e-mail, hard
+ *  delete). */
 import type { FaqEntry } from './types';
 
 export const EQUIPE_FAQ: FaqEntry[] = [
@@ -36,7 +39,7 @@ export const EQUIPE_FAQ: FaqEntry[] = [
     rubrique: 'equipe',
     question: 'Quels rôles et permissions ?',
     keywords: ['rôle', 'permission', 'droits', 'admin'],
-    related: ['equipe-inviter', 'equipe-supprimer'],
+    related: ['equipe-inviter', 'equipe-supprimer', 'equipe-modifier-profil'],
     answer: `Deux familles de rôles se cumulent pour chaque membre :
 
 - **Rôle métier** (édition de contenu) : **Lecteur** (consultation seule), **Contributeur** (saisie et enrichissement des fiches, sans validation éditoriale), **Éditeur** (contrôle qualité, correction, validation, publication).
@@ -65,6 +68,20 @@ export const EQUIPE_FAQ: FaqEntry[] = [
 **Alternative réversible.** Pour un retrait temporaire (congé, suspension), préférez **« Désactiver »** : le membre perd l'accès mais son compte peut être réactivé plus tard, sans repasser par une nouvelle invitation.
 
 **Impossible sur vous-même.** Ni la suppression ni la désactivation ne sont proposées sur votre propre compte — un administrateur ne peut pas se retirer lui-même.`,
+  },
+  {
+    id: 'equipe-modifier-profil',
+    rubrique: 'equipe',
+    question: 'Modifier l\'identité d\'un membre (nom, e-mail, rang plateforme) ?',
+    keywords: ['modifier', 'profil', 'identité', 'nom', 'e-mail', 'rang plateforme', 'lien de connexion'],
+    related: ['equipe-roles', 'equipe-mdp-collegue'],
+    answer: `Le bouton **« Modifier »** de la table Équipe ouvre la fiche d'identité du membre : **nom affiché**, **photo**, **e-mail de connexion**, et propose d'envoyer un **lien d'accès** (invitation ou réinitialisation du mot de passe selon que le compte s'est déjà connecté, ou lien de connexion à usage unique).
+
+**Qui peut l'utiliser ?** Un superuser plateforme, ou un administrateur d'ORG de rang ≥ 30 — jamais sur son propre compte (votre profil s'édite depuis Réglages → Mon compte).
+
+**Le rang plateforme est à part.** Le champ **Rôle plateforme** (Agent sans rang / Super administrateur / Propriétaire) ne se modifie que par un **owner** de la plateforme : les autres administrateurs le voient, désactivé, avec le motif affiché.
+
+**Changer l'e-mail a un effet immédiat**, sans courriel de confirmation, et peut modifier les fiches dont ce membre est propriétaire — la modale le rappelle avant validation.`,
   },
   {
     id: 'equipe-mdp-collegue',

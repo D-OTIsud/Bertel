@@ -286,6 +286,11 @@ CREATE OR REPLACE FUNCTION api.crm_user_label(p_user uuid, p_display_name text)
 RETURNS text
 LANGUAGE sql
 IMMUTABLE
+-- Corps 100 % pg_catalog (COALESCE/NULLIF/btrim/left/||) : on épingle le search_path à
+-- `pg_catalog` seul. Sans cela l'advisor lève `function_search_path_mutable`, et la fonction
+-- est appelée DEPUIS trois RPC SECURITY DEFINER — autant qu'elle ne dépende d'aucun schéma
+-- qu'un appelant pourrait influencer.
+SET search_path TO 'pg_catalog'
 AS $$
   SELECT CASE
            WHEN p_user IS NULL THEN NULL

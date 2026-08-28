@@ -4,8 +4,10 @@
 --
 -- A) STRUCTURE — colonnes/tables/index/FK/CHECK présents ; RLS activée et AUCUN grant
 --    anon/authenticated sur les deux tables neuves (l'accès PostgREST direct est fermé).
--- B) BACKFILL — invariant de corpus : toute tâche portant un `owner` porte au moins une
---    ligne d'assignation. Non vacant (le corpus en contient).
+-- B) BACKFILL — éprouvé sur des TÉMOINS fabriqués (jamais par déduction sur le corpus) :
+--    une ligne reprise depuis `owner` ne porte NI `assigned_by` NI `assigned_at`, que la
+--    tâche ait été modifiée ou non ; la colonne est NULLABLE ; un second passage ne réécrit
+--    rien. Plus une assertion de complétude sur le corpus réel (existence seulement).
 -- C) CRÉATION — sans clé d'assignation ⇒ le saisisseur est assigné ET enregistré comme
 --    créateur ; avec deux assignés ⇒ les deux sortent, ordonnés PAR NOM (le témoin est
 --    construit pour que l'ordre des noms CONTREDISE l'ordre des uuid) ; doublons ⇒ une
@@ -52,6 +54,9 @@ DECLARE
   v_t_multi uuid;     -- tâche à deux assignés
   v_t_dup uuid;       -- tâche créée avec des doublons dans assignee_ids
   v_t_bare uuid;      -- tâche insérée EN DIRECT (comme le trigger incident_report)
+  v_objBF  text := 'HOTRUN9999990914';  -- établissement des témoins de backfill
+  v_t_bf_neuve uuid;  -- témoin backfill : tâche jamais modifiée
+  v_t_bf_modif uuid;  -- témoin backfill : tâche modifiée après création
   v_int_id uuid;      -- interaction sur objA (lien §66)
   v_int_other uuid;   -- interaction sur objA2 (probe cohérence d'établissement)
   v_notif_c uuid;     -- une notification appartenant à userC
@@ -114,72 +119,78 @@ BEGIN
     WHERE n.nspname='api' AND p.proname='count_my_unread_notifications'),
     'A: api.count_my_unread_notifications ne doit pas exister (la pastille vient de la liste)';
 
-  -- ═══════════════ B. BACKFILL — existence ET métadonnées ═══════════════
-  -- Le backfill ne se contente pas d'exister : il ne doit RIEN inventer. Sans les deux
-  -- assertions de provenance ci-dessous, un futur `assigned_by = created_by` ou un
-  -- `assigned_at = now()` passerait sans bruit — c'est exactement la classe de défaut que
-  -- §A refuse.
+  -- ═══════════════ B. BACKFILL — sur des TÉMOINS, pas sur une heuristique ═══════════════
+  -- Première rédaction : « une ligne backfillée = une tâche dont created_by IS NULL ».
+  -- FAUX, et à retardement : le trigger `api.create_crm_artifacts_from_incident` crée des
+  -- tâches SANS créateur APRÈS 16w ; dès qu'une d'elles sera assignée par api.save_crm_task,
+  -- elle portera un `assigned_by` parfaitement légitime et la garde rougirait sur une donnée
+  -- saine. On éprouve donc la RÈGLE sur des témoins qu'on fabrique, jamais le corpus par
+  -- déduction.
+  --
+  -- Les témoins couvrent les DEUX formes qu'une rédaction antérieure croyait pouvoir
+  -- distinguer : jamais modifiée, et modifiée. La règle actuelle les traite identiquement —
+  -- c'est précisément ce que ce bloc verrouille.
+  INSERT INTO auth.users (id, email) VALUES (v_userA,'crm16w_a@test.local') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object (id, object_type, name, status)
+  VALUES (v_objBF,'HOT','Hôtel témoin backfill','draft') ON CONFLICT (id) DO NOTHING;
+
+  v_t_bf_neuve := gen_random_uuid();
+  v_t_bf_modif := gen_random_uuid();
+  INSERT INTO crm_task (id, object_id, title, status, priority, owner)
+  VALUES (v_t_bf_neuve, v_objBF, 'Témoin backfill jamais modifiée', 'todo', 'medium', v_userA),
+         (v_t_bf_modif, v_objBF, 'Témoin backfill modifiée',        'todo', 'medium', v_userA);
+  -- Le second est modifié APRÈS coup : `updated_at` s'écarte de `created_at`.
+  UPDATE crm_task SET title = 'Témoin backfill modifiée (titre changé)',
+                      updated_at = NOW() + interval '1 hour'
+   WHERE id = v_t_bf_modif;
+
+  -- On appelle LA fonction de la migration, jamais une copie de son corps : une copie
+  -- vérifierait la copie, et saboter la migration passerait au vert (constaté).
+  ASSERT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+                  WHERE n.nspname='internal' AND p.proname='crm_backfill_assignees_from_owner'),
+         'B (prémisse): internal.crm_backfill_assignees_from_owner absente — la garde ne '
+         'pourrait éprouver que sa propre copie de la règle';
+  PERFORM internal.crm_backfill_assignees_from_owner();
+
+  -- B1. Une ligne reprise depuis `owner` ne porte AUCUNE provenance : ni qui, ni quand.
+  ASSERT (SELECT count(*) FROM crm_task_assignee
+           WHERE task_id IN (v_t_bf_neuve, v_t_bf_modif)) = 2,
+         'B1 (prémisse): les deux témoins doivent avoir été repris';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee
+    WHERE task_id IN (v_t_bf_neuve, v_t_bf_modif) AND assigned_by IS NOT NULL),
+    'B1: une ligne backfillée porte un assigned_by — le backfill a inventé un auteur';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM crm_task_assignee
+    WHERE task_id IN (v_t_bf_neuve, v_t_bf_modif) AND assigned_at IS NOT NULL),
+    'B2: une ligne backfillée porte une date d''assignation — `owner` étant MODIFIABLE, '
+    'aucune date de la tâche n''est l''instant de l''assignation (et `updated_at = created_at` '
+    'ne prouve rien : NOW() est constant sur toute la transaction)';
+
+  -- B3. La colonne doit être NULLABLE : c'est ce qui permet de dire « on ne sait pas ».
+  ASSERT (SELECT is_nullable FROM information_schema.columns
+           WHERE table_schema='public' AND table_name='crm_task_assignee'
+             AND column_name='assigned_at') = 'YES',
+         'B3: crm_task_assignee.assigned_at doit être NULLABLE (NULL = date inconnue)';
+
+  -- B4. Complétude, sur le corpus RÉEL cette fois — cette assertion-là n'a aucun risque de
+  -- faux positif : elle ne parle que d'existence.
   ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
-         'B: aucune tâche avec owner dans le corpus — l''assertion de backfill serait vacante';
+         'B4: aucune tâche avec owner dans le corpus — l''assertion de backfill serait vacante';
   ASSERT NOT EXISTS (
     SELECT 1 FROM crm_task ct
     WHERE ct.owner IS NOT NULL
       AND NOT EXISTS (SELECT 1 FROM crm_task_assignee a WHERE a.task_id = ct.id)),
-    'B: une tâche porte un owner sans aucune ligne crm_task_assignee (backfill incomplet)';
+    'B4: une tâche porte un owner sans aucune ligne crm_task_assignee (backfill incomplet)';
 
-  -- B1. `assigned_by` est TOUJOURS NULL sur une ligne backfillée : personne ne sait qui a
-  -- assigné. (Les lignes créées par api.save_crm_task portent, elles, un assigned_by — le
-  -- bloc C1 le vérifie, donc cette assertion ne peut pas être satisfaite par vacuité.)
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM crm_task_assignee a
-    JOIN crm_task ct ON ct.id = a.task_id
-    WHERE ct.created_by IS NULL          -- ligne antérieure à 16w
-      AND a.assigned_by IS NOT NULL),
-    'B1: une ligne backfillée porte un assigned_by — le backfill a inventé un auteur';
-
-  -- B2. `assigned_at` n'est renseigné QUE sur une tâche JAMAIS MODIFIÉE (là, et là seulement,
-  -- `owner` est la valeur d'insertion, donc `created_at` EST l'instant de l'assignation) ;
-  -- et il vaut alors EXACTEMENT `created_at`. Sur une tâche modifiée, `owner` a pu changer :
-  -- toute date y serait une invention. C'est le défaut corrigé en revue.
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM crm_task_assignee a
-    JOIN crm_task ct ON ct.id = a.task_id
-    WHERE ct.created_by IS NULL          -- ligne antérieure à 16w, donc backfillée
-      AND a.assigned_at IS NOT NULL
-      AND a.assigned_at <> ct.created_at),
-    'B2: une ligne backfillée porte un assigned_at qui n''est pas created_at (date inventée)';
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM crm_task_assignee a
-    JOIN crm_task ct ON ct.id = a.task_id
-    WHERE ct.created_by IS NULL
-      AND ct.updated_at <> ct.created_at
-      AND a.assigned_at IS NOT NULL),
-    'B2bis: une tâche MODIFIÉE (donc potentiellement réassignée) porte une date '
-    'd''assignation — created_at n''y est pas l''instant de l''assignation';
-
-  -- B3. Non-vacuité de B1/B2 sur les DEUX branches : le corpus doit contenir à la fois une
-  -- tâche backfillée jamais modifiée (date attendue) et une modifiée (NULL attendu). Sans
-  -- ce contrôle, B2/B2bis pourraient passer sur un corpus qui ne les exerce pas.
-  ASSERT (SELECT count(*) FROM crm_task_assignee a JOIN crm_task ct ON ct.id = a.task_id
-           WHERE ct.created_by IS NULL AND ct.updated_at = ct.created_at) > 0,
-         'B3a: aucune tâche backfillée jamais modifiée — B2 serait vacante';
-  ASSERT (SELECT count(*) FROM crm_task_assignee a JOIN crm_task ct ON ct.id = a.task_id
-           WHERE ct.created_by IS NULL AND ct.updated_at <> ct.created_at) > 0,
-         'B3b: aucune tâche backfillée modifiée — B2bis serait vacante';
-  -- Et la date attendue est bien POSÉE quand elle est connue (sinon « tout NULL » passerait).
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM crm_task_assignee a
-    JOIN crm_task ct ON ct.id = a.task_id
-    WHERE ct.created_by IS NULL
-      AND ct.updated_at = ct.created_at
-      AND a.assigned_at IS DISTINCT FROM ct.created_at),
-    'B3c: une tâche backfillée jamais modifiée devrait porter created_at';
-
-  -- B4. `assigned_at` DOIT être nullable : c'est ce qui permet de dire « on ne sait pas ».
-  ASSERT (SELECT is_nullable FROM information_schema.columns
-           WHERE table_schema='public' AND table_name='crm_task_assignee'
-             AND column_name='assigned_at') = 'YES',
-         'B4: crm_task_assignee.assigned_at doit être NULLABLE (NULL = date inconnue)';
+  -- B5. Le backfill ne RÉÉCRIT jamais une ligne existante : une assignation déjà écrite par
+  -- api.save_crm_task garde sa provenance si le backfill repasse (ON CONFLICT DO NOTHING).
+  UPDATE crm_task_assignee SET assigned_by = v_userA, assigned_at = TIMESTAMPTZ '2001-01-01 00:00:00+00'
+   WHERE task_id = v_t_bf_neuve;
+  PERFORM internal.crm_backfill_assignees_from_owner();
+  ASSERT (SELECT assigned_at FROM crm_task_assignee WHERE task_id = v_t_bf_neuve)
+         = TIMESTAMPTZ '2001-01-01 00:00:00+00',
+         'B5: un second passage du backfill ne doit RIEN réécrire (ON CONFLICT DO NOTHING)';
 
   -- ═══════════════ Fixture ═══════════════
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code='publisher' LIMIT 1;
@@ -465,7 +476,15 @@ BEGIN
     ASSERT (v_task->>'created_by_id')::uuid = v_userA,
            'C2: list_object_crm doit porter created_by_id';
 
-    -- H3. Passer une tâche en `done` ne clôture RIEN côté SQL : la clôture de l'interaction
+      -- B6 (contre-épreuve du faux positif). Une tâche née du trigger incident_report a
+    -- légitimement `created_by IS NULL` APRÈS 16w. Quand elle est assignée par la voie
+    -- normale, elle porte un `assigned_by` parfaitement valide. Une garde qui déduirait
+    -- « backfillée » de `created_by IS NULL` rougirait ici, sur une donnée saine — c'est
+    -- exactement le défaut relevé en revue.
+    PERFORM api.save_crm_task(jsonb_build_object(
+      'id', v_t_bare::text, 'assignee_ids', jsonb_build_array(v_userC::text)));
+
+  -- H3. Passer une tâche en `done` ne clôture RIEN côté SQL : la clôture de l'interaction
     -- liée reste un geste explicite de l'UI (jamais un effet de bord du save).
     PERFORM api.save_crm_task(jsonb_build_object(
       'id', v_t_self::text, 'related_interaction_id', v_int_id::text));
@@ -474,6 +493,15 @@ BEGIN
   ASSERT (SELECT status::text FROM crm_interaction WHERE id=v_int_id) = 'planned',
          'H3: terminer une tâche liée ne doit JAMAIS toucher au statut de l''interaction '
          '(la clôture reste un geste explicite de l''UI, jamais un effet de bord du save)';
+  -- B6 (suite) : la tâche sans créateur porte bien une provenance d'assignation, et le
+  -- bloc B ne s'en émeut pas — il ne parle QUE de ses témoins.
+  ASSERT (SELECT created_by FROM crm_task WHERE id = v_t_bare) IS NULL,
+         'B6 (prémisse): la tâche témoin doit rester sans créateur (née hors save_crm_task)';
+  ASSERT (SELECT assigned_by FROM crm_task_assignee WHERE task_id = v_t_bare) = v_userA,
+         'B6: une tâche sans créateur assignée par la voie normale DOIT porter un assigned_by';
+  ASSERT (SELECT assigned_at FROM crm_task_assignee WHERE task_id = v_t_bare) IS NOT NULL,
+         'B6: …et une date d''assignation réelle';
+
   ASSERT (SELECT related_interaction_id FROM crm_task WHERE id=v_t_self) = v_int_id,
          'H3 (prémisse): le lien tâche→interaction doit bien avoir été posé';
 

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { authorizeAdminRoute } from '../_authorize';
+import { authorizeAdminRoute, sharesOrgIgnoringTargetActivity } from '../_authorize';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +20,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Anti-self (même règle §2.6 que les RPCs d'équipe) : un admin ne se supprime pas lui-même.
   if (userId === auth.callerId) {
     return NextResponse.json({ error: 'self_delete_forbidden' }, { status: 403 });
+  }
+
+  // Garde périmètre ORG (revue finale, correctif bloquant) — sans elle, un admin d'ORG de rang 30
+  // pouvait supprimer DÉFINITIVEMENT le compte d'une AUTRE organisation en connaissant son UUID.
+  // `sharesOrgIgnoringTargetActivity` (pas `sharesActiveOrg`) : le parcours normal désactive
+  // d'abord le membership de la cible (`rpc_deactivate_membership`) avant d'éventuellement purger
+  // son compte — exiger l'activité des DEUX côtés casserait cet usage légitime (piège B).
+  // L'appelant, lui, doit rester ACTIF : un admin dont le mandat a expiré ne garde aucun périmètre.
+  if (!auth.isSuper && !(await sharesOrgIgnoringTargetActivity(server, auth.callerId, userId))) {
+    return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
   }
 
   const { error: deleteErr } = await server.auth.admin.deleteUser(userId);

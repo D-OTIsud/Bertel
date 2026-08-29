@@ -82,3 +82,37 @@ export async function sharesActiveOrg(
   );
   return data.some((r) => r.user_id === bUserId && aOrgs.has(r.org_object_id as string));
 }
+
+/**
+ * Sœur ASYMÉTRIQUE de `sharesActiveOrg` : vrai quand l'APPELANT a un membership ACTIF dans une
+ * ORG où la CIBLE a un membership — actif OU NON.
+ *
+ * N'existe QUE pour la suppression définitive de compte (`/api/admin/delete-user`). Le parcours
+ * normal y est : désactiver un membre (son `user_org_membership.is_active` passe à `false` via
+ * `rpc_deactivate_membership`) PUIS, éventuellement, purger son compte. Si cette garde exigeait
+ * l'activité des DEUX côtés comme `sharesActiveOrg`, un admin ne pourrait plus supprimer un membre
+ * qu'il vient LUI-MÊME de désactiver — régression d'un usage légitime, pas un renforcement.
+ * L'asymétrie reste stricte : c'est l'APPELANT qui doit être actif (un admin dont le mandat a
+ * expiré ne garde aucun périmètre), jamais la cible.
+ *
+ * NE PAS fusionner avec `sharesActiveOrg` ni « harmoniser » leur sémantique : deux routes déjà en
+ * production (`user-profile`, `avatar/upload`) dépendent de la forme stricte (actif des deux
+ * côtés) pour éditer l'identité d'un membre encore en poste.
+ */
+export async function sharesOrgIgnoringTargetActivity(
+  server: SupabaseClient,
+  callerId: string,
+  targetId: string,
+): Promise<boolean> {
+  const { data, error } = await server
+    .from('user_org_membership')
+    .select('user_id, org_object_id, is_active')
+    .in('user_id', [callerId, targetId]);
+  if (error || !data) return false;
+  const callerActiveOrgs = new Set(
+    data
+      .filter((r) => r.user_id === callerId && r.is_active === true)
+      .map((r) => r.org_object_id as string),
+  );
+  return data.some((r) => r.user_id === targetId && callerActiveOrgs.has(r.org_object_id as string));
+}

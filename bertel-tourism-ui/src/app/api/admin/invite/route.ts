@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { authorizeAdminRoute } from '../_authorize';
+import { authorizeAdminRoute, sharesActiveOrg } from '../_authorize';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +30,18 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (existing) {
       if (existing.last_sign_in_at) {
         return NextResponse.json({ error: 'already_active', detail: 'Ce compte s’est déjà connecté — rien à renvoyer.' }, { status: 409 });
+      }
+      // Garde périmètre ORG (revue finale, correctif bloquant) — SEULEMENT sur cette branche
+      // `resend`, et APRÈS résolution du compte existant : une adresse jamais invitée n'a aucun
+      // membership, donc `sharesActiveOrg` y rendrait toujours faux et bloquerait en 403 toute
+      // invitation d'un membre réellement nouveau (piège A). Sans cette garde ICI, un admin d'ORG
+      // de rang 30 pouvait détruire un compte jamais connecté d'une AUTRE organisation en
+      // connaissant son e-mail (`resend: true` supprime avant de ré-inviter = suppression pure).
+      // `sharesActiveOrg` (pas la variante « cible désactivée » de delete-user) convient : un
+      // compte encore ré-invitable a déjà été rattaché par le flux d'invitation normal, donc son
+      // membership est actif.
+      if (!auth.isSuper && !(await sharesActiveOrg(server, auth.callerId, existing.id))) {
+        return NextResponse.json({ error: 'out_of_scope' }, { status: 403 });
       }
       const { error: delErr } = await server.auth.admin.deleteUser(existing.id);
       if (delErr) return NextResponse.json({ error: 'resend_failed', detail: delErr.message }, { status: 500 });

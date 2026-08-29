@@ -1,5 +1,5 @@
 /** @jest-environment node */
-import { authorizeAdminRoute, sharesActiveOrg } from './_authorize';
+import { authorizeAdminRoute, sharesActiveOrg, sharesOrgIgnoringTargetActivity } from './_authorize';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -115,5 +115,54 @@ describe('sharesActiveOrg', () => {
   it('faux quand la cible n’a aucun membership actif', async () => {
     const server = serverWithMemberships([{ user_id: 'a', org_object_id: 'ORG1' }]);
     await expect(sharesActiveOrg(server, 'a', 'b')).resolves.toBe(false);
+  });
+});
+
+describe('sharesOrgIgnoringTargetActivity', () => {
+  function serverWithMemberships(
+    rows: Array<{ user_id: string; org_object_id: string; is_active: boolean }>,
+  ) {
+    const inFn = jest.fn().mockResolvedValue({ data: rows, error: null });
+    const select = jest.fn().mockReturnValue({ in: inFn });
+    return { from: jest.fn().mockReturnValue({ select }) } as never;
+  }
+
+  it('vrai quand la cible a un membership DÉSACTIVÉ dans l’ORG où l’appelant est actif (piège B)', async () => {
+    const server = serverWithMemberships([
+      { user_id: 'admin', org_object_id: 'ORG1', is_active: true },
+      { user_id: 'target', org_object_id: 'ORG1', is_active: false },
+    ]);
+    await expect(sharesOrgIgnoringTargetActivity(server, 'admin', 'target')).resolves.toBe(true);
+  });
+
+  it('vrai quand les deux comptes sont actifs dans la même ORG', async () => {
+    const server = serverWithMemberships([
+      { user_id: 'admin', org_object_id: 'ORG1', is_active: true },
+      { user_id: 'target', org_object_id: 'ORG1', is_active: true },
+    ]);
+    await expect(sharesOrgIgnoringTargetActivity(server, 'admin', 'target')).resolves.toBe(true);
+  });
+
+  it('faux quand l’appelant n’est PAS actif dans l’ORG partagée (l’asymétrie ne joue que pour la cible)', async () => {
+    const server = serverWithMemberships([
+      { user_id: 'admin', org_object_id: 'ORG1', is_active: false },
+      { user_id: 'target', org_object_id: 'ORG1', is_active: false },
+    ]);
+    await expect(sharesOrgIgnoringTargetActivity(server, 'admin', 'target')).resolves.toBe(false);
+  });
+
+  it('faux quand les ORG diffèrent', async () => {
+    const server = serverWithMemberships([
+      { user_id: 'admin', org_object_id: 'ORG1', is_active: true },
+      { user_id: 'target', org_object_id: 'ORG2', is_active: false },
+    ]);
+    await expect(sharesOrgIgnoringTargetActivity(server, 'admin', 'target')).resolves.toBe(false);
+  });
+
+  it('faux quand la lecture échoue (fail-closed)', async () => {
+    const inFn = jest.fn().mockResolvedValue({ data: null, error: { message: 'boom' } });
+    const select = jest.fn().mockReturnValue({ in: inFn });
+    const server = { from: jest.fn().mockReturnValue({ select }) } as never;
+    await expect(sharesOrgIgnoringTargetActivity(server, 'admin', 'target')).resolves.toBe(false);
   });
 });

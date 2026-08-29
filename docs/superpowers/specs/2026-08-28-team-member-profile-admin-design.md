@@ -10,6 +10,26 @@ correction d'écran d'un chantier de déploiement étranger.
 
 ---
 
+> ## ⚠ Ce document est la conception ; l'implémentation l'a DÉPASSÉ sur trois points — 2026-08-29
+>
+> Ce texte reste la référence de **conception** (le besoin, l'arbitrage « deux boutons de lien et non
+> trois », la mécanique des routes). Mais la revue de code a trouvé, et fermé, une faille que la
+> conception n'avait pas vue, et le PO a tranché un différé. Ce qui est **livré** diffère donc du § 5
+> et du § 8 ci-dessous sur trois points. **Le contrat qui fait foi est §226** du journal canonique
+> `bertel-tourism-ui/claude_brief/lot1_mapping_decisions.md`.
+>
+> | Point | Ce que dit ce document | Ce qui est LIVRÉ |
+> |---|---|---|
+> | Gardes du `PATCH` (§ 5.2) | quatre gardes ; la sonde `is_platform_owner` ne couvre que `platformRole` | **six** gardes. La conception avait manqué que **changer l'e-mail de connexion d'un `owner` revient à prendre son compte** (changer l'adresse, puis demander un lien de réinitialisation qui arrive chez soi — aucun trigger de base ne s'y oppose, ce n'est pas un changement de rôle). Ajoutés : `owner_required_for_email` (même autorité, **sans** exemption `isSuper`) et la règle **`RANK_VIOLATION`** du dépôt (rang cible ≥ rang appelant ⇒ refus, superuser exempté, rang scopé à l'ORG partagée) — cette route était la seule surface d'administration d'équipe à ne comparer aucun rang |
+> | Périmètre d'ORG sur `invite` / `delete-user` (§ 8, « différé ») | dette assumée, non corrigée | **Fermé**, sur décision PO — l'inversion était perverse : un rang 30 pouvait *supprimer* un compte d'une autre ORG mais pas en changer le nom. Pas le « correctif de 2 lignes » annoncé : la garde ne vaut que sur la branche `resend` (sinon toute invitation d'une adresse **nouvelle** échoue, faute de membership), et `delete-user` a demandé une **fonction asymétrique** (appelant actif, cible active **ou non**) sans quoi un membre qu'on vient de désactiver devenait indélébile |
+> | Bloc avatar (§ 4.1) | dupliqué depuis `ProfileEditModal` | **Extrait** dans `components/common/AvatarPicker.tsx`, consommé par les deux modales (arbitrage PO au balayage pré-vol) |
+>
+> Le § 4.2 (avertissement sur la conséquence d'un changement d'e-mail) est en revanche **livré tel
+> quel**, et complété par la garde `email_claims_actor` qui réserve au superuser une adresse
+> correspondant à un canal acteur.
+
+---
+
 ## 1. Le besoin
 
 Un administrateur du panneau Équipe voit aujourd'hui une ligne par membre : nom, e-mail, rôle
@@ -263,3 +283,38 @@ constater l'e-mail reçu ou l'erreur de débit — et le dire, avec la sortie r�
 | Langues, locale, fuseau du membre | Écartés à l'arbitrage : ce sont des préférences d'affichage, pas de l'identité — les éditer pour autrui est douteux | Demande PO |
 | Un vrai courriel « Invitation » renvoyé sans détruire le compte | Exigerait de composer le message via le SMTP maison, donc de dupliquer le gabarit Supabase | Un besoin réel de gabarit d'invitation distinct |
 | Journal des actions d'administration de compte (qui a changé quel e-mail, quand) | Aucune surface de lecture n'existerait pour le lire — même dette que `actor_contact_export_log` (§213) | Passe « écran d'imputabilité » |
+
+---
+
+## 9. Recette — ce qui reste à vérifier, et par qui (2026-08-29)
+
+La suite automatisée est verte (**407 suites / 3374 tests**) et le **profil personnel** a été vérifié
+dans l'application qui tourne. Le parcours Équipe, lui, n'a **pas** pu l'être : le panneau Équipe
+n'apparaît pas en mode démo (`canAdministerTeam`), et l'atteindre exige une connexion avec un compte
+réel — que l'assistant n'est pas autorisé à effectuer (saisir un mot de passe lui est interdit).
+
+Les six points ci-dessous sont donc à faire à la main. Les deux derniers sont les seuls qui ne
+peuvent pas être prouvés autrement qu'en vrai.
+
+1. **La modale charge ce que le tableau ne connaît pas.** Ouvrir « Modifier » sur un membre : la
+   photo et le rang plateforme doivent apparaître. Ils ne viennent pas du tableau — c'est la preuve
+   que le `GET` de la route répond.
+2. **Renommer.** Modifier le nom, enregistrer : toast de succès, et **la ligne du tableau porte le
+   nouveau nom** après rechargement.
+3. **Rouvrir sur un AUTRE membre.** Les champs doivent porter le second membre, pas le premier.
+   (C'est le piège de réouverture : la modale reste montée pendant son animation de sortie.)
+4. **Le champ « Rôle plateforme ».** Avec un compte `owner`, il est actif et l'enregistrement passe.
+   Avec un `super_admin` **non** owner, il est désactivé **avec son motif affiché** — et une requête
+   forgée à la main répondrait 403. Une garde qui coupe tout le monde passerait le premier test et
+   casserait le produit : les deux moitiés comptent.
+5. **Le bouton de lien.** Sur un compte jamais connecté il dit « Renvoyer l'invitation », sinon
+   « Réinitialiser le mot de passe » — c'est **le même envoi**, seul le libellé change.
+   **Vérifier la réception de l'e-mail**, ou relever le message de limite de débit (qui prouve aussi
+   que l'appel part). Il doit être **en français**.
+6. **« Envoyer un lien de connexion ».** Même vérification. Si les liens magiques sont désactivés au
+   niveau du projet Supabase, l'appel échoue avec un message explicite : relever ce message exact et
+   le signaler, plutôt que de conclure à une panne.
+
+**À ne PAS tester en production** : la garde qui empêche un admin d'ORG de changer l'e-mail d'un
+`owner` (§226 § 2). Elle est couverte par des tests automatisés vérifiés rouges par sabotage, et
+l'éprouver en vrai supposerait de modifier l'adresse de connexion d'un compte réel.

@@ -39,6 +39,21 @@ export interface DashboardScorecards {
   avg_processing_days: number | null;
 }
 
+// ─── §1  CRM ouvert — carte d'attention du bandeau (LOCKED — 2026-08-30) ─────
+
+export interface DashboardCrmOpen {
+  /**
+   * Interactions CRM ouvertes, GLOBAL (aucun filtre appliqué).
+   * Prédicat identique à crm_backlog dans api.capture_metric_snapshots :
+   * resolved_at IS NULL AND status <> 'done'.
+   */
+  open_interactions: number;
+  /** Tâches CRM en todo / in_progress / blocked. canceled et done exclus. */
+  open_tasks: number;
+  /** open_interactions + open_tasks */
+  total: number;
+}
+
 // ─── §2a  Type Breakdown  (LOCKED — Phase 2A) ────────────────────────────────
 
 export interface TypeBreakdownRow {

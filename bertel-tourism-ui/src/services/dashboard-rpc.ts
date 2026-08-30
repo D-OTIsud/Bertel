@@ -5,6 +5,7 @@ import type {
   DashboardActualisation,
   DashboardCityDistribution,
   DashboardCompleteness,
+  DashboardCrmOpen,
   DashboardDistinctionOverview,
   DashboardScorecards,
   DashboardTypeBreakdown,
@@ -118,6 +119,25 @@ export async function getDashboardDistinctionOverview(
 
   if (error) throw error;
   return data as DashboardDistinctionOverview;
+}
+
+/**
+ * Compteur GLOBAL des éléments CRM ouverts (carte d'attention du bandeau).
+ * Sans paramètre : la carte n'obéit pas au panneau de filtres (décision PO 2026-08-30).
+ */
+export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
+  const { demoMode } = useSessionStore.getState();
+  if (demoMode) {
+    return { open_interactions: 0, open_tasks: 0, total: 0 };
+  }
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_crm_open');
+
+  if (error) throw error;
+  return data as DashboardCrmOpen;
 }
 
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────

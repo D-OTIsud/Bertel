@@ -78,6 +78,26 @@ describe('dashboard-rpc getters', () => {
     expect(rpc).toHaveBeenCalledWith('get_dashboard_completeness', PARAMS);
   });
 
+  it('getDashboardCrmOpen appelle la RPC sans aucun paramètre', async () => {
+    mockClient();
+    rpc.mockResolvedValue({ data: { open_interactions: 170, open_tasks: 2, total: 172 }, error: null });
+    const { getDashboardCrmOpen } = await import('./dashboard-rpc');
+
+    const result = await getDashboardCrmOpen();
+
+    expect(schema).toHaveBeenCalledWith('api');
+    expect(rpc).toHaveBeenCalledWith('get_dashboard_crm_open');
+    expect(result.total).toBe(172);
+  });
+
+  it('getDashboardCrmOpen propage l’erreur RPC au lieu de l’avaler', async () => {
+    mockClient();
+    rpc.mockResolvedValue({ data: null, error: new Error('boom') });
+    const { getDashboardCrmOpen } = await import('./dashboard-rpc');
+
+    await expect(getDashboardCrmOpen()).rejects.toThrow('boom');
+  });
+
   it('en mode demo, ne touche pas au client Supabase', async () => {
     jest.doMock('../lib/supabase', () => ({
       getApiClient: () => ({ schema }),

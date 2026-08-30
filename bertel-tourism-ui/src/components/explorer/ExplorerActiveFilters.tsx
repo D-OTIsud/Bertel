@@ -14,6 +14,7 @@ import { buildSearchParams } from '../../lib/explorer-search-params';
 import { buildDynamicListFilters, createDynamicList } from '../../services/lists';
 import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chips';
 import { cn } from '@/lib/utils';
+import { ExplorerBridgeButton } from '../dashboard/ExplorerBridgeButton';
 
 /**
  * Barre de filtres actifs de l'Explorateur (impl. 3.2) : une pastille retirable
@@ -23,9 +24,18 @@ import { cn } from '@/lib/utils';
 interface ExplorerActiveFiltersProps {
   /** Hook de store à piloter — défaut = singleton Explorer (Explorer & tests inchangés). */
   useStore?: typeof useExplorerStore;
+  /**
+   * Dashboard uniquement : garde la barre montée même sans puce active, pour que
+   * le pont vers l'Explorateur reste toujours atteignable (arbitrage PO 2026-08-30).
+   * L'Explorateur, lui, continue de masquer la barre vide.
+   */
+  showExplorerBridge?: boolean;
 }
 
-export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerActiveFiltersProps = {}) {
+export function ExplorerActiveFilters({
+  useStore = useExplorerStore,
+  showExplorerBridge = false,
+}: ExplorerActiveFiltersProps = {}) {
   const common = useStore((s) => s.common);
   const selectedBuckets = useStore((s) => s.selectedBuckets);
   // D23 : les facettes par bucket alimentent désormais aussi la barre de chips.
@@ -57,7 +67,7 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
   const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets, hot, res, iti, vis, srv, evt };
   const chips = buildExplorerActiveChips(filters);
 
-  if (chips.length === 0) {
+  if (chips.length === 0 && !showExplorerBridge) {
     return null;
   }
 
@@ -230,6 +240,7 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
   return (
     <div className="active-filter-strip explorer-active-filters" role="region" aria-label="Filtres actifs">
       <span className="explorer-active-filters__label">Filtres actifs</span>
+      {chips.length === 0 && <span className="active-filter-strip__empty">Aucun filtre actif</span>}
       {chips.map((chip) => (
         <button
           key={chip.key}
@@ -241,20 +252,23 @@ export function ExplorerActiveFilters({ useStore = useExplorerStore }: ExplorerA
           {chip.label} ✕
         </button>
       ))}
-      <button
-        type="button"
-        className="ghost-button active-filter-strip__reset"
-        disabled={savingDynamic}
-        title="Transformer ces filtres en liste dynamique (mise à jour automatique)"
-        onClick={() => void saveDynamic()}
-      >
-        {savingDynamic ? 'Création…' : '★ Liste dynamique'}
-      </button>
+      {chips.length > 0 && (
+        <button
+          type="button"
+          className="ghost-button active-filter-strip__reset"
+          disabled={savingDynamic}
+          title="Transformer ces filtres en liste dynamique (mise à jour automatique)"
+          onClick={() => void saveDynamic()}
+        >
+          {savingDynamic ? 'Création…' : '★ Liste dynamique'}
+        </button>
+      )}
       {chips.length > 1 ? (
         <button type="button" className="ghost-button active-filter-strip__reset" onClick={resetAll}>
           Tout effacer
         </button>
       ) : null}
+      {showExplorerBridge && <ExplorerBridgeButton />}
     </div>
   );
 }

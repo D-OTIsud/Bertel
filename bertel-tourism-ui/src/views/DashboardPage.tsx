@@ -25,6 +25,7 @@ import { ActualisationTable } from '../components/dashboard/ActualisationTable';
 import { CompletenessTable } from '../components/dashboard/CompletenessTable';
 import { DistinctionOverview } from '../components/dashboard/DistinctionOverview';
 import { DashboardTabs } from '../components/dashboard/DashboardTabs';
+import { TimeseriesWidget } from '../components/dashboard/TimeseriesWidget';
 import { WidgetFrame } from '../components/dashboard/WidgetFrame';
 
 export default function DashboardPage() {
@@ -89,6 +90,17 @@ export default function DashboardPage() {
 
           {activeTab === 'quality' && (
             <section className="dashboard-panel" role="tabpanel" id="dashboard-panel-quality" aria-labelledby="dashboard-tab-quality">
+              <TimeseriesWidget
+                eyebrow="Qualité"
+                title="Remplissage dans le temps"
+                subtitle="Relevé quotidien figé depuis le 19 juin 2026 — la seule façon de comparer une date à l’autre."
+                scope="global"
+                enabled={activeTab === 'quality'}
+                metrics={[
+                  { key: 'completeness_avg', label: 'Remplissage', unit: ' %', decimals: 1 },
+                  { key: 'classified_count', label: 'Classés' },
+                ]}
+              />
               {/* Ordre maquette 5.1 : corpus par type → complétude par type → actualisation. */}
               <WidgetFrame
                 isPending={typeBreakdown.isPending}
@@ -119,40 +131,60 @@ export default function DashboardPage() {
 
           {activeTab === 'offer' && (
             <section role="tabpanel" id="dashboard-panel-offer" aria-labelledby="dashboard-tab-offer">
-            <div className="dashboard-kpi__row">
-              <WidgetFrame
-                isPending={cityDistribution.isPending}
-                error={cityDistribution.error}
-                isEmpty={cityDistribution.data?.rows.length === 0}
-                onRetry={() => cityDistribution.refetch()}
-              >
-                {cityDistribution.data && <CommuneDistribution data={cityDistribution.data} />}
-              </WidgetFrame>
-              <WidgetFrame
-                isPending={distinctions.isPending}
-                error={distinctions.error}
-                onRetry={() => distinctions.refetch()}
-              >
-                {distinctions.data && <DistinctionOverview data={distinctions.data} />}
-              </WidgetFrame>
+            <div className="dashboard-panel">
+              <TimeseriesWidget
+                eyebrow="Offre"
+                title="Corpus dans le temps"
+                subtitle="Croissance nette du corpus, tous statuts, relevée chaque nuit."
+                scope="global"
+                enabled={activeTab === 'offer'}
+                metrics={[{ key: 'corpus_count', label: 'Corpus', color: 'var(--acc-asc)' }]}
+              />
+              <div className="dashboard-kpi__row">
+                <WidgetFrame
+                  isPending={cityDistribution.isPending}
+                  error={cityDistribution.error}
+                  isEmpty={cityDistribution.data?.rows.length === 0}
+                  onRetry={() => cityDistribution.refetch()}
+                >
+                  {cityDistribution.data && <CommuneDistribution data={cityDistribution.data} />}
+                </WidgetFrame>
+                <WidgetFrame
+                  isPending={distinctions.isPending}
+                  error={distinctions.error}
+                  onRetry={() => distinctions.refetch()}
+                >
+                  {distinctions.data && <DistinctionOverview data={distinctions.data} />}
+                </WidgetFrame>
+              </div>
             </div>
             </section>
           )}
 
           {activeTab === 'activity' && (
             <section role="tabpanel" id="dashboard-panel-activity" aria-labelledby="dashboard-tab-activity">
-            <article className="kpi-panel">
-              <div className="panel-heading">
-                <div>
-                  <span className="eyebrow">Activité équipe</span>
-                  <h2>Suivi d’activité</h2>
+            <div className="dashboard-panel">
+              <TimeseriesWidget
+                eyebrow="Activité"
+                title="Interactions planifiées dans le temps"
+                subtitle="Le gros de ce qui reste à traiter, relevé chaque nuit."
+                scope="global"
+                enabled={activeTab === 'activity'}
+                metrics={[{ key: 'crm_backlog', label: 'À traiter', color: 'var(--warn)' }]}
+              />
+              <article className="kpi-panel">
+                <div className="panel-heading">
+                  <div>
+                    <span className="eyebrow">Activité équipe</span>
+                    <h2>Suivi d’activité</h2>
+                  </div>
                 </div>
-              </div>
-              <p className="dashboard-widget-state">
-                Le suivi d’activité arrive prochainement : vélocité de saisie, contributeurs
-                et traitement des demandes rejoindront cet onglet.
-              </p>
-            </article>
+                <p className="dashboard-widget-state">
+                  Le suivi d’activité arrive prochainement : vélocité de saisie, contributeurs
+                  et traitement des demandes rejoindront cet onglet.
+                </p>
+              </article>
+            </div>
             </section>
           )}
         </main>

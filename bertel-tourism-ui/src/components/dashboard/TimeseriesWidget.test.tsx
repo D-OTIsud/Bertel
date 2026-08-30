@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TimeseriesWidget } from './TimeseriesWidget';
 import { getMetricSnapshotSeries } from '../../services/metric-snapshot-rpc';
+import type { MetricSnapshotSeries } from '../../types/metric-snapshot';
 
 // jest.mock avec fabrique, PAS jest.spyOn sur un espace de noms importé :
 // le transform SWC de next/jest rend les exports non configurables, et un spyOn
@@ -60,5 +61,46 @@ describe('TimeseriesWidget', () => {
     mockedSeries.mockResolvedValue({ points: [] });
     wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
     expect(await screen.findByText(/Aucun relevé/)).toBeInTheDocument();
+  });
+
+  it('ne montre jamais la valeur de l’ancienne métrique sous l’unité de la nouvelle', async () => {
+    // Le service répond différemment selon la métrique demandée : un pourcentage
+    // pour « Remplissage », un compte pour « Corpus ». La réponse de « Corpus »
+    // est retardée à la main pour pouvoir inspecter l'écran pendant la transition,
+    // avant qu'elle ne réponde.
+    let resolveCorpus: (value: MetricSnapshotSeries) => void = () => {};
+    const corpusPromise = new Promise<MetricSnapshotSeries>((resolve) => {
+      resolveCorpus = resolve;
+    });
+    mockedSeries.mockImplementation(async (args) => {
+      if (args.metricKey === 'corpus_count') {
+        return corpusPromise;
+      }
+      return { points: [{ bucket_date: '2026-08-30', value: 92.3, denominator: 361 }] };
+    });
+
+    wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
+
+    // Ciblé sur ".timeseries-value strong" : la courbe SVG arrondit ses graduations
+    // d'axe aux mêmes chiffres et créerait sinon des correspondances multiples.
+    const valueSelector = { selector: '.timeseries-value strong' };
+    expect(await screen.findByText('92,3 %', valueSelector)).toBeInTheDocument();
+
+    const corpus = screen.getByRole('button', { name: 'Corpus' });
+    fireEvent.click(corpus);
+
+    // Le sélecteur reste monté et cliquable pendant la transition — ce n'est pas
+    // le bug d'origine (démontage du bouton) qu'on rouvre ici.
+    expect(screen.getByRole('button', { name: 'Corpus' })).toHaveAttribute('aria-pressed', 'true');
+
+    // Tant que « Corpus » n'a pas répondu, la valeur de « Remplissage » (92,3) ne
+    // doit plus être affichée. Avec l'ancienne implémentation (refs), elle restait
+    // visible mais sans le « % » — comme si 92,3 était un compte de fiches, la
+    // confusion que ce correctif supprime.
+    expect(screen.queryByText('92,3', valueSelector)).not.toBeInTheDocument();
+
+    resolveCorpus({ points: [{ bucket_date: '2026-08-30', value: 843, denominator: null }] });
+
+    expect(await screen.findByText('843', valueSelector)).toBeInTheDocument();
   });
 });

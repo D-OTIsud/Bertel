@@ -1,11 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Info } from 'lucide-react';
 import { useMetricSnapshotSeries } from '../../hooks/useMetricSnapshotSeries';
 import { TimeseriesChart } from './TimeseriesChart';
 import { WidgetFrame } from './WidgetFrame';
-import type { MetricSnapshotPoint } from '../../types/metric-snapshot';
 
 interface MetricOption {
   key: string;
@@ -41,25 +40,28 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
 
   const query = useMetricSnapshotSeries({ metricKey: metric.key, scope, grain: 'week' }, enabled);
 
-  // Chaque métrique porte sa PROPRE clé de requête : basculer le sélecteur retombe
-  // donc en `isPending` le temps du fetch. Sans cette mémoire, WidgetFrame remplacerait
-  // toute la carte — sélecteur compris — par un squelette à chaque clic, ce qui referme
-  // le sélecteur qu'on vient d'ouvrir. On garde le dernier relevé connu à l'écran
-  // (lecture stale-while-revalidate) et on ne montre le squelette qu'au tout premier
-  // chargement du widget.
-  const lastPointsRef = useRef<MetricSnapshotPoint[]>([]);
-  if (query.data) lastPointsRef.current = query.data.points;
-  const hasLoadedOnceRef = useRef(false);
-  if (query.data) hasLoadedOnceRef.current = true;
-
-  const points = query.data?.points ?? lastPointsRef.current;
+  // Chaque métrique porte sa PROPRE clé de requête : basculer le sélecteur
+  // changerait donc `status` en "pending" le temps du fetch si on ne faisait
+  // rien — WidgetFrame remplacerait toute la carte, sélecteur compris, par un
+  // squelette à chaque clic. Le hook fixe déjà ça via `placeholderData:
+  // keepPreviousData` : `isPending` ne redevient vrai qu'au tout premier
+  // chargement du widget, donc `WidgetFrame` peut le lire tel quel.
+  //
+  // Mais garder l'ancien relevé affiché pendant le fetch a un coût : tant que
+  // `query.isPlaceholderData` est vrai, les points en main sont ceux de
+  // l'ANCIENNE métrique alors que `metric` (libellé, unité, décimales) a déjà
+  // basculé sur la nouvelle. On ne montre donc la valeur courante et la
+  // courbe QUE lorsque les points appartiennent bien à la métrique active —
+  // sinon on afficherait un pourcentage sous une unité "fiches", ou l'inverse.
+  const showMetricData = !query.isPlaceholderData;
+  const points = showMetricData ? (query.data?.points ?? []) : [];
   const last = points[points.length - 1];
   const first = points[0];
   const delta = last && first ? last.value - first.value : 0;
 
   return (
     <WidgetFrame
-      isPending={query.isPending && enabled && !hasLoadedOnceRef.current}
+      isPending={query.isPending && enabled}
       error={query.error}
       onRetry={() => query.refetch()}
     >
@@ -87,39 +89,47 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
           )}
         </div>
 
-        {last && (
-          <div className="timeseries-value">
-            <strong>
-              {nf.format(last.value)}
-              {metric.unit ?? ''}
-            </strong>
-            <span>
-              {delta >= 0 ? '+' : '−'}
-              {nf.format(Math.abs(delta))}
-              {metric.unit ?? ''} depuis le premier relevé
-            </span>
-          </div>
+        {showMetricData ? (
+          <>
+            {last && (
+              <div className="timeseries-value">
+                <strong>
+                  {nf.format(last.value)}
+                  {metric.unit ?? ''}
+                </strong>
+                <span>
+                  {delta >= 0 ? '+' : '−'}
+                  {nf.format(Math.abs(delta))}
+                  {metric.unit ?? ''} depuis le premier relevé
+                </span>
+              </div>
+            )}
+
+            <TimeseriesChart
+              points={points}
+              label={metric.label}
+              unit={metric.unit ?? ''}
+              decimals={metric.decimals ?? 0}
+              color={metric.color ?? 'var(--teal)'}
+            />
+
+            <div className="timeseries-notes">
+              <span className="timeseries-note">
+                <Info aria-hidden="true" />
+                Série <strong>globale</strong> : elle n’obéit pas au panneau de filtres.
+              </span>
+              <span className="timeseries-note">
+                <Info aria-hidden="true" />
+                {points.length} relevé{points.length > 1 ? 's' : ''} d’historique — la comparaison
+                année sur année s’activera en 2027.
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="dashboard-widget-state" aria-live="polite">
+            Chargement de {metric.label}…
+          </p>
         )}
-
-        <TimeseriesChart
-          points={points}
-          label={metric.label}
-          unit={metric.unit ?? ''}
-          decimals={metric.decimals ?? 0}
-          color={metric.color ?? 'var(--teal)'}
-        />
-
-        <div className="timeseries-notes">
-          <span className="timeseries-note">
-            <Info aria-hidden="true" />
-            Série <strong>globale</strong> : elle n’obéit pas au panneau de filtres.
-          </span>
-          <span className="timeseries-note">
-            <Info aria-hidden="true" />
-            {points.length} relevé{points.length > 1 ? 's' : ''} d’historique — la comparaison
-            année sur année s’activera en 2027.
-          </span>
-        </div>
       </article>
     </WidgetFrame>
   );

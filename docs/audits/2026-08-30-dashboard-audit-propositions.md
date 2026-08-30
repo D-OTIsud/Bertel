@@ -121,16 +121,37 @@ Compteurs d'absences cliquables (photo, contact, géoloc, description, horaires,
 
 ## 3. Ordre recommandé
 
-| # | Proposition | Effort | SQL | Gain |
-|---|---|---|---|---|
-| 1 | A1 carte CRM + A2 héros + A3 placeholder | S | 1 mini-RPC | arrêt des affichages faux |
-| 2 | B1 fiches < 80 | S | 0 | actionnabilité immédiate |
-| 3 | B3 pont Explorer | S | 0 | régression réparée |
-| 4 | B2 séries temporelles | M | 0 | 73 j de données enfin visibles |
-| 5 | C1+C2+C3 onglet Activité | M/L | 3 RPC | supprime le placeholder |
-| 6 | D1+D2 (puis D3) offre | M/L | 3 RPC | vocation observatoire |
-| 7 | F1 quality gaps | M | 1 RPC | pilotage qualité complet |
-| 8 | E1+E2 résolveur | M | résolveur | multi-ORG + drill distinctions |
+| # | Proposition | Effort | SQL | Gain | État |
+|---|---|---|---|---|---|
+| 1 | A1 carte CRM + A2 héros + A3 placeholder | S | 1 mini-RPC | arrêt des affichages faux | ✅ **livré 2026-08-30** |
+| 2 | B1 fiches < 80 | S | 0 | actionnabilité immédiate | ✅ **livré 2026-08-30** |
+| 3 | B3 pont Explorer | S | 0 | régression réparée | ✅ **livré 2026-08-30** |
+| 4 | B2 séries temporelles | M | 0 | 73 j de données enfin visibles | ✅ **livré 2026-08-30** |
+| 5 | C1+C2+C3 onglet Activité | M/L | 3 RPC | supprime le placeholder | à planifier |
+| 6 | D1+D2 (puis D3) offre | M/L | 3 RPC | vocation observatoire | à planifier |
+| 7 | F1 quality gaps | M | 1 RPC | pilotage qualité complet | à planifier |
+| 8 | E1+E2 résolveur | M | résolveur | multi-ORG + drill distinctions | à planifier |
+
+### Étapes 1 à 4 — livraison du 2026-08-30
+
+Plan exécuté : `docs/superpowers/plans/2026-08-30-dashboard-etapes-1-4.md` (7 tâches, 10 commits,
+`45122c1`..`33e2bff`). Une seule dépendance backend, la RPC `api.get_dashboard_crm_open`
+(manifeste `17f`), appliquée en production avec sa garde vérifiée rouge avant et verte après.
+
+**Invariant tenu, vérifié sur la base vive :** la carte du bandeau et la courbe de l'onglet
+Activité comptent la même chose — `open_interactions` = 170 = `crm_backlog` = dernier point de
+la série ; `total` = 172 = 170 interactions + 2 tâches ouvertes. La garde SQL a été prouvée
+**non vacante** par sabotage en transaction annulée (prédicat cassé ⇒ divergence 3144 vs 170
+détectée).
+
+**Ce que la revue finale a rattrapé**, et qui vaut d'être retenu : trois libellés
+réintroduisaient la classe de mensonge que ce lot supprime — le plafond serveur de 10 fiches
+affiché comme un compte total, l'état de chargement du compteur CRM rendu comme un « À jour ·
+0 », et une note d'historique qui comptait des semaines sous un sous-titre annonçant du
+quotidien. Les trois sont corrigés.
+
+**Reste à faire à la main :** la recette navigateur (§7 du plan). La cohérence carte ↔ courbe
+est prouvée en base, pas encore à l'écran.
 
 Étapes 1-4 = **frontend quasi pur** (une seule mini-RPC), livrables en un lot court ; chaque étape suivante est un lot indépendant conforme au phasage §58.
 

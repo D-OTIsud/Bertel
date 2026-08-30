@@ -1,4 +1,4 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { getMetricSnapshotSeries } from '../services/metric-snapshot-rpc';
 import type { MetricSeriesArgs, MetricSnapshotSeries } from '../types/metric-snapshot';
 
@@ -20,5 +20,11 @@ export function useMetricSnapshotSeries(
     queryFn: () => getMetricSnapshotSeries(args),
     staleTime: METRIC_SERIES_STALE_TIME_MS,
     enabled,
+    // Changer de métrique change la queryKey : sans placeholderData, `status`
+    // repasserait à "pending" le temps du fetch. keepPreviousData garde le
+    // dernier résultat connu, bascule `status` à "success" et pose
+    // `isPlaceholderData = true` — c'est ce signal que le widget lit pour
+    // savoir que les points en main ne sont PAS ceux de la métrique active.
+    placeholderData: keepPreviousData,
   });
 }

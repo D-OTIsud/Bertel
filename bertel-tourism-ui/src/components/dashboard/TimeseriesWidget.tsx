@@ -27,6 +27,20 @@ interface Props {
 const nf = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
 
 /**
+ * Profondeur d'historique réellement couverte, en JOURS entre `bucket_date` du premier point
+ * et aujourd'hui — jamais le nombre de points. `grain: 'week'` ne rend qu'~11 points sur un
+ * registre qui contient en réalité un relevé PAR JOUR (73 au 2026-08-30) : compter les points
+ * annoncerait « 11 relevés d'historique » à côté d'un sous-titre qui dit lui-même « Relevé
+ * quotidien depuis le 19 juin » — le widget se contredirait dans le même cadre.
+ */
+function historyDepthDays(firstBucketDate: string): number {
+  const start = new Date(`${firstBucketDate}T00:00:00Z`).getTime();
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.max(0, Math.round((todayUTC - start) / 86_400_000));
+}
+
+/**
  * Widget de série temporelle lisant le registre metric_snapshot.
  *
  * Deux mentions d'honnêteté sont OBLIGATOIRES et ne doivent pas être retirées :
@@ -58,6 +72,7 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
   const last = points[points.length - 1];
   const first = points[0];
   const delta = last && first ? last.value - first.value : 0;
+  const historyDays = first ? historyDepthDays(first.bucket_date) : null;
 
   return (
     <WidgetFrame
@@ -118,11 +133,13 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
                 <Info aria-hidden="true" />
                 Série <strong>globale</strong> : elle n’obéit pas au panneau de filtres.
               </span>
-              <span className="timeseries-note">
-                <Info aria-hidden="true" />
-                {points.length} relevé{points.length > 1 ? 's' : ''} d’historique — la comparaison
-                année sur année s’activera en 2027.
-              </span>
+              {historyDays !== null && (
+                <span className="timeseries-note">
+                  <Info aria-hidden="true" />
+                  {historyDays} jour{historyDays > 1 ? 's' : ''} d’historique — la comparaison année
+                  sur année s’activera en 2027.
+                </span>
+              )}
             </div>
           </>
         ) : (

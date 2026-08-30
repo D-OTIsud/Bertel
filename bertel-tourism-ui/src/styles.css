@@ -9948,6 +9948,8 @@ a {
   border: 1px solid color-mix(in srgb, var(--attn-accent) 35%, var(--surface));
 }
 .summary-attn--ok { --attn-accent: var(--brand-green); }
+/* État inconnu (chargement / erreur) : gris neutre — jamais l'ambre d'attente ni le vert « à jour ». */
+.summary-attn--unknown { --attn-accent: var(--text-muted); }
 .summary-attn__top {
   display: inline-flex;
   align-items: center;

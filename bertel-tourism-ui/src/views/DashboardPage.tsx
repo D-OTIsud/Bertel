@@ -79,7 +79,7 @@ export default function DashboardPage() {
         </aside>
 
         <main className="dashboard-main">
-          <ExplorerActiveFilters useStore={useDashboardExplorerStore} />
+          <ExplorerActiveFilters useStore={useDashboardExplorerStore} showExplorerBridge />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
             {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} />}

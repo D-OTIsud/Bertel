@@ -10677,6 +10677,22 @@ a {
   padding: 0.3rem 0.65rem;
 }
 
+.active-filter-strip__empty {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+}
+.explorer-bridge {
+  margin-left: 0.25rem;
+  font-size: 0.78rem;
+  padding: 0.3rem 0.65rem;
+  font-weight: 700;
+  color: var(--teal);
+  border-color: rgb(var(--theme-primary-rgb) / 0.42);
+  background: var(--teal-tint);
+}
+.explorer-bridge:hover { background: var(--teal-soft); }
+
 /* ─── Commune distribution list ─────────────────────────────────────────── */
 
 .commune-list {

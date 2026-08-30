@@ -9,7 +9,7 @@ DECLARE
   v            jsonb;
   v_int_live   int;
   v_task_live  int;
-  v_backlog    int;
+  v_backlog    numeric;
   v_has_public boolean;
 BEGIN
   -- (A) contrat de sortie
@@ -38,11 +38,28 @@ BEGIN
   ASSERT (v->>'total')::int = (v->>'open_interactions')::int + (v->>'open_tasks')::int,
          'total = open_interactions + open_tasks';
 
-  -- (E) cohérence avec le KPI historisé : la carte et la courbe disent la même chose
-  SELECT count(*) INTO v_backlog
-  FROM   crm_interaction WHERE resolved_at IS NULL AND status::text <> 'done';
-  ASSERT (v->>'open_interactions')::int = v_backlog,
-         'open_interactions suit le même prédicat que crm_backlog (capture_metric_snapshots)';
+  -- (E) cohérence avec le KPI historisé : la carte et la courbe disent la même chose.
+  -- Ce bloc appelle RÉELLEMENT api.capture_metric_snapshots plutôt que de recopier son
+  -- prédicat (resolved_at IS NULL AND status <> 'done') en dur ici : une copie ne peut
+  -- JAMAIS échouer si (B) est déjà passé — les deux expressions seraient alors le même
+  -- texte évalué deux fois, donc l'invariant que le runbook, le COMMENT de la fonction et
+  -- l'en-tête de migration présentent tous comme la raison d'être de la fonction ne serait
+  -- gardé par rien. Seule l'exécution de la fonction qui écrit le KPI historisé, suivie
+  -- d'une relecture de ce qu'elle a écrit, prouve que la carte et la courbe restent
+  -- alignées si l'une des deux définitions dérive un jour. Ne PAS « simplifier » en
+  -- revenant à une copie du prédicat.
+  PERFORM api.capture_metric_snapshots(current_date);
+  SELECT value INTO v_backlog
+  FROM   public.metric_snapshot
+  WHERE  metric_key    = 'crm_backlog'
+    AND  scope         = 'global'
+    AND  scope_key     = ''
+    AND  snapshot_date = current_date;
+  ASSERT v_backlog IS NOT NULL,
+         'capture_metric_snapshots doit écrire une ligne crm_backlog (global) pour aujourd hui';
+  ASSERT (v->>'open_interactions')::numeric = v_backlog,
+         format('la carte du bandeau (open_interactions=%s) et le KPI historisé crm_backlog de la courbe Activité (%s) doivent afficher le MÊME chiffre — sinon la carte et la courbe se contredisent pour la même réalité',
+                v->>'open_interactions', v_backlog);
 
   -- (F) §204 — EXECUTE retiré de PUBLIC et anon
   SELECT bool_or(has_function_privilege(r, 'api.get_dashboard_crm_open()', 'EXECUTE'))

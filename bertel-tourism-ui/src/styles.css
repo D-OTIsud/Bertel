@@ -11202,6 +11202,10 @@ a {
 .meter__zone { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
 .completeness-table__meter-col { min-width: 190px; }
 
+.timeseries-chart { display: block; overflow: visible; }
+.timeseries-chart__grid { stroke: var(--line); stroke-width: 1; }
+.timeseries-chart__axis { font-size: 11px; font-weight: 600; fill: var(--text-muted); }
+
 .below-toggle {
   display: inline-flex;
   align-items: center;

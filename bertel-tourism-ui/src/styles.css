@@ -11206,6 +11206,49 @@ a {
 .timeseries-chart__grid { stroke: var(--line); stroke-width: 1; }
 .timeseries-chart__axis { font-size: 11px; font-weight: 600; fill: var(--text-muted); }
 
+.timeseries-metrics { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.timeseries-metrics__btn {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.timeseries-metrics__btn[aria-pressed='true'] {
+  background: var(--teal);
+  border-color: transparent;
+  color: #fffdf8;
+}
+.timeseries-value { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
+.timeseries-value strong {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.timeseries-value span { font-size: 0.78rem; color: var(--text-muted); }
+.timeseries-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line-soft);
+}
+.timeseries-note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.timeseries-note svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: var(--warn); }
+
 .below-toggle {
   display: inline-flex;
   align-items: center;

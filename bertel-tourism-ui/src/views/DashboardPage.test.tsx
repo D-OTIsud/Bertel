@@ -43,6 +43,15 @@ jest.mock('../services/dashboard-rpc', () => ({
   }),
 }));
 
+jest.mock('../services/metric-snapshot-rpc', () => ({
+  getMetricSnapshotSeries: jest.fn().mockResolvedValue({
+    points: [
+      { bucket_date: '2026-06-30', value: 92.3, denominator: 361 },
+      { bucket_date: '2026-08-30', value: 91.4, denominator: 843 },
+    ],
+  }),
+}));
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(

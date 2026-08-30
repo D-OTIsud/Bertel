@@ -51,4 +51,19 @@ describe('ScorecardStrip', () => {
     render(<ScorecardStrip data={base} />);
     expect(screen.getByText('359')).toBeInTheDocument();
   });
+
+  it('verrouille la distinction inconnu vs sain : sans crmOpen ni « À jour » ni un 0, avec crmOpen à zéro les deux', () => {
+    const { unmount } = render(<ScorecardStrip data={base} />);
+    // état inconnu (chargement ou erreur) : jamais l'écran « À jour · 0 » restauré à tort
+    expect(screen.queryByText('À jour')).not.toBeInTheDocument();
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Indisponible')).toBeInTheDocument();
+    unmount();
+
+    // état sain réel : crmOpen défini ET total === 0, une information vraie
+    render(<ScorecardStrip data={base} crmOpen={{ open_interactions: 0, open_tasks: 0, total: 0 }} />);
+    expect(screen.getByText('À jour')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
 });

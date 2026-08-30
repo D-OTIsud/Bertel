@@ -45,6 +45,33 @@ describe('TimeseriesWidget', () => {
     expect(await screen.findByText(/année sur année/)).toBeInTheDocument();
   });
 
+  describe('profondeur d’historique en JOURS, pas en nombre de points (T5)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-08-30T12:00:00Z'));
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('dérive la note du premier bucket_date à aujourd’hui, jamais de points.length', async () => {
+      // 3 points seulement (grain hebdo mocké), mais le premier relevé date du 2026-06-30 :
+      // 61 jours réels d'historique — un compte de points afficherait « 3 relevés », mensonge
+      // que ce correctif supprime.
+      wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé quotidien figé depuis le 30 juin 2026." metrics={metrics} scope="global" enabled />);
+      expect(await screen.findByText(/61 jours d’historique — la comparaison année sur année/)).toBeInTheDocument();
+      expect(screen.queryByText(/3 relevés? d’historique/)).not.toBeInTheDocument();
+    });
+
+    it('n’affiche pas la note de profondeur quand le registre ne renvoie aucun point', async () => {
+      mockedSeries.mockResolvedValue({ points: [] });
+      wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
+      expect(await screen.findByText(/Aucun relevé/)).toBeInTheDocument();
+      expect(screen.queryByText(/d’historique/)).not.toBeInTheDocument();
+    });
+  });
+
   it('change de métrique au clic sur le sélecteur', async () => {
     wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
     const corpus = await screen.findByRole('button', { name: 'Corpus' });

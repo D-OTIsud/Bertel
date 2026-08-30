@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { Bell, CheckCircle2 } from 'lucide-react';
+import { Bell, CheckCircle2, MinusCircle } from 'lucide-react';
 import type { DashboardScorecards, DashboardCrmOpen } from '../../types/dashboard';
 
 interface Props {
@@ -27,12 +27,27 @@ function deltaTone(delta30d: number, deltaPct: number | null): string {
 }
 
 /**
+ * État de la carte d'attention CRM. `crmOpen === undefined` couvre AUTANT le chargement en
+ * cours que l'échec de la requête (elle n'est couverte par aucun WidgetFrame) : dans les deux
+ * cas c'est un INCONNU, jamais un « À jour · 0 » — confondre les deux est le défaut que ce lot
+ * existe pour supprimer. Le vrai « À jour · 0 » n'apparaît que lorsque `crmOpen` est défini ET
+ * que son `total` vaut zéro : un zéro observé, pas un zéro par défaut.
+ */
+type CrmAttnState = 'unknown' | 'ok' | 'attention';
+
+function crmAttnState(crmOpen: DashboardCrmOpen | undefined): CrmAttnState {
+  if (!crmOpen) return 'unknown';
+  return crmOpen.total > 0 ? 'attention' : 'ok';
+}
+
+/**
  * Bandeau résumé du dashboard (impl. 5.1) — remplace les 6 cartes-chiffres au poids
  * identique par une hiérarchie : UNE métrique meneuse (Inscrits SIT, grand format) +
  * deux secondaires (complétude, classés/labellisés) + une carte d'attention dédiée
  * aux demandes en cours qui mène au CRM. Contraste d'échelle = critère d'acceptation.
  */
 export function ScorecardStrip({ data, crmOpen }: Props) {
+  const attnState = crmAttnState(crmOpen);
   return (
     <section className="dashboard-summary" aria-label="Résumé du tableau de bord">
       {/* Métrique meneuse — domine par l'échelle (≈44px) et le fond plein. */}
@@ -62,20 +77,28 @@ export function ScorecardStrip({ data, crmOpen }: Props) {
 
       {/* Compteur CRM GLOBAL — il n'obéit pas au panneau de filtres (décision PO 2026-08-30),
           et la carte le dit, parce qu'un chiffre non filtré au milieu de chiffres filtrés
-          doit s'annoncer. pending_change n'est plus lu : la table est vide depuis toujours. */}
+          doit s'annoncer. pending_change n'est plus lu : la table est vide depuis toujours.
+          `attnState === 'unknown'` (chargement ou erreur, non couvert par WidgetFrame ici) rend
+          un état NEUTRE, jamais le « À jour · 0 » sain — c'est l'écran que ce lot supprime. */}
       <article
-        className={`summary-attn${crmOpen && crmOpen.total > 0 ? '' : ' summary-attn--ok'}`}
+        className={`summary-attn${attnState === 'unknown' ? ' summary-attn--unknown' : attnState === 'ok' ? ' summary-attn--ok' : ''}`}
         role="region"
         aria-label="Demandes à traiter"
       >
         <span className="summary-attn__top">
-          {crmOpen && crmOpen.total > 0 ? <Bell aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
-          {crmOpen && crmOpen.total > 0 ? 'À traiter' : 'À jour'}
+          {attnState === 'attention' && <Bell aria-hidden="true" />}
+          {attnState === 'ok' && <CheckCircle2 aria-hidden="true" />}
+          {attnState === 'unknown' && <MinusCircle aria-hidden="true" />}
+          {attnState === 'attention' ? 'À traiter' : attnState === 'ok' ? 'À jour' : 'Indisponible'}
         </span>
         <span className="summary-attn__line">
-          <span className="summary-attn__big">{nf.format(crmOpen?.total ?? 0)}</span>
+          <span className="summary-attn__big">{attnState === 'unknown' ? '—' : nf.format(crmOpen?.total ?? 0)}</span>
           <span className="summary-attn__txt">
-            {(crmOpen?.total ?? 0) > 1 ? 'demandes en cours' : 'demande en cours'}
+            {attnState === 'unknown'
+              ? 'chiffre non disponible'
+              : (crmOpen?.total ?? 0) > 1
+                ? 'demandes en cours'
+                : 'demande en cours'}
           </span>
         </span>
         {crmOpen && (
@@ -87,7 +110,7 @@ export function ScorecardStrip({ data, crmOpen }: Props) {
           </span>
         )}
         <Link href="/crm" className="summary-attn__cta">
-          {crmOpen && crmOpen.total > 0 ? 'Ouvrir le suivi CRM' : 'Voir le suivi CRM'}
+          {attnState === 'attention' ? 'Ouvrir le suivi CRM' : 'Voir le suivi CRM'}
         </Link>
       </article>
     </section>

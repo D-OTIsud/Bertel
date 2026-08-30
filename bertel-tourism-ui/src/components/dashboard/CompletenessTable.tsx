@@ -25,6 +25,36 @@ function fieldLabel(key: string): string {
   return FIELD_LABELS[key] ?? key;
 }
 
+/**
+ * Plafond serveur de api.get_dashboard_completeness (paramètre `p_below_limit`, dont le DÉFAUT
+ * vaut 10 côté base vive — vérifié : `p_below_limit integer DEFAULT 10`). Le client ne passe
+ * jamais ce paramètre, donc `below_80` ne contient jamais plus de BELOW_80_LIMIT fiches par
+ * type : au-delà, ce nombre n'est PAS le total réel de fiches à corriger, seulement la taille
+ * de la page renvoyée. DOUBLE le défaut serveur — à changer EN MÊME TEMPS que lui.
+ */
+export const BELOW_80_LIMIT = 10;
+
+/**
+ * Libellé visible + nom accessible du bouton de dépliage « À corriger ». Honnête au plafond
+ * serveur (constat de revue) : au plafond, on ne prétend plus à un compte total inconnu. Le
+ * nom accessible dit toujours le nombre ET l'action — sans lui un lecteur d'écran annonce
+ * « N fiches, bouton » sans dire ce que le clic fait.
+ */
+function belowToggleContent(count: number, isExpanded: boolean): { label: string; ariaLabel: string } {
+  const action = isExpanded ? 'masquer le détail' : 'afficher le détail';
+  if (count === BELOW_80_LIMIT) {
+    return {
+      label: `${BELOW_80_LIMIT} plus urgentes`,
+      ariaLabel: `${BELOW_80_LIMIT} plus urgentes à corriger, ${action}`,
+    };
+  }
+  const plural = count > 1 ? 's' : '';
+  return {
+    label: `${count} fiche${plural}`,
+    ariaLabel: `${count} fiche${plural} à corriger, ${action}`,
+  };
+}
+
 /** Jauge de complétude (richesse perçue visiteur 0–100) — D7 : couleur + zone écrite (WCAG 1.4.1). */
 function Meter({ score, completePct }: { score: number; completePct: number }) {
   const zone = meterZone(score, 50);
@@ -50,10 +80,17 @@ function Meter({ score, completePct }: { score: number; completePct: number }) {
 
 /** Fiches sous 80 pour un type — la donnée arrive déjà dans la réponse, on ne la refetch pas. */
 function BelowList({ rows }: { rows: CompletenessRow['below_80'] }) {
+  // Au plafond serveur, `rows.length` est la taille de la page reçue, pas le total réel de
+  // fiches sous 80 % : le libellé doit dire « les N plus incomplètes », jamais prétendre à
+  // un compte total qu'on ne connaît pas (constat de revue : l'écran annonçait « 10 fiches
+  // sous 80 % » pour des types qui en comptent bien plus en production).
+  const isAtLimit = rows.length === BELOW_80_LIMIT;
   return (
     <div className="below-list">
       <span className="below-list__head">
-        {rows.length} fiche{rows.length > 1 ? 's' : ''} sous 80 % · triées par score croissant
+        {isAtLimit
+          ? `Les ${BELOW_80_LIMIT} fiches les plus incomplètes · triées par score croissant`
+          : `${rows.length} fiche${rows.length > 1 ? 's' : ''} sous 80 % · triées par score croissant`}
       </span>
       <ul className="below-list__items">
         {[...rows]
@@ -127,56 +164,60 @@ export function CompletenessTable({ data }: Props) {
             </tr>
           </thead>
           <tbody>
-            {data.rows.map((row) => (
-              <Fragment key={row.type}>
-                <tr>
-                  <td className="actualisation-table__type">
-                    <button
-                      type="button"
-                      className={`type-cell-btn${activeTypes.includes(row.type) ? ' type-cell-btn--active' : ''}`}
-                      title={`Filtrer : ${row.type}`}
-                      onClick={() => handleType(row.type)}
-                      aria-pressed={activeTypes.includes(row.type)}
-                    >
-                      <TypePill type={row.type} />
-                    </button>
-                  </td>
-                  <td>{row.total.toLocaleString('fr-FR')}</td>
-                  <td className="completeness-table__meter-col">
-                    <Meter score={row.avg_score} completePct={row.complete_pct} />
-                  </td>
-                  <td>
-                    {row.missing_top_field ? (
-                      <span className="pill-mini">{fieldLabel(row.missing_top_field)}</span>
-                    ) : (
-                      <span className="actualisation-table__ok">—</span>
-                    )}
-                  </td>
-                  <td>
-                    {row.below_80.length > 0 ? (
+            {data.rows.map((row) => {
+              const belowToggle = belowToggleContent(row.below_80.length, openType === row.type);
+              return (
+                <Fragment key={row.type}>
+                  <tr>
+                    <td className="actualisation-table__type">
                       <button
                         type="button"
-                        className="below-toggle"
-                        aria-expanded={openType === row.type}
-                        onClick={() => setOpenType(openType === row.type ? null : row.type)}
+                        className={`type-cell-btn${activeTypes.includes(row.type) ? ' type-cell-btn--active' : ''}`}
+                        title={`Filtrer : ${row.type}`}
+                        onClick={() => handleType(row.type)}
+                        aria-pressed={activeTypes.includes(row.type)}
                       >
-                        <ChevronRight aria-hidden="true" />
-                        {row.below_80.length} fiche{row.below_80.length > 1 ? 's' : ''}
+                        <TypePill type={row.type} />
                       </button>
-                    ) : (
-                      <span className="actualisation-table__ok">—</span>
-                    )}
-                  </td>
-                </tr>
-                {openType === row.type && (
-                  <tr className="below-row">
-                    <td colSpan={5}>
-                      <BelowList rows={row.below_80} />
+                    </td>
+                    <td>{row.total.toLocaleString('fr-FR')}</td>
+                    <td className="completeness-table__meter-col">
+                      <Meter score={row.avg_score} completePct={row.complete_pct} />
+                    </td>
+                    <td>
+                      {row.missing_top_field ? (
+                        <span className="pill-mini">{fieldLabel(row.missing_top_field)}</span>
+                      ) : (
+                        <span className="actualisation-table__ok">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {row.below_80.length > 0 ? (
+                        <button
+                          type="button"
+                          className="below-toggle"
+                          aria-expanded={openType === row.type}
+                          aria-label={belowToggle.ariaLabel}
+                          onClick={() => setOpenType(openType === row.type ? null : row.type)}
+                        >
+                          <ChevronRight aria-hidden="true" />
+                          {belowToggle.label}
+                        </button>
+                      ) : (
+                        <span className="actualisation-table__ok">—</span>
+                      )}
                     </td>
                   </tr>
-                )}
-              </Fragment>
-            ))}
+                  {openType === row.type && (
+                    <tr className="below-row">
+                      <td colSpan={5}>
+                        <BelowList rows={row.below_80} />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>

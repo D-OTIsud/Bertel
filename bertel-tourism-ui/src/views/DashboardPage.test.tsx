@@ -38,6 +38,9 @@ jest.mock('../services/dashboard-rpc', () => ({
     total_scoped: 10, with_distinction: 4, without_distinction: 6, distinction_pct: 40,
     by_scheme: [{ scheme_code: 'hot_stars', scheme_name: 'Étoiles hôtel', display_group: 'official_classification', count: 4 }],
   }),
+  getDashboardCrmOpen: jest.fn().mockResolvedValue({
+    open_interactions: 170, open_tasks: 2, total: 172,
+  }),
 }));
 
 function renderPage() {
@@ -85,5 +88,13 @@ describe('DashboardPage — onglets', () => {
     expect(await screen.findByText('Période')).toBeInTheDocument();
     // Un groupe transverse de l'Explorer est présent.
     expect(screen.getByText('Localisation')).toBeInTheDocument();
+  });
+
+  it('affiche le compteur CRM global dans le bandeau', async () => {
+    renderPage();
+    // Le total CRM (172) doit s'afficher dans la carte d'attention du bandeau.
+    expect(await screen.findByText('172')).toBeInTheDocument();
+    // Vérifier aussi le libellé spécifique au total > 1.
+    expect(screen.getByText('demandes en cours')).toBeInTheDocument();
   });
 });

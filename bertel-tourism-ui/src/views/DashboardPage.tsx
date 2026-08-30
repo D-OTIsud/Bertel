@@ -12,6 +12,7 @@ import {
   getDashboardActualisation,
   getDashboardCompleteness,
   getDashboardDistinctionOverview,
+  getDashboardCrmOpen,
 } from '../services/dashboard-rpc';
 import { useDashboardQuery } from '../hooks/useDashboardQuery';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
@@ -53,6 +54,9 @@ export default function DashboardPage() {
 
   // Héro permanent ; les widgets d'onglet ne fetchent que quand leur onglet est visible.
   const scorecards = useDashboardQuery('scorecards', params, getDashboardScorecards);
+  // Compteur CRM global : le fetcher ignore `params` (la carte n'est pas filtrée),
+  // mais on passe params quand même pour garder UNE seule forme de queryKey.
+  const crmOpen = useDashboardQuery('crm-open', params, () => getDashboardCrmOpen());
   const typeBreakdown = useDashboardQuery('type-breakdown', params, getDashboardTypeBreakdown, activeTab === 'quality');
   const actualisation = useDashboardQuery('actualisation', params, getDashboardActualisation, activeTab === 'quality');
   const completeness = useDashboardQuery('completeness', params, getDashboardCompleteness, activeTab === 'quality');
@@ -78,7 +82,7 @@ export default function DashboardPage() {
           <ExplorerActiveFilters useStore={useDashboardExplorerStore} />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
-            {scorecards.data && <ScorecardStrip data={scorecards.data} />}
+            {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} />}
           </WidgetFrame>
 
           <DashboardTabs />
@@ -141,11 +145,12 @@ export default function DashboardPage() {
               <div className="panel-heading">
                 <div>
                   <span className="eyebrow">Activité équipe</span>
-                  <h2>À venir</h2>
+                  <h2>Suivi d’activité</h2>
                 </div>
               </div>
               <p className="dashboard-widget-state">
-                Vélocité, contributeurs et modération arrivent dans un prochain lot (lot 4).
+                Le suivi d’activité arrive prochainement : vélocité de saisie, contributeurs
+                et traitement des demandes rejoindront cet onglet.
               </p>
             </article>
             </section>

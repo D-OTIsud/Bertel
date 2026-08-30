@@ -9918,6 +9918,8 @@ a {
 .summary-stat__sub { font-size: 0.78rem; color: var(--text-muted); }
 .summary-stat__delta { font-size: 0.8rem; font-weight: 700; }
 .summary-stat__delta--up { color: var(--brand-green); }
+.summary-stat__delta--flat { color: var(--text-muted); }
+.summary-stat__delta--down { color: var(--red); }
 
 /* Métrique meneuse : fond plein + échelle dominante (≈44px vs ≈30px). */
 .summary-stat--lead {
@@ -9929,6 +9931,8 @@ a {
 .summary-stat--lead .summary-stat__value { color: #fff; font-size: 2.75rem; }
 .summary-stat--lead .summary-stat__sub { color: rgba(255, 255, 255, 0.78); }
 .summary-stat--lead .summary-stat__delta--up { color: #bff0d8; }
+.summary-stat--lead .summary-stat__delta--flat { color: rgb(255 255 255 / 0.72); }
+.summary-stat--lead .summary-stat__delta--down { color: #ffd9cf; }
 
 /* Carte d'attention : ambre quand il y a des demandes à traiter, état calme sinon.
    Accent local porté par --attn-accent ; texte mixé vers le noir pour le contraste AA. */
@@ -9976,6 +9980,11 @@ a {
   padding: 0.4rem 0.8rem;
 }
 .summary-attn__cta:hover { background: color-mix(in srgb, var(--attn-accent) 8%, var(--surface)); }
+.summary-attn__breakdown {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
 
 @media (max-width: 1100px) {
   .dashboard-summary { grid-template-columns: 1fr 1fr; }

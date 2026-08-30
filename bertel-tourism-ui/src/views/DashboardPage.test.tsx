@@ -77,7 +77,7 @@ describe('DashboardPage — onglets', () => {
   it("l'onglet Activité affiche le panneau « à venir » explicite", async () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Activité équipe' }));
-    expect(await screen.findByText(/lot 4/i)).toBeInTheDocument();
+    expect(await screen.findByText(/suivi d.activité arrive prochainement/i)).toBeInTheDocument();
   });
 
   it('monte le panneau de filtres Explorer + la section Période', async () => {

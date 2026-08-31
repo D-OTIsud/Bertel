@@ -13,16 +13,20 @@
 --    un re-claim immédiat resterait vide même avec un TTL de zéro, et une garde qui ne
 --    testerait que lui ne prouverait AUCUNE durée ; l'acquittement en succès est
 --    définitif (un second passage ne réécrit rien), l'acquittement en échec lève le
---    claim et rend la ligne immédiatement re-réclamable ; un destinataire sans e-mail
---    est TERMINÉ sur place, jamais rendu — sinon il boucle claim/échec à l'infini ;
---    les deux RPC sont fermés à `authenticated`.
+--    claim et rend la ligne immédiatement re-réclamable ; un destinataire sans e-mail —
+--    ABSENT *OU VIDE* — est TERMINÉ sur place, jamais rendu, sinon il boucle claim/échec
+--    à l'infini ; le PLAFOND de réclamation tient dans les deux extrêmes (NULL retombe
+--    sur le défaut, 0 est relevé à 1) ; les deux RPC sont fermés à `authenticated`.
 -- C) PRÉDICAT — user_can_write_crm_task porte la MÊME règle que save_crm_task ; la
 --    tâche inconnue rend false SOUS UNE PERSONA QUI PEUT ÉCRIRE (sous une persona sans
---    droit, false ne prouverait rien).
+--    droit, false ne prouverait rien) ; et le refus de C2 isole la PORTÉE PAR OBJET
+--    seule, l'autre moitié de la conjonction étant délibérément satisfaite.
 -- D) DOCUMENTS — list_crm_tasks émet documents[] ; `id` est le document_id ; une tâche
---    sans pièce jointe porte la clé ET `[]`, jamais null. Et le contrat 16z
---    (assignees[], created_by_id) SURVIT au redéploiement de la fonction — c'est le
---    risque propre à 17i, qui REDÉPLOIE list_crm_tasks.
+--    sans pièce jointe porte la clé ET `[]`, jamais null ; une taille non numérique sort
+--    à null au lieu d'abattre la lecture entière. Et le contrat 16z (assignees[],
+--    created_by_id) SURVIT au redéploiement de la fonction — c'est le risque propre à
+--    17i, qui REDÉPLOIE list_crm_tasks — éprouvé sur un témoin où créateur, owner et
+--    assigné sont TROIS personnes distinctes.
 --
 -- Contre une base sans 17i : échec immédiat (bloc A). Auto-contenu + transactionnel.
 -- Personas RÉELS par `request.jwt.claims` (jamais `SET ROLE` seul : sans JWT, auth.uid()
@@ -38,7 +42,7 @@ DECLARE
   v_objA   text := 'HOTRUN9999990921';
   v_objB   text := 'HOTRUN9999990922';
   v_userA  uuid := '00000000-0000-4000-a000-000000000921'; -- ORG A, write_crm_notes (l'auteur)
-  v_userB  uuid := '00000000-0000-4000-a000-000000000922'; -- ORG B (hors périmètre CRM de A)
+  v_userB  uuid := '00000000-0000-4000-a000-000000000922'; -- ORG B, write_crm_notes AUSSI (cf. C2)
   v_userC  uuid := '00000000-0000-4000-a000-000000000923'; -- ORG A, premier assigné
   v_userD  uuid := '00000000-0000-4000-a000-000000000924'; -- ORG A, second assigné (perdra son e-mail en B5)
   v_pub_role uuid;
@@ -49,9 +53,11 @@ DECLARE
   v_task   jsonb;
   v_t      uuid;       -- tâche témoin, assignée puis porteuse d'une pièce jointe
   v_t_nodoc uuid;      -- tâche témoin SANS pièce jointe (D2)
+  v_t_bad  uuid;       -- tâche témoin dont la pièce jointe a une taille illisible (D4)
   v_notif  uuid;       -- notification de userC
   v_notif_d uuid;      -- notification de userD
   v_doc    uuid;       -- ref_document de la pièce jointe
+  v_doc_bad uuid;      -- ref_document dont extra->>'size_bytes' n'est pas un nombre (D4)
   v_denied boolean;
   v_n      int;
 BEGIN
@@ -129,8 +135,16 @@ BEGIN
     ON CONFLICT DO NOTHING;
   -- userC et userD reçoivent AUSSI `write_crm_notes` : depuis 17c, un assigné doit pouvoir
   -- agir dans le CRM (on ne notifie personne pour un écran auquel il serait redirigé).
+  -- userB AUSSI, et c'est LE point de C2. `user_can_write_crm` est une CONJONCTION :
+  -- objet DANS le périmètre ET (permission OU rang d'admin). Sans permission, le `false`
+  -- de C2 aurait DEUX causes suffisantes, et une implémentation qui ignorerait
+  -- complètement l'objet (`SELECT api.user_has_permission('write_crm_notes')`) passerait
+  -- C1 ET C2 : la moitié du prédicat qui tient l'ORG B hors des pièces jointes de l'ORG A
+  -- ne serait gardée par rien — alors que c'est précisément le gate des routes documents.
+  -- Permission accordée, il ne reste qu'UNE cause possible au refus : la portée par objet.
   INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at)
   VALUES (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
+         (v_userB, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
          (v_userC, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
          (v_userD, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
     ON CONFLICT DO NOTHING;
@@ -255,6 +269,25 @@ BEGIN
   ASSERT (SELECT email_error FROM app_notification WHERE id=v_notif_d) = 'no_recipient_email',
     'B5: la raison de la terminaison doit être explicite';
 
+  -- B5b. Une adresse VIDE est une adresse ABSENTE. `''` n'est pas plus e-mailable que NULL,
+  -- mais seul NULL déclenche le bras de terminaison ci-dessus : sans le NULLIF, la chaîne
+  -- vide serait rendue au drain, échouerait au relais à chaque ping et reviendrait
+  -- réclamable après chaque TTL — la boucle claim/échec même que B5 ferme, laissée grande
+  -- ouverte à un caractère près. Témoin : on ressuscite la notification de userC et on vide
+  -- son adresse.
+  UPDATE auth.users SET email = '' WHERE id = v_userC;
+  UPDATE app_notification
+     SET email_sent_at = NULL, email_claimed_at = NULL, email_error = NULL
+   WHERE id = v_notif;
+  v_rows := api.claim_unmailed_notifications(20);
+  ASSERT jsonb_array_length(v_rows) = 0,
+    'B5b: une adresse VIDE doit être traitée comme absente — jamais rendue au drain';
+  ASSERT (SELECT email_sent_at FROM app_notification WHERE id=v_notif) IS NOT NULL,
+    'B5b: elle doit être TERMINÉE sur place comme une adresse NULL, sinon elle boucle '
+    'claim/échec à chaque TTL et bouche la file';
+  ASSERT (SELECT email_error FROM app_notification WHERE id=v_notif) = 'no_recipient_email',
+    'B5b: la raison de la terminaison doit être la même que pour une adresse absente';
+
   -- B6. Les deux RPC d'outbox sont fermés à `authenticated` (garde du REVOKE).
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -275,6 +308,28 @@ BEGIN
       'B6: api.mark_notifications_emailed ne doit pas être exécutable par authenticated';
   RESET ROLE;
 
+  -- B7. LE PLAFOND de réclamation : `LIMIT GREATEST(COALESCE(p_limit, 20), 1)`.
+  -- Aucune assertion ne l'éprouvait, alors que ses deux moitiés retiennent chacune un
+  -- comportement extrême : sans le COALESCE, un `p_limit` NULL (la route passe la valeur —
+  -- un paramètre omis, ou un `undefined` sérialisé, arrive ici en NULL) devient `LIMIT NULL`,
+  -- c'est-à-dire AUCUNE limite : un seul ping réclame la file ENTIÈRE et un drain qui tombe
+  -- ensuite gèle tout l'arriéré pour 10 minutes. Sans le GREATEST, un `0` devient `LIMIT 0`
+  -- et le drain ne rend plus JAMAIS rien — la file ne se vide plus du tout.
+  -- Vingt-et-un témoins : 20 rendus prouvent le défaut, le 21e restant prouve qu'il PLAFONNE.
+  INSERT INTO app_notification (recipient_id, kind, task_id, created_by, created_at)
+  SELECT v_userA, 'crm_task_assigned', v_t_nodoc, v_userA, now() + (g || ' seconds')::interval
+  FROM generate_series(1, 21) AS g;
+  ASSERT (SELECT count(*) FROM app_notification
+           WHERE kind='crm_task_assigned' AND email_sent_at IS NULL) = 21,
+    'B7 (prémisse): les 21 témoins doivent être les SEULES lignes en attente — sinon les '
+    'cardinalités ci-dessous ne mesurent pas le plafond';
+  ASSERT jsonb_array_length(api.claim_unmailed_notifications(NULL)) = 20,
+    'B7: un p_limit NULL doit retomber sur le défaut de 20 — sans COALESCE, LIMIT NULL vide '
+    'la file entière en un seul ping';
+  ASSERT jsonb_array_length(api.claim_unmailed_notifications(0)) = 1,
+    'B7: un p_limit 0 doit être relevé à 1 par le GREATEST — sinon LIMIT 0 ne rend jamais '
+    'rien et la file ne se draine plus';
+
   -- ═══════════════ C. PRÉDICAT D'ÉCRITURE DE TÂCHE ═══════════════
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -288,10 +343,18 @@ BEGIN
       'C3: un identifiant NULL ne doit jamais ouvrir le droit';
   RESET ROLE;
 
+  -- C2 isole la PORTÉE PAR OBJET, seule : userB porte `write_crm_notes` comme userA (voir la
+  -- fixture), donc le seul terme de la conjonction qui puisse encore refuser est
+  -- l'appartenance de l'objet à son périmètre. Un prédicat qui n'interrogerait que la
+  -- permission — en oubliant l'objet — passerait C1 et rougirait ICI.
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userB,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
+    ASSERT api.user_has_permission('write_crm_notes'),
+      'C2 (prémisse): userB doit BIEN porter write_crm_notes — sinon son refus a deux causes '
+      'suffisantes et C2 ne garde plus la portée par objet';
     ASSERT NOT api.user_can_write_crm_task(v_t),
-      'C2: userB (ORG B) ne doit pas pouvoir écrire une tâche de l''ORG A';
+      'C2: userB (ORG B, pourtant muni de write_crm_notes) ne doit pas pouvoir écrire une '
+      'tâche de l''ORG A — le refus vient de la PORTÉE PAR OBJET, et d''elle seule';
   RESET ROLE;
 
   -- ═══════════════ D. DOCUMENTS DANS list_crm_tasks ═══════════════
@@ -304,6 +367,31 @@ BEGIN
           '{"mime_type":"application/pdf","size_bytes":1234}'::jsonb);
   INSERT INTO crm_task_document (task_id, document_id, title, created_by)
   VALUES (v_t, v_doc, 'Devis.pdf', v_userA);
+
+  -- Témoin de D4 : une pièce jointe dont `extra->>'size_bytes'` N'EST PAS un nombre.
+  -- `ref_document.extra` est un jsonb LIBRE partagé avec les autres flux documentaires —
+  -- cette lecture ne contrôle pas ce qui s'y écrit. Le témoin vit sur une tâche À PART pour
+  -- que D1 garde sa cardinalité de 1 et que l'ordre des pièces reste déterministe.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_payload := api.save_crm_task(jsonb_build_object(
+      'object_id', v_objA, 'title', 'Tâche 17i pièce jointe à taille illisible'));
+    v_t_bad := (v_payload->>'id')::uuid;
+  RESET ROLE;
+  v_doc_bad := gen_random_uuid();
+  INSERT INTO ref_document (id, url, title, storage_bucket, storage_path, access_scope, extra)
+  VALUES (v_doc_bad, 'storage://actor-documents/tasks/y', 'Scan.pdf',
+          'actor-documents', 'tasks/'||v_t_bad::text||'/y.pdf', 'crm_private',
+          '{"mime_type":"application/pdf","size_bytes":"inconnu"}'::jsonb);
+  INSERT INTO crm_task_document (task_id, document_id, title, created_by)
+  VALUES (v_t_bad, v_doc_bad, 'Scan.pdf', v_userA);
+
+  -- D3 lira v_t, dont l'assigné est userD depuis B4 et le créateur userA. On écarte EN PLUS
+  -- la valeur de compatibilité `owner` vers userC : save_crm_task la tient égale au premier
+  -- assigné, donc à userD lui aussi, et une assertion d'identité ne saurait pas distinguer
+  -- la jointure crm_task_assignee d'un repli sur cette colonne. Les trois rôles portent
+  -- désormais trois personnes différentes — une seule origine peut satisfaire D3.
+  UPDATE crm_task SET owner = v_userC WHERE id = v_t;
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -332,12 +420,39 @@ BEGIN
       'D2: documents doit valoir [] (jamais null) — le front itère, il ne teste pas la nullité';
 
     -- D3. Non-régression : 17i REDÉPLOIE list_crm_tasks, le contrat 16z doit SURVIVRE.
+    -- Éprouvé sur v_t, où le créateur (userA), l'owner de compatibilité (userC) et l'assigné
+    -- (userD) sont TROIS personnes distinctes. Sur une tâche où ils coïncident, la seule
+    -- CARDINALITÉ passerait au vert sur une fonction qui aurait perdu la jointure
+    -- crm_task_assignee et se serait repliée sur owner ou created_by : c'est l'IDENTITÉ de
+    -- l'assigné, pas leur nombre, qui prouve d'où vient le tableau.
+    SELECT t INTO v_task FROM jsonb_array_elements(v_tasks) t WHERE (t->>'id')::uuid = v_t;
+    ASSERT v_task IS NOT NULL, 'D3 (prémisse): la tâche assignée doit être listée';
     ASSERT jsonb_array_length(v_task->'assignees') = 1,
       'D3: le contrat assignees[] de 16z doit survivre au redéploiement de list_crm_tasks';
+    ASSERT (v_task->'assignees'->0->>'user_id')::uuid = v_userD,
+      'D3: assignees[] doit venir de crm_task_assignee — ni de owner (userC sur ce témoin) '
+      'ni de created_by (userA)';
     ASSERT (v_task->>'created_by_id')::uuid = v_userA,
       'D3: created_by_id (16z) doit survivre au redéploiement de list_crm_tasks';
     ASSERT v_task->>'created_by_name' = 'Bernard Auteur',
       'D3: created_by_name (16z) doit survivre au redéploiement de list_crm_tasks';
+
+    -- D4. Une taille NON NUMÉRIQUE ne doit pas abattre la lecture. Le rayon d'action d'un
+    -- cast nu n'est pas la pièce jointe fautive : c'est api.list_crm_tasks() TOUT ENTIÈRE,
+    -- donc le kanban CRM de TOUS les utilisateurs du périmètre, abattu par UNE écriture
+    -- venue d'un autre flux documentaire. Une lecture qu'une écriture d'ailleurs peut
+    -- abattre doit se défendre elle-même. Si la garde tombe, l'appel ci-dessus lève
+    -- 22P02 et ce fichier rougit AVANT même d'arriver ici.
+    SELECT t INTO v_task FROM jsonb_array_elements(v_tasks) t WHERE (t->>'id')::uuid = v_t_bad;
+    ASSERT v_task IS NOT NULL, 'D4 (prémisse): la tâche à taille illisible doit être listée';
+    ASSERT jsonb_array_length(v_task->'documents') = 1,
+      'D4: la pièce jointe doit être ÉMISE malgré sa taille illisible — la garde neutralise '
+      'la valeur, elle ne fait pas disparaître la pièce';
+    ASSERT jsonb_typeof(v_task->'documents'->0->'size_bytes') = 'null',
+      'D4: une taille non numérique doit sortir à null (le front affiche la pièce sans son '
+      'poids), jamais faire lever la lecture entière';
+    ASSERT v_task->'documents'->0->>'mime_type' = 'application/pdf',
+      'D4: les autres métadonnées de la pièce restent intactes';
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claims', NULL, true);

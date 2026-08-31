@@ -28,9 +28,16 @@ COMMENT ON COLUMN public.app_notification.email_sent_at IS
 COMMENT ON COLUMN public.app_notification.email_error IS
   'Dernière erreur d''envoi. Diagnostic seulement : ne bloque jamais une re-réclamation.';
 
--- Le drainage ne balaie que les non-envoyées : index partiel, coût nul à vide.
+-- Index de parcours du drain. Il porte les DEUX prédicats du claim, `kind` compris :
+-- `app_notification` est explicitement GÉNÉRIQUE (16z — une espèce de plus = un CHECK de
+-- plus, pas une table de plus). Le jour où une seconde espèce non e-mailée y sera écrite,
+-- rien ne la terminera jamais — le drain ne réclame que `crm_task_assigned` — et ses lignes
+-- s'accumuleraient À DEMEURE en tête du parcours, devant celles qui doivent réellement
+-- partir. Borner l'index sur `kind` le restreint exactement à la file qu'il sert : il reste
+-- de la taille de l'arriéré d'envoi, jamais de celle de l'historique des autres espèces.
 CREATE INDEX IF NOT EXISTS idx_app_notification_unmailed
-  ON public.app_notification (created_at) WHERE email_sent_at IS NULL;
+  ON public.app_notification (created_at)
+  WHERE email_sent_at IS NULL AND kind = 'crm_task_assigned';
 
 -- Réclame jusqu'à p_limit notifications à e-mailer et retourne TOUT le contenu du message,
 -- dérivé en DB (aucune donnée client n'entre jamais dans un e-mail). SKIP LOCKED + fenêtre
@@ -62,7 +69,12 @@ BEGIN
   )
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
            'notification_id', cl.id,
-           'recipient_email', u.email,
+           -- NULLIF sur l'adresse VIDE : `''` n'est pas une adresse, mais seul NULL déclenche
+           -- la terminaison `no_recipient_email` plus bas. Rendue telle quelle, une chaîne
+           -- vide partirait au drain, échouerait au relais à chaque ping et reviendrait
+           -- réclamable après chaque TTL — exactement le bouchage de file en boucle
+           -- claim/échec que ce bras existe pour empêcher.
+           'recipient_email', NULLIF(u.email, ''),
            -- Libellés JOINTS à la lecture (jamais stockés) : effacement RGPD respecté.
            'recipient_name', api.crm_user_label(cl.recipient_id, rp.display_name),
            'task_title', ct.title,
@@ -103,8 +115,22 @@ COMMENT ON FUNCTION api.claim_unmailed_notifications(integer) IS
   'Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.';
 
 -- Acquittement du drain. p_failed = [{"id","error"}] : erreur stampée, claim levé —
--- re-réclamable au prochain ping. email_sent_at IS NULL en garde : un acquittement
--- tardif ne réécrit jamais une ligne déjà terminée.
+-- re-réclamable au prochain ping. Les deux bras sont bornés à `kind = 'crm_task_assigned'`,
+-- la MÊME espèce que le claim : un identifiant étranger porté par un acquittement ne doit
+-- pas pouvoir terminer une notification d'une autre espèce, que ce drain n'a jamais eue à
+-- envoyer (sans exposition aujourd'hui — service_role seul — mais la garde coûte un ET).
+--
+-- La garde `email_sent_at IS NULL` NE COUVRE PAS LES DEUX BRAS DE LA MÊME FAÇON :
+--  • SUCCÈS : couverture intégrale — une ligne déjà terminée n'est jamais réécrite, un
+--    acquittement tardif est un no-op (v_n = 0).
+--  • ÉCHEC : elle n'écarte que les lignes DÉJÀ acquittées en succès. Cas NON COUVERT,
+--    assumé : un drain calé au-delà des 10 min de TTL acquitte en échec une ligne qu'un
+--    second drain a entre-temps re-réclamée et réellement envoyée mais pas encore
+--    acquittée — email_sent_at y est encore NULL, l'échec passe, remet email_claimed_at à
+--    NULL, et un TROISIÈME envoi devient possible. Le fermer demanderait un jeton de claim
+--    comparé à l'acquittement ; on ne le pose pas parce que c'est le MÊME arbitrage que la
+--    fenêtre de panne du claim (perdre un e-mail est pire qu'en envoyer deux), pas un
+--    défaut neuf.
 CREATE OR REPLACE FUNCTION api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)
 RETURNS integer
 LANGUAGE plpgsql
@@ -115,7 +141,8 @@ DECLARE
   v_n integer := 0;
 BEGIN
   UPDATE app_notification SET email_sent_at = now(), email_error = NULL
-  WHERE id = ANY(COALESCE(p_sent, ARRAY[]::uuid[])) AND email_sent_at IS NULL;
+  WHERE id = ANY(COALESCE(p_sent, ARRAY[]::uuid[]))
+    AND kind = 'crm_task_assigned' AND email_sent_at IS NULL;
   GET DIAGNOSTICS v_n = ROW_COUNT;
 
   UPDATE app_notification n
@@ -125,7 +152,7 @@ BEGIN
     FROM jsonb_array_elements(COALESCE(p_failed, '[]'::jsonb)) item
     WHERE item->>'id' IS NOT NULL
   ) f
-  WHERE n.id = f.id AND n.email_sent_at IS NULL;
+  WHERE n.id = f.id AND n.kind = 'crm_task_assigned' AND n.email_sent_at IS NULL;
 
   RETURN v_n;
 END;
@@ -256,12 +283,22 @@ BEGIN
       -- retrouver le fichier, et deux identifiants pour une même pièce jointe finissent
       -- toujours par être confondus. Ordre STABLE (created_at puis id) : deux pièces
       -- déposées dans la même transaction ne peuvent pas permuter d'un appel à l'autre.
+      -- `size_bytes` est CASTÉ SOUS GARDE. `ref_document.extra` est un jsonb LIBRE, partagé
+      -- avec tous les autres flux documentaires : rien n'y contraint le type de cette clé,
+      -- et cette lecture ne peut pas se reposer sur la discipline d'écritures qu'elle ne
+      -- contrôle pas. Un cast nu ferait lever `invalid input syntax for type bigint` — non
+      -- pas sur la pièce jointe fautive, mais sur api.list_crm_tasks() TOUT ENTIÈRE : UNE
+      -- ligne malformée écrite par n'importe quel autre flux abattrait le kanban CRM de
+      -- TOUS les utilisateurs du périmètre. Une taille illisible vaut donc `null` (le front
+      -- affiche la pièce sans son poids), jamais une panne. Le prix est symétrique et
+      -- assumé : une valeur numérique dépassant bigint reste hors garde (voir le test D4).
       'documents', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
                  'id', d.document_id,
                  'title', d.title,
                  'mime_type', rd.extra->>'mime_type',
-                 'size_bytes', (rd.extra->>'size_bytes')::bigint,
+                 'size_bytes', CASE WHEN rd.extra->>'size_bytes' ~ '^\d+$'
+                                    THEN (rd.extra->>'size_bytes')::bigint END,
                  'created_at', d.created_at)
                ORDER BY d.created_at, d.id)
         FROM crm_task_document d

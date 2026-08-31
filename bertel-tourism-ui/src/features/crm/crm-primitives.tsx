@@ -27,19 +27,25 @@ import {
   isKnownInteractionStatus,
   isOpenInteractionStatus,
 } from './crm-status';
+import type { AnyCrmInteractionStatus } from './crm-status';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
  * la permission. `onReply` consigne une réponse sous la racine puis invalide la query ;
- * `onResolve` bascule le statut (done/planned). Absents ⇒ carte en lecture seule (pas de
- * contrôle rendu). `canWrite=false` ⇒ contrôles RENDUS mais désactivés avec raison
+ * `onChangeStatus` change le statut de la demande racine. Absents ⇒ carte en lecture seule
+ * (pas de contrôle rendu). `canWrite=false` ⇒ contrôles RENDUS mais désactivés avec raison
  * (no-write-trap) — on ne masque PAS l'affordance, on l'explique.
  */
 export interface CrmThreadActions {
   canWrite?: boolean;
   readOnlyReason?: string;
   onReply?: (rootId: string, body: string, sentimentCode?: string) => Promise<void> | void;
-  onResolve?: (rootId: string, done: boolean) => Promise<void> | void;
+  /**
+   * Change le statut de la demande racine. Contrat à SIX états (cycle de vie §6.1) ;
+   * tant que la base parle l'ancien vocabulaire, les appelants passent les statuts legacy
+   * (traité ou planifié).
+   */
+  onChangeStatus?: (rootId: string, status: AnyCrmInteractionStatus) => Promise<void> | void;
   /**
    * Édition d'un commentaire (§66, PO « l'auteur peut modifier… comme le super admin ») —
    * `id` est l'interaction RACINE *ou* une réponse ; `body`/`sentimentCode` sont l'écriture
@@ -613,7 +619,7 @@ function TlThreadActions({
 }) {
   const [resolving, setResolving] = useState(false);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const { canWrite, readOnlyReason, onReply, onResolve, onCreateTask, createTaskDisabledReason } = actions;
+  const { canWrite, readOnlyReason, onReply, onChangeStatus, onCreateTask, createTaskDisabledReason } = actions;
   const gateTitle = canWrite === false ? readOnlyReason : undefined;
   // Une interaction SANS établissement ne peut pas porter de tâche : le serveur refuse le
   // lien (22023, cohérence d'objet). Le bouton reste RENDU mais désactivé avec sa raison —
@@ -622,11 +628,11 @@ function TlThreadActions({
   const createTaskReason = gateTitle ?? noContextReason ?? createTaskDisabledReason;
 
   async function toggleResolve() {
-    if (!onResolve || resolving) return;
+    if (!onChangeStatus || resolving) return;
     setResolving(true);
     setResolveError(null);
     try {
-      await onResolve(rootId, !isResolved);
+      await onChangeStatus(rootId, isResolved ? 'planned' : 'done');
     } catch (caught) {
       setResolveError(caught instanceof Error ? caught.message : 'Échec de la mise à jour du statut.');
     } finally {
@@ -650,7 +656,7 @@ function TlThreadActions({
           <CornerDownRight size={11} aria-hidden /> Répondre
         </button>
       ) : null}
-      {onResolve ? (
+      {onChangeStatus ? (
         <button
           type="button"
           className="crm-btn sm"
@@ -757,11 +763,11 @@ function TlCard({
     (isKnownInteractionStatus(status) && !isOpenInteractionStatus(status)) ||
     (status == null && Boolean(item.resolvedAt));
   // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
-  // rendues que si un consommateur passe des callbacks (onReply/onResolve).
+  // rendues que si un consommateur passe des callbacks (onReply/onChangeStatus).
   const [composerOpen, setComposerOpen] = useState(false);
   // `onCreateTask` compte comme une action de fil : sans lui ici, une carte dont ce serait
   // la SEULE action ne rendrait aucune barre d'actions — silencieusement.
-  const hasThreadActions = Boolean(actions && (actions.onReply || actions.onResolve || actions.onCreateTask));
+  const hasThreadActions = Boolean(actions && (actions.onReply || actions.onChangeStatus || actions.onCreateTask));
   // Édition / suppression d'un commentaire (§66) — un SEUL éditeur et une SEULE confirmation
   // ouverts à la fois DANS cette carte, identifiés par l'id (racine OU réponse). L'isolation
   // inter-cartes est naturelle (état local à chaque TlCard) ; l'id distingue racine vs réponse.
@@ -989,7 +995,7 @@ export function CrmTimeline({
   canWrite,
   readOnlyReason,
   onReply,
-  onResolve,
+  onChangeStatus,
   onEditInteraction,
   onDeleteInteraction,
   onCreateTask,
@@ -1010,8 +1016,8 @@ export function CrmTimeline({
   // littéral marcherait par accident aujourd'hui (les trois hôtes passent aussi `onReply`)
   // et casserait au premier hôte qui ne passerait que cette action-là.
   const threadActions: CrmThreadActions | undefined =
-    onReply || onResolve || onEditInteraction || onDeleteInteraction || onCreateTask
-      ? { canWrite, readOnlyReason, onReply, onResolve, onEditInteraction, onDeleteInteraction, onCreateTask, createTaskDisabledReason }
+    onReply || onChangeStatus || onEditInteraction || onDeleteInteraction || onCreateTask
+      ? { canWrite, readOnlyReason, onReply, onChangeStatus, onEditInteraction, onDeleteInteraction, onCreateTask, createTaskDisabledReason }
       : undefined;
   let lastMonth: string | null = null;
   return (

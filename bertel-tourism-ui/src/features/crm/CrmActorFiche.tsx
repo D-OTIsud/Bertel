@@ -32,6 +32,7 @@ import {
   saveCrmInteraction,
 } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
+import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskFromInteractionModal, CrmTaskModal } from './CrmTaskModal';
@@ -385,8 +386,8 @@ export function CrmActorFiche({
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchActor();
   };
-  const handleResolve = async (rootId: string, done: boolean) => {
-    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+  const handleChangeStatus = async (rootId: string, status: AnyCrmInteractionStatus) => {
+    await saveCrmInteraction({ id: rootId, status });
     await refetchActor();
   };
   // Édition / suppression d'un commentaire (§66) — racine OU réponse. Édition PARTIELLE
@@ -559,7 +560,7 @@ export function CrmActorFiche({
                     canWrite={canWrite}
                     readOnlyReason={CRM_READ_ONLY_REASON}
                     onReply={handleReply}
-                    onResolve={handleResolve}
+                    onChangeStatus={handleChangeStatus}
                     onEditInteraction={handleEditInteraction}
                     onDeleteInteraction={handleDeleteInteraction}
                     onCreateTask={setTaskFromInteraction}

@@ -16,6 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
 import { deleteCrmInteraction, listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
+import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmTaskFromInteractionModal } from './CrmTaskModal';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
@@ -104,8 +105,8 @@ export function CrmObjectView({
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchObject();
   };
-  const handleResolve = async (rootId: string, done: boolean) => {
-    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+  const handleChangeStatus = async (rootId: string, status: AnyCrmInteractionStatus) => {
+    await saveCrmInteraction({ id: rootId, status });
     await refetchObject();
   };
   // Édition / suppression d'un commentaire (§66) — racine OU réponse. Édition PARTIELLE
@@ -201,7 +202,7 @@ export function CrmObjectView({
               canWrite={canWrite}
               readOnlyReason={CRM_READ_ONLY_REASON}
               onReply={handleReply}
-              onResolve={handleResolve}
+              onChangeStatus={handleChangeStatus}
               onEditInteraction={handleEditInteraction}
               onDeleteInteraction={handleDeleteInteraction}
               onCreateTask={setTaskFromInteraction}

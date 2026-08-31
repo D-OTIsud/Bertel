@@ -215,7 +215,7 @@ describe('TlCard — fil de discussion (§65/§66)', () => {
 
 // §65/§66 — composer de réponse inline + bascule « Marquer traitée / Rouvrir », gatés.
 describe('TlCard — répondre + résoudre (§65/§66)', () => {
-  it('sans onReply/onResolve (lecture), aucune action « Répondre » / « Marquer traitée »', () => {
+  it('sans onReply/onChangeStatus (lecture), aucune action « Répondre » / « Marquer traitée »', () => {
     const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'planned' })]} />);
     expect(queryByRole('button', { name: /répondre/i })).toBeNull();
     expect(queryByRole('button', { name: /marquer traitée|rouvrir/i })).toBeNull();
@@ -260,13 +260,13 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     // du fil (Répondre / Marquer traitée + composer) sont des FRÈRES de cette région, jamais
     // ses descendants — sinon <button>/<textarea> dans role=button = ARIA/clavier invalides.
     const onReply = jest.fn().mockResolvedValue(undefined);
-    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const { container, getByRole, getByPlaceholderText } = render(
       <CrmTimeline
         items={[makeItem({ status: 'planned' })]}
         canWrite
         onReply={onReply}
-        onResolve={onResolve}
+        onChangeStatus={onChangeStatus}
         onOpenActor={jest.fn()}
       />,
     );
@@ -296,7 +296,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
         items={[makeItem({ status: 'planned' })]}
         canWrite
         onReply={jest.fn()}
-        onResolve={jest.fn()}
+        onChangeStatus={jest.fn()}
         onOpenActor={onOpenActor}
       />,
     );
@@ -324,55 +324,55 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     expect(onOpenActor).not.toHaveBeenCalled();
   });
 
-  it('« Marquer traitée » → onResolve(rootId, true) ; « Rouvrir » → onResolve(rootId, false)', async () => {
-    const onResolve = jest.fn().mockResolvedValue(undefined);
+  it('« Marquer traitée » → onChangeStatus(rootId, done) ; « Rouvrir » → onChangeStatus(rootId, planned)', async () => {
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const { getByRole, rerender } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned', resolvedAt: null })]} canWrite onResolve={onResolve} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
     );
     fireEvent.click(getByRole('button', { name: /marquer traitée/i }));
-    await waitFor(() => expect(onResolve).toHaveBeenCalledWith('root-1', true));
+    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'done'));
     // Déjà traitée → le bouton bascule sur « Rouvrir ».
     rerender(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onResolve={onResolve} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onChangeStatus={onChangeStatus} />,
     );
     fireEvent.click(getByRole('button', { name: /rouvrir/i }));
-    await waitFor(() => expect(onResolve).toHaveBeenCalledWith('root-1', false));
+    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'planned'));
   });
 
   it('statut inconnu du registre (ex. « draft ») → « Marquer traitée », jamais « Rouvrir »', () => {
     // Régression défensive à ne pas réintroduire : un code absent du registre crm-status.ts
     // (import futur, faute de frappe) doit retomber sur « à traiter », pas sur « résolu ».
-    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const { getByRole, queryByRole } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'draft', resolvedAt: null })]} canWrite onResolve={onResolve} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'draft', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
     );
     expect(getByRole('button', { name: /marquer traitée/i })).toBeInTheDocument();
     expect(queryByRole('button', { name: /rouvrir/i })).toBeNull();
   });
 
   it('« Marquer traitée » stopPropagation (pas de navigation vers l acteur)', async () => {
-    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const onOpenActor = jest.fn();
     // Carte cliquable ⇒ scope au pied d'actions (le nom accessible de la carte englobe le libellé).
     const { container } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onResolve={onResolve} onOpenActor={onOpenActor} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onChangeStatus={onChangeStatus} onOpenActor={onOpenActor} />,
     );
     const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
     fireEvent.click(within(actionsBar).getByRole('button', { name: /marquer traitée/i }));
-    await waitFor(() => expect(onResolve).toHaveBeenCalled());
+    await waitFor(() => expect(onChangeStatus).toHaveBeenCalled());
     expect(onOpenActor).not.toHaveBeenCalled();
   });
 
   it('gating : sans permission, actions désactivées avec raison (no-write-trap)', () => {
     const onReply = jest.fn();
-    const onResolve = jest.fn();
+    const onChangeStatus = jest.fn();
     const { getByRole } = render(
       <CrmTimeline
         items={[makeItem({ status: 'planned' })]}
         canWrite={false}
         readOnlyReason="Lecture seule : permission requise"
         onReply={onReply}
-        onResolve={onResolve}
+        onChangeStatus={onChangeStatus}
       />,
     );
     const replyBtn = getByRole('button', { name: /répondre/i });

@@ -80,6 +80,23 @@ Bouton sur la barre de filtres actifs du dashboard. Depuis §180 les deux états
 
 ### Axe C — Onglet Activité réel (lot 4 re-scopé sur les données vraies)
 
+> ✅ **LIVRÉ le 2026-08-31.** Plan
+> `docs/superpowers/plans/2026-08-31-onglet-activite-cycle-vie-crm.md` (8 tâches, 8 commits
+> `2a2fa01`..`0382314`), deux passes SQL en production : **17g** (cycle de vie à six statuts,
+> journal de transitions) et **17h** (les deux RPC de l'onglet + extension de la carte).
+> Détail au §5 de ce document.
+>
+> **C1 est livré autrement que spécifié, et c'est le point à retenir** : il demandait
+> « créations vs modifications par semaine ». Les données ont imposé de compter des **jours**
+> et non des versions — cinq journées de juillet portent 58 à 482 fiches chacune (reprises en
+> masse) là où le travail éditorial réel ne dépasse jamais 9 fiches par jour. Compter les
+> versions aurait fait de cette courbe un graphique d'imports.
+>
+> **C3 : la brique B3 — `awaiting_provider` + journal de transitions + temps NET — n'a PAS été
+> reportée.** L'audit la donnait comme « raffinement ultérieur, ne pas l'attendre » ; elle est
+> livrée avec le reste, parce que le journal était de toute façon nécessaire pour que le cycle
+> de vie soit autre chose qu'un renommage.
+
 **C1. Vélocité.** — **M, 1 RPC SQL**
 Créations vs modifications par semaine (12 semaines) + publications par mois, depuis `object.created_at` / `object_version` (3 960 lignes) / `published_at` (490). Contrat `VelocityWeek_PROVISIONAL` déjà écrit dans `types/dashboard.ts`.
 
@@ -152,6 +169,50 @@ quotidien. Les trois sont corrigés.
 
 **Reste à faire à la main :** la recette navigateur (§7 du plan). La cohérence carte ↔ courbe
 est prouvée en base, pas encore à l'écran.
+
+### Axe C — livraison du 2026-08-31
+
+Plan exécuté : `docs/superpowers/plans/2026-08-31-onglet-activite-cycle-vie-crm.md` (8 tâches).
+Deux passes SQL appliquées en production, chacune avec sa garde prouvée **rouge avant, verte
+après**, et **non vacante par sabotage en transaction annulée** :
+
+- **17g** — `crm_status` recréé de trois à six valeurs (`new`, `in_progress`,
+  `awaiting_provider`, `resolved`, `closed`, `canceled`), journal de transitions alimenté par
+  trigger, sept fonctions redéployées.
+- **17h** — `api.get_dashboard_team_activity()`, `api.get_dashboard_crm_activity()`, et
+  `get_dashboard_crm_open()` étendue de `recent_interactions` / `backlog_interactions`.
+
+**Invariant final, vérifié en base à la livraison :** carte = courbe = comptage direct = **170**,
+`3 récentes + 167 d'arriéré = 170`, sommes par âge et par sujet = 170, plus aucune ligne dans
+l'ancien vocabulaire. Série historisée continue (169/169/169/170/170/170 du 26 au 31/08) : la
+bascule n'a pas produit de marche.
+
+**La panne que ce lot a fermée, et qu'il faut avoir en tête pour la suite :** trois prédicats
+comparaient le statut **en texte** (`status::text <> 'done'`), ce qui désarme le typage. Après
+renommage, aucune erreur — mais le backlog serait passé de 170 à **1 891**, et le cron de 03:00
+aurait écrit ce chiffre chaque nuit dans une série de 74 jours. Une rupture pareille ressemble à
+un événement métier réel ; personne ne l'aurait lue comme un bug. Mesuré par sabotage, pas
+supposé.
+
+**Ce que la recette a rattrapé, et que les tests ne pouvaient pas voir :**
+- la puce **sélectionnée** du sélecteur perdait sa teinte de statut (« Annulée » se serait
+  affichée en vert-canard) — onze tests verts ;
+- l'arriéré **vide** dessinait quatre barres à zéro surmontées de « 0 % de cet arriéré a plus
+  d'un an » — vingt tests verts ;
+- `listCrmStatusEvents` était **du code mort** : écrit, testé, branché nulle part. L'encart
+  d'attente aurait dit « depuis une date inconnue » pour toujours. Le trou était exactement
+  entre les tests de la modale (qui passent la date en prop) et ceux du service (qui appellent
+  la fonction directement).
+
+**Ce que le plan avait faux, et qu'il a fallu constater sur les données avant d'écrire :** le
+libellé de la carte additionnait des demandes et des tâches puis nommait la somme « demandes
+récentes » — alors que rien ne borne l'âge d'une tâche ; ses fixtures étaient périmées (dix
+semaines pour un contrat de douze) ; et une formule de comptage aurait fait rapporter **un
+jour-éditeur à une semaine vide** (`ROW(NULL, NULL)` n'est pas NULL sous un `LEFT JOIN`).
+
+**Reste à faire à la main :** la recette sur **session authentifiée**. L'écran a été vérifié en
+mode démo, où les RPC rendent des formes vides et les écritures sont des no-op : les états vides,
+les six teintes et les parcours sont prouvés, **les chiffres réels ne le sont pas**.
 
 Étapes 1-4 = **frontend quasi pur** (une seule mini-RPC), livrables en un lot court ; chaque étape suivante est un lot indépendant conforme au phasage §58.
 

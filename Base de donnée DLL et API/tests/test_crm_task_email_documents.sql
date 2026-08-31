@@ -7,7 +7,9 @@
 --    exposées, avec une prémisse de NON-VACUITÉ (service_role doit s'y voir, sans quoi
 --    les `NOT EXISTS` seraient vrais parce que la vue est vide, pas parce que le REVOKE
 --    a pris).
--- B) OUTBOX — le drain rend LA ligne en attente avec tout le contenu du message dérivé
+-- B) OUTBOX — l'arriéré ANTÉRIEUR à 17i est terminé par le backfill de la migration et ne
+--    repart donc pas au premier drain (B0, mesuré AVANT toute fixture, sans quoi la
+--    prémisse qui vide la file masquerait la panne) ; le drain rend LA ligne en attente
 --    en DB ; la FENÊTRE de réclamation est éprouvée dans les deux sens (5 min : encore
 --    réclamée ; 11 min : re-réclamable) parce que `now()` est FIGÉ sur la transaction —
 --    un re-claim immédiat resterait vide même avec un TTL de zéro, et une garde qui ne
@@ -16,7 +18,11 @@
 --    claim et rend la ligne immédiatement re-réclamable ; un destinataire sans e-mail —
 --    ABSENT *OU VIDE* — est TERMINÉ sur place, jamais rendu, sinon il boucle claim/échec
 --    à l'infini ; le PLAFOND de réclamation tient dans les deux extrêmes (NULL retombe
---    sur le défaut, 0 est relevé à 1) ; les deux RPC sont fermés à `authenticated`.
+--    sur le défaut, 0 est relevé à 1) ; une ligne durablement INENVOYABLE — adresse
+--    valide, boîte qui refuse définitivement — sort de la file au bout de 5 échecs (B8),
+--    sans quoi elle reste en tête du parcours et mange un créneau de chaque drain à
+--    jamais, la panne même que le bras `no_recipient_email` ferme pour l'autre moitié du
+--    problème ; les deux RPC sont fermés à `authenticated`.
 -- C) PRÉDICAT — user_can_write_crm_task porte la MÊME règle que save_crm_task ; la
 --    tâche inconnue rend false SOUS UNE PERSONA QUI PEUT ÉCRIRE (sous une persona sans
 --    droit, false ne prouverait rien) ; et le refus de C2 isole la PORTÉE PAR OBJET
@@ -62,6 +68,8 @@ DECLARE
   v_t_ovf  uuid;       -- tâche témoin dont la pièce jointe a une taille DÉBORDANTE (D4b)
   v_notif  uuid;       -- notification de userC
   v_notif_d uuid;      -- notification de userD
+  v_notif_x uuid;      -- notification durablement inenvoyable (B8)
+  v_i      int;        -- compteur de tentatives d'envoi (B8)
   v_doc    uuid;       -- ref_document de la pièce jointe
   v_doc_bad uuid;      -- ref_document dont extra->>'size_bytes' n'est pas un nombre (D4)
   v_doc_ovf uuid;      -- ref_document dont extra->>'size_bytes' dépasse bigint (D4b)
@@ -72,8 +80,16 @@ BEGIN
   -- ═══════════════ A. STRUCTURE ═══════════════
   ASSERT (SELECT count(*) FROM information_schema.columns
           WHERE table_schema='public' AND table_name='app_notification'
-            AND column_name IN ('email_claimed_at','email_sent_at','email_error')) = 3,
+            AND column_name IN ('email_claimed_at','email_sent_at','email_error','email_attempts')) = 4,
     'A1: colonnes outbox manquantes';
+  -- `email_attempts` doit être NOT NULL DEFAULT 0 : NULLABLE, `n.email_attempts + 1` rendrait
+  -- NULL sur une ligne historique et `email_attempts < 5` deviendrait NULL — la ligne
+  -- sortirait de la file DÈS SON PREMIER ÉCHEC, silencieusement, exactement l'inverse de la
+  -- borne voulue.
+  ASSERT (SELECT is_nullable = 'NO' AND column_default = '0' FROM information_schema.columns
+          WHERE table_schema='public' AND table_name='app_notification'
+            AND column_name='email_attempts'),
+    'A1b: email_attempts doit être NOT NULL DEFAULT 0';
   ASSERT to_regclass('public.crm_task_document') IS NOT NULL, 'A2: crm_task_document absente';
   ASSERT (SELECT relrowsecurity FROM pg_class WHERE oid='public.crm_task_document'::regclass),
     'A3: RLS OFF sur crm_task_document';
@@ -158,6 +174,23 @@ BEGIN
     ON CONFLICT DO NOTHING;
 
   -- ═══════════════ B. OUTBOX E-MAIL ═══════════════
+  -- B0. L'ARRIÉRÉ ANTÉRIEUR À 17i NE DOIT PAS REPARTIR AU PREMIER DRAIN.
+  -- `ADD COLUMN email_sent_at` fait naître toute ligne historique à NULL, donc réclamable :
+  -- sans le backfill de la migration, le premier ping e-maillerait des assignations déjà
+  -- vieilles de plusieurs jours, que leurs destinataires ont vues dans l'interface depuis
+  -- longtemps. Cette assertion doit précéder la prémisse de fixture ci-dessous, qui termine
+  -- le corpus et masquerait donc exactement ce qu'on mesure ici.
+  -- `created_at < now()` désigne EXACTEMENT le corpus antérieur : `now()` est figé à l'ouverture
+  -- de la transaction, et le protocole du manifeste applique la migration PUIS son test dans
+  -- CETTE transaction — toute ligne écrite par le test naît à `now()`, jamais avant.
+  -- Vacante sur une base fraîche (aucune notification n'existe) : elle ne mord que là où un
+  -- arriéré existe, c'est-à-dire exactement là où la panne est possible.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM app_notification
+    WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL AND created_at < now()),
+    'B0: aucune notification ANTÉRIEURE à 17i ne doit rester réclamable — le backfill de la '
+    'migration doit les avoir terminées, sinon le premier drain e-maille tout l''arriéré';
+
   -- Le drain réclame la FILE, pas les seules lignes de ce test : sur une base vivante les
   -- notifications déjà présentes rempliraient la fenêtre de claim et les assertions de
   -- cardinalité ci-dessous seraient fausses sans qu'aucune règle soit en cause. On termine
@@ -337,6 +370,47 @@ BEGIN
   ASSERT jsonb_array_length(api.claim_unmailed_notifications(0)) = 1,
     'B7: un p_limit 0 doit être relevé à 1 par le GREATEST — sinon LIMIT 0 ne rend jamais '
     'rien et la file ne se draine plus';
+
+  -- B8. UNE LIGNE DURABLEMENT INENVOYABLE SORT DE LA FILE.
+  -- C'est la MÊME classe de panne que celle que ferme le bras `no_recipient_email` (B5/B5b),
+  -- pour l'autre moitié du problème : une adresse syntaxiquement VALIDE dont la boîte refuse
+  -- DÉFINITIVEMENT (compte fermé, domaine en rejet). La ligne échoue, l'acquittement en échec
+  -- lève son claim, elle redevient réclamable — et, le parcours étant `ORDER BY created_at`,
+  -- elle reste en TÊTE : elle consomme un des 20 créneaux de CHAQUE drain, à jamais. Vingt
+  -- lignes de ce type et la file ne se draine plus du tout, sans que rien ne soit cassé.
+  -- On repart d'une file VIDE : les 21 témoins de B7 sont encore réclamables et rendraient
+  -- les cardinalités ci-dessous illisibles (tout est annulé au ROLLBACK).
+  UPDATE app_notification SET email_sent_at = now(), email_error = 'fixture_17i_b8'
+   WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL;
+  INSERT INTO app_notification (recipient_id, kind, task_id, created_by, created_at)
+  VALUES (v_userA, 'crm_task_assigned', v_t_nodoc, v_userA, now())
+  RETURNING id INTO v_notif_x;
+
+  FOR v_i IN 1..5 LOOP
+    v_rows := api.claim_unmailed_notifications(20);
+    ASSERT jsonb_array_length(v_rows) = 1 AND (v_rows->0->>'notification_id')::uuid = v_notif_x,
+      'B8 (prémisse): la ligne doit être réclamée à chacune de ses 5 tentatives — sinon '
+      'l''épuisement mesuré plus bas ne prouverait pas la BORNE mais un refus antérieur';
+    PERFORM api.mark_notifications_emailed(ARRAY[]::uuid[], jsonb_build_array(
+      jsonb_build_object('id', v_notif_x::text, 'error', 'boîte définitivement fermée')));
+  END LOOP;
+
+  ASSERT (SELECT email_attempts FROM app_notification WHERE id = v_notif_x) = 5,
+    'B8: chaque acquittement en échec doit INCRÉMENTER email_attempts — sans l''incrément, '
+    'la borne du claim est décorative et la file reste bouchable à l''infini';
+  ASSERT jsonb_array_length(api.claim_unmailed_notifications(20)) = 0,
+    'B8: passé 5 échecs, la ligne ne doit PLUS JAMAIS être réclamée — sinon elle reste en '
+    'tête du parcours (ORDER BY created_at) et mange un créneau de chaque drain, à jamais';
+  -- Elle sort de la file SANS mentir sur son sort : ni supprimée, ni marquée envoyée.
+  ASSERT EXISTS (SELECT 1 FROM app_notification WHERE id = v_notif_x),
+    'B8: une ligne épuisée n''est jamais supprimée — la notification reste due au destinataire '
+    'dans l''interface, seul son e-mail a échoué';
+  ASSERT (SELECT email_sent_at FROM app_notification WHERE id = v_notif_x) IS NULL,
+    'B8: une ligne épuisée ne doit pas être marquée ENVOYÉE — aucun e-mail n''est parti, et '
+    'poser email_sent_at effacerait la seule trace de l''échec';
+  ASSERT (SELECT email_error FROM app_notification WHERE id = v_notif_x) = 'boîte définitivement fermée',
+    'B8: elle doit rester DIAGNOSTICABLE par email_error + email_attempts — c''est le couple '
+    'qui permet à l''exploitation de la retrouver et, s''il y a lieu, de la relancer';
 
   -- ═══════════════ C. PRÉDICAT D'ÉCRITURE DE TÂCHE ═══════════════
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);

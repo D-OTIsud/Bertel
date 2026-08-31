@@ -14,14 +14,29 @@
 // membre de l'ORG ; un ensemble vide est refusé côté serveur ET côté bouton).
 // Toujours ouvert sous gating write_crm_notes (boutons d'ouverture désactivés sinon).
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { ExternalLink, Trash2, Upload } from 'lucide-react';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
+import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../../services/task-documents';
+import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
+
+/**
+ * Taille lisible d'une pièce jointe. `null` est une garde SQL DÉLIBÉRÉE (taille illisible
+ * côté serveur, cf. Task 7) et doit rester distinguable d'une taille de 0 octet — les
+ * confondre ferait mentir l'interface (« 0 Ko » n'est pas « on ne sait pas »).
+ */
+function formatDocumentSize(value: number | null): string {
+  if (value === null) return 'taille inconnue';
+  if (value < 1024) return `${value} o`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+}
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le
@@ -177,6 +192,33 @@ export function CrmTaskModal({
     },
   });
 
+  // Task 9 — pièces jointes (mode ÉDITION uniquement, cf. rendu plus bas). Les trois
+  // mutations appellent `onSaved()` (invalide `crm-tasks`, la liste `task.documents` se
+  // rafraîchit) mais NE FERMENT PAS le modal : contrairement à `createMutation`, l'utilisateur
+  // doit pouvoir enchaîner plusieurs ajouts/suppressions sans rouvrir la fenêtre. `task!`/
+  // `accessToken!` : ces mutations ne sont déclenchables que par des boutons désactivés tant
+  // que `task`/`accessToken` sont absents (cf. rendu), jamais appelées hors de ce cas.
+  const accessToken = useSupabaseAccessToken();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadTaskDocument({ taskId: task!.id, file, accessToken: accessToken! }),
+    onSuccess: () => onSaved(),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (documentId: string) => deleteTaskDocument({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onSuccess: () => onSaved(),
+  });
+  const openMutation = useMutation({
+    mutationFn: (documentId: string) => getTaskDocumentUrl({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onSuccess: (url) => window.open(url, '_blank', 'noopener'),
+  });
+  const documentPending = uploadMutation.isPending || deleteMutation.isPending || openMutation.isPending;
+  const documentError =
+    (uploadMutation.error as Error | null)?.message ??
+    (deleteMutation.error as Error | null)?.message ??
+    (openMutation.error as Error | null)?.message ?? null;
+
   // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
   // un tableau vide « pour voir ». `resolvedObject` n'est requis qu'à la CRÉATION — en
   // édition `objectOptions` est vide (établissement verrouillé), donc `resolvedObject` est
@@ -274,6 +316,69 @@ export function CrmTaskModal({
       </label>
       {selectedAssignees.length === 0 && !assigneesQuery.isLoading && (
         <p className="crm-field__hint">Choisissez au moins une personne.</p>
+      )}
+
+      {/* Task 9 — pièces jointes : SEULEMENT en édition, la tâche n'a pas encore d'id à la
+          création (rien à quoi ancrer un fichier). Boutons désactivés tant que le jeton de
+          session n'est pas lu : sans lui l'appel partirait sans Authorization (401 muet). */}
+      {task ? (
+        <div className="crm-field">
+          Pièces jointes
+          <ul className="crm-doc-list">
+            {task.documents.map((doc) => (
+              <li key={doc.id} className="crm-doc-list__row">
+                <span className="crm-doc-list__title">{doc.title}</span>
+                <span className="crm-doc-list__size">{formatDocumentSize(doc.sizeBytes)}</span>
+                <button
+                  type="button"
+                  className="crm-btn sm"
+                  aria-label={`Ouvrir « ${doc.title} »`}
+                  disabled={!accessToken || documentPending}
+                  onClick={() => openMutation.mutate(doc.id)}
+                >
+                  <ExternalLink size={11} aria-hidden /> Ouvrir
+                </button>
+                <button
+                  type="button"
+                  className="crm-btn sm crm-btn--danger-ghost"
+                  aria-label={`Supprimer « ${doc.title} »`}
+                  disabled={!accessToken || documentPending}
+                  onClick={() => {
+                    if (window.confirm(`Supprimer « ${doc.title} » ? Le fichier sera définitivement effacé.`)) {
+                      deleteMutation.mutate(doc.id);
+                    }
+                  }}
+                >
+                  <Trash2 size={11} aria-hidden /> Supprimer
+                </button>
+              </li>
+            ))}
+            {task.documents.length === 0 && <li className="crm-field__hint">Aucune pièce jointe.</li>}
+          </ul>
+          <input
+            ref={fileInputRef}
+            type="file"
+            aria-label="Ajouter un document"
+            accept="application/pdf,image/*"
+            style={{ display: 'none' }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) uploadMutation.mutate(file);
+            }}
+          />
+          <button
+            type="button"
+            className="crm-btn sm"
+            disabled={!accessToken || documentPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={11} aria-hidden /> Ajouter un document
+          </button>
+          {documentError && <div className="inline-alert" role="alert">{documentError}</div>}
+        </div>
+      ) : (
+        <p className="crm-field__hint">Enregistrez la tâche pour joindre des documents.</p>
       )}
 
       {createMutation.isError && (

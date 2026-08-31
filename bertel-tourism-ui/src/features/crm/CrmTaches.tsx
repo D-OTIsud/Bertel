@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, GripVertical, Link2, Pencil, Plus } from 'lucide-react';
+import { Bell, GripVertical, Link2, Paperclip, Pencil, Plus } from 'lucide-react';
 import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
@@ -288,6 +288,21 @@ export function CrmTaches({
               }}
             >
               <Link2 size={11} aria-hidden /> {task.relatedInteractionSubject ?? 'Interaction liée'}
+            </button>
+          )}
+          {/* Task 9 — badge trombone : même modal que le crayon (édition), même gating
+              d'écriture. Le compteur reste le libellé (title) quel que soit `canWrite` — la
+              raison de lecture seule est déjà annoncée globalement dans la barre d'outils. */}
+          {task.documents.length > 0 && (
+            <button
+              type="button"
+              className="pill-mini"
+              title={`${task.documents.length} pièce(s) jointe(s)`}
+              aria-label={`${task.documents.length} pièce(s) jointe(s) — modifier « ${task.title} »`}
+              disabled={!canWrite}
+              onClick={() => setEditTaskId(task.id)}
+            >
+              <Paperclip size={11} aria-hidden /> {task.documents.length}
             </button>
           )}
         </div>

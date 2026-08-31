@@ -594,6 +594,53 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(props.onOpenActor).not.toHaveBeenCalled();
   });
 
+  /* ===== Task 9 — badge trombone (pièces jointes) ===== */
+
+  it('affiche le badge trombone quand la tâche a des pièces jointes', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [
+          { id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null },
+          { id: 'doc-2', title: 'Photo.jpg', mimeType: 'image/jpeg', sizeBytes: null, createdAt: null },
+        ],
+      },
+    ]);
+    renderTaches();
+    expect(await screen.findByTitle('2 pièce(s) jointe(s)')).toBeInTheDocument();
+  });
+
+  it('pas de badge trombone quand la tâche n a aucune pièce jointe', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(within(card).queryByTitle(/pièce\(s\) jointe/)).not.toBeInTheDocument();
+  });
+
+  it('clic sur le badge trombone → ouvre le même modal que le crayon (mode édition)', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [{ id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null }],
+      },
+    ]);
+    renderTaches();
+    const badge = await screen.findByTitle('1 pièce(s) jointe(s)');
+    await userEvent.click(badge);
+    expect(await screen.findByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+    expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
+  });
+
+  it('badge trombone gaté en lecture seule (même gating que le crayon)', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [{ id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null }],
+      },
+    ]);
+    renderTaches({ canWrite: false });
+    expect(await screen.findByTitle('1 pièce(s) jointe(s)')).toBeDisabled();
+  });
+
   /* ===== §66 — prompt de clôture de l'interaction liée après un move→done ===== */
 
   it('Avancer une tâche liée à une interaction OUVERTE vers Terminées → prompt de clôture', async () => {

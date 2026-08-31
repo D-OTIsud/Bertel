@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ExternalLink, FileText, Trash2, Upload } from 'lucide-react';
-import { getSupabaseClient } from '../../lib/supabase';
 import {
   listActorSupport,
   listObjectDocumentTypes,
@@ -15,6 +14,7 @@ import {
   promoteActorDocument,
   uploadActorDocument,
 } from '../../services/actor-documents';
+import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
 
@@ -41,24 +41,6 @@ function formatBytes(value: number): string {
   return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
 }
 
-function useActorDocumentAccessToken() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const client = getSupabaseClient();
-    if (!client) return;
-    void client.auth.getSession().then(({ data }) => {
-      if (alive) setAccessToken(data.session?.access_token ?? null);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  return accessToken;
-}
-
 /** Zone d'ajout dédiée au rail droit de l'onglet Documents. */
 export function CrmActorDocumentDropzone({
   actorId,
@@ -69,7 +51,7 @@ export function CrmActorDocumentDropzone({
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const accessToken = useActorDocumentAccessToken();
+  const accessToken = useSupabaseAccessToken();
   const [isDragging, setIsDragging] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
@@ -153,7 +135,7 @@ export function CrmActorDocuments({
   objects: LinkedObjectOption[];
 }) {
   const queryClient = useQueryClient();
-  const accessToken = useActorDocumentAccessToken();
+  const accessToken = useSupabaseAccessToken();
   const [promotion, setPromotion] = useState<PromotionDraft | null>(null);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);

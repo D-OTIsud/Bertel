@@ -19,6 +19,14 @@ async function processFile(file: File) {
   return processActorDocumentBuffer(Buffer.from(await file.arrayBuffer()), file.type);
 }
 
+// Le storage renvoie parfois une erreur pour un objet DÉJÀ absent (suppression concurrente,
+// retry après un premier succès partiel) : un cas normal du point de vue de DELETE, qu'on
+// tolère pour poursuivre. Toute AUTRE erreur (droits, réseau, quota) est un échec RÉEL du
+// retrait qu'on ne doit pas avaler — voir le commentaire dans DELETE ci-dessous.
+function isMissingObjectError(error: { message: string }): boolean {
+  return /not found/i.test(error.message);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authenticated(req);
   if (!auth.ok) return auth.response;
@@ -114,14 +122,23 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   if (!resolved.ok) return resolved.response;
 
   // Deux situations distinctes derrière ce test, à ne pas confondre :
-  //  - chemin vide ⇒ la ligne ne désigne AUCUN fichier (purge manuelle, incident) : il
+  //  - pas de fichier ⇒ la ligne ne désigne AUCUN fichier (purge manuelle, incident) : il
   //    n'y a rien à retirer, la suppression de la ligne suit normalement ;
-  //  - chemin présent ⇒ on retire le fichier d'abord. remove() est silencieusement
-  //    idempotent si l'objet a déjà disparu du bucket, on ne bloque pas pour autant.
-  // L'ordre (fichier puis ligne) est délibéré : l'ordre inverse laisserait un fichier
-  // orphelin si le retrait échouait après la suppression de la ligne. Ici le pire cas
-  // est une ligne sans fichier — visible, rattrapable, jamais un orphelin muet.
-  if (resolved.storagePath) await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.storagePath]);
+  //  - fichier présent ⇒ on le retire D'ABORD. Une erreur « objet déjà absent » est
+  //    tolérée (cas normal : suppression concurrente, retry après succès partiel) et on
+  //    poursuit ; toute AUTRE erreur (droits, réseau, quota) est un échec RÉEL qu'on ne
+  //    doit pas avaler — l'avaler ferait supprimer la ligne quand même : même état final
+  //    que le constat qu'on vient de fermer sur les erreurs de LECTURE (ligne supprimée,
+  //    fichier orphelin dans le bucket, 200 {deleted:true} rendu à l'appelant). On sort
+  //    donc AVANT de toucher la ligne.
+  // L'ordre (fichier puis ligne) reste délibéré : l'ordre inverse laisserait un fichier
+  // orphelin si le retrait échouait après la suppression de la ligne.
+  if (resolved.file) {
+    const { error: removeError } = await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.file.path]);
+    if (removeError && !isMissingObjectError(removeError)) {
+      return NextResponse.json({ error: 'storage_remove_failed', detail: removeError.message }, { status: 500 });
+    }
+  }
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
   if (error) return NextResponse.json({ error: 'delete_failed', detail: error.message }, { status: 500 });
   // crm_task_document.document_id référence ref_document en CASCADE FK : la ligne de lien

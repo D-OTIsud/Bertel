@@ -33,15 +33,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const resolved = await resolveLinkedDocument(auth.server, taskId, documentId);
   if (!resolved.ok) return resolved.response;
-  // Contrairement à la suppression, une ligne sans chemin storage n'a rien à offrir ici :
+  // Contrairement à la suppression, une ligne sans fichier n'a rien à offrir ici :
   // 404 plutôt qu'une signature sur un chemin vide.
-  if (!resolved.storagePath) return NextResponse.json({ error: 'file_missing' }, { status: 404 });
+  if (!resolved.file) return NextResponse.json({ error: 'file_missing' }, { status: 404 });
 
   // Bucket ÉPINGLÉ (constante), jamais celui porté par la ligne : le service_role signe,
   // il ne doit pouvoir signer que dans le bucket privé des pièces jointes.
   const { data, error } = await auth.server.storage
     .from(PRIVATE_BUCKET)
-    .createSignedUrl(resolved.storagePath, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(resolved.file.path, SIGNED_URL_TTL_SECONDS);
   if (error || !data?.signedUrl) return NextResponse.json({ error: 'signed_url_failed', detail: error?.message }, { status: 500 });
   return NextResponse.json({ url: data.signedUrl });
 }

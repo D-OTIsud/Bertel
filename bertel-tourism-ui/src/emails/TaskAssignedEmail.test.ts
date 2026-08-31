@@ -31,4 +31,30 @@ describe('TaskAssignedEmail', () => {
     expect(html).toContain('Sans échéance');
     expect(html).toContain('votre équipe');
   });
+
+  it('repli sur « Sans échéance » si dueAt est une chaîne non-parsable', () => {
+    const html = renderTaskAssignedEmailHtml({
+      ...base, dueAt: 'pas-une-date',
+    });
+    expect(html).toContain('Sans échéance');
+    expect(html).not.toContain('Invalid Date');
+  });
+
+  it('échappe le HTML dans objectName, assignerName et appUrl simultanément', () => {
+    const html = renderTaskAssignedEmailHtml({
+      taskTitle: 'Tâche test',
+      objectName: '<img src=x onerror="alert()">',
+      dueAt: '2026-09-15T00:00:00+00:00',
+      assignerName: '<script>alert("xss")</script>',
+      appUrl: 'https://example.com?param="<b>test</b>',
+    });
+    // Vérifie que les formes brutes d'injection sont absentes
+    expect(html).not.toContain('<img src=x onerror="alert()">');
+    expect(html).not.toContain('<script>alert("xss")</script>');
+    expect(html).not.toContain('"<b>test</b>');
+    // Vérifie que les formes échappées sont présentes
+    expect(html).toContain('&lt;img src=x onerror=&quot;alert()&quot;&gt;');
+    expect(html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    expect(html).toContain('&quot;&lt;b&gt;test&lt;/b&gt;');
+  });
 });

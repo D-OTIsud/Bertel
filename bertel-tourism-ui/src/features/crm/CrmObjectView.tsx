@@ -14,7 +14,14 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ExternalLink, Plus } from 'lucide-react';
-import { deleteCrmInteraction, listCrmDirectory, listDemandTopics, listObjectCrm, saveCrmInteraction } from '../../services/crm';
+import {
+  deleteCrmInteraction,
+  listCrmDirectory,
+  listDemandTopics,
+  listObjectCrm,
+  loadAwaitingSince,
+  saveCrmInteraction,
+} from '../../services/crm';
 import { CrmTimeline, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
 import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmInteractionModal } from './CrmInteractionModal';
@@ -203,6 +210,7 @@ export function CrmObjectView({
               readOnlyReason={CRM_READ_ONLY_REASON}
               onReply={handleReply}
               onChangeStatus={handleChangeStatus}
+              loadAwaitingSince={loadAwaitingSince}
               onEditInteraction={handleEditInteraction}
               onDeleteInteraction={handleDeleteInteraction}
               onCreateTask={setTaskFromInteraction}

@@ -147,3 +147,25 @@ describe('CrmStatusModal', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+describe('câblage de la date d’attente — le journal est-il réellement lu ?', () => {
+  /* Ce bloc existe parce que le service `listCrmStatusEvents` a bien failli rester du CODE
+     MORT : il était écrit, testé, et AUCUN hôte ne le branchait. L'encart aurait alors dit
+     « depuis une date inconnue » pour toujours, sans qu'aucun test ne rougisse — tous les
+     tests de la modale passent la date en prop.
+     La garde porte donc sur le CÂBLAGE lui-même, au niveau du fichier source. */
+  const { readFileSync } = require('node:fs') as typeof import('node:fs');
+  const { join } = require('node:path') as typeof import('node:path');
+
+  it.each(['CrmActorFiche.tsx', 'CrmObjectView.tsx', 'CrmTimelineView.tsx'])(
+    '%s passe loadAwaitingSince à la timeline',
+    (fichier) => {
+      const src = readFileSync(join(__dirname, fichier), 'utf8');
+      // Le passage à la timeline…
+      expect(src).toMatch(/loadAwaitingSince=\{loadAwaitingSince\}/);
+      // …et son import depuis le service : sans lui, le passage ne compilerait pas, mais
+      // l'assertion le dit explicitement plutôt que de s'en remettre à tsc.
+      expect(src).toMatch(/^\s*loadAwaitingSince,$/m);
+    },
+  );
+});

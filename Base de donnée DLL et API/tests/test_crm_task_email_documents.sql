@@ -22,11 +22,16 @@
 --    droit, false ne prouverait rien) ; et le refus de C2 isole la PORTÉE PAR OBJET
 --    seule, l'autre moitié de la conjonction étant délibérément satisfaite.
 -- D) DOCUMENTS — list_crm_tasks émet documents[] ; `id` est le document_id ; une tâche
---    sans pièce jointe porte la clé ET `[]`, jamais null ; une taille non numérique sort
---    à null au lieu d'abattre la lecture entière. Et le contrat 16z (assignees[],
---    created_by_id) SURVIT au redéploiement de la fonction — c'est le risque propre à
---    17i, qui REDÉPLOIE list_crm_tasks — éprouvé sur un témoin où créateur, owner et
---    assigné sont TROIS personnes distinctes.
+--    sans pièce jointe porte la clé ET `[]`, jamais null ; une taille illisible sort à
+--    null au lieu d'abattre la lecture entière, dans les DEUX moitiés de cette classe de
+--    panne : non numérique (D4, 22P02) ET numérique mais débordant bigint (D4b, 22003) —
+--    une garde qui bornerait l'alphabet sans borner la LONGUEUR n'en fermerait qu'une.
+--    Et le contrat 16z SURVIT au redéploiement de la fonction — c'est le risque propre à
+--    17i, qui REDÉPLOIE list_crm_tasks — éprouvé sur un témoin où créateur (userA), owner
+--    de compatibilité (userC) et assigné (userD) sont TROIS personnes distinctes, et
+--    porté sur TOUTES les clés du contrat : assignees[], created_by_id/name,
+--    owner_id/owner_name et les trois related_interaction_* (valeurs réelles, jamais des
+--    nulls qu'une assertion d'existence laisserait passer).
 --
 -- Contre une base sans 17i : échec immédiat (bloc A). Auto-contenu + transactionnel.
 -- Personas RÉELS par `request.jwt.claims` (jamais `SET ROLE` seul : sans JWT, auth.uid()
@@ -54,10 +59,13 @@ DECLARE
   v_t      uuid;       -- tâche témoin, assignée puis porteuse d'une pièce jointe
   v_t_nodoc uuid;      -- tâche témoin SANS pièce jointe (D2)
   v_t_bad  uuid;       -- tâche témoin dont la pièce jointe a une taille illisible (D4)
+  v_t_ovf  uuid;       -- tâche témoin dont la pièce jointe a une taille DÉBORDANTE (D4b)
   v_notif  uuid;       -- notification de userC
   v_notif_d uuid;      -- notification de userD
   v_doc    uuid;       -- ref_document de la pièce jointe
   v_doc_bad uuid;      -- ref_document dont extra->>'size_bytes' n'est pas un nombre (D4)
+  v_doc_ovf uuid;      -- ref_document dont extra->>'size_bytes' dépasse bigint (D4b)
+  v_inter  uuid;       -- interaction liée au témoin de D3 (contrat 16z related_interaction_*)
   v_denied boolean;
   v_n      int;
 BEGIN
@@ -386,6 +394,46 @@ BEGIN
   INSERT INTO crm_task_document (task_id, document_id, title, created_by)
   VALUES (v_t_bad, v_doc_bad, 'Scan.pdf', v_userA);
 
+  -- Témoin de D4b : une taille FAITE DE CHIFFRES mais qui DÉBORDE bigint. Une garde
+  -- réduite à `^\d+$` la laisserait passer et le `::bigint` lèverait 22003 `value out of
+  -- range` — au MÊME endroit, avec le MÊME rayon d'action (api.list_crm_tasks TOUT ENTIÈRE,
+  -- donc le kanban de tout le périmètre) que le 22P02 que D4 ferme. Une garde qui ne borne
+  -- que la FORME sans borner la LONGUEUR ne ferme donc que la moitié de sa propre classe de
+  -- panne. Vingt chiffres : la plus petite valeur qui déborde de façon indiscutable.
+  -- Témoin sur une tâche À PART, comme celui de D4, pour que les cardinalités restent à 1.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_payload := api.save_crm_task(jsonb_build_object(
+      'object_id', v_objA, 'title', 'Tâche 17i pièce jointe à taille débordante'));
+    v_t_ovf := (v_payload->>'id')::uuid;
+  RESET ROLE;
+  v_doc_ovf := gen_random_uuid();
+  INSERT INTO ref_document (id, url, title, storage_bucket, storage_path, access_scope, extra)
+  VALUES (v_doc_ovf, 'storage://actor-documents/tasks/z', 'Enorme.pdf',
+          'actor-documents', 'tasks/'||v_t_ovf::text||'/z.pdf', 'crm_private',
+          '{"mime_type":"application/pdf","size_bytes":"99999999999999999999"}'::jsonb);
+  INSERT INTO crm_task_document (task_id, document_id, title, created_by)
+  VALUES (v_t_ovf, v_doc_ovf, 'Enorme.pdf', v_userA);
+
+  -- L'interaction liée du témoin de D3. `related_interaction_id/subject/status` font partie
+  -- du contrat 16z de list_crm_tasks au même titre qu'`assignees[]`, et 17i REDÉPLOIE la
+  -- fonction : une clé effacée par le redéploiement ne se verrait nulle part ailleurs.
+  -- L'interaction porte un sujet et un statut RÉELS (jamais NULL) : sur trois clés nulles,
+  -- des assertions d'existence passeraient encore sur une fonction qui les aurait remplacées
+  -- par des littéraux NULL — c'est la VALEUR jointe depuis crm_interaction qui prouve que la
+  -- jointure `ri` a survécu. Écriture directe : `crm_interaction` est sous RLS admin-only.
+  v_inter := gen_random_uuid();
+  INSERT INTO crm_interaction (id, object_id, interaction_type, direction, status, subject)
+  VALUES (v_inter, v_objA, 'note', 'internal', 'in_progress', 'Demande liée 17i');
+  PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- Payload SANS `assignee_ids` ni `owner` : v_requested reste NULL, donc ni les
+    -- assignations ni l'owner de compatibilité ne sont touchés (le témoin de D3 garde ses
+    -- trois personnes distinctes).
+    PERFORM api.save_crm_task(jsonb_build_object(
+      'id', v_t::text, 'related_interaction_id', v_inter::text));
+  RESET ROLE;
+
   -- D3 lira v_t, dont l'assigné est userD depuis B4 et le créateur userA. On écarte EN PLUS
   -- la valeur de compatibilité `owner` vers userC : save_crm_task la tient égale au premier
   -- assigné, donc à userD lui aussi, et une assertion d'identité ne saurait pas distinguer
@@ -436,6 +484,27 @@ BEGIN
       'D3: created_by_id (16z) doit survivre au redéploiement de list_crm_tasks';
     ASSERT v_task->>'created_by_name' = 'Bernard Auteur',
       'D3: created_by_name (16z) doit survivre au redéploiement de list_crm_tasks';
+    -- Le contrat 16z ne s'arrête pas à assignees[]/created_by_* : owner_id/owner_name sont
+    -- la valeur de COMPATIBILITÉ que lisent encore les clients d'avant 16z pendant la
+    -- fenêtre de déploiement, et le témoin les rend GRATUITEMENT discriminants — son owner
+    -- est userC, distinct du créateur (userA) ET de l'assigné (userD). Un redéploiement qui
+    -- les effacerait, ou qui les recalculerait depuis les assignés, ne casserait AUCUNE
+    -- autre assertion de ce fichier.
+    ASSERT (v_task->>'owner_id')::uuid = v_userC,
+      'D3: owner_id (contrat hérité 16z) doit survivre au redéploiement — et venir de '
+      'crm_task.owner, ni du créateur (userA) ni de l''assigné (userD)';
+    ASSERT v_task->>'owner_name' = 'Zoé Zoralde',
+      'D3: owner_name (contrat hérité 16z) doit être JOINT depuis app_user_profile sur '
+      'crm_task.owner';
+    -- Les trois clés d'interaction liée : la VALEUR, pas seulement la présence — une
+    -- assertion d'existence passerait encore sur une fonction qui aurait perdu la jointure
+    -- `ri` et émettrait trois NULL.
+    ASSERT (v_task->>'related_interaction_id')::uuid = v_inter,
+      'D3: related_interaction_id (16z) doit survivre au redéploiement de list_crm_tasks';
+    ASSERT v_task->>'related_interaction_subject' = 'Demande liée 17i',
+      'D3: related_interaction_subject (16z) doit rester JOINT depuis crm_interaction';
+    ASSERT v_task->>'related_interaction_status' = 'in_progress',
+      'D3: related_interaction_status (16z) doit rester JOINT depuis crm_interaction';
 
     -- D4. Une taille NON NUMÉRIQUE ne doit pas abattre la lecture. Le rayon d'action d'un
     -- cast nu n'est pas la pièce jointe fautive : c'est api.list_crm_tasks() TOUT ENTIÈRE,
@@ -453,6 +522,24 @@ BEGIN
       'poids), jamais faire lever la lecture entière';
     ASSERT v_task->'documents'->0->>'mime_type' = 'application/pdf',
       'D4: les autres métadonnées de la pièce restent intactes';
+
+    -- D4b. Une taille NUMÉRIQUE mais DÉBORDANTE ne doit pas non plus abattre la lecture.
+    -- C'est l'autre moitié de la MÊME classe de panne : une garde de FORME seule (`^\d+$`)
+    -- laisse « 99999999999999999999 » atteindre le `::bigint`, qui lève 22003 exactement là
+    -- où le 22P02 de D4 levait — api.list_crm_tasks() TOUT ENTIÈRE, donc le kanban CRM de
+    -- tous les utilisateurs du périmètre. La garde borne donc la LONGUEUR (`^\d{1,18}$`) et
+    -- non seulement l'alphabet. Sans CE témoin, la borne serait ré-élargie un jour sans que
+    -- rien ne rougisse. Si la borne tombe, l'appel de list_crm_tasks lève 22003 et ce
+    -- fichier rougit AVANT d'arriver ici, comme pour D4.
+    SELECT t INTO v_task FROM jsonb_array_elements(v_tasks) t WHERE (t->>'id')::uuid = v_t_ovf;
+    ASSERT v_task IS NOT NULL, 'D4b (prémisse): la tâche à taille débordante doit être listée';
+    ASSERT jsonb_array_length(v_task->'documents') = 1,
+      'D4b: la pièce jointe doit être ÉMISE malgré sa taille débordante';
+    ASSERT jsonb_typeof(v_task->'documents'->0->'size_bytes') = 'null',
+      'D4b: une taille qui déborde bigint doit sortir à null — une garde qui ne borne que '
+      'l''alphabet et pas la LONGUEUR laisse lever 22003 au même endroit que le 22P02 de D4';
+    ASSERT v_task->'documents'->0->>'title' = 'Enorme.pdf',
+      'D4b: les autres métadonnées de la pièce restent intactes';
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claims', NULL, true);

@@ -892,6 +892,94 @@ describe('saveCrmTask — rattachement acteur (rectif PO point 3)', () => {
   });
 });
 
+// 17i — ping fire-and-forget du drain e-mail après une assignation. Le ping ne part QUE si
+// l'input portait `assigneeIds` (clé absente = assignations inchangées, ex. drag & drop du
+// kanban qui n'envoie que le statut) ; il part APRÈS le succès du RPC (jamais avant, jamais
+// sur erreur), et jamais en mode démo (le chemin démo sort de saveCrmTask bien plus tôt).
+describe('saveCrmTask — ping notify-drain (17i)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  const realFetch = global.fetch;
+  const fetchMock = jest.fn().mockResolvedValue({ ok: true });
+
+  beforeEach(() => {
+    fetchMock.mockClear();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    useSessionStore.setState({ demoMode: false });
+    // getSupabaseClient().auth.getSession() → un access_token de test (même pattern que
+    // describe('uploadActorPhoto') plus haut dans ce fichier).
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: { access_token: 'jwt-ping' } } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+  });
+
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+    mockedGetSupabaseClient.mockReset();
+    global.fetch = realFetch;
+  });
+
+  it('ping le drain après un save AVEC assigneeIds', async () => {
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0)); // laisse partir le void
+    expect(fetchMock).toHaveBeenCalledWith('/api/crm/notify-drain', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ Authorization: 'Bearer jwt-ping' }),
+    }));
+  });
+
+  it('NE ping PAS un save sans assigneeIds (drag & drop statut seul)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ id: 't-1', status: 'done' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ne ping pas si le RPC échoue (le ping suit le succès, jamais l’échec)', async () => {
+    const rpc = jest.fn(async () => ({ data: null, error: { message: 'boom' } }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] })).rejects.toMatchObject({
+      message: 'boom',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('ne ping pas en mode démo (le chemin démo sort de saveCrmTask avant le ping)', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('pas de session active → pas de ping (aucun token à envoyer)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    mockedGetSupabaseClient.mockReturnValue({
+      auth: { getSession: async () => ({ data: { session: null } }) },
+    } as unknown as ReturnType<typeof getSupabaseClient>);
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('pas de client Supabase (non configuré) → pas de ping', async () => {
+    fakeRpcClient({ id: 't-1' });
+    mockedGetSupabaseClient.mockReturnValue(null as unknown as ReturnType<typeof getSupabaseClient>);
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('un fetch qui lève est avalé : saveCrmTask résout quand même (l’outbox rattrape)', async () => {
+    fakeRpcClient({ id: 't-1' });
+    fetchMock.mockRejectedValueOnce(new Error('network down'));
+    await expect(saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] })).resolves.toBe('t-1');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).toHaveBeenCalled();
+  });
+});
+
 // §65/§66 — réponses + bascule traité/rouvert (le composer de fil + le bouton « Marquer traitée »).
 describe('saveCrmInteraction — réponse (parentInteractionId) + bascule de statut', () => {
   const initialDemoMode = useSessionStore.getState().demoMode;

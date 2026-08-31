@@ -648,7 +648,32 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (!id) {
     throw new Error('Réponse RPC sans id');
   }
+  // Une écriture d'assignation vient peut-être de créer des notifications : on déclenche
+  // le drain. Clé `assigneeIds` absente (drag & drop) = aucune assignation possible = pas
+  // de ping. Le drain traite TOUTE la file, pas seulement cette tâche (filet de rattrapage).
+  if (input.assigneeIds !== undefined) void pingNotifyDrain();
   return id;
+}
+
+/**
+ * Ping fire-and-forget du drain e-mail (17i). L'échec est AVALÉ à dessein : la
+ * notification reste dans l'outbox et le prochain ping (de n'importe qui) la ramasse —
+ * un e-mail n'est jamais perdu, et l'écriture de la tâche n'attend jamais le SMTP.
+ */
+async function pingNotifyDrain(): Promise<void> {
+  try {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const { data } = await client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/crm/notify-drain', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // fire-and-forget : rien à faire, l'outbox rattrape.
+  }
 }
 
 /* ===== Assignables (PO point 4 — api.list_crm_assignees) ========================

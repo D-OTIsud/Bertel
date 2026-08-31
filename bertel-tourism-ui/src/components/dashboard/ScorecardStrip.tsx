@@ -37,7 +37,11 @@ type CrmAttnState = 'unknown' | 'ok' | 'attention';
 
 function crmAttnState(crmOpen: DashboardCrmOpen | undefined): CrmAttnState {
   if (!crmOpen) return 'unknown';
-  return crmOpen.total > 0 ? 'attention' : 'ok';
+  // L'état suit le chiffre RÉELLEMENT AFFICHÉ (récent + tâches), pas `total`, qui inclut
+  // l'arriéré. Sans cela, « À traiter » se poserait au-dessus d'un « 0 » dès que le seul
+  // reste est un arriéré ancien : exactement l'écran incohérent que ce lot existe pour
+  // supprimer. La troisième ligne empêche le vert de mentir, en disant l'arriéré.
+  return crmOpen.recent_interactions + crmOpen.open_tasks > 0 ? 'attention' : 'ok';
 }
 
 /**
@@ -92,22 +96,41 @@ export function ScorecardStrip({ data, crmOpen }: Props) {
           {attnState === 'attention' ? 'À traiter' : attnState === 'ok' ? 'À jour' : 'Indisponible'}
         </span>
         <span className="summary-attn__line">
-          <span className="summary-attn__big">{attnState === 'unknown' ? '—' : nf.format(crmOpen?.total ?? 0)}</span>
+          {/* « éléments » et non « demandes » : ce chiffre additionne des DEMANDES et des
+              TÂCHES, deux vocabulaires que la base tient soigneusement séparés. Le nommer
+              « demandes récentes », comme le proposait le plan, ferait passer une tâche pour
+              une demande — et « récente » pour une tâche, dont rien ne borne l'âge. */}
+          <span className="summary-attn__big">
+            {attnState === 'unknown' ? '—' : nf.format(crmOpen!.recent_interactions + crmOpen!.open_tasks)}
+          </span>
           <span className="summary-attn__txt">
             {attnState === 'unknown'
               ? 'chiffre non disponible'
-              : (crmOpen?.total ?? 0) > 1
-                ? 'demandes en cours'
-                : 'demande en cours'}
+              : crmOpen!.recent_interactions + crmOpen!.open_tasks > 1
+                ? 'éléments à traiter'
+                : 'élément à traiter'}
           </span>
         </span>
         {crmOpen && (
-          <span className="summary-attn__breakdown">
-            Tout le périmètre · {nf.format(crmOpen.open_interactions)} interaction
-            {crmOpen.open_interactions > 1 ? 's' : ''} planifiée
-            {crmOpen.open_interactions > 1 ? 's' : ''}, {nf.format(crmOpen.open_tasks)} tâche
-            {crmOpen.open_tasks > 1 ? 's' : ''} à faire
-          </span>
+          <>
+            {/* « Tout le périmètre » : un chiffre non filtré au milieu de chiffres filtrés doit
+                s'annoncer. */}
+            <span className="summary-attn__breakdown">
+              {`Tout le périmètre · ${nf.format(crmOpen.recent_interactions)} demande${
+                crmOpen.recent_interactions > 1 ? 's' : ''
+              } de moins de 90 jours, ${nf.format(crmOpen.open_tasks)} tâche${
+                crmOpen.open_tasks > 1 ? 's' : ''
+              } à faire`}
+            </span>
+            {/* L'arriéré est HORS du chiffre de tête, et on ne lui prête pas d'âge : il est
+                obtenu par soustraction, donc il ramasse aussi les demandes sans date. « Plus
+                anciennes » est vrai ; « en attente depuis plus de 90 jours » ne le serait pas. */}
+            <span className="summary-attn__breakdown">
+              {`+ ${nf.format(crmOpen.backlog_interactions)} demande${
+                crmOpen.backlog_interactions > 1 ? 's' : ''
+              } plus ancienne${crmOpen.backlog_interactions > 1 ? 's' : ''}`}
+            </span>
+          </>
         )}
         <Link href="/crm" className="summary-attn__cta">
           {attnState === 'attention' ? 'Ouvrir le suivi CRM' : 'Voir le suivi CRM'}

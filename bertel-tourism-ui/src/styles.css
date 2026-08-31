@@ -13819,3 +13819,140 @@ a {
 .help-qa__related button:hover { border-color: var(--line-strong); }
 .help-empty { border: 1px dashed var(--line-strong); border-radius: 12px; padding: 24px; text-align: center; color: var(--ink-3); }
 .help-empty p { margin: 4px 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   Onglet Activité équipe (manifeste 17h) — cinq widgets.
+   Aucune couleur en dur : les séries reçoivent leur teinte en prop JS (var(--teal),
+   var(--warn), var(--danger)), que la garde CSS ne voit pas mais que la revue, si.
+   Rappel de la règle projet : jamais rgba(var(--x-rgb), α) — la forme valide est
+   rgb(var(--x-rgb) / α), le mélange rend une déclaration invalide qui tombe en silence.
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* Histogramme partagé — la grille et les étiquettes réutilisent les classes de
+   TimeseriesChart : deux graphiques du même tableau de bord ne doivent pas avoir deux
+   typographies d'axe. */
+.bar-series { display: block; }
+.bar-series__bar { transition: opacity 140ms ease; }
+.bar-series:hover .bar-series__bar { opacity: 0.55; }
+.bar-series .bar-series__bar:hover { opacity: 1; }
+
+/* Notes de méthode — elles portent le RAISONNEMENT d'un indicateur, pas un détail : sans
+   elles un lecteur suppose que la hauteur d'une barre mesure du volume et lit le rythme de
+   saisie à l'envers. Grisées mais lisibles, jamais repliées derrière un « en savoir plus ». */
+.method-notes {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+/* Contributeurs */
+.contributors { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.contributors th {
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  font-weight: 700;
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+.contributors td { padding: 0.6rem 0; border-bottom: 1px solid var(--line-soft, var(--line)); }
+.contributors tr:last-child td { border-bottom: 0; }
+.contributors__num { text-align: right; font-variant-numeric: tabular-nums; }
+.contributors__span { color: var(--ink-2); white-space: nowrap; }
+/* La pastille dit POURQUOI un gros volume ne fait pas un gros contributeur. */
+.contributors__bulk {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Arriéré CRM — quatre tranches d'âge, TOUJOURS rendues, la vide comprise : c'est le creux
+   qui décrit la forme de l'arriéré. */
+.crm-backlog__ages { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.35rem; }
+.crm-backlog__agerow {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.83rem;
+}
+.crm-backlog__agelab { color: var(--ink-2); }
+.crm-backlog__track {
+  height: 1.05rem;
+  border-radius: 0.3rem;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.crm-backlog__track i { display: block; height: 100%; border-radius: 0.3rem; }
+.crm-backlog__agecnt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.crm-backlog__topics {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.crm-backlog__topic {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.65rem;
+  align-items: baseline;
+  font-size: 0.83rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--line-soft, var(--line));
+}
+.crm-backlog__topic:last-child { border-bottom: 0; }
+.crm-backlog__topicname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-backlog__topicmeta { color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Temps net — la barre illustre une SOUSTRACTION : les longueurs sont proportionnelles aux
+   durées, pas à des pourcentages, sans quoi l'exemple ne démontrerait rien. */
+.nettime { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 0.35rem; }
+.nettime__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.nettime__bar {
+  display: flex;
+  height: 2rem;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.nettime__seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0 0.4rem;
+}
+.nettime__seg--work { background: var(--surface-2); color: var(--ink-2); }
+/* L'attente prestataire est la part DÉDUITE : elle se distingue, sans crier — ce n'est pas
+   une faute de l'équipe, c'est du temps qui ne lui appartient pas. */
+.nettime__seg--wait { background: var(--warn); color: var(--surface); }
+.nettime__calc { margin: 0; font-size: 0.84rem; color: var(--ink-2); }
+.nettime__calc b { color: var(--ink); padding: 0 0.15rem; }
+

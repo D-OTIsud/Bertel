@@ -124,9 +124,15 @@ export type DashboardCrmAgeBucket = (typeof DASHBOARD_CRM_AGE_BUCKETS)[number];
 export interface DashboardCrmActivity {
   /** Toujours les QUATRE tranches, une tranche vide à zéro — jamais omise. */
   open_by_age: { bucket: DashboardCrmAgeBucket; count: number }[];
-  /** Trié par count décroissant. `name` n'est jamais vide : les demandes sans sujet sont
-   *  regroupées sous un libellé explicite. */
-  open_by_topic: { code: string | null; name: string; count: number; oldest: string }[];
+  /**
+   * Trié par count décroissant. `name` n'est jamais vide : les demandes sans sujet sont
+   * regroupées sous un libellé explicite.
+   *
+   * `oldest` PEUT être null : `crm_interaction.occurred_at` est nullable au schéma, donc le
+   * `min()` d'un groupe dont aucune demande n'est datée rend null. Aucune ligne n'est dans ce
+   * cas aujourd'hui — le type l'annonçait non-nullable et personne ne l'aurait vu passer.
+   */
+  open_by_topic: { code: string | null; name: string; count: number; oldest: string | null }[];
   /** 12 mois ; un mois sans mouvement porte 0, jamais null. */
   monthly_flow: { month: string; created: number; resolved: number }[];
   /**

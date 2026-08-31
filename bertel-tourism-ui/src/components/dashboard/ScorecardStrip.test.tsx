@@ -34,12 +34,37 @@ describe('ScorecardStrip', () => {
     expect(screen.getByText(/−100 %/)).toBeInTheDocument();
   });
 
-  it('compte les demandes CRM ouvertes, pas les pending_change', () => {
+  it('met en tête ce qui est RÉCENT, et sort l’arriéré du chiffre d’alerte', () => {
+    // Le chiffre de tête était `total` (172), arriéré compris : une carte d'alerte qui ne
+    // redescend jamais cesse d'être un signal. Il vaut désormais récent + tâches = 5, et les
+    // 167 anciennes sont dites à part, sans être comptées deux fois.
     render(<ScorecardStrip data={base} crmOpen={crmOpen} />);
-    expect(screen.getByText('172')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+    expect(screen.getByText('éléments à traiter')).toBeInTheDocument();
+    expect(screen.getByText(/3 demandes de moins de 90 jours, 2 tâches à faire/)).toBeInTheDocument();
+    expect(screen.getByText(/\+ 167 demandes plus anciennes/)).toBeInTheDocument();
     expect(screen.getByText('À traiter')).toBeInTheDocument();
-    expect(screen.getByText(/170 interactions planifiées/)).toBeInTheDocument();
-    expect(screen.getByText(/2 tâches à faire/)).toBeInTheDocument();
+  });
+
+  it('ne nomme JAMAIS « demandes » un total qui contient des tâches', () => {
+    // Deux vocabulaires que la base tient séparés (crm_status vs crm_task_status) ne se
+    // fondent pas dans un libellé commun à l'écran. Et rien ne borne l'âge d'une tâche :
+    // l'appeler « récente » serait faux.
+    render(<ScorecardStrip data={base} crmOpen={crmOpen} />);
+    expect(screen.queryByText(/demandes récentes/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/planifiée/)).not.toBeInTheDocument();
+  });
+
+  it('reste « À jour » quand il ne reste QUE de l’arriéré, en le disant', () => {
+    // Le vert ne doit pas mentir : la troisième ligne porte l'arriéré restant.
+    render(
+      <ScorecardStrip
+        data={base}
+        crmOpen={{ open_interactions: 167, open_tasks: 0, total: 167, recent_interactions: 0, backlog_interactions: 167 }}
+      />,
+    );
+    expect(screen.getByText('À jour')).toBeInTheDocument();
+    expect(screen.getByText(/\+ 167 demandes plus anciennes/)).toBeInTheDocument();
   });
 
   it('dit que le compte CRM est global, pas filtré', () => {

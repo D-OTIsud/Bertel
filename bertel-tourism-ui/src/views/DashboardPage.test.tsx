@@ -3,7 +3,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
-import { getDashboardScorecards, getDashboardCrmOpen } from '../services/dashboard-rpc';
+import {
+  getDashboardCrmActivity,
+  getDashboardCrmOpen,
+  getDashboardScorecards,
+  getDashboardTeamActivity,
+} from '../services/dashboard-rpc';
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -40,7 +45,34 @@ jest.mock('../services/dashboard-rpc', () => ({
     by_scheme: [{ scheme_code: 'hot_stars', scheme_name: 'Étoiles hôtel', display_group: 'official_classification', count: 4 }],
   }),
   getDashboardCrmOpen: jest.fn().mockResolvedValue({
+    // Les deux clés de 17h sont OBLIGATOIRES ici : `jest.mock` remplace tout le module, donc
+    // un mock incomplet ne fait pas échouer tsc — il rend « NaN » à l'écran, en silence.
     open_interactions: 170, open_tasks: 2, total: 172,
+    recent_interactions: 3, backlog_interactions: 167,
+  }),
+  getDashboardTeamActivity: jest.fn().mockResolvedValue({
+    weeks: [
+      { week_start: '2026-08-24', editor_days: 3, editors: 2, objects_touched: 2, created: 0 },
+      { week_start: '2026-08-31', editor_days: 2, editors: 2, objects_touched: 2, created: 0 },
+    ],
+    contributors: [
+      { user_id: 'u1', display_name: 'David Philippe', active_days: 18, objects_touched: 486,
+        bulk_days: 5, first_at: '2026-06-16T05:51:03Z', last_at: '2026-08-31T07:04:52Z' },
+    ],
+  }),
+  getDashboardCrmActivity: jest.fn().mockResolvedValue({
+    open_by_age: [
+      { bucket: 'lt_30d', count: 3 }, { bucket: 'd30_90', count: 0 },
+      { bucket: 'd90_1y', count: 24 }, { bucket: 'gt_1y', count: 143 },
+    ],
+    open_by_topic: [
+      { code: 'demande_signaletique', name: 'Demande signalétique', count: 123, oldest: '2018-11-14T00:00:00Z' },
+    ],
+    monthly_flow: [
+      { month: '2026-07-01', created: 0, resolved: 2 },
+      { month: '2026-08-01', created: 3, resolved: 0 },
+    ],
+    net: { avg_days: null, count: 0 },
   }),
 }));
 
@@ -87,10 +119,34 @@ describe('DashboardPage — onglets', () => {
     expect(screen.queryByText('Corpus par type')).not.toBeInTheDocument();
   });
 
-  it("l'onglet Activité affiche le panneau « à venir » explicite", async () => {
+  it("l'onglet Activité rend ses widgets, et plus le panneau « à venir »", async () => {
     renderPage();
     fireEvent.click(screen.getByRole('tab', { name: 'Activité équipe' }));
-    expect(await screen.findByText(/suivi d.activité arrive prochainement/i)).toBeInTheDocument();
+
+    expect(await screen.findByText('Rythme de saisie')).toBeInTheDocument();
+    expect(screen.getByText('Contributeurs')).toBeInTheDocument();
+    expect(await screen.findByText('Ce qui attend, et depuis quand')).toBeInTheDocument();
+    expect(screen.getByText('Ce qui entre et ce qui sort')).toBeInTheDocument();
+    expect(screen.getByText('Temps de traitement net')).toBeInTheDocument();
+    // Le placeholder a bien disparu — sans cette assertion, l'ajout des widgets pourrait le
+    // laisser cohabiter avec eux sans que rien ne le signale.
+    expect(screen.queryByText(/suivi d.activité arrive prochainement/i)).not.toBeInTheDocument();
+  });
+
+  it("les deux séries d'activité ne sont PAS chargées tant qu'on est sur un autre onglet", async () => {
+    const team = getDashboardTeamActivity as jest.Mock;
+    const crm = getDashboardCrmActivity as jest.Mock;
+    team.mockClear();
+    crm.mockClear();
+
+    renderPage();
+    await screen.findByText('5');
+    expect(team).not.toHaveBeenCalled();
+    expect(crm).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Activité équipe' }));
+    await waitFor(() => expect(team).toHaveBeenCalledTimes(1));
+    expect(crm).toHaveBeenCalledTimes(1);
   });
 
   it('monte le panneau de filtres Explorer + la section Période', async () => {
@@ -102,10 +158,11 @@ describe('DashboardPage — onglets', () => {
 
   it('affiche le compteur CRM global dans le bandeau', async () => {
     renderPage();
-    // Le total CRM (172) doit s'afficher dans la carte d'attention du bandeau.
-    expect(await screen.findByText('172')).toBeInTheDocument();
-    // Vérifier aussi le libellé spécifique au total > 1.
-    expect(screen.getByText('demandes en cours')).toBeInTheDocument();
+    // La carte met en tête ce qui est RÉCENT (3 demandes + 2 tâches = 5), pas le total : une
+    // alerte qui ne redescend jamais cesse d'être une alerte. L'arriéré est dit à part.
+    expect(await screen.findByText('5')).toBeInTheDocument();
+    expect(screen.getByText('éléments à traiter')).toBeInTheDocument();
+    expect(screen.getByText(/\+ 167 demandes plus anciennes/)).toBeInTheDocument();
   });
 
   it('ne rappelle pas le compteur CRM (global) quand un filtre change, contrairement à un widget filtré', async () => {
@@ -115,7 +172,7 @@ describe('DashboardPage — onglets', () => {
     crmOpenMock.mockClear();
 
     renderPage();
-    await screen.findByText('172');
+    await screen.findByText('5');
     expect(scorecardsMock).toHaveBeenCalledTimes(1);
     expect(crmOpenMock).toHaveBeenCalledTimes(1);
 

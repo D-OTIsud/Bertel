@@ -13,7 +13,9 @@ import {
   getDashboardActualisation,
   getDashboardCompleteness,
   getDashboardDistinctionOverview,
+  getDashboardCrmActivity,
   getDashboardCrmOpen,
+  getDashboardTeamActivity,
 } from '../services/dashboard-rpc';
 import { useDashboardQuery, DASHBOARD_STALE_TIME_MS } from '../hooks/useDashboardQuery';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
@@ -22,6 +24,11 @@ import { DashboardPeriodSection } from '../components/dashboard/DashboardPeriodS
 import { ScorecardStrip } from '../components/dashboard/ScorecardStrip';
 import { TypeBreakdown } from '../components/dashboard/TypeBreakdown';
 import { CommuneDistribution } from '../components/dashboard/CommuneDistribution';
+import { ActivityRhythmChart } from '../components/dashboard/ActivityRhythmChart';
+import { ContributorsTable } from '../components/dashboard/ContributorsTable';
+import { CrmBacklogWidget } from '../components/dashboard/CrmBacklogWidget';
+import { CrmFlowWidget } from '../components/dashboard/CrmFlowWidget';
+import { NetTimeWidget } from '../components/dashboard/NetTimeWidget';
 import { ActualisationTable } from '../components/dashboard/ActualisationTable';
 import { CompletenessTable } from '../components/dashboard/CompletenessTable';
 import { DistinctionOverview } from '../components/dashboard/DistinctionOverview';
@@ -68,6 +75,23 @@ export default function DashboardPage() {
   const typeBreakdown = useDashboardQuery('type-breakdown', params, getDashboardTypeBreakdown, activeTab === 'quality');
   const actualisation = useDashboardQuery('actualisation', params, getDashboardActualisation, activeTab === 'quality');
   const completeness = useDashboardQuery('completeness', params, getDashboardCompleteness, activeTab === 'quality');
+  // Deux séries GLOBALES de plus, même raisonnement que crm-open ci-dessus : elles ne
+  // répondent pas à « quels objets » mais à « comment l'équipe a travaillé », une question
+  // qui n'a pas de sens restreinte à une sélection. Leur clé ne porte donc pas `params`.
+  // `enabled` garde le FETCH : les hooks vivent au niveau page et sont évalués sur tous les
+  // onglets, alors que les widgets ne sont montés que sur celui-ci.
+  const teamActivity = useQuery({
+    queryKey: ['dashboard', 'team-activity'],
+    queryFn: getDashboardTeamActivity,
+    staleTime: DASHBOARD_STALE_TIME_MS,
+    enabled: activeTab === 'activity',
+  });
+  const crmActivity = useQuery({
+    queryKey: ['dashboard', 'crm-activity'],
+    queryFn: getDashboardCrmActivity,
+    staleTime: DASHBOARD_STALE_TIME_MS,
+    enabled: activeTab === 'activity',
+  });
   const cityDistribution = useDashboardQuery('city-distribution', params, getDashboardCityDistribution, activeTab === 'offer');
   const distinctions = useDashboardQuery('distinctions', params, getDashboardDistinctionOverview, activeTab === 'offer');
 
@@ -173,24 +197,57 @@ export default function DashboardPage() {
             <div className="dashboard-panel">
               <TimeseriesWidget
                 eyebrow="Activité"
-                title="Interactions planifiées dans le temps"
+                title="Demandes ouvertes dans le temps"
                 subtitle="Le gros de ce qui reste à traiter, relevé chaque nuit."
                 scope="global"
                 enabled={activeTab === 'activity'}
                 metrics={[{ key: 'crm_backlog', label: 'À traiter', color: 'var(--warn)' }]}
               />
-              <article className="kpi-panel">
-                <div className="panel-heading">
-                  <div>
-                    <span className="eyebrow">Activité équipe</span>
-                    <h2>Suivi d’activité</h2>
-                  </div>
-                </div>
-                <p className="dashboard-widget-state">
-                  Le suivi d’activité arrive prochainement : vélocité de saisie, contributeurs
-                  et traitement des demandes rejoindront cet onglet.
-                </p>
-              </article>
+              <WidgetFrame
+                isPending={teamActivity.isPending && activeTab === 'activity'}
+                error={teamActivity.error}
+                isEmpty={teamActivity.data?.weeks.length === 0}
+                emptyLabel="Aucune saisie relevée sur les douze dernières semaines."
+                onRetry={() => teamActivity.refetch()}
+              >
+                {teamActivity.data && <ActivityRhythmChart data={teamActivity.data} />}
+              </WidgetFrame>
+              <WidgetFrame
+                isPending={teamActivity.isPending && activeTab === 'activity'}
+                error={teamActivity.error}
+                isEmpty={teamActivity.data?.contributors.length === 0}
+                emptyLabel="Aucun contributeur sur les douze dernières semaines."
+                onRetry={() => teamActivity.refetch()}
+              >
+                {teamActivity.data && <ContributorsTable data={teamActivity.data} />}
+              </WidgetFrame>
+              <div className="dashboard-kpi__row">
+                <WidgetFrame
+                  isPending={crmActivity.isPending && activeTab === 'activity'}
+                  error={crmActivity.error}
+                  isEmpty={crmActivity.data?.open_by_age.every((b) => b.count === 0)}
+                  emptyLabel="Aucune demande ouverte : rien n’attend de traitement."
+                  onRetry={() => crmActivity.refetch()}
+                >
+                  {crmActivity.data && <CrmBacklogWidget data={crmActivity.data} />}
+                </WidgetFrame>
+                <WidgetFrame
+                  isPending={crmActivity.isPending && activeTab === 'activity'}
+                  error={crmActivity.error}
+                  emptyLabel="Aucun mouvement de demandes sur douze mois."
+                  onRetry={() => crmActivity.refetch()}
+                >
+                  {crmActivity.data && <CrmFlowWidget data={crmActivity.data} />}
+                </WidgetFrame>
+              </div>
+              <WidgetFrame
+                isPending={crmActivity.isPending && activeTab === 'activity'}
+                error={crmActivity.error}
+                emptyLabel="Temps de traitement non calculable."
+                onRetry={() => crmActivity.refetch()}
+              >
+                {crmActivity.data && <NetTimeWidget data={crmActivity.data} />}
+              </WidgetFrame>
             </div>
             </section>
           )}

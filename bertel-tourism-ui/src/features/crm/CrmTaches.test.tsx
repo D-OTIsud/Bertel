@@ -685,15 +685,27 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
 
   /* ===== Task 3 — crayon d'édition sur la carte : ouvre le modal en mode ÉDITION ===== */
 
-  it('ouvre le modal d’édition pré-rempli depuis le bouton crayon de la carte', async () => {
+  // Revue : le titre « Modifier la tâche » est IDENTIQUE pour toutes les tâches — l'asserter
+  // seul passerait au vert même si le kanban ouvrait la MAUVAISE tâche (ex. régression
+  // `tasks.find((task) => task.id === editTaskId)` → `tasks[0]`). On clique donc le crayon de
+  // « Valider le contrat photo », qui n'est PAS la première entrée de `tasks` (task-late l'est),
+  // et on vérifie dans le modal deux valeurs PROPRES à cette tâche (titre + échéance) : une
+  // régression vers `tasks[0]` afficherait celles de « Rappeler le directeur » et rougirait ici.
+  it('ouvre le modal d’édition pré-rempli AVEC LES VALEURS DE LA TÂCHE CLIQUÉE (pas tasks[0])', async () => {
     renderTaches();
     // Le filtre par défaut (« mes tâches ») laisse PLUSIEURS cartes visibles : un
     // `findByRole` générique sur toutes les cartes serait ambigu, on cible donc le crayon
     // d'une carte précise (le libellé accessible porte le titre de LA tâche).
-    await screen.findByText('Rappeler le directeur');
-    const edit = screen.getByRole('button', { name: 'Modifier « Rappeler le directeur »' });
+    await screen.findByText('Valider le contrat photo');
+    const edit = screen.getByRole('button', { name: 'Modifier « Valider le contrat photo »' });
     await userEvent.click(edit);
     expect(await screen.findByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+    // Titre : lu depuis la fixture, pas recopié en dur, pour rester lié à la tâche ciblée.
+    const clicked = tasks.find((task) => task.id === 'task-doing')!;
+    expect(screen.getByLabelText('Titre de la tâche')).toHaveValue(clicked.title);
+    // Échéance : second témoin discriminant — task-doing (iso(0)) diffère de task-late
+    // (iso(-2), première entrée de `tasks`), donc un retour à `tasks[0]` rougirait aussi ici.
+    expect(screen.getByLabelText('Échéance')).toHaveValue(clicked.dueAt!.slice(0, 10));
   });
 
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {

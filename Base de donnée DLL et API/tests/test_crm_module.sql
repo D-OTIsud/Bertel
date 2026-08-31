@@ -266,12 +266,21 @@ BEGIN
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';
     -- ----- Timeline filtrée (demande PO 2026-06-12) : statut + période (vocabulaire PO) -----
-    -- L'interaction ci-dessus est 'resolved' (défaut save_crm_interaction) ⇒ le filtre
-    -- « Traitées » (p_status='done', vocabulaire d'INTERFACE INCHANGÉ) renvoie ≥1.
+    -- L'interaction créée plus haut porte un SUJET. Depuis le manifeste 17b (2026-08-28) le
+    -- DEFAULT de colonne n'existe plus et le statut se DÉRIVE du sujet : un sujet ⇒ c'est une
+    -- demande, elle naît OUVERTE. Le commentaire d'origine de ce bloc promettait l'inverse
+    -- (« 'done' par défaut ») et l'assertion suivante était donc ROUGE depuis 17b — 17g n'a
+    -- fait qu'en traduire le vocabulaire, reconduisant la prémisse périmée.
+    -- On marque la demande traitée EXPLICITEMENT, par le VRAI chemin d'écriture : la prémisse
+    -- du filtre est ainsi POSÉE par le test, au lieu d'être héritée d'un défaut disparu.
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_int_id, 'status', 'resolved'));
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'done')->'items') >= 1,
            'list_crm_timeline (done): l''interaction traitée doit remonter';
-    ASSERT jsonb_typeof(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 'array',
-           'list_crm_timeline (active = famille ouverte): items doit être un tableau (≥0)';
+    -- Le filtre SYMÉTRIQUE ne doit plus la rendre. Sans cette assertion, un « done » qui
+    -- rendrait TOUT passerait quand même — l'ancienne rédaction ne vérifiait que le TYPE du
+    -- tableau (≥ 0), ce qu'aucune implémentation ne pouvait faire échouer.
+    ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 0,
+           'list_crm_timeline (active = famille ouverte): une demande traitée ne doit PAS remonter dans les Actives';
     -- p_from futur ⇒ aucune interaction passée ne remonte.
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_from := NOW() + interval '1 day')->'items') = 0,
            'list_crm_timeline (p_from futur): aucune interaction passée ne doit remonter';
@@ -747,8 +756,15 @@ BEGIN
                          api.list_crm_directory(p_from := NOW() + interval '1 day')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),
            'annuaire filtré (période future): l''acteur PO ne doit pas apparaître';
-    -- Statuts : « Actives » = famille ouverte, « Traitées » = famille fermée (les interactions
-    -- de test sont 'resolved'). Le vocabulaire d'INTERFACE (active | done) est INCHANGÉ.
+    -- Statuts : « Actives » = famille ouverte, « Traitées » = famille fermée. Le vocabulaire
+    -- d'INTERFACE (active | done) est INCHANGÉ.
+    -- MÊME PRÉMISSE PÉRIMÉE QU'AU BLOC TIMELINE : depuis 17b, l'interaction TOPIQUE de cette
+    -- fixture naît OUVERTE (un sujet ⇒ une demande) et seule la note SANS sujet naît fermée.
+    -- L'acteur porte donc une interaction de chaque famille, si bien que les DEUX filtres le
+    -- rendraient et que la paire d'assertions ci-dessous n'établirait plus aucune
+    -- discrimination. On ferme la topique EXPLICITEMENT pour restaurer la prémisse que ces
+    -- assertions éprouvent : l'acteur n'a plus AUCUNE interaction ouverte.
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_po_int_id, 'status', 'resolved'));
     ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
                          api.list_crm_directory(p_status := 'active')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),

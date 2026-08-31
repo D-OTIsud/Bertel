@@ -11,7 +11,13 @@
 
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteCrmInteraction, listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
+import {
+  deleteCrmInteraction,
+  listCrmTimeline,
+  listDemandTopics,
+  loadAwaitingSince,
+  saveCrmInteraction,
+} from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
 import type { AnyCrmInteractionStatus } from './crm-status';
@@ -196,6 +202,7 @@ export function CrmTimelineView({
                 readOnlyReason={CRM_READ_ONLY_REASON}
                 onReply={handleReply}
                 onChangeStatus={handleChangeStatus}
+                loadAwaitingSince={loadAwaitingSince}
                 onEditInteraction={handleEditInteraction}
                 onDeleteInteraction={handleDeleteInteraction}
                 onCreateTask={setTaskFromInteraction}

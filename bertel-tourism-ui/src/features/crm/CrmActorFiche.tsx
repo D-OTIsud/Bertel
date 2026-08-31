@@ -29,6 +29,7 @@ import {
   listCrmDirectory,
   listDemandTopics,
   listObjectAddresses,
+  loadAwaitingSince,
   saveCrmInteraction,
 } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
@@ -561,6 +562,7 @@ export function CrmActorFiche({
                     readOnlyReason={CRM_READ_ONLY_REASON}
                     onReply={handleReply}
                     onChangeStatus={handleChangeStatus}
+                    loadAwaitingSince={loadAwaitingSince}
                     onEditInteraction={handleEditInteraction}
                     onDeleteInteraction={handleDeleteInteraction}
                     onCreateTask={setTaskFromInteraction}

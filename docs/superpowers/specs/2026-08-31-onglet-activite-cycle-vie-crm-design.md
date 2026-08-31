@@ -144,11 +144,16 @@ En attendant, il affiche le **calcul** plutôt qu'une fausse moyenne : une barre
 
 Elle passe de « 172 demandes en cours » à une formulation qui sépare le récent de l'hérité :
 
-> **5** demandes récentes
-> Tout le périmètre · 3 de moins de 30 jours, 2 tâches à faire
-> \+ 167 en attente depuis plus de 90 jours
+> **5** éléments à traiter
+> Tout le périmètre · 3 demandes de moins de 90 jours, 2 tâches à faire
+> \+ 167 demandes plus anciennes
 
 Le chiffre d'alerte redevient un signal d'action. **Seuil : 90 jours** — au-delà, une demande rejoint l'arriéré mentionné en seconde ligne.
+
+*(Corrigé à la livraison, manifeste 17h. Trois écarts entre ce que cette maquette annonçait et ce que la RPC calcule :*
+*— « moins de 30 jours » contredisait le seuil de 90 jours écrit deux lignes plus bas, et que le SQL applique ;*
+*— « demandes récentes » nommait une somme qui contient des **tâches**, deux vocabulaires que la base sépare (`crm_status` / `crm_task_status`), et dont rien ne borne l'âge côté tâche — « récente » y serait faux ;*
+*— « en attente depuis plus de 90 jours » prêtait un âge à un arriéré obtenu par **soustraction**, qui ramasse aussi les demandes sans date d'occurrence. « Plus anciennes » est vrai sans sur-affirmer.)*
 
 Le contrat de `api.get_dashboard_crm_open` gagne deux clés : `recent_interactions` (moins de 90 j) et `backlog_interactions` (90 j et plus). `open_interactions` et `total` sont **conservés** — ils alimentent l'invariant de cohérence avec la courbe (§6.4).
 

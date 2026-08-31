@@ -270,6 +270,10 @@ export async function listCrmStatusEvents(interactionId: string): Promise<CrmSta
  * deux transitions ecrites dans la meme transaction portent la MEME date et rien ne les
  * departage, donc un max() donnerait une fausse impression de precision.
  */
+export async function loadAwaitingSince(interactionId: string): Promise<string | null> {
+  return awaitingSinceOf(await listCrmStatusEvents(interactionId));
+}
+
 export function awaitingSinceOf(events: CrmStatusEvent[]): string | null {
   for (let i = events.length - 1; i >= 0; i -= 1) {
     if (events[i].toStatus === 'awaiting_provider') return events[i].changedAt;

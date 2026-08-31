@@ -37,12 +37,13 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
         {members.map((m) => {
           const isSelf = m.userId === currentUserId;
           const cells = children ? children(m, isSelf) : null;
-          // D1 (2026-08-28) — le compteur ignorait l'héritage d'ORG : un membre pouvait afficher
-          // « 0 permission » tout en en ayant. On compte l'UNION (un droit à la fois hérité et
-          // accordé individuellement ne compte qu'une fois).
-          const effectiveCodes = new Set([...m.permissionCodes, ...m.inheritedPermissionCodes]);
+          // §227 — le compteur doit couvrir les DEUX voies d'accès, sinon il rassure à tort :
+          // un Éditeur qui ne tient ses droits que de son rôle afficherait « 0 permission ».
+          // On compte l'UNION (un droit à la fois conféré et accordé en exception ne compte
+          // qu'une fois). Miroir exact de `api.user_has_permission`.
+          const effectiveCodes = new Set([...m.permissionCodes, ...m.rolePermissionCodes]);
           const count = effectiveCodes.size;
-          const inheritedCount = m.inheritedPermissionCodes.length;
+          const roleCount = m.rolePermissionCodes.length;
           const lastSeen = formatLastSeen(m.lastSeenAt);
           // Task 6 (revue) : trois boutons « Modifier » identiques se répètent d'une ligne à
           // l'autre — le nom accessible doit nommer le membre, comme RoleSelect le fait déjà
@@ -102,12 +103,12 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                       + rôle admin
                     </span>
                   )}
-                  {inheritedCount > 0 && (
+                  {roleCount > 0 && (
                     <span
                       className="badge badge--xs"
-                      title="Droits accordés à toute l’organisation — ils ne se retirent pas depuis cette fiche"
+                      title="Droits conférés par le rôle métier — ils se règlent dans « Permissions par rôle », pas depuis cette fiche"
                     >
-                      dont {inheritedCount} héritée{inheritedCount > 1 ? 's' : ''}
+                      dont {roleCount} par le rôle
                     </span>
                   )}
                 </div>

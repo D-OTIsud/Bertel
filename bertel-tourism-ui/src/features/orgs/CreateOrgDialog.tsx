@@ -1,13 +1,13 @@
 'use client';
 // Création d'ORG (superadmin) en 2 étapes : ① identité + périmètre → rpc_create_org ;
-// ② invitation optionnelle du premier admin (chaîne existante invite → membership → rôle
-// admin org_admin + préréglage de permissions — RPCs déjà superuser-armées).
+// ② invitation optionnelle du premier admin (chaîne invite → membership → rôle admin org_admin ;
+// §227 : plus de préréglage individuel, le rôle métier confère ses droits).
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Modal } from '@/components/common/Modal';
 import { createOrg, friendlyOrgError } from '@/services/orgs';
-import { inviteUser, upsertMembership, setAdminRole, grantUserPermission, friendlyRbacError } from '@/services/rbac';
-import { BUSINESS_ROLE_CODES, businessRoleLabel, presetPermissionsFor } from '@/features/team/permission-presets';
+import { inviteUser, upsertMembership, setAdminRole, friendlyRbacError } from '@/services/rbac';
+import { BUSINESS_ROLE_CODES, businessRoleLabel } from '@/features/team/permission-presets';
 
 // Rôle admin remis au premier membre (rang 30 — vérifié en base : ref_org_admin_role).
 const FIRST_ADMIN_ROLE_CODE = 'org_admin';
@@ -42,9 +42,8 @@ export function CreateOrgDialog({ onDone }: { onDone: () => void }) {
     try {
       const invited = await inviteUser({ email: email.trim(), orgObjectId: orgId, businessRoleCode: roleCode });
       const membershipId = await upsertMembership(invited.userId, orgId, roleCode);
-      for (const code of presetPermissionsFor(roleCode)) {
-        try { await grantUserPermission(invited.userId, code); } catch (e) { console.warn('preset grant failed', code, e); }
-      }
+      // §227 — aucun octroi individuel : le rôle métier confère ses droits. La matrice de la
+      // nouvelle ORG est semée côté base par le trigger `trg_seed_org_role_permission`.
       await setAdminRole(membershipId, FIRST_ADMIN_ROLE_CODE);
       toast.success(`Invitation envoyée à ${email.trim()} — premier admin de l’organisation.`);
       onDone(); close();

@@ -1052,3 +1052,86 @@ pendant la fenêtre continue de fonctionner.
 > antérieures et étrangères à 16z (cf. l'encadré de 16u). Cette garde a donc été jouée **à la
 > main** contre le déployé (migration + test dans une transaction annulée) ; elle ne protège
 > rien automatiquement tant que le manifeste n'est pas réparé.
+
+---
+
+## 17i — Permissions par rôle métier, réglées par ORG (§227)
+
+`Base de donnée DLL et API/migration_role_permission_matrix.sql`
+Rollback : `Base de donnée DLL et API/rollback/rollback_role_permission_matrix.sql`
+
+### Pourquoi
+
+Le rôle métier n'était qu'une **étiquette** (SP-2 §24 : « aucun droit implicite »). Le
+2026-08-31 à 11:54, douze appels à `rpc_grant_org_permission` — depuis les cases
+« Permissions par défaut de l'organisation », logées dans le tiroir d'un MEMBRE nommé — ont
+accordé les 12 permissions du catalogue à l'ORG entière. `api.user_has_permission` acceptant
+le chemin ORG, les **trois Lecteurs** de l'ORG ont gagné écriture CRM, publication, horaires,
+tarifs, galerie et conformité juridique. Le compteur de /team affichait « 12 permissions »
+pour tout le monde : il ne mentait pas, il constatait.
+
+La couche fautive est une couche d'octroi **aveugle au rôle**. Elle est retirée.
+
+### Ce que la migration fait
+
+| | |
+| --- | --- |
+| **+** | `org_role_permission` (ORG × rôle × permission), RLS lecture par membre de l'ORG, écriture par RPC seulement |
+| **+** | Chemin « rôle » dans `api.user_has_permission` (corrélé sur `ubr.role_id`) |
+| **+** | `api.rpc_set_role_permission` / `api.rpc_list_role_permissions` (rang ≥ 30) |
+| **+** | Trigger `trg_seed_org_role_permission` — une ORG créée plus tard naît avec sa matrice |
+| **~** | `api.rpc_list_org_members` : `inherited_permission_codes` → `role_permission_codes` |
+| **−** | Chemin `org_permission` dans `user_has_permission` |
+| **−** | `api.rpc_grant_org_permission`, `api.rpc_revoke_org_permission` |
+
+`org_permission` (la TABLE) est conservée pour la traçabilité de l'incident.
+
+### Garde pré-vol — bloquante
+
+La migration **refuse de s'appliquer** si `org_permission` porte encore une ligne active :
+
+```sql
+SELECT count(*) FROM org_permission WHERE is_active;   -- doit valoir 0
+```
+
+Sinon, chaque ligne doit d'abord être reportée dans `org_role_permission` ou en
+`user_permission`, faute de quoi des membres perdent l'accès sans préavis.
+
+### ✅ APPLIQUÉE EN PRODUCTION le 2026-08-31
+
+Précédée d'une remédiation de données : les 12 `org_permission` de `ORGRUN000000000B` ont été
+désactivées, et deux droits ré-accordés en individuel (`a.mir` → `manage_team_messages`,
+`d.philippe` → `write_crm_notes`) parce qu'ils n'étaient tenus que par l'héritage.
+
+| Contrôle | Résultat |
+| --- | --- |
+| Dry-run transactionnel avant application | syntaxe OK, garde pré-vol passante, seed 7 (contributor) / 12 (editor) par ORG |
+| Seed après application | 38 lignes actives, 2 ORG × (7 + 12) |
+| **Sabotage** de la garde de rôle | Lecteur avant = `false` → droit accordé au rôle `viewer` = `true` → retiré = `false` ; Éditeur par son rôle seul = `true`. Joué en transaction **annulée**, 0 trace |
+| Trigger nouvelle ORG | ORG factice insérée en transaction annulée ⇒ contributor 7, editor 12, viewer 0 |
+| Consommateurs | les 13 fonctions dépendantes intactes (elles héritent), 0 policy RLS à retoucher |
+| Accès effectifs avant/après | inchangés pour 9 membres sur 10 ; `s.gaze` passe 11 → 12 (gagne `write_crm_notes` par son rôle — arbitrage §214, il l'avait déjà via son rang `org_admin`) |
+
+Le va-et-vient du sabotage est la seule preuve qui vaille : une jointure de rôle morte
+rendrait `false` en permanence et un test « le Lecteur ne peut pas écrire » passerait quand même.
+
+### Trou connu, NON fermé par cette migration
+
+Cinq fonctions court-circuitent les permissions pour quiconque porte **un** rôle admin, quel
+qu'il soit — le test est `api.current_user_admin_rank() IS NOT NULL`, pas un seuil :
+
+```
+api.user_can_write_crm · api.user_can_write_crm_actor · api.current_user_can_write_crm_notes
+api.save_crm_actor · api.user_can_write_list
+```
+
+Constaté en production : `xyz.makimura@gmail.com` est **Lecteur à 0 permission** mais garde
+`team_lead` (rang 10) — il peut donc écrire du CRM. Décision en attente : un rôle
+d'administration doit-il conférer l'écriture CRM indépendamment du rôle métier ?
+
+### Ordre de déploiement
+
+Base d'abord, **front ensuite mais sans délai** : le front déployé appelle encore
+`rpc_grant_org_permission` / `rpc_revoke_org_permission`, supprimées ici. Pendant la fenêtre,
+cliquer une case « Permissions par défaut de l'organisation » affiche une erreur au lieu
+d'accorder — le piège est désarmé, mais l'écran est incohérent.

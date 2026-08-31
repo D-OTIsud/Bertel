@@ -8,26 +8,28 @@ import {
   listBusinessRoles,
   listAdminRoles,
   listPermissionCatalog,
-  listOrgPermissions,
+  listRolePermissions,
   setBusinessRole,
   setAdminRole,
   revokeAdminRole,
   deactivateMembership,
   deleteUserAccount,
   friendlyRbacError,
-  grantUserPermission,
   type OrgMember,
   type RefRole,
   type RefPermission,
 } from '@/services/rbac';
+import type { MemberRef, RoleMatrix } from '@/features/team/role-permission-matrix';
 import { listOrgs, type OrgSummary } from '@/services/orgs';
 import { MembersTable } from '@/features/team/MembersTable';
 import { RoleSelect } from '@/features/team/RoleSelect';
 import { InviteMemberDialog } from '@/features/team/InviteMemberDialog';
 import { MemberPermissionsDrawer } from '@/features/team/MemberPermissionsDrawer';
+import { OrgRolePermissionsModal } from '@/features/team/OrgRolePermissionsModal';
 import { MemberProfileModal } from '@/features/team/MemberProfileModal';
 import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ShieldCheck } from 'lucide-react';
 
 export default function TeamAdminPage() {
   const role = useSessionStore((s) => s.role);
@@ -67,7 +69,9 @@ export default function TeamAdminPage() {
   const [bizRoles, setBizRoles] = useState<RefRole[]>([]);
   const [adminRoles, setAdminRoles] = useState<RefRole[]>([]);
   const [catalog, setCatalog] = useState<RefPermission[]>([]);
-  const [orgPerms, setOrgPerms] = useState<string[]>([]);
+  const [roleMatrix, setRoleMatrix] = useState<RoleMatrix>({});
+  // Écran de réglage des permissions par rôle métier (§227) — portée ORG, surface séparée.
+  const [roleMatrixOpen, setRoleMatrixOpen] = useState(false);
   // ID of the membership whose permissions drawer is open (null = closed).
   const [managingId, setManagingId] = useState<string | null>(null);
   // ID du membership dont la modale de profil est ouverte (null = fermée).
@@ -85,8 +89,9 @@ export default function TeamAdminPage() {
     try { setMembers(await listOrgMembers(effectiveOrgId)); setError(null); }
     catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
     finally { setLoading(false); }
-    // Refresh org-wide permission grants so the drawer reflects latest state.
-    listOrgPermissions(effectiveOrgId).then(setOrgPerms).catch(() => {});
+    // Recharge la matrice rôle → permissions : le tiroir d'un membre en dépend pour dire
+    // quels droits lui viennent de son rôle.
+    listRolePermissions(effectiveOrgId).then(setRoleMatrix).catch(() => {});
   }, [effectiveOrgId]);
 
   useEffect(() => { if (allowed) void reload(); }, [allowed, reload]);
@@ -97,7 +102,7 @@ export default function TeamAdminPage() {
     listBusinessRoles().then(setBizRoles).catch(() => {});
     listAdminRoles().then(setAdminRoles).catch(() => {});
     listPermissionCatalog().then(setCatalog).catch(() => {});
-    if (effectiveOrgId) listOrgPermissions(effectiveOrgId).then(setOrgPerms).catch(() => {});
+    if (effectiveOrgId) listRolePermissions(effectiveOrgId).then(setRoleMatrix).catch(() => {});
   }, [allowed, effectiveOrgId]);
 
   // Caller's effective admin rank (superuser/owner → Infinity so all ranks are assignable).
@@ -107,71 +112,56 @@ export default function TeamAdminPage() {
   const managing = members.find((m) => m.membershipId === managingId) ?? null;
   const editingProfile = members.find((m) => m.membershipId === editingProfileId) ?? null;
 
-  // Org-defaults section visible only to org_admin rank >= 30, owner, or superuser.
+  // Réglage des permissions par rôle : org_admin rang >= 30, owner ou superuser.
   const canManageOrgDefaults = role === 'owner' || role === 'super_admin' || (adminRank ?? 0) >= 30;
 
-  /**
-   * D5 (2026-08-28) — dire ce que le changement de rôle N'A PAS fait.
-   *
-   * `rpc_set_business_role` ne touche pas aux permissions et rien ne rejoue le préréglage : un
-   * membre promu Lecteur → Éditeur gardait 0 permission (l'étiquette changeait, les droits non).
-   * L'écran restait muet. On l'annonce désormais, sans jamais agir tout seul :
-   *  · PROMOTION → on PROPOSE d'appliquer le préréglage (additif) ;
-   *  · RÉTROGRADATION → on LISTE les droits en excès, à révoquer À LA MAIN dans le tiroir.
-   *    Aucune révocation automatique : `rpc_list_org_members` ne rend aucune provenance de grant,
-   *    donc on ne peut pas distinguer un droit venu du préréglage d'un droit accordé exprès —
-   *    révoquer en masse retirerait des droits que quelqu'un a choisi d'accorder.
-   */
-  function announceRoleGap(m: OrgMember, code: string) {
-    const { missing, excess } = reviewRoleChange(code, m.permissionCodes, m.inheritedPermissionCodes);
-    const roleLabel = businessRoleLabel(code);
+  // Projection minimale du roster pour la matrice : elle doit pouvoir NOMMER qui bascule.
+  const memberRefs: MemberRef[] = members.map((m) => ({
+    userId: m.userId,
+    displayName: m.displayName ?? m.email ?? m.userId,
+    businessRoleCode: m.businessRoleCode,
+    individualCodes: m.permissionCodes,
+  }));
 
-    if (missing.length > 0) {
+  /**
+   * §227 — dire ce que le changement de rôle FAIT, maintenant qu'il fait quelque chose.
+   *
+   * Ce bloc annonçait l'inverse : « le rôle seul n'accorde aucun droit », et proposait
+   * d'appliquer un préréglage à la main. Le rôle confère désormais ses droits immédiatement
+   * (table `org_role_permission`). Ce qui mérite une alerte a changé de camp : ce n'est plus
+   * ce que le rôle N'A PAS donné, c'est ce que la RÉTROGRADATION N'A PAS retiré — les
+   * exceptions individuelles, accordées nommément, survivent au changement d'étiquette.
+   */
+  function announceRoleChange(m: OrgMember, code: string) {
+    const { granted, residualExceptions } = reviewRoleChange(code, m.permissionCodes, roleMatrix);
+    const roleLabel = businessRoleLabel(code);
+    const who = m.displayName ?? m.email ?? 'Ce membre';
+
+    if (residualExceptions.length > 0) {
       toast.warning(
-        `${m.displayName ?? m.email ?? 'Ce membre'} n’a pas les ${missing.length} permission${missing.length > 1 ? 's' : ''} du rôle ${roleLabel}.`,
+        `${who} conserve ${residualExceptions.length} droit${residualExceptions.length > 1 ? 's' : ''} au-delà du rôle ${roleLabel}.`,
         {
           duration: Infinity,
-          description: 'Le rôle seul n’accorde aucun droit — les droits passent par les permissions.',
-          action: {
-            label: 'Appliquer le préréglage',
-            onClick: () => {
-              void (async () => {
-                const results = await Promise.allSettled(
-                  missing.map((permission) => grantUserPermission(m.userId, permission)),
-                );
-                const failed = results.filter((r) => r.status === 'rejected').length;
-                if (failed > 0) {
-                  // Un échec d'octroi ne doit plus disparaître dans un console.warn : c'est
-                  // précisément ainsi qu'un membre se retrouve avec un rôle sans ses droits.
-                  toast.error(`${failed} permission${failed > 1 ? 's' : ''} n’${failed > 1 ? 'ont' : 'a'} pas pu être accordée${failed > 1 ? 's' : ''}.`);
-                } else {
-                  toast.success('Préréglage appliqué.');
-                }
-                await reload();
-              })();
-            },
-          },
+          description:
+            'Accordés en exception individuelle, ils ne sont PAS retirés par le changement de rôle. '
+            + `À révoquer dans « Permissions » : ${residualExceptions.join(', ')}.`,
         },
       );
       return;
     }
 
-    if (excess.length > 0) {
-      toast.info(
-        `${m.displayName ?? m.email ?? 'Ce membre'} conserve ${excess.length} permission${excess.length > 1 ? 's' : ''} au-delà du rôle ${roleLabel}.`,
-        {
-          duration: Infinity,
-          description: `Rien n’est retiré automatiquement. À révoquer dans « Permissions » : ${excess.join(', ')}.`,
-        },
-      );
-    }
+    toast.success(
+      granted.length > 0
+        ? `Rôle ${roleLabel} : ${granted.length} droit${granted.length > 1 ? 's' : ''} appliqué${granted.length > 1 ? 's' : ''}.`
+        : `Rôle ${roleLabel} : lecture seule, aucun droit d’écriture.`,
+    );
   }
 
   async function changeBusinessRole(m: OrgMember, code: string) {
     try {
       await setBusinessRole(m.membershipId, code);
       toast.success('Rôle métier mis à jour.');
-      announceRoleGap(m, code);
+      announceRoleChange(m, code);
     } catch (e) {
       toast.error(friendlyRbacError(e as { message?: string }));
     }
@@ -235,6 +225,11 @@ export default function TeamAdminPage() {
           <p>Membres de votre organisation, rôles et permissions.</p>
         </div>
         <div className="settings-pane__actions">
+          {canManageOrgDefaults && effectiveOrgId && (
+            <button type="button" className="ghost-button" onClick={() => setRoleMatrixOpen(true)}>
+              <ShieldCheck size={14} aria-hidden /> Permissions par rôle
+            </button>
+          )}
           {canManageOrgDefaults ? (
             effectiveOrgId && <InviteMemberDialog orgId={effectiveOrgId} onDone={reload} />
           ) : (
@@ -295,11 +290,20 @@ export default function TeamAdminPage() {
         )}
       <MemberPermissionsDrawer
         member={managing}
+        catalog={catalog}
+        roleMatrix={roleMatrix}
+        onOpenRoleMatrix={canManageOrgDefaults ? () => { setManagingId(null); setRoleMatrixOpen(true); } : undefined}
+        onClose={() => setManagingId(null)}
+        onChanged={reload}
+      />
+      <OrgRolePermissionsModal
+        open={roleMatrixOpen}
         orgId={effectiveOrgId ?? ''}
         catalog={catalog}
-        orgPermissions={orgPerms}
-        canManageOrgDefaults={canManageOrgDefaults}
-        onClose={() => setManagingId(null)}
+        roles={bizRoles}
+        matrix={roleMatrix}
+        members={memberRefs}
+        onClose={() => setRoleMatrixOpen(false)}
         onChanged={reload}
       />
       <MemberProfileModal

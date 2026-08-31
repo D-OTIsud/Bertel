@@ -38,7 +38,7 @@
 --    save_crm_interaction accepte parent_interaction_id (réponse), NORMALISE la réponse-à-réponse
 --    vers la racine, hérite acteur+contexte, owner=auteur ; les 3 RPC de lecture ne renvoient que
 --    des RACINES (parent NULL) + 'replies' imbriquées + 'interlocutor_email' + 'resolved_at' ;
---    cycle « marquer traitée » (status=done ⇒ resolved_at) / « rouvrir » (planned ⇒ NULL) ;
+--    cycle « marquer traitée » (status=resolved ⇒ resolved_at) / « rouvrir » (new ⇒ NULL) ;
 --    répondre sans write_crm_notes (C) ou cross-ORG (B) → 42501 ; delete racine = CASCADE du fil.
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
@@ -266,11 +266,12 @@ BEGIN
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';
     -- ----- Timeline filtrée (demande PO 2026-06-12) : statut + période (vocabulaire PO) -----
-    -- L'interaction ci-dessus est 'done' (défaut save_crm_interaction) ⇒ done renvoie ≥1.
+    -- L'interaction ci-dessus est 'resolved' (défaut save_crm_interaction) ⇒ le filtre
+    -- « Traitées » (p_status='done', vocabulaire d'INTERFACE INCHANGÉ) renvoie ≥1.
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'done')->'items') >= 1,
-           'list_crm_timeline (done): l''interaction done doit remonter';
+           'list_crm_timeline (done): l''interaction traitée doit remonter';
     ASSERT jsonb_typeof(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 'array',
-           'list_crm_timeline (active=planned): items doit être un tableau (≥0)';
+           'list_crm_timeline (active = famille ouverte): items doit être un tableau (≥0)';
     -- p_from futur ⇒ aucune interaction passée ne remonte.
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_from := NOW() + interval '1 day')->'items') = 0,
            'list_crm_timeline (p_from futur): aucune interaction passée ne doit remonter';
@@ -420,20 +421,20 @@ BEGIN
            format('§66: une réponse ne doit PAS incrémenter interaction_count de l''annuaire (avant=%s, après=%s)',
                   v_dir_count_before, v_dir_count_after);
 
-    -- Cycle « marquer traitée » : status='done' pose resolved_at ; 'planned' (rouvrir) l'efface.
-    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'done'));
+    -- Cycle « marquer traitée » : status='resolved' pose resolved_at ; 'new' (rouvrir) l'efface.
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'resolved'));
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     ASSERT NULLIF(v_root->>'resolved_at','') IS NOT NULL,
-           '§66 (marquer traitée): status=done doit poser resolved_at';
-    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'planned'));
+           '§66 (marquer traitée): status=resolved doit poser resolved_at';
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'new'));
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     ASSERT NULLIF(v_root->>'resolved_at','') IS NULL,
-           '§66 (rouvrir): status=planned doit effacer resolved_at';
+           '§66 (rouvrir): status=new doit effacer resolved_at';
 
     -- ----- §66. Lien tâche↔interaction (demande PO 2026-06-14) -----
-    -- Statut courant de la demande racine (rouverte ⇒ 'planned') pour la cohérence du _status exposé.
+    -- Statut courant de la demande racine (rouverte ⇒ 'new') pour la cohérence du _status exposé.
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     v_demande_status := v_root->>'status';
@@ -746,11 +747,12 @@ BEGIN
                          api.list_crm_directory(p_from := NOW() + interval '1 day')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),
            'annuaire filtré (période future): l''acteur PO ne doit pas apparaître';
-    -- Statuts : Actives = planned, Traitées = done (les interactions de test sont 'done').
+    -- Statuts : « Actives » = famille ouverte, « Traitées » = famille fermée (les interactions
+    -- de test sont 'resolved'). Le vocabulaire d'INTERFACE (active | done) est INCHANGÉ.
     ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
                          api.list_crm_directory(p_status := 'active')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),
-           'annuaire filtré (active=planned): interactions done → acteur absent';
+           'annuaire filtré (active = famille ouverte): interactions resolved → acteur absent';
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(
                      api.list_crm_directory(p_status := 'done')) d
                    WHERE (d->>'actor_id')::uuid = v_new_actor),

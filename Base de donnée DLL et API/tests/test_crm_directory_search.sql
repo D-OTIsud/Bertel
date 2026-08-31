@@ -135,8 +135,8 @@ BEGIN
   -- Interactions : a1 (ancienne) et a2 (récente) — sonde de l'ordre par défaut (last_at DESC).
   -- a3 et a4 n'en ont AUCUNE : ils doivent rester trouvables par la recherche (« lien seul »).
   INSERT INTO crm_interaction (id, actor_id, object_id, interaction_type, body, occurred_at, status)
-  VALUES (gen_random_uuid(), v_a1, v_objA1, 'call', 'ancienne', NOW() - interval '30 days', 'planned'),
-         (gen_random_uuid(), v_a2, v_objA2, 'call', 'recente',  NOW() - interval '1 day',   'planned');
+  VALUES (gen_random_uuid(), v_a1, v_objA1, 'call', 'ancienne', NOW() - interval '30 days', 'new'),
+         (gen_random_uuid(), v_a2, v_objA2, 'call', 'recente',  NOW() - interval '1 day',   'new');
 
   -- ---------- Recherche EN TANT QUE userA (persona — le périmètre est le sujet) ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userA, 'role','authenticated')::text, true);

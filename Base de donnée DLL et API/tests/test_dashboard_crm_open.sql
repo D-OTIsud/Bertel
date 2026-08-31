@@ -18,10 +18,14 @@ BEGIN
   ASSERT v ? 'open_tasks',        'clé open_tasks présente';
   ASSERT v ? 'total',             'clé total présente';
 
-  -- (B) open_interactions == le prédicat exact de crm_backlog
+  -- (B) open_interactions == le prédicat exact de crm_backlog.
+  -- Manifeste 17g : liste positive TYPÉE des statuts OUVERTS (cycle de vie §6.1) et non plus
+  -- `status::text <> 'done'` — une comparaison en texte désarme le typage et survit muette à
+  -- tout renommage du vocabulaire, en se réduisant à `resolved_at IS NULL`.
   SELECT count(*) INTO v_int_live
   FROM   crm_interaction
-  WHERE  resolved_at IS NULL AND status::text <> 'done';
+  WHERE  resolved_at IS NULL
+    AND  status = ANY (ARRAY['new','in_progress','awaiting_provider']::crm_status[]);
   ASSERT (v->>'open_interactions')::int = v_int_live,
          format('open_interactions (%s) doit égaler le comptage live (%s)',
                 v->>'open_interactions', v_int_live);
@@ -40,7 +44,7 @@ BEGIN
 
   -- (E) cohérence avec le KPI historisé : la carte et la courbe disent la même chose.
   -- Ce bloc appelle RÉELLEMENT api.capture_metric_snapshots plutôt que de recopier son
-  -- prédicat (resolved_at IS NULL AND status <> 'done') en dur ici : une copie ne peut
+  -- prédicat (resolved_at IS NULL + liste positive des statuts ouverts) en dur ici : une copie ne peut
   -- JAMAIS échouer si (B) est déjà passé — les deux expressions seraient alors le même
   -- texte évalué deux fois, donc l'invariant que le runbook, le COMMENT de la fonction et
   -- l'en-tête de migration présentent tous comme la raison d'être de la fonction ne serait

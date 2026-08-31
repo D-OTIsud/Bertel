@@ -109,6 +109,29 @@ export const API_ERROR_LABELS: Record<string, string> = {
   promotion_document_failed: "L'enregistrement du document rattaché a échoué.",
   document_create_failed: "L'enregistrement du document a échoué.",
   actor_document_create_failed: "L'enregistrement du document du contact a échoué.",
+  // --- Pièces jointes de tâche CRM (17i, /api/task-document) ------------------------------
+  // Les cinq codes ci-dessous sont NÉS d'un clone d'`actor-document`, dont la couverture était
+  // de 100 % : `actor_document_create_failed` figure juste au-dessus. Sans eux, l'utilisateur
+  // lisait « Une erreur est survenue (code 500) » précisément sur les chemins que la route
+  // distingue avec le plus de soin — erreur de LECTURE ≠ absence, orphelin storage, bucket
+  // inattendu. Le travail de distinction était fait côté route et jeté côté écran.
+  // AUCUN d'eux ne doit rejoindre `CODES_WITH_BUSINESS_DETAIL` : leur `detail` porte un
+  // message Postgres/Storage brut, pas un `RAISE` métier français (règle 1 du module).
+  task_document_create_failed: "L'enregistrement de la pièce jointe a échoué.",
+  // Erreur de LECTURE, pas une absence : le fichier existe peut-être encore. Le dire
+  // autrement (« introuvable ») ferait croire à une suppression qui n'a pas eu lieu.
+  link_lookup_failed:
+    "La vérification de la pièce jointe a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  document_lookup_failed:
+    "La lecture de la pièce jointe a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  // La suppression a été INTERROMPUE AVANT d'effacer quoi que ce soit : le message doit dire
+  // que la pièce est toujours là, sinon l'utilisateur la croit partie et ne réessaie pas.
+  storage_remove_failed:
+    "Le retrait du fichier a échoué : la pièce jointe n'a pas été supprimée. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  // 409 : la ligne pointe hors du bucket des pièces jointes. Rien à faire depuis l'écran —
+  // c'est une anomalie de données, et l'utilisateur doit savoir que réessayer ne servira à rien.
+  unexpected_bucket:
+    "Cette pièce jointe pointe vers un espace de stockage inattendu : elle ne peut être ni ouverte ni supprimée depuis cet écran. Signalez-la à l'administrateur.",
   image_prep_failed: "L'image n'a pas pu être préparée. Réessayez avec un autre fichier.",
   download_failed: 'Le téléchargement a échoué.',
   signed_url_failed: "Le lien de téléchargement n'a pas pu être généré.",

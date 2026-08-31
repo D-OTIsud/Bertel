@@ -107,6 +107,56 @@ describe('codes du panneau Équipe — /api/admin/user-profile + /api/avatar/upl
   });
 });
 
+describe('codes des pièces jointes de tâche CRM — /api/task-document (17i)', () => {
+  // Ces cinq codes sont nés d'un clone d'`actor-document`, dont la couverture était de 100 %.
+  // Sans eux, l'utilisateur lisait « Une erreur est survenue (code 500) » exactement sur les
+  // chemins que la route distingue avec le plus de soin (lecture ratée ≠ absence, orphelin
+  // storage, bucket inattendu) : le travail de distinction était fait côté route et jeté
+  // côté écran.
+  const codes = [
+    'task_document_create_failed',
+    'link_lookup_failed',
+    'document_lookup_failed',
+    'storage_remove_failed',
+    'unexpected_bucket',
+  ];
+
+  it('les 5 codes ont tous un libellé FR non vide', () => {
+    for (const code of codes) {
+      expect(typeof API_ERROR_LABELS[code]).toBe('string');
+      expect(API_ERROR_LABELS[code].length).toBeGreaterThan(0);
+    }
+  });
+
+  it('aucun ne relaie son detail brut (Postgres / Storage), quel que soit le statut', () => {
+    // Le `detail` de ces routes est un message technique anglais : `linkError.message`,
+    // `documentError.message`, `removeError.message`. La règle 1 du module interdit qu'il
+    // atteigne l'écran — et c'est précisément ce qui casserait si l'un de ces codes était
+    // ajouté à `CODES_WITH_BUSINESS_DETAIL` « par symétrie » avec delete_failed.
+    const brut = 'permission denied for table crm_task_document';
+    for (const code of codes) {
+      const message = readApiErrorMessage({ error: code, detail: brut }, 500);
+      expect(message).toBe(API_ERROR_LABELS[code]);
+      expect(message).not.toContain('permission denied');
+    }
+  });
+
+  it('le 409 unexpected_bucket ne retombe PAS sur le repli générique par statut', () => {
+    // Sans son entrée, un 409 n'a aucun repli dédié : il tombait sur « Une erreur est
+    // survenue (code 409) », qui ne dit ni ce qui s'est passé ni que réessayer est inutile.
+    const message = readApiErrorMessage({ error: 'unexpected_bucket' }, 409);
+    expect(message).toBe(API_ERROR_LABELS.unexpected_bucket);
+    expect(message).not.toMatch(/code 409/);
+  });
+
+  it("storage_remove_failed dit que la pièce jointe est TOUJOURS LÀ", () => {
+    // La route sort AVANT de supprimer la ligne quand le retrait du fichier échoue : si le
+    // message laissait croire à une suppression, l'utilisateur ne réessaierait pas et la
+    // pièce resterait, sans qu'il le sache.
+    expect(API_ERROR_LABELS.storage_remove_failed).toMatch(/n'a pas été supprimée/);
+  });
+});
+
 describe('apiError', () => {
   it('lit le corps JSON et rend une Error FR', async () => {
     const error = await apiError(jsonResponse({ error: 'not_found' }, 404));

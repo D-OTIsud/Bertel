@@ -95,6 +95,7 @@ describe('crm parsers', () => {
         { userId: 'u-7', displayName: 'Jean P.' },
       ],
       createdById: 'u-7', createdByName: 'Jean P.',
+      documents: [], // 17i — absent du payload RPC de cette fixture ⇒ [].
     });
   });
 
@@ -165,6 +166,29 @@ describe('crm parsers', () => {
   it('borne un status inconnu sur todo (défense contre la dérive d enum)', () => {
     const task = parseCrmTask({ id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'doing' });
     expect(task.status).toBe('todo');
+  });
+
+  // 17i — pièces jointes de tâche : `id` EST le document_id (consommé tel quel par les routes
+  // /api/task-document de la Task 8, pas l'id de la ligne de liaison crm_task_document).
+  describe('parseCrmTask — documents', () => {
+    it('parse les documents et ignore les entrées sans id', () => {
+      const task = parseCrmTask({
+        id: 't-1', object_id: 'OBJ1', object_name: 'Hôtel', title: 'T',
+        documents: [
+          { id: 'd-1', title: 'Devis.pdf', mime_type: 'application/pdf', size_bytes: 1234, created_at: '2026-08-31T00:00:00Z' },
+          { title: 'sans-id-ignoré' },
+          'malformé',
+        ],
+      });
+      expect(task.documents).toEqual([
+        { id: 'd-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1234, createdAt: '2026-08-31T00:00:00Z' },
+      ]);
+    });
+
+    it('clé absente ou malformée ⇒ []', () => {
+      expect(parseCrmTask({ id: 't-1' }).documents).toEqual([]);
+      expect(parseCrmTask({ id: 't-1', documents: 'nope' }).documents).toEqual([]);
+    });
   });
 
   it('parse une page timeline { items, has_more }', () => {

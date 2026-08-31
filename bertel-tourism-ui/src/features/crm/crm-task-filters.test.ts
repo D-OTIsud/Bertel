@@ -24,6 +24,7 @@ function task(over: Partial<CrmTask> = {}): CrmTask {
     assignees: [], createdById: null, createdByName: null,
     ownerId: null, ownerName: null,
     relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null,
+    documents: [],
     ...over,
   };
 }

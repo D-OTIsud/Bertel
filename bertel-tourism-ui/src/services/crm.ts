@@ -9,6 +9,7 @@ import type {
   CrmInteractionReply,
   CrmTask,
   CrmTaskAssignee,
+  CrmTaskDocument,
   CrmTaskPriority,
   CrmTaskStatus,
   CrmTimelinePage,
@@ -51,6 +52,31 @@ export function parseCrmTaskAssignees(value: unknown): CrmTaskAssignee[] {
   return assignees;
 }
 
+/**
+ * `documents` (17i) — tolérant : absent/null/malformé ⇒ []. Une entrée sans id est ignorée
+ * (même doctrine que `parseCrmTaskAssignees` : une pièce jointe abîmée ne doit pas vider le
+ * kanban). `id` est le `document_id` — voir la docstring de `CrmTaskDocument`.
+ */
+export function parseCrmTaskDocuments(value: unknown): CrmTaskDocument[] {
+  if (!Array.isArray(value)) return [];
+  const documents: CrmTaskDocument[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as GenericRecord;
+    const id = readNullableString(record.id);
+    if (!id) continue;
+    documents.push({
+      id,
+      title: readString(record.title),
+      mimeType: readNullableString(record.mime_type),
+      // size_bytes peut être illisible côté SQL (garde délibérée) ⇒ null plutôt qu'une valeur inventée.
+      sizeBytes: typeof record.size_bytes === 'number' ? record.size_bytes : null,
+      createdAt: readNullableString(record.created_at),
+    });
+  }
+  return documents;
+}
+
 export function parseCrmTask(record: GenericRecord): CrmTask {
   const status = readString(record.status) as CrmTaskStatus;
   const priority = readString(record.priority) as CrmTaskPriority;
@@ -79,6 +105,8 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     relatedInteractionId: readNullableString(record.related_interaction_id),
     relatedInteractionSubject: readNullableString(record.related_interaction_subject),
     relatedInteractionStatus: readNullableString(record.related_interaction_status),
+    // 17i — pièces jointes de la tâche.
+    documents: parseCrmTaskDocuments(record.documents),
   };
 }
 

@@ -516,6 +516,20 @@ export interface CrmTaskAssignee {
   displayName: string;
 }
 
+/**
+ * Pièce jointe d'une tâche (17i). `id` = document_id — c'est LUI que consomment les routes
+ * /api/task-document (URL signée, suppression), PAS l'id de la ligne de liaison
+ * `crm_task_document`. Deux identifiants pour une même pièce jointe finissent toujours par se
+ * confondre : ce champ ne porte que le seul qui compte pour l'appelant.
+ */
+export interface CrmTaskDocument {
+  id: string;
+  title: string;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  createdAt: string | null;
+}
+
 export interface CrmTask {
   id: string;
   objectId: string;
@@ -557,6 +571,8 @@ export interface CrmTask {
   relatedInteractionId: string | null;
   relatedInteractionSubject: string | null;
   relatedInteractionStatus: string | null;
+  /** 17i — pièces jointes de la tâche. Toujours un tableau (jamais null), comme `assignees`. */
+  documents: CrmTaskDocument[];
 }
 
 /**

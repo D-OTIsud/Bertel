@@ -33,6 +33,7 @@ function makeTask(over: Partial<CrmTask> = {}): CrmTask {
     createdById: 'u-me', createdByName: 'David P.',
     ownerId: 'u-me', ownerName: 'David', relatedInteractionId: null,
     relatedInteractionSubject: null, relatedInteractionStatus: null,
+    documents: [],
     ...over,
   };
 }

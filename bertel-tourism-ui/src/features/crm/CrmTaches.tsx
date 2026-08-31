@@ -9,7 +9,7 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, GripVertical, Link2, Plus } from 'lucide-react';
+import { Bell, GripVertical, Link2, Pencil, Plus } from 'lucide-react';
 import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
@@ -81,6 +81,11 @@ export function CrmTaches({
   // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
   // datalist conservée, erreurs visibles dans le modal.
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  // Task 3 — édition (crayon de carte) : le même modal partagé, en mode `task`. On garde
+  // l'ID plutôt que l'objet tâche : après invalidation, `editTask` (dérivé plus bas) reçoit
+  // la tâche FRAÎCHE (pièces jointes à jour en Task 9) sans réinitialiser la saisie en cours
+  // (les useState du modal ne rejouent pas leur initialiseur au changement de props).
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   // DnD (PO point 5) : colonne actuellement survolée par une carte (surbrillance de dépôt).
   const [dropCol, setDropCol] = useState<CrmTaskStatus | null>(null);
   // Statut de la carte en cours de glissement (sa colonne source) — sert à MATÉRIALISER les
@@ -144,6 +149,9 @@ export function CrmTaches({
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
   const hiddenCount = tasks.filter((task) => task.status === 'canceled' || task.status === 'blocked').length;
+  // L'id et non l'objet : après invalidation, le modal reçoit la tâche FRAÎCHE (documents
+  // à jour en Task 9) sans réinitialiser la saisie en cours (les useState ne rejouent pas).
+  const editTask = editTaskId ? tasks.find((task) => task.id === editTaskId) ?? null : null;
 
   // Options du filtre : les assignables ∪ les personnes réellement portées par une tâche
   // visible. L'union est nécessaire — une tâche assignée à quelqu'un qui a quitté la liste
@@ -305,6 +313,18 @@ export function CrmTaches({
             <span className="sr-only">{assigneeLabel}</span>
           </span>
           <span className="ticket__actions">
+            {/* Task 3 — édition de la tâche (titre/description/échéance/assignés), AVANT les
+                boutons de statut : ce n'est pas un déplacement de colonne. */}
+            <button
+              type="button"
+              className="crm-btn sm"
+              aria-label={`Modifier « ${task.title} »`}
+              disabled={!canWrite}
+              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+              onClick={() => setEditTaskId(task.id)}
+            >
+              <Pencil size={12} aria-hidden />
+            </button>
             {task.status === 'in_progress' && (
               <button
                 type="button"
@@ -514,6 +534,18 @@ export function CrmTaches({
           picker="datalist"
           objectOptions={directoryObjects}
           onClose={() => setTaskModalOpen(false)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+        />
+      )}
+
+      {/* Task 3 — même modal partagé, en mode édition (`task`). `objectOptions=[]` : le champ
+          établissement est verrouillé, pas de picker à alimenter. */}
+      {editTask && canWrite && (
+        <CrmTaskModal
+          task={editTask}
+          picker="datalist"
+          objectOptions={[]}
+          onClose={() => setEditTaskId(null)}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
         />
       )}

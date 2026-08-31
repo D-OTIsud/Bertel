@@ -614,10 +614,15 @@ export interface SaveCrmTaskInput {
 export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   const client = requireCrmClient();
   if (!client) {
-    // Mode démo : reflète le move dans le mock pour éviter un contrôle sans effet.
+    // Mode démo : reflète le move ET l'édition dans le mock pour éviter un contrôle sans effet.
     if (input.id) {
       const task = mockCrmTasks.find((t) => t.id === input.id);
-      if (task && input.status) task.status = input.status;
+      if (task) {
+        if (input.status) task.status = input.status;
+        if (input.title !== undefined) task.title = input.title;
+        if (input.description !== undefined) task.description = input.description || null;
+        if (input.dueAt !== undefined) task.dueAt = input.dueAt;
+      }
     }
     return input.id ?? 'demo-task';
   }

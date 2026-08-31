@@ -66,6 +66,7 @@ const taskFixture = {
   createdById: 'u-moi', createdByName: 'Moi Même',
   ownerId: null, ownerName: null,
   relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null,
+  documents: [],
 };
 
 describe('CrmTaskModal — édition', () => {

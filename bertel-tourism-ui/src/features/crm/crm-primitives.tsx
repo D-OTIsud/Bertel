@@ -7,7 +7,7 @@
 // Timeline/TlCard = flux d'interactions groupé par mois (forme tl du design).
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, CornerDownRight, ListChecks, Mail, MapPin, Pencil, Phone, RotateCcw, StickyNote, Trash2 } from 'lucide-react';
+import { Check, CornerDownRight, ListChecks, Mail, MapPin, Pencil, Phone, StickyNote, Trash2 } from 'lucide-react';
 import type { CrmInteractionReply } from '../../types/domain';
 import { resolveTypeLabel } from '../../utils/labels';
 import {
@@ -24,10 +24,10 @@ import {
 import {
   interactionStatusLabel,
   interactionStatusTone,
-  isKnownInteractionStatus,
   isOpenInteractionStatus,
 } from './crm-status';
 import type { AnyCrmInteractionStatus } from './crm-status';
+import { CrmStatusModal } from './CrmStatusModal';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
@@ -46,6 +46,13 @@ export interface CrmThreadActions {
    * (traité ou planifié).
    */
   onChangeStatus?: (rootId: string, status: AnyCrmInteractionStatus) => Promise<void> | void;
+  /**
+   * Date du dernier passage en « attente prestataire », chargée à l'ouverture du sélecteur.
+   * Rend la DATE et non les événements, pour que ce module ne dépende ni de services/crm ni
+   * d'un QueryClient — il doit rester rendable nu. Absent ⇒ l'encart d'attente le dit au
+   * lieu d'inventer un compte de jours.
+   */
+  loadAwaitingSince?: (rootId: string) => Promise<string | null>;
   /**
    * Édition d'un commentaire (§66, PO « l'auteur peut modifier… comme le super admin ») —
    * `id` est l'interaction RACINE *ou* une réponse ; `body`/`sentimentCode` sont l'écriture
@@ -245,7 +252,8 @@ export interface CrmTimelineCardItem {
   interlocutorEmail?: string | null;
   /** Source (import_*…) — alimente interactionAuthorOf. */
   source?: string | null;
-  /** Statut de la demande (§65/§66) : 'planned' = en attente, 'done' = traitée. */
+  /** Statut de la demande, cycle de vie §6.1 : new, in_progress, awaiting_provider,
+   *  resolved, closed, canceled. Les libellés viennent du registre crm-status.ts. */
   status?: string | null;
   /** Timestamp de résolution (§65/§66) — affiché sur la chip « Traitée ». */
   resolvedAt?: string | null;
@@ -592,15 +600,16 @@ function TlEditDeleteButtons({
 }
 
 /**
- * Boutons d'actions d'une RACINE (§65/§66 + §66 édition) — « Répondre » + « Marquer traitée /
- * Rouvrir » PUIS « Modifier » + « Supprimer ». Tous gatés, stopPropagation, hors role=button.
+ * Boutons d'actions d'une RACINE (§65/§66 + §66 édition) — « Répondre » + « Statut : … »
+ * (ouvre le sélecteur à six états) PUIS « Modifier » + « Supprimer ». Tous gatés,
+ * stopPropagation, hors role=button.
  * L'ouverture de l'éditeur / de la confirmation de suppression est portée par le parent (TlCard)
  * pour l'isolation d'état par commentaire.
  */
 function TlThreadActions({
   rootId,
   item,
-  isResolved,
+  status,
   actions,
   onOpenComposer,
   onOpenEditor,
@@ -609,7 +618,8 @@ function TlThreadActions({
   rootId: string;
   /** La carte entière — `onCreateTask` la reçoit (objectId/objectName/actorId/subject). */
   item: CrmTimelineCardItem;
-  isResolved: boolean;
+  /** Statut EFFECTIF de la demande racine (voir sa dérivation dans TlCard). */
+  status: string | null;
   actions: CrmThreadActions;
   onOpenComposer: () => void;
   /** Ouvre l'éditeur inline de CE commentaire racine (état dans TlCard). Absent ⇒ pas de « Modifier ». */
@@ -617,9 +627,10 @@ function TlThreadActions({
   /** Ouvre la confirmation de suppression de CE commentaire racine. Absent ⇒ pas de « Supprimer ». */
   onOpenDelete?: () => void;
 }) {
-  const [resolving, setResolving] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [awaitingSince, setAwaitingSince] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState<string | null>(null);
-  const { canWrite, readOnlyReason, onReply, onChangeStatus, onCreateTask, createTaskDisabledReason } = actions;
+  const { canWrite, readOnlyReason, onReply, onChangeStatus, onCreateTask, createTaskDisabledReason, loadAwaitingSince } = actions;
   const gateTitle = canWrite === false ? readOnlyReason : undefined;
   // Une interaction SANS établissement ne peut pas porter de tâche : le serveur refuse le
   // lien (22023, cohérence d'objet). Le bouton reste RENDU mais désactivé avec sa raison —
@@ -627,16 +638,19 @@ function TlThreadActions({
   const noContextReason = item.objectId ? undefined : 'Cette demande n’est rattachée à aucun établissement : une tâche ne peut pas y être liée.';
   const createTaskReason = gateTitle ?? noContextReason ?? createTaskDisabledReason;
 
-  async function toggleResolve() {
-    if (!onChangeStatus || resolving) return;
-    setResolving(true);
+  // Le journal n'est lu QUE pour une demande réellement en attente, et seulement à
+  // l'ouverture : c'est le seul état où la date sert à quelque chose. Un échec de lecture ne
+  // doit PAS empêcher de changer le statut — l'encart dégrade, le sélecteur reste ouvrable.
+  async function openStatus() {
     setResolveError(null);
-    try {
-      await onChangeStatus(rootId, isResolved ? 'planned' : 'done');
-    } catch (caught) {
-      setResolveError(caught instanceof Error ? caught.message : 'Échec de la mise à jour du statut.');
-    } finally {
-      setResolving(false);
+    setAwaitingSince(null);
+    setStatusOpen(true);
+    if (status === 'awaiting_provider' && loadAwaitingSince) {
+      try {
+        setAwaitingSince(await loadAwaitingSince(rootId));
+      } catch {
+        setAwaitingSince(null);
+      }
     }
   }
 
@@ -660,22 +674,17 @@ function TlThreadActions({
         <button
           type="button"
           className="crm-btn sm"
-          disabled={canWrite === false || resolving}
+          disabled={canWrite === false}
           title={gateTitle}
           onClick={(event) => {
             event.stopPropagation();
-            void toggleResolve();
+            void openStatus();
           }}
         >
-          {isResolved ? (
-            <>
-              <RotateCcw size={11} aria-hidden /> Rouvrir
-            </>
-          ) : (
-            <>
-              <Check size={11} aria-hidden /> Marquer traitée
-            </>
-          )}
+          {/* Un statut hors registre n'a pas de libellé : on le DIT au lieu d'afficher un
+              bouton muet, et surtout on ne le fait pas passer pour « traitée » (régression
+              0f036b6 — l'ancien bouton bascule aurait proposé « Rouvrir »). */}
+          <Check size={11} aria-hidden /> Statut : {interactionStatusLabel(status) ?? 'non reconnu'}
         </button>
       ) : null}
       {onCreateTask ? (
@@ -691,6 +700,17 @@ function TlThreadActions({
         >
           <ListChecks size={11} aria-hidden /> Créer une tâche
         </button>
+      ) : null}
+      {statusOpen && onChangeStatus ? (
+        <CrmStatusModal
+          rootId={rootId}
+          status={status}
+          canWrite={canWrite}
+          readOnlyReason={readOnlyReason}
+          awaitingSince={awaitingSince}
+          onChangeStatus={onChangeStatus}
+          onClose={() => setStatusOpen(false)}
+        />
       ) : null}
       {/* Édition / suppression du commentaire racine (§66) — « comme le super admin ». */}
       <TlEditDeleteButtons
@@ -755,13 +775,11 @@ function TlCard({
   // Statut de la demande (§65/§66) — chip discrète, libellé et ton via le registre crm-status.ts.
   const status = item.status ?? null;
   const replies = item.replies ?? [];
-  // Résolu = statut CONNU du registre (crm-status.ts) ET non ouvert, OU (statut absent ET
-  // resolvedAt posé) — la vue objet ne porte pas de `status` mais peut porter `resolvedAt`,
-  // d'où la dérivation par repli. Un statut inconnu du registre (import futur, faute de
-  // frappe) retombe sur « à traiter » : ne jamais le traiter comme résolu par défaut.
-  const isResolved =
-    (isKnownInteractionStatus(status) && !isOpenInteractionStatus(status)) ||
-    (status == null && Boolean(item.resolvedAt));
+  // Statut EFFECTIF pour le sélecteur : la vue objet ne porte pas toujours `status` mais
+  // peut porter `resolvedAt`. Sans ce repli, le sélecteur s'ouvrirait sans état courant sur
+  // ces cartes-là. On ne devine RIEN dans l'autre sens : un statut inconnu du registre reste
+  // tel quel et n'est jamais assimilé à « traitée » (régression 0f036b6).
+  const effectiveStatus = status ?? (item.resolvedAt ? 'resolved' : null);
   // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
   // rendues que si un consommateur passe des callbacks (onReply/onChangeStatus).
   const [composerOpen, setComposerOpen] = useState(false);
@@ -938,13 +956,13 @@ function TlCard({
         ) : null}
 
         {/* Contrôles interactifs du fil — FRÈRES de .tl-card__nav, HORS du role=button (§66) :
-            boutons Répondre / Marquer traitée / Rouvrir + Modifier / Supprimer + composer inline.
+            boutons Répondre / Statut + Modifier / Supprimer + composer inline.
             Plus de stopPropagation requis pour éviter la nav (ils sont hors de la zone cliquable). */}
         {hasActionsRow && actions ? (
           <TlThreadActions
             rootId={item.id}
             item={item}
-            isResolved={isResolved}
+            status={effectiveStatus}
             actions={actions}
             onOpenComposer={() => setComposerOpen(true)}
             onOpenEditor={

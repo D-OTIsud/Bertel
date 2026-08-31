@@ -19,7 +19,7 @@ function fixtureWithCrm() {
       body: 'RDV fixé au 12.', occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
-      interlocutorEmail: null, status: 'done', resolvedAt: null, replies: [],
+      interlocutorEmail: null, status: 'resolved', resolvedAt: null, replies: [],
     }],
     topics: [{ code: 'demande_de_visite', name: 'Demande de visite', count: 1 }],
     interactionsUnavailableReason: null,
@@ -70,13 +70,13 @@ describe('SectionCrm — §19 synthèse + tiroir', () => {
     modules.providerFollowUp = {
       ...modules.providerFollowUp,
       interactions: [
-        ...modules.providerFollowUp.interactions, // a1 / status 'done' → ne compte pas
+        ...modules.providerFollowUp.interactions, // a1 / statut ferme → ne compte pas
         {
           id: 'i2', interactionType: 'call', subject: 'Rappel en attente', body: null,
           occurredAt: '2026-06-10T08:00:00Z', actorId: 'a1', actorName: 'Marie Guide',
           topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
           ownerName: null, source: null, interlocutorEmail: null,
-          status: 'planned', resolvedAt: null, replies: [],
+          status: 'new', resolvedAt: null, replies: [],
         },
       ],
     };

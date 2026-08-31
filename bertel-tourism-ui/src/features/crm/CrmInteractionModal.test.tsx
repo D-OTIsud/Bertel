@@ -245,7 +245,7 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 // Le PO a tranché pour un choix EXPLICITE, dont la position initiale est dérivée du sujet.
 // ---------------------------------------------------------------------------------------
 describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => {
-  it('sans sujet : la position initiale est « Déjà traitée » et le payload porte status=done', async () => {
+  it('sans sujet : la position initiale est « Déjà traitée » et le payload porte status=resolved', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
 
     expect(screen.getByRole('button', { name: /déjà traitée/i })).toHaveAttribute('aria-pressed', 'true');
@@ -255,10 +255,10 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
     fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
-    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'done' }));
+    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'resolved' }));
   });
 
-  it('un sujet choisi bascule la position initiale sur « À traiter » et envoie status=planned', async () => {
+  it('un sujet choisi bascule la position initiale sur « À traiter » et envoie status=new', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
 
     pickFromCombobox('Sujet normalisé', 'Demande de visite');
@@ -268,7 +268,7 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
     fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
-    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'planned' }));
+    expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'new' }));
   });
 
   it('le choix de l’agent PRIME et ne rebascule pas quand le sujet change ensuite', async () => {
@@ -289,7 +289,7 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(
-      expect.objectContaining({ status: 'done', topicCode: 'demande_de_visite' }),
+      expect.objectContaining({ status: 'resolved', topicCode: 'demande_de_visite' }),
     );
   });
 });

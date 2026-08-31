@@ -795,7 +795,8 @@ export interface ObjectWorkspaceCrmInteractionItem {
   source: string | null;
   /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
   interlocutorEmail: string | null;
-  /** Statut de la demande (§65/§66) : 'planned' = en attente, 'done' = traitée ; null = absent.
+  /** Statut de la demande, cycle de vie §6.1 : new, in_progress, awaiting_provider,
+   *  resolved, closed, canceled ; null = absent.
    *  list_object_crm le porte (comme list_actor_crm / la timeline) ⇒ la chip « En attente /
    *  Traitée » s'affiche dans la vue objet aussi (sinon elle restait fantôme, status hard-codé). */
   status: string | null;

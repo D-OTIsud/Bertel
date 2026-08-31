@@ -136,23 +136,26 @@ describe('CrmTimelineView (§63 v4 — timeline filtrable, PO points 6+7)', () =
     );
   });
 
-  // §65/§66 — bascule traitée : evt-1 est planned ⇒ « Marquer traitée » → status done.
-  it('Marquer traitée → saveCrmInteraction({ id, status: done })', async () => {
+  // §6.1 — le sélecteur à six états depuis la timeline : evt-1 est « new » ⇒ on le passe
+  // « Traitée », ce qui écrit le vocabulaire NEUF (et non plus « done »).
+  it('Sélecteur de statut → saveCrmInteraction({ id, status: resolved })', async () => {
     renderTimeline();
     const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
-    fireEvent.click(within(actionsBar).getByRole('button', { name: /marquer traitée/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', status: 'done' }));
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^statut :/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Traitée' }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'evt-1', status: 'resolved' }));
   });
 
   // Gating page-wide (no-write-trap) : sans permission, les actions du fil sont désactivées.
-  it('sans permission : Répondre / Marquer traitée désactivés avec raison', async () => {
+  it('sans permission : Répondre / Statut désactivés avec raison', async () => {
     renderTimeline(false);
     const card = (await screen.findByText('Besoin d une nouvelle photo facade.')).closest('.tl-card') as HTMLElement;
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
     const replyBtn = within(actionsBar).getByRole('button', { name: /répondre/i });
     expect(replyBtn).toBeDisabled();
-    expect(within(actionsBar).getByRole('button', { name: /marquer traitée/i })).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /^statut :/i })).toBeDisabled();
     expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
   });
 

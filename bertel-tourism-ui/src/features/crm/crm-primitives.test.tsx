@@ -339,6 +339,17 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     await waitFor(() => expect(onResolve).toHaveBeenCalledWith('root-1', false));
   });
 
+  it('statut inconnu du registre (ex. « draft ») → « Marquer traitée », jamais « Rouvrir »', () => {
+    // Régression défensive à ne pas réintroduire : un code absent du registre crm-status.ts
+    // (import futur, faute de frappe) doit retomber sur « à traiter », pas sur « résolu ».
+    const onResolve = jest.fn().mockResolvedValue(undefined);
+    const { getByRole, queryByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'draft', resolvedAt: null })]} canWrite onResolve={onResolve} />,
+    );
+    expect(getByRole('button', { name: /marquer traitée/i })).toBeInTheDocument();
+    expect(queryByRole('button', { name: /rouvrir/i })).toBeNull();
+  });
+
   it('« Marquer traitée » stopPropagation (pas de navigation vers l acteur)', async () => {
     const onResolve = jest.fn().mockResolvedValue(undefined);
     const onOpenActor = jest.fn();

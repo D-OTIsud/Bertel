@@ -2,6 +2,7 @@ import {
   interactionStatusLabel,
   interactionStatusTone,
   isOpenInteractionStatus,
+  isKnownInteractionStatus,
   CLOSED_INTERACTION_STATUSES,
 } from './crm-status';
 
@@ -51,5 +52,27 @@ describe('crm-status — registre bilingue', () => {
       expect(CLOSED_INTERACTION_STATUSES.has(s)).toBe(true);
     }
     expect(CLOSED_INTERACTION_STATUSES.has('awaiting_provider')).toBe(false);
+  });
+
+  it('connaît les huit codes du registre (nouveau vocabulaire + legacy)', () => {
+    for (const s of [
+      'new',
+      'in_progress',
+      'awaiting_provider',
+      'resolved',
+      'closed',
+      'canceled',
+      'planned',
+      'done',
+    ]) {
+      expect(isKnownInteractionStatus(s)).toBe(true);
+    }
+  });
+
+  it('ne connaît pas un code inventé, ni null/undefined/chaîne vide', () => {
+    expect(isKnownInteractionStatus('draft')).toBe(false);
+    expect(isKnownInteractionStatus(null)).toBe(false);
+    expect(isKnownInteractionStatus(undefined)).toBe(false);
+    expect(isKnownInteractionStatus('')).toBe(false);
   });
 });

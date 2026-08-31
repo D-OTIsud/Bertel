@@ -48,6 +48,16 @@ export function isOpenInteractionStatus(status: string | null | undefined): bool
   return REGISTRY[status]?.open ?? false;
 }
 
+/**
+ * Le code appartient-il au registre (les deux vocabulaires confondus) ? Sert à distinguer
+ * « fermé au sens du registre » d'« absent du registre » — un appelant ne doit jamais traiter
+ * ces deux cas comme équivalents (cf. isOpenInteractionStatus, qui répond `false` aux deux).
+ */
+export function isKnownInteractionStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return Object.prototype.hasOwnProperty.call(REGISTRY, status);
+}
+
 /** Ni traitée, ni clôturée, ni annulée — pilote le prompt de clôture du kanban (§66). */
 export const CLOSED_INTERACTION_STATUSES: ReadonlySet<string> = new Set(
   Object.entries(REGISTRY)

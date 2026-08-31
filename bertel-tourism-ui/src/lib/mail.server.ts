@@ -10,12 +10,13 @@ export class MailNotConfiguredError extends Error {
 }
 
 /**
- * Envoi d'un e-mail métier via le relais Google (config env, cf. env.server.ts).
- * Relais par IP du VPS : pas d'auth par défaut (auth uniquement si SMTP_USER/SMTP_PASSWORD
- * sont fournis) ; STARTTLS obligatoire (requireTLS). Lève MailNotConfiguredError si non configuré
- * ⇒ l'appelant renvoie 503 sans jamais faire échouer le partage par lien / le PDF.
+ * Envoi d'un e-mail métier — listes, notifications CRM… — via le relais Google
+ * (config env, cf. env.server.ts). Relais par IP du VPS : pas d'auth par défaut (auth
+ * uniquement si SMTP_USER/SMTP_PASSWORD sont fournis) ; STARTTLS obligatoire (requireTLS).
+ * Lève MailNotConfiguredError si non configuré ⇒ l'appelant renvoie 503 sans jamais faire
+ * échouer le partage par lien / le PDF / le drain de l'outbox.
  */
-export async function sendListEmail(opts: { to: string; subject: string; html: string }): Promise<void> {
+export async function sendMail(opts: { to: string; subject: string; html: string }): Promise<void> {
   const cfg = readSmtpConfig();
   if (!cfg) throw new MailNotConfiguredError();
 
@@ -34,3 +35,6 @@ export async function sendListEmail(opts: { to: string; subject: string; html: s
     html: opts.html,
   });
 }
+
+/** Alias historique (routes listes) — même fonction. */
+export const sendListEmail = sendMail;

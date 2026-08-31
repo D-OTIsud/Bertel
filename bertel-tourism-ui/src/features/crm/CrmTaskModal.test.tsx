@@ -157,13 +157,22 @@ describe('CrmTaskModal — pièces jointes', () => {
 
   it('édition : upload un fichier choisi', async () => {
     const onSaved = jest.fn();
-    renderModal({ task: taskWithDoc, objectOptions: [], onSaved });
+    const onClose = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
     const file = new File(['x'], 'Nouveau.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
     await waitFor(() => expect(jest.mocked(uploadTaskDocument)).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: 't-9', accessToken: 'token-test' }),
     ));
     expect(onSaved).toHaveBeenCalled();
+    // Contrairement à `createMutation`, l'upload NE FERME PAS le modal (l'utilisateur doit
+    // pouvoir enchaîner plusieurs pièces jointes) — un futur `onClose()` ajouté par erreur sur
+    // ce seul chemin doit rougir. NB : `CrmModal` ne se démonte JAMAIS lui-même en réaction à
+    // `onClose` (c'est le PARENT hors-test qui déciderait de ne plus le monter) — asserter la
+    // présence persistante du titre serait donc vacuous ici (sabotage vérifié : passe au vert
+    // même avec un `onClose()` ajouté). On assert directement que le mock `onClose` n'a PAS
+    // été appelé, seule assertion que ce test isolé peut réellement faire rougir.
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('édition : upload en échec → erreur visible (pas d’échec silencieux)', async () => {
@@ -172,6 +181,26 @@ describe('CrmTaskModal — pièces jointes', () => {
     const file = new File(['x'], 'Trop-gros.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
     expect(await screen.findByText('Fichier trop volumineux')).toBeInTheDocument();
+  });
+
+  // Constat de revue central : `error` d'une `useMutation` react-query n'est effacée QUE
+  // quand CETTE MÊME mutation est rejouée. Un test qui n'exercerait qu'une seule mutation ne
+  // peut PAS voir une bannière restée affichée à tort — il faut la SÉQUENCE : un échec d'upload
+  // puis une suppression réussie, et vérifier que la bannière d'erreur a disparu.
+  it('séquence upload échoué puis suppression réussie → la bannière d’erreur disparaît', async () => {
+    jest.mocked(uploadTaskDocument).mockRejectedValueOnce(new Error('Fichier trop volumineux'));
+    window.confirm = jest.fn().mockReturnValue(true);
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+
+    const badFile = new File(['x'], 'Trop-gros.pdf', { type: 'application/pdf' });
+    await userEvent.upload(screen.getByLabelText('Ajouter un document'), badFile);
+    expect(await screen.findByText('Fichier trop volumineux')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalled());
+
+    expect(screen.queryByText('Fichier trop volumineux')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('édition : Ouvrir demande l’URL signée et ouvre un nouvel onglet', async () => {
@@ -200,6 +229,21 @@ describe('CrmTaskModal — pièces jointes', () => {
   it('sizeBytes: 1234 → arrondi en Ko, distinct de « taille inconnue »', () => {
     renderModal({ task: taskWithDoc, objectOptions: [] });
     expect(screen.getByText('1 Ko')).toBeInTheDocument();
+    expect(screen.queryByText('taille inconnue')).not.toBeInTheDocument();
+  });
+
+  // Frontière exacte que la spec nomme (« jamais 0 Ko ») : `0` est une taille CONNUE et
+  // valide, distincte de `null` (« taille inconnue »). `formatDocumentSize` teste
+  // `value === null` AVANT `value < 1024` — si l'ordre s'inversait, `0` tomberait dans la
+  // branche `null` (0 est faux comme condition, mais `0 < 1024` est vrai AVANT le check
+  // null si celui-ci passe après) et devrait rendre « 0 o », pas « taille inconnue ».
+  it('sizeBytes: 0 affiche « 0 o », jamais « taille inconnue »', () => {
+    const taskWithZeroSize = {
+      ...taskFixture,
+      documents: [{ id: 'd-4', title: 'Vide.pdf', mimeType: 'application/pdf', sizeBytes: 0, createdAt: null }],
+    };
+    renderModal({ task: taskWithZeroSize, objectOptions: [] });
+    expect(screen.getByText('0 o')).toBeInTheDocument();
     expect(screen.queryByText('taille inconnue')).not.toBeInTheDocument();
   });
 

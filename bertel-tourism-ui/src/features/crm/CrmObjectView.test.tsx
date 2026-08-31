@@ -20,8 +20,8 @@ const snapshot: ObjectCrmSnapshot = {
       occurredAt: '2026-06-04T10:00:00Z', actorId: 'actor-1', actorName: 'Mme Marie Hoarau',
       topicCode: 'modification_infos_bdd', topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
-      // §66 : list_object_crm porte `status` ⇒ la vue objet rend la chip « En attente » (planned).
-      interlocutorEmail: null, status: 'planned', resolvedAt: null,
+      // §66 : list_object_crm porte `status` ⇒ la vue objet rend la chip du statut ouvert.
+      interlocutorEmail: null, status: 'new', resolvedAt: null,
       replies: [{
         id: 'i1-r1', interactionType: 'note', body: 'Tarifs intégrés dans la fiche.',
         occurredAt: '2026-06-05T08:00:00Z', createdAt: '2026-06-05T08:01:00Z',
@@ -36,7 +36,7 @@ const snapshot: ObjectCrmSnapshot = {
       occurredAt: '2026-03-24T09:00:00Z', actorId: null, actorName: 'SARL Basalte & Lagon',
       topicCode: null, topicName: null, sentimentCode: null, sentimentName: null,
       ownerName: null, source: 'import_berta2_crm', interlocutorEmail: 'contact@basalte.re',
-      status: 'done', resolvedAt: '2026-03-25T09:00:00Z', replies: [],
+      status: 'resolved', resolvedAt: '2026-03-25T09:00:00Z', replies: [],
     },
   ],
   topics: [{ code: 'modification_infos_bdd', name: 'Modification infos BDD', count: 1 }],
@@ -184,7 +184,7 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
         body: 'Point annuel.',
         // Chantier 2026-08-28 n°5 — la modale envoie DÉSORMAIS toujours la suite à donner.
         // Sans sujet, la position initiale est « Déjà traitée » : c'est une note interne.
-        status: 'done',
+        status: 'resolved',
       }),
     );
     // Refresh de la vue objet après écriture confirmée.
@@ -215,8 +215,8 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
   it('rend la chip de statut de la demande (En attente / Traitée) dans la vue objet', async () => {
     renderView();
     await screen.findByText('Appel tarifs');
-    // i1 = planned ⇒ « En attente » ; i2 = done ⇒ « Traitée ».
-    expect(screen.getByText('En attente')).toBeInTheDocument();
+    // i1 = new ⇒ « En attente de traitement » ; i2 = resolved ⇒ « Traitée ».
+    expect(screen.getByText('En attente de traitement')).toBeInTheDocument();
     expect(screen.getByText('Traitée')).toBeInTheDocument();
   });
 

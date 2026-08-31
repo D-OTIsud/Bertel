@@ -70,7 +70,7 @@ function makeItem(overrides: Partial<CrmTimelineCardItem> = {}): CrmTimelineCard
     actorId: 'actor-1',
     interlocutorEmail: null,
     source: 'bertel_ui',
-    status: 'done',
+    status: 'resolved',
     resolvedAt: '2026-06-05T10:00:00Z',
     replies: [],
     ...overrides,
@@ -201,22 +201,22 @@ describe('TlCard — fil de discussion (§65/§66)', () => {
     expect(container.querySelector('.tl-replies')).toBeNull();
   });
 
-  it('chip de statut : « En attente » si planned, « Traitée » si done', () => {
+  it('chip de statut : « En attente de traitement » si new, « Traitée » si resolved', () => {
     const { getByText, queryByText, rerender } = render(
-      <CrmTimeline items={[makeItem({ status: 'planned', resolvedAt: null })]} />,
+      <CrmTimeline items={[makeItem({ status: 'new', resolvedAt: null })]} />,
     );
-    expect(getByText('En attente')).toBeInTheDocument();
+    expect(getByText('En attente de traitement')).toBeInTheDocument();
     expect(queryByText('Traitée')).toBeNull();
-    rerender(<CrmTimeline items={[makeItem({ status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} />);
+    rerender(<CrmTimeline items={[makeItem({ status: 'resolved', resolvedAt: '2026-06-05T10:00:00Z' })]} />);
     expect(getByText('Traitée')).toBeInTheDocument();
-    expect(queryByText('En attente')).toBeNull();
+    expect(queryByText('En attente de traitement')).toBeNull();
   });
 });
 
 // §65/§66 — composer de réponse inline + bascule « Marquer traitée / Rouvrir », gatés.
 describe('TlCard — répondre + résoudre (§65/§66)', () => {
   it('sans onReply/onChangeStatus (lecture), aucune action « Répondre » / « Marquer traitée »', () => {
-    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'planned' })]} />);
+    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'new' })]} />);
     expect(queryByRole('button', { name: /répondre/i })).toBeNull();
     expect(queryByRole('button', { name: /marquer traitée|rouvrir/i })).toBeNull();
   });
@@ -224,7 +224,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
   it('« Répondre » ouvre le composer inline et envoie onReply(rootId, body, sentimentCode)', async () => {
     const onReply = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByPlaceholderText, getByLabelText } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} />,
     );
     fireEvent.click(getByRole('button', { name: /répondre/i }));
     fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Ma réponse au fil.' } });
@@ -236,7 +236,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
   it('« Répondre » place le focus dans le textarea du composer (a11y §66)', () => {
     const onReply = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByPlaceholderText } = render(
-      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onReply={onReply} />,
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={onReply} />,
     );
     fireEvent.click(getByRole('button', { name: /répondre/i }));
     // À l'ouverture, le curseur est dans le champ de réponse (le composer n'est monté qu'alors).
@@ -246,7 +246,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
   it('le composer de réponse a un textarea (≥ 3 lignes) ; « Envoyer » désactivé tant que vide', () => {
     const onReply = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByPlaceholderText } = render(
-      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onReply={onReply} />,
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={onReply} />,
     );
     fireEvent.click(getByRole('button', { name: /répondre/i }));
     const field = getByPlaceholderText(/votre réponse/i);
@@ -257,13 +257,13 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
 
   it('a11y : aucun contrôle interactif n est imbriqué dans la région role=button (séparation)', () => {
     // §66 — la carte cliquable expose une région de navigation (role=button) ; les contrôles
-    // du fil (Répondre / Marquer traitée + composer) sont des FRÈRES de cette région, jamais
+    // du fil (Répondre / Statut + composer) sont des FRÈRES de cette région, jamais
     // ses descendants — sinon <button>/<textarea> dans role=button = ARIA/clavier invalides.
     const onReply = jest.fn().mockResolvedValue(undefined);
     const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const { container, getByRole, getByPlaceholderText } = render(
       <CrmTimeline
-        items={[makeItem({ status: 'planned' })]}
+        items={[makeItem({ status: 'new' })]}
         canWrite
         onReply={onReply}
         onChangeStatus={onChangeStatus}
@@ -274,13 +274,13 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     expect(nav).toHaveAttribute('role', 'button');
     // Les boutons d'action du fil ne sont PAS dans la région de navigation.
     expect(nav.contains(getByRole('button', { name: /répondre/i }))).toBe(false);
-    expect(nav.contains(getByRole('button', { name: /marquer traitée/i }))).toBe(false);
+    expect(nav.contains(getByRole('button', { name: /^statut :/i }))).toBe(false);
     // …et le composer (textarea/select/boutons) non plus, une fois ouvert.
     fireEvent.click(getByRole('button', { name: /répondre/i }));
     expect(nav.contains(getByPlaceholderText(/votre réponse/i))).toBe(false);
     expect(nav.contains(getByRole('button', { name: /envoyer/i }))).toBe(false);
     // Garde-fou : sous le role=button, aucun contrôle de fil (textarea/select + boutons
-    // Répondre/Marquer traitée/Rouvrir/Envoyer/Annuler). Le tag de contexte (.ctx-tag) reste
+    // Répondre/Statut/Envoyer/Annuler). Le tag de contexte (.ctx-tag) reste
     // volontairement dans la région (navigation objet, stopPropagation) — il est exclu du compte.
     const threadControls = Array.from(nav.querySelectorAll('button, textarea, select')).filter(
       (el) => !el.classList.contains('ctx-tag'),
@@ -293,7 +293,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     const onOpenActor = jest.fn();
     const { container } = render(
       <CrmTimeline
-        items={[makeItem({ status: 'planned' })]}
+        items={[makeItem({ status: 'new' })]}
         canWrite
         onReply={jest.fn()}
         onChangeStatus={jest.fn()}
@@ -310,7 +310,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     // La carte cliquable (actorId + onOpenActor) est elle-même role="button" et son nom
     // accessible englobe les libellés ⇒ on scope les requêtes au pied d'actions / composer.
     const { container, getByPlaceholderText } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} onOpenActor={onOpenActor} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} onOpenActor={onOpenActor} />,
     );
     const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
     // Ouvrir le composer ne doit pas ouvrir la fiche acteur.
@@ -324,42 +324,52 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     expect(onOpenActor).not.toHaveBeenCalled();
   });
 
-  it('« Marquer traitée » → onChangeStatus(rootId, done) ; « Rouvrir » → onChangeStatus(rootId, planned)', async () => {
+  it('le bouton porte le LIBELLÉ du statut courant et ouvre le sélecteur à six états', async () => {
     const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const { getByRole, rerender } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
     );
-    fireEvent.click(getByRole('button', { name: /marquer traitée/i }));
-    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'done'));
-    // Déjà traitée → le bouton bascule sur « Rouvrir ».
+    expect(getByRole('button', { name: /statut : en attente de traitement/i })).toBeInTheDocument();
+
+    fireEvent.click(getByRole('button', { name: /^statut :/i }));
+    fireEvent.click(getByRole('button', { name: 'Attente prestataire' }));
+    fireEvent.click(getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'awaiting_provider'));
+
+    // Le libellé du bouton SUIT le statut : il ne bascule plus entre deux positions.
     rerender(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'done', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onChangeStatus={onChangeStatus} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'resolved', resolvedAt: '2026-06-05T10:00:00Z' })]} canWrite onChangeStatus={onChangeStatus} />,
     );
-    fireEvent.click(getByRole('button', { name: /rouvrir/i }));
-    await waitFor(() => expect(onChangeStatus).toHaveBeenCalledWith('root-1', 'planned'));
+    expect(getByRole('button', { name: /statut : traitée/i })).toBeInTheDocument();
   });
 
-  it('statut inconnu du registre (ex. « draft ») → « Marquer traitée », jamais « Rouvrir »', () => {
-    // Régression défensive à ne pas réintroduire : un code absent du registre crm-status.ts
-    // (import futur, faute de frappe) doit retomber sur « à traiter », pas sur « résolu ».
+  it('statut inconnu du registre (ex. « draft ») → « non reconnu », JAMAIS « traitée »', async () => {
+    // Régression défensive du commit 0f036b6, PORTÉE sur la nouvelle surface : un code absent
+    // du registre crm-status.ts (import futur, faute de frappe) ne doit pas se faire passer
+    // pour un statut connu — et surtout pas pour un statut FERMÉ. L'ancien bouton bascule
+    // aurait proposé « Rouvrir », c'est-à-dire affirmé que la demande était traitée.
     const onChangeStatus = jest.fn().mockResolvedValue(undefined);
-    const { getByRole, queryByRole } = render(
+    const { getByRole, queryByRole, getAllByRole } = render(
       <CrmTimeline items={[makeItem({ id: 'root-1', status: 'draft', resolvedAt: null })]} canWrite onChangeStatus={onChangeStatus} />,
     );
-    expect(getByRole('button', { name: /marquer traitée/i })).toBeInTheDocument();
-    expect(queryByRole('button', { name: /rouvrir/i })).toBeNull();
+    expect(getByRole('button', { name: /statut : non reconnu/i })).toBeInTheDocument();
+    expect(queryByRole('button', { name: /statut : traitée/i })).toBeNull();
+
+    // …et dans le sélecteur, il ne présélectionne AUCUN des six.
+    fireEvent.click(getByRole('button', { name: /^statut :/i }));
+    expect(getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true')).toHaveLength(0);
   });
 
-  it('« Marquer traitée » stopPropagation (pas de navigation vers l acteur)', async () => {
+  it('le bouton Statut stopPropagation (pas de navigation vers l acteur)', () => {
     const onChangeStatus = jest.fn().mockResolvedValue(undefined);
     const onOpenActor = jest.fn();
     // Carte cliquable ⇒ scope au pied d'actions (le nom accessible de la carte englobe le libellé).
-    const { container } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onChangeStatus={onChangeStatus} onOpenActor={onOpenActor} />,
+    const { container, getByRole } = render(
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onChangeStatus={onChangeStatus} onOpenActor={onOpenActor} />,
     );
     const actionsBar = container.querySelector('.tl-actions') as HTMLElement;
-    fireEvent.click(within(actionsBar).getByRole('button', { name: /marquer traitée/i }));
-    await waitFor(() => expect(onChangeStatus).toHaveBeenCalled());
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^statut :/i }));
+    expect(getByRole('button', { name: 'Clôturée' })).toBeInTheDocument();
     expect(onOpenActor).not.toHaveBeenCalled();
   });
 
@@ -368,7 +378,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
     const onChangeStatus = jest.fn();
     const { getByRole } = render(
       <CrmTimeline
-        items={[makeItem({ status: 'planned' })]}
+        items={[makeItem({ status: 'new' })]}
         canWrite={false}
         readOnlyReason="Lecture seule : permission requise"
         onReply={onReply}
@@ -376,7 +386,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
       />,
     );
     const replyBtn = getByRole('button', { name: /répondre/i });
-    const resolveBtn = getByRole('button', { name: /marquer traitée/i });
+    const resolveBtn = getByRole('button', { name: /^statut :/i });
     expect(replyBtn).toBeDisabled();
     expect(resolveBtn).toBeDisabled();
     expect(replyBtn).toHaveAttribute('title', expect.stringMatching(/lecture seule/i));
@@ -385,7 +395,7 @@ describe('TlCard — répondre + résoudre (§65/§66)', () => {
   it('échec d envoi → erreur visible inline, composer conservé (pas de double-submit)', async () => {
     const onReply = jest.fn().mockRejectedValue(new Error('refus RLS'));
     const { getByRole, getByPlaceholderText, findByText } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'planned' })]} canWrite onReply={onReply} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', status: 'new' })]} canWrite onReply={onReply} />,
     );
     fireEvent.click(getByRole('button', { name: /répondre/i }));
     fireEvent.change(getByPlaceholderText(/votre réponse/i), { target: { value: 'Texte conservé' } });
@@ -418,7 +428,7 @@ function replyOf(overrides: Partial<CrmInteractionReplyT> = {}): CrmInteractionR
 
 describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('sans onEdit/onDelete (lecture), aucune action « Modifier » / « Supprimer » sur la racine', () => {
-    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onReply={jest.fn()} />);
+    const { queryByRole } = render(<CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onReply={jest.fn()} />);
     expect(queryByRole('button', { name: /^modifier$/i })).toBeNull();
     expect(queryByRole('button', { name: /^supprimer$/i })).toBeNull();
   });
@@ -426,7 +436,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('gating : sans permission, « Modifier » / « Supprimer » désactivés avec raison (no-write-trap)', () => {
     const { getByRole } = render(
       <CrmTimeline
-        items={[makeItem({ status: 'planned' })]}
+        items={[makeItem({ status: 'new' })]}
         canWrite={false}
         readOnlyReason="Lecture seule : permission requise"
         onEditInteraction={jest.fn()}
@@ -444,7 +454,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
     const onEditInteraction = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByLabelText } = render(
       <CrmTimeline
-        items={[makeItem({ id: 'root-1', body: 'Corps de la note.', sentimentCode: 'positif', status: 'planned' })]}
+        items={[makeItem({ id: 'root-1', body: 'Corps de la note.', sentimentCode: 'positif', status: 'new' })]}
         canWrite
         onEditInteraction={onEditInteraction}
       />,
@@ -463,7 +473,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('« Enregistrer » désactivé tant que le corps est vide', () => {
     const onEditInteraction = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByLabelText } = render(
-      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onEditInteraction={onEditInteraction} />,
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
     );
     fireEvent.click(getByRole('button', { name: /^modifier$/i }));
     fireEvent.change(getByLabelText('Modifier le commentaire'), { target: { value: '   ' } });
@@ -473,7 +483,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('« Annuler » ferme l éditeur sans appeler onEditInteraction', () => {
     const onEditInteraction = jest.fn();
     const { getByRole, queryByLabelText } = render(
-      <CrmTimeline items={[makeItem({ status: 'planned' })]} canWrite onEditInteraction={onEditInteraction} />,
+      <CrmTimeline items={[makeItem({ status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
     );
     fireEvent.click(getByRole('button', { name: /^modifier$/i }));
     expect(queryByLabelText('Modifier le commentaire')).not.toBeNull();
@@ -486,7 +496,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
     const onEditInteraction = jest.fn().mockResolvedValue(undefined);
     const { getByRole, getByLabelText } = render(
       <CrmTimeline
-        items={[makeItem({ id: 'root-2', body: 'Sans sentiment.', sentimentCode: null, status: 'planned' })]}
+        items={[makeItem({ id: 'root-2', body: 'Sans sentiment.', sentimentCode: null, status: 'new' })]}
         canWrite
         onEditInteraction={onEditInteraction}
       />,
@@ -577,7 +587,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('a11y : « Modifier » / « Supprimer » sont hors de la région role=button (séparation)', () => {
     const { container, getByRole } = render(
       <CrmTimeline
-        items={[makeItem({ status: 'planned' })]}
+        items={[makeItem({ status: 'new' })]}
         canWrite
         onEditInteraction={jest.fn()}
         onDeleteInteraction={jest.fn()}
@@ -594,7 +604,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
     const onOpenActor = jest.fn();
     const { container } = render(
       <CrmTimeline
-        items={[makeItem({ id: 'root-1', status: 'planned' })]}
+        items={[makeItem({ id: 'root-1', status: 'new' })]}
         canWrite
         onEditInteraction={jest.fn()}
         onDeleteInteraction={jest.fn()}
@@ -614,7 +624,7 @@ describe('TlCard — modifier + supprimer un commentaire (§66 PO)', () => {
   it('échec d enregistrement → erreur visible inline, éditeur conservé', async () => {
     const onEditInteraction = jest.fn().mockRejectedValue(new Error('refus RLS'));
     const { getByRole, getByLabelText, findByText } = render(
-      <CrmTimeline items={[makeItem({ id: 'root-1', body: 'Corps.', status: 'planned' })]} canWrite onEditInteraction={onEditInteraction} />,
+      <CrmTimeline items={[makeItem({ id: 'root-1', body: 'Corps.', status: 'new' })]} canWrite onEditInteraction={onEditInteraction} />,
     );
     fireEvent.click(getByRole('button', { name: /^modifier$/i }));
     fireEvent.change(getByLabelText('Modifier le commentaire'), { target: { value: 'Tentative' } });

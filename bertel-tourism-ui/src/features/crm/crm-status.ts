@@ -17,6 +17,21 @@ export type CrmInteractionStatus =
   | 'resolved'
   | 'closed'
   | 'canceled';
+/**
+ * Les six états, dans l'ordre du cycle de vie — l'ordre dans lequel le sélecteur les propose.
+ * Liste unique : le sélecteur, les tests et toute future énumération la partagent, sinon deux
+ * listes parallèles finissent par diverger sans que rien ne le signale. Les entrées legacy
+ * n'y figurent PAS : on ne propose pas d'écrire un vocabulaire que la base ne parle plus.
+ */
+export const INTERACTION_STATUSES: readonly CrmInteractionStatus[] = [
+  'new',
+  'in_progress',
+  'awaiting_provider',
+  'resolved',
+  'closed',
+  'canceled',
+];
+
 export type LegacyCrmInteractionStatus = 'planned' | 'done';
 export type AnyCrmInteractionStatus = CrmInteractionStatus | LegacyCrmInteractionStatus;
 

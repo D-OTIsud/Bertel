@@ -118,7 +118,7 @@ export function CrmTaches({
   // §66 — « Oui, clôturer » : marque l'interaction liée comme traitée (le serveur pose
   // resolved_at). Invalide le kanban + toutes les vues d'interaction. Erreur visible dans le prompt.
   const closeInteractionMutation = useMutation({
-    mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'done' }),
+    mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'resolved' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['crm-actor'] });

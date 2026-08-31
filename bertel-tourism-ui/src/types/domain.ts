@@ -605,7 +605,8 @@ export interface CrmInteraction {
   source: string | null;
   /** Interlocuteur connu (interlocutor_email) — alimente interactionAuthorOf (fix « par Système »). */
   interlocutorEmail: string | null;
-  /** Demande traitée (§65/§66) : timestamp de résolution, null = en attente (statut 'planned'). */
+  /** Demande traitée : timestamp de résolution. null = demande OUVERTE (statuts new,
+   *  in_progress ou awaiting_provider du cycle de vie §6.1). */
   resolvedAt: string | null;
   /** Fil de discussion (§65/§66) — réponses NICHÉES sous la racine ; [] si aucune. */
   replies: CrmInteractionReply[];

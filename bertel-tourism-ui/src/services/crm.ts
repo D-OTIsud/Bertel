@@ -120,7 +120,7 @@ export function parseCrmInteraction(record: GenericRecord): CrmInteraction {
     objectName: readNullableString(record.object_name),
     interactionType: readString(record.interaction_type) || 'note',
     direction: readString(record.direction) || 'internal',
-    status: readString(record.status) || 'done',
+    status: readString(record.status) || 'resolved',
     subject: readString(record.subject),
     body: readNullableString(record.body),
     occurredAt: readNullableString(record.occurred_at),
@@ -167,8 +167,10 @@ export interface CrmTimelineFilters {
   interactionType?: string;
   sentimentCode?: string;
   /**
-   * Statut PO (rectifs points 6+7) : 'active' = interactions `planned` (à traiter),
-   * 'done' = traitées ; absent = toutes. Validé serveur (22023 sinon).
+   * Statut PO (rectifs points 6+7) — vocabulaire d'INTERFACE, distinct de celui du cycle
+   * de vie et VOLONTAIREMENT inchangé par la bascule 17g : 'active' = la famille OUVERTE
+   * (new, in_progress, awaiting_provider), 'done' = la famille FERMÉE (resolved, closed,
+   * canceled) ; absent = toutes. Validé serveur (22023 sinon).
    */
   status?: 'active' | 'done';
   /** Borne basse ISO (`occurred_at >= from`) ; absent = pas de borne (« Tout »). */
@@ -204,6 +206,75 @@ export async function listCrmTimeline(filters: CrmTimelineFilters = {}): Promise
     throw error;
   }
   return parseCrmTimelinePage(data);
+}
+
+/**
+ * Journal des transitions de statut d'une demande (manifeste 17g).
+ *
+ * Le type vit ICI et non dans types/domain.ts : ce n'est pas une entite du domaine mais la
+ * forme de sortie d'un RPC, au meme titre qu'ActorSupportSnapshot.
+ *
+ * `changedByLabel` peut etre null, et l'est pour TOUT l'historique anterieur a la bascule :
+ * `audit.audit_log.changed_by` y stocke un e-mail (ou « postgres ») et non un uuid, si bien
+ * que le rejeu de 17g n'a pu rattacher aucune de ces transitions a un compte. C'est le bon
+ * comportement (invariant §218 : on n'invente pas une provenance), mais l'affichage doit le
+ * supporter au lieu de supposer un auteur.
+ */
+export interface CrmStatusEvent {
+  /** null = creation de la demande. */
+  fromStatus: string | null;
+  toStatus: string;
+  changedAt: string;
+  changedByLabel: string | null;
+}
+
+function parseCrmStatusEvent(record: GenericRecord): CrmStatusEvent {
+  return {
+    fromStatus: readNullableString(record.from_status),
+    toStatus: readString(record.to_status),
+    changedAt: readString(record.changed_at),
+    changedByLabel: readNullableString(record.changed_by_label),
+  };
+}
+
+/**
+ * Evenements ORDONNES du plus ancien au plus recent (tri porte par la RPC).
+ * La RPC rend une ENVELOPPE `{ events: [...] }`, jamais un tableau nu : deballer avec un
+ * `Array.isArray(data)` rendrait toujours [] en silence.
+ */
+export async function listCrmStatusEvents(interactionId: string): Promise<CrmStatusEvent[]> {
+  const client = requireCrmClient();
+  // Mode demo : aucun journal fabrique. Un historique de transitions invente se lirait
+  // comme un vrai.
+  if (!client) {
+    return [];
+  }
+  const { data, error } = await client
+    .schema('api')
+    .rpc('list_crm_status_events', { p_interaction_id: interactionId });
+  if (error) {
+    throw error;
+  }
+  const record = (data && typeof data === 'object' ? data : {}) as GenericRecord;
+  return Array.isArray(record.events)
+    ? record.events
+        .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+        .map(parseCrmStatusEvent)
+    : [];
+}
+
+/**
+ * Date du DERNIER passage a « attente prestataire », ou null si la demande n'en a jamais eu
+ * — le cas de toute demande nee avant 17g, dont le journal ne porte aucun evenement.
+ * On prend le dernier evenement correspondant dans l'ordre rendu, sans recalculer de max :
+ * deux transitions ecrites dans la meme transaction portent la MEME date et rien ne les
+ * departage, donc un max() donnerait une fausse impression de precision.
+ */
+export function awaitingSinceOf(events: CrmStatusEvent[]): string | null {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    if (events[i].toStatus === 'awaiting_provider') return events[i].changedAt;
+  }
+  return null;
 }
 
 export async function listCrmTasks(): Promise<CrmTask[]> {
@@ -308,8 +379,9 @@ export function parseCrmDirectoryEntry(record: GenericRecord): CrmDirectoryEntry
 /**
  * Filtres serveur de l'annuaire (rectifs PO points 6+7) : le RPC applique sujet / statut /
  * période à TOUS les agrégats (compteurs, dernière interaction, top sujets) — les KPIs de
- * l'annuaire sont donc réactifs sans recalcul client. `status`: 'active' = interactions
- * `planned` (à traiter), 'done' = traitées ; absent = toutes. Sous filtre, les acteurs
+ * l'annuaire sont donc réactifs sans recalcul client. `status` est le vocabulaire
+ * d'INTERFACE : 'active' = la famille OUVERTE, 'done' = la famille FERMÉE ; absent =
+ * toutes. Sous filtre, les acteurs
  * « lien seul » (0 interaction correspondante) sont exclus par le serveur.
  */
 export interface CrmDirectoryFilters {
@@ -1010,7 +1082,8 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           // §65/§66 — fil de discussion (même contrat que parseCrmInteraction).
           interlocutorEmail: readNullableString(row.interlocutor_email),
           // Statut de la demande — list_object_crm le porte ; lu en nullable pour piloter la chip
-          // « En attente / Traitée » (planned/done) dans la vue objet aussi (était hard-codé null).
+          // La chip de statut dans la vue objet aussi (était hard-codé null) — libellé par
+          // le registre crm-status.ts, pas en dur ici.
           status: readNullableString(row.status),
           resolvedAt: readNullableString(row.resolved_at),
           replies: parseReplies(row.replies),

@@ -52,16 +52,16 @@ const DAY_MS = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).toISOString();
 
 // Kanban (rectif PO point 1) : une tâche par statut + une todo en retard.
-// §66 — task-late est LIÉE à une interaction encore OUVERTE (planned) ⇒ son move→done doit
+// §66 — task-late est LIÉE à une demande encore OUVERTE ⇒ son move→done (statut de TÂCHE) doit
 // proposer la clôture ; task-doing est liée à une interaction DÉJÀ traitée (done) ⇒ pas de
 // prompt ; task-later/task-done sont NON liées ⇒ jamais de prompt.
 // 16w — chaque tâche porte ses ASSIGNÉS (c'est eux que le filtre lit) et son créateur.
 // `ownerId` reste renseigné volontairement : un code resté sur l'ancienne clé passerait
 // inaperçu si la fixture l'avait supprimé.
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), createdAt: iso(-3), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), createdAt: iso(-3), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'new' },
   // Tâche CONJOINTE : elle doit remonter sous le filtre de Marie ET sous celui de Jean.
-  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), createdAt: iso(-1), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
+  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), createdAt: iso(-1), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'resolved' },
   // Créateur inconnu (createdById null) : la carte doit dire « Créateur inconnu ».
   { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), createdAt: iso(-60), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
   // Sans échéance : visible par défaut (case « Inclure sans échéance » cochée).
@@ -597,7 +597,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
 
   it('Avancer une tâche liée à une interaction OUVERTE vers Terminées → prompt de clôture', async () => {
     renderTaches();
-    // task-late (todo, lien planned) → Avancer la met en in_progress (pas de prompt encore).
+    // task-late (tâche todo, demande liée OUVERTE) → Avancer la met en in_progress (pas de prompt encore).
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Rappeler le directeur »' }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-late', status: 'in_progress' }));
     // Pas de prompt sur un move vers in_progress.
@@ -618,7 +618,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     // Prompt affiché (sujet de l'interaction visible).
     expect(await screen.findByText(/marquer aussi comme traitée/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /oui, clôturer/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-9', status: 'done' }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-9', status: 'resolved' }));
     // Le prompt se ferme après clôture.
     await waitFor(() => expect(screen.queryByText(/marquer aussi comme traitée/i)).not.toBeInTheDocument());
   });
@@ -626,14 +626,14 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('Avancer in_progress→done (bouton) d une tâche liée OUVERTE → prompt sur le chemin bouton aussi', async () => {
     // Une tâche in_progress liée à une interaction encore ouverte.
     crmMock.listCrmTasks.mockResolvedValue([
-      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
+      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'new' },
     ]);
     renderTaches();
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Suivi médiation »' }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-ip', status: 'done' }));
     expect(await screen.findByText(/marquer aussi comme traitée/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /oui, clôturer/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-7', status: 'done' }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-7', status: 'resolved' }));
   });
 
   it('« Non » ferme le prompt sans clôturer l interaction', async () => {

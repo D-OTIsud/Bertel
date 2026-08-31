@@ -5,6 +5,7 @@ import {
   listContactKinds,
   listCrmAssignees,
   listCrmDirectory,
+  listCrmStatusEvents,
   listCrmTimeline,
   listDemandTopics,
   listObjectDocumentTypes,
@@ -18,6 +19,7 @@ import {
   parseCrmInteraction,
   parseCrmTask,
   parseCrmTimelinePage,
+  awaitingSinceOf,
   parseObjectCrmSnapshot,
   saveActorChannel,
   saveCrmActor,
@@ -139,11 +141,11 @@ describe('crm parsers', () => {
     const task = parseCrmTask({
       id: 't1', object_id: 'o', object_name: 'O', title: 'x', status: 'todo',
       related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
-      related_interaction_status: 'planned',
+      related_interaction_status: 'new',
     });
     expect(task.relatedInteractionId).toBe('int-9');
     expect(task.relatedInteractionSubject).toBe('Demande de visite');
-    expect(task.relatedInteractionStatus).toBe('planned');
+    expect(task.relatedInteractionStatus).toBe('new');
   });
 
   it('lien interaction absent → relatedInteractionId/Status null', () => {
@@ -168,7 +170,7 @@ describe('crm parsers', () => {
   it('parse une page timeline { items, has_more }', () => {
     const page = parseCrmTimelinePage({
       items: [{ id: 'i1', object_id: 'o1', object_name: 'Obj', interaction_type: 'note',
-        direction: 'internal', status: 'done', subject: 'Note interne', body: 'corps',
+        direction: 'internal', status: 'resolved', subject: 'Note interne', body: 'corps',
         occurred_at: '2026-01-01T00:00:00Z', actor_name: 'A', topic_code: 'boutique',
         topic_name: 'Boutique', sentiment_code: 'positif', sentiment_name: 'Positif',
         owner_name: null, source: 'import_berta2_crm' }],
@@ -187,7 +189,7 @@ describe('crm parsers', () => {
   it('parse le payload list_object_crm en snapshot workspace (interactions + topics)', () => {
     const snapshot = parseObjectCrmSnapshot({
       interactions: [{
-        id: 'i1', interaction_type: 'call', direction: 'outbound', status: 'done',
+        id: 'i1', interaction_type: 'call', direction: 'outbound', status: 'resolved',
         subject: 'Demande de visite', body: 'RDV fixé au 12.',
         occurred_at: '2026-06-01T08:00:00Z', created_at: '2026-06-01T08:05:00Z',
         actor_id: 'a1', actor_name: 'M. Payet', topic_code: 'demande_de_visite', topic_name: 'Demande de visite',
@@ -211,8 +213,8 @@ describe('crm parsers', () => {
       occurredAt: '2026-06-01T08:00:00Z', actorId: 'a1', actorName: 'M. Payet',
       topicCode: 'demande_de_visite', topicName: 'Demande de visite',
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Marie', source: 'bertel_ui',
-      // §66 — `status` propagé (planned/done) pour la chip de la vue objet (était droppé).
-      interlocutorEmail: 'contact@palmistes.re', status: 'done', resolvedAt: '2026-06-02T08:00:00Z',
+      // §66 — `status` propagé pour la chip de la vue objet (était droppé).
+      interlocutorEmail: 'contact@palmistes.re', status: 'resolved', resolvedAt: '2026-06-02T08:00:00Z',
       replies: [{
         id: 'r1', interactionType: 'note', body: 'Réponse interne.', occurredAt: '2026-06-01T09:00:00Z',
         createdAt: '2026-06-01T09:01:00Z', sentimentCode: null, sentimentName: null,
@@ -234,7 +236,7 @@ describe('crm parsers', () => {
       tasks: [{
         id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', due_at: '2026-06-15T00:00:00Z',
         related_interaction_id: 'int-9', related_interaction_subject: 'Demande de visite',
-        related_interaction_status: 'planned',
+        related_interaction_status: 'new',
       }],
     });
     expect(snapshot.actors).toEqual([{
@@ -245,7 +247,7 @@ describe('crm parsers', () => {
     expect(snapshot.tasks).toEqual([{
       id: 't1', title: 'Rappeler', status: 'todo', priority: 'medium', dueAt: '2026-06-15T00:00:00Z',
       relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite',
-      relatedInteractionStatus: 'planned',
+      relatedInteractionStatus: 'new',
     }]);
   });
 
@@ -319,12 +321,12 @@ describe('parseActorCrmSnapshot', () => {
       actor: { id: 'a1', display_name: 'Mme Jocelyne Lebon', gender: 'Mme', first_name: 'Jocelyne', last_name: 'Lebon' },
       objects: [{ object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes', object_type: 'HLO', role_code: 'operator', role_name: 'Exploitant', is_primary: true }],
       interactions: [
-        { id: 'i1', interaction_type: 'note', direction: 'internal', status: 'planned',
+        { id: 'i1', interaction_type: 'note', direction: 'internal', status: 'new',
           subject: 'Note interne', body: 'corps', occurred_at: '2026-04-16T00:00:00+00:00',
           created_at: '2026-05-01T09:24:21Z', object_id: 'HLORUN00000000QB', object_name: 'Les Palmistes',
           topic_code: 'accompagnement_taxe_sejour', topic_name: 'Accompagnement Taxe de séjour',
           sentiment_code: 'interrogatif', sentiment_name: 'Interrogatif', owner_name: null, source: 'import_berta2_crm' },
-        { id: 'i2', interaction_type: 'call', direction: 'outbound', status: 'done',
+        { id: 'i2', interaction_type: 'call', direction: 'outbound', status: 'resolved',
           subject: 'Vœux annuels', body: null, occurred_at: '2026-01-08T00:00:00+00:00',
           object_id: null, object_name: null, topic_code: null, topic_name: null,
           sentiment_code: null, sentiment_name: null, owner_name: 'Florence', source: 'bertel_ui' },
@@ -388,7 +390,7 @@ describe('parseCrmInteraction — contexte objet nullable (§61)', () => {
   it('une interaction sans objet (générale) garde objectId/objectName null', () => {
     const interaction = parseCrmInteraction({
       id: 'i1', object_id: null, object_name: null, interaction_type: 'call',
-      direction: 'outbound', status: 'done', subject: 'Vœux', body: null,
+      direction: 'outbound', status: 'resolved', subject: 'Vœux', body: null,
       occurred_at: '2026-01-08T00:00:00Z',
     });
     expect(interaction.objectId).toBeNull();
@@ -754,7 +756,7 @@ describe('parseContactSuggestion / listObjectContactSuggestions', () => {
   });
 });
 
-// Timeline filtrable (PO points 6+7) — signature 7→9 args : p_status (active=planned/done) +
+// Timeline filtrable (PO points 6+7) — signature 7→9 args : p_status (active = famille ouverte / done = famille fermée) +
 // p_from en ARGUMENTS NOMMÉS. Toutes + Tout (status/from absents) = timeline complète.
 describe('listCrmTimeline — filtres statut/période (args nommés)', () => {
   const initialDemoMode = useSessionStore.getState().demoMode;
@@ -910,20 +912,20 @@ describe('saveCrmInteraction — réponse (parentInteractionId) + bascule de sta
     });
   });
 
-  // « Marquer traitée » : save({id, status:'done'}) — le serveur pose resolved_at.
+  // Clôture par le sélecteur : save({id, status:resolved}) — le serveur pose resolved_at.
   it('bascule « traitée » → { id, status: done }', async () => {
     useSessionStore.setState({ demoMode: false });
     const rpc = fakeRpcClient({ id: 'root-1' });
-    await saveCrmInteraction({ id: 'root-1', status: 'done' });
-    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'done' } });
+    await saveCrmInteraction({ id: 'root-1', status: 'resolved' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'resolved' } });
   });
 
-  // « Rouvrir » : save({id, status:'planned'}) — le serveur efface resolved_at.
-  it('bascule « rouvrir » → { id, status: planned }', async () => {
+  // Réouverture par le sélecteur : save({id, status:new}) — le serveur efface resolved_at.
+  it('réouverture par le sélecteur → { id, status: new }', async () => {
     useSessionStore.setState({ demoMode: false });
     const rpc = fakeRpcClient({ id: 'root-1' });
-    await saveCrmInteraction({ id: 'root-1', status: 'planned' });
-    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'planned' } });
+    await saveCrmInteraction({ id: 'root-1', status: 'new' });
+    expect(rpc).toHaveBeenCalledWith('save_crm_interaction', { p_payload: { id: 'root-1', status: 'new' } });
   });
 });
 
@@ -1166,5 +1168,75 @@ describe('saveActorChannel — visibilité du canal (17e)', () => {
       ],
     });
     expect(snapshot.channels.map((c) => c.isPublic)).toEqual([true, false, false, false]);
+  });
+});
+
+describe('listCrmStatusEvents — journal de transitions (manifeste 17g)', () => {
+  const initialDemoMode = useSessionStore.getState().demoMode;
+  afterEach(() => {
+    useSessionStore.setState({ demoMode: initialDemoMode });
+    mockedGetApiClient.mockReset();
+  });
+
+  it('deballe l’ENVELOPPE { events } — un tableau nu rendrait [] en silence', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = fakeRpcClient({
+      events: [
+        { from_status: null, to_status: 'new', changed_at: '2026-08-01T10:00:00Z', changed_by_label: 'David Philippe' },
+        { from_status: 'new', to_status: 'awaiting_provider', changed_at: '2026-08-05T09:00:00Z', changed_by_label: null },
+      ],
+    });
+
+    const events = await listCrmStatusEvents('int-1');
+
+    expect(rpc).toHaveBeenCalledWith('list_crm_status_events', { p_interaction_id: 'int-1' });
+    expect(events).toHaveLength(2);
+    expect(events[0]).toEqual({
+      fromStatus: null, toStatus: 'new',
+      changedAt: '2026-08-01T10:00:00Z', changedByLabel: 'David Philippe',
+    });
+    // changedByLabel null = tout l’historique anterieur a la bascule. Ne pas le replier sur
+    // une chaine vide : « pas d’auteur connu » et « auteur sans nom » ne sont pas la meme chose.
+    expect(events[1].changedByLabel).toBeNull();
+  });
+
+  it('rend [] quand la RPC ne renvoie pas d’enveloppe, sans jeter', async () => {
+    useSessionStore.setState({ demoMode: false });
+    fakeRpcClient(null);
+    await expect(listCrmStatusEvents('int-1')).resolves.toEqual([]);
+  });
+
+  it('propage l’erreur RPC au lieu de l’avaler', async () => {
+    useSessionStore.setState({ demoMode: false });
+    const rpc = jest.fn(async () => ({ data: null, error: new Error('42501') }));
+    mockedGetApiClient.mockReturnValue({ schema: jest.fn(() => ({ rpc })) } as unknown as ReturnType<typeof getApiClient>);
+    await expect(listCrmStatusEvents('int-1')).rejects.toThrow('42501');
+  });
+
+  it('en mode demo, ne fabrique AUCUN journal', async () => {
+    useSessionStore.setState({ demoMode: true });
+    await expect(listCrmStatusEvents('int-1')).resolves.toEqual([]);
+    expect(mockedGetApiClient).not.toHaveBeenCalled();
+  });
+});
+
+describe('awaitingSinceOf', () => {
+  const ev = (toStatus: string, changedAt: string) => ({
+    fromStatus: null, toStatus, changedAt, changedByLabel: null,
+  });
+
+  it('rend la date du DERNIER passage en attente prestataire', () => {
+    expect(
+      awaitingSinceOf([
+        ev('awaiting_provider', '2026-08-01T00:00:00Z'),
+        ev('in_progress', '2026-08-03T00:00:00Z'),
+        ev('awaiting_provider', '2026-08-10T00:00:00Z'),
+      ]),
+    ).toBe('2026-08-10T00:00:00Z');
+  });
+
+  it('rend null quand la demande n’est jamais passee en attente — le cas de tout l’historique d’avant 17g', () => {
+    expect(awaitingSinceOf([ev('new', '2026-08-01T00:00:00Z'), ev('resolved', '2026-08-02T00:00:00Z')])).toBeNull();
+    expect(awaitingSinceOf([])).toBeNull();
   });
 });

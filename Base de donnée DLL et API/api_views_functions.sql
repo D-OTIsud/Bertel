@@ -10287,11 +10287,17 @@ SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
 AS $$
   WITH interactions AS (
     SELECT count(*)::int AS n
-    FROM   crm_interaction
-    WHERE  resolved_at IS NULL
-      AND  status::text <> 'done'
+  -- ⚠ Bloc reproduit MOT POUR MOT — INDENTATION COMPRISE — depuis le point 5 de
+  -- api.capture_metric_snapshots. L'indentation « plate » au milieu du CTE est DÉLIBÉRÉE :
+  -- c'est ce qui rend l'identité des deux prédicats vérifiable par comparaison littérale des
+  -- deux `prosrc` (test 17g, bloc B). Ne pas « ré-aligner ».
+  FROM crm_interaction
+  WHERE resolved_at IS NULL
+    AND status = ANY (ARRAY['new','in_progress','awaiting_provider']::crm_status[])
   ),
   tasks AS (
+    -- ⚠ VOCABULAIRE DES TÂCHES (crm_task_status), PAS celui des demandes. Ces cinq lignes ne
+    -- bougent PAS avec le cycle de vie des demandes : `in_progress` est ici un statut de TÂCHE.
     SELECT count(*)::int AS n
     FROM   crm_task
     WHERE  status::text IN ('todo', 'in_progress', 'blocked')
@@ -10306,11 +10312,13 @@ $$;
 
 COMMENT ON FUNCTION api.get_dashboard_crm_open IS
 'Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d''attention du bandeau.
-open_interactions reprend le prédicat exact de crm_backlog (api.capture_metric_snapshots) :
-resolved_at IS NULL AND status <> ''done''. open_tasks = crm_task en todo/in_progress/blocked
-(canceled et done exclus — une tâche annulée n''est pas du travail en attente).
-GLOBAL par décision produit (2026-08-30) : la carte est un signal stable « ce qui m''attend
-aujourd''hui », elle n''obéit pas au panneau de filtres. N''émet aucune PII (trois entiers).';
+open_interactions reprend le prédicat exact de crm_backlog (api.capture_metric_snapshots) : la
+liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et resolved_at
+IS NULL. open_tasks = crm_task en todo/in_progress/blocked (les statuts terminaux de TÂCHE sont
+exclus — une tâche annulée n''est pas du travail en attente ; vocabulaire crm_task_status,
+distinct de celui des demandes). GLOBAL par décision produit (2026-08-30) : la carte est un
+signal stable « ce qui m''attend aujourd''hui », elle n''obéit pas au panneau de filtres.
+N''émet aucune PII (trois entiers). Manifeste 17g.';
 
 -- §204 — EXECUTE est accordé à PUBLIC par défaut sur toute fonction neuve ; un GRANT ciblé
 -- ne le retire pas. Le REVOKE est obligatoire, dans cet ordre.
@@ -10412,10 +10420,15 @@ BEGIN
   WHERE f.code='accessibility'
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
 
-  -- 5. Backlog CRM (provisoire jusqu'à Brique 3 : non résolu ET statut <> 'done')
+  -- 5. Backlog CRM — liste positive TYPÉE des statuts ouverts (cycle de vie §6.1). Identique
+  --    MOT POUR MOT au prédicat de get_dashboard_crm_open : la carte et la courbe comptent la
+  --    même chose. L'INDENTATION FAIT PARTIE DE L'IDENTITÉ — le test 17g compare les deux
+  --    `prosrc` sur ce bloc EXACT ; ne pas ré-indenter d'un côté sans l'autre.
   INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
   SELECT p_date,'global','','crm_backlog',count(*),NULL
-  FROM crm_interaction WHERE resolved_at IS NULL AND status::text <> 'done'
+  FROM crm_interaction
+  WHERE resolved_at IS NULL
+    AND status = ANY (ARRAY['new','in_progress','awaiting_provider']::crm_status[])
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
 
   SELECT count(*) INTO v_rows FROM public.metric_snapshot WHERE snapshot_date=p_date;
@@ -10425,7 +10438,12 @@ END$fn$;
 COMMENT ON FUNCTION api.capture_metric_snapshots(date) IS
 'Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent).
 Complétude via api.get_dashboard_completeness (pool publié), corpus net (tous statuts), classés
-(granted, global+commune), couverture durable/accessibilité, backlog CRM (provisoire avant Brique 3).
+(granted, global+commune), couverture durable/accessibilité, backlog CRM.
+crm_backlog = liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et
+resolved_at IS NULL — prédicat identique MOT POUR MOT à celui de api.get_dashboard_crm_open, sans
+quoi la carte du bandeau et la courbe de l''onglet Activité afficheraient deux chiffres pour la
+même réalité. Une comparaison EN TEXTE y serait une panne muette : elle survivrait à tout
+renommage du vocabulaire en se réduisant à resolved_at IS NULL (manifeste 17g).
 Exécutée par le cron quotidien capture-metric-snapshots.';
 
 REVOKE ALL ON FUNCTION api.capture_metric_snapshots(date) FROM PUBLIC, anon;

@@ -222,7 +222,13 @@ BEGIN
     FROM pg_type
     WHERE typname = 'crm_status'
   ) THEN
-    CREATE TYPE crm_status AS ENUM ('planned','done','canceled');
+    -- Cycle de vie des DEMANDES (manifeste 17g). Ne pas confondre avec `crm_task_status`
+    -- douze lignes plus bas, qui porte sur les TÂCHES et partage `in_progress`/`canceled` :
+    -- les deux vocabulaires se ressemblent et ne se remplacent JAMAIS l'un l'autre.
+    -- OUVERTS : new, in_progress, awaiting_provider (temps déduit du traitement net).
+    -- FERMÉS  : resolved, closed, canceled.
+    CREATE TYPE crm_status AS ENUM
+      ('new','in_progress','awaiting_provider','resolved','closed','canceled');
   END IF;
 END $$;
 
@@ -2202,8 +2208,9 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   parent_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE CASCADE,
   interaction_type crm_interaction_type NOT NULL DEFAULT 'note',
   direction crm_direction NOT NULL DEFAULT 'internal',
-  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done', ce qui faisait naître
-  -- « traitée » toute demande créée sans statut explicite. Le remplacer par 'planned' aurait
+  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done' — ANCIEN vocabulaire,
+  -- aujourd'hui 'resolved' (17g) — ce qui faisait naître « traitée » toute demande créée sans
+  -- statut explicite. Le remplacer par 'planned' (aujourd'hui 'new') aurait
   -- contredit la règle par-sujet de `api.save_crm_interaction` pour toute écriture DIRECTE ;
   -- l'absence de défaut, la colonne étant NOT NULL, fait ÉCHOUER une écriture directe sans
   -- statut au lieu de deviner. Les 3 seules fonctions qui insèrent ici passent toutes `status`
@@ -3246,7 +3253,7 @@ BEGIN
     NEW.object_id,
     'note',
     'internal',
-    'done',
+    'resolved',                    -- DEMANDE (crm_status, 17g) : la note de journal EST écrite.
     'Incident report received',
     COALESCE(NEW.description, 'No details provided'),
     'incident_report',
@@ -3272,7 +3279,7 @@ BEGIN
     NEW.object_id,
     'Maintenance incident to review',
     COALESCE(NEW.description, 'No details provided'),
-    'todo',
+    'todo',                        -- TÂCHE (crm_task_status) : INTOUCHÉ par 17g.
     v_priority,
     v_interaction_id,
     jsonb_build_object(
@@ -3382,7 +3389,7 @@ BEGIN
       NEW.object_id,
       'email',
       'outbound',
-      'done',
+      'resolved',                  -- le BAT EST parti : rien n'est en attente côté équipe (17g).
       'Proof sent for publication',
       'A PDF proof was sent for publication workflow.',
       'publication_workflow',
@@ -6658,6 +6665,64 @@ CREATE TRIGGER update_user_permission_updated_at
 
 -- Run audit attachment after all table creations (including late sections).
 SELECT audit.attach_missing_triggers();
+
+-- =====================================================
+-- Journal des transitions de statut d'une demande CRM (manifeste 17g) — FOLD de
+-- `migration_crm_lifecycle.sql`, corps identique.
+-- Placed AFTER attach_missing_triggers() ON PURPOSE, même précédent que gdpr_erasure_log
+-- ci-dessous : crm_interaction_status_event ne doit PAS porter de trigger d'audit sur un fresh
+-- apply, pour matcher la production (où la migration 17g n'a pas re-déclenché attach). Doctrine
+-- §61 : cette table porte SON PROPRE trigger append-only (trg_crm_interaction_status_event),
+-- RLS ON, ZÉRO policy, ZÉRO grant applicatif — un trigger d'audit ne serait pas dangereux (le
+-- journal est append-only) mais y ajouter en fresh apply ce que la production n'a jamais eu est
+-- une divergence évitable, pas un renfort.
+-- Il vit ICI et pas seulement dans la migration parce qu'un `schema_unified.sql` passé aux six
+-- valeurs SANS le journal ni les deux triggers d'écriture traduits donnerait un fresh apply
+-- VERT dont le premier incident lèverait 22P02.
+-- Il rend calculable le temps de traitement NET : l'attente prestataire (awaiting_provider) est
+-- déduite, parce qu'un indicateur ne doit mesurer que ce que l'équipe maîtrise.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.crm_interaction_status_event (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  interaction_id uuid NOT NULL REFERENCES public.crm_interaction(id) ON DELETE CASCADE,
+  from_status    crm_status,          -- NULL = création
+  to_status      crm_status NOT NULL,
+  changed_at     timestamptz NOT NULL DEFAULT now(),
+  -- Attribution d'ÉQUIPE (auth.uid()), même classe de rétention que audit_log.changed_by ;
+  -- hors périmètre de rpc_gdpr_erase_subject (acteurs/déclarants), décision spec §10.5.
+  changed_by     uuid
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_status_event_interaction
+  ON public.crm_interaction_status_event (interaction_id, changed_at);
+
+-- Doctrine §61 : RLS ON, ZÉRO POLICY, AUCUN GRANT applicatif — la lecture passe uniquement par
+-- le RPC DEFINER `api.list_crm_status_events`, jamais par PostgREST en direct.
+ALTER TABLE public.crm_interaction_status_event ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.crm_interaction_status_event FROM PUBLIC, anon, authenticated;
+
+-- SECURITY DEFINER : le trigger écrit dans une table à RLS activée et sans policy ; sans
+-- DEFINER, toute écriture depuis un rôle applicatif serait refusée et le journal serait
+-- silencieusement vide.
+CREATE OR REPLACE FUNCTION api.log_crm_interaction_status_event()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, NULL, NEW.status, auth.uid());
+  ELSIF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, OLD.status, NEW.status, auth.uid());
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_crm_interaction_status_event ON public.crm_interaction;
+CREATE TRIGGER trg_crm_interaction_status_event
+  AFTER INSERT OR UPDATE OF status ON public.crm_interaction
+  FOR EACH ROW EXECUTE FUNCTION api.log_crm_interaction_status_event();
 
 -- =====================================================
 -- RGPD Art. 17 — effacement / anonymisation (folded from migration_gdpr_erasure.sql, runbook 14j)

@@ -333,10 +333,10 @@ BEGIN
     ASSERT v_denied, 'D4b: un élément non-uuid doit être refusé (22023)';
 
     -- H1. Non-régression §66 : interaction liée inconnue / d'un autre établissement.
-    -- statut OUVERT explicite : sans lui l'interaction naît déjà « done » et l'assertion H3
+    -- statut OUVERT explicite : sans lui l'interaction naît déjà « resolved » et l'assertion H3
     -- (« terminer la tâche ne clôture pas l'interaction ») serait vraie sans rien prouver.
     v_payload := api.save_crm_interaction(jsonb_build_object(
-      'object_id', v_objA, 'interaction_type','call','body','Appel 16z','status','planned'));
+      'object_id', v_objA, 'interaction_type','call','body','Appel 16z','status','new'));
     v_int_id := (v_payload->>'id')::uuid;
     v_payload := api.save_crm_interaction(jsonb_build_object(
       'object_id', v_objA2, 'interaction_type','call','body','Appel 16z autre objet'));
@@ -366,9 +366,9 @@ BEGIN
   -- permission (les deux tables 16z n'ont AUCUN grant), et l'assertion serait vide.
   --
   -- H3 (prémisse) : l'interaction témoin est bien OUVERTE avant qu'on termine la tâche.
-  -- Sans cette prémisse, « elle n'est pas done à la fin » serait vrai sans rien prouver
-  -- (le défaut de save_crm_interaction est justement 'done').
-  ASSERT (SELECT status::text FROM crm_interaction WHERE id=v_int_id) = 'planned',
+  -- Sans cette prémisse, « elle n'est pas fermée à la fin » serait vrai sans rien prouver
+  -- (le défaut de save_crm_interaction est justement un statut TERMINAL, 'resolved' depuis 17g).
+  ASSERT (SELECT status::text FROM crm_interaction WHERE id=v_int_id) = 'new',
          'H3 (prémisse): l''interaction témoin doit être OUVERTE avant la probe';
 
   -- C1 — auto-assignation + provenance.
@@ -526,7 +526,7 @@ BEGIN
       'id', v_t_self::text, 'related_interaction_id', v_int_id::text));
     PERFORM api.save_crm_task(jsonb_build_object('id', v_t_self::text, 'status', 'done'));
   RESET ROLE;
-  ASSERT (SELECT status::text FROM crm_interaction WHERE id=v_int_id) = 'planned',
+  ASSERT (SELECT status::text FROM crm_interaction WHERE id=v_int_id) = 'new',
          'H3: terminer une tâche liée ne doit JAMAIS toucher au statut de l''interaction '
          '(la clôture reste un geste explicite de l''UI, jamais un effet de bord du save)';
   -- B6 (suite) : la tâche sans créateur porte bien une provenance d'assignation, et le

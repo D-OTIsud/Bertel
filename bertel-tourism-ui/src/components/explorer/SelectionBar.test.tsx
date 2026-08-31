@@ -20,7 +20,7 @@ describe('SelectionBar — barre adaptative', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useExplorerStore.setState({ selectedObjectIds: [], visibleObjectIds: [] });
-    useSessionStore.setState({ canEditObjects: true });
+    useSessionStore.setState({ canEditObjects: true, role: 'super_admin' });
   });
 
   it('sans sélection : seuls le compteur et « Sélection » existent (pas de CTA qui déborde)', () => {
@@ -89,5 +89,24 @@ describe('SelectionBar — barre adaptative', () => {
     useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
     render(<SelectionBar />);
     expect(screen.queryByRole('button', { name: /E-mails/ })).toBeNull();
+  });
+});
+
+// 17l — « Créer une liste » est réservé au superuser plateforme : `api.create_list` rend 42501
+// pour tout le monde d'autre. Le bouton doit DISPARAÎTRE, pas échouer après le clic.
+describe('SelectionBar — création de liste réservée au superuser (17l)', () => {
+  it('un membre ordinaire ne voit pas « Créer une liste », mais garde les autres actions', () => {
+    useSessionStore.setState({ canEditObjects: true, role: 'tourism_agent' });
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1', 'obj-2'] });
+    render(<SelectionBar />);
+    expect(screen.queryByRole('button', { name: /Créer une liste/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Imprimer/ })).toBeInTheDocument();
+  });
+
+  it('un superuser plateforme le voit', () => {
+    useSessionStore.setState({ canEditObjects: true, role: 'super_admin' });
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
+    render(<SelectionBar />);
+    expect(screen.getByRole('button', { name: /Créer une liste/ })).toBeInTheDocument();
   });
 });

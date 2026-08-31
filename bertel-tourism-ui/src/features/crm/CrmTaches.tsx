@@ -30,9 +30,9 @@ import {
   type TaskDateRange,
 } from './crm-task-filters';
 
-// §66 — une interaction « clôturable » : ni déjà traitée ni annulée. Le prompt de clôture ne
-// se déclenche que pour ces statuts (pas de proposition redondante).
-const CLOSED_INTERACTION_STATUSES = new Set(['done', 'canceled']);
+// §66 — une interaction « clôturable » : ni traitée, ni clôturée, ni annulée. Jeu partagé
+// bilingue (crm-status.ts) : le prompt reste juste avant ET après la bascule de vocabulaire.
+import { CLOSED_INTERACTION_STATUSES } from './crm-status';
 
 // 3 colonnes = les 3 statuts actifs du cycle de vie (canceled/blocked restent signalés
 // par le chip, jamais masqués en silence). cls pilote la couleur du dot + du liseré.

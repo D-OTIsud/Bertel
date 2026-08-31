@@ -1,56 +1,47 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, authorizeTask, resolveLinkedDocument } from '../authorize';
 
 // URL signée (60 s) d'une pièce jointe de tâche CRM (17i) — clone d'actor-document/url :
 // gate « en tant qu'appelant » via le RPC d'écriture (voir route.ts : les trois verbes
 // documents partagent le même prédicat, il n'y a pas de surface lecture seule ici), lecture
 // du chemin storage en service_role (RLS interdit toute lecture directe des tables CRM par
 // l'appelant), URL signée émise par le service_role.
-const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+//
+// C'est la route qui DÉLIVRE l'accès au fichier privé : tout ce qui la garde vit dans
+// ../authorize, partagé avec route.ts, et est asservi par url/route.test.ts.
+
+/** Durée de validité de l'URL signée, en secondes. Volontairement courte : le lien sort
+ *  du périmètre gaté dès qu'il est émis (il s'ouvre sans JWT), une fenêtre large en
+ *  ferait un droit d'accès durable et transférable au fichier privé. */
+const SIGNED_URL_TTL_SECONDS = 60;
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  const server = getServerSupabaseClient();
-  if (!server) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 });
-  const authHeader = req.headers.get('authorization') ?? '';
-  const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-  if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
-  const { data: userData, error: userError } = await server.auth.getUser(jwt);
-  if (userError || !userData.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+  const auth = await authenticated(req);
+  if (!auth.ok) return auth.response;
   let body: { taskId?: string; documentId?: string };
   try { body = await req.json() as typeof body; } catch { return NextResponse.json({ error: 'bad_json' }, { status: 400 }); }
   const taskId = body.taskId ?? '';
   const documentId = body.documentId ?? '';
   if (!UUID_SHAPE.test(taskId) || !UUID_SHAPE.test(documentId)) return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
 
-  const asCaller = createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
-  const { data: canWrite, error: gateError } = await asCaller
-    .schema('api')
-    .rpc('user_can_write_crm_task', { p_task_id: taskId });
-  if (gateError || canWrite !== true) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  // Le gate PRÉCÈDE toute lecture et toute signature : un appelant sans droit d'écriture
+  // sur la tâche ne doit pas même provoquer de résolution du document, encore moins
+  // d'émission d'URL.
+  if (!await authorizeTask(auth.jwt, taskId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  // Vérifié sur LA PAIRE (task_id, document_id) : un documentId valide mais rattaché à une
-  // autre tâche que celle gatée ci-dessus ne doit jamais produire d'URL signée.
-  const { data: link } = await server.from('crm_task_document')
-    .select('document_id')
-    .eq('task_id', taskId)
-    .eq('document_id', documentId)
-    .maybeSingle();
-  if (!link) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  const { data: document } = await server.from('ref_document')
-    .select('storage_bucket, storage_path')
-    .eq('id', documentId)
-    .maybeSingle();
-  const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');
-  const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
-  if (!bucket || !path) return NextResponse.json({ error: 'file_missing' }, { status: 404 });
-  const { data, error } = await server.storage.from(bucket).createSignedUrl(path, 60);
+  const resolved = await resolveLinkedDocument(auth.server, taskId, documentId);
+  if (!resolved.ok) return resolved.response;
+  // Contrairement à la suppression, une ligne sans chemin storage n'a rien à offrir ici :
+  // 404 plutôt qu'une signature sur un chemin vide.
+  if (!resolved.storagePath) return NextResponse.json({ error: 'file_missing' }, { status: 404 });
+
+  // Bucket ÉPINGLÉ (constante), jamais celui porté par la ligne : le service_role signe,
+  // il ne doit pouvoir signer que dans le bucket privé des pièces jointes.
+  const { data, error } = await auth.server.storage
+    .from(PRIVATE_BUCKET)
+    .createSignedUrl(resolved.storagePath, SIGNED_URL_TTL_SECONDS);
   if (error || !data?.signedUrl) return NextResponse.json({ error: 'signed_url_failed', detail: error?.message }, { status: 500 });
   return NextResponse.json({ url: data.signedUrl });
 }

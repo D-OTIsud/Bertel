@@ -101,6 +101,7 @@ export function CrmTaskModal({
   const assignees = assigneesQuery.data ?? [];
 
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   // Auto-sélection PO point 3 : en mode select avec UN SEUL établissement, on le pré-coche
   // (le champ est requis ⇒ formulaire plus proche du submit). Sinon vide (choix explicite).
   const [objectId, setObjectId] = useState(() => {
@@ -134,6 +135,8 @@ export function CrmTaskModal({
         // Clé ABSENTE quand il n'y a pas de lien : le RPC lit `payload ? 'related_interaction_id'`,
         // une clé présente à '' vaudrait un détachement explicite.
         ...(relatedInteractionId ? { relatedInteractionId } : {}),
+        // Clé ABSENTE quand vide à la création : ne rien écrire ≠ écrire un effacement.
+        ...(description.trim() ? { description: description.trim() } : {}),
         title: title.trim(),
         dueAt: dueAt || null,
         assigneeIds: selectedAssignees,
@@ -177,6 +180,17 @@ export function CrmTaskModal({
           placeholder="Titre de la tâche"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
+        />
+      </label>
+
+      <label className="crm-field">
+        Description
+        <textarea
+          aria-label="Description de la tâche"
+          placeholder="Décrire la tâche (optionnel)"
+          rows={3}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
         />
       </label>
 

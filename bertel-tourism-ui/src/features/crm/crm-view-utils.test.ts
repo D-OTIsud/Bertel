@@ -12,6 +12,7 @@ import {
   pavTintOf,
   taskGroupOf,
   tlIcoClassOf,
+  toDateInputValue,
   topicTintOf,
   TOPIC_TINT_COUNT,
 } from './crm-view-utils';
@@ -154,6 +155,47 @@ describe('formats date', () => {
   it('formatShort → JJ/MM/AAAA, null → —', () => {
     expect(formatShort('2026-06-01T08:00:00Z')).toBe('01/06/2026');
     expect(formatShort(null)).toBe('—');
+  });
+
+  // M4 — le modal d'édition pré-remplissait son champ d'échéance par `dueAt.slice(0, 10)`,
+  // c'est-à-dire la date UTC, alors que la carte kanban rend la même valeur en heure LOCALE.
+  // À UTC+4 (La Réunion), une due_at entre 20:00Z et 24:00Z fait afficher J+1 par la carte et
+  // J par le modal — et enregistrer PERSISTE l'écart.
+  describe('toDateInputValue — même fuseau que l’affichage de la carte', () => {
+    it('rend une valeur d’input valide et cohérente avec formatShort, quelle que soit l’heure', () => {
+      // L'INVARIANT, pas une constante : les deux surfaces doivent dater le même instant
+      // dans le même fuseau. Vrai dans tous les fuseaux, y compris UTC.
+      for (const iso of ['2026-09-15T00:00:00Z', '2026-09-15T21:30:00Z', '2026-09-15T12:00:00Z']) {
+        const [jour, mois, annee] = formatShort(iso).split('/');
+        expect(toDateInputValue(iso)).toBe(`${annee}-${mois}-${jour}`);
+      }
+    });
+
+    it('DANS LA FENÊTRE À RISQUE : la date locale l’emporte sur la date UTC', () => {
+      // Témoins CONSTRUITS depuis le fuseau du runtime, jamais des littéraux : un ISO écrit en
+      // dur ne serait discriminant que dans le fuseau où il a été écrit, et passerait au vert
+      // ailleurs en ne prouvant rien. 00:30 local mord à l'est de UTC (La Réunion, la cible),
+      // 23:30 local mord à l'ouest ; sous UTC pile les deux sont vacants — mais la panne
+      // n'existe pas non plus dans ce fuseau, la garde ne mord donc que là où elle a un objet.
+      const minuitTrente = new Date(2026, 8, 16, 0, 30, 0); // 16/09/2026 00:30 LOCAL
+      expect(toDateInputValue(minuitTrente.toISOString())).toBe('2026-09-16');
+      const veilleTard = new Date(2026, 8, 15, 23, 30, 0); // 15/09/2026 23:30 LOCAL
+      expect(toDateInputValue(veilleTard.toISOString())).toBe('2026-09-15');
+      // Et l'ancien comportement (`slice(0, 10)`) est bien celui qui divergeait : hors UTC,
+      // l'un des deux témoins au moins porte une date UTC différente de sa date locale.
+      const offset = new Date(2026, 8, 16).getTimezoneOffset();
+      if (offset !== 0) {
+        const temoin = offset < 0 ? minuitTrente : veilleTard;
+        expect(temoin.toISOString().slice(0, 10)).not.toBe(toDateInputValue(temoin.toISOString()));
+      }
+    });
+
+    it('valeur absente ou illisible → chaîne vide (jamais une valeur qu’un input date ignore)', () => {
+      expect(toDateInputValue(null)).toBe('');
+      expect(toDateInputValue(undefined)).toBe('');
+      expect(toDateInputValue('')).toBe('');
+      expect(toDateInputValue('pas-une-date')).toBe('');
+    });
   });
 
   it('formatRelative — minutes, heures, jours, semaines, mois', () => {

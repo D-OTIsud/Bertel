@@ -2,6 +2,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaches } from './CrmTaches';
+import { toDateInputValue } from './crm-view-utils';
 import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
 import { useSessionStore } from '../../store/session-store';
@@ -752,7 +753,12 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(screen.getByLabelText('Titre de la tâche')).toHaveValue(clicked.title);
     // Échéance : second témoin discriminant — task-doing (iso(0)) diffère de task-late
     // (iso(-2), première entrée de `tasks`), donc un retour à `tasks[0]` rougirait aussi ici.
-    expect(screen.getByLabelText('Échéance')).toHaveValue(clicked.dueAt!.slice(0, 10));
+    // L'attente passe par `toDateInputValue` et non par `slice(0, 10)` : depuis M4, le modal
+    // date l'échéance dans le fuseau d'AFFICHAGE (local), et `iso(0)` — construit sur
+    // `Date.now()` — porte une date UTC différente de sa date locale chaque fois que le test
+    // tourne entre minuit et 04:00 à La Réunion. La discrimination est intacte (les deux
+    // témoins restent à deux jours d'écart), la dépendance à l'heure de passage disparaît.
+    expect(screen.getByLabelText('Échéance')).toHaveValue(toDateInputValue(clicked.dueAt));
   });
 
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {

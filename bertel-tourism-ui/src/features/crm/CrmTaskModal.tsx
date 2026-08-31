@@ -22,6 +22,7 @@ import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../.
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
+import { toDateInputValue } from './crm-view-utils';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
@@ -134,7 +135,11 @@ export function CrmTaskModal({
     if (fixedObject) return fixedObject.objectId;
     return picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '';
   });
-  const [dueAt, setDueAt] = useState(task?.dueAt ? task.dueAt.slice(0, 10) : '');
+  // Pré-remplissage de l'échéance DANS LE FUSEAU D'AFFICHAGE DE LA CARTE, jamais en UTC.
+  // `dueAt.slice(0, 10)` prenait la date UTC de l'horodatage alors que la carte kanban la rend
+  // en heure locale (`formatShort`) : à UTC+4, une `due_at` entre 20:00Z et 24:00Z faisait
+  // afficher J+1 par la carte et J par le modal — et enregistrer PERSISTAIT l'écart.
+  const [dueAt, setDueAt] = useState(() => toDateInputValue(task?.dueAt));
   // 16w — `null` = « l'utilisateur n'a encore rien choisi », distinct de `[]` = « il a tout
   // décoché ». La sélection effective est DÉRIVÉE : le défaut s'applique donc même si la
   // liste des assignables arrive APRÈS l'ouverture du modal (aucune sélection perdue), et

@@ -147,6 +147,33 @@ export function formatShort(value: string | null): string {
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(ts));
 }
 
+/**
+ * `AAAA-MM-JJ` pour un `<input type="date">`, dérivé DANS LE MÊME FUSEAU que `formatShort`.
+ *
+ * POURQUOI CETTE FONCTION EXISTE. Le modal d'édition pré-remplissait son champ d'échéance
+ * par `task.dueAt.slice(0, 10)`, c'est-à-dire la date **UTC** de l'horodatage, alors que la
+ * carte kanban rend la même valeur par `formatShort`, qui n'impose aucun `timeZone` et
+ * s'affiche donc en heure **locale**. La Réunion étant à UTC+4, une `due_at` entre 20:00Z et
+ * 24:00Z fait afficher J+1 par la carte et J par le modal — et **enregistrer persiste le
+ * décalage** (`save_crm_task` accepte des heures, la valeur écrite est bien celle du champ).
+ * La fenêtre est étroite mais réelle, et la divergence est silencieuse : deux surfaces qui
+ * lisent la MÊME donnée doivent la dater dans le MÊME fuseau.
+ *
+ * Les accesseurs `getFullYear/getMonth/getDate` sont LOCAUX, exactement comme le formateur
+ * `Intl` sans `timeZone` de `formatShort` : la parité des deux surfaces est structurelle,
+ * pas une coïncidence de constantes recopiées. `''` sur valeur absente ou illisible — un
+ * `<input type="date">` n'accepte que le format exact, une valeur douteuse y serait ignorée
+ * en silence par le navigateur.
+ */
+export function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return '';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return '';
+  const date = new Date(ts);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** Date relative compacte (« il y a 5 sem. ») pour l'annuaire et la fiche. */
 export function formatRelative(value: string | null, now: Date = new Date()): string {
   if (!value) return '—';

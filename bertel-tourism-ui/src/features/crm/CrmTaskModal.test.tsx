@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaskModal } from './CrmTaskModal';
+import { toDateInputValue } from './crm-view-utils';
 
 jest.mock('../../services/crm', () => ({
   listCrmAssignees: jest.fn().mockResolvedValue([
@@ -92,6 +93,24 @@ describe('CrmTaskModal — édition', () => {
     expect(screen.getByLabelText('Échéance')).toHaveValue('2026-09-15');
     expect(screen.getByText('Hôtel Test')).toBeInTheDocument(); // static, pas un picker
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+  });
+
+  // M4 — le pré-remplissage était `task.dueAt.slice(0, 10)`, c'est-à-dire la date UTC, alors
+  // que la carte kanban rend la même valeur en heure LOCALE (`formatShort`). À UTC+4 (La
+  // Réunion), une due_at entre 20:00Z et 24:00Z faisait afficher J+1 par la carte et J par le
+  // modal — et enregistrer PERSISTAIT l'écart, `save_crm_task` acceptant bien des heures.
+  it("échéance dans la FENÊTRE À RISQUE : le champ suit le fuseau d'affichage de la carte", async () => {
+    // Témoin construit depuis le fuseau du runtime, jamais un ISO littéral : écrit en dur, il
+    // ne serait discriminant que dans le fuseau où il a été écrit et passerait au vert
+    // ailleurs sans rien prouver. 00:30 LOCAL le 16/09 vaut 20:30Z le 15/09 à UTC+4 — c'est
+    // exactement la fenêtre où `slice(0, 10)` rendait la veille.
+    const minuitTrenteLocal = new Date(2026, 8, 16, 0, 30, 0);
+    renderModal({
+      task: { ...taskFixture, dueAt: minuitTrenteLocal.toISOString() },
+      objectOptions: [],
+    });
+    expect(screen.getByLabelText('Échéance')).toHaveValue(toDateInputValue(minuitTrenteLocal.toISOString()));
+    expect(screen.getByLabelText('Échéance')).toHaveValue('2026-09-16');
   });
 
   it("soumet id + description (y compris vidée → '')", async () => {

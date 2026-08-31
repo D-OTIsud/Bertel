@@ -81,11 +81,11 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                 >
                   <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}
                 </button>
-                {/* D4 (2026-08-28) — l'écran ne montrait pas l'accès qui compte le plus. Un rôle
-                    d'administration d'ORG ouvre TOUTE l'écriture CRM et le statut superuser ouvre
-                    tout, indépendamment des permissions : en production, les 6 Éditeurs tiennent
-                    leurs droits CRM de leur rôle, pas de leurs cases à cocher. Le compteur pouvait
-                    donc afficher un chiffre rassurant à côté d'un accès total. */}
+                {/* Accès qui ne passe PAS par le compteur. Le superuser plateforme ouvre tout.
+                    Le rôle d'administration, lui, ouvrait aussi TOUTE l'écriture CRM jusqu'au
+                    2026-08-31 — 17j l'a fermé (arbitrage PO : « un lecteur ne doit jamais écrire
+                    le CRM »), il ne donne plus que la gestion d'équipe. La pastille reste : un
+                    rang admin ≥ 30 peut s'accorder des permissions, ce que le compteur ne dit pas. */}
                 <div className="members-table__access">
                   {m.isPlatformSuperuser && (
                     <span
@@ -98,7 +98,7 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                   {m.adminRoleCode && (
                     <span
                       className="badge badge--info badge--xs"
-                      title="Un rôle d’administration d’ORG ouvre notamment toute l’écriture CRM, sans passer par les permissions"
+                      title="Rôle d’administration d’ORG : gestion de l’équipe. À partir du rang 30, ce membre peut s’accorder des permissions. Il n’ouvre plus l’écriture CRM (17j)."
                     >
                       + rôle admin
                     </span>

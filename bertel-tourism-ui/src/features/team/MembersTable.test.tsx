@@ -63,7 +63,7 @@ describe('MembersTable — provenance de l’accès (§227)', () => {
     expect(screen.queryByRole('button', { name: /0 permission/ })).not.toBeInTheDocument();
   });
 
-  it('§227 : un rôle d’administration d’ORG est signalé — c’est lui qui ouvre l’écriture CRM', () => {
+  it('§227 : un rôle d’administration d’ORG est signalé — rang ≥ 30, il peut s’accorder des permissions', () => {
     renderTable([{ ...base, adminRoleCode: 'team_lead', permissionCodes: [] }]);
     expect(screen.getByText('+ rôle admin')).toBeInTheDocument();
   });

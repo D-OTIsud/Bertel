@@ -1197,3 +1197,76 @@ rang, pas une non-nullité : classe différente, hors sujet.
 `MembersTable` affirmait en `title` qu'un rôle d'administration « ouvre notamment toute
 l'écriture CRM » : devenu faux, corrigé dans le même lot. La pastille « + rôle admin » reste —
 à partir du rang 30 le membre peut s'accorder des permissions, ce que le compteur ne dit pas.
+
+---
+
+## 17k — Écrire une liste : son créateur, pas « n'importe quel rôle admin » (§227)
+
+`Base de donnée DLL et API/migration_list_write_creator_only.sql`
+Rollback : `rollback/rollback_list_write_creator_only.sql`
+
+Dernier porteur du motif fermé par 17j : `api.user_can_write_list` acceptait
+`current_user_admin_rank() IS NOT NULL`. `team_lead` (rang 10) donnait donc le droit de
+modifier, partager, marquer envoyée ou **supprimer** la liste de n'importe qui — y compris à un
+Lecteur (`xyz.makimura@gmail.com`).
+
+**Pas une permission, contrairement au CRM** : `ref_permission` n'a aucun droit « écrire une
+liste », et une liste est une sélection personnelle, pas du contenu publié. La règle juste est
+l'appartenance, pas le droit.
+
+**Le piège évité** : « créateur seul » pur créerait des listes orphelines — `object_list.created_by`
+ne porte AUCUNE clé étrangère (seule `org_object_id` en a une). Au départ d'un membre, sa liste
+resterait inéditable par tous. D'où un second bras étroit : un admin d'ORG **rang ≥ 30** peut
+reprendre une liste dont le créateur n'est plus membre actif.
+
+`COALESCE(..., FALSE)` ajouté (§204) : `is_platform_superuser()` rend NULL sans claim `role`, et
+`IF NOT NULL THEN RAISE` ne se déclenche pas — la garde aurait été fail-OPEN.
+
+### ✅ APPLIQUÉE le 2026-08-31 — sabotage 5 cas, transaction annulée
+
+| Cas | Attendu | Obtenu |
+| --- | --- | --- |
+| Lecteur + `team_lead`, liste d'autrui | `false` | `false` |
+| Éditeur + `team_lead` (rang 10), liste d'autrui | `false` | `false` |
+| le créateur | `true` | `true` |
+| rang 30, créateur **désactivé** (orpheline) | `true` | `true` |
+| rang 30, créateur **actif** | `false` | `false` |
+
+Les deux dernières lignes diffèrent : le bras de reprise regarde bien l'appartenance.
+**Balayage final : 0 fonction ne porte plus `current_user_admin_rank() IS NOT NULL`.**
+
+---
+
+## 17l — Créer une liste : superuser plateforme UNIQUEMENT (§227)
+
+`Base de donnée DLL et API/migration_list_create_superuser_only.sql`
+
+`api.create_list` ne portait **aucune** garde : tout membre créait des listes, Lecteur compris
+(2 des 12 listes en base sont d'un Lecteur). Arbitrage PO 2026-08-31, lecture stricte.
+
+⚠️ **Coût assumé, signalé avant application** : l'ORG `ORGRUN00000001C4` n'a aucun superuser
+plateforme (`s.gaze` est `org_admin` mais `tourism_agent`). Elle ne peut plus créer de liste par
+elle-même. Si cette autonomie redevient nécessaire, une ligne suffit :
+`OR COALESCE(api.current_user_admin_rank(), 0) >= 30`.
+
+`NO_ORG` devient inconditionnel : l'ancien test laissait un superuser sans ORG créer une liste à
+`org_object_id` NULL — invisible et inéditable pour tout le monde, son auteur compris.
+
+**Les 12 listes existantes ne sont pas touchées** : ni transfert, ni suppression. Seule la
+création est fermée.
+
+### ✅ APPLIQUÉE le 2026-08-31 — sabotage, transaction annulée
+
+| Appelant | Résultat |
+| --- | --- |
+| Éditeur + `team_lead` | `42501` |
+| `org_admin` **non** superuser | `42501` (c'est le point de l'arbitrage) |
+| superuser plateforme | liste créée, `org_object_id` renseigné |
+| listes existantes | 12, intactes |
+
+### Front
+
+Le bouton « Nouvelle liste » (`ListsManageView`, deux emplacements) et « Créer une liste »
+(`SelectionBar` de l'Exploreur) sont masqués hors superuser — sans quoi l'écran promettrait une
+action que le serveur refuse. Sélecteur `isPlatformSuperuser`, **délibérément distinct** de
+`canAdministerTeam` (qui accepte le rang ≥ 10) ; un test garde les deux séparés.

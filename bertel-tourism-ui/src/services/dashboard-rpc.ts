@@ -1,13 +1,16 @@
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { DashboardStatsParams } from '../lib/dashboard-stats-params';
+import { DASHBOARD_CRM_AGE_BUCKETS } from '../types/dashboard';
 import type {
   DashboardActualisation,
   DashboardCityDistribution,
   DashboardCompleteness,
+  DashboardCrmActivity,
   DashboardCrmOpen,
   DashboardDistinctionOverview,
   DashboardScorecards,
+  DashboardTeamActivity,
   DashboardTypeBreakdown,
 } from '../types/dashboard';
 
@@ -128,7 +131,10 @@ export async function getDashboardDistinctionOverview(
 export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
-    return { open_interactions: 0, open_tasks: 0, total: 0 };
+    return {
+      open_interactions: 0, open_tasks: 0, total: 0,
+      recent_interactions: 0, backlog_interactions: 0,
+    };
   }
 
   const client = requireDashboardRpcClient();
@@ -138,6 +144,55 @@ export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
 
   if (error) throw error;
   return data as DashboardCrmOpen;
+}
+
+/**
+ * Rythme de saisie de l'équipe sur 12 semaines + table des contributeurs.
+ * Sans paramètre : série GLOBALE, elle n'obéit pas au panneau de filtres (même raison que
+ * getDashboardCrmOpen — « comment l'équipe a travaillé » n'a pas de sens restreint à une
+ * sélection d'objets). Manifeste 17h.
+ */
+export async function getDashboardTeamActivity(): Promise<DashboardTeamActivity> {
+  const { demoMode } = useSessionStore.getState();
+  // Mode démo : la forme VIDE, jamais des données inventées — un rythme d'équipe fabriqué se
+  // lirait comme un vrai et n'a aucune valeur de démonstration.
+  if (demoMode) {
+    return { weeks: [], contributors: [] };
+  }
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_team_activity');
+
+  if (error) throw error;
+  return data as DashboardTeamActivity;
+}
+
+/**
+ * Arriéré CRM par âge et par sujet, flux mensuel, temps de traitement net.
+ * Sans paramètre, série GLOBALE (voir getDashboardTeamActivity). Manifeste 17h.
+ */
+export async function getDashboardCrmActivity(): Promise<DashboardCrmActivity> {
+  const { demoMode } = useSessionStore.getState();
+  if (demoMode) {
+    return {
+      // Les quatre tranches sont émises À ZÉRO plutôt qu'omises : la FORME du contrat ne
+      // change pas selon le mode, sinon le widget se code deux fois.
+      open_by_age: DASHBOARD_CRM_AGE_BUCKETS.map((bucket) => ({ bucket, count: 0 })),
+      open_by_topic: [],
+      monthly_flow: [],
+      net: { avg_days: null, count: 0 },
+    };
+  }
+
+  const client = requireDashboardRpcClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('get_dashboard_crm_activity');
+
+  if (error) throw error;
+  return data as DashboardCrmActivity;
 }
 
 // ─── Phase 2B+ stubs — mock-only until backend is implemented ─────────────────

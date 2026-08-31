@@ -156,6 +156,57 @@ WHERE o.object_type = 'ORG'
 ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO NOTHING;
 
 -- ─────────────────────────────────────────────────────────────────────────────
+-- 2bis. Semer AUSSI les ORG créées plus tard.
+--
+--    Le seed ci-dessus ne couvre que les ORG existant au moment de la migration. Sans ce
+--    trigger, une ORG créée demain naîtrait avec une matrice VIDE : ses Éditeurs auraient
+--    l'étiquette et zéro droit, et l'écran d'onboarding — qui n'accorde plus de permission
+--    individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et différée.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.seed_org_role_permission()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  INSERT INTO public.org_role_permission (org_object_id, role_id, permission_id)
+  SELECT NEW.id, r.id, p.id
+  FROM (VALUES
+    ('contributor','create_object'),
+    ('contributor','edit_canonical_when_publisher'),
+    ('contributor','edit_org_enrichment'),
+    ('contributor','edit_hours'),
+    ('contributor','edit_pricing'),
+    ('contributor','edit_gallery'),
+    ('contributor','attach_documents'),
+    ('editor','create_object'),
+    ('editor','edit_canonical_when_publisher'),
+    ('editor','edit_org_enrichment'),
+    ('editor','edit_hours'),
+    ('editor','edit_pricing'),
+    ('editor','edit_gallery'),
+    ('editor','attach_documents'),
+    ('editor','publish_object'),
+    ('editor','validate_changes'),
+    ('editor','manage_team_messages'),
+    ('editor','manage_legal_compliance'),
+    ('editor','write_crm_notes')
+  ) AS seed(role_code, perm_code)
+  JOIN public.ref_org_business_role r ON r.code = seed.role_code
+  JOIN public.ref_permission        p ON p.code = seed.perm_code AND p.is_active
+  ON CONFLICT ON CONSTRAINT org_role_permission_uniq DO NOTHING;
+  RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_seed_org_role_permission ON public.object;
+CREATE TRIGGER trg_seed_org_role_permission
+  AFTER INSERT ON public.object
+  FOR EACH ROW WHEN (NEW.object_type = 'ORG')
+  EXECUTE FUNCTION public.seed_org_role_permission();
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Le cœur : deux chemins, plus trois.
 --
 --    Chemin ORG SUPPRIMÉ. Ce n'est pas un nettoyage cosmétique — c'est la correction : tant

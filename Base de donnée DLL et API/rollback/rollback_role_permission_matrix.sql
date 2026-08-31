@@ -257,6 +257,8 @@ GRANT EXECUTE ON FUNCTION api.rpc_list_org_members(text) TO authenticated, servi
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. Supprimer la matrice et ses RPC.
 -- ─────────────────────────────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_seed_org_role_permission ON public.object;
+DROP FUNCTION IF EXISTS public.seed_org_role_permission();
 DROP FUNCTION IF EXISTS api.rpc_set_role_permission(text, text, text, boolean);
 DROP FUNCTION IF EXISTS api.rpc_list_role_permissions(text);
 DROP TABLE IF EXISTS public.org_role_permission CASCADE;

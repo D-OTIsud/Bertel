@@ -35,6 +35,16 @@ COMMENT ON COLUMN public.app_notification.email_error IS
 -- s'accumuleraient À DEMEURE en tête du parcours, devant celles qui doivent réellement
 -- partir. Borner l'index sur `kind` le restreint exactement à la file qu'il sert : il reste
 -- de la taille de l'arriéré d'envoi, jamais de celle de l'historique des autres espèces.
+--
+-- Il est LÂCHÉ avant d'être créé, et ce DROP n'est pas une précaution de style :
+-- l'idempotence d'un index à PRÉDICAT n'est pas celle d'une table. `IF NOT EXISTS` ne
+-- compare que le NOM ; sur un environnement portant déjà la première rédaction de cet index
+-- (parcours borné au seul `email_sent_at IS NULL`), le CREATE serait un NO-OP SILENCIEUX et
+-- l'index NON BORNÉ survivrait — c'est-à-dire exactement l'accumulation que la borne `kind`
+-- existe pour empêcher, conservée par la migration censée la fermer, et sans qu'aucune
+-- sortie de DDL ne le signale. Rejouer un DROP + CREATE coûte une reconstruction d'index ;
+-- taire une définition périmée coûte la panne qu'on croyait corrigée.
+DROP INDEX IF EXISTS public.idx_app_notification_unmailed;
 CREATE INDEX IF NOT EXISTS idx_app_notification_unmailed
   ON public.app_notification (created_at)
   WHERE email_sent_at IS NULL AND kind = 'crm_task_assigned';
@@ -290,14 +300,19 @@ BEGIN
       -- pas sur la pièce jointe fautive, mais sur api.list_crm_tasks() TOUT ENTIÈRE : UNE
       -- ligne malformée écrite par n'importe quel autre flux abattrait le kanban CRM de
       -- TOUS les utilisateurs du périmètre. Une taille illisible vaut donc `null` (le front
-      -- affiche la pièce sans son poids), jamais une panne. Le prix est symétrique et
-      -- assumé : une valeur numérique dépassant bigint reste hors garde (voir le test D4).
+      -- affiche la pièce sans son poids), jamais une panne. La BORNE DE LONGUEUR fait partie
+      -- de la garde : `^\d+$` seul laisserait passer « 99999999999999999999 », que `::bigint`
+      -- refuserait ensuite en 22003 `value out of range` — au MÊME endroit, avec le MÊME
+      -- rayon d'action et la MÊME classe de panne que celle qu'on vient de fermer, à un
+      -- chiffre près. `{1,18}` la ferme PAR CONSTRUCTION et non par confiance : 18 chiffres
+      -- valent au plus 999 999 999 999 999 999, strictement inférieur au maximum d'un bigint.
+      -- Une taille à 19 chiffres ou plus est illisible au même titre qu'un mot : `null`.
       'documents', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
                  'id', d.document_id,
                  'title', d.title,
                  'mime_type', rd.extra->>'mime_type',
-                 'size_bytes', CASE WHEN rd.extra->>'size_bytes' ~ '^\d+$'
+                 'size_bytes', CASE WHEN rd.extra->>'size_bytes' ~ '^\d{1,18}$'
                                     THEN (rd.extra->>'size_bytes')::bigint END,
                  'created_at', d.created_at)
                ORDER BY d.created_at, d.id)

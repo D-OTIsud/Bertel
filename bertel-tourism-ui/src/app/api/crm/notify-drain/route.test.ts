@@ -89,4 +89,46 @@ describe('POST /api/crm/notify-drain', () => {
     await expect(res.json()).resolves.toEqual({ sent: 0, failed: 0 });
     expect(rpc).toHaveBeenCalledTimes(1);
   });
+
+  // Constat 1 : un acquittement en échec ne doit JAMAIS disparaître en silence — les
+  // e-mails sont déjà partis (statut 200 assumé), mais l'appelant doit pouvoir le voir.
+  it('acquittement en échec : la réponse porte ackFailed, le statut reste 200 (les e-mails SONT partis)', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [row('n-1')], error: null }) // claim
+      .mockResolvedValueOnce({ data: null, error: { message: 'permission denied for function mark_notifications_emailed' } }); // mark KO
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedSend.mockResolvedValue();
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const res = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ sent: 1, failed: 0, ackFailed: true });
+    expect(errSpy).toHaveBeenCalled();
+    errSpy.mockRestore();
+  });
+
+  // Constat 2 : une ligne malformée (id ou e-mail absent) est sautée défensivement —
+  // jamais testé jusqu'ici. Une seule des deux lignes du claim est valide.
+  it('ligne malformée dans le claim : sautée, un seul envoi, acquittement de la seule ligne valide', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [row('n-1'), row('n-2', null)], error: null }) // n-2 sans recipient_email
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedSend.mockResolvedValue();
+    const res = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ sent: 1, failed: 0 });
+    expect(mockedSend).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', { p_sent: ['n-1'], p_failed: [] });
+  });
+
+  // Constat 3 : la branche d'erreur du claim n'était pas testée.
+  it('claim en erreur : 500 claim_failed, aucun envoi, aucun acquittement', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const res = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(res.status).toBe(500);
+    await expect(res.json()).resolves.toEqual({ error: 'claim_failed', detail: 'permission denied' });
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
 });

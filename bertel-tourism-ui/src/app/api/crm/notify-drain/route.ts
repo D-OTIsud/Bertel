@@ -73,8 +73,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   // File vide ⇒ pas d'acquittement du tout : aucun appel RPC inutile quand il n'y a rien à
   // acquitter (claim vide ⇒ sent et failed restent vides tous les deux).
+  let ackFailed = false;
   if (sent.length > 0 || failed.length > 0) {
-    await server.schema('api').rpc('mark_notifications_emailed', { p_sent: sent, p_failed: failed });
+    const { error: ackError } = await server
+      .schema('api')
+      .rpc('mark_notifications_emailed', { p_sent: sent, p_failed: failed });
+    if (ackError) {
+      // Les e-mails sont DÉJÀ partis : rien à annuler côté SMTP, donc le statut HTTP
+      // reste 200 (ce n'est pas un échec de la requête). Mais si l'acquittement échoue,
+      // les lignes restent non acquittées et repartiront après leur TTL de 10 minutes —
+      // doublon, jamais perte, c'est l'arbitrage assumé. Le vrai risque n'est pas le
+      // doublon isolé : c'est qu'un chemin d'acquittement durablement cassé (régression
+      // de droits sur ce RPC, par ex.) ferait re-envoyer tout le drain à chaque cycle
+      // SANS qu'aucun signal n'existe. On journalise donc côté serveur pour rendre
+      // l'échec diagnosticable, et on le signale à l'appelant par un booléen dédié —
+      // sans y recopier le message SQL brut, qui n'a pas à sortir de ce process.
+      console.error('[notify-drain] mark_notifications_emailed failed', ackError.message);
+      ackFailed = true;
+    }
   }
-  return NextResponse.json({ sent: sent.length, failed: failed.length });
+  const body: { sent: number; failed: number; ackFailed?: true } = { sent: sent.length, failed: failed.length };
+  if (ackFailed) body.ackFailed = true;
+  return NextResponse.json(body);
 }

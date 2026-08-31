@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
 import { useExplorerReferencesQuery } from '../hooks/useExplorerQueries';
@@ -14,7 +15,7 @@ import {
   getDashboardDistinctionOverview,
   getDashboardCrmOpen,
 } from '../services/dashboard-rpc';
-import { useDashboardQuery } from '../hooks/useDashboardQuery';
+import { useDashboardQuery, DASHBOARD_STALE_TIME_MS } from '../hooks/useDashboardQuery';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ExplorerActiveFilters } from '../components/explorer/ExplorerActiveFilters';
 import { DashboardPeriodSection } from '../components/dashboard/DashboardPeriodSection';
@@ -55,9 +56,15 @@ export default function DashboardPage() {
 
   // Héro permanent ; les widgets d'onglet ne fetchent que quand leur onglet est visible.
   const scorecards = useDashboardQuery('scorecards', params, getDashboardScorecards);
-  // Compteur CRM global : le fetcher ignore `params` (la carte n'est pas filtrée),
-  // mais on passe params quand même pour garder UNE seule forme de queryKey.
-  const crmOpen = useDashboardQuery('crm-open', params, () => getDashboardCrmOpen());
+  // Compteur CRM global : la carte n'obéit pas au panneau de filtres (« Tout le
+  // périmètre »), et le fetcher ne prend aucun paramètre. Faire entrer `params`
+  // dans la queryKey relancerait un appel réseau à chaque changement de filtre
+  // pour un résultat strictement identique — d'où une clé dédiée, sans filtres.
+  const crmOpen = useQuery({
+    queryKey: ['dashboard', 'crm-open'],
+    queryFn: getDashboardCrmOpen,
+    staleTime: DASHBOARD_STALE_TIME_MS,
+  });
   const typeBreakdown = useDashboardQuery('type-breakdown', params, getDashboardTypeBreakdown, activeTab === 'quality');
   const actualisation = useDashboardQuery('actualisation', params, getDashboardActualisation, activeTab === 'quality');
   const completeness = useDashboardQuery('completeness', params, getDashboardCompleteness, activeTab === 'quality');

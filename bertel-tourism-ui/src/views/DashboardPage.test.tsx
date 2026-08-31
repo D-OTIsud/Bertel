@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
+import { getDashboardScorecards, getDashboardCrmOpen } from '../services/dashboard-rpc';
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -105,5 +106,26 @@ describe('DashboardPage — onglets', () => {
     expect(await screen.findByText('172')).toBeInTheDocument();
     // Vérifier aussi le libellé spécifique au total > 1.
     expect(screen.getByText('demandes en cours')).toBeInTheDocument();
+  });
+
+  it('ne rappelle pas le compteur CRM (global) quand un filtre change, contrairement à un widget filtré', async () => {
+    const scorecardsMock = getDashboardScorecards as jest.Mock;
+    const crmOpenMock = getDashboardCrmOpen as jest.Mock;
+    scorecardsMock.mockClear();
+    crmOpenMock.mockClear();
+
+    renderPage();
+    await screen.findByText('172');
+    expect(scorecardsMock).toHaveBeenCalledTimes(1);
+    expect(crmOpenMock).toHaveBeenCalledTimes(1);
+
+    // Changer un filtre régénère `params` → nouvelle queryKey pour les widgets
+    // filtrés (ex. scorecards), qui doivent donc refetcher.
+    act(() => useDashboardExplorerStore.getState().setCities(['Le Tampon']));
+
+    await waitFor(() => expect(scorecardsMock).toHaveBeenCalledTimes(2));
+    // Le compteur CRM est global (queryKey sans filtres) : il ne doit PAS être
+    // rappelé, alors qu'un getter dépendant des filtres l'a bien été.
+    expect(crmOpenMock).toHaveBeenCalledTimes(1);
   });
 });

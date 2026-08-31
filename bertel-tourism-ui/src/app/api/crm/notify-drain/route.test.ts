@@ -66,6 +66,10 @@ describe('POST /api/crm/notify-drain', () => {
     await expect(res.json()).resolves.toEqual({ sent: 2, failed: 0 });
     expect(mockedSend).toHaveBeenCalledTimes(2);
     expect(mockedSend.mock.calls[0][0].to).toBe('dest@x.re');
+    // M3 — `recipient_name` était produit par le claim (jointure app_user_profile dédiée) et
+    // consommé par personne. La route doit le TRANSMETTRE au template, sinon la clé du
+    // contrat retombe au rang de décoration.
+    expect(mockedSend.mock.calls[0][0].html).toContain('Bonjour Dest,');
     expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed',
       { p_sent: ['n-1', 'n-2'], p_failed: [] });
   });
@@ -80,6 +84,22 @@ describe('POST /api/crm/notify-drain', () => {
     await expect(res.json()).resolves.toEqual({ sent: 1, failed: 1 });
     expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed',
       { p_sent: ['n-1'], p_failed: [{ id: 'n-2', error: 'smtp boom' }] });
+  });
+
+  // M3 (repli) — le claim peut rendre une ligne SANS nom de destinataire (profil vide,
+  // effacement RGPD). L'e-mail part quand même, avec une salutation impersonnelle : il ne
+  // doit jamais dire « Bonjour null » ni « Bonjour , ».
+  it('destinataire sans nom : l’e-mail part avec « Bonjour, », jamais « Bonjour null »', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [{ ...row('n-1'), recipient_name: null }], error: null })
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedSend.mockResolvedValue();
+    await POST(req({ authorization: 'Bearer jwt' }));
+    expect(mockedSend).toHaveBeenCalledTimes(1);
+    const { html } = mockedSend.mock.calls[0][0];
+    expect(html).toContain('Bonjour,');
+    expect(html).not.toContain('null');
   });
 
   it('file vide : 200 {sent:0,failed:0} sans acquittement', async () => {
@@ -122,12 +142,28 @@ describe('POST /api/crm/notify-drain', () => {
   });
 
   // Constat 3 : la branche d'erreur du claim n'était pas testée.
-  it('claim en erreur : 500 claim_failed, aucun envoi, aucun acquittement', async () => {
-    const rpc = jest.fn().mockResolvedValueOnce({ data: null, error: { message: 'permission denied' } });
+  // Revue finale : elle recopiait AUSSI le message SQL brut dans la réponse, alors que ce
+  // fichier énonce la règle inverse quarante lignes plus bas (« sans y recopier le message
+  // SQL brut, qui n'a pas à sortir de ce process »). Le brut part au journal, jamais au corps.
+  it('claim en erreur : 500 claim_failed SANS le message SQL brut, aucun envoi, aucun acquittement', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({
+      data: null,
+      error: { message: 'permission denied for function claim_unmailed_notifications' },
+    });
     mockedServer.mockReturnValue(serverWith(rpc));
+    const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     const res = await POST(req({ authorization: 'Bearer jwt' }));
     expect(res.status).toBe(500);
-    await expect(res.json()).resolves.toEqual({ error: 'claim_failed', detail: 'permission denied' });
+    // Égalité STRICTE : un `detail` réintroduit ferait rougir ici, là où un `toMatchObject`
+    // ou un test de la seule clé `error` le laisserait passer.
+    await expect(res.json()).resolves.toEqual({ error: 'claim_failed' });
+    // …et il reste diagnosticable côté serveur, sinon on aurait échangé une fuite contre un
+    // silence — le sort exact que la Task 5 a refusé pour l'acquittement.
+    expect(errSpy).toHaveBeenCalledWith(
+      '[notify-drain] claim_unmailed_notifications failed',
+      'permission denied for function claim_unmailed_notifications',
+    );
+    errSpy.mockRestore();
     expect(mockedSend).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledTimes(1);
   });

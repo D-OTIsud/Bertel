@@ -5,6 +5,7 @@ const base = {
   objectName: 'Hôtel des Palmes',
   dueAt: '2026-09-15T00:00:00+00:00',
   assignerName: 'Marie Payet',
+  recipientName: 'Zoé Zoralde',
   appUrl: 'https://app.example.re/crm',
 };
 
@@ -40,12 +41,44 @@ describe('TaskAssignedEmail', () => {
     expect(html).not.toContain('Invalid Date');
   });
 
+  // M3 — `recipient_name` était PRODUIT par le claim (avec sa jointure app_user_profile
+  // dédiée) et lu par personne. Il sert désormais la salutation, et le repli est la partie
+  // qui compte : un e-mail qui écorche le nom de son lecteur est pire que celui qui ne le
+  // nomme pas.
+  describe('salutation nominative (recipientName)', () => {
+    it('nomme le destinataire quand son nom est connu', () => {
+      expect(renderTaskAssignedEmailHtml(base)).toContain('Bonjour Zoé Zoralde,');
+    });
+
+    it('replie sur « Bonjour, » quand le nom est null — jamais « Bonjour null »', () => {
+      const html = renderTaskAssignedEmailHtml({ ...base, recipientName: null });
+      expect(html).toContain('Bonjour,');
+      expect(html).not.toContain('null');
+      expect(html).not.toMatch(/Bonjour\s+,/);
+    });
+
+    it('replie AUSSI sur « Bonjour, » quand le nom n’est que des espaces', () => {
+      // `api.crm_user_label` retombe sur un libellé de repli qui n'est pas garanti non vide :
+      // une garde sur la seule nullité laisserait partir « Bonjour   , » à un lecteur réel.
+      const html = renderTaskAssignedEmailHtml({ ...base, recipientName: '   ' });
+      expect(html).toContain('Bonjour,');
+      expect(html).not.toMatch(/Bonjour\s+,/);
+    });
+
+    it('échappe le HTML du nom du destinataire', () => {
+      const html = renderTaskAssignedEmailHtml({ ...base, recipientName: '<b>Zoé</b>' });
+      expect(html).not.toContain('<b>Zoé</b>');
+      expect(html).toContain('&lt;b&gt;Zoé&lt;/b&gt;');
+    });
+  });
+
   it('échappe le HTML dans objectName, assignerName et appUrl simultanément', () => {
     const html = renderTaskAssignedEmailHtml({
       taskTitle: 'Tâche test',
       objectName: '<img src=x onerror="alert()">',
       dueAt: '2026-09-15T00:00:00+00:00',
       assignerName: '<script>alert("xss")</script>',
+      recipientName: 'Zoé Zoralde',
       appUrl: 'https://example.com?param="<b>test</b>',
     });
     // Vérifie que les formes brutes d'injection sont absentes

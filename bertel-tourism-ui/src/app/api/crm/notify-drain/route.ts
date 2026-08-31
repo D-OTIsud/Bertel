@@ -37,7 +37,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!readSmtpConfig()) return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
 
   const { data, error } = await server.schema('api').rpc('claim_unmailed_notifications', { p_limit: 20 });
-  if (error) return NextResponse.json({ error: 'claim_failed', detail: error.message }, { status: 500 });
+  if (error) {
+    // MÊME règle qu'à l'acquittement plus bas : le message SQL brut n'a pas à sortir de ce
+    // process — il nomme des tables, des colonnes, parfois de la configuration. Ce fichier
+    // l'énonçait déjà pour l'acquittement et le violait ici, quarante lignes plus haut.
+    // Journalisé côté serveur pour rester diagnosticable, jamais renvoyé à l'appelant.
+    console.error('[notify-drain] claim_unmailed_notifications failed', error.message);
+    return NextResponse.json({ error: 'claim_failed' }, { status: 500 });
+  }
 
   const rows = Array.isArray(data) ? data : [];
   const origin = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim() || req.nextUrl.origin;
@@ -57,6 +64,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       objectName: str(row.object_name) || 'Établissement',
       dueAt: nstr(row.due_at),
       assignerName: nstr(row.assigner_name),
+      // Le claim JOINT ce nom (et sa jointure app_user_profile dédiée) : le laisser inutilisé
+      // aurait fait porter au contrat une clé que personne ne lit. `nstr` rend `null` sur une
+      // chaîne vide comme sur une valeur absente — le template replie alors sur « Bonjour, ».
+      recipientName: nstr(row.recipient_name),
       appUrl: `${origin}/crm`,
     };
     try {

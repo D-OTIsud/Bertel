@@ -44,14 +44,98 @@ export interface DashboardScorecards {
 export interface DashboardCrmOpen {
   /**
    * Interactions CRM ouvertes, GLOBAL (aucun filtre appliqué).
-   * Prédicat identique à crm_backlog dans api.capture_metric_snapshots :
-   * resolved_at IS NULL AND status <> 'done'.
+   * Prédicat identique à crm_backlog dans api.capture_metric_snapshots : resolved_at IS NULL
+   * et la liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider),
+   * manifeste 17g. Une comparaison en texte y serait une panne muette : elle survivrait à
+   * tout renommage du vocabulaire en se réduisant à resolved_at IS NULL.
    */
   open_interactions: number;
-  /** Tâches CRM en todo / in_progress / blocked. canceled et done exclus. */
+  /**
+   * Tâches CRM ouvertes — vocabulaire des TÂCHES (crm_task_status), distinct de celui des
+   * demandes : les statuts terminaux de tâche sont exclus.
+   */
   open_tasks: number;
   /** open_interactions + open_tasks */
   total: number;
+  /** Demandes ouvertes de moins de 90 jours (manifeste 17h). */
+  recent_interactions: number;
+  /**
+   * Demandes ouvertes de 90 jours ou plus (manifeste 17h). Calculé côté serveur par
+   * SOUSTRACTION, si bien que recent + backlog = open_interactions PAR CONSTRUCTION : les
+   * trois chiffres ne peuvent pas se contredire, et une demande sans date d'occurrence tombe
+   * dans l'arriéré au lieu de disparaître entre deux bornes.
+   */
+  backlog_interactions: number;
+}
+
+// ─── §2  Activité de l'équipe — rythme de saisie et contributeurs (17h) ──────
+
+export interface DashboardTeamActivityWeek {
+  /** Lundi de la semaine, ISO (YYYY-MM-DD). */
+  week_start: string;
+  /**
+   * Couples (éditeur, jour) — des JOURS, pas des versions. Une passe d'import produit des
+   * centaines de versions en une après-midi ; les compter ferait de cette après-midi le
+   * sommet de l'année. Un indicateur de rythme mesure la régularité, pas le débit.
+   */
+  editor_days: number;
+  editors: number;
+  objects_touched: number;
+  /** Objets créés dans la semaine (versions `insert`), auteurs humains uniquement. */
+  created: number;
+}
+
+export interface DashboardTeamActivityContributor {
+  user_id: string;
+  /**
+   * Vient de `api.crm_user_label` côté serveur — MÊME source que le kanban CRM et le journal
+   * de transitions, pour qu'une personne porte un seul nom d'un écran à l'autre.
+   */
+  display_name: string;
+  active_days: number;
+  objects_touched: number;
+  /**
+   * Jours où l'éditeur touche au moins 10 objets. La distribution réelle est bimodale : le
+   * seuil sépare deux régimes de travail, il ne coupe pas une population continue.
+   */
+  bulk_days: number;
+  first_at: string;
+  last_at: string;
+}
+
+export interface DashboardTeamActivity {
+  /** Toujours 12 entrées : une semaine sans activité sort à zéro, jamais omise. */
+  weeks: DashboardTeamActivityWeek[];
+  /** Trié par active_days décroissant. */
+  contributors: DashboardTeamActivityContributor[];
+}
+
+// ─── §4  Activité CRM — arriéré, flux, temps net (17h) ───────────────────────
+
+/**
+ * Les quatre tranches d'âge, dans l'ordre du contrat. Liste FERMÉE et unique : le type et la
+ * liste d'exécution en dérivent tous deux, comme la liste `VALUES` figée côté SQL. Deux
+ * énumérations parallèles finiraient par diverger sans que rien ne le signale.
+ */
+export const DASHBOARD_CRM_AGE_BUCKETS = ['lt_30d', 'd30_90', 'd90_1y', 'gt_1y'] as const;
+
+export type DashboardCrmAgeBucket = (typeof DASHBOARD_CRM_AGE_BUCKETS)[number];
+
+export interface DashboardCrmActivity {
+  /** Toujours les QUATRE tranches, une tranche vide à zéro — jamais omise. */
+  open_by_age: { bucket: DashboardCrmAgeBucket; count: number }[];
+  /** Trié par count décroissant. `name` n'est jamais vide : les demandes sans sujet sont
+   *  regroupées sous un libellé explicite. */
+  open_by_topic: { code: string | null; name: string; count: number; oldest: string }[];
+  /** 12 mois ; un mois sans mouvement porte 0, jamais null. */
+  monthly_flow: { month: string; created: number; resolved: number }[];
+  /**
+   * Temps de traitement NET : écoulé moins l'attente prestataire, parce qu'un indicateur ne
+   * doit mesurer que ce que l'équipe maîtrise. `avg_days` vaut null tant qu'aucune demande
+   * n'a bouclé son cycle depuis la bascule 17g — null veut dire « pas encore mesurable »,
+   * là où zéro voudrait dire « instantané ».
+   */
+  net: { avg_days: number | null; count: number };
 }
 
 // ─── §2a  Type Breakdown  (LOCKED — Phase 2A) ────────────────────────────────

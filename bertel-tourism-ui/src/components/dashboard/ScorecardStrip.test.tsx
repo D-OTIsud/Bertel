@@ -15,7 +15,12 @@ const base: DashboardScorecards = {
   avg_processing_days: null,
 };
 
-const crmOpen: DashboardCrmOpen = { open_interactions: 170, open_tasks: 2, total: 172 };
+const crmOpen: DashboardCrmOpen = {
+  open_interactions: 170, open_tasks: 2, total: 172,
+  // recent + arriere = open_interactions : la RPC tient l'invariant par construction
+  // (manifeste 17h), la fixture ne doit pas le contredire.
+  recent_interactions: 3, backlog_interactions: 167,
+};
 
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -43,7 +48,8 @@ describe('ScorecardStrip', () => {
   });
 
   it('passe en état calme quand il ne reste rien à traiter', () => {
-    render(<ScorecardStrip data={base} crmOpen={{ open_interactions: 0, open_tasks: 0, total: 0 }} />);
+    render(<ScorecardStrip data={base} crmOpen={{ open_interactions: 0, open_tasks: 0, total: 0,
+                 recent_interactions: 0, backlog_interactions: 0 }} />);
     expect(screen.getByText('À jour')).toBeInTheDocument();
   });
 
@@ -62,7 +68,8 @@ describe('ScorecardStrip', () => {
     unmount();
 
     // état sain réel : crmOpen défini ET total === 0, une information vraie
-    render(<ScorecardStrip data={base} crmOpen={{ open_interactions: 0, open_tasks: 0, total: 0 }} />);
+    render(<ScorecardStrip data={base} crmOpen={{ open_interactions: 0, open_tasks: 0, total: 0,
+                 recent_interactions: 0, backlog_interactions: 0 }} />);
     expect(screen.getByText('À jour')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
   });

@@ -21,6 +21,7 @@ import {
   pavTintOf,
   tlIcoClassOf,
 } from './crm-view-utils';
+import { interactionStatusLabel, interactionStatusTone, isOpenInteractionStatus } from './crm-status';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
@@ -740,12 +741,14 @@ function TlCard({
     interlocutorEmail: item.interlocutorEmail ?? null,
     source: item.source ?? null,
   });
-  // Statut de la demande (§65/§66) — chip discrète : 'planned' = à traiter, 'done' = traitée.
+  // Statut de la demande (§65/§66) — chip discrète, libellé et ton via le registre crm-status.ts.
   const status = item.status ?? null;
   const replies = item.replies ?? [];
   // Résolu = statut 'done' OU (statut absent ET resolvedAt posé) — la vue objet ne porte pas
   // de `status` mais peut porter `resolvedAt`, d'où la dérivation par repli.
-  const isResolved = status === 'done' || (status == null && Boolean(item.resolvedAt));
+  const isResolved =
+    (status != null && !isOpenInteractionStatus(status)) ||
+    (status == null && Boolean(item.resolvedAt));
   // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
   // rendues que si un consommateur passe des callbacks (onReply/onResolve).
   const [composerOpen, setComposerOpen] = useState(false);
@@ -805,11 +808,19 @@ function TlCard({
             {/* Type = pastille secondaire (plus le titre, rectif PO v5 point 4). */}
             <span className="pill-mini">{interactionTypeLabelOf(item.interactionType)}</span>
             <Mood sentimentCode={item.sentimentCode} sentimentName={item.sentimentName} />
-            {/* Statut de la demande (§65/§66) : « En attente » (planned) / « Traitée » (done). */}
-            {status === 'planned' ? <span className="tl-status tl-status--open">En attente</span> : null}
-            {status === 'done' ? (
-              <span className="tl-status tl-status--done" title={item.resolvedAt ? `Traitée le ${formatShort(item.resolvedAt)}` : undefined}>
-                Traitée
+            {/* Statut de la demande — registre bilingue crm-status.ts : les 6 statuts du
+                cycle de vie ET les 2 legacy rendent une chip ; un code inconnu ne rend rien
+                (jamais un libellé inventé). Le title date la résolution sur un statut fermé. */}
+            {status && interactionStatusLabel(status) ? (
+              <span
+                className={'tl-status tl-status--' + interactionStatusTone(status)}
+                title={
+                  !isOpenInteractionStatus(status) && item.resolvedAt
+                    ? `Traitée le ${formatShort(item.resolvedAt)}`
+                    : undefined
+                }
+              >
+                {interactionStatusLabel(status)}
               </span>
             ) : null}
             <span className="tl-card__when">{formatShort(item.occurredAt)}</span>

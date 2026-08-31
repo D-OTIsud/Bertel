@@ -21,7 +21,12 @@ import {
   pavTintOf,
   tlIcoClassOf,
 } from './crm-view-utils';
-import { interactionStatusLabel, interactionStatusTone, isOpenInteractionStatus } from './crm-status';
+import {
+  interactionStatusLabel,
+  interactionStatusTone,
+  isKnownInteractionStatus,
+  isOpenInteractionStatus,
+} from './crm-status';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
@@ -744,10 +749,12 @@ function TlCard({
   // Statut de la demande (§65/§66) — chip discrète, libellé et ton via le registre crm-status.ts.
   const status = item.status ?? null;
   const replies = item.replies ?? [];
-  // Résolu = statut 'done' OU (statut absent ET resolvedAt posé) — la vue objet ne porte pas
-  // de `status` mais peut porter `resolvedAt`, d'où la dérivation par repli.
+  // Résolu = statut CONNU du registre (crm-status.ts) ET non ouvert, OU (statut absent ET
+  // resolvedAt posé) — la vue objet ne porte pas de `status` mais peut porter `resolvedAt`,
+  // d'où la dérivation par repli. Un statut inconnu du registre (import futur, faute de
+  // frappe) retombe sur « à traiter » : ne jamais le traiter comme résolu par défaut.
   const isResolved =
-    (status != null && !isOpenInteractionStatus(status)) ||
+    (isKnownInteractionStatus(status) && !isOpenInteractionStatus(status)) ||
     (status == null && Boolean(item.resolvedAt));
   // Composer de réponse inline : ouvert par carte (state local). Les actions du fil ne sont
   // rendues que si un consommateur passe des callbacks (onReply/onResolve).

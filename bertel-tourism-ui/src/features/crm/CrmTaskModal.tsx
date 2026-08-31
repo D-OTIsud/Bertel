@@ -21,6 +21,7 @@ import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
+import type { CrmTask } from '../../types/domain';
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le
@@ -66,6 +67,7 @@ export function CrmTaskFromInteractionModal({
 }
 
 export function CrmTaskModal({
+  task,
   actorId,
   objectOptions,
   picker,
@@ -74,6 +76,13 @@ export function CrmTaskModal({
   onClose,
   onSaved,
 }: {
+  /**
+   * Mode ÉDITION : tâche existante pré-remplie, établissement verrouillé (le serveur
+   * accepterait un déplacement mais on ne l'offre pas), soumission par `saveCrmTask({id,…})`
+   * — la description est TOUJOURS envoyée (`''` = effacement, NULLIF serveur). La Task 9
+   * y accrochera la section pièces jointes.
+   */
+  task?: CrmTask;
   /** Fiche acteur : rattache la tâche à l'acteur (save_crm_task.actor_id). */
   actorId?: string;
   objectOptions: Array<{ objectId: string; objectName: string }>;
@@ -100,20 +109,26 @@ export function CrmTaskModal({
   const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees });
   const assignees = assigneesQuery.data ?? [];
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(task?.title ?? '');
+  const [description, setDescription] = useState(task?.description ?? '');
   // Auto-sélection PO point 3 : en mode select avec UN SEUL établissement, on le pré-coche
   // (le champ est requis ⇒ formulaire plus proche du submit). Sinon vide (choix explicite).
+  // En édition, l'établissement vient de la tâche elle-même (verrouillé, cf. rendu plus bas).
   const [objectId, setObjectId] = useState(() => {
+    if (task) return task.objectId;
     if (fixedObject) return fixedObject.objectId;
     return picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '';
   });
-  const [dueAt, setDueAt] = useState('');
+  const [dueAt, setDueAt] = useState(task?.dueAt ? task.dueAt.slice(0, 10) : '');
   // 16w — `null` = « l'utilisateur n'a encore rien choisi », distinct de `[]` = « il a tout
   // décoché ». La sélection effective est DÉRIVÉE : le défaut s'applique donc même si la
   // liste des assignables arrive APRÈS l'ouverture du modal (aucune sélection perdue), et
   // le moindre geste de l'utilisateur l'emporte définitivement.
-  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(null);
+  // En édition, les assignés actuels de la tâche jouent le rôle du « déjà choisi » : pas de
+  // défaut à calculer, ils sont connus dès le départ.
+  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(
+    task ? task.assignees.map((assignee) => assignee.userId) : null,
+  );
 
   // Les deux modes (fiche acteur / onglet Tâches) résolvent désormais par objectId : le
   // SearchSelect ne rend que des options valides (plus de saisie libre nom → id fragile).
@@ -128,6 +143,20 @@ export function CrmTaskModal({
 
   const createMutation = useMutation({
     mutationFn: () => {
+      if (task) {
+        // Édition : update PARTIEL par id. `objectId` n'est jamais envoyé — l'établissement
+        // est verrouillé côté UI, et l'omettre de fait interdit tout déplacement, même si le
+        // serveur l'accepterait. La description est TOUJOURS envoyée : '' = effacement
+        // explicite (le serveur la convertit en NULL via NULLIF), contrairement à la
+        // création où la clé absente signifie « ne rien écrire ».
+        return saveCrmTask({
+          id: task.id,
+          title: title.trim(),
+          description: description.trim(),
+          dueAt: dueAt || null,
+          assigneeIds: selectedAssignees,
+        });
+      }
       if (!resolvedObject) return Promise.reject(new Error('Établissement non résolu'));
       return saveCrmTask({
         objectId: resolvedObject.objectId,
@@ -149,10 +178,12 @@ export function CrmTaskModal({
   });
 
   // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
-  // un tableau vide « pour voir ».
+  // un tableau vide « pour voir ». `resolvedObject` n'est requis qu'à la CRÉATION — en
+  // édition `objectOptions` est vide (établissement verrouillé), donc `resolvedObject` est
+  // toujours nul et exiger sa présence rendrait « Enregistrer » mort sans explication.
   const canSubmit =
     Boolean(title.trim()) &&
-    Boolean(resolvedObject) &&
+    (Boolean(task) || Boolean(resolvedObject)) &&
     selectedAssignees.length > 0 &&
     !createMutation.isPending;
 
@@ -160,7 +191,7 @@ export function CrmTaskModal({
     <CrmModal
       // Le titre DIT le lien : c'est la seule chose qui distingue ce formulaire du formulaire
       // libre, et l'établissement en lecture seule serait autrement inexpliqué.
-      title={relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
+      title={task ? 'Modifier la tâche' : relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
       onClose={onClose}
       footer={
         <>
@@ -168,7 +199,7 @@ export function CrmTaskModal({
             Annuler
           </button>
           <button type="button" className="crm-btn primary" disabled={!canSubmit} onClick={() => createMutation.mutate()}>
-            Créer
+            {task ? 'Enregistrer' : 'Créer'}
           </button>
         </>
       }
@@ -196,12 +227,14 @@ export function CrmTaskModal({
 
       <label className="crm-field">
         Établissement
-        {fixedObject ? (
-          // Lecture seule assumée : la tâche hérite de l'établissement de la demande, et le
-          // serveur refuserait tout autre choix (22023). On ne rend PAS un picker désactivé —
-          // SearchSelect n'a pas de prop `disabled`, et lui en ajouter une toucherait un
-          // composant partagé bien au-delà du CRM.
-          <span className="crm-field__static">{fixedObject.objectName}</span>
+        {task || fixedObject ? (
+          // Lecture seule assumée : en édition comme depuis une demande, l'établissement
+          // n'est PAS modifiable ici (le serveur accepterait un déplacement en édition, mais
+          // on ne l'offre pas — cf. docstring de `task`) ; le serveur refuserait tout autre
+          // choix pour `fixedObject` (22023). On ne rend PAS un picker désactivé — SearchSelect
+          // n'a pas de prop `disabled`, et lui en ajouter une toucherait un composant partagé
+          // bien au-delà du CRM.
+          <span className="crm-field__static">{task ? task.objectName : fixedObject!.objectName}</span>
         ) : (
           <SearchSelect
             aria-label="Établissement"
@@ -245,7 +278,7 @@ export function CrmTaskModal({
 
       {createMutation.isError && (
         <div className="inline-alert" role="alert">
-          Échec de la création : {(createMutation.error as Error).message}
+          {task ? 'Échec de l’enregistrement' : 'Échec de la création'} : {(createMutation.error as Error).message}
         </div>
       )}
     </CrmModal>

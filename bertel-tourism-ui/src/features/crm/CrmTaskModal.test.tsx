@@ -53,3 +53,41 @@ describe('CrmTaskModal — description', () => {
     expect(mockedSave.mock.calls[0][0]).not.toHaveProperty('description');
   });
 });
+
+// Task 3 — mode ÉDITION : `task` pré-remplit le formulaire, verrouille l'établissement,
+// et soumet un update partiel par id (description TOUJOURS envoyée, y compris vidée).
+const taskFixture = {
+  id: 't-9', objectId: 'OBJ1', objectName: 'Hôtel Test',
+  actorId: null, actorName: null,
+  title: 'Titre initial', description: 'Description initiale',
+  status: 'todo' as const, priority: 'medium' as const,
+  dueAt: '2026-09-15T00:00:00+00:00', createdAt: '2026-08-01T00:00:00+00:00',
+  assignees: [{ userId: 'u-col', displayName: 'Collègue Un' }],
+  createdById: 'u-moi', createdByName: 'Moi Même',
+  ownerId: null, ownerName: null,
+  relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null,
+};
+
+describe('CrmTaskModal — édition', () => {
+  beforeEach(() => mockedSave.mockClear());
+
+  it('pré-remplit titre, description, échéance, assignés ; établissement en lecture seule', async () => {
+    renderModal({ task: taskFixture, objectOptions: [] });
+    expect(screen.getByLabelText('Titre de la tâche')).toHaveValue('Titre initial');
+    expect(screen.getByLabelText('Description de la tâche')).toHaveValue('Description initiale');
+    expect(screen.getByLabelText('Échéance')).toHaveValue('2026-09-15');
+    expect(screen.getByText('Hôtel Test')).toBeInTheDocument(); // static, pas un picker
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
+  });
+
+  it("soumet id + description (y compris vidée → '')", async () => {
+    renderModal({ task: taskFixture, objectOptions: [] });
+    await userEvent.clear(screen.getByLabelText('Description de la tâche'));
+    await userEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    await waitFor(() => expect(mockedSave).toHaveBeenCalled());
+    expect(mockedSave.mock.calls[0][0]).toMatchObject({
+      id: 't-9', title: 'Titre initial', description: '', assigneeIds: ['u-col'],
+    });
+    expect(mockedSave.mock.calls[0][0]).not.toHaveProperty('objectId'); // jamais de déplacement
+  });
+});

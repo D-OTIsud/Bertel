@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaches } from './CrmTaches';
 import * as crm from '../../services/crm';
@@ -680,6 +681,19 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(await screen.findByText(/marquer aussi comme traitée/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /oui, clôturer/i }));
     expect(await screen.findByText(/refus clôture/i)).toBeInTheDocument();
+  });
+
+  /* ===== Task 3 — crayon d'édition sur la carte : ouvre le modal en mode ÉDITION ===== */
+
+  it('ouvre le modal d’édition pré-rempli depuis le bouton crayon de la carte', async () => {
+    renderTaches();
+    // Le filtre par défaut (« mes tâches ») laisse PLUSIEURS cartes visibles : un
+    // `findByRole` générique sur toutes les cartes serait ambigu, on cible donc le crayon
+    // d'une carte précise (le libellé accessible porte le titre de LA tâche).
+    await screen.findByText('Rappeler le directeur');
+    const edit = screen.getByRole('button', { name: 'Modifier « Rappeler le directeur »' });
+    await userEvent.click(edit);
+    expect(await screen.findByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
   });
 
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {

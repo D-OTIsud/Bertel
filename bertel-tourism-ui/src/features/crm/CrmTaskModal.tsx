@@ -201,23 +201,41 @@ export function CrmTaskModal({
   const accessToken = useSupabaseAccessToken();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bannière d'erreur = état local UNIQUE, plutôt que dérivée en cascade des trois
+  // `mutation.error` (upload ?? delete ?? open). Raison : `error` d'une `useMutation`
+  // react-query v5 n'est remise à zéro QUE quand cette même mutation est rejouée — une
+  // cascade de `??` peut donc afficher l'échec d'une mutation A alors qu'une mutation B,
+  // postérieure, vient de RÉUSSIR (A n'a jamais été rejouée, son `error` traîne). Avec un
+  // état local effacé au DÉBUT de chaque action (`onMutate`, avant même de savoir si elle
+  // va réussir) et renseigné seulement à l'échec (`onError`), chaque mutation porte sa
+  // propre règle sans avoir besoin de connaître ses sœurs. C'est délibérément préféré à
+  // « reset() des deux autres mutations à chaque déclenchement » : ce second schéma est
+  // symétrique en O(n²) entre mutations (ajouter une 4e action document imposerait de
+  // penser à la reset-er ET à la faire reset-er par les trois existantes) — un oubli
+  // reproduirait exactement ce bug sans qu'aucun test unitaire isolé par mutation ne
+  // l'attrape. L'état local, lui, reste correct par construction quel que soit le nombre
+  // de mutations futures.
+  const [documentError, setDocumentError] = useState<string | null>(null);
+
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadTaskDocument({ taskId: task!.id, file, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
     onSuccess: () => onSaved(),
+    onError: (error) => setDocumentError((error as Error).message),
   });
   const deleteMutation = useMutation({
     mutationFn: (documentId: string) => deleteTaskDocument({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
     onSuccess: () => onSaved(),
+    onError: (error) => setDocumentError((error as Error).message),
   });
   const openMutation = useMutation({
     mutationFn: (documentId: string) => getTaskDocumentUrl({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
     onSuccess: (url) => window.open(url, '_blank', 'noopener'),
+    onError: (error) => setDocumentError((error as Error).message),
   });
   const documentPending = uploadMutation.isPending || deleteMutation.isPending || openMutation.isPending;
-  const documentError =
-    (uploadMutation.error as Error | null)?.message ??
-    (deleteMutation.error as Error | null)?.message ??
-    (openMutation.error as Error | null)?.message ?? null;
 
   // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
   // un tableau vide « pour voir ». `resolvedObject` n'est requis qu'à la CRÉATION — en

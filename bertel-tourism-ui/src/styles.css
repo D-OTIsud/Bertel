@@ -12459,13 +12459,25 @@ a {
 
 /* Sélecteur de statut à six états (spec §6.6) — les chips REPRENNENT la teinte du statut
    qu'elles proposent, si bien que le sélecteur et la chip de la carte parlent la même langue
-   visuelle. La SÉLECTION se marque par `is-on` (bordure accent), pas par la teinte : `new` et
-   `in_progress` partagent le ton `open` et seraient autrement indiscernables. */
+   visuelle.
+
+   ⚠ LA PUCE SÉLECTIONNÉE GARDE SA TEINTE. `.kind-chip.is-on` remplit en accent et passe le
+   texte en blanc — convention maison, juste pour un choix BINAIRE (les deux chips de la
+   modale de création), fausse ici : sur six états colorés sémantiquement, la puce choisie
+   perdrait sa couleur au moment précis où elle devient la réponse. « Annulée » sélectionnée
+   se serait affichée en vert-canard. Constaté à l'écran, pas à la lecture.
+   La sélection se marque donc par un ANNEAU d'accent + le poids du texte, teinte conservée. */
 .crm-app .crm-status-choices { flex-wrap: wrap; gap: 8px; }
 .crm-app .crm-status-choice { border: 1px solid transparent; font-weight: 600; }
-.crm-app .crm-status-choice.is-on {
+/* La sélection est portée par `aria-pressed`, PAS par la classe `is-on` : celle-ci
+   déclencherait `.kind-chip.is-on`, qui remplit en accent et écraserait la teinte (elle est
+   plus spécifique que `.tl-status--*`). Piloter le style sur l'attribut évite la guerre de
+   spécificité ET aligne l'apparence sur ce que lisent les lecteurs d'écran : un seul état,
+   une seule source. Cette règle ne touche donc ni `background` ni `color`. */
+.crm-app .crm-status-choice[aria-pressed='true'] {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent) inset;
+  box-shadow: 0 0 0 2px var(--accent);
+  font-weight: 800;
 }
 .crm-app .crm-status-choice:disabled { opacity: 0.55; cursor: not-allowed; }
 

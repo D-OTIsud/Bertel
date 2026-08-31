@@ -110,9 +110,10 @@ export function CrmStatusModal({
             <button
               key={code}
               type="button"
-              className={
-                'kind-chip crm-status-choice tl-status--' + interactionStatusTone(code) + (choice === code ? ' is-on' : '')
-              }
+              // Pas de classe `is-on` : elle déclencherait le remplissage accent de
+              // `.kind-chip.is-on`, qui écraserait la teinte du statut. La sélection est
+              // rendue depuis `aria-pressed` (voir styles.css).
+              className={'kind-chip crm-status-choice tl-status--' + interactionStatusTone(code)}
               aria-pressed={choice === code}
               disabled={disabled || saving}
               title={gateTitle}

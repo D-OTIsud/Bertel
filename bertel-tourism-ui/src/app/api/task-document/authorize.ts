@@ -64,13 +64,19 @@ export async function authenticated(req: NextRequest): Promise<AuthenticatedRequ
   return { ok: true, server, jwt, userId: data.user.id };
 }
 
-/** Résultat de `resolveLinkedDocument`. `storagePath` vide = la ligne existe mais ne
- *  désigne aucun fichier (purge manuelle, incident d'upload) : à chaque appelant de
- *  décider — la suppression tolère, l'URL signée refuse. Aucun bucket n'est rendu :
- *  le seul bucket légitime est `PRIVATE_BUCKET`, il n'a pas à transiter par la donnée. */
+/** Résultat de `resolveLinkedDocument`. `file: null` = la ligne existe mais ne désigne
+ *  aucun fichier exploitable (purge manuelle, incident d'upload) : à chaque appelant de
+ *  décider — la suppression tolère, l'URL signée refuse. Aucun bucket n'est rendu : le
+ *  seul bucket légitime est `PRIVATE_BUCKET`, il n'a pas à transiter par la donnée.
+ *
+ *  Volontairement `{ path: string } | null` plutôt qu'une simple chaîne : une chaîne vide
+ *  est une valeur `string` comme une autre pour le compilateur, rien n'obligeait un
+ *  appelant à la distinguer d'un chemin réel avant de la passer à `createSignedUrl` ou
+ *  `remove`. `null` force le narrowing à chaque site d'appel — l'oubli devient une erreur
+ *  de compilation, pas un bug en production. */
 export type LinkedDocument =
   | { ok: false; response: NextResponse }
-  | { ok: true; storagePath: string };
+  | { ok: true; file: { path: string } | null };
 
 /**
  * Résout le document RATTACHÉ à la tâche, en deux lectures service_role (RLS interdit
@@ -87,7 +93,10 @@ export type LinkedDocument =
  *     jamais purgé). On remonte donc un 500 explicite et on ne supprime rien.
  *  3. Le bucket est ÉPINGLÉ à PRIVATE_BUCKET, jamais lu depuis la ligne : sans cela une
  *     ligne ref_document pointant ailleurs ferait signer (ou supprimer) dans un bucket
- *     tiers avec le service_role. Même refus 409 que actor-document en pareil cas.
+ *     tiers avec le service_role. Le 409 unexpected_bucket ne doit sanctionner QUE ce
+ *     cas-là — un chemin vide sur le bon bucket reste une ligne « déjà purgée », pas un
+ *     bucket suspect ; les confondre rendrait indéboulonnable toute ligne portant le bon
+ *     bucket et un chemin vide (régression sabotée et corrigée dans cette passe).
  */
 export async function resolveLinkedDocument(
   server: ServerClient,
@@ -116,11 +125,19 @@ export async function resolveLinkedDocument(
 
   const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');
   const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
-  // Ligne sans coordonnées de fichier : cas « déjà purgé », distinct d'une erreur de
-  // lecture ci-dessus. On rend un chemin vide, l'appelant tranche.
-  if (!bucket && !path) return { ok: true, storagePath: '' };
-  if (bucket !== PRIVATE_BUCKET || !path) {
+  // Chemin vide ⇒ rien à signer ni à supprimer, quel que soit le bucket déclaré : ligne
+  // « déjà purgée » (purge manuelle, incident d'upload, ou tout simplement la ligne
+  // ref_document elle-même introuvable — les deux cas convergent ici, aucun appelant
+  // n'a besoin de les distinguer, tous deux se traduisent par « pas de fichier »).
+  // Le tester AVANT le bucket est délibéré : un bucket correct (PRIVATE_BUCKET) avec un
+  // chemin vide n'est PAS un bucket suspect, c'est une ligne sans fichier. Inverser
+  // l'ordre — comme le faisait la version précédente — rend la ligne indéboulonnable
+  // (409 permanent) alors qu'elle est parfaitement supprimable.
+  if (!path) return { ok: true, file: null };
+  // Chemin présent mais bucket différent de PRIVATE_BUCKET : seul cas légitime du 409,
+  // le bucket est réellement inattendu.
+  if (bucket !== PRIVATE_BUCKET) {
     return { ok: false, response: NextResponse.json({ error: 'unexpected_bucket' }, { status: 409 }) };
   }
-  return { ok: true, storagePath: path };
+  return { ok: true, file: { path } };
 }

@@ -54,7 +54,7 @@ function urlServer(options: {
     storage: { from: storageFrom },
     from,
   } as never;
-  return { server, link, createSignedUrl, storageFrom, from };
+  return { server, link, document, createSignedUrl, storageFrom, from };
 }
 
 describe('/api/task-document/url', () => {
@@ -108,7 +108,7 @@ describe('/api/task-document/url', () => {
   });
 
   it('happy path : {url} signée sur le chemin lié, TTL borné à 60 s', async () => {
-    const { server, link, createSignedUrl, storageFrom } = urlServer();
+    const { server, link, document, createSignedUrl, storageFrom } = urlServer();
     mockedServer.mockReturnValue(server);
     callerCan(true);
     const res = await POST(urlReq({ taskId: TASK_ID, documentId: DOC_ID }));
@@ -121,6 +121,9 @@ describe('/api/task-document/url', () => {
     expect(storageFrom).toHaveBeenCalledWith('actor-documents');
     // Filtre sur LA PAIRE, asserté sur les colonnes réellement vues.
     expect(link.eqCalls).toEqual([['task_id', TASK_ID], ['document_id', DOC_ID]]);
+    // Le filtre `ref_document.id = documentId` : un faux qui rendrait son résultat quel
+    // que soit le filtre passerait inaperçu sans cette ligne (Minor 3).
+    expect(document.eqCalls).toEqual([['id', DOC_ID]]);
   });
 
   it('500 quand la lecture ref_document échoue, sans signature', async () => {

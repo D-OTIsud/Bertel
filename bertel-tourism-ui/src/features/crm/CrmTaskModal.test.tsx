@@ -14,8 +14,21 @@ jest.mock('../../store/session-store', () => ({
   useSessionStore: (selector: (s: { userId: string; demoMode: boolean }) => unknown) =>
     selector({ userId: 'u-moi', demoMode: false }),
 }));
+jest.mock('../../services/task-documents', () => ({
+  uploadTaskDocument: jest.fn().mockResolvedValue({ documentId: 'd-2', title: 'Nouveau.pdf' }),
+  getTaskDocumentUrl: jest.fn().mockResolvedValue('https://signed.example/x'),
+  deleteTaskDocument: jest.fn().mockResolvedValue(undefined),
+}));
+// Le jeton par défaut ('token-test') couvre la majorité des scénarios ; `mockAccessToken`
+// (préfixe requis par le hoisting de jest.mock) reste overridable via mockReturnValueOnce
+// pour le cas « jeton pas encore lu » (accessToken === null → boutons désactivés).
+const mockAccessToken = jest.fn((): string | null => 'token-test');
+jest.mock('../../hooks/useSupabaseAccessToken', () => ({
+  useSupabaseAccessToken: () => mockAccessToken(),
+}));
 
 import { saveCrmTask } from '../../services/crm';
+import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../../services/task-documents';
 const mockedSave = jest.mocked(saveCrmTask);
 
 function renderModal(props: Partial<React.ComponentProps<typeof CrmTaskModal>> = {}) {
@@ -90,5 +103,114 @@ describe('CrmTaskModal — édition', () => {
       id: 't-9', title: 'Titre initial', description: '', assigneeIds: ['u-col'],
     });
     expect(mockedSave.mock.calls[0][0]).not.toHaveProperty('objectId'); // jamais de déplacement
+  });
+});
+
+// Task 9 — section « Pièces jointes » : SEULEMENT en édition (une tâche en création n'a pas
+// encore d'id auquel ancrer un fichier). Les trois mutations (upload/ouvrir/supprimer)
+// appellent onSaved() qui invalide `crm-tasks` SANS fermer le modal — l'utilisateur peut
+// enchaîner plusieurs pièces jointes.
+describe('CrmTaskModal — pièces jointes', () => {
+  const taskWithDoc = {
+    ...taskFixture,
+    documents: [{ id: 'd-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1234, createdAt: null }],
+  };
+
+  beforeEach(() => {
+    mockAccessToken.mockReturnValue('token-test');
+    jest.mocked(uploadTaskDocument).mockClear();
+    jest.mocked(deleteTaskDocument).mockClear();
+    jest.mocked(getTaskDocumentUrl).mockClear();
+  });
+
+  it('création : pas de section documents, un mot l’explique', () => {
+    renderModal();
+    expect(screen.queryByText('Pièces jointes')).not.toBeInTheDocument();
+    expect(screen.getByText('Enregistrez la tâche pour joindre des documents.')).toBeInTheDocument();
+  });
+
+  it('édition : aucune pièce jointe → message dédié dans la liste', () => {
+    renderModal({ task: taskFixture, objectOptions: [] }); // taskFixture.documents = []
+    expect(screen.getByText('Pièces jointes')).toBeInTheDocument();
+    expect(screen.getByText('Aucune pièce jointe.')).toBeInTheDocument();
+  });
+
+  it('édition : liste les documents et supprime avec confirmation', async () => {
+    const onSaved = jest.fn();
+    window.confirm = jest.fn().mockReturnValue(true);
+    renderModal({ task: taskWithDoc, objectOptions: [], onSaved });
+    expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalledWith({
+      taskId: 't-9', documentId: 'd-1', accessToken: 'token-test',
+    }));
+    expect(onSaved).toHaveBeenCalled(); // invalide crm-tasks SANS fermer le modal
+    expect(screen.getByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+  });
+
+  it('édition : suppression refusée à la confirmation → aucun appel', async () => {
+    window.confirm = jest.fn().mockReturnValue(false);
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+  });
+
+  it('édition : upload un fichier choisi', async () => {
+    const onSaved = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onSaved });
+    const file = new File(['x'], 'Nouveau.pdf', { type: 'application/pdf' });
+    await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
+    await waitFor(() => expect(jest.mocked(uploadTaskDocument)).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: 't-9', accessToken: 'token-test' }),
+    ));
+    expect(onSaved).toHaveBeenCalled();
+  });
+
+  it('édition : upload en échec → erreur visible (pas d’échec silencieux)', async () => {
+    jest.mocked(uploadTaskDocument).mockRejectedValueOnce(new Error('Fichier trop volumineux'));
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+    const file = new File(['x'], 'Trop-gros.pdf', { type: 'application/pdf' });
+    await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
+    expect(await screen.findByText('Fichier trop volumineux')).toBeInTheDocument();
+  });
+
+  it('édition : Ouvrir demande l’URL signée et ouvre un nouvel onglet', async () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+    await userEvent.click(screen.getByRole('button', { name: 'Ouvrir « Devis.pdf »' }));
+    await waitFor(() => expect(getTaskDocumentUrl).toHaveBeenCalledWith({
+      taskId: 't-9', documentId: 'd-1', accessToken: 'token-test',
+    }));
+    await waitFor(() => expect(openSpy).toHaveBeenCalledWith('https://signed.example/x', '_blank', 'noopener'));
+    openSpy.mockRestore();
+  });
+
+  // Résolution controleur — sizeBytes: null est une garde SQL délibérée (taille illisible),
+  // à ne JAMAIS confondre avec une taille de 0 octet : les deux doivent rester distinguables.
+  it('sizeBytes null affiche « taille inconnue », jamais « 0 Ko »', () => {
+    const taskWithUnknownSize = {
+      ...taskFixture,
+      documents: [{ id: 'd-3', title: 'Sans-taille.pdf', mimeType: 'application/pdf', sizeBytes: null, createdAt: null }],
+    };
+    renderModal({ task: taskWithUnknownSize, objectOptions: [] });
+    expect(screen.getByText('taille inconnue')).toBeInTheDocument();
+    expect(screen.queryByText('0 Ko')).not.toBeInTheDocument();
+  });
+
+  it('sizeBytes: 1234 → arrondi en Ko, distinct de « taille inconnue »', () => {
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+    expect(screen.getByText('1 Ko')).toBeInTheDocument();
+    expect(screen.queryByText('taille inconnue')).not.toBeInTheDocument();
+  });
+
+  // Jeton pas encore lu (accessToken === null) : les boutons restent désactivés — sinon
+  // l'appel partirait sans Authorization et la route répondrait 401 sans que l'utilisateur
+  // comprenne pourquoi.
+  it('jeton non encore lu : Ouvrir/Supprimer/Ajouter restent désactivés', () => {
+    mockAccessToken.mockReturnValue(null);
+    renderModal({ task: taskWithDoc, objectOptions: [] });
+    expect(screen.getByRole('button', { name: 'Ouvrir « Devis.pdf »' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ajouter un document' })).toBeDisabled();
   });
 });

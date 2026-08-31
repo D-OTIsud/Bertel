@@ -11811,6 +11811,11 @@ a {
   white-space: nowrap;
 }
 .crm-app .pill-mini.principal { background: var(--accent-tint); color: var(--accent-deep); }
+/* Task 9 — badge trombone kanban : SEUL usage cliquable de .pill-mini dans le CRM (ouvre le
+   modal d'édition, même gating d'écriture que le crayon), donc reset des chromes bouton natifs. */
+.crm-app button.pill-mini { border: 0; cursor: pointer; font-family: inherit; gap: 3px; }
+.crm-app button.pill-mini:hover:not(:disabled) { filter: brightness(0.94); }
+.crm-app button.pill-mini:disabled { cursor: not-allowed; opacity: 0.62; }
 .crm-app .crm-readonly-pill {
   background: rgba(214, 147, 58, 0.16);
   color: #8a5c1d;
@@ -12987,6 +12992,14 @@ a {
 /* Note NEUTRE sous un champ (explique un choix), à ne pas confondre avec `__hint`, qui est
    ambré parce qu'il signale une saisie manquante. */
 .crm-app .crm-field__note { margin: -1px 0 0; font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+/* Task 9 — liste des pièces jointes d'une tâche (modal d'édition). Rangée compacte : titre
+   tronqué, taille, puis les deux actions (Ouvrir/Supprimer) via .crm-btn.sm existant. */
+.crm-app .crm-doc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.crm-app .crm-doc-list__row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.crm-app .crm-doc-list__row:last-child { border-bottom: 0; padding-bottom: 0; }
+.crm-app .crm-doc-list__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+/* `sizeBytes: null` (garde SQL, taille illisible) rend « taille inconnue » ici — jamais « 0 Ko ». */
+.crm-app .crm-doc-list__size { flex: none; font-size: 10.5px; font-weight: 500; color: var(--ink-4); }
 /* §66 — aperçu du nom affiché COMPOSÉ (lecture seule, pas un champ éditable). */
 .crm-app .crm-display-name-preview {
   margin: -2px 0 0;

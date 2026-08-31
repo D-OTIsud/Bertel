@@ -1135,3 +1135,65 @@ Base d'abord, **front ensuite mais sans délai** : le front déployé appelle en
 `rpc_grant_org_permission` / `rpc_revoke_org_permission`, supprimées ici. Pendant la fenêtre,
 cliquer une case « Permissions par défaut de l'organisation » affiche une erreur au lieu
 d'accorder — le piège est désarmé, mais l'écran est incohérent.
+
+---
+
+## 17j — L'écriture CRM exige la permission, jamais le seul rang admin (§227)
+
+`Base de donnée DLL et API/migration_crm_write_requires_permission.sql`
+Rollback : `Base de donnée DLL et API/rollback/rollback_crm_write_requires_permission.sql`
+
+### Pourquoi
+
+17i a fait du rôle métier la source des droits. Restait un second système d'autorisation qui
+l'ignorait : quatre gardes d'écriture CRM acceptaient `api.current_user_admin_rank() IS NOT NULL`
+— une **non-nullité**, pas un seuil. `team_lead` vaut 10, très en dessous du rang 30 exigé pour
+écrire une permission, et suffisait pourtant à ouvrir tout le CRM.
+
+Constaté APRÈS 17i : `xyz.makimura@gmail.com`, rétrogradé Lecteur à 0 permission, gardait
+`team_lead` et écrivait toujours le CRM. /team affichait « 0 permission » à côté d'un accès
+réel — 17i avait rendu le compteur honnête, ce bras le rendait de nouveau menteur.
+
+Arbitrage PO 2026-08-31 : **« non, un lecteur ne doit jamais écrire le CRM »**.
+
+### Ce que la migration fait
+
+Retire le bras de rang admin de quatre gardes. Après elle : superuser plateforme, ou
+`write_crm_notes` (conférée par le rôle, ou accordée en exception).
+
+| Fonction | Traitement |
+| --- | --- |
+| `api.user_can_write_crm(text)` | réécrite |
+| `api.user_can_write_crm_actor(uuid)` | réécrite |
+| `api.current_user_can_write_crm_notes()` | réécrite (COALESCE §204 conservé — sans lui la sonde est à 3 valeurs et le front devient fail-OPEN) |
+| `api.save_crm_actor` | patch guardé sur la source vive (~200 lignes, un seul bras à corriger) |
+
+Le patch de `save_crm_actor` porte deux gardes : **motif absent ⇒ RAISE** (pas de no-op
+silencieux) et **motif en plusieurs exemplaires ⇒ RAISE** (`replace` remplace tout, on
+n'édite pas un site non relu).
+
+### Volontairement NON touché
+
+`api.user_can_write_list` porte le même motif mais une règle différente — « créateur de la
+liste OU admin de l'ORG », aucune permission en jeu, et `ref_permission` n'a pas de droit
+« écrire une liste ». Le retirer fermerait l'édition des listes d'autrui sans rien pour la
+rouvrir. Décision distincte.
+`can_delete_object_private_note` / `can_manage_object_private_note` comparent un **seuil** de
+rang, pas une non-nullité : classe différente, hors sujet.
+
+### ✅ APPLIQUÉE EN PRODUCTION le 2026-08-31
+
+| Contrôle | Résultat |
+| --- | --- |
+| Relevé pré-application | 1 seul membre concerné : `xyz.makimura` (Lecteur + `team_lead`, 0 permission) |
+| Dry-run transactionnel | patch + sabotage joués puis annulés, 0 trace |
+| **Sabotage** de la garde | Lecteur+`team_lead` = `false` → `write_crm_notes` accordée en exception = `true` → retirée = `false`. La garde lit bien la permission |
+| `save_crm_actor` | 3867 → 3822 caractères, soit exactement les 45 du bras retiré — le reste de la fonction intact |
+| Balayage final | les 10 membres testés en se plaçant dans leur session : **4 Lecteurs à `false`** (`team_lead` compris), **6 Éditeurs à `true`** |
+| Policies RLS | aucune ne porte le motif sur une écriture CRM (1 seule mention, en SELECT sur `actor_contact_export_log`) |
+
+### Front
+
+`MembersTable` affirmait en `title` qu'un rôle d'administration « ouvre notamment toute
+l'écriture CRM » : devenu faux, corrigé dans le même lot. La pastille « + rôle admin » reste —
+à partir du rang 30 le membre peut s'accorder des permissions, ce que le compteur ne dit pas.

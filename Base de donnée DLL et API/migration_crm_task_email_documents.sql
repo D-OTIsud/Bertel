@@ -3,10 +3,14 @@
 -- Spec : docs/superpowers/specs/2026-08-31-crm-task-email-description-attachments-design.md
 --
 -- 1. app_notification devient un OUTBOX e-mail (email_claimed_at / email_sent_at /
---    email_error). Le drainage est fait par le serveur Next (relais SMTP autorisé par IP
---    du VPS : ni Edge Function ni trigger DB ne peuvent envoyer). Claim TTL 10 min :
---    un crash entre claim et envoi re-rend la ligne réclamable — un e-mail n'est jamais
---    perdu, un doublon n'est possible QUE dans cette fenêtre de panne (assumé).
+--    email_error / email_attempts). Le drainage est fait par le serveur Next (relais SMTP
+--    autorisé par IP du VPS : ni Edge Function ni trigger DB ne peuvent envoyer). Claim
+--    TTL 10 min : un crash entre claim et envoi re-rend la ligne réclamable — un e-mail
+--    n'est jamais perdu, un doublon n'est possible QUE dans cette fenêtre de panne
+--    (assumé). Cinq échecs d'envoi et la ligne SORT de la file : sans cette borne, une
+--    seule adresse durablement inenvoyable rebouche la file à chaque drain, à jamais.
+--    L'arriéré antérieur à 17i est TERMINÉ par un backfill : on ne réveille pas des
+--    assignations anciennes le jour du déploiement.
 -- 2. api.user_can_write_crm_task : LE prédicat d'écriture d'une tâche, factorisé —
 --    même règle que api.save_crm_task (user_can_write_crm sur l'object de la tâche).
 -- 3. crm_task_document : pièces jointes d'une tâche (bucket privé actor-documents,
@@ -20,6 +24,7 @@
 ALTER TABLE public.app_notification ADD COLUMN IF NOT EXISTS email_claimed_at timestamptz;
 ALTER TABLE public.app_notification ADD COLUMN IF NOT EXISTS email_sent_at   timestamptz;
 ALTER TABLE public.app_notification ADD COLUMN IF NOT EXISTS email_error     text;
+ALTER TABLE public.app_notification ADD COLUMN IF NOT EXISTS email_attempts  int NOT NULL DEFAULT 0;
 
 COMMENT ON COLUMN public.app_notification.email_claimed_at IS
   'Réclamation de drainage en cours (TTL 10 min). NULL ou périmée = réclamable.';
@@ -27,8 +32,28 @@ COMMENT ON COLUMN public.app_notification.email_sent_at IS
   'Envoi e-mail confirmé (ou ligne terminée sans envoi possible — voir email_error).';
 COMMENT ON COLUMN public.app_notification.email_error IS
   'Dernière erreur d''envoi. Diagnostic seulement : ne bloque jamais une re-réclamation.';
+COMMENT ON COLUMN public.app_notification.email_attempts IS
+  'Nombre d''échecs d''envoi acquittés. À 5, la ligne SORT de la file (plus jamais '
+  'réclamée) et reste diagnosticable par email_error + email_attempts.';
 
--- Index de parcours du drain. Il porte les DEUX prédicats du claim, `kind` compris :
+-- ── L'ARRIÉRÉ ANTÉRIEUR À 17i NE DOIT PAS REPARTIR ─────────────────────────────────────
+-- `ADD COLUMN email_sent_at` fait naître TOUTES les lignes historiques à NULL, c'est-à-dire
+-- réclamables : sans ce backfill, le premier drain e-maillerait des assignations déjà
+-- anciennes. Une assignation vieille de plusieurs jours n'a rien à faire dans la boîte de
+-- son destinataire le jour du déploiement — elle a déjà été vue dans l'interface, et
+-- l'e-mail est un RAPPEL de l'événement, pas son archive. Le comportement ne doit pas non
+-- plus dépendre du délai qui sépare l'écriture de cette migration de son application :
+-- l'arriéré mesuré aujourd'hui est d'UNE ligne, il grossira jusqu'au déploiement.
+-- Les lignes sont TERMINÉES (email_sent_at posé) et non supprimées : la marque
+-- `backfill_pre_17i` dit explicitement pourquoi aucun e-mail n'est parti pour elles.
+-- ⚠ REJEU : cette migration est idempotente au sens DDL, mais ce backfill ne l'est pas au
+-- sens métier — le REJOUER sur une base vivante terminerait tout ce qui attend à cet
+-- instant dans la file (au pire quelques minutes d'e-mails en attente, la file étant
+-- drainée à chaque assignation). Ne pas rejouer 17i sur une base vivante sans le savoir.
+UPDATE app_notification SET email_sent_at = now(), email_error = 'backfill_pre_17i'
+WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL;
+
+-- Index de parcours du drain. Il porte les TROIS prédicats du claim, `kind` compris :
 -- `app_notification` est explicitement GÉNÉRIQUE (16z — une espèce de plus = un CHECK de
 -- plus, pas une table de plus). Le jour où une seconde espèce non e-mailée y sera écrite,
 -- rien ne la terminera jamais — le drain ne réclame que `crm_task_assigned` — et ses lignes
@@ -43,17 +68,38 @@ COMMENT ON COLUMN public.app_notification.email_error IS
 -- l'index NON BORNÉ survivrait — c'est-à-dire exactement l'accumulation que la borne `kind`
 -- existe pour empêcher, conservée par la migration censée la fermer, et sans qu'aucune
 -- sortie de DDL ne le signale. Rejouer un DROP + CREATE coûte une reconstruction d'index ;
--- taire une définition périmée coûte la panne qu'on croyait corrigée.
+-- taire une définition périmée coûte la panne qu'on croyait corrigée. Le même raisonnement
+-- vaut pour la borne `email_attempts` ajoutée ci-dessous : une ligne épuisée quitte la file,
+-- l'index doit la laisser sortir aussi, sinon il regrossit de tout ce qui ne partira jamais.
 DROP INDEX IF EXISTS public.idx_app_notification_unmailed;
 CREATE INDEX IF NOT EXISTS idx_app_notification_unmailed
   ON public.app_notification (created_at)
-  WHERE email_sent_at IS NULL AND kind = 'crm_task_assigned';
+  WHERE email_sent_at IS NULL AND kind = 'crm_task_assigned' AND email_attempts < 5;
 
 -- Réclame jusqu'à p_limit notifications à e-mailer et retourne TOUT le contenu du message,
 -- dérivé en DB (aucune donnée client n'entre jamais dans un e-mail). SKIP LOCKED + fenêtre
 -- TTL : deux drains concurrents ne prennent jamais la même ligne. Une ligne dont le
 -- destinataire n'a pas d'e-mail est TERMINÉE ici même (email_sent_at + email_error) :
 -- elle ne doit pas boucher la file en boucle claim/échec.
+--
+-- `email_attempts < 5` FERME LA MÊME CLASSE DE PANNE POUR L'AUTRE MOITIÉ DU PROBLÈME.
+-- Le bras `no_recipient_email` ci-dessous ne couvre que l'adresse ABSENTE ou VIDE ; il ne
+-- dit rien de l'adresse syntaxiquement valide dont la boîte refuse DÉFINITIVEMENT (compte
+-- fermé, domaine en rejet). Cette ligne-là échoue, l'acquittement en échec lève son claim,
+-- elle redevient réclamable — et comme le parcours est `ORDER BY n.created_at`, elle reste
+-- en TÊTE : elle consomme un des 20 créneaux de CHAQUE drain, à jamais. Vingt lignes de ce
+-- type et la file ne se draine plus du tout, alors que rien n'est cassé nulle part. La
+-- dissymétrie était donc : file protégée contre l'adresse manquante, grande ouverte à
+-- l'envoi qui échoue.
+-- Une ligne qui a épuisé ses 5 tentatives SORT de la file : elle n'est plus jamais
+-- réclamée, elle n'est NI supprimée NI marquée envoyée (`email_sent_at` reste NULL, ce qui
+-- dit la vérité : aucun e-mail n'est parti), et elle reste diagnosticable par le couple
+-- `email_error` + `email_attempts`. La relancer est un geste EXPLICITE d'exploitation
+-- (`UPDATE … SET email_attempts = 0`), jamais un effet de bord du drain.
+-- 5 et pas 1 : les échecs SMTP transitoires (relais saturé, coupure réseau du VPS) sont la
+-- majorité des échecs réels, et abandonner au premier perdrait des e-mails parfaitement
+-- envoyables. 5 et pas 50 : au-delà, la ligne bouche la file assez longtemps pour que le
+-- symptôme redevienne celui qu'on ferme ici.
 CREATE OR REPLACE FUNCTION api.claim_unmailed_notifications(p_limit integer DEFAULT 20)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -68,6 +114,7 @@ BEGIN
     FROM app_notification n
     WHERE n.kind = 'crm_task_assigned'
       AND n.email_sent_at IS NULL
+      AND n.email_attempts < 5
       AND (n.email_claimed_at IS NULL OR n.email_claimed_at < now() - interval '10 minutes')
     ORDER BY n.created_at
     LIMIT GREATEST(COALESCE(p_limit, 20), 1)
@@ -124,8 +171,12 @@ COMMENT ON FUNCTION api.claim_unmailed_notifications(integer) IS
   '(TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. '
   'Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.';
 
--- Acquittement du drain. p_failed = [{"id","error"}] : erreur stampée, claim levé —
--- re-réclamable au prochain ping. Les deux bras sont bornés à `kind = 'crm_task_assigned'`,
+-- Acquittement du drain. p_failed = [{"id","error"}] : erreur stampée, compteur de
+-- tentatives INCRÉMENTÉ, claim levé — re-réclamable au prochain ping TANT QUE le compteur
+-- n'a pas atteint 5 (voir la borne du claim : c'est l'incrément d'ici qui la rend
+-- atteignable ; sans lui la borne serait décorative et la file resterait bouchable à
+-- l'infini par une seule adresse durablement inenvoyable).
+-- Les deux bras sont bornés à `kind = 'crm_task_assigned'`,
 -- la MÊME espèce que le claim : un identifiant étranger porté par un acquittement ne doit
 -- pas pouvoir terminer une notification d'une autre espèce, que ce drain n'a jamais eue à
 -- envoyer (sans exposition aujourd'hui — service_role seul — mais la garde coûte un ET).
@@ -156,7 +207,7 @@ BEGIN
   GET DIAGNOSTICS v_n = ROW_COUNT;
 
   UPDATE app_notification n
-  SET email_error = f.err, email_claimed_at = NULL
+  SET email_error = f.err, email_claimed_at = NULL, email_attempts = n.email_attempts + 1
   FROM (
     SELECT (item->>'id')::uuid AS id, COALESCE(item->>'error', 'send_failed') AS err
     FROM jsonb_array_elements(COALESCE(p_failed, '[]'::jsonb)) item
@@ -172,7 +223,7 @@ REVOKE ALL ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) FROM PUBLIC
 GRANT EXECUTE ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) TO service_role;
 COMMENT ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) IS
   'Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + '
-  'claim levé (re-réclamable). Service_role only.';
+  'email_attempts+1 + claim levé (re-réclamable jusqu''à 5 tentatives). Service_role only.';
 
 -- ── 2. Prédicat d'écriture d'une tâche ─────────────────────────────────────────────────
 -- MÊME règle que api.save_crm_task (user_can_write_crm sur l'object de la tâche),

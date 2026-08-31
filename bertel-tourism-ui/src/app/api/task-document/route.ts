@@ -1,64 +1,19 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, authorizeTask, resolveLinkedDocument } from './authorize';
 
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
 // autorisation par RPC DEFINER « en tant qu'appelant » (jamais la service key), fichier
 // dans le bucket privé actor-documents sous tasks/{taskId}/, ref_document crm_private,
 // lien crm_task_document, rollback en cascade sur échec partiel. Le gate est le prédicat
 // d'ÉCRITURE (user_can_write_crm_task) pour les trois verbes : toutes les surfaces
-// documents vivent derrière le modal d'édition, lui-même gated écriture.
-const PRIVATE_BUCKET = 'actor-documents';
-const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// documents vivent derrière le modal d'édition, lui-même gated écriture. Le socle
+// d'autorisation (gate + résolution du document lié) vit dans ./authorize, partagé avec
+// url/route.ts : une seule copie du gate, un seul endroit à corriger.
 
 export const runtime = 'nodejs';
-
-function bearer(req: NextRequest): string {
-  const value = req.headers.get('authorization') ?? '';
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
-
-// Client « en tant qu'appelant » : porte le JWT de session, jamais la service key. Sert
-// uniquement à évaluer le RPC SECURITY DEFINER de gate — RLS sur crm_task_document et
-// ref_document bloque de toute façon la lecture/écriture directe par ce client.
-function callerClient(jwt: string) {
-  return createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-// Prédicat d'écriture UNIQUE pour les trois verbes (upload, url signée, delete) : la spec
-// assume que toute surface de pièce jointe de tâche vit derrière le modal d'édition, lui-même
-// gated en écriture. Tâche inconnue ⇒ false côté RPC, jamais une erreur qui fuiterait.
-async function authorizeTask(jwt: string, taskId: string): Promise<boolean> {
-  const { data, error } = await callerClient(jwt).schema('api').rpc(
-    'user_can_write_crm_task', { p_task_id: taskId });
-  return !error && data === true;
-}
-
-type AuthenticatedRequest =
-  | { ok: false; response: NextResponse }
-  | {
-      ok: true;
-      server: NonNullable<ReturnType<typeof getServerSupabaseClient>>;
-      jwt: string;
-      userId: string;
-    };
-
-async function authenticated(req: NextRequest): Promise<AuthenticatedRequest> {
-  const server = getServerSupabaseClient();
-  if (!server) return { ok: false, response: NextResponse.json({ error: 'server_misconfigured' }, { status: 500 }) };
-  const jwt = bearer(req);
-  if (!jwt) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  const { data, error } = await server.auth.getUser(jwt);
-  if (error || !data.user) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  return { ok: true, server, jwt, userId: data.user.id };
-}
 
 async function processFile(file: File) {
   return processActorDocumentBuffer(Buffer.from(await file.arrayBuffer()), file.type);
@@ -151,26 +106,22 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   }
   if (!await authorizeTask(auth.jwt, taskId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
-  // Le lien est vérifié sur LA PAIRE (task_id, document_id), pas seulement le document :
-  // un documentId valide mais rattaché à une autre tâche ne doit jamais passer ce garde.
-  const { data: link } = await auth.server
-    .from('crm_task_document')
-    .select('document_id')
-    .eq('task_id', taskId)
-    .eq('document_id', documentId)
-    .maybeSingle();
-  if (!link) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  // Le résolveur porte les trois invariants (paire task/document, erreur de lecture ≠
+  // absence, bucket épinglé). En particulier : si une lecture échoue il rend un 500 et
+  // on sort AVANT toute suppression — supprimer la métadonnée sur une lecture ratée
+  // laisserait le fichier dans le bucket sans plus aucune ligne pour le référencer.
+  const resolved = await resolveLinkedDocument(auth.server, taskId, documentId);
+  if (!resolved.ok) return resolved.response;
 
-  const { data: document } = await auth.server
-    .from('ref_document')
-    .select('storage_bucket, storage_path')
-    .eq('id', documentId)
-    .maybeSingle();
-  const bucket = String((document as { storage_bucket?: string } | null)?.storage_bucket ?? '');
-  const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
-  // Le fichier storage peut déjà avoir disparu (purge manuelle, incident) : on ne bloque
-  // pas la suppression de la ligne pour autant, remove() est silencieusement idempotent.
-  if (bucket && path) await auth.server.storage.from(bucket).remove([path]);
+  // Deux situations distinctes derrière ce test, à ne pas confondre :
+  //  - chemin vide ⇒ la ligne ne désigne AUCUN fichier (purge manuelle, incident) : il
+  //    n'y a rien à retirer, la suppression de la ligne suit normalement ;
+  //  - chemin présent ⇒ on retire le fichier d'abord. remove() est silencieusement
+  //    idempotent si l'objet a déjà disparu du bucket, on ne bloque pas pour autant.
+  // L'ordre (fichier puis ligne) est délibéré : l'ordre inverse laisserait un fichier
+  // orphelin si le retrait échouait après la suppression de la ligne. Ici le pire cas
+  // est une ligne sans fichier — visible, rattrapable, jamais un orphelin muet.
+  if (resolved.storagePath) await auth.server.storage.from(PRIVATE_BUCKET).remove([resolved.storagePath]);
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
   if (error) return NextResponse.json({ error: 'delete_failed', detail: error.message }, { status: 500 });
   // crm_task_document.document_id référence ref_document en CASCADE FK : la ligne de lien

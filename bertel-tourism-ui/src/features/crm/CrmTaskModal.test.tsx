@@ -156,15 +156,20 @@ describe('CrmTaskModal — pièces jointes', () => {
 
   it('édition : liste les documents et supprime avec confirmation', async () => {
     const onSaved = jest.fn();
+    const onClose = jest.fn();
     window.confirm = jest.fn().mockReturnValue(true);
-    renderModal({ task: taskWithDoc, objectOptions: [], onSaved });
+    renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
     expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
     await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalledWith({
       taskId: 't-9', documentId: 'd-1', accessToken: 'token-test',
     }));
     expect(onSaved).toHaveBeenCalled(); // invalide crm-tasks SANS fermer le modal
-    expect(screen.getByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+    // Même raison que pour l'upload : `CrmModal` ne se démonte JAMAIS de lui-même en réaction à
+    // `onClose`, donc asserter la présence persistante du titre serait vacuous (le heading reste
+    // là que `onClose()` soit appelé ou non). Seul le mock peut faire rougir un `onClose()` ajouté
+    // par erreur sur le chemin de suppression.
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('édition : suppression refusée à la confirmation → aucun appel', async () => {

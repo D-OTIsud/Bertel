@@ -241,10 +241,10 @@ BEGIN
          format('D4 : display_name doit venir de api.crm_user_label — source UNIQUE partagee avec le kanban CRM et le journal 17g ; obtenu %s', v_user_lbl);
 
   -- Tri : le contributeur le plus actif d'abord.
-  ASSERT (SELECT bool_and(prev >= cur) FROM (
+  ASSERT COALESCE((SELECT bool_and(prev >= cur) FROM (
             SELECT lag((d->>'active_days')::int) OVER (ORDER BY ord) AS prev, (d->>'active_days')::int AS cur
             FROM jsonb_array_elements(v_team->'contributors') WITH ORDINALITY AS t(d, ord)) z
-          WHERE prev IS NOT NULL),
+          WHERE prev IS NOT NULL), TRUE),
          'D5 : contributors est trie par active_days DESC';
 
   -- ═══ (G) LE TEMPS NET, PAR LA RPC ═══

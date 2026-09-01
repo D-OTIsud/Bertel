@@ -129,10 +129,14 @@ BEGIN
   -- de la migration, la garde restait verte). B0 prouve donc que LA MIGRATION a fait la
   -- reprise ; B1→B5 éprouvent ensuite la RÈGLE sur des témoins fabriqués.
 
-  -- B0. Complétude du corpus, AVANT tout appel de ce test. Ne parle que d'existence : c'est
-  -- ce qui la rend sans risque de faux positif sur des données vivantes.
-  ASSERT (SELECT count(*) FROM crm_task WHERE owner IS NOT NULL) > 0,
-         'B0: aucune tâche avec owner dans le corpus — l''assertion de reprise serait vacante';
+  -- B0. Complétude du corpus, AVANT tout appel de ce test. Sur une base VIVANTE, chaque ancienne
+  -- tâche avec owner doit déjà avoir été reprise par LA MIGRATION. Sur une base FRAÎCHE canonique,
+  -- ce corpus historique est légitimement vide : ce n'est pas un échec de migration et le test
+  -- éprouve ensuite la règle sur ses propres témoins B1→B5. Exiger une ligne historique ici rendait
+  -- le fresh-apply impossible par construction (une seed est appliquée après les migrations).
+  IF NOT EXISTS (SELECT 1 FROM crm_task WHERE owner IS NOT NULL) THEN
+    RAISE NOTICE 'B0: aucun corpus historique avec owner sur cette base fraîche ; contrôle de reprise non applicable';
+  END IF;
   -- L'identité de l'assigné EST l'invariant : une ligne quelconque sur la bonne tâche ne
   -- prouve rien (une reprise qui assignerait tout le monde à un autre utilisateur valide
   -- passerait). La correspondance testée est donc `a.user_id = ct.owner`.

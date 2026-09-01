@@ -14,6 +14,7 @@ import {
   promoteActorDocument,
   uploadActorDocument,
 } from '../../services/actor-documents';
+import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { CRM_READ_ONLY_REASON, formatDocumentSize, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
@@ -103,7 +104,7 @@ export function CrmActorDocumentDropzone({
         ref={fileInputRef}
         className="crm-actor-docs__file-input"
         type="file"
-        accept="application/pdf,image/jpeg,image/png,image/webp"
+        accept={CRM_DOCUMENT_ACCEPT}
         aria-label="Sélectionner un document à ajouter"
         onChange={(event) => addFile(event.target.files?.[0])}
       />

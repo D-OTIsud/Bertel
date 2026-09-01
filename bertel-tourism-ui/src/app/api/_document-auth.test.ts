@@ -1,5 +1,13 @@
 /** @jest-environment node */
-import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, callerClient } from './_document-auth';
+import {
+  MAX_UPLOAD_BODY_BYTES,
+  PRIVATE_BUCKET,
+  UUID_SHAPE,
+  authenticated,
+  callerClient,
+  rejectOversizedBody,
+} from './_document-auth';
+import { MAX_INPUT_BYTES } from './media/upload/process-image';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -117,5 +125,33 @@ describe('_document-auth — constantes', () => {
 
   it('le bucket privé est celui des documents CRM', () => {
     expect(PRIVATE_BUCKET).toBe('actor-documents');
+  });
+});
+
+describe('_document-auth — rejectOversizedBody', () => {
+  it('laisse passer un corps dans le plafond, et un corps sans Content-Length', () => {
+    // Pas d'en-tête ⇒ on ne sait rien : refuser casserait tout client qui n'annonce pas sa
+    // taille. C'est la limite ASSUMÉE de cette garde, pas un oubli.
+    expect(rejectOversizedBody(req())).toBeNull();
+    expect(rejectOversizedBody(req({ 'content-length': '0' }))).toBeNull();
+    expect(rejectOversizedBody(req({ 'content-length': String(MAX_UPLOAD_BODY_BYTES) }))).toBeNull();
+    expect(rejectOversizedBody(req({ 'content-length': 'pas-un-nombre' }))).toBeNull();
+  });
+
+  it('413 size dès le premier octet au-delà du plafond', async () => {
+    const response = rejectOversizedBody(req({ 'content-length': String(MAX_UPLOAD_BODY_BYTES + 1) }));
+    expect(response).not.toBeNull();
+    expect(response?.status).toBe(413);
+    // Code `size` : EXACTEMENT celui qu'émettait déjà le pipeline pour un fichier trop gros,
+    // donc le même message à l'écran (api-error.ts) sans traduction à ajouter.
+    await expect(response?.json()).resolves.toMatchObject({ error: 'size' });
+  });
+
+  it('le plafond couvre le plus gros fichier que le pipeline aurait accepté', () => {
+    // Sans cette borne basse, resserrer le plafond ferait refuser AVANT lecture des envois
+    // parfaitement légitimes — une garde de déni de service qui casse l'usage normal.
+    expect(MAX_UPLOAD_BODY_BYTES).toBeGreaterThan(MAX_INPUT_BYTES);
+    // …et pas de plafond démesuré : la marge sert l'enrobage multipart, rien d'autre.
+    expect(MAX_UPLOAD_BODY_BYTES).toBeLessThanOrEqual(MAX_INPUT_BYTES + 4 * 1024 * 1024);
   });
 });

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
-import { PRIVATE_BUCKET, UUID_SHAPE, authenticated } from '../_document-auth';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, rejectOversizedBody } from '../_document-auth';
 import { authorizeTask, resolveLinkedDocument } from './authorize';
 
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
@@ -31,6 +31,10 @@ function isMissingObjectError(error: { message: string }): boolean {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authenticated(req);
   if (!auth.ok) return auth.response;
+  // Le gate ne peut pas précéder la lecture du corps (l'identifiant de la cible y est) :
+  // à défaut, on refuse AVANT de bufferiser ce qui n'aurait jamais pu aboutir.
+  const oversized = rejectOversizedBody(req);
+  if (oversized) return oversized;
   let form: FormData;
   try { form = await req.formData(); } catch { return NextResponse.json({ error: 'bad_multipart' }, { status: 400 }); }
   const taskId = form.get('task_id');

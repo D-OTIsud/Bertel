@@ -20,9 +20,10 @@
 --    (sujet/statut/période) avec KPI recalculés sur l'ensemble FILTRÉ — les acteurs
 --    « lien seul » disparaissent sous filtre ; p_status hors contrat → 22023 ; refus 42501
 --    membre sans permission (C) et cross-ORG (B).
--- F) ASSIGNATION DE TÂCHE (demande PO 2026-06-12) : list_crm_assignees liste les membres
---    actifs de l'ORG du caller (userA + userC, jamais userB) avec un display_name garanti ;
---    save_crm_task accepte owner = membre de la MÊME ORG (userC) et refuse 22023 un owner
+-- F) ASSIGNATION DE TÂCHE (demande PO 2026-06-12, durcie par 17c) : list_crm_assignees
+--    liste les membres actifs de l'ORG qui PEUVENT agir dans le CRM (userA + userC avec un
+--    octroi temporaire, jamais userB) avec un display_name garanti ; save_crm_task accepte
+--    owner = membre éligible de la MÊME ORG (userC) et refuse 22023 un owner
 --    d'une autre ORG (userB).
 -- G) PHOTO ACTEUR + SUGGESTIONS CONTACTS + TIMELINE FILTRÉE (demande PO 2026-06-12) :
 --    save_crm_actor accepte photo_url (set puis effacement clé+vide), re-lu par list_actor_crm ;
@@ -55,7 +56,7 @@ DECLARE
   v_objB   text := 'HOTRUN9999990812'; -- objet de l'ORG B (probes cross-ORG acteur-centrées)
   v_userA  uuid := '00000000-0000-4000-a000-000000000101'; -- membre ORG A, AVEC write_crm_notes
   v_userB  uuid := '00000000-0000-4000-a000-000000000102'; -- membre ORG B (étranger à l'objet)
-  v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- membre ORG A, SANS permission
+  v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- ORG A ; permission temporaire au bloc F seulement
   v_actorA uuid := '00000000-0000-4000-a000-000000000821'; -- acteur lié à objA (ORG A)
   v_actorB uuid := '00000000-0000-4000-a000-000000000822'; -- acteur lié à objB (ORG B)
   v_pub_role uuid;
@@ -191,7 +192,10 @@ BEGIN
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE), (v_userC, v_orgA, TRUE)
     ON CONFLICT DO NOTHING;
   INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at) VALUES
-    (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
+    (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
+    -- 17c : être dans la même ORG ne suffit plus pour être assignable. Cet octroi rend le
+    -- témoin positif userC réellement éligible ; il est retiré avant les blocs de refus.
+    (v_userC, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
     ON CONFLICT DO NOTHING;
   -- Contact d'établissement (§03) pour prouver list_object_contact_suggestions (demande PO
   -- 2026-06-12) : 'email' fixture-guardé (sinon premier kind actif, mais l'assertion email est
@@ -516,6 +520,10 @@ BEGIN
     -- v_demande reste vivante : les blocs USER C / USER B probent l'autorisation de réponse
     -- dessus ; le bloc USER A final la supprime (CASCADE) avant le cycle de contexte v_ctx.
   RESET ROLE;
+
+  -- Le reste du fichier éprouve userC SANS permission. Retirer l'octroi temporaire ici
+  -- conserve ces gardes tout en alignant le bloc d'assignation sur la règle 17c.
+  DELETE FROM user_permission WHERE user_id = v_userC AND permission_id = v_perm;
 
   -- ---------- USER C (membre SANS permission) : lit mais n'écrit pas ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userC, 'role','authenticated')::text, true);

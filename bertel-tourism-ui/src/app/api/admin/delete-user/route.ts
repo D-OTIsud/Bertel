@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { authorizeAdminRoute, sharesOrgIgnoringTargetActivity } from '../_authorize';
 
 export const runtime = 'nodejs';
@@ -33,7 +34,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { error: deleteErr } = await server.auth.admin.deleteUser(userId);
-  if (deleteErr) return NextResponse.json({ error: 'delete_failed', detail: deleteErr.message }, { status: 500 });
+  if (deleteErr) {
+    // Même piège que `actor-document` : `delete_failed` est allowlisté (api-error.ts), son `detail`
+    // s'affiche VERBATIM. Celui-ci vient de GoTrue — anglais, et il nomme volontiers la table
+    // interne en cause (« Database error deleting user »). GoTrue ne porte pas de SQLSTATE :
+    // `engineErrorDetail` rend donc `undefined` et le client lit « La suppression a échoué. ».
+    // Le brut, lui, part au journal du serveur.
+    return NextResponse.json({ error: 'delete_failed', detail: engineErrorDetail(deleteErr, { operation: 'delete' }) }, { status: 500 });
+  }
 
   return NextResponse.json({ deleted: true }, { status: 200 });
 }

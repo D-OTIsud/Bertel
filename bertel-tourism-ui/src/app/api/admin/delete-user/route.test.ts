@@ -1,5 +1,6 @@
 /** @jest-environment node */
 import { POST } from './route';
+import { readApiErrorMessage } from '@/services/api-error';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -114,6 +115,30 @@ describe('POST /api/admin/delete-user', () => {
     const res = await POST(req({ authorization: 'Bearer t' }, { userId: 'target' }));
     expect(res.status).toBe(200);
     expect(deleteUser).toHaveBeenCalledWith('target');
+  });
+
+  it('un échec GoTrue ne fait plus fuiter son message anglais dans `delete_failed`', async () => {
+    // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est
+    // affiché VERBATIM. Celui de GoTrue est anglais et nomme la couche interne en cause.
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    const deleteUser = jest.fn().mockResolvedValue({ error: { message: 'Database error deleting user', status: 500 } });
+    mockedServer.mockReturnValue({
+      auth: {
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'super' } }, error: null }),
+        admin: { deleteUser },
+      },
+    } as never);
+    mockedCreate.mockReturnValue(callerClient(true, null) as never);
+
+    const res = await POST(req({ authorization: 'Bearer t' }, { userId: 'target' }));
+    const payload = await res.json();
+
+    expect(res.status).toBe(500);
+    expect(payload.error).toBe('delete_failed');
+    expect(payload.detail).toBeUndefined();
+    expect(readApiErrorMessage(payload, res.status)).toBe('La suppression a échoué.');
+    expect(JSON.stringify(warn.mock.calls)).toContain('Database error deleting user'); // journal, pas écran
+    warn.mockRestore();
   });
 
   it('200 pour un superuser ciblant un compte de N’IMPORTE QUELLE ORG (garde exemptée)', async () => {

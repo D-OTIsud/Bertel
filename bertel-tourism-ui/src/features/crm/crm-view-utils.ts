@@ -148,6 +148,27 @@ export function formatShort(value: string | null): string {
 }
 
 /**
+ * Taille lisible d'une pièce jointe — SOURCE UNIQUE des deux panneaux qui en affichent une
+ * (`CrmTaskModal`, `CrmActorDocuments`). Chacun portait sa copie, et elles avaient déjà
+ * divergé sur le cas qui compte.
+ *
+ * `null` est une garde SQL DÉLIBÉRÉE (taille illisible côté serveur : le cast de
+ * `ref_document.extra->>'size_bytes'` est borné, une valeur non numérique sort à NULL au
+ * lieu d'abattre la lecture entière) et doit rester distinguable d'une taille de 0 octet —
+ * les confondre ferait mentir l'interface (« 0 Ko » n'est pas « on ne sait pas »).
+ *
+ * Cette fonction FORMATE une taille ; elle ne décide pas s'il faut en afficher une. Un
+ * appelant dont la route ne sait PAS distinguer 0 de « inconnu » doit garder son appel :
+ * c'est le cas de `CrmActorDocuments`, dont le SQL émet `coalesce(size_bytes, 0)`.
+ */
+export function formatDocumentSize(value: number | null): string {
+  if (value === null) return 'taille inconnue';
+  if (value < 1024) return `${value} o`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+}
+
+/**
  * `AAAA-MM-JJ` pour un `<input type="date">`, dérivé DANS LE MÊME FUSEAU que `formatShort`.
  *
  * POURQUOI CETTE FONCTION EXISTE. Le modal d'édition pré-remplissait son champ d'échéance

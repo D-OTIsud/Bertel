@@ -185,6 +185,45 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(typeSelect).toHaveValue('brochure');
   });
 
+  // Taille de pièce jointe — `formatDocumentSize` est désormais PARTAGÉE avec CrmTaskModal :
+  // une seule fonction pour les deux panneaux. Sur CETTE route, `api.list_actor_support` émet
+  // `coalesce(size_bytes, 0)` : 0 ne dit pas « fichier vide » mais « taille absente », et rien
+  // ici ne sépare les deux. Le segment est donc OMIS plutôt que rendu « 0 o », qui affirmerait
+  // une taille qu'on n'a pas — c'est le comportement visible que l'extraction devait préserver.
+  it('taille : 2048 → « 2 Ko » dans la méta ; 0 (sentinelle SQL) → aucun segment de taille', async () => {
+    const baseDocument = {
+      notes: null,
+      validFrom: null,
+      validTo: null,
+      status: 'active' as const,
+      intendedRoleCode: null,
+      intendedRoleName: null,
+      mimeType: 'application/pdf',
+      promotedToObjectId: null,
+      promotedDocumentId: null,
+      promotedAt: null,
+      createdAt: '2026-08-12T08:00:00Z',
+    };
+    crmMock.listActorSupport.mockResolvedValue({
+      defaultRole: { code: 'operator', name: 'Exploitant' },
+      documents: [
+        { ...baseDocument, documentId: 'doc-taille', title: 'Avec-taille.pdf', sizeBytes: 2048 },
+        { ...baseDocument, documentId: 'doc-sans', title: 'Sans-taille.pdf', sizeBytes: 0 },
+      ],
+    });
+
+    renderFiche();
+    fireEvent.click(await screen.findByRole('tab', { name: /Documents d'accompagnement/ }));
+
+    const withSize = (await screen.findByText('Avec-taille.pdf')).closest('.crm-actor-docs__row') as HTMLElement;
+    expect(within(withSize).getByText('2 Ko · 12/08/2026')).toBeInTheDocument();
+
+    const withoutSize = (await screen.findByText('Sans-taille.pdf')).closest('.crm-actor-docs__row') as HTMLElement;
+    expect(within(withoutSize).getByText('12/08/2026')).toBeInTheDocument();
+    expect(within(withoutSize).queryByText(/0 o/)).not.toBeInTheDocument();
+    expect(within(withoutSize).queryByText(/taille inconnue/)).not.toBeInTheDocument();
+  });
+
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {
     renderFiche();
     expect(await screen.findByText('Mme Marie Hoarau')).toBeInTheDocument();

@@ -19,6 +19,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ExternalLink, Trash2, Upload } from 'lucide-react';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
 import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../../services/task-documents';
+import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
@@ -370,7 +371,7 @@ export function CrmTaskModal({
             ref={fileInputRef}
             type="file"
             aria-label="Ajouter un document"
-            accept="application/pdf,image/*"
+            accept={CRM_DOCUMENT_ACCEPT}
             style={{ display: 'none' }}
             onChange={(event) => {
               const file = event.target.files?.[0];

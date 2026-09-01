@@ -15,12 +15,12 @@
  *     noms de tables, des données ou de la configuration.
  *  2. **Un code inconnu ne fait pas échouer la traduction** : il retombe sur un message générique
  *     qui donne au moins le statut, de quoi ouvrir un ticket utile.
+ *
+ * Le vocabulaire SQLSTATE vit dans `@/lib/db-error-message` : les routes `src/app/api/**` en ont
+ * besoin AUSSI, pour ne pas alimenter un code allowlisté avec la sortie brute du moteur. Une
+ * seconde table ici dériverait de la première.
  */
-
-/** Vrai en dev/test, faux en production — décide de ce qui part au journal. */
-function isVerboseEnv(): boolean {
-  return process.env.NODE_ENV !== 'production';
-}
+import { SQLSTATE_LABELS, isVerboseEnv, readErrorCode, readErrorMessage } from '@/lib/db-error-message';
 
 /**
  * Journalise un brut NON traduit. En production, seuls le statut et le code sortent : le `detail`
@@ -237,37 +237,6 @@ export function networkError(cause: unknown): Error {
 }
 
 /**
- * SQLSTATE PostgreSQL → message FR. Table volontairement courte : ne sont traduits que les codes
- * dont l'utilisateur peut faire quelque chose.
- */
-const SQLSTATE_LABELS: Record<string, string> = {
-  '42501': "Cette action n'est pas autorisée avec vos droits actuels.",
-  '23505': 'Cette valeur existe déjà (doublon).',
-  '23503': 'Un élément lié a été supprimé entre-temps — rechargez la fiche.',
-  '23514': 'Une valeur enregistrée est invalide.',
-  '23502': 'Une valeur obligatoire est manquante.',
-  '22P02': 'Format de valeur invalide.',
-  '22001': 'Texte trop long pour ce champ.',
-  '57014': 'La requête a pris trop de temps. Affinez vos filtres et réessayez.',
-  PGRST301: 'Session expirée — reconnectez-vous.',
-};
-
-function readMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    return error.message;
-  }
-  return '';
-}
-
-function readCode(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
-    return error.code;
-  }
-  return '';
-}
-
-/**
  * Traduit une erreur PostgREST / Supabase en message FR.
  *
  * **La priorité est INVERSÉE par rapport à l'ancien `mapMutationError`** : on mappe d'abord, et à
@@ -283,8 +252,8 @@ function readCode(error: unknown): string {
  * court-circuiterait.
  */
 export function mapDatabaseError(error: unknown, fallback: string): Error {
-  const message = readMessage(error);
-  const code = readCode(error);
+  const message = readErrorMessage(error);
+  const code = readErrorCode(error);
   const normalized = `${code} ${message}`.toLowerCase();
 
   if (code && SQLSTATE_LABELS[code]) {

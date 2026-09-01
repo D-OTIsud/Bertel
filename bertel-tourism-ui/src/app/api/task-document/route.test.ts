@@ -59,12 +59,13 @@ function deleteServer(options: {
   links?: Parameters<typeof linkTable>[0];
   linkError?: { message: string } | null;
   document?: Parameters<typeof documentTable>[0];
+  deleteError?: { code?: string; message: string } | null;
 }) {
   const link = linkTable(options.links ?? [{ task_id: TASK_ID, document_id: DOC_ID }], options.linkError ?? null);
   const document = documentTable(options.document
     ?? { data: { storage_bucket: 'actor-documents', storage_path: DOC_PATH }, error: null });
   const removed = jest.fn().mockResolvedValue({ error: null });
-  const deleteEq = jest.fn().mockResolvedValue({ error: null });
+  const deleteEq = jest.fn().mockResolvedValue({ error: options.deleteError ?? null });
   const delDoc = jest.fn().mockReturnValue({ eq: deleteEq });
   const from = jest.fn((table: string) => (table === 'crm_task_document'
     ? { select: link.select }
@@ -234,6 +235,24 @@ describe('/api/task-document', () => {
     // Le filtre `ref_document.id = documentId` : un faux qui rendrait son résultat quel
     // que soit le filtre passerait inaperçu sans cette ligne (Minor 3).
     expect(document.eqCalls).toEqual([['id', DOC_ID]]);
+  });
+
+  it('DELETE ne relaie jamais le message Postgres brut quand ref_document refuse la suppression', async () => {
+    const raw = 'update or delete on table "ref_document" violates foreign key constraint "secret_fk"';
+    const { server, delDoc } = deleteServer({ deleteError: { code: '23503', message: raw } });
+    mockedServer.mockReturnValue(server);
+    callerCan(true);
+
+    const res = await DELETE(deleteReq({ taskId: TASK_ID, documentId: DOC_ID }));
+
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body).toEqual({
+      error: 'delete_failed',
+      detail: "Cet élément est encore utilisé ailleurs — il ne peut pas être supprimé.",
+    });
+    expect(JSON.stringify(body)).not.toContain(raw);
+    expect(delDoc).toHaveBeenCalled();
   });
 
   it('DELETE rend 404 pour un document valide rattaché à une AUTRE tâche', async () => {

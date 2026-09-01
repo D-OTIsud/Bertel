@@ -22,6 +22,7 @@ canonique avant validation par un éditeur.
 | D6 | Déclencheur de la tâche | **« Soumettre » explicite** — une tâche par soumission, brouillon libre avant |
 | D7 | Chemin d'écriture directe existant (`api.is_object_owner`) | **Fermé pour les personas acteur** ; conservé pour les équipes internes |
 | D8 | Architecture d'identité | **Approche A** : rôle `actor` + activation de `app_user_profile.actor_id` comme lien explicite |
+| D9 | Granularité de validation (PO, 2026-09-01) | Le vérificateur valide **l'ensemble de la soumission en une action** OU **changement par changement** (mélange approbations/rejets → statut `partial`) |
 
 ## 3. État des lieux (recon 2026-09-01, 6 sous-systèmes)
 
@@ -269,6 +270,56 @@ en v1 (l'édition de ses propres coordonnées = hors périmètre, cf. §9).
 > COMMENT liste les 4 formulations à faire évoluer ensemble). Aucune de ces 4 n'est
 > modifiée par ce chantier ; un test le verrouille (§8).
 
+### 4.3 bis — Validation côté éditeurs : tout OU partie (D9)
+
+Le vérificateur dispose des deux granularités :
+
+- **Partie** : les RPCs existants `api.approve_pending_change` / `api.reject_pending_change`
+  restent le chemin unitaire — chaque changement s'approuve ou se rejette indépendamment,
+  un mélange produit le statut `partial` (cf. 4.4).
+- **Ensemble** : deux nouveaux RPCs de soumission entière (mêmes gates que l'unitaire :
+  `api.user_can_moderate_object`, FOR UPDATE, refus si la soumission n'est plus `pending`).
+
+**Trou existant fermé au passage.** `api.approve_pending_change` REFUSE aujourd'hui tout
+changement `manual_apply` (`metadata->>'rpc'` NULL → 22023) : un module non
+auto-applicable ne peut jamais être marqué approuvé et resterait `pending` pour toujours —
+ce qui bloquerait la résolution de TOUTE soumission (4.4) puisque ~22/29 modules sont
+`manual_apply`. La migration ajoute donc un paramètre au RPC unitaire :
+
+```sql
+api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL,
+                           p_applied_manually boolean DEFAULT FALSE) → jsonb
+-- rpc whitelisté           → re-dispatch comme aujourd'hui (p_applied_manually ignoré)
+-- rpc NULL / manual_apply  → exige p_applied_manually = TRUE : le modérateur atteste
+--                            avoir reporté la modification à la main dans l'éditeur ;
+--                            la ligne passe 'approved' (pas 'applied'), reviewed_by/at
+--                            posés, AUCUN re-dispatch. Sinon 22023 (comportement actuel).
+```
+
+La distinction `applied` (re-dispatch machine) / `approved` (attesté manuel) existe déjà
+dans le CHECK de `pending_change.status` — elle devient enfin porteuse de sens. Signature
+étendue par DEFAULT : les appels existants sont inchangés.
+
+**`api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL, p_include_manual boolean DEFAULT FALSE) → jsonb`**
+« Tout approuver ». Transactionnel : itère les `pending_change` encore `pending` de la
+soumission dans un ordre stable ; les auto-applicables sont re-dispatchés (writer
+whitelisté, AS THE CALLER — le modérateur doit passer le gate canonique du writer,
+défense en profondeur inchangée) ; les `manual_apply` ne sont inclus que si
+`p_include_manual = TRUE` (même attestation que ci-dessus), sinon ils restent `pending`
+et le retour l'indique. **Tout ou rien** : si un writer échoue, la transaction entière
+est annulée (aucune soumission à moitié appliquée). Retour :
+`{applied_count, approved_manual_count, skipped_manual_count, submission_status}`.
+
+**`api.reject_fiche_submission(p_submission_id uuid, p_review_note text) → jsonb`**
+« Tout rejeter ». Note obligatoire (même règle que l'unitaire), appliquée à chaque
+changement encore `pending`. Les changements déjà traités unitairement ne sont pas
+touchés (on peut donc approuver 2 sections puis rejeter le reste en une action →
+statut `partial`).
+
+La résolution (4.4) reste inchangée : elle est déclenchée par le trigger sur
+`pending_change.status`, donc les chemins unitaire et groupé convergent sans code
+supplémentaire.
+
 ### 4.4 Résolution d'une soumission (trigger)
 
 `AFTER UPDATE OF status ON pending_change` (quand `submission_id IS NOT NULL`) →
@@ -345,6 +396,15 @@ brouillon local. Échec → rien n'est partiellement soumis (transaction).
   « Vérification de fiche » et un lien « Ouvrir la modération »
   (`/moderation?object=<id>`). `ModerationPage` accepte le paramètre `?object=` en
   pré-filtre (elle sait déjà filtrer par objet côté RPC).
+- `ModerationPage` — **vue groupée par soumission (D9)** : les lignes portant un
+  `submission_id` sont regroupées sous un en-tête de soumission (fiche, acteur, date,
+  message) avec les actions **« Tout approuver »** (`approve_fiche_submission` ;
+  case à cocher « inclure les sections reportées manuellement » → `p_include_manual`)
+  et **« Tout rejeter »** (`reject_fiche_submission`, motif obligatoire), en plus des
+  boutons unitaires existants sur chaque ligne. Sur une ligne `manual_apply`, le bouton
+  Approuver ouvre une confirmation « J'ai reporté cette modification dans l'éditeur »
+  → `p_applied_manually=TRUE`. Les lignes sans `submission_id` (contributeurs internes
+  §122) gardent l'affichage plat actuel.
 
 ### 4.6 Invitation / révocation (routes Next, service-role)
 
@@ -444,8 +504,13 @@ est déjà dans l'allowlist Supabase (même origine que les invitations staff).
   `updated_at` ; en cas de divergence, brouillon écarté avec bannière (pas de merge
   silencieux).
 - **Approbation partielle** : statut `partial`, notification détaillée par section.
+- **`list_pending_changes` enrichi** : la vue groupée a besoin de `submission_id`, du
+  message de soumission et d'un label acteur par ligne — le RPC est étendu de ces
+  colonnes (jointure `fiche_submission`), NULL pour les propositions hors soumission.
 - **22/29 modules non auto-applicables** (whitelist §120 à 7 writers) : assumé en v1 —
-  l'éditeur applique manuellement puis approuve/rejette. Chantier de suite listé §9.
+  le vérificateur reporte à la main puis **atteste** (`p_applied_manually`, cf. 4.3 bis) ;
+  la ligne passe `approved` et la soumission peut se résoudre. L'extension de la
+  whitelist reste le chantier de suite n°1 (§9).
 
 ## 8. Plan de test
 
@@ -460,6 +525,11 @@ existants, + gate CI fresh-apply) :
   hors whitelist, refus non-acteur, refus hors périmètre ;
 - E. `list_object_verifier_ids` : matrice §227, grant individuel, repli admin, vide ;
 - F. résolution : approve/reject/mixte → statut, tâche `done`, notification acteur ;
+- F2. D9 : `approve_pending_change(p_applied_manually)` — refus sans attestation sur
+  manual_apply (comportement actuel préservé), `approved` avec ; `approve_fiche_submission`
+  — nominal, `p_include_manual` FALSE laisse les manuels `pending`, rollback complet si un
+  writer échoue, gate modérateur ; `reject_fiche_submission` — note obligatoire, ne touche
+  pas les lignes déjà traitées, mixte unitaire+groupé → `partial` ;
 - G. invariants PII (§6) ;
 - H. matrice de visibilité : défauts, écriture rang ≥ 30, refus plancher dur ;
 - I. régression : pour un `tourism_agent`, `extended_object_ids` byte-identique à avant.

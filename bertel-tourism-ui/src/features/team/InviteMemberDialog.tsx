@@ -6,10 +6,9 @@ import { Modal } from '@/components/common/Modal';
 import {
   inviteUser,
   upsertMembership,
-  grantUserPermission,
   friendlyRbacError,
 } from '@/services/rbac';
-import { BUSINESS_ROLE_CODES, businessRoleLabel, presetPermissionsFor } from '@/features/team/permission-presets';
+import { BUSINESS_ROLE_CODES, businessRoleLabel } from '@/features/team/permission-presets';
 import { parseInviteEmails } from '@/features/team/parse-invite-emails';
 
 interface InviteMemberDialogProps {
@@ -47,12 +46,12 @@ export function InviteMemberDialog({ orgId, onDone }: InviteMemberDialogProps) {
     setOpen(false);
   }
 
-  // Rattache membership + permissions du préréglage au userId (nouveau ou existant).
+  // Rattache le membership. §227 — plus aucun octroi individuel ici : le rôle métier CONFÈRE
+  // ses droits (`org_role_permission`). Le boucle de préréglage qui vivait là créerait douze
+  // exceptions individuelles en doublon du rôle pour chaque invité, et plus rien ne
+  // distinguerait alors une vraie exception d'un droit standard.
   async function attach(userId: string) {
     await upsertMembership(userId, orgId, roleCode);
-    for (const code of presetPermissionsFor(roleCode)) {
-      try { await grantUserPermission(userId, code); } catch (e) { console.warn('preset grant failed', code, e); }
-    }
   }
 
   // Invite (ou ré-invite) une seule adresse et renvoie sa ligne de récap.

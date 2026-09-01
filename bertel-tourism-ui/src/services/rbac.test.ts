@@ -27,7 +27,7 @@ describe('rbac service', () => {
       membershipId: 'm1', userId: 'u1', email: 'a@b.c', displayName: 'A', isActive: true,
       businessRoleCode: 'contributor', adminRoleCode: null, permissionCodes: ['create_object'],
       lastSeenAt: '2026-07-29T11:11:09.98Z',
-      inheritedPermissionCodes: [], isPlatformSuperuser: false,
+      rolePermissionCodes: [], isPlatformSuperuser: false,
     });
   });
 
@@ -39,12 +39,12 @@ describe('rbac service', () => {
       data: [{ membership_id: 'm1', user_id: 'u1', email: 'a@b.c', display_name: 'A', is_active: true,
                business_role_code: 'editor', admin_role_code: 'team_lead',
                permission_codes: ['create_object'], last_seen_at: null,
-               inherited_permission_codes: ['write_crm_notes'], is_platform_superuser: true }],
+               role_permission_codes: ['write_crm_notes'], is_platform_superuser: true }],
       error: null,
     });
     mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
     const members = await listOrgMembers('ORG1');
-    expect(members[0].inheritedPermissionCodes).toEqual(['write_crm_notes']);
+    expect(members[0].rolePermissionCodes).toEqual(['write_crm_notes']);
     expect(members[0].isPlatformSuperuser).toBe(true);
     // L'héritage reste SÉPARÉ des droits individuels : la case à cocher ne pilote que ceux-ci.
     expect(members[0].permissionCodes).toEqual(['create_object']);
@@ -53,12 +53,12 @@ describe('rbac service', () => {
   it('listOrgMembers ne prend pas une valeur malformée pour un tableau ni pour un booléen', async () => {
     const rpc = jest.fn().mockResolvedValue({
       data: [{ membership_id: 'm1', user_id: 'u1', is_active: true,
-               inherited_permission_codes: 'pas-un-tableau', is_platform_superuser: 'oui' }],
+               role_permission_codes: 'pas-un-tableau', is_platform_superuser: 'oui' }],
       error: null,
     });
     mockedGetApiClient.mockReturnValue(clientWithRpc(rpc));
     const members = await listOrgMembers('ORG1');
-    expect(members[0].inheritedPermissionCodes).toEqual([]);
+    expect(members[0].rolePermissionCodes).toEqual([]);
     // Fail-closed : une valeur inattendue ne doit pas décorer quelqu'un en superuser.
     expect(members[0].isPlatformSuperuser).toBe(false);
   });

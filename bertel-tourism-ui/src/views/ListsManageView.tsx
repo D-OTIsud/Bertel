@@ -10,6 +10,8 @@ import { Clock3, ListChecks, Loader2, MapPin, Plus, Search, Users } from 'lucide
 import { ICON_BY_TYPE } from '@/features/lists/OtiTemplate';
 import { HUE_BY_TYPE, LABEL_BY_TYPE, OTI_ACCENTS } from '@/features/lists/type-meta';
 import { createListFromSelection, listMyLists, type ListStatus, type ObjectListCard } from '@/services/lists';
+import { useSessionStore } from '@/store/session-store';
+import { isPlatformSuperuser } from '@/store/session-selectors';
 import { cn } from '@/lib/utils';
 
 const STATUS_LABEL: Record<ListStatus, string> = {
@@ -112,6 +114,10 @@ export default function ListsManageView() {
   const [tab, setTab] = useState<Tab>('all');
   const [query, setQuery] = useState('');
 
+  // 17l — la creation de listes est reservee au superuser plateforme (api.create_list rend
+  // 42501 sinon). Sans cette garde l'ecran promettrait un bouton que le serveur refuse.
+  const canCreateList = useSessionStore(isPlatformSuperuser);
+
   const listsQuery = useQuery({ queryKey: ['my-lists'], queryFn: listMyLists, staleTime: 30_000 });
   const lists = listsQuery.data ?? [];
 
@@ -178,14 +184,16 @@ export default function ListsManageView() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            disabled={createBlank.isPending}
-            onClick={() => createBlank.mutate()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-orange px-3 py-2 text-[12.5px] font-bold text-white transition hover:bg-orange/90 disabled:opacity-60"
-          >
-            <Plus className="h-3.5 w-3.5" /> Nouvelle liste
-          </button>
+          {canCreateList && (
+            <button
+              type="button"
+              disabled={createBlank.isPending}
+              onClick={() => createBlank.mutate()}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-orange px-3 py-2 text-[12.5px] font-bold text-white transition hover:bg-orange/90 disabled:opacity-60"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nouvelle liste
+            </button>
+          )}
         </div>
       </header>
 
@@ -213,6 +221,7 @@ export default function ListsManageView() {
             {shown.map((l) => (
               <ListCard key={l.id} list={l} />
             ))}
+            {canCreateList && (
             <button
               type="button"
               disabled={createBlank.isPending}
@@ -227,6 +236,7 @@ export default function ListsManageView() {
                 Partez d'une sélection de l'explorateur ou d'une liste vierge
               </span>
             </button>
+            )}
           </div>
         )}
       </div>

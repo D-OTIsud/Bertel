@@ -10,6 +10,20 @@
 
 **Spec :** `docs/superpowers/specs/2026-08-31-crm-task-email-description-attachments-design.md`
 
+> **⚠ DEUX PRESCRIPTIONS DE CE PLAN SONT DEPUIS SUPERSÉDÉES** (passe de dédoublonnage,
+> 2026-09-01 — le plan est LIVRÉ par ailleurs, tout le reste vaut toujours). Ne pas les
+> recopier :
+>
+> 1. **Task 8** demandait de recopier `bearer` / `callerClient` / `authenticated` à
+>    l'identique depuis `actor-document/route.ts` (« elles sont module-locales là-bas »).
+>    Le socle a depuis été extrait dans **`src/app/api/_document-auth.ts`**, consommé par
+>    les DEUX familles ; chaque famille ne garde que ses prédicats dans son `authorize.ts`.
+> 2. **Task 9** posait `accept="application/pdf,image/*"` sur l'input du modal de tâche, là
+>    où le clone acteur énumérait les formats. Les deux surfaces lisent désormais
+>    **`CRM_DOCUMENT_ACCEPT`** (`src/services/document-accept.ts`), asservi au pipeline
+>    serveur par `document-accept.guard.test.ts` — `image/*` promettait des GIF et des HEIC
+>    que le serveur refuse en 415.
+
 ## Global Constraints
 
 - Worktree : `C:\Users\dphil\Bertel3.0\.claude\worktrees\crm-task-assignment-email-7ad8e9` — tout se passe ici, branche `claude/crm-task-assignment-email-7ad8e9`.

@@ -1,13 +1,17 @@
 -- test_crm_task_email_documents.sql
--- Garde permanente du manifeste 17i (migration_crm_task_email_documents.sql) :
+-- Garde permanente du manifeste 17m (migration_crm_task_email_documents.sql) :
 -- outbox e-mail d'assignation, prédicat d'écriture de tâche, pièces jointes de tâche.
+-- Créneau RENUMÉROTÉ (collision avec un chantier concurrent déjà sur master) :
+-- renommage documentaire pur, sans effet sur la migration déjà appliquée en production.
+-- Toutes les fixtures de ce fichier portent désormais le nouveau numéro de créneau,
+-- par cohérence — elles ne survivent pas au ROLLBACK, aucune n'est écrite en base.
 --
 -- A) STRUCTURE — colonnes d'outbox, table crm_task_document (RLS ON, AUCUN grant
 --    anon/authenticated), les trois fonctions neuves ; §204 sur les quatre fonctions
 --    exposées, avec une prémisse de NON-VACUITÉ (service_role doit s'y voir, sans quoi
 --    les `NOT EXISTS` seraient vrais parce que la vue est vide, pas parce que le REVOKE
 --    a pris).
--- B) OUTBOX — l'arriéré ANTÉRIEUR à 17i est terminé par le backfill de la migration et ne
+-- B) OUTBOX — l'arriéré ANTÉRIEUR à 17m est terminé par le backfill de la migration et ne
 --    repart donc pas au premier drain (B0, mesuré AVANT toute fixture, sans quoi la
 --    prémisse qui vide la file masquerait la panne) ; le drain rend LA ligne en attente
 --    en DB ; la FENÊTRE de réclamation est éprouvée dans les deux sens (5 min : encore
@@ -33,13 +37,13 @@
 --    panne : non numérique (D4, 22P02) ET numérique mais débordant bigint (D4b, 22003) —
 --    une garde qui bornerait l'alphabet sans borner la LONGUEUR n'en fermerait qu'une.
 --    Et le contrat 16z SURVIT au redéploiement de la fonction — c'est le risque propre à
---    17i, qui REDÉPLOIE list_crm_tasks — éprouvé sur un témoin où créateur (userA), owner
+--    17m, qui REDÉPLOIE list_crm_tasks — éprouvé sur un témoin où créateur (userA), owner
 --    de compatibilité (userC) et assigné (userD) sont TROIS personnes distinctes, et
 --    porté sur TOUTES les clés du contrat : assignees[], created_by_id/name,
 --    owner_id/owner_name et les trois related_interaction_* (valeurs réelles, jamais des
 --    nulls qu'une assertion d'existence laisserait passer).
 --
--- Contre une base sans 17i : échec immédiat (bloc A). Auto-contenu + transactionnel.
+-- Contre une base sans 17m : échec immédiat (bloc A). Auto-contenu + transactionnel.
 -- Personas RÉELS par `request.jwt.claims` (jamais `SET ROLE` seul : sans JWT, auth.uid()
 -- est NULL et toutes les assertions deviendraient vides — vacuité parfaite, cf. §204).
 -- Plage de fixtures dédiée 092x (09xx = test_crm_task_multi_assignee.sql, 08xx =
@@ -138,8 +142,8 @@ BEGIN
   IF v_perm IS NULL THEN RAISE EXCEPTION 'fixture: ref_permission[write_crm_notes] manquant'; END IF;
 
   INSERT INTO auth.users (id, email) VALUES
-    (v_userA,'crm17i_a@test.local'), (v_userB,'crm17i_b@test.local'),
-    (v_userC,'crm17i_c@test.local'), (v_userD,'crm17i_d@test.local')
+    (v_userA,'crm17m_a@test.local'), (v_userB,'crm17m_b@test.local'),
+    (v_userC,'crm17m_c@test.local'), (v_userD,'crm17m_d@test.local')
     ON CONFLICT (id) DO NOTHING;
   INSERT INTO app_user_profile (id, role, display_name) VALUES
     (v_userA,'tourism_agent','Bernard Auteur'),
@@ -148,8 +152,8 @@ BEGIN
     (v_userD,'tourism_agent','Alice Ah-Fat')
     ON CONFLICT (id) DO UPDATE SET role=EXCLUDED.role, display_name=EXCLUDED.display_name;
   INSERT INTO object (id, object_type, name, status) VALUES
-    (v_orgA,'ORG','ORG A 17i','published'), (v_orgB,'ORG','ORG B 17i','published'),
-    (v_objA,'HOT','Hôtel 17i A','draft'), (v_objB,'HOT','Hôtel 17i B','draft')
+    (v_orgA,'ORG','ORG A 17m','published'), (v_orgB,'ORG','ORG B 17m','published'),
+    (v_objA,'HOT','Hôtel 17m A','draft'), (v_objB,'HOT','Hôtel 17m B','draft')
     ON CONFLICT (id) DO NOTHING;
   INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
     (v_objA,v_orgA,v_pub_role), (v_objB,v_orgB,v_pub_role)
@@ -174,7 +178,7 @@ BEGIN
     ON CONFLICT DO NOTHING;
 
   -- ═══════════════ B. OUTBOX E-MAIL ═══════════════
-  -- B0. L'ARRIÉRÉ ANTÉRIEUR À 17i NE DOIT PAS REPARTIR AU PREMIER DRAIN.
+  -- B0. L'ARRIÉRÉ ANTÉRIEUR À 17m NE DOIT PAS REPARTIR AU PREMIER DRAIN.
   -- `ADD COLUMN email_sent_at` fait naître toute ligne historique à NULL, donc réclamable :
   -- sans le backfill de la migration, le premier ping e-maillerait des assignations déjà
   -- vieilles de plusieurs jours, que leurs destinataires ont vues dans l'interface depuis
@@ -188,14 +192,14 @@ BEGIN
   ASSERT NOT EXISTS (
     SELECT 1 FROM app_notification
     WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL AND created_at < now()),
-    'B0: aucune notification ANTÉRIEURE à 17i ne doit rester réclamable — le backfill de la '
+    'B0: aucune notification ANTÉRIEURE à 17m ne doit rester réclamable — le backfill de la '
     'migration doit les avoir terminées, sinon le premier drain e-maille tout l''arriéré';
 
   -- Le drain réclame la FILE, pas les seules lignes de ce test : sur une base vivante les
   -- notifications déjà présentes rempliraient la fenêtre de claim et les assertions de
   -- cardinalité ci-dessous seraient fausses sans qu'aucune règle soit en cause. On termine
   -- donc le corpus AVANT de fabriquer les témoins (tout est annulé au ROLLBACK).
-  UPDATE app_notification SET email_sent_at = now(), email_error = 'fixture_17i_corpus'
+  UPDATE app_notification SET email_sent_at = now(), email_error = 'fixture_17m_corpus'
    WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL;
   ASSERT (SELECT count(*) FROM app_notification
            WHERE kind='crm_task_assigned' AND email_sent_at IS NULL) = 0,
@@ -205,13 +209,13 @@ BEGIN
   SET LOCAL ROLE authenticated;
     -- Tâche assignée à userC ⇒ UNE notification (l'auteur ne se notifie pas lui-même).
     v_payload := api.save_crm_task(jsonb_build_object(
-      'object_id', v_objA, 'title', 'Tâche 17i à e-mailer',
+      'object_id', v_objA, 'title', 'Tâche 17m à e-mailer',
       'due_at', '2030-01-15T09:00:00+00',
       'assignee_ids', jsonb_build_array(v_userC::text)));
     v_t := (v_payload->>'id')::uuid;
     -- Tâche auto-assignée : témoin « sans pièce jointe » de D2, et AUCUNE notification.
     v_payload := api.save_crm_task(jsonb_build_object(
-      'object_id', v_objA, 'title', 'Tâche 17i sans pièce jointe'));
+      'object_id', v_objA, 'title', 'Tâche 17m sans pièce jointe'));
     v_t_nodoc := (v_payload->>'id')::uuid;
   RESET ROLE;
 
@@ -229,12 +233,12 @@ BEGIN
     'B1: le drain doit rendre exactement la ligne en attente';
   ASSERT (v_rows->0->>'notification_id')::uuid = v_notif,
     'B1: le drain doit rendre LA notification témoin';
-  ASSERT v_rows->0->>'recipient_email' = 'crm17i_c@test.local',
+  ASSERT v_rows->0->>'recipient_email' = 'crm17m_c@test.local',
     'B1: l''adresse du destinataire doit être jointe depuis auth.users';
   ASSERT v_rows->0->>'recipient_name' = 'Zoé Zoralde',
     'B1: le nom du destinataire doit être JOINT à la lecture (jamais stocké : portée RGPD)';
-  ASSERT v_rows->0->>'task_title' = 'Tâche 17i à e-mailer', 'B1: task_title inattendu';
-  ASSERT v_rows->0->>'object_name' = 'Hôtel 17i A', 'B1: object_name inattendu';
+  ASSERT v_rows->0->>'task_title' = 'Tâche 17m à e-mailer', 'B1: task_title inattendu';
+  ASSERT v_rows->0->>'object_name' = 'Hôtel 17m A', 'B1: object_name inattendu';
   ASSERT v_rows->0->>'assigner_name' = 'Bernard Auteur', 'B1: assigner_name inattendu';
   ASSERT (v_rows->0->>'due_at')::timestamptz = TIMESTAMPTZ '2030-01-15T09:00:00+00',
     'B1: due_at doit être rendu tel qu''il a été saisi';
@@ -380,7 +384,7 @@ BEGIN
   -- lignes de ce type et la file ne se draine plus du tout, sans que rien ne soit cassé.
   -- On repart d'une file VIDE : les 21 témoins de B7 sont encore réclamables et rendraient
   -- les cardinalités ci-dessous illisibles (tout est annulé au ROLLBACK).
-  UPDATE app_notification SET email_sent_at = now(), email_error = 'fixture_17i_b8'
+  UPDATE app_notification SET email_sent_at = now(), email_error = 'fixture_17m_b8'
    WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL;
   INSERT INTO app_notification (recipient_id, kind, task_id, created_by, created_at)
   VALUES (v_userA, 'crm_task_assigned', v_t_nodoc, v_userA, now())
@@ -457,7 +461,7 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     v_payload := api.save_crm_task(jsonb_build_object(
-      'object_id', v_objA, 'title', 'Tâche 17i pièce jointe à taille illisible'));
+      'object_id', v_objA, 'title', 'Tâche 17m pièce jointe à taille illisible'));
     v_t_bad := (v_payload->>'id')::uuid;
   RESET ROLE;
   v_doc_bad := gen_random_uuid();
@@ -478,7 +482,7 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     v_payload := api.save_crm_task(jsonb_build_object(
-      'object_id', v_objA, 'title', 'Tâche 17i pièce jointe à taille débordante'));
+      'object_id', v_objA, 'title', 'Tâche 17m pièce jointe à taille débordante'));
     v_t_ovf := (v_payload->>'id')::uuid;
   RESET ROLE;
   v_doc_ovf := gen_random_uuid();
@@ -490,7 +494,7 @@ BEGIN
   VALUES (v_t_ovf, v_doc_ovf, 'Enorme.pdf', v_userA);
 
   -- L'interaction liée du témoin de D3. `related_interaction_id/subject/status` font partie
-  -- du contrat 16z de list_crm_tasks au même titre qu'`assignees[]`, et 17i REDÉPLOIE la
+  -- du contrat 16z de list_crm_tasks au même titre qu'`assignees[]`, et 17m REDÉPLOIE la
   -- fonction : une clé effacée par le redéploiement ne se verrait nulle part ailleurs.
   -- L'interaction porte un sujet et un statut RÉELS (jamais NULL) : sur trois clés nulles,
   -- des assertions d'existence passeraient encore sur une fonction qui les aurait remplacées
@@ -498,7 +502,7 @@ BEGIN
   -- jointure `ri` a survécu. Écriture directe : `crm_interaction` est sous RLS admin-only.
   v_inter := gen_random_uuid();
   INSERT INTO crm_interaction (id, object_id, interaction_type, direction, status, subject)
-  VALUES (v_inter, v_objA, 'note', 'internal', 'in_progress', 'Demande liée 17i');
+  VALUES (v_inter, v_objA, 'note', 'internal', 'in_progress', 'Demande liée 17m');
   PERFORM set_config('request.jwt.claims', json_build_object('sub',v_userA,'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     -- Payload SANS `assignee_ids` ni `owner` : v_requested reste NULL, donc ni les
@@ -541,7 +545,7 @@ BEGIN
        AND jsonb_array_length(v_task->'documents') = 0,
       'D2: documents doit valoir [] (jamais null) — le front itère, il ne teste pas la nullité';
 
-    -- D3. Non-régression : 17i REDÉPLOIE list_crm_tasks, le contrat 16z doit SURVIVRE.
+    -- D3. Non-régression : 17m REDÉPLOIE list_crm_tasks, le contrat 16z doit SURVIVRE.
     -- Éprouvé sur v_t, où le créateur (userA), l'owner de compatibilité (userC) et l'assigné
     -- (userD) sont TROIS personnes distinctes. Sur une tâche où ils coïncident, la seule
     -- CARDINALITÉ passerait au vert sur une fonction qui aurait perdu la jointure
@@ -575,7 +579,7 @@ BEGIN
     -- `ri` et émettrait trois NULL.
     ASSERT (v_task->>'related_interaction_id')::uuid = v_inter,
       'D3: related_interaction_id (16z) doit survivre au redéploiement de list_crm_tasks';
-    ASSERT v_task->>'related_interaction_subject' = 'Demande liée 17i',
+    ASSERT v_task->>'related_interaction_subject' = 'Demande liée 17m',
       'D3: related_interaction_subject (16z) doit rester JOINT depuis crm_interaction';
     ASSERT v_task->>'related_interaction_status' = 'in_progress',
       'D3: related_interaction_status (16z) doit rester JOINT depuis crm_interaction';
@@ -617,6 +621,6 @@ BEGIN
   RESET ROLE;
 
   PERFORM set_config('request.jwt.claims', NULL, true);
-  RAISE NOTICE '17i CRM tâches (outbox e-mail, prédicat d''écriture, pièces jointes) : assertions passées.';
+  RAISE NOTICE '17m CRM tâches (outbox e-mail, prédicat d''écriture, pièces jointes) : assertions passées.';
 END$$;
 ROLLBACK;

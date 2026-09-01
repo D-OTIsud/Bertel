@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 // RGPD Art. 17 erasure endpoint. Orchestrates the SQL capability (migration_gdpr_erasure.sql):
@@ -98,7 +99,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // The gate raises a French message; map an authorization failure to 403, the rest to 400.
     const msg = rpcErr.message ?? 'erase_failed';
     const forbidden = /administrateurs plateforme|permission|not allowed|denied/i.test(msg);
-    return NextResponse.json({ error: 'erase_failed', detail: msg }, { status: forbidden ? 403 : 400 });
+    // `erase_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : le `detail` s'affiche
+    // VERBATIM, et c'est VOULU — les RAISE de `rpc_gdpr_erase_subject` sont déjà des phrases
+    // françaises, bien plus précises que « L'effacement a échoué. ». Mais un échec qui n'est PAS
+    // un RAISE (RLS, JWT expiré, statement timeout) sort en anglais du moteur : `engineErrorDetail`
+    // ne rend une valeur que dans ce cas-là, sinon on garde le message métier tel quel.
+    const detail = engineErrorDetail(rpcErr) ?? msg;
+    return NextResponse.json({ error: 'erase_failed', detail }, { status: forbidden ? 403 : 400 });
   }
 
   const report = (rpcData ?? {}) as EraseReport;

@@ -17,9 +17,9 @@ const snapshot: ActorCrmSnapshot = {
     { objectId: 'obj-1', objectName: 'La Maison des Hôtes', objectType: 'HLO', roleCode: 'operator', roleName: 'Exploitant', isPrimary: true },
   ],
   channels: [
-    { id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'flo.girard123@gmail.com', isPrimary: true },
-    { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0693 87 57 74', isPrimary: false },
-    { id: 'ch-3', kindCode: 'website', kindName: 'Site web', value: 'https://maison-des-hotes.re', isPrimary: false },
+    { id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'flo.girard123@gmail.com', isPrimary: true, isPublic: false },
+    { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0693 87 57 74', isPrimary: false, isPublic: false },
+    { id: 'ch-3', kindCode: 'website', kindName: 'Site web', value: 'https://maison-des-hotes.re', isPrimary: false, isPublic: false },
   ],
   interactions: [],
   topics: [],

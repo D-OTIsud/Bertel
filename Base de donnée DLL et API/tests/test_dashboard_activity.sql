@@ -145,12 +145,13 @@ BEGIN
   ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_crm->'open_by_topic') d
                      WHERE NULLIF(d->>'name','') IS NULL),
          'F4 : open_by_topic porte toujours un libelle affichable — une demande sans sujet est regroupee sous un nom explicite, jamais sous une case vide';
-  ASSERT (SELECT sum((d->>'count')::int) FROM jsonb_array_elements(v_crm->'open_by_topic') d) = v_open,
+  ASSERT COALESCE((SELECT sum((d->>'count')::int)
+                   FROM jsonb_array_elements(v_crm->'open_by_topic') d), 0) = v_open,
          'F5 : la somme par sujet doit egaler open_interactions — aucune demande ouverte n est perdue par la jointure sur le referentiel';
-  ASSERT (SELECT bool_and(prev >= cur) FROM (
+  ASSERT COALESCE((SELECT bool_and(prev >= cur) FROM (
             SELECT lag((d->>'count')::int) OVER (ORDER BY ord) AS prev, (d->>'count')::int AS cur
             FROM jsonb_array_elements(v_crm->'open_by_topic') WITH ORDINALITY AS t(d, ord)) z
-          WHERE prev IS NOT NULL),
+          WHERE prev IS NOT NULL), TRUE),
          'F6 : open_by_topic est trie par count DESC';
 
   -- ═══ (H) DOUZE MOIS, TOUJOURS ═══

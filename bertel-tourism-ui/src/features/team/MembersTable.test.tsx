@@ -12,7 +12,7 @@ const base: OrgMember = {
   adminRoleCode: null,
   permissionCodes: [],
   lastSeenAt: null,
-  inheritedPermissionCodes: [],
+  rolePermissionCodes: [],
   isPlatformSuperuser: false,
 };
 
@@ -45,35 +45,35 @@ describe('MembersTable — colonne Dernière activité', () => {
 // Mesuré en production : les 6 Éditeurs de l'OTI portent `team_lead` ou `org_admin`, et c'est
 // de là que viennent leurs droits CRM — pas de leurs cases à cocher.
 // ---------------------------------------------------------------------------------------
-describe('MembersTable — provenance de l’accès (chantier 2026-08-28)', () => {
-  it('D1 : le compteur inclut les droits HÉRITÉS de l’ORG, sans les compter deux fois', () => {
+describe('MembersTable — provenance de l’accès (§227)', () => {
+  it('le compteur inclut les droits conférés par le RÔLE, sans les compter deux fois', () => {
     renderTable([{
       ...base,
       permissionCodes: ['create_object', 'publish_object'],
-      inheritedPermissionCodes: ['publish_object', 'write_crm_notes'],
+      rolePermissionCodes: ['publish_object', 'write_crm_notes'],
     }]);
     // Union = create_object + publish_object + write_crm_notes = 3, pas 4.
     expect(screen.getByRole('button', { name: /3 permissions/ })).toBeInTheDocument();
-    expect(screen.getByText(/dont 2 héritées/)).toBeInTheDocument();
+    expect(screen.getByText(/dont 2 par le rôle/)).toBeInTheDocument();
   });
 
-  it('D1 : un membre SANS droit individuel mais avec héritage n’affiche plus « 0 permission »', () => {
-    renderTable([{ ...base, permissionCodes: [], inheritedPermissionCodes: ['write_crm_notes'] }]);
+  it('un membre SANS exception individuelle mais avec un rôle porteur n’affiche plus « 0 permission »', () => {
+    renderTable([{ ...base, permissionCodes: [], rolePermissionCodes: ['write_crm_notes'] }]);
     expect(screen.getByRole('button', { name: /1 permission/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /0 permission/ })).not.toBeInTheDocument();
   });
 
-  it('D4 : un rôle d’administration d’ORG est signalé — c’est lui qui ouvre l’écriture CRM', () => {
+  it('§227 : un rôle d’administration d’ORG est signalé — rang ≥ 30, il peut s’accorder des permissions', () => {
     renderTable([{ ...base, adminRoleCode: 'team_lead', permissionCodes: [] }]);
     expect(screen.getByText('+ rôle admin')).toBeInTheDocument();
   });
 
-  it('D4 : le statut superuser est signalé, même avec zéro permission', () => {
+  it('§227 : le statut superuser est signalé, même avec zéro permission', () => {
     renderTable([{ ...base, isPlatformSuperuser: true, permissionCodes: [] }]);
     expect(screen.getByText('superuser')).toBeInTheDocument();
   });
 
-  it('D4 : un simple lecteur ne porte AUCUNE pastille d’accès (pas de bruit)', () => {
+  it('§227 : un simple lecteur ne porte AUCUNE pastille d’accès (pas de bruit)', () => {
     renderTable([{ ...base, businessRoleCode: 'viewer' }]);
     expect(screen.queryByText('superuser')).not.toBeInTheDocument();
     expect(screen.queryByText('+ rôle admin')).not.toBeInTheDocument();

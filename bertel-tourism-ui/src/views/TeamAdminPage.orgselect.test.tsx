@@ -10,7 +10,7 @@ jest.mock('@/services/rbac', () => ({
   listBusinessRoles: jest.fn().mockResolvedValue([]),
   listAdminRoles: jest.fn().mockResolvedValue([]),
   listPermissionCatalog: jest.fn().mockResolvedValue([]),
-  listOrgPermissions: jest.fn().mockResolvedValue([]),
+  listRolePermissions: jest.fn().mockResolvedValue({}),
   friendlyRbacError: (e: { message?: string }) => e?.message ?? '',
 }));
 

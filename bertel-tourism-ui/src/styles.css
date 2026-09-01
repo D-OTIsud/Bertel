@@ -13768,9 +13768,27 @@ a {
 .perm-check { margin-top: 2px; width: 16px; height: 16px; flex: none; accent-color: var(--teal); cursor: pointer; }
 .perm-row__label { font-size: 13px; line-height: 1.4; cursor: pointer; }
 .perm-inherit { margin-left: 8px; font-size: 11px; color: var(--text-muted); }
-.perm-drawer__org { margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
-.perm-drawer__org-head { display: flex; align-items: center; gap: 8px; }
-.perm-drawer__org-head h2 { font-size: 14px; margin: 0; }
+/* §227 — le tiroir d'un membre ne porte plus de bloc de portée ORG (`.perm-drawer__org`,
+   retiré) : il montre les droits CONFÉRÉS par le rôle en lecture seule, puis les exceptions. */
+/* Vocabulaire de carte maison (`--surface` + `--line` + `--shadow-s`) et non `--surface-2` :
+   les thèmes d'ORG surchargent `--surface`/`--line` mais PAS les tokens secondaires, une carte
+   posée sur `--surface-2` deviendrait quasi invisible sur un canevas thémé. */
+.perm-drawer__role { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-s); }
+.perm-drawer__role-empty { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); margin: 0; }
+.perm-drawer__role-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.perm-drawer__role-list li { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink); }
+.perm-drawer__role-list li > svg { color: var(--teal); flex: none; }
+.perm-drawer__exceptions { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--line); }
+.perm-drawer__exceptions h2 { font-size: 14px; margin: 0 0 2px; }
+.link-button { background: none; border: 0; padding: 0; font: inherit; color: var(--teal); text-decoration: underline; cursor: pointer; }
+
+/* Matrice permission × rôle métier — surface DÉDIÉE, hors de la fiche d'un membre. */
+.role-matrix th[scope="col"] { text-align: center; }
+.role-matrix th[scope="col"]:first-child { text-align: left; }
+.role-matrix__count { display: block; font-size: 11px; font-weight: 400; color: var(--text-muted); }
+.role-matrix__group th { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding-top: 14px; }
+.role-matrix__cell { text-align: center; }
+.role-matrix__cell .perm-check { margin: 0 auto; display: block; }
 
 /* 7.2 — Apparence/Marqueurs : libellé maître à 2 lignes, form en vocabulaire maison, focus a11y. */
 .marker-master__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

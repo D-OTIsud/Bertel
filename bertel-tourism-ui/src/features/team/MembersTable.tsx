@@ -37,12 +37,13 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
         {members.map((m) => {
           const isSelf = m.userId === currentUserId;
           const cells = children ? children(m, isSelf) : null;
-          // D1 (2026-08-28) — le compteur ignorait l'héritage d'ORG : un membre pouvait afficher
-          // « 0 permission » tout en en ayant. On compte l'UNION (un droit à la fois hérité et
-          // accordé individuellement ne compte qu'une fois).
-          const effectiveCodes = new Set([...m.permissionCodes, ...m.inheritedPermissionCodes]);
+          // §227 — le compteur doit couvrir les DEUX voies d'accès, sinon il rassure à tort :
+          // un Éditeur qui ne tient ses droits que de son rôle afficherait « 0 permission ».
+          // On compte l'UNION (un droit à la fois conféré et accordé en exception ne compte
+          // qu'une fois). Miroir exact de `api.user_has_permission`.
+          const effectiveCodes = new Set([...m.permissionCodes, ...m.rolePermissionCodes]);
           const count = effectiveCodes.size;
-          const inheritedCount = m.inheritedPermissionCodes.length;
+          const roleCount = m.rolePermissionCodes.length;
           const lastSeen = formatLastSeen(m.lastSeenAt);
           // Task 6 (revue) : trois boutons « Modifier » identiques se répètent d'une ligne à
           // l'autre — le nom accessible doit nommer le membre, comme RoleSelect le fait déjà
@@ -80,11 +81,11 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                 >
                   <ShieldCheck size={13} aria-hidden /> {count} permission{count > 1 ? 's' : ''}
                 </button>
-                {/* D4 (2026-08-28) — l'écran ne montrait pas l'accès qui compte le plus. Un rôle
-                    d'administration d'ORG ouvre TOUTE l'écriture CRM et le statut superuser ouvre
-                    tout, indépendamment des permissions : en production, les 6 Éditeurs tiennent
-                    leurs droits CRM de leur rôle, pas de leurs cases à cocher. Le compteur pouvait
-                    donc afficher un chiffre rassurant à côté d'un accès total. */}
+                {/* Accès qui ne passe PAS par le compteur. Le superuser plateforme ouvre tout.
+                    Le rôle d'administration, lui, ouvrait aussi TOUTE l'écriture CRM jusqu'au
+                    2026-08-31 — 17j l'a fermé (arbitrage PO : « un lecteur ne doit jamais écrire
+                    le CRM »), il ne donne plus que la gestion d'équipe. La pastille reste : un
+                    rang admin ≥ 30 peut s'accorder des permissions, ce que le compteur ne dit pas. */}
                 <div className="members-table__access">
                   {m.isPlatformSuperuser && (
                     <span
@@ -97,17 +98,17 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                   {m.adminRoleCode && (
                     <span
                       className="badge badge--info badge--xs"
-                      title="Un rôle d’administration d’ORG ouvre notamment toute l’écriture CRM, sans passer par les permissions"
+                      title="Rôle d’administration d’ORG : gestion de l’équipe. À partir du rang 30, ce membre peut s’accorder des permissions. Il n’ouvre plus l’écriture CRM (17j)."
                     >
                       + rôle admin
                     </span>
                   )}
-                  {inheritedCount > 0 && (
+                  {roleCount > 0 && (
                     <span
                       className="badge badge--xs"
-                      title="Droits accordés à toute l’organisation — ils ne se retirent pas depuis cette fiche"
+                      title="Droits conférés par le rôle métier — ils se règlent dans « Permissions par rôle », pas depuis cette fiche"
                     >
-                      dont {inheritedCount} héritée{inheritedCount > 1 ? 's' : ''}
+                      dont {roleCount} par le rôle
                     </span>
                   )}
                 </div>

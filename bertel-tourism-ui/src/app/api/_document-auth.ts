@@ -55,6 +55,50 @@ export function callerClient(jwt: string) {
   );
 }
 
+/**
+ * Plafond du corps accepté AVANT parsing du multipart, en octets.
+ *
+ * Calé sur le plus grand fichier qu'un upload légitime puisse porter — `MAX_INPUT_BYTES`
+ * (20 Mo) de `media/upload/process-image.ts`, le PDF étant plafonné plus bas encore (5 Mo)
+ * — plus 1 Mo de marge pour l'enrobage multipart (frontières, nom de fichier, champ
+ * d'identifiant). Un corps au-delà n'aurait de toute façon jamais pu aboutir.
+ *
+ * ⚠ Volontairement PAS importé de `process-image.ts` : ce module est consommé par les
+ * routes d'URL signée, qui ne traitent aucune image — l'import y tirerait `sharp` pour rien.
+ * L'accord entre les deux constantes est asservi par `_document-auth.test.ts`.
+ */
+export const MAX_UPLOAD_BODY_BYTES = 21 * 1024 * 1024;
+
+/**
+ * Refuse un corps trop volumineux AVANT que `req.formData()` ne le bufferise intégralement.
+ *
+ * POURQUOI. L'identifiant de la cible (task_id, actor_id) voyage DANS le multipart : le gate
+ * ne peut pas savoir quoi autoriser avant que le corps ne soit lu. Un appelant authentifié
+ * mais sans droit d'écriture faisait donc absorber la totalité de son envoi — des centaines
+ * de Mo si l'envie lui en prenait — pour recevoir un 403 après coup.
+ *
+ * ⚠ CE QUE CETTE GARDE NE FAIT PAS, et c'est assumé : elle croit l'en-tête `Content-Length`.
+ * Un corps en `Transfer-Encoding: chunked`, qui n'en déclare aucun, lui échappe entièrement.
+ * Elle ferme le cas ordinaire (tout client normal, navigateur compris, déclare sa taille) ;
+ * borner réellement le flux demanderait de réécrire la lecture du corps, ce qui change la
+ * façon dont un multipart tronqué remonte. Elle ne prétend pas être un rempart anti-déni de
+ * service — la protection de fond reste en amont (proxy, plafond de corps de l'hébergeur).
+ *
+ * Le code `size` et le 413 sont EXACTEMENT ceux qu'émettait déjà le pipeline pour un fichier
+ * trop gros (`MediaProcessingError('size')`) : l'écran affiche le même message, aucune
+ * traduction à ajouter. Seul change le moment — avant la lecture, plus après.
+ */
+export function rejectOversizedBody(req: NextRequest): NextResponse | null {
+  const declared = Number(req.headers.get('content-length'));
+  // NaN (en-tête absent ou illisible) ⇒ on laisse passer : on ne sait rien, et refuser
+  // casserait tout client qui n'annonce pas sa taille.
+  if (!Number.isFinite(declared) || declared <= MAX_UPLOAD_BODY_BYTES) return null;
+  return NextResponse.json(
+    { error: 'size', detail: `Fichier trop volumineux (max ${Math.round(MAX_UPLOAD_BODY_BYTES / (1024 * 1024))} Mo).` },
+    { status: 413 },
+  );
+}
+
 export type AuthenticatedRequest =
   | { ok: false; response: NextResponse }
   | {

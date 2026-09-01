@@ -93,6 +93,35 @@ describe('/api/task-document', () => {
     expect(from).not.toHaveBeenCalled();
   });
 
+  it('413 size sur un corps hors plafond, SANS lire le multipart ni interroger le gate', async () => {
+    // L'identifiant de la tâche voyage DANS le multipart : le gate ne peut pas précéder la
+    // lecture du corps. À défaut, on refuse avant de bufferiser ce qui n'aurait de toute
+    // façon jamais pu aboutir — `formData` est fourni et doit rester intouché.
+    const rpc = jest.fn();
+    mockedServer.mockReturnValue(baseServer());
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+    const formData = jest.fn();
+    const res = await POST({
+      headers: new Headers({ authorization: 'Bearer jwt', 'content-length': String(500 * 1024 * 1024) }),
+      formData,
+    } as never);
+    expect(res.status).toBe(413);
+    await expect(res.json()).resolves.toMatchObject({ error: 'size' });
+    expect(formData).not.toHaveBeenCalled();
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('401 l’emporte sur le plafond de corps : un anonyme reste unauthenticated', async () => {
+    mockedServer.mockReturnValue(baseServer());
+    const formData = jest.fn();
+    const res = await POST({
+      headers: new Headers({ 'content-length': String(500 * 1024 * 1024) }),
+      formData,
+    } as never);
+    expect(res.status).toBe(401);
+    expect(formData).not.toHaveBeenCalled();
+  });
+
   it('POST refuse une forme UUID invalide (400) avant tout gate', async () => {
     const rpc = jest.fn();
     mockedServer.mockReturnValue(baseServer());

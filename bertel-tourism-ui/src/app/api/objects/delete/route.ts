@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 // §108 — Suppression définitive d'une fiche (admin-only).
@@ -18,6 +19,41 @@ import { getServerSupabaseClient } from '@/lib/supabase-server';
 
 const MEDIA_BUCKET = 'media';
 const DOCUMENTS_BUCKET = 'documents';
+
+/**
+ * Vocabulaire des `RAISE` de `api.rpc_delete_object` (migration_object_hard_delete.sql).
+ *
+ * Chacun sort sous la forme `CODE: phrase` — le préfixe est un marqueur MACHINE, lu ci-dessous
+ * pour choisir le statut HTTP, et il n'a jamais rien à faire à l'écran. `delete_failed` étant dans
+ * `CODES_WITH_BUSINESS_DETAIL` (api-error.ts), l'utilisateur lisait jusqu'ici littéralement
+ * « MUST_ARCHIVE_FIRST: archivez la fiche… », et pour `NO_AUTH_CONTEXT` une phrase en ANGLAIS
+ * nommant la fonction SQL. La table est la liste EXHAUSTIVE des six RAISE du RPC.
+ */
+const DELETE_OBJECT_RAISE_MESSAGES: Record<string, string> = {
+  NO_AUTH_CONTEXT: 'Votre session a expiré — reconnectez-vous puis réessayez.',
+  FORBIDDEN: 'Suppression définitive réservée aux administrateurs plateforme.',
+  FORBIDDEN_ORG: 'Les organisations ne peuvent pas être supprimées par cet outil.',
+  NOT_FOUND: "Cette fiche n'existe plus — elle a peut-être déjà été supprimée.",
+  MUST_ARCHIVE_FIRST: 'Archivez la fiche avant de la supprimer définitivement.',
+  NAME_MISMATCH: 'Le nom de confirmation ne correspond pas au nom de la fiche.',
+};
+
+/** Le préfixe `CODE: ` de nos RAISE — une convention À NOUS, pas une devinette sur la langue. */
+const RAISE_CODE_PREFIX = /^([A-Z][A-Z0-9_]{2,}):\s*/;
+
+/**
+ * `detail` affichable pour un échec du RPC. Deux familles, jamais confondues :
+ *  - un `RAISE` du RPC (préfixe `CODE: `) : message métier, rendu en FR sans son préfixe ;
+ *  - tout le reste : erreur MOTEUR (RLS, timeout, JWT expiré) — traduite si le SQLSTATE est
+ *    actionnable, sinon `undefined` et le client retombe sur « La suppression a échoué. ».
+ */
+function deleteObjectDetail(rpcErr: unknown, raw: string): string | undefined {
+  const prefixed = RAISE_CODE_PREFIX.exec(raw);
+  if (prefixed) {
+    return DELETE_OBJECT_RAISE_MESSAGES[prefixed[1]] ?? (raw.slice(prefixed[0].length).trim() || undefined);
+  }
+  return engineErrorDetail(rpcErr, { operation: 'delete' });
+}
 
 interface DeleteReport {
   media_to_delete?: string[];
@@ -90,9 +126,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .schema('api')
     .rpc('rpc_delete_object', { p_object_id: objectId, p_confirm_name: confirmName });
   if (rpcErr) {
+    // Le STATUT reste décidé sur le message BRUT (le préfixe machine est justement ce qui le
+    // porte) ; seul le `detail` rendu à l'utilisateur passe par la traduction.
     const msg = rpcErr.message ?? 'delete_failed';
     const forbidden = /FORBIDDEN:|administrateurs plateforme/i.test(msg);
-    return NextResponse.json({ error: 'delete_failed', detail: msg }, { status: forbidden ? 403 : 400 });
+    return NextResponse.json(
+      { error: 'delete_failed', detail: deleteObjectDetail(rpcErr, msg) },
+      { status: forbidden ? 403 : 400 },
+    );
   }
 
   const report = (rpcData ?? {}) as DeleteReport;

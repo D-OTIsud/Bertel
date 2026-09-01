@@ -1,5 +1,6 @@
 /** @jest-environment node */
 import { POST } from './route';
+import { readApiErrorMessage } from '@/services/api-error';
 
 // §108 — auth + RPC run on the anon "caller" client (createClient); the service-role client is
 // used ONLY for the best-effort Storage sweep. Deletion is therefore gated on the superuser RPC,
@@ -99,5 +100,52 @@ describe('POST /api/objects/delete', () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'MUST_ARCHIVE_FIRST: archivez la fiche...' } });
     const res = await POST(req({ objectId: 'o1', confirmName: 'X' }));
     expect(res.status).toBe(400);
+  });
+
+  // --- `detail` rendu à l'utilisateur ------------------------------------------------------
+  // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` s'affiche
+  // VERBATIM. Le préfixe `CODE: ` de nos RAISE est un marqueur MACHINE — il sert à choisir le
+  // statut, jamais à être lu.
+  describe('le `detail` affiché est un message métier FR, sans marqueur machine ni brut moteur', () => {
+    async function detailFor(error: unknown) {
+      rpcMock.mockResolvedValue({ data: null, error });
+      const res = await POST(req({ objectId: 'o1', confirmName: 'X' }));
+      const payload = await res.json();
+      return { status: res.status, payload, shown: readApiErrorMessage(payload, res.status) };
+    }
+
+    it('retire le préfixe machine de MUST_ARCHIVE_FIRST (le statut, lui, ne bouge pas)', async () => {
+      const { status, payload, shown } = await detailFor({ code: 'P0001', message: 'MUST_ARCHIVE_FIRST: archivez la fiche avant de la supprimer définitivement' });
+      expect(status).toBe(400);
+      expect(payload.detail).not.toMatch(/MUST_ARCHIVE_FIRST/);
+      expect(shown).toMatch(/^Archivez la fiche/);
+    });
+
+    it('traduit NO_AUTH_CONTEXT, dont le RAISE est en ANGLAIS et nomme la fonction SQL', async () => {
+      const { payload, shown } = await detailFor({ code: 'P0001', message: 'NO_AUTH_CONTEXT: rpc_delete_object requires an authenticated user' });
+      expect(payload.detail).not.toMatch(/rpc_delete_object|requires an authenticated/i);
+      expect(shown).toMatch(/session a expiré/i);
+    });
+
+    it('garde le message métier FR de la garde superuser, sans son préfixe, et reste en 403', async () => {
+      const { status, shown } = await detailFor({ code: 'P0001', message: 'FORBIDDEN: suppression définitive réservée aux administrateurs plateforme' });
+      expect(status).toBe(403);
+      expect(shown).not.toMatch(/FORBIDDEN/);
+      expect(shown).toMatch(/administrateurs plateforme/);
+    });
+
+    it('un échec MOTEUR (pas un RAISE) ne fuite pas : SQLSTATE connu ⇒ phrase FR', async () => {
+      const { shown } = await detailFor({ code: '57014', message: 'canceling statement due to statement timeout' });
+      expect(shown).not.toMatch(/canceling statement|timeout/i);
+      expect(shown).toMatch(/trop de temps/);
+    });
+
+    it('un échec MOTEUR à SQLSTATE inconnu ⇒ AUCUN detail, libellé générique FR', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+      const { payload, shown } = await detailFor({ code: 'XX000', message: 'internal error: cache lookup failed' });
+      expect(payload.detail).toBeUndefined();
+      expect(shown).toBe('La suppression a échoué.');
+      warn.mockRestore();
+    });
   });
 });

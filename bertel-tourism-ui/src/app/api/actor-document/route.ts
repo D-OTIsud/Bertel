@@ -1,65 +1,23 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { engineErrorDetail } from '@/lib/db-error-message';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { MediaProcessingError } from '../media/upload/process-image';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated } from '../_document-auth';
 import { processActorDocumentBuffer } from './process-actor-document';
+import { authorizeActor, authorizeObject } from './authorize';
 
-const PRIVATE_BUCKET = 'actor-documents';
+// Documents privés d'un ACTEUR CRM. Le socle d'authentification (Bearer → getUser, client
+// « en tant qu'appelant », bucket privé, forme UUID) est partagé avec /api/task-document
+// dans ../_document-auth ; les deux prédicats d'autorisation vivent dans ./authorize,
+// partagés avec url/route.ts. Ici ne restent que le traitement de fichier, les rollbacks et
+// les formes de réponse métier.
+
+/** Bucket PUBLIC de destination de la promotion (PATCH) — l'espace média d'un objet. */
 const PUBLIC_BUCKET = 'documents';
-const ACTOR_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DOCUMENT_ID_SHAPE = ACTOR_ID_SHAPE;
+/** Identifiant canonique d'objet : 3 lettres de type + 3 + 10. Ce n'est pas un UUID. */
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/;
 
 export const runtime = 'nodejs';
-
-function bearer(req: NextRequest): string {
-  const value = req.headers.get('authorization') ?? '';
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
-
-function callerClient(jwt: string) {
-  return createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-async function authorizeActor(jwt: string, actorId: string, write = true): Promise<boolean> {
-  const { data, error } = await callerClient(jwt).schema('api').rpc(
-    write ? 'user_can_write_crm_actor' : 'user_can_read_crm_actor',
-    { p_actor_id: actorId },
-  );
-  return !error && data === true;
-}
-
-async function authorizeObject(jwt: string, objectId: string): Promise<boolean> {
-  const { data, error } = await callerClient(jwt)
-    .schema('api')
-    .rpc('user_can_write_object_canonical', { p_object_id: objectId });
-  return !error && data === true;
-}
-
-type AuthenticatedRequest =
-  | { ok: false; response: NextResponse }
-  | {
-      ok: true;
-      server: NonNullable<ReturnType<typeof getServerSupabaseClient>>;
-      jwt: string;
-      userId: string;
-    };
-
-async function authenticated(req: NextRequest): Promise<AuthenticatedRequest> {
-  const server = getServerSupabaseClient();
-  if (!server) return { ok: false, response: NextResponse.json({ error: 'server_misconfigured' }, { status: 500 }) };
-  const jwt = bearer(req);
-  if (!jwt) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  const { data, error } = await server.auth.getUser(jwt);
-  if (error || !data.user) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  return { ok: true, server, jwt, userId: data.user.id };
-}
 
 async function processFile(file: File) {
   return processActorDocumentBuffer(Buffer.from(await file.arrayBuffer()), file.type);
@@ -72,7 +30,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try { form = await req.formData(); } catch { return NextResponse.json({ error: 'bad_multipart' }, { status: 400 }); }
   const actorId = form.get('actor_id');
   const file = form.get('file');
-  if (typeof actorId !== 'string' || !ACTOR_ID_SHAPE.test(actorId) || !(file instanceof File)) {
+  if (typeof actorId !== 'string' || !UUID_SHAPE.test(actorId) || !(file instanceof File)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   if (!await authorizeActor(auth.jwt, actorId)) {
@@ -143,7 +101,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const body = await readJson(req);
   const actorId = typeof body?.actorId === 'string' ? body.actorId : '';
   const documentId = typeof body?.documentId === 'string' ? body.documentId : '';
-  if (!ACTOR_ID_SHAPE.test(actorId) || !DOCUMENT_ID_SHAPE.test(documentId)) {
+  if (!UUID_SHAPE.test(actorId) || !UUID_SHAPE.test(documentId)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   if (!await authorizeActor(auth.jwt, actorId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -191,7 +149,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   const objectId = typeof body?.objectId === 'string' ? body.objectId : '';
   const roleCode = typeof body?.roleCode === 'string' ? body.roleCode.trim() : '';
   const requestedTitle = typeof body?.title === 'string' ? body.title.trim() : '';
-  if (!ACTOR_ID_SHAPE.test(actorId) || !DOCUMENT_ID_SHAPE.test(documentId) || !OBJECT_ID_SHAPE.test(objectId) || !roleCode) {
+  if (!UUID_SHAPE.test(actorId) || !UUID_SHAPE.test(documentId) || !OBJECT_ID_SHAPE.test(objectId) || !roleCode) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   const [canActor, canObject] = await Promise.all([

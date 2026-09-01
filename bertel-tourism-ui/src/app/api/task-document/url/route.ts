@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, authorizeTask, resolveLinkedDocument } from '../authorize';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated } from '../../_document-auth';
+import { authorizeTask, resolveLinkedDocument } from '../authorize';
 
 // URL signée (60 s) d'une pièce jointe de tâche CRM (17i) — clone d'actor-document/url :
 // gate « en tant qu'appelant » via le RPC d'écriture (voir route.ts : les trois verbes

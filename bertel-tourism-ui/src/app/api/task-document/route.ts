@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
-import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, authorizeTask, resolveLinkedDocument } from './authorize';
+import { PRIVATE_BUCKET, UUID_SHAPE, authenticated } from '../_document-auth';
+import { authorizeTask, resolveLinkedDocument } from './authorize';
 
 // Pièces jointes de TÂCHE CRM (17i) — clone du modèle actor-document : Bearer → getUser,
 // autorisation par RPC DEFINER « en tant qu'appelant » (jamais la service key), fichier

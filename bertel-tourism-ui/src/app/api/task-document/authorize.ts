@@ -1,40 +1,18 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { NextResponse } from 'next/server';
+import { PRIVATE_BUCKET, callerClient, type ServerClient } from '../_document-auth';
 
-// Socle d'AUTORISATION partagé par les trois verbes de /api/task-document (upload, URL
-// signée, suppression). Il existe pour une raison précise : le gate et la résolution du
-// document lié étaient recopiés verbatim dans route.ts et url/route.ts. Deux copies d'un
-// gate, c'est deux endroits où se tromper — et un correctif appliqué à l'une laisse
-// l'autre ouverte en silence, sans qu'aucun test ne rougisse. Une seule définition ici.
+// Autorisation PROPRE aux pièces jointes de tâche, partagée par les trois verbes de
+// /api/task-document (upload, URL signée, suppression). Elle existe pour une raison
+// précise : le gate et la résolution du document lié étaient recopiés verbatim dans
+// route.ts et url/route.ts. Deux copies d'un gate, c'est deux endroits où se tromper — et
+// un correctif appliqué à l'une laisse l'autre ouverte en silence, sans qu'aucun test ne
+// rougisse. Une seule définition ici.
 //
-// Périmètre volontairement étroit : authentifier l'appelant, évaluer le prédicat
-// d'écriture, résoudre le document RATTACHÉ à la tâche. Rien d'autre — le traitement de
+// Le socle d'AUTHENTIFICATION (Bearer → getUser, client « en tant qu'appelant », bucket
+// privé, forme UUID) est commun aux DEUX familles de routes documents et vit dans
+// ../_document-auth. Ce fichier ne garde que ce qui parle de tâche : le prédicat d'écriture
+// et la résolution du document RATTACHÉ à la tâche. Rien d'autre — le traitement de
 // fichier, les rollbacks et les formes de réponse métier restent dans chaque route.
-
-/** Bucket privé UNIQUE des pièces jointes de tâche. Voir `resolveLinkedDocument` : rien
- *  d'autre que cette constante ne doit jamais désigner un bucket pour signer/supprimer. */
-export const PRIVATE_BUCKET = 'actor-documents';
-
-export const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export type ServerClient = NonNullable<ReturnType<typeof getServerSupabaseClient>>;
-
-export function bearer(req: NextRequest): string {
-  const value = req.headers.get('authorization') ?? '';
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
-
-// Client « en tant qu'appelant » : porte le JWT de session, jamais la service key. Sert
-// uniquement à évaluer le RPC SECURITY DEFINER de gate — RLS sur crm_task_document et
-// ref_document bloque de toute façon la lecture/écriture directe par ce client.
-function callerClient(jwt: string) {
-  return createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
 
 // Prédicat d'écriture UNIQUE pour les trois verbes (upload, url signée, delete) : la spec
 // assume que toute surface de pièce jointe de tâche vit derrière le modal d'édition, lui-même
@@ -43,25 +21,6 @@ export async function authorizeTask(jwt: string, taskId: string): Promise<boolea
   const { data, error } = await callerClient(jwt).schema('api').rpc(
     'user_can_write_crm_task', { p_task_id: taskId });
   return !error && data === true;
-}
-
-export type AuthenticatedRequest =
-  | { ok: false; response: NextResponse }
-  | {
-      ok: true;
-      server: ServerClient;
-      jwt: string;
-      userId: string;
-    };
-
-export async function authenticated(req: NextRequest): Promise<AuthenticatedRequest> {
-  const server = getServerSupabaseClient();
-  if (!server) return { ok: false, response: NextResponse.json({ error: 'server_misconfigured' }, { status: 500 }) };
-  const jwt = bearer(req);
-  if (!jwt) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  const { data, error } = await server.auth.getUser(jwt);
-  if (error || !data.user) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  return { ok: true, server, jwt, userId: data.user.id };
 }
 
 /** Résultat de `resolveLinkedDocument`. `file: null` = la ligne existe mais ne désigne

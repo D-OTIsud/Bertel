@@ -15,7 +15,7 @@ import {
   uploadActorDocument,
 } from '../../services/actor-documents';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
-import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
+import { CRM_READ_ONLY_REASON, formatDocumentSize, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
 
 interface LinkedObjectOption {
@@ -32,13 +32,6 @@ interface PromotionDraft {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Une erreur est survenue.';
-}
-
-function formatBytes(value: number): string {
-  if (!value) return '';
-  if (value < 1024) return `${value} o`;
-  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
-  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
 }
 
 /** Zone d'ajout dédiée au rail droit de l'onglet Documents. */
@@ -231,7 +224,18 @@ export function CrmActorDocuments({
                   <div className="crm-actor-docs__meta">
                     <strong>{document.title}</strong>
                     <small>
-                      {[document.intendedRoleName, formatBytes(document.sizeBytes), document.createdAt ? formatShort(document.createdAt) : '']
+                      {[
+                        document.intendedRoleName,
+                        // `api.list_actor_support` émet `coalesce(size_bytes, 0)` : sur CETTE
+                        // route, 0 est LA SENTINELLE d'une taille absente autant qu'un fichier
+                        // réellement vide, et rien côté client ne les sépare. On OMET donc le
+                        // segment plutôt que d'afficher « 0 o », qui affirmerait une taille
+                        // qu'on n'a pas — le mensonge même que `formatDocumentSize` refuse de
+                        // faire pour `null`. Rétablir la distinction ici suppose de faire
+                        // cesser le `coalesce` côté SQL (hors périmètre).
+                        document.sizeBytes === 0 ? '' : formatDocumentSize(document.sizeBytes),
+                        document.createdAt ? formatShort(document.createdAt) : '',
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </small>

@@ -22,22 +22,10 @@ import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../.
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
-import { toDateInputValue } from './crm-view-utils';
+import { formatDocumentSize, toDateInputValue } from './crm-view-utils';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
-
-/**
- * Taille lisible d'une pièce jointe. `null` est une garde SQL DÉLIBÉRÉE (taille illisible
- * côté serveur, cf. Task 7) et doit rester distinguable d'une taille de 0 octet — les
- * confondre ferait mentir l'interface (« 0 Ko » n'est pas « on ne sait pas »).
- */
-function formatDocumentSize(value: number | null): string {
-  if (value === null) return 'taille inconnue';
-  if (value < 1024) return `${value} o`;
-  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
-  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
-}
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le

@@ -2,6 +2,7 @@ import {
   PAV_TINTS,
   channelHrefOf,
   dueBadgeClassOf,
+  formatDocumentSize,
   formatRelative,
   formatShort,
   initialsOf,
@@ -286,5 +287,36 @@ describe('channelHrefOf — coordonnées cliquables', () => {
     // Un website sans rien qui ressemble à un domaine ne devient pas un lien cassé.
     expect(channelHrefOf('website', 'à compléter')).toEqual({ href: null, external: false });
     expect(channelHrefOf('email', '')).toEqual({ href: null, external: false });
+  });
+});
+
+describe('formatDocumentSize — taille de pièce jointe (0 ≠ inconnue)', () => {
+  // LA frontière que la spec « pièces jointes » exige, et la seule raison pour laquelle
+  // cette fonction est partagée plutôt que recopiée : une taille illisible sort à `null`
+  // côté SQL (garde délibérée) et ne doit JAMAIS s'afficher comme une taille de zéro.
+  it('null → « taille inconnue », jamais un nombre', () => {
+    expect(formatDocumentSize(null)).toBe('taille inconnue');
+  });
+
+  it('0 → « 0 o » : une taille CONNUE et valide, distincte de null', () => {
+    expect(formatDocumentSize(0)).toBe('0 o');
+    expect(formatDocumentSize(0)).not.toBe(formatDocumentSize(null));
+  });
+
+  it('sous 1 Kio → octets bruts', () => {
+    expect(formatDocumentSize(1)).toBe('1 o');
+    expect(formatDocumentSize(1023)).toBe('1023 o');
+  });
+
+  it('à partir de 1 Kio → Ko arrondi ; les deux bornes basculent au bon endroit', () => {
+    expect(formatDocumentSize(1024)).toBe('1 Ko');
+    expect(formatDocumentSize(1234)).toBe('1 Ko');
+    expect(formatDocumentSize(2048)).toBe('2 Ko');
+    expect(formatDocumentSize(1024 * 1024 - 1)).toBe('1024 Ko');
+  });
+
+  it('à partir de 1 Mio → Mo à une décimale, séparateur FRANÇAIS (virgule)', () => {
+    expect(formatDocumentSize(1024 * 1024)).toBe('1,0 Mo');
+    expect(formatDocumentSize(2.5 * 1024 * 1024)).toBe('2,5 Mo');
   });
 });

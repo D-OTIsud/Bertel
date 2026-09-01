@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from '../actor-document/process-actor-document';
 import { PRIVATE_BUCKET, UUID_SHAPE, authenticated, rejectOversizedBody } from '../_document-auth';
@@ -145,7 +146,12 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     }
   }
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
-  if (error) return NextResponse.json({ error: 'delete_failed', detail: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json(
+      { error: 'delete_failed', detail: engineErrorDetail(error, { operation: 'delete' }) },
+      { status: 500 },
+    );
+  }
   // crm_task_document.document_id référence ref_document en CASCADE FK : la ligne de lien
   // tombe automatiquement, jamais supprimée à la main (source unique de vérité = la FK).
   return NextResponse.json({ deleted: true });

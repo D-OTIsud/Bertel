@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { MediaProcessingError } from '../media/upload/process-image';
 import { processActorDocumentBuffer } from './process-actor-document';
@@ -166,7 +167,18 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
   if (bucket && path) await auth.server.storage.from(bucket).remove([path]);
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
-  if (error) return NextResponse.json({ error: 'delete_failed', detail: error.message }, { status: 500 });
+  if (error) {
+    // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est
+    // affiché VERBATIM. Ici il ne vient d'aucun `RAISE` métier — c'est la sortie brute du moteur.
+    // Sans ce filtre, l'utilisateur qui retire une pièce jointe lisait « update or delete on table
+    // "ref_document" violates foreign key constraint … ». `engineErrorDetail` rend une phrase FR
+    // pour les SQLSTATE actionnables et `undefined` sinon, auquel cas le client retombe sur
+    // « La suppression a échoué. » — générique, mais jamais l'anglais du moteur.
+    return NextResponse.json(
+      { error: 'delete_failed', detail: engineErrorDetail(error, { operation: 'delete' }) },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ deleted: true });
 }
 

@@ -26,8 +26,8 @@ const snapshot: ActorCrmSnapshot = {
     { objectId: 'obj-2', objectName: 'Le Comptoir des Epices', objectType: 'RES', roleCode: 'owner', roleName: 'Propriétaire', isPrimary: false },
   ],
   channels: [
-    { id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'marie@basalte.re', isPrimary: true },
-    { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false },
+    { id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'marie@basalte.re', isPrimary: true, isPublic: false },
+    { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0262 12 34 56', isPrimary: false, isPublic: false },
   ],
   interactions: [
     {
@@ -560,6 +560,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         kindCode: 'email',
         value: 'marie@lagon.re',
         isPrimary: true,
+        isPublic: false,
       }),
     );
     expect(crmMock.deleteActorChannel).toHaveBeenCalledWith('ch-2');
@@ -671,11 +672,11 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     crmMock.listActorCrm.mockResolvedValue({
       ...snapshot,
       channels: [
-        { id: 'ch-1', kindCode: 'phone', kindName: 'Téléphone', value: '0262 11 11 11', isPrimary: false },
-        { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0692 22 22 22', isPrimary: true },
+        { id: 'ch-1', kindCode: 'phone', kindName: 'Téléphone', value: '0262 11 11 11', isPrimary: false, isPublic: false },
+        { id: 'ch-2', kindCode: 'phone', kindName: 'Téléphone', value: '0692 22 22 22', isPrimary: true, isPublic: false },
         // §66 — un e-mail (canal 3) satisfait la contrainte « e-mail obligatoire » ; il n'est pas
         // touché ⇒ aucune op canal supplémentaire (les assertions d'ordre restent sur ch-1/ch-2).
-        { id: 'ch-3', kindCode: 'email', kindName: 'Email', value: 'contact@actor.re', isPrimary: true },
+        { id: 'ch-3', kindCode: 'email', kindName: 'Email', value: 'contact@actor.re', isPrimary: true, isPublic: false },
       ],
     });
     renderFiche();
@@ -694,12 +695,14 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       kindCode: 'phone',
       value: '0692 22 22 22',
       isPrimary: false,
+      isPublic: false,
     });
     expect(crmMock.saveActorChannel.mock.calls[1][0]).toEqual({
       id: 'ch-1',
       kindCode: 'phone',
       value: '0262 11 11 11',
       isPrimary: true,
+      isPublic: false,
     });
   });
 

@@ -328,7 +328,7 @@ describe('export — dédup inter-sources de contacts.public (chantier 3b)', () 
   const dupVal = (id: string) => getExportColumn(id)!.value(dup, EMPTY_CTX);
 
   it('« Contacts publics » ne liste la valeur dupliquée qu’UNE fois', () => {
-    const occurrences = dupVal('contacts_public').toString().split('contact@temoin.re').length - 1;
+    const occurrences = String(dupVal('contacts_public')).split('contact@temoin.re').length - 1;
     expect(occurrences).toBe(1);
   });
 

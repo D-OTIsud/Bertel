@@ -1,6 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════════════════════════════
--- 17i — Tâches CRM : outbox e-mail d'assignation + pièces jointes.
+-- 17m — Tâches CRM : outbox e-mail d'assignation + pièces jointes.
 -- Spec : docs/superpowers/specs/2026-08-31-crm-task-email-description-attachments-design.md
+-- ⚠ Créneau RENUMÉROTÉ : ce chantier a été coupé de master avant qu'un chantier
+-- concurrent (permissions par rôle métier, §227) ne pousse en premier et n'en occupe
+-- le créneau d'origine. Renommage purement documentaire — déjà appliqué en production
+-- (Supabase `crm_task_email_documents`, 2026-09-01) sous ce contenu inchangé.
 --
 -- 1. app_notification devient un OUTBOX e-mail (email_claimed_at / email_sent_at /
 --    email_error / email_attempts). Le drainage est fait par le serveur Next (relais SMTP
@@ -9,7 +13,7 @@
 --    n'est jamais perdu, un doublon n'est possible QUE dans cette fenêtre de panne
 --    (assumé). Cinq échecs d'envoi et la ligne SORT de la file : sans cette borne, une
 --    seule adresse durablement inenvoyable rebouche la file à chaque drain, à jamais.
---    L'arriéré antérieur à 17i est TERMINÉ par un backfill : on ne réveille pas des
+--    L'arriéré antérieur à 17m est TERMINÉ par un backfill : on ne réveille pas des
 --    assignations anciennes le jour du déploiement.
 -- 2. api.user_can_write_crm_task : LE prédicat d'écriture d'une tâche, factorisé —
 --    même règle que api.save_crm_task (user_can_write_crm sur l'object de la tâche).
@@ -36,7 +40,7 @@ COMMENT ON COLUMN public.app_notification.email_attempts IS
   'Nombre d''échecs d''envoi acquittés. À 5, la ligne SORT de la file (plus jamais '
   'réclamée) et reste diagnosticable par email_error + email_attempts.';
 
--- ── L'ARRIÉRÉ ANTÉRIEUR À 17i NE DOIT PAS REPARTIR ─────────────────────────────────────
+-- ── L'ARRIÉRÉ ANTÉRIEUR À 17m NE DOIT PAS REPARTIR ─────────────────────────────────────
 -- `ADD COLUMN email_sent_at` fait naître TOUTES les lignes historiques à NULL, c'est-à-dire
 -- réclamables : sans ce backfill, le premier drain e-maillerait des assignations déjà
 -- anciennes. Une assignation vieille de plusieurs jours n'a rien à faire dans la boîte de
@@ -49,7 +53,12 @@ COMMENT ON COLUMN public.app_notification.email_attempts IS
 -- ⚠ REJEU : cette migration est idempotente au sens DDL, mais ce backfill ne l'est pas au
 -- sens métier — le REJOUER sur une base vivante terminerait tout ce qui attend à cet
 -- instant dans la file (au pire quelques minutes d'e-mails en attente, la file étant
--- drainée à chaque assignation). Ne pas rejouer 17i sur une base vivante sans le savoir.
+-- drainée à chaque assignation). Ne pas rejouer 17m sur une base vivante sans le savoir.
+-- ⚠ `backfill_pre_17i` NE SE RENOMME PAS : cette valeur est DÉJÀ ÉCRITE EN PRODUCTION
+-- (une ligne app_notification.email_error la porte réellement depuis l'application du
+-- 2026-09-01) sous le créneau `17i` qui existait au moment de l'écriture, avant sa
+-- renumérotation en `17m` pour collision avec le chantier §227. Renommer la chaîne ici
+-- ferait diverger ce fichier de la base — c'est un marqueur historique figé.
 UPDATE app_notification SET email_sent_at = now(), email_error = 'backfill_pre_17i'
 WHERE kind = 'crm_task_assigned' AND email_sent_at IS NULL;
 
@@ -167,7 +176,7 @@ $function$;
 REVOKE ALL ON FUNCTION api.claim_unmailed_notifications(integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.claim_unmailed_notifications(integer) TO service_role;
 COMMENT ON FUNCTION api.claim_unmailed_notifications(integer) IS
-  'Outbox e-mail (17i) : réclame les notifications crm_task_assigned non e-mailées '
+  'Outbox e-mail (17m) : réclame les notifications crm_task_assigned non e-mailées '
   '(TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. '
   'Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.';
 
@@ -222,7 +231,7 @@ $function$;
 REVOKE ALL ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) TO service_role;
 COMMENT ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) IS
-  'Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + '
+  'Acquittement du drain e-mail (17m). Succès = email_sent_at ; échec = email_error + '
   'email_attempts+1 + claim levé (re-réclamable jusqu''à 5 tentatives). Service_role only.';
 
 -- ── 2. Prédicat d'écriture d'une tâche ─────────────────────────────────────────────────
@@ -243,7 +252,7 @@ REVOKE ALL ON FUNCTION api.user_can_write_crm_task(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.user_can_write_crm_task(uuid) TO authenticated, service_role;
 COMMENT ON FUNCTION api.user_can_write_crm_task(uuid) IS
   'true si l''appelant peut écrire la tâche (même prédicat que save_crm_task : '
-  'user_can_write_crm sur son object). Gate des routes /api/task-document (17i).';
+  'user_can_write_crm sur son object). Gate des routes /api/task-document (17m).';
 
 -- ── 3. Pièces jointes de tâche ─────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.crm_task_document (
@@ -257,7 +266,7 @@ CREATE TABLE IF NOT EXISTS public.crm_task_document (
 );
 
 COMMENT ON TABLE public.crm_task_document IS
-  'Pièces jointes d''une tâche CRM (17i). Fichier dans le bucket privé actor-documents '
+  'Pièces jointes d''une tâche CRM (17m). Fichier dans le bucket privé actor-documents '
   '(chemin tasks/{task_id}/…), ref_document access_scope crm_private. Aucun accès '
   'PostgREST direct : écrit par les routes Next /api/task-document en service_role, '
   'lu par api.list_crm_tasks.';
@@ -337,7 +346,7 @@ BEGIN
       'related_interaction_id', ct.related_interaction_id,
       'related_interaction_subject', ri.subject,
       'related_interaction_status', ri.status,
-      -- 17i — pièces jointes. `[]` jamais null : le front itère, il ne teste pas la
+      -- 17m — pièces jointes. `[]` jamais null : le front itère, il ne teste pas la
       -- nullité. `id` EST le document_id (la clé que manipulent les routes
       -- /api/task-document et le lien de téléchargement), JAMAIS l'id de la ligne de
       -- liaison : exposer celui-ci obligerait le front à un aller-retour de plus pour

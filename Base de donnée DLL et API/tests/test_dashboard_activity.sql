@@ -63,6 +63,7 @@ DECLARE
   v_before     jsonb;
   v_after      jsonb;
 
+  v_id_open    uuid := gen_random_uuid();
   v_id_cycle   uuid := gen_random_uuid();
   v_t0         timestamptz;
   v_rows       int;
@@ -124,8 +125,9 @@ BEGIN
   ASSERT v_recent + v_backlog = v_open,
          format('E1 : recent (%s) + arriere (%s) doit egaler open_interactions (%s) — sinon la carte se contredit elle-meme',
                 v_recent, v_backlog, v_open);
-  ASSERT v_open > 0,
-         'E2 (non vacuite) : le corpus doit porter des demandes ouvertes, sinon E1 passerait a vide (0+0=0)';
+  -- Sur une base vivante, le corpus rend normalement E1 non vacant. Une base fraîche peut
+  -- légitimement être vide ; un témoin est alors fabriqué plus bas, une fois son objet créé,
+  -- puis l'invariant est rappelé sur 1 ligne réelle plutôt que d'exiger une seed historique.
 
   -- ═══ (F) LES QUATRE TRANCHES D'ÂGE, MÊME VIDES ═══
   SELECT array_agg(d->>'bucket' ORDER BY ord) INTO v_buckets
@@ -161,8 +163,6 @@ BEGIN
          'H3 : un mois sans mouvement porte 0, jamais null — la courbe ne doit pas trouer';
 
   -- ═══════════════════ FIXTURE (superuser, RLS bypass) ═══════════════════
-  SELECT ci.object_id INTO v_obj FROM crm_interaction ci WHERE ci.object_id IS NOT NULL LIMIT 1;
-  IF v_obj IS NULL THEN RAISE EXCEPTION 'fixture: aucune interaction ancree a un objet'; END IF;
   SELECT ci.actor_id INTO v_actor FROM crm_interaction ci WHERE ci.actor_id IS NOT NULL LIMIT 1;
 
   INSERT INTO auth.users (id, email) VALUES (v_user, 'dashboard_activity@test.local')
@@ -177,6 +177,23 @@ BEGIN
     VALUES ('HOTRUN99999912' || lpad(v_i::text, 2, '0'), 'HOT', 'Objet activite 12xx n' || v_i, 'draft')
     ON CONFLICT (id) DO NOTHING;
   END LOOP;
+  v_obj := 'HOTRUN9999991201';
+
+  -- Fresh-apply : rend E1 explicitement non vacant sans dépendre d'une seed appliquée après
+  -- les migrations. Sur une base vivante déjà peuplée, le contrôle initial suffit.
+  IF v_open = 0 THEN
+    INSERT INTO crm_interaction
+      (id, object_id, interaction_type, direction, status, body, occurred_at)
+    VALUES
+      (v_id_open, v_obj, 'email', 'inbound', 'new', 'Temoin fresh-apply invariant carte', NOW());
+    v_card    := api.get_dashboard_crm_open();
+    v_open    := (v_card->>'open_interactions')::int;
+    v_recent  := (v_card->>'recent_interactions')::int;
+    v_backlog := (v_card->>'backlog_interactions')::int;
+    ASSERT v_open = 1 AND v_recent + v_backlog = v_open,
+           format('E2 (temoin fresh-apply) : recent (%s) + arriere (%s) doit egaler 1 demande ouverte ; obtenu open=%s',
+                  v_recent, v_backlog, v_open);
+  END IF;
 
   -- ═══ (C) UNE VERSION SANS AUTEUR NE COMPTE PAS ═══
   -- 57,5 % du corpus est dans ce cas (imports/système). Si elle comptait, le « rythme de

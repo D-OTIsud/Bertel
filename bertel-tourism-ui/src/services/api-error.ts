@@ -183,6 +183,17 @@ export const API_ERROR_LABELS: Record<string, string> = {
  * à relayer de l'anglais technique, c'est un défaut à corriger À LA SOURCE (comme le pipeline
  * média l'a été), pas une devinette à faire ici. Tous les autres codes gardent leur `detail` au
  * journal — il est technique, anglais, ou porte de la configuration.
+ *
+ * CE DÉFAUT A EXISTÉ, il est fermé (2026-09-01). Quatre routes alimentaient ces deux codes ;
+ * trois le faisaient avec la sortie BRUTE du moteur, et l'utilisateur qui retirait une pièce
+ * jointe lisait « update or delete on table "ref_document" violates foreign key constraint … ».
+ * L'INVARIANT QUI EN SORT, à tenir par toute route qui émettra un jour un code de cette liste :
+ * elle ne met dans `detail` QUE le message d'un `RAISE` à elle, jamais un `error.message` de
+ * PostgREST / Postgres / GoTrue. Le tri se fait avec `engineErrorDetail` (@/lib/db-error-message),
+ * qui rend une phrase FR pour les SQLSTATE actionnables et `undefined` sinon — auquel cas la route
+ * OMET `detail` et l'utilisateur retombe ici, sur le libellé générique. Couvert par
+ * `route.delete.test.ts` (actor-document), `route.test.ts` (delete-user, objects/delete,
+ * rgpd/erase) : chacun vérifie le rendu FINAL via `readApiErrorMessage`, pas seulement la réponse.
  */
 const CODES_WITH_BUSINESS_DETAIL = new Set(['delete_failed', 'erase_failed']);
 

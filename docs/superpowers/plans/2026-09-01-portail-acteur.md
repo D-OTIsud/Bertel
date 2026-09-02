@@ -1267,7 +1267,7 @@ git commit -m "feat(sql): submit_actor_fiche transactionnel (18a §5)"
 
 **Interfaces :**
 - Produces:
-  - `api.list_my_portal_fiches() → jsonb` — `[{id, name, object_type, status, updated_at, open_submission:{id, submitted_at}|null, last_resolved:{status, resolved_at}|null, office_email}]`, persona acteur uniquement, portée portail. `office_email` (révision 2026-09-02, D11) = premier canal e-mail PUBLIC de l'ORG publisher (primaire d'abord), NULL sinon — alimente le repli « envoyez vos photos à l'office ».
+  - `api.list_my_portal_fiches() → jsonb` — `[{id, name, object_type, status, updated_at, open_submission:{id, submitted_at}|null, last_resolved:{status, resolved_at}|null, office_email, office_phone}]`, persona acteur uniquement, portée portail. `office_email` / `office_phone` (révision 2026-09-02, D11) = premiers canaux PUBLICS de l'ORG publisher (primaire d'abord ; `phone` avant `mobile`), NULL sinon — ils alimentent les DEUX replis du portail : « envoyez vos photos à l'office » et « signaler une erreur » quand c'est la seule saisie (un `mailto:` échoue en silence sur un téléphone sans application de courrier).
   - `api.list_my_submissions(p_limit int DEFAULT 20, p_object_id text DEFAULT NULL) → jsonb` — auto-scopé `submitted_by = auth.uid()` (jamais de paramètre destinataire) : `[{id, object_id, object_name, note, status, submitted_at, resolved_at, changes:[{id, section, field, status, review_note, reviewer_label}]}]`. `section` (révision 2026-09-02) = `metadata->>'section'`, le module id — la clé STABLE qui ancre l'état d'une rubrique côté portail (`field` est un libellé, il peut changer).
   - `api.get_my_actor_profile() → jsonb` — `{id, display_name, photo_url, channels:[{kind, value, is_primary}]}` du SEUL `current_user_actor_id()` (la policy SELECT d'actor_channel est inerte pour authenticated — c'est LE chemin de lecture). Lecture seule v1.
 
@@ -1347,8 +1347,11 @@ BEGIN
         FROM fiche_submission fs
         WHERE fs.object_id = o.id AND fs.status <> 'pending'
         ORDER BY fs.resolved_at DESC NULLS LAST LIMIT 1),
-      -- D11 : l'e-mail PUBLIC de l'office publisher, pour le repli « envoyez vos
-      -- photos ». Canal is_public uniquement (jamais un canal interne), primaire d'abord.
+      -- D11 : les coordonnées PUBLIQUES de l'office publisher, pour les deux replis du
+      -- portail (« envoyez vos photos » et « signaler une erreur » quand c'est la seule
+      -- saisie). Canaux is_public uniquement (jamais un canal interne), primaire d'abord.
+      -- Un `mailto:` échoue en silence sur un téléphone sans application de courrier :
+      -- le téléphone n'est pas décoratif, il est le second chemin.
       'office_email', (
         SELECT cc.value
         FROM object_org_link ool
@@ -1357,6 +1360,18 @@ BEGIN
         JOIN ref_code_contact_kind ck ON ck.id = cc.kind_id AND ck.code = 'email'
         WHERE ool.object_id = o.id AND COALESCE(cc.is_public, TRUE) AND cc.value <> ''
         ORDER BY ool.is_primary DESC NULLS LAST, cc.is_primary DESC NULLS LAST, cc.position NULLS LAST
+        LIMIT 1),
+      'office_phone', (
+        SELECT cc.value
+        FROM object_org_link ool
+        JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+        JOIN contact_channel cc ON cc.object_id = ool.org_object_id
+        JOIN ref_code_contact_kind ck ON ck.id = cc.kind_id AND ck.code IN ('phone', 'mobile')
+        WHERE ool.object_id = o.id AND COALESCE(cc.is_public, TRUE) AND cc.value <> ''
+        -- Même ordre que l'e-mail, puis 'phone' avant 'mobile' (un fixe d'office est le
+        -- numéro affiché ; le mobile n'est qu'un repli).
+        ORDER BY ool.is_primary DESC NULLS LAST, cc.is_primary DESC NULLS LAST,
+                 (ck.code = 'phone') DESC, cc.position NULLS LAST
         LIMIT 1)
     ) ORDER BY o.name)
     FROM object o
@@ -2049,10 +2064,12 @@ git commit -m "docs(sql): manifeste + runbook + CI pour 18a portail acteur — A
 
 **Files :**
 - Modify: `bertel-tourism-ui/src/types/domain.ts:1`
-- Modify: `bertel-tourism-ui/src/hooks/useBootstrapSession.ts` (normalizeRole + court-circuit des sondes)
+- Modify: `bertel-tourism-ui/src/hooks/useBootstrapSession.ts` (normalizeRole + court-circuit des sondes + messages `setGuest` sans « Google », Step 2 bis)
 - Modify: `bertel-tourism-ui/src/lib/auth-routing.ts`
 - Modify: `bertel-tourism-ui/src/app/(main)/layout.tsx`
-- Test: `bertel-tourism-ui/src/lib/auth-routing.test.ts` (créer s'il n'existe pas — vérifier avec `ls src/lib/auth-routing.test.ts`)
+- Modify: `bertel-tourism-ui/src/utils/user-role-label.ts` (`actor` → « Prestataire » ; `Record<UserRole, string>` strict casse la compilation sinon)
+- Modify (Step 2 bis) : `bertel-tourism-ui/src/views/SetPasswordPage.tsx`, `bertel-tourism-ui/src/views/LoginPage.tsx`, et leurs wrappers `bertel-tourism-ui/src/app/set-password/page.tsx` + `bertel-tourism-ui/src/app/login/page.tsx` (boundary `<Suspense>` exigé par `useSearchParams`)
+- Test: `bertel-tourism-ui/src/lib/auth-routing.test.ts`, `bertel-tourism-ui/src/views/SetPasswordPage.test.tsx`, `bertel-tourism-ui/src/views/LoginPage.test.tsx` (créer ceux qui n'existent pas — vérifier avec `ls`)
 
 **Interfaces :**
 - Produces: `UserRole` = `'super_admin' | 'tourism_agent' | 'owner' | 'actor'` ; `getDefaultAppPath('actor') === '/espace'` ; `getPostLoginPath('actor', from)` n'accepte un `from` que préfixé `/espace` ; le layout `(main)` renvoie tout acteur vers `/espace`. Tasks 11-14 en dépendent.
@@ -2219,8 +2236,11 @@ Attendu : PASS + exit 0. Si le typecheck révèle des switch exhaustifs sur `Use
 - [ ] **Step 4 : Commit**
 
 ```bash
-git add src/types/domain.ts src/lib/auth-routing.ts src/hooks/useBootstrapSession.ts "src/app/(main)/layout.tsx" src/lib/auth-routing.test.ts
+git add src/types/domain.ts src/lib/auth-routing.ts src/hooks/useBootstrapSession.ts "src/app/(main)/layout.tsx" src/utils/user-role-label.ts src/lib/auth-routing.test.ts
 git commit -m "feat(front): persona actor — types, bootstrap, routage portail"
+# Step 2 bis dans SON commit (copie de premier contact — surface différente) :
+git add src/views/SetPasswordPage.tsx src/views/LoginPage.tsx src/app/set-password/page.tsx src/app/login/page.tsx src/views/SetPasswordPage.test.tsx src/views/LoginPage.test.tsx
+git commit -m "feat(front): premier contact prestataire — copie invitation et connexion sans Google"
 ```
 
 (Depuis `bertel-tourism-ui/` ; adapter les chemins `git add` si lancé depuis la racine.)
@@ -2241,7 +2261,7 @@ git commit -m "feat(front): persona actor — types, bootstrap, routage portail"
 export interface PortalFiche { id: string; name: string; objectType: string; status: string;
   updatedAt: string | null; openSubmission: { id: string; submittedAt: string } | null;
   lastResolved: { status: string; resolvedAt: string | null } | null;
-  officeEmail: string | null; }   // révision 2026-09-02 (D11) — repli photos
+  officeEmail: string | null; officePhone: string | null; }   // révision 2026-09-02 (D11) — replis photos + signalement
 export interface MySubmissionChange { id: string; section: string | null; field: string; status: string;
   reviewNote: string | null; reviewerLabel: string | null; }   // section = module id (révision 2026-09-02)
 export interface MySubmission { id: string; objectId: string; objectName: string;
@@ -2261,7 +2281,7 @@ export async function submitActorFiche(objectId: string, changes: SubmitPendingC
 
 ```ts
 import { getApiClient } from '../lib/supabase';
-import { listMyPortalFiches, submitActorFiche, getPortalSectionVisibility } from './portal';
+import { listMyPortalFiches, listMySubmissions, submitActorFiche, getPortalSectionVisibility } from './portal';
 
 jest.mock('../lib/supabase');
 const mockRpc = jest.fn();
@@ -2273,12 +2293,18 @@ describe('services/portal', () => {
   it('parse les fiches du portail (défensif : ligne malformée ignorée)', async () => {
     mockRpc.mockResolvedValue({ data: [
       { id: 'HOT1', name: 'Villa', object_type: 'HOT', status: 'published', updated_at: '2026-09-01',
-        open_submission: { id: 's1', submitted_at: '2026-08-28' }, last_resolved: null, office_email: 'contact@oti.re' },
+        open_submission: { id: 's1', submitted_at: '2026-08-28' }, last_resolved: null,
+        office_email: 'contact@oti.re', office_phone: '0262 00 00 00' },
       { pas_un_id: true },
     ], error: null });
     const fiches = await listMyPortalFiches();
     expect(fiches).toHaveLength(1);
-    expect(fiches[0]).toMatchObject({ id: 'HOT1', openSubmission: { id: 's1' }, officeEmail: 'contact@oti.re' });
+    expect(fiches[0]).toMatchObject({ id: 'HOT1', openSubmission: { id: 's1' }, officeEmail: 'contact@oti.re', officePhone: '0262 00 00 00' });
+  });
+
+  it('rend null les coordonnées d’office absentes (cas de la prod au 2026-09-02)', async () => {
+    mockRpc.mockResolvedValue({ data: [{ id: 'HOT1', name: 'Villa', object_type: 'HOT', status: 'published' }], error: null });
+    await expect(listMyPortalFiches()).resolves.toMatchObject([{ officeEmail: null, officePhone: null }]);
     expect(mockRpc).toHaveBeenCalledWith('list_my_portal_fiches', {});
   });
 
@@ -2295,6 +2321,12 @@ describe('services/portal', () => {
         field: 'Descriptions', before: 'a', after: 'b' } }],
       p_note: 'Bonjour',
     });
+  });
+
+  it('borne les soumissions à la fiche ouverte (acteur multi-fiches)', async () => {
+    mockRpc.mockResolvedValue({ data: [], error: null });
+    await listMySubmissions(20, 'HOT1');
+    expect(mockRpc).toHaveBeenCalledWith('list_my_submissions', { p_limit: 20, p_object_id: 'HOT1' });
   });
 
   it('normalise la visibilité', async () => {
@@ -2349,8 +2381,11 @@ export interface PortalFiche {
   updatedAt: string | null;
   openSubmission: { id: string; submittedAt: string } | null;
   lastResolved: { status: string; resolvedAt: string | null } | null;
-  /** E-mail PUBLIC de l'office publisher (D11 : repli « envoyez vos photos »), null sinon. */
+  /** Coordonnées PUBLIQUES de l'office publisher (D11 : replis « envoyez vos photos » et
+   *  « signaler une erreur »), null si l'ORG n'en a pas — c'est le cas des 2 ORG de prod
+   *  au 2026-09-02, d'où le prérequis de recette (Task 20 Step 0). */
   officeEmail: string | null;
+  officePhone: string | null;
 }
 
 export async function listMyPortalFiches(): Promise<PortalFiche[]> {
@@ -2379,6 +2414,7 @@ export async function listMyPortalFiches(): Promise<PortalFiche[]> {
         ? { status: readString(resolved.status), resolvedAt: readNullableString(resolved.resolved_at) }
         : null,
       officeEmail: readNullableString(record.office_email),
+      officePhone: readNullableString(record.office_phone),
     });
   }
   return fiches;
@@ -2670,16 +2706,21 @@ import { signOut } from '../../services/auth';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import { useToast } from '../../hooks/useToast';
+import { clearAllPortalDrafts } from '../../features/portal/usePortalDraft';
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const brandName = useThemeStore((state) => state.theme.brandName);
   const logoUrl = useThemeStore((state) => state.theme.logoUrl);
   const userName = useSessionStore((state) => state.userName);
+  const userId = useSessionStore((state) => state.userId);
   const toast = useToast();
 
   async function handleSignOut() {
     try {
+      // La purge des brouillons suit une déconnexion RÉUSSIE : en cas d'échec réseau,
+      // le prestataire reste connecté et doit retrouver son travail non envoyé.
       await signOut();
+      if (userId) clearAllPortalDrafts(userId);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'La déconnexion a échoué. Réessayez.');
     }
@@ -2691,8 +2732,10 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       <header className="portal-shell__bar">
         <div className="portal-shell__brand">
           {logoUrl ? <img src={logoUrl} alt="" width={32} height={32} /> : null}
-          <span className="portal-shell__brand-name">{brandName}</span>
-          <span className="eyebrow">Espace prestataire</span>
+          <span className="portal-shell__brand-text">
+            <span className="portal-shell__brand-name">{brandName}</span>
+            <span className="eyebrow">Espace prestataire</span>
+          </span>
         </div>
         <div className="portal-shell__user">
           <span className="portal-shell__user-name">{userName}</span>
@@ -2826,17 +2869,27 @@ Bloc CSS à ajouter dans `src/styles.css` (à la fin, après le bloc `.help-*`) 
 .portal-shell { min-height: 100dvh; display: flex; flex-direction: column; background: var(--bg); }
 .portal-shell__bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between;
   gap: 12px; min-height: 56px; padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+/* Marque = logo + un bloc DEUX LIGNES (nom au-dessus, « Espace prestataire » en eyebrow),
+   comme la maquette ; le nom se tronque plutôt que de pousser le bouton hors écran. */
 .portal-shell__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.portal-shell__brand img { width: 32px; height: 32px; border-radius: 8px; }
-.portal-shell__brand-name { font-family: var(--font-display), sans-serif; font-weight: 700; }
+.portal-shell__brand img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
+.portal-shell__brand-text { display: grid; min-width: 0; }
+.portal-shell__brand-name { font-family: var(--font-display), sans-serif; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-shell__brand-text .eyebrow { font-size: .62rem; line-height: 1.2; }
 .portal-shell__user { display: flex; align-items: center; gap: 10px; }
 .portal-shell__main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 16px 120px; }
 .portal-shell .primary-button, .portal-shell .ghost-button { min-height: 48px; font-size: 1.05rem; border-radius: var(--radius-sm); }
 .portal-shell input, .portal-shell select, .portal-shell textarea { font-size: 1.05rem; }
 /* Le kit maison est taillé back-office : .badge 12 px, label .8rem, hint .78rem — relevés ICI seulement. */
-.portal-shell .badge { font-size: .9rem; padding: 5px 10px; }
-.portal-shell .auth-field > label { font-size: 1rem; }
-.portal-shell .auth-field__hint { font-size: .95rem; }
+.portal-shell .badge, .portal-modal .badge { font-size: .9rem; padding: 5px 10px; }
+.portal-shell .auth-field > label, .portal-modal .auth-field > label { font-size: 1rem; }
+.portal-shell .auth-field__hint, .portal-modal .auth-field__hint { font-size: .95rem; }
+/* `Modal` fait un createPortal vers document.body : ses descendants ne sont PAS sous
+   .portal-shell. Le contrat de taille est donc dupliqué sous .portal-modal (className
+   passée aux Modal/ConfirmDialog du portail) — sans quoi la fenêtre d'envoi garderait
+   les dimensions back-office (~36 px, 13 px). */
+.portal-modal .primary-button, .portal-modal .ghost-button { min-height: 48px; font-size: 1.05rem; border-radius: var(--radius-sm); }
+.portal-modal input, .portal-modal select, .portal-modal textarea { font-size: 1.05rem; }
 /* WCAG 2.4.11 : la barre d'envoi collante ne doit jamais couvrir un champ focalisé — le
    conteneur de défilement hors AppShell est <html>, pas <main>. */
 html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
@@ -2905,7 +2958,10 @@ export const PORTAL_HEADLINE_METRIC: Partial<Record<ArchetypeCode, 'max_capacity
 export function setPresentation(d: ObjectWorkspaceDescriptionsModule, chapo: string, description: string): ObjectWorkspaceDescriptionsModule
 export function upsertPublicContact(c: ObjectWorkspaceContactsModule, kind: 'phone' | 'mobile' | 'email' | 'website', value: string): ObjectWorkspaceContactsModule
 export function readPublicContact(c: ObjectWorkspaceContactsModule, kind: 'phone' | 'mobile' | 'email' | 'website'): string
-export type WeekHours = Record<string, { open: boolean; slots: { start: string; end: string }[] }>; // clé = code OPENING_WEEKDAYS
+// clé = code OPENING_WEEKDAYS. fixedHours=false ⇒ « ouvert sans horaires fixes » : la
+// tranche porte la sentinelle [{start:'',end:''}] (voir Step 3), JAMAIS slots vides —
+// un jour ouvert sans créneau serait relu FERMÉ.
+export type WeekHours = Record<string, { open: boolean; fixedHours: boolean; slots: { start: string; end: string }[] }>;
 export function readWeekHours(o: ObjectWorkspaceOpeningsModule): { hours: WeekHours; readOnlyReason: string | null }
 export function setWeekHours(o: ObjectWorkspaceOpeningsModule, hours: WeekHours): ObjectWorkspaceOpeningsModule
 export function setAmenities(c: ObjectWorkspaceCharacteristicsModule, checked: string[], visibleOptionCodes: Set<string>): ObjectWorkspaceCharacteristicsModule
@@ -2981,7 +3037,7 @@ describe('setWeekHours', () => {
   const closure = period({ recordId: 'p9', isClosure: true, recurrence: 'fixed', startDate: '2026-12-24', endDate: '2026-12-26' });
   it('n’édite que la période ouverte unique et garde les fermetures', () => {
     const o = { periods: [period({}), closure], periodTypeOptions: [], unavailableReason: null } as unknown as ObjectWorkspaceOpeningsModule;
-    const next = setWeekHours(o, { monday: { open: true, slots: [{ start: '09:00', end: '12:00' }] }, tuesday: { open: false, slots: [] } } as never);
+    const next = setWeekHours(o, { monday: { open: true, fixedHours: true, slots: [{ start: '09:00', end: '12:00' }] }, tuesday: { open: false, fixedHours: false, slots: [] } } as never);
     expect(next.periods[1]).toBe(o.periods[1]);                            // fermeture intacte (même référence)
     expect(next.periods[0].weekdays.find((w) => w.code === 'monday')?.slots).toEqual([{ start: '09:00', end: '12:00' }]);
     expect(next.periods[0].closedDays).toContain('tuesday');
@@ -2993,6 +3049,15 @@ describe('setWeekHours', () => {
   it('est en LECTURE SEULE avec 2 périodes ouvertes (saisonnier : géré par l’office)', () => {
     const o = { periods: [period({}), period({ recordId: 'p2', recurrence: 'cyclic', startDate: '2026-07-01', endDate: '2026-08-31' })], periodTypeOptions: [], unavailableReason: null } as unknown as ObjectWorkspaceOpeningsModule;
     expect(readWeekHours(o).readOnlyReason).toMatch(/saison/);
+  });
+  it('« ouvert sans horaires fixes » = sentinelle créneau vide, JAMAIS slots vides', () => {
+    const o = { periods: [period({})], periodTypeOptions: [], unavailableReason: null } as unknown as ObjectWorkspaceOpeningsModule;
+    const next = setWeekHours(o, { monday: { open: true, fixedHours: false, slots: [] } } as never);
+    // slots: [] ferait omettre le jour par buildOpeningsPayload ⇒ relu FERMÉ (§214-class).
+    expect(next.periods[0].weekdays.find((w) => w.code === 'monday')?.slots).toEqual([{ start: '', end: '' }]);
+    expect(next.periods[0].closedDays).not.toContain('monday');
+    // Et le retour de lecture reconnaît l'état sans le confondre avec « fermé ».
+    expect(readWeekHours(next).hours.monday).toMatchObject({ open: true, fixedHours: false });
   });
 });
 
@@ -3033,8 +3098,16 @@ describe('buildPortalRubrics', () => {
     expect(rubrics.some((r) => r.id === 'presentation')).toBe(false);
     expect(rubrics.find((r) => r.id === 'pricing')?.state).toBe('unavailable');
   });
-  it('priorité des états : rejected > pending > dirty > filled/todo', () => {
+  // Une correction RENVOYÉE prime sur le refus qui l'a provoquée : le module est dans les
+  // DEUX ensembles (refusé par la dernière soumission résolue, en attente dans la nouvelle).
+  // Afficher « À reprendre » inviterait à un geste que le verrou « une vérification ouverte »
+  // refuse. D'où : unavailable > pending > rejected > dirty > filled > todo.
+  it('priorité des états : pending PRIME sur rejected (corrigé puis renvoyé)', () => {
     const r = buildPortalRubrics({ archetype: 'RES', draft: draft({}), dirty: { contacts: true }, masked: [], floor, pendingModules: new Set(['contacts']), rejectedModules: new Set(['contacts']) });
+    expect(r.find((x) => x.id === 'contacts')?.state).toBe('pending');
+  });
+  it('refusé et NON renvoyé reste « À reprendre »', () => {
+    const r = buildPortalRubrics({ archetype: 'RES', draft: draft({}), dirty: {}, masked: [], floor, pendingModules: new Set(), rejectedModules: new Set(['contacts']) });
     expect(r.find((x) => x.id === 'contacts')?.state).toBe('rejected');
   });
   it('chaque rubrique porte un module hors plancher et un titre sans jargon', () => {
@@ -3091,7 +3164,7 @@ Points d'implémentation (le test guide ; ouvrir les types dans `object-workspac
 - `setPresentation` : `updateTranslatableField(field, 'fr', 'fr', value)` sur `object.chapo` et `object.description` — langue FORCÉE à `'fr'` dans les deux arguments (un compte à préférence EN écrirait ailleurs que la colonne FR) ; spread de `d`, `d.object` ; ne jamais stripper le Markdown (texte simple = Markdown valide).
 - `upsertPublicContact` : cible = première ligne `objectItems` dont `kindCode.toLowerCase() === kind` (pour `'phone'`, accepter aussi `'mobile'` en repli à la LECTURE, mais créer en `'phone'`) ; existante → `{ ...row, value }` ; absente et valeur non vide → `createContactDraft(kindOptions, objectItems.length === 0)` puis `{ ...draft, id: \`draft-contact-${kind}-${Date.now()}\`, kindId, kindCode, kindLabel (depuis kindOptions par code, sinon throw 'genre absent du catalogue'), isPublic: true, isPrimary: aucune autre ligne de ce genre }` puis `reconcileContactPrimary(next, id)` ; valeur vidée → ligne retirée. `webItems` jamais touché.
 - `readWeekHours` / `setWeekHours` : période cible = l'UNIQUE période `isClosure === false` ; 0 période → `createPeriodDraft(periods.length)` + `{ recurrence: 'always', label: 'Horaires habituels', startDate: '', endDate: '' }` ajoutée ; ≥ 2 → `readOnlyReason = 'Vos horaires changent selon la saison. L’office les gère pour vous.'` et `setWeekHours` rend `o` inchangé. **Quatre pièges vérifiés sur le code, chacun avec son test de sabotage :**
-  1. **La sentinelle « ouvert sans horaires fixes »** : le parser émet `slots: [{ start: '', end: '' }]` pour un jour ouvert sans créneau (`object-workspace-parser.ts:2511-2514`) et `buildOpeningsPayload` (`object-workspace.ts:4852-4868`) le rend `closed:false, time_frames:[]`. **Ne jamais filtrer un créneau vide** : un `slots.filter(s => s.start && s.end)` fermerait, en un clic d'approbation, tout restaurant « sur rendez-vous ». `WeekHours` porte donc `{ open: true, fixedHours: false }` ⇒ `slots: [{ start: '', end: '' }]` ; on ne retire que les créneaux À MOITIÉ remplis (erreur affichée avant).
+  1. **La sentinelle « ouvert sans horaires fixes »** : le parser émet `slots: [{ start: '', end: '' }]` pour un jour ouvert sans créneau (`object-workspace-parser.ts:2511-2514`) et `buildOpeningsPayload` (`object-workspace.ts:4852-4868`) le rend `closed:false, time_frames:[]`. **Ne jamais filtrer un créneau vide** : un `slots.filter(s => s.start && s.end)` fermerait, en un clic d'approbation, tout restaurant « sur rendez-vous ». D'où le champ `fixedHours` de `WeekHours` : `{ open: true, fixedHours: false }` ⇒ `slots: [{ start: '', end: '' }]` (jamais `[]`, qui vaut « fermé ») ; `readWeekHours` le rend `false` quand le seul créneau est vide ; on ne retire que les créneaux À MOITIÉ remplis (erreur affichée avant).
   2. **Les jours absents** : `period.weekdays` ne contient QUE les jours présents en base (un jour fermé est ABSENT, pas `slots: []`). Cocher un jour absent → INSÉRER `{ code, label (depuis OPENING_WEEKDAYS), slots }` ; laisser absent un jour absent non coché (sinon la période devient JSON-dirty sans changement réel) ; un jour inchangé garde la MÊME référence d'objet.
   3. **Symétrie de `closedDays`** : jour décoché → `slots: []` + `addClosedWeekday` ; jour recoché → retiré de `closedDays` (sinon état contradictoire et enveloppe fantôme après un aller-retour de case).
   4. **≥ 3 créneaux sur un jour** (0 cas aujourd'hui, rien ne l'interdit demain) : la rubrique passe en lecture seule pour ce jour (« Cet horaire est géré par l’office ») plutôt que de jeter un créneau non affiché.
@@ -3127,7 +3200,7 @@ export const PORTAL_RUBRICS: readonly PortalRubric[] = [
 ];
 ```
 
-`buildPortalRubrics` : filtre `archetypes.includes(archetype)` → `isModuleSubmittable(module, masked, floor)` (sinon ABSENTE) → état : `unavailableReason` posé sur la tranche ⇒ `'unavailable'` (+ `readOnlyReason: 'Cette rubrique n’est pas disponible pour le moment. Contactez l’office si vous devez la modifier.'`) — garde `'unavailableReason' in slice && slice.unavailableReason != null` : les tranches `contacts` et `descriptions` n'ont PAS ce champ ; sinon `rejectedModules.has` ⇒ `'rejected'` ; `pendingModules.has` ⇒ `'pending'` ; `dirty[module]` ⇒ `'dirty'` ; `isFilled` ⇒ `'filled'` ; sinon `'todo'`. Pour `hours`, `readWeekHours(...).readOnlyReason` devient le `readOnlyReason` de la rubrique (état `filled`, non éditable).
+`buildPortalRubrics` : filtre `archetypes.includes(archetype)` → `isModuleSubmittable(module, masked, floor)` (sinon ABSENTE) → état : `unavailableReason` posé sur la tranche ⇒ `'unavailable'` (+ `readOnlyReason: 'Cette rubrique n’est pas disponible pour le moment. Contactez l’office si vous devez la modifier.'`) — garde `'unavailableReason' in slice && slice.unavailableReason != null` : les tranches `contacts` et `descriptions` n'ont PAS ce champ ; sinon `pendingModules.has` ⇒ `'pending'` ; `rejectedModules.has` ⇒ `'rejected'` ; `dirty[module]` ⇒ `'dirty'` ; `isFilled` ⇒ `'filled'` ; sinon `'todo'`. **`pending` AVANT `rejected`** : après une correction renvoyée, le module appartient aux deux ensembles (refusé par la dernière soumission résolue, en attente dans la nouvelle) et « À reprendre » inviterait à un geste que le verrou « une vérification ouverte par fiche » refuse. Équivalent accepté : retirer de `rejectedModules` tout module présent dans la soumission ouverte, au calcul des ensembles (Step 3). Pour `hours`, `readWeekHours(...).readOnlyReason` devient le `readOnlyReason` de la rubrique (état `filled`, non éditable).
 
 `PORTAL_AMENITY_CODES` : ≤ 12 codes par archétype, **placeholder à valider PO** — proposer depuis `ref_amenity` (seeds, 163 codes scope object/both) les codes les plus fréquents par famille (wifi, parking, piscine, climatisation, terrasse ; accès PMR exclu car famille `accessibility`) ; un code absent du catalogue chargé n'est pas rendu (filtré au runtime, jamais d'erreur). ⚠ **`visite_libre` / `visite_guidee` / `audioguide` N'EXISTENT PAS dans `ref_amenity`** (ni seeds ni prod, vérifié le 2026-09-02 — seul `taxonomy_loi` porte `visite_guidee` ; `VISIT_MODE_CODES` de `editor-completion.ts` et les 3 toggles de `BlockVIS` écrivent des codes hors catalogue) : pour VIS, choisir des codes RÉELS ou faire seeder ces 3 codes (décision PO, à trancher avant la rubrique VIS). `PORTAL_PRICE_UNIT` : `{ HEB: 'par_nuit', RES: 'par_personne', VIS: 'par_personne', ASC: 'par_personne' }` — **à valider PO** (« par couvert » est du vocabulaire métier ; le visiteur lit « par personne »). `PORTAL_HEADLINE_METRIC` : `{ HEB: 'max_capacity', RES: 'seats' }`.
 
@@ -3181,16 +3254,16 @@ Sabotage obligatoire avant commit (à rapporter dans le message de PR) : retirer
 
 **Écrans (maquette : `docs/superpowers/specs/2026-09-01-portail-acteur-design.md` §4.5, artefact « Espace prestataire ») :**
 
-1. **Hub** — `<a>← Vos fiches</a>` (uniquement si ≥ 2 fiches) ; `h1.portal-h1` = nom de la fiche (`tabIndex={-1}`, reçoit le focus à chaque retour) ; ligne muted « {Type} · {Commune} » ; `.notice` permanent « Ce que vous modifiez ici est vérifié par l’office avant d’être publié. » ; si envoi en cours : `.notice--warn` « Envoyé le {date}. L’office vérifie vos modifications. Vous pouvez continuer à préparer d’autres changements. » ; si retours : carte `.panel-card--warning` « Retours de l’office » (une ligne par changement refusé : titre de rubrique + « refusé : « {review_note} » » + lien « Corriger ») ; carte « Pour compléter votre fiche » (boutons 48 px, un par rubrique `todo`, + « Ajoutez des photos ({n} sur {cible}) » qui ouvre Photos) ou ligne « Votre fiche est complète. Merci ! » ; `<ol class="portal-tasks">` : une ligne ≥ 64 px par rubrique = `<a href="?rubrique=…">` titre (1.05 rem/700) + résumé 1 ligne (`summary`, `--ink-3`, tronqué) + `.badge` d'état + chevron ; états : `todo` « À faire » (`--warn`, `Circle`) · `filled` « Rempli » (`--ok`, `Check`) · `dirty` « Modifié — à envoyer » (`--info`, `Pencil`) · `pending` « Envoyé — en vérification » (`--muted`, `Clock`) · `rejected` « À reprendre » (`--danger`, `AlertTriangle`) · `unavailable` « Indisponible pour le moment » (`--muted`, ligne non cliquable) ; puis la pseudo-rubrique **Photos** (lecture seule) et la carte **« Vérifiez ces informations »** (Nom / Type de fiche / Adresse / Téléphone publié en lecture seule + bouton « Signaler une erreur » → textarea « Dites-nous ce qui est faux » dont le texte part préfixé « Erreur signalée : » dans le message d'envoi). **Jamais une impasse** : `submit_actor_fiche` exige ≥ 1 modification, donc si le signalement est la SEULE chose saisie, la carte le dit (« Ce message partira avec votre prochain envoi. Pour prévenir l’office tout de suite : ») et affiche l'e-mail et le téléphone publics de l'office (`officeEmail` + un `officePhone` à émettre de la même façon par `list_my_portal_fiches`) avec `mailto:`/`tel:` ; le texte est conservé dans le brouillon local.
+1. **Hub** — `<a>← Vos fiches</a>` (uniquement si ≥ 2 fiches) ; `h1.portal-h1` = nom de la fiche (`tabIndex={-1}`, reçoit le focus à chaque retour) ; ligne muted « {Type} · {Commune} » ; `.notice` permanent « Ce que vous modifiez ici est vérifié par l’office avant d’être publié. » ; si envoi en cours : `.notice--warn` « Envoyé le {date}. L’office vérifie vos modifications. Vous pouvez continuer à préparer d’autres changements. » ; si retours : carte `.panel-card--warning` « Retours de l’office » (une ligne par changement refusé : titre de rubrique + « refusé : « {review_note} » » + lien « Corriger ») ; carte « Pour compléter votre fiche » (boutons 48 px, un par rubrique `todo`, + « Ajoutez des photos ({n} sur {cible}) » qui ouvre Photos) ou ligne « Votre fiche est complète. Merci ! » ; `<ol class="portal-tasks">` : une ligne ≥ 64 px par rubrique = `<Link href={{ query: { rubrique: r.id } }} scroll={false}>` (navigation douce — jamais un `<a href>` nu, cf. « Produces » ci-dessus) titre (1.05 rem/700) + résumé 1 ligne (`summary`, `--ink-3`, tronqué) + `.badge` d'état + chevron ; états : `todo` « À faire » (`--warn`, `Circle`) · `filled` « Rempli » (`--ok`, `Check`) · `dirty` « Modifié — à envoyer » (`--info`, `Pencil`) · `pending` « Envoyé — en vérification » (`--muted`, `Clock`) · `rejected` « À reprendre » (`--danger`, `AlertTriangle`) · `unavailable` « Indisponible pour le moment » (`--muted`, ligne non cliquable) ; puis la pseudo-rubrique **Photos** (lecture seule) et la carte **« Vérifiez ces informations »** (Nom / Type de fiche / Adresse / Téléphone publié en lecture seule + bouton « Signaler une erreur » → textarea « Dites-nous ce qui est faux » dont le texte part préfixé « Erreur signalée : » dans le message d'envoi). **Jamais une impasse** : `submit_actor_fiche` exige ≥ 1 modification, donc si le signalement est la SEULE chose saisie, la carte le dit (« Ce message partira avec votre prochain envoi. Pour prévenir l’office tout de suite : ») et affiche l'e-mail et le téléphone publics de l'office (`officeEmail` / `officePhone` de `PortalFiche`, Task 6 + Task 11) avec `mailto:`/`tel:` — si les deux sont NULL, « Contactez votre office de tourisme. » ; le texte est conservé **dans le brouillon local** (clé `note`, Step 2 §5 : il peut être la SEULE saisie et un envoi sans modification est refusé — il ne peut donc pas vivre dans un état d'écran).
 2. **Écran de rubrique** (`PortalRubricScreen`) — lien « ← Retour à la fiche » (44 px) ; `h1` = titre de la rubrique (focus) ; une phrase d'aide ; le formulaire (≤ 6 contrôles, labels visibles au-dessus, aide sous le label, erreur sous le champ) ; « Valider » (`.primary-button`, pleine largeur) + « Retour sans changer » (`.ghost-button`) ; ligne muted « Rien n’est envoyé pour l’instant. Vous enverrez tout depuis la page de la fiche. » ; si la rubrique est `pending` ou `rejected` : `.notice` « Vous avez envoyé une mise à jour de cette rubrique le {date}. Elle apparaîtra ici une fois vérifiée par l’office. » **suivie de ce qui a été envoyé** (« Vous aviez indiqué : Téléphone : 0692… »), lu dans l'instantané local `portal-sent:<userId>:<objectId>` écrit à l'envoi (Step 2) — sans lui, après un rechargement les champs montrent les valeurs PUBLIÉES et le prestataire re-saisit de mémoire, puis bute sur « vérification en cours » ; si `readOnlyReason` : le formulaire est remplacé par la phrase. **Le formulaire a un état local** initialisé depuis `editor.draft` et resynchronisé PENDANT LE RENDU quand `?rubrique` change (motif §212 : `if (key !== prevKey) { setPrevKey(key); setForm(read(draft)); }`) ; « Valider » = validation → `editor.replaceModule(MODULE_KEY_MAP[module], updater(...))` → retour hub (focus h1). Quitter avec un formulaire modifié non validé (« Retour sans changer » ou lien de retour) → `ConfirmDialog` titre « Quitter sans valider ? », message « Vos changements dans cette rubrique ne seront pas gardés. », **cancel = « Rester »** (c'est ce que reçoivent Échap et le clic hors fenêtre — `ConfirmDialog` mappe les deux sur `onCancel` : la sortie sûre doit être le cancel), **confirm tone=danger = « Quitter sans garder »**. Jamais l'inverse (« Ne pas garder » en cancel jetterait la saisie sur Échap).
 3. **Barre d'envoi** (`PortalSendBar`, `position: sticky; bottom: 0`, `--surface`, ombre haute, `padding-bottom: env(safe-area-inset-bottom)`) — visible dès qu'au moins une rubrique est `dirty` : « {n} rubrique(s) modifiée(s) · enregistrées sur cet appareil » + « Envoyer à l’office » (`.primary-button` 48 px) + « Annuler mes modifications » (`.ghost-button` → `ConfirmDialog` tone danger « Effacer » / « Garder » → `editor.resetModule` par module dirty + `clearPortalDraft`). Envoi en cours côté office : bouton `aria-disabled="true"` (reste focalisable, motif D10) + phrase « Vérification en cours — vous pourrez envoyer vos nouveaux changements quand l’office aura terminé. ». Hors ligne : `OfflineBanner` global + bouton `aria-disabled` + « Pas de connexion. Vos modifications sont conservées ici. ».
-4. **Fenêtre d'envoi** (`PortalSendModal`, `Modal` maison, reste montée) — titre « Envoyer à l’office » ; « Vous envoyez : » + liste des titres de rubriques modifiées, avec pour chacune la mention « appliquée dès validation » (modules auto : `openings`, `characteristics`) ou « l’office la reportera » (les autres) ; textarea « Un message pour l’office (facultatif) » (pré-rempli par le signalement d'erreur) + aide « Par exemple : « Nouveaux horaires d’été » ou « Le numéro a changé ». » ; pied « Pas maintenant » / « Envoyer » (busy « Envoi… », `aria-busy`) ; chaque ligne de rubrique porte un bouton `.ghost-button` « Retirer de l’envoi » (`editor.resetModule` + mise à jour du brouillon) ; erreur DANS la fenêtre (`role="alert"`) : générique « Nous n’avons pas pu envoyer vos modifications. Vérifiez votre connexion et réessayez. Rien n’est perdu. » ; déjà un envoi en cours (`error.code === 'PT409'`, Task 5 — ajouter le libellé à `API_ERROR_LABELS`/`SQLSTATE_LABELS` de `api-error.ts`) « L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée. » ; `22023` « Une rubrique n’est plus modifiable depuis ici (l’office l’a fermée). Retirez-la de l’envoi, puis réessayez. ». L'état de la note se resynchronise à l'ouverture (jamais `useState(() => …)` figé, §212).
+4. **Fenêtre d'envoi** (`PortalSendModal`, `Modal` maison, reste montée) — ⚠ **`Modal` fait un `createPortal(…, document.body)`** (`Modal.tsx:157,188`) : la fenêtre n'est donc PAS descendante de `.portal-shell` et **aucune** règle `.portal-shell …` ne l'atteint (boutons 48 px, champs 1.05 rem). Lui passer `className="portal-modal"` et dupliquer le contrat de taille sous ce sélecteur (`.portal-modal .primary-button/.ghost-button { min-height: 48px; font-size: 1.05rem }`, `.portal-modal textarea { font-size: 1.05rem }`, `.portal-modal .badge { font-size: .9rem }`) — même chose pour tout `ConfirmDialog` du portail (`.portal-modal` via sa prop `className` si elle existe, sinon envelopper le contenu). Titre « Envoyer à l’office » ; « Vous envoyez : » + liste des titres de rubriques modifiées, avec pour chacune la mention « appliquée dès validation » (modules auto : `openings`, `characteristics`) ou « l’office la reportera » (les autres) ; textarea « Un message pour l’office (facultatif) » (pré-rempli par le signalement d'erreur) + aide « Par exemple : « Nouveaux horaires d’été » ou « Le numéro a changé ». » ; pied « Pas maintenant » / « Envoyer » (busy « Envoi… », `aria-busy`) ; chaque ligne de rubrique porte un bouton `.ghost-button` « Retirer de l’envoi » (`editor.resetModule` + mise à jour du brouillon) ; erreur DANS la fenêtre (`role="alert"`) : générique « Nous n’avons pas pu envoyer vos modifications. Vérifiez votre connexion et réessayez. Rien n’est perdu. » ; déjà un envoi en cours (`error.code === 'PT409'`, Task 5 — ajouter le libellé à `API_ERROR_LABELS`/`SQLSTATE_LABELS` de `api-error.ts`) « L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée. » ; `22023` « Une rubrique n’est plus modifiable depuis ici (l’office l’a fermée). Retirez-la de l’envoi, puis réessayez. ». L'état de la note se resynchronise à l'ouverture (jamais `useState(() => …)` figé, §212).
 5. **Après envoi** — la fenêtre se ferme ; le hub rend en tête une carte `.panel-card.motion-success` (icône `CheckCircle`, `h2` « Merci ! Vos modifications ont été envoyées à l’office. », `p` « L’office les vérifie, en général sous quelques jours. Vous recevrez un e-mail quand ce sera fait. », bouton « Retour à vos fiches » si ≥ 2 fiches) et reçoit le focus ; les rubriques envoyées passent `pending` ; la barre disparaît. Pas de toast (il couvrirait la barre haute sur mobile).
 6. **Photos** (`PhotosRubric`, lecture seule, D11) — grille 2 colonnes des photos (`media.objectItems` type photo : `img alt={title || 'Photo n'}`, légende texte « Photo principale » sur `isMain`) ; carte `.notice` avec `Mail` : « Pour l’instant, les photos sont ajoutées par l’office. Envoyez-lui vos plus belles photos (JPG ou PNG) et il les publiera pour vous. » + bouton `.primary-button` « Envoyer mes photos par e-mail » = `mailto:{officeEmail}?subject=Photos — {nom}` + bouton « Copier l’adresse e-mail » **avec libellé visible** (`CopyButton` est icône seule : lui ajouter une prop `label` ou l'envelopper — un `mailto:` échoue en silence sur un téléphone sans application de courrier) ; si `officeEmail` absent : phrase « Contactez votre office de tourisme. » ; « (les photos de votre téléphone conviennent) » sous « JPG ou PNG » ; vide « Aucune photo pour l’instant. ». ⚠ En production le 2026-09-02, **aucune des 2 ORG n'a de canal e-mail public** : saisir les canaux de l'ORG publisher est un prérequis de recette (Task 20). ; **aucun bouton d'ajout** (la route `/api/media/upload` refuse la persona acteur en 403 — D7).
 
 - [ ] **Step 1 : Tests ROUGES**
 
-`usePortalDraft.test.ts` — reprendre les 4 cas du 2026-09-01 (écrit/relit, jette si l'empreinte a changé, clear, empreinte stable) avec la nouvelle signature `readPortalDraft(userId, objectId, baseline)` / `writePortalDraft(userId, objectId, baseline, draft)` / `clearPortalDraft(userId, objectId)` / `hasPortalDraft(userId, objectId)` (clé `portal-draft:<userId>:<objectId>` — un appareil partagé ne doit jamais rejouer le brouillon d'un autre compte) et un 5e cas : `clearAllPortalDrafts(userId)` purge toutes les clés du compte (appelé au sign-out).
+`usePortalDraft.test.ts` — reprendre les 4 cas du 2026-09-01 (écrit/relit, jette si l'empreinte a changé, clear, empreinte stable) avec les signatures du Step 2 : `readPortalDraft(userId, objectId, serverModules)` → `{ draft, note, savedAt } | null` / `writePortalDraft(userId, objectId, serverModules, dirtySlices, note)` / `clearPortalDraft(userId, objectId)` / `hasPortalDraft(userId, objectId)` (clé `portal-draft:<userId>:<objectId>` — un appareil partagé ne doit jamais rejouer le brouillon d'un autre compte), plus : `clearAllPortalDrafts(userId)` purge toutes les clés du compte ; une note SEULE (aucune tranche sale) survit à un rechargement ; le brouillon survit à `commitModules` (empreinte serveur, Step 2 §1) ; un échec de `signOut` laisse le brouillon intact (Step 2 §4).
 
 `PortalFicheHub.test.tsx` (RTL ; mocks `services/portal` + un `draft` de test ; monter `PortalFicheHub` avec un `editor` factice `{ draft, baseline, dirtySections, replaceModule: jest.fn(), … }`) :
 
@@ -3225,7 +3298,9 @@ it('erreur serveur « déjà en cours » → phrase dédiée dans la fenêtre, b
   1. **L'empreinte se calcule sur les modules SERVEUR** (`resource.modules` du cache React Query), **jamais sur `editor.baseline`** : `editor.commitModules` réécrit la baseline avec les valeurs ENVOYÉES alors que la fiche ne change qu'à l'approbation ; un brouillon écrit pendant la vérification serait donc stocké sous une empreinte qu'un rechargement ne reproduit jamais ⇒ écarté avec la bannière mensongère « mise à jour par l’office ». Test : « après commitModules puis rechargement, le brouillon est retrouvé ».
   2. **Empreinte et contenu sans catalogues** : hacher `stripCatalogOptions(modules)` (`io/object-io-serialize.ts`) — sinon un code ajouté au catalogue par l'office change l'empreinte de TOUS les brouillons ; et ne stocker que les tranches DIRTY (les 29 tranches avec catalogues dépassent vite le quota localStorage partagé entre fiches). `try/catch` sur chaque lecture/écriture.
   3. **Instantané envoyé** `portal-sent:<userId>:<objectId>` = `{ submittedAt, lines: Record<module, string[]> }` écrit à l'envoi depuis `describePortalChange(...).after` — lu par la notice de rubrique `pending`/`rejected` (« Vous aviez indiqué : … ») ; purgé quand `lastResolved` est postérieur à `submittedAt` et au sign-out.
-  `PortalShell.handleSignOut` appelle `clearAllPortalDrafts(userId)` (brouillons ET instantanés) AVANT `signOut()`.
+  4. **La purge suit une déconnexion RÉUSSIE, jamais l'inverse.** `PortalShell.handleSignOut` capture `userId`, `await signOut()`, et n'appelle `clearAllPortalDrafts(userId)` (brouillons ET instantanés) **qu'après** — une coupure réseau détruirait sinon tout le travail non envoyé d'un prestataire qui reste connecté. (Variante équivalente : purger dans la transition `SIGNED_OUT` confirmée.) Test : « `signOut` rejette ⇒ le brouillon est toujours là ».
+  5. **Le message à l'office fait partie du brouillon.** Le hub promet que le texte de « Signaler une erreur » survit quand aucune rubrique n'est modifiée (`submit_actor_fiche` refuse un envoi sans changement) : il ne peut donc pas vivre dans un état React. Les signatures portent une note :
+     `writePortalDraft(userId, objectId, serverModules, dirtySlices, note)` / `readPortalDraft(userId, objectId, serverModules) → { draft, note, savedAt } | null` ; la note est écrite même quand aucune tranche n'est sale (le brouillon existe alors avec `draft: {}`), elle pré-remplit la fenêtre d'envoi, et n'est effacée que par un envoi réussi ou un abandon explicite (« Annuler mes modifications » l'inclut, en le disant dans la confirmation). Tests : écriture/relecture d'une note sans tranche sale ; note conservée à travers un rechargement ; note écartée avec le brouillon quand l'empreinte a changé ; note purgée après un envoi réussi.
 
 - [ ] **Step 3 : `PortalFichePage.tsx` + route**
 
@@ -3238,9 +3313,9 @@ export default function PortalFicheRoute({ params }: { params: Promise<{ objectI
 }
 ```
 
-`PortalFichePage` : `useObjectWorkspaceQuery(objectId)` **avec langPrefs `['fr']`** (vérifier la signature dans `useExplorerQueries.ts` : si le hook lit `langPrefs` depuis la session, appeler `loadObjectWorkspace(queryClient, objectId, ['fr'])` via `useQuery` avec la clé `['object-workspace', objectId, ['fr']]`) + `useQuery(['portal-visibility', objectId], () => getPortalSectionVisibility(objectId))` + `useQuery(['portal-submissions'], () => listMySubmissions(20))` + le cache `['portal-fiches']` (pour `openSubmission`, `officeEmail`, nombre de fiches). Chargement → `PageSkeleton variant="form"` + « Nous préparons votre fiche… » ; erreur → `EmptyState mode="error"` « Nous n’avons pas pu ouvrir votre fiche. » + Réessayer ; `getArchetypeMeta(resource.type) === null` → panneau « Cette fiche est gérée par l’office. Contactez-le pour la modifier. ». Sinon `<PortalFicheEditor key={objectId} … />` qui appelle `useObjectEditorState(objectId, resource.modules)` et lit `useSearchParams().get('rubrique')`.
+`PortalFichePage` : `useObjectWorkspaceQuery(objectId)` **avec langPrefs `['fr']`** (vérifier la signature dans `useExplorerQueries.ts` : si le hook lit `langPrefs` depuis la session, appeler `loadObjectWorkspace(queryClient, objectId, ['fr'])` via `useQuery` avec la clé `['object-workspace', objectId, ['fr']]`) + `useQuery(['portal-visibility', objectId], () => getPortalSectionVisibility(objectId))` + `useQuery({ queryKey: ['portal-submissions', objectId], queryFn: () => listMySubmissions(20, objectId) })` (**la clé ET l'appel portent l'id** : sans le paramètre, la soumission ouverte de CETTE fiche peut sortir des 20 lignes d'un acteur multi-fiches ; sans l'id dans la clé, une fiche rendrait l'historique d'une autre. L'invalidation reste par préfixe `['portal-submissions']`) + le cache `['portal-fiches']` (pour `openSubmission`, `officeEmail`, nombre de fiches). Chargement → `PageSkeleton variant="form"` + « Nous préparons votre fiche… » ; erreur → `EmptyState mode="error"` « Nous n’avons pas pu ouvrir votre fiche. » + Réessayer ; `getArchetypeMeta(resource.type) === null` → panneau « Cette fiche est gérée par l’office. Contactez-le pour la modifier. ». Sinon `<PortalFicheEditor key={objectId} … />` qui appelle `useObjectEditorState(objectId, resource.modules)` et lit `useSearchParams().get('rubrique')`.
 
-Calcul des ensembles pour `buildPortalRubrics` : `pendingModules` = modules des changements `status === 'pending'` de la soumission ouverte (`listMySubmissions` → `changes[].section`, clé additive Task 6/11) ; `rejectedModules` = changements `status === 'rejected'` de la DERNIÈRE soumission résolue de cette fiche.
+Calcul des ensembles pour `buildPortalRubrics` : `pendingModules` = modules des changements `status === 'pending'` de la soumission ouverte (`listMySubmissions` → `changes[].section`, clé additive Task 6/11) ; `rejectedModules` = changements `status === 'rejected'` de la DERNIÈRE soumission résolue de cette fiche, **moins** ceux déjà présents dans `pendingModules` (une correction renvoyée n'est plus « à reprendre » — cf. la priorité des états, Step 4 de la Task 13).
 
 - [ ] **Step 4 : `PortalFicheHub.tsx`, `PortalRubricScreen.tsx`, les 8 rubriques, `PortalSendBar`, `PortalSendModal`**
 
@@ -3250,7 +3325,7 @@ Formulaires (contrôles natifs uniquement : `type=tel|email|url|time|number`, `i
 |---|---|---|
 | Vos coordonnées | Téléphone (`tel`), E-mail (`email`), Site internet (`url`, facultatif, aide « Exemple : www.exemple.re ») | `upsertPublicContact` ×3 (mobile = repli lecture du téléphone) |
 | Présentez votre établissement | « En une phrase » (`textarea` 2 lignes, 160 max, compteur `aria-live`), « Présentez votre établissement » (`textarea` 8 lignes, 2000 max ; avertissement doux < 120 car.) | `setPresentation` |
-| Vos horaires | **deux écrans dans la rubrique** (jamais une grille 7 × 5 sur un téléphone) : (1) « Quels jours êtes-vous ouvert ? » = 7 cases `.portal-choice` + raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » → « Suivant » ; (2) « À quelles heures ? » = 3 radios « Les mêmes heures tous les jours ouverts » (une paire `time` « de … à … » + « Ajouter une pause (fermeture le midi) ») / « Ça dépend du jour » (une carte par jour ouvert) / « Sans horaires fixes (sur rendez-vous) » (⇒ sentinelle créneau vide, voir Task 13) ; erreur « Indiquez une heure de fin après l’heure de début. » ; « Valider » ramène au hub | `setWeekHours` (lecture seule si `readOnlyReason`) |
+| Vos horaires | **deux écrans dans la rubrique** (jamais une grille 7 × 5 sur un téléphone) : (1) « Quels jours êtes-vous ouvert ? » = 7 cases `.portal-choice` + raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » → « Suivant » ; (2) « À quelles heures ? » = 3 radios « Les mêmes heures tous les jours ouverts » (une paire `time` « de … à … » + « Ajouter une pause (fermeture le midi) ») / « Ça dépend du jour » (une carte par jour ouvert) / « Sans horaires fixes (sur rendez-vous) » (⇒ `fixedHours: false` ⇒ sentinelle `[{start:'',end:''}]`, jamais `slots: []` qui serait relu FERMÉ — voir Task 13) ; erreur « Indiquez une heure de fin après l’heure de début. » ; « Valider » ramène au hub | `setWeekHours` (lecture seule si `readOnlyReason`) |
 | Équipements et moyens de paiement | `fieldset` « Ce que vous proposez » = cases `.portal-choice` sur `PORTAL_AMENITY_CODES[archetype]` ∩ catalogue chargé ; disclosure `.help-qa` « Voir tous les équipements » (familles restantes, `filterEstablishmentAmenityGroups`) ; `fieldset` « Moyens de paiement acceptés » = toutes `paymentOptions` | `setAmenities(…, visibleOptionCodes = tous les codes rendus)` + `setPayments` |
 | Capacité et animaux | « Combien de personnes pouvez-vous accueillir au maximum ? » (`number`, suffixe « personnes » ; RES : « Combien de couverts au maximum ? ») ; `fieldset` « Acceptez-vous les animaux ? » = 3 radios `.portal-choice` « Oui » / « Non » / « Je préfère ne pas l’indiquer » + « Sous quelles conditions ? (facultatif) » si Oui ; HEB : « Arrivée à partir de » / « Départ avant » (`time`) | `setHeadlineCapacity`, `setPetPolicy`, `setStayPolicy` |
 | Vos tarifs | VIS/ASC : case « L’accès est gratuit » ; « À partir de » (`number`, `inputmode=decimal`, suffixe « € par nuit / par couvert / par personne ») ; « Jusqu’à (facultatif) » ; liste muted « Autres tarifs déjà enregistrés par l’office » (`summarizePricingLine`) | `setStartingPrice` + `validatePricingDraft` |

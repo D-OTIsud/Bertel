@@ -245,8 +245,9 @@ target_pk, action, payload, metadata{rpc, section, manual_apply, field, before, 
 Gates, dans l'ordre :
 1. `auth.uid()` non nul + `api.is_actor_persona()` (42501 sinon) ;
 2. `p_object_id ∈ api.current_user_portal_object_ids()` (42501) ;
-3. pas de soumission `pending` existante pour cette fiche (23505 → message clair
-   « Une vérification est déjà en cours pour cette fiche ») ;
+3. pas de soumission `pending` existante pour cette fiche (SQLSTATE **`PT409`** — PostgREST
+   ⇒ HTTP 409, `error.code` exposé — avec le message « Une vérification est déjà en cours
+   pour cette fiche » ; **pas 23505**, que le front traduit en « doublon ») ;
 4. `p_changes` non vide, ≤ 40 éléments, chaque `metadata.section` ∈ sections visibles
    (matrice + plancher dur) — sinon 22023 en nommant la section refusée ;
 5. `metadata.rpc` de chaque élément soit NULL soit membre de la whitelist §120 (aucun
@@ -386,7 +387,7 @@ Le contrat d'envoi ne change pas : une rubrique = un module = une enveloppe.
   EXIF, HEB/RES/OTI. L'institution s'appelle « l'office » / « votre office de
   tourisme » ; le prestataire lit « votre fiche ». Vouvoiement, une idée par phrase,
   verbes d'abord sur les boutons.
-- **Les états sont des mots** (icône + texte) : « À faire », « Renseigné », « Modifié —
+- **Les états sont des mots** (icône + texte) : « À faire », « Rempli », « Modifié —
   à envoyer », « Envoyé — en vérification », « À reprendre », « Indisponible pour le
   moment ».
 - **Honnêteté** : quand le portail ne peut pas faire quelque chose (photos, horaires
@@ -452,9 +453,9 @@ jamais rendu ni soumis, quelle que soit la matrice) :
 |---|---|---|---|---|
 | Vos coordonnées | `contacts` | tous | Téléphone, E-mail, Site internet (lignes publiques éditées en place) | l'office reporte |
 | Présentez votre établissement | `descriptions` | tous | « En une phrase » (160), « Présentez votre établissement » (2000), FR, texte simple | l'office reporte |
-| Vos horaires | `openings` | RES, ASC, VIS, SRV (**pas HEB en v1** : 463/469 HLO sans période — question « ouvert toute l'année / fermetures » différée PO) | 7 jours : Ouvert/Fermé + « de … à … » (+ 2ᵉ créneau) ; lecture seule si ≥ 2 périodes ouvertes | **appliquée dès validation** |
+| Vos horaires | `openings` | RES, ASC, VIS, SRV (**pas HEB en v1** : 463/469 HLO sans période — question « ouvert toute l'année / fermetures » différée PO) | deux écrans : « Quels jours ? » (7 grandes cases + raccourcis) puis « À quelles heures ? » (mêmes heures tous les jours / ça dépend du jour / **sans horaires fixes** = sentinelle créneau vide, jamais « fermé ») ; lecture seule si ≥ 2 périodes ouvertes ou ≥ 3 créneaux un jour | **appliquée dès validation** |
 | Équipements et moyens de paiement | `characteristics` | tous | cases sur ≤ 12 équipements curés par type (+ « Voir tous les équipements ») + moyens de paiement | **appliquée dès validation** |
-| Accueil : personnes et animaux | `capacity-policies` | HEB, RES | capacité max (HEB) / couverts (RES) ; animaux Oui / Non / « Je préfère ne pas l'indiquer » (tri-état, jamais `false` par défaut) ; HEB : arrivée / départ | l'office reporte |
+| Capacité et animaux | `capacity-policies` | HEB, RES | capacité max (HEB) / couverts (RES) ; animaux Oui / Non / « Je préfère ne pas l'indiquer » (tri-état, jamais `false` par défaut) ; HEB : arrivée / départ | l'office reporte |
 | Vos tarifs | `pricing` | HEB, RES, VIS, ASC | « À partir de » + « Jusqu'à (facultatif) », unité fixée par type ; VIS/ASC : « L'accès est gratuit » | l'office reporte |
 | Votre activité | `activity` | ASC | durée, personnes min/max, âge minimum | l'office reporte |
 | Vos photos | `media` (lecture) | tous | galerie + repli e-mail vers l'office (D11) | — |
@@ -641,6 +642,19 @@ est déjà dans l'allowlist Supabase (même origine que les invitations staff).
   publiées (la fiche ne change qu'à la validation) ; la rubrique porte « Envoyé — en
   vérification » et une phrase l'explique dans le formulaire.
 - **Appareil partagé** : brouillon local clé par compte ET fiche, purgé au sign-out.
+- **Signalement d'erreur seul** (rien d'autre modifié) : `submit_actor_fiche` exige ≥ 1
+  modification — la carte « Vérifiez ces informations » ne fait jamais impasse : le texte
+  reste dans le brouillon et la carte affiche l'e-mail et le téléphone publics de l'office
+  (`mailto:`/`tel:`). Prérequis de recette : l'ORG publisher doit AVOIR des canaux publics
+  (0/2 en prod le 2026-09-02).
+- **Délai de vérification = contrainte produit** : une seule vérification ouverte par fiche
+  bloque le prestataire jusqu'à la réponse de l'office. L'OTI s'engage sur un délai
+  (proposition : 5 jours ouvrés ; copie « en général sous une semaine ») et surveille l'âge
+  des vérifications en attente.
+- **Brouillon pendant une vérification** : l'empreinte du brouillon se calcule sur les
+  modules SERVEUR sans catalogues, jamais sur la baseline locale (que l'envoi réécrit) ;
+  un instantané de ce qui a été envoyé est conservé sur l'appareil pour que la rubrique
+  « en vérification » montre « Vous aviez indiqué : … » après un rechargement.
 
 ## 8. Plan de test
 
@@ -738,6 +752,14 @@ HEB et RES.
 - Ordre de déploiement : migration d'abord (inerte tant qu'aucun compte `actor`
   n'existe), front ensuite — le rôle `actor` n'est attribuable que par la nouvelle
   route, donc aucun état intermédiaire dangereux.
+- **Prérequis de mise en service** (aucune invitation avant) : D9/`p_applied_manually`
+  déployé (5 rubriques sur 7 sont reportées à la main — sans lui un envoi ne se résout
+  jamais) ; rôle `actor` accepté par le front ; 17i-17l dans le manifeste ET en prod, avec
+  une preuve de parité de lecture acteur/superuser sur une fiche (writers « remplace
+  tout ») ; leg `canonical_description` vérifié sur le chemin réel
+  (`get_object_with_deep_data`, §213) ; canaux publics de l'ORG publisher saisis ; chaque
+  vérificateur détient aussi l'écriture canonique (re-dispatch AS THE CALLER). Détail :
+  plan Task 20 Step 0.
 
 ## 11. Références
 

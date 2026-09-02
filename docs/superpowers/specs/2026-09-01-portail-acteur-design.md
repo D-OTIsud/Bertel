@@ -379,8 +379,9 @@ en une colonne**, qui réutilise la **couche d'état** de l'éditeur
 Le contrat d'envoi ne change pas : une rubrique = un module = une enveloppe.
 
 **Principes d'interface (non négociables).**
-- Une colonne, `max-width 640px`, contrôles natifs ≥ 48 px, texte ≥ 1 rem, aucune
-  navigation latérale, aucun onglet, aucune table, aucun glisser-déposer.
+- Une colonne de lecture (640 px au plus ; sur ordinateur, la liste des rubriques
+  l'accompagne à gauche — voir « Deux tailles d'écran » plus bas), contrôles natifs
+  ≥ 48 px, texte ≥ 1 rem, aucun onglet, aucune table, aucun glisser-déposer.
 - **Une rubrique = un petit formulaire** (≤ 6 contrôles) avec libellés visibles au-dessus
   des champs, une phrase d'aide, une erreur en texte sous le champ (jamais la couleur
   seule), un bouton « Valider » qui ramène à la fiche.
@@ -401,6 +402,29 @@ Le contrat d'envoi ne change pas : une rubrique = un module = une enveloppe.
   icône lucide, `Modal`/`ConfirmDialog`/`EmptyState`/`PageSkeleton` maison. Un seul
   bloc `.portal-*` dans `styles.css`. Maquette validée : artefact « Espace prestataire »
   (2026-09-02).
+
+**Deux tailles d'écran, un seul modèle.** Le portail est pensé pour le téléphone, mais un
+prestataire sur ordinateur ne doit pas se retrouver devant une colonne de 640 px perdue au
+milieu d'un écran de 1920. Le modèle ne change pas — mêmes composants, même URL
+`?rubrique=`, même état, même parcours ; seule la **mise en page** change :
+
+- **≤ 1023 px (téléphone, tablette)** : une colonne, 640 px au plus. Le hub **ou** la
+  rubrique ouverte, jamais les deux.
+- **≥ 1024 px (ordinateur)** : deux colonnes (`340px` + le reste, 1080 px au plus) — à
+  gauche la **liste des rubriques**, collante, la rubrique ouverte marquée
+  `aria-current="step"` ; à droite le contenu : les cartes du hub (« Pour compléter »,
+  retours de l'office, Photos, « Vérifiez ces informations ») ou le formulaire de la
+  rubrique ouverte. Le prestataire garde sa liste sous les yeux pendant qu'il remplit et
+  voit ce qu'il lui reste à faire. La barre d'envoi reste collante en bas, sur toute la
+  largeur.
+- **Le même arbre React dans les deux cas** : le conteneur porte
+  `data-view="hub" | "rubric"` et c'est la CSS qui masque la liste (et l'en-tête de fiche)
+  sur petit écran quand une rubrique est ouverte. Pas de `useMediaQuery`, pas de rendu
+  conditionnel — donc ni désynchronisation d'hydratation, ni perte de focus, ni deux
+  chemins à tester.
+- Les cibles tactiles restent ≥ 48 px sur ordinateur (beaucoup d'écrans le sont) ; les
+  lignes de texte des formulaires sont bornées à ~66 caractères ; les lignes de rubrique
+  et les cartes gagnent un état de survol, qui ne porte jamais d'information.
 
 **Arborescence.**
 

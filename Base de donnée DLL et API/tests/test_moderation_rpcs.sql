@@ -19,9 +19,8 @@
 --    note ⇒ status='rejected' + review_note ; is_editing retombe à FALSE ; double-résolution refusée.
 -- F) APPROVE re-dispatch via save_object_rooms (SURF3) : preuve que le whitelist member
 --    save_object_rooms (pas seulement save_object_commercial) re-dispatch réellement — contributeur
---    propose une maj de capacity_total sur une chambre fixture ; l'approbation est REFUSÉE en
---    22023 — save_object_rooms n'est pas dans la whitelist VIVE (SEPT writers, cf. 18a §7) —
---    et la ligne object_room_type reste inchangée (capacity_total = 2).
+--    propose une maj de capacity_total sur une chambre fixture, editor approuve, la ligne
+--    object_room_type reflète le changement (capacity_total 2 → 4).
 --
 -- Contre une base sans la migration : échec immédiat (api.user_can_moderate_object / submit /
 -- list / approve / reject absentes) — état rouge attendu (TDD).
@@ -275,16 +274,7 @@ BEGIN
   RESET ROLE;
 
   -- ============================================================
-  -- F) APPROVE : save_object_rooms est HORS whitelist — sonde de REFUS
-  -- Retournée le 2026-09-02 (chantier 18a §7, décision (A) du contrôleur). Le prosrc VIF
-  -- d'api.approve_pending_change (md5 3cf2a45631df18e22e0b4c5cd81d9e2e) ne porte que SEPT
-  -- writers, SANS save_object_rooms : le fichier source migration_moderation_rpcs.sql en
-  -- listait huit, la base tranchait autrement. 18a §7 redéploie la fonction sur la liste
-  -- VIVE et la fige, identique à celle d'api.submit_actor_fiche — une asymétrie entre les
-  -- deux ferait entrer un changement qui ne pourrait plus jamais être approuvé, et
-  -- uq_fiche_submission_open garderait la fiche bloquée à vie. Cette section exigeait
-  -- l'INVERSE de tests/test_actor_portal.sql (bloc F2) : sur une base où les deux tournent,
-  -- l'une des deux était condamnée à rougir.
+  -- F) APPROVE re-dispatch via save_object_rooms (SURF3 whitelist member)
   -- ============================================================
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_contrib, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
@@ -299,16 +289,11 @@ BEGIN
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_editor, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
-  v_denied := false;
-  BEGIN PERFORM api.approve_pending_change(v_id3, 'Capacite mise a jour');
-  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  v_res := api.approve_pending_change(v_id3, 'Capacite mise a jour');
   RESET ROLE;
-  ASSERT v_denied,
-         'F: approve d''un rpc save_object_rooms doit être REFUSÉ (hors whitelist — SEPT writers)';
-  ASSERT (SELECT capacity_total FROM object_room_type WHERE id = v_room_id) = 2,
-         'F: le refus n''a RIEN écrit — le writer n''a pas tourné (capacity_total inchangé à 2)';
-  ASSERT (SELECT status FROM pending_change WHERE id = v_id3) = 'pending',
-         'F: le refus laisse la ligne intacte (aucune résolution partielle)';
+  ASSERT v_res->>'status' = 'applied', 'F: approve (save_object_rooms) doit retourner status=applied';
+  ASSERT (SELECT capacity_total FROM object_room_type WHERE id = v_room_id) = 4,
+         'F: le writer structuré (save_object_rooms) doit avoir RÉELLEMENT tourné (capacity_total=4)';
 
   RAISE NOTICE 'test_moderation_rpcs: TOUS LES ASSERTS PASSENT';
 END $$;

@@ -15,7 +15,12 @@
 --       donne JAMAIS l'écriture canonique à une persona acteur (ni user_can_write_object_canonical,
 --       qui en dérive) ; le chemin owner HISTORIQUE reste ouvert pour un non-acteur (tourism_agent)
 --       dont l'e-mail matche un lien primaire — D7 ferme seulement la persona acteur, pas le reste.
--- Blocs D..I ajoutés par les tasks suivantes du même chantier.
+--   (D1) DDL — fiche_submission, pending_change.submission_id et org_actor_module_visibility
+--       existent ; chk_app_notification_kind admet 'fiche_submission_reviewed' ; l'index unique
+--       partiel anti-doublon (uq_fiche_submission_open) existe ; et la RLS/REVOKE ferme les DEUX
+--       tables sensibles à TOUT authenticated, en lecture ET en écriture, persona acteur comme
+--       persona éditeur — pas seulement « la table existe ».
+-- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
 \set ON_ERROR_STOP on
@@ -37,6 +42,7 @@ DECLARE
   v_role_op uuid;
   v_pub     uuid;
   v_email_kind uuid;
+  v_denied  boolean; -- (D1) sonde REVOKE/RLS : TRUE si insufficient_privilege a bien été levée.
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -204,6 +210,92 @@ BEGIN
            'C: le chemin owner HISTORIQUE reste ouvert pour un non-acteur (équipes internes)';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-C OK';
+  -- ---------- (D1) DDL : tables + contraintes clés ----------
+  -- Aucune fixture nouvelle : réutilise v_agent/v_user (1301/1302) déjà déclarés — ce bloc
+  -- teste la structure DDL/RLS, pas un contenu métier. Les valeurs 'zz-noop-d1' ci-dessous
+  -- ne sont JAMAIS insérées (le REVOKE frappe avant toute vérification de contrainte FK/PK) :
+  -- hors registre de fixtures, aucune réservation d'id n'est nécessaire.
+  ASSERT EXISTS (SELECT 1 FROM information_schema.tables
+                  WHERE table_schema='public' AND table_name='fiche_submission'),
+         'D1: la table fiche_submission doit exister';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_schema='public' AND table_name='pending_change' AND column_name='submission_id'),
+         'D1: pending_change.submission_id doit exister';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.tables
+                  WHERE table_schema='public' AND table_name='org_actor_module_visibility'),
+         'D1: la table org_actor_module_visibility doit exister';
+  -- Le CHECK des notifications accepte la nouvelle espèce (fail-closed avant migration).
+  ASSERT (SELECT pg_get_constraintdef(oid) FROM pg_constraint
+           WHERE conname='chk_app_notification_kind') LIKE '%fiche_submission_reviewed%',
+         'D1: chk_app_notification_kind doit inclure fiche_submission_reviewed';
+  -- Une seule soumission ouverte par fiche (index partiel unique).
+  ASSERT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname='uq_fiche_submission_open'),
+         'D1: index unique partiel uq_fiche_submission_open manquant';
+  -- RLS + REVOKE : un authenticated n'a même pas le SELECT sur la table (permission
+  -- denied attendu, PAS « zéro ligne » — le REVOKE frappe avant la policy).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM count(*) FROM fiche_submission;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: fiche_submission doit être inaccessible en PostgREST direct (REVOKE)';
+  RESET ROLE;
+
+  -- ---------- (D1 suite) fermeture RLS EXHAUSTIVE ----------
+  -- Le SELECT ci-dessus ne prouve qu'UNE table, EN LECTURE, pour LA persona éditeur : ça ne
+  -- suffit pas à exclure une RLS ouverte en écriture, sur org_actor_module_visibility, ou
+  -- pour la persona acteur. On répète les 4 sondes (2 tables × lecture/écriture) pour les
+  -- 2 personas — un test qui ne vérifierait que la création des tables laisserait passer
+  -- une RLS ouverte.
+  -- Persona ÉDITEUR (v_agent, tourism_agent).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN INSERT INTO fiche_submission (object_id) VALUES ('zz-noop-d1');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: fiche_submission non-inscriptible en direct (éditeur, REVOKE)';
+
+    v_denied := false;
+    BEGIN PERFORM count(*) FROM org_actor_module_visibility;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: org_actor_module_visibility illisible en direct (éditeur, REVOKE)';
+
+    v_denied := false;
+    BEGIN INSERT INTO org_actor_module_visibility (org_object_id, object_type, module_id)
+      VALUES ('zz-noop-d1', 'HOT', 'descriptions');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: org_actor_module_visibility non-inscriptible en direct (éditeur, REVOKE)';
+  RESET ROLE;
+
+  -- Persona ACTEUR (v_user, role='actor') — les 4 mêmes sondes. La fermeture RLS/REVOKE ne
+  -- dépend pas de la persona métier : ni l'acteur ni l'éditeur n'ont de voie directe.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM count(*) FROM fiche_submission;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: fiche_submission illisible en direct (acteur, REVOKE)';
+
+    v_denied := false;
+    BEGIN INSERT INTO fiche_submission (object_id) VALUES ('zz-noop-d1');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: fiche_submission non-inscriptible en direct (acteur, REVOKE)';
+
+    v_denied := false;
+    BEGIN PERFORM count(*) FROM org_actor_module_visibility;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: org_actor_module_visibility illisible en direct (acteur, REVOKE)';
+
+    v_denied := false;
+    BEGIN INSERT INTO org_actor_module_visibility (org_object_id, object_type, module_id)
+      VALUES ('zz-noop-d1', 'HOT', 'descriptions');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'D1: org_actor_module_visibility non-inscriptible en direct (acteur, REVOKE)';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1 OK';
 END$$;
 ROLLBACK;

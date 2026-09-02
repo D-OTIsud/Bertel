@@ -11,7 +11,11 @@
 --       acteur, current_user_extended_object_ids() ≡ portal_object_ids (bras 1b fermé : le
 --       rôle d'acteur sur une ORG ne donne PLUS les fiches de l'ORG). Pour un tourism_agent,
 --       les 5 bras historiques sont inchangés (régression bloc I, Task 8).
--- Blocs C..I ajoutés par les tasks suivantes du même chantier.
+--   (C) D7 — api.is_object_owner(p_object_id) : un lien actor_object_role.is_primary=TRUE ne
+--       donne JAMAIS l'écriture canonique à une persona acteur (ni user_can_write_object_canonical,
+--       qui en dérive) ; le chemin owner HISTORIQUE reste ouvert pour un non-acteur (tourism_agent)
+--       dont l'e-mail matche un lien primaire — D7 ferme seulement la persona acteur, pas le reste.
+-- Blocs D..I ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
 \set ON_ERROR_STOP on
@@ -128,6 +132,29 @@ BEGIN
            'B: la policy object ne fuit pas la fiche draft de l''acteur piège';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-B OK';
+  -- ---------- (C) D7 : lien primaire + persona acteur ⇒ AUCUNE écriture canonique ----------
+  -- v_actor1 tient is_primary=TRUE sur v_objA (fixture bloc B). Avant la migration,
+  -- is_object_owner rendait TRUE ⇒ écriture canonique complète sans org ni permission.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT api.is_object_owner(v_objA) = FALSE,
+           'C: is_object_owner doit être FALSE pour une persona acteur (D7)';
+    ASSERT api.user_can_write_object_canonical(v_objA) = FALSE,
+           'C: user_can_write_object_canonical doit suivre (aucun autre bras ne s''ouvre)';
+  RESET ROLE;
+  -- Témoin : un tourism_agent dont l'e-mail matche un canal d'acteur à lien primaire
+  -- GARDE le chemin historique (D7 ne ferme QUE la persona acteur).
+  INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
+    (v_actor1, v_email_kind, 'portal_agent_1302@test.local')
+    ON CONFLICT DO NOTHING;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT api.is_object_owner(v_objA) = TRUE,
+           'C: le chemin owner HISTORIQUE reste ouvert pour un non-acteur (équipes internes)';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-C OK';
 END$$;
 ROLLBACK;

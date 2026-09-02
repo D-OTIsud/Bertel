@@ -35,6 +35,24 @@
 --       (rpc_set_actor_section_visibility) exige un rang admin >= 30 sur l'ORG et refuse
 --       TOUJOURS le plancher dur — dans les DEUX sens (ouvrir ET fermer), sans jamais y laisser
 --       de ligne ; le masquage configuré par l'ORG remonte bien côté vue portail.
+--   (D2) SUBMIT_ACTOR_FICHE — api.submit_actor_fiche(p_object_id, p_changes, p_note) : le geste
+--       transactionnel « Soumettre pour vérification » (soumission + N pending_change + tâche
+--       multi-assignée + notifications, en UNE transaction). Refus prouvés un par un : persona
+--       non-acteur, fiche hors portée, tableau de changements vide, plafond de 40 changements
+--       dépassé, module du plancher dur, module masqué par la matrice (H), writer hors whitelist
+--       §120 (cas générique ET cas ÉPINGLÉ save_object_rooms — CORRECTION CONTRÔLEUR : la
+--       whitelist vive de approve_pending_change, re-vérifiée en base avant écriture, n'a que
+--       SEPT entrées, SANS save_object_rooms — une asymétrie aurait laissé entrer un changement
+--       ensuite impossible à approuver, fiche bloquée à vie). TRANSACTIONNALITÉ prouvée : un
+--       writer interdit sur le 3e changement d'un tableau de 3 ne laisse NI fiche_submission, NI
+--       pending_change, NI crm_task, NI crm_task_assignee, NI notification — même si les 2
+--       premiers changements étaient valides pris isolément. Nominal : 2 changements ⇒
+--       submission pending + 2 pending_change liés (submission_id) + 1 crm_task typée
+--       (extra.kind='fiche_verification') multi-assignée (editor + granted, ≥2) + notification
+--       crm_task_assigned + trigger is_editing. Anti-spam : une soumission déjà ouverte refuse la
+--       suivante en PT409 SPÉCIFIQUEMENT (jamais le 23505 nu de l'index unique partiel — piège
+--       nommé par le PO : db-error-message.ts afficherait « doublon » au lieu de « vérification
+--       déjà en cours »).
 -- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
@@ -75,6 +93,14 @@ DECLARE
   v_verifier_count integer; -- (E) cardinalité exacte attendue à chaque étape (discriminant)
   v_floor_mod      text;    -- (H) itérateur sur les 9 modules du plancher dur
   v_real_super_count integer; -- (E) superusers RÉELS déjà en base (repli non scopé — jamais 0 en prod)
+  -- (D2) submit_actor_fiche — DECLARE additionnels (task-5). Aucun nouvel id de fixture réservé :
+  -- D2 réutilise EXCLUSIVEMENT v_user/v_agent/v_objA/v_objD (A/B) et v_editor/v_granted (E), plus
+  -- le masquage 'descriptions' posé sur v_orgA/'HOT' par H (dont v_objA dépend) — la sous-plage
+  -- 13xx n'est donc PAS étendue par ce bloc.
+  v_sub     jsonb; -- retour de submit_actor_fiche (nominal)
+  v_changes jsonb; -- le tableau de changements nominal (2 entrées), réutilisé par l'anti-spam
+  v_task    uuid;  -- task_id retourné
+  v_subid   uuid;  -- submission_id retourné
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -571,6 +597,213 @@ BEGIN
            'H: le masquage org×type configuré remonte dans la vue portail';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H OK';
+  -- ---------- (D2) submit_actor_fiche — LE geste « Soumettre pour vérification » ----------
+  v_changes := jsonb_build_array(
+    jsonb_build_object(
+      'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
+      'payload', jsonb_build_object('chapo', 'Nouveau chapo'),
+      'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
+                                     'field', 'Contacts', 'before', 'a', 'after', 'b')),
+    jsonb_build_object(
+      'target_table', 'opening_period', 'target_pk', NULL, 'action', 'update',
+      'payload', jsonb_build_object('periods', '[]'::jsonb),
+      'metadata', jsonb_build_object('rpc', 'save_object_openings', 'section', 'openings',
+                                     'manual_apply', false, 'field', 'Horaires', 'before', 'x', 'after', 'y')));
+
+  -- Refus : non-acteur (1er garde-fou du corps, avant même la lecture de p_changes).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, v_changes, NULL);
+  EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un non-acteur';
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  -- Refus : hors portée.
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objD, v_changes, NULL);
+  EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse une fiche hors portée';
+
+  -- Refus : tableau de changements vide — le geste « Soumettre » exige AU MOINS un changement ;
+  -- un tableau vide n'a mécaniquement rien à valider ni à écrire.
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, '[]'::jsonb, NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un tableau de changements vide (zéro modification)';
+
+  -- Refus : plafond de 40 changements DÉPASSÉ (41 entrées, contenu par ailleurs valide et
+  -- IDENTIQUE — seule la CARDINALITÉ doit border, pas le contenu). generate_series fabrique les
+  -- 41 doublons : jsonb_build_array ne prend pas un nombre variable d'arguments.
+  v_denied := false;
+  BEGIN
+    PERFORM api.submit_actor_fiche(v_objA,
+      (SELECT jsonb_agg(jsonb_build_object(
+         'target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
+         'payload', jsonb_build_object('chapo', 'x'),
+         'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
+                                        'field', 'Contacts', 'before', 'a', 'after', 'b')))
+       FROM generate_series(1, 41)),
+      NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un tableau de plus de 40 changements (plafond)';
+
+  -- Refus : module du plancher dur.
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_legal','target_pk',NULL,'action','update',
+      'payload','{}'::jsonb,
+      'metadata', jsonb_build_object('rpc',NULL,'section','legal','manual_apply',true,
+                                     'field','Juridique','before','','after',''))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un module du plancher dur';
+
+  -- Refus : module masqué par la matrice (descriptions masqué au bloc H).
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_description','target_pk',NULL,'action','update',
+      'payload','{}'::jsonb,
+      'metadata', jsonb_build_object('rpc',NULL,'section','descriptions','manual_apply',true,
+                                     'field','Descriptions','before','','after',''))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un module masqué par la matrice';
+
+  -- Refus : writer hors whitelist §120 (cas générique).
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object','target_pk',NULL,'action','update',
+      'payload','{}'::jsonb,
+      'metadata', jsonb_build_object('rpc','rpc_delete_object','section','contacts','manual_apply',false,
+                                     'field','x','before','','after',''))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: submit refuse un writer hors whitelist (anti-escalade dès l''entrée)';
+
+  -- Refus : writer hors whitelist — cas ÉPINGLÉ save_object_rooms (CORRECTION CONTRÔLEUR).
+  -- Le brief listait HUIT writers (avec save_object_rooms) ; le prosrc VIF de
+  -- api.approve_pending_change (md5=3cf2a45631df18e22e0b4c5cd81d9e2e, re-vérifié en base juste
+  -- avant l'écriture de la §5, IDENTIQUE) n'en porte que SEPT — SANS save_object_rooms. Si
+  -- submit_actor_fiche était PLUS permissif qu'approve_pending_change, un changement
+  -- save_object_rooms entrerait en base à la soumission puis ne pourrait JAMAIS être approuvé
+  -- (approve_pending_change le rejette en 22023) : uq_fiche_submission_open n'autorisant qu'UNE
+  -- vérification ouverte par fiche, celle-ci resterait bloquée POUR TOUJOURS — même classe de
+  -- bug que celle fermée en Task 4, par un autre chemin. Cette assertion est LA garde qui doit
+  -- mordre si quelqu'un « complète » un jour la whitelist en croyant réparer un oubli : sans
+  -- elle, les deux listes peuvent redivergerger en silence. section='contacts' choisi exprès
+  -- (ni plancher ni masqué) : seul le bras whitelist peut ici lever 22023.
+  v_denied := false;
+  BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+    jsonb_build_object('target_table','object_room','target_pk',NULL,'action','update',
+      'payload','{}'::jsonb,
+      'metadata', jsonb_build_object('rpc','save_object_rooms','section','contacts','manual_apply',false,
+                                     'field','x','before','','after',''))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied,
+    'D2: submit refuse save_object_rooms — miroir du refus vif de approve_pending_change (asymétrie ⇒ fiche bloquée pour toujours)';
+
+  -- Preuve de TRANSACTIONNALITÉ (le cœur de cette task) : 2 changements valides PRIS ISOLÉMENT
+  -- (mêmes formes que le nominal ci-dessous) suivis d'un 3e portant un writer hors whitelist. Le
+  -- corps de submit_actor_fiche valide CHAQUE enveloppe en un seul passage AVANT la moindre
+  -- écriture : si cette boucle de validation était un jour fusionnée avec la boucle d'écriture
+  -- (valider PUIS écrire À CHAQUE itération), les 2 premiers changements auraient déjà inséré
+  -- leur pending_change avant que le 3e ne fasse échouer l'appel — une soumission à moitié
+  -- écrite, pire qu'un refus (brief). v_objA ne porte ENCORE aucune fiche_submission à ce point
+  -- de la transaction (aucun bloc précédent n'y touche, et le Nominal n'a pas encore tourné) :
+  -- 0 est donc la valeur attendue avant ET après cet appel, pas une estimation optimiste.
+  v_denied := false;
+  BEGIN
+    PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+      jsonb_build_object('target_table', 'object_description', 'target_pk', NULL, 'action', 'update',
+        'payload', jsonb_build_object('chapo', 'Transactionnalité #1'),
+        'metadata', jsonb_build_object('rpc', NULL, 'section', 'contacts', 'manual_apply', true,
+                                       'field', 'Contacts', 'before', 'a', 'after', 'b')),
+      jsonb_build_object('target_table', 'opening_period', 'target_pk', NULL, 'action', 'update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc', 'save_object_openings', 'section', 'openings',
+                                       'manual_apply', false, 'field', 'Horaires', 'before', 'x', 'after', 'y')),
+      jsonb_build_object('target_table', 'object_room', 'target_pk', NULL, 'action', 'update',
+        'payload', '{}'::jsonb,
+        'metadata', jsonb_build_object('rpc', 'save_object_rooms', 'section', 'contacts',
+                                       'manual_apply', false, 'field', 'x', 'before', '', 'after', ''))
+    ), 'Note qui ne doit JAMAIS atterrir en base');
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+  ASSERT v_denied, 'D2: le 3e changement (writer interdit) fait échouer tout l''appel avant toute écriture';
+  RESET ROLE;
+
+  -- Rien n'a été écrit : les 5 tables concernées par le geste, comptées sous bypass RLS.
+  ASSERT (SELECT count(*) FROM fiche_submission WHERE object_id = v_objA) = 0,
+         'D2: transactionnalité — aucune fiche_submission créée malgré 2 changements valides en tête';
+  ASSERT (SELECT count(*) FROM pending_change WHERE object_id = v_objA) = 0,
+         'D2: transactionnalité — aucun pending_change créé (ni le 1er ni le 2e, valides pourtant)';
+  ASSERT (SELECT count(*) FROM crm_task WHERE object_id = v_objA) = 0,
+         'D2: transactionnalité — aucune crm_task créée';
+  ASSERT (SELECT count(*) FROM crm_task_assignee
+           WHERE task_id IN (SELECT id FROM crm_task WHERE object_id = v_objA)) = 0,
+         'D2: transactionnalité — aucune crm_task_assignee créée';
+  ASSERT (SELECT count(*) FROM app_notification
+           WHERE task_id IN (SELECT id FROM crm_task WHERE object_id = v_objA)) = 0,
+         'D2: transactionnalité — aucune notification créée';
+  ASSERT NOT EXISTS (SELECT 1 FROM fiche_submission WHERE note = 'Note qui ne doit JAMAIS atterrir en base'),
+         'D2: transactionnalité — la note du prestataire n''a fuité dans aucune ligne résiduelle';
+
+  -- Reprise de la session acteur pour le nominal.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+
+  -- Nominal.
+  v_sub := api.submit_actor_fiche(v_objA, v_changes, 'Tarifs de saison mis à jour');
+  v_subid := (v_sub->>'submission_id')::uuid;
+  v_task  := (v_sub->>'task_id')::uuid;
+  ASSERT (v_sub->>'change_count')::int = 2, 'D2: 2 changements enregistrés';
+  ASSERT (v_sub->>'assignee_count')::int >= 2, 'D2: editor + granted assignés (>= 2)';
+  RESET ROLE;
+  -- État en base (owner, RLS bypass).
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subid) = 'pending',
+         'D2: la soumission est pending';
+  ASSERT (SELECT note FROM fiche_submission WHERE id = v_subid) = 'Tarifs de saison mis à jour',
+         'D2: la note de l''acteur est portée';
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subid AND status='pending') = 2,
+         'D2: les pending_change portent submission_id';
+  ASSERT (SELECT is_editing FROM object WHERE id = v_objA) = TRUE,
+         'D2: le trigger is_editing a tourné';
+  ASSERT (SELECT count(*) FROM crm_task WHERE id = v_task) = 1, 'D2: la tâche existe';
+  ASSERT (SELECT title FROM crm_task WHERE id = v_task) LIKE 'Vérifier la fiche%',
+         'D2: titre de tâche auto-porteur';
+  ASSERT (SELECT (extra->>'kind') FROM crm_task WHERE id = v_task) = 'fiche_verification',
+         'D2: la tâche est typée via extra.kind';
+  ASSERT (SELECT (extra->>'submission_id')::uuid FROM crm_task WHERE id = v_task) = v_subid,
+         'D2: la tâche pointe la soumission';
+  ASSERT EXISTS (SELECT 1 FROM crm_task_assignee WHERE task_id = v_task AND user_id = v_editor),
+         'D2: l''éditeur est assigné';
+  ASSERT EXISTS (SELECT 1 FROM app_notification WHERE task_id = v_task AND recipient_id = v_editor
+                   AND kind = 'crm_task_assigned'),
+         'D2: la notification crm_task_assigned est créée (rail e-mail existant)';
+
+  -- Anti-spam : une soumission ouverte ⇒ refus de la suivante, en PT409 SPÉCIFIQUEMENT (piège
+  -- nommé par le PO). L'index unique partiel uq_fiche_submission_open lève un 23505 NU que le
+  -- RPC DOIT intercepter et re-lever en PT409 — un 23505 qui fuit remonterait au front comme
+  -- « Cette valeur existe déjà (doublon). » (db-error-message.ts) au lieu de « L'office est déjà
+  -- en train de vérifier cette fiche. ». `WHEN others` ne discriminerait PAS ce cas précis : un
+  -- 23505 fuité passerait le test à tort — d'où les DEUX branches ci-dessous, celle qui fait
+  -- mordre le test si le mauvais code fuit.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_denied := false;
+  BEGIN
+    PERFORM api.submit_actor_fiche(v_objA, v_changes, NULL);
+  EXCEPTION
+    WHEN SQLSTATE 'PT409' THEN v_denied := true;
+    WHEN unique_violation THEN
+      ASSERT FALSE, 'D2: PIÈGE — un 23505 nu a fuité au lieu du PT409 intercepté (db-error-message.ts afficherait « doublon »)';
+  END;
+  ASSERT v_denied, 'D2: une vérification déjà en cours refuse une nouvelle soumission (PT409)';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2 OK';
 END$$;
 ROLLBACK;

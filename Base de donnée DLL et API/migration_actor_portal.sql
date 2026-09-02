@@ -79,7 +79,16 @@ LANGUAGE sql STABLE SECURITY DEFINER
 -- §208/R2.1 : pg_temp EXPLICITEMENT EN DERNIER (cette feuille décide de la lecture).
 SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
-  SELECT aor.object_id
+  -- DISTINCT (ajout Task 6, constat de revue Task 1) : actor_object_role n'a PAS de contrainte
+  -- d'unicité par (actor_id, object_id) — sa PK inclut role_id. Un acteur qui tient DEUX rôles
+  -- valides sur LA MÊME fiche (ex. operator + sales_manager) fait sortir cet object_id EN
+  -- DOUBLE. Resté sans effet tant que les consommateurs étaient insensibles au doublon (`IN
+  -- (…)`, `EXISTS`) — mais list_my_portal_fiches (§6) JOINT directement dessus : sans ce
+  -- DISTINCT, le prestataire verrait sa fiche affichée DEUX FOIS sur l'accueil du portail.
+  -- Correction à la SOURCE plutôt que côté §6 : ferme le trou pour tout futur consommateur
+  -- direct, pas seulement celui-ci. Reproduit et prouvé au test, bloc G (fixture dédiée : un
+  -- second rôle valide posé sur l'objet déjà lié du bloc B).
+  SELECT DISTINCT aor.object_id
   FROM actor_object_role aor
   JOIN object o ON o.id = aor.object_id
   WHERE aor.actor_id = api.current_user_actor_id()
@@ -647,5 +656,155 @@ REVOKE ALL ON FUNCTION api.submit_actor_fiche(text, jsonb, text) FROM PUBLIC, an
 GRANT EXECUTE ON FUNCTION api.submit_actor_fiche(text, jsonb, text) TO authenticated, service_role;
 COMMENT ON FUNCTION api.submit_actor_fiche(text, jsonb, text) IS
   '18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = SEPT entrées, identique à approve_pending_change (§120) — jamais un sur-ensemble, sous peine de fiche bloquée à vie.';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 6. Lectures côté acteur. Auto-scopées : jamais de paramètre « pour qui » —
+--    le destinataire est TOUJOURS auth.uid() (doctrine notifications).
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.list_my_portal_fiches()
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+BEGIN
+  IF NOT api.is_actor_persona() THEN
+    RAISE EXCEPTION 'Réservé aux comptes du portail acteur' USING ERRCODE = '42501';
+  END IF;
+  RETURN COALESCE((
+    SELECT jsonb_agg(jsonb_build_object(
+      'id', o.id, 'name', o.name, 'object_type', o.object_type,
+      'status', o.status, 'updated_at', o.updated_at,
+      'open_submission', (
+        SELECT jsonb_build_object('id', fs.id, 'submitted_at', fs.submitted_at)
+        FROM fiche_submission fs
+        WHERE fs.object_id = o.id AND fs.status = 'pending'
+        ORDER BY fs.submitted_at DESC LIMIT 1),
+      'last_resolved', (
+        SELECT jsonb_build_object('status', fs.status, 'resolved_at', fs.resolved_at)
+        FROM fiche_submission fs
+        WHERE fs.object_id = o.id AND fs.status <> 'pending'
+        ORDER BY fs.resolved_at DESC NULLS LAST LIMIT 1),
+      -- D11 : les coordonnées PUBLIQUES de l'office publisher, pour les deux replis du
+      -- portail (« envoyez vos photos » et « signaler une erreur » quand c'est la seule
+      -- saisie). Canaux is_public uniquement (jamais un canal interne), primaire d'abord.
+      -- Un `mailto:` échoue en silence sur un téléphone sans application de courrier :
+      -- le téléphone n'est pas décoratif, il est le second chemin.
+      'office_email', (
+        SELECT cc.value
+        FROM object_org_link ool
+        JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+        JOIN contact_channel cc ON cc.object_id = ool.org_object_id
+        JOIN ref_code_contact_kind ck ON ck.id = cc.kind_id AND ck.code = 'email'
+        WHERE ool.object_id = o.id AND COALESCE(cc.is_public, TRUE) AND cc.value <> ''
+        ORDER BY ool.is_primary DESC NULLS LAST, cc.is_primary DESC NULLS LAST, cc.position NULLS LAST
+        LIMIT 1),
+      'office_phone', (
+        SELECT cc.value
+        FROM object_org_link ool
+        JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+        JOIN contact_channel cc ON cc.object_id = ool.org_object_id
+        JOIN ref_code_contact_kind ck ON ck.id = cc.kind_id AND ck.code IN ('phone', 'mobile')
+        WHERE ool.object_id = o.id AND COALESCE(cc.is_public, TRUE) AND cc.value <> ''
+        -- Même ordre que l'e-mail, puis 'phone' avant 'mobile' (un fixe d'office est le
+        -- numéro affiché ; le mobile n'est qu'un repli).
+        ORDER BY ool.is_primary DESC NULLS LAST, cc.is_primary DESC NULLS LAST,
+                 (ck.code = 'phone') DESC, cc.position NULLS LAST
+        LIMIT 1)
+    ) ORDER BY o.name)
+    FROM object o
+    WHERE o.id IN (SELECT api.current_user_portal_object_ids())
+  ), '[]'::jsonb);
+END;
+$$;
+
+-- p_object_id (révision 2026-09-02) : SANS filtre, un acteur multi-fiches peut voir la
+-- soumission ouverte de CETTE fiche sortir de la page (plafond 100, toutes fiches) ⇒
+-- rubriques « en vérification » muettes sans erreur. Le portail passe toujours l'id.
+CREATE OR REPLACE FUNCTION api.list_my_submissions(p_limit int DEFAULT 20, p_object_id text DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_limit int := LEAST(GREATEST(COALESCE(p_limit, 20), 1), 100);
+BEGIN
+  IF NOT api.is_actor_persona() THEN
+    RAISE EXCEPTION 'Réservé aux comptes du portail acteur' USING ERRCODE = '42501';
+  END IF;
+  RETURN COALESCE((
+    SELECT jsonb_agg(sub ORDER BY sub->>'submitted_at' DESC)
+    FROM (
+      SELECT jsonb_build_object(
+        'id', fs.id, 'object_id', fs.object_id, 'object_name', o.name,
+        'note', fs.note, 'status', fs.status,
+        'submitted_at', fs.submitted_at, 'resolved_at', fs.resolved_at,
+        'changes', COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'id', pc.id,
+            -- Le module id (clé stable, ancre l'état de la rubrique côté portail) ET le
+            -- libellé lisible (D12 : field est la projection en clair de l'enveloppe).
+            'section', pc.metadata->>'section',
+            'field', pc.metadata->>'field',
+            'status', pc.status,
+            'review_note', pc.review_note,
+            -- Libellé joint à la lecture, jamais stocké (RGPD).
+            'reviewer_label', CASE WHEN pc.reviewed_by IS NULL THEN NULL
+              ELSE COALESCE(rp.display_name, 'Utilisateur ' || left(pc.reviewed_by::text, 8)) END
+          ) ORDER BY pc.submitted_at, pc.id)
+          FROM pending_change pc
+          LEFT JOIN app_user_profile rp ON rp.id = pc.reviewed_by
+          WHERE pc.submission_id = fs.id), '[]'::jsonb)
+      ) AS sub
+      FROM fiche_submission fs
+      LEFT JOIN object o ON o.id = fs.object_id
+      WHERE fs.submitted_by = (SELECT auth.uid())
+        AND (p_object_id IS NULL OR fs.object_id = p_object_id)
+      ORDER BY fs.submitted_at DESC
+      LIMIT v_limit
+    ) t
+  ), '[]'::jsonb);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.get_my_actor_profile()
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_actor uuid := api.current_user_actor_id();
+BEGIN
+  IF NOT api.is_actor_persona() OR v_actor IS NULL THEN
+    RAISE EXCEPTION 'Réservé aux comptes du portail acteur' USING ERRCODE = '42501';
+  END IF;
+  -- Scopé STRICTEMENT à current_user_actor_id() : ce RPC n'ajoute PAS une 5e formulation
+  -- au périmètre PII de can_read_actor_contacts (invariant spec §6) — il ne lit qu'UN
+  -- acteur, LE MIEN, jamais un paramètre.
+  RETURN (
+    SELECT jsonb_build_object(
+      'id', a.id, 'display_name', a.display_name, 'photo_url', a.photo_url,
+      'channels', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'kind', ck.code, 'value', ac.value, 'is_primary', ac.is_primary)
+          ORDER BY ck.code, ac.position NULLS LAST)
+        FROM actor_channel ac
+        JOIN ref_code_contact_kind ck ON ck.id = ac.kind_id
+        WHERE ac.actor_id = a.id), '[]'::jsonb))
+    FROM actor a WHERE a.id = v_actor);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.list_my_portal_fiches()      FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.list_my_submissions(int, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.get_my_actor_profile()       FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_my_portal_fiches()   TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.list_my_submissions(int, text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_my_actor_profile()    TO authenticated, service_role;
+COMMENT ON FUNCTION api.list_my_portal_fiches() IS
+  '18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l''office publisher (office_email/office_phone, D11) — jamais un canal interne.';
+COMMENT ON FUNCTION api.list_my_submissions(int, text) IS
+  '18a — historique des soumissions de l''acteur COURANT (auto-scopé, jamais de paramètre destinataire). p_object_id filtre STRICTEMENT (révision 2026-09-02) — sans lui un acteur multi-fiches verrait la soumission ouverte d''UNE fiche apparaître sous une AUTRE. section = metadata.section (le module id stable), field = le libellé lisible (D12).';
+COMMENT ON FUNCTION api.get_my_actor_profile() IS
+  '18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu''UN acteur, le sien.';
 
 COMMIT;

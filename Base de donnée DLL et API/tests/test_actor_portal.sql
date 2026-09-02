@@ -58,9 +58,35 @@
 --       soumission déjà ouverte refuse la suivante en PT409 SPÉCIFIQUEMENT (jamais le 23505
 --       nu de l'index unique partiel — piège nommé par le PO : db-error-message.ts
 --       afficherait « doublon » au lieu de « vérification déjà en cours »).
+--   (G) LECTURES ACTEUR — api.list_my_portal_fiches / api.list_my_submissions /
+--       api.get_my_actor_profile : RPCs auto-scopées (jamais de paramètre destinataire — le
+--       compte appelant EST le périmètre, doctrine notifications). ISOLEMENT prouvé dans les
+--       DEUX sens : v_actor1 ne voit ni la fiche de l'acteur piège v_actor2 (v_objD) ni celle de
+--       v_actor3 (v_objE, bloc C) ; symétriquement v_actor3 ne voit QUE v_objE. Lien expiré/futur
+--       et objet ORG absents du RPC FINAL (pas seulement de la fonction ensembliste, bloc B) ;
+--       portée de v_actor1 close à EXACTEMENT 2 fiches (v_objA + v_objF), ni plus ni moins.
+--       DOUBLON DE RÔLES (constat de revue Task 1, ordonné ici) : api.current_user_portal_
+--       object_ids() n'avait pas de DISTINCT — un acteur tenant DEUX rôles actor_object_role
+--       valides sur la MÊME fiche la faisait sortir deux fois ; corrigé à la source (§1), prouvé
+--       en DEUX endroits (la fonction ensembliste ET le RPC json final) pour isoler la cause de
+--       sa conséquence visible. CANAUX PUBLICS DE L'OFFICE (D11, office_email/office_phone) : un
+--       canal is_public=FALSE ne sort JAMAIS, même mieux placé sur tout autre critère (fuite de
+--       PII sinon — piège posé exprès dans la fixture) ; primaire avant secondaire ; 'phone'
+--       avant 'mobile' MÊME à position d'insertion défavorable (le tri par position seul
+--       mordrait le mauvais côté) ; cas NULL EXPLICITE (clé jsonb présente, valeur JSON null)
+--       quand l'ORG publisher ne porte aucun canal — le cas réellement constaté en production le
+--       2026-09-02, pas un cas de bord théorique. list_my_submissions : 'section' = le module id
+--       STABLE (metadata->>'section'), jamais 'field' (le libellé lisible, D12) — vérifié en
+--       comparant les DEUX valeurs, pas en supposant que la bonne colonne a été lue ; p_object_id
+--       filtre STRICTEMENT (la soumission de v_objA n'apparaît pas sous v_objB, même acteur —
+--       sans quoi une rubrique « en vérification » resterait affichée sur la mauvaise fiche d'un
+--       prestataire multi-fiches). Les invariants PII du bloc D restent vrais pour la persona
+--       acteur : aucun gate interne (edit/contacts/search_actors) ne s'ouvre. Les TROIS RPCs
+--       refusent identiquement un non-acteur (42501, périmètre jamais élargi par défaut).
 -- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
--- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
+-- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx
+-- (+ 1410-1419 pour le bloc G, task 6).
 \set ON_ERROR_STOP on
 BEGIN;
 DO $$
@@ -112,6 +138,19 @@ DECLARE
   -- commentaire au point d'usage).
   v_seq_before bigint;
   v_seq_after  bigint;
+  -- (G) lectures acteur — DECLARE additionnels (task-6). Sous-plage de fixtures RÉSERVÉE :
+  -- 1410-1419, disjointe de 1301-1307 (A/E/H) / 1311-1314 (B) / 1321-1322 (B) / 1391-1393 (C).
+  -- Le reste du bloc G réutilise EXCLUSIVEMENT v_user/v_actor1/v_objA/v_objB/v_objC/v_objD (A/B),
+  -- v_user2/v_actor3/v_objE (C), v_subid/v_task (D2, la soumission nominale à 2 changements) et
+  -- les réf. déjà résolues (v_role_op, v_pub, v_email_kind) — aucun autre id n'est réservé.
+  v_orgB        text := 'ORGRUN9999991411'; -- (G) ORG SANS canal — cas NULL office_email/phone
+  v_objF        text := 'HOTRUN9999991412'; -- (G) fiche liée à v_orgB, dans la portée de v_actor1
+  v_role_sales  uuid; -- (G) SECOND rôle valide sur v_objA — fixture du doublon de rôles (Task 1)
+  v_phone_kind  uuid; -- (G) ref_code_contact_kind['phone']
+  v_mobile_kind uuid; -- (G) ref_code_contact_kind['mobile']
+  v_fiches      jsonb; -- (G) retour list_my_portal_fiches, capturé une fois par persona
+  v_f           jsonb; -- (G) élément unique extrait de v_fiches (une fiche)
+  v_dup_count   integer; -- (G) cardinalité brute de current_user_portal_object_ids() pour v_objA
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -897,6 +936,207 @@ BEGIN
   ASSERT v_denied, 'D2: une vérification déjà en cours refuse une nouvelle soumission (PT409)';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2 OK';
+  -- ---------- Fixture (G) : canaux publics de l'office + doublon de rôles ----------
+  -- RESET ROLE (D2) restaure le rôle Postgres mais pas le GUC — même geste que (A)/(C)/(D1).
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  SELECT id INTO v_phone_kind  FROM ref_code_contact_kind WHERE code = 'phone'  LIMIT 1;
+  SELECT id INTO v_mobile_kind FROM ref_code_contact_kind WHERE code = 'mobile' LIMIT 1;
+  IF v_phone_kind IS NULL OR v_mobile_kind IS NULL THEN
+    RAISE EXCEPTION 'fixture: ref_code_contact_kind[phone|mobile] manquant';
+  END IF;
+  SELECT id INTO v_role_sales FROM ref_actor_role WHERE code = 'sales_manager' LIMIT 1;
+  IF v_role_sales IS NULL THEN RAISE EXCEPTION 'fixture: ref_actor_role[sales_manager] manquant'; END IF;
+
+  -- v_orgB : une SECONDE org, sans AUCUN canal — le cas NULL/NULL de office_email/office_phone
+  -- doit être un résultat NORMAL, pas confondu avec un bug (D11 : la prod du 2026-09-02 n'a déjà
+  -- AUCUNE ORG avec un canal e-mail public — ce n'est pas un cas de bord théorique).
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_orgB, 'ORG', 'ORG portail test (sans canal)', 'published'),
+    (v_objF, 'HOT', 'Hôtel sans canal office', 'draft')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES (v_objF, v_orgB, v_pub)
+    ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actor1, v_objF, v_role_op, TRUE, NULL, NULL)
+    ON CONFLICT DO NOTHING;
+
+  -- Canaux de v_orgA (déjà publisher de v_objA) : mélange volontairement PIÉGEUX. Un canal
+  -- PRIVÉ (is_public=FALSE) ne doit JAMAIS sortir — même s'il « gagnerait » sur tout autre
+  -- critère (ici : sans le filtre is_public, l'ordre naturel du tri le placerait en tête, cf.
+  -- le phone privé posé is_primary=TRUE ci-dessous). Fuite de PII si c'est faux.
+  INSERT INTO contact_channel (object_id, kind_id, value, is_public, is_primary, position) VALUES
+    (v_orgA, v_email_kind,  'office-prive@test.local',             FALSE, FALSE, 0),
+    (v_orgA, v_email_kind,  'office-public-secondaire@test.local', TRUE,  FALSE, 1),
+    (v_orgA, v_email_kind,  'office-public-primaire@test.local',   TRUE,  TRUE,  2),
+    (v_orgA, v_mobile_kind, '0692000001',                          TRUE,  FALSE, 0),
+    (v_orgA, v_phone_kind,  '0262000001',                          TRUE,  FALSE, 5),
+    (v_orgA, v_phone_kind,  '0262-prive-primaire',                 FALSE, TRUE,  9)
+    ON CONFLICT DO NOTHING;
+
+  -- Doublon de rôles (constat Task 1, corrigé et prouvé ici, Task 6) : v_actor1 tient désormais
+  -- DEUX rôles valides sur LA MÊME fiche v_objA (operator posé en (B), + sales_manager ici).
+  -- actor_object_role n'a PAS de contrainte d'unicité par (actor_id, object_id) — sa PK inclut
+  -- role_id — un JOIN direct sur current_user_portal_object_ids() (comme list_my_portal_fiches)
+  -- ferait sortir v_objA deux fois sans le DISTINCT ajouté en §1.
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actor1, v_objA, v_role_sales, FALSE, NULL, NULL)
+    ON CONFLICT DO NOTHING;
+
+  -- ---------- (G) lectures acteur + invariants PII ----------
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- Doublon de rôles, sondé sur la fonction ENSEMBLISTE elle-même (avant tout RPC json) —
+    -- isole la correction §1 de sa consommation §6 : si ce compte échouait, le RPC échouerait
+    -- forcément aussi, mais l'inverse n'est pas vrai (un DISTINCT posé seulement côté §6
+    -- masquerait un doublon qui resterait actif pour tout AUTRE futur consommateur direct).
+    SELECT count(*) INTO v_dup_count FROM api.current_user_portal_object_ids() s WHERE s = v_objA;
+    ASSERT v_dup_count = 1,
+      'G: current_user_portal_object_ids ne rend v_objA qu''UNE fois malgré 2 rôles valides (DISTINCT §1)';
+
+    v_fiches := api.list_my_portal_fiches();
+
+    ASSERT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(v_fiches) f
+      WHERE f->>'id' = v_objA AND (f->'open_submission'->>'id')::uuid = v_subid),
+      'G: list_my_portal_fiches émet la fiche et sa soumission ouverte';
+    -- Doublon de rôles vu depuis le RPC FINAL (pas seulement la fonction ensembliste ci-dessus) :
+    -- UNE seule entrée jsonb pour v_objA malgré les 2 rôles actor_object_role valides.
+    ASSERT (SELECT count(*) FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objA) = 1,
+      'G: list_my_portal_fiches — une seule ligne pour v_objA malgré 2 rôles actor_object_role valides';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objD),
+      'G: list_my_portal_fiches ne fuit pas hors portée (fiche de l''acteur piège)';
+    -- Isolement : lien EXPIRÉ / FUTUR absents du RPC FINAL (pas seulement de la fonction
+    -- ensembliste sondée au bloc B) — c'est CE RPC que consomme le front du portail.
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objB),
+      'G: list_my_portal_fiches — lien expiré absent du RPC final';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objC),
+      'G: list_my_portal_fiches — lien futur absent du RPC final';
+    -- Isolement inter-acteurs : la fiche de v_actor3 (bloc C, compte v_user2) n'apparaît jamais
+    -- pour v_actor1.
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objE),
+      'G: list_my_portal_fiches n''expose pas la fiche d''un AUTRE acteur (isolement)';
+    -- Un objet ORG n'apparaît jamais, même le sien (v_actor1 tient un rôle SUR v_orgA, bras 1b).
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_orgA),
+      'G: list_my_portal_fiches n''émet jamais un objet ORG';
+    -- Portée close : EXACTEMENT 2 fiches (v_objA + v_objF) — ni le doublon de rôle n'ajoute une
+    -- ligne, ni aucune autre fuite n'en ajoute une troisième.
+    ASSERT (SELECT jsonb_array_length(v_fiches)) = 2,
+      'G: la portée de v_actor1 contient EXACTEMENT 2 fiches (v_objA + v_objF)';
+
+    -- Canaux publics de l'office (D11) : le PRIVÉ n'apparaît JAMAIS, le PUBLIC PRIMAIRE gagne
+    -- sur le PUBLIC secondaire, et 'phone' gagne sur 'mobile' — les DEUX ressortent d'UNE MÊME
+    -- entrée (v_objA), aucun risque de confondre le champ testé avec un autre.
+    SELECT f INTO v_f FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objA;
+    ASSERT v_f->>'office_email' = 'office-public-primaire@test.local',
+      'G: office_email — public + primaire gagne (jamais le privé, même mieux placé)';
+    ASSERT v_f->>'office_phone' = '0262000001',
+      'G: office_phone — public ''phone'' gagne sur ''mobile'' public ET sur le privé primaire';
+
+    -- Cas NULL (D11, cas réel en prod le 2026-09-02) : v_objF est lié à v_orgB, qui ne porte
+    -- AUCUN canal — NULL est le résultat ATTENDU, pas un bug. Distingué explicitement du cas
+    -- « clé absente » : la clé EXISTE dans le jsonb, sa VALEUR est JSON null.
+    SELECT f INTO v_f FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objF;
+    ASSERT v_f ? 'office_email' AND jsonb_typeof(v_f->'office_email') = 'null',
+      'G: office_email — NULL explicite quand l''ORG ne porte aucun canal (pas une absence de clé)';
+    ASSERT v_f ? 'office_phone' AND jsonb_typeof(v_f->'office_phone') = 'null',
+      'G: office_phone — même invariant NULL';
+
+    -- list_my_submissions : la soumission du bloc D2, avec ses 2 changements.
+    ASSERT (SELECT jsonb_array_length((SELECT jsonb_agg(s) FROM jsonb_array_elements(api.list_my_submissions(20)) s
+             WHERE (s->>'id')::uuid = v_subid))) = 1,
+      'G: list_my_submissions rend ma soumission';
+    ASSERT (SELECT jsonb_array_length(s->'changes') FROM jsonb_array_elements(api.list_my_submissions(20)) s
+             WHERE (s->>'id')::uuid = v_subid) = 2,
+      'G: la soumission liste ses 2 changements';
+    -- 'section' = le module id STABLE (metadata->>'section' posé par D2 : 'contacts'/'openings'),
+    -- PAS 'field' (le libellé lisible 'Contacts'/'Horaires') — la clé qui ancre l'état d'une
+    -- rubrique côté portail (D12). Une implémentation qui confondrait les deux colonnes (même
+    -- type text, même origine metadata) ne mordrait sur AUCUNE autre assertion de ce bloc.
+    ASSERT (SELECT array_agg(c->>'section' ORDER BY c->>'section')
+             FROM jsonb_array_elements(
+               (SELECT s->'changes' FROM jsonb_array_elements(api.list_my_submissions(20)) s
+                WHERE (s->>'id')::uuid = v_subid)) c)
+           = ARRAY['contacts','openings'],
+      'G: section = le module id stable (metadata.section), jamais le libellé field';
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(
+        (SELECT s->'changes' FROM jsonb_array_elements(api.list_my_submissions(20)) s
+         WHERE (s->>'id')::uuid = v_subid)) c
+      WHERE c->>'reviewer_label' IS NOT NULL),
+      'G: reviewer_label NULL — rien n''a encore été revu (Task 7)';
+    -- p_object_id : filtre STRICT — passé sur v_objB (un AUTRE objet du même acteur, sans
+    -- aucune soumission), ma soumission de v_objA doit disparaître. Sans ce filtre, une
+    -- rubrique « en vérification » resterait affichée sur la MAUVAISE fiche d'un prestataire
+    -- multi-fiches — le risque nommé par la révision, pas une simple absence de paramètre.
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(api.list_my_submissions(20, v_objB)) s
+      WHERE (s->>'id')::uuid = v_subid),
+      'G: list_my_submissions(p_object_id) filtre STRICTEMENT — la soumission de v_objA n''apparaît pas sous v_objB';
+    ASSERT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(api.list_my_submissions(20, v_objA)) s
+      WHERE (s->>'id')::uuid = v_subid),
+      'G: list_my_submissions(p_object_id) rend la soumission quand l''id correspond';
+
+    -- get_my_actor_profile : mon acteur, PAS l'homonyme d'e-mail, et SES canaux uniquement (pas
+    -- ceux de l'acteur piège v_actor2, ni de v_actor3).
+    ASSERT (api.get_my_actor_profile()->>'id')::uuid = v_actor1,
+      'G: get_my_actor_profile rend l''acteur du lien explicite';
+    ASSERT (api.get_my_actor_profile()->>'display_name') = 'Acteur Portail 1301',
+      'G: get_my_actor_profile rend le display_name de MON acteur';
+    ASSERT (SELECT jsonb_array_length(api.get_my_actor_profile()->'channels')) = 1,
+      'G: get_my_actor_profile — exactement 1 canal (celui de v_actor1, pas ceux des autres acteurs)';
+    ASSERT (api.get_my_actor_profile()->'channels'->0->>'value') = 'portal_agent_1302@test.local',
+      'G: get_my_actor_profile — le canal rendu est bien celui de v_actor1, pas de l''acteur piège';
+
+    -- Invariants PII (spec §6) : la persona acteur ne passe AUCUN gate interne.
+    ASSERT COALESCE(api.current_user_can_edit_objects(), FALSE) = FALSE,
+      'G: current_user_can_edit_objects FALSE pour un acteur';
+    ASSERT api.can_read_actor_contacts(v_objA) = FALSE,
+      'G: can_read_actor_contacts FALSE pour un acteur (aucune 5e formulation PII)';
+    v_denied := false;
+    BEGIN PERFORM api.search_actors('mar');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'G: search_actors refuse un acteur (42501)';
+  RESET ROLE;
+
+  -- ---------- (G suite) isolement — l'AUTRE acteur (v_actor3, compte v_user2, bloc C) ----------
+  -- Symétrique du bloc précédent : v_user2 voit SA fiche (v_objE) et RIEN d'autre — preuve
+  -- d'isolement dans les DEUX sens, pas un seul.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user2, 'role', 'authenticated', 'email', 'portal_actor_1393@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_fiches := api.list_my_portal_fiches();
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objE),
+      'G: isolement (retour) — v_actor3 voit bien SA fiche';
+    ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(v_fiches) f WHERE f->>'id' = v_objA),
+      'G: isolement (retour) — v_actor3 ne voit PAS la fiche de v_actor1';
+    ASSERT (SELECT jsonb_array_length(v_fiches)) = 1,
+      'G: isolement — la portée de v_actor3 se limite STRICTEMENT à v_objE (pas de fuite additive)';
+  RESET ROLE;
+
+  -- Un non-acteur ne lit rien via les RPCs « my » (auto-scopées, jamais de paramètre destinataire) :
+  -- les TROIS RPCs refusent identiquement, 42501, symétriques les uns aux autres.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_denied := false;
+  BEGIN PERFORM api.list_my_portal_fiches();
+  EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+  ASSERT v_denied, 'G: list_my_portal_fiches refuse un non-acteur';
+
+  v_denied := false;
+  BEGIN PERFORM api.list_my_submissions(20);
+  EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+  ASSERT v_denied, 'G: list_my_submissions refuse un non-acteur';
+
+  v_denied := false;
+  BEGIN PERFORM api.get_my_actor_profile();
+  EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+  ASSERT v_denied, 'G: get_my_actor_profile refuse un non-acteur';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G OK';
 END$$;
 ROLLBACK;

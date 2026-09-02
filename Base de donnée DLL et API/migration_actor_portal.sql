@@ -297,10 +297,21 @@ $$;
 
 -- 4.2 Les vérificateurs d'une fiche (D3) : membres ACTIFS d'une ORG publisher de l'objet
 -- tenant validate_changes — par la matrice de rôle (17i) OU par grant individuel.
--- REPLI : si personne, les rangs admin de l'ORG. Peut rendre VIDE (la soumission
--- n'échoue pas pour ça — la tâche part non assignée, signalée au client).
--- Les superusers plateforme ne sont PAS inclus : ils voient tout de toute façon,
--- les assigner d'office noierait leur « mes tâches ».
+-- REPLI (corrigé en revue Task 4, ruling contrôleur) : superutilisateurs plateforme
+-- actifs (app_user_profile.role IN ('owner','super_admin')) — JAMAIS les rangs admin
+-- de l'ORG. Fait vérifié en base : api.user_has_permission() (donc
+-- api.user_can_moderate_object, donc le bouton Approuver) n'a que DEUX chemins —
+-- grant individuel (user_permission) et rôle métier (user_org_business_role ×
+-- org_role_permission, §227) — et ignore TOTALEMENT user_org_admin_role. Un rang
+-- admin sans validate_changes échouerait donc user_can_moderate_object en 42501 :
+-- la tâche assignée serait injouable et la fiche resterait bloquée à vie
+-- (uq_fiche_submission_open n'autorise qu'une soumission ouverte à la fois) — pire
+-- qu'une liste vide, car muet. Un superuser plateforme, lui, satisfait
+-- user_can_moderate_object ET is_object_owner INCONDITIONNELLEMENT (leur bras
+-- is_platform_superuser(), commun aux deux) : le prérequis « tout vérificateur a
+-- aussi l'écriture canonique » tient toujours. Peut rendre VIDE si aucun
+-- superuser n'existe (la soumission n'échoue pas pour ça — spec §7, tâche part
+-- non assignée, assignee_count=0 signalé au client).
 CREATE OR REPLACE FUNCTION api.list_object_verifier_ids(p_object_id text)
 RETURNS SETOF uuid
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -333,14 +344,14 @@ BEGIN
   JOIN perm ON perm.id = up.permission_id;
 
   IF NOT FOUND THEN
-    -- Repli : rangs admin de l'ORG publisher.
+    -- Repli : superutilisateurs plateforme actifs (PAS les rangs admin de l'ORG —
+    -- cf. commentaire ci-dessus). Même prédicat que api.is_platform_superuser() sur
+    -- son bras app_user_profile : garantit que CHAQUE id rendu ici satisfait
+    -- api.user_can_moderate_object (invariant prouvé au test, bloc E).
     RETURN QUERY
-    SELECT DISTINCT uom.user_id
-    FROM object_org_link ool
-    JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
-    JOIN user_org_membership uom ON uom.org_object_id = ool.org_object_id AND uom.is_active
-    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active
-    WHERE ool.object_id = p_object_id;
+    SELECT p.id
+    FROM app_user_profile p
+    WHERE p.role IN ('owner', 'super_admin');
   END IF;
 END;
 $$;

@@ -23,8 +23,11 @@
 --   (E) VÉRIFICATEURS — api.list_object_verifier_ids(p_object_id) : les membres actifs d'une
 --       ORG publisher de l'objet dont le rôle métier confère validate_changes (matrice 17i) OU
 --       qui tiennent le grant individuel sont vérificateurs ; un viewer sans droit ne l'est PAS ;
---       le rang admin seul n'entre PAS tant que la matrice/le grant produit du monde — repli
---       UNIQUEMENT quand la liste serait vide autrement (prouvé dans les deux sens).
+--       un rang admin (user_org_admin_role) N'EST JAMAIS vérificateur, même en repli — FAIT
+--       vérifié en base : user_has_permission (donc user_can_moderate_object) ignore cette
+--       table ; repli = superutilisateurs plateforme UNIQUEMENT, sinon liste VIDE. Invariant
+--       sondé en boucle : tout id rendu doit satisfaire user_can_moderate_object (nominal ET
+--       repli) — c'est cette boucle qui aurait attrapé le défaut du repli par rang admin.
 --   (H) VISIBILITÉ — api.get_portal_section_visibility / api.get_actor_section_visibility : le
 --       plancher dur (legal…) est toujours annoncé ; sans ligne en base, un module est visible
 --       par défaut (jamais NULL) ; hors portée ⇒ 42501 ; get_actor_section_visibility refuse un
@@ -55,18 +58,23 @@ DECLARE
   v_pub     uuid;
   v_email_kind uuid;
   v_denied  boolean; -- (D1) sonde REVOKE/RLS : TRUE si insufficient_privilege a bien été levée.
-  -- (E/H) comptes DÉDIÉS Task 4 — sous-plage …001303-…001306, disjointe de 1301-1302 (A) et
+  -- (E/H) comptes DÉDIÉS Task 4 — sous-plage …001303-…001307, disjointe de 1301-1302 (A) et
   -- 1391-1393 (C). Aucun nouvel objet/acteur : E et H réutilisent v_orgA/v_objA/v_objD (B).
   v_editor  uuid := '00000000-0000-4000-a000-000000001303'; -- rôle métier editor (matrice)
   v_viewer  uuid := '00000000-0000-4000-a000-000000001304'; -- viewer sans permission
   v_granted uuid := '00000000-0000-4000-a000-000000001305'; -- grant individuel validate_changes
-  v_orgadm  uuid := '00000000-0000-4000-a000-000000001306'; -- rang admin sans validate_changes (repli)
+  v_orgadm  uuid := '00000000-0000-4000-a000-000000001306'; -- rang admin SANS validate_changes — n'est JAMAIS vérificateur (ruling post-revue)
+  v_super   uuid := '00000000-0000-4000-a000-000000001307'; -- superuser plateforme — SEULE population de repli retenue
   v_role_editor uuid;
   v_role_viewer uuid;
   v_perm_validate uuid;
   v_adm_role uuid;
   v_m1 uuid; v_m2 uuid; v_m3 uuid; v_m4 uuid;
   v_vis jsonb;
+  v_verifier_id    uuid;    -- (E) itérateur de l'invariant user_can_moderate_object
+  v_verifier_count integer; -- (E) cardinalité exacte attendue à chaque étape (discriminant)
+  v_floor_mod      text;    -- (H) itérateur sur les 9 modules du plancher dur
+  v_real_super_count integer; -- (E) superusers RÉELS déjà en base (repli non scopé — jamais 0 en prod)
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -375,19 +383,111 @@ BEGIN
   ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_viewer),
          'E: un viewer sans permission n''est PAS vérificateur';
   ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
-         'E: le rang admin seul n''entre pas TANT QUE des vérificateurs existent';
-  -- Repli : on éteint la matrice et le grant ⇒ les rangs admin prennent le relais.
+         'E: un rang admin SANS validate_changes n''est jamais vérificateur (user_has_permission ignore user_org_admin_role)';
+  SELECT count(*) INTO v_verifier_count FROM api.list_object_verifier_ids(v_objA);
+  ASSERT v_verifier_count = 2, 'E: branche primaire — exactement editor + granted, aucun tiers';
+
+  -- Invariant réel de la fonction (constat contrôleur, post-revue Task 4) : TOUT id rendu
+  -- par list_object_verifier_ids DOIT satisfaire user_can_moderate_object sur CET objet —
+  -- sinon la tâche « Vérifier » assignée mène à un 42501 au clic « Approuver », fiche
+  -- bloquée à vie (uq_fiche_submission_open n'autorise qu'une soumission ouverte). Sondé
+  -- EN BOUCLE sur ce que la fonction rend réellement, pas sur une liste anticipée à la
+  -- main : une population plausible mais fausse (ex. les rangs admin seuls, l'ancien
+  -- repli) doit mordre ici.
+  FOR v_verifier_id IN SELECT s FROM api.list_object_verifier_ids(v_objA) s LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_verifier_id, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT api.user_can_moderate_object(v_objA) = TRUE,
+             format('E: invariant — %s (rendu par list_object_verifier_ids) doit satisfaire user_can_moderate_object', v_verifier_id);
+    RESET ROLE;
+  END LOOP;
+
+  -- Repli : on éteint la matrice et le grant. FAIT vérifié en base par le contrôleur —
+  -- api.user_has_permission() (donc user_can_moderate_object, donc le bouton Approuver)
+  -- ne regarde QUE user_permission et user_org_business_role × org_role_permission ;
+  -- user_org_admin_role n'y intervient JAMAIS. Le repli rend donc les superutilisateurs
+  -- plateforme UNIQUEMENT (jamais les rangs admin) — la soumission n'échoue pas pour
+  -- autant si ce groupe est vide (spec §7), juste assignee_count=0 côté appelant.
+  -- Non scopé par construction (le ruling le veut ainsi) : n'assume PAS 0 superuser —
+  -- une base réelle porte quasi toujours au moins le compte owner/super_admin fondateur.
+  -- On capture donc le baseline RÉEL et on compare la fonction à CE baseline, jamais à
+  -- une constante — sans jamais toucher aux comptes superuser existants.
+  PERFORM set_config('request.jwt.claims', NULL, true);
   UPDATE org_role_permission SET is_active = FALSE
    WHERE org_object_id = v_orgA AND permission_id = v_perm_validate;
   UPDATE user_permission SET is_active = FALSE
    WHERE user_id = v_granted AND permission_id = v_perm_validate;
-  ASSERT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
-         'E: repli — sans validate_changes actif, les rangs admin de l''ORG sont assignés';
-  -- Restauration pour les blocs suivants.
+  SELECT count(*) INTO v_real_super_count FROM app_user_profile WHERE role IN ('owner','super_admin');
+
+  -- L'invariant D'ABORD, avant toute assertion de forme (count/EXISTS) : c'est LUI qui
+  -- doit mordre contre l'ANCIEN repli par rang admin (v_orgadm y satisferait FALSE, pas
+  -- TRUE, sur user_can_moderate_object) — rejoué ici contre le NOUVEAU repli (baseline
+  -- réel, superusers existants inclus, mais jamais v_orgadm).
+  FOR v_verifier_id IN SELECT s FROM api.list_object_verifier_ids(v_objA) s LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_verifier_id, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT api.user_can_moderate_object(v_objA) = TRUE,
+             format('E: invariant (repli, avant v_super) — %s doit satisfaire user_can_moderate_object', v_verifier_id);
+    RESET ROLE;
+  END LOOP;
+
+  SELECT count(*) INTO v_verifier_count FROM api.list_object_verifier_ids(v_objA);
+  ASSERT v_verifier_count = v_real_super_count,
+         'E: sans validate_changes actif, le repli rend EXACTEMENT les superusers réels — rien de plus (jamais les rangs admin)';
+  -- Sous-ensemble STRICT : tout id rendu par le repli EST un superuser réel — la sonde la
+  -- plus directe contre une population « plausible mais fausse » (ex. l'ancien admin-rang) :
+  -- si un SEUL id étranger s'y glissait, ce EXCEPT ne serait pas vide.
+  ASSERT NOT EXISTS (
+    SELECT s FROM api.list_object_verifier_ids(v_objA) s
+    EXCEPT
+    SELECT id FROM app_user_profile WHERE role IN ('owner','super_admin')
+  ), 'E: repli — chaque id rendu est un superuser réel, aucun intrus (ex. rang admin)';
+  ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
+         'E: le rang admin reste exclu même en repli';
+
+  -- Le superutilisateur plateforme : SEULE population de repli retenue par le ruling — il
+  -- satisfait user_can_moderate_object ET is_object_owner inconditionnellement, via leur
+  -- bras commun is_platform_superuser(), aucun autre bras ne peut donc échouer derrière.
+  -- v_super s'AJOUTE au baseline réel — jamais de mutation d'un compte existant.
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO auth.users (id, email) VALUES (v_super, 'portal_super_1307@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES (v_super, 'super_admin')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+
+  -- Invariant à nouveau, cas repli PEUPLÉ cette fois : le superuser rendu doit lui aussi
+  -- satisfaire user_can_moderate_object.
+  FOR v_verifier_id IN SELECT s FROM api.list_object_verifier_ids(v_objA) s LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_verifier_id, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT api.user_can_moderate_object(v_objA) = TRUE,
+             format('E: invariant (repli, avec v_super) — %s doit satisfaire user_can_moderate_object', v_verifier_id);
+    RESET ROLE;
+  END LOOP;
+
+  SELECT count(*) INTO v_verifier_count FROM api.list_object_verifier_ids(v_objA);
+  ASSERT v_verifier_count = v_real_super_count + 1,
+         'E: repli — le baseline réel PLUS v_super, rien d''autre';
+  ASSERT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_super),
+         'E: repli — un superutilisateur plateforme actif EST vérificateur';
+  ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
+         'E: repli actif — le rang admin reste exclu (le superuser seul qualifie)';
+
+  -- Restauration pour les blocs suivants : la branche primaire reprend la main et reste
+  -- PRIORITAIRE — elle ne fusionne PAS avec le repli : le superuser, bien que toujours
+  -- superuser, disparaît de la liste dès qu'un vérificateur primaire existe.
   UPDATE org_role_permission SET is_active = TRUE
    WHERE org_object_id = v_orgA AND permission_id = v_perm_validate;
   UPDATE user_permission SET is_active = TRUE
    WHERE user_id = v_granted AND permission_id = v_perm_validate;
+  SELECT count(*) INTO v_verifier_count FROM api.list_object_verifier_ids(v_objA);
+  ASSERT v_verifier_count = 2,
+         'E: la branche primaire restaurée reste prioritaire — exactement editor + granted';
+  ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_super),
+         'E: le superuser ne s''ajoute PAS à une branche primaire non vide (pas de fusion)';
 
   -- ---------- (H) visibilité : défauts, plancher, écriture gated ----------
   -- Défaut ouvert : sans ligne, seul le plancher masque.
@@ -437,26 +537,31 @@ BEGIN
     json_build_object('sub', v_orgadm, 'role', 'authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'descriptions', FALSE);
-    v_denied := false;
-    BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'legal', TRUE);
-    EXCEPTION WHEN others THEN v_denied := true; END;
-    ASSERT v_denied, 'H: le plancher dur n''est PAS paramétrable (même pour l''ouvrir)';
-    -- Extension (au-delà du verbatim brief) : la garde doit mordre dans les DEUX sens — un
-    -- module du plancher, déjà fermé de fait côté acteur, doit aussi refuser une fermeture
-    -- EXPLICITE en base. Sans cette seconde sonde, une implémentation qui ne garderait le
-    -- plancher QUE contre l'ouverture (ex. condition erronée `AND p_visible`) passerait le
-    -- test ci-dessus sans être détectée.
-    v_denied := false;
-    BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'legal', FALSE);
-    EXCEPTION WHEN others THEN v_denied := true; END;
-    ASSERT v_denied, 'H: le plancher dur refuse aussi la fermeture explicite (garde symétrique)';
+    -- Le plancher dur est INTÉGRALEMENT non paramétrable — boucle sur les 9 entrées de
+    -- api.actor_portal_floor_modules(), dans les DEUX sens, pas seulement 'legal' : un
+    -- sondage à un seul module ne mordrait pas si un AUTRE module du tableau littéral
+    -- perdait sa garde. SQLSTATE 22023 explicite (pas WHEN others) : un plantage pour
+    -- une tout autre raison ne doit pas passer pour une preuve du plancher.
+    FOR v_floor_mod IN SELECT unnest(api.actor_portal_floor_modules()) LOOP
+      v_denied := false;
+      BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', v_floor_mod, TRUE);
+      EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+      ASSERT v_denied, format('H: plancher %s refuse l''ouverture (22023)', v_floor_mod);
+
+      v_denied := false;
+      BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', v_floor_mod, FALSE);
+      EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+      ASSERT v_denied, format('H: plancher %s refuse la fermeture explicite (22023)', v_floor_mod);
+    END LOOP;
   RESET ROLE;
-  -- Aucune des deux tentatives n'a laissé de ligne résiduelle : le plancher n'est jamais
-  -- paramétré en base, dans aucun sens — l'exclusion vient uniquement de la fonction (4.1).
-  ASSERT NOT EXISTS (
-    SELECT 1 FROM org_actor_module_visibility
-    WHERE org_object_id = v_orgA AND object_type = 'HOT' AND module_id = 'legal'
-  ), 'H: aucune ligne matrice n''existe jamais pour un module du plancher dur';
+  -- Aucune des tentatives n'a laissé de ligne résiduelle, pour AUCUN des 9 modules du
+  -- plancher — l'exclusion vient uniquement de la fonction (4.1), jamais de la table.
+  FOR v_floor_mod IN SELECT unnest(api.actor_portal_floor_modules()) LOOP
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM org_actor_module_visibility
+      WHERE org_object_id = v_orgA AND object_type = 'HOT' AND module_id = v_floor_mod
+    ), format('H: aucune ligne matrice pour le module plancher %s', v_floor_mod);
+  END LOOP;
   -- Le masquage configuré remonte côté portail.
   PERFORM set_config('request.jwt.claims',
     json_build_object('sub', v_user, 'role', 'authenticated')::text, true);

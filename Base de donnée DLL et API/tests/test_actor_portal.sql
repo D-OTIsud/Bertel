@@ -123,10 +123,49 @@
 --       fail-closed sur une ligne à object_id NULL (user_can_moderate_object y rend NULL,
 --       pas FALSE) ; et le motif de refus reste obligatoire sur une boucle VIDE, seul endroit
 --       où le contrôle propre à reject_fiche_submission peut mordre.
--- Blocs suivants ajoutés par les tasks suivantes du même chantier.
+--   (F) RÉSOLUTION, RETOUR À L'ACTEUR, OUTBOX, RGPD (§8). Ce bloc ne rejoue AUCUN geste de
+--       validation : il LIT ce que le trigger a fait des quatre compositions de lignes que F2
+--       a déposées, parce que c'est précisément ce que la §8 doit produire toute seule, sans
+--       qu'aucun RPC ne l'appelle. Les quatre issues : partial (1 approved + 1 rejected),
+--       approved (2 applied), rejected (2 rejected) et — LE discriminant — approved sur un
+--       MÉLANGE applied + approved attesté : 'approved' est depuis la §7 une valeur réellement
+--       produite sur pending_change, et un agrégat qui la rangerait du côté des refus ferait
+--       lire « refusée » une soumission validée. Chaque issue est horodatée (resolved_at), la
+--       tâche de vérification passe done, et le VERROU se relâche — prouvé par une seconde
+--       soumission sur la même fiche, elle-même résolue (le trigger n'est pas à usage unique)
+--       puis relue côté prestataire (list_my_portal_fiches.last_resolved = 'partial').
+--       SENS INVERSE : sur une fiche dédiée laissée à UNE rubrique pending, rien ne bouge —
+--       ni statut, ni resolved_at, ni tâche (elle reste 'todo'), ni notification ; une
+--       résolution prématurée annoncerait « validé » pendant que l'office travaille encore.
+--       RGPD du payload : l'ensemble EXACT des clés est épinglé ({submission_id, outcome,
+--       object_id}) — l'assertion tombe quel que soit le nom donné à une clé ajoutée un jour —
+--       ET aucune VALEUR du payload n'est un display_name présent en base (seconde barrière,
+--       indépendante). OUTBOX : les trois pièces (CHECK §3.5, index §3.6, claim/ack §8.2-8.3)
+--       sont élargies ENSEMBLE — le claim émet kind/outcome/submission_id, sert TOUJOURS
+--       l'espèce historique, et l'acquittement reconnaît la nouvelle espèce (sans quoi le même
+--       e-mail repartirait à chaque TTL). list_crm_tasks émet `extra` BRUT (jsonb_typeof =
+--       'object' : un cast, même ::text, abattrait la lecture entière du kanban, classe §17m).
+--       RGPD/ACTEUR : l'effacement délie le compte portail dans les DEUX modes, sondés
+--       séparément — en mode 'delete' la cascade FK (ON DELETE SET NULL) délie déjà en
+--       SILENCE, si bien qu'un bloc placé après le DELETE ne rapporterait aucun
+--       portal_user_id et laisserait l'opérateur sans le compte auth à supprimer ; l'accès
+--       portail est vérifié PRÉSENT avant et ABSENT après, dans les deux modes.
+--   (I) RÉGRESSION — les personas historiques sont intactes. Les 5 bras de
+--       api.current_user_extended_object_ids() sont sondés un par un sur des témoins qui ne
+--       peuvent les obtenir QUE par ce bras : 1a (lien acteur direct, sans filtre valid_to NI
+--       valid_from — les deux, car une seule des deux sondes laisserait passer un filtre
+--       appliqué à moitié), 1b (fiches de l'ORG via rôle acteur), 2A et 2B (membership), 2C
+--       (périmètre all_published, fixture ORG dédiée). Les 4 formulations PII de
+--       can_read_actor_contacts restent closes à la persona acteur : le bloc G en couvre deux
+--       (can_read_actor_contacts, search_actors), la troisième — l'EXPORT, seule à faire
+--       réellement sortir la PII dans un fichier — est sondée ici avec un motif et un format
+--       VALIDES pour que le 22023 des contrôles de forme ne se substitue pas au 42501 du
+--       périmètre. Symétrie : un membre de l'ORG publisher garde son accès PII, sinon une
+--       fermeture trop large passerait pour une réussite.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx
--- (+ 1410-1419 pour le bloc G, task 6 ; + 1420-1429 pour le bloc F2, task 7).
+-- (+ 1410-1419 pour le bloc G, task 6 ; + 1420-1429 pour le bloc F2, task 7 ; + 1430-1449
+-- pour les blocs F et I, task 8).
 \set ON_ERROR_STOP on
 BEGIN;
 DO $$
@@ -218,6 +257,26 @@ DECLARE
   v_lp_count  integer; -- (F2) cardinalité de la file — sonde de LISIBILITÉ totale (anti-22P02)
   v_pc_orphan uuid;    -- (F2) ligne à object_id NULL — la garde doit être fail-closed
   v_pending_left integer; -- (F2) lignes encore en attente — ce qui EMPÊCHE la résolution
+  -- (F/I) task-8 — sous-plage de fixtures RÉSERVÉE : 1430-1449, disjointe de 1301-1307
+  -- (A/E/H) / 1311-1314 (B) / 1321-1322 (B) / 1391-1393 (C) / 1410-1419 (G) / 1420-1429 (F2).
+  -- Le reste du bloc F réutilise l'ÉTAT laissé par F2 (v_subid, v_subG, v_subH, v_subI,
+  -- v_task, v_objA) — c'est le point du bloc : il ne rejoue pas les gestes de validation, il
+  -- lit ce que la §8 en a fait.
+  v_objJ    text := 'HOTRUN9999991431'; -- (F) soumission INACHEVÉE — la résolution ne doit PAS mordre
+  v_actorRA uuid := '00000000-0000-4000-a000-000000001432'; -- (F) RGPD — sujet du mode anonymize
+  v_userRA  uuid := '00000000-0000-4000-a000-000000001433'; -- (F) son compte portail
+  v_actorRD uuid := '00000000-0000-4000-a000-000000001434'; -- (F) RGPD — sujet du mode delete
+  v_userRD  uuid := '00000000-0000-4000-a000-000000001435'; -- (F) son compte portail
+  v_objK    text := 'HOTRUN9999991436'; -- (F) la fiche que ces comptes portail perdent à l'effacement
+  v_orgC    text := 'ORGRUN9999991441'; -- (I) ORG à access_scope='all_published' — bras 2C
+  v_user2c  uuid := '00000000-0000-4000-a000-000000001442'; -- (I) témoin du bras 2C
+  v_subJ    uuid;   -- (F) la soumission inachevée de v_objJ
+  v_taskJ   uuid;   -- (F) sa tâche de vérification — elle doit rester OUVERTE
+  v_notif   uuid;   -- (F) la notification de résolution rendue à l'acteur
+  v_claim   jsonb;  -- (F) retour d'api.claim_unmailed_notifications (l'outbox)
+  v_keys    text[]; -- (F) clés EXACTES du payload — l'assertion qui mord si un nom s'y glisse
+  v_gdpr    jsonb;  -- (F) rapport d'api.rpc_gdpr_erase_subject
+  v_tasks   jsonb;  -- (F) retour d'api.list_crm_tasks (la clé extra)
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -1797,6 +1856,354 @@ BEGIN
   -- sans être refermée, plutôt que de laisser la Task 8 échouer loin de la cause.
   ASSERT (SELECT count(*) FROM pending_change WHERE object_id = v_objA AND status = 'pending') = 0,
          'F2: v_objA finit à ZÉRO ligne pending (prérequis du bloc F, Task 8)';
-  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G, F2 OK';
+  -- ---------- (F) résolution, retour à l'acteur, outbox, RGPD ----------
+  -- Ce bloc LIT l'état que F2 a laissé, il ne rejoue aucun geste de validation : c'est
+  -- justement ce que la §8 doit avoir produit TOUTE SEULE, par trigger, sans que personne
+  -- n'appelle une fonction de résolution. Les quatre compositions de lignes déposées par F2
+  -- sont les quatre entrées de l'agrégat :
+  --   v_subid → 1 'approved' (attestée) + 1 'rejected'          ⇒ partial
+  --   v_subG  → 2 'applied'                                     ⇒ approved
+  --   v_subH  → 2 'rejected'                                    ⇒ rejected
+  --   v_subI  → 1 'applied' + 1 'approved' (achèvement attesté) ⇒ approved
+  -- v_subI est la SEULE à mêler 'applied' et 'approved' : c'est elle, et elle seule, qui
+  -- distingue un agrégat correct d'un agrégat qui rangerait 'approved' du côté des refus —
+  -- valeur que la §7 a rendue réellement productible sur pending_change, et que le §120
+  -- historique ne produisait jamais.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subid) = 'partial',
+         'F: mélange approved+rejected ⇒ statut partial';
+  ASSERT (SELECT resolved_at FROM fiche_submission WHERE id = v_subid) IS NOT NULL,
+         'F: resolved_at posé';
+  ASSERT (SELECT status FROM crm_task WHERE id = v_task) = 'done',
+         'F: la tâche de vérification passe done à la résolution';
+
+  -- Les trois autres issues. v_subG ne discrimine PAS le bras 'approved' (2 'applied' seuls) :
+  -- il prouve le cas nominal ; v_subI, lui, tombe si l'attestation est comptée comme un refus.
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subG) = 'approved',
+         'F: tout applied ⇒ approved';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subH) = 'rejected',
+         'F: tout rejeté ⇒ rejected';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subI) = 'approved',
+         'F: applied + approved ATTESTÉ ⇒ approved — une attestation est une acceptation, jamais un refus';
+  ASSERT (SELECT count(*) FROM fiche_submission
+           WHERE id IN (v_subG, v_subH, v_subI) AND resolved_at IS NOT NULL) = 3,
+         'F: chaque issue est horodatée — le trigger tourne sur les TROIS chemins, pas seulement le premier';
+
+  -- Le verrou anti-spam se relâche : c'est la conséquence opérationnelle de « résolue », et
+  -- la seule chose qui rend la fiche à son prestataire. Sans résolution, uq_fiche_submission_
+  -- open bloquerait v_objA À VIE (la panne que D9 + §8 existent pour fermer).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_sub := api.submit_actor_fiche(v_objA, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z'))),
+      'Deuxième passage');
+    ASSERT (v_sub->>'submission_id') IS NOT NULL,
+      'F: une fois la vérification résolue, le prestataire peut re-soumettre (le verrou se relâche)';
+    -- L'état est relu là où le prestataire le lit vraiment : « en partie validée » n'est pas
+    -- une colonne interne, c'est ce que son accueil affiche.
+    ASSERT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(api.list_my_portal_fiches()) f
+      WHERE f->>'id' = v_objA AND f->'last_resolved'->>'status' = 'partial'),
+      'F: côté prestataire, la fiche annonce « en partie validée » (last_resolved)';
+  RESET ROLE;
+  -- Refermée AUSSITÔT : cette soumission de contrôle rouvre une ligne pending sur v_objA, et
+  -- l'assertion is_editing ci-dessous exige zéro. La refermer par un rejet est aussi ce qui
+  -- prouve que la boucle complète (soumettre → résoudre → re-soumettre → résoudre) tient.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    PERFORM api.reject_fiche_submission((v_sub->>'submission_id')::uuid, 'soumission de contrôle — refermée');
+  RESET ROLE;
+  ASSERT (SELECT status FROM fiche_submission WHERE id = (v_sub->>'submission_id')::uuid) = 'rejected',
+         'F: la seconde soumission se résout elle aussi (le trigger n''est pas à usage unique)';
+  ASSERT (SELECT is_editing FROM object WHERE id = v_objA) = FALSE,
+         'F: is_editing retombe à FALSE une fois tout résolu';
+
+  -- (F.2) RGPD — le payload de la notification ne porte AUCUN nom. Les libellés (nom de la
+  -- fiche, nom du prestataire) se JOIGNENT à la lecture, comme dans claim_unmailed_
+  -- notifications : une notification est immuable et survit à un effacement Art. 17, un nom
+  -- gelé dedans y survivrait aussi. L'assertion porte sur l'ENSEMBLE EXACT des clés — pas sur
+  -- l'absence d'une clé nommée : c'est ce qui la fait tomber quel que soit le nom donné à une
+  -- clé ajoutée un jour (actor_name, submitter, label…).
+  SELECT id INTO v_notif FROM app_notification
+   WHERE recipient_id = v_user AND kind = 'fiche_submission_reviewed'
+     AND (payload->>'submission_id')::uuid = v_subid;
+  ASSERT v_notif IS NOT NULL,
+         'F: l''acteur reçoit la notification de résolution';
+  ASSERT (SELECT payload->>'outcome' FROM app_notification WHERE id = v_notif) = 'partial',
+         'F: la notification porte l''ISSUE (l''e-mail dit « en partie validées », pas « traitées »)';
+  ASSERT (SELECT task_id FROM app_notification WHERE id = v_notif) = v_task,
+         'F: la notification pointe la tâche — c''est par elle que le claim joint le nom de la fiche';
+  SELECT array_agg(k ORDER BY k) INTO v_keys
+    FROM app_notification n, jsonb_object_keys(n.payload) k WHERE n.id = v_notif;
+  ASSERT v_keys = ARRAY['object_id','outcome','submission_id'],
+         'F: le payload porte EXACTEMENT submission_id/outcome/object_id — aucune clé de plus (RGPD)';
+  -- Seconde barrière, indépendante de la première : aucune VALEUR du payload n'est un nom
+  -- présent en base. Elle mord même si quelqu'un ajoutait un nom sous une clé déjà autorisée.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM app_notification n, jsonb_each_text(n.payload) kv
+     WHERE n.id = v_notif
+       AND (EXISTS (SELECT 1 FROM actor a            WHERE a.display_name = kv.value)
+         OR EXISTS (SELECT 1 FROM app_user_profile p WHERE p.display_name = kv.value))),
+    'F: aucune valeur du payload n''est un nom de personne (les libellés se joignent à la lecture)';
+  -- Un compte révoqué (submitted_by NULL) ne doit pas faire échouer la résolution : la
+  -- colonne est NOT NULL côté app_notification, un INSERT inconditionnel casserait le
+  -- traitement de l'office pour une soumission dont l'auteur n'existe plus.
+  ASSERT NOT EXISTS (SELECT 1 FROM app_notification WHERE recipient_id IS NULL),
+         'F: aucune notification orpheline n''a été fabriquée';
+
+  -- (F.3) Le sens INVERSE — la résolution ne doit pas mordre TROP TÔT. F2.11 avait déjà
+  -- prouvé que fiche_submission ne bascule pas tant qu'une ligne est pending ; ce qui se
+  -- prouve ICI est ce que la §8 AJOUTE et que F2 ne pouvait pas voir : la tâche reste
+  -- ouverte et l'acteur n'est PAS notifié. Une résolution prématurée annoncerait
+  -- « c'est validé » au prestataire pendant que l'office a encore une rubrique sur les bras,
+  -- et fermerait la tâche qui la lui rappelle.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO object (id, object_type, name, status)
+  VALUES (v_objJ, 'HOT', 'Hôtel §8 — vérification inachevée', 'draft') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object_org_link (object_id, org_object_id, role_id)
+  VALUES (v_objJ, v_orgA, v_pub) ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to)
+  VALUES (v_actor1, v_objJ, v_role_op, TRUE, NULL, NULL) ON CONFLICT DO NOTHING;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_sub := api.submit_actor_fiche(v_objJ, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z')),
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('value','0262000097'),
+        'metadata', jsonb_build_object('rpc',NULL,'section','contacts',
+                                       'manual_apply',true,'field','Contacts','before','a','after','b'))),
+      'Inachevée exprès');
+  RESET ROLE;
+  v_subJ  := (v_sub->>'submission_id')::uuid;
+  v_taskJ := (v_sub->>'task_id')::uuid;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    PERFORM api.approve_fiche_submission(v_subJ, 'Horaires OK, contacts à reporter', FALSE);
+  RESET ROLE;
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subJ AND status = 'pending') = 1,
+         'F: fixture — il reste bien UNE rubrique à traiter sur v_objJ';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subJ) = 'pending'
+     AND (SELECT resolved_at FROM fiche_submission WHERE id = v_subJ) IS NULL,
+         'F: la soumission ne se résout PAS tant qu''une rubrique est en attente';
+  ASSERT (SELECT status FROM crm_task WHERE id = v_taskJ) = 'todo',
+         'F: la tâche de vérification reste OUVERTE tant que l''office n''a pas fini';
+  ASSERT NOT EXISTS (SELECT 1 FROM app_notification
+                      WHERE kind = 'fiche_submission_reviewed'
+                        AND (payload->>'submission_id')::uuid = v_subJ),
+         'F: aucun retour à l''acteur avant la fin (sinon « validé » pendant que l''office travaille)';
+
+  -- (F.4) L'OUTBOX. Les TROIS pièces — CHECK, index partiel, claim/ack — s'élargissent
+  -- ENSEMBLE ou la file fuit en silence : la notification existe, elle est indexée, et
+  -- personne ne la réclame jamais. L'acteur n'a alors AUCUN retour, et rien ne le signale.
+  v_claim := api.claim_unmailed_notifications(50);
+  ASSERT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_claim) n
+    WHERE n->>'kind' = 'fiche_submission_reviewed'
+      AND (n->>'submission_id')::uuid = v_subid),
+    'F: claim_unmailed_notifications émet la notification acteur avec kind + submission_id';
+  ASSERT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(v_claim) n
+    WHERE (n->>'notification_id')::uuid = v_notif AND n->>'outcome' = 'partial'),
+    'F: le claim émet l''ISSUE — le relais choisit son gabarit sans relire la base';
+  -- L'espèce HISTORIQUE reste servie par le MÊME appel : élargir n'est pas basculer.
+  ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_claim) n WHERE n->>'kind' = 'crm_task_assigned'),
+    'F: l''élargissement du claim n''évince pas l''espèce historique (crm_task_assigned)';
+  -- L'ACQUITTEMENT est la troisième pièce : sans lui la ligne reste éternellement réclamable,
+  -- part à chaque ping, et bouche la file — exactement la panne 17m, sur la nouvelle espèce.
+  ASSERT api.mark_notifications_emailed(ARRAY[v_notif], '[]'::jsonb) = 1,
+    'F: mark_notifications_emailed acquitte la NOUVELLE espèce (sinon claim/renvoi en boucle)';
+  ASSERT (SELECT email_sent_at FROM app_notification WHERE id = v_notif) IS NOT NULL,
+    'F: la notification acquittée sort de la file';
+
+  -- (F.5) list_crm_tasks émet `extra` — c'est par cette clé que le kanban distingue une
+  -- tâche « vérification de fiche » d'une tâche CRM ordinaire (chip Task 19).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_tasks := api.list_crm_tasks();
+    ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(v_tasks) t
+                    WHERE (t->>'id')::uuid = v_task AND t->'extra'->>'kind' = 'fiche_verification'),
+      'F: list_crm_tasks émet extra.kind — le kanban peut marquer la tâche de vérification';
+    -- ÉMIS BRUT. `crm_task.extra` est du jsonb LIBRE, écrit par plusieurs producteurs : tout
+    -- cast (::text comme ::boolean sur une sous-clé) abat non pas la tâche fautive mais la
+    -- LECTURE ENTIÈRE du kanban, pour tout le périmètre — classe §17m, déjà payée sur
+    -- ref_document.extra dans cette même fonction.
+    ASSERT (SELECT jsonb_typeof(t->'extra') FROM jsonb_array_elements(v_tasks) t
+             WHERE (t->>'id')::uuid = v_task) = 'object',
+      'F: extra est émis BRUT (objet jsonb), jamais casté ni sérialisé';
+  RESET ROLE;
+
+  -- (F.6) RGPD — l'effacement d'un acteur DÉLIE son compte portail. Sans cela, un acteur
+  -- effacé au titre de l'Art. 17 garderait, par son compte, l'accès aux fiches que son
+  -- actor_id lui ouvrait : l'effacement serait cosmétique. Les DEUX modes sont sondés
+  -- séparément, et ce n'est pas une symétrie de confort — en mode 'delete', la contrainte
+  -- app_user_profile_actor_id_fkey (ON DELETE SET NULL) délie DÉJÀ le compte, mais en
+  -- SILENCE : un bloc placé après le DELETE ne trouverait plus rien à délier et ne
+  -- rapporterait AUCUN id, laissant l'opérateur RGPD sans le compte auth à supprimer.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO auth.users (id, email) VALUES
+    (v_userRA, 'portal_rgpd_a_1433@test.local'), (v_userRD, 'portal_rgpd_d_1435@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO actor (id, display_name) VALUES
+    (v_actorRA, 'Acteur RGPD Anonymize 1432'), (v_actorRD, 'Acteur RGPD Delete 1434')
+    ON CONFLICT (id) DO NOTHING;
+  -- Ordre FK : l'acteur AVANT le lien porté par le profil.
+  INSERT INTO app_user_profile (id, role) VALUES (v_userRA, 'actor'), (v_userRD, 'actor')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  UPDATE app_user_profile SET actor_id = v_actorRA WHERE id = v_userRA;
+  UPDATE app_user_profile SET actor_id = v_actorRD WHERE id = v_userRD;
+  INSERT INTO object (id, object_type, name, status)
+  VALUES (v_objK, 'HOT', 'Hôtel §8 — accès perdu à l''effacement', 'draft') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object_org_link (object_id, org_object_id, role_id)
+  VALUES (v_objK, v_orgA, v_pub) ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actorRA, v_objK, v_role_op, TRUE, NULL, NULL),
+    (v_actorRD, v_objK, v_role_op, FALSE, NULL, NULL)
+    ON CONFLICT DO NOTHING;
+
+  -- Avant : les deux comptes portail voient bien la fiche — sinon l'assertion « après »
+  -- passerait sur un périmètre déjà vide et ne prouverait rien.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userRA, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_portal_object_ids() s WHERE s = v_objK),
+      'F: fixture RGPD — avant effacement, le compte portail (anonymize) voit sa fiche';
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userRD, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_portal_object_ids() s WHERE s = v_objK),
+      'F: fixture RGPD — avant effacement, le compte portail (delete) voit sa fiche';
+  RESET ROLE;
+
+  -- L'effacement s'exécute sous le SEUL profil que sa garde admet (superuser plateforme) :
+  -- `set_config(…, NULL, …)` laisse une chaîne VIDE, pas NULL, donc la garde
+  -- `current_setting(…) IS NOT NULL AND NOT is_platform_superuser()` mord même sous postgres.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_super, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_gdpr := api.rpc_gdpr_erase_subject('actor', v_actorRA::text, 'anonymize', 'test 18a §8');
+    ASSERT (v_gdpr->>'portal_user_id')::uuid = v_userRA,
+      'F: RGPD anonymize — le rapport NOMME le compte auth à supprimer via l''API Admin';
+    ASSERT v_gdpr->>'portal_note' IS NOT NULL,
+      'F: RGPD anonymize — le rapport dit à l''opérateur ce qui reste à faire hors SQL';
+    v_gdpr := api.rpc_gdpr_erase_subject('actor', v_actorRD::text, 'delete', 'test 18a §8');
+    ASSERT (v_gdpr->>'portal_user_id')::uuid = v_userRD,
+      'F: RGPD delete — le rapport NOMME lui aussi le compte (la cascade FK délie en silence)';
+  RESET ROLE;
+  ASSERT (SELECT actor_id FROM app_user_profile WHERE id = v_userRA) IS NULL,
+         'F: RGPD anonymize — le compte portail est délié';
+  ASSERT (SELECT actor_id FROM app_user_profile WHERE id = v_userRD) IS NULL,
+         'F: RGPD delete — le compte portail est délié';
+  -- La conséquence, seule chose qui compte vraiment : l'accès tombe. La portée passe par
+  -- actor_id ; délier, c'est fermer.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userRA, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT NOT EXISTS (SELECT 1 FROM api.current_user_portal_object_ids() s WHERE s = v_objK),
+      'F: RGPD anonymize — l''accès portail tombe immédiatement';
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userRD, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT NOT EXISTS (SELECT 1 FROM api.current_user_portal_object_ids() s WHERE s = v_objK),
+      'F: RGPD delete — l''accès portail tombe immédiatement';
+  RESET ROLE;
+
+  -- ---------- (I) régression : personas historiques inchangées ----------
+  -- Le témoin tourism_agent garde EXACTEMENT ses 5 bras. Son e-mail matche un canal de
+  -- v_actor1 (fixture G) : le pont e-mail joue donc PLEINEMENT pour lui — c'est le point.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  -- Fixture du bras 2C, autonome : une ORG à périmètre « tout le publié » et son membre.
+  -- Isolée de v_orgA pour ne rien déplacer sous les blocs antérieurs.
+  INSERT INTO auth.users (id, email) VALUES (v_user2c, 'portal_scope2c_1442@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES (v_user2c, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  INSERT INTO object (id, object_type, name, status)
+  VALUES (v_orgC, 'ORG', 'ORG périmètre tout-publié', 'published') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO org_config (org_object_id, access_scope) VALUES (v_orgC, 'all_published')
+    ON CONFLICT (org_object_id) DO UPDATE SET access_scope = EXCLUDED.access_scope;
+  INSERT INTO user_org_membership (id, user_id, org_object_id, is_active)
+  VALUES (gen_random_uuid(), v_user2c, v_orgC, TRUE) ON CONFLICT DO NOTHING;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objD),
+           'I: bras 1b intact pour un non-acteur (fiches de l''ORG via rôle acteur)';
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objB),
+           'I: pas de filtre valid_to pour un non-acteur (bras 1a historique)';
+    -- Le pendant du précédent : le bras 1a historique ignore AUSSI valid_from. Les deux
+    -- ensemble ferment la régression « on a appliqué le filtre de validité à tout le monde »,
+    -- qu'une seule des deux laisserait passer à moitié.
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objC),
+           'I: pas de filtre valid_from pour un non-acteur (bras 1a historique)';
+  RESET ROLE;
+  -- Bras 2A et 2B : l'ORG elle-même et ses fiches, par membership. v_editor est membre de
+  -- v_orgA (fixture E) et n'a AUCUN lien acteur — ces deux bras sont donc les seuls à
+  -- pouvoir lui donner quoi que ce soit.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_orgA),
+           'I: bras 2A intact (l''objet EST l''ORG du membre)';
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objA),
+           'I: bras 2B intact (fiche rattachée à l''ORG du membre, même en draft)';
+  RESET ROLE;
+  -- Bras 2C : périmètre externe « tout le publié ». v_user2c n'a ni lien acteur ni fiche
+  -- rattachée à son ORG — sans ce bras il ne verrait RIEN d'autre que v_orgC.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user2c, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objB),
+           'I: bras 2C intact (objet publié d''une AUTRE ORG, périmètre all_published)';
+    ASSERT NOT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objA),
+           'I: bras 2C ne déborde pas sur le NON publié (v_objA est draft)';
+  RESET ROLE;
+
+  -- Les 4 formulations PII de api.can_read_actor_contacts restent closes à la persona acteur
+  -- (spec §6). Le bloc G en couvre deux (can_read_actor_contacts, search_actors) ; la
+  -- troisième — l'EXPORT, la seule qui fait réellement sortir la PII dans un fichier — est
+  -- sondée ici. Motif volontairement VALIDE (>= 5 caractères) et format valide : sans cela
+  -- le 22023 des contrôles de forme masquerait le 42501 du périmètre, et l'assertion
+  -- prouverait tout autre chose.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT api.can_read_actor_contacts(v_objA) = FALSE,
+           'I: can_read_actor_contacts reste FALSE pour un acteur, y compris sur SA fiche';
+    v_denied := false;
+    BEGIN PERFORM api.export_actor_contacts(ARRAY[v_objA], 'controle regression', 'csv', NULL, 1, 1);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'I: export_actor_contacts ne rend AUCUNE ligne à un acteur — le périmètre PII n''a pas gagné de 5e formulation';
+  RESET ROLE;
+  -- Symétrie : le témoin tourism_agent membre de l'ORG publisher garde, lui, son accès PII.
+  -- Sans cette assertion, une fermeture trop large (« plus personne ne lit la PII ») passerait.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT api.can_read_actor_contacts(v_objA) = TRUE,
+           'I: un membre de l''ORG publisher garde son accès PII (la fermeture vise la persona acteur, pas tout le monde)';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G, F2, F, I OK';
 END$$;
 ROLLBACK;

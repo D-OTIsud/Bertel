@@ -610,7 +610,18 @@ BEGIN
                                 submitted_by, status, metadata, submission_id)
     VALUES (p_object_id, v_change->>'target_table', v_change->>'target_pk',
             v_change->>'action', v_change->'payload', v_uid, 'pending',
-            v_change->'metadata', v_sub_id);
+            -- Les trois clés d'ATTESTATION sont retirées de l'enveloppe : elles n'appartiennent
+            -- qu'à api.approve_pending_change (§7), qui seule les écrit, et seulement sur sa
+            -- branche attestée. Sans ce filtre, un acteur les poserait lui-même — au nom du
+            -- modérateur de son choix — et elles survivraient sur les deux issues que §7 ne
+            -- réécrit pas : un REFUS (reject_pending_change ne touche pas metadata) et la voie
+            -- AUTO (`applied`, aucune réécriture). La ligne porterait alors « untel déclare
+            -- l'avoir reportée à la main » sans que personne n'ait rien signé. `-` sur jsonb est
+            -- NULL-safe, et metadata est nécessairement un objet ici (un scalaire est abattu par
+            -- le contrôle d'enveloppe plus haut). Les clés déclaratives — section, rpc,
+            -- manual_apply, field, before, after — passent intactes.
+            (v_change->'metadata') - ARRAY['applied_manually','attested_by','attested_at']::text[],
+            v_sub_id);
     v_count := v_count + 1;
   END LOOP;
 
@@ -844,7 +855,18 @@ COMMENT ON FUNCTION api.get_my_actor_profile() IS
 -- « moderation », « autorise ») — trace d'un déploiement historique passé par un canal qui
 -- les a perdus. Ces textes remontent jusqu'à l'écran du modérateur : ils sont réécrits ici
 -- dans leur forme correcte.
+-- ⚠ IDEMPOTENCE — DEUX drops, pas un. Le premier retire l'overload §120 à DEUX arguments :
+-- sans lui, `approve_pending_change($1,$2)` (l'appel du front) deviendrait AMBIGU entre
+-- l'ancienne signature et la nouvelle, dont le 3e paramètre a un défaut — 42725. Le second
+-- retire la signature que le CREATE ci-dessous repose : au REJEU, le premier DROP ne trouve
+-- plus rien et le CREATE (sans OR REPLACE, obligatoire puisqu'on ajoute un paramètre)
+-- percuterait une fonction déjà présente — 42723. Le fichier étant un unique BEGIN;…COMMIT;,
+-- c'est TOUTE la migration qui avorterait, sur une collision de nom qui ne désigne pas la
+-- cause. Sans CASCADE : l'unique appelant SQL (api.approve_fiche_submission) l'invoque par
+-- PERFORM depuis un corps plpgsql, il n'en dépend pas au sens de pg_depend. Motif déjà au
+-- dépôt : api_views_functions.sql:5768-5769.
 DROP FUNCTION IF EXISTS api.approve_pending_change(uuid, text);
+DROP FUNCTION IF EXISTS api.approve_pending_change(uuid, text, boolean);
 CREATE FUNCTION api.approve_pending_change(
   p_id                uuid,
   p_review_note       text    DEFAULT NULL,
@@ -880,7 +902,18 @@ BEGIN
   -- La garde d'autorisation reste AVANT toute branche : l'attestation est un geste de
   -- modération de plus, pas un chemin parallèle. Elle s'évalue sur auth.uid() — SECURITY
   -- DEFINER change le propriétaire des droits Postgres, jamais l'identité applicative.
-  IF NOT api.user_can_moderate_object(v_row.object_id) THEN
+  -- Le bras `object_id IS NULL` est EXPLICITE, et il est indispensable :
+  -- user_can_moderate_object rend NULL (et non FALSE) sur un object_id NULL, parce que
+  -- `NULL IN (<ensemble non vide>)` vaut NULL — `IF NOT NULL THEN` n'est alors pas pris, et
+  -- la garde laisse passer. pending_change.object_id EST nullable, et api.submit_pending_change
+  -- (exécutable par tout `authenticated`) accepte p_object_id NULL en sautant son propre
+  -- contrôle de lisibilité : une ligne orpheline est donc fabricable. Tant que rpc NULL était
+  -- refusé avant toute écriture, ce trou était inerte ; la branche attestée est la PREMIÈRE
+  -- écriture atteignable derrière cette garde — un agent sans aucun droit sur la ligne y
+  -- signerait une attestation nominative. La fonction sœur list_pending_changes filtre déjà
+  -- `pc.object_id IS NOT NULL` : l'asymétrie était un oubli. Les gardes jumelles de §7.2
+  -- n'en ont pas besoin — elles portent sur fiche_submission.object_id, déclaré NOT NULL.
+  IF v_row.object_id IS NULL OR NOT api.user_can_moderate_object(v_row.object_id) THEN
     RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
   END IF;
 
@@ -891,7 +924,14 @@ BEGIN
     -- modérateur ATTESTE l'avoir reporté à la main dans l'éditeur. Aucun SQL ne peut vérifier
     -- ce report ; ce que la base peut faire, et fait ici, c'est le rendre ATTESTABLE.
     IF NOT COALESCE(p_applied_manually, FALSE) THEN
-      RAISE EXCEPTION 'RPC de re-dispatch absent ou non autorisé: (null)' USING ERRCODE = '22023';
+      -- Message ADRESSÉ au conseiller, pas au développeur : c'est le refus le plus courant du
+      -- nouveau flux (5 rubriques sur 7 sont manual_apply), et il doit dire le REMÈDE. Le
+      -- jargon précédent (« RPC de re-dispatch absent… ») n'indiquait rien : le conseiller
+      -- appelait le support, ou refusait la soumission par dépit — et le prestataire recevait
+      -- un refus injustifié. Il doit surtout être DISTINCT de celui du writer non autorisé
+      -- ci-dessous, qui demande l'action INVERSE (ne surtout pas valider).
+      RAISE EXCEPTION 'Cette rubrique n''a pas de report automatique : reportez la modification dans l''éditeur, puis cochez « j''ai reporté ces modifications » pour la valider'
+        USING ERRCODE = '22023';
     END IF;
     UPDATE pending_change
        SET status      = 'approved',   -- approved ≠ applied : attesté par un humain, pas écrit par la machine
@@ -919,7 +959,10 @@ BEGIN
   -- « v_rpc IS NULL », p_applied_manually deviendrait un interrupteur d'approbation
   -- universel, capable d'ouvrir n'importe quelle enveloppe déposée par un autre chemin.
   IF NOT (v_rpc = ANY(v_allowed)) THEN
-    RAISE EXCEPTION 'RPC de re-dispatch absent ou non autorisé: %', v_rpc USING ERRCODE = '22023';
+    -- Ici l'enveloppe porte un writer RÉEL hors whitelist : ce n'est pas une rubrique à
+    -- reporter, c'est une anomalie. Le conseiller ne doit surtout pas « valider quand même ».
+    RAISE EXCEPTION 'Anomalie sur cette suggestion (writer « % » non autorisé) : ne la validez pas, signalez-la à l''administrateur', v_rpc
+      USING ERRCODE = '22023';
   END IF;
 
   -- Re-dispatch vers le writer structuré (signature uniforme (p_object_id, p_payload)).
@@ -1120,13 +1163,18 @@ BEGIN
     pc.submission_id,
     fs.note AS submission_note,
     a.display_name AS actor_label,
-    -- Comparaison jsonb plutôt que (metadata->>'manual_apply')::boolean : metadata est un
-    -- jsonb LIBRE, alimenté par plusieurs producteurs (éditeur §120, portail §5, correctifs).
-    -- Un cast nu sur un jsonb libre n'abat pas la ligne fautive, il abat la LECTURE ENTIÈRE —
-    -- une seule valeur non castable et la file de modération rend un 22P02 pour tout le monde
-    -- (précédent du dépôt, §17m). La comparaison jsonb ne lève jamais ; repli sur l'absence de
-    -- writer quand la clé n'existe pas, ce qui est le cas de toutes les lignes §120.
-    COALESCE(pc.metadata->'manual_apply' = 'true'::jsonb, (pc.metadata->>'rpc') IS NULL) AS manual_apply
+    -- UNE seule source de vérité : le prédicat exact sur lequel la MACHINE décide
+    -- (approve_pending_change et approve_fiche_submission branchent tous deux sur
+    -- `metadata->>'rpc' IS NULL`). metadata.manual_apply est une DÉCLARATION du soumetteur,
+    -- recopiée depuis le corps de requête et jamais confrontée à rpc : s'en servir pour peindre
+    -- le bouton du modérateur rouvrait la panne même que D9 ferme — la file annonce
+    -- « application automatique » sur une rubrique sans writer, le conseiller clique Approuver,
+    -- prend un refus, et il ne lui reste que le rejet ; la soumission ne se résout pas, le
+    -- verrou tient, le prestataire reste en PT409. Symétrie inverse tout aussi fausse :
+    -- {rpc: save_object_openings, manual_apply: true} faisait cocher une attestation sur une
+    -- ligne que la machine applique elle-même. `->>` ne caste rien : le rationale anti-22P02
+    -- sur jsonb libre (classe §17m) est préservé, y compris face à une valeur aberrante.
+    ((pc.metadata->>'rpc') IS NULL) AS manual_apply
   FROM pending_change pc
   LEFT JOIN object o            ON o.id = pc.object_id
   LEFT JOIN app_user_profile sp ON sp.id = pc.submitted_by

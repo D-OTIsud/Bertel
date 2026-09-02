@@ -1,6 +1,6 @@
 # Portail acteur — fiches en libre remplissage, vérifiées par les éditeurs
 
-Date : 2026-09-01 · Statut : **validé par le PO** (7 décisions actées ci-dessous) · Branche : `claude/actor-sheet-interface-spec-26b57f`
+Date : 2026-09-01 · Révision UI : 2026-09-02 (D10 actée, D11/D12 proposées) · Statut : **validé par le PO** (décisions actées ci-dessous) · Branche : `claude/actor-sheet-interface-spec-26b57f`
 
 ## 1. Objectif
 
@@ -17,12 +17,15 @@ canonique avant validation par un éditeur.
 | D1 | Accès acteur | Compte invité par e-mail ; la gestion du compte se fait **depuis la fiche prestataire du CRM**, pas via /team |
 | D2 | Modèle d'écriture | **Retenu jusqu'à validation** : tout passe par la modération (`pending_change`), rien en canonique avant approbation |
 | D3 | Assignation de la tâche | **Tous les éditeurs de l'org** publisher (multi-assignée §218) |
-| D4 | Périmètre de la fiche | **Éditeur complet, sections masquables** |
-| D5 | Niveau du masquage | **Par org ET par type** (matrice org × type × section) |
+| D4 | Périmètre de la fiche | **Éditeur complet, sections masquables** — *révisé par D10 (2026-09-02)* : le périmètre est celui des **rubriques du portail** (registre §4.5, 7 rubriques + Photos en lecture seule), masquables par la matrice ; l'éditeur complet n'est plus la surface |
+| D5 | Niveau du masquage | **Par org ET par type** (matrice org × type × **module**, cf. §4.2) |
 | D6 | Déclencheur de la tâche | **« Soumettre » explicite** — une tâche par soumission, brouillon libre avant |
 | D7 | Chemin d'écriture directe existant (`api.is_object_owner`) | **Fermé pour les personas acteur** ; conservé pour les équipes internes |
 | D8 | Architecture d'identité | **Approche A** : rôle `actor` + activation de `app_user_profile.actor_id` comme lien explicite |
 | D9 | Granularité de validation (PO, 2026-09-01) | Le vérificateur valide **l'ensemble de la soumission en une action** OU **changement par changement** (mélange approbations/rejets → statut `partial`) |
+| D10 | Interface du portail (PO, 2026-09-02) | **Interface dédiée et simplifiée** — liste de rubriques par fiche, un petit formulaire par rubrique, un seul geste d'envoi, zéro jargon, une colonne, mobile d'abord. L'éditeur back-office n'est **pas** réutilisé en présentation (seulement sa couche d'état). Cf. §4.5 |
+| D11 | Photos (proposé 2026-09-02, **à valider PO**) | v1 : photos en **lecture seule** + repli « envoyez-les à l'office » (mailto) — la route d'upload refuse la persona acteur (D7) et aucun writer ne sait appliquer une photo proposée. Le téléversement par le prestataire est le **chantier de suite n°1** (§9, options A/B) |
+| D12 | Lisibilité des modifications pour l'office (proposé 2026-09-02, **à valider PO**) | Le portail surcharge **uniquement** les trois clés présentationnelles `metadata.field/before/after` de l'enveloppe par une projection en clair (une ligne par champ) ; `section`, `rpc`, `manual_apply`, `payload` restent byte-identiques à `buildContributorSubmission` (seuls validés serveur). Sans cela, l'office lit un JSON de tranche entière tronqué à 4000 caractères |
 
 ## 3. État des lieux (recon 2026-09-01, 6 sous-systèmes)
 
@@ -65,6 +68,12 @@ Trous identifiés que cette spec ferme :
 - Bras 1b + absence de filtre `valid_from`/`valid_to`/`visibility` : un acteur lirait
   toutes les fiches (y compris brouillons) des ORG où il a un rôle, et un lien expiré
   donnerait encore accès.
+- **Photos (constaté 2026-09-02)** : `POST /api/media/upload` autorise EN TANT
+  QU'APPELANT via `api.user_can_write_object_canonical`, que D7 rend FALSE pour la
+  persona acteur ⇒ 403 ; le bucket refuse `anon`/`authenticated` (RESTRICTIVE) ; et le
+  module `media` est `manual_apply` sans writer (un vérificateur ne peut pas « reporter »
+  une photo sans la re-téléverser). Un acteur ne peut donc **pas** ajouter de photo
+  aujourd'hui — d'où D11 (lecture seule + repli) et le chantier de suite n°1.
 
 ## 4. Architecture
 
@@ -191,6 +200,17 @@ ALTER TABLE app_notification ADD CONSTRAINT chk_app_notification_kind
 > externes, bloc CRM, outils (versions, archivage, import/export), et les modules
 > READONLY existants (`sync-identifiers`, `provider-follow-up`, `distribution`,
 > `provider`).
+> **Ajout 2026-09-02** : `relationships` (son writer auto réécrit `object_org_link` et
+> `actor_object_role` — le périmètre même de l'acteur), `places` (son writer supprime
+> les médias des sous-lieux absents du payload) et `media` (aucun chemin d'upload ni
+> d'application pour un acteur, D11). Le plancher passe à **9 modules**
+> (`api.actor_portal_floor_modules()`).
+
+La matrice est clé par **module d'éditeur** (`module_id`, les 29 ids de `MODULE_KEY_MAP`),
+pas par numéro de section : `metadata.section` des enveloppes porte le module id, le
+serveur n'a donc aucun mapping front à dupliquer. Côté portail, le registre
+`PORTAL_RUBRICS` (§4.5) est une **allowlist** plus stricte que la matrice : un module
+hors registre n'est jamais rendu, même « visible » dans la matrice.
 
 ### 4.3 RPCs nouveaux (SECURITY DEFINER, `REVOKE FROM PUBLIC, anon`, grant `authenticated`)
 
@@ -251,13 +271,18 @@ Effets, dans la même transaction :
 
 **`api.list_my_submissions() → jsonb`**
 Auto-scopé `submitted_by = auth.uid()` (jamais de paramètre destinataire — doctrine
-notifications). Retourne les soumissions + par changement : section, statut,
-`review_note`, reviewer_label (via `app_user_profile`, jamais de PII copiée).
+notifications). Retourne les soumissions + par changement : `section` (= module id,
+`metadata->>'section'` — ajouté le 2026-09-02 : c'est la clé stable qui ancre « Envoyé —
+en vérification » / « À reprendre » sur la bonne rubrique ; `field` est un libellé qui
+peut changer), `field`, statut, `review_note`, reviewer_label (via `app_user_profile`,
+jamais de PII copiée).
 
 **`api.list_my_portal_fiches() → jsonb`**
 Liste légère pour l'accueil du portail : `{id, name, type, status, updated_at,
-open_submission {id, submitted_at} | null, last_resolved {status, resolved_at} | null}`.
-Persona acteur uniquement.
+open_submission {id, submitted_at} | null, last_resolved {status, resolved_at} | null,
+office_email}` — `office_email` (ajouté le 2026-09-02) = premier canal e-mail **public**
+de l'ORG publisher (primaire d'abord), NULL sinon ; il alimente le repli « envoyez vos
+photos à l'office » (D11). Persona acteur uniquement.
 
 **`api.get_my_actor_profile() → jsonb`**
 Le profil de l'acteur lié (`display_name`, `photo_url`, canaux e-mail/téléphone **de son
@@ -337,52 +362,138 @@ supplémentaire.
 Chemin trigger = fonctionne quel que soit le chemin d'approbation (RPC modération,
 correction manuelle service_role, futur bulk).
 
-### 4.5 Frontend
+### 4.5 Frontend — portail (révisé le 2026-09-02, D10)
+
+**Pourquoi une interface dédiée.** La version du 2026-09-01 réutilisait l'éditeur complet
+(`ObjectEditPage`, 22 sections, rail de navigation, éditeurs Markdown, répéteurs,
+tri-états) en masquant des sections. Or la plupart des prestataires sont **peu à l'aise
+avec l'informatique** et beaucoup passeront par un téléphone — où l'éditeur devient un
+seul défilement de 22 sections sans repère. Le portail est donc une **interface dédiée,
+en une colonne**, qui réutilise la **couche d'état** de l'éditeur
+(`useObjectEditorState`, `buildContributorSubmission`) et **rien de sa présentation**
+(les primitives de l'éditeur sont scopées `.object-editor` et taillées back-office).
+Le contrat d'envoi ne change pas : une rubrique = un module = une enveloppe.
+
+**Principes d'interface (non négociables).**
+- Une colonne, `max-width 640px`, contrôles natifs ≥ 48 px, texte ≥ 1 rem, aucune
+  navigation latérale, aucun onglet, aucune table, aucun glisser-déposer.
+- **Une rubrique = un petit formulaire** (≤ 6 contrôles) avec libellés visibles au-dessus
+  des champs, une phrase d'aide, une erreur en texte sous le champ (jamais la couleur
+  seule), un bouton « Valider » qui ramène à la fiche.
+- **Un seul geste d'envoi**, explicite : « Envoyer à l'office ». Rien ne part avant.
+- **Aucun jargon** : interdits à l'écran — canonique, modération, soumission (nom),
+  module, section, brouillon local, workspace, contributeur, pending, diff, RPC, JSON,
+  EXIF, HEB/RES/OTI. L'institution s'appelle « l'office » / « votre office de
+  tourisme » ; le prestataire lit « votre fiche ». Vouvoiement, une idée par phrase,
+  verbes d'abord sur les boutons.
+- **Les états sont des mots** (icône + texte) : « À faire », « Renseigné », « Modifié —
+  à envoyer », « Envoyé — en vérification », « À reprendre », « Indisponible pour le
+  moment ».
+- **Honnêteté** : quand le portail ne peut pas faire quelque chose (photos, horaires
+  saisonniers, fiche ITI/FMA), il le dit en une phrase et donne la voie de repli —
+  jamais un bouton qui échoue.
+- Style maison : tokens `--surface`/`--line`/`--shadow-s`/`--teal`/`--radius-md`,
+  `.primary-button`/`.ghost-button` relevés à 48 px sous `.portal-shell`, `.badge` avec
+  icône lucide, `Modal`/`ConfirmDialog`/`EmptyState`/`PageSkeleton` maison. Un seul
+  bloc `.portal-*` dans `styles.css`. Maquette validée : artefact « Espace prestataire »
+  (2026-09-02).
 
 **Arborescence.**
 
 ```
-src/app/(portal)/espace/page.tsx              — accueil « Vos fiches »
-src/app/(portal)/espace/fiches/[objectId]/page.tsx — la fiche en remplissage
-src/app/(portal)/layout.tsx                   — garde persona + PortalShell
-src/components/portal/PortalShell.tsx         — chrome dérivé d'AuthShell (logo, nom
-                                                de l'acteur, déconnexion, footer légal)
-src/services/portal.ts                        — submitActorFiche, listMyPortalFiches,
-                                                listMySubmissions, getActorSectionVisibility
+src/app/(portal)/layout.tsx                       — garde persona + PortalShell
+src/app/(portal)/espace/page.tsx                  — accueil « Vos fiches »
+src/app/(portal)/espace/fiches/[objectId]/page.tsx — la fiche (hub + rubriques, ?rubrique=)
+src/components/portal/PortalShell.tsx             — barre haute (logo, nom, « Espace
+                                                    prestataire », déconnexion), colonne, pied légal
+src/views/PortalHomePage.tsx                      — accueil
+src/features/portal/portal-rubrics.ts             — registre des rubriques (ALLOWLIST module→rubrique)
+src/features/portal/portal-bindings.ts            — updaters purs par module (tranche complète)
+src/features/portal/portal-change-summary.ts      — projection lisible d'une modification (D12)
+src/features/portal/portal-visibility.ts          — isModuleSubmittable (matrice + plancher)
+src/features/portal/usePortalDraft.ts             — brouillon localStorage par compte et par fiche
+src/features/portal/PortalFichePage.tsx           — chargement, garde de type, montage key={objectId}
+src/features/portal/PortalFicheHub.tsx            — la liste des rubriques + « Pour compléter »
+src/features/portal/PortalRubricScreen.tsx        — chrome commun d'une rubrique
+src/features/portal/rubrics/*.tsx                 — 7 formulaires + Photos (lecture seule)
+src/features/portal/PortalSendBar.tsx, PortalSendModal.tsx
+src/services/portal.ts                            — submitActorFiche, listMyPortalFiches, listMySubmissions, getPortalSectionVisibility
 ```
 
-**Accueil.** `list_my_portal_fiches` → cartes (maquette écran 1) : nom, type, badge d'état
-(À compléter / Vérification en cours / À jour), complétude. La complétude réutilise
-`computeOverallCompletion` et exige le workspace complet : elle est chargée
-**paresseusement par carte** (`usePrefetchObjectWorkspace`), plafonnée aux 10 premières
-fiches ; au-delà, la carte affiche l'état sans pourcentage (les acteurs réels ont 1-5
-fiches).
+**Accueil (`/espace`).** `list_my_portal_fiches` → une carte par fiche : nom, type en
+clair, état en mots (« Envoyé — en vérification » / « À reprendre » / « Modifications à
+envoyer » / « À jour »). **Une seule fiche (cas majoritaire) → ouverture directe de la
+fiche**, l'accueil n'est vu qu'avec deux fiches ou plus. Aucun chargement de workspace
+ici (≈ 85 requêtes par fiche) : la complétude se lit dans la fiche. Vide : « Aucune fiche
+n'est encore reliée à votre compte » (EmptyState `no-data`, jamais « Bientôt »).
 
-**Fiche.** Réutilisation d'`ObjectEditPage` via une prop `surface: 'portal'` (défaut
-`'backoffice'`) :
-- `contributorMode` forcé (`canWriteCanonicalDirect=false`) — redondant avec D7 côté DB,
-  volontairement ;
-- sections rendues = `getRegisteredSections(archetype)` ∩ matrice de visibilité ∩
-  complément du plancher dur ;
-- topbar : ni publication, ni statut, ni versions, ni import/export, ni presence-roster
-  complet — seuls restent « Brouillon local enregistré » et **« Soumettre pour
-  vérification »** ;
-- bandeau permanent « Vos modifications seront vérifiées par l'office avant d'être
-  publiées » ;
-- si une soumission est `pending` : bouton désactivé « Vérification en cours » (l'acteur
-  peut continuer à éditer son brouillon local) ;
-- **brouillon localStorage** par fiche (`portal-draft:<objectId>`, versionné par
-  `updated_at` du workspace ; jeté si la fiche canonique a bougé depuis, avec bannière
-  d'explication). `useUnsavedDraftGuard` reste actif en complément.
+**Fiche (`/espace/fiches/[id]`) — la liste de rubriques.** Une page unique qui affiche
+le **hub** ou **une rubrique** selon `?rubrique=` (la page ne se démonte jamais : l'état
+éditeur est init-once et le brouillon vit en mémoire). Le hub : nom de la fiche, phrase
+permanente « Ce que vous modifiez ici est vérifié par l'office avant d'être publié. »,
+bandeau « Envoyé le {date}. L'office vérifie… » quand une vérification est en cours,
+carte « Retours de l'office » (une ligne par changement refusé, avec le motif et un lien
+« Corriger »), carte « Pour compléter votre fiche » (un bouton par rubrique à faire, plus
+« Ajoutez des photos (n sur 4) »), puis la liste des rubriques (titre, résumé d'une ligne
+de ce qui est déjà rempli, état en mots, chevron), la pseudo-rubrique **Photos**
+(lecture seule) et la carte **« Vérifiez ces informations »** (nom, type, adresse,
+téléphone publié en lecture seule + « Signaler une erreur » → texte qui part dans le
+message à l'office). En bas, la **barre d'envoi** collante, visible dès qu'une rubrique
+est modifiée : « {n} rubrique(s) modifiée(s) · enregistrées sur cet appareil » +
+« Envoyer à l'office » + « Annuler mes modifications ». Vérification en cours : le bouton
+reste visible mais inactif (`aria-disabled`) avec la phrase « Vérification en cours — vous
+pourrez envoyer vos nouveaux changements quand l'office aura terminé. » ; le prestataire
+peut continuer à préparer.
 
-**Soumission.** Modal (maquette écran 2 bas) : récap des sections modifiées + message
-facultatif → `planSaveBatch` (mode contributeur) construit les enveloppes via
-`buildContributorSubmission`, puis UN appel `submitActorFiche(objectId, changes, note)`
-au lieu des N `submitPendingChange`. Succès → toast + retour accueil + purge du
-brouillon local. Échec → rien n'est partiellement soumis (transaction).
+**Rubriques v1** (registre `PORTAL_RUBRICS`, ALLOWLIST : un module hors registre n'est
+jamais rendu ni soumis, quelle que soit la matrice) :
 
-**Suivi.** Sur l'accueil et dans la fiche : état de la dernière soumission
-(`list_my_submissions`), motif de rejet visible par section (`review_note`).
+| Rubrique | Module | Archétypes | Contrôles | Régime à la validation |
+|---|---|---|---|---|
+| Vos coordonnées | `contacts` | tous | Téléphone, E-mail, Site internet (lignes publiques éditées en place) | l'office reporte |
+| Présentez votre établissement | `descriptions` | tous | « En une phrase » (160), « Présentez votre établissement » (2000), FR, texte simple | l'office reporte |
+| Vos horaires | `openings` | RES, ASC, VIS, SRV (**pas HEB en v1** : 463/469 HLO sans période — question « ouvert toute l'année / fermetures » différée PO) | 7 jours : Ouvert/Fermé + « de … à … » (+ 2ᵉ créneau) ; lecture seule si ≥ 2 périodes ouvertes | **appliquée dès validation** |
+| Équipements et moyens de paiement | `characteristics` | tous | cases sur ≤ 12 équipements curés par type (+ « Voir tous les équipements ») + moyens de paiement | **appliquée dès validation** |
+| Accueil : personnes et animaux | `capacity-policies` | HEB, RES | capacité max (HEB) / couverts (RES) ; animaux Oui / Non / « Je préfère ne pas l'indiquer » (tri-état, jamais `false` par défaut) ; HEB : arrivée / départ | l'office reporte |
+| Vos tarifs | `pricing` | HEB, RES, VIS, ASC | « À partir de » + « Jusqu'à (facultatif) », unité fixée par type ; VIS/ASC : « L'accès est gratuit » | l'office reporte |
+| Votre activité | `activity` | ASC | durée, personnes min/max, âge minimum | l'office reporte |
+| Vos photos | `media` (lecture) | tous | galerie + repli e-mail vers l'office (D11) | — |
+
+Nom, type, adresse, labels, tags, sous-lieux, chambres, menus : **lecture seule** (ou
+absents) ; une erreur se signale dans le message. Chaque updater écrit la **tranche
+complète** du module (tous les writers côté office sont « remplace tout », §214) et est
+testé par sabotage : ce qui n'est pas affiché survit byte-à-byte. Une rubrique dont le
+module est chargé en mode dégradé (`unavailableReason`) est affichée « Indisponible pour
+le moment » et n'est jamais soumise (`buildContributorSubmission` n'a pas cette garde).
+Les descriptions sont écrites en `'fr'` forcé (le workspace est chargé avec
+`langPrefs ['fr']`), via `updateTranslatableField` (base + `values.fr`).
+
+**Envoi.** Fenêtre « Envoyer à l'office » : « Vous envoyez : » + la liste des rubriques
+modifiées avec leur régime (« appliquée dès validation » / « l'office la reportera »),
+message facultatif (pré-rempli par un signalement d'erreur), « Envoyer ». Une enveloppe
+par rubrique modifiée via `buildContributorSubmission` ; **D12** : le portail surcharge
+UNIQUEMENT `metadata.field/before/after` par une projection lisible (« Téléphone :
+0262… → 0692… », une ligne par champ, plafond 4000) — `section`, `rpc`, `manual_apply`
+et `payload` restent byte-identiques (seuls validés serveur). Puis UN appel
+`submitActorFiche`. Succès → carte « Merci ! Vos modifications ont été envoyées à
+l'office. L'office les vérifie, en général sous quelques jours. Vous recevrez un e-mail
+quand ce sera fait. » (focus dessus, pas de toast) ; échec → phrase dans la fenêtre,
+rien n'est parti, brouillon intact.
+
+**Brouillon local.** localStorage `portal-draft:<userId>:<objectId>` (un appareil partagé
+ne rejoue jamais le brouillon d'un autre compte ; purgé au sign-out), versionné par une
+empreinte de la baseline ; si la fiche a bougé côté office, le brouillon est écarté avec
+la phrase « La fiche a été mise à jour par l'office entre-temps. Vos anciens changements
+non envoyés ont été mis de côté. ». Retrouvé : « Nous avons retrouvé des modifications que
+vous n'aviez pas envoyées. » + « Les garder » / « Les effacer ».
+
+**Suivi.** Accueil et fiche : état de la dernière vérification (`list_my_submissions`,
+qui émet désormais `section` par changement pour ancrer « Envoyé — en vérification » et
+« À reprendre » sur la bonne rubrique), motif de refus par rubrique.
+
+**Pas de cloche en v1** : `NotificationDrawer`/`useNotificationInbox` portent une copie
+et une destination CRM ; le retour vers le prestataire passe par l'e-mail (§4.7) et les
+badges de l'accueil.
 
 **Côté back-office.**
 - `CrmActorFiche` : bloc « Accès portail » (maquette écran 3) — état (aucun / invité /
@@ -453,15 +564,20 @@ est déjà dans l'allowlist Supabase (même origine que les invitations staff).
 
 1. **Ouverture d'accès** : l'éditeur ouvre la fiche prestataire CRM → « Accès portail »
    → Inviter → l'acteur reçoit l'e-mail → `/set-password` → `/` → `/espace`.
-2. **Remplissage** : l'acteur ouvre une fiche → sections visibles selon matrice →
-   brouillon local → « Soumettre pour vérification » + message → transaction : soumission
-   + N pending_change + tâche multi-assignée + notifications + e-mails éditeurs.
+2. **Remplissage** : l'acteur arrive sur sa fiche (directement s'il n'en a qu'une) →
+   la liste de rubriques avec « Pour compléter votre fiche » → il ouvre une rubrique,
+   remplit un petit formulaire, « Valider » → retour à la fiche, rubrique « Modifié — à
+   envoyer », brouillon conservé sur l'appareil → « Envoyer à l'office » + message →
+   transaction : soumission + N pending_change + tâche multi-assignée + notifications +
+   e-mails éditeurs → carte « Merci ! ».
 3. **Vérification** : chaque éditeur voit la tâche (kanban, inbox, e-mail) → « Ouvrir la
    modération » → diffs avant/après → approuve (7 modules auto-appliqués) ou rejette
    (motif obligatoire). Dernier changement traité → soumission résolue, tâche `done`,
    acteur notifié (inbox + e-mail).
-4. **Suivi acteur** : badge d'état par fiche, détail par section avec motifs de rejet ;
-   il peut re-soumettre dès que la soumission précédente est résolue.
+4. **Suivi acteur** : e-mail « Vos modifications ont été validées / refusées / en partie
+   validées » → accueil : état en mots par fiche → fiche : carte « Retours de l'office »
+   avec le motif par rubrique et un lien « Corriger » ; il peut renvoyer dès que la
+   vérification précédente est terminée.
 5. **Révocation** : bloc CRM → Révoquer → compte supprimé, données CRM intactes.
 
 ## 6. Sécurité — invariants vérifiés
@@ -509,8 +625,22 @@ est déjà dans l'allowlist Supabase (même origine que les invitations staff).
   colonnes (jointure `fiche_submission`), NULL pour les propositions hors soumission.
 - **22/29 modules non auto-applicables** (whitelist §120 à 7 writers) : assumé en v1 —
   le vérificateur reporte à la main puis **atteste** (`p_applied_manually`, cf. 4.3 bis) ;
-  la ligne passe `approved` et la soumission peut se résoudre. L'extension de la
-  whitelist reste le chantier de suite n°1 (§9).
+  la ligne passe `approved` et la soumission peut se résoudre. Sur les 7 rubriques du
+  portail, 2 sont appliquées en un clic (horaires, équipements/paiement) et 5 sont
+  reportées à la main — la fenêtre d'envoi le dit au prestataire, rubrique par rubrique.
+  L'extension de la whitelist reste un chantier de suite (§9).
+- **Fiche à ≥ 2 périodes d'ouverture** (saisonnier) : la rubrique Horaires passe en
+  lecture seule (« Vos horaires changent selon la saison. L'office les gère pour vous. ») —
+  jamais simplifiée en piège d'écriture.
+- **Module chargé en mode dégradé** (`unavailableReason`) : rubrique « Indisponible pour
+  le moment », jamais soumise (une tranche `characteristics` dégradée porte
+  `levelId = ''` et effacerait les niveaux de langue à l'approbation).
+- **Une seule fiche** : l'accueil redirige directement sur la fiche ; l'accueil n'existe
+  visuellement qu'à partir de deux fiches.
+- **Après envoi, avant validation** : les champs montrent toujours les valeurs
+  publiées (la fiche ne change qu'à la validation) ; la rubrique porte « Envoyé — en
+  vérification » et une phrase l'explique dans le formulaire.
+- **Appareil partagé** : brouillon local clé par compte ET fiche, purgé au sign-out.
 
 ## 8. Plan de test
 
@@ -534,26 +664,65 @@ existants, + gate CI fresh-apply) :
 - H. matrice de visibilité : défauts, écriture rang ≥ 30, refus plancher dur ;
 - I. régression : pour un `tourism_agent`, `extended_object_ids` byte-identique à avant.
 
-**Front (RTL/jest)** : routage par rôle (les 2 layouts), filtrage des sections (matrice +
-plancher), désactivation du bouton en soumission ouverte, modal de soumission → payload
-`submitActorFiche` conforme aux enveloppes contributeur, bloc « Accès portail » (états +
-409), rendu du nouveau kind de notification, brouillon localStorage (restauration +
-invalidation).
+**Front (RTL/jest)** : routage par rôle (les 2 layouts) ; **liaisons pures testées par
+sabotage** (chaque updater : « ce qui n'est pas affiché survit byte-à-byte », `'fr'`
+forcé, tri-état animaux `null`, fermetures et autres périodes intactes, codes PMR
+conservés) ; registre des rubriques (archétype × matrice × plancher × dégradé, priorité
+des états, titres sans jargon) ; projection lisible D12 (une ligne par champ, plafond
+4000) ; hub (états en mots, « Pour compléter », barre d'envoi, envoi en cours
+`aria-disabled` + phrase, retours de l'office, type non pris en charge) ; formulaire de
+rubrique (Valider écrit la tranche complète, erreur sous le champ, resynchronisation au
+changement de rubrique §212) ; fenêtre d'envoi → UNE enveloppe par module via
+`buildContributorSubmission` avec `section/rpc/manual_apply/payload` byte-identiques +
+UN appel `submitActorFiche` ; bloc « Accès portail » (états + 409) ; rendu du nouveau
+kind de notification ; brouillon localStorage (restauration, invalidation, clé par
+compte, purge au sign-out). Recette humaine : 5 prestataires, téléphone en main, parcours
+HEB et RES.
 
 **E2E (parcours 1-3 de §5)** sur environnement de dev avec données réelles (doctrine
 « prefer real DB data »).
 
 ## 9. Hors périmètre v1 (chantiers de suite, par ordre de valeur)
 
-1. **Extension de la whitelist d'auto-application** : écrire des writers uniformes
-   `(p_object_id, p_payload)` pour les sections les plus soumises par les acteurs
-   (descriptions, contacts, médias, tarifs) et les ajouter à `v_allowed` — c'est ce qui
-   transformera la vérification en un clic.
-2. Édition par l'acteur de ses propres coordonnées (`actor_channel`) avec re-modération.
-3. Branding par ORG du portail (`get_org_branding` existe, aucun consommateur runtime).
-4. Realtime sur l'inbox de notifications (aujourd'hui poll 30 s).
-5. Digest e-mail hebdo « fiches à compléter » vers les acteurs.
-6. Magic-link / OTP en plus du mot de passe.
+1. **Photos par le prestataire** (280/768 fiches liées sous l'objectif — le premier trou).
+   Décision PO/sécurité entre **(A)** une route `POST /api/portal/photo/upload` autorisée
+   en tant qu'appelant par un prédicat DEFINER dédié (`is_actor_persona() AND objectId ∈
+   current_user_portal_object_ids()`), photos seulement, réutilisant
+   `handleMediaUpload`/`processImage` (strip EXIF, ≤ 2000 px, `rejectOversizedBody` AVANT
+   lecture du corps), écrivant sous `${objectId}/pending/${uuid}.jpg` (fichier lisible par
+   URL non devinable dès l'upload, comme les portraits d'acteur) + un writer INSERT-only
+   `api.append_object_media(p_object_id, p_payload)` ajouté aux DEUX whitelists
+   (`approve_pending_change` ET `submit_actor_fiche`) qui épingle l'URL au chemin de CETTE
+   fiche et décide `is_main`/`visibility` côté office ; ou **(B)** bucket privé
+   `actor-documents` + promotion à l'approbation (précédent `PATCH /api/actor-document`).
+   Dans les deux cas : aperçu côté vérificateur (`list_pending_changes` doit exposer le
+   payload ou les URLs), HEIC iPhone à tester (`ALLOWED_MIME_TYPES` = jpeg/png/webp), GC
+   des orphelins. L'écran « Ajoutez une photo » (un gros bouton « Choisir une photo »,
+   aperçu, « Envoyer cette photo ») est dessiné dans la maquette derrière un drapeau.
+2. **Extension de la whitelist d'auto-application** : writers uniformes
+   `(p_object_id, p_payload)` pour descriptions, contacts, tarifs (route front vers
+   `save_object_commercial` déjà whitelisté, à extraire de `saveObjectWorkspacePricing`),
+   capacité (exige une clé `stay_policy` dans le writer) — c'est ce qui transformera la
+   vérification des 5 rubriques « reportées » en un clic.
+3. **Horaires des hébergements** : question « Ouvert toute l'année ? / Périodes de
+   fermeture » (463/469 HLO sans période — leur demander des horaires les pousserait à en
+   inventer) ; horaires saisonniers multiples et fermetures pour tous les types.
+4. Copies d'accueil « prestataire » : variante de `/set-password` (« Bienvenue, choisissez
+   votre mot de passe pour accéder à votre fiche » au lieu de « Bienvenue dans l'équipe »),
+   `/login` sans bouton Google pour un acteur, messages de déconnexion sans « Google »,
+   inventaire du template Supabase « Invite user » (hors dépôt).
+5. Complétude serveur par fiche pour l'accueil (`missing_essentials` dans
+   `list_my_portal_fiches`, `internal` sur le `search_path`) ; alignement front/SQL des
+   essentiels (ASC : ligne `object_act` vs champ rempli ; photos : vidéos comptées ou non).
+6. Édition par l'acteur de ses propres coordonnées (`actor_channel`) avec re-modération.
+7. Branding par ORG du portail (`get_org_branding` existe, aucun consommateur runtime).
+8. Cloche de notifications dans le portail ; realtime sur l'inbox (aujourd'hui poll 30 s).
+9. Digest e-mail hebdo « fiches à compléter » vers les acteurs.
+10. Magic-link / OTP (SMS) en plus du mot de passe — un public peu à l'aise avec les mots
+    de passe.
+11. Chambres/unités, menus & cuisine (RES), sous-lieux, labels, durabilité, tags,
+    réseaux sociaux, autres langues des descriptions, édition du nom/adresse/nature —
+    hors registre ou lecture seule en v1.
 
 ## 10. Livraison
 
@@ -579,6 +748,8 @@ invalidation).
   `migration_crm_assignee_eligibility.sql` (17c), `migration_role_permission_matrix.sql`
   (17i/§227), `migration_permission_write_paths.sql` (`is_object_owner`),
   `src/features/object-editor/contributor-proposal.ts`,
-  `src/features/object-editor/useEditorSave.ts`, `src/views/ModerationPage.tsx`,
+  `src/features/object-editor/useObjectEditorState.ts` (couche d'état réutilisée),
+  `src/features/object-editor/sections/{descriptions-field,contacts-edit,opening-period-edit,pricing-row}.ts`
+  (helpers purs réutilisés par les liaisons portail), `src/views/ModerationPage.tsx`,
   `src/features/crm/CrmActorFiche.tsx`, `src/components/auth/AuthShell.tsx`,
   `src/app/api/admin/invite/route.ts`, `src/app/api/_document-auth.ts`.

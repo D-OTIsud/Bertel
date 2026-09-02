@@ -1158,7 +1158,11 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM fiche_submission fs
               WHERE fs.object_id = p_object_id AND fs.status = 'pending') THEN
-    RAISE EXCEPTION 'Une vérification est déjà en cours pour cette fiche' USING ERRCODE = '23505';
+    -- PT409 (PostgREST ⇒ HTTP 409, SQLSTATE exposé dans error.code) et PAS 23505 : le front
+    -- traduit 23505 en « Cette valeur existe déjà (doublon). » (db-error-message.ts) et
+    -- mapDatabaseError applique le SQLSTATE AVANT le message — le prestataire lirait « doublon ».
+    RAISE EXCEPTION USING ERRCODE = 'PT409',
+      MESSAGE = 'Une vérification est déjà en cours pour cette fiche';
   END IF;
 
   v_actor := api.current_user_actor_id();
@@ -1264,7 +1268,7 @@ git commit -m "feat(sql): submit_actor_fiche transactionnel (18a §5)"
 **Interfaces :**
 - Produces:
   - `api.list_my_portal_fiches() → jsonb` — `[{id, name, object_type, status, updated_at, open_submission:{id, submitted_at}|null, last_resolved:{status, resolved_at}|null, office_email}]`, persona acteur uniquement, portée portail. `office_email` (révision 2026-09-02, D11) = premier canal e-mail PUBLIC de l'ORG publisher (primaire d'abord), NULL sinon — alimente le repli « envoyez vos photos à l'office ».
-  - `api.list_my_submissions(p_limit int DEFAULT 20) → jsonb` — auto-scopé `submitted_by = auth.uid()` (jamais de paramètre destinataire) : `[{id, object_id, object_name, note, status, submitted_at, resolved_at, changes:[{id, section, field, status, review_note, reviewer_label}]}]`. `section` (révision 2026-09-02) = `metadata->>'section'`, le module id — la clé STABLE qui ancre l'état d'une rubrique côté portail (`field` est un libellé, il peut changer).
+  - `api.list_my_submissions(p_limit int DEFAULT 20, p_object_id text DEFAULT NULL) → jsonb` — auto-scopé `submitted_by = auth.uid()` (jamais de paramètre destinataire) : `[{id, object_id, object_name, note, status, submitted_at, resolved_at, changes:[{id, section, field, status, review_note, reviewer_label}]}]`. `section` (révision 2026-09-02) = `metadata->>'section'`, le module id — la clé STABLE qui ancre l'état d'une rubrique côté portail (`field` est un libellé, il peut changer).
   - `api.get_my_actor_profile() → jsonb` — `{id, display_name, photo_url, channels:[{kind, value, is_primary}]}` du SEUL `current_user_actor_id()` (la policy SELECT d'actor_channel est inerte pour authenticated — c'est LE chemin de lecture). Lecture seule v1.
 
 - [ ] **Step 1 : Ajouter le bloc G au test, lancer ROUGE**
@@ -1361,7 +1365,10 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION api.list_my_submissions(p_limit int DEFAULT 20)
+-- p_object_id (révision 2026-09-02) : SANS filtre, un acteur multi-fiches peut voir la
+-- soumission ouverte de CETTE fiche sortir de la page (plafond 100, toutes fiches) ⇒
+-- rubriques « en vérification » muettes sans erreur. Le portail passe toujours l'id.
+CREATE OR REPLACE FUNCTION api.list_my_submissions(p_limit int DEFAULT 20, p_object_id text DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = public, api, auth, pg_temp
@@ -1399,6 +1406,7 @@ BEGIN
       FROM fiche_submission fs
       LEFT JOIN object o ON o.id = fs.object_id
       WHERE fs.submitted_by = (SELECT auth.uid())
+        AND (p_object_id IS NULL OR fs.object_id = p_object_id)
       ORDER BY fs.submitted_at DESC
       LIMIT v_limit
     ) t
@@ -1435,10 +1443,10 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION api.list_my_portal_fiches()      FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION api.list_my_submissions(int)     FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.list_my_submissions(int, text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION api.get_my_actor_profile()       FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.list_my_portal_fiches()   TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION api.list_my_submissions(int)  TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.list_my_submissions(int, text) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.get_my_actor_profile()    TO authenticated, service_role;
 ```
 
@@ -2191,10 +2199,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
+- [ ] **Step 2 bis (révision 2026-09-02) : premier contact en mots de prestataire**
+
+Le premier écran qu'un prestataire voit est `/set-password` (lien d'invitation), puis `/login` — deux pages partagées avec le personnel dont la copie est staff (« Bienvenue dans l’équipe », « Enregistrer et accéder à la plateforme », bouton Google qui, pour un compte invité sans profil pré-existant, finit sur un `SessionScreen` brické). Signal = query `?espace=1` (posé par la route d'invitation acteur, Task 15) ; lecture via `useSearchParams` sous un `<Suspense>` dans les wrappers `app/set-password/page.tsx` et `app/login/page.tsx` (vérifier qu'ils n'en ont pas déjà un).
+
+- `SetPasswordPage` : si `espace=1` → h2 « Bienvenue », p « Choisissez un mot de passe pour accéder à votre fiche. », bouton « C’est parti », lien mort « Ce lien ne fonctionne plus. Demandez à votre office de tourisme de vous renvoyer une invitation. » ; sinon copie inchangée.
+- `LoginPage` : si `espace=1` OU `from` préfixé `/espace` → sous-titre « Connectez-vous pour mettre à jour votre fiche. », **pas** de séparateur ni de bouton « Continuer avec Google » ; sinon inchangé.
+- `useBootstrapSession` / `setGuest` : remplacer les deux messages « Reconnectez-vous avec Google » / « Connectez-vous avec Google pour acceder a la plateforme. » par « Vous êtes déconnecté. » / « Connectez-vous pour accéder à votre espace. » (ils s'affichent à TOUT le monde, pas seulement aux comptes Google).
+- Test RTL : `SetPasswordPage` avec `?espace=1` rend « C’est parti » ; `LoginPage` avec `?espace=1` ne rend pas « Continuer avec Google ».
+
 - [ ] **Step 3 : Vérifier**
 
 ```bash
-cd bertel-tourism-ui && npm run test:run -- src/lib/auth-routing.test.ts && npm run typecheck
+cd bertel-tourism-ui && npm run test:run -- src/lib/auth-routing.test.ts src/views/SetPasswordPage.test.tsx src/views/LoginPage.test.tsx && npm run typecheck
 ```
 
 Attendu : PASS + exit 0. Si le typecheck révèle des switch exhaustifs sur `UserRole` cassés ailleurs (ex. `user-role-label`), compléter le cas `actor` avec le libellé `'Prestataire'`.
@@ -2232,7 +2249,7 @@ export interface MySubmission { id: string; objectId: string; objectName: string
   changes: MySubmissionChange[]; }
 export interface PortalVisibility { floorModules: string[]; maskedModules: string[]; }
 export async function listMyPortalFiches(): Promise<PortalFiche[]>
-export async function listMySubmissions(limit?: number): Promise<MySubmission[]>
+export async function listMySubmissions(limit?: number, objectId?: string | null): Promise<MySubmission[]>
 export async function getPortalSectionVisibility(objectId: string): Promise<PortalVisibility>
 export async function submitActorFiche(objectId: string, changes: SubmitPendingChangeInput[], note: string | null):
   Promise<{ submissionId: string; taskId: string; changeCount: number; assigneeCount: number }>
@@ -2387,9 +2404,11 @@ export interface MySubmission {
   changes: MySubmissionChange[];
 }
 
-export async function listMySubmissions(limit = 20): Promise<MySubmission[]> {
+export async function listMySubmissions(limit = 20, objectId: string | null = null): Promise<MySubmission[]> {
   const client = requireApiClient();
-  const { data, error } = await client.schema('api').rpc('list_my_submissions', { p_limit: limit });
+  // objectId : la fiche ouverte passe TOUJOURS son id — sans filtre, un acteur multi-fiches
+  // peut voir la soumission ouverte de cette fiche sortir de la page (rubriques muettes).
+  const { data, error } = await client.schema('api').rpc('list_my_submissions', { p_limit: limit, p_object_id: objectId });
   if (error) throw mapDatabaseError(error, 'Vos soumissions sont indisponibles.');
   if (!Array.isArray(data)) return [];
   const submissions: MySubmission[] = [];
@@ -2498,7 +2517,8 @@ git commit -m "feat(front): service du portail acteur (fiches, soumissions, visi
 > **Révision 2026-09-02 (UI simplifiée, D10).** Les Tasks 12 à 14 remplacent intégralement leur version du 2026-09-01. Le portail n'est PLUS une variante d'`ObjectEditPage` : c'est une interface dédiée, en une colonne, pensée pour des prestataires peu à l'aise avec l'informatique — une liste de **rubriques** par fiche, une rubrique = un petit formulaire, un seul geste d'envoi. Elle réutilise la **couche d'état** de l'éditeur (`useObjectEditorState`, `buildContributorSubmission`) et rien de sa présentation (les primitives de l'éditeur sont scopées `.object-editor` et taillées back-office 13 px). Vocabulaire portail : `docs/superpowers/specs/2026-09-01-portail-acteur-design.md` §4.5.
 
 **Files :**
-- Create: `bertel-tourism-ui/src/app/(portal)/layout.tsx`
+- Create: `bertel-tourism-ui/src/app/(portal)/layout.tsx` (composant SERVEUR : `metadata` + `viewport`)
+- Create: `bertel-tourism-ui/src/components/portal/PortalGate.tsx` (la garde cliente)
 - Create: `bertel-tourism-ui/src/app/(portal)/espace/page.tsx`
 - Create: `bertel-tourism-ui/src/components/portal/PortalShell.tsx`
 - Create: `bertel-tourism-ui/src/views/PortalHomePage.tsx`
@@ -2582,7 +2602,21 @@ cd bertel-tourism-ui && npm run test:run -- src/views/PortalHomePage.test.tsx
 
 - [ ] **Step 2 : Implémenter les 4 fichiers + le bloc CSS**
 
-`src/app/(portal)/layout.tsx` — gabarit du gate `(main)` avec `PortalShell` à la place d'`AppShell` (inchangé par rapport à la version du 2026-09-01) :
+`src/app/(portal)/layout.tsx` — composant SERVEUR (un layout client ne peut exporter ni `metadata` ni `viewport`) : le titre d'onglet du portail et `viewportFit: 'cover'`, sans lequel `env(safe-area-inset-bottom)` vaut 0 sur iPhone et la barre d'envoi se colle sous la barre système :
+
+```tsx
+import type { Metadata, Viewport } from 'next';
+import { PortalGate } from '@/components/portal/PortalGate';
+
+export const metadata: Metadata = { title: 'Espace prestataire' };
+export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
+
+export default function PortalLayout({ children }: { children: React.ReactNode }) {
+  return <PortalGate>{children}</PortalGate>;
+}
+```
+
+`src/components/portal/PortalGate.tsx` — la garde cliente, gabarit du gate `(main)` avec `PortalShell` à la place d'`AppShell` :
 
 ```tsx
 'use client';
@@ -2594,7 +2628,7 @@ import { PortalShell } from '@/components/portal/PortalShell';
 import { getLoginPath } from '@/lib/auth-routing';
 import { useSessionStore } from '@/store/session-store';
 
-export default function PortalLayout({ children }: { children: React.ReactNode }) {
+export function PortalGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const status = useSessionStore((state) => state.status);
@@ -2689,6 +2723,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
 // vient de list_my_portal_fiches seul ; la complétude se lit dans la fiche.
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle, Check, ChevronRight, Clock, Pencil } from 'lucide-react';
 import { listMyPortalFiches, type PortalFiche } from '../services/portal';
@@ -2746,14 +2781,14 @@ export function PortalHomePage() {
             const badge = ficheBadge(fiche, hasPortalDraft(userId, fiche.id));
             return (
               <li key={fiche.id}>
-                <a className="portal-card portal-fiche" href={`/espace/fiches/${fiche.id}`}>
+                <Link className="portal-card portal-fiche" href={`/espace/fiches/${fiche.id}`}>
                   <span className="portal-fiche__body">
                     <span className="portal-fiche__name">{fiche.name}</span>
                     <span className="muted">{TYPE_LABEL[fiche.objectType] ?? fiche.objectType}</span>
                   </span>
                   <span className={`badge ${badge.className}`}><badge.Icon size={14} aria-hidden /> {badge.label}</span>
                   <ChevronRight size={20} aria-hidden />
-                </a>
+                </Link>
               </li>
             );
           })}
@@ -2798,6 +2833,13 @@ Bloc CSS à ajouter dans `src/styles.css` (à la fin, après le bloc `.help-*`) 
 .portal-shell__main { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 16px 120px; }
 .portal-shell .primary-button, .portal-shell .ghost-button { min-height: 48px; font-size: 1.05rem; border-radius: var(--radius-sm); }
 .portal-shell input, .portal-shell select, .portal-shell textarea { font-size: 1.05rem; }
+/* Le kit maison est taillé back-office : .badge 12 px, label .8rem, hint .78rem — relevés ICI seulement. */
+.portal-shell .badge { font-size: .9rem; padding: 5px 10px; }
+.portal-shell .auth-field > label { font-size: 1rem; }
+.portal-shell .auth-field__hint { font-size: .95rem; }
+/* WCAG 2.4.11 : la barre d'envoi collante ne doit jamais couvrir un champ focalisé — le
+   conteneur de défilement hors AppShell est <html>, pas <main>. */
+html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
 .portal-h1 { font-family: var(--font-display), sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0 0 6px; text-wrap: balance; }
 .portal-lead { margin: 0 0 20px; color: var(--ink-2); font-size: 1.05rem; }
 .portal-card { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); box-shadow: var(--shadow-s); }
@@ -3048,7 +3090,12 @@ Points d'implémentation (le test guide ; ouvrir les types dans `object-workspac
 
 - `setPresentation` : `updateTranslatableField(field, 'fr', 'fr', value)` sur `object.chapo` et `object.description` — langue FORCÉE à `'fr'` dans les deux arguments (un compte à préférence EN écrirait ailleurs que la colonne FR) ; spread de `d`, `d.object` ; ne jamais stripper le Markdown (texte simple = Markdown valide).
 - `upsertPublicContact` : cible = première ligne `objectItems` dont `kindCode.toLowerCase() === kind` (pour `'phone'`, accepter aussi `'mobile'` en repli à la LECTURE, mais créer en `'phone'`) ; existante → `{ ...row, value }` ; absente et valeur non vide → `createContactDraft(kindOptions, objectItems.length === 0)` puis `{ ...draft, id: \`draft-contact-${kind}-${Date.now()}\`, kindId, kindCode, kindLabel (depuis kindOptions par code, sinon throw 'genre absent du catalogue'), isPublic: true, isPrimary: aucune autre ligne de ce genre }` puis `reconcileContactPrimary(next, id)` ; valeur vidée → ligne retirée. `webItems` jamais touché.
-- `readWeekHours` / `setWeekHours` : période cible = l'UNIQUE période `isClosure === false` ; 0 période → `createPeriodDraft(periods.length)` + `{ recurrence: 'always', label: 'Horaires habituels', startDate: '', endDate: '' }` ajoutée ; ≥ 2 → `readOnlyReason = 'Vos horaires changent selon la saison. L’office les gère pour vous.'` et `setWeekHours` rend `o` inchangé. Jour ouvert → `slots` (filtrer les créneaux incomplets) ; jour fermé → `slots: []` ET `closedDays = addClosedWeekday(closedDays, code)` ; jour rouvert → retiré de `closedDays`. `validatePeriodDraft` passe toujours en `'always'`. Fermetures et autres périodes : mêmes références.
+- `readWeekHours` / `setWeekHours` : période cible = l'UNIQUE période `isClosure === false` ; 0 période → `createPeriodDraft(periods.length)` + `{ recurrence: 'always', label: 'Horaires habituels', startDate: '', endDate: '' }` ajoutée ; ≥ 2 → `readOnlyReason = 'Vos horaires changent selon la saison. L’office les gère pour vous.'` et `setWeekHours` rend `o` inchangé. **Quatre pièges vérifiés sur le code, chacun avec son test de sabotage :**
+  1. **La sentinelle « ouvert sans horaires fixes »** : le parser émet `slots: [{ start: '', end: '' }]` pour un jour ouvert sans créneau (`object-workspace-parser.ts:2511-2514`) et `buildOpeningsPayload` (`object-workspace.ts:4852-4868`) le rend `closed:false, time_frames:[]`. **Ne jamais filtrer un créneau vide** : un `slots.filter(s => s.start && s.end)` fermerait, en un clic d'approbation, tout restaurant « sur rendez-vous ». `WeekHours` porte donc `{ open: true, fixedHours: false }` ⇒ `slots: [{ start: '', end: '' }]` ; on ne retire que les créneaux À MOITIÉ remplis (erreur affichée avant).
+  2. **Les jours absents** : `period.weekdays` ne contient QUE les jours présents en base (un jour fermé est ABSENT, pas `slots: []`). Cocher un jour absent → INSÉRER `{ code, label (depuis OPENING_WEEKDAYS), slots }` ; laisser absent un jour absent non coché (sinon la période devient JSON-dirty sans changement réel) ; un jour inchangé garde la MÊME référence d'objet.
+  3. **Symétrie de `closedDays`** : jour décoché → `slots: []` + `addClosedWeekday` ; jour recoché → retiré de `closedDays` (sinon état contradictoire et enveloppe fantôme après un aller-retour de case).
+  4. **≥ 3 créneaux sur un jour** (0 cas aujourd'hui, rien ne l'interdit demain) : la rubrique passe en lecture seule pour ce jour (« Cet horaire est géré par l’office ») plutôt que de jeter un créneau non affiché.
+  `validatePeriodDraft` passe toujours en `'always'`. Fermetures et autres périodes : mêmes références.
 - `setAmenities` : `mergeEstablishmentAmenitySelection(c.selectedAmenityCodes, checked, visibleOptionCodes)` ; `setPayments` : `Array.from(new Set(codes))`. `selectedLanguages`/`selectedEnvironmentCodes` intacts.
 - `setHeadlineCapacity` : ligne `capacityItems` par `metricCode` (UNIQUE object_id+metric_id) modifiée en place (`value: String`), sinon créée depuis `metricOptions` (`metricId`, `metricLabel`, `unit`, `effectiveFrom: ''`, `effectiveTo: ''`) ; valeur vide → ligne retirée ; si le code n'est pas dans `metricOptions` → throw (la rubrique ne rend pas le champ).
 - `setPetPolicy` : `{ accepted, conditions: accepted === true ? conditions : '' }` — `null` reste `null`.
@@ -3074,15 +3121,15 @@ export const PORTAL_RUBRICS: readonly PortalRubric[] = [
   // les pousserait à en inventer (question « ouvert toute l'année / fermetures » différée PO).
   { id: 'hours', module: 'openings', title: 'Vos horaires', archetypes: ['RES', 'ASC', 'VIS', 'SRV'], isFilled: …, summary: … },
   { id: 'amenities', module: 'characteristics', title: 'Équipements et moyens de paiement', archetypes: ['HEB', 'RES', 'ASC', 'VIS', 'SRV'], isFilled: …, summary: … },
-  { id: 'welcome', module: 'capacity-policies', title: 'Accueil : personnes et animaux', archetypes: ['HEB', 'RES'], isFilled: …, summary: … },
+  { id: 'welcome', module: 'capacity-policies', title: 'Capacité et animaux', archetypes: ['HEB', 'RES'], isFilled: …, summary: … },
   { id: 'pricing', module: 'pricing', title: 'Vos tarifs', archetypes: ['HEB', 'RES', 'ASC', 'VIS'], isFilled: …, summary: … },
   { id: 'activity', module: 'activity', title: 'Votre activité', archetypes: ['ASC'], isFilled: …, summary: … },
 ];
 ```
 
-`buildPortalRubrics` : filtre `archetypes.includes(archetype)` → `isModuleSubmittable(module, masked, floor)` (sinon ABSENTE) → état : `unavailableReason` posé sur la tranche ⇒ `'unavailable'` (+ `readOnlyReason: 'Cette rubrique n’est pas disponible pour le moment.'`) ; sinon `rejectedModules.has` ⇒ `'rejected'` ; `pendingModules.has` ⇒ `'pending'` ; `dirty[module]` ⇒ `'dirty'` ; `isFilled` ⇒ `'filled'` ; sinon `'todo'`. Pour `hours`, `readWeekHours(...).readOnlyReason` devient le `readOnlyReason` de la rubrique (état `filled`, non éditable).
+`buildPortalRubrics` : filtre `archetypes.includes(archetype)` → `isModuleSubmittable(module, masked, floor)` (sinon ABSENTE) → état : `unavailableReason` posé sur la tranche ⇒ `'unavailable'` (+ `readOnlyReason: 'Cette rubrique n’est pas disponible pour le moment. Contactez l’office si vous devez la modifier.'`) — garde `'unavailableReason' in slice && slice.unavailableReason != null` : les tranches `contacts` et `descriptions` n'ont PAS ce champ ; sinon `rejectedModules.has` ⇒ `'rejected'` ; `pendingModules.has` ⇒ `'pending'` ; `dirty[module]` ⇒ `'dirty'` ; `isFilled` ⇒ `'filled'` ; sinon `'todo'`. Pour `hours`, `readWeekHours(...).readOnlyReason` devient le `readOnlyReason` de la rubrique (état `filled`, non éditable).
 
-`PORTAL_AMENITY_CODES` : ≤ 12 codes par archétype, **placeholder à valider PO** — proposer depuis `ref_amenity` (seeds) les codes les plus fréquents par famille (wifi, parking, piscine, climatisation, terrasse, accès PMR exclu car famille `accessibility`) ; un code absent du catalogue chargé n'est pas rendu (filtré au runtime, jamais d'erreur). `PORTAL_PRICE_UNIT` : `{ HEB: 'par_nuit', RES: 'par_couvert', VIS: 'par_personne', ASC: 'par_personne' }` — **à valider PO**. `PORTAL_HEADLINE_METRIC` : `{ HEB: 'max_capacity', RES: 'seats' }`.
+`PORTAL_AMENITY_CODES` : ≤ 12 codes par archétype, **placeholder à valider PO** — proposer depuis `ref_amenity` (seeds, 163 codes scope object/both) les codes les plus fréquents par famille (wifi, parking, piscine, climatisation, terrasse ; accès PMR exclu car famille `accessibility`) ; un code absent du catalogue chargé n'est pas rendu (filtré au runtime, jamais d'erreur). ⚠ **`visite_libre` / `visite_guidee` / `audioguide` N'EXISTENT PAS dans `ref_amenity`** (ni seeds ni prod, vérifié le 2026-09-02 — seul `taxonomy_loi` porte `visite_guidee` ; `VISIT_MODE_CODES` de `editor-completion.ts` et les 3 toggles de `BlockVIS` écrivent des codes hors catalogue) : pour VIS, choisir des codes RÉELS ou faire seeder ces 3 codes (décision PO, à trancher avant la rubrique VIS). `PORTAL_PRICE_UNIT` : `{ HEB: 'par_nuit', RES: 'par_personne', VIS: 'par_personne', ASC: 'par_personne' }` — **à valider PO** (« par couvert » est du vocabulaire métier ; le visiteur lit « par personne »). `PORTAL_HEADLINE_METRIC` : `{ HEB: 'max_capacity', RES: 'seats' }`.
 
 - [ ] **Step 5 : Implémenter `portal-change-summary.ts` (D12)**
 
@@ -3129,17 +3176,17 @@ Sabotage obligatoire avant commit (à rapporter dans le message de PR) : retirer
 - Test: `bertel-tourism-ui/src/features/portal/usePortalDraft.test.ts`, `PortalFicheHub.test.tsx`, `rubrics/ContactsRubric.test.tsx`, `PortalSendModal.test.tsx`
 
 **Interfaces :**
-- Consumes: `loadObjectWorkspace(queryClient, objectId, ['fr'])` / `useObjectWorkspaceQuery` (`hooks/useExplorerQueries.ts` — **langPrefs forcé à `['fr']`** pour que `descriptions.localLanguage === 'fr'`), `useObjectEditorState(objectId, modules)` (`draft`, `baseline`, `dirtySections`, `isDirty`, `replaceModule`, `resetModule`, `commitModules`), `getArchetypeMeta` ; Task 13 (`buildPortalRubrics`, updaters, `describePortalChange`, `isModuleSubmittable`) ; Task 11 (`getPortalSectionVisibility`, `listMySubmissions` — émet désormais `section` par changement —, `submitActorFiche`) ; `buildContributorSubmission`, `MODULE_KEY_MAP` ; `Modal`, `ConfirmDialog`, `EmptyState`, `PageSkeleton`, `useToast`, `useUnsavedDraftGuard`.
-- Produces: route `/espace/fiches/[objectId]` ; **une seule page** qui affiche le hub OU une rubrique selon `?rubrique=<id>` (via `router.replace` sur les searchParams — la page ne se démonte JAMAIS entre deux rubriques : l'état éditeur est init-once et le brouillon vit en mémoire).
+- Consumes: `loadObjectWorkspace(queryClient, objectId, ['fr'])` / `useObjectWorkspaceQuery` (`hooks/useExplorerQueries.ts` — **langPrefs forcé à `['fr']`** pour que `descriptions.localLanguage === 'fr'`), `useObjectEditorState(objectId, modules)` (`draft`, `baseline`, `dirtySections`, `isDirty`, `replaceModule`, `resetModule`, `commitModules`), `getArchetypeMeta` ; Task 13 (`buildPortalRubrics`, updaters, `describePortalChange`, `isModuleSubmittable`) ; Task 11 (`getPortalSectionVisibility`, `listMySubmissions` — émet désormais `section` par changement —, `submitActorFiche`) ; `buildContributorSubmission`, `MODULE_KEY_MAP` ; `Modal`, `ConfirmDialog`, `EmptyState`, `PageSkeleton`, `useToast`. **JAMAIS `useUnsavedDraftGuard`** : il appelle `window.confirm` natif avec le message STAFF « Vous avez des modifications non publiées. Publiez la fiche… », pousse une entrée d'historique et intercepte tout lien dont la query diffère — avec `?rubrique=` il se déclencherait à chaque retour au hub. Le brouillon local est le filet ; aucune boîte bloquante à la sortie de la page.
+- Produces: route `/espace/fiches/[objectId]` ; **une seule page** qui affiche le hub OU une rubrique selon `?rubrique=<id>` (navigation DOUCE uniquement : `<Link href={{ query: { rubrique } }} scroll={false}>` ou `router.push('?rubrique=…')` — une entrée d'historique par rubrique pour que le bouton Retour du téléphone ramène au hub ; **jamais un `<a href>` nu**, qui est une navigation complète dans l'App Router et remonte la page ; `useSearchParams` sous un `<Suspense>` dans le wrapper de route. La page ne se démonte JAMAIS entre deux rubriques : l'état éditeur est init-once et le brouillon vit en mémoire — à VÉRIFIER sur Next 16 en recette : changer `?rubrique=` ne doit pas remonter `PortalFicheEditor`).
 
 **Écrans (maquette : `docs/superpowers/specs/2026-09-01-portail-acteur-design.md` §4.5, artefact « Espace prestataire ») :**
 
-1. **Hub** — `<a>← Vos fiches</a>` (uniquement si ≥ 2 fiches) ; `h1.portal-h1` = nom de la fiche (`tabIndex={-1}`, reçoit le focus à chaque retour) ; ligne muted « {Type} · {Commune} » ; `.notice` permanent « Ce que vous modifiez ici est vérifié par l’office avant d’être publié. » ; si envoi en cours : `.notice--warn` « Envoyé le {date}. L’office vérifie vos modifications. Vous pouvez continuer à préparer d’autres changements. » ; si retours : carte `.panel-card--warning` « Retours de l’office » (une ligne par changement refusé : titre de rubrique + « refusé : « {review_note} » » + lien « Corriger ») ; carte « Pour compléter votre fiche » (boutons 48 px, un par rubrique `todo`, + « Ajoutez des photos ({n} sur {cible}) » qui ouvre Photos) ou ligne « Votre fiche est complète. Merci ! » ; `<ol class="portal-tasks">` : une ligne ≥ 64 px par rubrique = `<a href="?rubrique=…">` titre (1.05 rem/700) + résumé 1 ligne (`summary`, `--ink-3`, tronqué) + `.badge` d'état + chevron ; états : `todo` « À faire » (`--warn`, `Circle`) · `filled` « Renseigné » (`--ok`, `Check`) · `dirty` « Modifié — à envoyer » (`--info`, `Pencil`) · `pending` « Envoyé — en vérification » (`--muted`, `Clock`) · `rejected` « À reprendre » (`--danger`, `AlertTriangle`) · `unavailable` « Indisponible pour le moment » (`--muted`, ligne non cliquable) ; puis la pseudo-rubrique **Photos** (lecture seule) et la carte **« Vérifiez ces informations »** (Nom / Type / Adresse / Téléphone publié en lecture seule + bouton « Signaler une erreur » → textarea « Dites-nous ce qui est faux » dont le texte part préfixé « Erreur signalée : » dans le message d'envoi).
-2. **Écran de rubrique** (`PortalRubricScreen`) — lien « ← Retour à la fiche » (44 px) ; `h1` = titre de la rubrique (focus) ; une phrase d'aide ; le formulaire (≤ 6 contrôles, labels visibles au-dessus, aide sous le label, erreur sous le champ) ; « Valider » (`.primary-button`, pleine largeur) + « Retour sans changer » (`.ghost-button`) ; ligne muted « Rien n’est envoyé pour l’instant. Vous enverrez tout depuis la page de la fiche. » ; si la rubrique est `pending` : `.notice` « Vous avez envoyé une mise à jour de cette rubrique le {date}. Elle apparaîtra ici une fois vérifiée par l’office. » ; si `readOnlyReason` : le formulaire est remplacé par la phrase. **Le formulaire a un état local** initialisé depuis `editor.draft` et resynchronisé PENDANT LE RENDU quand `?rubrique` change (motif §212 : `if (key !== prevKey) { setPrevKey(key); setForm(read(draft)); }`) ; « Valider » = validation → `editor.replaceModule(MODULE_KEY_MAP[module], updater(...))` → retour hub (focus h1). Quitter avec un formulaire modifié non validé → `ConfirmDialog` « Garder vos changements ? » (Garder = valider si valide / Ne pas garder).
+1. **Hub** — `<a>← Vos fiches</a>` (uniquement si ≥ 2 fiches) ; `h1.portal-h1` = nom de la fiche (`tabIndex={-1}`, reçoit le focus à chaque retour) ; ligne muted « {Type} · {Commune} » ; `.notice` permanent « Ce que vous modifiez ici est vérifié par l’office avant d’être publié. » ; si envoi en cours : `.notice--warn` « Envoyé le {date}. L’office vérifie vos modifications. Vous pouvez continuer à préparer d’autres changements. » ; si retours : carte `.panel-card--warning` « Retours de l’office » (une ligne par changement refusé : titre de rubrique + « refusé : « {review_note} » » + lien « Corriger ») ; carte « Pour compléter votre fiche » (boutons 48 px, un par rubrique `todo`, + « Ajoutez des photos ({n} sur {cible}) » qui ouvre Photos) ou ligne « Votre fiche est complète. Merci ! » ; `<ol class="portal-tasks">` : une ligne ≥ 64 px par rubrique = `<a href="?rubrique=…">` titre (1.05 rem/700) + résumé 1 ligne (`summary`, `--ink-3`, tronqué) + `.badge` d'état + chevron ; états : `todo` « À faire » (`--warn`, `Circle`) · `filled` « Rempli » (`--ok`, `Check`) · `dirty` « Modifié — à envoyer » (`--info`, `Pencil`) · `pending` « Envoyé — en vérification » (`--muted`, `Clock`) · `rejected` « À reprendre » (`--danger`, `AlertTriangle`) · `unavailable` « Indisponible pour le moment » (`--muted`, ligne non cliquable) ; puis la pseudo-rubrique **Photos** (lecture seule) et la carte **« Vérifiez ces informations »** (Nom / Type de fiche / Adresse / Téléphone publié en lecture seule + bouton « Signaler une erreur » → textarea « Dites-nous ce qui est faux » dont le texte part préfixé « Erreur signalée : » dans le message d'envoi). **Jamais une impasse** : `submit_actor_fiche` exige ≥ 1 modification, donc si le signalement est la SEULE chose saisie, la carte le dit (« Ce message partira avec votre prochain envoi. Pour prévenir l’office tout de suite : ») et affiche l'e-mail et le téléphone publics de l'office (`officeEmail` + un `officePhone` à émettre de la même façon par `list_my_portal_fiches`) avec `mailto:`/`tel:` ; le texte est conservé dans le brouillon local.
+2. **Écran de rubrique** (`PortalRubricScreen`) — lien « ← Retour à la fiche » (44 px) ; `h1` = titre de la rubrique (focus) ; une phrase d'aide ; le formulaire (≤ 6 contrôles, labels visibles au-dessus, aide sous le label, erreur sous le champ) ; « Valider » (`.primary-button`, pleine largeur) + « Retour sans changer » (`.ghost-button`) ; ligne muted « Rien n’est envoyé pour l’instant. Vous enverrez tout depuis la page de la fiche. » ; si la rubrique est `pending` ou `rejected` : `.notice` « Vous avez envoyé une mise à jour de cette rubrique le {date}. Elle apparaîtra ici une fois vérifiée par l’office. » **suivie de ce qui a été envoyé** (« Vous aviez indiqué : Téléphone : 0692… »), lu dans l'instantané local `portal-sent:<userId>:<objectId>` écrit à l'envoi (Step 2) — sans lui, après un rechargement les champs montrent les valeurs PUBLIÉES et le prestataire re-saisit de mémoire, puis bute sur « vérification en cours » ; si `readOnlyReason` : le formulaire est remplacé par la phrase. **Le formulaire a un état local** initialisé depuis `editor.draft` et resynchronisé PENDANT LE RENDU quand `?rubrique` change (motif §212 : `if (key !== prevKey) { setPrevKey(key); setForm(read(draft)); }`) ; « Valider » = validation → `editor.replaceModule(MODULE_KEY_MAP[module], updater(...))` → retour hub (focus h1). Quitter avec un formulaire modifié non validé (« Retour sans changer » ou lien de retour) → `ConfirmDialog` titre « Quitter sans valider ? », message « Vos changements dans cette rubrique ne seront pas gardés. », **cancel = « Rester »** (c'est ce que reçoivent Échap et le clic hors fenêtre — `ConfirmDialog` mappe les deux sur `onCancel` : la sortie sûre doit être le cancel), **confirm tone=danger = « Quitter sans garder »**. Jamais l'inverse (« Ne pas garder » en cancel jetterait la saisie sur Échap).
 3. **Barre d'envoi** (`PortalSendBar`, `position: sticky; bottom: 0`, `--surface`, ombre haute, `padding-bottom: env(safe-area-inset-bottom)`) — visible dès qu'au moins une rubrique est `dirty` : « {n} rubrique(s) modifiée(s) · enregistrées sur cet appareil » + « Envoyer à l’office » (`.primary-button` 48 px) + « Annuler mes modifications » (`.ghost-button` → `ConfirmDialog` tone danger « Effacer » / « Garder » → `editor.resetModule` par module dirty + `clearPortalDraft`). Envoi en cours côté office : bouton `aria-disabled="true"` (reste focalisable, motif D10) + phrase « Vérification en cours — vous pourrez envoyer vos nouveaux changements quand l’office aura terminé. ». Hors ligne : `OfflineBanner` global + bouton `aria-disabled` + « Pas de connexion. Vos modifications sont conservées ici. ».
-4. **Fenêtre d'envoi** (`PortalSendModal`, `Modal` maison, reste montée) — titre « Envoyer à l’office » ; « Vous envoyez : » + liste des titres de rubriques modifiées, avec pour chacune la mention « appliquée dès validation » (modules auto : `openings`, `characteristics`) ou « l’office la reportera » (les autres) ; textarea « Un message pour l’office (facultatif) » (pré-rempli par le signalement d'erreur) + aide « Par exemple : « Nouveaux horaires d’été » ou « Le numéro a changé ». » ; pied « Pas maintenant » / « Envoyer » (busy « Envoi… », `aria-busy`) ; erreur DANS la fenêtre (`role="alert"`) : générique « Nous n’avons pas pu envoyer vos modifications. Vérifiez votre connexion et réessayez. Rien n’est perdu. » ; déjà un envoi en cours (message serveur contenant « vérification est déjà en cours » ou SQLSTATE 23505 mappé) « L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée. » ; 22023 « Une des rubriques ne peut pas être envoyée. Retirez-la et réessayez. ». L'état de la note se resynchronise à l'ouverture (jamais `useState(() => …)` figé, §212).
+4. **Fenêtre d'envoi** (`PortalSendModal`, `Modal` maison, reste montée) — titre « Envoyer à l’office » ; « Vous envoyez : » + liste des titres de rubriques modifiées, avec pour chacune la mention « appliquée dès validation » (modules auto : `openings`, `characteristics`) ou « l’office la reportera » (les autres) ; textarea « Un message pour l’office (facultatif) » (pré-rempli par le signalement d'erreur) + aide « Par exemple : « Nouveaux horaires d’été » ou « Le numéro a changé ». » ; pied « Pas maintenant » / « Envoyer » (busy « Envoi… », `aria-busy`) ; chaque ligne de rubrique porte un bouton `.ghost-button` « Retirer de l’envoi » (`editor.resetModule` + mise à jour du brouillon) ; erreur DANS la fenêtre (`role="alert"`) : générique « Nous n’avons pas pu envoyer vos modifications. Vérifiez votre connexion et réessayez. Rien n’est perdu. » ; déjà un envoi en cours (`error.code === 'PT409'`, Task 5 — ajouter le libellé à `API_ERROR_LABELS`/`SQLSTATE_LABELS` de `api-error.ts`) « L’office est déjà en train de vérifier cette fiche. Vous pourrez envoyer ces changements quand la vérification sera terminée. » ; `22023` « Une rubrique n’est plus modifiable depuis ici (l’office l’a fermée). Retirez-la de l’envoi, puis réessayez. ». L'état de la note se resynchronise à l'ouverture (jamais `useState(() => …)` figé, §212).
 5. **Après envoi** — la fenêtre se ferme ; le hub rend en tête une carte `.panel-card.motion-success` (icône `CheckCircle`, `h2` « Merci ! Vos modifications ont été envoyées à l’office. », `p` « L’office les vérifie, en général sous quelques jours. Vous recevrez un e-mail quand ce sera fait. », bouton « Retour à vos fiches » si ≥ 2 fiches) et reçoit le focus ; les rubriques envoyées passent `pending` ; la barre disparaît. Pas de toast (il couvrirait la barre haute sur mobile).
-6. **Photos** (`PhotosRubric`, lecture seule, D11) — grille 2 colonnes des photos (`media.objectItems` type photo : `img alt={title || 'Photo n'}`, légende texte « Photo principale » sur `isMain`) ; carte `.notice` avec `Mail` : « Pour l’instant, les photos sont ajoutées par l’office. Envoyez-lui vos plus belles photos (JPG ou PNG) et il les publiera pour vous. » + bouton `.primary-button` « Envoyer mes photos par e-mail » = `mailto:{officeEmail}?subject=Photos — {nom}` (si `officeEmail` absent : phrase « Contactez votre office de tourisme. ») ; vide « Aucune photo pour l’instant. » ; **aucun bouton d'ajout** (la route `/api/media/upload` refuse la persona acteur en 403 — D7).
+6. **Photos** (`PhotosRubric`, lecture seule, D11) — grille 2 colonnes des photos (`media.objectItems` type photo : `img alt={title || 'Photo n'}`, légende texte « Photo principale » sur `isMain`) ; carte `.notice` avec `Mail` : « Pour l’instant, les photos sont ajoutées par l’office. Envoyez-lui vos plus belles photos (JPG ou PNG) et il les publiera pour vous. » + bouton `.primary-button` « Envoyer mes photos par e-mail » = `mailto:{officeEmail}?subject=Photos — {nom}` + bouton « Copier l’adresse e-mail » **avec libellé visible** (`CopyButton` est icône seule : lui ajouter une prop `label` ou l'envelopper — un `mailto:` échoue en silence sur un téléphone sans application de courrier) ; si `officeEmail` absent : phrase « Contactez votre office de tourisme. » ; « (les photos de votre téléphone conviennent) » sous « JPG ou PNG » ; vide « Aucune photo pour l’instant. ». ⚠ En production le 2026-09-02, **aucune des 2 ORG n'a de canal e-mail public** : saisir les canaux de l'ORG publisher est un prérequis de recette (Task 20). ; **aucun bouton d'ajout** (la route `/api/media/upload` refuse la persona acteur en 403 — D7).
 
 - [ ] **Step 1 : Tests ROUGES**
 
@@ -3148,7 +3195,7 @@ Sabotage obligatoire avant commit (à rapporter dans le message de PR) : retirer
 `PortalFicheHub.test.tsx` (RTL ; mocks `services/portal` + un `draft` de test ; monter `PortalFicheHub` avec un `editor` factice `{ draft, baseline, dirtySections, replaceModule: jest.fn(), … }`) :
 
 ```tsx
-it('rend une ligne par rubrique de l’archétype avec un état en mots', () => { /* HEB : 5 rubriques, « À faire » / « Renseigné » */ });
+it('rend une ligne par rubrique de l’archétype avec un état en mots', () => { /* HEB : 5 rubriques, « À faire » / « Rempli » */ });
 it('« Pour compléter votre fiche » ne liste que les rubriques À faire, plus les photos sous l’objectif', () => {});
 it('la barre d’envoi n’apparaît qu’avec une rubrique modifiée et compte les rubriques', () => {});
 it('envoi en cours : bouton aria-disabled + phrase visible, les rubriques restent ouvrables', () => {});
@@ -3174,7 +3221,11 @@ it('Envoyer construit UNE enveloppe par module dirty via buildContributorSubmiss
 it('erreur serveur « déjà en cours » → phrase dédiée dans la fenêtre, brouillon intact', () => {});
 ```
 
-- [ ] **Step 2 : `usePortalDraft.ts`** — reprendre la version du 2026-09-01 (empreinte djb2 de la baseline, debounce 800 ms, restauration au montage, `draftDiscarded`) avec les changements de signature ci-dessus. `PortalShell.handleSignOut` appelle `clearAllPortalDrafts(userId)` AVANT `signOut()`.
+- [ ] **Step 2 : `usePortalDraft.ts`** — reprendre la version du 2026-09-01 (empreinte djb2, debounce 800 ms, restauration au montage, `draftDiscarded`) avec les changements de signature ci-dessus et **trois corrections** (revue du 2026-09-02) :
+  1. **L'empreinte se calcule sur les modules SERVEUR** (`resource.modules` du cache React Query), **jamais sur `editor.baseline`** : `editor.commitModules` réécrit la baseline avec les valeurs ENVOYÉES alors que la fiche ne change qu'à l'approbation ; un brouillon écrit pendant la vérification serait donc stocké sous une empreinte qu'un rechargement ne reproduit jamais ⇒ écarté avec la bannière mensongère « mise à jour par l’office ». Test : « après commitModules puis rechargement, le brouillon est retrouvé ».
+  2. **Empreinte et contenu sans catalogues** : hacher `stripCatalogOptions(modules)` (`io/object-io-serialize.ts`) — sinon un code ajouté au catalogue par l'office change l'empreinte de TOUS les brouillons ; et ne stocker que les tranches DIRTY (les 29 tranches avec catalogues dépassent vite le quota localStorage partagé entre fiches). `try/catch` sur chaque lecture/écriture.
+  3. **Instantané envoyé** `portal-sent:<userId>:<objectId>` = `{ submittedAt, lines: Record<module, string[]> }` écrit à l'envoi depuis `describePortalChange(...).after` — lu par la notice de rubrique `pending`/`rejected` (« Vous aviez indiqué : … ») ; purgé quand `lastResolved` est postérieur à `submittedAt` et au sign-out.
+  `PortalShell.handleSignOut` appelle `clearAllPortalDrafts(userId)` (brouillons ET instantanés) AVANT `signOut()`.
 
 - [ ] **Step 3 : `PortalFichePage.tsx` + route**
 
@@ -3199,9 +3250,9 @@ Formulaires (contrôles natifs uniquement : `type=tel|email|url|time|number`, `i
 |---|---|---|
 | Vos coordonnées | Téléphone (`tel`), E-mail (`email`), Site internet (`url`, facultatif, aide « Exemple : www.exemple.re ») | `upsertPublicContact` ×3 (mobile = repli lecture du téléphone) |
 | Présentez votre établissement | « En une phrase » (`textarea` 2 lignes, 160 max, compteur `aria-live`), « Présentez votre établissement » (`textarea` 8 lignes, 2000 max ; avertissement doux < 120 car.) | `setPresentation` |
-| Vos horaires | raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » ; 7 lignes : jour + case `.portal-choice` « Ouvert » (texte devient « Fermé ») + « de » `time` « à » `time` + « + Ajouter un deuxième créneau » / « Retirer » ; erreur « Indiquez une heure de fin après l’heure de début. » | `setWeekHours` (lecture seule si `readOnlyReason`) |
+| Vos horaires | **deux écrans dans la rubrique** (jamais une grille 7 × 5 sur un téléphone) : (1) « Quels jours êtes-vous ouvert ? » = 7 cases `.portal-choice` + raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » → « Suivant » ; (2) « À quelles heures ? » = 3 radios « Les mêmes heures tous les jours ouverts » (une paire `time` « de … à … » + « Ajouter une pause (fermeture le midi) ») / « Ça dépend du jour » (une carte par jour ouvert) / « Sans horaires fixes (sur rendez-vous) » (⇒ sentinelle créneau vide, voir Task 13) ; erreur « Indiquez une heure de fin après l’heure de début. » ; « Valider » ramène au hub | `setWeekHours` (lecture seule si `readOnlyReason`) |
 | Équipements et moyens de paiement | `fieldset` « Ce que vous proposez » = cases `.portal-choice` sur `PORTAL_AMENITY_CODES[archetype]` ∩ catalogue chargé ; disclosure `.help-qa` « Voir tous les équipements » (familles restantes, `filterEstablishmentAmenityGroups`) ; `fieldset` « Moyens de paiement acceptés » = toutes `paymentOptions` | `setAmenities(…, visibleOptionCodes = tous les codes rendus)` + `setPayments` |
-| Accueil : personnes et animaux | « Combien de personnes pouvez-vous accueillir au maximum ? » (`number`, suffixe « personnes » ; RES : « Combien de couverts au maximum ? ») ; `fieldset` « Acceptez-vous les animaux ? » = 3 radios `.portal-choice` « Oui » / « Non » / « Je préfère ne pas l’indiquer » + « Sous quelles conditions ? (facultatif) » si Oui ; HEB : « Arrivée à partir de » / « Départ avant » (`time`) | `setHeadlineCapacity`, `setPetPolicy`, `setStayPolicy` |
+| Capacité et animaux | « Combien de personnes pouvez-vous accueillir au maximum ? » (`number`, suffixe « personnes » ; RES : « Combien de couverts au maximum ? ») ; `fieldset` « Acceptez-vous les animaux ? » = 3 radios `.portal-choice` « Oui » / « Non » / « Je préfère ne pas l’indiquer » + « Sous quelles conditions ? (facultatif) » si Oui ; HEB : « Arrivée à partir de » / « Départ avant » (`time`) | `setHeadlineCapacity`, `setPetPolicy`, `setStayPolicy` |
 | Vos tarifs | VIS/ASC : case « L’accès est gratuit » ; « À partir de » (`number`, `inputmode=decimal`, suffixe « € par nuit / par couvert / par personne ») ; « Jusqu’à (facultatif) » ; liste muted « Autres tarifs déjà enregistrés par l’office » (`summarizePricingLine`) | `setStartingPrice` + `validatePricingDraft` |
 | Votre activité | « Durée » (`number` + `select` minutes/heures → minutes), « Nombre de personnes : minimum / maximum », « Âge minimum » (`number`, suffixe « ans ») ; erreur « Le maximum doit être supérieur ou égal au minimum. » | `setActivityBasics` |
 | Vos photos | lecture seule (voir écran 6) | — |
@@ -3225,7 +3276,7 @@ void queryClient.invalidateQueries({ queryKey: ['portal-submissions'] });
 
 Jamais `useEditorSave.save` (N appels non transactionnels), jamais de saver direct, jamais `client.from(...)`.
 
-CSS (suite du bloc `.portal-*`) : `.portal-tasks` (liste sans puces, lignes séparées par `--line`, `.portal-task__link` flex ≥ 64 px), `.portal-choice` (label flex, ≥ 56 px, padding 12px 16px, bordure `--line`, radius `--radius-sm`, `:has(:checked)` fond `rgb(var(--theme-primary-rgb) / 0.08)` + bordure `--teal`), `.portal-week` (lignes jour), `.portal-sendbar` (sticky bottom, `--surface`, `box-shadow: var(--shadow-m)`, `padding: 12px 16px calc(12px + env(safe-area-inset-bottom))`), `.portal-progress` (piste 8 px, recette `.crm-backlog__track`, `aria-hidden` — le texte « 3 rubriques sur 6 renseignées » porte la valeur), `.portal-gallery` (grille 2 colonnes, `aspect-ratio: 4/3`).
+CSS (suite du bloc `.portal-*`) : `.portal-tasks` (liste sans puces, lignes séparées par `--line`, `.portal-task__link` flex ≥ 64 px), `.portal-choice` (label flex, ≥ 56 px, padding 12px 16px, bordure `--line`, radius `--radius-sm`, `:has(:checked)` fond `rgb(var(--theme-primary-rgb) / 0.08)` + bordure `--teal`), `.portal-week` (lignes jour), `.portal-sendbar` (`position: sticky; bottom: 0` — jamais `fixed`, qui saute avec le clavier iOS —, `--surface`, `box-shadow: var(--shadow-m)`, `padding: 12px 16px calc(12px + env(safe-area-inset-bottom))` ; aucun ancêtre de `.portal-shell` ne doit porter `overflow: hidden|auto`, sinon le sticky ne colle pas), `.portal-progress` (piste 8 px, recette `.crm-backlog__track`, `aria-hidden` — le texte « 3 rubriques sur 6 renseignées » porte la valeur), `.portal-gallery` (grille 2 colonnes, `aspect-ratio: 4/3`).
 
 - [ ] **Step 5 : Vérifier**
 
@@ -3382,7 +3433,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const origin = (req.headers.get('origin') ?? new URL(req.url).origin).replace(/\/$/, '');
   const { data: created, error: createErr } = await server.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/set-password`,
+    // ?espace=1 : la page /set-password bascule en copie « prestataire » (Task 10 Step 2 bis).
+    // ⚠ Vérifier dans le Dashboard Supabase (Auth → URL configuration) que l'allowlist accepte
+    // la query string (motif `…/set-password*`) — sinon Supabase retombe sur le Site URL.
+    redirectTo: `${origin}/set-password?espace=1`,
   });
   if (createErr || !created.user) {
     return NextResponse.json({ error: 'create_failed', detail: createErr?.message ?? 'no_user' }, { status: 500 });
@@ -3957,6 +4011,17 @@ git commit -m "feat(front): chip vérification de fiche + réglage du portail ac
 **Files :**
 - Modify: `docs/SQL_ROLLOUT_RUNBOOK.md` (tableau de sabotage 18a complété)
 - Modify: `CLAUDE.md` du repo SI un invariant nouveau mérite d'y vivre (le plancher dur, la règle « approve attesté »)
+
+- [ ] **Step 0 : Prérequis de mise en service (révision 2026-09-02) — AUCUNE invitation de prestataire avant que les six soient verts**
+
+1. **18a déployée avec `p_applied_manually` (Task 7)** : 5 des 7 rubriques sont `manual_apply` et l'`approve_pending_change` déployé aujourd'hui refuse `rpc NULL` (22023) — un envoi contenant coordonnées/présentation/tarifs/capacité/activité ne pourrait JAMAIS se résoudre et bloquerait la fiche pour toujours (une seule vérification ouverte).
+2. **Task 10 fusionnée** (rôle `actor` accepté par `normalizeRole`, `USER_ROLE_LABELS_FR`, routage) — sinon tout compte acteur bricke sur `SessionScreen`.
+3. **17i-17l dans `ci_fresh_apply.sql` ET en prod** (re-routage §1.5 de `current_user_extended_object_ids`) — sinon les 25 lectures d'enrichissement reviennent vides et les rubriques disparaissent. **Preuve de parité** : charger la MÊME fiche en acteur et en superuser et asserter l'égalité byte-à-byte de `draft.openings` / `draft.characteristics` / `draft.capacityPolicies` (`unavailableReason` null) — une lecture partielle + un writer « remplace tout » effacerait le reste à l'approbation.
+4. **Leg `canonical_description` sur le chemin RÉEL** : `getObjectResource` appelle `api.get_object_with_deep_data` d'abord (§213) — vérifier avec un JWT acteur que la présentation existante arrive dans `descriptions.object`, sinon la rubrique montre des champs vides et un report manuel effacerait le texte.
+5. **Canaux publics de l'ORG publisher saisis** (e-mail + téléphone) — en prod, 0/2 ORG en ont : sans eux, « Envoyer mes photos » et « Signaler une erreur » n'ont pas de repli.
+6. **Chaque vérificateur de `list_object_verifier_ids` a aussi l'écriture canonique** (`edit_canonical_when_publisher` via sa matrice de rôle) — sinon les rubriques auto (horaires, équipements) échouent en 42501 au re-dispatch AS THE CALLER et « un clic » est faux pour lui.
+
+Et une contrainte produit à consigner : **une seule vérification ouverte par fiche bloque le prestataire jusqu'à la réponse de l'office** — l'OTI s'engage sur un délai (proposition : 5 jours ouvrés, copie « en général sous une semaine ») et surveille l'âge des vérifications en attente.
 
 - [ ] **Step 1 : Suites complètes**
 

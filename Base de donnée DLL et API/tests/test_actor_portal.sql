@@ -49,10 +49,15 @@
 --       premiers changements étaient valides pris isolément. Nominal : 2 changements ⇒
 --       submission pending + 2 pending_change liés (submission_id) + 1 crm_task typée
 --       (extra.kind='fiche_verification') multi-assignée (editor + granted, ≥2) + notification
---       crm_task_assigned + trigger is_editing. Anti-spam : une soumission déjà ouverte refuse la
---       suivante en PT409 SPÉCIFIQUEMENT (jamais le 23505 nu de l'index unique partiel — piège
---       nommé par le PO : db-error-message.ts afficherait « doublon » au lieu de « vérification
---       déjà en cours »).
+--       crm_task_assigned + trigger is_editing. COURSE (revue post-Task 5) : le pré-check
+--       EXISTS est un check-then-act — un trigger BEFORE INSERT éphémère injecte la ligne
+--       « concurrente » entre le pré-check et l'INSERT réel de submit_actor_fiche (le
+--       pré-check ne peut PAS la voir), prouvant que l'écriture elle-même est blindée
+--       (BEGIN…EXCEPTION WHEN unique_violation…) et remonte PT409, jamais un 23505 nu — et
+--       qu'aucune ligne (ni la vraie, ni l'injectée) ne survit à l'échec. Anti-spam : une
+--       soumission déjà ouverte refuse la suivante en PT409 SPÉCIFIQUEMENT (jamais le 23505
+--       nu de l'index unique partiel — piège nommé par le PO : db-error-message.ts
+--       afficherait « doublon » au lieu de « vérification déjà en cours »).
 -- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
@@ -101,6 +106,12 @@ DECLARE
   v_changes jsonb; -- le tableau de changements nominal (2 entrées), réutilisé par l'anti-spam
   v_task    uuid;  -- task_id retourné
   v_subid   uuid;  -- submission_id retourné
+  -- (D2, revue post-Task 5) preuve anti-course : compteur IMMUNISÉ au ROLLBACK TO SAVEPOINT
+  -- (propriété documentée des séquences Postgres), contrairement au GUC bertel_test.race_armed
+  -- que le blindage EXCEPTION WHEN unique_violation annule LUI-MÊME en réussissant (voir
+  -- commentaire au point d'usage).
+  v_seq_before bigint;
+  v_seq_after  bigint;
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -748,6 +759,88 @@ BEGIN
          'D2: transactionnalité — aucune notification créée';
   ASSERT NOT EXISTS (SELECT 1 FROM fiche_submission WHERE note = 'Note qui ne doit JAMAIS atterrir en base'),
          'D2: transactionnalité — la note du prestataire n''a fuité dans aucune ligne résiduelle';
+
+  -- ---------- Preuve du blindage anti-course PT409 (revue contrôleur post-Task 5) ----------
+  -- Le pré-check EXISTS de submit_actor_fiche est un check-then-act : entre lui et
+  -- l'INSERT réel, rien n'empêche deux appels quasi simultanés (double-clic, deux
+  -- onglets) de le franchir tous les deux avant que l'un des deux n'écrive —
+  -- uq_fiche_submission_open départage alors les deux à l'ÉCRITURE, pas au pré-check.
+  -- Impossible de simuler deux VRAIES transactions concurrentes depuis une session
+  -- SQL unique — on reproduit donc la MÊME structure de course par injection
+  -- déterministe : un trigger BEFORE INSERT ÉPHÉMÈRE sur fiche_submission (DDL
+  -- transactionnelle, effacée par le ROLLBACK final comme tout le reste) insère la
+  -- ligne « concurrente » exactement entre l'instant où le pré-check a déjà rendu
+  -- FALSE et l'instant où l'INSERT de submit_actor_fiche tente d'écrire — le
+  -- pré-check ne PEUT PAS voir cette ligne, elle n'existe pas encore quand il lit —
+  -- et l'INSERT réel se heurte alors à l'index unique, exactement comme le ferait un
+  -- vrai second appel concurrent. Armé pour UN seul tir via un GUC de test
+  -- (`bertel_test.race_armed`, jamais lu par le code de production).
+  -- Séquence-preuve : PAS un GUC. Le blindage (submit_actor_fiche) enveloppe l'INSERT dans
+  -- son PROPRE BEGIN/EXCEPTION WHEN unique_violation, ce qui pose un SAVEPOINT juste avant
+  -- l'INSERT ; quand ce blindage réussit (attrape le 23505, relève PT409), Postgres fait
+  -- ROLLBACK TO SAVEPOINT — qui annule TOUT ce qui s'est passé depuis, y compris un GUC
+  -- set_config(...,true) posé par le trigger (constaté empiriquement : un premier essai
+  -- avec un GUC-désarmoir échouait TOUJOURS, même migration corrigée, car le blindage qui
+  -- doit réussir efface lui-même sa propre preuve). Une séquence, elle, est documentée
+  -- IMMUNISÉE au ROLLBACK (y compris TO SAVEPOINT) : nextval() n'est jamais « annulé ».
+  -- C'est le seul signal fiable ici.
+  CREATE TEMP SEQUENCE IF NOT EXISTS race_probe_fired_seq;
+  -- Amorçage : last_value d'une séquence FRAÎCHE lit DÉJÀ sa valeur de départ (1) avant
+  -- tout nextval() — is_called seul distingue « jamais tirée » de « tirée une fois »,
+  -- mais last_value seul seul ne bouge PAS entre les deux (constaté empiriquement : la
+  -- comparaison avant/après échouait TOUJOURS, migration corrigée y compris, 1 = 1). Un
+  -- nextval() de rodage AVANT la capture du baseline lève cette ambiguïté une fois pour
+  -- toutes : toute comparaison ultérieure « après > avant » redevient sans piège.
+  PERFORM nextval('race_probe_fired_seq');
+  SELECT last_value INTO v_seq_before FROM race_probe_fired_seq;
+
+  CREATE OR REPLACE FUNCTION public.race_inject_competing_submission()
+  RETURNS trigger LANGUAGE plpgsql AS $trg$
+  BEGIN
+    IF current_setting('bertel_test.race_armed', true) = '1' THEN
+      PERFORM set_config('bertel_test.race_armed', '0', true); -- désarme AVANT l'INSERT niché,
+        -- pour éviter que ce même INSERT ne redéclenche CE trigger (récursion) — ce GUC n'a
+        -- besoin de survivre QUE jusqu'à l'INSERT niché suivant, pas au-delà (voir plus haut).
+      PERFORM nextval('race_probe_fired_seq'); -- preuve immunisée que CE tir a eu lieu.
+      INSERT INTO public.fiche_submission (object_id, status) VALUES (NEW.object_id, 'pending');
+    END IF;
+    RETURN NEW;
+  END;
+  $trg$;
+  DROP TRIGGER IF EXISTS race_inject ON public.fiche_submission;
+  CREATE TRIGGER race_inject BEFORE INSERT ON public.fiche_submission
+    FOR EACH ROW EXECUTE FUNCTION public.race_inject_competing_submission();
+
+  PERFORM set_config('bertel_test.race_armed', '1', true);
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+  v_denied := false;
+  BEGIN
+    PERFORM api.submit_actor_fiche(v_objA, v_changes, NULL);
+  EXCEPTION
+    WHEN SQLSTATE 'PT409' THEN v_denied := true;
+    WHEN unique_violation THEN
+      ASSERT FALSE,
+        'D2: PIÈGE — la course laisse fuir un 23505 nu au lieu du PT409 intercepté (blindage EXCEPTION WHEN unique_violation absent ou retiré)';
+  END;
+  ASSERT v_denied, 'D2: la course pré-check/écriture est rattrapée en PT409, jamais en 23505 nu';
+  RESET ROLE;
+
+  -- Le tir a bien eu lieu : sans cette sonde, l'assertion précédente passerait AUSSI si le
+  -- trigger n'avait JAMAIS injecté quoi que ce soit (elle prouverait alors seulement le cas
+  -- déjà couvert par le pré-check EXISTS, pas la course). last_value de la séquence
+  -- (immunisée au ROLLBACK TO SAVEPOINT, cf. commentaire plus haut) doit avoir avancé.
+  SELECT last_value INTO v_seq_after FROM race_probe_fired_seq;
+  ASSERT v_seq_after > v_seq_before,
+         'D2: le trigger d''injection de course doit avoir tiré (séquence-preuve avancée)';
+  -- Rien n'a survécu à la course CÔTÉ TABLE : le ROLLBACK TO SAVEPOINT implicite du
+  -- BEGIN/EXCEPTION de submit_actor_fiche efface À LA FOIS l'INSERT raté et la ligne
+  -- injectée par le trigger (les deux appartiennent au même savepoint, ouvert juste avant
+  -- l'INSERT) — seule la séquence, non transactionnelle par construction, garde la trace.
+  ASSERT (SELECT count(*) FROM fiche_submission WHERE object_id = v_objA) = 0,
+         'D2: course — aucune ligne (ni la vraie ni l''injectée) ne survit à l''échec';
+  DROP TRIGGER IF EXISTS race_inject ON public.fiche_submission;
 
   -- Reprise de la session acteur pour le nominal.
   PERFORM set_config('request.jwt.claims',

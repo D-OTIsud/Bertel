@@ -1196,4 +1196,520 @@ GRANT EXECUTE ON FUNCTION api.list_pending_changes(text, text, int, int) TO auth
 COMMENT ON FUNCTION api.list_pending_changes(text, text, int, int) IS
   'P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. Résolution des soumissions + retour à l'acteur + outbox + RGPD.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 8.1 LA RÉSOLUTION — c'est elle, et elle seule, qui rend la fiche au prestataire.
+-- `uq_fiche_submission_open` n'autorise QU'UNE soumission ouverte par fiche, et rien d'autre
+-- que le passage de fiche_submission.status hors de 'pending' ne relâche ce verrou : tant que
+-- la résolution n'a pas eu lieu, l'acteur reste en PT409 sur SA propre fiche. La logique est
+-- portée par un TRIGGER sur pending_change, jamais par les RPC de la §7, pour trois raisons :
+--   • elle couvre TOUS les chemins de traitement — unitaire (approve/reject_pending_change),
+--     groupé (approve/reject_fiche_submission) et correctif service_role — sans qu'aucun
+--     n'ait à s'en souvenir ; un chemin oublié, c'est une fiche bloquée à vie ;
+--   • elle ne peut pas diverger : dupliquée dans deux RPC, elle finirait par ne plus dire la
+--     même chose dans les deux ;
+--   • elle est ATOMIQUE avec le changement de statut qui la déclenche.
+CREATE SCHEMA IF NOT EXISTS internal;
+CREATE OR REPLACE FUNCTION internal.resolve_fiche_submission(p_submission_id uuid)
+RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+-- §208/R2.1 : pg_temp EN DERNIER — cette fonction LIT pending_change et fiche_submission pour
+-- décider d'une écriture ; une table temporaire homonyme ne doit pas pouvoir s'interposer.
+SET search_path = pg_catalog, public, api, internal, auth, pg_temp
+AS $$
+DECLARE
+  v_sub fiche_submission%ROWTYPE;
+  v_pending  int;
+  v_applied  int;
+  v_rejected int;
+  v_status   text;
+BEGIN
+  -- FOR UPDATE : deux lignes de la MÊME soumission peuvent être tranchées par deux
+  -- transactions concurrentes (deux conseillers, deux onglets). Sans le verrou, les deux
+  -- verraient « plus rien en attente » et poseraient chacune le statut + la notification :
+  -- le prestataire recevrait DEUX retours pour une seule vérification.
+  SELECT * INTO v_sub FROM fiche_submission WHERE id = p_submission_id FOR UPDATE;
+  -- Déjà résolue (ou inexistante : pending_change.submission_id est ON DELETE SET NULL, mais
+  -- une ligne peut survivre à une purge) ⇒ no-op. C'est aussi ce qui rend le trigger
+  -- IDEMPOTENT : un second passage sur la même soumission ne renotifie personne.
+  IF NOT FOUND OR v_sub.status <> 'pending' THEN RETURN; END IF;
+
+  -- 'approved' est une valeur RÉELLEMENT produite sur pending_change depuis la §7 (branche
+  -- attestée : un humain déclare avoir reporté la rubrique à la main). C'est une ACCEPTATION,
+  -- au même titre que 'applied' — les compter séparément, ou pire du côté des refus, ferait
+  -- lire « refusée » au prestataire une soumission que l'office a validée.
+  SELECT count(*) FILTER (WHERE status = 'pending'),
+         count(*) FILTER (WHERE status IN ('applied', 'approved')),
+         count(*) FILTER (WHERE status = 'rejected')
+    INTO v_pending, v_applied, v_rejected
+  FROM pending_change WHERE submission_id = p_submission_id;
+
+  -- L'office n'a pas fini : ne RIEN faire. Un statut posé trop tôt annoncerait « c'est
+  -- validé » au prestataire, fermerait la tâche qui rappelle le travail restant, et
+  -- relâcherait le verrou — l'acteur re-soumettrait par-dessus une vérification en cours.
+  IF v_pending > 0 THEN RETURN; END IF;
+
+  v_status := CASE
+    WHEN v_rejected = 0 THEN 'approved'
+    WHEN v_applied  = 0 THEN 'rejected'
+    ELSE 'partial' END;
+
+  UPDATE fiche_submission
+     SET status = v_status, resolved_at = now()
+   WHERE id = p_submission_id;
+
+  -- La tâche de vérification est close — SAUF si quelqu'un l'a annulée à la main entre-temps :
+  -- « annulée » est une décision humaine, la refermer en « faite » la réécrirait.
+  IF v_sub.task_id IS NOT NULL THEN
+    UPDATE crm_task SET status = 'done', updated_at = now()
+     WHERE id = v_sub.task_id AND status <> 'canceled';
+  END IF;
+
+  -- Le retour à l'acteur. PAYLOAD SANS AUCUN NOM (RGPD) : une notification est immuable et
+  -- survit à un effacement Art. 17 ; un nom gelé dedans y survivrait aussi. Les libellés
+  -- (nom de la fiche, du prestataire) se JOIGNENT à la lecture — même doctrine que
+  -- api.claim_unmailed_notifications, qui appelle api.crm_user_label au moment du drain.
+  -- object_id est un identifiant technique, pas une donnée personnelle : il sert de repli
+  -- au relais quand task_id est NULL (tâche purgée ⇒ la jointure vers object ne rend rien).
+  -- submitted_by NULL (compte portail révoqué ou effacé) ⇒ pas de notification : la colonne
+  -- recipient_id est NOT NULL, et un INSERT inconditionnel ferait échouer le geste de
+  -- l'office pour une soumission dont l'auteur n'existe plus.
+  IF v_sub.submitted_by IS NOT NULL THEN
+    INSERT INTO app_notification (recipient_id, kind, task_id, created_by, payload)
+    VALUES (v_sub.submitted_by, 'fiche_submission_reviewed', v_sub.task_id, NULL,
+            jsonb_build_object('submission_id', p_submission_id, 'outcome', v_status,
+                               'object_id', v_sub.object_id));
+  END IF;
+END;
+$$;
+
+-- Le trigger est SECURITY DEFINER, contrairement à la fonction de résolution qu'il appelle :
+-- l'EXECUTE d'une fonction PERFORMée est vérifié contre l'utilisateur COURANT, or
+-- internal.resolve_fiche_submission est révoquée à tout le monde sauf son propriétaire. Sans
+-- DEFINER ici, une écriture directe sur pending_change par `service_role` (le correctif
+-- d'exploitation que ce trigger existe justement pour couvrir) échouerait en 42501 — la
+-- résolution ne serait plus universelle, ce qui est tout son intérêt. Le geste reste sûr :
+-- pour que ce trigger tire, il faut DÉJÀ avoir eu le droit d'écrire la ligne pending_change.
+CREATE OR REPLACE FUNCTION public.fiche_submission_after_review()
+RETURNS trigger
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog, public, api, internal, auth, pg_temp
+AS $$
+BEGIN
+  -- AFTER UPDATE OF status ne garantit PAS que la valeur a changé (un UPDATE qui réécrit le
+  -- même statut tire aussi) — le no-op de la résolution sur une soumission déjà résolue
+  -- absorbe ce cas. Les lignes sans submission_id sont celles du flux §120/§122 : rien à
+  -- résoudre, on sort immédiatement pour ne pas leur coûter un verrou.
+  IF NEW.submission_id IS NOT NULL AND NEW.status <> 'pending' THEN
+    PERFORM internal.resolve_fiche_submission(NEW.submission_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+DROP TRIGGER IF EXISTS trg_fiche_submission_resolve ON public.pending_change;
+CREATE TRIGGER trg_fiche_submission_resolve
+  AFTER UPDATE OF status ON public.pending_change
+  FOR EACH ROW EXECUTE FUNCTION public.fiche_submission_after_review();
+REVOKE ALL ON FUNCTION internal.resolve_fiche_submission(uuid) FROM PUBLIC, anon, authenticated;
+COMMENT ON FUNCTION internal.resolve_fiche_submission(uuid) IS
+  '18a §8 — statut agrégé d''une soumission dont plus aucune ligne n''est pending : approved (tout applied/approved), rejected (tout rejected), partial (mélange) ; ferme la tâche et notifie l''acteur (payload SANS nom, RGPD). Appelée par le trigger trg_fiche_submission_resolve, jamais directement.';
+COMMENT ON FUNCTION public.fiche_submission_after_review() IS
+  '18a §8 — trigger de résolution sur pending_change. SECURITY DEFINER : la résolution doit tourner quel que soit le chemin qui a tranché la ligne (unitaire, groupé, correctif service_role).';
+
+-- 8.2 L'outbox e-mail apprend la nouvelle espèce. Corps recopié du prosrc VIF
+-- (md5=a6fed3aaf46683854a1c266c673aa7aa, identique à migration_crm_task_email_documents.sql,
+-- re-vérifié juste avant cette écriture) ; les SEULS écarts sont : (a) le prédicat de kind
+-- élargi aux DEUX espèces, (b) trois clés de plus dans l'enveloppe rendue au relais
+-- (kind/outcome/submission_id) et les deux colonnes qu'elles exigent au RETURNING du CTE.
+-- Les TROIS pièces de la file — CHECK (§3.5), index partiel (§3.6) et ce claim/ack —
+-- s'élargissent ENSEMBLE : si l'une reste en arrière, la notification est écrite, indexée,
+-- et JAMAIS réclamée. L'acteur n'a aucun retour et rien ne le signale (invariant spec §6).
+CREATE OR REPLACE FUNCTION api.claim_unmailed_notifications(p_limit integer DEFAULT 20)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'api', 'auth'
+AS $function$
+DECLARE
+  v_rows jsonb;
+BEGIN
+  WITH claimable AS (
+    SELECT n.id
+    FROM app_notification n
+    WHERE n.kind IN ('crm_task_assigned', 'fiche_submission_reviewed')
+      AND n.email_sent_at IS NULL
+      AND n.email_attempts < 5
+      AND (n.email_claimed_at IS NULL OR n.email_claimed_at < now() - interval '10 minutes')
+    ORDER BY n.created_at
+    LIMIT GREATEST(COALESCE(p_limit, 20), 1)
+    FOR UPDATE SKIP LOCKED
+  ), claimed AS (
+    UPDATE app_notification n SET email_claimed_at = now()
+    FROM claimable c WHERE n.id = c.id
+    RETURNING n.id, n.recipient_id, n.task_id, n.created_by, n.created_at, n.kind, n.payload
+  )
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+           'notification_id', cl.id,
+           -- 18a — l'ESPÈCE. Le relais choisit son gabarit (« tâche assignée » vs « vos
+           -- modifications ont été… ») sur cette clé seule : sans elle il devrait deviner
+           -- d'après la présence des autres, ou relire la base qu'il vient de drainer.
+           'kind', cl.kind,
+           -- NULLIF sur l'adresse VIDE : `''` n'est pas une adresse, mais seul NULL déclenche
+           -- la terminaison `no_recipient_email` plus bas. Rendue telle quelle, une chaîne
+           -- vide partirait au drain, échouerait au relais à chaque ping et reviendrait
+           -- réclamable après chaque TTL — exactement le bouchage de file en boucle
+           -- claim/échec que ce bras existe pour empêcher.
+           'recipient_email', NULLIF(u.email, ''),
+           -- Libellés JOINTS à la lecture (jamais stockés) : effacement RGPD respecté.
+           'recipient_name', api.crm_user_label(cl.recipient_id, rp.display_name),
+           'task_title', ct.title,
+           'object_name', o.name,
+           'due_at', ct.due_at,
+           'assigner_name', api.crm_user_label(cl.created_by, ap.display_name),
+           -- 18a — l'ISSUE et la soumission, lues au `->>` (jamais castées : payload est du
+           -- jsonb libre, et un cast nu abattrait la LECTURE ENTIÈRE du drain, classe §17m).
+           -- NULL sur l'espèce historique, qui ne porte pas ces clés — le relais s'en sert
+           -- comme discriminant secondaire.
+           'outcome', (cl.payload->>'outcome'),
+           'submission_id', (cl.payload->>'submission_id')
+         ) ORDER BY cl.created_at, cl.id), '[]'::jsonb)
+  INTO v_rows
+  FROM claimed cl
+  LEFT JOIN auth.users u        ON u.id  = cl.recipient_id
+  LEFT JOIN app_user_profile rp ON rp.id = cl.recipient_id
+  -- Ces deux jointures servent les DEUX espèces : task_id est posé sur l'une comme sur
+  -- l'autre (la notification de résolution pointe la tâche de vérification), et c'est par
+  -- elles que le nom de la FICHE arrive au relais sans être stocké nulle part.
+  LEFT JOIN crm_task ct         ON ct.id = cl.task_id
+  LEFT JOIN object o            ON o.id  = ct.object_id
+  LEFT JOIN app_user_profile ap ON ap.id = cl.created_by;
+
+  -- Destinataire sans e-mail : terminée, pas retournée.
+  UPDATE app_notification n
+  SET email_sent_at = now(), email_error = 'no_recipient_email'
+  WHERE n.id IN (
+    SELECT (item->>'notification_id')::uuid
+    FROM jsonb_array_elements(v_rows) item
+    WHERE item->>'recipient_email' IS NULL
+  );
+
+  RETURN COALESCE((
+    SELECT jsonb_agg(item)
+    FROM jsonb_array_elements(v_rows) item
+    WHERE item->>'recipient_email' IS NOT NULL
+  ), '[]'::jsonb);
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION api.claim_unmailed_notifications(integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.claim_unmailed_notifications(integer) TO service_role;
+COMMENT ON FUNCTION api.claim_unmailed_notifications(integer) IS
+  'Outbox e-mail (17m + 18a §8) : réclame les notifications crm_task_assigned ET '
+  'fiche_submission_reviewed non e-mailées (TTL 10 min, SKIP LOCKED) et retourne le contenu '
+  'du message dérivé en DB, avec kind / outcome / submission_id. '
+  'Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.';
+
+-- 8.3 L'acquittement suit le claim, sur les MÊMES espèces. Corps recopié du prosrc VIF
+-- (md5=dfe7343cc63971b8fc7f369e1f52e58f, identique au fichier) ; seuls les deux prédicats de
+-- kind changent. Sans cet élargissement, le drain réclamerait la notification acteur, l'
+-- enverrait, et l'acquittement ne trouverait AUCUNE ligne : email_sent_at resterait NULL,
+-- la ligne redeviendrait réclamable au TTL suivant, et le prestataire recevrait le même
+-- e-mail toutes les dix minutes — jusqu'aux 5 tentatives, sans qu'aucune erreur ne remonte.
+CREATE OR REPLACE FUNCTION api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'api', 'auth'
+AS $function$
+DECLARE
+  v_n integer := 0;
+BEGIN
+  UPDATE app_notification SET email_sent_at = now(), email_error = NULL
+  WHERE id = ANY(COALESCE(p_sent, ARRAY[]::uuid[]))
+    AND kind IN ('crm_task_assigned', 'fiche_submission_reviewed') AND email_sent_at IS NULL;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+
+  UPDATE app_notification n
+  SET email_error = f.err, email_claimed_at = NULL, email_attempts = n.email_attempts + 1
+  FROM (
+    SELECT (item->>'id')::uuid AS id, COALESCE(item->>'error', 'send_failed') AS err
+    FROM jsonb_array_elements(COALESCE(p_failed, '[]'::jsonb)) item
+    WHERE item->>'id' IS NOT NULL
+  ) f
+  WHERE n.id = f.id
+    AND n.kind IN ('crm_task_assigned', 'fiche_submission_reviewed')
+    AND n.email_sent_at IS NULL;
+
+  RETURN v_n;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) TO service_role;
+COMMENT ON FUNCTION api.mark_notifications_emailed(uuid[], jsonb) IS
+  'Acquittement du drain e-mail (17m + 18a §8, les DEUX espèces). Succès = email_sent_at ; '
+  'échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu''à 5 tentatives). Service_role only.';
+
+-- 8.4 api.list_crm_tasks émet `extra`. C'est la SEULE clé qui distingue une tâche de
+-- vérification de fiche d'une tâche CRM ordinaire (crm_task n'a pas de colonne kind : §5 type
+-- la tâche par extra.kind='fiche_verification'). Corps recopié du prosrc VIF
+-- (md5=05fc0595046e4bc0e28579fa082b8459 ; identique à migration_crm_task_email_documents.sql
+-- À UN COMMENTAIRE PRÈS — la base dit « 17i » là où le fichier dit « 17m », trace de la
+-- renumérotation du créneau, sans effet). UNE seule clé est ajoutée : 'extra'.
+-- ⚠ ORDRE DE MANIFESTE : cette redéfinition doit rester APRÈS migration_crm_task_email_
+-- documents.sql (17m), dont elle est un sur-ensemble strict ; l'inverse rétablirait la
+-- version sans `extra` et éteindrait la puce du kanban sans qu'aucune erreur ne se lève.
+-- ⚠ `ct.extra` est ÉMIS BRUT. C'est du jsonb LIBRE, écrit par plusieurs producteurs : tout
+-- cast — sur la colonne ou sur une de ses sous-clés — abattrait non pas la tâche fautive mais
+-- api.list_crm_tasks() TOUT ENTIÈRE, donc le kanban de tous les utilisateurs du périmètre.
+-- C'est exactement la panne déjà payée sur ref_document.extra dans cette même fonction
+-- (voir la garde `~ '^\d{1,18}$'` de size_bytes) : ne la rouvrons pas par la porte d'à côté.
+CREATE OR REPLACE FUNCTION api.list_crm_tasks()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path TO 'public', 'api', 'auth'
+AS $function$
+DECLARE
+  v_scope text[];
+  v_items jsonb;
+BEGIN
+  IF NOT api.is_platform_superuser() THEN
+    v_scope := ARRAY(SELECT api.current_user_crm_object_ids());
+    IF COALESCE(array_length(v_scope, 1), 0) = 0 THEN
+      RETURN '[]'::jsonb;
+    END IF;
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(item), '[]'::jsonb) INTO v_items
+  FROM (
+    SELECT jsonb_build_object(
+      'id', ct.id, 'object_id', ct.object_id, 'object_name', o.name,
+      'actor_id', ct.actor_id, 'actor_name', act.display_name, -- rattachement acteur (rectif PO)
+      'title', ct.title, 'description', ct.description,
+      'status', ct.status, 'priority', ct.priority,
+      'due_at', ct.due_at, 'created_at', ct.created_at,
+      -- 18a §8 — l'enveloppe libre de la tâche, BRUTE. Le front y lit
+      -- extra.kind === 'fiche_verification' pour marquer les tâches issues du portail.
+      'extra', ct.extra,
+      -- owner_id/owner_name : contrat HÉRITÉ conservé pour la fenêtre de déploiement
+      -- (16z). Valeur de compatibilité = 1er assigné par uuid croissant. Le front ≥16z
+      -- lit `assignees`, jamais ces deux clés.
+      'owner_id', ct.owner, 'owner_name', p.display_name,
+      -- 16z — assignation multiple. Ordre STABLE : nom affiché insensible à la casse puis
+      -- uuid (deux homonymes ne peuvent pas permuter d'un appel à l'autre). Jamais NULL.
+      'assignees', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+                 'user_id', a.user_id,
+                 'display_name', api.crm_user_label(a.user_id, ap.display_name))
+               ORDER BY lower(api.crm_user_label(a.user_id, ap.display_name)), a.user_id)
+        FROM crm_task_assignee a
+        LEFT JOIN app_user_profile ap ON ap.id = a.user_id
+        WHERE a.task_id = ct.id), '[]'::jsonb),
+      -- 16z — provenance. NULL assumé = créateur inconnu (§A) ; le front affiche
+      -- « Créateur inconnu », il ne devine JAMAIS un nom depuis les assignés.
+      'created_by_id', ct.created_by,
+      'created_by_name', api.crm_user_label(ct.created_by, cp.display_name),
+      'related_interaction_id', ct.related_interaction_id,
+      'related_interaction_subject', ri.subject,
+      'related_interaction_status', ri.status,
+      -- 17m — pièces jointes. `[]` jamais null : le front itère, il ne teste pas la
+      -- nullité. `id` EST le document_id (la clé que manipulent les routes
+      -- /api/task-document et le lien de téléchargement), JAMAIS l'id de la ligne de
+      -- liaison : exposer celui-ci obligerait le front à un aller-retour de plus pour
+      -- retrouver le fichier, et deux identifiants pour une même pièce jointe finissent
+      -- toujours par être confondus. Ordre STABLE (created_at puis id) : deux pièces
+      -- déposées dans la même transaction ne peuvent pas permuter d'un appel à l'autre.
+      -- `size_bytes` est CASTÉ SOUS GARDE. `ref_document.extra` est un jsonb LIBRE, partagé
+      -- avec tous les autres flux documentaires : rien n'y contraint le type de cette clé,
+      -- et cette lecture ne peut pas se reposer sur la discipline d'écritures qu'elle ne
+      -- contrôle pas. Un cast nu ferait lever `invalid input syntax for type bigint` — non
+      -- pas sur la pièce jointe fautive, mais sur api.list_crm_tasks() TOUT ENTIÈRE : UNE
+      -- ligne malformée écrite par n'importe quel autre flux abattrait le kanban CRM de
+      -- TOUS les utilisateurs du périmètre. Une taille illisible vaut donc `null` (le front
+      -- affiche la pièce sans son poids), jamais une panne. La BORNE DE LONGUEUR fait partie
+      -- de la garde : `^\d+$` seul laisserait passer « 99999999999999999999 », que `::bigint`
+      -- refuserait ensuite en 22003 `value out of range` — au MÊME endroit, avec le MÊME
+      -- rayon d'action et la MÊME classe de panne que celle qu'on vient de fermer, à un
+      -- chiffre près. `{1,18}` la ferme PAR CONSTRUCTION et non par confiance : 18 chiffres
+      -- valent au plus 999 999 999 999 999 999, strictement inférieur au maximum d'un bigint.
+      -- Une taille à 19 chiffres ou plus est illisible au même titre qu'un mot : `null`.
+      'documents', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+                 'id', d.document_id,
+                 'title', d.title,
+                 'mime_type', rd.extra->>'mime_type',
+                 'size_bytes', CASE WHEN rd.extra->>'size_bytes' ~ '^\d{1,18}$'
+                                    THEN (rd.extra->>'size_bytes')::bigint END,
+                 'created_at', d.created_at)
+               ORDER BY d.created_at, d.id)
+        FROM crm_task_document d
+        JOIN ref_document rd ON rd.id = d.document_id
+        WHERE d.task_id = ct.id), '[]'::jsonb)
+    ) AS item
+    FROM crm_task ct
+    JOIN object o ON o.id = ct.object_id
+    LEFT JOIN actor act ON act.id = ct.actor_id
+    LEFT JOIN app_user_profile p ON p.id = ct.owner
+    LEFT JOIN app_user_profile cp ON cp.id = ct.created_by
+    LEFT JOIN crm_interaction ri ON ri.id = ct.related_interaction_id
+    WHERE (v_scope IS NULL OR ct.object_id = ANY(v_scope))
+    ORDER BY ct.due_at ASC NULLS LAST, ct.created_at DESC
+  ) q;
+
+  RETURN v_items;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION api.list_crm_tasks() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_crm_tasks() TO authenticated, service_role;
+
+-- 8.5 RGPD — l'effacement d'un ACTEUR délie son compte portail. Sans cela, l'effacement
+-- serait cosmétique : la portée du portail passe par app_user_profile.actor_id, et un compte
+-- qui garderait ce lien continuerait d'ouvrir et de modifier les fiches d'une personne dont
+-- on vient d'effacer l'identité. Corps recopié du prosrc VIF
+-- (md5=073dc1ae220a13d304e70321465d33e9, identique à schema_unified.sql:6775 — c'est CE
+-- fichier qui porte la version canonique, migration_gdpr_erasure.sql en garde une plus
+-- verbeuse et plus ancienne). Deux ajouts, et deux seulement.
+--
+-- ⚠ LE DÉLIAGE EST EN DEUX MORCEAUX, ET C'EST STRUCTUREL. La contrainte
+-- app_user_profile_actor_id_fkey est ON DELETE SET NULL : en mode 'delete', le
+-- `DELETE FROM actor` délie DÉJÀ le compte — mais en SILENCE. Un bloc placé après la
+-- branche de mode ne trouverait donc plus rien à délier et ne rapporterait AUCUN id :
+-- l'opérateur RGPD ignorerait quel compte auth.users il lui reste à supprimer via l'API
+-- Admin, et le compte survivrait à l'effacement. L'UPDATE est donc fait AVANT la branche
+-- (il vaut pour les deux modes) ; seule la remontée au rapport est faite APRÈS, parce que
+-- chaque branche RÉAFFECTE v_report et écraserait une clé posée plus tôt.
+CREATE OR REPLACE FUNCTION api.rpc_gdpr_erase_subject(
+  p_subject_kind TEXT, p_subject_id TEXT, p_mode TEXT DEFAULT 'anonymize', p_reason TEXT DEFAULT NULL
+) RETURNS JSONB
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, auth, audit
+AS $$
+DECLARE
+  v_uid UUID := auth.uid();
+  v_actor UUID; v_report JSONB := '{}'::jsonb; v_media TEXT[] := ARRAY[]::TEXT[];
+  v_photo TEXT; v_int_id UUID; v_task_id TEXT;
+  v_portal_user UUID;  -- 18a §8 — le compte portail délié, reporté à l'opérateur RGPD
+  TOMBSTONE CONSTANT TEXT := '[Donnée effacée]';
+BEGIN
+  IF current_setting('request.jwt.claims', true) IS NOT NULL AND NOT api.is_platform_superuser() THEN
+    RAISE EXCEPTION 'Effacement RGPD réservé aux administrateurs plateforme (référent RGPD / superuser).';
+  END IF;
+  IF p_mode NOT IN ('anonymize','delete') THEN
+    RAISE EXCEPTION 'Mode invalide: % (attendu anonymize|delete)', p_mode;
+  END IF;
+
+  IF p_subject_kind = 'actor' THEN
+    v_actor := p_subject_id::uuid;
+    IF NOT EXISTS (SELECT 1 FROM actor WHERE id = v_actor) THEN
+      RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
+    SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    -- 18a §8 — AVANT la branche de mode (cf. l'avertissement ci-dessus) : l'accès portail
+    -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
+    UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
+    RETURNING id INTO v_portal_user;
+    IF p_mode = 'anonymize' THEN
+      UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
+                       gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
+      UPDATE crm_interaction SET actor_id = NULL,
+             handled_by_actor_id = CASE WHEN handled_by_actor_id = v_actor THEN NULL ELSE handled_by_actor_id END,
+             subject = NULL, body = NULL, source = NULL, extra = NULL
+       WHERE actor_id = v_actor OR handled_by_actor_id = v_actor;
+      UPDATE crm_task SET actor_id = NULL, title = TOMBSTONE, description = NULL, extra = NULL WHERE actor_id = v_actor;
+      DELETE FROM actor_consent WHERE actor_id = v_actor;
+      DELETE FROM actor_channel WHERE actor_id = v_actor;
+      v_report := jsonb_build_object('mode','anonymize','actor', v_actor);
+    ELSE
+      DELETE FROM actor WHERE id = v_actor;
+      v_report := jsonb_build_object('mode','delete','actor', v_actor);
+    END IF;
+    -- Remontée APRÈS la branche : les deux modes viennent d'écraser v_report.
+    -- La suppression d'auth.users n'est pas faisable en SQL (même doctrine que la branche
+    -- 'user') : on NOMME le compte pour que le geste ne se perde pas.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
+    PERFORM audit.redact_subject('actor','id', v_actor::text,
+      ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
+            'display_name_normalized','first_name_normalized','last_name_normalized']);
+    PERFORM audit.redact_subject('actor_channel','actor_id', v_actor::text, ARRAY['value','extra']);
+    PERFORM audit.redact_subject('actor_consent','actor_id', v_actor::text, ARRAY['source']);
+    PERFORM audit.redact_subject('crm_interaction','actor_id', v_actor::text,
+      ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
+    PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
+      ARRAY['title','description','extra','actor_id']);
+
+  ELSIF p_subject_kind = 'incident' THEN
+    IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Signalement introuvable: %', p_subject_id; END IF;
+    SELECT crm_interaction_id, crm_task_id INTO v_int_id, v_task_id FROM incident_report WHERE id = p_subject_id::uuid;
+    UPDATE incident_report SET reporter_email = NULL, reporter_name = NULL, description = NULL,
+           media_urls = NULL, geom = NULL, metadata = NULL WHERE id = p_subject_id::uuid;
+    IF v_int_id IS NOT NULL THEN
+      UPDATE crm_interaction SET subject = NULL, body = NULL, extra = NULL WHERE id = v_int_id;
+      PERFORM audit.redact_subject('crm_interaction','id', v_int_id::text, ARRAY['subject','body','extra']);
+    END IF;
+    PERFORM audit.redact_subject('incident_report','id', p_subject_id,
+      ARRAY['reporter_email','reporter_name','description','media_urls','geom','metadata']);
+    v_report := jsonb_build_object('incident', p_subject_id, 'linked_interaction', v_int_id);
+
+  ELSIF p_subject_kind = 'review' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_review WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Avis introuvable: %', p_subject_id; END IF;
+    SELECT author_avatar_url INTO v_photo FROM object_review WHERE id = p_subject_id::uuid;
+    IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    IF p_mode = 'delete' THEN DELETE FROM object_review WHERE id = p_subject_id::uuid;
+    ELSE UPDATE object_review SET author_name = NULL, author_avatar_url = NULL, content = NULL,
+             title = NULL, response = NULL, raw_data = NULL WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('object_review','id', p_subject_id,
+      ARRAY['author_name','author_avatar_url','content','title','response','raw_data']);
+    v_report := jsonb_build_object('review', p_subject_id);
+
+  ELSIF p_subject_kind = 'object_legal' THEN
+    IF NOT EXISTS (SELECT 1 FROM object_legal WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Donnée légale introuvable: %', p_subject_id; END IF;
+    UPDATE object_legal SET value = '{}'::jsonb, note = NULL WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('object_legal','id', p_subject_id, ARRAY['value','note']);
+    v_report := jsonb_build_object('object_legal', p_subject_id);
+
+  ELSIF p_subject_kind = 'contact_channel' THEN
+    IF NOT EXISTS (SELECT 1 FROM contact_channel WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Coordonnée introuvable: %', p_subject_id; END IF;
+    IF p_mode = 'delete' THEN DELETE FROM contact_channel WHERE id = p_subject_id::uuid;
+    ELSE UPDATE contact_channel SET value = TOMBSTONE WHERE id = p_subject_id::uuid; END IF;
+    PERFORM audit.redact_subject('contact_channel','id', p_subject_id, ARRAY['value']);
+    v_report := jsonb_build_object('contact_channel', p_subject_id);
+
+  ELSIF p_subject_kind = 'user' THEN
+    IF NOT EXISTS (SELECT 1 FROM app_user_profile WHERE id = p_subject_id::uuid) THEN
+      RAISE EXCEPTION 'Profil utilisateur introuvable: %', p_subject_id; END IF;
+    UPDATE app_user_profile SET display_name = NULL, avatar_url = NULL, preferences = '{}'::jsonb
+     WHERE id = p_subject_id::uuid;
+    PERFORM audit.redact_subject('app_user_profile','id', p_subject_id, ARRAY['display_name','avatar_url','preferences']);
+    v_report := jsonb_build_object('user', p_subject_id,
+                  'note','Supprimer le compte auth.users via l''API Admin Supabase (hors SQL).');
+  ELSE
+    RAISE EXCEPTION 'Type de sujet inconnu: %', p_subject_kind;
+  END IF;
+
+  v_report := v_report || jsonb_build_object('media_to_delete', to_jsonb(v_media));
+  INSERT INTO gdpr_erasure_log(subject_kind, subject_id, mode, reason, performed_by, report)
+  VALUES (p_subject_kind, p_subject_id, p_mode, p_reason,
+          COALESCE(NULLIF(current_setting('request.jwt.claim.email', true), ''), v_uid::text, current_user), v_report);
+  RETURN v_report;
+END;
+$$;
+REVOKE ALL ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) TO authenticated, service_role;
+COMMENT ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) IS
+  'Effacement/anonymisation RGPD Art. 17 d''un sujet. Anonymise (défaut) ou supprime, rédige le journal d''audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.';
+
 COMMIT;
+
+-- PostgREST doit recharger le schéma (fonctions api.* nouvelles/modifiées).
+NOTIFY pgrst, 'reload schema';

@@ -2566,7 +2566,7 @@ git commit -m "feat(front): service du portail acteur (fiches, soumissions, visi
 - Produces: routes `/espace` ; `PortalShell` réutilisé par la fiche (Task 14) ; classes `.portal-*`.
 
 **Règles d'interface (valables pour TOUT le portail, Tasks 12-14) :**
-- Une colonne, `max-width: 640px`, padding 16 px ; jamais de rail, d'onglets, de table, de glisser-déposer.
+- Une colonne de lecture (`max-width: 640px`, padding 16 px) ; jamais d'onglets, de table, de glisser-déposer. **Sur ordinateur (≥ 1024 px) la fiche passe à deux colonnes** — liste des rubriques collante à gauche, contenu à droite — sans changer d'arbre React : voir Task 14 et le bloc CSS ci-dessous.
 - Cibles ≥ 48 px : sous `.portal-shell`, `.primary-button` / `.ghost-button` passent à `min-height: 48px; font-size: 1.05rem`, pleine largeur ≤ 640 px ; les `input/select/textarea` gardent la règle globale (≈ 48 px) avec `font-size: 1.05rem` (évite le zoom iOS). **Ne jamais modifier les règles globales** : tout est scopé `.portal-shell`.
 - Cartes sur `--surface` + 1 px `--line` + `--shadow-s` + `var(--radius-md)` (jamais `--surface-2` : le branding par ORG ne le surcharge pas). Teinte translucide UNIQUEMENT en `rgb(var(--theme-primary-rgb) / α)` (garde `styles.guard.test.ts`).
 - Cases et boutons radio = `<label class="portal-choice">` enveloppant un `<input>` natif (`accent-color: var(--teal)`), état coché via `:has(:checked)` (fond `rgb(var(--theme-primary-rgb) / 0.08)` + bordure `--teal` + icône lucide `Check`), `:focus-visible` explicite (l'anneau global `:where()` est masqué par le radius).
@@ -2904,6 +2904,27 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 @media (max-width: 640px) {
   .portal-shell__user-name { display: none; }
   .portal-shell .primary-button, .portal-shell .ghost-button { width: 100%; }
+}
+
+/* ---- Ordinateur (≥ 1024 px) : DEUX colonnes, même arbre React. La liste des rubriques
+   reste sous les yeux pendant la saisie ; c'est data-view (sur .portal-fiche) qui décide
+   de ce qu'on masque en dessous, jamais un useMediaQuery (pas d'hydratation à
+   resynchroniser, un seul chemin à tester). ---- */
+.portal-fiche-layout { display: grid; gap: 20px; }
+@media (min-width: 1024px) {
+  .portal-shell__main { max-width: 1080px; padding-inline: 24px; }
+  .portal-fiche-layout { grid-template-columns: 340px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .portal-hub-list { position: sticky; top: 72px; }          /* 56 px de barre + 16 px d'air */
+  .portal-panel { max-width: 66ch; }                          /* longueur de ligne lisible */
+  .portal-shell .primary-button, .portal-shell .ghost-button { width: auto; }
+  .portal-task__link:hover, .portal-fiche:hover { background: rgb(var(--theme-primary-rgb) / 0.05); }
+  .portal-task__link[aria-current="step"] { background: rgb(var(--theme-primary-rgb) / 0.08); box-shadow: inset 3px 0 0 var(--teal); }
+}
+@media (max-width: 1023px) {
+  /* Une seule colonne : pendant la saisie d'une rubrique, la liste et l'en-tête de fiche
+     s'effacent — l'écran de rubrique porte son propre retour et son propre h1. */
+  .portal-fiche[data-view="rubric"] .portal-fiche-head,
+  .portal-fiche[data-view="rubric"] .portal-hub-list { display: none; }
 }
 ```
 
@@ -3252,6 +3273,23 @@ Sabotage obligatoire avant commit (à rapporter dans le message de PR) : retirer
 - Consumes: `loadObjectWorkspace(queryClient, objectId, ['fr'])` / `useObjectWorkspaceQuery` (`hooks/useExplorerQueries.ts` — **langPrefs forcé à `['fr']`** pour que `descriptions.localLanguage === 'fr'`), `useObjectEditorState(objectId, modules)` (`draft`, `baseline`, `dirtySections`, `isDirty`, `replaceModule`, `resetModule`, `commitModules`), `getArchetypeMeta` ; Task 13 (`buildPortalRubrics`, updaters, `describePortalChange`, `isModuleSubmittable`) ; Task 11 (`getPortalSectionVisibility`, `listMySubmissions` — émet désormais `section` par changement —, `submitActorFiche`) ; `buildContributorSubmission`, `MODULE_KEY_MAP` ; `Modal`, `ConfirmDialog`, `EmptyState`, `PageSkeleton`, `useToast`. **JAMAIS `useUnsavedDraftGuard`** : il appelle `window.confirm` natif avec le message STAFF « Vous avez des modifications non publiées. Publiez la fiche… », pousse une entrée d'historique et intercepte tout lien dont la query diffère — avec `?rubrique=` il se déclencherait à chaque retour au hub. Le brouillon local est le filet ; aucune boîte bloquante à la sortie de la page.
 - Produces: route `/espace/fiches/[objectId]` ; **une seule page** qui affiche le hub OU une rubrique selon `?rubrique=<id>` (navigation DOUCE uniquement : `<Link href={{ query: { rubrique } }} scroll={false}>` ou `router.push('?rubrique=…')` — une entrée d'historique par rubrique pour que le bouton Retour du téléphone ramène au hub ; **jamais un `<a href>` nu**, qui est une navigation complète dans l'App Router et remonte la page ; `useSearchParams` sous un `<Suspense>` dans le wrapper de route. La page ne se démonte JAMAIS entre deux rubriques : l'état éditeur est init-once et le brouillon vit en mémoire — à VÉRIFIER sur Next 16 en recette : changer `?rubrique=` ne doit pas remonter `PortalFicheEditor`).
 
+**Composition (une seule pour les deux tailles d'écran).** `PortalFicheEditor` rend TOUJOURS le même arbre, quel que soit l'écran et quelle que soit la vue :
+
+```tsx
+<div className="portal-fiche" data-view={activeRubric ? 'rubric' : 'hub'}>
+  <div className="portal-fiche-head">{/* retour, h1 fiche, notices, progression, « Pour compléter », retours de l'office */}</div>
+  <div className="portal-fiche-layout">
+    <ol className="portal-tasks portal-hub-list">{/* une ligne par rubrique ; aria-current="step" sur l'ouverte */}</ol>
+    <div className="portal-panel">
+      {activeRubric ? <PortalRubricScreen … /> : <>{/* Photos + « Vérifiez ces informations » */}</>}
+    </div>
+  </div>
+  <PortalSendBar … />
+</div>
+```
+
+≥ 1024 px la grille place la liste à gauche (collante) et le panneau à droite : le prestataire garde ses rubriques sous les yeux en remplissant. ≤ 1023 px la même grille retombe en une colonne et la CSS masque l'en-tête + la liste quand `data-view="rubric"`. **Aucun `useMediaQuery`, aucun rendu conditionnel par taille** — un seul chemin, pas d'hydratation à resynchroniser, et le focus (h1 du panneau à l'ouverture d'une rubrique, h1 de la fiche au retour) se gère à l'identique. Test RTL : les deux enfants sont rendus dans les deux vues, seul `data-view` change, et la ligne ouverte porte `aria-current="step"`.
+
 **Écrans (maquette : `docs/superpowers/specs/2026-09-01-portail-acteur-design.md` §4.5, artefact « Espace prestataire ») :**
 
 1. **Hub** — `<a>← Vos fiches</a>` (uniquement si ≥ 2 fiches) ; `h1.portal-h1` = nom de la fiche (`tabIndex={-1}`, reçoit le focus à chaque retour) ; ligne muted « {Type} · {Commune} » ; `.notice` permanent « Ce que vous modifiez ici est vérifié par l’office avant d’être publié. » ; si envoi en cours : `.notice--warn` « Envoyé le {date}. L’office vérifie vos modifications. Vous pouvez continuer à préparer d’autres changements. » ; si retours : carte `.panel-card--warning` « Retours de l’office » (une ligne par changement refusé : titre de rubrique + « refusé : « {review_note} » » + lien « Corriger ») ; carte « Pour compléter votre fiche » (boutons 48 px, un par rubrique `todo`, + « Ajoutez des photos ({n} sur {cible}) » qui ouvre Photos) ou ligne « Votre fiche est complète. Merci ! » ; `<ol class="portal-tasks">` : une ligne ≥ 64 px par rubrique = `<Link href={{ query: { rubrique: r.id } }} scroll={false}>` (navigation douce — jamais un `<a href>` nu, cf. « Produces » ci-dessus) titre (1.05 rem/700) + résumé 1 ligne (`summary`, `--ink-3`, tronqué) + `.badge` d'état + chevron ; états : `todo` « À faire » (`--warn`, `Circle`) · `filled` « Rempli » (`--ok`, `Check`) · `dirty` « Modifié — à envoyer » (`--info`, `Pencil`) · `pending` « Envoyé — en vérification » (`--muted`, `Clock`) · `rejected` « À reprendre » (`--danger`, `AlertTriangle`) · `unavailable` « Indisponible pour le moment » (`--muted`, ligne non cliquable) ; puis la pseudo-rubrique **Photos** (lecture seule) et la carte **« Vérifiez ces informations »** (Nom / Type de fiche / Adresse / Téléphone publié en lecture seule + bouton « Signaler une erreur » → textarea « Dites-nous ce qui est faux » dont le texte part préfixé « Erreur signalée : » dans le message d'envoi). **Jamais une impasse** : `submit_actor_fiche` exige ≥ 1 modification, donc si le signalement est la SEULE chose saisie, la carte le dit (« Ce message partira avec votre prochain envoi. Pour prévenir l’office tout de suite : ») et affiche l'e-mail et le téléphone publics de l'office (`officeEmail` / `officePhone` de `PortalFiche`, Task 6 + Task 11) avec `mailto:`/`tel:` — si les deux sont NULL, « Contactez votre office de tourisme. » ; le texte est conservé **dans le brouillon local** (clé `note`, Step 2 §5 : il peut être la SEULE saisie et un envoi sans modification est refusé — il ne peut donc pas vivre dans un état d'écran).
@@ -3274,6 +3312,7 @@ it('la barre d’envoi n’apparaît qu’avec une rubrique modifiée et compte 
 it('envoi en cours : bouton aria-disabled + phrase visible, les rubriques restent ouvrables', () => {});
 it('retours de l’office : une ligne par changement refusé avec la note et un lien Corriger vers ?rubrique=', () => {});
 it('type non pris en charge (ITI/FMA/ORG) : panneau « Cette fiche est gérée par l’office » et aucune rubrique', () => {});
+it('même arbre dans les deux vues : liste ET panneau rendus, seul data-view change, la rubrique ouverte porte aria-current="step"', () => {});
 ```
 
 `rubrics/ContactsRubric.test.tsx` :
@@ -3359,7 +3398,7 @@ CSS (suite du bloc `.portal-*`) : `.portal-tasks` (liste sans puces, lignes sép
 cd bertel-tourism-ui && npm run test:run -- src/features/portal src/views/PortalHomePage.test.tsx src/styles.guard.test.ts && npm run typecheck
 ```
 
-Puis recette manuelle en dev (préférence « real DB data ») : `preview_start`, compte de test acteur (provisoirement en SQL live : `UPDATE app_user_profile SET role='actor', actor_id=<uuid test> WHERE id=<compte jetable>`), parcourir /espace → fiche → 2 rubriques → Envoyer → « Merci ! » → recharger (rubriques « Envoyé — en vérification ») ; **sur un téléphone réel** (ou l'émulation 375 px) : aucune barre horizontale, cibles ≥ 48 px, clavier numérique sur les champs nombre/tel ; PUIS remettre le compte dans son état d'origine.
+Puis recette manuelle en dev (préférence « real DB data ») : `preview_start`, compte de test acteur (provisoirement en SQL live : `UPDATE app_user_profile SET role='actor', actor_id=<uuid test> WHERE id=<compte jetable>`), parcourir /espace → fiche → 2 rubriques → Envoyer → « Merci ! » → recharger (rubriques « Envoyé — en vérification ») ; **sur un téléphone réel** (ou l'émulation 375 px) : aucune barre horizontale, cibles ≥ 48 px, clavier numérique sur les champs nombre/tel ; **puis sur ordinateur (1440 px)** : deux colonnes, la liste des rubriques reste visible et collante pendant la saisie, la rubrique ouverte est marquée, les lignes de texte ne dépassent pas ~66 caractères, la barre d'envoi reste atteignable ; **et à 1023 px** : bascule propre en une colonne (l'en-tête et la liste s'effacent quand une rubrique est ouverte). PUIS remettre le compte dans son état d'origine.
 
 - [ ] **Step 6 : Commits (une tranche par commit, chacune verte)**
 

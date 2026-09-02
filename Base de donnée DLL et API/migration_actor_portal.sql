@@ -807,4 +807,345 @@ COMMENT ON FUNCTION api.list_my_submissions(int, text) IS
 COMMENT ON FUNCTION api.get_my_actor_profile() IS
   '18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu''UN acteur, le sien.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 7. D9 — valider TOUT ou PARTIE.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 7.1 approve_pending_change gagne l'ATTESTATION manuelle. DROP requis : on AJOUTE un
+-- paramètre, et CREATE OR REPLACE ne sait pas le faire. Le DROP efface aussi les
+-- REVOKE/GRANT — re-posés plus bas, sinon la fonction repart avec le EXECUTE public
+-- implicite de PostgreSQL.
+--
+-- ⚠ CE QUE FERMAIT LA VERSION VIVE, ET POURQUOI ÇA COMPTE. Le prosrc VIF relevé le
+-- 2026-09-02 (md5=3cf2a45631df18e22e0b4c5cd81d9e2e, archivé dans
+-- .superpowers/sdd/2026-09-01-portail-acteur/live/approve_pending_change.LIVE.sql) traite
+-- « rpc absent » et « rpc non whitelisté » dans UNE SEULE condition :
+--   IF v_rpc IS NULL OR NOT (v_rpc = ANY(v_allowed)) THEN RAISE … ERRCODE '22023';
+-- Un changement sans writer était donc refusé INCONDITIONNELLEMENT, sans qu'aucune écriture
+-- n'ait lieu : la ligne ne sortait JAMAIS de 'pending'. Tant que le seul producteur de
+-- pending_change était l'éditeur interne (§120/§122), qui n'émet que des enveloppes
+-- structurées, ce refus était sans conséquence. Le portail acteur le rend mortel : 5 des 7
+-- rubriques ouvertes au prestataire sont manual_apply (l'intersection avec les routes auto
+-- se réduit à {openings, characteristics}), et uq_fiche_submission_open n'autorise QU'UNE
+-- vérification ouverte par fiche. Sans branche attestée, l'office n'aurait eu qu'un seul
+-- geste possible sur ces lignes — le REFUS — et toute soumission contenant une rubrique
+-- manuelle aurait bloqué sa fiche pour toujours.
+--
+-- ⚠ WHITELIST REPRISE DU prosrc VIF, PAS DU FICHIER. migration_moderation_rpcs.sql en liste
+-- HUIT (avec save_object_rooms) ; la définition VIVE n'en porte que SEPT. Recopier le
+-- fichier aurait ajouté save_object_rooms à l'ensemble des writers qu'une approbation peut
+-- auto-dispatcher : un élargissement de la surface d'écriture, jamais l'effet de bord
+-- légitime d'un ajout de paramètre. La liste doit en outre rester IDENTIQUE à celle de
+-- api.submit_actor_fiche (§5) — une asymétrie dans un sens laisse entrer un changement
+-- inapprouvable (fiche bloquée à vie), dans l'autre elle rend approuvable ce que la
+-- soumission refusait.
+--
+-- ⚠ ACCENTS RESTAURÉS. Les messages vifs sont translittérés (« deja resolue »,
+-- « moderation », « autorise ») — trace d'un déploiement historique passé par un canal qui
+-- les a perdus. Ces textes remontent jusqu'à l'écran du modérateur : ils sont réécrits ici
+-- dans leur forme correcte.
+DROP FUNCTION IF EXISTS api.approve_pending_change(uuid, text);
+CREATE FUNCTION api.approve_pending_change(
+  p_id                uuid,
+  p_review_note       text    DEFAULT NULL,
+  p_applied_manually  boolean DEFAULT FALSE
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_row pending_change%ROWTYPE;
+  v_rpc text;
+  v_uid uuid := auth.uid();
+  -- SEPT entrées — cf. l'avertissement ci-dessus. Miroir exact de api.submit_actor_fiche.
+  v_allowed text[] := ARRAY[
+    'save_object_commercial',
+    'save_object_workspace_sustainability',
+    'save_object_workspace_tags',
+    'save_object_itinerary_nested',
+    'save_object_openings',
+    'save_object_places',
+    'save_object_relations'
+  ];
+  v_now timestamptz := now();
+BEGIN
+  SELECT * INTO v_row FROM pending_change WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Suggestion introuvable: %', p_id USING ERRCODE = 'no_data_found';
+  END IF;
+  IF v_row.status <> 'pending' THEN
+    RAISE EXCEPTION 'Suggestion déjà résolue (statut=%)', v_row.status USING ERRCODE = '22023';
+  END IF;
+  -- La garde d'autorisation reste AVANT toute branche : l'attestation est un geste de
+  -- modération de plus, pas un chemin parallèle. Elle s'évalue sur auth.uid() — SECURITY
+  -- DEFINER change le propriétaire des droits Postgres, jamais l'identité applicative.
+  IF NOT api.user_can_moderate_object(v_row.object_id) THEN
+    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
+  END IF;
+
+  v_rpc := v_row.metadata->>'rpc';
+
+  IF v_rpc IS NULL THEN
+    -- 18a/D9 : un changement manual_apply devient APPROUVABLE — à la seule condition que le
+    -- modérateur ATTESTE l'avoir reporté à la main dans l'éditeur. Aucun SQL ne peut vérifier
+    -- ce report ; ce que la base peut faire, et fait ici, c'est le rendre ATTESTABLE.
+    IF NOT COALESCE(p_applied_manually, FALSE) THEN
+      RAISE EXCEPTION 'RPC de re-dispatch absent ou non autorisé: (null)' USING ERRCODE = '22023';
+    END IF;
+    UPDATE pending_change
+       SET status      = 'approved',   -- approved ≠ applied : attesté par un humain, pas écrit par la machine
+           reviewed_by = v_uid,
+           reviewed_at = v_now,
+           review_note = p_review_note,
+           -- Trace EXPLICITE, et non dérivée. « status='approved' AND applied_at IS NULL »
+           -- dit la même chose aujourd'hui, mais c'est une inférence : le premier remaniement
+           -- des statuts l'efface sans bruit. reviewed_by seul ne suffit pas non plus — un
+           -- REJET en pose un aussi. On écrit donc le fait lui-même, avec son auteur et sa
+           -- date. Clé distincte de metadata.manual_apply, qui est la DÉCLARATION du
+           -- soumetteur (« cette rubrique n'a pas de writer ») : ici c'est l'ATTESTATION du
+           -- modérateur (« je l'ai reportée »). Deux faits, deux clés, deux responsables.
+           metadata    = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+                           'applied_manually', TRUE,
+                           'attested_by', v_uid,
+                           'attested_at', v_now),
+           updated_at  = v_now
+     WHERE id = p_id;
+    RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'approved', 'reviewed_at', v_now);
+  END IF;
+
+  -- Un writer PRÉSENT mais hors whitelist reste refusé, attestation ou pas : l'attestation
+  -- ne couvre que l'ABSENCE de route automatique. Sans cette branche distincte du bras
+  -- « v_rpc IS NULL », p_applied_manually deviendrait un interrupteur d'approbation
+  -- universel, capable d'ouvrir n'importe quelle enveloppe déposée par un autre chemin.
+  IF NOT (v_rpc = ANY(v_allowed)) THEN
+    RAISE EXCEPTION 'RPC de re-dispatch absent ou non autorisé: %', v_rpc USING ERRCODE = '22023';
+  END IF;
+
+  -- Re-dispatch vers le writer structuré (signature uniforme (p_object_id, p_payload)).
+  -- %I quote l'identifiant ; le nom est en outre whitelisté ci-dessus. AS THE CALLER : le
+  -- writer re-vérifie ses propres gates d'écriture canonique contre auth.uid().
+  EXECUTE format('SELECT api.%I($1, $2)', v_rpc) USING v_row.object_id, v_row.payload;
+
+  UPDATE pending_change
+     SET status      = 'applied',
+         reviewed_by = v_uid,
+         reviewed_at = v_now,
+         applied_at  = v_now,
+         review_note = p_review_note,
+         updated_at  = v_now
+   WHERE id = p_id;
+
+  RETURN jsonb_build_object('success', true, 'id', p_id, 'status', 'applied', 'applied_at', v_now);
+END;
+$$;
+REVOKE ALL ON FUNCTION api.approve_pending_change(uuid, text, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.approve_pending_change(uuid, text, boolean) TO authenticated, service_role;
+COMMENT ON FUNCTION api.approve_pending_change(uuid, text, boolean) IS
+  'P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d''un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l''appel historique à deux arguments est inchangé.';
+
+-- 7.2 Approbation / rejet d'une SOUMISSION entière. Tout-ou-rien : un writer qui échoue fait
+-- remonter son exception et annule le geste complet (la transaction du RPC est atomique) —
+-- une soumission à moitié appliquée serait pire qu'un refus.
+-- Ces deux RPC ne posent PAS le statut agrégé de fiche_submission : la résolution (statut,
+-- resolved_at, tâche done, notification à l'acteur) est portée par le TRIGGER de la §8, qui
+-- tourne sur pending_change et couvre donc AUSSI les chemins unitaires et les correctifs
+-- service_role. Dupliquer cette logique ici en ferait deux versions à faire diverger.
+CREATE OR REPLACE FUNCTION api.approve_fiche_submission(
+  p_submission_id  uuid,
+  p_review_note    text    DEFAULT NULL,
+  p_include_manual boolean DEFAULT FALSE
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_sub fiche_submission%ROWTYPE;
+  v_pc  RECORD;
+  v_applied int := 0;
+  v_manual  int := 0;
+  v_skipped int := 0;
+BEGIN
+  SELECT * INTO v_sub FROM fiche_submission WHERE id = p_submission_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Soumission introuvable: %', p_submission_id USING ERRCODE = 'no_data_found';
+  END IF;
+  -- Garde PROPRE, et pas seulement celle d'approve_pending_change : sur une soumission dont
+  -- plus aucune ligne n'est pending, la boucle ci-dessous ne s'exécute pas — sans ce contrôle,
+  -- l'appel rendrait un SUCCÈS à quelqu'un qui n'a aucun droit sur la fiche.
+  IF NOT api.user_can_moderate_object(v_sub.object_id) THEN
+    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
+  END IF;
+
+  FOR v_pc IN
+    SELECT id, (metadata->>'rpc') AS rpc FROM pending_change
+    WHERE submission_id = p_submission_id AND status = 'pending'
+    ORDER BY submitted_at, id
+  LOOP
+    IF v_pc.rpc IS NULL AND NOT COALESCE(p_include_manual, FALSE) THEN
+      -- Reste pending, DÉLIBÉRÉMENT : le modérateur n'a pas déclaré avoir reporté ces
+      -- rubriques. Tant qu'il en reste une, la soumission ne peut pas se résoudre — le
+      -- verrou « une seule vérification ouverte » tient, et l'acteur ne rouvre pas la fiche
+      -- pendant que l'office travaille encore.
+      v_skipped := v_skipped + 1;
+      CONTINUE;
+    END IF;
+    -- L'attestation n'est propagée que pour les lignes SANS writer : sur une ligne auto, elle
+    -- serait un mensonge d'audit (la machine écrit, personne n'atteste).
+    PERFORM api.approve_pending_change(v_pc.id, p_review_note, v_pc.rpc IS NULL);
+    IF v_pc.rpc IS NULL THEN v_manual := v_manual + 1; ELSE v_applied := v_applied + 1; END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'applied_count', v_applied, 'approved_manual_count', v_manual,
+    'skipped_manual_count', v_skipped,
+    -- Relu APRÈS la boucle : le trigger de résolution (§8) a pu le faire basculer pendant.
+    'submission_status', (SELECT status FROM fiche_submission WHERE id = p_submission_id));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION api.reject_fiche_submission(
+  p_submission_id uuid,
+  p_review_note   text
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_sub fiche_submission%ROWTYPE;
+  v_pc  RECORD;
+  v_n   int := 0;
+BEGIN
+  -- Le motif est la SEULE chose que le prestataire recevra pour comprendre ce qui ne va pas :
+  -- un refus muet le laisse re-soumettre à l'identique. Contrôlé avant toute lecture, comme
+  -- dans reject_pending_change (§120), pour que le message ne dépende pas de l'existence de
+  -- la soumission.
+  IF p_review_note IS NULL OR btrim(p_review_note) = '' THEN
+    RAISE EXCEPTION 'Un motif de refus est obligatoire' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_sub FROM fiche_submission WHERE id = p_submission_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Soumission introuvable: %', p_submission_id USING ERRCODE = 'no_data_found';
+  END IF;
+  IF NOT api.user_can_moderate_object(v_sub.object_id) THEN
+    RAISE EXCEPTION 'Droits de modération insuffisants sur cet objet' USING ERRCODE = '42501';
+  END IF;
+  -- Seules les lignes ENCORE pending : un rejet groupé arrivant après un traitement unitaire
+  -- ne doit pas ré-écrire ce qui a déjà été tranché (ni écraser son motif).
+  FOR v_pc IN
+    SELECT id FROM pending_change
+    WHERE submission_id = p_submission_id AND status = 'pending'
+    ORDER BY submitted_at, id
+  LOOP
+    PERFORM api.reject_pending_change(v_pc.id, p_review_note);
+    v_n := v_n + 1;
+  END LOOP;
+  RETURN jsonb_build_object('rejected_count', v_n,
+    'submission_status', (SELECT status FROM fiche_submission WHERE id = p_submission_id));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.approve_fiche_submission(uuid, text, boolean) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.reject_fiche_submission(uuid, text)           FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.approve_fiche_submission(uuid, text, boolean) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.reject_fiche_submission(uuid, text)           TO authenticated, service_role;
+COMMENT ON FUNCTION api.approve_fiche_submission(uuid, text, boolean) IS
+  '18a/D9 — approuve une soumission entière. p_include_manual=FALSE (défaut) SAUTE les changements sans writer et les laisse pending : la soumission reste ouverte tant que l''office n''a pas attesté les avoir reportés. Ne pose pas le statut agrégé (trigger §8).';
+COMMENT ON FUNCTION api.reject_fiche_submission(uuid, text) IS
+  '18a/D9 — refuse une soumission entière. Motif OBLIGATOIRE (le prestataire doit savoir pourquoi) ; ne touche que les lignes encore pending.';
+
+-- 7.3 list_pending_changes émet les colonnes de soumission (vue groupée côté office). DROP
+-- requis : le type de retour change (4 colonnes ajoutées), ce que CREATE OR REPLACE refuse.
+-- Corps = celui du §120 + 2 jointures + 4 colonnes. Les DEUX jointures ajoutées sont LEFT :
+-- l'écrasante majorité des pending_change (contributeurs internes §120/§122) n'a PAS de
+-- submission_id, et un INNER les ferait disparaître de la file de modération — régression
+-- totale et silencieuse d'un module existant.
+DROP FUNCTION IF EXISTS api.list_pending_changes(text, text, int, int);
+CREATE FUNCTION api.list_pending_changes(
+  p_status    text DEFAULT 'pending',
+  p_object_id text DEFAULT NULL,
+  p_limit     int  DEFAULT 50,
+  p_offset    int  DEFAULT 0
+)
+RETURNS TABLE (
+  id             uuid,
+  object_id      text,
+  object_name    text,
+  target_table   text,
+  target_pk      text,
+  action         text,
+  status         text,
+  field_label    text,
+  before_value   text,
+  after_value    text,
+  submitted_by   uuid,
+  submitter_label text,
+  submitted_at   timestamptz,
+  reviewed_by    uuid,
+  reviewer_label text,
+  reviewed_at    timestamptz,
+  review_note    text,
+  applied_at     timestamptz,
+  submission_id  uuid,
+  submission_note text,
+  actor_label    text,
+  manual_apply   boolean
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_is_super boolean := api.is_platform_superuser();
+  v_scope    text[]  := ARRAY(SELECT api.current_user_crm_object_ids());
+  v_can_validate boolean := api.user_has_permission('validate_changes');
+  v_limit    int := LEAST(GREATEST(COALESCE(p_limit, 50), 1), 200);
+  v_offset   int := GREATEST(COALESCE(p_offset, 0), 0);
+BEGIN
+  RETURN QUERY
+  SELECT
+    pc.id, pc.object_id, o.name, pc.target_table, pc.target_pk, pc.action, pc.status,
+    pc.metadata->>'field'  AS field_label,
+    pc.metadata->>'before' AS before_value,
+    pc.metadata->>'after'  AS after_value,
+    pc.submitted_by,
+    COALESCE(sp.display_name, 'Utilisateur ' || left(pc.submitted_by::text, 8)) AS submitter_label,
+    pc.submitted_at,
+    pc.reviewed_by,
+    CASE WHEN pc.reviewed_by IS NULL THEN NULL
+         ELSE COALESCE(rp.display_name, 'Utilisateur ' || left(pc.reviewed_by::text, 8)) END AS reviewer_label,
+    pc.reviewed_at, pc.review_note, pc.applied_at,
+    -- 18a/D9 : le groupage par soumission + le libellé acteur (joint à la lecture, RGPD).
+    pc.submission_id,
+    fs.note AS submission_note,
+    a.display_name AS actor_label,
+    -- Comparaison jsonb plutôt que (metadata->>'manual_apply')::boolean : metadata est un
+    -- jsonb LIBRE, alimenté par plusieurs producteurs (éditeur §120, portail §5, correctifs).
+    -- Un cast nu sur un jsonb libre n'abat pas la ligne fautive, il abat la LECTURE ENTIÈRE —
+    -- une seule valeur non castable et la file de modération rend un 22P02 pour tout le monde
+    -- (précédent du dépôt, §17m). La comparaison jsonb ne lève jamais ; repli sur l'absence de
+    -- writer quand la clé n'existe pas, ce qui est le cas de toutes les lignes §120.
+    COALESCE(pc.metadata->'manual_apply' = 'true'::jsonb, (pc.metadata->>'rpc') IS NULL) AS manual_apply
+  FROM pending_change pc
+  LEFT JOIN object o            ON o.id = pc.object_id
+  LEFT JOIN app_user_profile sp ON sp.id = pc.submitted_by
+  LEFT JOIN app_user_profile rp ON rp.id = pc.reviewed_by
+  LEFT JOIN fiche_submission fs ON fs.id = pc.submission_id
+  LEFT JOIN actor a             ON a.id = fs.actor_id
+  WHERE (p_status IS NULL OR pc.status = p_status)
+    AND (p_object_id IS NULL OR pc.object_id = p_object_id)
+    AND (
+      v_is_super
+      OR (v_can_validate AND pc.object_id IS NOT NULL AND pc.object_id = ANY(v_scope))
+    )
+  ORDER BY pc.submitted_at DESC, pc.id
+  LIMIT v_limit OFFSET v_offset;
+END;
+$$;
+REVOKE ALL ON FUNCTION api.list_pending_changes(text, text, int, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.list_pending_changes(text, text, int, int) TO authenticated, service_role;
+COMMENT ON FUNCTION api.list_pending_changes(text, text, int, int) IS
+  'P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.';
+
 COMMIT;

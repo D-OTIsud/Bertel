@@ -83,10 +83,38 @@
 --       prestataire multi-fiches). Les invariants PII du bloc D restent vrais pour la persona
 --       acteur : aucun gate interne (edit/contacts/search_actors) ne s'ouvre. Les TROIS RPCs
 --       refusent identiquement un non-acteur (42501, périmètre jamais élargi par défaut).
+--   (F2) D9 — VALIDER TOUT OU PARTIE. Le comportement VIF d'api.approve_pending_change sur une
+--       ligne `rpc: null` est d'abord ÉTABLI, pas supposé : refus inconditionnel en 22023, sans
+--       aucune écriture — la ligne ne sortait donc JAMAIS de « pending », et comme 5 des 7
+--       rubriques du portail sont manual_apply, la soumission ne pouvait jamais se résoudre et
+--       uq_fiche_submission_open bloquait la fiche à vie. §7 ouvre une
+--       branche ATTESTÉE : rpc NULL + p_applied_manually ⇒ 'approved' (jamais 'applied'),
+--       applied_at NULL, AUCUN re-dispatch (prouvé : rien n'est écrit dans object_description),
+--       et une TRACE EXPLICITE metadata.applied_manually/attested_by/attested_at — parce que
+--       « la machine a écrit » et « un humain déclare avoir écrit » ne doivent pas se confondre
+--       dans l'audit, et parce qu'un fait dérivé (status+applied_at) s'efface au premier
+--       remaniement. Anti-escalade : l'attestation NE contourne ni la garde de modération
+--       (v_viewer et v_orgadm — rang admin >= 30, §227 — refusés en 42501 sur les CINQ gestes)
+--       ni la whitelist (un writer réel hors liste reste refusé même « attesté »). Les QUATRE
+--       issues d'une soumission sont prouvées sur leur composition de lignes — l'entrée exacte
+--       du trigger de résolution (Task 8, qui seul pose le statut agrégé) : partielle
+--       (1 approuvé + 1 rejeté, avec le détail PAR SECTION relu côté prestataire via
+--       list_my_submissions), tout approuvé (2 applied), tout rejeté (2 rejected, ligne
+--       manual_apply comprise — un refus n'a jamais eu besoin de writer), et surtout PARTIEL
+--       INACHEVÉ : p_include_manual=FALSE saute la ligne manuelle, il reste 1 pending, la
+--       soumission NE se résout PAS et le verrou « une seule vérification ouverte » TIENT
+--       (PT409 sur une nouvelle soumission) — sinon l'acteur rouvrirait pendant que l'office
+--       travaille. Motif de refus OBLIGATOIRE (NULL et blancs refusés, sondés avec les droits et
+--       sur une soumission valide). Gardes des RPC groupés isolées sur une soumission SANS ligne
+--       pending — sans leur garde propre, une boucle vide rendrait un succès à qui n'a aucun
+--       droit. NON-RÉGRESSION §120/§122 : l'appel historique à DEUX arguments sur une ligne sans
+--       submission_id rend toujours 'applied' + applied_at, sans estampille d'attestation ; et
+--       une telle ligne reste listée par list_pending_changes (jointure soumission LEFT, jamais
+--       INNER — un INNER effacerait la file de modération existante en silence).
 -- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx
--- (+ 1410-1419 pour le bloc G, task 6).
+-- (+ 1410-1419 pour le bloc G, task 6 ; + 1420-1429 pour le bloc F2, task 7).
 \set ON_ERROR_STOP on
 BEGIN;
 DO $$
@@ -151,6 +179,28 @@ DECLARE
   v_fiches      jsonb; -- (G) retour list_my_portal_fiches, capturé une fois par persona
   v_f           jsonb; -- (G) élément unique extrait de v_fiches (une fiche)
   v_dup_count   integer; -- (G) cardinalité brute de current_user_portal_object_ids() pour v_objA
+  -- (F2) D9 — DECLARE additionnels (task-7). Sous-plage de fixtures RÉSERVÉE : 1420-1429,
+  -- disjointe de 1301-1307 (A/E/H) / 1311-1314 (B) / 1321-1322 (B) / 1391-1393 (C) /
+  -- 1410-1419 (G). TROIS fiches neuves sont ici structurellement nécessaires, pas un confort :
+  -- uq_fiche_submission_open n'autorise QU'UNE soumission ouverte par fiche, et ce qui libère
+  -- ce verrou — fiche_submission.status ≠ 'pending' — est posé par le TRIGGER de résolution de
+  -- la Task 8, qui n'existe pas encore. Deux soumissions successives sur la MÊME fiche
+  -- partiraient donc en PT409 : chaque issue à prouver exige SA fiche.
+  v_objG    text := 'HOTRUN9999991421'; -- (F2) issue « tout approuvé »    — 2 changements auto
+  v_objH    text := 'HOTRUN9999991422'; -- (F2) issue « tout rejeté »      — 1 auto + 1 manuel
+  v_objI    text := 'HOTRUN9999991423'; -- (F2) issue « partiel INACHEVÉ » — le verrou doit TENIR
+  v_pc_manual uuid; -- (F2) la ligne manual_apply (rpc NULL) de la soumission nominale D2
+  v_pc_auto   uuid; -- (F2) la ligne auto (save_object_openings) de la même soumission
+  v_pc_escal  uuid; -- (F2) ligne PIÈGE : writer réel hors whitelist — l'attestation ne l'ouvre PAS
+  v_pc_legacy uuid; -- (F2) ligne §120/§122 SANS submission_id — preuve de non-régression
+  v_subG      uuid; -- (F2) soumission de v_objG
+  v_subH      uuid; -- (F2) soumission de v_objH
+  v_subI      uuid; -- (F2) soumission de v_objI
+  v_res2      jsonb;   -- (F2) retours des RPC D9
+  v_msg       text;    -- (F2) SQLERRM capturé — preuve des accents restaurés dans les messages
+  v_persona   uuid;    -- (F2) itérateur des personas SANS droit de modération
+  v_detail    jsonb;   -- (F2) le détail PAR SECTION relu côté prestataire (list_my_submissions)
+  v_pending_left integer; -- (F2) lignes encore en attente — ce qui EMPÊCHE la résolution
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -1137,6 +1187,444 @@ BEGIN
   ASSERT v_denied, 'G: get_my_actor_profile refuse un non-acteur';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G OK';
+  -- ---------- Fixture (F2) : fiches dédiées + écriture canonique de l'office ----------
+  -- RESET ROLE restaure le rôle Postgres mais pas le GUC — même geste que (A)/(C)/(D1)/(G).
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+
+  -- Le re-dispatch d'un writer whitelisté tourne AS THE CALLER : save_object_openings appelle
+  -- internal.workspace_assert_can_write_object → api.user_can_write_object_canonical. Sans ce
+  -- grant, toute approbation d'un changement AUTO échouerait en 42501 levé par le WRITER et non
+  -- par la garde de modération — le test « ça refuse » passerait alors en prouvant tout autre
+  -- chose. Grant posé ICI et non dans la fixture équipe (bloc E) : aucun bloc antérieur ne doit
+  -- voir ses droits changer sous lui.
+  INSERT INTO user_permission (user_id, permission_id, is_active)
+  SELECT v_editor, id, TRUE FROM ref_permission WHERE code = 'edit_canonical_when_publisher'
+  ON CONFLICT (user_id, permission_id) DO UPDATE SET is_active = TRUE;
+
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_objG, 'HOT', 'Hôtel D9 — tout approuvé',    'draft'),
+    (v_objH, 'HOT', 'Hôtel D9 — tout rejeté',      'draft'),
+    (v_objI, 'HOT', 'Hôtel D9 — partiel inachevé', 'draft')
+    ON CONFLICT (id) DO NOTHING;
+  -- Publiées par v_orgA : c'est CE lien publisher qui met ces fiches à la fois dans
+  -- api.current_user_crm_object_ids() de v_editor (donc dans user_can_moderate_object) et dans
+  -- api.list_object_verifier_ids — les deux moitiés du geste D9.
+  INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
+    (v_objG, v_orgA, v_pub), (v_objH, v_orgA, v_pub), (v_objI, v_orgA, v_pub)
+    ON CONFLICT DO NOTHING;
+  -- Insérés APRÈS les assertions de cardinalité du bloc G (« portée close à EXACTEMENT 2
+  -- fiches ») : ce bloc est additif, il ne doit rien déplacer en amont.
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actor1, v_objG, v_role_op, TRUE, NULL, NULL),
+    (v_actor1, v_objH, v_role_op, TRUE, NULL, NULL),
+    (v_actor1, v_objI, v_role_op, TRUE, NULL, NULL)
+    ON CONFLICT DO NOTHING;
+
+  -- ---------- (F2) D9 : validation TOTALE ou PARTIELLE + attestation manual_apply ----------
+  -- Les DEUX lignes de la soumission nominale (D2) : une manual_apply (rpc NULL), une auto.
+  SELECT id INTO v_pc_manual FROM pending_change
+   WHERE submission_id = v_subid AND metadata->'manual_apply' = 'true'::jsonb;
+  SELECT id INTO v_pc_auto FROM pending_change
+   WHERE submission_id = v_subid AND metadata->>'rpc' = 'save_object_openings';
+  ASSERT v_pc_manual IS NOT NULL AND v_pc_auto IS NOT NULL AND v_pc_manual <> v_pc_auto,
+         'F2: fixture — la soumission D2 porte bien UNE ligne manuelle et UNE ligne auto';
+  -- LE fait que D9 doit trancher, et qui n'était établi nulle part avant cette task : cette
+  -- ligne n'a AUCUN writer. Le prosrc VIF de api.approve_pending_change (relevé le 2026-09-02,
+  -- md5=3cf2a45631df18e22e0b4c5cd81d9e2e) refuse rpc NULL INCONDITIONNELLEMENT — « IF v_rpc IS
+  -- NULL OR NOT (v_rpc = ANY(v_allowed)) THEN RAISE … ERRCODE 22023 » — SANS RIEN ÉCRIRE, donc
+  -- sans jamais faire sortir la ligne de « pending ». Comme 5 des 7 rubriques du portail sont
+  -- manual_apply (intersection avec les routes auto = {openings, characteristics} seulement),
+  -- la soumission ne pouvait JAMAIS se résoudre et uq_fiche_submission_open bloquait la fiche
+  -- POUR TOUJOURS. Le seul geste possible restait le refus. C'est ce trou que §7 ferme.
+  ASSERT (SELECT metadata->>'rpc' FROM pending_change WHERE id = v_pc_manual) IS NULL,
+         'F2: fixture — la ligne manual_apply ne porte AUCUN writer (rpc NULL)';
+
+  -- (F2.1) AUTORISATION — l'attestation n'est pas une porte dérobée.
+  -- v_viewer est membre actif de l'ORG mais ne tient AUCUN validate_changes ; v_orgadm tient un
+  -- rang admin >= 30 et rien d'autre — or api.user_has_permission ignore TOTALEMENT
+  -- user_org_admin_role (§227, re-vérifié en base). Les deux doivent être refusés à
+  -- l'IDENTIQUE, et en 42501 PRÉCISÉMENT : un 22023 (« déjà résolue », « rpc absent ») passerait
+  -- un WHEN others à tort en prouvant tout autre chose. Si la garde d'autorisation manquait, la
+  -- sonde attestée ci-dessous RÉUSSIRAIT (aucune exception) et l'assertion mordrait.
+  FOREACH v_persona IN ARRAY ARRAY[v_viewer, v_orgadm] LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_persona, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      v_denied := false;
+      BEGIN PERFORM api.approve_pending_change(v_pc_auto, 'sans droit');
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied, 'F2: approve unitaire refusé sans droit de modération (42501)';
+
+      v_denied := false;
+      BEGIN PERFORM api.approve_pending_change(v_pc_manual, 'je l''ai reporté', TRUE);
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied,
+        'F2: l''ATTESTATION ne contourne PAS la garde de modération (sinon n''importe quel membre déclare une fiche « validée »)';
+
+      v_denied := false;
+      BEGIN PERFORM api.reject_pending_change(v_pc_auto, 'motif');
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied, 'F2: reject unitaire refusé sans droit de modération';
+
+      v_denied := false;
+      BEGIN PERFORM api.approve_fiche_submission(v_subid, 'sans droit', TRUE);
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied, 'F2: approbation GROUPÉE refusée sans droit de modération';
+
+      v_denied := false;
+      BEGIN PERFORM api.reject_fiche_submission(v_subid, 'motif');
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied, 'F2: rejet GROUPÉ refusé sans droit de modération';
+    RESET ROLE;
+  END LOOP;
+  -- Rien n'a bougé sous ces cinq refus (une garde qui lève APRÈS avoir écrit resterait invisible
+  -- au seul comptage d'exceptions dans un test qui ne relit pas l'état).
+  ASSERT (SELECT count(*) FROM pending_change
+           WHERE submission_id = v_subid AND status = 'pending') = 2,
+         'F2: les refus d''autorisation ne laissent AUCUNE écriture derrière eux';
+
+  -- (F2.2) L'attestation n'ouvre PAS la whitelist. Ligne PIÈGE portant un writer RÉEL mais non
+  -- whitelisté : une implémentation écrite « IF v_rpc IS NULL OR p_applied_manually THEN
+  -- <branche attestée> » passerait TOUS les autres tests de ce bloc et transformerait
+  -- p_applied_manually en interrupteur d'approbation universel — un modérateur pourrait
+  -- « attester » n'importe quelle enveloppe, y compris un writer destructeur. Insérée
+  -- directement sous owner : submit_actor_fiche la refuse à l'entrée (bloc D2), c'est justement
+  -- le point — une telle ligne ne peut venir que d'un AUTRE chemin (contributeur interne §122,
+  -- correctif service_role, ligne historique).
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO pending_change (object_id, target_table, target_pk, action, payload,
+                              submitted_by, status, metadata)
+  VALUES (v_objA, 'object', NULL, 'update', '{}'::jsonb, v_user, 'pending',
+          jsonb_build_object('rpc', 'rpc_delete_object', 'section', 'contacts', 'field', 'x'))
+  RETURNING id INTO v_pc_escal;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM api.approve_pending_change(v_pc_escal, 'j''atteste', TRUE);
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+    ASSERT v_denied,
+      'F2: l''attestation ne rend PAS approuvable un writer hors whitelist (anti-escalade)';
+    -- Refermée tout de suite : elle porte sur v_objA et retiendrait sinon object.is_editing à
+    -- TRUE, ce que le bloc F (Task 8) vérifie retomber une fois tout résolu.
+    PERFORM api.reject_pending_change(v_pc_escal, 'ligne de fixture — refermée');
+  RESET ROLE;
+  ASSERT (SELECT status FROM pending_change WHERE id = v_pc_escal) = 'rejected',
+         'F2: la ligne piège est bien refermée (rejected), pas laissée pending';
+
+  -- (F2.3) NON-RÉGRESSION §120/§122 : le 3e paramètre a un DÉFAUT, donc l'appel historique à
+  -- DEUX arguments — celui que le front émet toujours, sur des lignes SANS submission_id —
+  -- doit se comporter EXACTEMENT comme avant : re-dispatch, status 'applied', applied_at posé.
+  -- Aucune clé manual_apply dans metadata : c'est la forme réelle d'une ligne §120, et elle
+  -- exerce au passage le repli de la colonne manual_apply de list_pending_changes.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO pending_change (object_id, target_table, target_pk, action, payload,
+                              submitted_by, status, metadata)
+  VALUES (v_objA, 'opening_period', NULL, 'update', jsonb_build_object('periods', '[]'::jsonb),
+          v_user, 'pending',
+          jsonb_build_object('rpc', 'save_object_openings', 'section', 'openings', 'field', 'Horaires'))
+  RETURNING id INTO v_pc_legacy;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_res2 := api.approve_pending_change(v_pc_legacy, 'Approbation historique');
+    ASSERT v_res2->>'status' = 'applied',
+           'F2: non-régression — l''appel à 2 arguments rend toujours applied';
+  RESET ROLE;
+  ASSERT (SELECT status FROM pending_change WHERE id = v_pc_legacy) = 'applied',
+         'F2: non-régression — la ligne §120 est appliquée par re-dispatch';
+  ASSERT (SELECT applied_at FROM pending_change WHERE id = v_pc_legacy) IS NOT NULL,
+         'F2: non-régression — applied_at reste posé sur une application MACHINE';
+  ASSERT (SELECT reviewed_by FROM pending_change WHERE id = v_pc_legacy) = v_editor,
+         'F2: non-régression — reviewed_by porte bien l''appelant, pas le propriétaire DEFINER';
+  -- La trace d'attestation ne doit JAMAIS être apposée sur une application machine : sinon la
+  -- piste d'audit ment dans l'autre sens (« quelqu'un a attesté » alors que la machine a écrit).
+  ASSERT NOT (SELECT metadata ? 'applied_manually' FROM pending_change WHERE id = v_pc_legacy),
+         'F2: non-régression — aucune trace d''attestation n''est apposée sur une application machine';
+
+  -- (F2.4) Le cœur de D9 : rpc NULL, sans puis avec attestation.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- Sans attestation, le refus §120 est PRÉSERVÉ : approuver une rubrique manual_apply sans
+    -- déclarer l'avoir reportée à la main ferait lire « validée » au prestataire alors que sa
+    -- fiche publique n'a pas bougé — et rien, d'aucun côté, ne le lui dirait. C'est la panne la
+    -- plus grave que ce chantier puisse produire, parce qu'elle est silencieuse des DEUX côtés.
+    v_denied := false;
+    BEGIN PERFORM api.approve_pending_change(v_pc_manual, NULL);
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+    ASSERT v_denied, 'F2: approuver un manual_apply SANS attestation reste refusé (22023)';
+
+    -- Avec attestation : la ligne passe 'approved' — et surtout PAS 'applied'.
+    v_res2 := api.approve_pending_change(v_pc_manual, 'Reporté à la main dans l''éditeur', TRUE);
+    ASSERT v_res2->>'status' = 'approved', 'F2: l''attestation rend « approved »';
+  RESET ROLE;
+  ASSERT (SELECT status FROM pending_change WHERE id = v_pc_manual) = 'approved',
+         'F2: manual_apply attesté ⇒ approved (jamais applied)';
+  -- applied_at NULL est le SECOND discriminant, indépendant du statut : « la machine a écrit »
+  -- et « un humain a attesté avoir écrit » ne doivent jamais être confondus dans l'audit.
+  ASSERT (SELECT applied_at FROM pending_change WHERE id = v_pc_manual) IS NULL,
+         'F2: pas d''applied_at sur une approbation attestée (approved ≠ applied)';
+  -- La TRACE ATTESTABLE, explicite et non dérivée : qui a attesté, et quand. Un simple
+  -- reviewed_by ne suffit pas — un rejet en pose un aussi ; et « status=approved AND applied_at
+  -- IS NULL » est un fait DÉRIVÉ qu'un futur remaniement du statut effacerait sans bruit.
+  ASSERT (SELECT metadata->>'applied_manually' FROM pending_change WHERE id = v_pc_manual) = 'true',
+         'F2: la ligne porte la marque explicite d''une application MANUELLE';
+  ASSERT (SELECT (metadata->>'attested_by')::uuid FROM pending_change WHERE id = v_pc_manual) = v_editor,
+         'F2: la trace nomme QUI a attesté (responsabilité opposable, pas un statut anonyme)';
+  ASSERT (SELECT metadata->>'attested_at' FROM pending_change WHERE id = v_pc_manual) IS NOT NULL,
+         'F2: la trace date l''attestation';
+  -- L'enveloppe d'origine survit à l'estampille (le || jsonb ne doit rien écraser).
+  ASSERT (SELECT metadata->>'section' FROM pending_change WHERE id = v_pc_manual) = 'contacts',
+         'F2: l''estampille d''attestation n''écrase pas l''enveloppe d''origine';
+  -- AUCUN re-dispatch : c'est la contrepartie de l'attestation. La fiche n'a pas bougé par la
+  -- machine — le payload (chapo « Nouveau chapo ») n'a été écrit nulle part.
+  ASSERT NOT EXISTS (SELECT 1 FROM object_description d WHERE d.object_id = v_objA),
+         'F2: approbation attestée ⇒ AUCUN re-dispatch, la machine n''a rien écrit dans la fiche';
+
+  -- (F2.5) Idempotence + accents restaurés (décision contrôleur B : les messages vifs étaient
+  -- translittérés — « deja resolue » — trace d'un déploiement historique ; ils remontent
+  -- jusqu'à l'écran du modérateur).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false; v_msg := NULL;
+    BEGIN PERFORM api.approve_pending_change(v_pc_manual, 'deux fois', TRUE);
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; v_msg := SQLERRM; END;
+    ASSERT v_denied, 'F2: une ligne déjà traitée ne se ré-approuve pas';
+    ASSERT v_msg LIKE '%déjà résolue%',
+           'F2: le message porte ses accents (le chemin de déploiement ne les translittère pas)';
+  RESET ROLE;
+
+  -- (F2.6) list_pending_changes émet les colonnes de soumission.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT EXISTS (
+      SELECT 1 FROM api.list_pending_changes('pending', v_objA, 50, 0) lp
+      WHERE lp.id = v_pc_auto AND lp.submission_id = v_subid AND lp.manual_apply = FALSE
+        AND lp.submission_note = 'Tarifs de saison mis à jour'),
+      'F2: list_pending_changes émet submission_id / submission_note / manual_apply';
+    ASSERT EXISTS (
+      SELECT 1 FROM api.list_pending_changes('approved', v_objA, 50, 0) lp
+      WHERE lp.id = v_pc_manual AND lp.manual_apply = TRUE AND lp.actor_label IS NOT NULL),
+      'F2: la ligne attestée sort manual_apply=TRUE et nomme l''acteur';
+    -- La jointure sur la soumission doit être LEFT : une ligne §120/§122 sans submission_id
+    -- disparaîtrait de la file de modération avec un INNER JOIN — régression silencieuse et
+    -- totale du module existant, invisible à toute assertion qui ne regarde que le portail.
+    ASSERT EXISTS (
+      SELECT 1 FROM api.list_pending_changes('applied', v_objA, 50, 0) lp
+      WHERE lp.id = v_pc_legacy AND lp.submission_id IS NULL AND lp.manual_apply = FALSE),
+      'F2: une ligne SANS soumission reste listée (jointure LEFT, pas INNER)';
+  RESET ROLE;
+
+  -- (F2.7) Rejet groupé — motif OBLIGATOIRE, et ne touche que ce qui reste « pending ».
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- Motif absent puis vide : sondés sur une soumission VALIDE et avec les droits, sinon
+    -- l'exception prouverait le mauvais garde-fou. Le prestataire doit TOUJOURS savoir pourquoi.
+    v_denied := false;
+    BEGIN PERFORM api.reject_fiche_submission(v_subid, NULL);
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+    ASSERT v_denied, 'F2: un rejet groupé SANS motif est refusé';
+    v_denied := false;
+    BEGIN PERFORM api.reject_fiche_submission(v_subid, '   ');
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+    ASSERT v_denied, 'F2: un motif fait uniquement d''espaces est refusé aussi';
+
+    v_res2 := api.reject_fiche_submission(v_subid, 'Le reste est à revoir');
+    ASSERT (v_res2->>'rejected_count')::int = 1,
+           'F2: seule la ligne encore pending est rejetée (l''attestée n''est pas retouchée)';
+  RESET ROLE;
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subid AND status = 'pending') = 0,
+         'F2: aucun motif refusé n''a rejeté quoi que ce soit au passage';
+  ASSERT (SELECT status FROM pending_change WHERE id = v_pc_auto) = 'rejected',
+         'F2: reject_fiche_submission rejette les pending restants';
+  ASSERT (SELECT status FROM pending_change WHERE id = v_pc_manual) = 'approved',
+         'F2: le rejet groupé ne touche PAS les lignes déjà traitées';
+
+  -- ISSUE nº1 « PARTIEL » : la soumission est entièrement traitée, mais mélangée. C'est
+  -- exactement l'entrée que la résolution (trigger, Task 8) traduira en statut 'partial' — le
+  -- statut agrégé lui-même est prouvé au bloc F, cette task ne le pose pas (le brief l'interdit
+  -- explicitement : « ne pas dupliquer la logique ici »).
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subid AND status = 'approved') = 1
+     AND (SELECT count(*) FROM pending_change WHERE submission_id = v_subid AND status = 'rejected') = 1,
+         'F2: issue PARTIELLE — 1 approuvé + 1 rejeté, plus rien en attente';
+  -- Le DÉTAIL PAR SECTION, relu là où le prestataire le lit vraiment : « validée » n'est jamais
+  -- une affirmation globale, c'est un état PAR rubrique, avec son motif.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    SELECT c INTO v_detail
+      FROM jsonb_array_elements(api.list_my_submissions(20, v_objA)) s,
+           jsonb_array_elements(s->'changes') c
+     WHERE s->>'id' = v_subid::text AND c->>'section' = 'contacts';
+    ASSERT v_detail->>'status' = 'approved',
+           'F2: côté prestataire, la rubrique « contacts » est validée';
+    SELECT c INTO v_detail
+      FROM jsonb_array_elements(api.list_my_submissions(20, v_objA)) s,
+           jsonb_array_elements(s->'changes') c
+     WHERE s->>'id' = v_subid::text AND c->>'section' = 'openings';
+    ASSERT v_detail->>'status' = 'rejected' AND v_detail->>'review_note' = 'Le reste est à revoir',
+           'F2: côté prestataire, la rubrique « openings » est refusée AVEC son motif';
+  RESET ROLE;
+
+  -- (F2.8) La garde d'autorisation des RPC GROUPÉS, isolée. Sondée maintenant que v_subid n'a
+  -- plus AUCUNE ligne pending : sans sa propre garde, chaque RPC groupé parcourrait une boucle
+  -- vide et RENDRAIT UN SUCCÈS à un utilisateur sans droit. Plus tôt dans le bloc, la garde de
+  -- approve_pending_change/reject_pending_change aurait masqué l'absence de celle-ci.
+  FOREACH v_persona IN ARRAY ARRAY[v_viewer, v_orgadm] LOOP
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_persona, 'role', 'authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      v_denied := false;
+      BEGIN PERFORM api.approve_fiche_submission(v_subid, 'boucle vide', TRUE);
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied,
+        'F2: approve_fiche_submission porte SA garde (une boucle vide ne doit pas rendre succès)';
+      v_denied := false;
+      BEGIN PERFORM api.reject_fiche_submission(v_subid, 'boucle vide');
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+      ASSERT v_denied,
+        'F2: reject_fiche_submission porte SA garde (le contrôle du motif ne la remplace pas)';
+    RESET ROLE;
+  END LOOP;
+
+  -- (F2.9) ISSUE nº2 « TOUT APPROUVÉ » — v_objG, deux changements auto, approbation groupée.
+  -- Deux changements de la MÊME section : ce qui est prouvé ici est la BOUCLE (deux
+  -- re-dispatches successifs comptés), pas la variété des rubriques.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_sub := api.submit_actor_fiche(v_objG, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires été','before','x','after','z')),
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires hiver','before','y','after','w'))),
+      'Tout est bon');
+  RESET ROLE;
+  v_subG := (v_sub->>'submission_id')::uuid;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_res2 := api.approve_fiche_submission(v_subG, 'OK', FALSE);
+    ASSERT (v_res2->>'applied_count')::int = 2,
+           'F2: l''approbation groupée applique CHAQUE changement auto (boucle, pas le premier seul)';
+    ASSERT (v_res2->>'approved_manual_count')::int = 0
+       AND (v_res2->>'skipped_manual_count')::int = 0,
+           'F2: aucune ligne manuelle dans cette soumission — les deux compteurs restent à zéro';
+  RESET ROLE;
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subG AND status = 'applied') = 2
+     AND (SELECT count(*) FROM pending_change WHERE submission_id = v_subG AND status <> 'applied') = 0,
+         'F2: issue TOUT APPROUVÉ — les 2 changements sont applied, plus rien en attente';
+
+  -- (F2.10) ISSUE nº3 « TOUT REJETÉ » — v_objH, 1 auto + 1 manuel. Le rejet groupé doit
+  -- emporter AUSSI la ligne manual_apply : elle n'a pas de writer, mais un refus n'en demande
+  -- aucun — c'était d'ailleurs le SEUL geste possible sur ces lignes avant D9.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_subH := (api.submit_actor_fiche(v_objH, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z')),
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('value','0262000099'),
+        'metadata', jsonb_build_object('rpc',NULL,'section','contacts',
+                                       'manual_apply',true,'field','Contacts','before','a','after','b'))),
+      'À revoir')->>'submission_id')::uuid;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_res2 := api.reject_fiche_submission(v_subH, 'Informations non conformes');
+    ASSERT (v_res2->>'rejected_count')::int = 2,
+           'F2: le rejet groupé emporte AUSSI la ligne manual_apply (un refus n''a pas besoin de writer)';
+  RESET ROLE;
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subH AND status = 'rejected') = 2
+     AND (SELECT count(*) FROM pending_change WHERE submission_id = v_subH AND status <> 'rejected') = 0,
+         'F2: issue TOUT REJETÉ — les 2 changements sont rejected, plus rien en attente';
+
+  -- (F2.11) ISSUE nº4 « PARTIEL INACHEVÉ » — v_objI, 1 auto + 1 manuel, approuvés SANS
+  -- p_include_manual. C'est le cas qui ne doit surtout PAS se résoudre : la ligne manuelle reste
+  -- pending, donc l'office n'a pas fini, donc le verrou uq_fiche_submission_open doit TENIR.
+  -- S'il lâchait ici, l'acteur rouvrirait une soumission pendant que l'office travaille encore.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_subI := (api.submit_actor_fiche(v_objI, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z')),
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('value','0262000098'),
+        'metadata', jsonb_build_object('rpc',NULL,'section','contacts',
+                                       'manual_apply',true,'field','Contacts','before','a','after','b'))),
+      'Mélange auto + manuel')->>'submission_id')::uuid;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_res2 := api.approve_fiche_submission(v_subI, 'Horaires OK, le reste à reporter', FALSE);
+    ASSERT (v_res2->>'applied_count')::int = 1,
+           'F2: partiel — le changement auto est appliqué';
+    ASSERT (v_res2->>'skipped_manual_count')::int = 1,
+           'F2: partiel — la ligne manuelle est SAUTÉE, pas approuvée en douce';
+    ASSERT (v_res2->>'approved_manual_count')::int = 0,
+           'F2: partiel — sans p_include_manual, aucune attestation n''est posée à l''insu du modérateur';
+  RESET ROLE;
+  SELECT count(*) INTO v_pending_left
+    FROM pending_change WHERE submission_id = v_subI AND status = 'pending';
+  ASSERT v_pending_left = 1,
+         'F2: partiel INACHEVÉ — il reste une ligne à traiter, la soumission ne PEUT pas se résoudre';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subI) = 'pending'
+     AND (SELECT resolved_at FROM fiche_submission WHERE id = v_subI) IS NULL,
+         'F2: partiel INACHEVÉ — la soumission reste ouverte tant qu''une ligne est en attente';
+  -- Et le verrou TIENT : la conséquence opérationnelle de « non résolue ».
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM api.submit_actor_fiche(v_objI, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z'))), NULL);
+    EXCEPTION WHEN SQLSTATE 'PT409' THEN v_denied := true; END;
+    ASSERT v_denied,
+      'F2: partiel INACHEVÉ — le verrou « une seule vérification ouverte » tient tant que l''office n''a pas fini';
+  RESET ROLE;
+  -- Achèvement : le modérateur revient et atteste. La ligne sort enfin de « pending ».
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_res2 := api.approve_fiche_submission(v_subI, 'Contacts reportés à la main', TRUE);
+    ASSERT (v_res2->>'approved_manual_count')::int = 1
+       AND (v_res2->>'applied_count')::int = 0
+       AND (v_res2->>'skipped_manual_count')::int = 0,
+           'F2: l''achèvement ne retraite QUE ce qui restait pending';
+  RESET ROLE;
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subI AND status = 'pending') = 0,
+         'F2: après achèvement, plus aucune ligne en attente — la résolution (Task 8) peut opérer';
+  -- Le chemin GROUPÉ laisse la MÊME trace attestable que le chemin unitaire : sans cela, une
+  -- attestation de masse serait anonyme, et « qui a dit que c'était reporté ? » resterait sans
+  -- réponse exactement là où le volume la rend le plus nécessaire.
+  ASSERT (SELECT (metadata->>'attested_by')::uuid FROM pending_change
+           WHERE submission_id = v_subI AND metadata->>'rpc' IS NULL) = v_editor,
+         'F2: l''attestation GROUPÉE nomme elle aussi son auteur';
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G, F2 OK';
 END$$;
 ROLLBACK;

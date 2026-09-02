@@ -153,4 +153,42 @@ COMMENT ON FUNCTION api.current_user_actor_id() IS
 COMMENT ON FUNCTION api.current_user_portal_object_ids() IS
   '18a portail acteur — fiches du portail : liens actor_object_role NON expirés de MON actor_id, hors ORG.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2. D7 — l'écriture canonique se ferme aux personas acteur.
+--    Avant : e-mail correspondant (pont api.user_actor_ids) + actor_object_role.is_primary=TRUE
+--    ⇒ écriture canonique COMPLÈTE (objet + 23 tables enfant + tous les save_object_*), sans
+--    ORG, sans rôle, sans permission. Contradictoire avec D2 (« retenu jusqu'à validation »).
+--    Le bras service_role/superuser est inchangé ; les équipes internes qui empruntent le
+--    chemin owner historique (non-acteurs) le gardent — seule la persona acteur en est
+--    exclue. Corps recopié depuis le corps VIF (md5(prosrc)=c1cc3ac8996cf9cdf0f5dd0adb7ae53c,
+--    re-vérifié juste avant cette écriture, identique à l'archive Task 0 — l'écart avec
+--    rls_policies.sql, sa source déclarative, est purement cosmétique : un saut de ligne
+--    après « SELECT 1 »), seul le `AND NOT api.is_actor_persona()` est ajouté.
+--    Durcissement (hors brief, doctrine §208/R2.1 — cette fonction LIT actor_object_role) :
+--    `pg_temp` ajouté en fin de search_path, absent du corps vif. C'est un ajout défensif
+--    qui ne change aucun comportement (aucune table temporaire nommée `actor_object_role`,
+--    `app_user_profile` etc. n'existe dans ce contexte) — pas une régression.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.is_object_owner(p_object_id text)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+  SELECT (
+    EXISTS (
+      SELECT 1
+      FROM actor_object_role aor
+      WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids())
+        AND aor.object_id = p_object_id
+        AND aor.is_primary = TRUE
+    )
+    -- D7 (18a) : une persona acteur ne tient JAMAIS l'écriture canonique par son lien.
+    AND NOT api.is_actor_persona()
+  )
+  OR auth.role() IN ('service_role','admin')
+  OR api.is_platform_superuser();
+$$;
+COMMENT ON FUNCTION api.is_object_owner(p_object_id text) IS
+  '18a/D7 — owner historique (lien primaire via pont e-mail) FERMÉ aux personas actor ; intact pour le reste.';
+
 COMMIT;

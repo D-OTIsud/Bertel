@@ -468,4 +468,161 @@ GRANT EXECUTE ON FUNCTION api.get_actor_section_visibility(text, text)          
 GRANT EXECUTE ON FUNCTION api.get_portal_section_visibility(text)                         TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION api.rpc_set_actor_section_visibility(text, text, text, boolean) TO authenticated, service_role;
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 5. submit_actor_fiche — LE geste « Soumettre pour vérification » (D2/D3/D6).
+--    Transactionnel : soumission + N pending_change + tâche multi-assignée +
+--    notifications. La tâche est insérée DIRECTEMENT (précédent : trigger incident) —
+--    api.save_crm_task est inutilisable par un acteur et ses gates ne doivent pas
+--    s'élargir. L'appel api.notify_task_assignees passe en DEFINER→DEFINER (les
+--    EXECUTE se vérifient contre le propriétaire, pas l'appelant).
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION api.submit_actor_fiche(
+  p_object_id text,
+  p_changes   jsonb,
+  p_note      text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_uid       uuid := auth.uid();
+  v_actor     uuid;
+  v_masked    text[];
+  v_floor     text[] := api.actor_portal_floor_modules();
+  -- CORRECTION CONTRÔLEUR (revue task-5) : le brief listait HUIT writers (avec
+  -- save_object_rooms). Le prosrc VIF de api.approve_pending_change (§120) —
+  -- re-vérifié en base juste avant cette écriture, md5(prosrc)=3cf2a45631df18e22e0b4c5cd81d9e2e,
+  -- IDENTIQUE à l'archive .superpowers/sdd/2026-09-01-portail-acteur/live/approve_pending_change.LIVE.sql —
+  -- n'en porte que SEPT : SANS save_object_rooms. Cette liste DOIT rester un
+  -- SOUS-ENSEMBLE (ici : identique) de celle d'approve_pending_change, JAMAIS un
+  -- sur-ensemble : si submit_actor_fiche acceptait un writer qu'approve_pending_change
+  -- refuse, ce changement entrerait en base à la soumission puis ne pourrait plus
+  -- JAMAIS être approuvé (22023 côté approve) — et comme uq_fiche_submission_open
+  -- n'autorise qu'UNE vérification ouverte par fiche, celle-ci resterait bloquée
+  -- POUR TOUJOURS (aucun mécanisme ne libère le verrou sans résolution). N'AJOUTE
+  -- JAMAIS une entrée ici sans l'avoir d'abord ajoutée, vérifiée et déployée côté
+  -- approve_pending_change — et sans mettre à jour l'assertion miroir de
+  -- tests/test_actor_portal.sql (bloc D2, « épinglé save_object_rooms ») qui
+  -- proteste explicitement contre cette divergence.
+  v_allowed   text[] := ARRAY[
+    'save_object_commercial','save_object_workspace_sustainability','save_object_workspace_tags',
+    'save_object_itinerary_nested','save_object_openings','save_object_places',
+    'save_object_relations'];
+  v_change    jsonb;
+  v_section   text;
+  v_rpc       text;
+  v_action    text;
+  v_count     int := 0;
+  v_sub_id    uuid;
+  v_task_id   uuid;
+  v_name      text;
+  v_sections  text[] := ARRAY[]::text[];
+  v_assignees uuid[];
+BEGIN
+  IF v_uid IS NULL OR NOT api.is_actor_persona() THEN
+    RAISE EXCEPTION 'Réservé aux comptes du portail acteur' USING ERRCODE = '42501';
+  END IF;
+  IF p_object_id IS NULL OR p_object_id NOT IN (SELECT api.current_user_portal_object_ids()) THEN
+    RAISE EXCEPTION 'Fiche hors de votre périmètre' USING ERRCODE = '42501';
+  END IF;
+  IF p_changes IS NULL OR jsonb_typeof(p_changes) <> 'array'
+     OR jsonb_array_length(p_changes) = 0 OR jsonb_array_length(p_changes) > 40 THEN
+    RAISE EXCEPTION 'p_changes doit être un tableau de 1 à 40 changements' USING ERRCODE = '22023';
+  END IF;
+  IF EXISTS (SELECT 1 FROM fiche_submission fs
+              WHERE fs.object_id = p_object_id AND fs.status = 'pending') THEN
+    -- PT409 (PostgREST ⇒ HTTP 409, SQLSTATE exposé dans error.code) et PAS 23505 : le front
+    -- traduit 23505 en « Cette valeur existe déjà (doublon). » (db-error-message.ts) et
+    -- mapDatabaseError applique le SQLSTATE AVANT le message — le prestataire lirait « doublon ».
+    RAISE EXCEPTION USING ERRCODE = 'PT409',
+      MESSAGE = 'Une vérification est déjà en cours pour cette fiche';
+  END IF;
+
+  v_actor := api.current_user_actor_id();
+  v_masked := ARRAY(SELECT jsonb_array_elements_text(
+    api.get_portal_section_visibility(p_object_id)->'masked_modules'));
+
+  -- Validation de CHAQUE enveloppe avant la moindre écriture.
+  FOR v_change IN SELECT * FROM jsonb_array_elements(p_changes) LOOP
+    v_section := v_change->'metadata'->>'section';
+    v_rpc     := v_change->'metadata'->>'rpc';
+    v_action  := v_change->>'action';
+    IF v_section IS NULL OR btrim(v_section) = '' THEN
+      RAISE EXCEPTION 'metadata.section requis sur chaque changement' USING ERRCODE = '22023';
+    END IF;
+    IF v_section = ANY (v_floor) THEN
+      RAISE EXCEPTION 'La section « % » n''est pas ouverte aux acteurs', v_section USING ERRCODE = '22023';
+    END IF;
+    IF v_section = ANY (v_masked) THEN
+      RAISE EXCEPTION 'La section « % » est masquée par votre organisation', v_section USING ERRCODE = '22023';
+    END IF;
+    IF v_rpc IS NOT NULL AND NOT (v_rpc = ANY (v_allowed)) THEN
+      RAISE EXCEPTION 'Writer non autorisé: %', v_rpc USING ERRCODE = '22023';
+    END IF;
+    IF COALESCE(v_action, '') NOT IN ('insert','update','delete') THEN
+      RAISE EXCEPTION 'action invalide: %', v_action USING ERRCODE = '22023';
+    END IF;
+    IF v_change->'payload' IS NULL OR (v_change->>'target_table') IS NULL
+       OR btrim(v_change->>'target_table') = '' THEN
+      RAISE EXCEPTION 'payload et target_table requis' USING ERRCODE = '22023';
+    END IF;
+    v_sections := array_append(v_sections, v_change->'metadata'->>'field');
+  END LOOP;
+
+  -- La soumission.
+  INSERT INTO fiche_submission (object_id, actor_id, submitted_by, note)
+  VALUES (p_object_id, v_actor, v_uid, NULLIF(btrim(COALESCE(p_note, '')), ''))
+  RETURNING id INTO v_sub_id;
+
+  -- Les changements (mêmes colonnes que submit_pending_change + submission_id ;
+  -- le trigger after-insert flippe object.is_editing).
+  FOR v_change IN SELECT * FROM jsonb_array_elements(p_changes) LOOP
+    INSERT INTO pending_change (object_id, target_table, target_pk, action, payload,
+                                submitted_by, status, metadata, submission_id)
+    VALUES (p_object_id, v_change->>'target_table', v_change->>'target_pk',
+            v_change->>'action', v_change->'payload', v_uid, 'pending',
+            v_change->'metadata', v_sub_id);
+    v_count := v_count + 1;
+  END LOOP;
+
+  -- La tâche de vérification, typée par extra (crm_task n'a pas de colonne kind).
+  SELECT o.name INTO v_name FROM object o WHERE o.id = p_object_id;
+  v_task_id := gen_random_uuid();
+  INSERT INTO crm_task (id, object_id, actor_id, title, description, status, priority, created_by, extra)
+  VALUES (v_task_id, p_object_id, v_actor,
+          'Vérifier la fiche « ' || COALESCE(v_name, p_object_id) || ' »',
+          COALESCE('Message du prestataire : ' || NULLIF(btrim(COALESCE(p_note, '')), '') || E'\n', '')
+            || 'Sections modifiées : ' || array_to_string(v_sections, ', '),
+          'todo', 'medium', v_uid,
+          jsonb_build_object('kind', 'fiche_verification', 'submission_id', v_sub_id));
+  UPDATE fiche_submission SET task_id = v_task_id WHERE id = v_sub_id;
+
+  -- Assignation multi (D3) + notifications (kind crm_task_assigned réutilisé — l'outbox
+  -- e-mail existante part sans aucun nouveau rail).
+  v_assignees := ARRAY(SELECT api.list_object_verifier_ids(p_object_id));
+  IF COALESCE(array_length(v_assignees, 1), 0) > 0 THEN
+    INSERT INTO crm_task_assignee (task_id, user_id, assigned_by)
+    SELECT v_task_id, u.u, v_uid FROM unnest(v_assignees) AS u(u)
+    ON CONFLICT (task_id, user_id) DO NOTHING;
+    -- owner de compat = plus petit uuid (même règle que save_crm_task, migration_crm_task_
+    -- multi_assignee_notifications.sql L378). PAS min(u.u) : uuid n'a pas d'agrégat MIN/MAX
+    -- sur cette version de Postgres (constaté à l'exécution : « function min(uuid) does not
+    -- exist ») — uuid n'a qu'un opclass btree (ORDER BY fonctionne), pas d'agrégat dédié.
+    UPDATE crm_task SET owner = (SELECT u.u FROM unnest(v_assignees) u(u) ORDER BY u.u LIMIT 1)
+      WHERE id = v_task_id;
+    PERFORM api.notify_task_assignees(v_task_id, v_assignees, v_uid);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'submission_id', v_sub_id, 'task_id', v_task_id,
+    'change_count', v_count,
+    'assignee_count', COALESCE(array_length(v_assignees, 1), 0));
+END;
+$$;
+REVOKE ALL ON FUNCTION api.submit_actor_fiche(text, jsonb, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.submit_actor_fiche(text, jsonb, text) TO authenticated, service_role;
+COMMENT ON FUNCTION api.submit_actor_fiche(text, jsonb, text) IS
+  '18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = SEPT entrées, identique à approve_pending_change (§120) — jamais un sur-ensemble, sous peine de fiche bloquée à vie.';
+
 COMMIT;

@@ -20,6 +20,18 @@
 --       partiel anti-doublon (uq_fiche_submission_open) existe ; et la RLS/REVOKE ferme les DEUX
 --       tables sensibles à TOUT authenticated, en lecture ET en écriture, persona acteur comme
 --       persona éditeur — pas seulement « la table existe ».
+--   (E) VÉRIFICATEURS — api.list_object_verifier_ids(p_object_id) : les membres actifs d'une
+--       ORG publisher de l'objet dont le rôle métier confère validate_changes (matrice 17i) OU
+--       qui tiennent le grant individuel sont vérificateurs ; un viewer sans droit ne l'est PAS ;
+--       le rang admin seul n'entre PAS tant que la matrice/le grant produit du monde — repli
+--       UNIQUEMENT quand la liste serait vide autrement (prouvé dans les deux sens).
+--   (H) VISIBILITÉ — api.get_portal_section_visibility / api.get_actor_section_visibility : le
+--       plancher dur (legal…) est toujours annoncé ; sans ligne en base, un module est visible
+--       par défaut (jamais NULL) ; hors portée ⇒ 42501 ; get_actor_section_visibility refuse un
+--       non-membre de l'ORG même s'il est légitimement scopé côté portail ; l'écriture
+--       (rpc_set_actor_section_visibility) exige un rang admin >= 30 sur l'ORG et refuse
+--       TOUJOURS le plancher dur — dans les DEUX sens (ouvrir ET fermer), sans jamais y laisser
+--       de ligne ; le masquage configuré par l'ORG remonte bien côté vue portail.
 -- Blocs suivants ajoutés par les tasks suivantes du même chantier.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx.
@@ -43,6 +55,18 @@ DECLARE
   v_pub     uuid;
   v_email_kind uuid;
   v_denied  boolean; -- (D1) sonde REVOKE/RLS : TRUE si insufficient_privilege a bien été levée.
+  -- (E/H) comptes DÉDIÉS Task 4 — sous-plage …001303-…001306, disjointe de 1301-1302 (A) et
+  -- 1391-1393 (C). Aucun nouvel objet/acteur : E et H réutilisent v_orgA/v_objA/v_objD (B).
+  v_editor  uuid := '00000000-0000-4000-a000-000000001303'; -- rôle métier editor (matrice)
+  v_viewer  uuid := '00000000-0000-4000-a000-000000001304'; -- viewer sans permission
+  v_granted uuid := '00000000-0000-4000-a000-000000001305'; -- grant individuel validate_changes
+  v_orgadm  uuid := '00000000-0000-4000-a000-000000001306'; -- rang admin sans validate_changes (repli)
+  v_role_editor uuid;
+  v_role_viewer uuid;
+  v_perm_validate uuid;
+  v_adm_role uuid;
+  v_m1 uuid; v_m2 uuid; v_m3 uuid; v_m4 uuid;
+  v_vis jsonb;
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -296,6 +320,152 @@ BEGIN
     ASSERT v_denied, 'D1: org_actor_module_visibility non-inscriptible en direct (acteur, REVOKE)';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-D1 OK';
+  -- ---------- Fixture équipe éditrice (owner, RLS bypass) ----------
+  -- RESET ROLE (D1) restaure le rôle Postgres mais PAS le GUC request.jwt.claims (résidu
+  -- 'authenticated' de la dernière sonde v_user) : sans ce nettoyage,
+  -- enforce_app_user_profile_role_change rejette les INSERT INTO auth.users qui suivent
+  -- (le trigger handle_auth_user_profile_created qu'ils déclenchent confondrait le contexte
+  -- privilégié courant avec une session authenticated résiduelle). Même geste que (A) et (C).
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  SELECT id INTO v_perm_validate FROM ref_permission WHERE code='validate_changes' LIMIT 1;
+  IF v_perm_validate IS NULL THEN RAISE EXCEPTION 'fixture: ref_permission[validate_changes] manquant'; END IF;
+  SELECT id INTO v_role_editor FROM ref_org_business_role WHERE code='editor' LIMIT 1;
+  SELECT id INTO v_role_viewer FROM ref_org_business_role WHERE code='viewer' LIMIT 1;
+  IF v_role_editor IS NULL OR v_role_viewer IS NULL THEN RAISE EXCEPTION 'fixture: ref_org_business_role manquant'; END IF;
+  SELECT id INTO v_adm_role FROM ref_org_admin_role WHERE rank >= 30 LIMIT 1;
+  IF v_adm_role IS NULL THEN RAISE EXCEPTION 'fixture: ref_org_admin_role rang>=30 manquant'; END IF;
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_editor, 'portal_editor_1303@test.local'), (v_viewer, 'portal_viewer_1304@test.local'),
+    (v_granted, 'portal_granted_1305@test.local'), (v_orgadm, 'portal_orgadm_1306@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES
+    (v_editor, 'tourism_agent'), (v_viewer, 'tourism_agent'),
+    (v_granted, 'tourism_agent'), (v_orgadm, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  INSERT INTO user_org_membership (id, user_id, org_object_id, is_active) VALUES
+    (gen_random_uuid(), v_editor, v_orgA, TRUE),
+    (gen_random_uuid(), v_viewer, v_orgA, TRUE),
+    (gen_random_uuid(), v_granted, v_orgA, TRUE),
+    (gen_random_uuid(), v_orgadm, v_orgA, TRUE)
+    ON CONFLICT DO NOTHING;
+  SELECT id INTO v_m1 FROM user_org_membership WHERE user_id=v_editor AND org_object_id=v_orgA;
+  SELECT id INTO v_m2 FROM user_org_membership WHERE user_id=v_viewer AND org_object_id=v_orgA;
+  SELECT id INTO v_m3 FROM user_org_membership WHERE user_id=v_granted AND org_object_id=v_orgA;
+  SELECT id INTO v_m4 FROM user_org_membership WHERE user_id=v_orgadm AND org_object_id=v_orgA;
+  INSERT INTO user_org_business_role (membership_id, role_id, is_active) VALUES
+    (v_m1, v_role_editor, TRUE), (v_m2, v_role_viewer, TRUE), (v_m3, v_role_viewer, TRUE)
+    ON CONFLICT DO NOTHING;
+  INSERT INTO user_org_admin_role (membership_id, role_id, is_active) VALUES (v_m4, v_adm_role, TRUE)
+    ON CONFLICT DO NOTHING;
+  -- La matrice 17i : le rôle editor de CETTE ORG confère validate_changes.
+  INSERT INTO org_role_permission (org_object_id, role_id, permission_id, is_active) VALUES
+    (v_orgA, v_role_editor, v_perm_validate, TRUE)
+    ON CONFLICT (org_object_id, role_id, permission_id) DO UPDATE SET is_active = TRUE;
+  -- Le grant individuel (exception).
+  INSERT INTO user_permission (user_id, permission_id, is_active) VALUES
+    (v_granted, v_perm_validate, TRUE)
+    ON CONFLICT (user_id, permission_id) DO UPDATE SET is_active = TRUE;
+
+  -- ---------- (E) list_object_verifier_ids ----------
+  ASSERT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_editor),
+         'E: le rôle métier editor (matrice 17i) est vérificateur';
+  ASSERT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_granted),
+         'E: le grant individuel validate_changes est vérificateur';
+  ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_viewer),
+         'E: un viewer sans permission n''est PAS vérificateur';
+  ASSERT NOT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
+         'E: le rang admin seul n''entre pas TANT QUE des vérificateurs existent';
+  -- Repli : on éteint la matrice et le grant ⇒ les rangs admin prennent le relais.
+  UPDATE org_role_permission SET is_active = FALSE
+   WHERE org_object_id = v_orgA AND permission_id = v_perm_validate;
+  UPDATE user_permission SET is_active = FALSE
+   WHERE user_id = v_granted AND permission_id = v_perm_validate;
+  ASSERT EXISTS (SELECT 1 FROM api.list_object_verifier_ids(v_objA) s WHERE s = v_orgadm),
+         'E: repli — sans validate_changes actif, les rangs admin de l''ORG sont assignés';
+  -- Restauration pour les blocs suivants.
+  UPDATE org_role_permission SET is_active = TRUE
+   WHERE org_object_id = v_orgA AND permission_id = v_perm_validate;
+  UPDATE user_permission SET is_active = TRUE
+   WHERE user_id = v_granted AND permission_id = v_perm_validate;
+
+  -- ---------- (H) visibilité : défauts, plancher, écriture gated ----------
+  -- Défaut ouvert : sans ligne, seul le plancher masque.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_vis := api.get_portal_section_visibility(v_objA);
+    ASSERT (v_vis->'floor_modules') ? 'legal',
+           'H: le plancher dur contient legal (§18)';
+    ASSERT NOT ((v_vis->'masked_modules') ? 'descriptions'),
+           'H: sans config, descriptions est visible (défaut ouvert)';
+    -- Hors portée ⇒ refus.
+    v_denied := false;
+    BEGIN PERFORM api.get_portal_section_visibility(v_objD);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'H: get_portal_section_visibility hors portée doit lever 42501';
+    -- Extension (au-delà du verbatim brief) : get_actor_section_visibility (écran /settings)
+    -- est une SECONDE fonction, avec sa PROPRE garde d'appartenance — jamais exercée si l'on ne
+    -- teste que la variante portail. Une persona acteur scopée sur v_objA mais SANS membership
+    -- dans v_orgA doit être refusée ici aussi : les deux gardes sont indépendantes.
+    v_denied := false;
+    BEGIN PERFORM api.get_actor_section_visibility(v_orgA, 'HOT');
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'H: get_actor_section_visibility refuse un non-membre de l''ORG (même persona acteur scopée)';
+  RESET ROLE;
+  -- La variante /settings s'ouvre à un membre ACTIF de l'ORG (ici v_editor) — même plancher,
+  -- même défaut ouvert, vérifiés AVANT toute config (symétrique à la vérification portail).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_vis := api.get_actor_section_visibility(v_orgA, 'HOT');
+    ASSERT (v_vis->'floor_modules') ? 'legal',
+           'H: get_actor_section_visibility porte aussi le plancher dur';
+    ASSERT NOT ((v_vis->'masked_modules') ? 'descriptions'),
+           'H: get_actor_section_visibility — défaut ouvert avant toute config';
+  RESET ROLE;
+  -- Écriture : rang ≥ 30 requis ; plancher refusé.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'descriptions', FALSE);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'H: un éditeur sans rang >= 30 ne règle pas la matrice';
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_orgadm, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'descriptions', FALSE);
+    v_denied := false;
+    BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'legal', TRUE);
+    EXCEPTION WHEN others THEN v_denied := true; END;
+    ASSERT v_denied, 'H: le plancher dur n''est PAS paramétrable (même pour l''ouvrir)';
+    -- Extension (au-delà du verbatim brief) : la garde doit mordre dans les DEUX sens — un
+    -- module du plancher, déjà fermé de fait côté acteur, doit aussi refuser une fermeture
+    -- EXPLICITE en base. Sans cette seconde sonde, une implémentation qui ne garderait le
+    -- plancher QUE contre l'ouverture (ex. condition erronée `AND p_visible`) passerait le
+    -- test ci-dessus sans être détectée.
+    v_denied := false;
+    BEGIN PERFORM api.rpc_set_actor_section_visibility(v_orgA, 'HOT', 'legal', FALSE);
+    EXCEPTION WHEN others THEN v_denied := true; END;
+    ASSERT v_denied, 'H: le plancher dur refuse aussi la fermeture explicite (garde symétrique)';
+  RESET ROLE;
+  -- Aucune des deux tentatives n'a laissé de ligne résiduelle : le plancher n'est jamais
+  -- paramétré en base, dans aucun sens — l'exclusion vient uniquement de la fonction (4.1).
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM org_actor_module_visibility
+    WHERE org_object_id = v_orgA AND object_type = 'HOT' AND module_id = 'legal'
+  ), 'H: aucune ligne matrice n''existe jamais pour un module du plancher dur';
+  -- Le masquage configuré remonte côté portail.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_vis := api.get_portal_section_visibility(v_objA);
+    ASSERT (v_vis->'masked_modules') ? 'descriptions',
+           'H: le masquage org×type configuré remonte dans la vue portail';
+  RESET ROLE;
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H OK';
 END$$;
 ROLLBACK;

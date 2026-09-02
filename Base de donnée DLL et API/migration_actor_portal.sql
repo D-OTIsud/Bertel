@@ -191,4 +191,87 @@ $$;
 COMMENT ON FUNCTION api.is_object_owner(p_object_id text) IS
   '18a/D7 — owner historique (lien primaire via pont e-mail) FERMÉ aux personas actor ; intact pour le reste.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 3. DDL — soumissions, visibilité par module, nouvelle espèce de notification.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 3.1 fiche_submission : UNE ligne par « Soumettre » (D6). Regroupe les N pending_change
+-- d'un même geste, porte le message de l'acteur, le statut agrégé et la tâche liée.
+CREATE TABLE IF NOT EXISTS public.fiche_submission (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  object_id     text NOT NULL REFERENCES public.object(id) ON DELETE CASCADE,
+  actor_id      uuid REFERENCES public.actor(id) ON DELETE SET NULL,
+  submitted_by  uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  note          text,
+  status        text NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending', 'approved', 'rejected', 'partial')),
+  task_id       uuid REFERENCES public.crm_task(id) ON DELETE SET NULL,
+  submitted_at  timestamptz NOT NULL DEFAULT now(),
+  resolved_at   timestamptz
+);
+CREATE INDEX IF NOT EXISTS idx_fiche_submission_object ON public.fiche_submission (object_id, status);
+CREATE INDEX IF NOT EXISTS idx_fiche_submission_actor  ON public.fiche_submission (submitted_by, submitted_at DESC);
+-- Anti-spam structurel (D6) : UNE seule soumission ouverte par fiche. Le RPC de soumission
+-- (section 5) rend un message propre ; cet index est la garde de dernier ressort (course).
+CREATE UNIQUE INDEX IF NOT EXISTS uq_fiche_submission_open
+  ON public.fiche_submission (object_id) WHERE status = 'pending';
+
+-- 3.2 Rattachement des changements à leur soumission. SET NULL : la résolution d'une
+-- soumission ne doit jamais empêcher la purge d'une ligne pending_change isolée.
+ALTER TABLE public.pending_change ADD COLUMN IF NOT EXISTS submission_id uuid
+  REFERENCES public.fiche_submission(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_pending_change_submission
+  ON public.pending_change (submission_id) WHERE submission_id IS NOT NULL;
+
+-- 3.3 Masquage org × type × MODULE (D4/D5). Absence de ligne = visible (défaut ouvert) ;
+-- le PLANCHER DUR (modules jamais montrés aux acteurs) est codé dans les fonctions,
+-- pas dans cette table — il n'est PAS paramétrable.
+CREATE TABLE IF NOT EXISTS public.org_actor_module_visibility (
+  org_object_id text NOT NULL REFERENCES public.object(id) ON DELETE CASCADE,
+  object_type   text NOT NULL,
+  module_id     text NOT NULL,
+  is_visible    boolean NOT NULL DEFAULT TRUE,
+  updated_by    uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_object_id, object_type, module_id)
+);
+
+-- 3.4 RLS : fiche_submission et la matrice suivent le régime pending_change/crm_* —
+-- service_role/admin uniquement, tout accès via RPC DEFINER.
+ALTER TABLE public.fiche_submission            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.org_actor_module_visibility ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS admin_fiche_submission ON public.fiche_submission;
+CREATE POLICY admin_fiche_submission ON public.fiche_submission FOR ALL
+  USING ((SELECT auth.role()) = ANY (ARRAY['service_role','admin']));
+DROP POLICY IF EXISTS admin_org_actor_module_visibility ON public.org_actor_module_visibility;
+CREATE POLICY admin_org_actor_module_visibility ON public.org_actor_module_visibility FOR ALL
+  USING ((SELECT auth.role()) = ANY (ARRAY['service_role','admin']));
+
+REVOKE ALL ON TABLE public.fiche_submission            FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.org_actor_module_visibility FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.fiche_submission            TO service_role;
+GRANT ALL ON TABLE public.org_actor_module_visibility TO service_role;
+
+-- 3.5 Nouvelle espèce de notification : le retour à l'ACTEUR quand sa soumission est
+-- résolue. Côté éditeurs on RÉUTILISE 'crm_task_assigned' (la tâche EST assignée) —
+-- zéro nouvelle espèce dans ce sens.
+ALTER TABLE public.app_notification DROP CONSTRAINT IF EXISTS chk_app_notification_kind;
+ALTER TABLE public.app_notification ADD CONSTRAINT chk_app_notification_kind
+  CHECK (kind IN ('crm_task_assigned', 'fiche_submission_reviewed'));
+
+-- 3.6 L'index outbox suit le CHECK — les 3 pièces (CHECK, index, claim/ack section 8)
+-- s'élargissent ENSEMBLE, sinon la file fuit (invariant spec §6).
+DROP INDEX IF EXISTS public.idx_app_notification_unmailed;
+CREATE INDEX IF NOT EXISTS idx_app_notification_unmailed
+  ON public.app_notification (created_at)
+  WHERE email_sent_at IS NULL
+    AND kind IN ('crm_task_assigned', 'fiche_submission_reviewed')
+    AND email_attempts < 5;
+
+COMMENT ON TABLE public.fiche_submission IS
+  '18a — un « Soumettre » du portail acteur : groupe N pending_change, porte le message, le statut agrégé et la tâche de vérification.';
+COMMENT ON TABLE public.org_actor_module_visibility IS
+  '18a — masquage org × type × module de l''éditeur portail. Absence de ligne = visible. Le plancher dur est dans les fonctions.';
+
 COMMIT;

@@ -281,9 +281,12 @@ jamais de PII copiée).
 **`api.list_my_portal_fiches() → jsonb`**
 Liste légère pour l'accueil du portail : `{id, name, type, status, updated_at,
 open_submission {id, submitted_at} | null, last_resolved {status, resolved_at} | null,
-office_email}` — `office_email` (ajouté le 2026-09-02) = premier canal e-mail **public**
-de l'ORG publisher (primaire d'abord), NULL sinon ; il alimente le repli « envoyez vos
-photos à l'office » (D11). Persona acteur uniquement.
+office_email, office_phone}` — `office_email` / `office_phone` (ajoutés le 2026-09-02) =
+premiers canaux **publics** de l'ORG publisher (primaire d'abord, `phone` avant `mobile`),
+NULL sinon ; ils alimentent les deux replis du portail : « envoyez vos photos à l'office »
+et « signaler une erreur » quand c'est la seule saisie (D11) — un `mailto:` échoue en
+silence sur un téléphone sans application de courrier, le numéro est le second chemin.
+Persona acteur uniquement.
 
 **`api.get_my_actor_profile() → jsonb`**
 Le profil de l'acteur lié (`display_name`, `photo_url`, canaux e-mail/téléphone **de son
@@ -482,15 +485,23 @@ quand ce sera fait. » (focus dessus, pas de toast) ; échec → phrase dans la 
 rien n'est parti, brouillon intact.
 
 **Brouillon local.** localStorage `portal-draft:<userId>:<objectId>` (un appareil partagé
-ne rejoue jamais le brouillon d'un autre compte ; purgé au sign-out), versionné par une
-empreinte de la baseline ; si la fiche a bougé côté office, le brouillon est écarté avec
+ne rejoue jamais le brouillon d'un autre compte ; purgé **après** une déconnexion réussie,
+jamais avant — une coupure réseau détruirait le travail non envoyé d'un prestataire resté
+connecté), versionné par une empreinte des modules SERVEUR sans catalogues. **Il porte
+aussi le message à l'office** (texte de « Signaler une erreur ») : ce message peut être la
+seule chose saisie, et un envoi sans modification est refusé par le serveur — il ne peut
+donc pas vivre dans un état d'écran. Il n'est effacé que par un envoi réussi ou un abandon
+explicite ; si la fiche a bougé côté office, le brouillon est écarté avec
 la phrase « La fiche a été mise à jour par l'office entre-temps. Vos anciens changements
 non envoyés ont été mis de côté. ». Retrouvé : « Nous avons retrouvé des modifications que
 vous n'aviez pas envoyées. » + « Les garder » / « Les effacer ».
 
 **Suivi.** Accueil et fiche : état de la dernière vérification (`list_my_submissions`,
-qui émet désormais `section` par changement pour ancrer « Envoyé — en vérification » et
-« À reprendre » sur la bonne rubrique), motif de refus par rubrique.
+appelée **avec l'id de la fiche ouverte** et qui émet `section` par changement pour ancrer
+« Envoyé — en vérification » et « À reprendre » sur la bonne rubrique), motif de refus par
+rubrique. Une correction renvoyée affiche « Envoyé — en vérification », jamais « À
+reprendre » : le verrou « une vérification ouverte par fiche » interdit le geste que ce
+dernier libellé invite à faire.
 
 **Pas de cloche en v1** : `NotificationDrawer`/`useNotificationInbox` portent une copie
 et une destination CRM ; le retour vers le prestataire passe par l'e-mail (§4.7) et les

@@ -274,4 +274,187 @@ COMMENT ON TABLE public.fiche_submission IS
 COMMENT ON TABLE public.org_actor_module_visibility IS
   '18a — masquage org × type × module de l''éditeur portail. Absence de ligne = visible. Le plancher dur est dans les fonctions.';
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 4. Vérificateurs (D3) + visibilité des modules (D4/D5).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- 4.1 Le plancher dur : modules JAMAIS montrés/acceptés côté acteur, quelle que soit la
+-- config. §18 Juridique (legal), §19 Suivi prestataire (provider-follow-up = notes
+-- privées), §21 Publication (publication), §22 Identifiants externes (sync-identifiers),
+-- plus les modules READONLY de l'éditeur (distribution, provider). Ajout 2026-09-02 :
+-- relationships (son writer auto save_object_relations réécrit object_org_link ET
+-- actor_object_role — le périmètre même de l'acteur), places (save_object_places
+-- supprime les médias des sous-lieux absents du payload), media (aucun chemin
+-- d'upload ni d'application pour un acteur, D11). Fonction plutôt que table : non
+-- paramétrable PAR CONSTRUCTION.
+CREATE OR REPLACE FUNCTION api.actor_portal_floor_modules()
+RETURNS text[]
+LANGUAGE sql IMMUTABLE
+AS $$
+  SELECT ARRAY['legal','provider-follow-up','publication','sync-identifiers','distribution','provider',
+               'relationships','places','media'];
+$$;
+
+-- 4.2 Les vérificateurs d'une fiche (D3) : membres ACTIFS d'une ORG publisher de l'objet
+-- tenant validate_changes — par la matrice de rôle (17i) OU par grant individuel.
+-- REPLI : si personne, les rangs admin de l'ORG. Peut rendre VIDE (la soumission
+-- n'échoue pas pour ça — la tâche part non assignée, signalée au client).
+-- Les superusers plateforme ne sont PAS inclus : ils voient tout de toute façon,
+-- les assigner d'office noierait leur « mes tâches ».
+CREATE OR REPLACE FUNCTION api.list_object_verifier_ids(p_object_id text)
+RETURNS SETOF uuid
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+BEGIN
+  RETURN QUERY
+  WITH pub_orgs AS (
+    SELECT ool.org_object_id
+    FROM object_org_link ool
+    JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+    WHERE ool.object_id = p_object_id
+  ), perm AS (
+    SELECT id FROM ref_permission WHERE code = 'validate_changes' AND is_active LIMIT 1
+  ), members AS (
+    SELECT uom.id AS membership_id, uom.user_id, uom.org_object_id
+    FROM user_org_membership uom
+    JOIN pub_orgs p ON p.org_object_id = uom.org_object_id
+    WHERE uom.is_active
+  )
+  SELECT DISTINCT m.user_id FROM members m
+  JOIN user_org_business_role ubr ON ubr.membership_id = m.membership_id AND ubr.is_active
+  JOIN org_role_permission orp
+    ON orp.org_object_id = m.org_object_id
+   AND orp.role_id = ubr.role_id AND orp.is_active
+  JOIN perm ON perm.id = orp.permission_id
+  UNION
+  SELECT DISTINCT m.user_id FROM members m
+  JOIN user_permission up ON up.user_id = m.user_id AND up.is_active
+  JOIN perm ON perm.id = up.permission_id;
+
+  IF NOT FOUND THEN
+    -- Repli : rangs admin de l'ORG publisher.
+    RETURN QUERY
+    SELECT DISTINCT uom.user_id
+    FROM object_org_link ool
+    JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+    JOIN user_org_membership uom ON uom.org_object_id = ool.org_object_id AND uom.is_active
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active
+    WHERE ool.object_id = p_object_id;
+  END IF;
+END;
+$$;
+
+-- 4.3 Lecture de la matrice pour /settings (org + type explicites). Membres actifs de
+-- l'ORG uniquement (même périmètre que la policy SELECT d'org_role_permission).
+CREATE OR REPLACE FUNCTION api.get_actor_section_visibility(p_org_object_id text, p_object_type text)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM user_org_membership uom
+    WHERE uom.user_id = (SELECT auth.uid()) AND uom.org_object_id = p_org_object_id AND uom.is_active
+  ) AND NOT api.is_platform_superuser() THEN
+    RAISE EXCEPTION 'Réservé aux membres de l''organisation' USING ERRCODE = '42501';
+  END IF;
+  RETURN jsonb_build_object(
+    'floor_modules', to_jsonb(api.actor_portal_floor_modules()),
+    'masked_modules', COALESCE((
+      SELECT jsonb_agg(v.module_id ORDER BY v.module_id)
+      FROM org_actor_module_visibility v
+      WHERE v.org_object_id = p_org_object_id AND v.object_type = p_object_type
+        AND v.is_visible = FALSE), '[]'::jsonb));
+END;
+$$;
+
+-- 4.4 Variante portail : résout l'ORG publisher (primaire d'abord) et le type depuis la
+-- fiche. Autorisée : persona acteur pour une fiche de SA portée, membres de l'ORG,
+-- superuser. C'est elle que consomme l'éditeur en mode portail (front ET section 5).
+CREATE OR REPLACE FUNCTION api.get_portal_section_visibility(p_object_id text)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_org  text;
+  v_type text;
+BEGIN
+  IF NOT (
+    (api.is_actor_persona()
+      AND p_object_id IN (SELECT api.current_user_portal_object_ids()))
+    OR api.is_platform_superuser()
+    OR EXISTS (
+      SELECT 1 FROM object_org_link ool
+      JOIN user_org_membership uom ON uom.org_object_id = ool.org_object_id AND uom.is_active
+      WHERE ool.object_id = p_object_id AND uom.user_id = (SELECT auth.uid()))
+  ) THEN
+    RAISE EXCEPTION 'Fiche hors de votre périmètre' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT o.object_type INTO v_type FROM object o WHERE o.id = p_object_id;
+  SELECT ool.org_object_id INTO v_org
+  FROM object_org_link ool
+  JOIN ref_org_role r ON r.id = ool.role_id AND r.code = 'publisher'
+  WHERE ool.object_id = p_object_id
+  ORDER BY ool.is_primary DESC NULLS LAST, ool.org_object_id
+  LIMIT 1;
+
+  RETURN jsonb_build_object(
+    'floor_modules', to_jsonb(api.actor_portal_floor_modules()),
+    'masked_modules', COALESCE((
+      SELECT jsonb_agg(v.module_id ORDER BY v.module_id)
+      FROM org_actor_module_visibility v
+      WHERE v.org_object_id = v_org AND v.object_type = v_type
+        AND v.is_visible = FALSE), '[]'::jsonb));
+END;
+$$;
+
+-- 4.5 Écriture de la matrice : rang admin ≥ 30 sur l'ORG (même seuil que
+-- rpc_set_role_permission). Refuse le plancher dur — même pour le RE-rendre visible :
+-- une ligne « legal visible » en base serait un mensonge, la fonction l'ignorerait.
+CREATE OR REPLACE FUNCTION api.rpc_set_actor_section_visibility(
+  p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+BEGIN
+  IF p_module_id = ANY (api.actor_portal_floor_modules()) THEN
+    RAISE EXCEPTION 'Le module % appartient au plancher non paramétrable', p_module_id
+      USING ERRCODE = '22023';
+  END IF;
+  IF NOT (api.is_platform_superuser() OR EXISTS (
+    SELECT 1 FROM user_org_membership uom
+    JOIN user_org_admin_role uar ON uar.membership_id = uom.id AND uar.is_active
+    JOIN ref_org_admin_role rar ON rar.id = uar.role_id AND rar.rank >= 30
+    WHERE uom.user_id = (SELECT auth.uid())
+      AND uom.org_object_id = p_org_object_id AND uom.is_active
+  )) THEN
+    RAISE EXCEPTION 'Réservé aux administrateurs d''organisation (rang >= 30)'
+      USING ERRCODE = '42501';
+  END IF;
+
+  INSERT INTO org_actor_module_visibility (org_object_id, object_type, module_id, is_visible, updated_by)
+  VALUES (p_org_object_id, p_object_type, p_module_id, p_visible, (SELECT auth.uid()))
+  ON CONFLICT (org_object_id, object_type, module_id)
+  DO UPDATE SET is_visible = EXCLUDED.is_visible, updated_by = EXCLUDED.updated_by, updated_at = now();
+
+  RETURN jsonb_build_object('org_object_id', p_org_object_id, 'object_type', p_object_type,
+                            'module_id', p_module_id, 'is_visible', p_visible);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION api.actor_portal_floor_modules()                                   FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.list_object_verifier_ids(text)                                 FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.get_actor_section_visibility(text, text)                       FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.get_portal_section_visibility(text)                            FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION api.rpc_set_actor_section_visibility(text, text, text, boolean)    FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.actor_portal_floor_modules()                                TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.list_object_verifier_ids(text)                              TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_actor_section_visibility(text, text)                    TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.get_portal_section_visibility(text)                         TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION api.rpc_set_actor_section_visibility(text, text, text, boolean) TO authenticated, service_role;
+
 COMMIT;

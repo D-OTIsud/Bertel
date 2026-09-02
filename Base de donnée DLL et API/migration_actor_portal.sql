@@ -570,10 +570,29 @@ BEGIN
     v_sections := array_append(v_sections, v_change->'metadata'->>'field');
   END LOOP;
 
-  -- La soumission.
-  INSERT INTO fiche_submission (object_id, actor_id, submitted_by, note)
-  VALUES (p_object_id, v_actor, v_uid, NULLIF(btrim(COALESCE(p_note, '')), ''))
-  RETURNING id INTO v_sub_id;
+  -- La soumission. Le pré-check EXISTS plus haut n'est qu'un check-then-act : il rend
+  -- le cas courant lisible sans lever d'exception coûteuse, mais entre lui et CET
+  -- INSERT, rien ne l'empêche d'être doublé (double-clic avant que le bouton se
+  -- désactive côté front, deux onglets) — les deux appels peuvent lire EXISTS=FALSE
+  -- et arriver ici ensemble ; uq_fiche_submission_open (index unique partiel)
+  -- départage alors les deux à l'ÉCRITURE, pas au pré-check. Sans ce blindage, le
+  -- perdant de la course remonterait un 23505 NU — exactement le message
+  -- « doublon » (db-error-message.ts) que le pré-check ci-dessus prétend déjà
+  -- fermer, et le piège nommé par le PO pour ce chantier. Le code d'erreur est la
+  -- SEULE chose que voit le prestataire : on rattrape donc ICI, à l'écriture réelle,
+  -- avec le MÊME message et le MÊME SQLSTATE que le pré-check — le front n'a
+  -- jamais qu'un seul cas PT409 à traiter. Motif identique à 4 précédents du dépôt
+  -- (SELECT optimiste + écriture blindée) : api.create_tag et
+  -- api.create_membership_campaign (api_views_functions.sql), et leur miroir dans
+  -- migration_tags_create_and_order.sql.
+  BEGIN
+    INSERT INTO fiche_submission (object_id, actor_id, submitted_by, note)
+    VALUES (p_object_id, v_actor, v_uid, NULLIF(btrim(COALESCE(p_note, '')), ''))
+    RETURNING id INTO v_sub_id;
+  EXCEPTION WHEN unique_violation THEN
+    RAISE EXCEPTION USING ERRCODE = 'PT409',
+      MESSAGE = 'Une vérification est déjà en cours pour cette fiche';
+  END;
 
   -- Les changements (mêmes colonnes que submit_pending_change + submission_id ;
   -- le trigger after-insert flippe object.is_editing).
@@ -593,7 +612,11 @@ BEGIN
   VALUES (v_task_id, p_object_id, v_actor,
           'Vérifier la fiche « ' || COALESCE(v_name, p_object_id) || ' »',
           COALESCE('Message du prestataire : ' || NULLIF(btrim(COALESCE(p_note, '')), '') || E'\n', '')
-            || 'Sections modifiées : ' || array_to_string(v_sections, ', '),
+            -- array_to_string (forme à 2 arguments) ignore silencieusement les NULL : si
+            -- tous les metadata.field valent NULL, la liste serait vide et la phrase
+            -- finirait tronquée (« Sections modifiées : » suivi de rien) — l'office lit
+            -- cette description, un repli lisible vaut mieux qu'une phrase coupée.
+            || 'Sections modifiées : ' || COALESCE(NULLIF(array_to_string(v_sections, ', '), ''), '(non précisées)'),
           'todo', 'medium', v_uid,
           jsonb_build_object('kind', 'fiche_verification', 'submission_id', v_sub_id));
   UPDATE fiche_submission SET task_id = v_task_id WHERE id = v_sub_id;

@@ -31,6 +31,9 @@ DECLARE
   v_actor2  uuid := '00000000-0000-4000-a000-000000001322'; -- un AUTRE acteur (piège e-mail)
   v_user    uuid := '00000000-0000-4000-a000-000000001301'; -- compte portail (role actor)
   v_agent   uuid := '00000000-0000-4000-a000-000000001302'; -- témoin tourism_agent
+  v_objE    text := 'HOTRUN9999991391'; -- (C) objet DÉDIÉ D7, hors piège e-mail du bloc B
+  v_actor3  uuid := '00000000-0000-4000-a000-000000001392'; -- (C) acteur DÉDIÉ D7, détient v_objE
+  v_user2   uuid := '00000000-0000-4000-a000-000000001393'; -- (C) compte portail DÉDIÉ D7 (persona actor)
   v_role_op uuid;
   v_pub     uuid;
   v_email_kind uuid;
@@ -133,18 +136,64 @@ BEGIN
   RESET ROLE;
 
   -- ---------- (C) D7 : lien primaire + persona acteur ⇒ AUCUNE écriture canonique ----------
-  -- v_actor1 tient is_primary=TRUE sur v_objA (fixture bloc B). Avant la migration,
-  -- is_object_owner rendait TRUE ⇒ écriture canonique complète sans org ni permission.
+  -- Fixture DÉDIÉE au bloc C (v_objE/v_actor3/v_user2, 1391-1393) — AUCUNE ligne des blocs A/B
+  -- n'est modifiée (les blocs D..I s'appuient dessus, et le piège e-mail du bloc B est
+  -- lui-même une assertion qui doit perdurer). Nécessaire : sous le fixture du bloc B, le pont
+  -- e-mail (api.user_actor_ids) fait résoudre v_user vers v_actor2, PAS vers v_actor1 — donc
+  -- is_object_owner(v_objA) pour v_user est déjà FALSE AVANT la §2, pour une raison étrangère
+  -- à D7 (l'assertion ne « mordrait » pas — constaté empiriquement lors de la revue, corrigé
+  -- ici ; cf. task-2-report.md § « Correction post-revue »). Ici l'e-mail du compte v_user2 est
+  -- le canal DIRECT de SON PROPRE acteur v_actor3 (pas de piège) : le scénario réel que D7 doit
+  -- fermer — persona acteur + is_primary=TRUE ⇒ TRUE avant la §2, FALSE après.
+  -- RESET ROLE (bloc B) restaure le rôle Postgres mais PAS le GUC request.jwt.claims : sans ce
+  -- nettoyage, le trigger enforce_app_user_profile_role_change confond ces INSERT (rôle
+  -- privilégié) avec une session 'authenticated' résiduelle du dernier persona testé. Même
+  -- geste que le cas « hors HTTP » du bloc A ci-dessus.
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO auth.users (id, email) VALUES (v_user2, 'portal_actor_1393@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES (v_user2, 'actor')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  INSERT INTO object (id, object_type, name, status) VALUES (v_objE, 'HOT', 'Hôtel D7 (bloc C)', 'draft')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO actor (id, display_name) VALUES (v_actor3, 'Acteur D7 (bloc C)')
+    ON CONFLICT (id) DO NOTHING;
+  -- L'UPDATE référence v_actor3 (FK app_user_profile_actor_id_fkey) : DOIT suivre l'INSERT actor.
+  UPDATE app_user_profile SET actor_id = v_actor3 WHERE id = v_user2;
+  INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
+    (v_actor3, v_email_kind, 'portal_actor_1393@test.local')
+    ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary) VALUES
+    (v_actor3, v_objE, v_role_op, TRUE)
+    ON CONFLICT DO NOTHING;
+
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+    json_build_object('sub', v_user2, 'role', 'authenticated', 'email', 'portal_actor_1393@test.local')::text, true);
   SET LOCAL ROLE authenticated;
-    ASSERT api.is_object_owner(v_objA) = FALSE,
-           'C: is_object_owner doit être FALSE pour une persona acteur (D7)';
-    ASSERT api.user_can_write_object_canonical(v_objA) = FALSE,
+    ASSERT api.is_object_owner(v_objE) = FALSE,
+           'C: is_object_owner doit être FALSE pour une persona acteur titulaire d''un lien primaire (D7)';
+    ASSERT api.user_can_write_object_canonical(v_objE) = FALSE,
            'C: user_can_write_object_canonical doit suivre (aucun autre bras ne s''ouvre)';
   RESET ROLE;
-  -- Témoin : un tourism_agent dont l'e-mail matche un canal d'acteur à lien primaire
-  -- GARDE le chemin historique (D7 ne ferme QUE la persona acteur).
+
+  -- Témoin de non-régression (renforcé, 2 objets, MÊME compte v_agent) : un tourism_agent
+  -- dont l'e-mail de session bridge vers un acteur titulaire d'un lien primaire GARDE le
+  -- chemin historique — D7 ne ferme QUE la persona acteur, jamais le mécanisme lui-même.
+  -- Deux e-mails de session DISTINCTS pour le MÊME v_agent (le trigger
+  -- prevent_duplicate_actor_email interdit qu'un seul e-mail bridge vers deux acteurs
+  -- différents — constaté empiriquement) : le premier prouve sur v_objE, le MÊME objet que
+  -- le refus ci-dessus (une fonction qui refuserait tout le monde échouerait ici) ; le second,
+  -- l'e-mail RÉEL de v_agent (auth.users), prouve sur v_objA (bloc B) comme témoin historique.
+  INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
+    (v_actor3, v_email_kind, 'portal_agent_1302_objE@test.local')
+    ON CONFLICT DO NOTHING;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302_objE@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT api.is_object_owner(v_objE) = TRUE,
+           'C: le chemin owner HISTORIQUE reste ouvert pour un non-acteur, même objet que le refus D7';
+  RESET ROLE;
+
   INSERT INTO actor_channel (actor_id, kind_id, value) VALUES
     (v_actor1, v_email_kind, 'portal_agent_1302@test.local')
     ON CONFLICT DO NOTHING;

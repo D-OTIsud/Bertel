@@ -49,14 +49,29 @@ BEGIN
     (v_no_membership_user, 'tourism_agent')
   ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
 
+  -- ⚠ RÔLES MÉTIER RETOURNÉS PAR §227 (manifeste 17i). Depuis que le rôle métier CONFÈRE
+  -- les droits, `editor` porte `edit_canonical_when_publisher`, `attach_documents` ET
+  -- `manage_legal_compliance` par la matrice `org_role_permission` semée à la création de
+  -- l'ORG. Laisser les trois témoins en `editor` détruirait CE fichier de bout en bout :
+  -- le témoin « seule permission = juridique » gagnerait l'écriture canonique et l'ajout
+  -- de pièces (les deux assertions négatives plus bas), le témoin « sans permission
+  -- juridique » gagnerait la gestion juridique, et la révocation de l'exception
+  -- individuelle ne changerait plus rien puisque le rôle la re-confère.
+  --
+  -- Le fait gardé ici n'a PAS changé : la porte juridique lit une PERMISSION, pas une
+  -- appartenance. Ce sont les rôles-témoins qui doivent le redire dans le vocabulaire de
+  -- §227 — `viewer` (aucun droit conféré) pour isoler l'exception individuelle,
+  -- `contributor` pour le témoin « rôle métier réel, riche de sept droits, dont AUCUN
+  -- n'est la conformité juridique » : témoin plus fort que `viewer`, qui ne prouverait
+  -- que l'absence de tout.
   INSERT INTO user_org_membership (user_id, org_object_id, is_active)
     VALUES (v_legal_user, v_org, TRUE) RETURNING id INTO v_membership;
   INSERT INTO user_org_business_role (membership_id, role_id, is_active)
-    SELECT v_membership, id, TRUE FROM ref_org_business_role WHERE code = 'editor';
+    SELECT v_membership, id, TRUE FROM ref_org_business_role WHERE code = 'viewer';
   INSERT INTO user_org_membership (user_id, org_object_id, is_active)
     VALUES (v_editor_user, v_org, TRUE) RETURNING id INTO v_membership;
   INSERT INTO user_org_business_role (membership_id, role_id, is_active)
-    SELECT v_membership, id, TRUE FROM ref_org_business_role WHERE code = 'editor';
+    SELECT v_membership, id, TRUE FROM ref_org_business_role WHERE code = 'contributor';
   INSERT INTO user_org_membership (user_id, org_object_id, is_active)
     VALUES (v_outside_user, v_other_org, TRUE) RETURNING id INTO v_membership;
   INSERT INTO user_org_business_role (membership_id, role_id, is_active)
@@ -116,14 +131,14 @@ BEGIN
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_editor_user, 'role', 'authenticated')::text, true);
   ASSERT api.user_can_manage_object_legal(v_object) = FALSE,
-    'editor role alone must not grant legal management';
+    'un rôle métier qui ne confère PAS manage_legal_compliance (contributor : sept droits, aucun juridique) ne doit pas ouvrir la gestion juridique';
   SET LOCAL ROLE authenticated;
   SELECT COUNT(*) INTO v_count FROM ref_document WHERE id = v_document;
-  ASSERT v_count = 0, 'editor without legal permission must not read private document metadata';
+  ASSERT v_count = 0, 'membre sans permission juridique : pas de lecture des métadonnées du justificatif privé';
   UPDATE object_legal SET note = 'must not write' WHERE id = v_record;
   GET DIAGNOSTICS v_count = ROW_COUNT;
   RESET ROLE;
-  ASSERT v_count = 0, 'editor without legal permission must not update legal data';
+  ASSERT v_count = 0, 'membre sans permission juridique : pas d''écriture des données juridiques';
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_outside_user, 'role', 'authenticated')::text, true);
   ASSERT api.user_can_manage_object_legal(v_object) = FALSE,

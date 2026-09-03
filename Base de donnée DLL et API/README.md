@@ -124,6 +124,26 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 -- §46: seed ref_capacity_applicability (facettes capacite Explorer HOT/RES) -- necessite ref_capacity_metric (seeds)
 \i migration_capacity_applicability_seed.sql
 
+-- 10) 227 -- le role metier CONFERE les droits (matrice org_role_permission), l'ecriture CRM
+--     exige la permission, l'ecriture d'une liste appartient a son createur, la creation
+--     d'une liste est reservee au superuser plateforme. Ces quatre etapes etaient deja en
+--     production et absentes de ce fichier comme de ci_fresh_apply.sql : dette de packaging
+--     rattrapee au packaging du portail acteur, qui depend d'org_role_permission.
+--     APRES rls_policies.sql et migration_sp4_list_org_members.sql ; ordre interne impose.
+\i migration_role_permission_matrix.sql
+\i migration_crm_write_requires_permission.sql
+\i migration_list_write_creator_only.sql
+\i migration_list_create_superuser_only.sql
+
+-- 11) Portail acteur (18a) : persona `actor`, portee dediee, D7 (l'acteur n'ecrit pas le
+--     canonique), fiche_submission + tache de verification multi-assignee, D9 (validation
+--     totale ou partielle, manual_apply acquittable), outbox elargie.
+--     APRES 17i (org_role_permission, lu pour deriver les verificateurs), APRES 17m
+--     (api.list_crm_tasks y est redeployee avec la cle `extra`) et APRES schema_unified.sql
+--     (miroir d'api.rpc_gdpr_erase_subject). NE PAS jouer migration_gdpr_erasure.sql apres :
+--     cette redaction ignore la branche acteur et effacerait le deliage du compte portail.
+\i migration_actor_portal.sql
+
 -- Ordre complet + refresh MV + rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```
 

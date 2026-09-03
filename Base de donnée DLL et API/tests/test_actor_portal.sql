@@ -2438,6 +2438,16 @@ BEGIN
   SET LOCAL ROLE authenticated;
     ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objD),
            'I: bras 1b intact pour un non-acteur (fiches de l''ORG via rôle acteur)';
+    -- Témoin NON DISCRIMINANT, conservé DÉLIBÉRÉMENT. v_objB porte lui aussi un lien acteur
+    -- EXPIRÉ, mais il est rattaché à v_orgA par object_org_link et v_actor1 tient un rôle
+    -- sur v_orgA : le bras 1b, dont la sous-requête est autonome et ne filtre AUCUNE
+    -- validité, le rend à lui seul. Cette assertion ne prouve donc rien sur le bras 1a —
+    -- elle passerait encore si 1a recevait le filtre de validité, et même s'il était
+    -- SUPPRIMÉ. Elle reste ici pour que la raison de son insuffisance demeure lisible, et
+    -- pour qu'on ne « re-simplifie » pas v_objM/v_objN vers elle en croyant ne rien perdre.
+    -- Vérifié par mutation : avec le filtre posé sur 1a, celle-ci passe et la suivante tombe.
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objB),
+           'I: (NON DISCRIMINANT) v_objB est rendu par le bras 1b — ne prouve RIEN sur 1a';
     ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objM),
            'I: pas de filtre valid_to pour un non-acteur (bras 1a, témoin EXCLUSIF hors ORG)';
     -- Le pendant du précédent : le bras 1a historique ignore AUSSI valid_from. Les deux

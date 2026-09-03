@@ -71,8 +71,15 @@ BEGIN
   INSERT INTO auth.users (id, email) VALUES
     (v_userA, 'lists_a@test.local'), (v_userB, 'lists_b@test.local')
     ON CONFLICT (id) DO NOTHING;
+  -- ⚠ userA est SUPERUSER PLATEFORME depuis §227 (manifeste 17l) : `api.create_list`
+  -- n'accepte plus que `api.is_platform_superuser()` — un `tourism_agent`, même membre
+  -- actif d'une ORG, est refusé en 42501 « FORBIDDEN: la création de listes est réservée
+  -- aux superusers plateforme ». userA doit donc être le seul persona qui PEUT créer une
+  -- liste, sans quoi ce fichier meurt à sa première ligne utile.
+  -- userB reste `tourism_agent` : c'est LUI qui porte l'isolation cross-org asserée en
+  -- fin de fichier, et l'élever ferait passer cette garde pour de mauvaises raisons.
   INSERT INTO app_user_profile (id, role) VALUES
-    (v_userA, 'tourism_agent'), (v_userB, 'tourism_agent')
+    (v_userA, 'super_admin'), (v_userB, 'tourism_agent')
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);

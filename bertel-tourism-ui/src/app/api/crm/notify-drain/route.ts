@@ -59,6 +59,30 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Ligne malformée ou sans e-mail (le claim les termine normalement lui-même) :
     // on la SAUTE — le claim la re-traitera, jamais de boucle d'erreur ici.
     if (!id || !to) continue;
+    // 18a — le claim rend désormais DEUX espèces (crm_task_assigned et
+    // fiche_submission_reviewed) et ce relais ne sait composer que la première. Composer la
+    // seconde avec TaskAssignedEmail enverrait au PRESTATAIRE une notification d'assignation
+    // interne — sujet « Nouvelle tâche », bouton pointant /crm, une page que la persona
+    // `actor` ne peut pas ouvrir — et `outcome`, la seule information utile, serait jeté.
+    // On ne compose donc pas : on TERMINE la ligne en échec explicite.
+    //
+    // Un `continue` nu ne suffirait pas : mark_notifications_emailed n'incrémente
+    // email_attempts que par le bras p_failed, donc une ligne sautée sans acquittement
+    // redevient réclamable à chaque TTL de 10 min, indéfiniment, en consommant un des 20
+    // slots du LIMIT — file bouchée à vie. La notification in-app, elle, subsiste.
+    //
+    // Le repli sur 'crm_task_assigned' quand la clé est ABSENTE rend cette garde sûre dans
+    // les DEUX ordres de déploiement : contre un claim antérieur à 18a §8.2 (qui n'émet pas
+    // `kind`), toutes les lignes restent traitées comme avant.
+    //
+    // TODO(Task 18) : remplacer par un aiguillage sur `kind` vers
+    // src/emails/SubmissionReviewedEmail (sujet et corps dérivés de `outcome` ∈
+    // {approved, rejected, partial}, lien vers l'espace acteur et NON /crm) — spec §4.7.
+    const kind = str(row.kind) || 'crm_task_assigned';
+    if (kind !== 'crm_task_assigned') {
+      failed.push({ id, error: 'unsupported_kind' });
+      continue;
+    }
     const emailData: TaskAssignedEmailData = {
       taskTitle: str(row.task_title) || 'Tâche',
       objectName: str(row.object_name) || 'Établissement',

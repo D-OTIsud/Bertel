@@ -3,7 +3,7 @@ import { AuthSessionMissingError } from '@supabase/supabase-js';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
-import { useSessionStore } from '../store/session-store';
+import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
@@ -163,9 +163,7 @@ export function useBootstrapSession() {
 
       if (!data.user) {
         setGuest(
-          options.authEvent === 'SIGNED_OUT'
-            ? 'Vous avez ete deconnecte. Reconnectez-vous avec Google.'
-            : 'Connectez-vous avec Google pour acceder a la plateforme.',
+          options.authEvent === 'SIGNED_OUT' ? GUEST_SIGNED_OUT_MESSAGE : GUEST_SIGN_IN_MESSAGE,
         );
         return;
       }

@@ -4,6 +4,14 @@ import type { UserRole } from '../types/domain';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
 
+// Messages de l'état invité. Ils s'affichent à TOUT LE MONDE — dont un partenaire invité
+// par e-mail qui n'a jamais vu de bouton Google — d'où l'absence de toute mention d'un
+// fournisseur d'identité. Exportés parce que /login décide d'en faire un toast : la page
+// les comparait par `includes('deconnecte')`, un fragment sans accent qu'un simple
+// renommage aurait rendu muet. Une constante partagée, pas un mot deviné.
+export const GUEST_SIGNED_OUT_MESSAGE = 'Vous êtes déconnecté.';
+export const GUEST_SIGN_IN_MESSAGE = 'Connectez-vous pour accéder à votre espace.';
+
 // Initiales (≤ 2) dérivées du nom — repli d'avatar quand aucune photo. Même logique que
 // useBootstrapSession/ProfileDrawer/Sidebar (dette pré-existante à consolider un jour).
 function initialsFromName(name: string): string {

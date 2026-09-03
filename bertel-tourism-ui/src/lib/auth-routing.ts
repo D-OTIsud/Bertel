@@ -12,7 +12,7 @@ export function isSafeInternalPath(path: string | null | undefined): path is str
  * `startsWith('/espace')` nu laisserait passer « /espaces-verts » : le préfixe doit
  * être suivi d'une fin de chemin, d'un séparateur, d'une query ou d'un fragment.
  */
-function isPortalPath(path: string): boolean {
+export function isPortalPath(path: string): boolean {
   if (!path.startsWith(PORTAL_ROOT)) return false;
   const next = path.charAt(PORTAL_ROOT.length);
   return next === '' || next === '/' || next === '?' || next === '#';

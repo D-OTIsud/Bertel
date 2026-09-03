@@ -22,7 +22,7 @@ import {
 } from './portal-rubrics';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import type { ObjectWorkspacePermissions } from '../../services/object-workspace';
-import type { ArchetypeCode } from '../object-editor/archetypes';
+import { TYPE_LABEL, type ArchetypeCode } from '../object-editor/archetypes';
 
 const floor = ['legal', 'provider-follow-up', 'publication', 'sync-identifiers', 'distribution', 'provider', 'relationships', 'places', 'media'];
 
@@ -217,8 +217,9 @@ describe('liaisons PURES vers le motif d’indisponibilité', () => {
   });
 });
 
+const BANNED = /\b(canonique|mod[ée]ration|soumission|module|section|workspace|contributeur|pending|diff|rpc|json|prestataire|HEB|RES|OTI|HLO|PSV)\b/i;
+
 describe('vocabulaire et intégrité du registre', () => {
-  const BANNED = /\b(canonique|mod[ée]ration|soumission|module|section|workspace|contributeur|pending|diff|rpc|json|prestataire|HEB|RES|OTI|HLO|PSV)\b/i;
 
   it('chaque rubrique porte un module hors plancher et un titre sans jargon', () => {
     for (const rubric of PORTAL_RUBRICS) {
@@ -246,10 +247,27 @@ describe('vocabulaire et intégrité du registre', () => {
     // (Explorer, CRM, éditeur) : on ne la touche pas, on la surcharge ICI.
     expect(portalTypeLabel('PSV')).not.toMatch(/prestataire/i);
     expect(portalTypeLabel('HLO')).toBe('Gîtes, meublés & chambres d’hôtes');
-    expect(portalTypeLabel('ZZZ')).toBe('ZZZ');
-    for (const code of ['HOT', 'HPA', 'HLO', 'CAMP', 'RVA', 'RES', 'ASC', 'ACT', 'LOI', 'PCU', 'PNA', 'PRD', 'PSV', 'VIL', 'COM', 'SPU']) {
-      expect(portalTypeLabel(code)).not.toMatch(/prestataire/i);
+    // La garde balaie la taxonomie ENTIÈRE, pas une liste recopiée : un libellé proscrit
+    // ajouté demain doit faire rougir ce test tout seul.
+    for (const code of Object.keys(TYPE_LABEL)) {
+      expect(portalTypeLabel(code)).not.toMatch(BANNED);
     }
+  });
+
+  it('un code de type inconnu ne rend RIEN — jamais le code lui-même', () => {
+    // Sans ça, seule la garde de l'appelant empêche « ZZZ » d'atteindre l'écran d'un
+    // partenaire ; la fonction doit être fail-closed par elle-même.
+    expect(portalTypeLabel('ZZZ')).toBe('');
+    expect(portalTypeLabel(null)).toBe('');
+    expect(portalTypeLabel('')).toBe('');
+  });
+
+  it('les catalogues et les listes de types sont GELÉS (un consommateur ne peut pas les muter)', () => {
+    expect(Object.isFrozen(PORTAL_AMENITY_CODES)).toBe(true);
+    for (const codes of Object.values(PORTAL_AMENITY_CODES)) expect(Object.isFrozen(codes)).toBe(true);
+    expect(Object.isFrozen(PORTAL_PAYMENT_CODES)).toBe(true);
+    expect(Object.isFrozen(PORTAL_RUBRICS)).toBe(true);
+    for (const rubric of PORTAL_RUBRICS) expect(Object.isFrozen(rubric.archetypes)).toBe(true);
   });
 });
 

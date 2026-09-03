@@ -69,8 +69,9 @@ export interface PortalRubric {
   module: WorkspaceModuleId;
   /** Libellé portail, français courant. */
   title: string;
-  /** Types couverts — l'applicabilité vit ICI, fail-closed. */
-  archetypes: ArchetypeCode[];
+  /** Types couverts — l'applicabilité vit ICI, fail-closed. Gelé : un consommateur qui
+   *  trierait ou pousserait dedans changerait le registre pour tout l'écran. */
+  archetypes: readonly ArchetypeCode[];
   isFilled(draft: ObjectWorkspaceModules, archetype: ArchetypeCode): boolean;
   /** Une ligne sous le titre. */
   summary(draft: ObjectWorkspaceModules, archetype: ArchetypeCode): string;
@@ -128,7 +129,7 @@ function contactsOf(draft: ObjectWorkspaceModules) {
  * l'accessibilité est saisie par l'office, et `setAmenities` la préserve précisément
  * parce qu'elle reste hors de l'écran.
  */
-export const PORTAL_AMENITY_CODES: Record<ArchetypeCode, string[]> = {
+export const PORTAL_AMENITY_CODES: Readonly<Record<ArchetypeCode, readonly string[]>> = {
   HEB: ['wifi', 'parking', 'swimming_pool', 'air_conditioning', 'equipped_kitchen', 'private_bathroom', 'washing_machine', 'garden', 'private_terrace', 'bbq', 'tv', 'baby_crib'],
   RES: ['wifi', 'parking', 'air_conditioning', 'common_terrace', 'garden', 'bar', 'high_chair', 'playground', 'pet_bowls'],
   // 18b a seedé les trois modes de visite (famille visit_mediation) : ils existent enfin
@@ -140,8 +141,17 @@ export const PORTAL_AMENITY_CODES: Record<ArchetypeCode, string[]> = {
   FMA: [],
 };
 
-/** Moyens de paiement proposés — codes `ref_code` domaine `payment_method`. */
-export const PORTAL_PAYMENT_CODES: readonly string[] = [
+// Gel PROFOND : `Object.freeze` ne descend pas dans les tableaux, et c'est justement le
+// tableau qu'un consommateur trierait ou pousserait.
+for (const codes of Object.values(PORTAL_AMENITY_CODES)) Object.freeze(codes);
+Object.freeze(PORTAL_AMENITY_CODES);
+
+/**
+ * Moyens de paiement proposés en tête d'écran — codes `ref_code` domaine `payment_method`.
+ * Le référentiel en compte 15 : les autres restent joignables sous le repli « Voir tous les
+ * moyens de paiement », et un code hors écran est PRÉSERVÉ par `setPayments`, jamais effacé.
+ */
+export const PORTAL_PAYMENT_CODES: readonly string[] = Object.freeze([
   'especes',
   'carte_bleue',
   'visa',
@@ -150,7 +160,7 @@ export const PORTAL_PAYMENT_CODES: readonly string[] = [
   'cheque_vacances',
   'virement',
   'tickets_restaurant',
-];
+]);
 
 /**
  * L'unité du tarif d'appel. « Par couvert » est du vocabulaire métier : le visiteur lit
@@ -178,15 +188,18 @@ const PORTAL_TYPE_LABEL_OVERRIDES: Record<string, string> = {
   PSV: 'Service touristique',
 };
 
+/** Le libellé du type, ou '' quand on ne sait pas le dire — JAMAIS le code lui-même :
+ *  « HLO », « PSV » ou « ZZZ » à l'écran d'un partenaire, c'est du jargon d'outil interne.
+ *  Fail-closed par elle-même, sans dépendre de la garde de l'appelant. */
 export function portalTypeLabel(typeCode: string | null | undefined): string {
   if (!typeCode) return '';
   const code = typeCode.toUpperCase();
-  return PORTAL_TYPE_LABEL_OVERRIDES[code] ?? TYPE_LABEL[code] ?? typeCode;
+  return PORTAL_TYPE_LABEL_OVERRIDES[code] ?? TYPE_LABEL[code] ?? '';
 }
 
 // ══════════════════════════════ Les rubriques ═══════════════════════════════
 
-const ALL_ESTABLISHMENTS: ArchetypeCode[] = ['HEB', 'RES', 'ASC', 'VIS', 'SRV'];
+const ALL_ESTABLISHMENTS: readonly ArchetypeCode[] = Object.freeze<ArchetypeCode[]>(['HEB', 'RES', 'ASC', 'VIS', 'SRV']);
 
 function weekHoursSummary(draft: ObjectWorkspaceModules): string {
   const { hours } = readWeekHours(slice(draft, 'openings') as never);
@@ -196,7 +209,7 @@ function weekHoursSummary(draft: ObjectWorkspaceModules): string {
   return `Ouvert ${open.length} jours sur 7`;
 }
 
-export const PORTAL_RUBRICS: readonly PortalRubric[] = [
+const RUBRIC_REGISTRY: PortalRubric[] = [
   {
     id: 'contacts',
     module: 'contacts',
@@ -363,9 +376,18 @@ export const PORTAL_RUBRICS: readonly PortalRubric[] = [
   },
 ];
 
+// Gel PROFOND, en deux temps : annoter le littéral d'abord (un `.map` en fin de littéral
+// coupe le typage contextuel et rend tous les paramètres `any`), figer ensuite.
+for (const rubric of RUBRIC_REGISTRY) {
+  Object.freeze(rubric.archetypes);
+  Object.freeze(rubric);
+}
+
+export const PORTAL_RUBRICS: readonly PortalRubric[] = Object.freeze(RUBRIC_REGISTRY);
+
 /** Les modules que le portail peut envoyer — dérivés du registre, jamais réécrits à la main. */
-export const PORTAL_MODULES: readonly WorkspaceModuleId[] = Array.from(
-  new Set(PORTAL_RUBRICS.map((rubric) => rubric.module)),
+export const PORTAL_MODULES: readonly WorkspaceModuleId[] = Object.freeze(
+  Array.from(new Set(PORTAL_RUBRICS.map((rubric) => rubric.module))),
 );
 
 export function isPortalSupportedArchetype(archetype: ArchetypeCode): boolean {

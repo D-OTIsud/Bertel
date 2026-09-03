@@ -23,7 +23,7 @@ describe('describePortalChange', () => {
         ],
       },
     });
-    expect(describePortalChange('contacts', base, next)).toEqual({
+    expect(describePortalChange('contacts', base, next, 'RES')).toEqual({
       field: 'Vos coordonnées',
       before: 'Téléphone : 0262 00',
       after: 'Téléphone : 0692 00\nE-mail : a@b.re',
@@ -40,20 +40,20 @@ describe('describePortalChange', () => {
         ],
       },
     });
-    expect(describePortalChange('contacts', base, next).after).toBe('Téléphone : 0692 00');
+    expect(describePortalChange('contacts', base, next, 'RES').after).toBe('Téléphone : 0692 00');
   });
 
   it('borne les textes longs à 4000 caractères comme l’enveloppe d’origine', () => {
     const long = 'x'.repeat(5000);
     const base = modules({ descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } } });
     const next = modules({ descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: long, values: { fr: long } } } } });
-    expect(describePortalChange('descriptions', base, next).after.length).toBeLessThanOrEqual(4000);
+    expect(describePortalChange('descriptions', base, next, 'RES').after.length).toBeLessThanOrEqual(4000);
   });
 
   it('descriptions : accroche et présentation nommées en clair', () => {
     const base = modules({ descriptions: { object: { chapo: { baseValue: 'A', values: { fr: 'A' } }, description: { baseValue: 'B', values: { fr: 'B' } } } } });
     const next = modules({ descriptions: { object: { chapo: { baseValue: 'A2', values: { fr: 'A2' } }, description: { baseValue: 'B', values: { fr: 'B' } } } } });
-    const change = describePortalChange('descriptions', base, next);
+    const change = describePortalChange('descriptions', base, next, 'RES');
     expect(change.field).toBe('Présentez votre établissement');
     expect(change.before).toBe('Accroche : A\nPrésentation : B');
     expect(change.after).toBe('Accroche : A2\nPrésentation : B');
@@ -101,7 +101,7 @@ describe('describePortalChange', () => {
         paymentOptions: [{ id: 'p1', code: 'carte_bleue', label: 'Carte Bleue' }],
       },
     });
-    const change = describePortalChange('characteristics', modules(shape(['wifi'], [])), modules(shape(['wifi', 'parking'], ['carte_bleue'])));
+    const change = describePortalChange('characteristics', modules(shape(['wifi'], [])), modules(shape(['wifi', 'parking'], ['carte_bleue'])), 'RES');
     expect(change.field).toBe('Équipements et moyens de paiement');
     expect(change.before).toBe('Équipements : Wi-Fi');
     expect(change.after).toBe('Équipements : Wi-Fi, Parking\nPaiement : Carte Bleue');
@@ -126,7 +126,7 @@ describe('describePortalChange', () => {
         stayPolicy: { checkInFrom: '16:00', checkInUntil: '', checkOutUntil: '10:00', conditions: '' },
       }),
     );
-    const change = describePortalChange('capacity-policies', before, after);
+    const change = describePortalChange('capacity-policies', before, after, 'HEB');
     expect(change.before).toBe('Animaux : non renseigné');
     expect(change.after).toBe('Capacité max. : 4\nAnimaux : oui (petits chiens)\nArrivée : à partir de 16:00 · Départ : avant 10:00');
   });
@@ -144,7 +144,7 @@ describe('describePortalChange', () => {
     });
     const before = modules(shape([]));
     const after = modules(shape([{ recordId: 'p1', kindCode: 'adulte', indicationCode: 'principal', unitCode: 'par_nuit', unitLabel: 'Par nuit', amount: '45', amountMax: '', currency: 'EUR' }]));
-    const change = describePortalChange('pricing', before, after);
+    const change = describePortalChange('pricing', before, after, 'HEB');
     expect(change.field).toBe('Vos tarifs');
     expect(change.before).toBe('Aucun tarif indiqué');
     expect(change.after).toBe('À partir de 45 € par nuit');
@@ -153,25 +153,34 @@ describe('describePortalChange', () => {
   it('tarifs : « gratuit » se dit gratuit', () => {
     const shape = (prices: unknown[]) => ({ pricing: { prices, priceUnitOptions: [], priceKindOptions: [], priceTypeOptions: [], discounts: [], promotions: [] } });
     const after = modules(shape([{ recordId: 'p1', kindCode: 'gratuit', indicationCode: 'principal', unitCode: '', unitLabel: '', amount: '0', amountMax: '', currency: 'EUR' }]));
-    expect(describePortalChange('pricing', modules(shape([])), after).after).toBe('Gratuit');
+    expect(describePortalChange('pricing', modules(shape([])), after, 'VIS').after).toBe('Gratuit');
   });
 
   it('activité : durée, participants et âge sur une ligne', () => {
     const before = modules({ activity: { durationMin: '', minParticipants: '', maxParticipants: '', minAge: '' } });
     const after = modules({ activity: { durationMin: '120', minParticipants: '2', maxParticipants: '8', minAge: '6' } });
-    const change = describePortalChange('activity', before, after);
+    const change = describePortalChange('activity', before, after, 'ASC');
     expect(change.field).toBe('Votre activité');
     expect(change.after).toBe('Durée : 120 min · 2 à 8 personnes · dès 6 ans');
   });
 
   it('ne jette pas sur une tranche absente ou abîmée', () => {
     const empty = modules({});
-    expect(() => describePortalChange('contacts', empty, empty)).not.toThrow();
-    expect(describePortalChange('contacts', empty, empty)).toEqual({ field: 'Vos coordonnées', before: '', after: '' });
+    expect(() => describePortalChange('contacts', empty, empty, 'RES')).not.toThrow();
+    expect(describePortalChange('contacts', empty, empty, 'RES')).toEqual({ field: 'Vos coordonnées', before: '', after: '' });
+  });
+
+  it('le type est OBLIGATOIRE : deux rubriques partagent le module `openings`', () => {
+    // Un défaut « restaurant » ferait lire « Lundi : … » à l'office pour un hébergement,
+    // sur le texte même dont il dépend pour accepter ou refuser. Le paramètre est requis :
+    // le typecheck refuse l'appel à trois arguments (garde à la compilation).
+    const stay = modules({ openings: { periods: [{ recordId: 'p1', isClosure: false, recurrence: 'always', startDate: '', endDate: '', closedDays: [], weekdays: [] }] } });
+    expect(describePortalChange('openings', stay, stay, 'HEB').field).toBe('Ouverture et fermetures');
+    expect(describePortalChange('openings', stay, stay, 'RES').field).toBe('Vos horaires');
   });
 
   it('un module hors registre garde son identifiant comme libellé', () => {
     const empty = modules({});
-    expect(describePortalChange('tags', empty, empty).field).toBe('tags');
+    expect(describePortalChange('tags', empty, empty, 'RES').field).toBe('tags');
   });
 });

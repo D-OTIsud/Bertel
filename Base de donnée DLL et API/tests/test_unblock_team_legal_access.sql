@@ -52,7 +52,10 @@ BEGIN
   -- ⚠ RÔLES MÉTIER RETOURNÉS PAR §227 (manifeste 17i). Depuis que le rôle métier CONFÈRE
   -- les droits, `editor` porte `edit_canonical_when_publisher`, `attach_documents` ET
   -- `manage_legal_compliance` par la matrice `org_role_permission` semée à la création de
-  -- l'ORG. Laisser les trois témoins en `editor` détruirait CE fichier de bout en bout :
+  -- l'ORG. DEUX des trois témoins sont retournés ici (v_legal_user, v_editor_user) ; le
+  -- troisième, v_outside_user, GARDE `editor` — il vit dans une AUTRE ORG et c'est la portée
+  -- objet, pas la permission, qui doit le refuser. Les laisser tous les trois en `editor`
+  -- détruirait CE fichier de bout en bout :
   -- le témoin « seule permission = juridique » gagnerait l'écriture canonique et l'ajout
   -- de pièces (les deux assertions négatives plus bas), le témoin « sans permission
   -- juridique » gagnerait la gestion juridique, et la révocation de l'exception

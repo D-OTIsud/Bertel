@@ -96,8 +96,13 @@ async function fetchAdminRoleCode(): Promise<string | null> {
   } catch (err) { console.warn('current_user_admin_role_code threw.', err); return null; }
 }
 
+// Allowlist stricte, jamais un cast : un rôle inconnu doit rendre null pour tomber dans
+// `setSessionError` plus bas. La persona `actor` (18a) doit donc y figurer explicitement,
+// sans quoi un partenaire authentifié se retrouve bloqué sur l'écran de session.
 function normalizeRole(value: unknown): UserRole | null {
-  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
+  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' || value === 'actor'
+    ? value
+    : null;
 }
 
 function initialsFromName(name: string): string {
@@ -185,6 +190,28 @@ export function useBootstrapSession() {
       const langPrefs = Array.isArray(profile?.lang_prefs) && profile.lang_prefs.every((item) => typeof item === 'string')
         ? profile.lang_prefs
         : fallbackLangPrefs;
+
+      // Persona partenaire (18a) : aucune des sondes back-office ne s'applique — on hydrate
+      // directement avec les valeurs neutres au lieu de payer 5 allers-retours qui
+      // rendraient tous false/null. Le portail fait ses propres lectures.
+      if (role === 'actor') {
+        hydrateFromAuth({
+          role,
+          userId: user.id,
+          email: String(user.email ?? ''),
+          userName,
+          avatar: initialsFromName(userName),
+          avatarUrl: typeof profile?.avatar_url === 'string' && profile.avatar_url.length > 0 ? profile.avatar_url : null,
+          langPrefs,
+          canEditObjects: false,
+          canCreateObjects: false,
+          orgId: null,
+          orgName: null,
+          adminRank: null,
+          adminRoleCode: null,
+        });
+        return;
+      }
 
       const canEditObjects = await fetchCanEditObjects();
       if (cancelled) {

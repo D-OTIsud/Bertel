@@ -70,8 +70,10 @@ export const PORTAL_DAY_READONLY_REASON =
 export const PORTAL_SEASONAL_HOURS_REASON =
   'Vos horaires changent selon la saison. L’office les gère pour vous.';
 
+/** Nomme les DEUX moitiés de la rubrique : l'écran verrouille tout, `setStayOpening` ET
+ *  `setStayClosures` refusent d'écrire, et le partenaire sait quoi demander à l'office. */
 export const PORTAL_SEASONAL_OPENING_REASON =
-  'Vos périodes d’ouverture changent selon la saison. L’office les gère pour vous.';
+  'Vos périodes d’ouverture et vos fermetures changent selon la saison. L’office les gère pour vous.';
 
 // ═══════════════════════════════ Présentation ═══════════════════════════════
 
@@ -102,13 +104,20 @@ export function setPresentation(
 
 export type PortalContactKind = 'phone' | 'mobile' | 'email' | 'website';
 
-/** Genres acceptés pour une case de l'écran, du plus au moins spécifique. La LECTURE et
- *  l'ÉCRITURE partagent cette résolution : sinon, modifier un numéro affiché comme
- *  « téléphone » alors qu'il est stocké en « mobile » créerait une ligne de plus et
- *  laisserait l'ancienne périmée à l'écran comme en base. */
+/**
+ * Genres acceptés pour une case de l'écran, du plus au moins spécifique. La LECTURE et
+ * l'ÉCRITURE partagent cette résolution : sinon, modifier un numéro affiché comme
+ * « téléphone » alors qu'il est stocké en « mobile » créerait une ligne de plus et
+ * laisserait l'ancienne périmée à l'écran comme en base.
+ *
+ * Le repli est à SENS UNIQUE. « Téléphone » accepte un mobile faute de mieux — c'est
+ * souvent le seul numéro d'un gîte. L'inverse est INTERDIT : sur une fiche n'ayant qu'une
+ * ligne `phone`, remplir « Mobile » remplacerait le numéro FIXE, et la ligne resterait de
+ * genre `phone`. Un écran qui rend les deux champs doit pouvoir le faire sans destruction.
+ */
 const CONTACT_KIND_FALLBACKS: Record<PortalContactKind, string[]> = {
   phone: ['phone', 'mobile'],
-  mobile: ['mobile', 'phone'],
+  mobile: ['mobile'],
   email: ['email'],
   website: ['website'],
 };
@@ -165,7 +174,9 @@ export function upsertPublicContact(
   const draft = createContactDraft(contacts.kindOptions, contacts.objectItems.length === 0);
   const row: ObjectWorkspaceContactItem = {
     ...draft,
-    id: `draft-contact-${kind}-${Date.now()}`,
+    // DÉTERMINISTE : `Date.now()` rendrait la fonction impure et changerait la clé React
+    // à chaque frappe. Le portail n'a qu'une ligne publique par genre, l'id est donc unique.
+    id: `draft-contact-${kind}`,
     kindId: option.id,
     kindCode: option.code,
     kindLabel: option.label,
@@ -244,7 +255,10 @@ export function readWeekHours(openings: ObjectWorkspaceOpeningsModule): {
     hours[code] = {
       open: slots.length > 0,
       fixedHours: hasAnyTime(slots),
-      slots,
+      // COPIE : l'écran garde ces créneaux dans son état de formulaire et les modifie en
+      // place ; prêter les objets du brouillon laisserait une frappe muter la tranche
+      // serveur sans passer par un updater, donc sans aucune des gardes de ce fichier.
+      slots: slots.map((slot) => ({ ...slot })),
       readOnly: slots.length > MAX_EDITABLE_SLOTS_PER_DAY,
     };
   }
@@ -258,15 +272,28 @@ export function readWeekHours(openings: ObjectWorkspaceOpeningsModule): {
   };
 }
 
-/** Les créneaux à écrire pour un jour, d'après ce que l'écran annonce. Un jour ouvert
- *  n'obtient JAMAIS `slots: []` : ce serait « fermé » à la relecture. */
-function desiredSlots(entry: WeekDayHours): ObjectWorkspaceOpeningSlot[] {
+/**
+ * Les créneaux à écrire pour un jour, d'après ce que l'écran annonce. Un jour ouvert
+ * n'obtient JAMAIS `slots: []` : ce serait « fermé » à la relecture.
+ *
+ * Le filtre des créneaux à moitié saisis ne s'applique qu'à la saisie NEUVE. Un créneau
+ * déjà STOCKÉ est conservé tel quel, même à une seule borne : `readWeekHours` rend la
+ * semaine telle qu'elle est enregistrée, et l'écran la renvoie entière — sans cette
+ * distinction, une heure d'ouverture sans heure de fermeture (saisie par l'office, ou
+ * laissée en chantier) disparaîtrait au premier aller-retour, en emportant le service.
+ */
+function desiredSlots(
+  entry: WeekDayHours,
+  stored: ObjectWorkspaceOpeningWeekday | undefined,
+): ObjectWorkspaceOpeningSlot[] {
   if (!entry.open) return [];
   if (!entry.fixedHours) return [{ start: '', end: '' }];
-  // On ne retire ici que les créneaux À MOITIÉ saisis (l'écran affiche l'erreur avant) —
-  // jamais un créneau stocké. Et si rien ne reste, le jour reste OUVERT via la sentinelle.
-  const filled = entry.slots.filter(isFilledSlot);
-  return filled.length > 0 ? filled : [{ start: '', end: '' }];
+  const storedSlots = stored?.slots ?? [];
+  const kept = entry.slots.filter(
+    (slot) => isFilledSlot(slot) || storedSlots.some((s) => s.start === slot.start && s.end === slot.end),
+  );
+  // Si rien ne reste, le jour reste OUVERT via la sentinelle — jamais `[]`, qui vaut fermé.
+  return kept.length > 0 ? kept : [{ start: '', end: '' }];
 }
 
 function applyWeekHours(period: ObjectWorkspaceOpeningPeriod, hours: WeekHours): ObjectWorkspaceOpeningPeriod {
@@ -289,7 +316,7 @@ function applyWeekHours(period: ObjectWorkspaceOpeningPeriod, hours: WeekHours):
     // l'écran jetterait les créneaux qu'il n'affiche pas. On ne touche à RIEN.
     if (stored && stored.slots.length > MAX_EDITABLE_SLOTS_PER_DAY) continue;
 
-    const next = desiredSlots(entry);
+    const next = desiredSlots(entry, stored);
 
     if (stored) {
       if (!sameSlots(stored.slots, next)) byCode.set(code, { ...stored, slots: next });
@@ -426,10 +453,20 @@ export function setStayOpening(
   if (indexes.length > 1) return openings;
   if (opening.openAllYear === null) return openings;
 
+  const current = indexes.length > 0 ? openings.periods[indexes[0]] : null;
   const allYear = opening.openAllYear === true;
-  const recurrence: ObjectWorkspaceOpeningPeriod['recurrence'] = allYear ? 'always' : 'cyclic';
+  // `readStayOpening` replie `fixed` ET `cyclic` sur « pas toute l'année » : réécrire
+  // 'cyclic' en dur ferait basculer `all_years` de false à true dans buildOpeningsPayload,
+  // et l'ouverture PONCTUELLE enregistrée par l'office deviendrait une saison annuelle.
+  // On ne change donc jamais le mode de récurrence d'une période déjà datée.
+  const recurrence: ObjectWorkspaceOpeningPeriod['recurrence'] = allYear
+    ? 'always'
+    : current && current.recurrence !== 'always'
+      ? current.recurrence
+      : 'cyclic';
   const startDate = allYear ? '' : opening.startDate;
   const endDate = allYear ? '' : opening.endDate;
+  const allYears = recurrence !== 'fixed';
 
   if (indexes.length === 0) {
     const created: ObjectWorkspaceOpeningPeriod = {
@@ -439,7 +476,7 @@ export function setStayOpening(
       recurrence,
       startDate,
       endDate,
-      allYears: true,
+      allYears,
       weekdays: stayWeekdays(),
     };
     return { ...openings, periods: [...openings.periods, created] };
@@ -455,12 +492,13 @@ export function setStayOpening(
     period.recurrence === recurrence &&
     period.startDate === startDate &&
     period.endDate === endDate &&
+    period.allYears === allYears &&
     weekdays === period.weekdays
   ) {
     return openings;
   }
 
-  const next: ObjectWorkspaceOpeningPeriod = { ...period, recurrence, startDate, endDate, allYears: true, weekdays };
+  const next: ObjectWorkspaceOpeningPeriod = { ...period, recurrence, startDate, endDate, allYears, weekdays };
   return { ...openings, periods: openings.periods.map((entry, i) => (i === index ? next : entry)) };
 }
 
@@ -473,6 +511,11 @@ export function setStayClosures(
   openings: ObjectWorkspaceOpeningsModule,
   closures: StayClosure[],
 ): ObjectWorkspaceOpeningsModule {
+  // Même verrou que `setStayOpening` : avec plusieurs périodes ouvertes, l'écran affiche
+  // « l'office les gère pour vous » et se met en lecture seule. Sans ce refus ici, la
+  // moitié fermetures s'écrirait quand même — deux politiques dans une seule rubrique.
+  if (openPeriodIndexes(openings).length > 1) return openings;
+
   const wanted = new Map(closures.map((closure) => [closure.key, closure]));
   const seen = new Set<string>();
   const periods: ObjectWorkspaceOpeningPeriod[] = [];
@@ -534,21 +577,27 @@ export function setAmenities(
 }
 
 /**
- * Même garde pour les moyens de paiement : le portail n'affiche que les options du
- * catalogue CHARGÉ. Un code sélectionné qui n'y figure pas (catalogue partiel, code
- * retiré du référentiel) n'est pas affiché — le remplacer à l'aveugle l'effacerait.
+ * Même garde pour les moyens de paiement — et `visibleOptionCodes` vient de l'ÉCRAN, pas
+ * du catalogue.
+ *
+ * `characteristics.paymentOptions` est le référentiel COMPLET (15 codes `payment_method`
+ * en base), pas ce que le partenaire voit : le portail en montre une liste curée. En
+ * déduire l'ensemble « visible » rendrait les autres codes remplaçables, donc effaçables —
+ * `paypal` (8 objets) et `apple_pay` (1) partiraient au premier clic sur une case, en
+ * silence, et la projection D12 montrerait à l'agent une ligne parfaitement plausible.
+ * `save_object_commercial` est « remplace tout » : c'est exactement la classe §214.
  */
 export function setPayments(
   characteristics: ObjectWorkspaceCharacteristicsModule,
   codes: string[],
+  visibleOptionCodes: Set<string>,
 ): ObjectWorkspaceCharacteristicsModule {
-  const catalog = new Set(characteristics.paymentOptions.map((option) => option.code));
   return {
     ...characteristics,
     selectedPaymentCodes: mergeEstablishmentAmenitySelection(
       characteristics.selectedPaymentCodes,
       codes,
-      catalog,
+      visibleOptionCodes,
     ),
   };
 }

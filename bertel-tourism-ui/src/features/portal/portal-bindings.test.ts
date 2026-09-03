@@ -168,6 +168,22 @@ describe('upsertPublicContact', () => {
     expect(next.objectItems[0]).toMatchObject({ id: 'm1', kindCode: 'mobile', value: '0692 22 22 22' });
   });
 
+  it('remplir « Mobile » n’écrase JAMAIS le numéro fixe', () => {
+    const phoneOnly = { ...contacts, objectItems: [contacts.objectItems[0]] } as unknown as ObjectWorkspaceContactsModule;
+    // Le repli est à SENS UNIQUE : « téléphone » accepte un mobile faute de mieux, jamais
+    // l'inverse — sinon éditer le mobile remplace le fixe, et la ligne reste de genre phone.
+    expect(readPublicContact(phoneOnly, 'mobile')).toBe('');
+    const next = upsertPublicContact(phoneOnly, 'mobile', '0692 33 33 33');
+    expect(next.objectItems[0]).toBe(phoneOnly.objectItems[0]);
+    expect(next.objectItems).toHaveLength(2);
+    expect(next.objectItems[1]).toMatchObject({ kindCode: 'mobile', value: '0692 33 33 33', isPublic: true });
+  });
+
+  it('l’identifiant d’une ligne créée est DÉTERMINISTE (fonction pure, clé React stable)', () => {
+    const created = upsertPublicContact(contacts, 'email', 'a@b.re').objectItems.find((i) => i.kindCode === 'email');
+    expect(created?.id).toBe('draft-contact-email');
+  });
+
   it('ne rend jamais une coordonnée non publique', () => {
     expect(readPublicContact(contacts, 'phone')).toBe('0262 00 00 00');
     const privatePhone = {
@@ -275,6 +291,39 @@ describe('setWeekHours', () => {
     // On ne touche QUE mardi : lundi doit ressortir identique, sentinelle comprise.
     const next = setWeekHours(o, { tuesday: { open: true, fixedHours: true, slots: [{ start: '10:00', end: '14:00' }] } } as WeekHours);
     expect(next.periods[0].weekdays.find((w) => w.code === 'monday')?.slots).toEqual([{ start: '', end: '' }]);
+  });
+
+  it('un créneau STOCKÉ à moitié rempli survit à un aller-retour de lecture', () => {
+    const half = period({
+      weekdays: [
+        { code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '' }, { start: '14:00', end: '18:00' }] },
+      ],
+    });
+    const o = openings([half]);
+    // L'écran relit la semaine et la renvoie telle quelle : rien ne doit bouger.
+    const next = setWeekHours(o, readWeekHours(o).hours);
+    // SABOTAGE : filtrer `entry.slots` sur le contenu sans distinguer le STOCKÉ de la
+    // saisie ⇒ le service du matin disparaît, remplacé par la sentinelle.
+    expect(next.periods[0].weekdays[0].slots).toEqual([{ start: '09:00', end: '' }, { start: '14:00', end: '18:00' }]);
+    expect(next).toBe(o);
+  });
+
+  it('un créneau NEUF à moitié saisi tombe sans emporter le créneau stocké', () => {
+    const half = period({ weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '' }] }] });
+    const o = openings([half]);
+    const next = setWeekHours(o, {
+      monday: { open: true, fixedHours: true, slots: [{ start: '09:00', end: '' }, { start: '14:00', end: '' }] },
+    } as WeekHours);
+    expect(next.periods[0].weekdays[0].slots).toEqual([{ start: '09:00', end: '' }]);
+  });
+
+  it('readWeekHours ne prête jamais les tableaux ni les créneaux du brouillon', () => {
+    const stored = period({ weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '12:00' }] }] });
+    const o = openings([stored]);
+    const { hours } = readWeekHours(o);
+    hours.monday.slots.push({ start: '20:00', end: '23:00' });
+    hours.monday.slots[0].start = 'SABOTÉ';
+    expect(o.periods[0].weekdays[0].slots).toEqual([{ start: '09:00', end: '12:00' }]);
   });
 
   it('recocher un jour le retire de closedDays (sinon état contradictoire)', () => {
@@ -397,10 +446,33 @@ describe('readStayOpening / setStayOpening / setStayClosures (hébergements)', (
     expect(next.periods[0]).toBe(o.periods[0]);
   });
 
-  it('lecture seule avec 2 périodes ouvertes', () => {
-    const o = openings([period(), period({ recordId: 'p2', recurrence: 'cyclic' })]);
+  it('une ouverture PONCTUELLE de l’office ne devient pas une saison annuelle', () => {
+    const once = period({
+      recordId: 'p5',
+      recurrence: 'fixed',
+      startDate: '2026-05-01',
+      endDate: '2026-10-31',
+      allYears: false,
+      weekdays: [{ code: 'monday', label: 'lundi', slots: [{ start: '', end: '' }] }],
+    });
+    const o = openings([once]);
+    // Renvoyer la valeur LUE sans y toucher ne doit rien changer : sinon `recurrence` passe
+    // de 'fixed' à 'cyclic' et buildOpeningsPayload bascule `all_years` de false à true —
+    // une ouverture ponctuelle devient une saison qui se répète chaque année.
+    expect(setStayOpening(o, readStayOpening(o).opening)).toBe(o);
+    const moved = setStayOpening(o, { openAllYear: false, startDate: '2026-06-01', endDate: '2026-09-30' });
+    expect(moved.periods[0].recurrence).toBe('fixed');
+    expect(moved.periods[0].allYears).toBe(false);
+  });
+
+  it('lecture seule avec 2 périodes ouvertes — ouverture ET fermetures', () => {
+    const o = openings([period(), period({ recordId: 'p2', recurrence: 'cyclic' }), closure]);
     expect(readStayOpening(o).readOnlyReason).toMatch(/saison/i);
+    expect(readStayOpening(o).readOnlyReason).toMatch(/fermeture/i);
     expect(setStayOpening(o, { openAllYear: true, startDate: '', endDate: '' })).toBe(o);
+    // Les deux moitiés de la rubrique ont la MÊME politique : sans ce verrou, l'écran
+    // annonce « l'office gère » et la moitié fermetures s'écrirait quand même.
+    expect(setStayClosures(o, [])).toBe(o);
   });
 });
 
@@ -432,15 +504,36 @@ describe('setAmenities / setPayments', () => {
     expect(next.selectedPaymentCodes).toBe(characteristics.selectedPaymentCodes);
   });
 
-  it('les moyens de paiement absents du catalogue chargé survivent', () => {
-    const next = setPayments(characteristics, ['carte_bleue']);
-    // SABOTAGE : `Array.from(new Set(codes))` seul ⇒ `crypto` (hors catalogue chargé) est effacé.
-    expect([...next.selectedPaymentCodes].sort()).toEqual(['carte_bleue', 'crypto']);
-    expect(next.selectedAmenityCodes).toBe(characteristics.selectedAmenityCodes);
+  // `paymentOptions` est le référentiel COMPLET (15 codes `payment_method` en base), pas ce
+  // que l'écran montre. Le prendre pour l'ensemble visible efface tout code sélectionné hors
+  // de la liste curée — `paypal` existe sur 8 objets de production, `apple_pay` sur 1.
+  const wideCatalog = {
+    ...characteristics,
+    paymentOptions: [
+      { id: 'p1', code: 'especes', label: 'Espèces' },
+      { id: 'p2', code: 'carte_bleue', label: 'Carte Bleue' },
+      { id: 'p3', code: 'paypal', label: 'PayPal' },
+      { id: 'p4', code: 'apple_pay', label: 'Apple Pay' },
+      { id: 'p5', code: 'crypto', label: 'Cryptomonnaie' },
+    ],
+    selectedPaymentCodes: ['especes', 'paypal'],
+  } as unknown as ObjectWorkspaceCharacteristicsModule;
+  const shown = new Set(['especes', 'carte_bleue']);
+
+  it('un moyen de paiement DANS le catalogue mais HORS de l’écran survit', () => {
+    const next = setPayments(wideCatalog, ['carte_bleue'], shown);
+    // SABOTAGE : dériver l'ensemble visible de `paymentOptions` ⇒ PayPal est effacé, et la
+    // projection D12 affiche « Paiement : Carte Bleue », parfaitement plausible.
+    expect([...next.selectedPaymentCodes].sort()).toEqual(['carte_bleue', 'paypal']);
+    expect(next.selectedAmenityCodes).toBe(wideCatalog.selectedAmenityCodes);
+  });
+
+  it('décocher une case RENDUE la retire bien', () => {
+    expect(setPayments(wideCatalog, [], shown).selectedPaymentCodes).toEqual(['paypal']);
   });
 
   it('déduplique les codes envoyés deux fois', () => {
-    const next = setPayments(characteristics, ['especes', 'especes', 'carte_bleue']);
+    const next = setPayments(wideCatalog, ['especes', 'especes', 'carte_bleue'], shown);
     expect(next.selectedPaymentCodes.filter((c) => c === 'especes')).toHaveLength(1);
   });
 });

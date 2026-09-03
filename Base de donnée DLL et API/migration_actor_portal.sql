@@ -1251,9 +1251,15 @@ BEGIN
   -- relâcherait le verrou — l'acteur re-soumettrait par-dessus une vérification en cours.
   IF v_pending > 0 THEN RETURN; END IF;
 
+  -- ORDRE DES BRAS : `v_applied = 0` D'ABORD. Une soumission VIDÉE — dont on vient de purger
+  -- ou de délier toutes les lignes — a 0 applied / 0 rejected / 0 pending ; avec l'ordre
+  -- inverse elle tomberait dans `approved` et annoncerait au prestataire « vos modifications
+  -- ont été validées » alors qu'on vient de détruire ses lignes. Aucune issue NON vide n'est
+  -- affectée : quand v_pending = 0 et qu'il reste au moins une ligne, le CHECK de statut
+  -- garantit v_applied + v_rejected > 0, donc au plus un des deux bras peut valoir 0.
   v_status := CASE
-    WHEN v_rejected = 0 THEN 'approved'
     WHEN v_applied  = 0 THEN 'rejected'
+    WHEN v_rejected = 0 THEN 'approved'
     ELSE 'partial' END;
 
   UPDATE fiche_submission
@@ -1297,20 +1303,45 @@ RETURNS trigger
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path = pg_catalog, public, api, internal, auth, pg_temp
 AS $$
+DECLARE
+  v_old uuid;
+  v_new uuid;
 BEGIN
-  -- AFTER UPDATE OF status ne garantit PAS que la valeur a changé (un UPDATE qui réécrit le
-  -- même statut tire aussi) — le no-op de la résolution sur une soumission déjà résolue
-  -- absorbe ce cas. Les lignes sans submission_id sont celles du flux §120/§122 : rien à
-  -- résoudre, on sort immédiatement pour ne pas leur coûter un verrou.
-  IF NEW.submission_id IS NOT NULL AND NEW.status <> 'pending' THEN
-    PERFORM internal.resolve_fiche_submission(NEW.submission_id);
+  -- OLD n'existe pas sur INSERT, NEW n'existe pas sur DELETE : les lire sans garde de TG_OP
+  -- lève 'record "old" is not assigned yet'.
+  IF TG_OP <> 'INSERT' THEN v_old := OLD.submission_id; END IF;
+  IF TG_OP <> 'DELETE' THEN v_new := NEW.submission_id; END IF;
+
+  -- Chemin nominal : la ligne vient d'être TRANCHÉE. AFTER UPDATE OF status ne garantit PAS
+  -- que la valeur a changé (un UPDATE qui réécrit le même statut tire aussi) — le no-op de
+  -- la résolution sur une soumission déjà résolue absorbe ce cas. Les lignes sans
+  -- submission_id sont celles du flux §120/§122 : rien à résoudre.
+  IF v_new IS NOT NULL AND NEW.status <> 'pending' THEN
+    PERFORM internal.resolve_fiche_submission(v_new);
+  END IF;
+
+  -- La ligne QUITTE la soumission : DELETE, ou `submission_id` remis à NULL / réaffecté.
+  -- C'est un chemin de sortie de « pending » comme un autre, et c'est le plus dangereux :
+  -- si la DERNIÈRE ligne encore pending est purgée, plus RIEN ne peut refermer la
+  -- soumission — approve_fiche_submission et reject_fiche_submission bouclent sur
+  -- `status='pending'`, ne trouvent rien, et rendent un SUCCÈS qui n'a rien fait
+  -- ({applied_count:0} / {rejected_count:0}) ; la ligne reste dans uq_fiche_submission_open
+  -- et chaque envoi du prestataire lève PT409, POUR TOUJOURS. La §3.2 bénit explicitement
+  -- cette purge (« la résolution d'une soumission ne doit jamais empêcher la purge d'une
+  -- ligne pending_change isolée ») et trg_pending_change_after_delete couvre déjà le DELETE
+  -- pour is_editing : l'ancien dispositif était plus complet que le neuf.
+  -- `IS DISTINCT FROM` garde le no-op sur le cas courant (UPDATE de status seul : v_old =
+  -- v_new, ce second bras ne tire pas). En AFTER DELETE FOR EACH ROW la ligne est déjà
+  -- sortie du snapshot : le count(*) de la résolution est juste.
+  IF v_old IS NOT NULL AND v_old IS DISTINCT FROM v_new THEN
+    PERFORM internal.resolve_fiche_submission(v_old);
   END IF;
   RETURN NULL;
 END;
 $$;
 DROP TRIGGER IF EXISTS trg_fiche_submission_resolve ON public.pending_change;
 CREATE TRIGGER trg_fiche_submission_resolve
-  AFTER UPDATE OF status ON public.pending_change
+  AFTER UPDATE OF status, submission_id OR DELETE ON public.pending_change
   FOR EACH ROW EXECUTE FUNCTION public.fiche_submission_after_review();
 REVOKE ALL ON FUNCTION internal.resolve_fiche_submission(uuid) FROM PUBLIC, anon, authenticated;
 COMMENT ON FUNCTION internal.resolve_fiche_submission(uuid) IS
@@ -1612,6 +1643,26 @@ BEGIN
     -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
     UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
     RETURNING id INTO v_portal_user;
+    -- 18a §8 — l'ORIGINAL du message libre du prestataire. La branche anonymize efface plus
+    -- bas crm_task.description, qui n'en est qu'une COPIE (submit_actor_fiche écrit le même
+    -- texte aux deux endroits) ; fiche_submission.note, colonne créée par CETTE migration,
+    -- échappait aux deux modes et restait relue telle quelle par la file de modération.
+    -- AVANT la branche, pour la même raison que l'UPDATE ci-dessus : fiche_submission.actor_id
+    -- est ON DELETE SET NULL, donc en mode 'delete' le DELETE FROM actor délierait la ligne
+    -- en SILENCE et tout nettoyage placé après serait muet. Le bras submitted_by rattrape les
+    -- soumissions dont l'actor_id était déjà NULL (v_portal_user NULL ⇒ prédicat NULL ⇒
+    -- aucune ligne de plus, jamais un balayage).
+    -- La garde to_regclass n'est PAS de la superstition : ce corps est aussi la définition
+    -- canonique de schema_unified.sql, appliquée AVANT 18a dans le manifeste — donc à un
+    -- moment où fiche_submission (créée par la §3.1) n'existe pas encore. plpgsql ne résout
+    -- les noms de relation qu'à l'exécution : sans garde, la branche 'actor' deviendrait
+    -- inexécutable sur toute base où 18a n'est pas encore passée (test_gdpr_erasure.sql en
+    -- premier). Avec elle, les deux fichiers portent le MÊME texte — prosrc et source
+    -- restent md5-alignables — et la ligne s'active d'elle-même dès que la table existe.
+    IF to_regclass('public.fiche_submission') IS NOT NULL THEN
+      UPDATE fiche_submission SET note = NULL
+       WHERE actor_id = v_actor OR submitted_by = v_portal_user;
+    END IF;
     IF p_mode = 'anonymize' THEN
       UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
                        gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
@@ -1643,6 +1694,24 @@ BEGIN
       ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
     PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
       ARRAY['title','description','extra','actor_id']);
+    -- 18a §8 — la SIXIÈME rédaction, et la seule qui nettoie une trace que l'effacement
+    -- vient de FABRIQUER lui-même : trg_audit_app_user_profile (AFTER UPDATE) a écrit dans
+    -- audit.audit_log une ligne dont before_data = to_jsonb(OLD) — elle RE-NOUE le lien
+    -- acteur↔compte que le déliage ci-dessus vient de couper, et y gèle le display_name du
+    -- compte portail. Sans elle, l'UPDATE de déliage serait la seule mutation de cette
+    -- branche sans son redact jumeau. audit.redact_subject apparie sur
+    -- `(row_pk ->> clé) = valeur OR (before_data ->> clé) = valeur` (prosrc vérifié) : la
+    -- clé actor_id attrape donc bien la ligne née de ce déliage.
+    PERFORM audit.redact_subject('app_user_profile','actor_id', v_actor::text,
+      ARRAY['actor_id','display_name','avatar_url','preferences']);
+    -- Et le résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION
+    -- du lien (before_data.actor_id = null, after_data.actor_id = <A>) n'est appariée ni par
+    -- row_pk->>'actor_id' ni par before_data->>'actor_id'. Apparier sur `id` = le compte
+    -- portail attrape par row_pk TOUTES les lignes d'audit de ce compte, création comprise.
+    IF v_portal_user IS NOT NULL THEN
+      PERFORM audit.redact_subject('app_user_profile','id', v_portal_user::text,
+        ARRAY['actor_id','display_name','avatar_url','preferences']);
+    END IF;
 
   ELSIF p_subject_kind = 'incident' THEN
     IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN

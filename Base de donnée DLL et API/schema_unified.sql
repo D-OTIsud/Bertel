@@ -6798,18 +6798,26 @@ BEGIN
       RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
     SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
     IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
-    -- 18a §8 : le compte portail est délié AVANT la branche de mode. En mode 'delete' la
-    -- contrainte app_user_profile_actor_id_fkey (ON DELETE SET NULL) le délierait de toute
-    -- façon, mais en SILENCE : un bloc placé après ne rapporterait plus aucun id et
-    -- l'opérateur RGPD ignorerait quel compte auth.users il lui reste à supprimer.
+    -- 18a §8 — AVANT la branche de mode (cf. l'avertissement ci-dessus) : l'accès portail
+    -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
     UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
     RETURNING id INTO v_portal_user;
-    -- 18a §8 : l'ORIGINAL du message libre du prestataire (crm_task.description n'en est
-    -- qu'une copie, effacée plus bas). Garde to_regclass : fiche_submission naît avec la
-    -- §3.1 de 18a, et CE corps est appliqué AVANT 18a dans le manifeste — plpgsql ne résout
-    -- les relations qu'à l'exécution, la branche 'actor' deviendrait donc inexécutable sans
-    -- elle. Texte IDENTIQUE à celui de migration_actor_portal.sql §8.5 : les deux fichiers
-    -- restent md5-alignables.
+    -- 18a §8 — l'ORIGINAL du message libre du prestataire. La branche anonymize efface plus
+    -- bas crm_task.description, qui n'en est qu'une COPIE (submit_actor_fiche écrit le même
+    -- texte aux deux endroits) ; fiche_submission.note, colonne créée par CETTE migration,
+    -- échappait aux deux modes et restait relue telle quelle par la file de modération.
+    -- AVANT la branche, pour la même raison que l'UPDATE ci-dessus : fiche_submission.actor_id
+    -- est ON DELETE SET NULL, donc en mode 'delete' le DELETE FROM actor délierait la ligne
+    -- en SILENCE et tout nettoyage placé après serait muet. Le bras submitted_by rattrape les
+    -- soumissions dont l'actor_id était déjà NULL (v_portal_user NULL ⇒ prédicat NULL ⇒
+    -- aucune ligne de plus, jamais un balayage).
+    -- La garde to_regclass n'est PAS de la superstition : ce corps est aussi la définition
+    -- canonique de schema_unified.sql, appliquée AVANT 18a dans le manifeste — donc à un
+    -- moment où fiche_submission (créée par la §3.1) n'existe pas encore. plpgsql ne résout
+    -- les noms de relation qu'à l'exécution : sans garde, la branche 'actor' deviendrait
+    -- inexécutable sur toute base où 18a n'est pas encore passée (test_gdpr_erasure.sql en
+    -- premier). Avec elle, les deux fichiers portent le MÊME texte — prosrc et source
+    -- restent md5-alignables — et la ligne s'active d'elle-même dès que la table existe.
     IF to_regclass('public.fiche_submission') IS NOT NULL THEN
       UPDATE fiche_submission SET note = NULL
        WHERE actor_id = v_actor OR submitted_by = v_portal_user;
@@ -6829,6 +6837,13 @@ BEGIN
       DELETE FROM actor WHERE id = v_actor;
       v_report := jsonb_build_object('mode','delete','actor', v_actor);
     END IF;
+    -- Remontée APRÈS la branche : les deux modes viennent d'écraser v_report.
+    -- La suppression d'auth.users n'est pas faisable en SQL (même doctrine que la branche
+    -- 'user') : on NOMME le compte pour que le geste ne se perde pas.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
     PERFORM audit.redact_subject('actor','id', v_actor::text,
       ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
             'display_name_normalized','first_name_normalized','last_name_normalized']);
@@ -6836,22 +6851,22 @@ BEGIN
     PERFORM audit.redact_subject('actor_consent','actor_id', v_actor::text, ARRAY['source']);
     PERFORM audit.redact_subject('crm_interaction','actor_id', v_actor::text,
       ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
-    -- 18a §8 : remontée APRÈS la branche (chaque mode vient de réaffecter v_report).
-    IF v_portal_user IS NOT NULL THEN
-      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
-        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
-    END IF;
     PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
       ARRAY['title','description','extra','actor_id']);
-    -- 18a §8 : la trace que l'effacement FABRIQUE lui-même. trg_audit_app_user_profile
-    -- (AFTER UPDATE) écrit before_data = to_jsonb(OLD), qui RE-NOUE le lien acteur↔compte
-    -- que le déliage vient de couper et y gèle le display_name du compte portail.
-    -- redact_subject apparie sur row_pk->>clé OR before_data->>clé (prosrc vérifié).
+    -- 18a §8 — la SIXIÈME rédaction, et la seule qui nettoie une trace que l'effacement
+    -- vient de FABRIQUER lui-même : trg_audit_app_user_profile (AFTER UPDATE) a écrit dans
+    -- audit.audit_log une ligne dont before_data = to_jsonb(OLD) — elle RE-NOUE le lien
+    -- acteur↔compte que le déliage ci-dessus vient de couper, et y gèle le display_name du
+    -- compte portail. Sans elle, l'UPDATE de déliage serait la seule mutation de cette
+    -- branche sans son redact jumeau. audit.redact_subject apparie sur
+    -- `(row_pk ->> clé) = valeur OR (before_data ->> clé) = valeur` (prosrc vérifié) : la
+    -- clé actor_id attrape donc bien la ligne née de ce déliage.
     PERFORM audit.redact_subject('app_user_profile','actor_id', v_actor::text,
       ARRAY['actor_id','display_name','avatar_url','preferences']);
-    -- Résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION du
-    -- lien (before_data.actor_id = null). Apparier sur `id` attrape par row_pk TOUTES les
-    -- lignes d'audit du compte portail, création comprise.
+    -- Et le résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION
+    -- du lien (before_data.actor_id = null, after_data.actor_id = <A>) n'est appariée ni par
+    -- row_pk->>'actor_id' ni par before_data->>'actor_id'. Apparier sur `id` = le compte
+    -- portail attrape par row_pk TOUTES les lignes d'audit de ce compte, création comprise.
     IF v_portal_user IS NOT NULL THEN
       PERFORM audit.redact_subject('app_user_profile','id', v_portal_user::text,
         ARRAY['actor_id','display_name','avatar_url','preferences']);

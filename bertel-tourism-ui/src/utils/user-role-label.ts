@@ -8,6 +8,9 @@ const USER_ROLE_LABELS_FR: Record<UserRole, string> = {
   super_admin: 'Super-administrateur',
   tourism_agent: 'Agent touristique',
   owner: 'Propriétaire',
+  // Le mot à l'écran est « Partenaire » (arbitrage PO) : « prestataire » ne vit que
+  // dans la doc interne, les commentaires et les noms de fichiers.
+  actor: 'Partenaire',
 };
 
 /** Tonalité de badge associée au rôle (réutilise les classes `.badge--*`). */
@@ -17,6 +20,7 @@ const USER_ROLE_TONES: Record<UserRole, RoleBadgeTone> = {
   super_admin: 'info',
   owner: 'ok',
   tourism_agent: 'ok',
+  actor: 'ok',
 };
 
 /**
@@ -26,7 +30,9 @@ const USER_ROLE_TONES: Record<UserRole, RoleBadgeTone> = {
 export function resolveUserRoleLabel(role: UserRole | null | undefined, adminRank?: number | null): string {
   if (!role) return 'Non connecté';
   const base = USER_ROLE_LABELS_FR[role] ?? role;
-  if (role !== 'super_admin' && (adminRank ?? 0) >= 10) {
+  // Un partenaire n'administre aucune équipe : « · Admin ORG » n'a aucun sens pour lui,
+  // et son rang est nul par construction (bootstrap court-circuité, 18a).
+  if (role !== 'super_admin' && role !== 'actor' && (adminRank ?? 0) >= 10) {
     return `${base} · Admin ORG`;
   }
   return base;

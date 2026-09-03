@@ -1,4 +1,7 @@
-export type UserRole = 'super_admin' | 'tourism_agent' | 'owner';
+// `actor` (18a) = le partenaire touristique qui met à jour sa propre fiche depuis
+// l'Espace partenaire (/espace). Il n'a AUCUN accès au back-office : tout ce qui
+// dérive de UserRole (routage, libellés, navigation) doit traiter ce cas à part.
+export type UserRole = 'super_admin' | 'tourism_agent' | 'owner' | 'actor';
 export type NetworkStatus = 'connected' | 'degraded' | 'offline';
 export type MapLayerMode = 'classic' | 'satellite' | 'topo';
 export type ObjectTypeCode = 'HOT' | 'RES' | 'ACT' | 'ITI' | 'EVT' | 'VIS' | 'SRV';

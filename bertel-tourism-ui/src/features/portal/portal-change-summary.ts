@@ -199,7 +199,7 @@ function projectActivity(draft: ObjectWorkspaceModules): string[] {
 
 // ─────────────────────────────── projection ─────────────────────────────────
 
-type Projection = (draft: ObjectWorkspaceModules, archetype?: ArchetypeCode) => string[];
+type Projection = (draft: ObjectWorkspaceModules, archetype: ArchetypeCode) => string[];
 
 const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
   contacts: projectContacts,
@@ -213,24 +213,25 @@ const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
   activity: projectActivity,
 };
 
-function titleFor(module: WorkspaceModuleId, archetype?: ArchetypeCode): string {
-  const scoped = archetype
-    ? PORTAL_RUBRICS.find((rubric) => rubric.module === module && rubric.archetypes.includes(archetype))
-    : undefined;
+function titleFor(module: WorkspaceModuleId, archetype: ArchetypeCode): string {
+  const scoped = PORTAL_RUBRICS.find(
+    (rubric) => rubric.module === module && rubric.archetypes.includes(archetype),
+  );
   return (scoped ?? PORTAL_RUBRICS.find((rubric) => rubric.module === module))?.title ?? module;
 }
 
 /**
  * Le trio `field` / `before` / `after` que l'office lira dans sa file, pour UNE rubrique.
  *
- * `archetype` lève l'ambiguïté quand deux rubriques partagent un module (`openings`).
- * Omis, c'est la lecture par défaut — celle des horaires — qui s'applique.
+ * `archetype` est OBLIGATOIRE : deux rubriques partagent le module `openings`, et un défaut
+ * « restaurant » ferait lire « Lundi : 09:00–12:00 » à l'agent pour un hébergement — sur le
+ * texte MÊME dont il dépend pour accepter ou refuser. Le typecheck est la garde.
  */
 export function describePortalChange(
   module: WorkspaceModuleId,
   baseline: ObjectWorkspaceModules,
   draft: ObjectWorkspaceModules,
-  archetype?: ArchetypeCode,
+  archetype: ArchetypeCode,
 ): { field: string; before: string; after: string } {
   const project = PROJECTIONS[module];
   const render = (source: ObjectWorkspaceModules) => (project ? project(source, archetype).join('\n').slice(0, MAX_CHARS) : '');

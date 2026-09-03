@@ -17,6 +17,7 @@ import { listMyPortalFiches, type PortalFiche } from '../services/portal';
 import { EmptyState } from '../components/common/EmptyState';
 import { PageSkeleton } from '../components/common/PageSkeleton';
 import { TYPE_LABEL } from '../features/object-editor/archetypes';
+import { portalTypeLabel } from '../features/portal/portal-rubrics';
 import { useSessionStore } from '../store/session-store';
 import { hasPortalDraft } from '../features/portal/usePortalDraft';
 
@@ -100,9 +101,12 @@ export function PortalHomePage() {
                   <span className="portal-fiche__body">
                     <span className="portal-fiche__name">{fiche.name}</span>
                     {/* Le type en toutes lettres, et RIEN si on ne sait pas le dire : replier
-                        sur le code (HOT, RES, ASC…) mettrait du jargon interne à l'écran. */}
+                        sur le code (HOT, RES, ASC…) mettrait du jargon interne à l'écran.
+                        `portalTypeLabel` surcharge les libellés au vocabulaire proscrit —
+                        TYPE_LABEL.PSV vaut littéralement « Prestataire » — sans toucher à la
+                        taxonomie partagée que lisent l'Explorer, le CRM et l'éditeur. */}
                     {TYPE_LABEL[fiche.objectType] ? (
-                      <span className="muted">{TYPE_LABEL[fiche.objectType]}</span>
+                      <span className="muted">{portalTypeLabel(fiche.objectType)}</span>
                     ) : null}
                   </span>
                   <span className={`badge ${badge.className}`}>

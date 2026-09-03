@@ -292,6 +292,8 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 18a. `migration_actor_portal.sql` — **Portail acteur (spec `docs/superpowers/specs/2026-09-01-portail-acteur-design.md`)** (idempotente ; **`NOTIFY pgrst, 'reload schema';` requis** et fait par le fichier ; détail complet en section `## 18a`). **Créneau `18a` : vérifié libre** au manifeste, dans `ci_fresh_apply.sql` et dans le `README.md` avant écriture ; le bloc `17a`–`17m` est épuisé. **TROIS contraintes d'ordre, toutes tenues :** (1) **APRÈS 17i** — la migration LIT `org_role_permission` pour dériver les vérificateurs (`api.list_object_verifier_ids`) ; (2) **APRÈS 17m**, source canonique du corps d'`api.list_crm_tasks` — 18a la REDÉPLOIE avec la clé `extra`, placée avant 17m elle serait ÉCRASÉE par la version 17m rejouée ensuite ; (3) **APRÈS `schema_unified.sql`**, qui porte le MIROIR d'`api.rpc_gdpr_erase_subject` : la section 8.5 de 18a redéploie cette fonction avec la branche acteur qui délie le compte portail (`app_user_profile.actor_id`) dans les DEUX modes, et passer avant `schema_unified.sql` ferait écraser ce déliage **sans la moindre erreur**. **⚠ TROISIÈME RÉDACTION AU DÉPÔT** : `migration_gdpr_erasure.sql` porte une variante de cette même fonction **sans** la branche acteur ; elle est **volontairement absente** de `ci_fresh_apply.sql` — rejouée après 18a elle effacerait le déliage en silence. Le step CI **RGPD mirror alignment** garde les deux faits : `schema_unified.sql ≡ migration_actor_portal.sql` (md5 du corps, prémisse de non-vacuité incluse) et « `migration_gdpr_erasure.sql` n'est pas inclus au manifeste ».
 
+18b. `migration_ref_amenity_visit_modes.sql` — **Seed `ref_amenity` : trois modes de visite déjà écrits par l'éditeur, absents de tout catalogue (arbitrage PO 2026-09-03 ; détail complet en section `## 18b`)** (idempotente, aucun `NOTIFY pgrst` requis — donnée pure, aucune fonction/vue touchée). `visite_libre` / `visite_guidee` / `audioguide` (`VISIT_MODE_CODES`, `editor-completion.ts` + `BlockVIS.tsx` §06) n'existaient dans **aucun** catalogue, ni en prod ni dans les seeds. **Ce n'est pas un orphelinat de données silencieux, c'est un blocage de sauvegarde** : `object_amenity.amenity_id` est une FK `NOT NULL` → `ref_amenity(id)`, et le bras `amenities` d'`object_workspace_safe_write_rpcs.sql` lève `ERRCODE 23503` dès qu'un code ne résout à aucun `ref_amenity.code` — comme `characteristics` est un module à écriture groupée (§48 single-owner : amenities + moyens de paiement + tags environnement dans le même payload), cocher un seul de ces trois boutons en §06 et sauvegarder faisait échouer la sauvegarde **entière** de la fiche VIS. Vérifié en base : 0 ligne `object_amenity` ne référence ces codes aujourd'hui (impossible structurellement, pas une coïncidence). **Famille NEUVE `visit_mediation`, jamais `accessibility`** : ce sont des modes de visite, pas des aides d'accessibilité — le catalogue porte déjà ce rôle sous des codes `acc_*` distincts (`acc_flexible_visit`, `acc_visit_device`), et le filtre public d'accessibilité ne lit **que** la famille `accessibility`. Aucune des 21 familles existantes ne convenait (`services`/`entertainment` sont un fourre-tout hôtelier/loisirs). Conventions reproduites du bloc B-3/B-4 de `seeds_data.sql` (famille `accessibility`) : `INSERT INTO ref_code (domain='amenity_family', ...) ON CONFLICT DO NOTHING` pour la famille, `WITH family AS (...) INSERT ... ON CONFLICT (code) DO UPDATE` pour les équipements. `scope='object'`. Couverte par `tests/test_ref_amenity_visit_modes.sql`, **prouvée ROUGE avant application** (`P0004` : les trois codes absents), verte après, rejeu (2 applications dans la même transaction) sans doublon.
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -1369,3 +1371,94 @@ En complément **facultatif** — et seulement là où `psql` et une chaîne de 
 Aucun code front n'est requis par cette migration : elle est inerte tant qu'aucun
 `app_user_profile.role = 'actor'` n'existe. L'interface du portail (spec D10 §228) est un chantier
 distinct, non commencé.
+
+## 18b — Seed `ref_amenity` : trois modes de visite hors catalogue depuis la mise en service de l'éditeur
+
+`Base de donnée DLL et API/migration_ref_amenity_visit_modes.sql`
+
+**Constat.** `VISIT_MODE_CODES` (`bertel-tourism-ui/src/features/object-editor/editor-completion.ts`)
+et les trois `Toggle` de `BlockVIS.tsx` (§06) écrivent depuis leur mise en service les codes
+`visite_libre`, `visite_guidee` et `audioguide`. Une recherche en base (`ILIKE` sur
+`%visit%`/`%guid%`/`%audio%`/`%tour%` + `%visite%`/`%guid%`/`%audio%` sur `code`/`name`) ne
+remonte **aucun** de ces trois codes — ni en production, ni dans `seeds_data.sql`. Seuls des
+codes de la famille `accessibility` (`acc_audio_description`, `acc_flexible_visit`,
+`acc_visit_device`, `acc_sign_language`, `acc_tactile_guidance`, `acc_braille_or_audio_docs`,
+`acc_guide_dog_welcome`, `acc_visual_audio_announce`) plus `boutique`/`tour_desk` remontent :
+aucun « mode de visite ».
+
+**Ce que ça casse réellement — pas un orphelinat silencieux, un blocage de sauvegarde.**
+`object_amenity.amenity_id` est une FK `NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE` :
+il ne peut structurellement jamais exister de ligne « orpheline » qui référencerait un code
+absent du catalogue. La preuve tient dans le bras `amenities` d'`object_workspace_safe_write_rpcs.sql` :
+
+```sql
+v_id := internal.workspace_uuid(v_row->>'amenity_id');
+IF v_id IS NULL THEN
+  SELECT id INTO v_id FROM public.ref_amenity WHERE lower(code) = lower(v_row->>'amenity_code');
+END IF;
+IF v_id IS NULL THEN
+  RAISE EXCEPTION 'Unknown amenity reference: %', v_row USING ERRCODE = '23503';
+END IF;
+```
+
+Le front (`object-workspace.ts`, `buildCharacteristicsRpcPayload`) envoie `{ amenity_code: code }`
+pour chaque code sélectionné — jamais d'`amenity_id`. Tant qu'un code n'a pas de ligne
+`ref_amenity`, la résolution échoue et la fonction lève `23503`. Or `characteristics` est un
+module à **écriture groupée** (règle §48 single-owner citée dans `BlockVIS.tsx` : « tariffs are
+edited in §13, opening hours in §14 ») — `amenities`, moyens de paiement et tags environnement
+partagent le **même payload**. Cocher **un seul** des trois boutons « Visite libre / Visite
+guidée / Audioguide » en §06 et sauvegarder faisait donc échouer **toute la sauvegarde** de la
+fiche VIS, pas seulement la rubrique Visite. Vérifié en base : `SELECT count(*) FROM
+object_amenity oa JOIN ref_amenity ra ON ra.id = oa.amenity_id WHERE ra.code IN
+('visite_libre','visite_guidee','audioguide')` → **0**, sur un total de 6210 lignes
+`object_amenity` — attendu, pas une coïncidence : la garde `23503` rend la chose impossible.
+
+**Famille : `visit_mediation` (NEUVE), jamais `accessibility`.** Ce sont des modes de visite —
+comment le visiteur parcourt le site — pas des aides d'accessibilité. Le catalogue porte déjà ce
+rôle-là sous des codes `acc_*` dédiés et **distincts** : `acc_flexible_visit` (rythme/horaires
+adaptables sur demande) et `acc_visit_device` (dispositif d'aide de visite accessible). Les
+ranger sous `accessibility` **fausserait le filtre public d'accessibilité**, qui ne lit **que**
+cette famille-là — et `nonAccessibilityAmenityCount()` (`editor-completion.ts`) exclut
+explicitement `accessibility` du calcul de complétude §06 ; la réciproque doit rester vraie :
+rien qui n'est pas une aide d'accessibilité ne doit s'y trouver. Aucune des 21 familles
+existantes ne convenait davantage : `services` (bureau d'excursions, conciergerie, pressing…) et
+`entertainment` (jeux de société, bibliothèque…) sont un fourre-tout hôtelier/loisirs, pas la
+médiation d'un site de visite patrimonial/muséal. `visit_mediation` reprend le vocabulaire du
+sous-titre §06 de l'éditeur lui-même (« Modes de visite et équipements de médiation »).
+
+**Conventions reproduites** (bloc B-3/B-4 de `seeds_data.sql`, famille `accessibility`) : la
+famille est semée par `INSERT INTO ref_code (domain='amenity_family', code, name, description)
+... ON CONFLICT DO NOTHING` — la forme à 4 colonnes que suivent 20 des 21 familles existantes
+(seule `accessibility` porte un `metadata` enrichi, non repris ici pour une famille à 3 membres).
+Les équipements suivent le patron exact des 43 codes `acc_*` : `WITH family AS (...) INSERT INTO
+ref_amenity (...) ... ON CONFLICT (code) DO UPDATE SET ...`. `scope='object'` (comme les 113
+autres lignes `scope='object'` du catalogue — un mode de visite est une propriété du site visité,
+jamais d'une chambre). `position` laissé `NULL`, comme toutes les familles/équipements ajoutés
+après la passe de tri par popularité réelle (`migration_amenity_popularity_order.sql`, §73) —
+`business`/`comforts`/`equipment`/`family`/`sustainable` et leurs membres portent déjà
+`position=NULL` pour la même raison.
+
+**Idempotence.** `ON CONFLICT DO NOTHING` (famille) / `ON CONFLICT (code) DO UPDATE` (équipements,
+contrainte `ref_amenity_code_key`). Aucun `DROP` : rien n'est recréé dans ce fichier — pas de
+risque de la classe Task 7 (un `DROP` incomplet qui abat un rejeu transactionnel).
+
+### ⏳ PAS ENCORE APPLIQUÉE — packaging seul
+
+Comme 18a, ce chantier est **packagé, pas déployé** ; le déploiement est fait par le contrôleur.
+
+### Preuve TDD (menée en base LIVE, lecture seule + transactions annulées uniquement)
+
+| Étape | Résultat |
+| --- | --- |
+| ROUGE (`tests/test_ref_amenity_visit_modes.sql` seul, `BEGIN…ROLLBACK`, avant migration) | `ERROR: P0004: A: visite_libre doit exister exactement une fois dans ref_amenity` |
+| VERT (migration + test dans le même `BEGIN…ROLLBACK`) | tous les `ASSERT` passent, aucune erreur |
+| REJEU (migration appliquée **deux fois** dans le même `BEGIN…ROLLBACK`, puis test) | `visit_mediation` : 1 ligne ; les 3 codes : 1 ligne chacun — aucun doublon |
+
+Couverte par `tests/test_ref_amenity_visit_modes.sql` (étape **18b-test**, `ci_fresh_apply.sql`) et
+par le step CI `ref_amenity visit modes test` (`.github/workflows/sql-fresh-apply.yml`).
+
+### Front
+
+Aucun changement front dans ce créneau. La rubrique « Équipements » du portail acteur pour les
+sites de visite (type `VIS`) est un chantier distinct (Task 13) qui dépend de ce seed pour ne
+plus buter sur `23503` dès qu'un mode de visite est sélectionné.

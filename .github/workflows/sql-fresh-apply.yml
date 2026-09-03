@@ -438,6 +438,11 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"
 
+      - name: "ref_amenity visit modes test (18b — seed visite_libre/visite_guidee/audioguide, famille visit_mediation ; répare le blocage de sauvegarde §06 BlockVIS sans mélanger avec accessibility)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_amenity_visit_modes.sql"
+
       - name: "RGPD erasure test (api.rpc_gdpr_erase_subject Art. 17 — anonymisation acteur, canaux supprimés, interaction déliée, journal d'audit rédigé). Garde qui EXISTAIT au dépôt sans être jouée nulle part : ni ci_fresh_apply.sql ni ce workflow ne la référençaient."
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

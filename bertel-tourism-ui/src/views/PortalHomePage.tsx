@@ -78,7 +78,14 @@ export function PortalHomePage() {
     );
   }
   // Redirection en cours : surtout pas la liste, que le partenaire verrait clignoter.
-  if (single) return <p className="muted">Ouverture de votre fiche…</p>;
+  // `role="status"` : sur un réseau lent cet écran dure, et un lecteur d'écran n'en serait
+  // pas averti — l'utilisateur croirait la page vide.
+  if (single)
+    return (
+      <p className="muted" role="status">
+        Ouverture de votre fiche…
+      </p>
+    );
 
   const prenom = firstName(userName);
   return (

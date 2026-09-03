@@ -39,6 +39,11 @@ export const SQLSTATE_LABELS: Record<string, string> = {
   '22001': 'Texte trop long pour ce champ.',
   '57014': 'La requête a pris trop de temps. Affinez vos filtres et réessayez.',
   PGRST301: 'Session expirée — reconnectez-vous.',
+  // Code MAISON, levé par le seul `api.submit_actor_fiche` (portail partenaire) : une
+  // vérification est déjà ouverte sur cette fiche. La fenêtre d'envoi a sa propre phrase,
+  // plus longue ; celle-ci est le repli partout ailleurs — sans elle, un partenaire lirait
+  // le message PostgREST brut, en anglais.
+  PT409: 'Une vérification est déjà en cours sur cette fiche. Attendez la réponse de l’office.',
 };
 
 /**

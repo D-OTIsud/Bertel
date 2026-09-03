@@ -152,9 +152,15 @@
 --       portail est vérifié PRÉSENT avant et ABSENT après, dans les deux modes.
 --   (I) RÉGRESSION — les personas historiques sont intactes. Les 5 bras de
 --       api.current_user_extended_object_ids() sont sondés un par un sur des témoins qui ne
---       peuvent les obtenir QUE par ce bras : 1a (lien acteur direct, sans filtre valid_to NI
---       valid_from — les deux, car une seule des deux sondes laisserait passer un filtre
---       appliqué à moitié), 1b (fiches de l'ORG via rôle acteur), 2A et 2B (membership), 2C
+--       peuvent les obtenir QUE par ce bras. ⚠ Correction de revue : les témoins du bras 1a
+--       étaient v_objB et v_objC, tous deux rattachés à v_orgA par object_org_link — le bras
+--       1b, dont la sous-requête est autonome et ne filtre aucune validité, les rendait à lui
+--       seul ; 1a pouvait donc recevoir le filtre de validité que la §1 écrit six lignes plus
+--       haut, ou disparaître, sans que rien ne rougisse. Ils sont remplacés par deux fiches
+--       SANS object_org_link (hors de portée de 1b) à liens invalides, plus une assertion sur
+--       v_orgA — qu'un objet ORG n'étant jamais object_id dans object_org_link, seul 1a peut
+--       rendre — qui ferme la SUPPRESSION du bras, que le filtre seul ne couvre pas.
+--       1b (fiches de l'ORG via rôle acteur), 2A et 2B (membership), 2C
 --       (périmètre all_published, fixture ORG dédiée). Les 4 formulations PII de
 --       can_read_actor_contacts restent closes à la persona acteur : le bloc G en couvre deux
 --       (can_read_actor_contacts, search_actors), la troisième — l'EXPORT, seule à faire
@@ -162,6 +168,19 @@
 --       VALIDES pour que le 22023 des contrôles de forme ne se substitue pas au 42501 du
 --       périmètre. Symétrie : un membre de l'ORG publisher garde son accès PII, sinon une
 --       fermeture trop large passerait pour une réussite.
+--       Revue 2026-09-03 : le trigger couvre désormais les chemins de sortie de « pending »
+--       qui ne sont PAS un changement de statut — DELETE de la dernière ligne pending, et
+--       DÉLIAGE (submission_id remis à NULL) — parce qu'aucune RPC ne peut rattraper le coup
+--       (elles bouclent sur `status='pending'`, ne trouvent rien, et rendent un succès qui
+--       n'a rien fait) : la fiche resterait emmurée en PT409 pour toujours. Une soumission
+--       VIDÉE se résout en `rejected`, jamais `approved` — on n'annonce pas « validé » à qui
+--       on vient de détruire les lignes. L'IDEMPOTENCE est exercée par un UPDATE MULTI-LIGNES
+--       en UNE instruction (le correctif service_role s'écrit ainsi) : N déclenchements AFTER
+--       ROW qui voient tous v_pending = 0, et EXACTEMENT une notification. La garde
+--       « submitted_by IS NOT NULL » est enfin visible : l'assertion qui prétendait la couvrir
+--       était une TAUTOLOGIE (app_notification.recipient_id est NOT NULL en base), remplacée
+--       par une soumission dont l'auteur a été révoqué entre le dépôt et la décision — le cas
+--       que la §8.5 fabrique elle-même via portal_note.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx
 -- (+ 1410-1419 pour le bloc G, task 6 ; + 1420-1429 pour le bloc F2, task 7 ; + 1430-1449
@@ -277,6 +296,19 @@ DECLARE
   v_keys    text[]; -- (F) clés EXACTES du payload — l'assertion qui mord si un nom s'y glisse
   v_gdpr    jsonb;  -- (F) rapport d'api.rpc_gdpr_erase_subject
   v_tasks   jsonb;  -- (F) retour d'api.list_crm_tasks (la clé extra)
+  -- (F/I, ronde de revue) suite de la sous-plage 1430-1449 : 1443-1448. 1449 reste libre.
+  v_objL    text := 'HOTRUN9999991443'; -- (F) auteur RÉVOQUÉ — la résolution doit tenir sans destinataire
+  v_objM    text := 'HOTRUN9999991444'; -- (I) lien EXPIRÉ hors ORG — témoin EXCLUSIF du bras 1a
+  v_objN    text := 'HOTRUN9999991445'; -- (I) lien FUTUR  hors ORG — témoin EXCLUSIF du bras 1a
+  v_objP    text := 'HOTRUN9999991446'; -- (F) purge de la DERNIÈRE ligne pending (chemin DELETE)
+  v_objQ    text := 'HOTRUN9999991447'; -- (F) DÉLIAGE puis soumission VIDÉE (0/0/0)
+  v_objR    text := 'HOTRUN9999991448'; -- (F) UPDATE multi-lignes en UNE instruction (idempotence)
+  v_subL    uuid; v_taskL uuid;   -- (F) la soumission à l'auteur révoqué
+  v_subP    uuid;                 -- (F) la soumission dont on purge la dernière ligne
+  v_pcP     uuid;                 -- (F) sa ligne manuelle, celle qu'on purge
+  v_subQ    uuid;                 -- (F) la soumission qu'on vide par déliage
+  v_subR    uuid;                 -- (F) la soumission tranchée en UNE instruction
+  v_notif_n integer;              -- (F) cardinalité des notifications de résolution — EXACTEMENT une
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -1890,6 +1922,14 @@ BEGIN
   ASSERT (SELECT count(*) FROM fiche_submission
            WHERE id IN (v_subG, v_subH, v_subI) AND resolved_at IS NOT NULL) = 3,
          'F: chaque issue est horodatée — le trigger tourne sur les TROIS chemins, pas seulement le premier';
+  -- Et chacune n'a produit QU'UNE notification : la résolution passe par autant de
+  -- déclenchements que la soumission a de lignes (2 chacune), le no-op d'idempotence
+  -- absorbe tous les passages sauf le premier.
+  SELECT count(*) INTO v_notif_n FROM app_notification
+   WHERE kind = 'fiche_submission_reviewed'
+     AND (payload->>'submission_id')::uuid IN (v_subG, v_subH, v_subI);
+  ASSERT v_notif_n = 3,
+         'F: une notification par soumission résolue, jamais une par ligne tranchée';
 
   -- Le verrou anti-spam se relâche : c'est la conséquence opérationnelle de « résolue », et
   -- la seule chose qui rend la fiche à son prestataire. Sans résolution, uq_fiche_submission_
@@ -1936,6 +1976,15 @@ BEGIN
      AND (payload->>'submission_id')::uuid = v_subid;
   ASSERT v_notif IS NOT NULL,
          'F: l''acteur reçoit la notification de résolution';
+  -- EXACTEMENT une. `SELECT … INTO` n'est pas STRICT : il prendrait silencieusement la
+  -- première ligne d'un doublon, et les sondes du claim plus bas sont des EXISTS — rien
+  -- dans ce bloc ne comptait. Or le trigger tire UNE FOIS PAR LIGNE : c'est la garde
+  -- d'idempotence de la résolution (`v_sub.status <> 'pending'`) qui empêche le prestataire
+  -- de recevoir N retours pour une seule vérification.
+  SELECT count(*) INTO v_notif_n FROM app_notification
+   WHERE kind = 'fiche_submission_reviewed' AND (payload->>'submission_id')::uuid = v_subid;
+  ASSERT v_notif_n = 1,
+         'F: EXACTEMENT une notification par résolution (la garde d''idempotence tient)';
   ASSERT (SELECT payload->>'outcome' FROM app_notification WHERE id = v_notif) = 'partial',
          'F: la notification porte l''ISSUE (l''e-mail dit « en partie validées », pas « traitées »)';
   ASSERT (SELECT task_id FROM app_notification WHERE id = v_notif) = v_task,
@@ -1955,8 +2004,58 @@ BEGIN
   -- Un compte révoqué (submitted_by NULL) ne doit pas faire échouer la résolution : la
   -- colonne est NOT NULL côté app_notification, un INSERT inconditionnel casserait le
   -- traitement de l'office pour une soumission dont l'auteur n'existe plus.
-  ASSERT NOT EXISTS (SELECT 1 FROM app_notification WHERE recipient_id IS NULL),
-         'F: aucune notification orpheline n''a été fabriquée';
+  -- ⚠ Ce commentaire était juste, l'assertion qui le suivait ne l'était pas :
+  -- `NOT EXISTS (… WHERE recipient_id IS NULL)` est une TAUTOLOGIE — la colonne est NOT NULL
+  -- en base, le prédicat ne peut jamais être faux, aucune mutation ne le fait tomber. La
+  -- garde `IF v_sub.submitted_by IS NOT NULL` (§8.1) était donc invisible au test. On la
+  -- rend visible par la fixture que la §8.5 fabrique elle-même : l'opérateur RGPD suit
+  -- `portal_note`, supprime le compte via l'API Admin, et la FK auth.users(id) ON DELETE
+  -- SET NULL laisse la soumission ORPHELINE. Le conseiller tranche ensuite la dernière
+  -- rubrique : sans la garde, l'INSERT part avec recipient_id NULL ⇒ 23502, l'exception
+  -- remonte, approve_pending_change avorte, la ligne ne sort jamais de pending et
+  -- uq_fiche_submission_open bloque la fiche À VIE — la panne exacte que la §8 ferme.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO object (id, object_type, name, status)
+  VALUES (v_objL, 'HOT', 'Hôtel §8 — auteur révoqué', 'draft') ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object_org_link (object_id, org_object_id, role_id)
+  VALUES (v_objL, v_orgA, v_pub) ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to)
+  VALUES (v_actor1, v_objL, v_role_op, TRUE, NULL, NULL) ON CONFLICT DO NOTHING;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_sub := api.submit_actor_fiche(v_objL, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z'))),
+      'Auteur bientôt révoqué');
+  RESET ROLE;
+  v_subL  := (v_sub->>'submission_id')::uuid;
+  v_taskL := (v_sub->>'task_id')::uuid;
+  -- L'effet de la révocation, posé directement : supprimer la ligne auth.users emporterait
+  -- aussi app_user_profile (ON DELETE CASCADE) et donc toutes les fixtures qui en dépendent.
+  UPDATE fiche_submission SET submitted_by = NULL WHERE id = v_subL;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    PERFORM api.approve_fiche_submission(v_subL, 'Horaires OK', FALSE);
+  RESET ROLE;
+  -- (a) La résolution ABOUTIT quand même : la garde saute la NOTIFICATION, jamais le
+  -- traitement. Sans garde ⇒ 23502 et le geste de l'office avorte ; garde placée trop tôt
+  -- (RETURN avant l'UPDATE de statut) ⇒ ces trois assertions tombent.
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subL) = 'approved',
+         'F: auteur révoqué — la soumission se résout quand même (sinon uq_fiche_submission_open bloque la fiche à vie)';
+  ASSERT (SELECT resolved_at FROM fiche_submission WHERE id = v_subL) IS NOT NULL,
+         'F: auteur révoqué — resolved_at posé';
+  ASSERT (SELECT status FROM crm_task WHERE id = v_taskL) = 'done',
+         'F: auteur révoqué — la tâche de vérification se ferme quand même';
+  -- (b) Et AUCUN retour n'est fabriqué : il n'y a personne à qui l'adresser.
+  ASSERT NOT EXISTS (SELECT 1 FROM app_notification
+                      WHERE kind = 'fiche_submission_reviewed'
+                        AND (payload->>'submission_id')::uuid = v_subL),
+         'F: auteur révoqué — aucun retour n''est fabriqué (pas de destinataire)';
 
   -- (F.3) Le sens INVERSE — la résolution ne doit pas mordre TROP TÔT. F2.11 avait déjà
   -- prouvé que fiche_submission ne bascule pas tant qu'une ligne est pending ; ce qui se
@@ -2005,6 +2104,147 @@ BEGIN
                       WHERE kind = 'fiche_submission_reviewed'
                         AND (payload->>'submission_id')::uuid = v_subJ),
          'F: aucun retour à l''acteur avant la fin (sinon « validé » pendant que l''office travaille)';
+
+  -- (F.3 bis) LES CHEMINS DE SORTIE DE « pending » QUI NE SONT PAS UN CHANGEMENT DE STATUT.
+  -- Une ligne peut quitter l'ensemble « encore à traiter » de trois façons : être tranchée
+  -- (ci-dessus), être SUPPRIMÉE, ou être DÉLIÉE (submission_id remis à NULL). Les deux
+  -- dernières sont les plus dangereuses, parce qu'aucune RPC ne peut rattraper le coup :
+  -- approve_fiche_submission et reject_fiche_submission bouclent sur « status = pending »,
+  -- ne trouvent plus rien, et rendent un SUCCÈS QUI N'A RIEN FAIT ({applied_count:0} /
+  -- {rejected_count:0}) — la §7 leur interdit délibérément de poser le statut agrégé. La
+  -- soumission resterait donc dans uq_fiche_submission_open et chaque envoi du prestataire
+  -- lèverait PT409, POUR TOUJOURS ; seul un UPDATE service_role direct la débloquerait.
+  -- La §3.2 bénit explicitement cette purge en commentaire, et trg_pending_change_after_delete
+  -- couvre déjà le DELETE pour is_editing : l'ancien dispositif était plus complet que le neuf.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_objP, 'HOT', 'Hôtel §8 — purge de la dernière ligne', 'draft'),
+    (v_objQ, 'HOT', 'Hôtel §8 — soumission vidée par déliage', 'draft'),
+    (v_objR, 'HOT', 'Hôtel §8 — tranchée en UNE instruction', 'draft')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO object_org_link (object_id, org_object_id, role_id) VALUES
+    (v_objP, v_orgA, v_pub), (v_objQ, v_orgA, v_pub), (v_objR, v_orgA, v_pub)
+    ON CONFLICT DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actor1, v_objP, v_role_op, TRUE, NULL, NULL),
+    (v_actor1, v_objQ, v_role_op, TRUE, NULL, NULL),
+    (v_actor1, v_objR, v_role_op, TRUE, NULL, NULL)
+    ON CONFLICT DO NOTHING;
+
+  -- (F.3 bis a) DELETE de la DERNIÈRE ligne encore pending. Scénario exact du constat :
+  -- 1 rubrique appliquée, 1 rubrique manuelle laissée pending, qu'un opérateur purge.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_subP := (api.submit_actor_fiche(v_objP, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z')),
+      jsonb_build_object('target_table','contact_channel','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('value','0262000096'),
+        'metadata', jsonb_build_object('rpc',NULL,'section','contacts',
+                                       'manual_apply',true,'field','Contacts','before','a','after','b'))),
+      'Une rubrique sera purgée')->>'submission_id')::uuid;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_editor, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    PERFORM api.approve_fiche_submission(v_subP, 'Horaires OK', FALSE);
+  RESET ROLE;
+  SELECT id INTO v_pcP FROM pending_change
+   WHERE submission_id = v_subP AND status = 'pending';
+  ASSERT v_pcP IS NOT NULL,
+         'F: fixture purge — il reste bien UNE ligne pending à purger';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subP) = 'pending',
+         'F: fixture purge — la soumission est encore ouverte avant la purge';
+  DELETE FROM pending_change WHERE id = v_pcP;
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subP) = 'approved'
+     AND (SELECT resolved_at FROM fiche_submission WHERE id = v_subP) IS NOT NULL,
+         'F: purger la DERNIÈRE ligne pending résout la soumission (sinon la fiche est emmurée — aucune RPC ne peut plus la refermer)';
+  -- La conséquence opérationnelle, la seule qui compte pour le prestataire : le verrou lâche.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN PERFORM api.submit_actor_fiche(v_objP, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires','before','x','after','z'))), NULL);
+    EXCEPTION WHEN SQLSTATE 'PT409' THEN v_denied := true; END;
+    ASSERT NOT v_denied,
+      'F: après purge, le prestataire peut ré-envoyer — la fiche n''est pas emmurée en PT409';
+  RESET ROLE;
+
+  -- (F.3 bis b) DÉLIAGE, puis soumission VIDÉE. Deux faits en une fixture : « submission_id
+  -- remis à NULL » est un chemin de sortie au même titre que le DELETE ; et une soumission
+  -- qui ne porte PLUS AUCUNE ligne (0 applied / 0 rejected / 0 pending) doit se résoudre en
+  -- « rejected » — avec l'ordre de bras inverse elle tomberait dans « approved » et
+  -- annoncerait « vos modifications ont été validées » à un prestataire dont on vient de
+  -- détruire les lignes.
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_subQ := (api.submit_actor_fiche(v_objQ, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires été','before','x','after','z')),
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires hiver','before','y','after','w'))),
+      'Sera vidée par déliage')->>'submission_id')::uuid;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  UPDATE pending_change SET submission_id = NULL
+   WHERE id = (SELECT id FROM pending_change WHERE submission_id = v_subQ
+               ORDER BY submitted_at, id LIMIT 1);
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subQ) = 'pending',
+         'F: délier UNE ligne sur deux ne résout rien — l''autre est encore en attente';
+  UPDATE pending_change SET submission_id = NULL
+   WHERE id = (SELECT id FROM pending_change WHERE submission_id = v_subQ
+               ORDER BY submitted_at, id LIMIT 1);
+  ASSERT (SELECT count(*) FROM pending_change WHERE submission_id = v_subQ) = 0,
+         'F: fixture déliage — la soumission ne porte plus aucune ligne';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subQ) = 'rejected',
+         'F: soumission VIDÉE ⇒ rejected, JAMAIS approved (on n''annonce pas « validé » à qui on a détruit les lignes)';
+  ASSERT (SELECT resolved_at FROM fiche_submission WHERE id = v_subQ) IS NOT NULL,
+         'F: soumission vidée — resolved_at posé (le déliage est un chemin de sortie)';
+
+  -- (F.3 ter) IDEMPOTENCE sous un UPDATE MULTI-LIGNES. Les deux RPC groupés bouclent ligne
+  -- par ligne : le trigger y voit toujours « v_pending > 0 » sauf au dernier tour, si bien
+  -- que la garde d'idempotence de la résolution et son FOR UPDATE n'étaient exercés par
+  -- AUCUN chemin du test. Or le correctif d'exploitation — le chemin même pour lequel ce
+  -- trigger est SECURITY DEFINER — s'écrit naturellement en UNE instruction sur N lignes :
+  -- N déclenchements AFTER ROW qui voient TOUS v_pending = 0. Sans la garde, le prestataire
+  -- reçoit N retours pour une seule vérification et resolved_at est réécrit N fois.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_subR := (api.submit_actor_fiche(v_objR, jsonb_build_array(
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires été','before','x','after','z')),
+      jsonb_build_object('target_table','opening_period','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('periods', '[]'::jsonb),
+        'metadata', jsonb_build_object('rpc','save_object_openings','section','openings',
+                                       'manual_apply',false,'field','Horaires hiver','before','y','after','w'))),
+      'Tranchée en une instruction')->>'submission_id')::uuid;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  UPDATE pending_change SET status = 'applied', applied_at = now(), updated_at = now()
+   WHERE submission_id = v_subR AND status = 'pending';
+  ASSERT (SELECT status FROM fiche_submission WHERE id = v_subR) = 'approved',
+         'F: un UPDATE groupé résout la soumission comme la boucle des RPC';
+  SELECT count(*) INTO v_notif_n FROM app_notification
+   WHERE kind = 'fiche_submission_reviewed' AND (payload->>'submission_id')::uuid = v_subR;
+  ASSERT v_notif_n = 1,
+         'F: DEUX lignes tranchées en UNE instruction ⇒ UNE seule notification (garde d''idempotence)';
 
   -- (F.4) L'OUTBOX. Les TROIS pièces — CHECK, index partiel, claim/ack — s'élargissent
   -- ENSEMBLE ou la file fuit en silence : la notification existe, elle est indexée, et
@@ -2075,6 +2315,15 @@ BEGIN
     (v_actorRA, v_objK, v_role_op, TRUE, NULL, NULL),
     (v_actorRD, v_objK, v_role_op, FALSE, NULL, NULL)
     ON CONFLICT DO NOTHING;
+  -- Le message libre du prestataire, écrit à la soumission. crm_task.description n'en est
+  -- qu'une COPIE : c'est fiche_submission.note qui est l'ORIGINAL, et c'est lui que
+  -- l'effacement oubliait. Une soumission par mode, pour que les DEUX soient sondés.
+  INSERT INTO fiche_submission (object_id, actor_id, submitted_by, note, status, resolved_at)
+  VALUES (v_objK, v_actorRA, v_userRA,
+          'Je m''appelle Jean Dupont, mon nouveau portable est le 0692…', 'approved', now());
+  INSERT INTO fiche_submission (object_id, actor_id, submitted_by, note, status, resolved_at)
+  VALUES (v_objK, v_actorRD, v_userRD,
+          'Rappelez-moi au 0692…, je suis Jean Dupont', 'approved', now());
 
   -- Avant : les deux comptes portail voient bien la fiche — sinon l'assertion « après »
   -- passerait sur un périmètre déjà vide et ne prouverait rien.
@@ -2110,6 +2359,29 @@ BEGIN
          'F: RGPD anonymize — le compte portail est délié';
   ASSERT (SELECT actor_id FROM app_user_profile WHERE id = v_userRD) IS NULL,
          'F: RGPD delete — le compte portail est délié';
+  -- F4 — l'ORIGINAL du message libre, pas seulement sa copie dans crm_task.description.
+  -- Les DEUX modes : en 'delete', la cascade FK (actor_id ON DELETE SET NULL) délierait la
+  -- ligne en silence, et un nettoyage placé après la branche de mode serait muet.
+  ASSERT NOT EXISTS (SELECT 1 FROM fiche_submission WHERE object_id = v_objK AND note IS NOT NULL),
+         'F: RGPD — l''ORIGINAL du message libre est effacé dans les DEUX modes (fiche_submission.note)';
+  -- F3 — l'effacement ne doit pas laisser derrière lui la trace qu'il vient LUI-MÊME de
+  -- fabriquer : le déliage du compte portail est un UPDATE, donc trg_audit_app_user_profile
+  -- écrit une ligne d'audit dont before_data RE-NOUE le lien acteur↔compte et gèle le
+  -- display_name. Sonde sur les DEUX côtés (before_data et after_data), et sur les DEUX
+  -- comptes : la ligne du déliage est appariée par actor_id, celle de la CRÉATION du lien
+  -- (before_data.actor_id = null) seulement par row_pk = l'id du compte.
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM audit.audit_log
+     WHERE table_name = 'app_user_profile'
+       AND ((before_data->>'actor_id') IN (v_actorRA::text, v_actorRD::text)
+         OR (after_data ->>'actor_id') IN (v_actorRA::text, v_actorRD::text))),
+    'F: RGPD — aucune ligne d''audit ne re-noue le lien acteur↔compte que l''effacement vient de couper';
+  ASSERT NOT EXISTS (
+    SELECT 1 FROM audit.audit_log
+     WHERE table_name = 'app_user_profile'
+       AND (row_pk->>'id') IN (v_userRA::text, v_userRD::text)
+       AND (before_data ? 'display_name' OR after_data ? 'display_name')),
+    'F: RGPD — le display_name du compte portail ne survit pas dans l''audit';
   -- La conséquence, seule chose qui compte vraiment : l'accès tombe. La portée passe par
   -- actor_id ; délier, c'est fermer.
   PERFORM set_config('request.jwt.claims',
@@ -2142,19 +2414,42 @@ BEGIN
     ON CONFLICT (org_object_id) DO UPDATE SET access_scope = EXCLUDED.access_scope;
   INSERT INTO user_org_membership (id, user_id, org_object_id, is_active)
   VALUES (gen_random_uuid(), v_user2c, v_orgC, TRUE) ON CONFLICT DO NOTHING;
+  -- Témoins EXCLUSIFS du bras 1a (correction de revue). v_objB et v_objC ne l'étaient PAS :
+  -- tous deux sont rattachés à v_orgA par object_org_link, et v_actor1 tient un rôle sur
+  -- v_orgA — le bras 1b, dont la sous-requête est AUTONOME et ne filtre aucune validité, les
+  -- rendait donc à lui seul. Le bras 1a pouvait recevoir le filtre de validité que la §1
+  -- écrit six lignes plus haut dans le MÊME fichier — l'édit le plus naturel du monde —
+  -- sans qu'aucune assertion ne rougisse, alors que c'est exactement la régression que ce
+  -- bloc existe pour attraper. Ces deux fiches-ci n'ont AUCUN object_org_link (1b ne rend
+  -- que des object_id d'object_org_link), sont en 'draft' (2C ne les rend pas), et v_agent
+  -- n'a aucun membership (2A/2B lui sont vides) : seul 1a peut les rendre. Leurs liens sont
+  -- volontairement INVALIDES — c'est ce qui rend l'assertion sensible au filtre.
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_objM, 'HOT', 'Hôtel lien expiré hors ORG (bras 1a)', 'draft'),
+    (v_objN, 'HOT', 'Hôtel lien futur hors ORG (bras 1a)',  'draft')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, valid_from, valid_to) VALUES
+    (v_actor1, v_objM, v_role_op, FALSE, NULL,             CURRENT_DATE - 1),
+    (v_actor1, v_objN, v_role_op, FALSE, CURRENT_DATE + 1, NULL)
+    ON CONFLICT DO NOTHING;
 
   PERFORM set_config('request.jwt.claims',
     json_build_object('sub', v_agent, 'role', 'authenticated', 'email', 'portal_agent_1302@test.local')::text, true);
   SET LOCAL ROLE authenticated;
     ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objD),
            'I: bras 1b intact pour un non-acteur (fiches de l''ORG via rôle acteur)';
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objB),
-           'I: pas de filtre valid_to pour un non-acteur (bras 1a historique)';
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objM),
+           'I: pas de filtre valid_to pour un non-acteur (bras 1a, témoin EXCLUSIF hors ORG)';
     -- Le pendant du précédent : le bras 1a historique ignore AUSSI valid_from. Les deux
     -- ensemble ferment la régression « on a appliqué le filtre de validité à tout le monde »,
     -- qu'une seule des deux laisserait passer à moitié.
-    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objC),
-           'I: pas de filtre valid_from pour un non-acteur (bras 1a historique)';
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_objN),
+           'I: pas de filtre valid_from pour un non-acteur (bras 1a, témoin EXCLUSIF hors ORG)';
+    -- Et la SUPPRESSION pure du bras 1a, que le filtre de validité seul ne couvre pas : un
+    -- objet ORG n'est jamais un object_id dans object_org_link, donc 1b ne peut pas le
+    -- rendre ; v_agent n'a aucun membership, donc 2A/2B non plus. v_orgA n'arrive que par 1a.
+    ASSERT EXISTS (SELECT 1 FROM api.current_user_extended_object_ids() s WHERE s = v_orgA),
+           'I: bras 1a intact — l''ORG sur laquelle l''acteur ponté tient un rôle est rendue par LUI seul';
   RESET ROLE;
   -- Bras 2A et 2B : l'ORG elle-même et ses fiches, par membership. v_editor est membre de
   -- v_orgA (fixture E) et n'a AUCUN lien acteur — ces deux bras sont donc les seuls à

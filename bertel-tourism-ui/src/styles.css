@@ -12184,6 +12184,40 @@ a {
 /* §66 — bouton « Affecter un établissement » sous la liste des établissements liés. */
 .crm-app .crm-rail__add { margin-top: 10px; align-self: flex-start; }
 
+/* 18a/D1 — carte « Accès portail » du rail. L'en-tête `.rcard h4` est en
+   `justify-content: space-between` (il porte ailleurs un compteur à droite) : le titre est
+   donc enveloppé, sinon l'icône partirait à gauche et le mot à droite. */
+.crm-app .crm-portal-access__title { display: inline-flex; align-items: center; gap: 6px; }
+.crm-app .crm-portal-access__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-all;
+}
+.crm-app .crm-portal-access__actions { margin-top: 12px; gap: 8px; }
+.crm-app .crm-portal-access__pick { display: block; margin-top: 10px; }
+.crm-app .crm-portal-access__pick > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.crm-app .crm-portal-access__pick > select {
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
 /* Rangée relation (acteur ⇄ objet, avec rôle) */
 .crm-app .rel-row {
   display: flex;

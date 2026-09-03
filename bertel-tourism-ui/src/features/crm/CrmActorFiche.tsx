@@ -39,6 +39,7 @@ import { CrmModal } from './CrmModal';
 import { CrmTaskFromInteractionModal, CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
 import { CrmActorDocumentDropzone, CrmActorDocuments } from './CrmActorDocuments';
+import { CrmActorPortalAccess } from './CrmActorPortalAccess';
 import { CopyButton } from '../../components/common/CopyButton';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
@@ -589,6 +590,19 @@ export function CrmActorFiche({
             channels={channels}
             canWrite={canWrite}
             onEdit={() => setModal('edit')}
+          />
+
+          {/* 18a/D1 — accès au portail partenaire. Comme la carte acteur : TOUJOURS visible,
+              hors de la région repliable et des deux onglets. Les canaux e-mail sont ceux
+              déjà chargés par le snapshot ; le principal d'abord, pour que l'adresse
+              proposée par défaut soit celle que l'office considère comme la bonne. */}
+          <CrmActorPortalAccess
+            actorId={actorId}
+            canWrite={canWrite}
+            emailChannels={channels
+              .filter((channel) => channel.kindCode === 'email')
+              .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+              .map((channel) => channel.value)}
           />
 
           {activeTab === 'documents' ? (

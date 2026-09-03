@@ -18,6 +18,7 @@ export function ConfirmDialog({
   tone = 'default',
   busy = false,
   confirmGate,
+  className,
   onCancel,
   onConfirm,
 }: {
@@ -38,6 +39,14 @@ export function ConfirmDialog({
    * (le mot-clé `SUPPRIMER` doit être tapé tel quel).
    */
   confirmGate?: { expected: string[]; label: ReactNode };
+  /**
+   * Classe posée sur la CARTE de la fenêtre. `Modal` fait un `createPortal` vers
+   * `document.body` : la fenêtre n'est donc descendante d'aucun conteneur d'écran, et une
+   * surface qui relève ses tailles (le portail partenaire : boutons 48 px, texte 1.05 rem)
+   * n'atteindrait jamais ses boutons sans ce crochet. Envelopper le message ne suffit pas —
+   * le pied vit hors du corps.
+   */
+  className?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -61,6 +70,7 @@ export function ConfirmDialog({
     <Modal
       title={title}
       open={open}
+      className={className}
       onOpenChange={(next) => { if (!next) onCancel(); }}
       footer={
         <>

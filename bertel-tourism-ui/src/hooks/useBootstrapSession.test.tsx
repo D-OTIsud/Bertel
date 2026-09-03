@@ -2,7 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { AuthSessionMissingError } from '@supabase/supabase-js';
 import { useBootstrapSession } from './useBootstrapSession';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
-import { useSessionStore } from '../store/session-store';
+import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn(), getApiClient: jest.fn() }));
 jest.mock('../services/user-profile', () => ({
@@ -111,5 +111,50 @@ describe('useBootstrapSession — persona actor', () => {
 
     await waitFor(() => expect(useSessionStore.getState().status).toBe('error'));
     expect(useSessionStore.getState().errorMessage).toContain('role utilisateur est absent');
+  });
+});
+
+describe('useBootstrapSession — messages d’état invité', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useSessionStore.setState({ demoMode: false, status: 'booting', errorMessage: null });
+  });
+
+  it('parle à tout le monde, pas seulement aux comptes Google', async () => {
+    (getSupabaseClient as jest.Mock).mockReturnValue(
+      makeAuthClient({ data: { user: null }, error: new AuthSessionMissingError() }),
+    );
+
+    renderHook(() => useBootstrapSession());
+
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('guest'));
+    // Ces messages s'affichent à TOUS les visiteurs — dont un partenaire invité par
+    // e-mail, qui n'a jamais vu de bouton Google.
+    expect(useSessionStore.getState().errorMessage).toBe(GUEST_SIGN_IN_MESSAGE);
+    expect(useSessionStore.getState().errorMessage).not.toMatch(/Google/);
+  });
+
+  it('après une déconnexion, reprend la constante partagée avec /login', async () => {
+    let authCallback: (event: string) => void = () => {};
+    const client = {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
+        onAuthStateChange: jest.fn((cb: (event: string) => void) => {
+          authCallback = cb;
+          return { data: { subscription: { unsubscribe: jest.fn() } } };
+        }),
+      },
+    } as unknown as ReturnType<typeof getSupabaseClient>;
+    (getSupabaseClient as jest.Mock).mockReturnValue(client);
+
+    renderHook(() => useBootstrapSession());
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('guest'));
+
+    authCallback('SIGNED_OUT');
+
+    await waitFor(() =>
+      expect(useSessionStore.getState().errorMessage).toBe(GUEST_SIGNED_OUT_MESSAGE),
+    );
+    expect(useSessionStore.getState().errorMessage).not.toMatch(/Google/);
   });
 });

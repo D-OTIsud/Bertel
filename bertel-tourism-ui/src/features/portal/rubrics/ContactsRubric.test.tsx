@@ -124,6 +124,21 @@ describe('ContactsRubric', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('l’erreur est ANNONCÉE et le focus part sur le champ fautif', async () => {
+    // Sans ça, un partenaire au lecteur d'écran clique « Valider », n'entend RIEN, et le
+    // formulaire refuse simplement de partir.
+    setup();
+
+    await userEvent.type(screen.getByLabelText('E-mail'), 'contact@');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(screen.getByText('Vérifiez cette adresse e-mail (exemple : contact@exemple.re).')).toHaveAttribute(
+      'role',
+      'alert',
+    );
+    expect(screen.getByLabelText('E-mail')).toHaveFocus();
+  });
+
   it('changer de rubrique resynchronise le formulaire — pas les valeurs de la précédente (§212)', () => {
     const first = modules();
     const editor = fakeEditor(first);

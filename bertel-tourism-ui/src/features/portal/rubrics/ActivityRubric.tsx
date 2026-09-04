@@ -32,7 +32,7 @@ function readDuration(minutes: string): { duration: string; durationUnit: 'minut
   return { duration: String(value), durationUnit: 'minutes' };
 }
 
-export function ActivityRubric({ editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function ActivityRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const activity = editor.draft.activity as ObjectWorkspaceActivityModule;
   const { form, setForm, dirty } = useRubricForm<ActivityForm>(formKey, () => ({
     ...readDuration(activity.durationMin ?? ''),
@@ -40,7 +40,7 @@ export function ActivityRubric({ editor, formKey, onDone, onCancel, onDirtyChang
     maxParticipants: activity.maxParticipants ?? '',
     minAge: activity.minAge ?? '',
     error: null,
-  }));
+  }), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 

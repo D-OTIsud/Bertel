@@ -28,7 +28,7 @@ const UNIT_LABEL: Record<string, string> = {
   par_sejour: '€ par séjour',
 };
 
-export function PricingRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function PricingRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const pricing = editor.draft.pricing as ObjectWorkspacePricingModule;
   const unitCode = PORTAL_PRICE_UNIT[archetype] ?? '';
   const suffix = UNIT_LABEL[unitCode] ?? '€';
@@ -37,7 +37,7 @@ export function PricingRubric({ archetype, editor, formKey, onDone, onCancel, on
   const { form, setForm, dirty } = useRubricForm<PricingForm>(formKey, () => {
     const read = readStartingPrice(pricing);
     return { ...read, unitCode: read.unitCode || unitCode, error: null };
-  });
+  }, formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 

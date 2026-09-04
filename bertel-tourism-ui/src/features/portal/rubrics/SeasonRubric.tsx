@@ -30,12 +30,15 @@ function badRange(start: string, end: string): boolean {
   return Boolean(start && end && end < start);
 }
 
-export function SeasonRubric({ rubric, editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+// `rubric` n'est pas lu : la lecture seule (calendrier saisonnier, motif de tranche) est
+// portée par `PortalRubricScreen`, qui remplace le formulaire par la phrase AVANT de le
+// monter. Une seconde garde ici serait du code mort — et deux endroits à tenir.
+export function SeasonRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const openings = editor.draft.openings as ObjectWorkspaceOpeningsModule;
   const { form, setForm, dirty } = useRubricForm<SeasonForm>(formKey, () => {
     const read = readStayOpening(openings);
     return { opening: read.opening, closures: read.closures, error: null };
-  });
+  }, formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -54,17 +57,6 @@ export function SeasonRubric({ rubric, editor, formKey, onDone, onCancel, onDirt
     next = setStayClosures(next, form.closures);
     editor.replaceModule('openings', next);
     onDone();
-  }
-
-  if (rubric.readOnlyReason) {
-    return (
-      <div className="portal-form">
-        <p className="notice">{rubric.readOnlyReason}</p>
-        <button type="button" className="ghost-button" onClick={onCancel}>
-          Retour à la fiche
-        </button>
-      </div>
-    );
   }
 
   return (

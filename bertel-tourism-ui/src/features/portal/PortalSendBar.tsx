@@ -16,6 +16,20 @@ import { WifiOff } from 'lucide-react';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { useState } from 'react';
 
+/**
+ * La ligne d'état, ACCORDÉE. Le pluriel se décide sur le nombre, une fois, ici — pas trois
+ * fois dans le JSX, où « 1 rubrique modifiée · enregistrées » avait survécu.
+ */
+function stateLine(dirtyCount: number, heldCount: number, savedAt: string | null): string {
+  const total = dirtyCount + heldCount;
+  const s = total > 1 ? 's' : '';
+  const head = `${total} rubrique${s} modifiée${s}`;
+  if (heldCount > 0 && dirtyCount === 0) {
+    return `${head} · gardée${s} sur cet appareil, à envoyer quand l’office aura terminé sa vérification.`;
+  }
+  return savedAt ? `${head} · enregistrée${s} sur cet appareil` : head;
+}
+
 function subscribeOnline(onChange: () => void) {
   window.addEventListener('online', onChange);
   window.addEventListener('offline', onChange);
@@ -27,12 +41,19 @@ function subscribeOnline(onChange: () => void) {
 
 export function PortalSendBar({
   dirtyCount,
+  heldCount,
   savedAt,
   verificationOpen,
   onSend,
   onDiscard,
 }: {
   dirtyCount: number;
+  /**
+   * Rubriques DÉJÀ parties en vérification et remodifiées depuis. Elles ne peuvent pas
+   * partir (une seule vérification ouverte par fiche), mais la saisie est au chaud — et
+   * sans ce comptage la barre n'apparaît pas : « Valider » n'aurait AUCUN effet visible.
+   */
+  heldCount: number;
   savedAt: string | null;
   /** Une vérification est déjà ouverte côté office : rien de neuf ne peut partir. */
   verificationOpen: boolean;
@@ -48,7 +69,7 @@ export function PortalSendBar({
     () => true,
   );
 
-  if (dirtyCount === 0) return null;
+  if (dirtyCount === 0 && heldCount === 0) return null;
 
   const blocked = verificationOpen || !online;
   const reason = verificationOpen
@@ -59,10 +80,7 @@ export function PortalSendBar({
 
   return (
     <div className="portal-sendbar">
-      <p className="portal-sendbar__state">
-        {`${dirtyCount} rubrique${dirtyCount > 1 ? 's' : ''} modifiée${dirtyCount > 1 ? 's' : ''}`}
-        {savedAt ? ' · enregistrées sur cet appareil' : null}
-      </p>
+      <p className="portal-sendbar__state">{stateLine(dirtyCount, heldCount, savedAt)}</p>
       {reason ? (
         <p className="portal-sendbar__reason" id="portal-send-reason">
           {!online ? <WifiOff size={16} aria-hidden /> : null} {reason}

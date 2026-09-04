@@ -23,7 +23,7 @@ interface WelcomeForm {
   writeError: string | null;
 }
 
-export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const capacity = editor.draft.capacityPolicies as ObjectWorkspaceCapacityPoliciesModule;
   const metric = PORTAL_HEADLINE_METRIC[archetype] ?? 'max_capacity';
   const isStay = archetype === 'HEB';
@@ -35,7 +35,7 @@ export function WelcomeRubric({ archetype, editor, formKey, onDone, onCancel, on
     checkInFrom: capacity.stayPolicy?.checkInFrom ?? '',
     checkOutUntil: capacity.stayPolicy?.checkOutUntil ?? '',
     writeError: null,
-  }));
+  }), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 

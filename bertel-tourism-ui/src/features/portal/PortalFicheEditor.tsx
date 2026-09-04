@@ -13,13 +13,14 @@
  * Un `<a href>` nu serait une navigation complète dans l'App Router : la page remonterait,
  * l'état d'édition repartirait de zéro et le brouillon en mémoire serait perdu.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { PortalFicheHub, type PortalRejection } from './PortalFicheHub';
 import { PortalSendModal } from './PortalSendModal';
 import { buildPortalRubrics, portalTypeLabel, PORTAL_RUBRICS } from './portal-rubrics';
-import { readPortalSent, usePortalDraft, type PortalSentSnapshot } from './usePortalDraft';
+import type { PortalFormCache } from './rubrics/rubric-kit';
+import { clearPortalSent, readPortalSent, usePortalDraft, type PortalSentSnapshot } from './usePortalDraft';
 import { readPublicContact } from './portal-bindings';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { useObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -37,6 +38,8 @@ export interface PortalFicheEditorProps {
   submissions: MySubmission[];
   fiche: PortalFiche | null;
   ficheCount: number;
+  /** La fiche vient du cache et le rafraîchissement a échoué. */
+  refreshFailed?: boolean;
 }
 
 /** L'envoi OUVERT de cette fiche, et le dernier RÉSOLU — deux lectures distinctes. */
@@ -55,6 +58,7 @@ export function PortalFicheEditor({
   submissions,
   fiche,
   ficheCount,
+  refreshFailed = false,
 }: PortalFicheEditorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -71,9 +75,28 @@ export function PortalFicheEditor({
   const activeRubricId = searchParams.get('rubrique');
   const hubHref = `/espace/fiches/${objectId}`;
 
+  const resolvedAt = fiche?.lastResolved?.resolvedAt ?? null;
+  const openSubmissionId = fiche?.openSubmission?.id ?? null;
+
   useEffect(() => {
-    setSentSnapshot(readPortalSent(userId, objectId));
-  }, [userId, objectId]);
+    const snapshot = readPortalSent(userId, objectId);
+    // L'office a tranché APRÈS cet envoi et rien n'est plus en vérification : l'instantané
+    // décrit un passé révolu. Le garder ferait afficher « Vous aviez indiqué… » avec une
+    // date et un contenu périmés, comme s'ils étaient ceux de la vérification en cours.
+    if (snapshot && !openSubmissionId && resolvedAt && resolvedAt > snapshot.submittedAt) {
+      clearPortalSent(userId, objectId);
+      setSentSnapshot(null);
+      return;
+    }
+    setSentSnapshot(snapshot);
+  }, [userId, objectId, resolvedAt, openSubmissionId]);
+
+  /**
+   * La saisie EN COURS d'une rubrique. Elle vit ici — `PortalFicheEditor` ne se démonte
+   * jamais entre deux rubriques — donc elle survit au bouton Retour du téléphone, qui ne
+   * passe par aucun lien interceptable. « Quitter sans garder », lui, la vide.
+   */
+  const formCacheRef = useRef<PortalFormCache>(new Map());
 
   useEffect(() => {
     // Le remerciement appartient au geste qui vient d'avoir lieu : ouvrir une rubrique
@@ -102,6 +125,23 @@ export function PortalFicheEditor({
       // précisément le geste que « À reprendre » invite à faire.
       if (change.status === 'rejected' && change.section && !pendingModules.has(change.section as WorkspaceModuleId)) {
         set.add(change.section as WorkspaceModuleId);
+      }
+    }
+    return set;
+  }, [resolved, pendingModules]);
+
+  /**
+   * Acceptés par l'office mais pas encore RECOPIÉS sur la fiche. C'est la forme dominante
+   * (5 rubriques sur 7 sont reportées à la main) et elle n'a aucun état au registre : sans
+   * ce signal, la rubrique retombe sur la donnée publiée — l'ANCIENNE valeur — avec le
+   * badge « Rempli », et le partenaire ressaisit.
+   */
+  const approvedModules = useMemo(() => {
+    const set = new Set<string>();
+    for (const change of resolved?.changes ?? []) {
+      // `applied` = la machine a déjà réécrit la fiche : il n'y a rien à annoncer.
+      if (change.status === 'approved' && change.section && !pendingModules.has(change.section as WorkspaceModuleId)) {
+        set.add(change.section);
       }
     }
     return set;
@@ -146,7 +186,40 @@ export function PortalFicheEditor({
     return list;
   }, [resolved, archetype, pendingModules]);
 
+  /** Vrai quand c'est NOUS qui avons poussé l'entrée `?rubrique=` de l'historique. */
+  const pushedRef = useRef(false);
+  const previousRubricRef = useRef<string | null>(activeRubricId);
+  useEffect(() => {
+    // Ouvrir une rubrique DEPUIS le hub pousse une entrée ; arriver directement sur
+    // `?rubrique=` (lien partagé, signet) n'en pousse aucune.
+    if (previousRubricRef.current === null && activeRubricId !== null) pushedRef.current = true;
+    if (activeRubricId === null) pushedRef.current = false;
+    previousRubricRef.current = activeRubricId;
+  }, [activeRubricId]);
+
+  /** Les rubriques dont le brouillon n'a pas été repris — nommées, pas tues. */
+  const discardedRubrics = useMemo(
+    () =>
+      draft.discardedModules
+        .map(
+          (module) =>
+            PORTAL_RUBRICS.find((entry) => entry.module === module && entry.archetypes.includes(archetype))?.title ??
+            null,
+        )
+        .filter((title): title is string => Boolean(title)),
+    [draft.discardedModules, archetype],
+  );
+
   const handleBackToHub = useCallback(() => {
+    // `back()` défait l'entrée que la liste vient de pousser : sans lui, le bouton Retour
+    // du téléphone renverrait sur la rubrique qu'on vient de quitter. Mais seulement si
+    // c'est bien nous qui l'avons poussée — arriver directement sur `?rubrique=` (un lien
+    // partagé, un signet) ferait autrement SORTIR du site.
+    if (pushedRef.current) {
+      pushedRef.current = false;
+      router.back();
+      return;
+    }
     router.push(hubHref, { scroll: false });
   }, [router, hubHref]);
 
@@ -159,6 +232,10 @@ export function PortalFicheEditor({
 
   const handleSent = useCallback(
     ({ submissionId }: { submissionId: string }) => {
+      // Sous 1024 px, l'en-tête de fiche — donc la carte « Merci ! » — est masqué en vue
+      // rubrique : envoyer depuis un écran de rubrique ne changeait RIEN à l'écran, et le
+      // focus tombait dans le vide sur un élément `display:none`. On revient à la fiche.
+      if (activeRubricId) router.push(hubHref, { scroll: false });
       setJustSent(true);
       setSentSnapshot(readPortalSent(userId, objectId));
       draft.clear();
@@ -175,7 +252,7 @@ export function PortalFicheEditor({
       // Par PRÉFIXE : la clé porte l'id de la fiche, l'invalidation couvre toutes les fiches.
       void queryClient.invalidateQueries({ queryKey: ['portal-submissions'] });
     },
-    [userId, objectId, draft, queryClient],
+    [userId, objectId, draft, queryClient, activeRubricId, router, hubHref],
   );
 
   const location = (resource.modules as unknown as { location?: { main?: Record<string, string> } }).location?.main ?? {};
@@ -205,6 +282,10 @@ export function PortalFicheEditor({
         activeRubricId={activeRubricId}
         editor={editor}
         rejections={rejections}
+        approvedModules={approvedModules}
+        discardedRubrics={discardedRubrics}
+        refreshFailed={refreshFailed}
+        formCache={formCacheRef.current}
         media={resource.modules.media as ObjectWorkspaceMediaModule}
         note={draft.note}
         onNoteChange={draft.setNote}

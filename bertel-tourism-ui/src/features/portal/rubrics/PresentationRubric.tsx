@@ -24,12 +24,12 @@ interface PresentationForm {
   description: string;
 }
 
-export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const descriptions = editor.draft.descriptions as ObjectWorkspaceDescriptionsModule;
   const { form, setForm, dirty } = useRubricForm<PresentationForm>(formKey, () => ({
     chapo: readTranslatableField(descriptions.object.chapo, 'fr', 'fr') ?? '',
     description: readTranslatableField(descriptions.object.description, 'fr', 'fr') ?? '',
-  }));
+  }), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 

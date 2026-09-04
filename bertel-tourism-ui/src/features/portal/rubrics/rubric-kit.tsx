@@ -57,7 +57,10 @@ export function PortalField({
         className: error ? 'portal-input portal-input--invalid' : 'portal-input',
       })}
       {error ? (
-        <p className="field-error" id={errorId}>
+        // `role="alert"` : sans lui, un partenaire au lecteur d'écran clique « Valider »,
+        // n'entend RIEN, et le formulaire refuse simplement de partir. Les erreurs de
+        // niveau formulaire l'avaient déjà — l'incohérence était ici.
+        <p className="field-error" id={errorId} role="alert">
           {error}
         </p>
       ) : null}
@@ -129,28 +132,51 @@ export interface RubricForm<T> {
  * L'état local d'un formulaire de rubrique, resynchronisé PENDANT LE RENDU quand la clé
  * change (motif §212). `read` est appelée à la volée : ne lui donner que des lectures pures.
  */
-export function useRubricForm<T>(formKey: string, read: () => T): RubricForm<T> {
+export function useRubricForm<T>(formKey: string, read: () => T, cache?: PortalFormCache): RubricForm<T> {
   const [state, setState] = useState<{ key: string; initial: T; value: T }>(() => {
-    const value = read();
-    return { key: formKey, initial: value, value };
+    const initial = read();
+    // Une saisie laissée en plan par une sortie NON confirmée (le bouton Retour du
+    // téléphone, qui ne passe par aucun lien interceptable) est retrouvée telle quelle.
+    // « Quitter sans garder », lui, vide ce cache : le message promet, il doit dire vrai.
+    const kept = cache?.get(formKey) as T | undefined;
+    return { key: formKey, initial, value: kept === undefined ? initial : kept };
   });
 
   if (state.key !== formKey) {
-    const value = read();
-    setState({ key: formKey, initial: value, value });
+    const initial = read();
+    const kept = cache?.get(formKey) as T | undefined;
+    setState({ key: formKey, initial, value: kept === undefined ? initial : kept });
   }
 
   const setForm = (next: T | ((previous: T) => T)) =>
-    setState((previous) => ({
-      ...previous,
-      value: typeof next === 'function' ? (next as (p: T) => T)(previous.value) : next,
-    }));
+    setState((previous) => {
+      const value = typeof next === 'function' ? (next as (p: T) => T)(previous.value) : next;
+      cache?.set(formKey, value);
+      return { ...previous, value };
+    });
 
   return {
     form: state.value,
     setForm,
     dirty: serialize(state.value) !== serialize(state.initial),
   };
+}
+
+/**
+ * Le magasin de la saisie EN COURS, tenu par le hub (qui ne se démonte jamais entre deux
+ * rubriques). Une `Map` suffit : ce n'est pas du travail à conserver d'une session à
+ * l'autre — c'est du travail à ne pas perdre en changeant d'écran.
+ */
+export type PortalFormCache = Map<string, unknown>;
+
+/**
+ * Amène le focus sur le champ fautif. Laisser le focus sur « Valider » après un refus
+ * oblige à retrouver le champ à l'aveugle — au clavier comme au lecteur d'écran.
+ */
+export function focusPortalField(id: string): void {
+  if (typeof document === 'undefined') return;
+  const field = document.getElementById(id);
+  if (field instanceof HTMLElement) field.focus();
 }
 
 function serialize(value: unknown): string {

@@ -1,4 +1,4 @@
-import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPublicationCards } from '../data/mock';
+import { filterMockCards, mockAuditQuestions, mockCards, mockObjectDetails, mockPublicationCards } from '../data/mock';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { AuditQuestion, BackendObjectTypeCode, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
@@ -427,6 +427,90 @@ export async function listObjectMarkers(
   );
 
   return dedupeExplorerCards(perBucket.flat());
+}
+
+// ---------------------------------------------------------------------------
+// Cartes réclamées PAR ID (§125 bis) — la voie de rattrapage de la sélection.
+//
+// La liste est paginée, la carte ne l'est pas : une sélection faite sur la carte
+// désigne régulièrement des fiches hors de la fenêtre chargée (cf.
+// components/explorer/selection-hydration.ts). `api.get_object_cards_batch` est
+// exactement l'enrichissement que sert déjà la page de liste — mêmes clés, mêmes
+// taxonomies, mêmes badges — donc une fiche réclamée ici est INDISCERNABLE de la
+// même fiche arrivée par la pagination. Un marqueur, lui, ne porte que
+// {id,type,name,image,open_now,location} : le rendre comme carte de résultat
+// donnerait une carte amputée de ses tags, sa taxonomie et sa description.
+//
+// La fonction est SECURITY DEFINER mais authorize-once : elle re-filtre la liste
+// d'ids sur le périmètre lisible de l'appelant (publié ∪ étendu). Un id inconnu ou
+// non autorisé est simplement absent du retour — jamais une erreur.
+// ---------------------------------------------------------------------------
+export async function listExplorerCardsByIds(
+  ids: string[],
+  langPrefs: string[],
+  signal?: AbortSignal,
+): Promise<ObjectCard[]> {
+  const wanted = [...new Set(ids.map((id) => String(id).trim()).filter(Boolean))];
+  if (wanted.length === 0) {
+    return [];
+  }
+
+  const session = useSessionStore.getState();
+  const client = requireRpcClient();
+
+  if (session.demoMode || !client) {
+    const byId = new Map(mockCards.map((card) => [card.id, card] as const));
+    return wanted.flatMap((id) => {
+      const card = byId.get(id);
+      return card ? [card] : [];
+    });
+  }
+
+  // §204 — `missing_essentials` n'est PAS dans le retour de get_object_cards_batch : la
+  // page de liste l'attache positionnellement après coup, via ce même helper. Sans lui,
+  // une fiche remontée ici perdrait sa pastille « N manquants » alors que la même fiche
+  // arrivée par la pagination l'aurait : deux rendus pour une seule fiche. Le helper est
+  // son propre gate — il rend 0 ligne à un appelant non éditeur, donc le champ reste
+  // absent exactement comme il l'est déjà pour un non-éditeur.
+  const [cardsResult, essentialsResult] = await Promise.all([
+    withAbort(
+      client.schema('api').rpc('get_object_cards_batch', {
+        p_ids: wanted,
+        p_lang_prefs: langPrefs,
+      }),
+      signal,
+    ),
+    withAbort(
+      client.schema('api').rpc('object_missing_essentials', { p_object_ids: wanted }),
+      signal,
+    ),
+  ]);
+
+  if (cardsResult.error) {
+    throw cardsResult.error;
+  }
+  if (!Array.isArray(cardsResult.data)) {
+    return [];
+  }
+
+  // Un échec du seul volet « remplissage » ne doit pas priver l'utilisateur de sa
+  // sélection : on dégrade en pastille absente (jamais en pastille fausse).
+  const missingByObject = new Map<string, string[]>();
+  if (!essentialsResult.error && Array.isArray(essentialsResult.data)) {
+    for (const row of essentialsResult.data as Array<{ object_id?: unknown; missing?: unknown }>) {
+      const id = row?.object_id != null ? String(row.object_id) : '';
+      if (id && Array.isArray(row?.missing)) {
+        missingByObject.set(id, (row.missing as unknown[]).map((entry) => String(entry)));
+      }
+    }
+  }
+
+  return normalizeExplorerCards(
+    (cardsResult.data as ObjectCard[]).map((card) => {
+      const missing = missingByObject.get(String(card?.id ?? ''));
+      return missing ? { ...card, missing_essentials: missing } : card;
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------

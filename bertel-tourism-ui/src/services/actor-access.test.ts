@@ -1,7 +1,7 @@
-import { getSupabaseClient } from '../lib/supabase';
-import { invitePortalAccess, resendPortalAccess, revokePortalAccess } from './actor-access';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { canManageActorPortalAccess, invitePortalAccess, resendPortalAccess, revokePortalAccess } from './actor-access';
 
-jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
+jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 
 const originalFetch = global.fetch;
 const fetchMock = jest.fn();
@@ -15,6 +15,23 @@ beforeEach(() => {
 });
 
 afterAll(() => { global.fetch = originalFetch; });
+
+it.each([
+  [true, null, true], [false, null, false], [null, null, false],
+  [undefined, null, false], [true, { message: 'unavailable' }, false],
+])('permission RPC data=%s error=%s gives %s', async (data, error, allowed) => {
+  const rpc = jest.fn().mockResolvedValue({ data, error });
+  const schema = jest.fn().mockReturnValue({ rpc });
+  (getApiClient as jest.Mock).mockReturnValue({ schema });
+  await expect(canManageActorPortalAccess()).resolves.toBe(allowed);
+  expect(schema).toHaveBeenCalledWith('api');
+  expect(rpc).toHaveBeenCalledWith('current_user_can_manage_actor_portal');
+});
+
+it('hides access when the permission request throws', async () => {
+  (getApiClient as jest.Mock).mockReturnValue({ schema: () => ({ rpc: jest.fn().mockRejectedValue(new Error('offline')) }) });
+  await expect(canManageActorPortalAccess()).resolves.toBe(false);
+});
 
 it.each([
   ['invite', () => invitePortalAccess('actor-1', 'partner@example.test')],

@@ -1720,3 +1720,23 @@ Les numeros des anciens rapports restent des reperes historiques de leurs branch
 La CI a egalement revele que `migration_explorer_name_relevance.sql` est le dernier
 definisseur de `get_filtered_object_ids` : le filtre de realm et le contournement
 de la MV pour un compte de test y sont conserves, comme dans `api_views_functions.sql`.
+
+## 18e — Permission du bloc CRM Accès portail — 2026-09-04
+
+Appliquer `supabase/migrations/20260904060259_actor_portal_access_permission.sql`
+avant le déploiement de l’interface et de la route `/api/crm/actor-access`.
+Le manifeste de création utilise la copie identique
+`Base de donnée DLL et API/migration_actor_portal_access_permission.sql`, puis
+`tests/test_actor_portal_access_permission.sql` (fixtures annulées par ROLLBACK).
+
+La permission `manage_actor_portal_access`, catégorie CRM, apparaît dans
+Administration → Équipe → Permissions par rôle métier, sous le libellé
+« Gérer l’accès au portail prestataire ». Elle n’est accordée à aucun rôle par défaut.
+Seuls les superutilisateurs plateforme (`super_admin` / propriétaire `owner`, selon
+la définition existante) voient initialement le bloc. Cocher Éditeur permet ensuite
+de le déléguer aux éditeurs de l’organisation. Les exceptions individuelles existantes
+fonctionnent également. Le périmètre CRM de chaque acteur reste vérifié côté serveur.
+
+En l’absence du RPC ou en cas de refus, le bloc est masqué ; la route refuse les
+quatre opérations, y compris la lecture du statut. La migration est rejouable sans
+effacer les permissions accordées ultérieurement. Aucun compte portail n’est modifié.

@@ -569,6 +569,10 @@ ROLLBACK;
 \echo '== 18d-test  le corpus seme, complet et cloisonne : 15 fiches par type, des acteurs fictifs, et RIEN dans le flux partenaire =='
 \ir tests/test_test_org_seed.sql
 
+\echo '== 18e permission dediee au bloc CRM Acces portail (aucun octroi par defaut) =='
+\ir migration_actor_portal_access_permission.sql
+\ir tests/test_actor_portal_access_permission.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

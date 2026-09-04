@@ -1386,6 +1386,42 @@ Si l'auto-rattachement cesse un jour de poser `is_primary`, les fiches creees da
 aucune erreur. Le bloc I de `test_test_org_isolation.sql` garde precisement cela : creation,
 publication, puis verification par `anon` **et** par `service_role`.
 
+### L'identité d'acteur traverse les organisations (correctif 18a-bis)
+
+Un utilisateur est relié à des fiches **par son e-mail** — `api.user_actor_ids()` joint
+`actor_channel.kind='email'` sur l'e-mail de session. Ce chemin (1a/1b du read gate) **ignore
+complètement l'organisation**, donc il ignorait aussi le realm : le prédicat n'avait été posé que
+sur le chemin 2C.
+
+Les deux sens fuyaient, mesurés sur la base live :
+
+| Croisement | Avant | Après |
+| --- | --- | --- |
+| Testeur dont l'e-mail est celui d'un acteur **réel** | voyait la fiche de production `LOIRUN00000000VI` | 0 fiche réelle |
+| Utilisateur de production dont l'e-mail est posé sur un acteur du **bac à sable** | voyait la fiche de test `PNATST0000000012` | 0 fiche de test |
+
+Le second n'a rien de théorique : **poser un e-mail sur un acteur du bac à sable est exactement ce
+qu'on y fait pour éprouver le portail acteur** (§228).
+
+**Le correctif filtre l'UNION ENTIÈRE en un seul point** — un `JOIN object … WHERE o.is_test =
+(SELECT api.current_user_test_realm())` posé sur le résultat des 5 chemins, plutôt qu'un prédicat
+répété chemin par chemin qui se serait re-oublié au prochain chemin ajouté. Le prédicat inline de
+2C disparaît, devenu redondant.
+
+**L'écriture passait par le même trou** : `api.is_object_owner` s'appuie sur `user_actor_ids()` et
+renvoyait `true` sur une fiche de production pour un compte de test. L'`UPDATE` direct ne touchait
+0 ligne — mais **par effet de bord** de la policy SELECT, pas par une garde : un RPC
+`SECURITY DEFINER` qui consulte `is_object_owner` puis écrit n'aurait eu aucun filet. La garde
+porte désormais le prédicat. `user_can_write_canonical` était déjà sain (il exige le lien d'ORG).
+
+**Découverte annexe** : les e-mails d'acteurs sont **uniques globalement** (« Email … is already
+used by actor … »). Cela limite la portée du croisement — un même e-mail ne peut pas être porté
+par un acteur de chaque côté — mais ne l'empêche pas, puisqu'il suffit qu'un *utilisateur* d'un
+realm porte l'e-mail d'un *acteur* de l'autre.
+
+Bloc J de `test_test_org_isolation.sql`, **non-vacuité prouvée par sabotage** : en restaurant la
+forme d'avant (prédicat sur le seul 2C), le bloc rougit.
+
 ### Ouvrir un compte de test
 
 Aucun code supplémentaire : l'ORG « Bac a sable (organisation de test) » apparaît dans le

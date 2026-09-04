@@ -151,6 +151,36 @@ export function hasPortalDraft(userId: string | null, objectId: string): boolean
 }
 
 /**
+ * Vrai si CE compte a, sur CET appareil, quelque chose que l'office n'a pas encore reçu :
+ * un brouillon validé (`portal-draft:`) ou une saisie en cours (`portal-form:`), TOUTES
+ * fiches confondues.
+ *
+ * Portée ACCOUNT-WIDE, comme `clearAllPortalDrafts` : la déconnexion purge tout le compte,
+ * et une question posée sur la seule fiche ouverte laisserait détruire en silence le
+ * travail commencé sur les autres. `hasPortalDraft`, lui, reste par fiche — il répond à
+ * une autre question (« ce brouillon-ci existe-t-il ? »).
+ *
+ * `portal-sent:` est délibérément EXCLU : il décrit ce qui est DÉJÀ parti à l'office. Sa
+ * perte ne coûte pas une saisie, et retenir quelqu'un pour lui serait crier au loup.
+ */
+export function hasUnsentPortalWork(userId: string | null): boolean {
+  if (!userId) return false;
+  const store = getStore();
+  if (!store) return false;
+  try {
+    const prefixes = [accountPrefix(DRAFT_PREFIX, userId), accountPrefix(FORM_PREFIX, userId)];
+    for (let index = 0; index < store.length; index += 1) {
+      const key = store.key(index);
+      if (key && prefixes.some((prefix) => key.startsWith(prefix))) return true;
+    }
+    return false;
+  } catch {
+    // Stockage indisponible : il n'y a alors rien de gardé, donc rien à perdre.
+    return false;
+  }
+}
+
+/**
  * Efface TOUS les brouillons ET instantanés du compte donné — et rien d'autre.
  *
  * Appelée seulement après une déconnexion RÉUSSIE : tant que le partenaire reste connecté,

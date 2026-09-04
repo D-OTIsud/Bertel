@@ -8,13 +8,29 @@
 //
 // La déconnexion passe par services/auth.signOut() : l'événement SIGNED_OUT remet la session
 // en invité et la garde redirige — jamais de router.replace ici.
+//
+// ═══════════════════════════════════════════════════════════════════════════════════
+// LA DÉCONNEXION DÉTRUIT, ET ELLE LE DIT.
+// ═══════════════════════════════════════════════════════════════════════════════════
+//
+// Elle purge les TROIS familles de clés (`portal-draft:`, `portal-form:`, `portal-sent:`)
+// et pour TOUTES les fiches du compte, pas seulement celle ouverte. La purge est gardée —
+// un téléphone ou un poste d'office est souvent partagé, et laisser la saisie d'un
+// partenaire sur l'appareil du suivant est le risque qui l'a fait naître. Mais elle passe
+// désormais par une question, comme « Annuler mes modifications » (PortalSendBar), et avec
+// le même vocabulaire.
+//
+// La question n'est posée QUE s'il y a quelque chose à perdre (`hasUnsentPortalWork`, qui
+// balaye le compte entier) : sans saisie en attente la déconnexion reste un seul geste.
+import { useState } from 'react';
 import { SandboxBanner } from '../layout/SandboxBanner';
 import { LogOut } from 'lucide-react';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { signOut } from '../../services/auth';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import { useToast } from '../../hooks/useToast';
-import { clearAllPortalDrafts } from '../../features/portal/usePortalDraft';
+import { clearAllPortalDrafts, hasUnsentPortalWork } from '../../features/portal/usePortalDraft';
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const brandName = useThemeStore((state) => state.theme.brandName);
@@ -22,6 +38,16 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
   const userName = useSessionStore((state) => state.userName);
   const userId = useSessionStore((state) => state.userId);
   const toast = useToast();
+  const [askSignOut, setAskSignOut] = useState(false);
+
+  /** Le clic sur « Se déconnecter » : il DEMANDE avant de détruire, ou file droit. */
+  function requestSignOut() {
+    if (hasUnsentPortalWork(userId)) {
+      setAskSignOut(true);
+      return;
+    }
+    void handleSignOut();
+  }
 
   async function handleSignOut() {
     // L'id est capturé AVANT : la session bascule en invité dès que signOut() aboutit, et
@@ -55,7 +81,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
         </div>
         <div className="portal-shell__user">
           <span className="portal-shell__user-name muted">{userName}</span>
-          <button type="button" className="ghost-button" onClick={() => void handleSignOut()}>
+          <button type="button" className="ghost-button" onClick={requestSignOut}>
             <LogOut size={16} aria-hidden /> Se déconnecter
           </button>
         </div>
@@ -75,6 +101,21 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           Conditions d’utilisation
         </a>
       </footer>
+
+      <ConfirmDialog
+        open={askSignOut}
+        className="portal-modal"
+        title="Vous avez des modifications non envoyées"
+        message="Tout ce que vous avez saisi sur cet appareil sera perdu, y compris votre message à l’office. Votre fiche publiée ne change pas. Cet appareil peut être partagé : c’est pourquoi vos modifications sont effacées quand vous vous déconnectez."
+        cancelLabel="Rester connecté"
+        confirmLabel="Effacer et me déconnecter"
+        tone="danger"
+        onCancel={() => setAskSignOut(false)}
+        onConfirm={() => {
+          setAskSignOut(false);
+          void handleSignOut();
+        }}
+      />
     </div>
   );
 }

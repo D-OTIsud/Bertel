@@ -159,9 +159,28 @@ function stripSlices(slices: PortalSlices): PortalSlices {
   return out;
 }
 
-/** L'empreinte des tranches du portail, catalogues exclus. */
-function fingerprintOf(serverModules: ObjectWorkspaceModules): string {
-  return portalDraftFingerprint(stripCatalogOptions(serverModules));
+/**
+ * L'empreinte des tranches du portail QUE CE BROUILLON PORTE, catalogues exclus.
+ *
+ * Portée aux seules tranches concernées : une empreinte globale faisait perdre un brouillon
+ * de tarifs parce que l'office avait corrigé une coquille dans la description — deux
+ * travaux sans le moindre rapport. Un brouillon qui ne porte QUE le message n'a alors plus
+ * d'empreinte du tout : il ne peut écraser aucun travail, il n'y a rien à comparer.
+ */
+function fingerprintOf(serverModules: ObjectWorkspaceModules, modules: WorkspaceModuleId[]): string {
+  const live = stripCatalogOptions(serverModules) as unknown as Record<string, unknown>;
+  const scoped: Record<string, unknown> = {};
+  for (const module of modules) {
+    const key = MODULE_KEY_MAP[module];
+    scoped[key] = live[key];
+  }
+  // Les tranches absentes hachent comme `null` des deux côtés : l'empreinte ne dépend que
+  // de ce que le brouillon transporte.
+  return portalDraftFingerprint(scoped as unknown as ObjectWorkspaceModules);
+}
+
+function carriedModules(slices: PortalSlices): WorkspaceModuleId[] {
+  return PORTAL_MODULES.filter((module) => Object.prototype.hasOwnProperty.call(slices, module));
 }
 
 export function writePortalDraft(
@@ -176,7 +195,7 @@ export function writePortalDraft(
     portalDraftKey(userId, objectId),
     serializePortalDraft({
       objectId,
-      fingerprint: fingerprintOf(serverModules),
+      fingerprint: fingerprintOf(serverModules, carriedModules(dirtySlices)),
       note,
       modules: stripSlices(dirtySlices),
       savedAt: new Date().toISOString(),
@@ -189,6 +208,11 @@ export interface PortalDraftRead {
   draft: PortalSlices;
   note: string;
   savedAt: string;
+  /**
+   * Les tranches ÉCARTÉES parce que l'office a travaillé dessus entre-temps. L'appelant
+   * les NOMME à l'écran : « refaites vos changements » sans dire lesquels n'aide personne.
+   */
+  droppedModules: WorkspaceModuleId[];
 }
 
 export function readPortalDraft(
@@ -199,18 +223,22 @@ export function readPortalDraft(
   if (!userId) return null;
   const payload = parsePortalDraft(readRaw(portalDraftKey(userId, objectId)));
   if (!payload || payload.objectId !== objectId) return null;
-  // L'office a travaillé sur la fiche depuis la prise : rejouer le local écraserait son
-  // travail. On rend `null` — l'appelant le DIT au partenaire, il ne le tait pas.
-  if (payload.fingerprint !== fingerprintOf(serverModules)) return null;
+
+  const carried = carriedModules(payload.modules);
+  // L'office a travaillé sur CES tranches depuis la prise : les rejouer écraserait son
+  // travail. On les écarte — et on les NOMME. Le MESSAGE, lui, reste : un texte libre
+  // n'écrase rien, et c'est souvent la seule chose que le partenaire ait écrite.
+  if (payload.fingerprint !== fingerprintOf(serverModules, carried)) {
+    return { draft: {}, note: payload.note, savedAt: payload.savedAt, droppedModules: carried };
+  }
 
   const draft: PortalSlices = {};
   const live = serverModules as unknown as Record<string, unknown>;
-  for (const module of PORTAL_MODULES) {
-    if (!Object.prototype.hasOwnProperty.call(payload.modules, module)) continue;
+  for (const module of carried) {
     const key = MODULE_KEY_MAP[module];
     draft[module] = restoreCatalogOptions(payload.modules[module], live[key], key);
   }
-  return { draft, note: payload.note, savedAt: payload.savedAt };
+  return { draft, note: payload.note, savedAt: payload.savedAt, droppedModules: [] };
 }
 
 // ══════════════════════ Instantané de ce qui a été ENVOYÉ ═══════════════════
@@ -283,6 +311,8 @@ export interface UsePortalDraftResult {
   setNote: (value: string) => void;
   /** Un brouillon existait mais la fiche a changé côté office : il a été écarté. */
   discarded: boolean;
+  /** Les modules écartés — l'écran les NOMME plutôt que de dire « refaites vos changements ». */
+  discardedModules: WorkspaceModuleId[];
   /** Horodatage du dernier enregistrement local, ou `null`. */
   savedAt: string | null;
   /** Efface le brouillon local ET le message (envoi réussi, ou abandon explicite). */
@@ -298,6 +328,7 @@ export interface UsePortalDraftResult {
 export function usePortalDraft({ userId, objectId, serverModules, editor }: UsePortalDraftInput): UsePortalDraftResult {
   const [note, setNote] = useState('');
   const [discarded, setDiscarded] = useState(false);
+  const [discardedModules, setDiscardedModules] = useState<WorkspaceModuleId[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [cleared, setCleared] = useState(0);
   const restoredRef = useRef(false);
@@ -311,22 +342,30 @@ export function usePortalDraft({ userId, objectId, serverModules, editor }: UseP
   serverRef.current = serverModules;
 
   useEffect(() => {
-    if (restoredRef.current) return;
+    // Pas encore de compte : la session arrive APRÈS le premier rendu. Sortir en marquant
+    // la restauration « faite » armait un piège muet — le brouillon n'était jamais relu.
+    if (!userId || restoredRef.current) return;
     restoredRef.current = true;
     const stored = readPortalDraft(userId, objectId, serverRef.current);
-    if (stored) {
-      for (const [module, slice] of Object.entries(stored.draft) as [WorkspaceModuleId, unknown][]) {
-        editorRef.current.replaceModule(MODULE_KEY_MAP[module], slice as never);
+    if (!stored) {
+      // Une clé présente que la lecture a refusée = un brouillon d'une autre VERSION du
+      // schéma : rien n'en est réutilisable, mais le silence ferait croire à une perte
+      // inexpliquée.
+      if (hasPortalDraft(userId, objectId)) {
+        setDiscarded(true);
+        clearPortalDraft(userId, objectId);
       }
-      setNote(stored.note);
-      setSavedAt(stored.savedAt);
       return;
     }
-    // Une clé présente que la lecture a refusée = un brouillon écarté (empreinte ou version).
-    // Le silence ici ferait croire à une perte inexpliquée.
-    if (hasPortalDraft(userId, objectId)) {
+
+    for (const [module, slice] of Object.entries(stored.draft) as [WorkspaceModuleId, unknown][]) {
+      editorRef.current.replaceModule(MODULE_KEY_MAP[module], slice as never);
+    }
+    setNote(stored.note);
+    setSavedAt(stored.savedAt);
+    if (stored.droppedModules.length > 0) {
       setDiscarded(true);
-      clearPortalDraft(userId, objectId);
+      setDiscardedModules(stored.droppedModules);
     }
   }, [userId, objectId]);
 
@@ -372,10 +411,11 @@ export function usePortalDraft({ userId, objectId, serverModules, editor }: UseP
     setNote('');
     setSavedAt(null);
     setDiscarded(false);
+    setDiscardedModules([]);
     // Réarme l'effet d'écriture pour qu'il reparte d'un état vide au lieu de réécrire
     // immédiatement ce qu'on vient d'effacer.
     setCleared((value) => value + 1);
   }, [userId, objectId]);
 
-  return { note, setNote, discarded, savedAt, clear };
+  return { note, setNote, discarded, discardedModules, savedAt, clear };
 }

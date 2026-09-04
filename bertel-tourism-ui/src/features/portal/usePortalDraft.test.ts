@@ -70,12 +70,20 @@ describe('writePortalDraft / readPortalDraft', () => {
     expect(read?.savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  it('JETTE le brouillon quand l’office a modifié la fiche depuis la prise', () => {
+  it('ÉCARTE les tranches que l’office a modifiées depuis la prise', () => {
     writePortalDraft(USER, OBJ, server(), dirty(), 'un mot');
 
-    // La fiche a bougé côté office : rejouer le local écraserait son travail.
-    const moved = server({ descriptions: { object: { chapo: { baseValue: 'B', values: { fr: 'B' } } } } });
-    expect(readPortalDraft(USER, OBJ, moved)).toBeNull();
+    // L'office a retouché LA tranche que le brouillon porte : la rejouer écraserait son
+    // travail.
+    const moved = server({
+      contacts: {
+        objectItems: [{ id: 'c1', kindCode: 'phone', isPublic: true, value: '0262 11 11 11' }],
+        kindOptions: [{ id: 'k1', code: 'phone', label: 'Téléphone' }],
+      },
+    });
+    const read = readPortalDraft(USER, OBJ, moved);
+    expect(read?.draft).toEqual({});
+    expect(read?.droppedModules).toEqual(['contacts']);
   });
 
   it('un message SEUL — aucune rubrique modifiée — survit à un rechargement', () => {
@@ -119,6 +127,41 @@ describe('writePortalDraft / readPortalDraft', () => {
       },
     });
     expect(readPortalDraft(USER, OBJ, enriched)).not.toBeNull();
+  });
+
+  it('l’empreinte ne couvre QUE les tranches que le brouillon porte', () => {
+    // Une correction de coquille de l'office dans la description ne doit pas faire perdre
+    // un brouillon de tarifs sans le moindre rapport.
+    writePortalDraft(USER, OBJ, server(), dirty(), 'un mot');
+
+    const elsewhere = server({ descriptions: { object: { chapo: { baseValue: 'B', values: { fr: 'B' } } } } });
+    expect(readPortalDraft(USER, OBJ, elsewhere)?.note).toBe('un mot');
+    expect(readPortalDraft(USER, OBJ, elsewhere)?.draft.contacts).toBeDefined();
+  });
+
+  it('le MESSAGE survit même quand les tranches sont écartées, et les rubriques perdues sont NOMMÉES', () => {
+    // La bannière disait « refaites vos changements » alors que le contenu venait d'être
+    // supprimé, message à l'office compris. Un message libre n'écrase rien : il n'y a
+    // aucune raison de le jeter.
+    writePortalDraft(USER, OBJ, server(), dirty(), 'ma piscine est en travaux');
+
+    const moved = server({
+      contacts: {
+        objectItems: [{ id: 'c1', kindCode: 'phone', isPublic: true, value: '0262 99 99 99' }],
+        kindOptions: [{ id: 'k1', code: 'phone', label: 'Téléphone' }],
+      },
+    });
+    const read = readPortalDraft(USER, OBJ, moved);
+    expect(read?.note).toBe('ma piscine est en travaux');
+    expect(read?.draft).toEqual({});
+    expect(read?.droppedModules).toEqual(['contacts']);
+  });
+
+  it('une note SEULE n’est jamais écartée : elle ne peut écraser aucun travail de l’office', () => {
+    writePortalDraft(USER, OBJ, server(), {}, 'un mot');
+
+    const moved = server({ descriptions: { object: { chapo: { baseValue: 'Z', values: { fr: 'Z' } } } } });
+    expect(readPortalDraft(USER, OBJ, moved)?.note).toBe('un mot');
   });
 
   it('ne rejoue JAMAIS le brouillon d’un autre compte sur un appareil partagé', () => {
@@ -214,16 +257,22 @@ describe('usePortalDraft', () => {
     expect(result.current.discarded).toBe(false);
   });
 
-  it('signale l’abandon quand la fiche a changé côté office (et n’écrase rien)', () => {
-    writePortalDraft(USER, OBJ, server(), dirty(), 'perdu');
+  it('signale l’abandon quand l’office a retouché la MÊME tranche (et n’écrase rien)', () => {
+    writePortalDraft(USER, OBJ, server(), dirty(), 'gardé quand même');
     const editor = fakeEditor();
 
-    const moved = server({ descriptions: { object: { chapo: { baseValue: 'B', values: { fr: 'B' } } } } });
+    const moved = server({
+      contacts: {
+        objectItems: [{ id: 'c1', kindCode: 'phone', isPublic: true, value: '0262 11 11 11' }],
+        kindOptions: [{ id: 'k1', code: 'phone', label: 'Téléphone' }],
+      },
+    });
     const { result } = renderHook(() => usePortalDraft({ userId: USER, objectId: OBJ, serverModules: moved, editor }));
 
     expect(result.current.discarded).toBe(true);
     expect(editor.replaceModule).not.toHaveBeenCalled();
-    expect(result.current.note).toBe('');
+    // Le message, lui, n'écrase rien : il survit à l'abandon des tranches.
+    expect(result.current.note).toBe('gardé quand même');
   });
 
   it('enregistre le message seul après la temporisation, sans aucune rubrique modifiée', () => {
@@ -268,6 +317,42 @@ describe('usePortalDraft', () => {
     rerender({ editor: committed });
 
     expect(readPortalDraft(USER, OBJ, server())?.note).toBe('avant envoi');
+  });
+
+  it('un compte pas encore connu à la première frappe n’ANNULE PAS la restauration', () => {
+    // La session arrive après le premier rendu. Marquer la restauration « faite » avant de
+    // savoir s'il y a un compte armait un piège muet : le brouillon n'était jamais relu.
+    writePortalDraft(USER, OBJ, server(), dirty(), 'retrouvé');
+    const editor = fakeEditor();
+    const { result, rerender } = renderHook(
+      (props: { userId: string | null }) =>
+        usePortalDraft({ userId: props.userId, objectId: OBJ, serverModules: server(), editor }),
+      { initialProps: { userId: null as string | null } },
+    );
+    expect(result.current.note).toBe('');
+
+    rerender({ userId: USER });
+
+    expect(result.current.note).toBe('retrouvé');
+    expect(editor.replaceModule).toHaveBeenCalledWith('contacts', expect.anything());
+  });
+
+  it('nomme les tranches écartées pour que l’écran puisse les dire', () => {
+    writePortalDraft(USER, OBJ, server(), dirty(), 'gardé');
+    const editor = fakeEditor();
+    const moved = server({
+      contacts: {
+        objectItems: [{ id: 'c1', kindCode: 'phone', isPublic: true, value: '0000' }],
+        kindOptions: [{ id: 'k1', code: 'phone', label: 'Téléphone' }],
+      },
+    });
+
+    const { result } = renderHook(() => usePortalDraft({ userId: USER, objectId: OBJ, serverModules: moved, editor }));
+
+    expect(result.current.discarded).toBe(true);
+    expect(result.current.discardedModules).toEqual(['contacts']);
+    // Le message, lui, n'écrase rien : il reste.
+    expect(result.current.note).toBe('gardé');
   });
 
   it('clear() efface le brouillon ET le message', () => {

@@ -105,6 +105,21 @@ describe('PortalVerifyCard', () => {
     expect(screen.queryByText(/Ce message partira avec votre prochain envoi/)).not.toBeInTheDocument();
   });
 
+  it('un signalement à DEUX paragraphes ne perd pas le second après un blur', async () => {
+    // Le second paragraphe migrait dans la moitié « message libre », invisible ici : rien
+    // n'était perdu dans ce qui part à l'office, mais le partenaire VOYAIT s'effacer ce
+    // qu’il venait de taper — dans le composant même de la Critique 1.
+    const { onNoteChange, view, props } = setup();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Signaler une erreur' }));
+    await userEvent.click(screen.getByLabelText('Dites-nous ce qui est faux'));
+    await userEvent.paste('Le nom est faux.\n\nEt l’adresse aussi.');
+    await userEvent.click(screen.getByRole('button', { name: 'Garder ce signalement' }));
+
+    const written = onNoteChange.mock.calls.at(-1)?.[0] as string;
+    view.rerender(<PortalVerifyCard {...props} note={written} />);
+    expect(screen.getByLabelText('Dites-nous ce qui est faux')).toHaveValue('Le nom est faux.\n\nEt l’adresse aussi.');
+  });
   it('vider le signalement ne laisse pas le préfixe orphelin dans la note', async () => {
     const { onNoteChange } = setup({ note: 'Erreur signalée : ancienne erreur' });
 

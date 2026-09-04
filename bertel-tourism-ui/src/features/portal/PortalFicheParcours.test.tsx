@@ -188,6 +188,56 @@ describe('parcours — la saisie en cours survit à un RECHARGEMENT', () => {
     expect(await screen.findByLabelText('Téléphone')).toHaveValue('');
   });
 
+  it('INTERROMPU dans la fenêtre de temporisation : la saisie est quand même écrite', async () => {
+    // LE test qui prouve la fermeture. Tous les autres attendent l'écriture AVANT de
+    // démonter — ils prouvent donc l'inverse. Ici : aucune pause, aucun timer avancé, et
+    // le débounce se réarme à chaque frappe. C'est l'exact scénario « appel entrant ».
+    primeServices();
+    searchParams = new URLSearchParams('rubrique=contacts');
+    const first = renderPage();
+
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692 45 12 30');
+    // La temporisation de 800 ms N’EST PAS écoulée : rien n’a encore été écrit.
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).toBeNull();
+
+    first.unmount();
+
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).not.toBeNull();
+    primeServices();
+    renderPage();
+    expect(await screen.findByLabelText('Téléphone')).toHaveValue('0692 45 12 30');
+  });
+
+  it('la page qui se CACHE (appel entrant, onglet en arrière-plan) écrit sur-le-champ', async () => {
+    // `pagehide` et `visibilitychange -> hidden` sont les seuls signaux fiables sur mobile ;
+    // `beforeunload` n'y est ni garanti ni souhaitable (il empêche la mise en bfcache).
+    primeServices();
+    searchParams = new URLSearchParams('rubrique=contacts');
+    renderPage();
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692');
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).toBeNull();
+
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).toContain('0692');
+  });
+
+  it('mémoire pleine : on le DIT au lieu de laisser la saisie redevenir volatile', async () => {
+    primeServices();
+    const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    searchParams = new URLSearchParams('rubrique=contacts');
+    renderPage();
+
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692');
+    window.dispatchEvent(new Event('pagehide'));
+
+    expect(
+      await screen.findByText(/Nous ne pouvons plus garder vos modifications sur cet appareil/),
+    ).toBeInTheDocument();
+    setItem.mockRestore();
+  });
   it('« Annuler mes modifications » efface AUSSI la saisie non validée', async () => {
     // La saisie en cours et le brouillon sont deux clés : abandonner tout doit emporter
     // les deux, sinon la rubrique se rouvre avec un texte que le partenaire croit effacé.

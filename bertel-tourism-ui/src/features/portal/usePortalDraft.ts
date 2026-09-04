@@ -88,15 +88,50 @@ function readRaw(key: string): string | null {
   }
 }
 
-function writeRaw(key: string, value: string): void {
+/** Vrai si l'écriture a abouti. Un échec (quota plein, stockage refusé) DOIT remonter :
+ *  la saisie redevient volatile, et le taire ramène le problème d'origine, invisible. */
+function writeRaw(key: string, value: string): boolean {
   const store = getStore();
-  if (!store) return;
+  if (!store) return false;
   try {
     store.setItem(key, value);
+    return true;
   } catch {
-    // Quota atteint ou stockage refusé : l'appareil ne retiendra rien. On ne casse
-    // surtout pas la saisie en cours pour autant.
+    // Quota atteint ou stockage refusé. On ne casse surtout pas la saisie en cours —
+    // mais l'appelant le dira au partenaire.
+    return false;
   }
+}
+
+/**
+ * Écrit ce qui reste en attente quand la page se CACHE ou que le composant se démonte.
+ *
+ * Le débounce de 800 ms se réarme à chaque frappe : une saisie tapée sans pause, puis
+ * interrompue tout de suite — un appel entrant, l'onglet tué par le système — n'était
+ * JAMAIS écrite. La fenêtre est passée d'illimitée à 800 ms ; ceci la ferme.
+ *
+ * `pagehide` couvre la fermeture et la mise en bfcache ; `visibilitychange → hidden` est le
+ * SEUL signal fiable sur iOS Safari, où `beforeunload` n'est ni garanti ni souhaitable (il
+ * empêche la mise en bfcache). L'écriture est SYNCHRONE — `localStorage.setItem` l'est, et
+ * rien ne doit s'interposer : un `setTimeout(0)` ou une promesse ne s'exécuteraient plus.
+ */
+function useFlushOnHide(flush: () => void): void {
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+  useEffect(() => {
+    const run = () => flushRef.current();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') run();
+    };
+    window.addEventListener('pagehide', run);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', run);
+      document.removeEventListener('visibilitychange', onVisibility);
+      // Démontage React sans rechargement : même fenêtre, même perte.
+      run();
+    };
+  }, []);
 }
 
 function removeRaw(key: string): void {
@@ -202,9 +237,9 @@ export function writePortalDraft(
   serverModules: ObjectWorkspaceModules,
   dirtySlices: PortalSlices,
   note: string,
-): void {
-  if (!userId) return;
-  writeRaw(
+): boolean {
+  if (!userId) return false;
+  return writeRaw(
     portalDraftKey(userId, objectId),
     serializePortalDraft({
       objectId,
@@ -370,20 +405,21 @@ export function writePortalForms(
   objectId: string,
   serverModules: ObjectWorkspaceModules,
   forms: Record<string, unknown>,
-): void {
-  if (!userId) return;
+): boolean {
+  if (!userId) return false;
   if (Object.keys(forms).length === 0) {
     removeRaw(portalFormKey(userId, objectId));
-    return;
+    return true;
   }
   const payload: PortalFormPayload = {
     fingerprint: fingerprintOf(serverModules, modulesOfForms(forms)),
     forms,
   };
   try {
-    writeRaw(portalFormKey(userId, objectId), JSON.stringify(payload));
+    return writeRaw(portalFormKey(userId, objectId), JSON.stringify(payload));
   } catch {
     // Un formulaire non sérialisable ne doit pas casser la saisie en cours.
+    return false;
   }
 }
 
@@ -395,51 +431,73 @@ export function usePortalFormCache({
   userId,
   objectId,
   serverModules,
+  onStorageFailure,
 }: {
   userId: string | null;
   objectId: string;
   serverModules: ObjectWorkspaceModules;
+  /** L'appareil ne peut plus retenir : l'écran doit le DIRE, pas le taire. */
+  onStorageFailure?: () => void;
 }): PortalFormStore {
   const serverRef = useRef(serverModules);
   serverRef.current = serverModules;
   const timerRef = useRef<number | null>(null);
   const formsRef = useRef<Record<string, unknown> | null>(null);
+  /** Une écriture est due : c'est ce que le flush de dernière seconde doit poser. */
+  const dirtyRef = useRef(false);
   const accountRef = useRef({ userId, objectId });
   accountRef.current = { userId, objectId };
+  const failureRef = useRef(onStorageFailure);
+  failureRef.current = onStorageFailure;
 
-  return useMemo<PortalFormStore>(() => {
+  const store = useMemo<PortalFormStore & { flushNow: () => void }>(() => {
     const load = () => {
       if (formsRef.current === null) {
         formsRef.current = readPortalForms(accountRef.current.userId, accountRef.current.objectId, serverRef.current);
       }
       return formsRef.current;
     };
-    const flush = () => {
+    const commit = () => {
+      if (!dirtyRef.current) return;
+      dirtyRef.current = false;
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      const written = writePortalForms(
+        accountRef.current.userId,
+        accountRef.current.objectId,
+        serverRef.current,
+        formsRef.current ?? {},
+      );
+      if (!written && accountRef.current.userId) failureRef.current?.();
+    };
+    const schedule = () => {
+      dirtyRef.current = true;
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-      // Différé : sans cela, chaque frappe écrirait dans `localStorage`.
-      timerRef.current = window.setTimeout(() => {
-        writePortalForms(
-          accountRef.current.userId,
-          accountRef.current.objectId,
-          serverRef.current,
-          formsRef.current ?? {},
-        );
-      }, WRITE_DEBOUNCE_MS);
+      // Différé : sans cela, chaque frappe écrirait dans `localStorage`. Le débounce se
+      // réarme à chaque touche — d'où le flush de dernière seconde, sans lequel une
+      // saisie tapée sans pause puis interrompue ne serait jamais écrite.
+      timerRef.current = window.setTimeout(commit, WRITE_DEBOUNCE_MS);
     };
     return {
       get: (key) => load()[key],
       set: (key, value) => {
         load()[key] = value;
-        flush();
+        schedule();
       },
       delete: (key) => {
         delete load()[key];
-        flush();
+        schedule();
       },
+      flushNow: commit,
     };
     // Un magasin par montage : `key={objectId}` garantit un remontage par fiche.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useFlushOnHide(store.flushNow);
+  return store;
 }
 
 // ═════════════════════════════════ Le hook ══════════════════════════════════
@@ -456,6 +514,8 @@ export interface UsePortalDraftInput {
   /** Les modules tels que le SERVEUR les rend (cache React Query), JAMAIS `editor.baseline`. */
   serverModules: ObjectWorkspaceModules;
   editor: DraftEditor;
+  /** L'appareil ne peut plus retenir (quota plein) : l'écran doit le DIRE. */
+  onStorageFailure?: () => void;
 }
 
 export interface UsePortalDraftResult {
@@ -478,7 +538,13 @@ export interface UsePortalDraftResult {
  * Monté sous `key={objectId}` par l'appelant : `useObjectEditorState` est init-once et ne
  * resynchronise jamais, la restauration n'a donc qu'UNE occasion de s'exécuter.
  */
-export function usePortalDraft({ userId, objectId, serverModules, editor }: UsePortalDraftInput): UsePortalDraftResult {
+export function usePortalDraft({
+  userId,
+  objectId,
+  serverModules,
+  editor,
+  onStorageFailure,
+}: UsePortalDraftInput): UsePortalDraftResult {
   const [note, setNote] = useState('');
   const [discarded, setDiscarded] = useState(false);
   const [discardedModules, setDiscardedModules] = useState<WorkspaceModuleId[]>([]);
@@ -493,6 +559,8 @@ export function usePortalDraft({ userId, objectId, serverModules, editor }: UseP
   editorRef.current = editor;
   const serverRef = useRef(serverModules);
   serverRef.current = serverModules;
+  const failureRef = useRef(onStorageFailure);
+  failureRef.current = onStorageFailure;
 
   useEffect(() => {
     // Pas encore de compte : la session arrive APRÈS le premier rendu. Sortir en marquant
@@ -540,24 +608,46 @@ export function usePortalDraft({ userId, objectId, serverModules, editor }: UseP
     }
   }, [dirtySlices]);
 
+  /** L'écriture DUE mais pas encore faite — ce que le flush de dernière seconde doit poser. */
+  const pendingWriteRef = useRef<(() => string | null) | null>(null);
+
   useEffect(() => {
     // Tant que la restauration n'a pas eu lieu, écrire écraserait le brouillon stocké
     // par un état vide — précisément celui qu'on vient de lire.
     if (!restoredRef.current || !userId) return;
     const empty = Object.keys(dirtySlices).length === 0 && note.trim() === '';
-    const timer = window.setTimeout(() => {
+    const write = (): string | null => {
       if (empty) {
         clearPortalDraft(userId, objectId);
-        setSavedAt(null);
-        return;
+        return null;
       }
-      writePortalDraft(userId, objectId, serverRef.current, dirtySlices, note);
-      setSavedAt(new Date().toISOString());
+      const written = writePortalDraft(userId, objectId, serverRef.current, dirtySlices, note);
+      if (!written) {
+        failureRef.current?.();
+        return null;
+      }
+      return new Date().toISOString();
+    };
+    // Le message à l'office se tape lettre par lettre : sans ce relais, une note écrite
+    // d'un trait puis interrompue partagerait le sort de la saisie de rubrique.
+    pendingWriteRef.current = () => {
+      const at = write();
+      pendingWriteRef.current = null;
+      return at;
+    };
+    const timer = window.setTimeout(() => {
+      const at = write();
+      pendingWriteRef.current = null;
+      setSavedAt(at);
     }, WRITE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
     // `signature` remplace `dirtySlices` : l'objet est recréé à chaque rendu de l'éditeur.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, note, userId, objectId, cleared]);
+
+  useFlushOnHide(() => {
+    pendingWriteRef.current?.();
+  });
 
   const clear = useCallback(() => {
     clearPortalDraft(userId, objectId);

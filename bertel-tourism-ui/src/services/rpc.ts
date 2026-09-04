@@ -1,4 +1,4 @@
-import { filterMockCards, mockAuditQuestions, mockObjectDetails, mockPublicationCards } from '../data/mock';
+import { filterMockCards, mockAuditQuestions, mockCards, mockObjectDetails, mockPublicationCards } from '../data/mock';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { AuditQuestion, BackendObjectTypeCode, ExplorerBucketKey, ExplorerFilters, ObjectCard, ObjectDetail, PublicationCard, RpcPageResponse } from '../types/domain';
@@ -427,6 +427,58 @@ export async function listObjectMarkers(
   );
 
   return dedupeExplorerCards(perBucket.flat());
+}
+
+// ---------------------------------------------------------------------------
+// Cartes réclamées PAR ID (§125 bis) — la voie de rattrapage de la sélection.
+//
+// La liste est paginée, la carte ne l'est pas : une sélection faite sur la carte
+// désigne régulièrement des fiches hors de la fenêtre chargée (cf.
+// components/explorer/selection-hydration.ts). `api.get_object_cards_batch` est
+// exactement l'enrichissement que sert déjà la page de liste — mêmes clés, mêmes
+// taxonomies, mêmes badges — donc une fiche réclamée ici est INDISCERNABLE de la
+// même fiche arrivée par la pagination. Un marqueur, lui, ne porte que
+// {id,type,name,image,open_now,location} : le rendre comme carte de résultat
+// donnerait une carte amputée de ses tags, sa taxonomie et sa description.
+//
+// La fonction est SECURITY DEFINER mais authorize-once : elle re-filtre la liste
+// d'ids sur le périmètre lisible de l'appelant (publié ∪ étendu). Un id inconnu ou
+// non autorisé est simplement absent du retour — jamais une erreur.
+// ---------------------------------------------------------------------------
+export async function listExplorerCardsByIds(
+  ids: string[],
+  langPrefs: string[],
+  signal?: AbortSignal,
+): Promise<ObjectCard[]> {
+  const wanted = [...new Set(ids.map((id) => String(id).trim()).filter(Boolean))];
+  if (wanted.length === 0) {
+    return [];
+  }
+
+  const session = useSessionStore.getState();
+  const client = requireRpcClient();
+
+  if (session.demoMode || !client) {
+    const byId = new Map(mockCards.map((card) => [card.id, card] as const));
+    return wanted.flatMap((id) => {
+      const card = byId.get(id);
+      return card ? [card] : [];
+    });
+  }
+
+  const { data, error } = await withAbort(
+    client.schema('api').rpc('get_object_cards_batch', {
+      p_ids: wanted,
+      p_lang_prefs: langPrefs,
+    }),
+    signal,
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data) ? normalizeExplorerCards(data as ObjectCard[]) : [];
 }
 
 // ---------------------------------------------------------------------------

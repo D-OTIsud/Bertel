@@ -16,6 +16,7 @@ import { saveBrandingSettings } from '../services/branding';
 import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
+import { TestCorpusSettings } from '../features/settings/TestCorpusSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
@@ -802,6 +803,14 @@ export default function SettingsPage() {
       {activeSection === 'organisations' && role === 'super_admin' && (
         <article className="panel-card">
           <OrgsPanel />
+        </article>
+      )}
+
+      {/* 18b — corpus du bac a sable : remise a zero. Le gating de role ici n'est
+          qu'un confort d'affichage ; la RPC porte ses propres gardes serveur. */}
+      {activeSection === 'test-corpus' && role === 'super_admin' && (
+        <article className="panel-card">
+          <TestCorpusSettings />
         </article>
       )}
 

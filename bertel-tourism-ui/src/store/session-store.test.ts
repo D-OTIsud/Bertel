@@ -5,11 +5,27 @@ describe('session active org', () => {
     useSessionStore.getState().hydrateFromAuth({
       role: 'tourism_agent', userId: 'u1', email: 'a@b.c', userName: 'A', avatar: 'A', avatarUrl: null,
       langPrefs: ['fr'], canEditObjects: true, canCreateObjects: false, orgId: 'ORG-OTI', orgName: 'OTI du Sud',
-      adminRank: null, adminRoleCode: null,
+      adminRank: null, adminRoleCode: null, isTestRealm: false,
     });
     expect(useSessionStore.getState().orgId).toBe('ORG-OTI');
     expect(useSessionStore.getState().orgName).toBe('OTI du Sud');
     expect(useSessionStore.getState().canCreateObjects).toBe(false);
+  });
+
+  // 18b — le realm de bac a sable suit la session, et RETOMBE avec elle : un
+  // drapeau resté armé après une déconnexion afficherait « bac à sable » au
+  // compte suivant, sur des fiches réelles.
+  it('isTestRealm est porté par hydrateFromAuth et retombe à la déconnexion', () => {
+    useSessionStore.getState().hydrateFromAuth({
+      role: 'tourism_agent', userId: 'u2', email: 't@b.c', userName: 'T', avatar: 'T', avatarUrl: null,
+      langPrefs: ['fr'], canEditObjects: true, canCreateObjects: true,
+      orgId: 'ORGTST0000000001', orgName: 'Bac a sable', adminRank: null, adminRoleCode: null,
+      isTestRealm: true,
+    });
+    expect(useSessionStore.getState().isTestRealm).toBe(true);
+
+    useSessionStore.getState().setGuest();
+    expect(useSessionStore.getState().isTestRealm).toBe(false);
   });
 
   it('applyProfile updates name + recomputes initials + sets avatarUrl', () => {

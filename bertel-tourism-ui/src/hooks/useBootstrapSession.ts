@@ -72,6 +72,29 @@ async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string
   }
 }
 
+// Resolves whether the current user belongs to a sandbox organisation, from
+// `api.current_user_test_realm()` — la MEME feuille que la garde SQL. On ne
+// re-transcrit surtout pas la regle en TypeScript : c'est ainsi qu'on cree une
+// divergence front/serveur (§214, §17c). Purement indicatif — le cloisonnement
+// est fait par le serveur, ce drapeau ne fait que l'AFFICHER.
+// Faux par defaut : afficher a tort « bac a sable » sur la production ferait
+// croire a un testeur qu'il peut casser des fiches reelles.
+async function fetchTestRealm(): Promise<boolean> {
+  const apiClient = getApiClient();
+  if (!apiClient) return false;
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_test_realm');
+    if (error) {
+      console.warn('current_user_test_realm unavailable, assuming production realm.', error);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn('current_user_test_realm threw, assuming production realm.', err);
+    return false;
+  }
+}
+
 // Resolves the current user's team-admin rank from `api.current_user_admin_rank()`.
 // Returns null when the user has no admin role or the helper is unavailable.
 async function fetchAdminRank(): Promise<number | null> {
@@ -209,6 +232,10 @@ export function useBootstrapSession() {
       if (cancelled) {
         return;
       }
+      const isTestRealm = await fetchTestRealm();
+      if (cancelled) {
+        return;
+      }
 
       hydrateFromAuth({
         role,
@@ -224,6 +251,7 @@ export function useBootstrapSession() {
         orgName: activeOrg.orgName,
         adminRank,
         adminRoleCode,
+        isTestRealm,
       });
     }
 

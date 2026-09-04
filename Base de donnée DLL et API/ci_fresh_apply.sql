@@ -531,6 +531,12 @@ ROLLBACK;
 \echo '== 18a-test  la garde prouvee dans les DEUX sens, et sur la surface qui compte : l API partenaire =='
 \ir tests/test_test_org_isolation.sql
 
+\echo '== 18b   migration_test_org_seed.sql  (le CORPUS du bac a sable : l ORG de test, ses acteurs fictifs, et 15 fiches de chacun des 18 types adressables). Strategie hybride : la COQUILLE est fabriquee (noms, acteurs, adresses, telephones en plage ARCEP fictive, e-mails en .test non routable) pour qu AUCUNE donnee personnelle reelle n entre dans le corpus ; la PROFONDEUR est empruntee aux fiches reelles du meme type (jeux d equipements, communes et coordonnees, formes de tarifs, classements). Les 9 types sans source vivante (PNA ITI VIL ASC RVA CAMP HPA SPU PCU) tombent sur la fabrication generique — ce sont justement ceux qu on ne peut aujourd hui exercer sur rien. Le seed ne pose JAMAIS is_test a la main : il pose le lien d ORG primaire et laisse le trigger 18a marquer la fiche, sinon le corpus pourrait diverger de son organisation. Idempotent, ce qui n allait PAS de soi : les tables filles ont des cles primaires de substitution, ou un ON CONFLICT DO NOTHING ne declenche RIEN et un second passage dupliquerait chaque adresse, tarif et periode — d ou la purge des filles avant reecriture, actor_object_role compris (son index unique PARTIEL sur (object_id, role_id) WHERE is_primary n est couvert par aucun ON CONFLICT sur la cle primaire). Porte aussi api.rpc_reset_test_data() : superuser, SANS ARGUMENT (la cible est constante, on ne peut pas la pointer sur une ORG de production) et refus si l ORG visee n est pas is_test_org. APRES 18a. =='
+\ir migration_test_org_seed.sql
+
+\echo '== 18b-test  le corpus seme, complet et cloisonne : 15 fiches par type, des acteurs fictifs, et RIEN dans le flux partenaire =='
+\ir tests/test_test_org_seed.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

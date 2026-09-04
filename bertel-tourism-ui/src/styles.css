@@ -602,6 +602,18 @@ textarea::placeholder {
   color: var(--text);
 }
 .mod-scope { margin: 0.5rem 0 0; font-size: 12px; color: var(--text-muted); }
+/* Compte rendu d'un geste groupé : ce n'est ni une erreur ni une décoration, c'est le seul
+   endroit qui dit ce que le RPC a fait. Il doit se distinguer de .form-error sans crier. */
+.mod-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #1f6b45;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+}
 .mod-scope a { color: inherit; text-decoration: underline; }
 
 /* ---- Palette de commandes ⌘K (D24) ---- */
@@ -13795,6 +13807,13 @@ a {
 }
 .confirm-attestation__label input { margin-top: 3px; flex: none; }
 .confirm-attestation__hint { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); }
+/* Réponse au clic refusé — née du clic, pas du montage : elle doit se voir. */
+.confirm-attestation__blocked {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #9a3322;
+}
 
 /* 7.3 — Fournisseurs IA : table + formulaire en vocabulaire maison (plus de styles inline). */
 .ai-provider { display: flex; flex-direction: column; gap: 16px; }

@@ -51,6 +51,20 @@ const SUB_ITEMS: PendingChangeItem[] = [
   },
 ];
 
+// Un envoi 100 % AUTOMATIQUE : rien à certifier, donc aucune case — le seul cas où le geste
+// groupé part avec `p_include_manual = false`.
+const AUTO_ITEMS: PendingChangeItem[] = [
+  { ...ITEM, id: 'pc-x', submissionId: 'sub-2', actorLabel: 'Luc Ah-Nieme', manualApply: false, field: 'Horaires' },
+  { ...ITEM, id: 'pc-y', submissionId: 'sub-2', actorLabel: 'Luc Ah-Nieme', manualApply: false, field: 'Tarifs' },
+];
+
+const APPROVAL_OK = {
+  appliedCount: 1,
+  approvedManualCount: 1,
+  skippedManualCount: 0,
+  submissionStatus: 'approved',
+};
+
 function renderPage(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
     <QueryClientProvider client={client}>
@@ -65,7 +79,7 @@ beforeEach(() => {
   mock.listPendingChanges.mockResolvedValue([ITEM]);
   mock.approvePendingChange.mockResolvedValue(undefined);
   mock.rejectPendingChange.mockResolvedValue(undefined);
-  mock.approveFicheSubmission.mockResolvedValue(undefined);
+  mock.approveFicheSubmission.mockResolvedValue(APPROVAL_OK);
   mock.rejectFicheSubmission.mockResolvedValue(undefined);
 });
 
@@ -137,6 +151,27 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     await waitFor(() => expect(mock.listPendingChanges).toHaveBeenCalledWith('approved', null));
   });
 
+  // Relisible ne suffit pas : le filtre n'a de sens que si la ligne dit QUI a signé et QUAND.
+  // `reviewer_label` est déjà émis par le RPC — ne pas l'afficher, c'était laisser une
+  // attestation nominative anonyme à l'écran, et un statut brut en anglais à traduire.
+  it('D9 : une ligne attestée est IMPUTABLE (statut en français, signataire, date, motif)', async () => {
+    mock.listPendingChanges.mockResolvedValue([
+      {
+        ...SUB_ITEMS[0],
+        status: 'approved',
+        reviewerLabel: 'Claire Robert',
+        reviewedAt: '2026-03-13T09:00:00Z',
+        reviewNote: 'Reporté dans la fiche',
+      },
+    ]);
+    renderPage();
+    expect(await screen.findByText(/Validée sur attestation \(report manuel\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Validée par Claire Robert le 2026-03-13/)).toBeInTheDocument();
+    expect(screen.getByText(/Motif : Reporté dans la fiche/)).toBeInTheDocument();
+    // Le statut brut du serveur ne doit plus atteindre l'écran.
+    expect(screen.queryByText(/· approved/)).not.toBeInTheDocument();
+  });
+
   // FAIT VÉRIFIÉ n°3 : sans `objectFilter` dans la queryKey, React Query re-sert le cache de
   // l'objet précédent — la navigation Next entre ?object=A et ?object=B ne remonte pas le
   // composant, et l'agent tranche la ligne d'un AUTRE partenaire en croyant traiter la sienne.
@@ -168,44 +203,107 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     renderPage();
     expect(await screen.findByText(/Marie Payet/)).toBeInTheDocument();
     expect(screen.getByText(/Tarifs à jour/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Tout approuver/ }));
-    const dialog = await screen.findByRole('dialog', { name: /Approuver l’envoi/ });
-    // Le groupe porte une rubrique auto ET une manuelle : sans la case, seule l'auto part —
-    // et la modale doit le DIRE, sinon « tout approuver » ment sur ce qu'il fait.
-    expect(dialog).toHaveTextContent(/restera.{0,20}en attente/i);
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Approuver$/ }));
-    await waitFor(() => expect(mock.approveFicheSubmission).toHaveBeenCalledWith('sub-1', null, false));
+    expect(screen.getByRole('button', { name: /Tout approuver/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Tout rejeter/ })).toBeInTheDocument();
   });
 
-  it('D9 : inclure les rubriques manuelles EXIGE de cocher l’attestation groupée', async () => {
+  // L'ordre du serveur est `submitted_at DESC`. Rendre TOUS les envois puis TOUTES les lignes
+  // isolées ferait passer une proposition interne du jour SOUS un envoi partenaire plus ancien :
+  // la file affichée ne serait plus celle qui a été demandée.
+  it('D9 : envois et propositions internes restent INTERCALÉS dans l’ordre du serveur', async () => {
+    mock.listPendingChanges.mockResolvedValue([
+      { ...ITEM, id: 'pc-i1', field: 'Interne récent' },
+      { ...SUB_ITEMS[0], id: 'pc-s1', field: 'Envoi milieu' },
+      { ...ITEM, id: 'pc-i2', field: 'Interne ancien' },
+    ]);
+    renderPage();
+    await screen.findByText(/Interne récent/);
+    const order = screen
+      .getAllByText(/Interne récent|Envoi milieu|Interne ancien/)
+      .map((node) => node.textContent?.replace(/\s+/g, ' ').trim());
+    expect(order).toEqual([
+      'Hôtel Basalte · Interne récent',
+      'Hôtel Basalte · Envoi milieu',
+      'Hôtel Basalte · Interne ancien',
+    ]);
+  });
+
+  // Le SEUL cas où « Tout approuver » ne certifie rien : aucune rubrique manuelle, donc
+  // aucune case — `p_include_manual` part à false parce qu'il n'y a rien à inclure.
+  it('D9 : un envoi tout-automatique s’approuve sans certification', async () => {
+    mock.listPendingChanges.mockResolvedValue(AUTO_ITEMS);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Tout approuver/ }));
+    const dialog = await screen.findByRole('dialog', { name: /Approuver l’envoi/ });
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /^Approuver$/ }));
+    await waitFor(() => expect(mock.approveFicheSubmission).toHaveBeenCalledWith('sub-2', null, false));
+  });
+
+  // Le geste groupé certifie N rubriques d'un clic : sa friction doit égaler celle de
+  // l'unitaire. Tant que la case n'était obligatoire que sur un envoi 100 % manuel, un envoi
+  // MIXTE se validait en deux clics — sous un message qui poussait justement à cocher.
+  it('D9 : sur un envoi MIXTE, la certification groupée est obligatoire et NOMME les rubriques', async () => {
     mock.listPendingChanges.mockResolvedValue(SUB_ITEMS);
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Tout approuver/ }));
     const dialog = await screen.findByRole('dialog', { name: /Approuver l’envoi/ });
+    // On ne signe pas un compteur : la rubrique manuelle est nommée dans la case elle-même.
     const attestation = within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i });
+    expect(attestation).toHaveAccessibleName(/Contacts/);
     expect(attestation).not.toBeChecked();
 
+    // Le geste réflexe ne passe pas, et l'écran RÉAGIT au clic refusé.
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
+    expect(mock.approveFicheSubmission).not.toHaveBeenCalled();
+
     fireEvent.click(attestation);
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Approuver$/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
     await waitFor(() => expect(mock.approveFicheSubmission).toHaveBeenCalledWith('sub-1', null, true));
   });
 
   // Piège du RPC : si TOUTES les lignes sont manuelles et que l'attestation n'est pas signée,
   // approve_fiche_submission saute tout et rend un succès à 0 ligne. L'agent lirait « approuvé »
-  // sur un envoi où rien n'a bougé. La confirmation reste donc BLOQUÉE.
+  // sur un envoi où rien n'a bougé.
   it('D9 : un envoi 100 % manuel ne s’approuve pas « à vide »', async () => {
     mock.listPendingChanges.mockResolvedValue([SUB_ITEMS[0]]);
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Tout approuver/ }));
     const dialog = await screen.findByRole('dialog', { name: /Approuver l’envoi/ });
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Approuver$/ }));
-    await waitFor(() => expect(within(dialog).getByText(/rien ne serait validé/i)).toBeInTheDocument());
+    expect(within(dialog).getByText(/rien ne serait validé/i)).toBeInTheDocument();
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
     expect(mock.approveFicheSubmission).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i }));
-    fireEvent.click(within(dialog).getByRole('button', { name: /^Approuver$/ }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
     await waitFor(() => expect(mock.approveFicheSubmission).toHaveBeenCalledWith('sub-1', null, true));
+  });
+
+  // Le RPC ne traite pas forcément tout ce qu'on lui donne. Sans compte rendu, un « Tout
+  // approuver » partiel est indiscernable d'un geste complet : le panneau rétrécit, point.
+  it('D9 : après un geste groupé, l’écran DIT ce que le RPC a fait', async () => {
+    mock.listPendingChanges.mockResolvedValue(SUB_ITEMS);
+    mock.approveFicheSubmission.mockResolvedValue({
+      appliedCount: 2,
+      approvedManualCount: 4,
+      skippedManualCount: 1,
+      submissionStatus: 'partial',
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Tout approuver/ }));
+    const dialog = await screen.findByRole('dialog', { name: /Approuver l’envoi/ });
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
+
+    const notice = await screen.findByRole('status');
+    expect(notice).toHaveTextContent(/2 modifications appliquées automatiquement/i);
+    expect(notice).toHaveTextContent(/4 validées sur votre attestation/i);
+    expect(notice).toHaveTextContent(/1 laissée en attente/i);
+    expect(notice).toHaveTextContent(/L’envoi reste ouvert/i);
   });
 
   it('D9 : « Tout rejeter » exige un motif avant d’appeler le RPC groupé', async () => {
@@ -236,9 +334,11 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     const attestation = within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i });
     expect(attestation).not.toBeChecked();
 
-    // Le geste réflexe — cliquer le bouton de confirmation — ne doit RIEN valider.
+    // Le geste réflexe ne doit RIEN valider — et l'écran doit RÉAGIR au clic refusé. Le hint,
+    // lui, est affiché depuis l'ouverture : le constater ne prouverait aucune réaction.
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    await waitFor(() => expect(within(dialog).getByText(/sans ce report/i)).toBeInTheDocument());
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
     expect(mock.approvePendingChange).not.toHaveBeenCalled();
 
     // Geste conscient : on coche, puis on valide.
@@ -266,8 +366,8 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     const next = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
     expect(within(next).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();
     fireEvent.click(within(next).getByRole('button', { name: /Certifier et valider/ }));
-    // Sans un NOUVEAU geste, la seconde ligne ne part pas.
-    await waitFor(() => expect(within(next).getByText(/sans ce report/i)).toBeInTheDocument());
+    // Sans un NOUVEAU geste, la seconde ligne ne part pas — et le refus se voit.
+    expect(await within(next).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
     expect(mock.approvePendingChange).toHaveBeenCalledTimes(1);
   });
 
@@ -281,8 +381,9 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^Approuver$/ }));
     const dialog = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
     expect(within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();
+    expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    await waitFor(() => expect(within(dialog).getByText(/sans ce report/i)).toBeInTheDocument());
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
     expect(mock.approvePendingChange).not.toHaveBeenCalled();
   });
 

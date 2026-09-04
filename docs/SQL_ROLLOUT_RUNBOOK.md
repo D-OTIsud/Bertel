@@ -1272,3 +1272,95 @@ Le bouton « Nouvelle liste » (`ListsManageView`, deux emplacements) et « Cré
 (`SelectionBar` de l'Exploreur) sont masqués hors superuser — sans quoi l'écran promettrait une
 action que le serveur refuse. Sélecteur `isPlatformSuperuser`, **délibérément distinct** de
 `canAdministerTeam` (qui accepte le rang ≥ 10) ; un test garde les deux séparés.
+
+## 18a / 18b — Organisation de test à données isolées
+
+`migration_test_org_isolation.sql` (la dimension) + `migration_test_org_seed.sql` (le corpus).
+Spec : `docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
+
+### Pourquoi
+
+Aucun moyen d'exercer la plateforme sur des données jetables : toute fiche créée pour essayer
+une fonctionnalité entrait dans le corpus réel, devenait visible de tous, et **partait à l'API
+partenaire**.
+
+`org_config.access_scope = 'own_objects_only'` existe depuis §172 et **ne restreint rien** : une
+policy distincte, `public_objects_published`, accorde `status='published'` au rôle `public`
+(donc `anon` compris), par un autre chemin. Le périmètre était déclaré, pas appliqué.
+
+### Ce que les migrations font
+
+Un unique prédicat, écrit partout à l'identique :
+
+```sql
+o.is_test = (SELECT api.current_user_test_realm())
+```
+
+Une **égalité**, donc les deux sens à la fois — le corpus de test ne sort pas, et le compte de
+test ne voit pas la production. Deux prédicats séparés auraient laissé un des sens s'oublier ;
+c'est exactement ce qui est arrivé à `access_scope`.
+
+`object.is_test` est dénormalisé mais **entretenu par trigger** depuis `org_config.is_test_org` :
+l'organisation reste la source de vérité, la garde ne lit qu'une constante par ligne (pas de
+jointure dans le chemin RLS le plus chaud, celui réécrit en ensembliste pour §35).
+
+### Ce que le plan n'avait pas vu, et que les tests ont trouvé
+
+| # | Trouvé par | Conséquence si non fermé |
+| --- | --- | --- |
+| `can_read_object` ne couvre que **15 policies de lecture sur 58** ; les 42 autres inlinent le contrôle de publication depuis §35 | revue avant application | media, contact_channel, descriptions, tarifs, horaires grands ouverts — *la fiche entière*, avec le test « la fiche est invisible » au vert |
+| Le chemin **2C** de `current_user_extended_object_ids` (`access_scope = 'all_published'`) accorde tout le corpus publié | bloc C du test, passé rouge | rouvre à lui seul ce que `public_objects_published` venait de fermer |
+| `object_deletion_log` ne portait aucune dimension de test | bloc G du test | supprimer une fiche de test publiait son id et son type au **flux de tombstones partenaire** (C-4) |
+
+Les 42 policies sont réécrites **génériquement**, à partir du `qual` décompilé : on n'injecte que
+le prédicat, chaque policy garde ses conditions propres. Un `DO` block **refuse de valider** s'il
+reste une seule policy de lecture testant la publication sans prédicat de realm.
+
+### L'API partenaire
+
+Elle appelle en `service_role`, qui **court-circuite toute la RLS** : aucune des gardes RLS ne la
+protège. Le prédicat est donc écrit dans les corps de fonction (21 emplacements), et testé
+séparément.
+
+### ✅ APPLIQUÉES EN PRODUCTION le 2026-09-04
+
+| Vérification | Mesure |
+| --- | --- |
+| Flux partenaire complet (parcours du curseur) | 5 pages, **848 fiches servies, 0 de test** — exactement le corpus de production |
+| Policies de lecture sans prédicat de realm | 0 |
+| Matview de l'Explorer | 848 lignes = published non-test |
+| Corpus de test | 271 fiches, **19 types couverts**, 200 acteurs fictifs |
+| Compte de test simulé | 271 fiches de test visibles, **0 fiche réelle** ; fiche complète (localisation, description, contacts) |
+| `test_test_org_isolation.sql` | 8 blocs verts, **rouge avant application** |
+| `test_test_org_seed.sql` | 7 blocs verts |
+
+### Ouvrir un compte de test
+
+Aucun code supplémentaire : l'ORG « Bac a sable (organisation de test) » apparaît dans le
+sélecteur d'organisation de **/settings > Équipe**. On y invite un compte par e-mail ; l'invité
+choisit son propre mot de passe via `/set-password`, comme pour toute autre organisation.
+
+Comptes **dédiés** : pas de double appartenance. Le realm se calcule par utilisateur, pas par
+session — un compte présent dans les deux mondes serait de test partout, y compris sur les
+fiches réelles.
+
+### Remise à zéro
+
+`api.rpc_reset_test_data()` — superuser plateforme, **sans argument** (la cible est constante, on
+ne peut pas la pointer sur une organisation de production), et refus si l'ORG visée n'est pas
+`is_test_org`. Exposée dans **/settings > Corpus de test**, avec confirmation par saisie.
+
+La purge porte sur `is_test`, **pas sur le préfixe d'id** : une fiche créée à la main dans le bac
+à sable doit disparaître aussi, et une fiche de production ne doit pas disparaître parce qu'elle
+porterait un id malheureux.
+
+### Ordre de déploiement
+
+1. `migration_test_org_isolation.sql` (18a) — **en dernier dans le manifeste** : sa réécriture
+   générique des policies doit voir toutes les policies déjà créées.
+2. Les fonctions modifiées d'`api_views_functions.sql` (extraites par
+   `tools/sql/extract_functions.cjs` — le fichier entier contient des `DROP … CASCADE` qu'on ne
+   rejoue pas sur la production).
+3. `migration_explorer_rls_setbased.sql` (chemin 2C), `migration_cards_batch_authorize_definer.sql`,
+   `migration_partner_tombstone_feed.sql`.
+4. `migration_test_org_seed.sql` (18b).

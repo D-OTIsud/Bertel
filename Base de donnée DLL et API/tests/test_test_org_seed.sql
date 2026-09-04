@@ -144,14 +144,27 @@ BEGIN
       'G: FUITE PARTENAIRE — le corpus de test est dans current_user_readable_object_ids';
 
     -- Temoin de non-vacuite : le corpus REEL, lui, doit bien etre servi. Sans
-    -- cette ligne les deux assertions ci-dessus seraient vertes sur une base vide.
-    SELECT count(*) INTO v_n
-    FROM api.get_filtered_object_ids('{}'::jsonb, NULL,
-                                     ARRAY['published','draft']::object_status[], NULL) f
-    JOIN object o ON o.id = f.object_id
-    WHERE NOT o.is_test;
-    ASSERT v_n > 0,
-           'G: TEST VACANT — l API partenaire ne sert AUCUNE fiche, le zero ci-dessus ne prouve rien';
+    -- lui, les deux assertions ci-dessus seraient vertes sur une base ou l API
+    -- partenaire ne sert simplement RIEN, et ne prouveraient aucun cloisonnement.
+    --
+    -- Conditionne a l existence d un corpus de production : ci_fresh_apply.sql
+    -- monte le schema et les REFERENTIELS, pas de corpus d objets. Exiger le
+    -- temoin inconditionnellement rendrait la garde rouge sur base fraiche — pour
+    -- une absence de donnees, pas pour une fuite. On exige alors la seule chose
+    -- qui ait un sens la-bas : que le corpus de test, lui, existe bien.
+    IF EXISTS (SELECT 1 FROM object WHERE NOT is_test AND status = 'published') THEN
+      SELECT count(*) INTO v_n
+      FROM api.get_filtered_object_ids('{}'::jsonb, NULL,
+                                       ARRAY['published','draft']::object_status[], NULL) f
+      JOIN object o ON o.id = f.object_id
+      WHERE NOT o.is_test;
+      ASSERT v_n > 0,
+             'G: TEST VACANT — un corpus de production existe mais l API partenaire n en sert AUCUNE fiche ; le zero ci-dessus ne prouve rien';
+    ELSE
+      ASSERT EXISTS (SELECT 1 FROM object WHERE is_test),
+             'G: TEST VACANT — ni corpus de production, ni corpus de test : rien n a ete mesure';
+      RAISE NOTICE 'G: base sans corpus de production (fresh apply) — temoin de non-vacuite adapte';
+    END IF;
   RESET ROLE;
 
   RAISE NOTICE 'test_test_org_seed: OK (A org, B couverture 15/type, C marquage par lien d ORG, D profondeur, E acteurs fictifs, F rien de routable, G hors flux partenaire)';

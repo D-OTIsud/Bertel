@@ -12,7 +12,7 @@
  * dans `portal-bindings` (`desiredSlots`) — l'écran n'a qu'à dire `fixedHours: false`.
  */
 import { useEffect } from 'react';
-import { PortalChoice, PortalRubricActions, useRubricForm } from './rubric-kit';
+import { PortalChoice, PortalRubricActions, focusPortalField, useRubricForm } from './rubric-kit';
 import { readWeekHours, setWeekHours, type WeekDayHours, type WeekHours } from '../portal-bindings';
 import { OPENING_WEEKDAYS } from '../../object-editor/sections/opening-period-edit';
 import type { PortalRubricFormProps } from './types';
@@ -32,6 +32,8 @@ interface HoursForm {
 
 const EMPTY_SLOT: ObjectWorkspaceOpeningSlot = { start: '', end: '' };
 const RANGE_ERROR = 'Indiquez une heure de fin après l’heure de début.';
+const MISSING_END = 'Indiquez aussi l’heure de fermeture.';
+const MISSING_START = 'Indiquez aussi l’heure d’ouverture.';
 
 const SHORTCUTS: { label: string; codes: string[] }[] = [
   { label: 'Tous les jours', codes: OPENING_WEEKDAYS.map((day) => day.code) },
@@ -86,19 +88,43 @@ function toWeekHours(form: HoursForm): WeekHours {
   return hours;
 }
 
-/** Un créneau à moitié saisi n'est pas une erreur (l'écran l'ignore) ; une fin avant le
- *  début en est une, et elle se dit sous le champ. */
-function rangeError(form: HoursForm): string | null {
-  const sources =
-    form.mode === 'same'
-      ? [form.same]
-      : form.mode === 'per-day'
-        ? OPENING_WEEKDAYS.filter((day) => form.open[day.code]).map((day) => form.perDay[day.code] ?? [])
-        : [];
-  for (const slots of sources) {
-    for (const slot of slots) {
-      if (slot.start.trim() && slot.end.trim() && slot.end <= slot.start) return RANGE_ERROR;
-    }
+/** Les créneaux que l'écran affiche VRAIMENT, chacun avec le préfixe d'id de ses deux
+ *  champs — sans lui, on saurait qu'il y a une erreur sans savoir OÙ mettre le focus. */
+function editableSlots(form: HoursForm): { idPrefix: string; slot: ObjectWorkspaceOpeningSlot }[] {
+  if (form.mode === 'same') {
+    return form.same.map((slot, index) => ({ idPrefix: `portal-same-${index}`, slot }));
+  }
+  if (form.mode === 'per-day') {
+    return OPENING_WEEKDAYS.filter((day) => form.open[day.code]).flatMap((day) =>
+      (form.perDay[day.code] ?? [EMPTY_SLOT]).map((slot, index) => ({
+        idPrefix: `portal-${day.code}-${index}`,
+        slot,
+      })),
+    );
+  }
+  return [];
+}
+
+/**
+ * Ce qui empêche d'enregistrer, et OÙ.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ * UN CRÉNEAU À MOITIÉ SAISI EST UNE ERREUR, PAS UN SILENCE.
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ * `toWeekHours` calcule `fixedHours = filled(slots).length > 0` : une seule borne ⇒
+ * `filled = []` ⇒ `fixedHours: false`, et `desiredSlots` pose la sentinelle. Le
+ * restaurateur qui tape « 09:00 », est interrompu et valide voyait son horaire devenir
+ * « ouvert sans horaires fixes » — sans message, sans champ en erreur, retour direct au
+ * hub. Un créneau ENTIÈREMENT vide, lui, reste licite : c'est le mode « sans horaires
+ * fixes » qui le porte, et « Ajouter une pause » laisse légitimement le second vide.
+ */
+function rangeError(form: HoursForm): { message: string; fieldId: string } | null {
+  for (const { idPrefix, slot } of editableSlots(form)) {
+    const start = slot.start.trim();
+    const end = slot.end.trim();
+    if (start && !end) return { message: MISSING_END, fieldId: `${idPrefix}-end` };
+    if (!start && end) return { message: MISSING_START, fieldId: `${idPrefix}-start` };
+    if (start && end && end <= start) return { message: RANGE_ERROR, fieldId: `${idPrefix}-end` };
   }
   return null;
 }
@@ -126,7 +152,10 @@ export function HoursRubric({ editor, formKey, onDone, onCancel, onDirtyChange, 
     }
     const error = rangeError(form);
     if (error) {
-      setForm((previous) => ({ ...previous, error }));
+      setForm((previous) => ({ ...previous, error: error.message }));
+      // Le focus reste sinon sur « Valider » : au clavier comme au lecteur d'écran, il
+      // faudrait retrouver la borne manquante à l'aveugle, parmi sept paires identiques.
+      focusPortalField(error.fieldId);
       return;
     }
     editor.replaceModule('openings', setWeekHours(openings, toWeekHours(form)));

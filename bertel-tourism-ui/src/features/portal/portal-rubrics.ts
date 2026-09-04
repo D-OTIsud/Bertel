@@ -215,12 +215,45 @@ export function portalTypeLabel(typeCode: string | null | undefined): string {
 
 const ALL_ESTABLISHMENTS: readonly ArchetypeCode[] = Object.freeze<ArchetypeCode[]>(['HEB', 'RES', 'ASC', 'VIS', 'SRV']);
 
+/** Les créneaux d'un jour, en clair : « 09:00–14:00 », « 11:30–14:30 et 19:00–22:00 ».
+ *  Les bornes incomplètes sont écartées — une heure seule ne se lit pas. */
+function slotsText(slots: readonly { start: string; end: string }[]): string {
+  return slots
+    .filter((slot) => slot.start.trim() && slot.end.trim())
+    .map((slot) => `${slot.start}–${slot.end}`)
+    .join(' et ');
+}
+
+/**
+ * CE QUI A ÉTÉ SAISI, pas seulement combien de jours.
+ *
+ * Le résumé ne rendait que le nombre de jours ouverts : il était RIGOUREUSEMENT identique
+ * avant et après une saisie d'heures. Un créneau devenu « sans horaires fixes » par
+ * accident n'était donc rattrapable depuis le hub par aucun signe — il fallait rouvrir la
+ * rubrique pour s'en apercevoir.
+ */
+function weekHoursDetail(hours: Record<string, { open: boolean; fixedHours: boolean; slots: { start: string; end: string }[] }>): string {
+  const open = Object.values(hours).filter((entry) => entry.open);
+  if (open.length === 0) return '';
+  const withHours = open.filter((entry) => entry.fixedHours);
+  if (withHours.length === 0) return 'sans horaires fixes';
+  const texts = new Set(withHours.map((entry) => slotsText(entry.slots)));
+  if (texts.size === 1 && withHours.length === open.length) {
+    const only = [...texts][0];
+    // Une seule borne stockée (saisie par l'office, ou laissée en chantier) : `fixedHours`
+    // est vrai mais il n'y a rien de lisible. Le taire ramènerait le silence d'origine.
+    return only === '' ? 'horaires à compléter' : only;
+  }
+  return 'horaires selon les jours';
+}
+
 function weekHoursSummary(draft: ObjectWorkspaceModules): string {
   const { hours } = readWeekHours(slice(draft, 'openings') as never);
   const open = Object.entries(hours).filter(([, entry]) => entry.open);
   if (open.length === 0) return '';
-  if (open.length === 7) return 'Ouvert tous les jours';
-  return `Ouvert ${open.length} jours sur 7`;
+  const days = open.length === 7 ? 'Ouvert tous les jours' : `Ouvert ${open.length} jours sur 7`;
+  const detail = weekHoursDetail(hours);
+  return detail ? `${days} · ${detail}` : days;
 }
 
 const RUBRIC_REGISTRY: PortalRubric[] = [

@@ -14227,6 +14227,7 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-task__link--off { cursor: default; opacity: 0.75; }
 .portal-task__body { display: grid; gap: 2px; flex: 1; min-width: 0; }
 .portal-task__title { font-size: 1.02rem; font-weight: 700; }
+.portal-task__held { font-size: 0.85rem; font-weight: 600; color: var(--teal); }
 .portal-task__summary {
   color: var(--ink-3);
   font-size: 0.88rem;
@@ -14317,7 +14318,9 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
 /* L'erreur est un TEXTE sous le champ ; la bordure ne fait que l'accompagner. */
 .portal-input--invalid { border-color: var(--destructive); }
-.portal-input--time { width: 110px; min-height: 44px; padding: 8px 10px; }
+/* 48 px, comme tout le reste : ce sont les champs de « Vos horaires », l'écran qu'un
+   restaurateur ouvre le plus souvent, et 44 px passait sous la cible du pouce. */
+.portal-input--time { width: 118px; min-height: 48px; padding: 10px 12px; }
 .portal-input--unit { width: auto; min-width: 120px; }
 .portal-suffixed { display: flex; align-items: center; gap: 8px; }
 .portal-suffixed > input { flex: 1; min-width: 0; }
@@ -14359,12 +14362,14 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
 .portal-choice:has(:checked) { border-color: var(--teal); background: rgb(var(--theme-primary-rgb) / 0.08); }
 
 .portal-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Les raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » sont des
+   commandes à part entière, pas des étiquettes : même cible que les autres boutons. */
 .portal-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
-  padding: 8px 14px;
+  min-height: 48px;
+  padding: 10px 16px;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -14405,7 +14410,18 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
   box-shadow: var(--shadow-m);
 }
 .portal-sendbar__state { margin: 0; font-size: 0.95rem; color: var(--ink-2); }
-.portal-sendbar__reason { margin: 0; font-size: 0.92rem; color: #8a5a12; }
+.portal-sendbar__reason {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  /* L'encre ambrée SANS son fond ambré ne tenait pas le contraste sur `--surface`. */
+  background: rgb(214 147 58 / 0.12);
+  color: #7a4e12;
+}
 .portal-sendbar__actions { display: grid; gap: 8px; }
 /* `aria-disabled`, pas `disabled` : le bouton reste focalisable, donc sa raison reste
    lisible — mais il doit AVOIR l'air indisponible. */

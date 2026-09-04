@@ -39,10 +39,12 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { restoreCatalogOptions, stripCatalogOptions } from '../object-editor/io/object-io-serialize';
 import { parsePortalDraft, portalDraftFingerprint, serializePortalDraft } from './portal-draft-schema';
-import { PORTAL_MODULES } from './portal-rubrics';
+import { PORTAL_MODULES, PORTAL_RUBRICS } from './portal-rubrics';
 
 const DRAFT_PREFIX = 'portal-draft:';
 const SENT_PREFIX = 'portal-sent:';
+/** La saisie EN COURS d'une rubrique — celle qui n'a pas encore été validée. */
+const FORM_PREFIX = 'portal-form:';
 
 /** Temporisation d'écriture. Assez longue pour ne pas écrire à chaque frappe du message,
  *  assez courte pour qu'un onglet mis en veille juste après une saisie ait déjà écrit. */
@@ -61,6 +63,10 @@ export function portalDraftKey(userId: string, objectId: string): string {
 
 export function portalSentKey(userId: string, objectId: string): string {
   return `${accountPrefix(SENT_PREFIX, userId)}${objectId}`;
+}
+
+export function portalFormKey(userId: string, objectId: string): string {
+  return `${accountPrefix(FORM_PREFIX, userId)}${objectId}`;
 }
 
 function getStore(): Storage | null {
@@ -120,7 +126,11 @@ export function clearAllPortalDrafts(userId: string | null): void {
   const store = getStore();
   if (!store) return;
   try {
-    const prefixes = [accountPrefix(DRAFT_PREFIX, userId), accountPrefix(SENT_PREFIX, userId)];
+    const prefixes = [
+      accountPrefix(DRAFT_PREFIX, userId),
+      accountPrefix(SENT_PREFIX, userId),
+      accountPrefix(FORM_PREFIX, userId),
+    ];
     // Collecte AVANT suppression : retirer une clé pendant l'itération décale les index.
     const doomed: string[] = [];
     for (let index = 0; index < store.length; index += 1) {
@@ -136,6 +146,9 @@ export function clearAllPortalDrafts(userId: string | null): void {
 export function clearPortalDraft(userId: string | null, objectId: string): void {
   if (!userId) return;
   removeRaw(portalDraftKey(userId, objectId));
+  // La saisie en cours part avec : « Annuler mes modifications » et un envoi réussi
+  // effacent le brouillon, il n'y a plus rien à reprendre dans un formulaire.
+  removeRaw(portalFormKey(userId, objectId));
 }
 
 /** Les tranches SANS catalogues, prêtes à être écrites. La clé de stockage est le module id
@@ -287,6 +300,146 @@ export function readPortalSent(userId: string | null, objectId: string): PortalS
 export function clearPortalSent(userId: string | null, objectId: string): void {
   if (!userId) return;
   removeRaw(portalSentKey(userId, objectId));
+}
+
+// ═══════════════ La saisie EN COURS, celle qui n'a pas encore été validée ═══════════════
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ * CE QUI A ÉTÉ TAPÉ SURVIT À UN RECHARGEMENT, PAS SEULEMENT À UN CHANGEMENT D'ÉCRAN.
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ *
+ * Le brouillon (`portal-draft:`) n'est écrit que depuis `editor.dirtySections`, qui ne
+ * bouge qu'au clic sur « Valider ». Entre l'ouverture d'une rubrique et cette validation,
+ * la saisie ne vivait qu'en mémoire : un rechargement, un onglet tué par le système, un
+ * appel entrant — le scénario le PLUS probable sur un téléphone — l'effaçaient sans un mot.
+ *
+ * Même discipline que le brouillon, pour les mêmes raisons :
+ *  · clé préfixée par le COMPTE (`portal-form:<userId>:<objectId>`) — un appareil partagé
+ *    ne rejoue jamais la saisie d'un autre partenaire ;
+ *  · EMPREINTE portée aux seules tranches concernées — si l'office a retouché la rubrique
+ *    entre-temps, rejouer un formulaire pris sur l'ancienne valeur écraserait son travail ;
+ *  · purgée par `clearPortalDraft` (envoi réussi, abandon explicite) et par la déconnexion.
+ */
+export interface PortalFormStore {
+  get(key: string): unknown;
+  set(key: string, value: unknown): void;
+  delete(key: string): void;
+}
+
+interface PortalFormPayload {
+  fingerprint: string;
+  forms: Record<string, unknown>;
+}
+
+/** Les modules des rubriques présentes — l'empreinte ne couvre qu'eux. */
+function modulesOfForms(forms: Record<string, unknown>): WorkspaceModuleId[] {
+  const modules = new Set<WorkspaceModuleId>();
+  for (const rubricId of Object.keys(forms)) {
+    const rubric = PORTAL_RUBRICS.find((entry) => entry.id === rubricId);
+    if (rubric) modules.add(rubric.module);
+  }
+  return PORTAL_MODULES.filter((module) => modules.has(module));
+}
+
+export function readPortalForms(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+): Record<string, unknown> {
+  if (!userId) return {};
+  const raw = readRaw(portalFormKey(userId, objectId));
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    const record = parsed as Partial<PortalFormPayload>;
+    const forms = record.forms;
+    if (!forms || typeof forms !== 'object' || Array.isArray(forms)) return {};
+    // L'office a retouché la rubrique depuis : rejouer un formulaire pris sur l'ancienne
+    // valeur ferait renvoyer, sans le savoir, une donnée périmée.
+    if (record.fingerprint !== fingerprintOf(serverModules, modulesOfForms(forms))) return {};
+    return forms as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+export function writePortalForms(
+  userId: string | null,
+  objectId: string,
+  serverModules: ObjectWorkspaceModules,
+  forms: Record<string, unknown>,
+): void {
+  if (!userId) return;
+  if (Object.keys(forms).length === 0) {
+    removeRaw(portalFormKey(userId, objectId));
+    return;
+  }
+  const payload: PortalFormPayload = {
+    fingerprint: fingerprintOf(serverModules, modulesOfForms(forms)),
+    forms,
+  };
+  try {
+    writeRaw(portalFormKey(userId, objectId), JSON.stringify(payload));
+  } catch {
+    // Un formulaire non sérialisable ne doit pas casser la saisie en cours.
+  }
+}
+
+/**
+ * Le magasin persistant passé aux rubriques. Stable pour la vie du montage — les
+ * formulaires le reçoivent en prop et ne doivent jamais le voir changer d'identité.
+ */
+export function usePortalFormCache({
+  userId,
+  objectId,
+  serverModules,
+}: {
+  userId: string | null;
+  objectId: string;
+  serverModules: ObjectWorkspaceModules;
+}): PortalFormStore {
+  const serverRef = useRef(serverModules);
+  serverRef.current = serverModules;
+  const timerRef = useRef<number | null>(null);
+  const formsRef = useRef<Record<string, unknown> | null>(null);
+  const accountRef = useRef({ userId, objectId });
+  accountRef.current = { userId, objectId };
+
+  return useMemo<PortalFormStore>(() => {
+    const load = () => {
+      if (formsRef.current === null) {
+        formsRef.current = readPortalForms(accountRef.current.userId, accountRef.current.objectId, serverRef.current);
+      }
+      return formsRef.current;
+    };
+    const flush = () => {
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      // Différé : sans cela, chaque frappe écrirait dans `localStorage`.
+      timerRef.current = window.setTimeout(() => {
+        writePortalForms(
+          accountRef.current.userId,
+          accountRef.current.objectId,
+          serverRef.current,
+          formsRef.current ?? {},
+        );
+      }, WRITE_DEBOUNCE_MS);
+    };
+    return {
+      get: (key) => load()[key],
+      set: (key, value) => {
+        load()[key] = value;
+        flush();
+      },
+      delete: (key) => {
+        delete load()[key];
+        flush();
+      },
+    };
+    // Un magasin par montage : `key={objectId}` garantit un remontage par fiche.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 // ═════════════════════════════════ Le hook ══════════════════════════════════

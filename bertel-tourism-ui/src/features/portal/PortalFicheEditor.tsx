@@ -19,8 +19,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PortalFicheHub, type PortalRejection } from './PortalFicheHub';
 import { PortalSendModal } from './PortalSendModal';
 import { buildPortalRubrics, portalTypeLabel, PORTAL_RUBRICS } from './portal-rubrics';
-import type { PortalFormCache } from './rubrics/rubric-kit';
-import { clearPortalSent, readPortalSent, usePortalDraft, type PortalSentSnapshot } from './usePortalDraft';
+import {
+  clearPortalSent,
+  readPortalSent,
+  usePortalDraft,
+  usePortalFormCache,
+  type PortalSentSnapshot,
+} from './usePortalDraft';
 import { readPublicContact } from './portal-bindings';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { useObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -78,25 +83,15 @@ export function PortalFicheEditor({
   const resolvedAt = fiche?.lastResolved?.resolvedAt ?? null;
   const openSubmissionId = fiche?.openSubmission?.id ?? null;
 
-  useEffect(() => {
-    const snapshot = readPortalSent(userId, objectId);
-    // L'office a tranché APRÈS cet envoi et rien n'est plus en vérification : l'instantané
-    // décrit un passé révolu. Le garder ferait afficher « Vous aviez indiqué… » avec une
-    // date et un contenu périmés, comme s'ils étaient ceux de la vérification en cours.
-    if (snapshot && !openSubmissionId && resolvedAt && resolvedAt > snapshot.submittedAt) {
-      clearPortalSent(userId, objectId);
-      setSentSnapshot(null);
-      return;
-    }
-    setSentSnapshot(snapshot);
-  }, [userId, objectId, resolvedAt, openSubmissionId]);
-
   /**
-   * La saisie EN COURS d'une rubrique. Elle vit ici — `PortalFicheEditor` ne se démonte
-   * jamais entre deux rubriques — donc elle survit au bouton Retour du téléphone, qui ne
-   * passe par aucun lien interceptable. « Quitter sans garder », lui, la vide.
+   * La saisie EN COURS d'une rubrique — PERSISTÉE, pas seulement gardée en mémoire.
+   *
+   * Le brouillon n'est écrit que depuis `editor.dirtySections`, qui ne bouge qu'au clic sur
+   * « Valider ». Une `Map` en mémoire survivait au changement d'écran, mais pas à un
+   * rechargement, ni à un onglet tué par le système, ni à un appel entrant — le scénario
+   * le plus probable des quatre sur un téléphone.
    */
-  const formCacheRef = useRef<PortalFormCache>(new Map());
+  const formCache = usePortalFormCache({ userId, objectId, serverModules: resource.modules });
 
   useEffect(() => {
     // Le remerciement appartient au geste qui vient d'avoir lieu : ouvrir une rubrique
@@ -147,6 +142,27 @@ export function PortalFicheEditor({
     return set;
   }, [resolved, pendingModules]);
 
+  useEffect(() => {
+    const snapshot = readPortalSent(userId, objectId);
+    if (!snapshot) {
+      setSentSnapshot(null);
+      return;
+    }
+    // L'office a tranché après cet envoi et rien n'est plus en vérification : l'instantané
+    // décrit un passé révolu, et le garder ferait afficher « Vous aviez indiqué… » avec une
+    // date périmée. MAIS il reste nécessaire tant qu'une modification ACCEPTÉE n'a pas été
+    // recopiée : la notice de ce cas — le plus fréquent — s'appuie précisément dessus.
+    // Purger sans cette réserve annulait la correction de l'IMPORTANT 7 : la notice
+    // s'affichait sans date et sans le contenu concret qui empêche la ressaisie.
+    const settled = !openSubmissionId && resolvedAt && resolvedAt > snapshot.submittedAt;
+    if (settled && approvedModules.size === 0) {
+      clearPortalSent(userId, objectId);
+      setSentSnapshot(null);
+      return;
+    }
+    setSentSnapshot(snapshot);
+  }, [userId, objectId, resolvedAt, openSubmissionId, approvedModules]);
+
   const rubrics = useMemo(
     () =>
       buildPortalRubrics({
@@ -186,16 +202,16 @@ export function PortalFicheEditor({
     return list;
   }, [resolved, archetype, pendingModules]);
 
-  /** Vrai quand c'est NOUS qui avons poussé l'entrée `?rubrique=` de l'historique. */
-  const pushedRef = useRef(false);
-  const previousRubricRef = useRef<string | null>(activeRubricId);
-  useEffect(() => {
-    // Ouvrir une rubrique DEPUIS le hub pousse une entrée ; arriver directement sur
-    // `?rubrique=` (lien partagé, signet) n'en pousse aucune.
-    if (previousRubricRef.current === null && activeRubricId !== null) pushedRef.current = true;
-    if (activeRubricId === null) pushedRef.current = false;
-    previousRubricRef.current = activeRubricId;
-  }, [activeRubricId]);
+  /**
+   * Combien d'entrées d'historique CETTE page a poussées (0 ou 1, jamais plus).
+   *
+   * Enchaîner deux rubriques par la liste collante poussait une SECONDE entrée : « Retour à
+   * la fiche » et le retour automatique après « Valider » ramenaient alors sur la rubrique
+   * précédente, et il fallait appuyer deux fois. Une rubrique ouverte depuis une autre
+   * REMPLACE donc l'entrée au lieu d'en ajouter une : l'historique tient au plus
+   * `hub → rubrique`, et un seul `back()` revient toujours à la fiche.
+   */
+  const depthRef = useRef(0);
 
   /** Les rubriques dont le brouillon n'a pas été repris — nommées, pas tues. */
   const discardedRubrics = useMemo(
@@ -211,17 +227,36 @@ export function PortalFicheEditor({
   );
 
   const handleBackToHub = useCallback(() => {
-    // `back()` défait l'entrée que la liste vient de pousser : sans lui, le bouton Retour
-    // du téléphone renverrait sur la rubrique qu'on vient de quitter. Mais seulement si
-    // c'est bien nous qui l'avons poussée — arriver directement sur `?rubrique=` (un lien
-    // partagé, un signet) ferait autrement SORTIR du site.
-    if (pushedRef.current) {
-      pushedRef.current = false;
+    // `back()` défait l'unique entrée poussée par cette page. Sans elle — arrivée directe
+    // sur `?rubrique=` par un lien partagé ou un signet — `back()` ferait SORTIR du site.
+    if (depthRef.current > 0) {
+      depthRef.current = 0;
       router.back();
       return;
     }
     router.push(hubHref, { scroll: false });
   }, [router, hubHref]);
+
+  /**
+   * Ouvrir une destination depuis la fiche. Le hub délègue ici pour que l'historique reste
+   * la propriété d'un seul endroit.
+   */
+  const handleNavigate = useCallback(
+    (href: string) => {
+      if (href === hubHref) {
+        handleBackToHub();
+        return;
+      }
+      if (activeRubricId) {
+        // Rubrique → rubrique : on REMPLACE, l'historique n'enfle pas.
+        router.replace(href, { scroll: false });
+        return;
+      }
+      router.push(href, { scroll: false });
+      depthRef.current = 1;
+    },
+    [router, hubHref, activeRubricId, handleBackToHub],
+  );
 
   const handleDiscard = useCallback(() => {
     for (const rubric of rubrics) {
@@ -285,7 +320,7 @@ export function PortalFicheEditor({
         approvedModules={approvedModules}
         discardedRubrics={discardedRubrics}
         refreshFailed={refreshFailed}
-        formCache={formCacheRef.current}
+        formCache={formCache}
         media={resource.modules.media as ObjectWorkspaceMediaModule}
         note={draft.note}
         onNoteChange={draft.setNote}
@@ -296,6 +331,7 @@ export function PortalFicheEditor({
         onSend={() => setSendOpen(true)}
         onDiscard={handleDiscard}
         onBackToHub={handleBackToHub}
+        onNavigate={handleNavigate}
       />
       <PortalSendModal
         open={sendOpen}

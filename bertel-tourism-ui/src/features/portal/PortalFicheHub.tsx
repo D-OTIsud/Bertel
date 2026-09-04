@@ -119,6 +119,8 @@ export interface PortalFicheHubProps {
   discardedRubrics: string[];
   /** Le rafraîchissement a échoué mais la fiche est en cache : on le dit, on ne cache rien. */
   refreshFailed: boolean;
+  /** L'appareil ne peut plus garder les modifications (mémoire pleine). */
+  storageFailed: boolean;
   sentSnapshot: PortalSentSnapshot | null;
   justSent: boolean;
   /** La saisie en cours d'une rubrique — vit ici, donc survit au changement d'écran. */
@@ -149,6 +151,7 @@ export function PortalFicheHub({
   draftDiscarded,
   discardedRubrics,
   refreshFailed,
+  storageFailed,
   sentSnapshot,
   justSent,
   formCache,
@@ -253,6 +256,13 @@ export function PortalFicheHub({
           <p className="notice notice--warn">
             <Info size={18} aria-hidden /> Nous n’avons pas pu vérifier les dernières informations. Voici votre fiche
             telle qu’elle était enregistrée sur cet appareil. Vos modifications sont toujours là.
+          </p>
+        ) : null}
+
+        {storageFailed ? (
+          <p className="notice notice--warn" role="status">
+            <AlertTriangle size={18} aria-hidden /> Nous ne pouvons plus garder vos modifications sur cet appareil : sa
+            mémoire est pleine. Envoyez-les à l’office dès que possible.
           </p>
         ) : null}
 

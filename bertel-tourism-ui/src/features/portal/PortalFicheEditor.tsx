@@ -70,8 +70,22 @@ export function PortalFicheEditor({
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
 
+  /**
+   * L'appareil ne peut plus rien retenir (mémoire pleine, stockage refusé). L'écriture
+   * échouait EN SILENCE : la saisie redevenait volatile sans que rien ne le dise — le
+   * problème d'origine, en pire, parce qu'invisible.
+   */
+  const [storageFailed, setStorageFailed] = useState(false);
+  const reportStorageFailure = useCallback(() => setStorageFailed(true), []);
+
   const editor = useObjectEditorState(objectId, resource.modules);
-  const draft = usePortalDraft({ userId, objectId, serverModules: resource.modules, editor });
+  const draft = usePortalDraft({
+    userId,
+    objectId,
+    serverModules: resource.modules,
+    editor,
+    onStorageFailure: reportStorageFailure,
+  });
 
   const [sendOpen, setSendOpen] = useState(false);
   const [justSent, setJustSent] = useState(false);
@@ -91,7 +105,12 @@ export function PortalFicheEditor({
    * rechargement, ni à un onglet tué par le système, ni à un appel entrant — le scénario
    * le plus probable des quatre sur un téléphone.
    */
-  const formCache = usePortalFormCache({ userId, objectId, serverModules: resource.modules });
+  const formCache = usePortalFormCache({
+    userId,
+    objectId,
+    serverModules: resource.modules,
+    onStorageFailure: reportStorageFailure,
+  });
 
   useEffect(() => {
     // Le remerciement appartient au geste qui vient d'avoir lieu : ouvrir une rubrique
@@ -320,6 +339,7 @@ export function PortalFicheEditor({
         approvedModules={approvedModules}
         discardedRubrics={discardedRubrics}
         refreshFailed={refreshFailed}
+        storageFailed={storageFailed}
         formCache={formCache}
         media={resource.modules.media as ObjectWorkspaceMediaModule}
         note={draft.note}

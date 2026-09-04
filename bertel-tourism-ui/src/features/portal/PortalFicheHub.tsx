@@ -26,7 +26,6 @@
  */
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
   Check,
@@ -127,6 +126,12 @@ export interface PortalFicheHubProps {
   onSend: () => void;
   onDiscard: () => void;
   onBackToHub: () => void;
+  /**
+   * Toute navigation interne passe par l'éditeur, qui décide `push` / `replace` / `back` :
+   * l'historique reste la propriété d'un seul endroit, et il tient au plus une entrée de
+   * rubrique — sans quoi « Retour à la fiche » ramène sur la rubrique précédente.
+   */
+  onNavigate: (href: string) => void;
 }
 
 export function PortalFicheHub({
@@ -150,13 +155,15 @@ export function PortalFicheHub({
   onSend,
   onDiscard,
   onBackToHub,
+  onNavigate,
 }: PortalFicheHubProps) {
-  const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const thanksRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLElement>(null);
   const [formDirty, setFormDirty] = useState(false);
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
+  /** « Ajoutez des photos » cliqué depuis une rubrique : le focus attend le retour. */
+  const [focusPhotos, setFocusPhotos] = useState(false);
   const active = rubrics.find((rubric) => rubric.id === activeRubricId) ?? null;
 
   useEffect(() => {
@@ -166,8 +173,15 @@ export function PortalFicheHub({
       thanksRef.current?.focus();
       return;
     }
-    if (!active) headingRef.current?.focus();
-  }, [justSent, active]);
+    if (active) return;
+    if (focusPhotos) {
+      setFocusPhotos(false);
+      photosRef.current?.scrollIntoView({ block: 'start' });
+      photosRef.current?.focus();
+      return;
+    }
+    headingRef.current?.focus();
+  }, [justSent, active, focusPhotos]);
 
   /**
    * Tout lien qui QUITTE une rubrique passe par ici. Sans saisie en cours il laisse
@@ -176,20 +190,23 @@ export function PortalFicheHub({
    */
   const guardedLeave = useCallback(
     (href: string) => (event: MouseEvent) => {
-      if (!active || !formDirty) return;
       event.preventDefault();
-      setLeaveTarget(href);
+      if (active && formDirty) {
+        setLeaveTarget(href);
+        return;
+      }
+      onNavigate(href);
     },
-    [active, formDirty],
+    [active, formDirty, onNavigate],
   );
 
   const resolveLeave = useCallback(
     (leave: boolean) => {
       const href = leaveTarget;
       setLeaveTarget(null);
-      if (leave && href) router.push(href, { scroll: false });
+      if (leave && href) onNavigate(href);
     },
-    [leaveTarget, router],
+    [leaveTarget, onNavigate],
   );
 
   const dirty = rubrics.filter((rubric) => rubric.state === 'dirty');
@@ -214,7 +231,7 @@ export function PortalFicheHub({
             <h2>Merci ! Vos modifications ont été envoyées à l’office.</h2>
             <p>L’office les vérifie, en général sous une semaine. Vous recevrez un e-mail quand ce sera fait.</p>
             {fiche.count >= 2 ? (
-              <Link className="ghost-button" href="/espace">
+              <Link className="ghost-button" href="/espace" onClick={guardedLeave('/espace')}>
                 Retour à vos fiches
               </Link>
             ) : null}
@@ -319,12 +336,20 @@ export function PortalFicheHub({
               </Link>
             ))}
             {photosMissing ? (
-              // Un bouton, pas une ancre : une ancre fait défiler SANS déplacer le focus,
-              // et un utilisateur au clavier reste là où il était.
+              // Un bouton, pas une ancre : une ancre fait défiler SANS déplacer le focus, et
+              // un utilisateur au clavier reste là où il était. Et quand une rubrique est
+              // ouverte, `PhotosRubric` n'est PAS monté : le bouton était alors mort (à
+              // partir de 1024 px, où l'en-tête reste visible). On revient d'abord à la
+              // fiche, le focus suit au montage.
               <button
                 type="button"
                 className="ghost-button"
                 onClick={() => {
+                  if (active) {
+                    setFocusPhotos(true);
+                    onNavigate(hubHref);
+                    return;
+                  }
                   photosRef.current?.scrollIntoView({ block: 'start' });
                   photosRef.current?.focus();
                 }}

@@ -13,30 +13,40 @@
  */
 export const PORTAL_REPORT_PREFIX = 'Erreur signalée : ';
 
-const SEPARATOR = '\n\n';
+/**
+ * La frontière entre les deux parts. Un simple saut de ligne double ne suffisait PAS : un
+ * signalement à DEUX paragraphes voyait son second paragraphe migrer dans la moitié
+ * « message libre » et disparaître du champ après un blur. Rien n'était perdu dans
+ * `p_note`, mais le partenaire VOYAIT s'effacer ce qu'il venait de taper — dans le
+ * composant même de la Critique 1.
+ *
+ * Le marqueur est explicite et se lit très bien dans le message reçu par l'office.
+ */
+const MESSAGE_MARKER = '\n\nMessage : ';
 
-/** La part « signalement d'erreur » de la note, sans son préfixe. '' s'il n'y en a pas. */
+/** La part « signalement d'erreur » de la note, sans son préfixe — paragraphes compris. */
 export function readPortalReport(note: string): string {
   if (!note.startsWith(PORTAL_REPORT_PREFIX)) return '';
   const body = note.slice(PORTAL_REPORT_PREFIX.length);
-  const cut = body.indexOf(SEPARATOR);
+  // Le DERNIER marqueur : le partenaire peut très bien écrire « Message : » dans son texte.
+  const cut = body.lastIndexOf(MESSAGE_MARKER);
   return (cut === -1 ? body : body.slice(0, cut)).trim();
 }
 
 /** Tout le reste — le message libre écrit dans la fenêtre d'envoi. */
 export function readPortalMessage(note: string): string {
   if (!note.startsWith(PORTAL_REPORT_PREFIX)) return note.trim();
-  const cut = note.indexOf(SEPARATOR);
-  return cut === -1 ? '' : note.slice(cut + SEPARATOR.length).trim();
+  const cut = note.lastIndexOf(MESSAGE_MARKER);
+  return cut === -1 ? '' : note.slice(cut + MESSAGE_MARKER.length).trim();
 }
 
 /**
- * Recompose la note. Chaque écran ne remplace QUE sa part : vider le signalement ne laisse
+ * Recompose la note. Chaque écran ne remplace que sa part : vider le signalement ne laisse
  * pas le préfixe orphelin, et n'emporte pas le message libre.
  */
 export function composePortalNote(report: string, message: string): string {
   const head = report.trim() ? `${PORTAL_REPORT_PREFIX}${report.trim()}` : '';
   const tail = message.trim();
-  if (head && tail) return `${head}${SEPARATOR}${tail}`;
+  if (head && tail) return `${head}${MESSAGE_MARKER}${tail}`;
   return head || tail;
 }

@@ -132,6 +132,54 @@ describe('HoursRubric — étape 2, les heures', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('une heure d’ouverture SANS heure de fermeture est refusée, dite, et le focus va sur le champ manquant', async () => {
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Le scénario réel : le restaurateur tape « 09:00 », est interrompu, clique
+    // « Valider ». Sans refus, `toWeekHours` calcule `fixedHours = filled(slots) > 0`
+    // ⇒ FALSE, `desiredSlots` pose la sentinelle, et son horaire devient « ouvert sans
+    // horaires fixes » — sans message, sans champ en erreur, retour direct au hub.
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const { editor, onDone } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Tous les jours' }));
+    await goToStepTwo();
+    await userEvent.type(screen.getByLabelText('de quelle heure'), '09:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    const error = screen.getByText('Indiquez aussi l’heure de fermeture.');
+    expect(error).toHaveAttribute('role', 'alert');
+    expect(editor.replaceModule).not.toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+    // Le focus reste sinon sur « Valider » : il faut retrouver le champ à l'aveugle.
+    expect(screen.getByLabelText('à quelle heure')).toHaveFocus();
+  });
+
+  it('l’heure de fermeture SEULE est refusée de la même façon, focus sur l’ouverture', async () => {
+    const { editor } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Tous les jours' }));
+    await goToStepTwo();
+    await userEvent.type(screen.getByLabelText('à quelle heure'), '14:30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(screen.getByText('Indiquez aussi l’heure d’ouverture.')).toBeInTheDocument();
+    expect(editor.replaceModule).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('de quelle heure')).toHaveFocus();
+  });
+
+  it('« ça dépend du jour » : le créneau à moitié saisi est trouvé SUR SON JOUR', async () => {
+    const { editor } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Le week-end' }));
+    await goToStepTwo();
+    await userEvent.click(screen.getByRole('radio', { name: 'Ça dépend du jour' }));
+    await userEvent.type(screen.getByLabelText('de quelle heure, Samedi'), '11:30');
+    await userEvent.type(screen.getByLabelText('à quelle heure, Samedi'), '14:30');
+    await userEvent.type(screen.getByLabelText('de quelle heure, Dimanche'), '11:30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(screen.getByText('Indiquez aussi l’heure de fermeture.')).toBeInTheDocument();
+    expect(editor.replaceModule).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('à quelle heure, Dimanche')).toHaveFocus();
+  });
+
   it('« ça dépend du jour » rend une carte par jour OUVERT, avec des champs nommés distinctement', async () => {
     setup();
     await userEvent.click(screen.getByRole('button', { name: 'Le week-end' }));
@@ -199,6 +247,57 @@ describe('HoursRubric — lecture de l’existant', () => {
     const days = writtenWeekdays(editor);
     expect(days.find((day) => day.code === 'monday')?.slots).toEqual([]);
     expect(days.find((day) => day.code === 'tuesday')?.slots).toEqual([{ start: '09:00', end: '17:00' }]);
+  });
+});
+
+/**
+ * La ligne que le partenaire relit sur le hub. Elle ne rendait QUE le nombre de jours
+ * ouverts : rigoureusement identique avant et après une saisie d'heures — donc aucune
+ * erreur d'horaire n'était rattrapable depuis la fiche. L'état est PRODUIT par le
+ * formulaire, jamais posé à la main.
+ */
+describe('HoursRubric — ce que le hub REDIT de la saisie', () => {
+  const HOURS_RUBRIC = PORTAL_RUBRICS.find((entry) => entry.id === 'hours')!;
+
+  /** Le résumé du hub, calculé sur la tranche que « Valider » vient d'écrire. */
+  function summaryOfWritten(editor: ReturnType<typeof fakeEditor>): string {
+    const [, value] = (editor.replaceModule as jest.Mock).mock.calls[0];
+    return HOURS_RUBRIC.summary(portalModules({ openings: value }), 'RES');
+  }
+
+  it('des heures saisies sont REDITES, pas seulement comptées', async () => {
+    const { editor } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Tous les jours' }));
+    await goToStepTwo();
+    await userEvent.type(screen.getByLabelText('de quelle heure'), '11:30');
+    await userEvent.type(screen.getByLabelText('à quelle heure'), '14:30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(summaryOfWritten(editor)).toBe('Ouvert tous les jours · 11:30–14:30');
+  });
+
+  it('« sans horaires fixes » se lit sur le hub, et ne se confond plus avec des heures', async () => {
+    const { editor } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Du lundi au vendredi' }));
+    await goToStepTwo();
+    await userEvent.click(screen.getByRole('radio', { name: 'Sans horaires fixes (sur rendez-vous)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(summaryOfWritten(editor)).toBe('Ouvert 5 jours sur 7 · sans horaires fixes');
+  });
+
+  it('des heures DIFFÉRENTES selon les jours le disent, sans mentir sur une valeur unique', async () => {
+    const { editor } = setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Le week-end' }));
+    await goToStepTwo();
+    await userEvent.click(screen.getByRole('radio', { name: 'Ça dépend du jour' }));
+    await userEvent.type(screen.getByLabelText('de quelle heure, Samedi'), '11:30');
+    await userEvent.type(screen.getByLabelText('à quelle heure, Samedi'), '14:30');
+    await userEvent.type(screen.getByLabelText('de quelle heure, Dimanche'), '09:00');
+    await userEvent.type(screen.getByLabelText('à quelle heure, Dimanche'), '13:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(summaryOfWritten(editor)).toBe('Ouvert 2 jours sur 7 · horaires selon les jours');
   });
 });
 

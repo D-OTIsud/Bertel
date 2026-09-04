@@ -576,6 +576,17 @@ export interface CrmTask {
   relatedInteractionStatus: string | null;
   /** 17i — pièces jointes de la tâche. Toujours un tableau (jamais null), comme `assignees`. */
   documents: CrmTaskDocument[];
+  /**
+   * 18a — `crm_task.extra`, jsonb LIBRE, émis BRUT par `api.list_crm_tasks`.
+   *
+   * `crm_task` n'a pas de colonne `kind` : c'est `extra.kind === 'fiche_verification'` qui
+   * type une tâche née d'un envoi du portail acteur, et rien d'autre ne la distingue d'une
+   * tâche CRM ordinaire. Plusieurs producteurs écrivent dans cette colonne — on ne la type
+   * donc PAS ici (un `kind` obligatoire mentirait), et on ne caste rien : côté SQL, un cast
+   * sur cette colonne abattrait `api.list_crm_tasks()` tout entière, donc le kanban de tous
+   * les utilisateurs du périmètre (classe de panne déjà payée sur `ref_document.extra`).
+   */
+  extra?: Record<string, unknown> | null;
 }
 
 /**

@@ -107,6 +107,14 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     relatedInteractionStatus: readNullableString(record.related_interaction_status),
     // 17i — pièces jointes de la tâche.
     documents: parseCrmTaskDocuments(record.documents),
+    // 18a — `extra` BRUT, sans lecture ni typage : c'est `extra.kind` qui distingue une
+    // tâche de vérification de fiche, et seul un OBJET peut la porter. Un tableau, un
+    // scalaire ou `null` retombent à `null` — un `Array` passerait `typeof === 'object'`
+    // et se lirait ensuite `extra.kind === undefined`, silencieusement.
+    extra:
+      record.extra && typeof record.extra === 'object' && !Array.isArray(record.extra)
+        ? (record.extra as Record<string, unknown>)
+        : null,
   };
 }
 

@@ -11,7 +11,17 @@ import { pickerListbox } from '../../components/ui/pickers/pickers.test-utils';
 
 jest.mock('../../services/crm');
 
+// 18a — la puce « Vérification de fiche » route vers /moderation : le kanban a désormais un
+// routeur. Sans ce mock, `useRouter` lève hors d'un App Router monté.
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+
 const crmMock = crm as jest.Mocked<typeof crm>;
+
+// Le VRAI parseur, malgré l'automock du module : la puce doit être produite par le PARCOURS
+// (ligne RPC → parseCrmTask → rendu), pas par une fixture qui poserait `extra` à la main.
+const { parseCrmTask: parseCrmTaskReal } =
+  jest.requireActual<typeof import('../../services/crm')>('../../services/crm');
 
 // L'établissement est un SearchSelect (combobox + popover) : ouvrir puis cliquer l'option.
 // Borné au listbox du picker comme `toggleAssignee` — le popover est portalisé sous <body>
@@ -73,6 +83,25 @@ const tasks: CrmTask[] = [
   // Échéance HORS fenêtre par défaut (+40 j) : masquée tant que la plage n'est pas élargie.
   { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
 ];
+
+// 18a — une ligne telle que `api.list_crm_tasks` la rend pour une tâche de vérification de
+// fiche : `crm_task` n'a pas de colonne `kind`, c'est `extra.kind` qui la type. On la fait
+// TRAVERSER le vrai parseur — si `extra` cesse d'être reporté, la puce s'éteint ici.
+const verificationTask: CrmTask = parseCrmTaskReal({
+  id: 'task-verif',
+  object_id: 'obj-7',
+  object_name: 'Villa Vanille',
+  title: 'Vérifier la fiche envoyée',
+  description: null,
+  status: 'todo',
+  priority: 'medium',
+  due_at: iso(1),
+  created_at: iso(0),
+  assignees: [{ user_id: ME.userId, display_name: ME.displayName }],
+  created_by_id: null,
+  created_by_name: null,
+  extra: { kind: 'fiche_verification', submission_id: 'sub-1' },
+});
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {
   const props = { canWrite: true, onOpenObject: jest.fn(), onOpenActor: jest.fn(), ...overrides };
@@ -770,5 +799,44 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await screen.findByText('Rappeler le directeur');
     expect(screen.getByText('1 annulée(s)/bloquée(s)')).toBeInTheDocument();
     expect(screen.queryByText('Tâche annulée')).not.toBeInTheDocument();
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  // Task 19 — la puce « Vérification de fiche ». Elle est le SEUL signal qui distingue,
+  // dans le kanban, une soumission du portail acteur d'une tâche CRM ordinaire : sans elle
+  // l'agent d'office ouvre le crayon, ne voit rien à faire, et la fiche du partenaire reste
+  // bloquée (une seule vérification ouverte à la fois).
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  describe('puce « Vérification de fiche » (18a)', () => {
+    it('une tâche typée par extra.kind porte la puce et ouvre la modération sur SA fiche', async () => {
+      crmMock.listCrmTasks.mockResolvedValue([verificationTask]);
+      renderTaches();
+      const chip = await screen.findByRole('button', { name: /vérification de fiche/i });
+      fireEvent.click(chip);
+      expect(push).toHaveBeenCalledWith('/moderation?object=obj-7');
+    });
+
+    it('une tâche CRM ordinaire ne porte PAS la puce', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      expect(screen.queryByRole('button', { name: /vérification de fiche/i })).not.toBeInTheDocument();
+    });
+
+    it('un `extra` sans le bon kind ne porte pas la puce non plus', async () => {
+      // `crm_task.extra` est du jsonb LIBRE, écrit par plusieurs producteurs : la présence
+      // de la clé ne suffit pas, c'est sa VALEUR qui type la tâche.
+      crmMock.listCrmTasks.mockResolvedValue([
+        parseCrmTaskReal({
+          id: 'task-autre-extra', object_id: 'obj-7', object_name: 'Villa Vanille',
+          title: 'Autre tâche', status: 'todo', priority: 'medium',
+          due_at: iso(1), created_at: iso(0),
+          assignees: [{ user_id: ME.userId, display_name: ME.displayName }],
+          extra: { kind: 'import_batch' },
+        }),
+      ]);
+      renderTaches();
+      await screen.findByText('Autre tâche');
+      expect(screen.queryByRole('button', { name: /vérification de fiche/i })).not.toBeInTheDocument();
+    });
   });
 });

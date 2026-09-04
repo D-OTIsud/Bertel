@@ -10,7 +10,7 @@
  *    et le dit ;
  *  - un type non pris en charge n'ouvre AUCUNE rubrique (allowlist fail-closed).
  */
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PortalFicheHub, type PortalFicheHubProps } from './PortalFicheHub';
@@ -20,6 +20,7 @@ import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import * as portal from '../../services/portal';
 import * as explorerQueries from '../../hooks/useExplorerQueries';
+import { useSessionStore } from '../../store/session-store';
 
 jest.mock('../../services/portal');
 jest.mock('../../hooks/useExplorerQueries');
@@ -106,6 +107,10 @@ function hubProps(over: Record<string, unknown> = {}): PortalFicheHubProps {
     activeRubricId: null as string | null,
     editor: fakeEditor(draft, dirty),
     rejections: [] as { module: string; title: string; note: string | null; rubricId: string | null }[],
+    approvedModules: new Set<string>(),
+    discardedRubrics: [] as string[],
+    refreshFailed: false,
+    formCache: new Map<string, unknown>(),
     media: draft.media,
     note: '',
     onNoteChange: jest.fn(),
@@ -240,6 +245,84 @@ describe('PortalFicheHub — la liste des rubriques', () => {
     expect(props.onBackToHub).not.toHaveBeenCalled();
   });
 
+  it('cliquer une AUTRE rubrique dans la liste, formulaire en cours, demande avant de sortir', async () => {
+    // Sur ordinateur la liste reste collée à gauche et cliquable pendant toute la saisie :
+    // c'est la sortie la plus naturelle, et c'était la seule non gardée.
+    renderHub({ activeRubricId: 'contacts' });
+    await userEvent.type(screen.getByLabelText('Téléphone'), '0692');
+
+    const list = screen.getByRole('list', { name: 'Les rubriques de votre fiche' });
+    await userEvent.click(within(list).getByText('Vos tarifs'));
+
+    expect(await screen.findByRole('dialog', { name: 'Quitter sans valider ?' })).toBeInTheDocument();
+  });
+
+  it('les liens « Corriger » et « Pour compléter » sont gardés eux aussi', async () => {
+    renderHub({
+      activeRubricId: 'contacts',
+      rejections: [{ module: 'pricing', rubricId: 'pricing', title: 'Vos tarifs', note: 'Par personne ?' }],
+    });
+    await userEvent.type(screen.getByLabelText('Téléphone'), '0692');
+
+    await userEvent.click(screen.getByRole('link', { name: /Corriger/ }));
+
+    expect(await screen.findByRole('dialog', { name: 'Quitter sans valider ?' })).toBeInTheDocument();
+  });
+
+  it('sans saisie en cours, la liste navigue sans rien demander', async () => {
+    renderHub({ activeRubricId: 'contacts' });
+
+    const list = screen.getByRole('list', { name: 'Les rubriques de votre fiche' });
+    await userEvent.click(within(list).getByText('Vos tarifs'));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('rubrique en vérification MAIS remodifiée : la barre existe et dit où sont les changements', () => {
+    // « Valider » n'avait aucun effet visible : le badge restait « Envoyé — en vérification »,
+    // aucune barre n'apparaissait, et la phrase prévue pour ce cas était inatteignable.
+    const draft = modules();
+    renderHub({
+      draft,
+      dirty: { contacts: true },
+      pendingModules: new Set(['contacts']),
+      fiche: { ...hubProps().fiche, openSubmission: { id: 's1', submittedAt: '2026-09-02T08:00:00.000Z' } },
+    });
+
+    expect(screen.getByRole('button', { name: 'Envoyer à l’office' })).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '1 rubrique modifiée · gardée sur cet appareil, à envoyer quand l’office aura terminé sa vérification.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('modification ACCEPTÉE non encore reportée : la ligne le dit, au lieu de « Rempli »', () => {
+    // `approved` est le cas DOMINANT. Sans ce libellé, le partenaire rouvre la rubrique,
+    // y retrouve son ANCIENNE valeur avec « Rempli », et ressaisit.
+    renderHub({ approvedModules: new Set(['pricing']) });
+
+    const list = screen.getByRole('list', { name: 'Les rubriques de votre fiche' });
+    const pricing = within(list).getByText('Vos tarifs').closest('a');
+    expect(pricing).toHaveTextContent('Accepté — en cours de report');
+  });
+
+  it('rafraîchissement en échec avec une fiche en cache : on montre la fiche et on le dit', () => {
+    renderHub({ refreshFailed: true });
+
+    expect(screen.getByRole('list', { name: 'Les rubriques de votre fiche' })).toBeInTheDocument();
+    expect(screen.getByText(/Voici votre fiche telle qu’elle était enregistrée sur cet appareil/)).toBeInTheDocument();
+  });
+
+  it('brouillon écarté : on NOMME les rubriques perdues et on garde le message à l’office', () => {
+    renderHub({ draftDiscarded: true, discardedRubrics: ['Vos tarifs', 'Vos horaires'] });
+
+    const notice = screen.getByRole('status', { name: 'Modifications non reprises' });
+    expect(notice).toHaveTextContent('Vos tarifs');
+    expect(notice).toHaveTextContent('Vos horaires');
+    expect(notice).toHaveTextContent('Votre message à l’office a été gardé');
+  });
+
   it('après un envoi réussi : une carte « Merci ! » qui prend le focus, et aucun toast', () => {
     renderHub({ justSent: true });
 
@@ -278,6 +361,47 @@ describe('PortalFichePage — la garde de type', () => {
 
     expect(await screen.findByText('Cette fiche est gérée par l’office.')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Les rubriques de votre fiche' })).not.toBeInTheDocument();
+  });
+
+  it('hors ligne avec la fiche EN CACHE : on rend la fiche, jamais l’écran d’erreur', async () => {
+    // Le cache React Query est persisté dans localStorage (24 h). Un rafraîchissement
+    // d'arrière-plan qui échoue met `isError` à vrai ALORS QUE `data` est là : remplacer la
+    // fiche par « Nous n'avons pas pu ouvrir votre fiche » cache au partenaire sa fiche ET
+    // son brouillon, tous deux présents sur l'appareil.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(['object-workspace', OBJ, ['fr']], {
+      id: OBJ,
+      name: 'Villa Vanille',
+      type: 'HOT',
+      detail: {} as never,
+      modules: modules(),
+      permissions: {} as never,
+    });
+    mockedQueries.loadObjectWorkspace.mockRejectedValue(new Error('Réseau indisponible.'));
+    mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: floor, maskedModules: [] });
+    mockedPortal.listMySubmissions.mockResolvedValue([]);
+    mockedPortal.listMyPortalFiches.mockResolvedValue([]);
+
+    render(
+      <QueryClientProvider client={client}>
+        <PortalFichePage objectId={OBJ} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByRole('list', { name: 'Les rubriques de votre fiche' })).toBeInTheDocument();
+    expect(screen.queryByText('Nous n’avons pas pu ouvrir votre fiche.')).not.toBeInTheDocument();
+  });
+
+  it('sans fiche en cache ET sans réseau : l’écran d’erreur, avec un bouton Réessayer', async () => {
+    mockedQueries.loadObjectWorkspace.mockRejectedValue(new Error('Réseau indisponible.'));
+    mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: floor, maskedModules: [] });
+    mockedPortal.listMySubmissions.mockResolvedValue([]);
+    mockedPortal.listMyPortalFiches.mockResolvedValue([]);
+
+    renderPage();
+
+    expect(await screen.findByText('Nous n’avons pas pu ouvrir votre fiche.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Réessayer' })).toBeInTheDocument();
   });
 
   it('une correction RENVOYÉE lit « Envoyé — en vérification », jamais « À reprendre »', async () => {
@@ -331,6 +455,44 @@ describe('PortalFichePage — la garde de type', () => {
     // …et le retour de l'office DISPARAÎT de la liste des retours : son lien « Corriger »
     // enverrait refaire un geste que PT409 refuse.
     expect(screen.queryByRole('region', { name: 'Retours de l’office' })).not.toBeInTheDocument();
+  });
+
+  it('purge l’instantané envoyé une fois l’office passé : sinon « Vous aviez indiqué » ment', async () => {
+    // `clearPortalSent` existait sans aucun appelant : la notice pouvait afficher une date
+    // et un contenu périmés comme s'ils étaient ceux de la vérification en cours.
+    useSessionStore.setState({ userId: 'u1' } as never);
+    window.localStorage.setItem(
+      'portal-sent:u1:HOTRUN0001',
+      JSON.stringify({ submittedAt: '2026-09-01T08:00:00.000Z', lines: { contacts: ['Téléphone : 0000'] } }),
+    );
+    mockedQueries.loadObjectWorkspace.mockResolvedValue({
+      id: OBJ,
+      name: 'Villa Vanille',
+      type: 'HOT',
+      detail: {} as never,
+      modules: modules(),
+      permissions: {} as never,
+    });
+    mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: floor, maskedModules: [] });
+    mockedPortal.listMySubmissions.mockResolvedValue([]);
+    mockedPortal.listMyPortalFiches.mockResolvedValue([
+      {
+        id: OBJ,
+        name: 'Villa Vanille',
+        objectType: 'HOT',
+        status: 'published',
+        updatedAt: null,
+        openSubmission: null,
+        lastResolved: { status: 'approved', resolvedAt: '2026-09-02T08:00:00.000Z' },
+        officeEmail: null,
+        officePhone: null,
+      },
+    ]);
+
+    renderPage();
+
+    await screen.findByRole('list', { name: 'Les rubriques de votre fiche' });
+    await waitFor(() => expect(window.localStorage.getItem('portal-sent:u1:HOTRUN0001')).toBeNull());
   });
 
   it('la vérification en cours est demandée POUR CETTE FICHE — la clé de cache porte son id', async () => {

@@ -39,7 +39,7 @@ function toggle(list: string[], code: string, checked: boolean): string[] {
   return checked ? Array.from(new Set([...list, code])) : list.filter((entry) => entry !== code);
 }
 
-export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const characteristics = editor.draft.characteristics as ObjectWorkspaceCharacteristicsModule;
 
   const { curated, rest } = useMemo(() => {
@@ -83,7 +83,7 @@ export function AmenitiesRubric({ archetype, editor, formKey, onDone, onCancel, 
   const { form, setForm, dirty } = useRubricForm<AmenitiesForm>(formKey, () => ({
     amenities: (characteristics.selectedAmenityCodes ?? []).filter((code) => visibleCodes.has(code)),
     payments: (characteristics.selectedPaymentCodes ?? []).filter((code) => visiblePaymentCodes.has(code)),
-  }));
+  }), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 

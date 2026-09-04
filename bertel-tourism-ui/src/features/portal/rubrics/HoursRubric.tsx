@@ -103,13 +103,15 @@ function rangeError(form: HoursForm): string | null {
   return null;
 }
 
-export function HoursRubric({ rubric, editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+// `rubric` n'est pas lu : la lecture seule (calendrier saisonnier, motif de tranche) est
+// portée par `PortalRubricScreen`, qui remplace le formulaire par la phrase AVANT de le
+// monter. Une seconde garde ici serait du code mort — et deux endroits à tenir.
+export function HoursRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const openings = editor.draft.openings as ObjectWorkspaceOpeningsModule;
-  const { form, setForm, dirty } = useRubricForm<HoursForm>(formKey, () => readForm(openings));
+  const { form, setForm, dirty } = useRubricForm<HoursForm>(formKey, () => readForm(openings), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
-  const locked = Boolean(rubric.readOnlyReason);
   const openCodes = OPENING_WEEKDAYS.filter((day) => form.open[day.code]);
 
   function setSlot(list: ObjectWorkspaceOpeningSlot[], index: number, patch: Partial<ObjectWorkspaceOpeningSlot>) {
@@ -129,17 +131,6 @@ export function HoursRubric({ rubric, editor, formKey, onDone, onCancel, onDirty
     }
     editor.replaceModule('openings', setWeekHours(openings, toWeekHours(form)));
     onDone();
-  }
-
-  if (locked) {
-    return (
-      <div className="portal-form">
-        <p className="notice">{rubric.readOnlyReason}</p>
-        <button type="button" className="ghost-button" onClick={onCancel}>
-          Retour à la fiche
-        </button>
-      </div>
-    );
   }
 
   return (
@@ -219,6 +210,7 @@ export function HoursRubric({ rubric, editor, formKey, onDone, onCancel, onDirty
                 <SlotPair
                   key={index}
                   idPrefix={`portal-same-${index}`}
+                  context={form.same.length > 1 ? `, créneau ${index + 1}` : ''}
                   slot={slot}
                   onChange={(patch) => setForm((previous) => ({ ...previous, same: setSlot(previous.same, index, patch), error: null }))}
                 />
@@ -244,6 +236,7 @@ export function HoursRubric({ rubric, editor, formKey, onDone, onCancel, onDirty
                     <SlotPair
                       key={index}
                       idPrefix={`portal-${day.code}-${index}`}
+                      context={`, ${day.label}`}
                       slot={slot}
                       onChange={(patch) =>
                         setForm((previous) => ({
@@ -276,18 +269,27 @@ export function HoursRubric({ rubric, editor, formKey, onDone, onCancel, onDirty
   );
 }
 
+/**
+ * Une paire d'heures. Le libellé VISIBLE reste « de » / « à » — c'est ce qui se lit le
+ * mieux —, mais le nom ACCESSIBLE porte le contexte : sept paires « de »/« à » identiques
+ * ne se distinguent pas au lecteur d'écran, qui annonce sept fois le même champ.
+ */
 function SlotPair({
   idPrefix,
+  context,
   slot,
   onChange,
 }: {
   idPrefix: string;
+  context: string;
   slot: ObjectWorkspaceOpeningSlot;
   onChange: (patch: Partial<ObjectWorkspaceOpeningSlot>) => void;
 }) {
   return (
     <div className="portal-slot">
-      <label htmlFor={`${idPrefix}-start`}>de</label>
+      <label htmlFor={`${idPrefix}-start`}>
+        de<span className="sr-only"> quelle heure{context}</span>
+      </label>
       <input
         id={`${idPrefix}-start`}
         className="portal-input portal-input--time"
@@ -295,7 +297,9 @@ function SlotPair({
         value={slot.start}
         onChange={(event) => onChange({ start: event.target.value })}
       />
-      <label htmlFor={`${idPrefix}-end`}>à</label>
+      <label htmlFor={`${idPrefix}-end`}>
+        à<span className="sr-only"> quelle heure{context}</span>
+      </label>
       <input
         id={`${idPrefix}-end`}
         className="portal-input portal-input--time"

@@ -9,7 +9,7 @@
  * les réseaux sociaux, le contact de l'office — traverse intact.
  */
 import { useEffect } from 'react';
-import { PortalField, PortalRubricActions, useRubricForm } from './rubric-kit';
+import { PortalField, PortalRubricActions, focusPortalField, useRubricForm } from './rubric-kit';
 import { readPublicContact, upsertPublicContact } from '../portal-bindings';
 import type { PortalRubricFormProps } from './types';
 import type { ObjectWorkspaceContactsModule } from '../../../services/object-workspace-parser';
@@ -29,7 +29,7 @@ function looksLikeEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 }
 
-export function ContactsRubric({ editor, formKey, onDone, onCancel, onDirtyChange }: PortalRubricFormProps) {
+export function ContactsRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
   const contacts = editor.draft.contacts as ObjectWorkspaceContactsModule;
   const { form, setForm, dirty } = useRubricForm<ContactsForm>(formKey, () => ({
     phone: readPublicContact(contacts, 'phone'),
@@ -37,7 +37,7 @@ export function ContactsRubric({ editor, formKey, onDone, onCancel, onDirtyChang
     website: readPublicContact(contacts, 'website'),
     emailError: null,
     writeError: null,
-  }));
+  }), formCache);
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
@@ -48,6 +48,9 @@ export function ContactsRubric({ editor, formKey, onDone, onCancel, onDirtyChang
         ...previous,
         emailError: 'Vérifiez cette adresse e-mail (exemple : contact@exemple.re).',
       }));
+      // Le focus reste sinon sur « Valider » : au clavier comme au lecteur d'écran, il
+      // faut alors retrouver le champ fautif à l'aveugle.
+      focusPortalField('portal-email');
       return;
     }
     try {

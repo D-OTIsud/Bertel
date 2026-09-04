@@ -12,6 +12,7 @@
  * ses messages que dans une application web). D'où aussi la copie de l'adresse, avec un
  * libellé VISIBLE — `CopyButton` est une icône seule, et une icône seule ne se comprend pas.
  */
+import { forwardRef } from 'react';
 import { Mail, Phone } from 'lucide-react';
 import { CopyButton } from '../../../components/common/CopyButton';
 import type { ObjectWorkspaceMediaModule } from '../../../services/object-workspace-parser';
@@ -28,21 +29,24 @@ function isPhoto(typeCode: string, kind: string): boolean {
   return haystack.includes('photo') || haystack.includes('image');
 }
 
-export function PhotosRubric({
-  media,
-  ficheName,
-  officeEmail,
-  officePhone,
-}: {
-  media: ObjectWorkspaceMediaModule | undefined;
-  ficheName: string;
-  officeEmail: string | null;
-  officePhone: string | null;
-}) {
+/**
+ * La référence est transmise pour que « Ajoutez des photos » puisse DÉPLACER LE FOCUS ici :
+ * une ancre fait défiler sans bouger le focus, et un utilisateur au clavier reste là où il
+ * était pendant que la page saute sous ses yeux.
+ */
+export const PhotosRubric = forwardRef<
+  HTMLElement,
+  {
+    media: ObjectWorkspaceMediaModule | undefined;
+    ficheName: string;
+    officeEmail: string | null;
+    officePhone: string | null;
+  }
+>(function PhotosRubric({ media, ficheName, officeEmail, officePhone }, ref) {
   const photos = (media?.objectItems ?? []).filter((item) => isPhoto(item.typeCode, item.kind));
 
   return (
-    <section className="portal-card portal-photos" aria-labelledby="portal-photos-title">
+    <section className="portal-card portal-photos" aria-labelledby="portal-photos-title" ref={ref} tabIndex={-1}>
       <h2 id="portal-photos-title">Vos photos</h2>
       {media?.unavailableReason ? (
         <p className="notice notice--warn">
@@ -100,4 +104,4 @@ export function PhotosRubric({
       )}
     </section>
   );
-}
+});

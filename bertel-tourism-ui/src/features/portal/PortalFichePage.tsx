@@ -50,7 +50,29 @@ export function PortalFichePage({ objectId }: { objectId: string }) {
   });
   const fiches = useQuery({ queryKey: ['portal-fiches'], queryFn: listMyPortalFiches });
 
-  if (workspace.isLoading || visibility.isLoading) {
+  // LA DONNÉE D'ABORD, L'ERREUR ENSUITE. Le cache React Query est persisté dans
+  // `localStorage` (24 h) : un rafraîchissement d'arrière-plan qui échoue — tunnel, 3G —
+  // met `isError` à vrai ALORS QUE `data` est là. Remplacer la fiche par un écran d'erreur
+  // cacherait au partenaire sa fiche ET son brouillon, tous deux présents sur l'appareil,
+  // et la phrase « Pas de connexion. Vos modifications sont conservées ici. » n'aurait
+  // jamais l'occasion de s'afficher.
+  if (!workspace.data) {
+    if (workspace.isError || visibility.isError) {
+      return (
+        <EmptyState
+          mode="error"
+          title="Nous n’avons pas pu ouvrir votre fiche."
+          description="Vérifiez votre connexion, puis réessayez."
+          action={{
+            label: 'Réessayer',
+            onClick: () => {
+              void workspace.refetch();
+              void visibility.refetch();
+            },
+          }}
+        />
+      );
+    }
     return (
       <>
         <p className="muted" role="status">
@@ -58,23 +80,6 @@ export function PortalFichePage({ objectId }: { objectId: string }) {
         </p>
         <PageSkeleton variant="form" />
       </>
-    );
-  }
-
-  if (workspace.isError || visibility.isError || !workspace.data) {
-    return (
-      <EmptyState
-        mode="error"
-        title="Nous n’avons pas pu ouvrir votre fiche."
-        description="Vérifiez votre connexion, puis réessayez."
-        action={{
-          label: 'Réessayer',
-          onClick: () => {
-            void workspace.refetch();
-            void visibility.refetch();
-          },
-        }}
-      />
     );
   }
 
@@ -105,6 +110,9 @@ export function PortalFichePage({ objectId }: { objectId: string }) {
       resource={resource}
       visibility={visibility.data ?? { floorModules: [], maskedModules: [] }}
       submissions={submissions.data ?? []}
+      // La fiche vient du cache et le rafraîchissement a échoué : on le DIT, en gardant
+      // l'écran utile.
+      refreshFailed={workspace.isError || visibility.isError}
       fiche={list.find((entry) => entry.id === objectId) ?? null}
       ficheCount={list.length}
     />

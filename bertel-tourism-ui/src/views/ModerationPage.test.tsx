@@ -247,6 +247,30 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     await waitFor(() => expect(mock.approvePendingChange).toHaveBeenCalledWith('pc-a', null, true));
   });
 
+  // Une attestation qui SURVIT à sa ligne signe la suivante sans qu'on y pense : l'agent
+  // rouvre, voit la case déjà cochée, valide. Le geste conscient a disparu, et « validée »
+  // recommence à ne rien vouloir dire. Elle repart donc décochée à chaque ouverture.
+  it('D9 : l’attestation ne se reporte JAMAIS d’une ligne à la suivante', async () => {
+    const second: PendingChangeItem = { ...SUB_ITEMS[0], id: 'pc-c', field: 'Tarifs' };
+    mock.listPendingChanges.mockResolvedValue([SUB_ITEMS[0], second]);
+    renderPage();
+    const approveButtons = await screen.findAllByRole('button', { name: /^Approuver$/ });
+
+    fireEvent.click(approveButtons[0]);
+    const first = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
+    fireEvent.click(within(first).getByRole('checkbox', { name: /j.ai reporté ces modifications/i }));
+    fireEvent.click(within(first).getByRole('button', { name: /Certifier et valider/ }));
+    await waitFor(() => expect(mock.approvePendingChange).toHaveBeenCalledWith('pc-a', null, true));
+
+    fireEvent.click(screen.getAllByRole('button', { name: /^Approuver$/ })[1]);
+    const next = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
+    expect(within(next).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();
+    fireEvent.click(within(next).getByRole('button', { name: /Certifier et valider/ }));
+    // Sans un NOUVEAU geste, la seconde ligne ne part pas.
+    await waitFor(() => expect(within(next).getByText(/sans ce report/i)).toBeInTheDocument());
+    expect(mock.approvePendingChange).toHaveBeenCalledTimes(1);
+  });
+
   // FAIL-CLOSED (fait vérifié n°2) : les fixtures démo n'expriment pas manual_apply. Un
   // `undefined` traité comme « automatique » rendrait l'approbation en un clic — exactement le
   // trou que D9 ferme. L'inconnu se traite donc comme du manuel.

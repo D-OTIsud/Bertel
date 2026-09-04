@@ -10,6 +10,7 @@ import {
   Brush,
   Building2,
   CircleUser,
+  FlaskConical,
   KeyRound,
   ListChecks,
   MapPin,
@@ -83,6 +84,7 @@ const PLATFORM_GROUP: SettingsNavGroup = {
     { id: 'ai', label: 'Fournisseurs IA', icon: Bot },
     { id: 'partner-keys', label: 'Clés API partenaire', icon: KeyRound, isNew: true },
     { id: 'organisations', label: 'Organisations', icon: Building2, isNew: true },
+    { id: 'test-corpus', label: 'Corpus de test', icon: FlaskConical, isNew: true },
     { id: 'diagnostic', label: 'Diagnostic', icon: Activity },
   ],
 };

@@ -24,9 +24,11 @@ import { useSessionStore } from '../../store/session-store';
 
 jest.mock('../../services/portal');
 jest.mock('../../hooks/useExplorerQueries');
+const routerPush = jest.fn();
+let searchParams = new URLSearchParams('');
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
-  useSearchParams: () => new URLSearchParams(''),
+  useRouter: () => ({ push: routerPush, replace: jest.fn(), back: jest.fn() }),
+  useSearchParams: () => searchParams,
 }));
 
 const mockedPortal = portal as jest.Mocked<typeof portal>;
@@ -36,7 +38,14 @@ const OBJ = 'HOTRUN0001';
 
 const modules = (over: Record<string, unknown> = {}) =>
   ({
-    contacts: { objectItems: [], webItems: [], kindOptions: [], roleOptions: [] },
+    // Le catalogue des genres DOIT être là : sans lui `upsertPublicContact` refuse d'écrire
+    // (et la rubrique le dit, plutôt que de laisser un bouton sans effet).
+    contacts: {
+      objectItems: [],
+      webItems: [],
+      kindOptions: [{ id: 'k-phone', code: 'phone', label: 'Téléphone' }],
+      roleOptions: [],
+    },
     descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } },
     openings: { periods: [], periodTypeOptions: [], unavailableReason: null },
     characteristics: { selectedAmenityCodes: [], selectedPaymentCodes: [], amenityGroups: [], paymentOptions: [], unavailableReason: null },
@@ -134,6 +143,7 @@ function renderHub(over: Record<string, unknown> = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
+  searchParams = new URLSearchParams('');
 });
 
 describe('PortalFicheHub — la liste des rubriques', () => {
@@ -377,6 +387,10 @@ describe('PortalFichePage — la garde de type', () => {
       modules: modules(),
       permissions: {} as never,
     });
+    // Périmée : au montage, React Query tente un rafraîchissement — c'est LUI qui échoue,
+    // pendant que la donnée reste disponible. Sans cette invalidation, la requête est
+    // fraîche, aucun appel n'est fait, et le cas testé ne se produit pas.
+    await client.invalidateQueries({ queryKey: ['object-workspace'] });
     mockedQueries.loadObjectWorkspace.mockRejectedValue(new Error('Réseau indisponible.'));
     mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: floor, maskedModules: [] });
     mockedPortal.listMySubmissions.mockResolvedValue([]);
@@ -390,6 +404,10 @@ describe('PortalFichePage — la garde de type', () => {
 
     expect(await screen.findByRole('list', { name: 'Les rubriques de votre fiche' })).toBeInTheDocument();
     expect(screen.queryByText('Nous n’avons pas pu ouvrir votre fiche.')).not.toBeInTheDocument();
+    // …et on le DIT, au lieu de laisser croire que tout est à jour.
+    await waitFor(() =>
+      expect(screen.getByText(/Voici votre fiche telle qu’elle était enregistrée sur cet appareil/)).toBeInTheDocument(),
+    );
   });
 
   it('sans fiche en cache ET sans réseau : l’écran d’erreur, avec un bouton Réessayer', async () => {
@@ -493,6 +511,43 @@ describe('PortalFichePage — la garde de type', () => {
 
     await screen.findByRole('list', { name: 'Les rubriques de votre fiche' });
     await waitFor(() => expect(window.localStorage.getItem('portal-sent:u1:HOTRUN0001')).toBeNull());
+  });
+
+  it('envoyer DEPUIS une rubrique ramène à la fiche — sinon « Merci ! » reste masqué sur téléphone', async () => {
+    // Sous 1024 px l'en-tête de fiche est en `display:none` en vue rubrique : la carte
+    // « Merci ! » y est invisible et `focus()` échoue EN SILENCE sur un élément masqué. Le
+    // geste le plus important de l'application se terminait sans accusé de réception.
+    useSessionStore.setState({ userId: 'u1' } as never);
+    searchParams = new URLSearchParams('rubrique=contacts');
+    mockedQueries.loadObjectWorkspace.mockResolvedValue({
+      id: OBJ,
+      name: 'Villa Vanille',
+      type: 'HOT',
+      detail: {} as never,
+      modules: modules(),
+      permissions: {} as never,
+    });
+    mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: floor, maskedModules: [] });
+    mockedPortal.listMySubmissions.mockResolvedValue([]);
+    mockedPortal.listMyPortalFiches.mockResolvedValue([]);
+    mockedPortal.submitActorFiche.mockResolvedValue({
+      submissionId: 'sub-1',
+      taskId: 't-1',
+      changeCount: 1,
+      assigneeCount: 1,
+    });
+
+    renderPage();
+
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692 45 12 30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Envoyer à l’office' }));
+    // « Valider » a déjà ramené au hub une fois : on ne compte que ce qui suit l'ENVOI.
+    routerPush.mockClear();
+    await userEvent.click(await screen.findByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    expect(routerPush).toHaveBeenCalledWith(`/espace/fiches/${OBJ}`, { scroll: false });
   });
 
   it('la vérification en cours est demandée POUR CETTE FICHE — la clé de cache porte son id', async () => {

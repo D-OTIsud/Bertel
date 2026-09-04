@@ -19,7 +19,17 @@ function readNullableString(value: unknown): string | null {
 }
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */
-export type AppNotificationKind = 'crm_task_assigned';
+export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed';
+
+const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed'];
+
+/**
+ * Issue d'une vérification de fiche (18a) — le CHECK de `fiche_submission` moins `pending`.
+ * `partial` n'est ni une acceptation ni un refus : l'office a retenu une partie du travail.
+ */
+export type SubmissionOutcome = 'approved' | 'rejected' | 'partial';
+
+const KNOWN_OUTCOMES: readonly string[] = ['approved', 'rejected', 'partial'];
 
 export interface AppNotification {
   id: string;
@@ -34,6 +44,15 @@ export interface AppNotification {
   /** Qui a déclenché la notification. `null` = inconnu — ne jamais le deviner. */
   createdById: string | null;
   createdByName: string | null;
+  /**
+   * 18a — l'issue d'une vérification, pour l'espèce `fiche_submission_reviewed` seulement.
+   * `null` sur l'espèce historique, ET sur une issue que ce front ne connaît pas : un verdict
+   * ne se devine pas. Toujours présente (à null) plutôt qu'absente selon l'espèce — sinon
+   * chaque consommateur devrait re-tester la FORME de l'objet au lieu de la valeur.
+   */
+  outcome: SubmissionOutcome | null;
+  /** 18a — la vérification concernée. Identifiant technique, jamais affiché. */
+  submissionId: string | null;
 }
 
 export interface AppNotificationInbox {
@@ -46,9 +65,22 @@ const EMPTY_INBOX: AppNotificationInbox = { items: [], unreadCount: 0 };
 export function parseAppNotification(record: GenericRecord): AppNotification | null {
   const id = readNullableString(record.id);
   if (!id) return null; // une ligne sans id n'est pas adressable : on l'ignore
+  // 18a — validation STRICTE de l'espèce, à la place de l'ancien repli sur
+  // 'crm_task_assigned'. Le repli était sûr tant qu'il n'existait qu'une espèce ; avec deux
+  // (et un jour trois), il rendrait une notification INCONNUE sous le gabarit « X vous a
+  // assigné une tâche » et l'enverrait sur /crm. Un mauvais libellé trompe ; une ligne
+  // absente, non — la pastille (comptée serveur) reste le signal qu'il y a du neuf.
+  // `app_notification.kind` est NOT NULL + CHECK : une ligne sans kind est malformée.
+  const kind = readString(record.kind);
+  if (!KNOWN_KINDS.includes(kind)) return null;
+  // Le payload BRUT, tel que `api.list_my_notifications` l'émet (corps live vérifié :
+  // ce RPC rend `payload` entier et AUCUNE clé outcome/submission_id de premier niveau —
+  // contrairement à `api.claim_unmailed_notifications`, qui les aplatit pour le relais).
+  const payload = record.payload && typeof record.payload === 'object' ? (record.payload as GenericRecord) : {};
+  const outcome = readString(payload.outcome);
   return {
     id,
-    kind: (readString(record.kind) || 'crm_task_assigned') as AppNotificationKind,
+    kind: kind as AppNotificationKind,
     createdAt: readNullableString(record.created_at),
     readAt: readNullableString(record.read_at),
     taskId: readNullableString(record.task_id),
@@ -57,6 +89,10 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
     objectName: readNullableString(record.object_name),
     createdById: readNullableString(record.created_by_id),
     createdByName: readNullableString(record.created_by_name),
+    // Une issue hors des trois connues rend `null` : le libellé dira « vérifiées », neutre
+    // et vrai, plutôt qu'un verdict inventé.
+    outcome: KNOWN_OUTCOMES.includes(outcome) ? (outcome as SubmissionOutcome) : null,
+    submissionId: readNullableString(payload.submission_id),
   };
 }
 

@@ -187,6 +187,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/compose_object_resource_blocks`
 - **object types served:** —
 
+### `api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/configure_sandbox_discovery_user`
+- **object types served:** **all object types**
+
 ### `api.create_crm_artifacts_from_incident()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
@@ -846,6 +851,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_ref_catalog`
 - **object types served:** —
+
+### `api.get_sandbox_discovery_user()` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_sandbox_discovery_user`
+- **object types served:** **all object types**
 
 ### `api.get_trail(p_trail_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`

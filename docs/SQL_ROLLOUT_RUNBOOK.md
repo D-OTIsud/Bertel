@@ -1784,3 +1784,13 @@ ROLLBACK. Le parcours navigateur local utilise des réponses Auth simulées : il
 vérifie le lien, l’entrée directe, le stockage séparé, la récupération après erreur
 et la sortie. L’émission d’une session Auth réelle doit être confirmée après
 redéploiement : aucune clé Admin n’est disponible dans l’environnement local de test.
+
+Résultats du 2026-09-04 : 44 tests Jest ciblés passent ; le build de production
+(`npm run build`) passe sur un checkout propre du commit `2debe19`, avec `/test`
+et `/api/sandbox/session` présents. Le manifeste SQL complet et ses régressions
+passent en CI : [run 33845734056](https://github.com/D-OTIsud/Bertel/actions/runs/33845734056).
+Le graphe DB a été rafraîchi avec les fonctions/policies vivantes et une extraction
+ciblée de `internal.sandbox_discovery_identity` depuis `pg_catalog` (export tbls
+trop long). La prévisualisation a confirmé l’entrée, la sortie et la préservation
+du stockage de travail, avec Auth simulée. Le cache de développement de la
+prévisualisation n’a pas été utilisé pour valider le build de production.

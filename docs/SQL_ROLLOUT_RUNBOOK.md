@@ -1331,8 +1331,25 @@ séparément.
 | Matview de l'Explorer | 848 lignes = published non-test |
 | Corpus de test | 271 fiches, **19 types couverts**, 200 acteurs fictifs |
 | Compte de test simulé | 271 fiches de test visibles, **0 fiche réelle** ; fiche complète (localisation, description, contacts) |
-| `test_test_org_isolation.sql` | 8 blocs verts, **rouge avant application** |
+| Fiche **creee** dans le bac a sable, puis publiee | `is_test` = true ; invisible de `anon` ; absente de l'API partenaire |
+| `test_test_org_isolation.sql` | 9 blocs verts, **rouge avant application** |
 | `test_test_org_seed.sql` | 7 blocs verts |
+
+### Creer une fiche DANS le bac a sable
+
+C'est la condition d'un bac a sable utile — on n'y vient pas pour lire — et le chemin le plus
+fragile du cloisonnement, parce qu'il repose sur un **enchainement de triggers** :
+
+```
+rpc_create_object
+  -> trg_auto_attach_object_to_creator_org   (AFTER INSERT sur object : pose object_org_link is_primary)
+     -> trg_object_org_link_is_test           (AFTER INSERT sur object_org_link : marque object.is_test)
+```
+
+Si l'auto-rattachement cesse un jour de poser `is_primary`, les fiches creees dans le bac a sable
+**naitront en production** — publiques des leur publication, et servies a l'API partenaire, sans
+aucune erreur. Le bloc I de `test_test_org_isolation.sql` garde precisement cela : creation,
+publication, puis verification par `anon` **et** par `service_role`.
 
 ### Ouvrir un compte de test
 

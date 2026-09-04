@@ -270,7 +270,64 @@ BEGIN
            'H: TEST VACANT — l API partenaire ne sert pas la fiche une fois repassee en production';
   RESET ROLE;
 
-  RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite)';
+  -- ────────── I. Une fiche CREEE dans le bac a sable y reste ──────────
+  -- C'est la condition d'un bac a sable « pleinement fonctionnel » : on n'y vient
+  -- pas pour lire, on y vient pour CREER. Et c'est le chemin le plus fragile de
+  -- tout le cloisonnement, parce qu'il repose sur un enchainement de triggers :
+  --   rpc_create_object  →  trg_auto_attach_object_to_creator_org (AFTER INSERT
+  --   sur object, pose object_org_link is_primary)  →  trg_object_org_link_is_test
+  --   (AFTER INSERT sur object_org_link, marque object.is_test).
+  -- Si un jour l'auto-rattachement cesse de poser is_primary, ou s'execute avant,
+  -- les fiches creees dans le bac a sable naitront EN PRODUCTION — publiques des
+  -- leur publication, et servies a l'API partenaire. Sans erreur.
+  DECLARE
+    v_creator uuid := '00000000-0000-4000-a000-0000000000e3'::uuid;
+    v_new     text;
+    v_new_is_test boolean;
+    v_visible integer;
+  BEGIN
+    INSERT INTO auth.users (id, email) VALUES (v_creator, 'realm_creator@test.local')
+      ON CONFLICT (id) DO NOTHING;
+    INSERT INTO app_user_profile (id, role) VALUES (v_creator, 'tourism_agent')
+      ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+    INSERT INTO user_org_membership (user_id, org_object_id, is_active)
+    VALUES (v_creator, v_orgTest, TRUE);
+    INSERT INTO user_permission (user_id, permission_id)
+    SELECT v_creator, rp.id FROM ref_permission rp
+     WHERE rp.code IN ('create_object', 'publish_object', 'edit_object')
+    ON CONFLICT DO NOTHING;
+
+    -- L'ORG a ete rebasculee en production par le bloc H : on la remet en test.
+    UPDATE org_config SET is_test_org = TRUE WHERE org_object_id = v_orgTest;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_creator, 'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      v_new := api.rpc_create_object('HOT', 'Fiche creee dans le bac a sable', 'RUN');
+      -- Publier est le cas qui COMPTE : un brouillon etait deja invisible avant ce
+      -- chantier. Le corpus de test n'est dangereux qu'une fois publie.
+      PERFORM api.rpc_publish_object(v_new);
+    RESET ROLE;
+
+    SELECT o.is_test INTO v_new_is_test FROM object o WHERE o.id = v_new;
+    ASSERT v_new_is_test IS TRUE,
+           'I: FUITE — une fiche CREEE dans le bac a sable nait en production (enchainement de triggers rompu)';
+
+    PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+    SET LOCAL ROLE anon;
+      SELECT count(*) INTO v_visible FROM object WHERE id = v_new;
+      ASSERT v_visible = 0,
+             'I: FUITE — anon voit une fiche creee ET PUBLIEE dans le bac a sable';
+    RESET ROLE;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+    SET LOCAL ROLE service_role;
+      ASSERT api.get_object_resource(v_new, ARRAY['fr']) IS NULL,
+             'I: FUITE PARTENAIRE — une fiche creee dans le bac a sable est servie par l API partenaire';
+    RESET ROLE;
+  END;
+
+  RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite, I creation dans le bac a sable)';
 END
 $$;
 ROLLBACK;

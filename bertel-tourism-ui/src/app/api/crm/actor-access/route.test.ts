@@ -569,6 +569,60 @@ describe('POST /api/crm/actor-access — renvoi', () => {
     ]);
   });
 
+  // Le message d'échec doit être vrai AU MOMENT OÙ L'AGENT LE LIT. Sur `invite`, rien n'a
+  // bougé ; sur `resend`, un compte vient d'être détruit — « aucun compte n'a été créé »
+  // laisserait croire que l'accès existant est intact.
+  it('500 resend_lost_previous quand l’invitation échoue APRÈS la fermeture de l’ancien compte', async () => {
+    const spies = serverStub({
+      channels: ['marie@basalte.re'],
+      linked: { id: 'portal-1', role: 'actor' },
+      users: [{ id: 'portal-1', email: 'marie@basalte.re', last_sign_in_at: null }],
+      inviteError: { message: 'smtp down' },
+    });
+    gate();
+    const res = await POST(
+      req({ authorization: 'Bearer t' }, { action: 'resend', actorId: ACTOR, email: 'marie@basalte.re' }),
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('resend_lost_previous');
+    // L'ancien compte est bel et bien parti : c'est ce qui rend « create_failed » mensonger ici.
+    expect(spies.deleteUser).toHaveBeenCalledWith('portal-1');
+  });
+
+  it('500 resend_lost_previous quand le profil échoue sur un renvoi — l’acteur n’a plus aucun accès', async () => {
+    const spies = serverStub({
+      channels: ['marie@basalte.re'],
+      linked: { id: 'portal-1', role: 'actor' },
+      users: [{ id: 'portal-1', email: 'marie@basalte.re', last_sign_in_at: null }],
+      newUserId: 'portal-2',
+      upsertError: { message: 'unique violation' },
+    });
+    gate();
+    const res = await POST(
+      req({ authorization: 'Bearer t' }, { action: 'resend', actorId: ACTOR, email: 'marie@basalte.re' }),
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('resend_lost_previous');
+    expect(spies.deleteUser).toHaveBeenNthCalledWith(1, 'portal-1');
+    expect(spies.deleteUser).toHaveBeenNthCalledWith(2, 'portal-2');
+  });
+
+  it('500 resend_failed quand la fermeture elle-même échoue — là, rien n’a bougé', async () => {
+    const spies = serverStub({
+      channels: ['marie@basalte.re'],
+      linked: { id: 'portal-1', role: 'actor' },
+      users: [{ id: 'portal-1', email: 'marie@basalte.re', last_sign_in_at: null }],
+    });
+    spies.deleteUser.mockResolvedValue({ error: { message: 'gotrue down' } });
+    gate();
+    const res = await POST(
+      req({ authorization: 'Bearer t' }, { action: 'resend', actorId: ACTOR, email: 'marie@basalte.re' }),
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe('resend_failed');
+    expect(spies.inviteUserByEmail).not.toHaveBeenCalled();
+  });
+
   it('409 already_active : un compte portail déjà connecté n’est ni supprimé ni ré-invité', async () => {
     const spies = serverStub({
       channels: ['marie@basalte.re'],

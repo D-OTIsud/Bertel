@@ -581,6 +581,29 @@ textarea::placeholder {
 .mod-meta__subject { font-size: 13px; color: var(--text); }
 .mod-meta__byline { font-size: 12px; color: var(--text-muted); }
 
+/* ---- Modération 18a/D9 : envoi groupé + rubriques à reporter à la main ---- */
+/* La mention « report manuel » n'est PAS décorative : c'est le seul endroit où l'agent apprend,
+   AVANT de cliquer, qu'approuver n'écrira rien. Elle doit donc porter son propre contraste. */
+.mod-meta__manual { font-size: 12px; font-weight: 600; color: #9a5b12; }
+.mod-submission { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.mod-submission__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mod-submission__note {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--line);
+  background: var(--bg-tint);
+  font-size: 13px;
+  color: var(--text);
+}
+.mod-scope { margin: 0.5rem 0 0; font-size: 12px; color: var(--text-muted); }
+.mod-scope a { color: inherit; text-decoration: underline; }
+
 /* ---- Palette de commandes ⌘K (D24) ---- */
 .palette { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 78vw); }
 .palette__search {
@@ -13751,6 +13774,27 @@ a {
 .primary-button--danger { background: var(--destructive); border-color: var(--destructive); color: var(--destructive-foreground); }
 .primary-button--danger:hover:not(:disabled) { filter: brightness(0.94); }
 .confirm-message { font-size: 14px; color: var(--ink-2); margin: 0; }
+
+/* 18a/D9 — l'attestation est une DÉCLARATION, pas une option : elle occupe un bloc à part,
+   encadré, pour ne pas se lire comme une préférence tassée sous le message. */
+.confirm-attestation {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-tint);
+}
+.confirm-attestation__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.confirm-attestation__label input { margin-top: 3px; flex: none; }
+.confirm-attestation__hint { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); }
 
 /* 7.3 — Fournisseurs IA : table + formulaire en vocabulaire maison (plus de styles inline). */
 .ai-provider { display: flex; flex-direction: column; gap: 16px; }

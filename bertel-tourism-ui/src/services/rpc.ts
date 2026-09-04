@@ -978,7 +978,15 @@ export async function deleteObjectPrivateNote(noteId: string): Promise<void> {
 
 // Modération P2.1 (§120) : implémentations réelles dans services/moderation.ts (RPC-only —
 // api.list/submit/approve/reject_pending_change ; la table pending_change est admin-only en RLS).
-export { listPendingChanges, submitPendingChange, approvePendingChange, rejectPendingChange } from './moderation';
+// 18a/D9 : + les deux gestes GROUPÉS (api.approve/reject_fiche_submission) de la §7.2.
+export {
+  listPendingChanges,
+  submitPendingChange,
+  approvePendingChange,
+  rejectPendingChange,
+  approveFicheSubmission,
+  rejectFicheSubmission,
+} from './moderation';
 
 // CRM (§61) : implémentations réelles dans services/crm.ts (RPC-only — voir la spec).
 export { listCrmTasks, listCrmTimeline } from './crm';

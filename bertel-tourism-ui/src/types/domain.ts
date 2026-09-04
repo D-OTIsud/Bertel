@@ -656,6 +656,19 @@ export interface PendingChangeItem {
   reviewedAt?: string | null;
   reviewNote?: string | null;
   appliedAt?: string | null;
+  // --- 18a/D9 : groupage par ENVOI du portail acteur. NULL pour les propositions internes
+  // (contributeurs §120/§122), qui gardent l'affichage plat.
+  submissionId?: string | null;
+  submissionNote?: string | null;
+  actorLabel?: string | null;
+  /**
+   * `TRUE` ⇒ aucune route automatique : approuver n'écrit RIEN dans la fiche, l'office doit
+   * reporter à la main puis l'attester. Projection serveur exacte de `metadata->>'rpc' IS NULL`
+   * (§7.3), c.-à-d. le prédicat sur lequel la machine décide — jamais la déclaration du
+   * soumetteur. `undefined` = INCONNU (fixtures démo, serveur d'avant la §7) : à traiter comme
+   * manuel, parce que la valeur risquée est `false` (elle rend l'approbation en un clic).
+   */
+  manualApply?: boolean;
 }
 
 export interface AuditQuestion {

@@ -14,6 +14,11 @@ jest.mock('../../hooks/useToast', () => ({
 }));
 
 const DRAFT_KEY = 'portal-draft:u1:HOT1';
+const FORM_KEY = 'portal-form:u1:HOT1';
+
+/** Le bouton de la barre haute. Le libellé de confirmation est VOLONTAIREMENT différent
+ *  (« Effacer et me déconnecter »), sans quoi les deux se confondraient ici. */
+const signOutButton = () => screen.getByRole('button', { name: /Se déconnecter/ });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -63,7 +68,8 @@ describe('PortalShell', () => {
     mockedAuth.signOut.mockResolvedValue(undefined);
     render(<PortalShell>contenu</PortalShell>);
 
-    await userEvent.click(screen.getByRole('button', { name: /Se déconnecter/ }));
+    await userEvent.click(signOutButton());
+    await userEvent.click(await screen.findByRole('button', { name: 'Effacer et me déconnecter' }));
 
     await waitFor(() => expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull());
     expect(mockedAuth.signOut).toHaveBeenCalledTimes(1);
@@ -76,7 +82,8 @@ describe('PortalShell', () => {
     mockedAuth.signOut.mockRejectedValue(new Error('Réseau indisponible.'));
     render(<PortalShell>contenu</PortalShell>);
 
-    await userEvent.click(screen.getByRole('button', { name: /Se déconnecter/ }));
+    await userEvent.click(signOutButton());
+    await userEvent.click(await screen.findByRole('button', { name: 'Effacer et me déconnecter' }));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Réseau indisponible.'));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBe('{"note":null}');
@@ -88,9 +95,85 @@ describe('PortalShell', () => {
     mockedAuth.signOut.mockResolvedValue(undefined);
     render(<PortalShell>contenu</PortalShell>);
 
-    await userEvent.click(screen.getByRole('button', { name: /Se déconnecter/ }));
+    await userEvent.click(signOutButton());
+    await userEvent.click(await screen.findByRole('button', { name: 'Effacer et me déconnecter' }));
 
     await waitFor(() => expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull());
     expect(window.localStorage.getItem('portal-draft:u2:RES2')).toBe('{"note":null}');
+  });
+});
+
+/**
+ * La déconnexion DÉTRUIT — trois familles de clés, toutes les fiches du compte — et c'est
+ * le seul geste destructif de l'espace qui ne demandait rien. « Annuler mes modifications »,
+ * lui, a toujours eu sa fenêtre (PortalSendBar). L'asymétrie n'avait jamais été discutée :
+ * les trois tests ci-dessus vérifiaient QUE la purge a lieu, jamais si elle devrait prévenir.
+ */
+describe('PortalShell — la déconnexion prévient avant de détruire', () => {
+  it('une saisie non envoyée : le premier clic DEMANDE, il ne déconnecte pas et n’efface rien', async () => {
+    // `portal-form:` — la saisie en cours, celle qui n'a même pas été validée. C'est la
+    // plus fragile des trois familles, et `hasPortalDraft` ne la voyait pas.
+    window.localStorage.setItem(FORM_KEY, '{"fingerprint":"f","forms":{"contacts":{}}}');
+    mockedAuth.signOut.mockResolvedValue(undefined);
+    render(<PortalShell>contenu</PortalShell>);
+
+    await userEvent.click(signOutButton());
+
+    expect(
+      await screen.findByText(/Tout ce que vous avez saisi sur cet appareil sera perdu/),
+    ).toBeInTheDocument();
+    expect(mockedAuth.signOut).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(FORM_KEY)).not.toBeNull();
+  });
+
+  it('« Rester connecté » ne déconnecte pas et garde tout', async () => {
+    window.localStorage.setItem(FORM_KEY, '{"fingerprint":"f","forms":{"contacts":{}}}');
+    mockedAuth.signOut.mockResolvedValue(undefined);
+    render(<PortalShell>contenu</PortalShell>);
+
+    await userEvent.click(signOutButton());
+    await userEvent.click(await screen.findByRole('button', { name: 'Rester connecté' }));
+
+    expect(mockedAuth.signOut).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem(FORM_KEY)).not.toBeNull();
+  });
+
+  it('rien à perdre : la déconnexion reste UN seul geste', async () => {
+    // Une question posée à vide serait un obstacle de plus pour quelqu'un qui vient
+    // seulement de consulter sa fiche.
+    mockedAuth.signOut.mockResolvedValue(undefined);
+    render(<PortalShell>contenu</PortalShell>);
+
+    await userEvent.click(signOutButton());
+
+    await waitFor(() => expect(mockedAuth.signOut).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/sera perdu/)).not.toBeInTheDocument();
+  });
+
+  it('le travail d’un AUTRE compte ne déclenche pas la question', async () => {
+    // La purge est cloisonnée par compte : la question doit l'être aussi, sinon un
+    // appareil d'office ferait poser une fenêtre à quelqu'un qui n'a rien saisi.
+    window.localStorage.setItem('portal-draft:u2:RES2', '{"note":null}');
+    window.localStorage.setItem('portal-form:u2:RES2', '{"fingerprint":"f","forms":{}}');
+    mockedAuth.signOut.mockResolvedValue(undefined);
+    render(<PortalShell>contenu</PortalShell>);
+
+    await userEvent.click(signOutButton());
+
+    await waitFor(() => expect(mockedAuth.signOut).toHaveBeenCalledTimes(1));
+    expect(window.localStorage.getItem('portal-draft:u2:RES2')).toBe('{"note":null}');
+  });
+
+  it('un instantané d’ENVOI seul ne retient personne — il décrit ce qui est DÉJÀ parti', async () => {
+    window.localStorage.setItem('portal-sent:u1:HOT1', '{"submittedAt":"2026-09-01T08:00:00.000Z","lines":{}}');
+    mockedAuth.signOut.mockResolvedValue(undefined);
+    render(<PortalShell>contenu</PortalShell>);
+
+    await userEvent.click(signOutButton());
+
+    await waitFor(() => expect(mockedAuth.signOut).toHaveBeenCalledTimes(1));
+    // La purge l'emporte quand même : sur un appareil partagé, il porte le téléphone et
+    // les tarifs du partenaire précédent.
+    await waitFor(() => expect(window.localStorage.getItem('portal-sent:u1:HOT1')).toBeNull());
   });
 });

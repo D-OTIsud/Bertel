@@ -43,7 +43,15 @@
 --       §120 (cas générique ET cas ÉPINGLÉ save_object_rooms — CORRECTION CONTRÔLEUR : la
 --       whitelist vive de approve_pending_change, re-vérifiée en base avant écriture, n'a que
 --       SEPT entrées, SANS save_object_rooms — une asymétrie aurait laissé entrer un changement
---       ensuite impossible à approuver, fiche bloquée à vie). TRANSACTIONNALITÉ prouvée : un
+--       ensuite impossible à approuver, fiche bloquée à vie). RÉDUCTION 2026-09-04 : le plancher
+--       dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien
+--       ne couplait les deux clés — une section anodine + un writer de la liste franchissait le
+--       plancher. La whitelist est ramenée aux DEUX writers réellement émis par le portail ; les
+--       CINQ retirés sont refusés UN PAR UN (dont save_object_relations, save_object_places et
+--       save_object_itinerary_nested, dont les modules sont pourtant DÉJÀ dans
+--       api.actor_portal_floor_modules()), et save_object_commercial a son contrôle POSITIF —
+--       sans lui une whitelist VIDÉE laisserait tous les refus verts et le portail muet.
+--       TRANSACTIONNALITÉ prouvée : un
 --       writer interdit sur le 3e changement d'un tableau de 3 ne laisse NI fiche_submission, NI
 --       pending_change, NI crm_task, NI crm_task_assignee, NI notification — même si les 2
 --       premiers changements étaient valides pris isolément. Nominal : 2 changements ⇒
@@ -181,6 +189,25 @@
 --       était une TAUTOLOGIE (app_notification.recipient_id est NOT NULL en base), remplacée
 --       par une soumission dont l'auteur a été révoqué entre le dépôt et la décision — le cas
 --       que la §8.5 fabrique elle-même via portal_note.
+--   (J) LES DEUX PORTES QUE 18a OUVRE ET DOIT REFERMER (revue sécurité 2026-09-04). J1-J5 :
+--       app_user_profile.actor_id devient LA source de vérité de la portée du portail (§1.3),
+--       elle ne peut donc plus rester écrivable par son sujet — 907 acteurs sans compte portail
+--       étaient autant de cibles atteignables. J1 épingle l'ÉTAT de privilège, et c'est lui qui
+--       distingue la vraie correction du no-op : un `REVOKE UPDATE (actor_id)` seul ne retire
+--       RIEN quand authenticated tient UPDATE au niveau TABLE (Postgres émet un WARNING et
+--       laisse le privilège ; vérifié en base). J2 prouve le geste d'escalade refusé ET la
+--       self-update légitime préservée ; J3 rend le privilège de colonne pour prouver que le
+--       TRIGGER mord SEUL (sans quoi un futur `GRANT UPDATE ON app_user_profile` rouvrirait
+--       tout en silence) ; J4 le bras INSERT (un profil ne naît pas déjà lié) ; J5 que la voie
+--       service_role — /api/crm/actor-access, la seule légitime — et le bras `role` historique
+--       sont intacts. J6 : api.submit_pending_change, la file de modération historique, était
+--       exécutable par tout authenticated et gatée sur le seul can_read_object (« publié OU
+--       portée étendue ») — 18a créant la première population de comptes authenticated
+--       EXTERNES, toutes les protections de submit_actor_fiche (plancher, masquage, whitelist,
+--       plafond de 40, verrou PT409) se contournaient en appelant l'autre RPC, et sur
+--       n'importe quelle fiche PUBLIÉE du realm. Refus prouvé sur SA fiche ET sur une fiche
+--       publiée hors périmètre, aucune ligne écrite, plus le contrôle POSITIF sans lequel une
+--       garde trop large fermerait la file de modération à tout le monde en restant verte.
 -- Contre une base sans la migration : échec immédiat (fonctions absentes) — rouge attendu (TDD).
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste). Plage de fixtures dédiée 13xx
 -- (+ 1410-1419 pour le bloc G, task 6 ; + 1420-1429 pour le bloc F2, task 7 ; + 1430-1449
@@ -309,6 +336,20 @@ DECLARE
   v_subQ    uuid;                 -- (F) la soumission qu'on vide par déliage
   v_subR    uuid;                 -- (F) la soumission tranchée en UNE instruction
   v_notif_n integer;              -- (F) cardinalité des notifications de résolution — EXACTEMENT une
+  -- (D2, revue sécurité) itérateur sur les writers RETIRÉS de la whitelist de submit_actor_fiche :
+  -- la liste est désormais réduite aux DEUX writers que le portail émet réellement, et chacun des
+  -- cinq autres est épinglé un par un — un `= ANY` sur une liste plus large ne rougirait pas si
+  -- l'un d'eux y revenait seul.
+  v_bad_rpc text;
+  -- (J) escalade de privilège + porte dérobée de modération — sous-plage de fixtures RÉSERVÉE :
+  -- 1450-1459, disjointe de TOUTES les précédentes (1301-1307, 1311-1314, 1321-1322, 1391-1393,
+  -- 1410-1419, 1420-1429, 1430-1449). Le bloc J est placé EN DERNIER délibérément : il manipule
+  -- des privilèges de colonne (GRANT/REVOKE, DDL transactionnelle) et écrit un pending_change de
+  -- contrôle positif — rien ne doit tourner après lui.
+  v_userJ   uuid := '00000000-0000-4000-a000-000000001451'; -- (J) compte quelconque, sans lien acteur
+  v_actorJ  uuid := '00000000-0000-4000-a000-000000001452'; -- (J) acteur SANS compte portail — la cible des 907
+  v_userJ2  uuid := '00000000-0000-4000-a000-000000001453'; -- (J) compte SANS profil — bras INSERT du trigger
+  v_pcJ     uuid;  -- (J) le pending_change du contrôle positif (voie historique tourism_agent)
 BEGIN
   -- ---------- (A) CHECK + helpers ----------
   INSERT INTO auth.users (id, email) VALUES
@@ -922,6 +963,60 @@ BEGIN
   EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
   ASSERT v_denied,
     'D2: submit refuse save_object_rooms — miroir du refus vif de approve_pending_change (asymétrie ⇒ fiche bloquée pour toujours)';
+
+  -- Refus : les CINQ writers RETIRÉS de la whitelist (revue sécurité 2026-09-04). Le plancher
+  -- dur est contrôlé sur `metadata.section`, le ré-dispatch d'écriture est décidé sur
+  -- `metadata.rpc`, et RIEN ne couple les deux clés : une enveloppe qui déclare une section
+  -- anodine ('contacts') et un writer de la liste franchissait le plancher puis se faisait
+  -- ré-dispatcher à l'approbation. Trois de ces writers étaient explicitement interdits par
+  -- ailleurs — `relationships`, `places` et `media` sont dans api.actor_portal_floor_modules(),
+  -- dont le commentaire dit que save_object_relations « réécrit object_org_link ET
+  -- actor_object_role, le périmètre même de l'acteur ». La whitelist est donc réduite aux
+  -- DEUX writers que le portail émet réellement (save_object_commercial, save_object_openings) ;
+  -- les cinq autres n'ont AUCUN émetteur côté portail. Épinglés UN PAR UN, et non par un
+  -- `= ANY(liste)` : si l'un d'eux revenait seul dans v_allowed, une assertion agrégée pourrait
+  -- rester verte. section='contacts' partout — ni plancher ni masquée : seul le bras whitelist
+  -- peut ici lever 22023, sans quoi l'assertion prouverait un autre refus que celui visé.
+  FOREACH v_bad_rpc IN ARRAY ARRAY['save_object_relations','save_object_places',
+                                   'save_object_itinerary_nested','save_object_workspace_sustainability',
+                                   'save_object_workspace_tags'] LOOP
+    v_denied := false;
+    BEGIN PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+      jsonb_build_object('target_table','object','target_pk',NULL,'action','update',
+        'payload','{}'::jsonb,
+        'metadata', jsonb_build_object('rpc', v_bad_rpc, 'section','contacts','manual_apply',false,
+                                       'field','x','before','','after',''))), NULL);
+    EXCEPTION WHEN SQLSTATE '22023' THEN v_denied := true; END;
+    ASSERT v_denied,
+      format('D2: submit refuse %s — writer retiré de la whitelist (aucun émetteur côté portail)', v_bad_rpc);
+  END LOOP;
+
+  -- CONTRÔLE POSITIF de la réduction, sans lequel toutes les assertions ci-dessus resteraient
+  -- vertes avec une whitelist VIDE — et le portail serait mort sans que rien ne rougisse.
+  -- On ne peut pas simplement soumettre save_object_commercial ici : l'appel RÉUSSIRAIT et
+  -- poserait sur v_objA une fiche_submission que le Nominal qui suit attend absente
+  -- (uq_fiche_submission_open ⇒ PT409). On exploite donc l'ordre de la boucle de validation :
+  -- un tableau de DEUX enveloppes dont la première porte save_object_commercial (qui doit
+  -- passer le bras whitelist) et la seconde une action invalide (qui fait échouer l'appel
+  -- AVANT toute écriture). Le SQLSTATE est le même (22023) dans les deux cas — c'est le
+  -- MESSAGE qui discrimine : « action invalide » prouve que la première enveloppe a franchi le
+  -- bras whitelist ; « Writer non autorisé » prouverait l'inverse.
+  v_msg := '';
+  BEGIN
+    PERFORM api.submit_actor_fiche(v_objA, jsonb_build_array(
+      jsonb_build_object('target_table','object_commercial','target_pk',NULL,'action','update',
+        'payload', jsonb_build_object('x','y'),
+        'metadata', jsonb_build_object('rpc','save_object_commercial','section','contacts',
+                                       'manual_apply',false,'field','Commercial','before','','after','')),
+      jsonb_build_object('target_table','object_description','target_pk',NULL,'action','zzz-invalide',
+        'payload','{}'::jsonb,
+        'metadata', jsonb_build_object('rpc',NULL,'section','contacts','manual_apply',true,
+                                       'field','x','before','','after',''))), NULL);
+  EXCEPTION WHEN SQLSTATE '22023' THEN v_msg := SQLERRM; END;
+  ASSERT v_msg LIKE '%action invalide%',
+    'D2: save_object_commercial DOIT rester accepté — la réduction de whitelist ne doit pas vider le portail (message obtenu: ' || v_msg || ')';
+  ASSERT v_msg NOT LIKE '%Writer non autorisé%',
+    'D2: save_object_commercial a été refusé par le bras whitelist — la whitelist a été trop réduite';
 
   -- Preuve de TRANSACTIONNALITÉ (le cœur de cette task) : 2 changements valides PRIS ISOLÉMENT
   -- (mêmes formes que le nominal ci-dessous) suivis d'un 3e portant un writer hors whitelist. Le
@@ -2509,6 +2604,179 @@ BEGIN
            'I: un membre de l''ORG publisher garde son accès PII (la fermeture vise la persona acteur, pas tout le monde)';
   RESET ROLE;
 
-  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G, F2, F, I OK';
+  -- ══════════════════════════════════════════════════════════════════════════════════════
+  -- (J) 18a referme les DEUX portes qu'elle ouvre elle-même.
+  --     J1-J5 : app_user_profile.actor_id devient LA source de vérité de la portée du
+  --             portail (§1.3) — elle ne peut donc plus rester écrivable par son sujet.
+  --     J6    : 18a crée la PREMIÈRE population de comptes `authenticated` EXTERNES ; la
+  --             file de modération historique doit leur être fermée.
+  --     Placé EN DERNIER : ce bloc manipule des privilèges de colonne et écrit un
+  --     pending_change de contrôle positif. Rien ne tourne après lui.
+  -- ══════════════════════════════════════════════════════════════════════════════════════
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  INSERT INTO auth.users (id, email) VALUES
+    (v_userJ, 'portal_escalade_1451@test.local'), (v_userJ2, 'portal_escalade_1453@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES (v_userJ, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  -- v_userJ2 doit rester SANS profil : c'est le bras INSERT du trigger qu'il sonde. Le
+  -- trigger on_auth_user_created_app_user_profile vient d'en créer un — on l'efface.
+  DELETE FROM app_user_profile WHERE id = v_userJ2;
+  -- La CIBLE : un acteur qui n'a aucun compte portail. C'est exactement la population que
+  -- l'index unique partiel uq_app_user_profile_actor_id laisse atteignable (907 en base au
+  -- 2026-09-04) — s'attribuer son actor_id, c'est hériter de sa portée portail.
+  INSERT INTO actor (id, display_name) VALUES (v_actorJ, 'Acteur SANS compte portail 1452')
+    ON CONFLICT (id) DO NOTHING;
+
+  -- ---------- (J1) l'état de privilège que la migration DOIT produire ----------
+  -- ⚠ Une forme naïve — `REVOKE UPDATE (actor_id) … FROM authenticated` seule — est un
+  -- NO-OP ici : authenticated et anon tiennent UPDATE/INSERT au niveau TABLE, et Postgres
+  -- ne soustrait pas une colonne d'un privilège de table (il émet un WARNING et ne change
+  -- rien ; vérifié en base le 2026-09-04, has_column_privilege restait TRUE). La migration
+  -- doit donc RETIRER le privilège de table puis le rendre COLONNE PAR COLONNE, sauf
+  -- actor_id. Ces quatre sondes sont ce qui distingue les deux formes.
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'actor_id', 'UPDATE') = FALSE,
+    'J1: authenticated ne doit PAS pouvoir écrire app_user_profile.actor_id (UPDATE)';
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'actor_id', 'INSERT') = FALSE,
+    'J1: authenticated ne doit PAS pouvoir écrire app_user_profile.actor_id (INSERT)';
+  ASSERT has_column_privilege('anon', 'public.app_user_profile', 'actor_id', 'UPDATE') = FALSE,
+    'J1: anon non plus (UPDATE) — il tenait le privilège de TABLE lui aussi';
+  ASSERT has_column_privilege('anon', 'public.app_user_profile', 'actor_id', 'INSERT') = FALSE,
+    'J1: anon non plus (INSERT)';
+  -- Contrôles POSITIFS : la chirurgie de privilèges n'a fermé QUE actor_id. Sans eux, un
+  -- `REVOKE UPDATE, INSERT … FROM authenticated` sans re-GRANT passerait pour une réussite
+  -- tout en cassant l'édition du profil pour toute l'application.
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'display_name', 'UPDATE'),
+    'J1: display_name reste écrivable (self-update du profil, ProfileEditModal)';
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'preferences', 'UPDATE'),
+    'J1: preferences reste écrivable';
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'role', 'INSERT'),
+    'J1: role reste dans le GRANT (c''est le TRIGGER qui le garde, pas le privilège — ne pas déplacer la garde)';
+  ASSERT has_table_privilege('authenticated', 'public.app_user_profile', 'SELECT'),
+    'J1: la lecture du profil est intacte';
+  ASSERT has_column_privilege('service_role', 'public.app_user_profile', 'actor_id', 'UPDATE'),
+    'J1: la voie LÉGITIME (route /api/crm/actor-access en service_role) garde l''écriture';
+  ASSERT has_column_privilege('service_role', 'public.app_user_profile', 'actor_id', 'INSERT'),
+    'J1: idem à l''INSERT (upsert du profil portail à l''invitation)';
+
+  -- ---------- (J2) le geste d'escalade lui-même ----------
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userJ, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN UPDATE app_user_profile SET actor_id = v_actorJ WHERE id = v_userJ;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'J2: un authenticated ne peut PAS s''attribuer l''actor_id d''un acteur (42501) — sinon il hérite de sa portée portail';
+    -- Contrôle POSITIF dans le MÊME contexte : la self-update légitime du front passe encore.
+    UPDATE app_user_profile SET display_name = 'J2 self-update' WHERE id = v_userJ;
+  RESET ROLE;
+  ASSERT (SELECT actor_id FROM app_user_profile WHERE id = v_userJ) IS NULL,
+    'J2: et RIEN n''a été écrit — l''exception n''a pas laissé passer la ligne';
+  ASSERT (SELECT display_name FROM app_user_profile WHERE id = v_userJ) = 'J2 self-update',
+    'J2: la self-update légitime (display_name) survit à la chirurgie de privilèges';
+
+  -- ---------- (J3) le trigger, SEUL, sans le privilège de colonne ----------
+  -- REVOKE et trigger sont DEUX gardes, pas une. On rouvre ici le privilège de colonne
+  -- (DDL transactionnelle, annulée par le ROLLBACK final comme tout le reste) pour prouver
+  -- que le trigger mord SANS lui : sans cette étape, un futur `GRANT UPDATE ON
+  -- app_user_profile TO authenticated` — le geste le plus banal qui soit — rouvrirait
+  -- l'escalade en grand sans qu'aucune assertion ne rougisse.
+  GRANT UPDATE (actor_id) ON public.app_user_profile TO authenticated;
+  ASSERT has_column_privilege('authenticated', 'public.app_user_profile', 'actor_id', 'UPDATE'),
+    'J3: amorçage — le privilège a bien été rendu, la sonde qui suit teste donc le TRIGGER';
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userJ, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN UPDATE app_user_profile SET actor_id = v_actorJ WHERE id = v_userJ;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'J3: privilège de colonne RENDU, le trigger enforce_app_user_profile_role_change refuse SEUL (ceinture ET bretelles)';
+  RESET ROLE;
+  REVOKE UPDATE (actor_id) ON public.app_user_profile FROM authenticated;
+
+  -- ---------- (J4) le bras INSERT : un profil ne naît pas déjà lié ----------
+  -- Sans lui, le REVOKE d'UPDATE ne fermerait que la moitié de la porte : un tout premier
+  -- login (aucune ligne app_user_profile) créerait son profil DÉJÀ porteur d'un actor_id.
+  GRANT INSERT (actor_id) ON public.app_user_profile TO authenticated;
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userJ2, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN INSERT INTO app_user_profile (id, actor_id) VALUES (v_userJ2, v_actorJ);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'J4: un profil ne peut pas NAÎTRE déjà lié à un acteur (bras INSERT du trigger)';
+  RESET ROLE;
+  REVOKE INSERT (actor_id) ON public.app_user_profile FROM authenticated;
+  ASSERT NOT EXISTS (SELECT 1 FROM app_user_profile WHERE id = v_userJ2),
+    'J4: aucune ligne de profil n''a été créée par la tentative';
+
+  -- ---------- (J5) la voie légitime reste ouverte ----------
+  -- /api/crm/actor-access écrit ce lien en service_role (client `server` de
+  -- _document-auth.ts). Une fermeture qui l'emporterait aussi rendrait le portail
+  -- inattribuable — et cette assertion est la seule qui le dirait.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userJ, 'role', 'service_role')::text, true);
+  SET LOCAL ROLE service_role;
+    UPDATE app_user_profile SET actor_id = v_actorJ WHERE id = v_userJ;
+  RESET ROLE;
+  PERFORM set_config('request.jwt.claims', NULL, true);
+  ASSERT (SELECT actor_id FROM app_user_profile WHERE id = v_userJ) = v_actorJ,
+    'J5: la voie service_role (/api/crm/actor-access) écrit toujours le lien compte↔acteur';
+  -- Et le bras `role` historique n'a pas bougé : la garde ajoutée s'AJOUTE, elle ne remplace pas.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userJ, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_denied := false;
+    BEGIN UPDATE app_user_profile SET role = 'owner' WHERE id = v_userJ;
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied, 'J5: non-régression — le bras `role` du trigger refuse toujours l''auto-promotion';
+  RESET ROLE;
+
+  -- ---------- (J6) la porte dérobée : api.submit_pending_change ----------
+  -- api.submit_pending_change (migration_moderation_rpcs.sql) est exécutable par TOUT
+  -- authenticated et ne vérifie que api.can_read_object = « publié OU portée étendue ».
+  -- 18a crée la première population de comptes authenticated EXTERNES : sans garde, TOUTES
+  -- les protections de submit_actor_fiche — plancher dur, matrice de masquage, whitelist de
+  -- writers, plafond de 40 changements, verrou PT409 — se contournent en appelant l'autre
+  -- RPC. Et can_read_object accepte n'importe quel objet PUBLIÉ du realm, pas seulement les
+  -- fiches du prestataire : la porte est plus large encore que celle qu'elle contourne.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_user, 'role', 'authenticated', 'email', 'portal_actor_1301@test.local')::text, true);
+  SET LOCAL ROLE authenticated;
+    -- (a) sur SA PROPRE fiche : la porte de l'acteur est submit_actor_fiche, pas celle-ci.
+    v_denied := false;
+    BEGIN PERFORM api.submit_pending_change(v_objA, 'object_description', NULL, 'update',
+      jsonb_build_object('chapo', 'contournement 18a'), jsonb_build_object('section', 'legal'));
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'J6: une persona acteur ne passe PAS par submit_pending_change, même sur sa propre fiche (section legal = plancher dur contourné)';
+    -- (b) et sur une fiche PUBLIÉE hors de sa portée portail. v_objB porte un lien EXPIRÉ
+    -- (donc hors portail, bloc B) mais il est publié — can_read_object rend donc TRUE. C'est
+    -- exactement le cas que « Fiche hors de votre périmètre » ferme côté submit_actor_fiche.
+    v_denied := false;
+    BEGIN PERFORM api.submit_pending_change(v_objB, 'object_description', NULL, 'update',
+      jsonb_build_object('chapo', 'contournement 18a'), NULL);
+    EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    ASSERT v_denied,
+      'J6: ni sur une fiche PUBLIÉE quelconque du realm — can_read_object n''est PAS un périmètre de portail';
+  RESET ROLE;
+  ASSERT NOT EXISTS (SELECT 1 FROM pending_change WHERE payload->>'chapo' = 'contournement 18a'),
+    'J6: aucun changement n''est entré par la porte dérobée';
+  -- CONTRÔLE POSITIF, sans lequel la garde pourrait fermer la file de modération à TOUT LE
+  -- MONDE sans que rien ne rougisse : la voie historique (tourism_agent) reste ouverte.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_agent, 'role', 'authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    v_pcJ := api.submit_pending_change(v_objB, 'object_description', NULL, 'update',
+      jsonb_build_object('chapo', 'voie historique'), NULL);
+  RESET ROLE;
+  ASSERT v_pcJ IS NOT NULL AND EXISTS (SELECT 1 FROM pending_change WHERE id = v_pcJ),
+    'J6: la voie historique (tourism_agent) reste OUVERTE — la garde ne vise QUE la persona acteur';
+
+  RAISE NOTICE 'test_actor_portal blocs A-D1, E, H, D2, G, F2, F, I, J OK';
 END$$;
 ROLLBACK;

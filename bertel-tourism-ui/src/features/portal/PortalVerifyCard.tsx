@@ -16,8 +16,7 @@
  */
 import { useState } from 'react';
 import { CopyButton } from '../../components/common/CopyButton';
-
-const REPORT_PREFIX = 'Erreur signalée : ';
+import { composePortalNote, readPortalMessage, readPortalReport } from './portal-note';
 
 export function PortalVerifyCard({
   ficheName,
@@ -41,12 +40,24 @@ export function PortalVerifyCard({
   /** Au moins une rubrique modifiée : le message partira avec l'envoi. */
   hasPendingChanges: boolean;
 }) {
-  const reported = note.startsWith(REPORT_PREFIX);
-  const [open, setOpen] = useState(reported);
-  const [text, setText] = useState(reported ? note.slice(REPORT_PREFIX.length) : '');
+  // §212 — l'état se resynchronise PENDANT LE RENDU sur la note. `usePortalDraft` la
+  // restaure dans un EFFET : au premier rendu elle vaut '', et un `useState` figé laissait
+  // la carte fermée sur un texte vide pour toujours. Le partenaire ne voyait alors son
+  // signalement NULLE PART (sans rubrique modifiée il n'y a ni barre ni fenêtre d'envoi),
+  // le rouvrait, trouvait un champ vide, et un simple clic ailleurs l'effaçait.
+  const reported = readPortalReport(note);
+  const [state, setState] = useState({ note, text: reported, open: reported !== '' });
+  if (state.note !== note) {
+    const fresh = readPortalReport(note);
+    setState({ note, text: fresh, open: fresh !== '' || state.open });
+  }
+  const { text, open } = state;
+  const setText = (value: string) => setState((previous) => ({ ...previous, text: value }));
 
+  // On ne remplace que NOTRE part : le message libre écrit dans la fenêtre d'envoi
+  // traverse intact, et vider le signalement ne laisse pas le préfixe orphelin.
   function save() {
-    onNoteChange(text.trim() ? `${REPORT_PREFIX}${text.trim()}` : '');
+    onNoteChange(composePortalNote(text, readPortalMessage(note)));
   }
 
   return (
@@ -113,7 +124,11 @@ export function PortalVerifyCard({
           ) : null}
         </div>
       ) : (
-        <button type="button" className="ghost-button" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="ghost-button"
+          onClick={() => setState((previous) => ({ ...previous, open: true }))}
+        >
           Signaler une erreur
         </button>
       )}

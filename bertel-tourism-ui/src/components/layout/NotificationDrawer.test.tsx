@@ -35,7 +35,6 @@ function notif(over: Partial<AppNotification> = {}): AppNotification {
     createdById: 'u-jean',
     createdByName: 'Jean P.',
     outcome: null,
-    submissionId: null,
     ...over,
   };
 }
@@ -51,7 +50,6 @@ function review(over: Partial<AppNotification> = {}): AppNotification {
     createdById: null,
     createdByName: null,
     outcome: 'approved',
-    submissionId: 'sub-1',
     ...over,
   });
 }

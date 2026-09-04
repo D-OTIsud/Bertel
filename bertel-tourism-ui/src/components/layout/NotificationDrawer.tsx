@@ -21,6 +21,7 @@ import {
   notificationKeys,
   type AppNotification,
 } from '../../services/notifications';
+import { SUBMISSION_OUTCOME_WORD } from '../../lib/submission-outcome';
 import { notificationInboxQueryOptions } from '../../hooks/useNotificationInbox';
 import { useSessionStore } from '../../store/session-store';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
@@ -44,23 +45,17 @@ function formatWhen(value: string | null): string {
   });
 }
 
-/**
- * Le mot de chaque issue de vérification (18a). Table plutôt que ternaire : `partial` n'est
- * ni `approved` ni `rejected`, et une issue inconnue retombe sur « vérifiées » — neutre et
- * vrai — plutôt que sur un verdict inventé.
- */
-const REVIEW_OUTCOME_WORD: Record<string, string> = {
-  approved: 'validées',
-  rejected: 'refusées',
-  partial: 'en partie validées',
-};
-
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
   // 18a — le retour de l'office sur une fiche envoyée. Ni émetteur (le payload est SANS nom,
   // RGPD) ni titre de tâche : ce qui compte pour son lecteur, c'est SA fiche et le verdict.
+  //
+  // Le mot du verdict vient de `lib/submission-outcome`, la MÊME source que l'e-mail de
+  // résolution : ces deux surfaces décrivent un seul et même événement, et un arbitrage de
+  // copie appliqué à l'une seulement les ferait diverger en silence. Une issue inconnue
+  // retombe sur « vérifiées » — neutre et vrai — plutôt que sur un verdict inventé.
   if (notification.kind === 'fiche_submission_reviewed') {
-    const outcome = REVIEW_OUTCOME_WORD[notification.outcome ?? ''] ?? 'vérifiées';
+    const outcome = notification.outcome ? SUBMISSION_OUTCOME_WORD[notification.outcome] : 'vérifiées';
     return `Vos modifications de « ${notification.objectName ?? 'votre fiche'} » ont été ${outcome}`;
   }
   const who = notification.createdByName ?? 'Quelqu’un';

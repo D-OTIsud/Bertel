@@ -16,6 +16,7 @@ const base: SubmissionReviewedEmailData = {
   outcome: 'approved',
   recipientName: 'Marie',
   appUrl: 'https://app.example.re/espace',
+  loginUrl: 'https://app.example.re/login',
 };
 
 const approved = renderSubmissionReviewedEmailHtml({ ...base, outcome: 'approved' });
@@ -74,6 +75,22 @@ describe('SubmissionReviewedEmail — corps, une issue = une phrase', () => {
     expect(partial).not.toContain('Vos modifications n’ont pas été retenues');
   });
 
+  // Revue, mineur 4 — le titre et la 2ᵉ phrase de `partial` se répétaient à un synonyme
+  // près (« a été validée » / « a été acceptée ») : le lecteur pouvait y chercher DEUX
+  // faits là où il n'y en avait qu'un. Chaque phrase doit apporter un fait de plus.
+  it('aucune phrase du corps ne redit le titre (ni pour partial, ni pour rejected)', () => {
+    for (const [html, headline] of [
+      [partial, 'Une partie de vos modifications a été validée'],
+      [rejected, 'Vos modifications n’ont pas été retenues'],
+    ] as const) {
+      // Le titre apparaît UNE fois : dans le titre. Pas de paraphrase juste en dessous.
+      expect(html.split(headline).length - 1).toBe(1);
+    }
+    // `partial` dit ce que le refus partiel CHANGE (rien, sur ces points-là) — un fait neuf.
+    expect(partial).toContain('votre fiche n’a pas changé sur ces points');
+    expect(rejected).toContain('elle reste telle qu’elle était avant votre envoi');
+  });
+
   it('les trois corps sont réellement différents deux à deux', () => {
     expect(new Set([approved, rejected, partial]).size).toBe(3);
   });
@@ -86,6 +103,25 @@ describe('SubmissionReviewedEmail — le reste du message', () => {
     expect(approved).toContain('Ouvrir mon espace');
     expect(approved).toContain('https://app.example.re/espace');
     expect(rejected).toContain('dans votre espace');
+  });
+
+  // IMPORTANT 2 (revue) — « Ouvrir mon espace » mène à /espace, donc à /login pour un
+  // gîteur qui a posé son mot de passe une fois, il y a des mois. Celui qui ne se connecte
+  // pas ne saura JAMAIS ce qui a été refusé — et c'est lui qui téléphone à l'office, ce que
+  // ce portail existe pour éviter. Le message doit donc annoncer la connexion ET donner la
+  // porte de récupération, dans les TROIS cas.
+  it('annonce la connexion et donne la porte de récupération, dans les trois issues', () => {
+    for (const html of [approved, rejected, partial]) {
+      expect(html).toContain('Vous devrez vous connecter avec votre adresse e-mail');
+      expect(html).toContain('Mot de passe oublié');
+      expect(html).toContain('https://app.example.re/login');
+    }
+  });
+
+  it('la porte de récupération n’invente pas d’URL : elle vient des données', () => {
+    const html = renderSubmissionReviewedEmailHtml({ ...base, loginUrl: 'https://autre.re/login' });
+    expect(html).toContain('https://autre.re/login');
+    expect(html).not.toContain('https://app.example.re/login');
   });
 
   it('AUCUN mot d’outil interne n’atteint le partenaire', () => {

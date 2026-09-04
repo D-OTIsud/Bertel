@@ -6,7 +6,12 @@
 // Parsing défensif au même standard que services/crm.ts : une ligne malformée est IGNORÉE,
 // elle ne fait pas tomber toute la boîte.
 import { getApiClient } from '../lib/supabase';
+import { isSubmissionOutcome, type SubmissionOutcome } from '../lib/submission-outcome';
 import { useSessionStore } from '../store/session-store';
+
+// L'issue et son vocabulaire viennent de `lib/submission-outcome` — la MÊME source que
+// l'e-mail de résolution. Re-exportée pour les consommateurs de ce service.
+export type { SubmissionOutcome };
 
 type GenericRecord = Record<string, unknown>;
 
@@ -22,14 +27,6 @@ function readNullableString(value: unknown): string | null {
 export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed';
 
 const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed'];
-
-/**
- * Issue d'une vérification de fiche (18a) — le CHECK de `fiche_submission` moins `pending`.
- * `partial` n'est ni une acceptation ni un refus : l'office a retenu une partie du travail.
- */
-export type SubmissionOutcome = 'approved' | 'rejected' | 'partial';
-
-const KNOWN_OUTCOMES: readonly string[] = ['approved', 'rejected', 'partial'];
 
 export interface AppNotification {
   id: string;
@@ -51,8 +48,6 @@ export interface AppNotification {
    * chaque consommateur devrait re-tester la FORME de l'objet au lieu de la valeur.
    */
   outcome: SubmissionOutcome | null;
-  /** 18a — la vérification concernée. Identifiant technique, jamais affiché. */
-  submissionId: string | null;
 }
 
 export interface AppNotificationInbox {
@@ -76,8 +71,11 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
   // Le payload BRUT, tel que `api.list_my_notifications` l'émet (corps live vérifié :
   // ce RPC rend `payload` entier et AUCUNE clé outcome/submission_id de premier niveau —
   // contrairement à `api.claim_unmailed_notifications`, qui les aplatit pour le relais).
+  // Seul `outcome` en est lu : `submission_id` y reste disponible, mais aucune surface ne
+  // l'affiche ni ne s'en sert pour naviguer — le porter dans le type en ferait du poids
+  // mort, écrit une fois et lu par personne.
   const payload = record.payload && typeof record.payload === 'object' ? (record.payload as GenericRecord) : {};
-  const outcome = readString(payload.outcome);
+  const outcome: unknown = payload.outcome;
   return {
     id,
     kind: kind as AppNotificationKind,
@@ -91,8 +89,7 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
     createdByName: readNullableString(record.created_by_name),
     // Une issue hors des trois connues rend `null` : le libellé dira « vérifiées », neutre
     // et vrai, plutôt qu'un verdict inventé.
-    outcome: KNOWN_OUTCOMES.includes(outcome) ? (outcome as SubmissionOutcome) : null,
-    submissionId: readNullableString(payload.submission_id),
+    outcome: isSubmissionOutcome(outcome) ? outcome : null,
   };
 }
 

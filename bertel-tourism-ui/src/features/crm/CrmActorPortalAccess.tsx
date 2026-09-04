@@ -12,8 +12,14 @@
 //  - jamais un bouton qui échoue : sans canal e-mail, sans droit d'écriture, ou si l'acteur
 //    est déjà rattaché à un autre compte, le bouton est DÉSACTIVÉ avec la raison À L'ÉCRAN
 //    (pas seulement en `title`, invisible au doigt) ;
-//  - inviter envoie un e-mail à une vraie personne : le geste passe par une confirmation qui
-//    NOMME l'adresse. La révocation aussi — elle supprime un compte.
+//  - tout geste qui envoie un e-mail ou supprime un compte passe par une confirmation qui
+//    NOMME l'adresse : inviter, RENVOYER (il invalide le lien précédent) et révoquer.
+//
+// Le statut est lu derrière `api.user_can_read_crm_actor`, pas le prédicat d'écriture : un
+// agent en lecture seule (canWrite=false) doit voir l'état du compte, sinon la carte lui
+// afficherait un bandeau d'alerte permanent sur CHAQUE fiche et la branche `blockedReason`
+// ci-dessous ne serait jamais atteinte en production. Voir le commentaire de REQUIRED_GATE
+// dans `app/api/crm/actor-access/route.ts` : les deux moitiés de cette règle vont ensemble.
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound } from 'lucide-react';
@@ -45,7 +51,7 @@ export function CrmActorPortalAccess({
   emailChannels: string[];
 }) {
   const queryClient = useQueryClient();
-  const [confirming, setConfirming] = useState<'invite' | 'revoke' | null>(null);
+  const [confirming, setConfirming] = useState<'invite' | 'resend' | 'revoke' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // null = « pas encore choisi » ⇒ la première adresse fait foi, y compris quand les canaux
   // arrivent APRÈS le premier rendu (ils viennent du snapshot de la fiche).
@@ -80,7 +86,7 @@ export function CrmActorPortalAccess({
   const invite = useMutation({ mutationFn: () => invitePortalAccess(actorId, inviteEmail), ...onSettled(true) });
   const resend = useMutation({
     mutationFn: () => resendPortalAccess(actorId, account?.email ?? inviteEmail),
-    ...onSettled(false),
+    ...onSettled(true),
   });
   const revoke = useMutation({ mutationFn: () => revokePortalAccess(actorId), ...onSettled(true) });
 
@@ -129,7 +135,7 @@ export function CrmActorPortalAccess({
                 className="crm-btn sm"
                 disabled={!canWrite || resend.isPending}
                 title={canWrite ? undefined : CRM_READ_ONLY_REASON}
-                onClick={() => resend.mutate()}
+                onClick={() => setConfirming('resend')}
               >
                 {resend.isPending ? 'Envoi…' : 'Renvoyer l’invitation'}
               </button>
@@ -200,6 +206,23 @@ export function CrmActorPortalAccess({
         busy={invite.isPending}
         onCancel={() => setConfirming(null)}
         onConfirm={() => invite.mutate()}
+      />
+      {/* Renvoyer n'est pas anodin : un nouvel e-mail part, ET le lien précédent cesse de
+          fonctionner. Même exigence de confirmation que l'invitation. */}
+      <ConfirmDialog
+        open={confirming === 'resend'}
+        title="Renvoyer l’invitation"
+        message={
+          <>
+            Une nouvelle invitation part à <strong>{account?.email ?? inviteEmail}</strong>. Le lien
+            envoyé précédemment cessera de fonctionner.
+          </>
+        }
+        confirmLabel="Renvoyer"
+        cancelLabel="Annuler"
+        busy={resend.isPending}
+        onCancel={() => setConfirming(null)}
+        onConfirm={() => resend.mutate()}
       />
       <ConfirmDialog
         open={confirming === 'revoke'}

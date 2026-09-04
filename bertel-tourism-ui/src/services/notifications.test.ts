@@ -61,7 +61,6 @@ describe('parsing défensif', () => {
       // existent quand même, à null. Une clé absente selon l'espèce obligerait chaque
       // consommateur à re-tester la forme de l'objet plutôt que la valeur.
       outcome: null,
-      submissionId: null,
     });
   });
 
@@ -105,7 +104,7 @@ describe('parsing défensif', () => {
 // contrats sont donc différents, et c'est le payload qu'il faut lire ici.
 // ═══════════════════════════════════════════════════════════════════════════════════════
 describe('espèce fiche_submission_reviewed', () => {
-  it('lit l’issue et la soumission DANS le payload (c’est là que le RPC les met)', () => {
+  it('lit l’issue DANS le payload (c’est là que le RPC la met)', () => {
     const parsed = parseAppNotification({
       id: 'n2',
       kind: 'fiche_submission_reviewed',
@@ -121,7 +120,9 @@ describe('espèce fiche_submission_reviewed', () => {
     });
     expect(parsed?.kind).toBe('fiche_submission_reviewed');
     expect(parsed?.outcome).toBe('partial');
-    expect(parsed?.submissionId).toBe('sub-1');
+    // `submission_id` reste dans le payload SQL mais n'entre PAS dans le type : aucune
+    // surface ne l'affiche ni ne navigue avec — le porter serait du poids mort.
+    expect(parsed).not.toHaveProperty('submissionId');
   });
 
   it('payload absent ou malformé : issue inconnue, jamais une issue inventée', () => {

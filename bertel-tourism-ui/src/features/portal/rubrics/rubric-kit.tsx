@@ -163,11 +163,23 @@ export function useRubricForm<T>(formKey: string, read: () => T, cache?: PortalF
 }
 
 /**
- * Le magasin de la saisie EN COURS, tenu par le hub (qui ne se démonte jamais entre deux
- * rubriques). Une `Map` suffit : ce n'est pas du travail à conserver d'une session à
- * l'autre — c'est du travail à ne pas perdre en changeant d'écran.
+ * Le magasin de la saisie EN COURS.
+ *
+ * Une `Map` en mémoire ne suffit PAS : elle survit au changement d'écran, pas à un
+ * rechargement, ni à un onglet tué par le système, ni à un appel entrant — le scénario le
+ * plus probable des quatre sur un téléphone. Le brouillon `localStorage`, lui, n'est écrit
+ * que depuis `editor.dirtySections`, qui ne bouge qu'au clic sur « Valider ». Entre les
+ * deux, tout ce qui a été tapé disparaissait sans un mot.
+ *
+ * L'interface reste minimale pour qu'une `Map` la satisfasse telle quelle (les tests en
+ * passent une), et que l'implémentation persistante — `usePortalFormCache` — puisse s'y
+ * substituer sans toucher un seul formulaire.
  */
-export type PortalFormCache = Map<string, unknown>;
+export interface PortalFormCache {
+  get(key: string): unknown;
+  set(key: string, value: unknown): void;
+  delete(key: string): void;
+}
 
 /**
  * Amène le focus sur le champ fautif. Laisser le focus sur « Valider » après un refus

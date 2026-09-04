@@ -19,6 +19,13 @@
 --      transformerait le premier envoi groupe de test en incident reel.
 --   G. Le corpus reste HORS du flux partenaire, mesure sur le corpus vivant et
 --      pas sur un temoin fabrique.
+--   I. La profondeur PAR TYPE : les facettes. Le bloc D ne verifiait que les
+--      tables COMMUNES — c'est-a-dire exactement ce que le semeur construisait —
+--      et laissait donc passer un corpus ou AUCUNE fiche n'avait de facette :
+--      sentiers sans trace ni etape, manifestations SANS DATE, hotels sans
+--      chambre, restaurants sans carte. Le bloc I part de
+--      `ref_facet_applicability` et non d'une liste ecrite a la main : c'est ce
+--      qui le rend capable de signaler un type qu'on aurait oublie plus tard.
 --   H. La remise a zero fait un aller-retour IDENTIQUE, et ses deux gardes
 --      refusent effectivement — dont celle qui compte : une ORG non marquee de
 --      test ne peut pas etre purgee. Une fonction qui SUPPRIME merite qu'on
@@ -228,7 +235,84 @@ BEGIN
            'H: GARDE MUETTE — purge acceptee sur une ORG NON marquee de test';
   END;
 
-  RAISE NOTICE 'test_test_org_seed: OK (A org, B couverture 15/type, C marquage par lien d ORG, D profondeur, E acteurs fictifs, F rien de routable, G hors flux partenaire, H remise a zero + ses deux refus)';
+  -- ────────── I. La profondeur PAR TYPE (facettes) ──────────
+  DECLARE
+    r        record;
+    v_nb     integer;
+    v_manque text := '';
+  BEGIN
+    -- I1. Generique, pilote par le REGISTRE. Pour chaque type ayant au moins une
+    -- facette applicable, chaque fiche de test doit porter au moins une ligne dans
+    -- au moins une de ses facettes. Ecrit en dynamique parce que la liste des
+    -- tables vient de la base : si un type gagne une facette demain et que le
+    -- semeur l'ignore, CE bloc rougit sans qu'on ait rien a modifier ici.
+    FOR r IN
+      SELECT fa.object_type::text AS t,
+             array_agg(fa.facet_table ORDER BY fa.facet_table) AS tables
+      FROM ref_facet_applicability fa
+      WHERE EXISTS (SELECT 1 FROM object o WHERE o.is_test AND o.object_type = fa.object_type)
+      GROUP BY 1
+    LOOP
+      EXECUTE format(
+        'SELECT count(*) FROM object o WHERE o.is_test AND o.object_type::text = %L AND NOT (%s)',
+        r.t,
+        (SELECT string_agg(format('EXISTS (SELECT 1 FROM %I f WHERE f.object_id = o.id)', tb), ' OR ')
+         FROM unnest(r.tables) AS tb
+         -- object_iti_section porte parent_object_id et non object_id : elle sort
+         -- du motif commun, et elle est de toute facon facultative (decoupage en
+         -- troncons). On ne la compte pas comme preuve de profondeur.
+         WHERE tb <> 'object_iti_section')
+      ) INTO v_nb;
+      IF v_nb > 0 THEN
+        v_manque := v_manque || format('%s (%s fiches sans facette) ', r.t, v_nb);
+      END IF;
+    END LOOP;
+    ASSERT v_manque = '',
+           format('I: types dont des fiches de test n ont AUCUNE facette : %s', v_manque);
+
+    -- I2. Le metier, nomme. Le generique ci-dessus se contenterait d'UNE ligne
+    -- dans UNE table ; ces assertions-la disent ce qui rend la fiche exploitable.
+    SELECT count(*) INTO v_nb FROM object o
+     WHERE o.is_test AND o.object_type = 'ITI'
+       AND (NOT EXISTS (SELECT 1 FROM object_iti i        WHERE i.object_id = o.id)
+         OR NOT EXISTS (SELECT 1 FROM object_iti_stage st WHERE st.object_id = o.id)
+         OR NOT EXISTS (SELECT 1 FROM object_iti_practice pr WHERE pr.object_id = o.id));
+    ASSERT v_nb = 0,
+           format('I: %s sentiers de test sans mesures, sans etape ou sans pratique — l editeur d itineraire n a rien a editer', v_nb);
+
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM object_iti i JOIN object o ON o.id = i.object_id
+      WHERE o.is_test AND i.geom IS NULL),
+      'I: des sentiers de test sans TRACE — ni carte, ni GPX, ni KML a exercer';
+
+    SELECT count(*) INTO v_nb FROM object o
+     WHERE o.is_test AND o.object_type = 'FMA'
+       AND NOT EXISTS (SELECT 1 FROM object_fma_occurrence oc WHERE oc.object_id = o.id);
+    ASSERT v_nb = 0,
+           format('I: %s manifestations de test SANS DATE — agenda, filtre « a venir » et tri chronologique restent muets', v_nb);
+
+    SELECT count(*) INTO v_nb FROM object o
+     WHERE o.is_test AND o.object_type IN ('HOT','HLO','CAMP','HPA','RVA')
+       AND NOT EXISTS (SELECT 1 FROM object_room_type rt WHERE rt.object_id = o.id);
+    ASSERT v_nb = 0, format('I: %s hebergements de test sans aucun type de chambre', v_nb);
+
+    SELECT count(*) INTO v_nb FROM object o
+     WHERE o.is_test AND o.object_type = 'RES'
+       AND NOT EXISTS (SELECT 1 FROM object_menu m
+                        WHERE m.object_id = o.id
+                          AND EXISTS (SELECT 1 FROM object_menu_item mi WHERE mi.menu_id = m.id));
+    ASSERT v_nb = 0, format('I: %s restaurants de test sans carte garnie', v_nb);
+
+    -- I3. Et la reciproque : aucune facette la ou le registre n'en prevoit pas.
+    -- trg_assert_facet_applicable le refuserait deja, mais une facette posee sur
+    -- un type non prevu signalerait que le semeur a derive du registre.
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM object_act a JOIN object o ON o.id = a.object_id
+      WHERE o.is_test AND o.object_type::text NOT IN ('ACT','ASC')),
+      'I: object_act pose sur un type auquel il ne s applique pas';
+  END;
+
+  RAISE NOTICE 'test_test_org_seed: OK (A org, B couverture 15/type, C marquage par lien d ORG, D profondeur commune, E acteurs fictifs, F rien de routable, G hors flux partenaire, H remise a zero + ses deux refus, I facettes par type)';
 END
 $$;
 ROLLBACK;

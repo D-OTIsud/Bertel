@@ -1335,6 +1335,41 @@ séparément.
 | `test_test_org_isolation.sql` | 9 blocs verts, **rouge avant application** |
 | `test_test_org_seed.sql` | 7 blocs verts |
 
+### La profondeur PAR TYPE — `migration_test_org_facets.sql` (18b0)
+
+18b remplissait les tables **communes** (localisation, description, contacts, acteur, ouverture,
+équipements, tarifs, classements) et s'arrêtait là. Les 270 fiches n'avaient donc **aucune ligne
+de facette** : sentiers sans distance ni tracé ni étape, manifestations **sans date**, hôtels sans
+chambre, restaurants sans carte. Le corpus était complet au sens du *nombre* de fiches et vide au
+sens du *métier*.
+
+La garde de 18b ne le voyait pas : elle vérifiait la profondeur **commune**, c'est-à-dire
+exactement ce que le semeur construisait. *Une garde qui n'interroge que ce qu'on a fait ne dit
+rien de ce qu'on a oublié* — même motif que les 42 policies inlinées de 18a.
+
+- **Ordre** : 18b0 s'applique **avant** 18b, qui appelle `internal.seed_test_facets` depuis
+  `seed_test_corpus`. C'est la seule façon que `rpc_reset_test_data()` resème aussi les facettes ;
+  une passe de rattrapage séparée aurait disparu au premier « Réinitialiser » sans revenir.
+- **Le registre décide** : `ref_facet_applicability` (+ `trg_assert_facet_applicable`). 7 types
+  (COM, PCU, PNA, PRD, PSV, SPU, VIL) n'ont aucune facette et n'en reçoivent pas.
+- **Piège relevé** : `object_iti.open_status` n'accepte que 4 des 7 codes de
+  `ref_code_iti_open_status` — `not_managed`, `unknown` et `archived` sont refusés par le CHECK
+  de la colonne.
+
+| Type | Facettes semées |
+| --- | --- |
+| ITI | `object_iti` (distance, dénivelé, durée, boucle, statut, **tracé LineString**), 4 étapes géolocalisées, 1-3 pratiques, `object_iti_info`, 6 points de profil |
+| FMA | `object_fma` (dates, horaires, récurrence) + **3 occurrences étalées** (passée, proche, lointaine) |
+| ACT, ASC | `object_act` (durée, participants, difficulté, âge, encadrement) |
+| HOT, HLO, CAMP, HPA, RVA | 3 types de chambre (capacités, surface, literie, prix) ; salle de réunion 1 fiche sur 2 |
+| LOI | salle de réunion 1 fiche sur 2 |
+| RES | une carte + 4 plats |
+
+Le bloc I de `test_test_org_seed.sql` garde tout cela, et sa moitié générique est **pilotée par le
+registre** : si un type gagne une facette demain et que le semeur l'ignore, il rougit sans qu'on
+touche au test. **Non-vacuité prouvée par sabotage** — les 5 assertions rougissent quand on
+détruit tour à tour étapes, tracé, dates, chambres et cartes.
+
 ### Creer une fiche DANS le bac a sable
 
 C'est la condition d'un bac a sable utile — on n'y vient pas pour lire — et le chemin le plus

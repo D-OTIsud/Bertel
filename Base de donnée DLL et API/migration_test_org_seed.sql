@@ -307,6 +307,13 @@ BEGIN
         ON CONFLICT (object_id, amenity_id) DO NOTHING;
       END IF;
 
+      -- La profondeur PAR TYPE (migration_test_org_facets.sql, appliquee AVANT
+      -- celle-ci). Appelee ICI, dans le semeur, et non par une passe separee :
+      -- rpc_reset_test_data() repasse par seed_test_corpus, donc toute facette
+      -- semee ailleurs disparaitrait au premier « Reinitialiser » sans revenir.
+      -- Le corpus doit etre complet PAR CONSTRUCTION, pas par rattrapage.
+      PERFORM internal.seed_test_facets(v_id, v_type, v_i, v_src);
+
       -- Un tarif de repli pour les types marchands dont la source n'en portait
       -- aucun. Sans lui, un seul type du corpus de test avait des prix : les
       -- filtres tarifaires, le tri par prix et cached_min_price restaient muets

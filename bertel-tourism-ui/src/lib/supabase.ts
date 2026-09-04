@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { env, hasSupabaseConfig } from './env';
+import { isSandboxMode, SANDBOX_AUTH_KEY } from './sandbox-mode';
 
 // Single GoTrueClient singleton. Two createClient() calls with the same credentials
 // produce two GoTrueClient instances sharing the same localStorage key, which triggers
@@ -15,6 +16,7 @@ export function getSupabaseClient(): SupabaseClient | null {
   if (!dbClient) {
     dbClient = createClient(env.supabaseUrl, env.supabaseAnonKey, {
       auth: {
+        ...(isSandboxMode() ? { storageKey: SANDBOX_AUTH_KEY, storage: window.sessionStorage } : {}),
         persistSession: true,
         autoRefreshToken: true,
       },

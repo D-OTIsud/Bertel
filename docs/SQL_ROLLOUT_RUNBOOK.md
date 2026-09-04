@@ -1752,3 +1752,35 @@ Contrôle après application : catalogue et RPC présents, zéro octroi actif pa
 et zéro exception individuelle. Le graphe DB a été régénéré avec les fonctions et
 policies du catalogue vivant ; l’export `tbls` ayant dépassé 180 secondes, le relevé
 existant des tables a été conservé (cette migration ne change ni table, ni colonne, ni FK).
+
+## 18f — Découverte publique du bac à sable — 2026-09-04
+
+`https://bertel.re/?test=true` ouvre `/test`, sans identifiants. Le lien discret
+« Essayer l’espace de test » du login utilise cette même entrée. `/login?test=true`
+fonctionne également. Le bandeau propose « Quitter le test ».
+
+La migration `supabase/migrations/20260904062635_public_sandbox_entry.sql` a été
+appliquée en base ; sa copie canonique `migration_public_sandbox_entry.sql` et le
+test transactionnel `tests/test_public_sandbox_entry.sql` sont ajoutés au manifeste.
+Le premier appel à `/api/sandbox/session` prépare une identité de découverte
+partagée, marquée exclusivement via Auth Admin, membre contributeur de l’ORG de
+test. Aucun e-mail n’est envoyé. Aucun compte de travail n’est converti, aucun rôle
+administrateur ni permission portail n’est accordé. Les fiches fictives sont
+modifiables ; CRM en écriture, administration et remise à zéro restent fermés.
+
+Le serveur vérifie ce périmètre avant d’émettre une session. Les RPC de préparation
+ne sont exécutables que par `service_role`. Le marqueur signé `app_metadata` garde
+le realm de test même après révocation de l’appartenance (jamais `user_metadata`).
+La clé serveur existante `SUPABASE_SERVICE_ROLE_KEY` reste nécessaire, comme pour
+les autres routes Admin ; aucune clé supplémentaire n’est requise.
+
+Dans le navigateur, tokens et cache de découverte utilisent des clés distinctes,
+dans `sessionStorage`. La session de travail en `localStorage` reste intacte, ainsi
+que les autres onglets. Entrée et sortie rechargent la page pour reconstruire les
+clients avec le bon stockage. Une erreur de vérification du realm bloque l’ouverture.
+
+Validation : les assertions SQL passent sur la base connectée et sont annulées par
+ROLLBACK. Le parcours navigateur local utilise des réponses Auth simulées : il
+vérifie le lien, l’entrée directe, le stockage séparé, la récupération après erreur
+et la sortie. L’émission d’une session Auth réelle doit être confirmée après
+redéploiement : aucune clé Admin n’est disponible dans l’environnement local de test.

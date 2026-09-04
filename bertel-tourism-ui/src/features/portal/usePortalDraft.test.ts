@@ -12,11 +12,13 @@ import {
   clearPortalDraft,
   hasPortalDraft,
   portalDraftKey,
+  portalFormKey,
   portalSentKey,
   readPortalDraft,
   readPortalSent,
   usePortalDraft,
   writePortalDraft,
+  writePortalForms,
   writePortalSent,
 } from './usePortalDraft';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -183,6 +185,19 @@ describe('clearPortalDraft / clearAllPortalDrafts', () => {
     expect(hasPortalDraft(USER, 'AUTRE')).toBe(true);
   });
 
+  it('clearPortalDraft emporte AUSSI la saisie non validée de la fiche', async () => {
+    // Deux clés, un seul abandon : « Annuler mes modifications » et un envoi réussi
+    // effacent le brouillon ; laisser la saisie en cours rouvrirait la rubrique avec un
+    // texte que le partenaire croit effacé.
+    writePortalDraft(USER, OBJ, server(), dirty(), 'a');
+    writePortalForms(USER, OBJ, server(), { contacts: { phone: '0692' } });
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).not.toBeNull();
+
+    clearPortalDraft(USER, OBJ);
+
+    expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBeNull();
+    expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).toBeNull();
+  });
   it('clearAllPortalDrafts purge brouillons ET instantanés du compte, et seulement du compte', () => {
     writePortalDraft(USER, OBJ, server(), dirty(), 'a');
     writePortalSent(USER, OBJ, { submittedAt: '2026-09-03T10:00:00.000Z', lines: { contacts: ['Téléphone : 0692'] } });

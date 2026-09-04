@@ -256,8 +256,9 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     // Le geste réflexe ne passe pas, et l'écran RÉAGIT au clic refusé.
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
+    // L'assertion qui PORTE : rien n'est parti. Vient ensuite la preuve que l'écran a réagi.
     expect(mock.approveFicheSubmission).not.toHaveBeenCalled();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
 
     fireEvent.click(attestation);
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
@@ -275,8 +276,9 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     expect(within(dialog).getByText(/rien ne serait validé/i)).toBeInTheDocument();
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
+    // L'assertion qui PORTE : rien n'est parti. Vient ensuite la preuve que l'écran a réagi.
     expect(mock.approveFicheSubmission).not.toHaveBeenCalled();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
 
     fireEvent.click(within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i }));
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
@@ -338,8 +340,9 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     // lui, est affiché depuis l'ouverture : le constater ne prouverait aucune réaction.
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
+    // L'assertion qui PORTE : rien n'est parti. Vient ensuite la preuve que l'écran a réagi.
     expect(mock.approvePendingChange).not.toHaveBeenCalled();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
 
     // Geste conscient : on coche, puis on valide.
     fireEvent.click(attestation);
@@ -367,8 +370,8 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     expect(within(next).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();
     fireEvent.click(within(next).getByRole('button', { name: /Certifier et valider/ }));
     // Sans un NOUVEAU geste, la seconde ligne ne part pas — et le refus se voit.
-    expect(await within(next).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
     expect(mock.approvePendingChange).toHaveBeenCalledTimes(1);
+    expect(await within(next).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
   });
 
   // FAIL-CLOSED (fait vérifié n°2) : les fixtures démo n'expriment pas manual_apply. Un
@@ -383,8 +386,9 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     expect(within(dialog).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();
     expect(within(dialog).queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: /Certifier et valider/ }));
-    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
+    // L'assertion qui PORTE : rien n'est parti. Vient ensuite la preuve que l'écran a réagi.
     expect(mock.approvePendingChange).not.toHaveBeenCalled();
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(/Cochez la certification/i);
   });
 
   it('D9 : une ligne sans envoi garde l’affichage plat (aucun geste groupé)', async () => {

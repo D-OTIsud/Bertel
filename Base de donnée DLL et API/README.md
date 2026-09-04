@@ -330,7 +330,7 @@ Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.
 - Fonctions `SECURITY DEFINER` sensibles avec `SET search_path` explicite.
 - Eviter les grants globaux sur toutes les fonctions `api`; preferer une allowlist (voir `docs/SUPABASE_SETUP.md`).
 
-### Realm de test (bac a sable) — 18a/18b
+### Realm de test (bac a sable) — 18c/18d
 
 Un unique predicat cloisonne le corpus de test, ecrit partout a l'identique :
 
@@ -352,7 +352,7 @@ ne voit pas la production.
 - Les tombstones (`object_deletion_log.is_test`) figent le realm A LA SUPPRESSION : l'objet
   n'existe plus, on ne peut pas le rejoindre apres coup.
 
-Voir `docs/SQL_ROLLOUT_RUNBOOK.md` (18a/18b) et
+Voir `docs/SQL_ROLLOUT_RUNBOOK.md` (18c/18d) et
 `docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
 
 ## Scripts operationnels

@@ -28,6 +28,7 @@ import {
   invitePortalAccess,
   resendPortalAccess,
   revokePortalAccess,
+  type PortalActionResult,
 } from '../../services/actor-access';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
@@ -53,6 +54,8 @@ export function CrmActorPortalAccess({
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState<'invite' | 'resend' | 'revoke' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Le geste a réussi mais quelque chose mérite d'être dit (trace CRM manquante).
+  const [notice, setNotice] = useState<string | null>(null);
   // null = « pas encore choisi » ⇒ la première adresse fait foi, y compris quand les canaux
   // arrivent APRÈS le premier rendu (ils viennent du snapshot de la fiche).
   const [chosenEmail, setChosenEmail] = useState<string | null>(null);
@@ -65,15 +68,22 @@ export function CrmActorPortalAccess({
   function refresh() {
     void queryClient.invalidateQueries({ queryKey: ['crm-actor-portal-access', actorId] });
   }
-  function onSettled(close: boolean) {
+  /**
+   * `doneLabel` décrit ce qui A ÉTÉ FAIT — il ne sert qu'au cas où la trace CRM manque. Le
+   * geste a réussi : ce n'est donc pas une alerte, mais l'agent doit savoir que l'historique
+   * de l'acteur ne portera pas ce qu'il vient de faire.
+   */
+  function onSettled(doneLabel: string) {
     return {
-      onSuccess: () => {
+      onSuccess: (result: PortalActionResult) => {
         setActionError(null);
-        if (close) setConfirming(null);
+        setNotice(result.traced ? null : `${doneLabel}, mais l’action n’a pas pu être journalisée dans le CRM.`);
+        setConfirming(null);
         refresh();
       },
       onError: (error: unknown) => {
-        if (close) setConfirming(null);
+        setConfirming(null);
+        setNotice(null);
         setActionError(messageOf(error));
       },
     };
@@ -83,12 +93,18 @@ export function CrmActorPortalAccess({
   const linkedToOtherAccount = statusQuery.data?.linkedToOtherAccount === true;
   const inviteEmail = chosenEmail ?? emailChannels[0] ?? '';
 
-  const invite = useMutation({ mutationFn: () => invitePortalAccess(actorId, inviteEmail), ...onSettled(true) });
+  const invite = useMutation({
+    mutationFn: () => invitePortalAccess(actorId, inviteEmail),
+    ...onSettled('L’accès a été ouvert'),
+  });
   const resend = useMutation({
     mutationFn: () => resendPortalAccess(actorId, account?.email ?? inviteEmail),
-    ...onSettled(true),
+    ...onSettled('L’invitation a été renvoyée'),
   });
-  const revoke = useMutation({ mutationFn: () => revokePortalAccess(actorId), ...onSettled(true) });
+  const revoke = useMutation({
+    mutationFn: () => revokePortalAccess(actorId),
+    ...onSettled('L’accès a été révoqué'),
+  });
 
   // Une seule raison rendue à la fois, dans l'ordre où elle bloque réellement.
   const blockedReason = !canWrite
@@ -150,6 +166,10 @@ export function CrmActorPortalAccess({
               Révoquer
             </button>
           </div>
+          {/* Même règle que le bras « pas de compte » : la raison est À L'ÉCRAN, pas seulement
+              en `title`. Un `title` ne se lit ni au doigt ni par toutes les aides techniques —
+              l'énoncer en tête du fichier et ne l'appliquer qu'à moitié ne vaut rien. */}
+          {!canWrite && <p className="crm-rail__note">{CRM_READ_ONLY_REASON}</p>}
         </>
       ) : (
         <>
@@ -189,6 +209,13 @@ export function CrmActorPortalAccess({
         <div className="inline-alert" role="alert">
           {actionError}
         </div>
+      )}
+      {/* `status` et non `alert` : le geste a RÉUSSI, seule la trace manque. Une alerte rouge
+          ferait croire à un échec et pousserait l'agent à recommencer. */}
+      {notice && (
+        <p className="crm-rail__note" role="status">
+          {notice}
+        </p>
       )}
 
       <ConfirmDialog

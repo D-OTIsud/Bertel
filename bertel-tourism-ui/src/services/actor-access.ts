@@ -68,7 +68,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   profile_read_failed: 'Impossible de vérifier l’accès portail pour l’instant. Réessayez dans un instant.',
   create_failed: 'L’invitation n’a pas pu être envoyée. Aucun compte n’a été créé — réessayez.',
   profile_failed: 'L’invitation a échoué et le compte a été annulé. Réessayez ; si cela persiste, signalez-le.',
+  // Le renvoi supprime l'ancien compte AVANT d'en créer un neuf. S'il échoue APRÈS cette
+  // suppression, « aucun compte n'a été créé » serait vrai à la lettre et faux en pratique :
+  // l'acteur n'a plus d'accès du tout. Deux moments, deux phrases.
   resend_failed: 'Le renvoi a échoué. L’accès existant n’a pas été modifié.',
+  resend_lost_previous:
+    'L’ancien accès a été fermé mais le nouveau n’a pas pu être créé — relancez l’invitation.',
   revoke_failed: 'La révocation a échoué. L’accès est toujours actif.',
 };
 
@@ -85,14 +90,32 @@ export async function getPortalAccessStatus(actorId: string): Promise<PortalAcce
   return { account: payload.account ?? null, linkedToOtherAccount: payload.linkedToOtherAccount === true };
 }
 
-export async function invitePortalAccess(actorId: string, email: string): Promise<void> {
-  await unwrap(await callActorAccess({ action: 'invite', actorId, email }));
+/**
+ * Résultat d'un geste qui a RÉUSSI.
+ *
+ * `traced` dit si la note CRM a bien été écrite. La route la rend honnêtement ; ne pas la
+ * remonter jusqu'à l'écran déplacerait simplement d'un cran le silence que cette trace existe
+ * pour fermer — l'agent croirait le geste journalisé alors qu'il ne l'est pas.
+ *
+ * Absent ⇒ considéré comme tracé : on ne crie au loup que si le serveur dit explicitement non.
+ */
+export interface PortalActionResult {
+  traced: boolean;
 }
 
-export async function resendPortalAccess(actorId: string, email: string): Promise<void> {
-  await unwrap(await callActorAccess({ action: 'resend', actorId, email }));
+async function actionResult(response: Response): Promise<PortalActionResult> {
+  const payload = await unwrap<{ traced?: unknown }>(response);
+  return { traced: payload.traced !== false };
 }
 
-export async function revokePortalAccess(actorId: string): Promise<void> {
-  await unwrap(await callActorAccess({ action: 'revoke', actorId }));
+export async function invitePortalAccess(actorId: string, email: string): Promise<PortalActionResult> {
+  return actionResult(await callActorAccess({ action: 'invite', actorId, email }));
+}
+
+export async function resendPortalAccess(actorId: string, email: string): Promise<PortalActionResult> {
+  return actionResult(await callActorAccess({ action: 'resend', actorId, email }));
+}
+
+export async function revokePortalAccess(actorId: string): Promise<PortalActionResult> {
+  return actionResult(await callActorAccess({ action: 'revoke', actorId }));
 }

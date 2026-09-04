@@ -3837,6 +3837,9 @@ a {
   cursor: default;
 }
 
+.auth-test-link { align-self: center; margin-top: 0.5rem; }
+.sandbox-banner__exit { margin-left: auto; white-space: nowrap; }
+
 .auth-divider {
   display: flex;
   align-items: center;
@@ -14528,4 +14531,52 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
   .portal-rubric-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .portal-rubric-actions__note { flex-basis: 100%; }
   .portal-dates { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Bandeau « bac à sable » (18a/18b) ─────────────────────────────────────────
+   Le corpus de test est volontairement réaliste : sans repère permanent, un
+   testeur ne peut pas distinguer une fiche jetable d'un vrai prestataire. Le
+   bandeau est donc PERSISTANT (jamais masquable) mais discret — une barre fine
+   au-dessus du contenu, pas une alerte qu'on apprend à ignorer.
+   `--warning` plutôt que le rouge de danger : on signale un contexte, pas une
+   erreur. Aucun rôle de sécurité — le cloisonnement est fait par la base. */
+.sandbox-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: var(--text);
+  background: rgb(var(--theme-accent-rgb) / 0.10);
+  border-bottom: 1px solid rgb(var(--theme-accent-rgb) / 0.28);
+}
+
+.sandbox-banner__dot {
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--warning);
+}
+
+.sandbox-banner__label {
+  flex: 0 0 auto;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--accent-brand-strong);
+}
+
+.sandbox-banner__text {
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  /* Sur mobile la phrase complète pousserait le contenu hors de l'écran ; le
+     libellé et la pastille suffisent à situer le contexte. */
+  .sandbox-banner__text {
+    display: none;
+  }
 }

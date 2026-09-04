@@ -73,6 +73,10 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    if (searchParams?.get('test') === 'true') {
+      router.replace('/test');
+      return;
+    }
     if (status !== 'ready') return;
     router.replace(getPostLoginPath(role, searchParams?.get('from')));
   }, [role, router, searchParams, status]);
@@ -262,6 +266,7 @@ export default function LoginPage() {
               </Button>
             </>
           )}
+          <a className="auth-link auth-test-link" href="/?test=true">Essayer l’espace de test</a>
         </>
       ) : (
         <>

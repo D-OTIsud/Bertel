@@ -301,6 +301,14 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns and are transaction-wrapped where the files contain `BEGIN`/`COMMIT`. RPC scripts are idempotent through `CREATE OR REPLACE` plus grants/revokes; review local/pilot-only scripts before reapplying.
 
+18c. `migration_test_org_isolation.sql` — Isolation du bac a sable. Apres toutes les policies et le portail ; applique la dimension de test et rejoue `tests/test_test_org_isolation.sql`, y compris le croisement des liens explicites du portail.
+
+18c1. `migration_partner_tombstone_feed.sql` — Flux des suppressions definitives partenaire, excluant le bac a sable ; apres creation de `object_deletion_log.is_test` par 18c, avant le test d'isolation.
+
+18d0. `migration_test_org_facets.sql` — Fonction de generation des facettes par type, avant le seed qui l'appelle.
+
+18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 
@@ -1075,6 +1083,19 @@ pendant la fenêtre continue de fonctionner.
 `Base de donnée DLL et API/migration_role_permission_matrix.sql`
 Rollback : `Base de donnée DLL et API/rollback/rollback_role_permission_matrix.sql`
 
+**Manifeste : étape `17i`**, après **17d** `migration_team_roster_provenance.sql` — dernier
+autre définisseur d'`api.rpc_list_org_members`, que cette migration recrée. Déclarée dans
+`ci_fresh_apply.sql` le **2026-09-04** seulement ; jusque-là appliquée en PROD mais absente du
+manifeste, donc **jamais** exercée par la garde CI (cf. l'encadré de la liste ordonnée).
+
+**Intégration CI du 2026-09-04 :** le premier run (`33837270977`) applique les trois
+migrations mais échoue sur `test_unblock_team_legal_access.sql` : ses témoins `editor`
+héritent désormais des droits canoniques, documentaires et juridiques. La correction
+de fixture issue du chantier portail conserve toutes les assertions : `viewer` avec
+exception juridique individuelle, `contributor` sans droit juridique, et `editor`
+dans une autre ORG pour vérifier la frontière de périmètre. Aucune règle de production
+n'est modifiée par cette correction.
+
 ### Pourquoi
 
 Le rôle métier n'était qu'une **étiquette** (SP-2 §24 : « aucun droit implicite »). Le
@@ -1144,6 +1165,12 @@ Constaté en production : `xyz.makimura@gmail.com` est **Lecteur à 0 permission
 `team_lead` (rang 10) — il peut donc écrire du CRM. Décision en attente : un rôle
 d'administration doit-il conférer l'écriture CRM indépendamment du rôle métier ?
 
+> **Décidé le 2026-08-31, et FERMÉ** : arbitrage PO « non, un lecteur ne doit jamais écrire le
+> CRM ». **17j** retire le motif des quatre gardes CRM (`user_can_write_crm`,
+> `user_can_write_crm_actor`, `current_user_can_write_crm_notes`, `save_crm_actor`) et **17k**
+> du cinquième (`user_can_write_list`). Vérifié sur la base vive le **2026-09-04** : **0**
+> fonction porte encore `current_user_admin_rank() IS NOT NULL` hors commentaire.
+
 ### Ordre de déploiement
 
 Base d'abord, **front ensuite mais sans délai** : le front déployé appelle encore
@@ -1157,6 +1184,15 @@ d'accorder — le piège est désarmé, mais l'écran est incohérent.
 
 `Base de donnée DLL et API/migration_crm_write_requires_permission.sql`
 Rollback : `Base de donnée DLL et API/rollback/rollback_crm_write_requires_permission.sql`
+
+**Manifeste : étape `17j`**, après **17i** et **17c** `migration_crm_notes_probe.sql`.
+⚠️ **Sa place est dictée par le patch sur place de `save_crm_actor`** : le motif est comparé
+**tel quel, en minuscules**, or le dernier définisseur de cette fonction dans le manifeste est
+l'étape **8z3** `../supabase/migrations/20260807124408_actor_prospects_documents.sql`, qui le
+porte en minuscules et **exactement une fois** (`migration_crm_module.sql`, plus haut, l'écrit
+en MAJUSCULES et ferait lever le `RAISE` « le bras a changé de forme »). Toute remontée de cette
+étape au-dessus de 8z3 casse le fresh-apply. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04**
+seulement.
 
 ### Pourquoi
 
@@ -1220,6 +1256,9 @@ l'écriture CRM » : devenu faux, corrigé dans le même lot. La pastille « + r
 `Base de donnée DLL et API/migration_list_write_creator_only.sql`
 Rollback : `rollback/rollback_list_write_creator_only.sql`
 
+**Manifeste : étape `17k`**, après **L1** `migration_object_list.sql`, seul définisseur
+d'`api.user_can_write_list`. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04** seulement.
+
 Dernier porteur du motif fermé par 17j : `api.user_can_write_list` acceptait
 `current_user_admin_rank() IS NOT NULL`. `team_lead` (rang 10) donnait donc le droit de
 modifier, partager, marquer envoyée ou **supprimer** la liste de n'importe qui — y compris à un
@@ -1255,6 +1294,31 @@ Les deux dernières lignes diffèrent : le bras de reprise regarde bien l'appart
 ## 17l — Créer une liste : superuser plateforme UNIQUEMENT (§227)
 
 `Base de donnée DLL et API/migration_list_create_superuser_only.sql`
+
+⛔ **PAS ENCORE DÉCLARÉE au manifeste (état au 2026-09-04) — et c'est délibéré.** Sa place
+naturelle est après **L1** `migration_object_list.sql`, seul définisseur d'`api.create_list`,
+dans le bloc §227 de fin de chaîne. **La déclarer maintenant ferait rougir `sql-fresh-apply`** :
+`tests/test_object_list.sql`, que le workflow **rejoue après le manifeste** (étape « §211 E1
+Listes module non-regression »), appelle `api.create_list` ligne 98 sous une persona
+`authenticated` dont `app_user_profile.role` vaut `tourism_agent` — `is_platform_superuser()`
+y est FALSE, l'appel lèverait `42501` et les assertions suivantes tomberaient.
+
+Le test n'est pas cassé : il encode la règle produit **d'avant** l'arbitrage PO du 2026-08-31
+(« tout membre crée des listes »). Le rendre conforme est une décision produit, pas une
+réparation de manifeste — deux formes possibles, à trancher :
+
+1. donner à la persona de création `app_user_profile.role = 'super_admin'` (le test continue de
+   couvrir static/dynamic/partage/isolation, il change juste de créateur) ;
+2. **ou** garder la persona `tourism_agent` et retourner l'assertion : la création doit
+   désormais lever `42501` — ce qui ferait du test la garde manquante de 17l.
+
+La seconde est la seule qui **prouve** 17l ; la première ne fait que ne plus la contredire.
+
+Vérifié le 2026-09-04 : `test_object_list.sql` est le **seul** test du dépôt qui appelle
+`api.create_list` ou `api.user_can_write_list` — c'est donc le seul obstacle.
+
+Pas de fichier de rollback versionné : la restauration consiste à redéployer `api.create_list`
+depuis `migration_object_list.sql`.
 
 `api.create_list` ne portait **aucune** garde : tout membre créait des listes, Lecteur compris
 (2 des 12 listes en base sont d'un Lecteur). Arbitrage PO 2026-08-31, lecture stricte.
@@ -1692,3 +1756,271 @@ par le step CI `ref_amenity visit modes test` (`.github/workflows/sql-fresh-appl
 Aucun changement front dans ce créneau. La rubrique « Équipements » du portail acteur pour les
 sites de visite (type `VIS`) est un chantier distinct (Task 13) qui dépend de ce seed pour ne
 plus buter sur `23503` dès qu'un mode de visite est sélectionné.
+
+## 18c / 18d — Organisation de test à données isolées
+
+`migration_test_org_isolation.sql` (la dimension) + `migration_test_org_seed.sql` (le corpus).
+Spec : `docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
+
+### Pourquoi
+
+Aucun moyen d'exercer la plateforme sur des données jetables : toute fiche créée pour essayer
+une fonctionnalité entrait dans le corpus réel, devenait visible de tous, et **partait à l'API
+partenaire**.
+
+`org_config.access_scope = 'own_objects_only'` existe depuis §172 et **ne restreint rien** : une
+policy distincte, `public_objects_published`, accorde `status='published'` au rôle `public`
+(donc `anon` compris), par un autre chemin. Le périmètre était déclaré, pas appliqué.
+
+### Ce que les migrations font
+
+Un unique prédicat, écrit partout à l'identique :
+
+```sql
+o.is_test = (SELECT api.current_user_test_realm())
+```
+
+Une **égalité**, donc les deux sens à la fois — le corpus de test ne sort pas, et le compte de
+test ne voit pas la production. Deux prédicats séparés auraient laissé un des sens s'oublier ;
+c'est exactement ce qui est arrivé à `access_scope`.
+
+`object.is_test` est dénormalisé mais **entretenu par trigger** depuis `org_config.is_test_org` :
+l'organisation reste la source de vérité, la garde ne lit qu'une constante par ligne (pas de
+jointure dans le chemin RLS le plus chaud, celui réécrit en ensembliste pour §35).
+
+### Ce que le plan n'avait pas vu, et que les tests ont trouvé
+
+| # | Trouvé par | Conséquence si non fermé |
+| --- | --- | --- |
+| `can_read_object` ne couvre que **15 policies de lecture sur 58** ; les 42 autres inlinent le contrôle de publication depuis §35 | revue avant application | media, contact_channel, descriptions, tarifs, horaires grands ouverts — *la fiche entière*, avec le test « la fiche est invisible » au vert |
+| Le chemin **2C** de `current_user_extended_object_ids` (`access_scope = 'all_published'`) accorde tout le corpus publié | bloc C du test, passé rouge | rouvre à lui seul ce que `public_objects_published` venait de fermer |
+| `object_deletion_log` ne portait aucune dimension de test | bloc G du test | supprimer une fiche de test publiait son id et son type au **flux de tombstones partenaire** (C-4) |
+
+Les 42 policies sont réécrites **génériquement**, à partir du `qual` décompilé : on n'injecte que
+le prédicat, chaque policy garde ses conditions propres. Un `DO` block **refuse de valider** s'il
+reste une seule policy de lecture testant la publication sans prédicat de realm.
+
+### L'API partenaire
+
+Elle appelle en `service_role`, qui **court-circuite toute la RLS** : aucune des gardes RLS ne la
+protège. Le prédicat est donc écrit dans les corps de fonction (21 emplacements), et testé
+séparément.
+
+### ✅ APPLIQUÉES EN PRODUCTION le 2026-09-04
+
+| Vérification | Mesure |
+| --- | --- |
+| Flux partenaire complet (parcours du curseur) | 5 pages, **848 fiches servies, 0 de test** — exactement le corpus de production |
+| Policies de lecture sans prédicat de realm | 0 |
+| Matview de l'Explorer | 848 lignes = published non-test |
+| Corpus de test | 271 fiches, **19 types couverts**, 200 acteurs fictifs |
+| Compte de test simulé | 271 fiches de test visibles, **0 fiche réelle** ; fiche complète (localisation, description, contacts) |
+| Fiche **creee** dans le bac a sable, puis publiee | `is_test` = true ; invisible de `anon` ; absente de l'API partenaire |
+| `test_test_org_isolation.sql` | 9 blocs verts, **rouge avant application** |
+| `test_test_org_seed.sql` | 7 blocs verts |
+
+### La profondeur PAR TYPE — `migration_test_org_facets.sql` (18d0)
+
+18d remplissait les tables **communes** (localisation, description, contacts, acteur, ouverture,
+équipements, tarifs, classements) et s'arrêtait là. Les 270 fiches n'avaient donc **aucune ligne
+de facette** : sentiers sans distance ni tracé ni étape, manifestations **sans date**, hôtels sans
+chambre, restaurants sans carte. Le corpus était complet au sens du *nombre* de fiches et vide au
+sens du *métier*.
+
+La garde de 18d ne le voyait pas : elle vérifiait la profondeur **commune**, c'est-à-dire
+exactement ce que le semeur construisait. *Une garde qui n'interroge que ce qu'on a fait ne dit
+rien de ce qu'on a oublié* — même motif que les 42 policies inlinées de 18c.
+
+- **Ordre** : 18d0 s'applique **avant** 18d, qui appelle `internal.seed_test_facets` depuis
+  `seed_test_corpus`. C'est la seule façon que `rpc_reset_test_data()` resème aussi les facettes ;
+  une passe de rattrapage séparée aurait disparu au premier « Réinitialiser » sans revenir.
+- **Le registre décide** : `ref_facet_applicability` (+ `trg_assert_facet_applicable`). 7 types
+  (COM, PCU, PNA, PRD, PSV, SPU, VIL) n'ont aucune facette et n'en reçoivent pas.
+- **Piège relevé** : `object_iti.open_status` n'accepte que 4 des 7 codes de
+  `ref_code_iti_open_status` — `not_managed`, `unknown` et `archived` sont refusés par le CHECK
+  de la colonne.
+
+| Type | Facettes semées |
+| --- | --- |
+| ITI | `object_iti` (distance, dénivelé, durée, boucle, statut, **tracé LineString**), 4 étapes géolocalisées, 1-3 pratiques, `object_iti_info`, 6 points de profil |
+| FMA | `object_fma` (dates, horaires, récurrence) + **3 occurrences étalées** (passée, proche, lointaine) |
+| ACT, ASC | `object_act` (durée, participants, difficulté, âge, encadrement) |
+| HOT, HLO, CAMP, HPA, RVA | 3 types de chambre (capacités, surface, literie, prix) ; salle de réunion 1 fiche sur 2 |
+| LOI | salle de réunion 1 fiche sur 2 |
+| RES | une carte + 4 plats |
+
+Le bloc I de `test_test_org_seed.sql` garde tout cela, et sa moitié générique est **pilotée par le
+registre** : si un type gagne une facette demain et que le semeur l'ignore, il rougit sans qu'on
+touche au test. **Non-vacuité prouvée par sabotage** — les 5 assertions rougissent quand on
+détruit tour à tour étapes, tracé, dates, chambres et cartes.
+
+### Creer une fiche DANS le bac a sable
+
+C'est la condition d'un bac a sable utile — on n'y vient pas pour lire — et le chemin le plus
+fragile du cloisonnement, parce qu'il repose sur un **enchainement de triggers** :
+
+```
+rpc_create_object
+  -> trg_auto_attach_object_to_creator_org   (AFTER INSERT sur object : pose object_org_link is_primary)
+     -> trg_object_org_link_is_test           (AFTER INSERT sur object_org_link : marque object.is_test)
+```
+
+Si l'auto-rattachement cesse un jour de poser `is_primary`, les fiches creees dans le bac a sable
+**naitront en production** — publiques des leur publication, et servies a l'API partenaire, sans
+aucune erreur. Le bloc I de `test_test_org_isolation.sql` garde precisement cela : creation,
+publication, puis verification par `anon` **et** par `service_role`.
+
+### L'identité d'acteur traverse les organisations (correctif 18c-bis)
+
+Un utilisateur est relié à des fiches **par son e-mail** — `api.user_actor_ids()` joint
+`actor_channel.kind='email'` sur l'e-mail de session. Ce chemin (1a/1b du read gate) **ignore
+complètement l'organisation**, donc il ignorait aussi le realm : le prédicat n'avait été posé que
+sur le chemin 2C.
+
+Les deux sens fuyaient, mesurés sur la base live :
+
+| Croisement | Avant | Après |
+| --- | --- | --- |
+| Testeur dont l'e-mail est celui d'un acteur **réel** | voyait la fiche de production `LOIRUN00000000VI` | 0 fiche réelle |
+| Utilisateur de production dont l'e-mail est posé sur un acteur du **bac à sable** | voyait la fiche de test `PNATST0000000012` | 0 fiche de test |
+
+Le second n'a rien de théorique : **poser un e-mail sur un acteur du bac à sable est exactement ce
+qu'on y fait pour éprouver le portail acteur** (§228).
+
+**Le correctif filtre l'UNION ENTIÈRE en un seul point** — un `JOIN object … WHERE o.is_test =
+(SELECT api.current_user_test_realm())` posé sur le résultat des 5 chemins, plutôt qu'un prédicat
+répété chemin par chemin qui se serait re-oublié au prochain chemin ajouté. Le prédicat inline de
+2C disparaît, devenu redondant.
+
+**L'écriture passait par le même trou** : `api.is_object_owner` s'appuie sur `user_actor_ids()` et
+renvoyait `true` sur une fiche de production pour un compte de test. L'`UPDATE` direct ne touchait
+0 ligne — mais **par effet de bord** de la policy SELECT, pas par une garde : un RPC
+`SECURITY DEFINER` qui consulte `is_object_owner` puis écrit n'aurait eu aucun filet. La garde
+porte désormais le prédicat. `user_can_write_canonical` était déjà sain (il exige le lien d'ORG).
+
+**Découverte annexe** : les e-mails d'acteurs sont **uniques globalement** (« Email … is already
+used by actor … »). Cela limite la portée du croisement — un même e-mail ne peut pas être porté
+par un acteur de chaque côté — mais ne l'empêche pas, puisqu'il suffit qu'un *utilisateur* d'un
+realm porte l'e-mail d'un *acteur* de l'autre.
+
+Bloc J de `test_test_org_isolation.sql`, **non-vacuité prouvée par sabotage** : en restaurant la
+forme d'avant (prédicat sur le seul 2C), le bloc rougit.
+
+### Ouvrir un compte de test
+
+Aucun code supplémentaire : l'ORG « Bac a sable (organisation de test) » apparaît dans le
+sélecteur d'organisation de **/settings > Équipe**. On y invite un compte par e-mail ; l'invité
+choisit son propre mot de passe via `/set-password`, comme pour toute autre organisation.
+
+Comptes **dédiés** : pas de double appartenance. Le realm se calcule par utilisateur, pas par
+session — un compte présent dans les deux mondes serait de test partout, y compris sur les
+fiches réelles.
+
+### Remise à zéro
+
+`api.rpc_reset_test_data()` — superuser plateforme, **sans argument** (la cible est constante, on
+ne peut pas la pointer sur une organisation de production), et refus si l'ORG visée n'est pas
+`is_test_org`. Exposée dans **/settings > Corpus de test**, avec confirmation par saisie.
+
+La purge porte sur `is_test`, **pas sur le préfixe d'id** : une fiche créée à la main dans le bac
+à sable doit disparaître aussi, et une fiche de production ne doit pas disparaître parce qu'elle
+porterait un id malheureux.
+
+### Ordre de déploiement
+
+1. `migration_test_org_isolation.sql` (18c) — **en dernier dans le manifeste** : sa réécriture
+   générique des policies doit voir toutes les policies déjà créées.
+2. Les fonctions modifiées d'`api_views_functions.sql` (extraites par
+   `tools/sql/extract_functions.cjs` — le fichier entier contient des `DROP … CASCADE` qu'on ne
+   rejoue pas sur la production).
+3. `migration_explorer_rls_setbased.sql` (chemin 2C), `migration_cards_batch_authorize_definer.sql`,
+   `migration_partner_tombstone_feed.sql`.
+4. `migration_test_org_seed.sql` (18d).
+
+## Integration portail et bac a sable — 2026-09-04
+
+Le portail conserve 18a et le seed des modes de visite 18b. Le bac a sable utilise
+18c (isolation), 18d0 (facettes) puis 18d (corpus), apres le portail.
+La migration du portail conserve le filtre de realm sur les cinq chemins de lecture
+historiques, sur la portee explicite du portail et sur le lien owner, en plus du refus
+d'ecriture canonique pour la persona actor. Le bloc J du test d'isolation est rejoue
+apres les deux migrations pour verifier que le portail ne rouvre pas le pont e-mail.
+Les numeros des anciens rapports restent des reperes historiques de leurs branches.
+
+La CI a egalement revele que `migration_explorer_name_relevance.sql` est le dernier
+definisseur de `get_filtered_object_ids` : le filtre de realm et le contournement
+de la MV pour un compte de test y sont conserves, comme dans `api_views_functions.sql`.
+
+## 18e — Permission du bloc CRM Accès portail — 2026-09-04
+
+Appliquer `supabase/migrations/20260904060259_actor_portal_access_permission.sql`
+avant le déploiement de l’interface et de la route `/api/crm/actor-access`.
+Le manifeste de création utilise la copie identique
+`Base de donnée DLL et API/migration_actor_portal_access_permission.sql`, puis
+`tests/test_actor_portal_access_permission.sql` (fixtures annulées par ROLLBACK).
+
+La permission `manage_actor_portal_access`, catégorie CRM, apparaît dans
+Administration → Équipe → Permissions par rôle métier, sous le libellé
+« Gérer l’accès au portail prestataire ». Elle n’est accordée à aucun rôle par défaut.
+Seuls les superutilisateurs plateforme (`super_admin` / propriétaire `owner`, selon
+la définition existante) voient initialement le bloc. Cocher Éditeur permet ensuite
+de le déléguer aux éditeurs de l’organisation. Les exceptions individuelles existantes
+fonctionnent également. Le périmètre CRM de chaque acteur reste vérifié côté serveur.
+
+En l’absence du RPC ou en cas de refus, le bloc est masqué ; la route refuse les
+quatre opérations, y compris la lecture du statut. La migration est rejouable sans
+effacer les permissions accordées ultérieurement. Aucun compte portail n’est modifié.
+
+Validation du 2026-09-04 : 130 tests Jest ciblés passent (route, service, carte et
+fiche CRM, matrice et tiroir des permissions), ainsi que `tsc --noEmit`. Le test SQL
+transactionnel passe sur la base connectée, puis le manifeste complet et ses tests
+passent en CI sur une base vierge : [run 33843400996](https://github.com/D-OTIsud/Bertel/actions/runs/33843400996),
+commit `cea707a`. La migration incrémentale a ensuite été appliquée en base.
+Le masquage côté interface et la garde de route nécessitent le redéploiement de l’application.
+
+Contrôle après application : catalogue et RPC présents, zéro octroi actif par rôle
+et zéro exception individuelle. Le graphe DB a été régénéré avec les fonctions et
+policies du catalogue vivant ; l’export `tbls` ayant dépassé 180 secondes, le relevé
+existant des tables a été conservé (cette migration ne change ni table, ni colonne, ni FK).
+
+## 18f — Découverte publique du bac à sable — 2026-09-04
+
+`https://bertel.re/?test=true` ouvre `/test`, sans identifiants. Le lien discret
+« Essayer l’espace de test » du login utilise cette même entrée. `/login?test=true`
+fonctionne également. Le bandeau propose « Quitter le test ».
+
+La migration `supabase/migrations/20260904062635_public_sandbox_entry.sql` a été
+appliquée en base ; sa copie canonique `migration_public_sandbox_entry.sql` et le
+test transactionnel `tests/test_public_sandbox_entry.sql` sont ajoutés au manifeste.
+Le premier appel à `/api/sandbox/session` prépare une identité de découverte
+partagée, marquée exclusivement via Auth Admin, membre contributeur de l’ORG de
+test. Aucun e-mail n’est envoyé. Aucun compte de travail n’est converti, aucun rôle
+administrateur ni permission portail n’est accordé. Les fiches fictives sont
+modifiables ; CRM en écriture, administration et remise à zéro restent fermés.
+
+Le serveur vérifie ce périmètre avant d’émettre une session. Les RPC de préparation
+ne sont exécutables que par `service_role`. Le marqueur signé `app_metadata` garde
+le realm de test même après révocation de l’appartenance (jamais `user_metadata`).
+La clé serveur existante `SUPABASE_SERVICE_ROLE_KEY` reste nécessaire, comme pour
+les autres routes Admin ; aucune clé supplémentaire n’est requise.
+
+Dans le navigateur, tokens et cache de découverte utilisent des clés distinctes,
+dans `sessionStorage`. La session de travail en `localStorage` reste intacte, ainsi
+que les autres onglets. Entrée et sortie rechargent la page pour reconstruire les
+clients avec le bon stockage. Une erreur de vérification du realm bloque l’ouverture.
+
+Validation : les assertions SQL passent sur la base connectée et sont annulées par
+ROLLBACK. Le parcours navigateur local utilise des réponses Auth simulées : il
+vérifie le lien, l’entrée directe, le stockage séparé, la récupération après erreur
+et la sortie. L’émission d’une session Auth réelle doit être confirmée après
+redéploiement : aucune clé Admin n’est disponible dans l’environnement local de test.
+
+Résultats du 2026-09-04 : 44 tests Jest ciblés passent ; le build de production
+(`npm run build`) passe sur un checkout propre du commit `2debe19`, avec `/test`
+et `/api/sandbox/session` présents. Le manifeste SQL complet et ses régressions
+passent en CI : [run 33845734056](https://github.com/D-OTIsud/Bertel/actions/runs/33845734056).
+Le graphe DB a été rafraîchi avec les fonctions/policies vivantes et une extraction
+ciblée de `internal.sandbox_discovery_identity` depuis `pg_catalog` (export tbls
+trop long). La prévisualisation a confirmé l’entrée, la sortie et la préservation
+du stockage de travail, avec Auth simulée. Le cache de développement de la
+prévisualisation n’a pas été utilisé pour valider le build de production.

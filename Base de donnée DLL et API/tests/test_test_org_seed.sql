@@ -19,9 +19,14 @@
 --      transformerait le premier envoi groupe de test en incident reel.
 --   G. Le corpus reste HORS du flux partenaire, mesure sur le corpus vivant et
 --      pas sur un temoin fabrique.
+--   H. La remise a zero fait un aller-retour IDENTIQUE, et ses deux gardes
+--      refusent effectivement — dont celle qui compte : une ORG non marquee de
+--      test ne peut pas etre purgee. Une fonction qui SUPPRIME merite qu'on
+--      prouve ses refus, pas seulement son succes.
 --
--- LECTURE SEULE : ce test n'ecrit rien et ne cree aucun temoin — il mesure le
--- corpus REEL tel que le seed l'a laisse. Il echoue donc si le seed n'a pas tourne.
+-- Les blocs A a G ne LISENT que le corpus reel tel que le seed l'a laisse — le
+-- test echoue donc si le seed n'a pas tourne. Le bloc H ecrit, mais tout est
+-- annule par le ROLLBACK final comme dans le reste de la suite.
 \set ON_ERROR_STOP on
 BEGIN;
 DO $$
@@ -167,7 +172,63 @@ BEGIN
     END IF;
   RESET ROLE;
 
-  RAISE NOTICE 'test_test_org_seed: OK (A org, B couverture 15/type, C marquage par lien d ORG, D profondeur, E acteurs fictifs, F rien de routable, G hors flux partenaire)';
+  -- ────────── H. La remise a zero ──────────
+  DECLARE
+    v_su     uuid := '00000000-0000-4000-a000-0000000000f4'::uuid;
+    v_plain  uuid := '00000000-0000-4000-a000-0000000000f5'::uuid;
+    v_before integer;
+    v_after  integer;
+    v_denied boolean;
+    v_res    jsonb;
+  BEGIN
+    INSERT INTO auth.users (id, email)
+    VALUES (v_su, 'seed_reset_su@test.local'), (v_plain, 'seed_reset_plain@test.local')
+    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO app_user_profile (id, role)
+    VALUES (v_su, 'super_admin'), (v_plain, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+
+    SELECT count(*) INTO v_before FROM object WHERE is_test;
+
+    -- H1. Un compte ordinaire ne purge rien.
+    v_denied := false;
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_plain, 'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      BEGIN PERFORM api.rpc_reset_test_data();
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    RESET ROLE;
+    ASSERT v_denied, 'H: GARDE MUETTE — un compte ordinaire a pu reinitialiser le corpus';
+
+    -- H2. Le superuser passe, et le corpus revient A L IDENTIQUE. Une remise a
+    -- zero qui laisse moins de fiches qu elle n en trouve casse le bac a sable
+    -- au lieu de le restaurer — et ne se verrait qu au prochain essai.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_su, 'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      v_res := api.rpc_reset_test_data();
+    RESET ROLE;
+    SELECT count(*) INTO v_after FROM object WHERE is_test;
+    ASSERT v_after = v_before,
+           format('H: la remise a zero n est pas un aller-retour : %s fiches avant, %s apres', v_before, v_after);
+    ASSERT (v_res->'reseeded'->>'objects')::integer > 0,
+           'H: la remise a zero n a rien reseme';
+
+    -- H3. LA garde qui compte : sans le marqueur is_test_org, aucune purge.
+    -- C est elle qui separe « je vide le bac a sable » de « je vide une ORG ».
+    UPDATE org_config SET is_test_org = FALSE WHERE org_object_id = v_org;
+    v_denied := false;
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_su, 'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      BEGIN PERFORM api.rpc_reset_test_data();
+      EXCEPTION WHEN insufficient_privilege THEN v_denied := true; END;
+    RESET ROLE;
+    ASSERT v_denied,
+           'H: GARDE MUETTE — purge acceptee sur une ORG NON marquee de test';
+  END;
+
+  RAISE NOTICE 'test_test_org_seed: OK (A org, B couverture 15/type, C marquage par lien d ORG, D profondeur, E acteurs fictifs, F rien de routable, G hors flux partenaire, H remise a zero + ses deux refus)';
 END
 $$;
 ROLLBACK;

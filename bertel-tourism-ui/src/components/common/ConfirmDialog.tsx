@@ -6,7 +6,7 @@
 // `.object-editor` (qui dépend de classes `.btn` indisponibles hors éditeur). Un seul design
 // system app-wide.
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
 
 export function ConfirmDialog({
@@ -18,6 +18,8 @@ export function ConfirmDialog({
   tone = 'default',
   busy = false,
   confirmGate,
+  attestation,
+  className,
   onCancel,
   onConfirm,
 }: {
@@ -38,13 +40,49 @@ export function ConfirmDialog({
    * (le mot-clé `SUPPRIMER` doit être tapé tel quel).
    */
   confirmGate?: { expected: string[]; label: ReactNode };
+  /**
+   * 18a/D9 — DÉCLARATION cochée, distincte de la confirmation. Le serveur ne peut pas vérifier
+   * un report fait à la main dans l'éditeur ; il ne peut que l'IMPUTER (attested_by/attested_at).
+   * L'écran est donc la seule vraie garde : l'attestation doit demander un geste propre, jamais
+   * être l'effet de bord d'un clic sur le bouton de confirmation. `required` verrouille la
+   * confirmation tant que la case n'est pas cochée, et `hint` DIT pourquoi (une case grisée sans
+   * raison se lit comme une panne).
+   */
+  attestation?: {
+    label: ReactNode;
+    checked: boolean;
+    onChange: (next: boolean) => void;
+    required?: boolean;
+    hint?: ReactNode;
+  };
+  /**
+   * Classe posée sur la CARTE de la fenêtre. `Modal` fait un `createPortal` vers
+   * `document.body` : la fenêtre n'est donc descendante d'aucun conteneur d'écran, et une
+   * surface qui relève ses tailles (le portail partenaire : boutons 48 px, texte 1.05 rem)
+   * n'atteindrait jamais ses boutons sans ce crochet. Envelopper le message ne suffit pas —
+   * le pied vit hors du corps.
+   */
+  className?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const [gateValue, setGateValue] = useState('');
+  // 18a/D9 — « on a cliqué alors que c'était bloqué ». Sans cet état, un clic sur un bouton
+  // verrouillé ne produit AUCUN changement visible : le hint est là depuis l'ouverture, donc
+  // `aria-live` n'annonce rien et l'écran a l'air en panne. C'est le clic qui doit provoquer
+  // la réponse, pas le montage.
+  const [blockedAttempt, setBlockedAttempt] = useState(false);
+  // Deux ConfirmDialog coexistent pendant le fondu de sortie : des id figés se dupliqueraient
+  // dans le document, et `htmlFor` pointerait sur la mauvaise case.
+  const fieldId = useId();
+  const attestationInputId = `${fieldId}-attestation`;
+  const attestationHintId = `${fieldId}-attestation-hint`;
   // Réinitialise la saisie à la fermeture pour que la prochaine ouverture reparte propre.
   useEffect(() => {
-    if (!open) setGateValue('');
+    if (!open) {
+      setGateValue('');
+      setBlockedAttempt(false);
+    }
   }, [open]);
 
   const gatePass =
@@ -53,14 +91,24 @@ export function ConfirmDialog({
       const trimmed = candidate.trim();
       return trimmed !== '' && trimmed === gateValue.trim();
     });
-  const confirmBlocked = busy || !gatePass;
-  // D10/A4 : la raison du blocage reste joignable — « en cours » (sr-only) ou le hint du gate.
-  const confirmReasonId = busy ? 'confirm-busy-reason' : confirmGate && !gatePass ? 'confirm-gate-hint' : undefined;
+  // 18a/D9 : une attestation `required` non cochée bloque au même titre qu'un gate manqué.
+  const attestationMissing = Boolean(attestation?.required) && !attestation?.checked;
+  const confirmBlocked = busy || !gatePass || attestationMissing;
+  // D10/A4 : la raison du blocage reste joignable — « en cours » (sr-only), le hint du gate,
+  // ou celui de l'attestation.
+  const confirmReasonId = busy
+    ? 'confirm-busy-reason'
+    : confirmGate && !gatePass
+      ? 'confirm-gate-hint'
+      : attestationMissing
+        ? attestationHintId
+        : undefined;
 
   return (
     <Modal
       title={title}
       open={open}
+      className={className}
       onOpenChange={(next) => { if (!next) onCancel(); }}
       footer={
         <>
@@ -78,7 +126,10 @@ export function ConfirmDialog({
             aria-disabled={confirmBlocked || undefined}
             aria-describedby={confirmReasonId}
             onClick={() => {
-              if (confirmBlocked) return;
+              if (confirmBlocked) {
+                setBlockedAttempt(true);
+                return;
+              }
               onConfirm();
             }}
           >
@@ -88,6 +139,36 @@ export function ConfirmDialog({
       }
     >
       <p className="confirm-message">{message}</p>
+      {attestation && (
+        <div className="confirm-attestation">
+          <label htmlFor={attestationInputId} className="confirm-attestation__label">
+            <input
+              id={attestationInputId}
+              type="checkbox"
+              checked={attestation.checked}
+              onChange={(event) => {
+                // Cocher lève le blocage : la réponse au clic refusé n'a plus lieu d'être.
+                if (event.target.checked) setBlockedAttempt(false);
+                attestation.onChange(event.target.checked);
+              }}
+              aria-describedby={attestation.hint ? attestationHintId : undefined}
+            />
+            <span>{attestation.label}</span>
+          </label>
+          {attestation.hint && (
+            <p id={attestationHintId} className="confirm-attestation__hint">
+              {attestation.hint}
+            </p>
+          )}
+          {/* Élément NÉ du clic refusé — c'est lui, et non le hint permanent, qui prouve que
+              l'écran a réagi (et qu'un lecteur d'écran l'annonce). */}
+          {blockedAttempt && attestationMissing && (
+            <p className="confirm-attestation__blocked" role="alert">
+              Cochez la certification ci-dessus pour pouvoir valider.
+            </p>
+          )}
+        </div>
+      )}
       {confirmGate && (
         <div className="mt-3 space-y-1">
           <label htmlFor="confirm-gate-input" className="block text-sm font-medium text-ink-2">

@@ -6782,6 +6782,7 @@ DECLARE
   v_uid UUID := auth.uid();
   v_actor UUID; v_report JSONB := '{}'::jsonb; v_media TEXT[] := ARRAY[]::TEXT[];
   v_photo TEXT; v_int_id UUID; v_task_id TEXT;
+  v_portal_user UUID;  -- 18a §8 — le compte portail délié, reporté à l'opérateur RGPD
   TOMBSTONE CONSTANT TEXT := '[Donnée effacée]';
 BEGIN
   IF current_setting('request.jwt.claims', true) IS NOT NULL AND NOT api.is_platform_superuser() THEN
@@ -6797,6 +6798,30 @@ BEGIN
       RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
     SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
     IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    -- 18a §8 — AVANT la branche de mode (cf. l'avertissement ci-dessus) : l'accès portail
+    -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
+    UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
+    RETURNING id INTO v_portal_user;
+    -- 18a §8 — l'ORIGINAL du message libre du prestataire. La branche anonymize efface plus
+    -- bas crm_task.description, qui n'en est qu'une COPIE (submit_actor_fiche écrit le même
+    -- texte aux deux endroits) ; fiche_submission.note, colonne créée par CETTE migration,
+    -- échappait aux deux modes et restait relue telle quelle par la file de modération.
+    -- AVANT la branche, pour la même raison que l'UPDATE ci-dessus : fiche_submission.actor_id
+    -- est ON DELETE SET NULL, donc en mode 'delete' le DELETE FROM actor délierait la ligne
+    -- en SILENCE et tout nettoyage placé après serait muet. Le bras submitted_by rattrape les
+    -- soumissions dont l'actor_id était déjà NULL (v_portal_user NULL ⇒ prédicat NULL ⇒
+    -- aucune ligne de plus, jamais un balayage).
+    -- La garde to_regclass n'est PAS de la superstition : ce corps est aussi la définition
+    -- canonique de schema_unified.sql, appliquée AVANT 18a dans le manifeste — donc à un
+    -- moment où fiche_submission (créée par la §3.1) n'existe pas encore. plpgsql ne résout
+    -- les noms de relation qu'à l'exécution : sans garde, la branche 'actor' deviendrait
+    -- inexécutable sur toute base où 18a n'est pas encore passée (test_gdpr_erasure.sql en
+    -- premier). Avec elle, les deux fichiers portent le MÊME texte — prosrc et source
+    -- restent md5-alignables — et la ligne s'active d'elle-même dès que la table existe.
+    IF to_regclass('public.fiche_submission') IS NOT NULL THEN
+      UPDATE fiche_submission SET note = NULL
+       WHERE actor_id = v_actor OR submitted_by = v_portal_user;
+    END IF;
     IF p_mode = 'anonymize' THEN
       UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
                        gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
@@ -6812,6 +6837,13 @@ BEGIN
       DELETE FROM actor WHERE id = v_actor;
       v_report := jsonb_build_object('mode','delete','actor', v_actor);
     END IF;
+    -- Remontée APRÈS la branche : les deux modes viennent d'écraser v_report.
+    -- La suppression d'auth.users n'est pas faisable en SQL (même doctrine que la branche
+    -- 'user') : on NOMME le compte pour que le geste ne se perde pas.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
     PERFORM audit.redact_subject('actor','id', v_actor::text,
       ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
             'display_name_normalized','first_name_normalized','last_name_normalized']);
@@ -6821,6 +6853,24 @@ BEGIN
       ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
     PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
       ARRAY['title','description','extra','actor_id']);
+    -- 18a §8 — la SIXIÈME rédaction, et la seule qui nettoie une trace que l'effacement
+    -- vient de FABRIQUER lui-même : trg_audit_app_user_profile (AFTER UPDATE) a écrit dans
+    -- audit.audit_log une ligne dont before_data = to_jsonb(OLD) — elle RE-NOUE le lien
+    -- acteur↔compte que le déliage ci-dessus vient de couper, et y gèle le display_name du
+    -- compte portail. Sans elle, l'UPDATE de déliage serait la seule mutation de cette
+    -- branche sans son redact jumeau. audit.redact_subject apparie sur
+    -- `(row_pk ->> clé) = valeur OR (before_data ->> clé) = valeur` (prosrc vérifié) : la
+    -- clé actor_id attrape donc bien la ligne née de ce déliage.
+    PERFORM audit.redact_subject('app_user_profile','actor_id', v_actor::text,
+      ARRAY['actor_id','display_name','avatar_url','preferences']);
+    -- Et le résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION
+    -- du lien (before_data.actor_id = null, after_data.actor_id = <A>) n'est appariée ni par
+    -- row_pk->>'actor_id' ni par before_data->>'actor_id'. Apparier sur `id` = le compte
+    -- portail attrape par row_pk TOUTES les lignes d'audit de ce compte, création comprise.
+    IF v_portal_user IS NOT NULL THEN
+      PERFORM audit.redact_subject('app_user_profile','id', v_portal_user::text,
+        ARRAY['actor_id','display_name','avatar_url','preferences']);
+    END IF;
 
   ELSIF p_subject_kind = 'incident' THEN
     IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN

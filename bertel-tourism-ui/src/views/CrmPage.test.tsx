@@ -10,6 +10,10 @@ jest.mock('../services/crm');
 jest.mock('../hooks/usePresenceRoom', () => ({
   usePresenceRoom: () => ({ peers: [], typingUsers: [], announceTyping: jest.fn() }),
 }));
+// 18a — le kanban route désormais vers /moderation (puce « Vérification de fiche »), donc
+// il appelle useRouter, qui exige un App Router monté.
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 

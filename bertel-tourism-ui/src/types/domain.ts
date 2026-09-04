@@ -1,4 +1,7 @@
-export type UserRole = 'super_admin' | 'tourism_agent' | 'owner';
+// `actor` (18a) = le partenaire touristique qui met à jour sa propre fiche depuis
+// l'Espace partenaire (/espace). Il n'a AUCUN accès au back-office : tout ce qui
+// dérive de UserRole (routage, libellés, navigation) doit traiter ce cas à part.
+export type UserRole = 'super_admin' | 'tourism_agent' | 'owner' | 'actor';
 export type NetworkStatus = 'connected' | 'degraded' | 'offline';
 export type MapLayerMode = 'classic' | 'satellite' | 'topo';
 export type ObjectTypeCode = 'HOT' | 'RES' | 'ACT' | 'ITI' | 'EVT' | 'VIS' | 'SRV';
@@ -573,6 +576,17 @@ export interface CrmTask {
   relatedInteractionStatus: string | null;
   /** 17i — pièces jointes de la tâche. Toujours un tableau (jamais null), comme `assignees`. */
   documents: CrmTaskDocument[];
+  /**
+   * 18a — `crm_task.extra`, jsonb LIBRE, émis BRUT par `api.list_crm_tasks`.
+   *
+   * `crm_task` n'a pas de colonne `kind` : c'est `extra.kind === 'fiche_verification'` qui
+   * type une tâche née d'un envoi du portail acteur, et rien d'autre ne la distingue d'une
+   * tâche CRM ordinaire. Plusieurs producteurs écrivent dans cette colonne — on ne la type
+   * donc PAS ici (un `kind` obligatoire mentirait), et on ne caste rien : côté SQL, un cast
+   * sur cette colonne abattrait `api.list_crm_tasks()` tout entière, donc le kanban de tous
+   * les utilisateurs du périmètre (classe de panne déjà payée sur `ref_document.extra`).
+   */
+  extra?: Record<string, unknown> | null;
 }
 
 /**
@@ -653,6 +667,19 @@ export interface PendingChangeItem {
   reviewedAt?: string | null;
   reviewNote?: string | null;
   appliedAt?: string | null;
+  // --- 18a/D9 : groupage par ENVOI du portail acteur. NULL pour les propositions internes
+  // (contributeurs §120/§122), qui gardent l'affichage plat.
+  submissionId?: string | null;
+  submissionNote?: string | null;
+  actorLabel?: string | null;
+  /**
+   * `TRUE` ⇒ aucune route automatique : approuver n'écrit RIEN dans la fiche, l'office doit
+   * reporter à la main puis l'attester. Projection serveur exacte de `metadata->>'rpc' IS NULL`
+   * (§7.3), c.-à-d. le prédicat sur lequel la machine décide — jamais la déclaration du
+   * soumetteur. `undefined` = INCONNU (fixtures démo, serveur d'avant la §7) : à traiter comme
+   * manuel, parce que la valeur risquée est `false` (elle rend l'approbation en un clic).
+   */
+  manualApply?: boolean;
 }
 
 export interface AuditQuestion {

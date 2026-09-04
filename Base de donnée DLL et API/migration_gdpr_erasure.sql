@@ -23,6 +23,15 @@
 --   * la suppression du compte auth.users (kind='user', mode 'delete') passe par l'API Admin
 --     Supabase Auth (hors SQL) — ce fichier anonymise app_user_profile uniquement ;
 --   * ajouter ce fichier au manifest + docs/SQL_ROLLOUT_RUNBOOK.md (intégrité de déploiement).
+--
+-- ⚠⚠ NE PLUS REJOUER CE FICHIER SEUL. Depuis 18a (migration_actor_portal.sql §8.5), le corps
+--    canonique d'api.rpc_gdpr_erase_subject est celui de 18a : il ajoute le déliage du compte
+--    portail (UPDATE app_user_profile SET actor_id = NULL) dans les DEUX modes. La signature
+--    est IDENTIQUE (TEXT,TEXT,TEXT,TEXT) ⇒ le CREATE OR REPLACE ci-dessous ÉCRASE 18a SANS
+--    LEVER la moindre erreur, et l'effacement Art. 17 d'un acteur laisse ensuite son compte
+--    portail OUVERT sur sa fiche. Le step CI « RGPD mirror alignment » ne surveille que
+--    ci_fresh_apply.sql : il ne voit PAS un rejeu manuel. Si ce fichier doit être rejoué,
+--    enchaîner IMMÉDIATEMENT migration_actor_portal.sql.
 -- =====================================================================
 
 -- ---------------------------------------------------------------------

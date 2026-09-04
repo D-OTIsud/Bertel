@@ -301,6 +301,12 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns and are transaction-wrapped where the files contain `BEGIN`/`COMMIT`. RPC scripts are idempotent through `CREATE OR REPLACE` plus grants/revokes; review local/pilot-only scripts before reapplying.
 
+18c. `migration_test_org_isolation.sql` — Isolation du bac a sable. Apres toutes les policies et le portail ; applique la dimension de test et rejoue `tests/test_test_org_isolation.sql`, y compris le croisement des liens explicites du portail.
+
+18d0. `migration_test_org_facets.sql` — Fonction de generation des facettes par type, avant le seed qui l'appelle.
+
+18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.
+
 ### CI enforcement (deploy integrity)
 A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 

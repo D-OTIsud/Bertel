@@ -267,6 +267,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
 
+## `api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+- writes `internal.sandbox_discovery_identity` _(high)_
+- writes `public.app_user_profile` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
+
 ## `api.create_crm_artifacts_from_incident()`
 - returns: `trigger`
 - writes `public.crm_interaction` _(high)_
@@ -1494,6 +1505,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
 - reads `public.ref_catalog_registry` _(high)_
 - reads `public.ref_code` _(high)_
+
+## `api.get_sandbox_discovery_user()`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
 
 ## `api.get_trail(p_trail_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER

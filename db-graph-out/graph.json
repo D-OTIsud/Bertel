@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 370,
+  "table_count": 371,
   "view_count": 13,
-  "function_count": 423,
+  "function_count": 425,
   "policy_count": 565,
   "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3643
+  "edge_count": 3661
  },
  "nodes": [
   {
@@ -42823,6 +42823,31 @@
    }
   },
   {
+   "id": "internal.sandbox_discovery_identity",
+   "kind": "table",
+   "label": "sandbox_discovery_identity",
+   "schema": "internal",
+   "domain": "other",
+   "doc": "Identité publique de découverte, sans droits d’administration. Sessions séparées, corpus fictif partagé. Préparation serveur obligatoire avant émission de tokens.",
+   "props": {
+    "columns": [
+     {
+      "name": "singleton",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": false
+   }
+  },
+  {
    "id": "audit.redact_subject(p_table text, p_match_key text, p_match_val text, p_pii_cols text[])",
    "kind": "function",
    "label": "redact_subject",
@@ -51921,35 +51946,6 @@
    }
   },
   {
-   "id": "api.current_user_test_realm()",
-   "kind": "function",
-   "label": "current_user_test_realm",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l'API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).",
-   "props": {
-    "signature": "current_user_test_realm()",
-    "returns": "boolean",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/api_views_functions.sql",
-      "line": 32
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_test_org_isolation.sql",
-      "line": 69
-     },
-     {
-      "path": "Base de donnée DLL et API/rls_policies.sql",
-      "line": 139
-     }
-    ]
-   }
-  },
-  {
    "id": "api.object_expected_is_test(p_object_id text)",
    "kind": "function",
    "label": "object_expected_is_test",
@@ -52072,6 +52068,39 @@
      "path": "Base de donnée DLL et API/migration_test_org_isolation.sql",
      "line": 169
     }
+   }
+  },
+  {
+   "id": "api.current_user_test_realm()",
+   "kind": "function",
+   "label": "current_user_test_realm",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l'API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).",
+   "props": {
+    "signature": "current_user_test_realm()",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/api_views_functions.sql",
+      "line": 32
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
+      "line": 12
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_test_org_isolation.sql",
+      "line": 69
+     },
+     {
+      "path": "Base de donnée DLL et API/rls_policies.sql",
+      "line": 139
+     }
+    ]
    }
   },
   {
@@ -52766,6 +52795,56 @@
     "source": {
      "path": "Base de donnée DLL et API/migration_role_permission_matrix.sql",
      "line": 344
+    }
+   }
+  },
+  {
+   "id": "api.get_sandbox_discovery_user()",
+   "kind": "function",
+   "label": "get_sandbox_discovery_user",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_sandbox_discovery_user()",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
+      "line": 24
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
+     "line": 24
+    }
+   }
+  },
+  {
+   "id": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "kind": "function",
+   "label": "configure_sandbox_discovery_user",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
+      "line": 51
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
+     "line": 51
     }
    }
   },
@@ -80167,6 +80246,31 @@
    }
   },
   {
+   "source": "internal.sandbox_discovery_identity",
+   "target": "auth.users",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "{",
+      "{"
+     ],
+     [
+      "u",
+      "i"
+     ],
+     [
+      "s",
+      "d"
+     ],
+     [
+      "e",
+      "}"
+     ]
+    ]
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -96121,30 +96225,6 @@
    }
   },
   {
-   "source": "api.current_user_test_realm()",
-   "target": "public.user_org_membership",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM user_org_membership"
-    }
-   }
-  },
-  {
-   "source": "api.current_user_test_realm()",
-   "target": "public.org_config",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN org_config"
-    }
-   }
-  },
-  {
    "source": "api.object_expected_is_test(p_object_id text)",
    "target": "public.object_org_link",
    "kind": "reads",
@@ -96213,6 +96293,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.current_user_test_realm()",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.current_user_test_realm()",
+   "target": "public.org_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.org_config"
     }
    }
   },
@@ -97761,6 +97865,210 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.org_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.org_config"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "internal.sandbox_discovery_identity",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM internal.sandbox_discovery_identity"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.user_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.ref_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.user_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_permission"
+    }
+   }
+  },
+  {
+   "source": "api.get_sandbox_discovery_user()",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.user_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_permission"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.ref_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.ref_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.app_user_profile",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.user_org_membership",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "public.user_org_business_role",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
+   "target": "internal.sandbox_discovery_identity",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO internal.sandbox_discovery_identity"
     }
    }
   },

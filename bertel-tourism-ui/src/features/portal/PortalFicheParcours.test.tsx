@@ -31,9 +31,21 @@ jest.mock('../../hooks/useExplorerQueries');
  */
 let applyQuery: (query: string) => void = () => {};
 const queryOf = (href: string) => href.split('?')[1] ?? '';
-const routerPush = jest.fn((href: string) => applyQuery(queryOf(href)));
-const routerReplace = jest.fn((href: string) => applyQuery(queryOf(href)));
-const routerBack = jest.fn(() => applyQuery(''));
+/** La pile d'historique, pour de vrai : `back()` retombe sur l'entrée précédente, pas sur
+ *  le hub par convention — sans quoi une entrée de trop resterait invisible. */
+let historyStack: string[] = [''];
+const routerPush = jest.fn((href: string) => {
+  historyStack.push(queryOf(href));
+  applyQuery(queryOf(href));
+});
+const routerReplace = jest.fn((href: string) => {
+  historyStack[historyStack.length - 1] = queryOf(href);
+  applyQuery(queryOf(href));
+});
+const routerBack = jest.fn(() => {
+  historyStack.pop();
+  applyQuery(historyStack[historyStack.length - 1] ?? '');
+});
 let searchParams = new URLSearchParams('');
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPush, replace: routerReplace, back: routerBack }),
@@ -113,6 +125,7 @@ function Harness({ initial }: { initial: string }) {
 }
 
 function renderRouted(initial = '') {
+  historyStack = initial ? [initial] : [''];
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
@@ -125,6 +138,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
   searchParams = new URLSearchParams('');
+  historyStack = [''];
   useSessionStore.setState({ userId: USER } as never);
 });
 
@@ -174,6 +188,23 @@ describe('parcours — la saisie en cours survit à un RECHARGEMENT', () => {
     expect(await screen.findByLabelText('Téléphone')).toHaveValue('');
   });
 
+  it('« Annuler mes modifications » efface AUSSI la saisie non validée', async () => {
+    // La saisie en cours et le brouillon sont deux clés : abandonner tout doit emporter
+    // les deux, sinon la rubrique se rouvre avec un texte que le partenaire croit effacé.
+    jest.useFakeTimers({ advanceTimers: true });
+    primeServices();
+    searchParams = new URLSearchParams('rubrique=contacts');
+    renderPage();
+
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692 45 12 30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Annuler mes modifications' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Effacer' }));
+
+    await waitFor(() => expect(window.localStorage.getItem(portalFormKey(USER, OBJ))).toBeNull());
+    expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBeNull();
+    jest.useRealTimers();
+  });
   it('l’office a retouché la rubrique entre-temps : la saisie n’est PAS rejouée', async () => {
     // Rejouer un formulaire pris sur l'ancienne valeur ferait renvoyer une donnée périmée
     // sans que le partenaire le sache.
@@ -352,10 +383,13 @@ describe('parcours — l’historique tient au plus UNE entrée de rubrique', ()
 
     await userEvent.click(screen.getByRole('link', { name: /Retour à la fiche/ }));
 
-    // UN seul `back()` : l'entrée de rubrique est unique, et on retombe sur la fiche.
+    // UN seul geste, et on est SUR LA FICHE — pas sur la rubrique précédente.
     expect(routerBack).toHaveBeenCalledTimes(1);
     expect(routerPush).not.toHaveBeenCalled();
-    expect(await screen.findByRole('heading', { level: 1, name: 'Villa Vanille' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.querySelector('.portal-fiche-page')).toHaveAttribute('data-view', 'hub'),
+    );
+    expect(screen.queryByRole('heading', { level: 2, name: 'Vos coordonnées' })).not.toBeInTheDocument();
   });
 
   it('arrivé directement sur ?rubrique= (lien partagé), le retour POUSSE au lieu de sortir du site', async () => {

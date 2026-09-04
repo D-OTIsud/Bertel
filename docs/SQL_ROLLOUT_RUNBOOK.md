@@ -1708,3 +1708,7 @@ historiques, sur la portee explicite du portail et sur le lien owner, en plus du
 d'ecriture canonique pour la persona actor. Le bloc J du test d'isolation est rejoue
 apres les deux migrations pour verifier que le portail ne rouvre pas le pont e-mail.
 Les numeros des anciens rapports restent des reperes historiques de leurs branches.
+
+La CI a egalement revele que `migration_explorer_name_relevance.sql` est le dernier
+definisseur de `get_filtered_object_ids` : le filtre de realm et le contournement
+de la MV pour un compte de test y sont conserves, comme dans `api_views_functions.sql`.

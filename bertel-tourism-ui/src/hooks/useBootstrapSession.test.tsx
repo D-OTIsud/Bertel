@@ -77,6 +77,8 @@ describe('useBootstrapSession — persona actor', () => {
       }),
     );
 
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    (getApiClient as jest.Mock).mockReturnValue({ schema: () => ({ rpc }) });
     renderHook(() => useBootstrapSession());
 
     await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
@@ -91,10 +93,10 @@ describe('useBootstrapSession — persona actor', () => {
     expect(state.orgName).toBeNull();
     expect(state.adminRank).toBeNull();
     expect(state.adminRoleCode).toBeNull();
-    // Le court-circuit est la raison d'être du bloc : aucune des 5 RPC back-office
-    // ne doit partir. Toutes passent par getApiClient — s'il n'est jamais appelé,
-    // aucune n'a été tentée.
-    expect(getApiClient).not.toHaveBeenCalled();
+    // La seule sonde partagee avec le back-office est le contexte de test.
+    expect(state.isTestRealm).toBe(true);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('current_user_test_realm');
   });
 
   it("refuse toujours un rôle inconnu (la garde de normalizeRole n'a pas été élargie)", async () => {

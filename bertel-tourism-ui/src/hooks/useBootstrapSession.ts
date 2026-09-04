@@ -216,7 +216,10 @@ export function useBootstrapSession() {
       // directement avec les valeurs neutres au lieu de payer 5 allers-retours qui
       // rendraient tous false/null. Le portail fait ses propres lectures.
       if (role === 'actor') {
+        const isTestRealm = await fetchTestRealm();
+        if (cancelled) return;
         hydrateFromAuth({
+          isTestRealm,
           role,
           userId: user.id,
           email: String(user.email ?? ''),

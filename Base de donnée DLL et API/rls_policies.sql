@@ -130,6 +130,14 @@ $$;
 --   B. Périmètre propre — l'objet est lié à l'ORG du user via object_org_link (tous rôles, non publiés inclus)
 --   C. Périmètre externe publié — org_config.access_scope = 'all_published' ET objet published
 --      (objets non publiés d'autres ORG hors périmètre, cf. §2.3.B du plan)
+-- current_user_test_realm: realm de lecture (production / bac à sable). Défini par
+-- migration_test_org_isolation.sql, \ir'd EN DERNIER — mais api_views_functions.sql et
+-- migration_cards_batch_authorize_definer.sql le référencent dans des corps SQL validés
+-- au CREATE. Stub ici (production = false, comportement d'AVANT le cloisonnement, donc
+-- une base restée au stub se comporte exactement comme aujourd'hui) ; la migration le
+-- remplace par le vrai corps via CREATE OR REPLACE (même signature).
+CREATE OR REPLACE FUNCTION api.current_user_test_realm() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+
 -- Set form of the extended read gate: the current user's extended-readable object ids, computed
 -- ONCE. The `object` SELECT policy uses this as a hashed-set membership test (id IN (SELECT ...)),
 -- so the planner hoists it to a single InitPlan instead of evaluating the predicate per row. The
@@ -217,13 +225,6 @@ $$;
 -- the canonical definitions later in THIS file replace them via CREATE OR REPLACE
 -- (same signatures), so runtime behaviour is unchanged. (Found by the SQL fresh-apply CI gate.)
 CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
--- current_user_test_realm: realm de lecture (production / bac à sable). Défini par
--- migration_test_org_isolation.sql, \ir'd EN DERNIER — mais api_views_functions.sql et
--- migration_cards_batch_authorize_definer.sql le référencent dans des corps SQL validés
--- au CREATE. Stub ici (production = false, comportement d'AVANT le cloisonnement, donc
--- une base restée au stub se comporte exactement comme aujourd'hui) ; la migration le
--- remplace par le vrai corps via CREATE OR REPLACE (même signature).
-CREATE OR REPLACE FUNCTION api.current_user_test_realm() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 -- user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
 -- AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /

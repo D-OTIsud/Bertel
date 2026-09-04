@@ -226,6 +226,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'email_not_actor_channel' }, { status: 422 });
   }
 
+  // Vrai dès que `resend` a REFERMÉ l'ancien compte. Ce qui suit peut encore échouer, et le
+  // message d'échec ne dit alors PAS la même chose que sur `invite` : là, rien n'a bougé ;
+  // ici, un compte vient d'être détruit. Une phrase « aucun compte n'a été créé » serait
+  // fausse au moment exact où l'agent la lit.
+  let previousAccountClosed = false;
+
   if (portal) {
     // L'acteur A DÉJÀ un compte portail. Tout ce qui n'est pas un renvoi À LA MÊME ADRESSE
     // est refusé ICI, avant `inviteUserByEmail` : sinon l'e-mail partirait, puis l'upsert
@@ -248,6 +254,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // `portal.id`, jamais un id trouvé par e-mail.
     const { error: delErr } = await server.auth.admin.deleteUser(portal.id);
     if (delErr) return NextResponse.json({ error: 'resend_failed' }, { status: 500 });
+    previousAccountClosed = true;
   } else {
     if (action === 'resend') {
       // Sans compte portail, il n'y a rien à renvoyer. Sans ce refus, `resend` se
@@ -274,7 +281,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     redirectTo: `${inviteOrigin(req)}/set-password?espace=1`,
   });
   if (createErr || !created?.user) {
-    return NextResponse.json({ error: 'create_failed' }, { status: 500 });
+    return NextResponse.json(
+      { error: previousAccountClosed ? 'resend_lost_previous' : 'create_failed' },
+      { status: 500 },
+    );
   }
   // Le profil PORTAIL : rôle `actor` + le lien explicite. C'est CE couple qui confine le
   // compte (routage front) et fonde sa portée (RLS via api.current_user_actor_id).
@@ -285,7 +295,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Compte auth créé mais profil raté ⇒ rollback, sinon le compte reste sans rôle : il
     // se connecterait sans périmètre, ce que le front lit comme une session cassée.
     await server.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ error: 'profile_failed' }, { status: 500 });
+    // Sur un renvoi, l'ancien compte est parti AUSSI : l'acteur se retrouve sans accès du
+    // tout, ce que « le compte a été annulé » ne dit pas.
+    return NextResponse.json(
+      { error: previousAccountClosed ? 'resend_lost_previous' : 'profile_failed' },
+      { status: 500 },
+    );
   }
   const traced = await trace(
     jwt,

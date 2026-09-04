@@ -72,4 +72,37 @@ describe('settings-nav (Phase 7.1 — rail gated par rôle)', () => {
     const account = buildSettingsNav('tourism_agent').find((g) => g.id === 'account');
     expect(account?.sections.map((s) => s.id)).toContain('legal');
   });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  // Task 19 — « Portail acteurs ». Ce qui est éprouvé n'est pas la présence d'un libellé,
+  // c'est le GATING : la matrice décide de ce qu'un partenaire peut modifier sur une fiche
+  // publiée. Elle est réservée à l'admin d'ORG de rang ≥ 30 — le seuil qu'applique
+  // api.rpc_set_actor_section_visibility. Plus bas, l'écran offrirait un geste refusé en 42501.
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  describe('section « Portail acteurs » (18a)', () => {
+    it('absente tant que l’option n’est pas accordée', () => {
+      expect(settingsSectionIds('tourism_agent', { canManageTeam: true })).not.toContain('actor-portal');
+      // …y compris pour un super-admin plateforme : c'est un réglage d'ORG, pas de plateforme.
+      expect(settingsSectionIds('super_admin', {})).not.toContain('actor-portal');
+    });
+
+    it('présente dans « Mon organisation » quand l’option est accordée', () => {
+      const org = buildSettingsNav('tourism_agent', { canManageActorPortal: true }).find((g) => g.id === 'org');
+      expect(org?.sections.map((s) => s.id)).toContain('actor-portal');
+      expect(org?.sections.find((s) => s.id === 'actor-portal')?.label).toBe('Portail acteurs');
+    });
+
+    it('ouvre le groupe « Mon organisation » à elle seule (aucune autre section accordée)', () => {
+      // Le groupe est construit dynamiquement : sans cette section il n'existerait pas, et le
+      // `?section=actor-portal` d'une URL partagée retomberait sur le profil.
+      expect(buildSettingsNav('tourism_agent', { canManageActorPortal: true }).map((g) => g.id))
+        .toEqual(['account', 'org']);
+    });
+
+    it('un ?section=actor-portal non accordé retombe sur le défaut, il n’ouvre rien', () => {
+      expect(resolveSettingsSection('tourism_agent', 'actor-portal', {})).toBe(DEFAULT_SETTINGS_SECTION);
+      expect(resolveSettingsSection('tourism_agent', 'actor-portal', { canManageActorPortal: true }))
+        .toBe('actor-portal');
+    });
+  });
 });

@@ -96,7 +96,28 @@ describe('crm parsers', () => {
       ],
       createdById: 'u-7', createdByName: 'Jean P.',
       documents: [], // 17i — absent du payload RPC de cette fixture ⇒ [].
+      extra: null, // 18a — absent du payload RPC de cette fixture ⇒ null.
     });
+  });
+
+  // 18a §8.4 — `crm_task` n'a PAS de colonne `kind` : c'est `extra.kind` qui distingue une
+  // tâche de vérification de fiche d'une tâche CRM ordinaire, et `api.list_crm_tasks` émet
+  // désormais `extra` BRUT (jsonb libre — tout cast abattrait la liste entière). Sans ce
+  // report dans le parseur, la puce du kanban est éteinte SANS qu'aucune erreur ne se lève.
+  it('reporte `extra` brut — c’est la SEULE clé qui type une tâche de vérification', () => {
+    const task = parseCrmTask({
+      id: 't2', object_id: 'HOT123', object_name: 'Hôtel Test', title: 'Vérifier la fiche',
+      status: 'todo', priority: 'medium',
+      extra: { kind: 'fiche_verification', submission_id: 'sub-1' },
+    });
+    expect(task.extra).toEqual({ kind: 'fiche_verification', submission_id: 'sub-1' });
+  });
+
+  it('`extra` non-objet (null, tableau, scalaire) retombe à null — jamais une forme inventée', () => {
+    expect(parseCrmTask({ id: 't3', extra: null }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3', extra: 'texte' }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3', extra: [1, 2] }).extra).toBeNull();
+    expect(parseCrmTask({ id: 't3' }).extra).toBeNull();
   });
 
   describe('16w — assignés et créateur', () => {

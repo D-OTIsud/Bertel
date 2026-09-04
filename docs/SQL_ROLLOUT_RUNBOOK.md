@@ -1328,11 +1328,60 @@ ne compare plus rien. Le même step refuse l'entrée de `migration_gdpr_erasure.
 Ce chantier est **packagé, pas déployé**. Le tableau de sabotage ci-dessous est à remplir APRÈS
 application, comme pour 17g/17l.
 
+Les sondes se jouent en `BEGIN; … ROLLBACK;` (un appel `execute_sql` = une transaction), sauf celles
+du tableau A, qui sont toutes en lecture seule. Aucune ne demande de créer un compte `role='actor'`
+durable : les fixtures naissent et meurent dans la transaction annulée.
+
+**A. Non-régression — la migration ne doit rien avoir bougé d'autre**
+
 | Sabotage / sonde | Attendu | Constaté |
 | --- | --- | --- |
 | `SELECT count(*) FROM app_user_profile WHERE role='actor'` | `0` — la migration est **inerte** tant qu'aucun compte acteur n'existe | _à relever_ |
 | `api.current_user_extended_object_ids` sur un `tourism_agent` réel connu | ensemble **inchangé** avant/après | _à relever_ |
-| md5 des `prosrc` relevés au Task 0 étape 3 | **seules** les fonctions listées par 18a ont changé | _à relever_ |
+| md5 des `prosrc` des 9 fonctions du relevé initial (valeurs de référence ci-dessous) | **seules** les fonctions écrites par 18a ont changé — les autres à l'octet près | _à relever_ |
+| `SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api' AND p.proname='approve_pending_change'` | `1` — le `DROP FUNCTION IF EXISTS api.approve_pending_change(uuid, text)` a laissé **une seule** signature, à trois paramètres. Deux signatures ⇒ `42725` sur tout appel à deux arguments | _à relever_ |
+
+Valeurs de référence, relevées en production le 2026-09-02 puis re-relevées identiques le
+2026-09-03 (la base n'avait pas bougé entre les deux) :
+
+```
+approve_pending_change            3cf2a45631df18e22e0b4c5cd81d9e2e   ← 18a §7 la réécrit
+can_read_extended                 4d6febed63160210d5a6de7e37143314
+claim_unmailed_notifications      a6fed3aaf46683854a1c266c673aa7aa   ← 18a §8 la réécrit
+current_user_extended_object_ids  490062f9215cec873569f1f91fef32e8   ← 18a §1.5 la réécrit
+is_object_owner                   c1cc3ac8996cf9cdf0f5dd0adb7ae53c   ← 18a §2 la réécrit (D7)
+list_crm_tasks                    05fc0595046e4bc0e28579fa082b8459   ← 18a §8 la réécrit (extra)
+list_pending_changes              437a70e99f4825173c0a0d6d15dad465   ← 18a §7 la réécrit
+mark_notifications_emailed        dfe7343cc63971b8fc7f369e1f52e58f   ← 18a §8 la réécrit
+rpc_gdpr_erase_subject            073dc1ae220a13d304e70321465d33e9   ← 18a §8.5 la réécrit
+user_actor_ids                    2bd0f6be5734b46322d1ba8239175d6f
+```
+
+Deux seulement doivent rester **identiques** après application : `can_read_extended` et
+`user_actor_ids`. Toute autre immobilité est un signe que la section correspondante n'a pas pris.
+
+**B. Les invariants du chantier — un par ligne**
+
+| Invariant | Sabotage / sonde | Attendu | Constaté |
+| --- | --- | --- | --- |
+| **D7 — l'écriture canonique est fermée aux acteurs** | `api.is_object_owner(<fiche de l'acteur>)` sous un JWT acteur, puis sous un membre publisher de la même fiche | `FALSE` pour l'acteur, `TRUE` pour le membre. Avant 18a ce même prédicat rendait **TRUE** pour un acteur primaire : c'est un droit qu'on retire, pas un droit qu'on n'a jamais donné. Bloc C de `tests/test_actor_portal.sql` | _à relever_ |
+| **Portée — lien expiré** | `actor_object_role` posé avec `valid_to = CURRENT_DATE - 1` | la fiche **n'apparaît pas** dans `api.current_user_portal_object_ids()` (`migration_actor_portal.sql:95-96`) | _à relever_ |
+| **Portée — lien futur** | même fixture avec `valid_from = CURRENT_DATE + 1` | la fiche **n'apparaît pas** | _à relever_ |
+| **Portée — objet ORG** | lien valide vers un objet `object_type = 'ORG'` | la fiche **n'apparaît pas** (`:97` — l'éditeur ne sait pas les ouvrir) | _à relever_ |
+| **Portée — le pont e-mail ne l'élargit pas** | un second acteur partageant l'adresse du compte, lié à une **autre** fiche | cette autre fiche **n'apparaît pas** : la portée passe par `app_user_profile.actor_id` (D8), jamais par `api.user_actor_ids` | _à relever_ |
+| **Portée — deux rôles sur la même fiche** | poser `operator` **et** `sales_manager` valides sur le même objet | la fiche apparaît **une seule fois** (`SELECT DISTINCT`, `:91`). Sans lui l'accueil du portail la montrerait en double | _à relever_ |
+| **Verrou « une seule vérification ouverte »** | deux `api.submit_actor_fiche` sur la même fiche, la première non résolue | le second lève **`PT409`**, jamais `23505`. Les deux chemins sont couverts : le pré-check (`:547`) et le blindage `EXCEPTION WHEN unique_violation` autour de l'INSERT réel (`:602`), **même message et même code** | _à relever_ |
+| **Attestation imputable — ce qu'elle écrit** | `api.approve_pending_change(<ligne manual_apply>, …, p_applied_manually => TRUE)` | `status='approved'` (**jamais** `applied`), `applied_at` **NULL**, et `metadata` porte `applied_manually` / `attested_by` / `attested_at` (`:948-951`). Ces trois clés sont écrites **explicitement**, pas déduites de `status` | _à relever_ |
+| **Attestation — aucun re-dispatch** | même appel, puis relire la table cible de la rubrique (p. ex. `object_description`) | **rien n'a été écrit** : une attestation acquitte, elle n'applique pas | _à relever_ |
+| **Attestation — refus sans elle** | même ligne, `p_applied_manually => FALSE` | `22023`, ligne **intacte** en `pending`. C'est ce refus qui bloquait la fiche à vie avant 18a | _à relever_ |
+| **Whitelist §120 — SEPT, et miroir exact** | lire les deux tableaux `v_allowed` : `api.submit_actor_fiche` (`:517-520`) et `api.approve_pending_change` (`:884-892`) | **7 entrées identiques**, `save_object_rooms` **absent des deux**. Une asymétrie où `submit` est plus permissif fabrique une fiche acceptée puis jamais approuvable, donc bloquée à vie par `uq_fiche_submission_open` | _à relever_ |
+| **Plancher dur de la matrice de visibilité** | `api.rpc_set_actor_section_visibility(<org>, <type>, 'legal', TRUE)` — c'est-à-dire une tentative de **re-rendre visible** un module du plancher | refus explicite « Le module … appartient au plancher non paramétrable » (`:444-445`). Les 9 modules du plancher sont dans une fonction `IMMUTABLE` (`:299-305`), non paramétrable par construction | _à relever_ |
+| **La résolution libère le verrou (UPDATE)** | résoudre la dernière ligne `pending` d'une soumission par `approve`/`reject` | `fiche_submission.status` quitte `pending` **par trigger**, et une nouvelle `submit_actor_fiche` passe (plus de PT409) | _à relever_ |
+| **La résolution libère le verrou (DELETE / déliage)** | **supprimer** la dernière ligne `pending`, ou lui mettre `submission_id = NULL` | même résultat. Le trigger est `AFTER DELETE OR UPDATE OF status, submission_id` et résout `OLD` **et** `NEW` : sans ce bras, aucune RPC ne savait plus refermer la soumission et la fiche restait en PT409 à vie | _à relever_ |
+| **Une soumission vidée n'annonce pas une validation** | vider une soumission de toutes ses lignes, puis lire la notification produite | l'issue n'est **pas** `approved` — on n'annonce pas « vos modifications ont été validées » à quelqu'un dont on vient de détruire les lignes | _à relever_ |
+| **RGPD — aucun nom dans le payload** | lire `app_notification.payload` d'une ligne `kind='fiche_submission_reviewed'` | jeu de clés **exactement** `{submission_id, outcome, object_id}` (`:1288-1289`), et **aucune** valeur égale à un `display_name` de la base. `object_id` est un identifiant technique, assumé (arbitrage Task 8) | _à relever_ |
+| **RGPD — déliage du compte portail, mode `anonymize`** | `api.rpc_gdpr_erase_subject(<acteur>, 'anonymize')` | `app_user_profile.actor_id` passe à NULL, `fiche_submission.note` (l'**original** du message libre) est nettoyée, et les lignes d'audit `app_user_profile` sont rédigées — sinon le trigger d'audit re-noue lui-même le lien acteur↔compte qu'on vient de couper | _à relever_ |
+| **RGPD — déliage du compte portail, mode `delete`** | même appel en `delete` | même résultat. Le nettoyage de `fiche_submission.note` se fait **avant** la branche de mode : après, la FK `ON DELETE SET NULL` a déjà délié et le nettoyage serait muet | _à relever_ |
 
 ### 🔴 OBLIGATOIRE — le bloc F du test n'a JAMAIS tourné ; c'est le PUSH qui le referme
 
@@ -1366,11 +1415,192 @@ En complément **facultatif** — et seulement là où `psql` et une chaîne de 
 `psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"`.
 **Sans `BEGIN` externe** : le fichier porte les siens.
 
+### ⚠ AVANT LE PREMIER COMPTE `role='actor'` — prérequis de mise en service
+
+Déployer 18a est sans risque : la migration est **inerte** tant qu'aucun compte acteur n'existe
+(D7 est gaté par `AND NOT api.is_actor_persona()`, `migration_actor_portal.sql:195`).
+**Inviter un partenaire ne l'est pas.** Les six prérequis ci-dessous se vérifient avant la
+**première invitation**, pas avant l'application.
+
+Les états portés au tableau ont été relevés en base au packaging de 18a. Les n°5 et n°6 portent
+sur des **données**, pas sur du code : ils **doivent être re-relevés au moment de la mise en
+service**. La matrice §227 est réglable par ORG, et un canal de contact peut être saisi ou retiré
+à tout moment.
+
+| # | Prérequis | État vérifié en base au packaging de 18a |
+| --- | --- | --- |
+| 1 | **18a déployée**, avec `p_applied_manually` | ⛔ **NON** — c'est le prérequis dont tout dépend. Voir « Ordre de déploiement » ci-dessous |
+| 2 | **Le front accepte le rôle `actor`** (`normalizeRole`, `USER_ROLE_LABELS_FR`, routage par défaut) | livré en branche. Sans lui, tout compte acteur bloque sur l'écran de session |
+| 3 | **17i-17l en production ET au manifeste fresh-apply** | ✅ **vert** — `org_role_permission` **existe en production** (58 lignes, les 2 permissions présentes). Seul le manifeste `ci_fresh_apply.sql` les ignorait ; corrigé au packaging de 18a |
+| 4 | **La description canonique arrive sur le chemin réel** | ⏳ **invérifiable avant déploiement** — demande un JWT acteur, qui n'existe pas encore. À vérifier au premier parcours de recette : la présentation existante doit arriver dans `descriptions.object`, sinon la rubrique s'affiche vide et un report manuel effacerait le texte |
+| 5 | **Les canaux publics de l'office sont saisis** | ⛔ **ROUGE** — détail ci-dessous |
+| 6 | **Les vérificateurs ont aussi l'écriture canonique** | ✅ **vert** — détail ci-dessous |
+
+**Prérequis 5 — le détail, et il est pire que « aucun canal public ».** Les **trois** ORG n'ont
+**aucun canal de contact du tout** :
+
+```
+OTI du Sud                      0 e-mail public · 0 tél public · 0 canal privé
+Comité Régional de Tourisme     0 · 0 · 0
+Bac a sable (test)              0 · 0 · 0
+```
+
+Conséquence exacte : `office_email` et `office_phone` seront **NULL pour toutes les fiches**, et
+les deux replis du portail — « envoyez vos photos à l'office » (les photos sont en lecture seule
+pour un partenaire, D11) et « signaler une erreur » — se termineront sur
+« Contactez votre office de tourisme. » **sans adresse ni numéro**. Le partenaire lit une phrase
+qui ne mène nulle part. **C'est une saisie côté OTI, pas du code** : aucun correctif logiciel ne
+peut inventer une adresse.
+
+**Prérequis 6 — le détail, et pourquoi un zéro compte.** Un **seul** rôle métier porte
+`validate_changes`, et ce même rôle porte **aussi** `edit_canonical_when_publisher` dans les
+3 ORG — donc quiconque peut vérifier peut aussi appliquer. Porteurs :
+
+```
+ORGRUN000000000B   OTI du Sud                    5
+ORGRUN00000001C4   Comité Régional de Tourisme   1
+ORGTST0000000001   Bac a sable (test)            0
+```
+
+Le **0** du bac à sable n'est pas anodin. Pour une fiche publiée par cette ORG, la branche
+primaire de `api.list_object_verifier_ids` ne rendrait **personne**, et le repli tomberait sur
+l'unique superutilisateur plateforme. Cela **fonctionne** — c'est exactement ce que le repli
+superutilisateur a été écrit pour couvrir — mais il faut le savoir avant de recetter sur cette
+ORG : la tâche de vérification n'ira pas à un agent de l'office.
+
+⚠ Ce prérequis se re-vérifie **par ORG et à chaque mise en service**. Un rôle métier auquel on
+retire `edit_canonical_when_publisher` en gardant `validate_changes` produirait un vérificateur
+qui voit la tâche, clique « Approuver », et prend un `42501` au re-dispatch — la fiche du
+partenaire resterait bloquée.
+
+#### Trois prérequis hors code, découverts en cours de chantier
+
+Ils ne sont dans aucun plan et **aucune ligne de code ne peut les fermer**.
+
+**a. `NEXT_PUBLIC_APP_URL` DOIT être posée en production.** Sans elle, l'origine des liens
+retombe sur l'en-tête `Host` de l'appelant, dans **deux** routes :
+`bertel-tourism-ui/src/app/api/crm/notify-drain/route.ts:62` (l'e-mail de retour au partenaire) et
+la fonction `inviteOrigin()` de `bertel-tourism-ui/src/app/api/crm/actor-access/route.ts`
+(le lien d'invitation, qui porte un jeton). C'était sans grande portée tant que ces liens ne partaient qu'à des membres de
+l'équipe ; **depuis 18a ils partent à des partenaires externes**. ⚠ **Rien n'échoue si elle
+manque** : le repli est silencieux, aucune erreur, aucun log. C'est un prérequis qu'on ne
+découvre pas en le ratant.
+
+**b. L'allowlist Supabase (Auth → URL Configuration) doit accepter `…/set-password*` AVEC la
+query string.** La route d'invitation demande
+`redirectTo: <origine>/set-password?espace=1` (`actor-access/route.ts`, champ `redirectTo` de
+l'appel `inviteUserByEmail`). Si le motif
+autorisé ne couvre pas la query string, Supabase retombe sur le *Site URL* et **`?espace=1` est
+perdu** : `/set-password` affiche alors la copie destinée au personnel de l'office, et le
+partenaire lit un texte qui ne le concerne pas. C'est aussi la **seule** défense contre un
+`redirectTo` forgé — raison de plus pour la vérifier plutôt que de la supposer.
+
+**c. Le gabarit d'e-mail « Invite user » est un champ du dashboard Supabase — arbitrage PO.**
+Copie de référence : `docs/supabase-email-templates/invite-user.html`. Il est **partagé entre le
+personnel de l'office et les partenaires** : un seul gabarit pour les deux publics. Il dit
+aujourd'hui « Plateforme tourisme & CRM » (`:38`) et « Rejoignez-nous ! » (`:46`) — du jargon
+interne pour un gîteur, et **c'est le premier texte qu'il lira de Bertel**. **Aucune ligne de code
+ne peut le corriger** : il vit dans le dashboard. Deux issues ont été identifiées, **aucune n'est
+posée** : neutraliser le gabarit pour qu'il convienne aux deux publics, ou le brancher sur
+`{{ .Data.espace }}` pour qu'il dise deux choses différentes. **Décision PO requise avant la
+première invitation.**
+
+#### Une contrainte produit à consigner, pas une contrainte technique
+
+`uq_fiche_submission_open` n'autorise **qu'une seule vérification ouverte par fiche**. Tant que
+l'office n'a pas répondu, le partenaire ne peut rien renvoyer sur sa propre fiche. L'office
+s'engage donc sur un délai — **5 jours ouvrés** (arbitrage PO du 2026-09-03, copie affichée
+« en général sous une semaine ») — et doit **surveiller l'âge des vérifications en attente**. Une
+vérification oubliée n'est pas un retard : c'est un partenaire muré.
+
+### Ordre de déploiement
+
+Chaque geste vient à sa place pour une raison ; elle est écrite en dessous.
+
+**1. Pousser la branche.** C'est ce geste qui referme la **seule preuve manquante du SQL**. Le
+bloc F de `tests/test_actor_portal.sql` (lignes 1891-2399) **n'a jamais été exécuté**, dans aucun
+environnement : le plafond de l'outil MCP (~120 Ko) a forcé un découpage en deux passes et le
+bloc F est tombé entre les deux. Le step CI le joue **en entier** par `psql -f`, sans plafond
+(cf. la sous-section 🔴 ci-dessus). ⛔ Ne jamais découper le fichier ni le coller dans
+`execute_sql` pour « rattraper » : c'est exactement le geste qui a fait tomber le bloc F.
+
+**2. Attendre le run CI vert, et le lire.** C'est le **premier fresh-apply portant 17i→18b** : la
+première épreuve réelle des quatre créneaux §227 qui manquaient au manifeste, et des deux fichiers
+de test d'autres chantiers corrigés dans le même commit (`tests/test_unblock_team_legal_access.sql`
+et `tests/test_object_list.sql`, qui encodaient la règle **pré-§227**). Vérifier nommément les
+étapes `18a` (`ci_fresh_apply.sql:540`), `18a-test` (`:543`), et les steps « Actor portal test »,
+« RGPD erasure test » et « RGPD mirror alignment ». **Ne rien appliquer en production avant
+d'avoir ce run**, et coller son lien dans la sous-section 🔴 ci-dessus.
+
+**3. Déployer 18a, PUIS 18b.** 18a est un unique `BEGIN;…COMMIT;` : tout ou rien, un échec ne
+laisse rien derrière lui. Les quatre étapes §227 (17i-17l) sont **déjà en production** — ne rien y
+rejouer. Relever les 9 md5 juste avant (tableau A ci-dessus).
+
+**4. ⛔ Ne mettre le front en production qu'APRÈS le SQL. Jamais l'inverse.**
+`bertel-tourism-ui/src/services/moderation.ts:139` envoie désormais **toujours**
+`p_applied_manually`. La base d'avant 18a n'a que `api.approve_pending_change(uuid, text)`, et
+**PostgREST résout les surcharges par le jeu de noms de paramètres** ⇒ **`PGRST202`** tant que la
+§7 n'est pas là, rendu à l'écran comme « Approbation impossible. ».
+`api.list_pending_changes` change d'arité mais **pas** de jeu de paramètres, **donc la file
+d'attente s'affiche normalement** : la panne est **muette et localisée au bouton**. Concrètement,
+l'agent d'office ne peut plus approuver **une seule ligne**, avec un message qui ne dit pas
+pourquoi, et le partenaire reste bloqué en `PT409` sur sa propre fiche jusqu'à ce que quelqu'un
+comprenne.
+
+**5. Rejouer `tests/test_actor_portal.sql` seul** contre la base migrée, **sans la migration dans
+le payload** — c'est la seconde façon de refermer le bloc F, et elle vaut confirmation du run CI
+sur des données réelles. **Sans `BEGIN` externe** : le fichier porte les siens
+(`BEGIN` l. 189, `ROLLBACK` l. 2514). Là où `psql` et une chaîne de connexion existent
+uniquement — le fichier fait 175 977 octets et ne passe pas par `execute_sql`.
+
+**6. Re-relever les 9 md5 `prosrc`** du relevé initial et prouver que **seules les fonctions
+visées** ont bougé (tableau A ci-dessus, valeurs de référence incluses). Vérifier dans la foulée
+que la whitelist d'`api.approve_pending_change` porte bien **sept** writers, `save_object_rooms`
+exclu, et qu'il ne reste **qu'une seule** signature à trois paramètres.
+
+Puis, et seulement alors : remplir le tableau de sabotage, basculer le marqueur
+« ⏳ PAS ENCORE APPLIQUÉE », et **ne créer aucun compte `app_user_profile.role = 'actor'`** tant
+que les six prérequis de mise en service ne sont pas verts.
+
+### Trois invariants à ne pas re-perdre
+
+Ils sont défendus dans le code, mais chacun se re-perdrait sous un remaniement de bonne foi.
+
+1. **La whitelist §120 est à SEPT writers, et `submit` et `approve` doivent porter la MÊME.**
+   `api.submit_actor_fiche` (`migration_actor_portal.sql:517-520`) et
+   `api.approve_pending_change` (`:884-892`). **Une asymétrie fabrique une fiche bloquée à vie** :
+   si `submit` est le plus permissif, la proposition entre en base, l'approbation la refuse en
+   `22023`, et `uq_fiche_submission_open` ne libère jamais le partenaire. N'ajouter une entrée
+   qu'après l'avoir posée **des deux côtés**, et mettre à jour l'assertion miroir du bloc D2 de
+   `tests/test_actor_portal.sql`.
+
+2. **Le plancher dur de la matrice de visibilité n'est pas paramétrable.**
+   `api.actor_portal_floor_modules()` (`:299-305`) est une fonction `IMMUTABLE`, pas une table, et
+   `api.rpc_set_actor_section_visibility` refuse le plancher **même pour le re-rendre visible**
+   (`:444-445`). Les 9 modules y sont pour des raisons distinctes, pas par prudence générale :
+   `relationships` parce que son writer réécrit `actor_object_role`, c'est-à-dire **le périmètre
+   même de l'acteur** ; `places` parce que son writer supprime les médias des sous-lieux absents
+   du payload ; `media` parce qu'aucun chemin d'application n'existe (D11).
+
+3. **L'attestation de report manuel est déclarative.** La base la rend **imputable et visible**
+   (`applied_manually` / `attested_by` / `attested_at`, `:948-951`), elle **ne peut pas vérifier
+   que le report a eu lieu**. **L'écran est donc la seule garde** : case obligatoire, décochée à
+   chaque ouverture, bouton « Certifier et valider ». Si l'office demande à réduire la friction du
+   geste groupé, la reprise correcte est un **second bouton nommé** — jamais une case redevenue
+   facultative. Une attestation cochée par réflexe fait cesser « validée » de vouloir dire quelque
+   chose, et le partenaire lit « validée » sur une fiche publique qui n'a pas bougé.
+
 ### Front
 
-Aucun code front n'est requis par cette migration : elle est inerte tant qu'aucun
-`app_user_profile.role = 'actor'` n'existe. L'interface du portail (spec D10 §228) est un chantier
-distinct, non commencé.
+L'interface du portail (spec D10 §228) est **livrée en branche, non poussée** : l'espace
+`/espace` et les 8 rubriques du registre
+`bertel-tourism-ui/src/features/portal/portal-rubrics.ts`, l'écran d'attestation de
+`/moderation`, la carte d'accès portail du CRM, le réglage de visibilité de `/settings`, et le
+retour au partenaire par notification et e-mail.
+
+La migration reste **inerte** tant qu'aucun `app_user_profile.role = 'actor'` n'existe — mais le
+front, lui, **ne l'est pas** : voir le geste n°4 de l'ordre de déploiement ci-dessus. Le front en
+production avant le SQL casse l'approbation pour l'office entier, en silence.
 
 ## 18b — Seed `ref_amenity` : trois modes de visite hors catalogue depuis la mise en service de l'éditeur
 

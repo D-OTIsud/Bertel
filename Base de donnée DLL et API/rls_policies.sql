@@ -170,6 +170,11 @@ AS $$
   -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
   SELECT o.id FROM object o
   WHERE o.status = 'published'
+    -- Cloisonnement du bac a sable (migration_test_org_isolation.sql). Ce chemin 2C
+    -- accorde TOUT le corpus publie : sans predicat de realm il rouvrait a lui seul
+    -- ce que public_objects_published venait de fermer. Mesure par
+    -- tests/test_test_org_isolation.sql bloc C, passe ROUGE exactement ici.
+    AND o.is_test = (SELECT api.current_user_test_realm())
     AND EXISTS (
       SELECT 1 FROM user_org_membership uom
       JOIN org_config oc ON oc.org_object_id = uom.org_object_id
@@ -200,6 +205,13 @@ $$;
 -- the canonical definitions later in THIS file replace them via CREATE OR REPLACE
 -- (same signatures), so runtime behaviour is unchanged. (Found by the SQL fresh-apply CI gate.)
 CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+-- current_user_test_realm: realm de lecture (production / bac à sable). Défini par
+-- migration_test_org_isolation.sql, \ir'd EN DERNIER — mais api_views_functions.sql et
+-- migration_cards_batch_authorize_definer.sql le référencent dans des corps SQL validés
+-- au CREATE. Stub ici (production = false, comportement d'AVANT le cloisonnement, donc
+-- une base restée au stub se comporte exactement comme aujourd'hui) ; la migration le
+-- remplace par le vrai corps via CREATE OR REPLACE (même signature).
+CREATE OR REPLACE FUNCTION api.current_user_test_realm() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 -- user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
 -- AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /

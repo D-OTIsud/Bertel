@@ -65,6 +65,12 @@ BEGIN
            ) AS tombstone
     FROM object_deletion_log dl
     WHERE dl.performed_at > v_since
+      -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : un
+      -- tombstone est le SEUL reste d une fiche supprimee — l objet n existe
+      -- plus, on ne peut pas rejoindre son realm apres coup. D ou la colonne
+      -- figee a la suppression par trigger, et ce filtre. Sans lui, supprimer
+      -- une fiche de test aurait publie son id et son type aux partenaires.
+      AND dl.is_test = false
     ORDER BY dl.performed_at
     LIMIT v_limit
   ) t;

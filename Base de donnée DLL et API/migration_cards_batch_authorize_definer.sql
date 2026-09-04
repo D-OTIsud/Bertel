@@ -60,7 +60,9 @@ LANGUAGE sql STABLE SECURITY DEFINER
 --   ALTER FUNCTION api.current_user_readable_object_ids() SET search_path = public, api, auth;
 SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $fn$
-  SELECT o.id FROM object o WHERE o.status = 'published'
+  -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : DEFINER,
+  -- donc la RLS ne s'applique pas — le predicat de realm doit etre ecrit ici.
+  SELECT o.id FROM object o WHERE o.status = 'published' AND o.is_test = (SELECT api.current_user_test_realm())
   UNION
   SELECT api.current_user_extended_object_ids();
 $fn$;
@@ -110,7 +112,8 @@ AS $$
     -- Do NOT trust the caller's id list; a non-published id still requires extended membership.
     SELECT DISTINCT id
     FROM input_ids
-    WHERE EXISTS (SELECT 1 FROM object o WHERE o.id = input_ids.id AND o.status = 'published')
+    WHERE EXISTS (SELECT 1 FROM object o WHERE o.id = input_ids.id AND o.status = 'published'
+                    AND o.is_test = (SELECT api.current_user_test_realm()))
        OR id IN (SELECT api.current_user_extended_object_ids())
   ), main_location AS (
     SELECT DISTINCT ON (ol.object_id)

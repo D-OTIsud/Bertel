@@ -64,6 +64,11 @@ AS $fn$
   -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
   SELECT o.id FROM object o
   WHERE o.status = 'published'
+    -- Cloisonnement du bac a sable (migration_test_org_isolation.sql). Ce chemin 2C
+    -- accorde TOUT le corpus publie : sans predicat de realm il rouvrait a lui seul
+    -- ce que public_objects_published venait de fermer. Mesure par
+    -- tests/test_test_org_isolation.sql bloc C, passe ROUGE exactement ici.
+    AND o.is_test = (SELECT api.current_user_test_realm())
     AND EXISTS (
       SELECT 1 FROM user_org_membership uom
       JOIN org_config oc ON oc.org_object_id = uom.org_object_id

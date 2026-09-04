@@ -508,7 +508,8 @@ DECLARE
   v_prefer_org text;
   v_block      jsonb;
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM object o WHERE o.id = p_object_id AND o.status = 'published') THEN
+  IF NOT EXISTS (SELECT 1 FROM object o WHERE o.id = p_object_id AND o.status = 'published'
+                    AND o.is_test = (SELECT api.current_user_test_realm())) THEN
     RETURN NULL;
   END IF;
 
@@ -1293,7 +1294,13 @@ AS $$
       AND (
         p_status IS NULL
         OR p_status <@ ARRAY['published']::object_status[]
-      ) AS use_mv
+      )
+      -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : la MV
+      -- ne contient AUCUNE fiche de test, donc un compte de test qui la lirait
+      -- verrait un Explorer VIDE. On le route vers la branche `object`, seule a
+      -- porter le predicat de realm. Un compte de production garde la MV — et
+      -- garde donc exactement son plan et son cout d'aujourd'hui.
+      AND (SELECT api.current_user_test_realm()) IS NOT TRUE AS use_mv
     FROM normalized n
   ),
   -- §157 — « ouvert à … » : le moteur d'ouverture (internal.compute_open_status,
@@ -1374,6 +1381,12 @@ AS $$
       LIMIT 1
     ) ol ON TRUE
     WHERE NOT params.use_mv
+      -- Garde de realm a double sens (migration_test_org_isolation.sql). Cette
+      -- fonction est SECURITY DEFINER : la RLS ne s'applique PAS ici, le predicat
+      -- doit donc etre ecrit. Un compte de production ne voit que le reel, un
+      -- compte de bac a sable ne voit que le test — une seule egalite pour les
+      -- deux sens, qu'on ne peut pas oublier a moitie.
+      AND o.is_test = (SELECT api.current_user_test_realm())
   ),
   -- §197 — LE REPLI. Le flou ne s'ajoute pas au plein texte : il le REMPLACE, et
   -- seulement quand le plein texte ne trouve RIEN. Une saisie correcte garde donc
@@ -3037,8 +3050,11 @@ BEGIN
   FROM object o
   WHERE o.id = p_object_id
     AND (
-      -- Public access: published objects
-      o.status = 'published' 
+      -- Public access: published objects — cloisonne par realm
+      -- (migration_test_org_isolation.sql). SECURITY DEFINER : la RLS ne
+      -- s'applique pas ici, et c'est CE chemin que suit l'API partenaire
+      -- (service_role => realm=false), d'ou l'exclusion du corpus de test.
+      (o.status = 'published' AND o.is_test = (SELECT api.current_user_test_realm()))
       OR 
       -- Extended access: user is actor for this object or parent org
       v_can_read_extended
@@ -4995,7 +5011,8 @@ BEGIN
           JOIN ref_code_cuisine_type ct ON ct.id = oct.cuisine_type_id
           WHERE r.source_object_id = obj.id
             AND rt.code = 'partner_of'  -- restaurants partenaires
-            AND (v_can_read_extended OR o_restaurant.status = 'published')
+            AND (v_can_read_extended OR (o_restaurant.status = 'published'
+                                         AND o_restaurant.is_test = (SELECT api.current_user_test_realm())))
         ) ct
       ), '[]'::jsonb)
     );
@@ -5874,6 +5891,10 @@ BEGIN
   FROM object o
   WHERE (v_types IS NULL OR o.object_type = ANY(v_types))
     AND (v_status IS NULL OR o.status = ANY(v_status))
+    -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : garde de
+    -- realm a double sens. L'API partenaire appelle en service_role, qui
+    -- COURT-CIRCUITE la RLS — le predicat doit donc etre ecrit ici.
+    AND o.is_test = (SELECT api.current_user_test_realm())
     AND (v_search IS NULL OR o.name_search_vector @@ plainto_tsquery('french', api.norm_search(v_search)));
 
   -- Page d'ids
@@ -5882,6 +5903,10 @@ BEGIN
     FROM object o
     WHERE (v_types IS NULL OR o.object_type = ANY(v_types))
       AND (v_status IS NULL OR o.status = ANY(v_status))
+      -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : garde de
+      -- realm a double sens. L'API partenaire appelle en service_role, qui
+      -- COURT-CIRCUITE la RLS — le predicat doit donc etre ecrit ici.
+      AND o.is_test = (SELECT api.current_user_test_realm())
       AND (v_search IS NULL OR o.name_search_vector @@ plainto_tsquery('french', api.norm_search(v_search)))
     ORDER BY o.id
     OFFSET v_offset
@@ -6128,6 +6153,10 @@ BEGIN
       FROM object o
       WHERE (v_types IS NULL OR o.object_type = ANY(v_types))
         AND (v_status IS NULL OR o.status = ANY(v_status))
+        -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : garde de
+        -- realm a double sens. L'API partenaire appelle en service_role, qui
+        -- COURT-CIRCUITE la RLS — le predicat doit donc etre ecrit ici.
+        AND o.is_test = (SELECT api.current_user_test_realm())
         AND (v_search IS NULL OR o.name_search_vector @@ plainto_tsquery('french', api.norm_search(v_search)))
         AND o.updated_at_source >= p_since
         AND (last_ts IS NULL OR (o.updated_at_source, o.id) > (last_ts, last_id))
@@ -6140,6 +6169,10 @@ BEGIN
       FROM object o
       WHERE (v_types IS NULL OR o.object_type = ANY(v_types))
         AND (v_status IS NULL OR o.status = ANY(v_status))
+        -- Cloisonnement du bac a sable (migration_test_org_isolation.sql) : garde de
+        -- realm a double sens. L'API partenaire appelle en service_role, qui
+        -- COURT-CIRCUITE la RLS — le predicat doit donc etre ecrit ici.
+        AND o.is_test = (SELECT api.current_user_test_realm())
         AND (v_search IS NULL OR o.name_search_vector @@ plainto_tsquery('french', api.norm_search(v_search)))
         AND o.updated_at >= p_since
         AND (last_ts IS NULL OR (o.updated_at, o.id) > (last_ts, last_id))
@@ -6754,6 +6787,7 @@ BEGIN
     ) item_counts ON TRUE
     WHERE o.object_type = 'RES'
       AND o.status = 'published'
+      AND o.is_test = (SELECT api.current_user_test_realm())
       AND ct.code = ANY(p_cuisine_types)
     GROUP BY o.id, o.name, o.object_type, o.status, o.region_code, 
              o.created_at, o.updated_at, o.published_at, o.is_editing,
@@ -6891,6 +6925,7 @@ BEGIN
     ) restaurant_cuisines ON TRUE
     WHERE o.object_type = 'FMA'
       AND o.status = 'published'
+      AND o.is_test = (SELECT api.current_user_test_realm())
       AND ct.code = ANY(p_cuisine_types)
     GROUP BY o.id, o.name, o.object_type, o.status, o.region_code, 
              o.created_at, o.updated_at, o.published_at, o.is_editing,
@@ -7440,6 +7475,7 @@ BEGIN
     FROM object
     WHERE object_type::text = p_object_type
       AND status = 'published'
+      AND is_test = (SELECT api.current_user_test_realm())
     ORDER BY name
     LIMIT p_limit
     OFFSET p_offset
@@ -7482,6 +7518,7 @@ BEGIN
     SELECT o.id, o.name
     FROM object o
     WHERE o.status = 'published'
+      AND o.is_test = (SELECT api.current_user_test_realm())
       AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
       AND (
         o.name_search_vector @@ plainto_tsquery('french', api.norm_search(p_search_term))
@@ -8112,6 +8149,7 @@ BEGIN
     WHERE oc.value_id IN (SELECT id FROM label_hierarchy)
       AND oc.status = 'granted'
       AND o.status = 'published'
+      AND o.is_test = (SELECT api.current_user_test_realm())
   ),
   partial_label_objects AS (
     -- Objects with some actions from the label
@@ -8121,6 +8159,7 @@ BEGIN
     WHERE osa.action_id IN (SELECT action_id FROM label_actions)
       AND o.id NOT IN (SELECT id FROM full_label_objects)
       AND o.status = 'published'
+      AND o.is_test = (SELECT api.current_user_test_realm())
     GROUP BY o.id
   ),
   combined_objects AS (
@@ -9038,6 +9077,7 @@ BEGIN
     WHERE rlt.is_required = true
   ) compliance ON true
   WHERE o.status = 'published'
+    AND o.is_test = (SELECT api.current_user_test_realm())
     AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types));
 
   -- Build audit summary
@@ -9094,6 +9134,7 @@ BEGIN
           WHERE rlt.is_required = true
         ) compliance ON true
         WHERE o.status = 'published'
+          AND o.is_test = (SELECT api.current_user_test_realm())
           AND (p_object_types IS NULL OR o.object_type::text = ANY(p_object_types))
         GROUP BY o.object_type
       ) ot
@@ -9610,7 +9651,8 @@ BEGIN
     ON d.object_id = o.id
    AND d.org_object_id IS NULL
   WHERE o.id = p_object_id
-    AND o.status = 'published';
+    AND o.status = 'published'
+    AND o.is_test = (SELECT api.current_user_test_realm());
 
   RETURN v_result;
 END;
@@ -10715,17 +10757,17 @@ BEGIN
 
   -- 2. Corpus net (tous statuts, hors ORG) : global / type / statut
   INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
-  SELECT p_date,'global','','corpus_count',count(*),NULL FROM object WHERE object_type<>'ORG'
+  SELECT p_date,'global','','corpus_count',count(*),NULL FROM object WHERE object_type<>'ORG' AND is_test = false
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
 
   INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
   SELECT p_date,'type',object_type::text,'corpus_count',count(*),NULL
-  FROM object WHERE object_type<>'ORG' GROUP BY object_type
+  FROM object WHERE object_type<>'ORG' AND is_test = false GROUP BY object_type
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
 
   INSERT INTO public.metric_snapshot(snapshot_date,scope,scope_key,metric_key,value,denominator)
   SELECT p_date,'status',status::text,'corpus_count',count(*),NULL
-  FROM object WHERE object_type<>'ORG' GROUP BY status
+  FROM object WHERE object_type<>'ORG' AND is_test = false GROUP BY status
   ON CONFLICT (snapshot_date,scope,scope_key,metric_key) DO UPDATE SET value=EXCLUDED.value, captured_at=now();
 
   -- 3. Classés (granted) : global + par commune

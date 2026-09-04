@@ -1079,6 +1079,14 @@ autre définisseur d'`api.rpc_list_org_members`, que cette migration recrée. D�
 `ci_fresh_apply.sql` le **2026-09-04** seulement ; jusque-là appliquée en PROD mais absente du
 manifeste, donc **jamais** exercée par la garde CI (cf. l'encadré de la liste ordonnée).
 
+**Intégration CI du 2026-09-04 :** le premier run (`33837270977`) applique les trois
+migrations mais échoue sur `test_unblock_team_legal_access.sql` : ses témoins `editor`
+héritent désormais des droits canoniques, documentaires et juridiques. La correction
+de fixture issue du chantier portail conserve toutes les assertions : `viewer` avec
+exception juridique individuelle, `contributor` sans droit juridique, et `editor`
+dans une autre ORG pour vérifier la frontière de périmètre. Aucune règle de production
+n'est modifiée par cette correction.
+
 ### Pourquoi
 
 Le rôle métier n'était qu'une **étiquette** (SP-2 §24 : « aucun droit implicite »). Le

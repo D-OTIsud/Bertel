@@ -7,6 +7,12 @@ import {
   taskAssignedEmailSubject,
   type TaskAssignedEmailData,
 } from '@/emails/TaskAssignedEmail';
+import {
+  renderSubmissionReviewedEmailHtml,
+  submissionReviewedEmailSubject,
+  type SubmissionOutcome,
+  type SubmissionReviewedEmailData,
+} from '@/emails/SubmissionReviewedEmail';
 
 // Drainage de l'outbox e-mail d'assignation (17i). N'importe quel utilisateur CONNECTÉ
 // peut pinger : le corps de requête est IGNORÉ — la route ne fait que déclencher l'envoi
@@ -59,47 +65,74 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Ligne malformée ou sans e-mail (le claim les termine normalement lui-même) :
     // on la SAUTE — le claim la re-traitera, jamais de boucle d'erreur ici.
     if (!id || !to) continue;
-    // 18a — le claim rend désormais DEUX espèces (crm_task_assigned et
-    // fiche_submission_reviewed) et ce relais ne sait composer que la première. Composer la
-    // seconde avec TaskAssignedEmail enverrait au PRESTATAIRE une notification d'assignation
-    // interne — sujet « Nouvelle tâche », bouton pointant /crm, une page que la persona
-    // `actor` ne peut pas ouvrir — et `outcome`, la seule information utile, serait jeté.
-    // On ne compose donc pas : on TERMINE la ligne en échec explicite.
+    // 18a — le claim rend DEUX espèces (crm_task_assigned et fiche_submission_reviewed) et
+    // chacune a SON gabarit. Composer la seconde avec TaskAssignedEmail enverrait au
+    // partenaire une notification d'assignation interne — sujet « Nouvelle tâche », bouton
+    // pointant /crm, une page que la persona `actor` ne peut pas ouvrir — et `outcome`, la
+    // seule information utile, serait jeté.
     //
-    // Un `continue` nu ne suffirait pas : mark_notifications_emailed n'incrémente
+    // Le repli sur 'crm_task_assigned' quand la clé est ABSENTE couvre l'ordre de
+    // déploiement inverse (front neuf, claim antérieur à 18a §8.2, qui n'émet pas `kind`) :
+    // toutes les lignes restent alors traitées comme avant.
+    //
+    // Une espèce que ce relais ne sait pas composer est TERMINÉE en échec explicite, jamais
+    // sautée. Un `continue` nu ne suffirait pas : mark_notifications_emailed n'incrémente
     // email_attempts que par le bras p_failed, donc une ligne sautée sans acquittement
     // redevient réclamable à chaque TTL de 10 min, indéfiniment, en consommant un des 20
     // slots du LIMIT — file bouchée à vie. La notification in-app, elle, subsiste.
-    //
-    // Le repli sur 'crm_task_assigned' quand la clé est ABSENTE rend cette garde sûre dans
-    // les DEUX ordres de déploiement : contre un claim antérieur à 18a §8.2 (qui n'émet pas
-    // `kind`), toutes les lignes restent traitées comme avant.
-    //
-    // TODO(Task 18) : remplacer par un aiguillage sur `kind` vers
-    // src/emails/SubmissionReviewedEmail (sujet et corps dérivés de `outcome` ∈
-    // {approved, rejected, partial}, lien vers l'espace acteur et NON /crm) — spec §4.7.
     const kind = str(row.kind) || 'crm_task_assigned';
-    if (kind !== 'crm_task_assigned') {
+    if (kind !== 'crm_task_assigned' && kind !== 'fiche_submission_reviewed') {
       failed.push({ id, error: 'unsupported_kind' });
       continue;
     }
-    const emailData: TaskAssignedEmailData = {
-      taskTitle: str(row.task_title) || 'Tâche',
-      objectName: str(row.object_name) || 'Établissement',
-      dueAt: nstr(row.due_at),
-      assignerName: nstr(row.assigner_name),
-      // Le claim JOINT ce nom (et sa jointure app_user_profile dédiée) : le laisser inutilisé
-      // aurait fait porter au contrat une clé que personne ne lit. `nstr` rend `null` sur une
-      // chaîne vide comme sur une valeur absente — le template replie alors sur « Bonjour, ».
-      recipientName: nstr(row.recipient_name),
-      appUrl: `${origin}/crm`,
-    };
-    try {
-      await sendMail({
-        to,
+
+    let mail: { subject: string; html: string };
+    if (kind === 'fiche_submission_reviewed') {
+      // L'ISSUE décide de tout le message, et elle ne se devine pas. Le brief proposait un
+      // repli sur 'approved' ; il est refusé ici, et c'est le seul écart assumé de la Task :
+      // annoncer « vos modifications ont été validées » à un partenaire dont le travail a
+      // été refusé est le pire message que ce fichier puisse produire — il ne rouvrira
+      // jamais son espace pour corriger, et sa fiche restera bloquée (une seule vérification
+      // ouverte à la fois). Le trigger de résolution écrit TOUJOURS une issue parmi les
+      // trois : une issue absente signifie un payload que ce relais ne sait pas composer,
+      // exactement comme une espèce inconnue — même traitement, même bras p_failed. L'état
+      // reste lisible sur /espace, et email_error nomme la cause côté office.
+      const outcome = str(row.outcome);
+      if (outcome !== 'approved' && outcome !== 'rejected' && outcome !== 'partial') {
+        failed.push({ id, error: 'unknown_outcome' });
+        continue;
+      }
+      const reviewData: SubmissionReviewedEmailData = {
+        objectName: str(row.object_name) || 'Votre fiche',
+        outcome: outcome as SubmissionOutcome,
+        recipientName: nstr(row.recipient_name),
+        // L'espace du partenaire, JAMAIS /crm : la persona `actor` ne peut pas l'ouvrir.
+        appUrl: `${origin}/espace`,
+      };
+      mail = {
+        subject: submissionReviewedEmailSubject(reviewData),
+        html: renderSubmissionReviewedEmailHtml(reviewData),
+      };
+    } else {
+      const emailData: TaskAssignedEmailData = {
+        taskTitle: str(row.task_title) || 'Tâche',
+        objectName: str(row.object_name) || 'Établissement',
+        dueAt: nstr(row.due_at),
+        assignerName: nstr(row.assigner_name),
+        // Le claim JOINT ce nom (et sa jointure app_user_profile dédiée) : le laisser inutilisé
+        // aurait fait porter au contrat une clé que personne ne lit. `nstr` rend `null` sur une
+        // chaîne vide comme sur une valeur absente — le template replie alors sur « Bonjour, ».
+        recipientName: nstr(row.recipient_name),
+        appUrl: `${origin}/crm`,
+      };
+      mail = {
         subject: taskAssignedEmailSubject(emailData),
         html: renderTaskAssignedEmailHtml(emailData),
-      });
+      };
+    }
+
+    try {
+      await sendMail({ to, subject: mail.subject, html: mail.html });
       sent.push(id);
     } catch (err) {
       failed.push({ id, error: err instanceof Error ? err.message : 'send_failed' });

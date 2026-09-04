@@ -34,8 +34,26 @@ function notif(over: Partial<AppNotification> = {}): AppNotification {
     objectName: 'Hôtel Test',
     createdById: 'u-jean',
     createdByName: 'Jean P.',
+    outcome: null,
+    submissionId: null,
     ...over,
   };
+}
+
+/** 18a — le retour de l'office sur une fiche envoyée par un acteur. */
+function review(over: Partial<AppNotification> = {}): AppNotification {
+  return notif({
+    id: 'n-review',
+    kind: 'fiche_submission_reviewed',
+    taskId: 't-verif',
+    taskTitle: 'Vérifier la fiche',
+    objectName: 'Villa Vanille',
+    createdById: null,
+    createdByName: null,
+    outcome: 'approved',
+    submissionId: 'sub-1',
+    ...over,
+  });
 }
 
 function renderDrawer(open = true) {
@@ -65,6 +83,26 @@ describe('notificationLabel', () => {
   it('un émetteur ou une tâche inconnus se DISENT, ils ne se devinent pas', () => {
     expect(notificationLabel(notif({ createdByName: null, taskTitle: null }))).toBe(
       'Quelqu’un vous a assigné « une tâche »',
+    );
+  });
+
+  // 18a — la seconde espèce. Le libellé parle de la FICHE, pas d'une tâche : il n'y a ni
+  // émetteur (payload sans nom, RGPD) ni titre de tâche à annoncer à son destinataire.
+  it('résolution : les trois issues se lisent différemment', () => {
+    expect(notificationLabel(review({ outcome: 'approved' }))).toBe(
+      'Vos modifications de « Villa Vanille » ont été validées',
+    );
+    expect(notificationLabel(review({ outcome: 'rejected' }))).toBe(
+      'Vos modifications de « Villa Vanille » ont été refusées',
+    );
+    expect(notificationLabel(review({ outcome: 'partial' }))).toBe(
+      'Vos modifications de « Villa Vanille » ont été en partie validées',
+    );
+  });
+
+  it('résolution : issue ou fiche inconnues se DISENT aussi, jamais devinées', () => {
+    expect(notificationLabel(review({ outcome: null, objectName: null }))).toBe(
+      'Vos modifications de « votre fiche » ont été vérifiées',
     );
   });
 });
@@ -109,6 +147,19 @@ describe('NotificationDrawer', () => {
     await waitFor(() => expect(mocked.markNotificationRead).toHaveBeenCalledWith('n1'));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(push).toHaveBeenCalledWith('/crm?tab=taches');
+  });
+
+  // 18a — un membre d'équipe peut AUSSI être acteur d'une fiche : son tiroir back-office
+  // peut donc porter les deux espèces. La destination suit l'espèce, pas le tiroir : /crm
+  // n'affiche rien d'un retour de vérification, et un acteur pur ne peut même pas l'ouvrir.
+  it('clic sur un retour de vérification : navigue vers l’espace, pas vers le kanban', async () => {
+    mocked.listMyNotifications.mockResolvedValue({ items: [review()], unreadCount: 1 });
+    const { onOpenChange } = renderDrawer();
+    fireEvent.click(await screen.findByText('Vos modifications de « Villa Vanille » ont été validées'));
+    await waitFor(() => expect(mocked.markNotificationRead).toHaveBeenCalledWith('n-review'));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(push).toHaveBeenCalledWith('/espace');
+    expect(push).not.toHaveBeenCalledWith('/crm?tab=taches');
   });
 
   it('clic sur une notification DÉJÀ lue : on navigue sans ré-écrire en base', async () => {

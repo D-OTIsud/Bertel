@@ -44,8 +44,25 @@ function formatWhen(value: string | null): string {
   });
 }
 
+/**
+ * Le mot de chaque issue de vérification (18a). Table plutôt que ternaire : `partial` n'est
+ * ni `approved` ni `rejected`, et une issue inconnue retombe sur « vérifiées » — neutre et
+ * vrai — plutôt que sur un verdict inventé.
+ */
+const REVIEW_OUTCOME_WORD: Record<string, string> = {
+  approved: 'validées',
+  rejected: 'refusées',
+  partial: 'en partie validées',
+};
+
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
+  // 18a — le retour de l'office sur une fiche envoyée. Ni émetteur (le payload est SANS nom,
+  // RGPD) ni titre de tâche : ce qui compte pour son lecteur, c'est SA fiche et le verdict.
+  if (notification.kind === 'fiche_submission_reviewed') {
+    const outcome = REVIEW_OUTCOME_WORD[notification.outcome ?? ''] ?? 'vérifiées';
+    return `Vos modifications de « ${notification.objectName ?? 'votre fiche'} » ont été ${outcome}`;
+  }
   const who = notification.createdByName ?? 'Quelqu’un';
   const title = notification.taskTitle ?? 'une tâche';
   return `${who} vous a assigné « ${title} »`;
@@ -81,6 +98,15 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
     // d'un aller-retour réseau, et l'échec du marquage laisse simplement la ligne non lue.
     if (!notification.readAt) readOneMutation.mutate(notification.id);
     onOpenChange(false);
+    // 18a — la destination suit l'ESPÈCE, pas le tiroir. Un membre d'équipe peut aussi être
+    // acteur d'une fiche : son tiroir back-office porte alors les deux espèces. Le kanban
+    // n'affiche RIEN d'un retour de vérification, et l'invalidation des tâches n'a pas lieu
+    // d'être ici. (Pas de cloche dans le portail en v1 : le partenaire reçoit l'e-mail et
+    // voit l'état sur /espace — ce branchement sert le cas mixte.)
+    if (notification.kind === 'fiche_submission_reviewed') {
+      router.push('/espace');
+      return;
+    }
     void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
     router.push('/crm?tab=taches');
   }

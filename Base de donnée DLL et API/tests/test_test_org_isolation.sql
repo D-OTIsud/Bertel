@@ -20,6 +20,15 @@
 --      C/D/E ne la protege. C'est un chemin distinct, teste distinctement.
 --   G. LES TOMBSTONES — supprimer une fiche de test ne doit pas fuiter son id au
 --      flux C-4. object_deletion_log ne portait aucune dimension de test.
+--   J. L'IDENTITE D'ACTEUR traverse les organisations. Un utilisateur est relie
+--      a des fiches par son E-MAIL (user_actor_ids -> actor_channel), un chemin
+--      qui ignore completement l'organisation. Les deux sens se produisent :
+--      un testeur dont l'e-mail est aussi celui d'un acteur reel, et un
+--      utilisateur de production dont l'e-mail atterrit sur un acteur du bac a
+--      sable — ce dernier n'a rien de theorique, poser un e-mail sur un acteur
+--      du bac a sable est exactement ce qu'on y fait pour eprouver le portail
+--      acteur. L'ECRITURE compte autant que la lecture : is_object_owner passe
+--      par le meme chemin.
 --   H. NON-VACUITE — la MEME fiche, basculee en production, DOIT redevenir
 --      visible partout. Sans ce bloc, un fixture casse (fiche non publiee, ORG mal
 --      liee) ferait passer C a D pour de mauvaises raisons, et le test serait vert
@@ -327,7 +336,85 @@ BEGIN
     RESET ROLE;
   END;
 
-  RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite, I creation dans le bac a sable)';
+  -- ────────── J. Le croisement des identites d'acteur ──────────
+  DECLARE
+    v_kind      uuid;
+    v_actor_r   uuid;   -- acteur REEL, primaire sur une fiche REELLE
+    v_obj_r     text;
+    v_actor_t   uuid;   -- acteur du BAC A SABLE
+    v_obj_t     text;
+    -- DEUX e-mails distincts : une garde applicative refuse qu'un meme e-mail soit
+    -- porte par deux acteurs (« Email … is already used by actor … »). Elle limite
+    -- la portee du croisement — mais elle ne l'empeche pas : il suffit qu'un
+    -- utilisateur d'un realm porte l'e-mail d'un acteur de l'autre, ce qui est le
+    -- cas des DEUX scenarios ci-dessous.
+    v_mail_r    text := 'croisement_reel@test.local';
+    v_mail_t    text := 'croisement_bac@test.local';
+    v_u_test    uuid := '00000000-0000-4000-a000-0000000000f6'::uuid;
+    v_u_prod    uuid := '00000000-0000-4000-a000-0000000000f7'::uuid;
+    v_role      uuid;
+    v_n         integer;
+  BEGIN
+    SELECT id INTO v_kind FROM ref_code_contact_kind WHERE code = 'email';
+    SELECT id INTO v_role FROM ref_actor_role ORDER BY code LIMIT 1;
+    UPDATE org_config SET is_test_org = TRUE WHERE org_object_id = v_orgTest;
+
+    -- Un MEME e-mail porte par un acteur de chaque cote. C'est la situation
+    -- reelle : la meme personne peut etre prestataire ET testeur.
+    INSERT INTO actor (display_name, extra)
+    VALUES ('Acteur Reel Croise', '{}'::jsonb) RETURNING id INTO v_actor_r;
+    INSERT INTO actor (display_name, extra)
+    VALUES ('Acteur Test Croise', jsonb_build_object('test_corpus', true))
+    RETURNING id INTO v_actor_t;
+    INSERT INTO actor_channel (actor_id, kind_id, value, is_public)
+    VALUES (v_actor_r, v_kind, v_mail_r, TRUE), (v_actor_t, v_kind, v_mail_t, TRUE);
+
+    -- v_objProd est reelle et publiee ; v_objTest est de test et publiee.
+    v_obj_r := v_objProd;
+    v_obj_t := v_objTest;
+    INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+    VALUES (v_actor_r, v_obj_r, v_role, TRUE, 'public'),
+           (v_actor_t, v_obj_t, v_role, TRUE, 'public')
+    ON CONFLICT (actor_id, object_id, role_id) DO NOTHING;
+
+    -- Le TESTEUR porte l'e-mail de l'acteur REEL ; l'utilisateur de PRODUCTION
+    -- porte celui de l'acteur du BAC A SABLE. C'est exactement le croisement.
+    INSERT INTO auth.users (id, email) VALUES (v_u_test, v_mail_r), (v_u_prod, v_mail_t)
+    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO app_user_profile (id, role) VALUES (v_u_test, 'tourism_agent'), (v_u_prod, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+    INSERT INTO user_org_membership (user_id, org_object_id, is_active)
+    VALUES (v_u_test, v_orgTest, TRUE), (v_u_prod, v_orgProd, TRUE);
+
+    -- J1. Le TESTEUR, acteur d'une fiche reelle : ni lecture, ni ecriture.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_test, 'role','authenticated', 'email', v_mail_r)::text, true);
+    SET LOCAL ROLE authenticated;
+      SELECT count(*) INTO v_n FROM object WHERE id = v_obj_r;
+      ASSERT v_n = 0,
+             'J: FUITE — un compte de test voit une fiche de PRODUCTION parce que son e-mail est celui d un acteur reel';
+      ASSERT api.is_object_owner(v_obj_r) IS FALSE,
+             'J: FUITE D ECRITURE — is_object_owner accorde une fiche de PRODUCTION a un compte de test (un RPC DEFINER ecrirait sans filet)';
+      -- Et il voit toujours SA fiche : la garde ne doit pas casser le bac a sable.
+      ASSERT (SELECT count(*) FROM object WHERE id = v_obj_t) = 1,
+             'J: le compte de test ne voit plus sa propre fiche — la garde coupe trop';
+    RESET ROLE;
+
+    -- J2. L'utilisateur de PRODUCTION, acteur d'une fiche du bac a sable.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_prod, 'role','authenticated', 'email', v_mail_t)::text, true);
+    SET LOCAL ROLE authenticated;
+      SELECT count(*) INTO v_n FROM object WHERE id = v_obj_t;
+      ASSERT v_n = 0,
+             'J: FUITE — un compte de PRODUCTION voit une fiche de test parce que son e-mail est pose sur un acteur du bac a sable';
+      ASSERT api.is_object_owner(v_obj_t) IS FALSE,
+             'J: FUITE D ECRITURE — is_object_owner accorde une fiche de test a un compte de production';
+      ASSERT (SELECT count(*) FROM object WHERE id = v_obj_r) = 1,
+             'J: l utilisateur de production ne voit plus sa propre fiche — la garde coupe trop';
+    RESET ROLE;
+  END;
+
+  RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite, I creation dans le bac a sable, J croisement des identites d acteur)';
 END
 $$;
 ROLLBACK;

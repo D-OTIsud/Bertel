@@ -159,9 +159,15 @@ export function PortalRubricScreen({
         href={hubHref}
         scroll={false}
         onClick={(event) => {
-          if (!formDirty) return;
+          // TOUJOURS intercepté : laisser le lien naviguer nativement contournerait la
+          // comptabilité d'historique de l'éditeur (`back` vs `push`) et empilerait une
+          // entrée de plus à chaque retour.
           event.preventDefault();
-          setAskLeave(true);
+          if (formDirty) {
+            setAskLeave(true);
+            return;
+          }
+          onBack();
         }}
       >
         <ArrowLeft size={18} aria-hidden /> Retour à la fiche

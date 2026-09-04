@@ -130,6 +130,7 @@ function hubProps(over: Record<string, unknown> = {}): PortalFicheHubProps {
     onSend: jest.fn(),
     onDiscard: jest.fn(),
     onBackToHub: jest.fn(),
+    onNavigate: jest.fn(),
     ...over,
   } as unknown as PortalFicheHubProps;
 }

@@ -45,6 +45,15 @@ const SEND_ERRORS: Record<string, string> = {
 const GENERIC_ERROR =
   'Nous n’avons pas pu envoyer vos modifications. Vérifiez votre connexion, puis réessayez dans un instant. Rien n’est perdu : tout est encore enregistré sur cet appareil.';
 
+/**
+ * L'envoi n'a même pas pu être PRÉPARÉ. Les bâtisseurs de payload lisent des tranches
+ * brutes et jettent sur une donnée incomplète : ce n'est ni le réseau ni l'office. Servir
+ * « Vérifiez votre connexion » désignerait un problème inexistant, et le partenaire
+ * chercherait son wifi pendant que la panne est ailleurs.
+ */
+const PREPARE_ERROR =
+  'Nous n’avons pas pu préparer votre envoi : une rubrique contient une information que nous ne savons pas relire. Contactez votre office de tourisme — vos modifications restent enregistrées sur cet appareil.';
+
 export interface PortalSendModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -73,16 +82,28 @@ export function PortalSendModal({
 }: PortalSendModalProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * Les rubriques mises DE CÔTÉ pour cet envoi. Elles ne partent pas, et RIEN n'est
+   * détruit : `resetModule` remettrait la tranche à la baseline — les valeurs tapées
+   * seraient perdues et le brouillon réécrit sans elles 800 ms plus tard, sous un libellé
+   * qui promet exactement le contraire (« je le garde, je l'enverrai plus tard »).
+   */
+  const [excluded, setExcluded] = useState<Set<WorkspaceModuleId>>(new Set());
 
   // Le message N'A PAS d'état local : il vit dans le brouillon (il peut être la SEULE chose
   // saisie, et un envoi sans modification est refusé). Il est donc « resynchronisé » par
   // construction — un `useState(() => note)` figé afficherait le texte de l'ouverture
   // précédente. Seule l'erreur se remet à zéro à chaque ouverture.
   useEffect(() => {
-    if (open) setError(null);
+    if (open) {
+      setError(null);
+      // La mise de côté vaut pour UN envoi : rouvrir la fenêtre repart de tout.
+      setExcluded(new Set());
+    }
   }, [open]);
 
-  const sending = rubrics.filter((rubric) => rubric.state === 'dirty');
+  const modified = rubrics.filter((rubric) => rubric.state === 'dirty');
+  const sending = modified.filter((rubric) => !excluded.has(rubric.module));
 
   async function handleSend() {
     if (busy || sending.length === 0) return;
@@ -93,10 +114,10 @@ export function PortalSendModal({
     const modules: WorkspaceModuleId[] = [];
     const envelopes: SubmitPendingChangeInput[] = [];
 
+    // La CONSTRUCTION est gardée SÉPARÉMENT : hors d'un try, l'exception laisserait le
+    // bouton bloqué sur « Envoi… » — un bouton qui ne répond plus ; dans le même try que
+    // l'appel, elle emprunterait le message du RÉSEAU, qui ne décrit pas ce qui s'est passé.
     try {
-      // La CONSTRUCTION est dans le try : les bâtisseurs de payload lisent des tranches
-      // brutes et peuvent jeter sur une donnée abîmée. Hors du try, l'exception laisserait
-      // le bouton bloqué sur « Envoi… », c'est-à-dire un bouton qui ne répond plus.
       for (const rubric of sending) {
         // Deux rubriques ne partagent jamais un module POUR UN MÊME TYPE, mais une double
         // enveloppe se marcherait dessus dans un seul envoi : on ferme la porte.
@@ -107,7 +128,13 @@ export function PortalSendModal({
         const readable = describePortalChange(rubric.module, editor.baseline, editor.draft, archetype);
         envelopes.push({ ...base, metadata: { ...base.metadata, ...readable } });
       }
+    } catch {
+      setError(PREPARE_ERROR);
+      setBusy(false);
+      return;
+    }
 
+    try {
       const result = await submitActorFiche(objectId, envelopes, note.trim() || null);
       // Ce que le partenaire a envoyé, tel qu'il l'a écrit — relu par la notice de rubrique.
       writePortalSent(userId, objectId, {
@@ -158,23 +185,43 @@ export function PortalSendModal({
     >
       <p>Vous envoyez :</p>
       <ul className="portal-send-list">
-        {sending.map((rubric) => (
-          <li key={rubric.id}>
-            <span className="portal-send-list__title">{rubric.title}</span>
-            <span className="muted">
-              {isAutoDispatchModule(rubric.module) ? 'appliqués dès validation' : 'l’office la reportera'}
-            </span>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => editor.resetModule(MODULE_KEY_MAP[rubric.module])}
-            >
-              Retirer de l’envoi
-            </button>
-          </li>
-        ))}
+        {modified.map((rubric) => {
+          const off = excluded.has(rubric.module);
+          return (
+            <li key={rubric.id} data-excluded={off || undefined}>
+              <span className="portal-send-list__title">{rubric.title}</span>
+              <span className="muted">
+                {off
+                  ? 'ne partira pas cette fois'
+                  : isAutoDispatchModule(rubric.module)
+                    ? // Il vient de cliquer « Valider » : « appliqué dès validation » lui
+                      // ferait croire que c'est déjà en ligne.
+                      'l’office les publiera tout de suite'
+                    : 'l’office les recopiera lui-même'}
+              </span>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() =>
+                  setExcluded((previous) => {
+                    const next = new Set(previous);
+                    if (off) next.delete(rubric.module);
+                    else next.add(rubric.module);
+                    return next;
+                  })
+                }
+              >
+                {off ? 'Remettre dans l’envoi' : 'Retirer de l’envoi'}
+              </button>
+            </li>
+          );
+        })}
       </ul>
-      {sending.length === 0 ? <p className="muted">Vous n’avez plus aucune modification à envoyer.</p> : null}
+      {sending.length === 0 ? (
+        <p className="muted">
+          Vous n’envoyez rien pour l’instant. Remettez au moins une rubrique dans l’envoi.
+        </p>
+      ) : null}
 
       <div className="auth-field">
         <label htmlFor="portal-send-note">Un message pour l’office (facultatif)</label>

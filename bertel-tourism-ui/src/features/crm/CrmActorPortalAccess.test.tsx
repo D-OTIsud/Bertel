@@ -1,10 +1,13 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmActorPortalAccess } from './CrmActorPortalAccess';
 import * as actorAccess from '../../services/actor-access';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
 
 jest.mock('../../services/actor-access');
+jest.mock('../../store/session-store', () => ({
+  useSessionStore: (selector: (state: { userId: string; orgId: string }) => unknown) => selector({ userId: 'agent-1', orgId: 'org-1' }),
+}));
 
 const mocked = actorAccess as jest.Mocked<typeof actorAccess>;
 
@@ -34,12 +37,25 @@ function noAccount() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mocked.canManageActorPortalAccess.mockResolvedValue(true);
   mocked.invitePortalAccess.mockResolvedValue({ traced: true });
   mocked.resendPortalAccess.mockResolvedValue({ traced: true });
   mocked.revokePortalAccess.mockResolvedValue({ traced: true });
 });
 
 describe('CrmActorPortalAccess — aucun accès encore ouvert', () => {
+  it('masque le bloc et ne lit aucun compte tant que la permission est inconnue ou refusée', async () => {
+    let resolvePermission!: (allowed: boolean) => void;
+    mocked.canManageActorPortalAccess.mockImplementation(() => new Promise((resolve) => { resolvePermission = resolve; }));
+    noAccount();
+    renderCard();
+    expect(screen.queryByText('Accès portail')).not.toBeInTheDocument();
+    expect(mocked.getPortalAccessStatus).not.toHaveBeenCalled();
+    await act(async () => { resolvePermission(false); });
+    expect(screen.queryByText('Accès portail')).not.toBeInTheDocument();
+    expect(mocked.getPortalAccessStatus).not.toHaveBeenCalled();
+  });
+
   it('propose « Inviter » avec l’adresse, et n’envoie RIEN avant confirmation', async () => {
     noAccount();
     renderCard();

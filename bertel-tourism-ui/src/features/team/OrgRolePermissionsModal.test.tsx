@@ -13,6 +13,7 @@ jest.mock('sonner', () => ({ toast: { error: jest.fn(), success: jest.fn() } }))
 const { setRolePermission } = require('@/services/rbac') as { setRolePermission: jest.Mock };
 
 const CATALOG = [
+  { code: 'manage_actor_portal_access', name: 'Gérer l’accès au portail prestataire', category: 'crm' },
   { code: 'write_crm_notes', name: 'Écrire dans le CRM', category: 'crm' },
   { code: 'edit_hours', name: 'Horaires', category: 'content' },
 ];
@@ -39,6 +40,16 @@ function renderModal() {
 beforeEach(() => setRolePermission.mockClear());
 
 describe('OrgRolePermissionsModal', () => {
+  it('permet d’accorder aux éditeurs la permission portail initialement décochée', async () => {
+    renderModal();
+    const checkbox = screen.getByRole('checkbox', { name: 'Gérer l’accès au portail prestataire — Éditeur' });
+    expect(checkbox).not.toBeChecked();
+    await userEvent.click(checkbox);
+    expect(setRolePermission).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole('button', { name: /Accorder/i }));
+    expect(setRolePermission).toHaveBeenCalledWith('ORG1', 'editor', 'manage_actor_portal_access', true);
+  });
+
   it('chaque case est adressable par permission ET par rôle', async () => {
     renderModal();
     expect(screen.getByRole('checkbox', { name: 'Écrire dans le CRM — Lecteur' })).not.toBeChecked();

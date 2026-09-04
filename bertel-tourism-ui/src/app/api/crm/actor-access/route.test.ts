@@ -31,6 +31,8 @@ function req(headers: Record<string, string>, body: unknown): never {
 /* ─── Client « en tant qu'appelant » ─────────────────────────────────────────────────── */
 
 interface GateOptions {
+  portal?: boolean | null;
+  portalError?: unknown;
   read?: boolean | null;
   write?: boolean | null;
   /** Erreur rendue par les DEUX prédicats de gate (jamais par la trace). */
@@ -45,6 +47,9 @@ interface GateOptions {
  */
 function gate(options: GateOptions = { read: true, write: true }) {
   const rpc = jest.fn(async (name: string) => {
+    if (name === 'current_user_can_manage_actor_portal') {
+      return { data: options.portal === undefined ? true : options.portal, error: options.portalError ?? null };
+    }
     if (name === 'user_can_read_crm_actor') {
       return { data: options.read ?? null, error: options.gateError ?? null };
     }
@@ -194,6 +199,21 @@ beforeEach(() => {
 });
 
 describe('POST /api/crm/actor-access — identité et gate', () => {
+  it.each(['status', 'invite', 'resend', 'revoke'])('%s exige la permission dédiée malgré les droits CRM', async (action) => {
+    for (const denial of [{ portal: false }, { portal: null }, { portal: true, portalError: { message: 'unavailable' } }]) {
+      const spies = serverStub({ linked: { id: 'portal-1', role: 'actor' } });
+      const { rpc } = gate({ read: true, write: true, ...denial });
+      const res = await POST(req({ authorization: 'Bearer t' }, { action, actorId: ACTOR, email: 'marie@basalte.re' }));
+      expect(res.status).toBe(403);
+      expect((await res.json()).error).toBe('portal_access_forbidden');
+      expect(gateCalls(rpc)).toEqual([['current_user_can_manage_actor_portal', undefined]]);
+      expect(spies.from).not.toHaveBeenCalled();
+      expect(spies.getUserById).not.toHaveBeenCalled();
+      expect(spies.listUsers).not.toHaveBeenCalled();
+      expectNoAccountWrite(spies);
+    }
+  });
+
   it('401 sans Bearer — et rien n’est lu en base', async () => {
     const spies = serverStub();
     const res = await POST(req({}, { action: 'status', actorId: ACTOR }));
@@ -239,6 +259,7 @@ describe('POST /api/crm/actor-access — identité et gate', () => {
       const { rpc } = gate({ read: true, write: true });
       await POST(req({ authorization: 'Bearer t' }, { action, actorId: ACTOR, ...body }));
       expect(gateCalls(rpc)).toEqual([
+        ['current_user_can_manage_actor_portal', undefined],
         [forbids === 'read' ? 'user_can_read_crm_actor' : 'user_can_write_crm_actor', { p_actor_id: ACTOR }],
       ]);
     }

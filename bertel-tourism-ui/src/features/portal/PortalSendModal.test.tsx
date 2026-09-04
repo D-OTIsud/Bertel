@@ -155,8 +155,8 @@ describe('PortalSendModal', () => {
     expect(screen.getByText('Vos coordonnées')).toBeInTheDocument();
     expect(screen.getByText('Vos horaires')).toBeInTheDocument();
     // `openings` est auto-dispatch, `contacts` non : le partenaire lit ce que l'office fera.
-    expect(screen.getByText('appliqués dès validation')).toBeInTheDocument();
-    expect(screen.getByText('l’office la reportera')).toBeInTheDocument();
+    expect(screen.getByText('l’office les publiera tout de suite')).toBeInTheDocument();
+    expect(screen.getByText('l’office les recopiera lui-même')).toBeInTheDocument();
   });
 
   it('Envoyer construit UNE enveloppe par module modifié, surcharge SEULEMENT field/before/after (D12) et appelle submitActorFiche UNE fois', async () => {
@@ -263,12 +263,95 @@ describe('PortalSendModal', () => {
     expect(window.localStorage.getItem(portalDraftKey(USER, OBJ))).toBeNull();
   });
 
-  it('« Retirer de l’envoi » remet la rubrique à ce qu’elle était, sans rien envoyer', async () => {
+  it('« Retirer de l’envoi » ne DÉTRUIT RIEN : la rubrique sort de l’envoi, la saisie reste', async () => {
+    // Le mot promet « je le garde, je l'enverrai plus tard ». `resetModule` remettrait la
+    // tranche à la baseline — les valeurs tapées seraient perdues, et le brouillon réécrit
+    // sans elles 800 ms plus tard. C'était le seul geste destructif de l'écran sans
+    // confirmation.
     const { editor } = setup();
 
     await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
 
-    expect(editor.resetModule).toHaveBeenCalledWith('contacts');
+    expect(editor.resetModule).not.toHaveBeenCalled();
+    expect(screen.getByText('Vos coordonnées')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remettre dans l’envoi' })).toBeInTheDocument();
+  });
+
+  it('une rubrique retirée ne part PAS, les autres si', async () => {
+    setup();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes.map((entry) => (entry.metadata as { section: string }).section)).toEqual(['openings']);
+  });
+
+  it('« Remettre dans l’envoi » la remet', async () => {
+    setup();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Retirer de l’envoi' })[0]);
+    await userEvent.click(screen.getByRole('button', { name: 'Remettre dans l’envoi' }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes).toHaveLength(2);
+  });
+
+  it('tout retirer désarme l’envoi au lieu de partir à vide (le serveur refuserait)', async () => {
+    setup();
+    for (const button of screen.getAllByRole('button', { name: 'Retirer de l’envoi' })) {
+      await userEvent.click(button);
+    }
+
+    expect(screen.getByRole('button', { name: 'Envoyer' })).toHaveAttribute('aria-disabled', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+  });
+
+  it('une tranche abîmée dit qu’on n’a pas pu PRÉPARER l’envoi — jamais « vérifiez votre connexion »', async () => {
+    // `buildContributorSubmission` jette sur une tranche incomplète (`toNullableText`
+    // reçoit `undefined`). Le message générique désignerait un problème inexistant : le
+    // partenaire vérifierait son wifi pendant que la vraie panne est ailleurs.
+    // Une période sans `closedDays` : `buildOpeningsPayload` fait `period.closedDays.map`
+    // et jette. C'est bien la TRANCHE de l'éditeur qui est lue, pas celle des rubriques.
+    const brokenDraft = modules({
+      openings: {
+        periods: [{ recordId: null, label: '', isClosure: false, recurrence: 'always', startDate: '', endDate: '', allYears: true, weekdays: [] }],
+        periodTypeOptions: [],
+        unavailableReason: null,
+      },
+    });
+    const brokenEditor = {
+      ...fakeEditor(),
+      draft: brokenDraft,
+      dirtySections: { openings: true },
+    } as unknown as ObjectEditorState;
+    render(
+      <PortalSendModal
+        open
+        onOpenChange={jest.fn()}
+        objectId={OBJ}
+        userId={USER}
+        archetype="RES"
+        editor={brokenEditor}
+        rubrics={rubrics({ draft: brokenDraft, dirty: { openings: true } })}
+        note=""
+        onNoteChange={jest.fn()}
+        onSent={jest.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Nous n’avons pas pu préparer votre envoi');
+    expect(alert).toHaveTextContent('Contactez votre office de tourisme');
+    expect(alert).not.toHaveTextContent('Vérifiez votre connexion');
+    // Et le bouton redevient utilisable : il ne reste pas figé sur « Envoi… ».
+    expect(screen.getByRole('button', { name: 'Envoyer' })).toBeInTheDocument();
     expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
   });
 });

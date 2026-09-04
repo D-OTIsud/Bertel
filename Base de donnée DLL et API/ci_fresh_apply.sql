@@ -554,6 +554,9 @@ ROLLBACK;
 \echo '== 18c   migration_test_org_isolation.sql  (organisation de test a donnees isolees). La dimension de cloisonnement : object.is_test entretenu par trigger depuis org_config.is_test_org, et UNE seule feuille de garde, api.current_user_test_realm(), appliquee partout sous la MEME forme o.is_test = (SELECT api.current_user_test_realm()) - une egalite, donc les DEUX sens a la fois : le corpus de test ne sort pas, et le compte de test ne voit pas la production. EN DERNIER dans le manifeste parce que sa reecriture generique des policies de lecture doit voir TOUTES les policies deja creees : can_read_object ne couvre que 15 policies sur 58, les 42 autres INLINENT le controle de publication depuis 35, et les patcher une par une a la main etait le chemin le plus sur vers une table fille oubliee (media, contact_channel, descriptions, tarifs, horaires). Le DO block REFUSE de valider s il reste une seule policy de lecture testant la publication sans predicat de realm. =='
 \ir migration_test_org_isolation.sql
 
+\echo '== 18c1 migration_partner_tombstone_feed.sql (flux des suppressions partenaire, filtre le realm apres creation de object_deletion_log.is_test) =='
+\ir migration_partner_tombstone_feed.sql
+
 \echo '== 18c-test  la garde prouvee dans les DEUX sens, et sur la surface qui compte : l API partenaire =='
 \ir tests/test_test_org_isolation.sql
 

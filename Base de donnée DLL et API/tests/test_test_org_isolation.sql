@@ -416,6 +416,9 @@ BEGIN
     -- J3. Integration portail : un lien explicite vers l'autre realm ne suffit pas.
     -- Chaque persona a une fiche autorisee ET une fiche etrangere : ni un refus
     -- systematique, ni un simple filtre du pont e-mail ne peut faire passer ce test.
+    -- La fixture change un role applicatif : utiliser le contexte d'administration,
+    -- puis restaurer les JWT des deux acteurs avant toute assertion d'acces.
+    PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
     UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_t WHERE id = v_u_test;
     UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_r WHERE id = v_u_prod;
     INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)

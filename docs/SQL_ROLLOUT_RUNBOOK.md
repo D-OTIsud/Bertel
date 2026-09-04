@@ -1243,6 +1243,56 @@ rang, pas une non-nullité : classe différente, hors sujet.
 | Balayage final | les 10 membres testés en se plaçant dans leur session : **4 Lecteurs à `false`** (`team_lead` compris), **6 Éditeurs à `true`** |
 | Policies RLS | aucune ne porte le motif sur une écriture CRM (1 seule mention, en SELECT sur `actor_contact_export_log`) |
 
+### ✅ APPLIQUÉE EN PRODUCTION — 2026-09-04
+
+Appliquée par `node tools/sql/apply.cjs` (runner node-pg du dépôt, qui lit le fichier lui-même —
+`psql` n'est pas installé sur ce poste et le plafond de l'outil MCP interdisait un envoi de 123 Ko).
+
+| Étape | Résultat |
+|---|---|
+| `apply.cjs migration_actor_portal.sql --dry-run` | `DRY-RUN OK (annule)` — la migration entière exécutée puis annulée |
+| `apply.cjs migration_actor_portal.sql` | `APPLIQUE` |
+| `apply.cjs migration_ref_amenity_visit_modes.sql --dry-run` puis réel | `DRY-RUN OK` puis `APPLIQUE` |
+| **`apply.cjs tests/test_actor_portal.sql`** | **`blocs A-D1, E, H, D2, G, F2, F, I, J OK`** — ⇒ **le bloc F est enfin exécuté** (obligation O5 levée) |
+
+**Contrôles d'après déploiement, tous verts :**
+
+```
+fiche_submission + org_actor_module_visibility      créées
+fonctions 18a                                       14 / 14
+approve_pending_change                              (p_id, p_review_note, p_applied_manually)
+codes 18b dans la famille visit_mediation           3 / 3
+cloisonnement du bac à sable préservé               3 / 3 fonctions
+whitelist déployée de submit_actor_fiche            ARRAY['save_object_commercial','save_object_openings']
+garde is_actor_persona sur submit_pending_change    posée
+actor_id écrivable par authenticated                FALSE   (display_name reste TRUE)
+résidus de fixtures / soumissions / matrice         0 / 0 / 0
+comptes role='actor'                                0
+```
+
+**md5 `prosrc` après déploiement** — `user_actor_ids` est la SEULE des dix fonctions de référence à
+n'avoir pas bougé, ce qui est exact : 18a ne la re-déploie pas. Les dix autres ont changé parce que
+les sections 1, 2, 7 et 8 les re-déploient toutes.
+
+```
+approve_pending_change                78b171f997cd630da118ecc81382448d
+claim_unmailed_notifications          8877cac288096b255ab0f076fe79f030
+current_user_extended_object_ids      2f6785003718cdfa4030bb4ea4970ef8
+enforce_app_user_profile_role_change  5250d35c5c517eb095e687f36bb6ea0b
+is_object_owner                       ebc71d1957e73a2544a1797551b1f9e6
+list_crm_tasks                        4b86ecd1fdda5509b4e4d897dc27a78a
+list_pending_changes                  e7cfcdc8ac6ee7e76010536bd10e9bc1
+mark_notifications_emailed            cc42feea883957a9dbd2671d83201d08
+rpc_gdpr_erase_subject                af723bd148603158d64f15062cf559bc
+submit_pending_change                 998569fd10b16ffd408fd8fed5563b29
+user_actor_ids                        2bd0f6be5734b46322d1ba8239175d6f   (INCHANGÉE)
+```
+
+⚠ **La branche n'est PAS poussée** (`git push` refusé par les permissions du poste). La production
+porte donc quatre commits de correction de sécurité qui n'existent encore dans aucune référence
+distante : `02edef8`, `e044cfb`, `acb5012`, `bfe55c0`, plus le merge `34ccbe1`. **À pousser dès que
+possible** — c'est le seul écart dépôt↔prod ouvert par ce déploiement, et il est connu.
+
 ### Front
 
 `MembersTable` affirmait en `title` qu'un rôle d'administration « ouvre notamment toute

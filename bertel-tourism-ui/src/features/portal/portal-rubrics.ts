@@ -25,8 +25,32 @@
  * Surtout : `contacts` et `descriptions` — deux des rubriques du portail — n'ont AUCUN
  * signal racine. Un accès générique `modules[x].unavailableReason` rendrait donc ces deux
  * rubriques éditables sur une donnée peut-être morte. Chaque rubrique porte ci-dessous le
- * CHEMIN EXACT de son motif, et chaîne en OU le refus de DROITS (`permissions.<module>.
- * disabledReason`, champ OPPOSÉ : un refus d'autorisation, pas une donnée indisponible).
+ * CHEMIN EXACT de son motif.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ * `permissions.<module>.disabledReason` N'A RIEN À FAIRE ICI. NE LE RECHAÎNEZ PAS.
+ * ═══════════════════════════════════════════════════════════════════════════════════
+ *
+ * Ce champ dérive de trois sondes serveur — `api.is_object_owner`,
+ * `api.user_can_write_canonical`, `api.user_can_write_enrichment` — qui valent FALSE pour
+ * la persona acteur PAR CONSTRUCTION : `is_object_owner` porte `AND NOT
+ * api.is_actor_persona()` (c'est D7), et les deux autres exigent une adhésion
+ * `user_org_membership` qu'un compte portail n'a jamais. Le chaîner fermait donc les SEPT
+ * rubriques de TOUT partenaire : « 0 sur 0 », aucun champ, aucun bouton d'envoi — le
+ * portail entier sans chemin d'entrée.
+ *
+ * Il décrit l'écriture canonique DIRECTE. La question du portail n'est pas « peut-il
+ * écrire tout de suite ? » mais « peut-il PROPOSER ? », et cette question a déjà ses
+ * réponses, ailleurs :
+ *   · la PORTÉE — `api.current_user_portal_object_ids` a déjà filtré la fiche : s'il la
+ *     voit, il y a droit ;
+ *   · le PLANCHER et le MASQUE de `get_portal_section_visibility`, consommés par
+ *     `isModuleSubmittable` juste en dessous ;
+ *   · et, en dernier ressort, `api.submit_actor_fiche`, qui revalide chaque enveloppe.
+ *
+ * L'éditeur, lui, a raison de le lire (`SectionLegal.tsx`) : là l'utilisateur EST un agent
+ * d'office, et le signal veut dire « vous n'avez pas le droit ». Ici il veut dire « D7
+ * fonctionne » — et le lire comme une indisponibilité inverse son sens.
  *
  * VOCABULAIRE. Les titres atteignent l'écran d'un partenaire — souvent peu à l'aise avec
  * l'informatique, souvent sur un téléphone. Jamais `MODULE_LABEL` (« Descriptions & langues
@@ -34,7 +58,7 @@
  */
 import { getArchetypeMeta, TYPE_LABEL, type ArchetypeCode } from '../object-editor/archetypes';
 import { readTranslatableField } from '../object-editor/sections/descriptions-field';
-import type { WorkspaceModuleId, ObjectWorkspacePermissions } from '../../services/object-workspace';
+import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import {
   readPublicContact,
@@ -77,8 +101,6 @@ export interface PortalRubric {
   summary(draft: ObjectWorkspaceModules, archetype: ArchetypeCode): string;
   /** Liaison PURE : le chemin EXACT du motif d'indisponibilité de cette tranche. */
   readUnavailableReason(draft: ObjectWorkspaceModules): string | null;
-  /** Liaison PURE vers le refus de DROITS — champ opposé, chaîné en OU. */
-  readDisabledReason(permissions: ObjectWorkspacePermissions | null | undefined): string | null;
   /** Lecture seule due à la FORME des données (calendrier saisonnier…), pas à un droit. */
   readStructuralReadOnly?(draft: ObjectWorkspaceModules): string | null;
 }
@@ -96,14 +118,6 @@ function slice(draft: ObjectWorkspaceModules, key: keyof ObjectWorkspaceModules)
 
 function reasonOf(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
-}
-
-function accessReason(
-  permissions: ObjectWorkspacePermissions | null | undefined,
-  key: keyof ObjectWorkspacePermissions,
-): string | null {
-  const access = permissions?.[key] as { disabledReason?: string | null } | undefined;
-  return reasonOf(access?.disabledReason);
 }
 
 function frText(draft: ObjectWorkspaceModules, field: 'chapo' | 'description'): string {
@@ -226,7 +240,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     // La tranche `contacts` ne porte AUCUN motif racine (vérifié dans le parseur) : la
     // liaison rend `null`, elle ne va pas chercher un champ qui n'existe pas.
     readUnavailableReason: () => null,
-    readDisabledReason: (permissions) => accessReason(permissions, 'contacts'),
   },
   {
     id: 'presentation',
@@ -237,7 +250,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     summary: (draft) => frText(draft, 'chapo'),
     // `descriptions` non plus n'a pas de motif racine.
     readUnavailableReason: () => null,
-    readDisabledReason: (permissions) => accessReason(permissions, 'descriptions'),
   },
   {
     id: 'hours',
@@ -249,7 +261,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     isFilled: (draft) => weekHoursSummary(draft) !== '',
     summary: weekHoursSummary,
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'openings').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'openings'),
     readStructuralReadOnly: (draft) => readWeekHours(slice(draft, 'openings') as never).readOnlyReason,
   },
   {
@@ -270,7 +281,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
       return `${head} · ${closures.length} fermeture${closures.length > 1 ? 's' : ''}`;
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'openings').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'openings'),
     readStructuralReadOnly: (draft) => readStayOpening(slice(draft, 'openings') as never).readOnlyReason,
   },
   {
@@ -295,7 +305,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
       return parts.join(' · ');
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'characteristics').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'characteristics'),
   },
   {
     id: 'welcome',
@@ -325,7 +334,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
       return parts.join(' · ');
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'capacityPolicies').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'capacityPolicies'),
   },
   {
     id: 'pricing',
@@ -345,7 +353,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
     // tarifs, et le portail n'y touche pas. Le chaîner fermerait le tarif d'appel pour
     // une panne qui ne le concerne pas.
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'pricing').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'pricing'),
   },
   {
     id: 'activity',
@@ -372,7 +379,6 @@ const RUBRIC_REGISTRY: PortalRubric[] = [
       return parts.join(' · ');
     },
     readUnavailableReason: (draft) => reasonOf(slice(draft, 'activity').unavailableReason),
-    readDisabledReason: (permissions) => accessReason(permissions, 'activity'),
   },
 ];
 
@@ -414,7 +420,6 @@ export interface BuildPortalRubricsInput {
   floor: string[];
   pendingModules: Set<WorkspaceModuleId>;
   rejectedModules: Set<WorkspaceModuleId>;
-  permissions?: ObjectWorkspacePermissions | null;
 }
 
 export type BuiltPortalRubric = PortalRubric & { state: RubricState; readOnlyReason: string | null };
@@ -437,7 +442,10 @@ export function buildPortalRubrics(input: BuildPortalRubricsInput): BuiltPortalR
     if (!rubric.archetypes.includes(input.archetype)) continue;
     if (!isModuleSubmittable(rubric.module, input.masked, input.floor)) continue;
 
-    const blocked = rubric.readUnavailableReason(input.draft) ?? rubric.readDisabledReason(input.permissions);
+    // La DONNÉE seule. Aucun refus de droits n'entre ici : voir l'en-tête du fichier —
+    // pour un partenaire, `permissions.<module>.disabledReason` est toujours posé, et le
+    // lire fermait le portail entier.
+    const blocked = rubric.readUnavailableReason(input.draft);
     if (blocked) {
       built.push({ ...rubric, state: 'unavailable', readOnlyReason: PORTAL_UNAVAILABLE_REASON });
       continue;

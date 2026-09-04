@@ -3695,7 +3695,7 @@ export function canManageObjectLegalDirect(flags: {
   return flags.directWrite || flags.legal;
 }
 
-async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
+export async function getObjectWorkspacePermissions(objectId: string): Promise<ObjectWorkspacePermissions> {
   const session = useSessionStore.getState();
   const directWrite = session.demoMode || session.role === 'owner' || session.role === 'super_admin';
   const apiClient = getApiClient();

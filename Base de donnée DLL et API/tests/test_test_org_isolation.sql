@@ -412,6 +412,39 @@ BEGIN
       ASSERT (SELECT count(*) FROM object WHERE id = v_obj_r) = 1,
              'J: l utilisateur de production ne voit plus sa propre fiche — la garde coupe trop';
     RESET ROLE;
+
+    -- J3. Integration portail : un lien explicite vers l'autre realm ne suffit pas.
+    -- Chaque persona a une fiche autorisee ET une fiche etrangere : ni un refus
+    -- systematique, ni un simple filtre du pont e-mail ne peut faire passer ce test.
+    UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_t WHERE id = v_u_test;
+    UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_r WHERE id = v_u_prod;
+    INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+    VALUES (v_actor_t, v_obj_r, v_role, FALSE, 'public'),
+           (v_actor_r, v_obj_t, v_role, FALSE, 'public');
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_test, 'role','authenticated', 'email', v_mail_t)::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT v_obj_t IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de test perd sa fiche autorisee';
+      ASSERT v_obj_r NOT IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de test lit une fiche de production par son lien explicite';
+      ASSERT v_obj_r NOT IN (SELECT api.current_user_extended_object_ids()),
+             'J3: le portail contourne le realm par la lecture etendue';
+      ASSERT api.is_object_owner(v_obj_t) IS FALSE,
+             'J3: le lien primaire du portail rouvre l ecriture canonique';
+    RESET ROLE;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_prod, 'role','authenticated', 'email', v_mail_r)::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT v_obj_r IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de production perd sa fiche autorisee';
+      ASSERT v_obj_t NOT IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de production lit le bac a sable par son lien explicite';
+      ASSERT api.is_object_owner(v_obj_r) IS FALSE,
+             'J3: le portail de production peut ecrire le canonique';
+    RESET ROLE;
   END;
 
   RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite, I creation dans le bac a sable, J croisement des identites d acteur)';

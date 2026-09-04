@@ -1740,3 +1740,15 @@ fonctionnent également. Le périmètre CRM de chaque acteur reste vérifié cô
 En l’absence du RPC ou en cas de refus, le bloc est masqué ; la route refuse les
 quatre opérations, y compris la lecture du statut. La migration est rejouable sans
 effacer les permissions accordées ultérieurement. Aucun compte portail n’est modifié.
+
+Validation du 2026-09-04 : 130 tests Jest ciblés passent (route, service, carte et
+fiche CRM, matrice et tiroir des permissions), ainsi que `tsc --noEmit`. Le test SQL
+transactionnel passe sur la base connectée, puis le manifeste complet et ses tests
+passent en CI sur une base vierge : [run 33843400996](https://github.com/D-OTIsud/Bertel/actions/runs/33843400996),
+commit `cea707a`. La migration incrémentale a ensuite été appliquée en base.
+Le masquage côté interface et la garde de route nécessitent le redéploiement de l’application.
+
+Contrôle après application : catalogue et RPC présents, zéro octroi actif par rôle
+et zéro exception individuelle. Le graphe DB a été régénéré avec les fonctions et
+policies du catalogue vivant ; l’export `tbls` ayant dépassé 180 secondes, le relevé
+existant des tables a été conservé (cette migration ne change ni table, ni colonne, ni FK).

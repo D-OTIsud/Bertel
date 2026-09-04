@@ -10,7 +10,7 @@
 - values: `call`, `email`, `meeting`, `visit`, `whatsapp`, `sms`, `note`, `other`
 
 ## `public.crm_status`
-- values: `planned`, `done`, `canceled`
+- values: `new`, `in_progress`, `awaiting_provider`, `resolved`, `closed`, `canceled`
 
 ## `public.crm_task_priority`
 - values: `low`, `medium`, `high`, `urgent`

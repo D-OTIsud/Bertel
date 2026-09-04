@@ -66,6 +66,14 @@ describe('LoginPage — mot de passe oublié', () => {
     expect(screen.getByRole('button', { name: 'Mot de passe oublié ?' })).toBeInTheDocument();
   });
 
+  it('propose la découverte sans remplir les identifiants, par un lien discret vers ?test=true', () => {
+    render(<LoginPage />);
+    const link = screen.getByRole('link', { name: 'Essayer l’espace de test' });
+    expect(link).toHaveAttribute('href', '/?test=true');
+    expect(link).toHaveClass('auth-link');
+    expect(screen.getByLabelText('Adresse e-mail')).toHaveValue('');
+  });
+
   it('bascule sur le panneau de réinitialisation en réutilisant l’e-mail déjà saisi', () => {
     render(<LoginPage />);
 

@@ -1,0 +1,456 @@
+-- test_test_org_isolation.sql
+-- Garde permanente du cloisonnement « organisation de test » (migration_test_org_isolation.sql).
+--
+-- CE QUE CE TEST PROUVE, et pourquoi chaque bloc existe :
+--   A. Structure — colonnes, feuille de garde, triggers, et le REVOKE qui empeche
+--      PUBLIC d'executer la feuille.
+--   B. L'ORG est la SOURCE DE VERITE : is_test n'est jamais ecrit a la main, il
+--      descend de org_config.is_test_org par trigger, dans les deux sens.
+--   C. SORTIE — une fiche de test PUBLIEE reste invisible de anon et de toute ORG
+--      de production. C'est le sens « les donnees de test ne s'echappent pas ».
+--   D. ENTREE — un compte de test ne voit PAS le corpus reel. C'est le sens qu'on
+--      oublie : access_scope='own_objects_only' existait depuis §172 et ne l'a
+--      jamais assure, parce que public_objects_published le contournait.
+--   E. LES TABLES FILLES — la fiche est faite de ses enfants (media, descriptions,
+--      tarifs, horaires, contacts). 42 policies sur 58 INLINENT le controle de
+--      publication au lieu d'appeler can_read_object : patcher la seule fonction
+--      aurait laisse la fiche de test grande ouverte tout en faisant passer C.
+--   F. L'API PARTENAIRE — la surface qui compte pour la demande initiale. Elle
+--      appelle en service_role, qui COURT-CIRCUITE la RLS : aucune des gardes
+--      C/D/E ne la protege. C'est un chemin distinct, teste distinctement.
+--   G. LES TOMBSTONES — supprimer une fiche de test ne doit pas fuiter son id au
+--      flux C-4. object_deletion_log ne portait aucune dimension de test.
+--   J. L'IDENTITE D'ACTEUR traverse les organisations. Un utilisateur est relie
+--      a des fiches par son E-MAIL (user_actor_ids -> actor_channel), un chemin
+--      qui ignore completement l'organisation. Les deux sens se produisent :
+--      un testeur dont l'e-mail est aussi celui d'un acteur reel, et un
+--      utilisateur de production dont l'e-mail atterrit sur un acteur du bac a
+--      sable — ce dernier n'a rien de theorique, poser un e-mail sur un acteur
+--      du bac a sable est exactement ce qu'on y fait pour eprouver le portail
+--      acteur. L'ECRITURE compte autant que la lecture : is_object_owner passe
+--      par le meme chemin.
+--   H. NON-VACUITE — la MEME fiche, basculee en production, DOIT redevenir
+--      visible partout. Sans ce bloc, un fixture casse (fiche non publiee, ORG mal
+--      liee) ferait passer C a D pour de mauvaises raisons, et le test serait vert
+--      en ne gardant rien.
+--
+-- Sur une base SANS la migration : api.current_user_test_realm() existe en stub
+-- (renvoie false) ou pas du tout ; object.is_test est absent -> le fixture echoue
+-- des le premier INSERT -> rouge. Auto-porte et transactionnel (ROLLBACK).
+\set ON_ERROR_STOP on
+BEGIN;
+DO $$
+DECLARE
+  v_orgTest text := 'ORGRUN8888880001';   -- ORG bac a sable
+  v_orgProd text := 'ORGRUN8888880002';   -- ORG de production
+  v_objTest text := 'HOTRUN8888880011';   -- fiche de test, PUBLIEE
+  v_objProd text := 'HOTRUN8888880012';   -- fiche reelle, PUBLIEE
+  v_userTest uuid := '00000000-0000-4000-a000-0000000000c1'::uuid;
+  v_userProd uuid := '00000000-0000-4000-a000-0000000000d2'::uuid;
+  v_pub_role uuid;
+  v_n         integer;
+  v_js        jsonb;
+BEGIN
+  -- ────────── A. Structure ──────────
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='object' AND column_name='is_test'),
+         'A: object.is_test absente';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='org_config' AND column_name='is_test_org'),
+         'A: org_config.is_test_org absente';
+  ASSERT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='object_deletion_log' AND column_name='is_test'),
+         'A: object_deletion_log.is_test absente — les tombstones fuiteraient a l API partenaire';
+  ASSERT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+                 WHERE n.nspname='api' AND p.proname='current_user_test_realm'),
+         'A: api.current_user_test_realm() absente';
+  ASSERT (SELECT p.prosecdef FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname='api' AND p.proname='current_user_test_realm'),
+         'A: current_user_test_realm DOIT etre SECURITY DEFINER (elle lit user_org_membership sous RLS)';
+  -- pg_temp en dernier : sans lui, un CREATE TEMP TABLE user_org_membership par
+  -- n'importe quel authenticated forgerait le realm (§208/R2.1).
+  ASSERT (SELECT array_to_string(p.proconfig,',') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+          WHERE n.nspname='api' AND p.proname='current_user_test_realm') LIKE '%pg_temp',
+         'A: search_path de current_user_test_realm DOIT finir par pg_temp (§208/R2.1)';
+  ASSERT NOT has_function_privilege('public', 'api.current_user_test_realm()', 'EXECUTE'),
+         'A: EXECUTE ne doit pas rester accorde a PUBLIC';
+  ASSERT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_object_org_link_is_test'),
+         'A: trigger de propagation object_org_link absent';
+  ASSERT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_org_config_is_test'),
+         'A: trigger de bascule org_config absent';
+  ASSERT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname='trg_object_deletion_log_is_test'),
+         'A: trigger de realm des tombstones absent';
+
+  -- Aucune policy de lecture ne doit tester la publication sans predicat de realm.
+  -- C'est la garde qui rend impossible l'oubli d'une table fille — la panne
+  -- MUETTE que ce chantier redoutait.
+  SELECT count(*) INTO v_n FROM pg_policies
+   WHERE schemaname='public' AND cmd='SELECT'
+     AND qual ILIKE '%status = ''published''%'
+     AND qual NOT LIKE '%current_user_test_realm%';
+  ASSERT v_n = 0,
+         format('A: %s policy(ies) de lecture testent la publication SANS predicat de realm', v_n);
+
+  -- ────────── Fixture (superuser : RLS contournee) ──────────
+  SELECT id INTO v_pub_role FROM ref_org_role WHERE code='publisher' LIMIT 1;
+  IF v_pub_role IS NULL THEN
+    RAISE EXCEPTION 'fixture: ref_org_role[publisher] absent (seeds non appliques)';
+  END IF;
+
+  INSERT INTO object (id, object_type, name, status) VALUES
+    (v_orgTest, 'ORG', 'ORG Bac a sable', 'published'),
+    (v_orgProd, 'ORG', 'ORG Production',  'published'),
+    (v_objTest, 'HOT', 'Hotel de test',   'published'),
+    (v_objProd, 'HOT', 'Hotel reel',      'published');
+
+  INSERT INTO org_config (org_object_id, access_scope, is_test_org) VALUES
+    (v_orgTest, 'own_objects_only', TRUE),
+    (v_orgProd, 'all_published',    FALSE);
+
+  INSERT INTO object_org_link (object_id, org_object_id, role_id, is_primary) VALUES
+    (v_objTest, v_orgTest, v_pub_role, TRUE),
+    (v_objProd, v_orgProd, v_pub_role, TRUE);
+
+  INSERT INTO auth.users (id, email) VALUES
+    (v_userTest, 'realm_test@test.local'), (v_userProd, 'realm_prod@test.local')
+    ON CONFLICT (id) DO NOTHING;
+  INSERT INTO app_user_profile (id, role) VALUES
+    (v_userTest, 'tourism_agent'), (v_userProd, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+  INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
+    (v_userTest, v_orgTest, TRUE), (v_userProd, v_orgProd, TRUE);
+
+  -- Une fille de chaque cote, pour le bloc E.
+  INSERT INTO object_description (object_id, description, visibility) VALUES
+    (v_objTest, 'Description de la fiche de test', 'public'),
+    (v_objProd, 'Description de la fiche reelle',  'public');
+
+  -- ────────── B. L'ORG est la source de verite ──────────
+  ASSERT (SELECT is_test FROM object WHERE id = v_objTest) IS TRUE,
+         'B: le trigger n a pas propage is_test depuis l ORG de test';
+  ASSERT (SELECT is_test FROM object WHERE id = v_objProd) IS FALSE,
+         'B: une fiche d ORG de production ne doit pas etre marquee de test';
+
+  -- Bascule de l'ORG : les fiches suivent, sans qu'on les touche.
+  UPDATE org_config SET is_test_org = FALSE WHERE org_object_id = v_orgTest;
+  ASSERT (SELECT is_test FROM object WHERE id = v_objTest) IS FALSE,
+         'B: la bascule de l ORG vers la production n a pas suivi';
+  UPDATE org_config SET is_test_org = TRUE  WHERE org_object_id = v_orgTest;
+  ASSERT (SELECT is_test FROM object WHERE id = v_objTest) IS TRUE,
+         'B: la bascule de l ORG vers le bac a sable n a pas suivi';
+
+  -- ────────── C. SORTIE : la fiche de test ne s echappe pas ──────────
+  PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+  SET LOCAL ROLE anon;
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objTest) = 0,
+           'C: FUITE — anon voit une fiche de test publiee';
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objProd) = 1,
+           'C: anon doit continuer a voir le corpus reel (la garde ne casse pas le produit)';
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userProd, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT (SELECT api.current_user_test_realm()) IS FALSE,
+           'C: un membre d ORG de production doit etre en realm production';
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objTest) = 0,
+           'C: FUITE — une ORG de production voit une fiche de test';
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objProd) = 1,
+           'C: une ORG de production doit voir sa propre fiche';
+  RESET ROLE;
+
+  -- ────────── D. ENTREE : le compte de test ne voit pas la production ──────────
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userTest, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT (SELECT api.current_user_test_realm()) IS TRUE,
+           'D: un membre d ORG de test doit etre en realm bac a sable';
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objProd) = 0,
+           'D: FUITE — un compte de test voit le corpus reel (le sens qu access_scope n a jamais assure)';
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objTest) = 1,
+           'D: un compte de test DOIT voir sa propre fiche — sinon le bac a sable est inutilisable';
+  RESET ROLE;
+
+  -- ────────── E. Les tables filles (42 policies inlinees) ──────────
+  PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+  SET LOCAL ROLE anon;
+    ASSERT (SELECT count(*) FROM object_description WHERE object_id = v_objTest) = 0,
+           'E: FUITE — la DESCRIPTION d une fiche de test est lisible par anon (policy fille inlinee non cloisonnee)';
+    ASSERT (SELECT count(*) FROM object_description WHERE object_id = v_objProd) = 1,
+           'E: la description d une fiche reelle doit rester lisible';
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', v_userTest, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT (SELECT count(*) FROM object_description WHERE object_id = v_objProd) = 0,
+           'E: FUITE — un compte de test lit la description d une fiche reelle';
+  RESET ROLE;
+
+  -- ────────── F. L API PARTENAIRE (service_role — la RLS ne s applique PAS) ──────────
+  -- C'est la demande initiale : « that data should not go to the partenaire api ».
+  -- Le route Next.js appelle ces RPC en service_role ; aucune garde RLS ne joue ici.
+  PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+  SET LOCAL ROLE service_role;
+    ASSERT (SELECT api.current_user_test_realm()) IS FALSE,
+           'F: service_role DOIT etre en realm production';
+
+    -- /api/public/objects/{id}
+    ASSERT api.get_object_resource(v_objTest, ARRAY['fr']) IS NULL,
+           'F: FUITE PARTENAIRE — get_object_resource sert une fiche de test';
+    ASSERT api.get_object_resource(v_objProd, ARRAY['fr']) IS NOT NULL,
+           'F: get_object_resource doit continuer a servir le corpus reel';
+
+    -- /api/public/objects (liste paginee).
+    --
+    -- ATTENTION AU FAUX VERT. Avec p_status = ['published'] seul, la fonction lit
+    -- la MATVIEW — un instantane qui ne contient AUCUNE ligne de ce fixture, cree
+    -- dans la transaction courante. L'assertion « la fiche de test est absente »
+    -- serait alors VRAIE sans rien prouver : elle serait absente parce que RIEN
+    -- n'est la. On force donc la branche `FROM object` (celle qui porte le
+    -- predicat de realm) en demandant un statut hors du perimetre de la MV.
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM api.get_filtered_object_ids('{}'::jsonb, NULL,
+                                                ARRAY['published','draft']::object_status[], NULL) f
+      WHERE f.object_id = v_objTest),
+      'F: FUITE PARTENAIRE — la fiche de test est listee par get_filtered_object_ids';
+    ASSERT EXISTS (
+      SELECT 1 FROM api.get_filtered_object_ids('{}'::jsonb, NULL,
+                                                ARRAY['published','draft']::object_status[], NULL) f
+      WHERE f.object_id = v_objProd),
+      'F: le corpus reel doit rester liste (temoin de non-vacuite de l assertion precedente)';
+
+    -- Et la MV elle-meme ne doit contenir aucune fiche de test : c'est ce qui rend
+    -- le chemin chaud sur inconditionnellement, quel que soit son futur appelant.
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM internal.mv_filtered_objects m
+      JOIN object o ON o.id = m.id
+      WHERE o.is_test),
+      'F: FUITE — la matview de l Explorer contient des fiches de test';
+
+    -- L ensemble « lisible » servant les marqueurs de carte.
+    ASSERT NOT EXISTS (SELECT 1 FROM api.current_user_readable_object_ids() s WHERE s = v_objTest),
+           'F: FUITE PARTENAIRE — la fiche de test est dans current_user_readable_object_ids';
+  RESET ROLE;
+
+  -- ────────── G. Les tombstones (flux C-4) ──────────
+  INSERT INTO object_deletion_log (object_id, object_name, object_type, status_at_deletion)
+  VALUES (v_objTest, 'Hotel de test', 'HOT', 'published');
+  ASSERT (SELECT is_test FROM object_deletion_log WHERE object_id = v_objTest) IS TRUE,
+         'G: le tombstone d une fiche de test doit heriter du realm de test';
+
+  INSERT INTO object_deletion_log (object_id, object_name, object_type, status_at_deletion)
+  VALUES (v_objProd, 'Hotel reel', 'HOT', 'published');
+  ASSERT (SELECT is_test FROM object_deletion_log WHERE object_id = v_objProd) IS FALSE,
+         'G: le tombstone d une fiche reelle ne doit pas etre marque de test';
+
+  PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+  SET LOCAL ROLE service_role;
+    v_js := api.list_deleted_objects_since(NULL, 1000);
+    ASSERT NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(v_js->'tombstones') t
+      WHERE t->>'object_id' = v_objTest),
+      'G: FUITE PARTENAIRE — le tombstone d une fiche de test part au flux C-4';
+    ASSERT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(v_js->'tombstones') t
+      WHERE t->>'object_id' = v_objProd),
+      'G: le tombstone d une fiche reelle doit continuer a partir (la garde ne casse pas le flux)';
+  RESET ROLE;
+
+  -- ────────── H. NON-VACUITE ──────────
+  -- Tout ce qui precede serait VERT si le fixture etait simplement casse : fiche non
+  -- publiee, ORG mal liee, id inexistant. On bascule la MEME fiche en production et
+  -- on exige qu elle redevienne visible PARTOUT. Si ce bloc echoue, les blocs C a G
+  -- ne prouvaient rien.
+  UPDATE org_config SET is_test_org = FALSE WHERE org_object_id = v_orgTest;
+  ASSERT (SELECT is_test FROM object WHERE id = v_objTest) IS FALSE, 'H: la bascule n a pas pris';
+
+  PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+  SET LOCAL ROLE anon;
+    ASSERT (SELECT count(*) FROM object WHERE id = v_objTest) = 1,
+           'H: TEST VACANT — la fiche reste invisible de anon une fois repassee en production';
+    ASSERT (SELECT count(*) FROM object_description WHERE object_id = v_objTest) = 1,
+           'H: TEST VACANT — la description reste invisible une fois repassee en production';
+  RESET ROLE;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+  SET LOCAL ROLE service_role;
+    ASSERT api.get_object_resource(v_objTest, ARRAY['fr']) IS NOT NULL,
+           'H: TEST VACANT — l API partenaire ne sert pas la fiche une fois repassee en production';
+  RESET ROLE;
+
+  -- ────────── I. Une fiche CREEE dans le bac a sable y reste ──────────
+  -- C'est la condition d'un bac a sable « pleinement fonctionnel » : on n'y vient
+  -- pas pour lire, on y vient pour CREER. Et c'est le chemin le plus fragile de
+  -- tout le cloisonnement, parce qu'il repose sur un enchainement de triggers :
+  --   rpc_create_object  →  trg_auto_attach_object_to_creator_org (AFTER INSERT
+  --   sur object, pose object_org_link is_primary)  →  trg_object_org_link_is_test
+  --   (AFTER INSERT sur object_org_link, marque object.is_test).
+  -- Si un jour l'auto-rattachement cesse de poser is_primary, ou s'execute avant,
+  -- les fiches creees dans le bac a sable naitront EN PRODUCTION — publiques des
+  -- leur publication, et servies a l'API partenaire. Sans erreur.
+  DECLARE
+    v_creator uuid := '00000000-0000-4000-a000-0000000000e3'::uuid;
+    v_new     text;
+    v_new_is_test boolean;
+    v_visible integer;
+  BEGIN
+    INSERT INTO auth.users (id, email) VALUES (v_creator, 'realm_creator@test.local')
+      ON CONFLICT (id) DO NOTHING;
+    INSERT INTO app_user_profile (id, role) VALUES (v_creator, 'tourism_agent')
+      ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+    INSERT INTO user_org_membership (user_id, org_object_id, is_active)
+    VALUES (v_creator, v_orgTest, TRUE);
+    INSERT INTO user_permission (user_id, permission_id)
+    SELECT v_creator, rp.id FROM ref_permission rp
+     WHERE rp.code IN ('create_object', 'publish_object', 'edit_object')
+    ON CONFLICT DO NOTHING;
+
+    -- L'ORG a ete rebasculee en production par le bloc H : on la remet en test.
+    UPDATE org_config SET is_test_org = TRUE WHERE org_object_id = v_orgTest;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_creator, 'role','authenticated')::text, true);
+    SET LOCAL ROLE authenticated;
+      v_new := api.rpc_create_object('HOT', 'Fiche creee dans le bac a sable', 'RUN');
+      -- Publier est le cas qui COMPTE : un brouillon etait deja invisible avant ce
+      -- chantier. Le corpus de test n'est dangereux qu'une fois publie.
+      PERFORM api.rpc_publish_object(v_new);
+    RESET ROLE;
+
+    SELECT o.is_test INTO v_new_is_test FROM object o WHERE o.id = v_new;
+    ASSERT v_new_is_test IS TRUE,
+           'I: FUITE — une fiche CREEE dans le bac a sable nait en production (enchainement de triggers rompu)';
+
+    PERFORM set_config('request.jwt.claims', json_build_object('role','anon')::text, true);
+    SET LOCAL ROLE anon;
+      SELECT count(*) INTO v_visible FROM object WHERE id = v_new;
+      ASSERT v_visible = 0,
+             'I: FUITE — anon voit une fiche creee ET PUBLIEE dans le bac a sable';
+    RESET ROLE;
+
+    PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+    SET LOCAL ROLE service_role;
+      ASSERT api.get_object_resource(v_new, ARRAY['fr']) IS NULL,
+             'I: FUITE PARTENAIRE — une fiche creee dans le bac a sable est servie par l API partenaire';
+    RESET ROLE;
+  END;
+
+  -- ────────── J. Le croisement des identites d'acteur ──────────
+  DECLARE
+    v_kind      uuid;
+    v_actor_r   uuid;   -- acteur REEL, primaire sur une fiche REELLE
+    v_obj_r     text;
+    v_actor_t   uuid;   -- acteur du BAC A SABLE
+    v_obj_t     text;
+    -- DEUX e-mails distincts : une garde applicative refuse qu'un meme e-mail soit
+    -- porte par deux acteurs (« Email … is already used by actor … »). Elle limite
+    -- la portee du croisement — mais elle ne l'empeche pas : il suffit qu'un
+    -- utilisateur d'un realm porte l'e-mail d'un acteur de l'autre, ce qui est le
+    -- cas des DEUX scenarios ci-dessous.
+    v_mail_r    text := 'croisement_reel@test.local';
+    v_mail_t    text := 'croisement_bac@test.local';
+    v_u_test    uuid := '00000000-0000-4000-a000-0000000000f6'::uuid;
+    v_u_prod    uuid := '00000000-0000-4000-a000-0000000000f7'::uuid;
+    v_role      uuid;
+    v_n         integer;
+  BEGIN
+    SELECT id INTO v_kind FROM ref_code_contact_kind WHERE code = 'email';
+    SELECT id INTO v_role FROM ref_actor_role ORDER BY code LIMIT 1;
+    UPDATE org_config SET is_test_org = TRUE WHERE org_object_id = v_orgTest;
+
+    -- Un MEME e-mail porte par un acteur de chaque cote. C'est la situation
+    -- reelle : la meme personne peut etre prestataire ET testeur.
+    INSERT INTO actor (display_name, extra)
+    VALUES ('Acteur Reel Croise', '{}'::jsonb) RETURNING id INTO v_actor_r;
+    INSERT INTO actor (display_name, extra)
+    VALUES ('Acteur Test Croise', jsonb_build_object('test_corpus', true))
+    RETURNING id INTO v_actor_t;
+    INSERT INTO actor_channel (actor_id, kind_id, value, is_public)
+    VALUES (v_actor_r, v_kind, v_mail_r, TRUE), (v_actor_t, v_kind, v_mail_t, TRUE);
+
+    -- v_objProd est reelle et publiee ; v_objTest est de test et publiee.
+    v_obj_r := v_objProd;
+    v_obj_t := v_objTest;
+    INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+    VALUES (v_actor_r, v_obj_r, v_role, TRUE, 'public'),
+           (v_actor_t, v_obj_t, v_role, TRUE, 'public')
+    ON CONFLICT (actor_id, object_id, role_id) DO NOTHING;
+
+    -- Le TESTEUR porte l'e-mail de l'acteur REEL ; l'utilisateur de PRODUCTION
+    -- porte celui de l'acteur du BAC A SABLE. C'est exactement le croisement.
+    INSERT INTO auth.users (id, email) VALUES (v_u_test, v_mail_r), (v_u_prod, v_mail_t)
+    ON CONFLICT (id) DO NOTHING;
+    INSERT INTO app_user_profile (id, role) VALUES (v_u_test, 'tourism_agent'), (v_u_prod, 'tourism_agent')
+    ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
+    INSERT INTO user_org_membership (user_id, org_object_id, is_active)
+    VALUES (v_u_test, v_orgTest, TRUE), (v_u_prod, v_orgProd, TRUE);
+
+    -- J1. Le TESTEUR, acteur d'une fiche reelle : ni lecture, ni ecriture.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_test, 'role','authenticated', 'email', v_mail_r)::text, true);
+    SET LOCAL ROLE authenticated;
+      SELECT count(*) INTO v_n FROM object WHERE id = v_obj_r;
+      ASSERT v_n = 0,
+             'J: FUITE — un compte de test voit une fiche de PRODUCTION parce que son e-mail est celui d un acteur reel';
+      ASSERT api.is_object_owner(v_obj_r) IS FALSE,
+             'J: FUITE D ECRITURE — is_object_owner accorde une fiche de PRODUCTION a un compte de test (un RPC DEFINER ecrirait sans filet)';
+      -- Et il voit toujours SA fiche : la garde ne doit pas casser le bac a sable.
+      ASSERT (SELECT count(*) FROM object WHERE id = v_obj_t) = 1,
+             'J: le compte de test ne voit plus sa propre fiche — la garde coupe trop';
+    RESET ROLE;
+
+    -- J2. L'utilisateur de PRODUCTION, acteur d'une fiche du bac a sable.
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_prod, 'role','authenticated', 'email', v_mail_t)::text, true);
+    SET LOCAL ROLE authenticated;
+      SELECT count(*) INTO v_n FROM object WHERE id = v_obj_t;
+      ASSERT v_n = 0,
+             'J: FUITE — un compte de PRODUCTION voit une fiche de test parce que son e-mail est pose sur un acteur du bac a sable';
+      ASSERT api.is_object_owner(v_obj_t) IS FALSE,
+             'J: FUITE D ECRITURE — is_object_owner accorde une fiche de test a un compte de production';
+      ASSERT (SELECT count(*) FROM object WHERE id = v_obj_r) = 1,
+             'J: l utilisateur de production ne voit plus sa propre fiche — la garde coupe trop';
+    RESET ROLE;
+
+    -- J3. Integration portail : un lien explicite vers l'autre realm ne suffit pas.
+    -- Chaque persona a une fiche autorisee ET une fiche etrangere : ni un refus
+    -- systematique, ni un simple filtre du pont e-mail ne peut faire passer ce test.
+    -- La fixture change un role applicatif : utiliser le contexte d'administration,
+    -- puis restaurer les JWT des deux acteurs avant toute assertion d'acces.
+    PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
+    UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_t WHERE id = v_u_test;
+    UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_r WHERE id = v_u_prod;
+    INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+    VALUES (v_actor_t, v_obj_r, v_role, FALSE, 'public'),
+           (v_actor_r, v_obj_t, v_role, FALSE, 'public');
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_test, 'role','authenticated', 'email', v_mail_t)::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT v_obj_t IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de test perd sa fiche autorisee';
+      ASSERT v_obj_r NOT IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de test lit une fiche de production par son lien explicite';
+      ASSERT v_obj_r NOT IN (SELECT api.current_user_extended_object_ids()),
+             'J3: le portail contourne le realm par la lecture etendue';
+      ASSERT api.is_object_owner(v_obj_t) IS FALSE,
+             'J3: le lien primaire du portail rouvre l ecriture canonique';
+    RESET ROLE;
+
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', v_u_prod, 'role','authenticated', 'email', v_mail_r)::text, true);
+    SET LOCAL ROLE authenticated;
+      ASSERT v_obj_r IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de production perd sa fiche autorisee';
+      ASSERT v_obj_t NOT IN (SELECT api.current_user_portal_object_ids()),
+             'J3: le portail de production lit le bac a sable par son lien explicite';
+      ASSERT api.is_object_owner(v_obj_r) IS FALSE,
+             'J3: le portail de production peut ecrire le canonique';
+    RESET ROLE;
+  END;
+
+  RAISE NOTICE 'test_test_org_isolation: OK (A structure, B source de verite, C sortie, D entree, E filles, F API partenaire, G tombstones, H non-vacuite, I creation dans le bac a sable, J croisement des identites d acteur)';
+END
+$$;
+ROLLBACK;

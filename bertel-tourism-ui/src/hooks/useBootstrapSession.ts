@@ -5,6 +5,8 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
 import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
+import { isSandboxMode } from '../lib/sandbox-mode';
+import { leaveSandbox } from '../services/sandbox';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -69,6 +71,29 @@ async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string
   } catch (err) {
     console.warn('current_user_active_org threw.', err);
     return { orgId: null, orgName: null };
+  }
+}
+
+// Resolves whether the current user belongs to a sandbox organisation, from
+// `api.current_user_test_realm()` — la MEME feuille que la garde SQL. On ne
+// re-transcrit surtout pas la regle en TypeScript : c'est ainsi qu'on cree une
+// divergence front/serveur (§214, §17c). Purement indicatif — le cloisonnement
+// est fait par le serveur, ce drapeau ne fait que l'AFFICHER.
+// Faux par defaut : afficher a tort « bac a sable » sur la production ferait
+// croire a un testeur qu'il peut casser des fiches reelles.
+async function fetchTestRealm(): Promise<boolean> {
+  const apiClient = getApiClient();
+  if (!apiClient) return false;
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_test_realm');
+    if (error) {
+      console.warn('current_user_test_realm unavailable, assuming production realm.', error);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn('current_user_test_realm threw, assuming production realm.', err);
+    return false;
   }
 }
 
@@ -162,6 +187,11 @@ export function useBootstrapSession() {
       }
 
       if (!data.user) {
+        if (isSandboxMode()) {
+          leaveSandbox();
+          window.location.replace('/login');
+          return;
+        }
         setGuest(
           options.authEvent === 'SIGNED_OUT' ? GUEST_SIGNED_OUT_MESSAGE : GUEST_SIGN_IN_MESSAGE,
         );
@@ -193,7 +223,10 @@ export function useBootstrapSession() {
       // directement avec les valeurs neutres au lieu de payer 5 allers-retours qui
       // rendraient tous false/null. Le portail fait ses propres lectures.
       if (role === 'actor') {
+        const isTestRealm = await fetchTestRealm();
+        if (cancelled) return;
         hydrateFromAuth({
+          isTestRealm,
           role,
           userId: user.id,
           email: String(user.email ?? ''),
@@ -234,6 +267,14 @@ export function useBootstrapSession() {
       if (cancelled) {
         return;
       }
+      const isTestRealm = await fetchTestRealm();
+      if (cancelled) {
+        return;
+      }
+      if (isSandboxMode() && !isTestRealm) {
+        setSessionError('Le cloisonnement de l’espace de test n’a pas pu être vérifié. Revenez à la connexion pour réessayer.');
+        return;
+      }
 
       hydrateFromAuth({
         role,
@@ -249,6 +290,7 @@ export function useBootstrapSession() {
         orgName: activeOrg.orgName,
         adminRank,
         adminRoleCode,
+        isTestRealm,
       });
     }
 

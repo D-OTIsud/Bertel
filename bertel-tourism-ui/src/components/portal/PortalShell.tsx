@@ -8,6 +8,7 @@
 //
 // La déconnexion passe par services/auth.signOut() : l'événement SIGNED_OUT remet la session
 // en invité et la garde redirige — jamais de router.replace ici.
+import { SandboxBanner } from '../layout/SandboxBanner';
 import { LogOut } from 'lucide-react';
 import { signOut } from '../../services/auth';
 import { useSessionStore } from '../../store/session-store';
@@ -59,6 +60,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
       </header>
+      <SandboxBanner />
       <main id="portal-main" className="portal-shell__main">
         {children}
       </main>

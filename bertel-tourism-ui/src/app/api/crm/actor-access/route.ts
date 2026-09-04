@@ -146,6 +146,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!UUID_SHAPE.test(actorId)) return NextResponse.json({ error: 'invalid_actor' }, { status: 422 });
   if (!ACTIONS.includes(action)) return NextResponse.json({ error: 'invalid_action' }, { status: 422 });
 
+  // Permission dédiée, y compris pour lire le statut. Le droit CRM seul ne suffit pas.
+  const { data: canManagePortal, error: permissionError } = await callerClient(jwt)
+    .schema('api')
+    .rpc('current_user_can_manage_actor_portal');
+  if (permissionError || canManagePortal !== true) {
+    return NextResponse.json({ error: 'portal_access_forbidden' }, { status: 403 });
+  }
+
   // LE gate — évalué EN TANT QUE L'APPELANT (clé anon + son JWT), jamais avec la service
   // key : une réponse obtenue avec celle-ci ne dirait rien des droits de l'appelant.
   // FAIL-CLOSED : les prédicats n'ont pas de COALESCE et peuvent rendre NULL hors contexte

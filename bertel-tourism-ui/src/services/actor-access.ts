@@ -13,7 +13,19 @@
  * métier (canal, portail, compte interne) y est légitime. La seule copie que lit le partenaire
  * est celle de `/set-password?espace=1`, posée par la route.
  */
-import { getSupabaseClient } from '../lib/supabase';
+import { getApiClient, getSupabaseClient } from '../lib/supabase';
+
+/** Même permission que la route serveur ; une panne garde le composant masqué. */
+export async function canManageActorPortalAccess(): Promise<boolean> {
+  try {
+    const client = getApiClient();
+    if (!client) return false;
+    const { data, error } = await client.schema('api').rpc('current_user_can_manage_actor_portal');
+    return !error && data === true;
+  } catch {
+    return false;
+  }
+}
 
 export interface PortalAccount {
   userId: string;
@@ -49,6 +61,7 @@ async function callActorAccess(body: Record<string, unknown>): Promise<Response>
 
 /** Traduction des refus de la route. Chaque code dit QUOI FAIRE, pas seulement ce qui a raté. */
 const ERROR_MESSAGES: Record<string, string> = {
+  portal_access_forbidden: 'Vous n’avez pas la permission de gérer l’accès au portail prestataire.',
   email_not_actor_channel:
     "Cette adresse n’est pas dans les coordonnées de l’acteur — ajoutez-la d’abord à sa fiche.",
   email_taken_by_staff:

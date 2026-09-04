@@ -1,7 +1,7 @@
 'use client';
 
 // Carte « Accès portail » de la fiche prestataire (18a/D1). Rail droit de CrmActorFiche,
-// juste sous la carte acteur — TOUJOURS visible, hors de la région repliable : c'est par ici
+// juste sous la carte acteur, visible avec la permission dédiée : c'est par ici
 // qu'un agent d'office ouvre (ou ferme) l'accès d'un partenaire à ses propres fiches.
 //
 // Toute action passe par /api/crm/actor-access, dont la garde serveur
@@ -24,6 +24,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound } from 'lucide-react';
 import {
+  canManageActorPortalAccess,
   getPortalAccessStatus,
   invitePortalAccess,
   resendPortalAccess,
@@ -31,6 +32,7 @@ import {
   type PortalActionResult,
 } from '../../services/actor-access';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { useSessionStore } from '../../store/session-store';
 import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
 
 const NO_EMAIL_REASON = 'Ajoutez d’abord une adresse e-mail à cet acteur.';
@@ -41,16 +43,30 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Une erreur est survenue.';
 }
 
-export function CrmActorPortalAccess({
+interface PortalAccessProps {
+  actorId: string;
+  canWrite: boolean;
+  /** Adresses e-mail des coordonnées de l’acteur, principale d’abord. */
+  emailChannels: string[];
+}
+
+export function CrmActorPortalAccess(props: PortalAccessProps) {
+  const userId = useSessionStore((state) => state.userId);
+  const orgId = useSessionStore((state) => state.orgId);
+  const permission = useQuery({
+    queryKey: ['crm-actor-portal-permission', userId, orgId],
+    queryFn: canManageActorPortalAccess,
+    enabled: !!userId,
+  });
+  if (!userId || permission.data !== true) return null;
+  return <PortalAccessCard {...props} />;
+}
+
+function PortalAccessCard({
   actorId,
   canWrite,
   emailChannels,
-}: {
-  actorId: string;
-  canWrite: boolean;
-  /** Adresses `email` des coordonnées de l'acteur, principale d'abord (fournies par la fiche). */
-  emailChannels: string[];
-}) {
+}: PortalAccessProps) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState<'invite' | 'resend' | 'revoke' | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);

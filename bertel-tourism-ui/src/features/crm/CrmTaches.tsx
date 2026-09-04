@@ -8,8 +8,9 @@
 // Écritures via api.save_crm_task ; gating page-wide write_crm_notes (no-write-trap).
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, GripVertical, Link2, Paperclip, Pencil, Plus } from 'lucide-react';
+import { Bell, GripVertical, Link2, Paperclip, Pencil, Plus, ShieldCheck } from 'lucide-react';
 import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
@@ -54,6 +55,11 @@ export function CrmTaches({
   onOpenObject: (objectId: string) => void;
   onOpenActor: (actorId: string) => void;
 }) {
+  // 18a — la puce « Vérification de fiche » quitte le CRM pour /moderation : c'est une vraie
+  // navigation, pas un panneau du module. Le `nav` du CRM est persisté (CrmPage) ; seuls les
+  // filtres LOCAUX de ce kanban (personne, période) sont perdus au retour — arbitrage assumé,
+  // le geste « je vais vérifier cette fiche » est un aller simple.
+  const router = useRouter();
   const queryClient = useQueryClient();
   const currentUserId = useSessionStore((state) => state.userId);
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
@@ -288,6 +294,27 @@ export function CrmTaches({
               }}
             >
               <Link2 size={11} aria-hidden /> {task.relatedInteractionSubject ?? 'Interaction liée'}
+            </button>
+          )}
+          {/* 18a — la SEULE marque qui distingue, dans le kanban, un envoi du portail acteur
+              d'une tâche CRM ordinaire (`crm_task` n'a pas de colonne `kind`). Sans elle,
+              l'agent ouvre le crayon, ne voit rien à faire, et la fiche du partenaire reste
+              bloquée — une seule vérification ouverte à la fois par fiche.
+              `stopPropagation` : ne déclenche ni le DnD ni la nav de la carte.
+              Jamais gatée par `canWrite` : lire une vérification n'est pas l'écrire, et la
+              page de modération porte déjà son propre contrôle de droits. */}
+          {task.extra?.kind === 'fiche_verification' && (
+            <button
+              type="button"
+              className="pill-mini"
+              title="Envoi du portail acteur — ouvrir la vérification"
+              aria-label={`Ouvrir la vérification de fiche « ${task.objectName} »`}
+              onClick={(event) => {
+                event.stopPropagation();
+                router.push(`/moderation?object=${encodeURIComponent(task.objectId)}`);
+              }}
+            >
+              <ShieldCheck size={11} aria-hidden /> Vérification de fiche
             </button>
           )}
           {/* Task 9 — badge trombone : même modal que le crayon (édition), même gating

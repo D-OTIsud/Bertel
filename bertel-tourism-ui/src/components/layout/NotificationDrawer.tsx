@@ -21,6 +21,7 @@ import {
   notificationKeys,
   type AppNotification,
 } from '../../services/notifications';
+import { SUBMISSION_OUTCOME_WORD } from '../../lib/submission-outcome';
 import { notificationInboxQueryOptions } from '../../hooks/useNotificationInbox';
 import { useSessionStore } from '../../store/session-store';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
@@ -46,6 +47,17 @@ function formatWhen(value: string | null): string {
 
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
+  // 18a — le retour de l'office sur une fiche envoyée. Ni émetteur (le payload est SANS nom,
+  // RGPD) ni titre de tâche : ce qui compte pour son lecteur, c'est SA fiche et le verdict.
+  //
+  // Le mot du verdict vient de `lib/submission-outcome`, la MÊME source que l'e-mail de
+  // résolution : ces deux surfaces décrivent un seul et même événement, et un arbitrage de
+  // copie appliqué à l'une seulement les ferait diverger en silence. Une issue inconnue
+  // retombe sur « vérifiées » — neutre et vrai — plutôt que sur un verdict inventé.
+  if (notification.kind === 'fiche_submission_reviewed') {
+    const outcome = notification.outcome ? SUBMISSION_OUTCOME_WORD[notification.outcome] : 'vérifiées';
+    return `Vos modifications de « ${notification.objectName ?? 'votre fiche'} » ont été ${outcome}`;
+  }
   const who = notification.createdByName ?? 'Quelqu’un';
   const title = notification.taskTitle ?? 'une tâche';
   return `${who} vous a assigné « ${title} »`;
@@ -81,6 +93,15 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
     // d'un aller-retour réseau, et l'échec du marquage laisse simplement la ligne non lue.
     if (!notification.readAt) readOneMutation.mutate(notification.id);
     onOpenChange(false);
+    // 18a — la destination suit l'ESPÈCE, pas le tiroir. Un membre d'équipe peut aussi être
+    // acteur d'une fiche : son tiroir back-office porte alors les deux espèces. Le kanban
+    // n'affiche RIEN d'un retour de vérification, et l'invalidation des tâches n'a pas lieu
+    // d'être ici. (Pas de cloche dans le portail en v1 : le partenaire reçoit l'e-mail et
+    // voit l'état sur /espace — ce branchement sert le cas mixte.)
+    if (notification.kind === 'fiche_submission_reviewed') {
+      router.push('/espace');
+      return;
+    }
     void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
     router.push('/crm?tab=taches');
   }

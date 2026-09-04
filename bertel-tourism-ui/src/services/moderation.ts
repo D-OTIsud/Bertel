@@ -39,6 +39,15 @@ export function parsePendingChange(row: GenericRecord): PendingChangeItem {
     reviewedAt: readNullableString(row.reviewed_at),
     reviewNote: readNullableString(row.review_note),
     appliedAt: readNullableString(row.applied_at),
+    // 18a/D9 — colonnes ajoutées par la §7.3 : de quoi grouper la file par envoi partenaire.
+    submissionId: readNullableString(row.submission_id),
+    submissionNote: readNullableString(row.submission_note),
+    actorLabel: readNullableString(row.actor_label),
+    // FAIL-CLOSED, et c'est le point le plus important de ce mapping. `row.manual_apply === true`
+    // écraserait en `false` une colonne ABSENTE — or `false` veut dire « la machine applique »,
+    // donc approbation en un clic. On préserve donc l'état INCONNU (undefined) : l'écran
+    // exigera l'attestation tant qu'il n'a pas la preuve du contraire.
+    manualApply: typeof row.manual_apply === 'boolean' ? row.manual_apply : undefined,
   };
 }
 
@@ -61,7 +70,13 @@ export async function listPendingChanges(
   offset = 0,
 ): Promise<PendingChangeItem[]> {
   if (useSessionStore.getState().demoMode) {
-    return mockPendingChanges.filter((item) => (status ? (item.status ?? 'pending') === status : true));
+    // Le filtre par objet est honoré ICI AUSSI : Task 19 ouvre /moderation?object=<id>. Une
+    // branche démo qui ignorerait `objectId` afficherait la file de TOUTE l'organisation sous
+    // un titre qui promet une seule fiche — l'agent trancherait la ligne d'un autre partenaire.
+    return mockPendingChanges.filter(
+      (item) =>
+        (status ? (item.status ?? 'pending') === status : true) && (objectId ? item.objectId === objectId : true),
+    );
   }
   const client = requireApiClient();
   const { data, error } = await client.schema('api').rpc('list_pending_changes', {
@@ -105,14 +120,94 @@ export async function submitPendingChange(input: SubmitPendingChangeInput): Prom
   return data;
 }
 
-export async function approvePendingChange(id: string, reviewNote: string | null = null): Promise<void> {
+/**
+ * 18a/D9 — `appliedManually` est une ATTESTATION nominative : le serveur l'estampille en
+ * `metadata.attested_by/attested_at` et pose `status='approved'` (jamais `applied` : rien n'a
+ * été écrit dans la fiche). Sur une ligne sans writer, l'approbation SANS attestation est
+ * refusée en 22023 avec le message qui dit le remède. Le paramètre est toujours transmis
+ * explicitement : laisser le DÉFAUT SQL trancher reviendrait à ne pas choisir.
+ */
+export async function approvePendingChange(
+  id: string,
+  reviewNote: string | null = null,
+  appliedManually = false,
+): Promise<void> {
   const client = requireApiClient();
   const { error } = await client.schema('api').rpc('approve_pending_change', {
     p_id: id,
     p_review_note: reviewNote,
+    p_applied_manually: appliedManually,
   });
   if (error) {
     throw mapDatabaseError(error, 'Approbation impossible.');
+  }
+}
+
+/**
+ * Ce que le RPC a RÉELLEMENT fait. `approve_fiche_submission` ne traite pas forcément tout ce
+ * qu'on lui donne : sans attestation il SAUTE les rubriques sans writer et les laisse pending.
+ * Jeter ce retour laissait l'agent devant un panneau qui rétrécit, sans savoir ce qui est parti
+ * ni ce qui reste — et « approuvé » se mettait à désigner deux choses différentes.
+ */
+export interface FicheSubmissionApproval {
+  /** Lignes ré-appliquées par un writer automatique (status=applied). */
+  appliedCount: number;
+  /** Lignes SANS writer, validées sur l'attestation de l'agent (status=approved). */
+  approvedManualCount: number;
+  /** Lignes sans writer laissées en attente faute d'attestation : l'envoi reste ouvert. */
+  skippedManualCount: number;
+  /** Statut agrégé relu APRÈS le trigger de résolution (§8). */
+  submissionStatus: string | null;
+}
+
+/** Compteur du RPC : absent/aberrant ⇒ 0, jamais NaN dans une phrase lue par un agent. */
+function readCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * 18a/D9 — approuve un ENVOI entier. `includeManual=false` (défaut) laisse DÉLIBÉRÉMENT les
+ * rubriques sans report automatique en attente : l'envoi reste ouvert tant que l'office ne les
+ * a pas reportées et attestées. Rend les trois compteurs du RPC pour que l'écran puisse DIRE
+ * ce qui vient de se passer — un « Tout approuver » partiel est invisible autrement.
+ */
+export async function approveFicheSubmission(
+  submissionId: string,
+  reviewNote: string | null = null,
+  includeManual = false,
+): Promise<FicheSubmissionApproval> {
+  const client = requireApiClient();
+  const { data, error } = await client.schema('api').rpc('approve_fiche_submission', {
+    p_submission_id: submissionId,
+    p_review_note: reviewNote,
+    p_include_manual: includeManual,
+  });
+  if (error) {
+    throw mapDatabaseError(error, 'Approbation de l’envoi impossible.');
+  }
+  const row = (data ?? {}) as GenericRecord;
+  return {
+    appliedCount: readCount(row.applied_count),
+    approvedManualCount: readCount(row.approved_manual_count),
+    skippedManualCount: readCount(row.skipped_manual_count),
+    submissionStatus: readNullableString(row.submission_status),
+  };
+}
+
+/** 18a/D9 — refuse un ENVOI entier. Motif obligatoire : c'est la seule chose que le partenaire
+ *  recevra pour comprendre, et sans elle il re-soumet à l'identique. Garde client doublant
+ *  celle du RPC (défense en profondeur). */
+export async function rejectFicheSubmission(submissionId: string, reviewNote: string): Promise<void> {
+  if (!reviewNote || reviewNote.trim().length === 0) {
+    throw new Error('Un motif de refus est obligatoire.');
+  }
+  const client = requireApiClient();
+  const { error } = await client.schema('api').rpc('reject_fiche_submission', {
+    p_submission_id: submissionId,
+    p_review_note: reviewNote,
+  });
+  if (error) {
+    throw mapDatabaseError(error, 'Refus de l’envoi impossible.');
   }
 }
 

@@ -9,6 +9,13 @@ interface CopyButtonProps {
   className?: string;
   /** Libellé accessible — passer la valeur quand plusieurs boutons coexistent. */
   label?: string;
+  /**
+   * Libellé VISIBLE à côté de l'icône. Par défaut le bouton est une icône seule — lisible
+   * dans une ligne de contact déjà étiquetée, illisible quand il est le seul repli d'un
+   * `mailto:` (portail partenaire) : une icône « deux carrés » ne dit à personne qu'elle
+   * copie une adresse.
+   */
+  visibleLabel?: string;
   /** Taille de l'icône lucide (16 fiche établissement, 14 rail CRM). */
   size?: number;
 }
@@ -21,7 +28,13 @@ interface CopyButtonProps {
  * à l'intérieur de zones cliquables (ligne-lien de la fiche, cartes) et copier ne
  * doit jamais naviguer.
  */
-export function CopyButton({ value, className, label = 'Copier dans le presse-papiers', size = 16 }: CopyButtonProps) {
+export function CopyButton({
+  value,
+  className,
+  label = 'Copier dans le presse-papiers',
+  visibleLabel,
+  size = 16,
+}: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
@@ -37,8 +50,17 @@ export function CopyButton({ value, className, label = 'Copier dans le presse-pa
   };
 
   return (
-    <button type="button" className={className} onClick={handleCopy} aria-label={label} title={label}>
+    <button
+      type="button"
+      className={className}
+      onClick={handleCopy}
+      // Avec un libellé visible, `aria-label` ferait doublon (et masquerait le texte lu) :
+      // le nom accessible vient alors du contenu, comme pour n'importe quel bouton.
+      aria-label={visibleLabel ? undefined : label}
+      title={visibleLabel ? undefined : label}
+    >
       {copied ? <Check size={size} strokeWidth={2.5} /> : <Copy size={size} strokeWidth={2} />}
+      {visibleLabel ? <span>{copied ? 'Copié' : visibleLabel}</span> : null}
     </button>
   );
 }

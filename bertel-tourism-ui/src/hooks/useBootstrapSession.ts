@@ -3,7 +3,7 @@ import { AuthSessionMissingError } from '@supabase/supabase-js';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
-import { useSessionStore } from '../store/session-store';
+import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
@@ -96,8 +96,13 @@ async function fetchAdminRoleCode(): Promise<string | null> {
   } catch (err) { console.warn('current_user_admin_role_code threw.', err); return null; }
 }
 
+// Allowlist stricte, jamais un cast : un rôle inconnu doit rendre null pour tomber dans
+// `setSessionError` plus bas. La persona `actor` (18a) doit donc y figurer explicitement,
+// sans quoi un partenaire authentifié se retrouve bloqué sur l'écran de session.
 function normalizeRole(value: unknown): UserRole | null {
-  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
+  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' || value === 'actor'
+    ? value
+    : null;
 }
 
 function initialsFromName(name: string): string {
@@ -158,9 +163,7 @@ export function useBootstrapSession() {
 
       if (!data.user) {
         setGuest(
-          options.authEvent === 'SIGNED_OUT'
-            ? 'Vous avez ete deconnecte. Reconnectez-vous avec Google.'
-            : 'Connectez-vous avec Google pour acceder a la plateforme.',
+          options.authEvent === 'SIGNED_OUT' ? GUEST_SIGNED_OUT_MESSAGE : GUEST_SIGN_IN_MESSAGE,
         );
         return;
       }
@@ -185,6 +188,28 @@ export function useBootstrapSession() {
       const langPrefs = Array.isArray(profile?.lang_prefs) && profile.lang_prefs.every((item) => typeof item === 'string')
         ? profile.lang_prefs
         : fallbackLangPrefs;
+
+      // Persona partenaire (18a) : aucune des sondes back-office ne s'applique — on hydrate
+      // directement avec les valeurs neutres au lieu de payer 5 allers-retours qui
+      // rendraient tous false/null. Le portail fait ses propres lectures.
+      if (role === 'actor') {
+        hydrateFromAuth({
+          role,
+          userId: user.id,
+          email: String(user.email ?? ''),
+          userName,
+          avatar: initialsFromName(userName),
+          avatarUrl: typeof profile?.avatar_url === 'string' && profile.avatar_url.length > 0 ? profile.avatar_url : null,
+          langPrefs,
+          canEditObjects: false,
+          canCreateObjects: false,
+          orgId: null,
+          orgName: null,
+          adminRank: null,
+          adminRoleCode: null,
+        });
+        return;
+      }
 
       const canEditObjects = await fetchCanEditObjects();
       if (cancelled) {

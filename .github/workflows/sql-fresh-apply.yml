@@ -418,7 +418,7 @@ jobs:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_selection_emails.sql"
 
-      - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch incl. save_object_rooms)"
+      - name: "moderation RPCs test (P2.1 §120 + §182 section F — user_can_moderate_object/submit/list/approve/reject, whitelist re-dispatch — save_object_rooms EXCLU, cf. 18a §7)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_moderation_rpcs.sql"
@@ -432,6 +432,67 @@ jobs:
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
         run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_prospects_documents.sql"
+
+      - name: "Actor portal test (18a — persona actor + portée dédiée, D7, visibilité des rubriques, submit_actor_fiche, lectures acteur, D9 validation totale/partielle, résolution + outbox, RGPD branche acteur)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"
+
+      - name: "ref_amenity visit modes test (18b — seed visite_libre/visite_guidee/audioguide, famille visit_mediation ; répare le blocage de sauvegarde §06 BlockVIS sans mélanger avec accessibility)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_ref_amenity_visit_modes.sql"
+
+      - name: "RGPD erasure test (api.rpc_gdpr_erase_subject Art. 17 — anonymisation acteur, canaux supprimés, interaction déliée, journal d'audit rédigé). Garde qui EXISTAIT au dépôt sans être jouée nulle part : ni ci_fresh_apply.sql ni ce workflow ne la référençaient."
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_gdpr_erasure.sql"
+
+      # ─────────────────────────────────────────────────────────────────────────
+      # Garde d'alignement du miroir RGPD (18a §8.5).
+      #
+      # api.rpc_gdpr_erase_subject vit en DEUX exemplaires au dépôt qui doivent rester
+      # identiques : schema_unified.sql (le miroir, joué en étape 1 du manifeste) et
+      # migration_actor_portal.sql (18a, joué en fin de manifeste). Sur une base fraîche
+      # 18a passe APRÈS et gagne : une divergence du miroir ne produirait AUCUNE erreur
+      # de fresh-apply, et l'écart ne se verrait qu'à la prochaine install qui rejouerait
+      # schema_unified seul. Ce step compare les deux corps octet pour octet.
+      #
+      # Le dépôt porte une TROISIÈME rédaction, migration_gdpr_erasure.sql, sans la
+      # branche acteur : elle est volontairement absente de ci_fresh_apply.sql, car
+      # rejouée après 18a elle EFFACERAIT le déliage du compte portail sans lever.
+      # Le second test le vérifie.
+      # ─────────────────────────────────────────────────────────────────────────
+      - name: "RGPD mirror alignment (schema_unified.sql ≡ migration_actor_portal.sql pour api.rpc_gdpr_erase_subject ; migration_gdpr_erasure.sql hors manifeste)"
+        run: |
+          set -euo pipefail
+          extract() {
+            awk '/^CREATE OR REPLACE FUNCTION api\.rpc_gdpr_erase_subject\(/{f=1} f{print} f&&/^\$\$;$/{exit}' "$1"
+          }
+          # Prémisse de NON-VACUITÉ : sans elle, un renommage de la fonction ferait rendre
+          # DEUX extractions vides — donc deux md5 égaux — et la garde passerait au vert
+          # en ne comparant plus rien.
+          NA=$(extract "Base de donnée DLL et API/schema_unified.sql" | wc -l)
+          NB=$(extract "Base de donnée DLL et API/migration_actor_portal.sql" | wc -l)
+          if [ "$NA" -lt 50 ] || [ "$NB" -lt 50 ]; then
+            echo "::error::extraction vide ou tronquée (schema_unified: $NA lignes, migration_actor_portal: $NB) — le marqueur 'CREATE OR REPLACE FUNCTION api.rpc_gdpr_erase_subject(' a bougé. Réparer ce step AVANT de croire son verdict."
+            exit 1
+          fi
+          A=$(extract "Base de donnée DLL et API/schema_unified.sql" | md5sum | cut -d' ' -f1)
+          B=$(extract "Base de donnée DLL et API/migration_actor_portal.sql" | md5sum | cut -d' ' -f1)
+          echo "schema_unified.sql        : $A ($NA lignes)"
+          echo "migration_actor_portal.sql: $B ($NB lignes)"
+          if [ "$A" != "$B" ]; then
+            echo "::error::api.rpc_gdpr_erase_subject a DIVERGÉ entre schema_unified.sql et migration_actor_portal.sql (18a §8.5). Sur base fraîche 18a écrase le miroir : la divergence ne lève nulle part, elle se paie à la prochaine install. Réaligner les deux corps."
+            exit 1
+          fi
+          # On cherche une INCLUSION (\i / \ir), pas une mention : le \echo de l'étape 18a
+          # nomme ce fichier pour dire précisément qu'il ne doit PAS être joué.
+          if grep -qE '^[[:space:]]*\\ir?[[:space:]]+migration_gdpr_erasure\.sql' "Base de donnée DLL et API/ci_fresh_apply.sql"; then
+            echo "::error::migration_gdpr_erasure.sql est entré dans ci_fresh_apply.sql. Cette rédaction ignore la branche acteur de 18a §8.5 et effacerait le déliage du compte portail SANS lever. La retirer du manifeste, ou l'aligner d'abord."
+            exit 1
+          fi
+          echo "RGPD mirror alignment OK."
 
       - name: Stop Supabase
         if: always()

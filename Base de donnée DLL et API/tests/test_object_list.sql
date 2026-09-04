@@ -26,6 +26,8 @@ DECLARE
   v_draft1 text := 'HOTRUN9999990813';  -- draft (doit être exclu de la page publique)
   v_userA  uuid := '00000000-0000-4000-a000-0000000000e1';
   v_userB  uuid := '00000000-0000-4000-a000-0000000000e2';
+  v_userC  uuid := '00000000-0000-4000-a000-0000000000e3';  -- propriétaire NON-superuser (17k)
+  v_legacy uuid;                                            -- sa liste « ante-17l »
   v_pub_role uuid;
   v_kind_phone uuid; v_kind_mobile uuid; v_kind_web uuid;
   v_static uuid; v_dyn uuid; v_tok text;
@@ -69,13 +71,27 @@ BEGIN
     (v_draft1, 'HOT', 'Draft 1', 'draft');
 
   INSERT INTO auth.users (id, email) VALUES
-    (v_userA, 'lists_a@test.local'), (v_userB, 'lists_b@test.local')
+    (v_userA, 'lists_a@test.local'), (v_userB, 'lists_b@test.local'),
+    (v_userC, 'lists_c@test.local')
     ON CONFLICT (id) DO NOTHING;
+  -- ⚠ userA est SUPERUSER PLATEFORME depuis §227 (manifeste 17l) : `api.create_list`
+  -- n'accepte plus que `api.is_platform_superuser()` — un `tourism_agent`, même membre
+  -- actif d'une ORG, est refusé en 42501 « FORBIDDEN: la création de listes est réservée
+  -- aux superusers plateforme ». userA doit donc être le seul persona qui PEUT créer une
+  -- liste, sans quoi ce fichier meurt à sa première ligne utile.
+  -- userB reste `tourism_agent` : c'est LUI qui porte l'isolation cross-org asserée en
+  -- fin de fichier, et l'élever ferait passer cette garde pour de mauvaises raisons.
   INSERT INTO app_user_profile (id, role) VALUES
-    (v_userA, 'tourism_agent'), (v_userB, 'tourism_agent')
+    (v_userA, 'super_admin'), (v_userB, 'tourism_agent'), (v_userC, 'tourism_agent')
     ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role;
   INSERT INTO user_org_membership (user_id, org_object_id, is_active) VALUES
-    (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE);
+    (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE), (v_userC, v_orgA, TRUE);
+
+  -- Reproduit l'état RÉEL de la prod : 4 des 12 listes ont un créateur `tourism_agent`
+  -- (créées AVANT 17l). INSERT direct : depuis 17l `api.create_list` refuserait userC,
+  -- et sans cette ligne le bras de PROPRIÉTÉ de `user_can_write_list` n'a plus de témoin.
+  INSERT INTO object_list (org_object_id, created_by, kind, name)
+  VALUES (v_orgA, v_userC, 'static', 'Liste ante-17l') RETURNING id INTO v_legacy;
 
   -- contacts : pub1 = phone public + phone PRIVÉ (sonde de fuite) + website ;
   --            pub2 = mobile public uniquement (sonde du repli phone→mobile).
@@ -185,11 +201,30 @@ BEGIN
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userB, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     v_ok := false;
-    BEGIN PERFORM api.get_list(v_static); v_ok := true; EXCEPTION WHEN others THEN NULL; END;
+    BEGIN PERFORM api.get_list(v_static); v_ok := true; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
     ASSERT NOT v_ok, 'cross-org LEAK: user B read user A''s list';
     v_ok := false;
-    BEGIN PERFORM api.delete_list(v_static); v_ok := true; EXCEPTION WHEN others THEN NULL; END;
+    BEGIN PERFORM api.delete_list(v_static); v_ok := true; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
     ASSERT NOT v_ok, 'cross-org LEAK: user B deleted user A''s list';
+  RESET ROLE;
+
+  -- ---------- 17k : le bras de PROPRIÉTÉ de api.user_can_write_list ----------
+  -- Depuis 17l seul un superuser CRÉE une liste ; `l.created_by = auth.uid()` est donc la
+  -- SEULE chose qui laisse encore écrire les listes antérieures — 4 en production. userA
+  -- étant superuser, aucune autre écriture de ce fichier ne traverse ce bras : sans ce
+  -- témoin il passe pour du code mort, et le réduire à `COALESCE(api.is_platform_superuser(),
+  -- FALSE)` laisserait la CI INTÉGRALEMENT VERTE en retirant à ces 4 propriétaires le droit
+  -- de renommer, modifier, partager ou supprimer leur liste.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userC, 'role','authenticated')::text, true);
+  SET LOCAL ROLE authenticated;
+    ASSERT COALESCE(api.is_platform_superuser(), FALSE) = FALSE,
+           'témoin vacant : userC ne doit PAS être superuser, sinon le bras propriété est court-circuité';
+    ASSERT api.user_can_write_list(v_legacy),
+           '17k: le créateur NON-superuser doit garder l''écriture sur SA liste (listes ante-17l)';
+    ASSERT NOT api.user_can_write_list(v_static),
+           '17k: un membre de l''ORG qui n''est PAS le créateur ne doit pas écrire';
+    ASSERT api.user_can_read_list(v_static),
+           'le bras de LECTURE par l''ORG reste ouvert (ce que 17k ne touche pas)';
   RESET ROLE;
 
   RAISE NOTICE 'object_list module assertions passed (static, dynamic, share/public no-PII, item contacts public-only, cross-org isolation, lock).';

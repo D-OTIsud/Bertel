@@ -8,13 +8,23 @@ jest.mock('@/lib/mail.server', () => ({
 }));
 jest.mock('@/lib/env.server', () => ({ readSmtpConfig: jest.fn() }));
 
+// Le gabarit RÉEL par défaut (les sujets et corps assertés plus bas sont les vrais), mais
+// espionnable : un seul test le fait JETER, pour éprouver que la composition est protégée
+// au même titre que l'envoi.
+jest.mock('@/emails/TaskAssignedEmail', () => {
+  const actual = jest.requireActual('@/emails/TaskAssignedEmail');
+  return { ...actual, renderTaskAssignedEmailHtml: jest.fn(actual.renderTaskAssignedEmailHtml) };
+});
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { sendMail } from '@/lib/mail.server';
 import { readSmtpConfig } from '@/lib/env.server';
+import { renderTaskAssignedEmailHtml } from '@/emails/TaskAssignedEmail';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedSend = jest.mocked(sendMail);
 const mockedSmtp = jest.mocked(readSmtpConfig);
+const mockedRenderTask = jest.mocked(renderTaskAssignedEmailHtml);
 
 const smtpOk = { host: 'smtp', port: 587, secure: false, user: null, pass: null, fromName: 'Bertel', fromEmail: 'no-reply@x' };
 
@@ -35,6 +45,13 @@ function serverWith(rpc: jest.Mock) {
 const row = (id: string, email: string | null = 'dest@x.re') => ({
   notification_id: id, recipient_email: email, recipient_name: 'Dest',
   task_title: 'Tâche', object_name: 'Hôtel', due_at: null, assigner_name: 'Chef',
+});
+
+// 18a — la SECONDE espèce réclamée par le même claim. `kind` et `outcome` sont les deux
+// seules clés qui la distinguent ; le reste de l'enveloppe est identique (mêmes jointures).
+const reviewRow = (id: string, outcome: string | null = 'approved') => ({
+  ...row(id), kind: 'fiche_submission_reviewed', outcome,
+  recipient_name: 'Marie', object_name: 'Villa Vanille', submission_id: 'sub-1',
 });
 
 describe('POST /api/crm/notify-drain', () => {
@@ -166,5 +183,138 @@ describe('POST /api/crm/notify-drain', () => {
     errSpy.mockRestore();
     expect(mockedSend).not.toHaveBeenCalled();
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  // Task 18 — l'aiguillage par ESPÈCE. Ces cas TRAVERSENT le parcours réel : une ligne
+  // réclamée par le claim doit produire l'e-mail attendu. Aucun n'écrit le résultat à la
+  // main : le sujet et le corps sont ceux que la route a composés.
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  describe('aiguillage par kind (18a)', () => {
+    it('fiche_submission_reviewed : compose l’e-mail de résolution, PAS celui d’assignation', async () => {
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [reviewRow('n-1', 'approved')], error: null })
+        .mockResolvedValueOnce({ data: 1, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      const res = await POST(req({ authorization: 'Bearer jwt' }));
+      await expect(res.json()).resolves.toEqual({ sent: 1, failed: 0 });
+      const { subject, html } = mockedSend.mock.calls[0][0];
+      expect(subject).toBe('Vos modifications ont été validées — Villa Vanille');
+      // Le gabarit d'assignation enverrait « Nouvelle tâche » et un bouton vers /crm — une
+      // page que la persona `actor` ne peut pas ouvrir.
+      expect(subject).not.toContain('Nouvelle tâche');
+      expect(html).toContain('Bonjour Marie,');
+      expect(html).toContain('https://app.test/espace');
+      expect(html).not.toContain('https://app.test/crm');
+      // IMPORTANT 2 (revue) — le partenaire arrive sur un mur de connexion : la page de
+      // récupération d'accès doit être DANS le message, pas à deviner.
+      expect(html).toContain('https://app.test/login');
+      expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', { p_sent: ['n-1'], p_failed: [] });
+    });
+
+    it('les TROIS issues produisent trois messages distincts au bout du drain', async () => {
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({
+          data: [reviewRow('n-a', 'approved'), reviewRow('n-r', 'rejected'), reviewRow('n-p', 'partial')],
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: 3, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      await POST(req({ authorization: 'Bearer jwt' }));
+      const subjects = mockedSend.mock.calls.map(([mail]) => mail.subject);
+      expect(subjects).toEqual([
+        'Vos modifications ont été validées — Villa Vanille',
+        'Vos modifications ont été refusées — Villa Vanille',
+        'Vos modifications ont été en partie validées — Villa Vanille',
+      ]);
+      const bodies = mockedSend.mock.calls.map(([mail]) => mail.html);
+      expect(new Set(bodies).size).toBe(3);
+    });
+
+    it('les deux espèces cohabitent dans un même claim, chacune avec SON gabarit', async () => {
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [row('n-1'), reviewRow('n-2', 'rejected')], error: null })
+        .mockResolvedValueOnce({ data: 2, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      await POST(req({ authorization: 'Bearer jwt' }));
+      expect(mockedSend.mock.calls[0][0].subject).toBe('Nouvelle tâche : Tâche — Hôtel');
+      expect(mockedSend.mock.calls[0][0].html).toContain('https://app.test/crm');
+      expect(mockedSend.mock.calls[1][0].subject).toBe('Vos modifications ont été refusées — Villa Vanille');
+      expect(mockedSend.mock.calls[1][0].html).toContain('https://app.test/espace');
+    });
+
+    // IMPORTANT 1 (revue) — la COMPOSITION était sortie du `try` : un gabarit qui jette
+    // remontait hors de la route (500), donc `mark_notifications_emailed` n'était JAMAIS
+    // appelé, et les 20 lignes déjà réclamées restaient claimées avec `email_attempts`
+    // inchangé — re-réclamables à chaque TTL, à vie. Exactement la panne que la garde de 18a
+    // existe pour fermer. La composition est donc protégée au même titre que l'envoi.
+    it('un gabarit qui JETTE n’empêche ni l’acquittement ni l’envoi des autres lignes', async () => {
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [row('n-1'), row('n-2')], error: null })
+        .mockResolvedValueOnce({ data: 1, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      mockedRenderTask.mockImplementationOnce(() => {
+        throw new Error('template boom');
+      });
+      const res = await POST(req({ authorization: 'Bearer jwt' }));
+      // 200, pas 500 : la route ne remonte pas l'exception d'une ligne.
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toEqual({ sent: 1, failed: 1 });
+      // La seconde ligne est partie normalement…
+      expect(mockedSend).toHaveBeenCalledTimes(1);
+      // …et l'acquittement a bien eu lieu, la ligne fautive comptant une tentative de plus
+      // (bras p_failed) au lieu de rester claimée pour toujours.
+      expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', {
+        p_sent: ['n-2'],
+        p_failed: [{ id: 'n-1', error: 'template boom' }],
+      });
+    });
+
+    it('kind ABSENT (claim antérieur à 18a) : traité comme avant, gabarit d’assignation', async () => {
+      // Le repli protège l'ordre de déploiement inverse — front neuf, SQL ancien.
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [row('n-1')], error: null })
+        .mockResolvedValueOnce({ data: 1, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      await POST(req({ authorization: 'Bearer jwt' }));
+      expect(mockedSend.mock.calls[0][0].subject).toContain('Nouvelle tâche');
+    });
+
+    it('kind INCONNU : terminé en p_failed, jamais sauté — sinon la file se bouche à vie', async () => {
+      // Un `continue` nu ne suffirait pas : mark_notifications_emailed n'incrémente
+      // email_attempts que par le bras p_failed, donc une ligne sautée sans acquittement
+      // redevient réclamable à chaque TTL de 10 min, indéfiniment.
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [{ ...row('n-1'), kind: 'kind_du_futur' }], error: null })
+        .mockResolvedValueOnce({ data: 0, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      const res = await POST(req({ authorization: 'Bearer jwt' }));
+      await expect(res.json()).resolves.toEqual({ sent: 0, failed: 1 });
+      expect(mockedSend).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed',
+        { p_sent: [], p_failed: [{ id: 'n-1', error: 'unsupported_kind' }] });
+    });
+
+    it('issue ABSENTE ou inconnue : p_failed, JAMAIS un repli sur « validées »', async () => {
+      // Le pire message de tout ce fichier serait d'annoncer une acceptation qui n'a pas eu
+      // lieu : le partenaire n'ouvrirait plus jamais son espace pour corriger. La ligne part
+      // donc en échec (elle reste re-tentée, et l'état reste lisible sur /espace).
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [reviewRow('n-1', null), reviewRow('n-2', 'peut_etre')], error: null })
+        .mockResolvedValueOnce({ data: 0, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      const res = await POST(req({ authorization: 'Bearer jwt' }));
+      await expect(res.json()).resolves.toEqual({ sent: 0, failed: 2 });
+      expect(mockedSend).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', {
+        p_sent: [],
+        p_failed: [{ id: 'n-1', error: 'unknown_outcome' }, { id: 'n-2', error: 'unknown_outcome' }],
+      });
+    });
   });
 });

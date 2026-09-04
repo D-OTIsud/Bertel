@@ -581,6 +581,41 @@ textarea::placeholder {
 .mod-meta__subject { font-size: 13px; color: var(--text); }
 .mod-meta__byline { font-size: 12px; color: var(--text-muted); }
 
+/* ---- Modération 18a/D9 : envoi groupé + rubriques à reporter à la main ---- */
+/* La mention « report manuel » n'est PAS décorative : c'est le seul endroit où l'agent apprend,
+   AVANT de cliquer, qu'approuver n'écrira rien. Elle doit donc porter son propre contraste. */
+.mod-meta__manual { font-size: 12px; font-weight: 600; color: #9a5b12; }
+.mod-submission { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.mod-submission__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mod-submission__note {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--line);
+  background: var(--bg-tint);
+  font-size: 13px;
+  color: var(--text);
+}
+.mod-scope { margin: 0.5rem 0 0; font-size: 12px; color: var(--text-muted); }
+/* Compte rendu d'un geste groupé : ce n'est ni une erreur ni une décoration, c'est le seul
+   endroit qui dit ce que le RPC a fait. Il doit se distinguer de .form-error sans crier. */
+.mod-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #1f6b45;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+}
+.mod-scope a { color: inherit; text-decoration: underline; }
+
 /* ---- Palette de commandes ⌘K (D24) ---- */
 .palette { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 78vw); }
 .palette__search {
@@ -12184,6 +12219,40 @@ a {
 /* §66 — bouton « Affecter un établissement » sous la liste des établissements liés. */
 .crm-app .crm-rail__add { margin-top: 10px; align-self: flex-start; }
 
+/* 18a/D1 — carte « Accès portail » du rail. L'en-tête `.rcard h4` est en
+   `justify-content: space-between` (il porte ailleurs un compteur à droite) : le titre est
+   donc enveloppé, sinon l'icône partirait à gauche et le mot à droite. */
+.crm-app .crm-portal-access__title { display: inline-flex; align-items: center; gap: 6px; }
+.crm-app .crm-portal-access__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  word-break: break-all;
+}
+.crm-app .crm-portal-access__actions { margin-top: 12px; gap: 8px; }
+.crm-app .crm-portal-access__pick { display: block; margin-top: 10px; }
+.crm-app .crm-portal-access__pick > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.crm-app .crm-portal-access__pick > select {
+  width: 100%;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
 /* Rangée relation (acteur ⇄ objet, avec rôle) */
 .crm-app .rel-row {
   display: flex;
@@ -13718,6 +13787,34 @@ a {
 .primary-button--danger:hover:not(:disabled) { filter: brightness(0.94); }
 .confirm-message { font-size: 14px; color: var(--ink-2); margin: 0; }
 
+/* 18a/D9 — l'attestation est une DÉCLARATION, pas une option : elle occupe un bloc à part,
+   encadré, pour ne pas se lire comme une préférence tassée sous le message. */
+.confirm-attestation {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg-tint);
+}
+.confirm-attestation__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.confirm-attestation__label input { margin-top: 3px; flex: none; }
+.confirm-attestation__hint { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); }
+/* Réponse au clic refusé — née du clic, pas du montage : elle doit se voir. */
+.confirm-attestation__blocked {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #9a3322;
+}
+
 /* 7.3 — Fournisseurs IA : table + formulaire en vocabulaire maison (plus de styles inline). */
 .ai-provider { display: flex; flex-direction: column; gap: 16px; }
 .ai-base-url { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
@@ -13987,3 +14084,448 @@ a {
 .nettime__calc { margin: 0; font-size: 0.84rem; color: var(--ink-2); }
 .nettime__calc b { color: var(--ink); padding: 0 0.15rem; }
 
+
+/* ============================================================================
+   Espace partenaire (18a, D10) — UNE colonne, grands contrôles, tokens maison.
+   TOUT est scopé `.portal-shell` (et `.portal-modal`, cf. plus bas) : aucune règle
+   globale n'est touchée, le back-office ne bouge pas d'un pixel.
+   ============================================================================ */
+.portal-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.portal-shell__bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+/* Marque = logo + un bloc DEUX LIGNES (nom de l'organisation au-dessus, « Espace
+   partenaire » en eyebrow dessous), comme la maquette. Le nom se tronque plutôt que
+   de pousser « Se déconnecter » hors de l'écran d'un téléphone. */
+.portal-shell__brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.portal-shell__brand img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
+.portal-shell__brand-text { display: grid; min-width: 0; }
+.portal-shell__brand-name {
+  font-family: var(--font-display), sans-serif;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.portal-shell__brand-text .eyebrow { font-size: 0.62rem; line-height: 1.2; margin-bottom: 0; }
+.portal-shell__user { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.portal-shell__user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.portal-shell__main {
+  flex: 1;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 16px 120px;
+}
+.portal-shell__legal { padding: 0 16px calc(20px + env(safe-area-inset-bottom)); }
+/* Cibles tactiles. `.primary-button` / `.ghost-button` ne DÉCLARENT aucune hauteur
+   (padding + font-weight seuls) : 48 px est POSÉ ici, ce n'est pas une surcharge. */
+.portal-shell .primary-button,
+.portal-shell .ghost-button {
+  min-height: 48px;
+  font-size: 1.05rem;
+  border-radius: var(--radius-sm);
+}
+/* 1.05rem sur les champs : sous 16 px, iOS zoome à la mise au point et le partenaire
+   se retrouve avec une page décalée qu'il ne sait pas remettre en place. */
+.portal-shell input,
+.portal-shell select,
+.portal-shell textarea { font-size: 1.05rem; }
+/* Le kit maison est taillé back-office : `.badge` 12 px, label d'auth-field .8rem,
+   hint .78rem — relevés ICI seulement, pour être lisibles à bout de bras. */
+.portal-shell .badge,
+.portal-modal .badge { font-size: 0.9rem; padding: 5px 10px; }
+.portal-shell .auth-field > label,
+.portal-modal .auth-field > label { font-size: 1rem; }
+.portal-shell .auth-field__hint,
+.portal-modal .auth-field__hint { font-size: 0.95rem; }
+/* `Modal` fait un createPortal vers document.body : ses descendants ne sont PAS sous
+   .portal-shell. Le contrat de taille est donc dupliqué sous .portal-modal (className
+   passée aux Modal/ConfirmDialog du portail) — sans quoi la fenêtre d'envoi garderait
+   les dimensions back-office. */
+.portal-modal .primary-button,
+.portal-modal .ghost-button {
+  min-height: 48px;
+  font-size: 1.05rem;
+  border-radius: var(--radius-sm);
+}
+.portal-modal input,
+.portal-modal select,
+.portal-modal textarea { font-size: 1.05rem; }
+/* WCAG 2.4.11 : la barre d'envoi collante ne doit jamais couvrir le champ qui vient de
+   prendre le focus — hors AppShell, le conteneur de défilement est <html>, pas <main>. */
+html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
+
+.portal-h1 {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+.portal-lead { margin: 0 0 20px; color: var(--ink-2); font-size: 1.05rem; }
+.portal-card {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-s);
+}
+.portal-fiches { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.portal-fiche {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  min-height: 72px;
+  color: inherit;
+  text-decoration: none;
+}
+.portal-fiche__body { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.portal-fiche__name { font-size: 1.1rem; font-weight: 700; }
+.portal-fiche__chevron { color: var(--ink-3); flex: none; }
+/* L'anneau global est posé en :where() : ici le radius le masquerait, on le redit. */
+.portal-fiche:focus-visible,
+.portal-choice:focus-within,
+.portal-task__link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (max-width: 640px) {
+  /* Le nom du compte s'efface : sur 375 px, il volerait la place du bouton. */
+  .portal-shell__user-name { display: none; }
+  .portal-shell .primary-button,
+  .portal-shell .ghost-button { width: 100%; }
+  .portal-shell__bar .ghost-button { width: auto; }
+}
+
+/* ---- Ordinateur (≥ 1024 px) : DEUX colonnes, MÊME arbre React. La liste des rubriques
+   reste sous les yeux pendant la saisie. C'est `data-view` (porté par `.portal-fiche-page`)
+   qui décide de ce qu'on masque en dessous, jamais un useMediaQuery : pas d'hydratation à
+   resynchroniser, pas de focus perdu au franchissement du seuil, un seul chemin à tester. ---- */
+.portal-fiche-layout { display: grid; gap: 20px; }
+@media (min-width: 1024px) {
+  .portal-shell__main { max-width: 1080px; padding-inline: 24px; }
+  .portal-fiche-layout {
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .portal-hub-list { position: sticky; top: 72px; } /* 56 px de barre + 16 px d'air */
+  .portal-panel { max-width: 66ch; }               /* longueur de ligne lisible */
+  .portal-shell .primary-button,
+  .portal-shell .ghost-button { width: auto; }
+  .portal-task__link:hover,
+  .portal-fiche:hover { background: rgb(var(--theme-primary-rgb) / 0.05); }
+  .portal-task__link[aria-current='step'] {
+    background: rgb(var(--theme-primary-rgb) / 0.08);
+    box-shadow: inset 3px 0 0 var(--teal);
+  }
+}
+@media (max-width: 1023px) {
+  /* Une seule colonne : pendant la saisie d'une rubrique, l'en-tête de fiche et la liste
+     s'effacent — l'écran de rubrique porte son propre retour et son propre titre.
+     SAUF le titre de la fiche : il reste dans le document, rendu invisible à l'œil mais
+     lisible par un lecteur d'écran. Sans lui la page n'aurait AUCUN `h1` (le titre de
+     rubrique est un `h2`) ; avec lui affiché, on en aurait DEUX à partir de 1024 px. Un
+     seul `h1` dont le contenu change, un seul arbre, aucun `useMediaQuery`. */
+  .portal-fiche-page[data-view='rubric'] .portal-fiche-head > *:not(.portal-h1),
+  .portal-fiche-page[data-view='rubric'] .portal-hub-list { display: none; }
+  .portal-fiche-page[data-view='rubric'] .portal-fiche-head { display: block; margin: 0; gap: 0; }
+  .portal-fiche-page[data-view='rubric'] .portal-fiche-head > .portal-h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+/* ---- La fiche : liste de rubriques, formulaires, envoi (Task 14) -------------------
+   Tout reste scopé `.portal-shell` / `.portal-modal`. Les tailles sont POSÉES ici, pas
+   surchargées : le kit maison est taillé back-office et ne déclare aucune hauteur. ---- */
+.portal-fiche-head { display: grid; gap: 12px; margin-bottom: 20px; }
+.portal-fiche-head > h1,
+.portal-fiche-head > p { margin: 0; }
+
+/* Lien de retour — 44 px de haut, la cible d'un pouce pressé. */
+.portal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--teal);
+  font-weight: 700;
+  text-decoration: none;
+  justify-self: start;
+}
+.portal-back:hover { text-decoration: underline; }
+
+/* ---- La liste des rubriques ---- */
+.portal-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-s);
+  overflow: hidden;
+}
+.portal-tasks > li + li { border-top: 1px solid var(--line); }
+.portal-task__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+/* Une rubrique indisponible n'est pas cliquable : ouvrir un écran qui ne peut rien
+   enregistrer serait un bouton qui échoue. */
+.portal-task__link--off { cursor: default; opacity: 0.75; }
+.portal-task__body { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.portal-task__title { font-size: 1.02rem; font-weight: 700; }
+.portal-task__held { font-size: 0.85rem; font-weight: 600; color: var(--teal); }
+.portal-task__summary {
+  color: var(--ink-3);
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Progression. La barre est DÉCORATIVE : la valeur vit dans la phrase. ---- */
+.portal-progress { display: grid; gap: 6px; }
+.portal-progress > p { margin: 0; font-size: 0.95rem; color: var(--ink-2); }
+.portal-progress__track {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.portal-progress__track > span { display: block; height: 100%; background: var(--teal); }
+
+/* ---- « Pour compléter », retours de l'office, remerciement, vérification ---- */
+.portal-todo,
+.portal-returns,
+.portal-thanks,
+.portal-verify,
+.portal-photos,
+.portal-managed { padding: 16px; display: grid; gap: 10px; }
+.portal-todo h2,
+.portal-returns h2,
+.portal-thanks h2,
+.portal-verify h2,
+.portal-photos h2 { margin: 0; font-family: var(--font-display), sans-serif; font-size: 1rem; }
+.portal-todo .ghost-button { justify-content: flex-start; }
+.portal-returns ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.portal-returns p { margin: 0; }
+.portal-returns blockquote {
+  margin: 6px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--bg);
+  border-radius: 0 8px 8px 0;
+  color: var(--ink-2);
+}
+.portal-thanks { border-color: var(--brand-green); }
+.portal-thanks > svg { color: var(--brand-green); }
+.portal-thanks:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.portal-verify__list { margin: 0; display: grid; gap: 8px; }
+.portal-verify__list > div { display: grid; gap: 2px; }
+.portal-verify__list dt { font-size: 0.88rem; color: var(--ink-3); }
+.portal-verify__list dd { margin: 0; font-weight: 600; }
+.portal-verify__contacts { display: grid; gap: 6px; margin-top: 6px; }
+
+/* ---- Photos (lecture seule, D11) ---- */
+.portal-gallery { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.portal-gallery > li { position: relative; }
+.portal-gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; display: block; }
+.portal-gallery__tag {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: var(--surface);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.portal-photos__actions { display: grid; gap: 10px; }
+/* Le bouton de copie porte un LIBELLÉ VISIBLE ici : il est le repli d'un mailto: qui peut
+   échouer en silence, pas une commodité à côté d'un contact déjà étiqueté. */
+.portal-copy { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.portal-copy .ghost-button { display: inline-flex; align-items: center; gap: 8px; }
+.portal-copy__value { font-weight: 600; word-break: break-all; }
+
+/* ---- Formulaires de rubrique ---- */
+.portal-form { display: grid; gap: 16px; }
+.portal-field { gap: 0.35rem; }
+.portal-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+}
+.portal-input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+/* L'erreur est un TEXTE sous le champ ; la bordure ne fait que l'accompagner. */
+.portal-input--invalid { border-color: var(--destructive); }
+/* 48 px, comme tout le reste : ce sont les champs de « Vos horaires », l'écran qu'un
+   restaurateur ouvre le plus souvent, et 44 px passait sous la cible du pouce. */
+.portal-input--time { width: 118px; min-height: 48px; padding: 10px 12px; }
+.portal-input--unit { width: auto; min-width: 120px; }
+.portal-suffixed { display: flex; align-items: center; gap: 8px; }
+.portal-suffixed > input { flex: 1; min-width: 0; }
+.portal-suffixed > span { color: var(--ink-2); white-space: nowrap; }
+.portal-counter { margin: -10px 0 0; font-size: 0.85rem; }
+.portal-fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.portal-fieldset > legend { font-size: 1rem; font-weight: 700; padding: 0; margin-bottom: 4px; }
+.portal-rubric-actions { display: grid; gap: 10px; }
+.portal-rubric-actions__note { margin: 0; font-size: 0.9rem; }
+.portal-dates { display: grid; gap: 12px; }
+.portal-closure {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.portal-disclosure > summary { min-height: 48px; display: flex; align-items: center; cursor: pointer; }
+.portal-readonly-list { display: grid; gap: 6px; }
+.portal-readonly-list h2 { margin: 0; font-size: 0.95rem; }
+.portal-readonly-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.portal-sent-lines { display: grid; gap: 2px; margin-top: 4px; font-weight: 600; }
+
+/* Une case ou un radio taillé pour un pouce : le LIBELLÉ fait partie de la cible. */
+.portal-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.portal-choice input { width: 22px; height: 22px; accent-color: var(--teal); margin: 0; flex: none; }
+.portal-choice:has(:checked) { border-color: var(--teal); background: rgb(var(--theme-primary-rgb) / 0.08); }
+
+.portal-shortcuts { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Les raccourcis « Tous les jours » / « Du lundi au vendredi » / « Le week-end » sont des
+   commandes à part entière, pas des étiquettes : même cible que les autres boutons. */
+.portal-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.portal-pill:hover { border-color: var(--teal); color: var(--teal); }
+
+.portal-week { display: grid; gap: 10px; }
+.portal-week__day {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.portal-week__name { margin: 0; font-weight: 700; }
+.portal-slot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.portal-slot > label { color: var(--ink-2); font-size: 0.95rem; }
+
+/* ---- La barre d'envoi. `sticky`, JAMAIS `fixed` : un élément fixe saute au-dessus du
+   clavier iOS et se retrouve au milieu de l'écran pendant la saisie. Aucun ancêtre de
+   `.portal-shell` ne doit porter `overflow: hidden|auto`, sinon le sticky ne colle pas. -- */
+.portal-sendbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: grid;
+  gap: 8px;
+  margin: 16px -16px 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: var(--shadow-m);
+}
+.portal-sendbar__state { margin: 0; font-size: 0.95rem; color: var(--ink-2); }
+.portal-sendbar__reason {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  /* L'encre ambrée SANS son fond ambré ne tenait pas le contraste sur `--surface`. */
+  background: rgb(214 147 58 / 0.12);
+  color: #7a4e12;
+}
+.portal-sendbar__actions { display: grid; gap: 8px; }
+/* `aria-disabled`, pas `disabled` : le bouton reste focalisable, donc sa raison reste
+   lisible — mais il doit AVOIR l'air indisponible. */
+.portal-sendbar .primary-button[aria-disabled='true'] { opacity: 0.55; }
+
+/* ---- La fenêtre d'envoi (hors `.portal-shell` : createPortal vers document.body). ---- */
+.portal-modal .portal-send-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.portal-modal .portal-send-list > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.portal-modal .portal-send-list__title { font-weight: 700; flex: 1; min-width: 0; }
+.portal-modal .portal-input { width: 100%; }
+
+@media (min-width: 1024px) {
+  /* Sur ordinateur la barre n'a plus à coller sous le pouce : elle redevient une carte
+     en fin de colonne, atteignable sans masquer la saisie. */
+  .portal-sendbar { margin-inline: 0; border-radius: var(--radius-md); border: 1px solid var(--line); }
+  .portal-sendbar__actions { display: flex; justify-content: flex-end; gap: 12px; }
+  .portal-rubric-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .portal-rubric-actions__note { flex-basis: 100%; }
+  .portal-dates { grid-template-columns: 1fr 1fr; }
+}

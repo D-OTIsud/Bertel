@@ -5,10 +5,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getPostLoginPath, isSafeInternalPath } from '../lib/auth-routing';
+import { getPostLoginPath, isPortalPath, isSafeInternalPath } from '../lib/auth-routing';
 import { loginEmailSchema, type LoginFormValues } from '../lib/schemas';
 import { requestPasswordReset, signInWithGoogle, signInWithEmailPassword } from '../services/auth';
-import { useSessionStore } from '../store/session-store';
+import { GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,6 +47,14 @@ export default function LoginPage() {
 
   const [submitting, setSubmitting] = useState(false);
 
+  // Premier contact d'un partenaire : `?espace=1` est posé par son lien d'invitation,
+  // `?from=/espace...` par un retour depuis le portail. Dans les deux cas la page parle
+  // de SA fiche, et ne propose pas Google : un compte invité par e-mail n'a pas de
+  // profil Google, et l'y envoyer le laisse sur un écran de session sans issue.
+  const fromParam = searchParams?.get('from') ?? null;
+  const isPartnerEntry =
+    searchParams?.get('espace') === '1' || (isSafeInternalPath(fromParam) && isPortalPath(fromParam));
+
   // Panneau « mot de passe oublié » : même carte, bascule locale (pas de route dédiée).
   const [forgotMode, setForgotMode] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -71,7 +79,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!errorMessage) return;
-    if (status === 'error' || errorMessage.includes('deconnecte')) {
+    if (status === 'error' || errorMessage === GUEST_SIGNED_OUT_MESSAGE) {
       toast.error(errorMessage);
     }
   }, [errorMessage, status]);
@@ -118,7 +126,7 @@ export default function LoginPage() {
   }
 
   async function handleGoogleLogin() {
-    const from = searchParams?.get('from');
+    const from = fromParam;
     if (typeof window !== 'undefined') {
       if (isSafeInternalPath(from)) {
         sessionStorage.setItem('auth_redirect_from', from);
@@ -193,7 +201,7 @@ export default function LoginPage() {
     <AuthShell>
       <div className="auth-panel__head">
         <h2>Connexion</h2>
-        <p>Accédez à votre espace de travail.</p>
+        <p>{isPartnerEntry ? 'Connectez-vous pour mettre à jour votre fiche.' : 'Accédez à votre espace de travail.'}</p>
       </div>
 
       {!demoMode ? (
@@ -238,18 +246,22 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="auth-divider">ou</p>
+          {!isPartnerEntry && (
+            <>
+              <p className="auth-divider">ou</p>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => void handleGoogleLogin()}
-            disabled={submitting}
-          >
-            <GoogleMark />
-            {submitting ? 'Redirection Google...' : 'Continuer avec Google'}
-          </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => void handleGoogleLogin()}
+                disabled={submitting}
+              >
+                <GoogleMark />
+                {submitting ? 'Redirection Google...' : 'Continuer avec Google'}
+              </Button>
+            </>
+          )}
         </>
       ) : (
         <>

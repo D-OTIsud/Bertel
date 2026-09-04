@@ -18,6 +18,7 @@ import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
+import { ActorSectionVisibilityForm } from '../features/orgs/ActorSectionVisibilityForm';
 import { ProfileEditModal } from '../features/settings/ProfileEditModal';
 import { SettingsRail } from './SettingsRail';
 import { buildSettingsNav, resolveSettingsSection } from './settings-nav';
@@ -78,7 +79,14 @@ export default function SettingsPage() {
   // Task 11 — branding par ORG : réservé à l'admin d'ORG de rang ≥ 30 (au-delà du seuil ≥ 10
   // qui donne juste accès à l'équipe), et seulement si l'utilisateur est bien rattaché à une ORG.
   const canManageOrgBranding = (adminRank ?? 0) >= 30 && !!orgId;
-  const settingsNavOptions = useMemo(() => ({ canManageTeam, canManageOrgBranding }), [canManageTeam, canManageOrgBranding]);
+  // Task 19 — portail acteurs : MÊME calcul, et ce n'est pas une coïncidence. Le seuil ≥ 30
+  // est celui qu'api.rpc_set_actor_section_visibility applique côté serveur ; l'ORG est
+  // exigée parce que la matrice est portée PAR ORG (org_object_id est un paramètre du RPC).
+  const canManageActorPortal = (adminRank ?? 0) >= 30 && !!orgId;
+  const settingsNavOptions = useMemo(
+    () => ({ canManageTeam, canManageOrgBranding, canManageActorPortal }),
+    [canManageTeam, canManageOrgBranding, canManageActorPortal],
+  );
   const settingsNav = useMemo(() => buildSettingsNav(role, settingsNavOptions), [role, settingsNavOptions]);
   const [activeSection, setActiveSection] = useState<string>(() =>
     resolveSettingsSection(role, typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('section'), settingsNavOptions),
@@ -821,6 +829,20 @@ export default function SettingsPage() {
               </div>
             </div>
             <OrgBrandingForm orgId={orgId} />
+          </section>
+        </article>
+      )}
+
+      {activeSection === 'actor-portal' && canManageActorPortal && orgId && (
+        <article className="panel-card">
+          <section className="settings-pane">
+            <div className="settings-pane__head">
+              <div>
+                <h2>Portail acteurs</h2>
+                <p className="muted">Choisissez les rubriques que les prestataires peuvent remplir, par type de fiche. Les informations de gestion restent toujours internes.</p>
+              </div>
+            </div>
+            <ActorSectionVisibilityForm orgId={orgId} />
           </section>
         </article>
       )}

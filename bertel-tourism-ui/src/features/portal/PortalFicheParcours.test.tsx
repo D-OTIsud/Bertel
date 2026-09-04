@@ -15,7 +15,10 @@ import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PortalFichePage } from './PortalFichePage';
 import { portalDraftKey, portalFormKey, writePortalDraft, writePortalSent } from './usePortalDraft';
-import { KIND_OPTIONS, portalModules } from './__fixtures__/portal-fixtures';
+import { actorPortalPermissions, KIND_OPTIONS, portalModules } from './__fixtures__/portal-fixtures';
+import { PORTAL_RUBRICS } from './portal-rubrics';
+import { MODULE_KEY_MAP } from '../object-editor/editor-state';
+import type { ObjectWorkspacePermissions } from '../../services/object-workspace';
 import * as portal from '../../services/portal';
 import * as explorerQueries from '../../hooks/useExplorerQueries';
 import { useSessionStore } from '../../store/session-store';
@@ -92,14 +95,20 @@ const fiche = (over: Partial<portal.PortalFiche> = {}): portal.PortalFiche => ({
   ...over,
 });
 
-function primeServices(modules: ObjectWorkspaceModules = fixture()) {
+function primeServices(
+  modules: ObjectWorkspaceModules = fixture(),
+  // `{}` n'est PAS l'objet d'un partenaire : `accessReason` y rend `null` partout, et la
+  // suite ne voit alors jamais le refus de droits que le serveur oppose à TOUT compte
+  // portail. Les parcours qui veulent l'état réel passent `actorPortalPermissions()`.
+  permissions: ObjectWorkspacePermissions = {} as never,
+) {
   mockedQueries.loadObjectWorkspace.mockResolvedValue({
     id: OBJ,
     name: 'Villa Vanille',
     type: 'HOT',
     detail: {} as never,
     modules,
-    permissions: {} as never,
+    permissions,
   });
   mockedPortal.getPortalSectionVisibility.mockResolvedValue({ floorModules: FLOOR, maskedModules: [] });
   mockedPortal.listMySubmissions.mockResolvedValue([]);
@@ -139,7 +148,43 @@ beforeEach(() => {
   window.localStorage.clear();
   searchParams = new URLSearchParams('');
   historyStack = [''];
-  useSessionStore.setState({ userId: USER } as never);
+  useSessionStore.setState({ userId: USER, role: 'actor', demoMode: false } as never);
+});
+
+describe('parcours — les DROITS d’un compte portail (D7)', () => {
+  it('les trois sondes serveur refusent tout, et le partenaire garde quand même un chemin d’entrée', async () => {
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // LE test que les sept suites du portail ne pouvaient pas faire : elles passaient
+    // `permissions: {} as never`, un objet VIDE pour lequel `accessReason` rend `null`
+    // partout — donc l'exact contraire de ce que vit un partenaire.
+    // ═══════════════════════════════════════════════════════════════════════════════
+    const permissions = await actorPortalPermissions();
+
+    // PRÉMISSE, pas la preuve : on vérifie qu'on est bien dans le cas fautif. CHAQUE
+    // module du portail porte un refus d'écriture canonique DIRECTE — c'est D7 qui
+    // fonctionne, pas une rubrique indisponible. Sans cette boucle, un objet devenu
+    // permissif un jour rendrait le parcours ci-dessous vert pour la mauvaise raison.
+    const access = permissions as unknown as Record<string, { disabledReason: string | null }>;
+    for (const rubric of PORTAL_RUBRICS) {
+      expect(access[MODULE_KEY_MAP[rubric.module]]?.disabledReason).toEqual(expect.any(String));
+    }
+
+    primeServices(fixture(), permissions);
+    renderRouted('');
+
+    const list = await screen.findByRole('list', { name: 'Les rubriques de votre fiche' });
+    // Aucune rubrique fermée, et le compteur ne dit pas « 0 sur 0 ».
+    expect(within(list).queryAllByText('Indisponible pour le moment')).toHaveLength(0);
+    expect(screen.queryByText(/sur 0 renseignée/)).not.toBeInTheDocument();
+
+    // Et le chemin va jusqu'au bout : ouvrir, saisir, valider, envoyer. Avec la jambe
+    // `readDisabledReason`, la ligne est un `<span>` inerte : rien de tout ceci n'existe.
+    await userEvent.click(within(list).getByText('Vos coordonnées'));
+    await userEvent.type(await screen.findByLabelText('Téléphone'), '0692 45 12 30');
+    await userEvent.click(screen.getByRole('button', { name: 'Valider' }));
+
+    expect(await screen.findByRole('button', { name: 'Envoyer à l’office' })).toBeInTheDocument();
+  });
 });
 
 describe('parcours — la saisie en cours survit à un RECHARGEMENT', () => {

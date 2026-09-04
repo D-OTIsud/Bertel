@@ -6,6 +6,8 @@
  * Elles vivent dans `__fixtures__/` — jamais chargé par l'application, jamais ramassé par
  * jest comme suite de tests.
  */
+import { getObjectWorkspacePermissions, type ObjectWorkspacePermissions } from '../../../services/object-workspace';
+import { useSessionStore } from '../../../store/session-store';
 import type { ObjectEditorState } from '../../object-editor/useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 
@@ -90,6 +92,35 @@ export function portalModules(over: Record<string, unknown> = {}): ObjectWorkspa
     publication: { status: 'published' },
     ...over,
   } as unknown as ObjectWorkspaceModules;
+}
+
+/**
+ * L'objet `permissions` RÉEL d'un compte portail — produit par la fonction de PRODUCTION,
+ * jamais recopié à la main : recopié, il figerait une supposition, et il cesserait de
+ * suivre `getObjectWorkspacePermissions` au premier module ajouté.
+ *
+ * Pour la persona acteur les trois sondes serveur valent FALSE PAR CONSTRUCTION :
+ *  · `api.is_object_owner` porte `AND NOT api.is_actor_persona()` — c'est D7 ;
+ *  · `user_can_write_canonical` et `user_can_write_enrichment` exigent
+ *    `api.current_user_org_id()`, donc une adhésion `user_org_membership` qu'un compte
+ *    portail n'a jamais.
+ *
+ * CHAQUE module porte donc un `disabledReason` non nul. C'est l'état NORMAL d'un
+ * partenaire, pas une anomalie : `permissions.<module>.disabledReason` décrit l'écriture
+ * canonique DIRECTE — un droit que D7 lui refuse volontairement — et non « peut-il
+ * proposer ? », qui est la seule question du portail.
+ *
+ * `getApiClient()` rend `null` sous jest (pas de configuration Supabase) : les sondes
+ * gardent leurs valeurs par défaut, exactement celles que le SQL rend à un acteur.
+ */
+export async function actorPortalPermissions(): Promise<ObjectWorkspacePermissions> {
+  const before = useSessionStore.getState();
+  useSessionStore.setState({ demoMode: false, role: 'actor' } as never);
+  try {
+    return await getObjectWorkspacePermissions('HOTRUN0001');
+  } finally {
+    useSessionStore.setState({ demoMode: before.demoMode, role: before.role } as never);
+  }
 }
 
 export function fakeEditor(

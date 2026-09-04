@@ -151,15 +151,37 @@ describe('buildPortalRubrics — visibilité et états', () => {
     expect(r.find((x) => x.id === 'amenities')?.state).toBe('unavailable');
   });
 
-  it('un refus de DROITS (disabledReason) ferme la rubrique comme une donnée absente', () => {
-    const permissions = {
-      contacts: { canDirectWrite: false, canPrepareProposal: false, canSubmitProposal: false, disabledReason: 'Vos droits actuels ne permettent pas…' },
-    } as unknown as ObjectWorkspacePermissions;
-    const r = build({ permissions });
-    expect(r.find((x) => x.id === 'contacts')?.state).toBe('unavailable');
-    // Le champ est OPPOSÉ à unavailableReason : sans le chaînage en OU, la rubrique resterait
-    // éditable et l'envoi serait refusé côté serveur, sans explication à l'écran.
-    expect(r.find((x) => x.id === 'presentation')?.state).not.toBe('unavailable');
+  it('un refus de DROITS n’entre PAS dans l’état d’une rubrique', () => {
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // CE TEST EST LE RETOURNEMENT DE SON PRÉDÉCESSEUR, qui verrouillait POSITIVEMENT le
+    // comportement fautif (« un disabledReason ferme la rubrique »).
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Pour la persona acteur, les trois sondes dont dérive `disabledReason` valent FALSE
+    // par construction (D7 sur `is_object_owner`, adhésion ORG absente pour les deux
+    // autres) : CHAQUE module en porte un. Le chaîner fermait les sept rubriques de TOUT
+    // partenaire — « 0 sur 0 », aucun champ, aucun envoi possible.
+    const refused = {
+      canDirectWrite: false,
+      canPrepareProposal: false,
+      canSubmitProposal: false,
+      disabledReason: 'Vos droits actuels ne permettent pas cette modification.',
+    };
+    const permissions = Object.fromEntries(
+      ['contacts', 'descriptions', 'openings', 'characteristics', 'capacityPolicies', 'pricing', 'activity'].map(
+        (key) => [key, refused],
+      ),
+    ) as unknown as ObjectWorkspacePermissions;
+
+    const withoutPermissions = build().map((r) => `${r.id}:${r.state}`);
+    const withRefusal = build({ permissions } as never).map((r) => `${r.id}:${r.state}`);
+
+    expect(withRefusal).toEqual(withoutPermissions);
+    expect(withRefusal.some((entry) => entry.endsWith(':unavailable'))).toBe(false);
+    // Et la LIAISON elle-même a quitté le registre : sans ça, la rechaîner reste à un
+    // caractère de distance.
+    for (const rubric of PORTAL_RUBRICS) {
+      expect(rubric).not.toHaveProperty('readDisabledReason');
+    }
   });
 
   it('les horaires saisonniers restent visibles mais en lecture seule', () => {

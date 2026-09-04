@@ -192,9 +192,8 @@ export function PortalFicheEditor({
         floor: visibility.floorModules,
         pendingModules,
         rejectedModules,
-        permissions: resource.permissions,
       }),
-    [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules, resource.permissions],
+    [archetype, editor.draft, editor.dirtySections, visibility, pendingModules, rejectedModules],
   );
 
   const rejections = useMemo<PortalRejection[]>(() => {

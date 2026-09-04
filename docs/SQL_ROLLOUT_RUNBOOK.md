@@ -303,6 +303,8 @@ Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns a
 
 18c. `migration_test_org_isolation.sql` — Isolation du bac a sable. Apres toutes les policies et le portail ; applique la dimension de test et rejoue `tests/test_test_org_isolation.sql`, y compris le croisement des liens explicites du portail.
 
+18c1. `migration_partner_tombstone_feed.sql` — Flux des suppressions definitives partenaire, excluant le bac a sable ; apres creation de `object_deletion_log.is_test` par 18c, avant le test d'isolation.
+
 18d0. `migration_test_org_facets.sql` — Fonction de generation des facettes par type, avant le seed qui l'appelle.
 
 18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.

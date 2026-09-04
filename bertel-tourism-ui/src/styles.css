@@ -3837,6 +3837,9 @@ a {
   cursor: default;
 }
 
+.auth-test-link { align-self: center; margin-top: 0.5rem; }
+.sandbox-banner__exit { margin-left: auto; white-space: nowrap; }
+
 .auth-divider {
   display: flex;
   align-items: center;

@@ -573,6 +573,10 @@ ROLLBACK;
 \ir migration_actor_portal_access_permission.sql
 \ir tests/test_actor_portal_access_permission.sql
 
+\echo '== 18f entree publique de decouverte, session bornee au corpus de test =='
+\ir migration_public_sandbox_entry.sql
+\ir tests/test_public_sandbox_entry.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

@@ -5,6 +5,8 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
 import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
+import { isSandboxMode } from '../lib/sandbox-mode';
+import { leaveSandbox } from '../services/sandbox';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -185,6 +187,11 @@ export function useBootstrapSession() {
       }
 
       if (!data.user) {
+        if (isSandboxMode()) {
+          leaveSandbox();
+          window.location.replace('/login');
+          return;
+        }
         setGuest(
           options.authEvent === 'SIGNED_OUT' ? GUEST_SIGNED_OUT_MESSAGE : GUEST_SIGN_IN_MESSAGE,
         );
@@ -262,6 +269,10 @@ export function useBootstrapSession() {
       }
       const isTestRealm = await fetchTestRealm();
       if (cancelled) {
+        return;
+      }
+      if (isSandboxMode() && !isTestRealm) {
+        setSessionError('Le cloisonnement de l’espace de test n’a pas pu être vérifié. Revenez à la connexion pour réessayer.');
         return;
       }
 

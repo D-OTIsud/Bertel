@@ -1,6 +1,8 @@
 'use client';
 
 import { useSessionStore } from '../../store/session-store';
+import { leaveSandbox } from '@/services/sandbox';
+import { isSandboxMode } from '@/lib/sandbox-mode';
 
 /**
  * Bandeau « bac à sable » — affiché quand le compte appartient à une organisation
@@ -31,6 +33,9 @@ export function SandboxBanner() {
         Données de test uniquement{orgName ? ` — ${orgName}` : ''}. Le corpus réel n’est pas
         visible ici, et rien de ce que vous modifiez ne part à l’API partenaire.
       </span>
+      {isSandboxMode() && <a className="auth-link sandbox-banner__exit" href="/login" onClick={() => leaveSandbox()}>
+        Quitter le test
+      </a>}
     </div>
   );
 }

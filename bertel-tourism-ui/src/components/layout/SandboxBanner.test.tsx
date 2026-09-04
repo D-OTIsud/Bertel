@@ -1,6 +1,7 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { SandboxBanner } from './SandboxBanner';
 import { useSessionStore } from '../../store/session-store';
+import { SANDBOX_MODE_KEY } from '@/lib/sandbox-mode';
 
 /**
  * Le bandeau existe parce que le corpus de test est DELIBEREMENT indiscernable de
@@ -33,5 +34,15 @@ describe('SandboxBanner', () => {
     useSessionStore.setState({ isTestRealm: true, orgName: null });
     render(<SandboxBanner />);
     expect(screen.getByRole('status')).toHaveTextContent('Données de test uniquement');
+  });
+
+  it('propose une sortie discrète qui quitte le mode test sans déconnecter le travail', () => {
+    sessionStorage.setItem(SANDBOX_MODE_KEY, 'true');
+    useSessionStore.setState({ isTestRealm: true });
+    render(<SandboxBanner />);
+    const exit = screen.getByRole('link', { name: 'Quitter le test' });
+    expect(exit).toHaveAttribute('href', '/login');
+    fireEvent.click(exit);
+    expect(sessionStorage.getItem(SANDBOX_MODE_KEY)).toBeNull();
   });
 });

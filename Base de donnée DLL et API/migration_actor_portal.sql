@@ -94,7 +94,8 @@ AS $$
   WHERE aor.actor_id = api.current_user_actor_id()
     AND (aor.valid_from IS NULL OR aor.valid_from <= CURRENT_DATE)
     AND (aor.valid_to   IS NULL OR aor.valid_to   >= CURRENT_DATE)
-    AND o.object_type <> 'ORG';
+    AND o.object_type <> 'ORG'
+    AND o.is_test = (SELECT api.current_user_test_realm());
 $$;
 REVOKE EXECUTE ON FUNCTION api.current_user_portal_object_ids() FROM PUBLIC, anon;
 GRANT  EXECUTE ON FUNCTION api.current_user_portal_object_ids() TO authenticated, service_role;
@@ -108,8 +109,8 @@ GRANT  EXECUTE ON FUNCTION api.current_user_actor_id()   TO authenticated, servi
 -- il accorderait les fiches d'un homonyme d'e-mail et TOUTES les fiches de l'ORG.
 -- api.can_read_extended délègue déjà à cette fonction (« one source of truth », voir
 -- son en-tête dans rls_policies.sql) : le branchement se propage seul aux ~40 policies
--- de lecture. Les 5 bras historiques sont recopiés BYTE-À-BYTE depuis rls_policies.sql
--- (L149-180) — ne pas les « améliorer » ici.
+-- de lecture. Les cinq bras historiques conservent le filtre de realm commun
+-- de migration_explorer_rls_setbased.sql : le portail ne doit pas annuler cette garde.
 CREATE OR REPLACE FUNCTION api.current_user_extended_object_ids()
 RETURNS SETOF text
 LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -121,35 +122,40 @@ BEGIN
     RETURN;
   END IF;
   RETURN QUERY
-  -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
-  SELECT aor.object_id FROM actor_object_role aor
-  WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  UNION
-  -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
-  SELECT ool.object_id FROM object_org_link ool
-  WHERE ool.org_object_id IN (
+  SELECT s.object_id
+  FROM (
+    -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
     SELECT aor.object_id FROM actor_object_role aor
     WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  )
-  UNION
-  -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
-  SELECT uom.org_object_id FROM user_org_membership uom
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
-  SELECT ool.object_id FROM user_org_membership uom
-  JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
-  SELECT o.id FROM object o
-  WHERE o.status = 'published'
-    AND EXISTS (
-      SELECT 1 FROM user_org_membership uom
-      JOIN org_config oc ON oc.org_object_id = uom.org_object_id
-      WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-        AND oc.access_scope = 'all_published'
-    );
+    UNION
+    -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
+    SELECT ool.object_id FROM object_org_link ool
+    WHERE ool.org_object_id IN (
+      SELECT aor.object_id FROM actor_object_role aor
+      WHERE aor.actor_id IN (SELECT api.user_actor_ids())
+    )
+    UNION
+    -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
+    SELECT uom.org_object_id FROM user_org_membership uom
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
+    SELECT ool.object_id FROM user_org_membership uom
+    JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
+    SELECT o.id FROM object o
+    WHERE o.status = 'published'
+      AND EXISTS (
+        SELECT 1 FROM user_org_membership uom
+        JOIN org_config oc ON oc.org_object_id = uom.org_object_id
+        WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+          AND oc.access_scope = 'all_published'
+      )
+  ) AS s(object_id)
+  JOIN object o ON o.id = s.object_id
+  WHERE o.is_test = (SELECT api.current_user_test_realm());
 END;
 $$;
 REVOKE EXECUTE ON FUNCTION api.current_user_extended_object_ids() FROM PUBLIC;
@@ -175,7 +181,8 @@ COMMENT ON FUNCTION api.current_user_portal_object_ids() IS
 --    après « SELECT 1 »), seul le `AND NOT api.is_actor_persona()` est ajouté.
 --    Durcissement (hors brief, doctrine §208/R2.1 — cette fonction LIT actor_object_role) :
 --    `pg_temp` ajouté en fin de search_path, absent du corps vif. C'est un ajout défensif
---    qui ne change aucun comportement (aucune table temporaire nommée `actor_object_role`,
+--    Integration du bac a sable : le lien owner conserve aussi le filtre de realm.
+--    Ce durcissement ne change aucun comportement (aucune table temporaire nommée `actor_object_role`,
 --    `app_user_profile` etc. n'existe dans ce contexte) — pas une régression.
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION api.is_object_owner(p_object_id text)
@@ -187,9 +194,11 @@ AS $$
     EXISTS (
       SELECT 1
       FROM actor_object_role aor
+      JOIN object o ON o.id = aor.object_id
       WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids())
         AND aor.object_id = p_object_id
         AND aor.is_primary = TRUE
+        AND o.is_test = (SELECT api.current_user_test_realm())
     )
     -- D7 (18a) : une persona acteur ne tient JAMAIS l'écriture canonique par son lien.
     AND NOT api.is_actor_persona()

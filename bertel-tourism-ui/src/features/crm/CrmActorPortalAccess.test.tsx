@@ -34,9 +34,9 @@ function noAccount() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mocked.invitePortalAccess.mockResolvedValue(undefined);
-  mocked.resendPortalAccess.mockResolvedValue(undefined);
-  mocked.revokePortalAccess.mockResolvedValue(undefined);
+  mocked.invitePortalAccess.mockResolvedValue({ traced: true });
+  mocked.resendPortalAccess.mockResolvedValue({ traced: true });
+  mocked.revokePortalAccess.mockResolvedValue({ traced: true });
 });
 
 describe('CrmActorPortalAccess — aucun accès encore ouvert', () => {
@@ -177,6 +177,55 @@ describe('CrmActorPortalAccess — un accès existe', () => {
     const revoke = screen.getByRole('button', { name: 'Révoquer' });
     expect(revoke).toBeDisabled();
     expect(revoke).toHaveAttribute('title', CRM_READ_ONLY_REASON);
+    // La raison est AUSSI à l'écran : un `title` ne se lit ni au doigt ni par toutes les
+    // aides techniques. Même règle que le bras « pas de compte ».
+    expect(screen.getByText(CRM_READ_ONLY_REASON)).toBeInTheDocument();
+  });
+
+  // IMPORTANT 7 se refermait au serveur mais pas à l'écran : la route rend `traced`, le
+  // service le jetait. Une trace manquée redevenait invisible à l'agent — le silence
+  // simplement déplacé d'un cran.
+  it('trace CRM manquée : le geste est annoncé RÉUSSI, et le défaut de journalisation est dit', async () => {
+    mocked.getPortalAccessStatus.mockResolvedValue({
+      account: { userId: 'u1', email: 'marie@basalte.re', invitedAt: '2026-08-01T09:00:00Z', lastSignInAt: null },
+      linkedToOtherAccount: false,
+    });
+    mocked.revokePortalAccess.mockResolvedValue({ traced: false });
+    renderCard();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Révoquer' }));
+    await screen.findByRole('dialog', { name: /Révoquer l’accès portail/ });
+    const confirmButtons = screen.getAllByRole('button', { name: 'Révoquer' });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    const notice = await screen.findByRole('status');
+    expect(notice).toHaveTextContent('L’accès a été révoqué, mais l’action n’a pas pu être journalisée dans le CRM.');
+    // Pas une alerte : le geste a réussi, recommencer serait une erreur.
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('trace CRM manquée sur l’invitation : le message nomme le geste réellement accompli', async () => {
+    noAccount();
+    mocked.invitePortalAccess.mockResolvedValue({ traced: false });
+    renderCard();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Inviter/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Envoyer l’invitation' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'L’accès a été ouvert, mais l’action n’a pas pu être journalisée dans le CRM.',
+    );
+  });
+
+  it('trace CRM réussie : aucun message parasite', async () => {
+    noAccount();
+    renderCard();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Inviter/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Envoyer l’invitation' }));
+
+    await waitFor(() => expect(mocked.invitePortalAccess).toHaveBeenCalled());
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('un refus du serveur est affiché en clair, sans laisser croire que c’est parti', async () => {

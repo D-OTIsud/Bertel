@@ -53,7 +53,6 @@ function item(id: string, readAt: string | null = null) {
     createdById: 'u-jean',
     createdByName: 'Jean P.',
     outcome: null,
-    submissionId: null,
   };
 }
 
@@ -67,7 +66,6 @@ function reviewItem(id: string) {
     createdById: null,
     createdByName: null,
     outcome: 'partial' as const,
-    submissionId: 'sub-1',
   };
 }
 

@@ -13,6 +13,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ActorSectionVisibilityForm } from './ActorSectionVisibilityForm';
 import * as service from '../../services/actor-visibility';
+import { OBJECT_TYPE_CODES } from '../../lib/object-types';
 
 // Seuls les DEUX appels réseau sont doublés. `actorVisibilityKeys` reste la VRAIE fabrique
 // de clés : automockée, elle rendrait `undefined` pour tous les types, la query ne serait
@@ -80,11 +81,18 @@ describe('les rubriques listées suivent le type de fiche', () => {
     const codes = within(select as HTMLSelectElement).getAllByRole('option').map((o) => (o as HTMLOptionElement).value);
     expect(codes).toContain('HLO');
     expect(codes).toContain('RES');
-    // ITI et FMA n'ont AUCUNE rubrique de portail (registre fail-closed) et ORG n'est pas une
-    // fiche : les régler serait un réglage sans effet, donc un mensonge.
+    // …et pas seulement les familles évidentes : SRV couvre aussi commerces et services.
+    expect(codes).toContain('COM');
+    // ITI et FMA n'ont AUCUNE rubrique de portail (registre fail-closed) : les régler serait
+    // un réglage sans effet, donc un mensonge.
     expect(codes).not.toContain('ITI');
     expect(codes).not.toContain('FMA');
+    // ORG est l'un des 19 codes du modèle mais n'est PAS une fiche. L'assertion est comparée
+    // au vocabulaire fermé de la DB, sinon elle serait vraie par construction (ORG n'est pas
+    // une clé de TYPE_ARCHETYPES) et ne mordrait pas si la liste venait d'OBJECT_TYPE_CODES.
+    expect(OBJECT_TYPE_CODES.has('ORG')).toBe(true);
     expect(codes).not.toContain('ORG');
+    for (const code of codes) expect(OBJECT_TYPE_CODES.has(code)).toBe(true);
   });
 });
 
@@ -100,8 +108,12 @@ describe('bascule d’une rubrique', () => {
       expect(mocked.setActorSectionVisibility).toHaveBeenCalledWith('ORG1', 'HLO', 'pricing', true),
     );
     // La matrice relue est celle que l'éditeur en mode portail consomme : sans invalidation,
-    // l'écran affiche un réglage que la fiche du partenaire n'a pas encore.
-    await waitFor(() => expect(invalidate).toHaveBeenCalled());
+    // l'écran affiche un réglage que la fiche du partenaire n'a pas encore. La CLÉ compte :
+    // invalider trop large (ou `undefined`) rafraîchirait tout le cache et masquerait une
+    // clé fausse, invalider une autre clé ne rafraîchirait rien.
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ['actor-section-visibility', 'ORG1', 'HLO'] }),
+    );
   });
 
   it('fermer une rubrique ouverte écrit visible = false, avec SON module', async () => {

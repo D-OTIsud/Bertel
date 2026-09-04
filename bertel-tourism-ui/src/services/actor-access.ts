@@ -61,6 +61,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   forbidden: 'Vous n’avez pas le droit d’écriture CRM sur cet acteur.',
   unauthenticated: 'Session expirée — reconnectez-vous.',
   invalid_email: 'Cette adresse e-mail n’est pas valide.',
+  // Pannes serveur. Le `detail` brut de GoTrue/PostgREST ne redescend PAS jusqu'ici (la route
+  // ne l'émet plus) : ces phrases sont donc TOUT ce que l'agent lira, elles doivent dire quoi
+  // faire. « Aucun compte n'a été créé » compte : sans cette précision, l'agent réessaie et
+  // tombe sur un 409.
+  profile_read_failed: 'Impossible de vérifier l’accès portail pour l’instant. Réessayez dans un instant.',
+  create_failed: 'L’invitation n’a pas pu être envoyée. Aucun compte n’a été créé — réessayez.',
+  profile_failed: 'L’invitation a échoué et le compte a été annulé. Réessayez ; si cela persiste, signalez-le.',
+  resend_failed: 'Le renvoi a échoué. L’accès existant n’a pas été modifié.',
+  revoke_failed: 'La révocation a échoué. L’accès est toujours actif.',
 };
 
 async function unwrap<T>(response: Response): Promise<T> {

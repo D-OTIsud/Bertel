@@ -163,7 +163,9 @@ export function ActorSectionVisibilityForm({ orgId }: { orgId: string }) {
         <span>
           <Lock size={12} aria-hidden /> Jamais visible par les prestataires
         </span>
-        <ul>
+        {/* Même vocabulaire de liste que les interrupteurs ci-dessus (`perm-list`) : un <ul>
+            nu rendrait des puces de navigateur au milieu d'un volet de réglages. */}
+        <ul className="perm-list">
           <li>
             Gestion interne — informations juridiques, publication, suivi, identifiants de
             synchronisation, diffusion, relations et sous-lieux.

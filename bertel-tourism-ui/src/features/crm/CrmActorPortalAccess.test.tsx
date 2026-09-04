@@ -143,15 +143,33 @@ describe('CrmActorPortalAccess — un accès existe', () => {
 
     expect(await screen.findByText('Invité')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Renvoyer l’invitation' }));
+
+    // Renvoyer envoie un e-mail ET invalide le lien précédent : même exigence de
+    // confirmation que l'invitation (le `findBy` laisse passer les microtâches, donc la
+    // mutation aurait eu le temps de partir si le clic la déclenchait).
+    const dialog = await screen.findByRole('dialog', { name: /Renvoyer l’invitation/ });
+    expect(dialog).toHaveTextContent('marie@basalte.re');
+    expect(mocked.resendPortalAccess).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Renvoyer' }));
     await waitFor(() => expect(mocked.resendPortalAccess).toHaveBeenCalledWith(ACTOR, 'marie@basalte.re'));
   });
 
-  it('lecture seule : « Renvoyer » et « Révoquer » sont désactivés avec la raison standard', async () => {
+  // Cette combinaison — statut LU, écriture refusée — est celle d'un agent en lecture seule,
+  // et elle EXISTE parce que la route gate `status` sur `user_can_read_crm_actor` et non sur
+  // le prédicat d'écriture. Avec un `status` gaté en écriture, `canWrite=false` répondrait
+  // 403 sur chaque fiche : la carte tomberait dans son bras d'erreur et ce test validerait
+  // une branche morte.
+  it('lecture seule : l’état du compte reste LISIBLE, seules les actions sont désactivées', async () => {
     mocked.getPortalAccessStatus.mockResolvedValue({
       account: { userId: 'u1', email: 'marie@basalte.re', invitedAt: '2026-08-01T09:00:00Z', lastSignInAt: null },
       linkedToOtherAccount: false,
     });
     renderCard({ canWrite: false });
+
+    // Pas de bandeau de panne : l'agent voit bien l'état, il ne peut simplement pas agir.
+    expect(await screen.findByText('marie@basalte.re')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     const resend = await screen.findByRole('button', { name: 'Renvoyer l’invitation' });
     expect(resend).toBeDisabled();

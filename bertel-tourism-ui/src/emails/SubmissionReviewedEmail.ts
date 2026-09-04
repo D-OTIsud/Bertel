@@ -28,9 +28,13 @@
 // object_id, outcome}). Le nom de la fiche et celui du destinataire ci-dessous sont JOINTS
 // à la lecture par le claim, au moment de composer — jamais gelés dans la notification.
 import { escapeHtml } from '@/lib/safe-output';
+import { SUBMISSION_OUTCOME_WORD, type SubmissionOutcome } from '@/lib/submission-outcome';
 
-/** Les trois issues d'une vérification — le CHECK de `fiche_submission` moins `pending`. */
-export type SubmissionOutcome = 'approved' | 'rejected' | 'partial';
+// Le type et le mot de chaque issue viennent de `lib/submission-outcome` — la MÊME source
+// que le libellé du tiroir de notifications. Deux surfaces qui décrivent un seul verdict ne
+// peuvent plus diverger sur un arbitrage de copie. Re-exporté pour la route de drain, qui
+// compose depuis ce module.
+export type { SubmissionOutcome };
 
 export interface SubmissionReviewedEmailData {
   /** Nom de la fiche, joint à la lecture. */
@@ -43,17 +47,15 @@ export interface SubmissionReviewedEmailData {
   recipientName: string | null;
   /** Lien ABSOLU vers l'espace du partenaire (`/espace`), jamais vers /crm. */
   appUrl: string;
+  /**
+   * Lien ABSOLU vers la page de connexion (`/login`), qui porte aussi « Mot de passe
+   * oublié ? ». Le lecteur type a posé son mot de passe UNE fois, il y a des mois : sans
+   * cette porte, celui qui ne se reconnecte pas ne saura jamais ce qui a été refusé — et
+   * c'est lui qui téléphone à l'office, ce que ce portail existe pour éviter. Champ à part
+   * plutôt que déduit d'`appUrl` : on ne fabrique pas une URL par découpage de chaîne.
+   */
+  loginUrl: string;
 }
-
-/**
- * Le mot de l'issue, au participe, tel qu'il se lit dans le sujet.
- * Table EXHAUSTIVE par le type : ajouter une issue au SQL sans la rédiger ici ne compilera pas.
- */
-const OUTCOME_WORD: Record<SubmissionOutcome, string> = {
-  approved: 'validées',
-  rejected: 'refusées',
-  partial: 'en partie validées',
-};
 
 /** Le titre du message, dans le corps. Distinct du sujet : il porte la phrase, pas l'objet. */
 const OUTCOME_HEADLINE: Record<SubmissionOutcome, string> = {
@@ -73,15 +75,19 @@ const OUTCOME_BODY: Record<SubmissionOutcome, readonly string[]> = {
     'Tout ce que vous avez envoyé a été accepté.',
     'Vous n’avez rien à faire.',
   ],
+  // Chaque phrase apporte un fait de PLUS que le titre. Une 2ᵉ phrase qui paraphrase le
+  // titre (« a été validée » / « a été acceptée ») fait chercher deux faits là où il n'y en
+  // a qu'un : elle dit donc ce que la décision CHANGE pour la fiche, ce que le titre ne dit
+  // pas. Vrai dans les deux cas : rien de refusé n'a été appliqué.
   rejected: [
     'Votre office de tourisme a vérifié votre fiche.',
-    'L’office n’a retenu aucune de vos modifications.',
+    'Votre fiche n’a pas changé : elle reste telle qu’elle était avant votre envoi.',
     'L’office a indiqué pourquoi. Ouvrez votre espace pour le lire, corriger et renvoyer.',
   ],
   partial: [
     'Votre office de tourisme a vérifié votre fiche.',
-    'Une partie de vos modifications a été acceptée.',
-    'L’office n’a pas retenu le reste, et il a indiqué pourquoi. Ouvrez votre espace pour le lire, corriger et renvoyer.',
+    'L’office n’a pas retenu le reste : votre fiche n’a pas changé sur ces points.',
+    'L’office a indiqué pourquoi. Ouvrez votre espace pour le lire, corriger et renvoyer.',
   ],
 };
 
@@ -92,7 +98,7 @@ const OUTCOME_BODY: Record<SubmissionOutcome, readonly string[]> = {
  * l'échapper y ferait lire « &lt;b&gt; » au lieu du nom. L'échappement porte sur le corps.
  */
 export function submissionReviewedEmailSubject(data: SubmissionReviewedEmailData): string {
-  return `Vos modifications ont été ${OUTCOME_WORD[data.outcome]} — ${data.objectName}`;
+  return `Vos modifications ont été ${SUBMISSION_OUTCOME_WORD[data.outcome]} — ${data.objectName}`;
 }
 
 /**
@@ -129,6 +135,7 @@ export function renderSubmissionReviewedEmailHtml(data: SubmissionReviewedEmailD
   <tr><td style="padding:20px 26px 26px;">
     <a href="${escapeHtml(data.appUrl)}" style="display:inline-block;background:#0e7a6f;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;border-radius:10px;padding:11px 20px;">Ouvrir mon espace</a>
     <div style="font-size:12px;color:#5b5754;margin-top:12px;">Le détail se lit dans votre espace, fiche par fiche.</div>
+    <div style="font-size:12px;color:#5b5754;margin-top:6px;">Vous devrez vous connecter avec votre adresse e-mail. Mot de passe oublié ? <a href="${escapeHtml(data.loginUrl)}" style="color:#0e7a6f;">Demandez-en un nouveau</a>.</div>
     <div style="font-size:11px;color:#8a857f;margin-top:14px;">Vous recevez cet e-mail parce que votre office de tourisme a vérifié une fiche que vous lui avez envoyée.</div>
   </td></tr>
 </table>

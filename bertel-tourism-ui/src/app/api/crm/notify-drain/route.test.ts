@@ -8,13 +8,23 @@ jest.mock('@/lib/mail.server', () => ({
 }));
 jest.mock('@/lib/env.server', () => ({ readSmtpConfig: jest.fn() }));
 
+// Le gabarit RÉEL par défaut (les sujets et corps assertés plus bas sont les vrais), mais
+// espionnable : un seul test le fait JETER, pour éprouver que la composition est protégée
+// au même titre que l'envoi.
+jest.mock('@/emails/TaskAssignedEmail', () => {
+  const actual = jest.requireActual('@/emails/TaskAssignedEmail');
+  return { ...actual, renderTaskAssignedEmailHtml: jest.fn(actual.renderTaskAssignedEmailHtml) };
+});
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { sendMail } from '@/lib/mail.server';
 import { readSmtpConfig } from '@/lib/env.server';
+import { renderTaskAssignedEmailHtml } from '@/emails/TaskAssignedEmail';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedSend = jest.mocked(sendMail);
 const mockedSmtp = jest.mocked(readSmtpConfig);
+const mockedRenderTask = jest.mocked(renderTaskAssignedEmailHtml);
 
 const smtpOk = { host: 'smtp', port: 587, secure: false, user: null, pass: null, fromName: 'Bertel', fromEmail: 'no-reply@x' };
 
@@ -197,6 +207,9 @@ describe('POST /api/crm/notify-drain', () => {
       expect(html).toContain('Bonjour Marie,');
       expect(html).toContain('https://app.test/espace');
       expect(html).not.toContain('https://app.test/crm');
+      // IMPORTANT 2 (revue) — le partenaire arrive sur un mur de connexion : la page de
+      // récupération d'accès doit être DANS le message, pas à deviner.
+      expect(html).toContain('https://app.test/login');
       expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', { p_sent: ['n-1'], p_failed: [] });
     });
 
@@ -231,6 +244,34 @@ describe('POST /api/crm/notify-drain', () => {
       expect(mockedSend.mock.calls[0][0].html).toContain('https://app.test/crm');
       expect(mockedSend.mock.calls[1][0].subject).toBe('Vos modifications ont été refusées — Villa Vanille');
       expect(mockedSend.mock.calls[1][0].html).toContain('https://app.test/espace');
+    });
+
+    // IMPORTANT 1 (revue) — la COMPOSITION était sortie du `try` : un gabarit qui jette
+    // remontait hors de la route (500), donc `mark_notifications_emailed` n'était JAMAIS
+    // appelé, et les 20 lignes déjà réclamées restaient claimées avec `email_attempts`
+    // inchangé — re-réclamables à chaque TTL, à vie. Exactement la panne que la garde de 18a
+    // existe pour fermer. La composition est donc protégée au même titre que l'envoi.
+    it('un gabarit qui JETTE n’empêche ni l’acquittement ni l’envoi des autres lignes', async () => {
+      const rpc = jest.fn()
+        .mockResolvedValueOnce({ data: [row('n-1'), row('n-2')], error: null })
+        .mockResolvedValueOnce({ data: 1, error: null });
+      mockedServer.mockReturnValue(serverWith(rpc));
+      mockedSend.mockResolvedValue();
+      mockedRenderTask.mockImplementationOnce(() => {
+        throw new Error('template boom');
+      });
+      const res = await POST(req({ authorization: 'Bearer jwt' }));
+      // 200, pas 500 : la route ne remonte pas l'exception d'une ligne.
+      expect(res.status).toBe(200);
+      await expect(res.json()).resolves.toEqual({ sent: 1, failed: 1 });
+      // La seconde ligne est partie normalement…
+      expect(mockedSend).toHaveBeenCalledTimes(1);
+      // …et l'acquittement a bien eu lieu, la ligne fautive comptant une tentative de plus
+      // (bras p_failed) au lieu de rester claimée pour toujours.
+      expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', {
+        p_sent: ['n-2'],
+        p_failed: [{ id: 'n-1', error: 'template boom' }],
+      });
     });
 
     it('kind ABSENT (claim antérieur à 18a) : traité comme avant, gabarit d’assignation', async () => {

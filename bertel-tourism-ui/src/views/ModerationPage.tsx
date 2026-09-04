@@ -22,6 +22,7 @@ import {
   approveFicheSubmission,
   rejectFicheSubmission,
 } from '../services/rpc';
+import type { FicheSubmissionApproval } from '../services/moderation';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 import { EmptyState } from '../components/common/EmptyState';
 import { Modal } from '../components/common/Modal';
@@ -62,6 +63,18 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'rejected', label: 'Rejetées' },
 ];
 
+/**
+ * Les statuts de `pending_change` sont des valeurs de base, en anglais. Les afficher bruts
+ * (« · approved ») demande à l'agent de traduire, et surtout d'INFÉRER ce que « approved »
+ * veut dire ici : validé par un humain qui a reporté à la main, jamais écrit par la machine.
+ */
+const STATUS_LABELS: Record<string, string> = {
+  pending: 'En attente',
+  applied: 'Appliquée automatiquement',
+  approved: 'Validée sur attestation (report manuel)',
+  rejected: 'Refusée',
+};
+
 /** Une ligne encore ouverte : le serveur peut renvoyer des lignes résolues (filtres non-pending). */
 function isPending(item: PendingChangeItem): boolean {
   return !item.status || item.status === 'pending';
@@ -86,22 +99,25 @@ interface SubmissionGroup {
   items: PendingChangeItem[];
 }
 
+/** Une entrée de la file : un envoi groupé, ou une proposition interne isolée. */
+type QueueEntry =
+  | { kind: 'submission'; group: SubmissionGroup }
+  | { kind: 'item'; item: PendingChangeItem };
+
 /**
- * Regroupe les lignes par envoi partenaire en PRÉSERVANT l'ordre du serveur (submitted_at DESC) :
- * un groupe apparaît à la position de sa première ligne. Les lignes sans `submissionId`
- * (contributeurs internes) sortent telles quelles — elles n'ont ni acteur ni geste groupé.
+ * Construit la file en PRÉSERVANT l'ordre du serveur (submitted_at DESC) — un seul flux, pas
+ * deux populations empilées. Un groupe occupe la position de sa PREMIÈRE ligne ; les lignes
+ * suivantes du même envoi le rejoignent sans déplacer quoi que ce soit. Rendre tous les envois
+ * puis toutes les lignes isolées ferait passer une proposition interne du jour SOUS un envoi
+ * partenaire plus ancien : l'ordre affiché ne serait plus celui qui a été demandé.
  */
-function groupBySubmission(items: PendingChangeItem[]): {
-  submissions: SubmissionGroup[];
-  loose: PendingChangeItem[];
-} {
-  const submissions: SubmissionGroup[] = [];
+function buildQueue(items: PendingChangeItem[]): QueueEntry[] {
+  const entries: QueueEntry[] = [];
   const byId = new Map<string, SubmissionGroup>();
-  const loose: PendingChangeItem[] = [];
   for (const item of items) {
     const submissionId = item.submissionId;
     if (!submissionId) {
-      loose.push(item);
+      entries.push({ kind: 'item', item });
       continue;
     }
     let group = byId.get(submissionId);
@@ -115,11 +131,37 @@ function groupBySubmission(items: PendingChangeItem[]): {
         items: [],
       };
       byId.set(submissionId, group);
-      submissions.push(group);
+      entries.push({ kind: 'submission', group });
     }
     group.items.push(item);
   }
-  return { submissions, loose };
+  return entries;
+}
+
+/** Le libellé d'une rubrique, tel que l'agent le lit dans la file. */
+function rubricLabel(item: PendingChangeItem): string {
+  return item.field || item.targetTable || 'rubrique';
+}
+
+/**
+ * Ce que le RPC groupé vient RÉELLEMENT de faire, en une phrase. Sans elle, un « Tout approuver »
+ * partiel est indiscernable d'un « Tout approuver » complet : le panneau rétrécit, et rien ne dit
+ * si des rubriques sont restées en attente.
+ */
+function describeApproval(result: FicheSubmissionApproval): string {
+  const parts: string[] = [];
+  if (result.appliedCount > 0) {
+    parts.push(`${result.appliedCount} modification${result.appliedCount > 1 ? 's' : ''} appliquée${result.appliedCount > 1 ? 's' : ''} automatiquement`);
+  }
+  if (result.approvedManualCount > 0) {
+    parts.push(`${result.approvedManualCount} validée${result.approvedManualCount > 1 ? 's' : ''} sur votre attestation`);
+  }
+  if (result.skippedManualCount > 0) {
+    parts.push(`${result.skippedManualCount} laissée${result.skippedManualCount > 1 ? 's' : ''} en attente`);
+  }
+  if (parts.length === 0) return 'Envoi traité : aucune modification n’a changé d’état.';
+  const suffix = result.skippedManualCount > 0 ? ' L’envoi reste ouvert.' : '';
+  return `Envoi traité : ${parts.join(', ')}.${suffix}`;
 }
 
 /** Cible du refus : une ligne isolée, ou l'envoi entier (deux RPC, une seule modale de motif). */
@@ -146,6 +188,9 @@ export default function ModerationPage() {
   const [rejectNote, setRejectNote] = useState('');
   const [noteError, setNoteError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Compte rendu du dernier geste groupé (compteurs du RPC). Distinct de `actionError` : ce
+  // n'est pas une panne, c'est ce qui vient d'être fait — et sans lui rien ne le dit.
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const query = useQuery({
     // `objectFilter` FAIT PARTIE de la clé : la navigation Next entre ?object=A et ?object=B ne
@@ -167,6 +212,7 @@ export default function ModerationPage() {
       approvePendingChange(id, null, appliedManually),
     onSuccess: () => {
       setActionError(null);
+      setActionNotice(null);
       closeApprove();
       refresh();
     },
@@ -179,13 +225,17 @@ export default function ModerationPage() {
   const approveGroupMutation = useMutation({
     mutationFn: ({ id, withManual }: { id: string; withManual: boolean }) =>
       approveFicheSubmission(id, null, withManual),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setActionError(null);
+      // Le RPC ne traite pas forcément tout : ses trois compteurs sont le SEUL moyen pour
+      // l'agent de savoir ce qui est parti et ce qui reste. Les jeter rendait le geste muet.
+      setActionNotice(describeApproval(result));
       closeApproveGroup();
       refresh();
     },
     onError: (error) => {
       closeApproveGroup();
+      setActionNotice(null);
       setActionError(error instanceof Error ? error.message : "Échec de l'approbation de l’envoi.");
     },
   });
@@ -197,6 +247,7 @@ export default function ModerationPage() {
         : rejectPendingChange(target.id, target.note),
     onSuccess: () => {
       setActionError(null);
+      setActionNotice(null);
       closeReject();
       refresh();
     },
@@ -246,7 +297,7 @@ export default function ModerationPage() {
   }
 
   const items = query.data ?? [];
-  const { submissions, loose } = groupBySubmission(items);
+  const queue = buildQueue(items);
 
   /** Une ligne de la file — identique qu'elle appartienne à un envoi ou non. */
   function renderCard(item: PendingChangeItem) {
@@ -266,12 +317,22 @@ export default function ModerationPage() {
               d'une seule ligne tassée. */}
           <span className="mod-meta">
             <span className="mod-meta__subject">
-              <strong>{item.objectName}</strong> · {item.field || item.targetTable}
-              {resolved ? ` · ${item.status}` : ''}
+              <strong>{item.objectName}</strong> · {rubricLabel(item)}
+              {resolved ? ` · ${STATUS_LABELS[item.status ?? ''] ?? item.status}` : ''}
             </span>
             <span className="mod-meta__byline">
               {item.author} · {item.submittedAt}
             </span>
+            {/* Le filtre « Approuvées (report manuel) » n'a de sens que si la ligne dit QUI a
+                signé et QUAND : sans cela il rend les lignes relisibles, pas imputables — or
+                c'est exactement l'imputabilité qui justifie son existence (D9). */}
+            {resolved && item.reviewerLabel && (
+              <span className="mod-meta__byline">
+                {item.status === 'rejected' ? 'Refusée par' : 'Validée par'} {item.reviewerLabel}
+                {item.reviewedAt ? ` le ${item.reviewedAt}` : ''}
+              </span>
+            )}
+            {resolved && item.reviewNote && <span className="mod-meta__byline">Motif : {item.reviewNote}</span>}
             {/* D9 : le sort de la ligne est ANNONCÉ avant le clic. Sans cette mention, un
                 « Approuver » sur une rubrique sans writer se lit comme les autres, et l'agent
                 découvre le refus 22023 sans comprendre ce qu'on attend de lui. */}
@@ -314,7 +375,8 @@ export default function ModerationPage() {
 
   const approveManual = approveTarget ? requiresAttestation(approveTarget) : false;
   const groupPending = approveGroup ? approveGroup.items.filter(isPending) : [];
-  const groupManualCount = groupPending.filter(requiresAttestation).length;
+  const groupManual = groupPending.filter(requiresAttestation);
+  const groupManualCount = groupManual.length;
   const groupAutoCount = groupPending.length - groupManualCount;
 
   return (
@@ -353,6 +415,12 @@ export default function ModerationPage() {
         </p>
       )}
 
+      {actionNotice && (
+        <p role="status" className="mod-notice">
+          {actionNotice}
+        </p>
+      )}
+
       {items.length === 0 ? (
         <EmptyState
           mode="coming-soon"
@@ -365,7 +433,9 @@ export default function ModerationPage() {
         />
       ) : (
         <div className="stack-list">
-          {submissions.map((group) => {
+          {queue.map((entry) => {
+            if (entry.kind === 'item') return renderCard(entry.item);
+            const group = entry.group;
             const pendingCount = group.items.filter(isPending).length;
             return (
               <section key={group.id} className="panel-card mod-submission">
@@ -416,7 +486,6 @@ export default function ModerationPage() {
               </section>
             );
           })}
-          {loose.map(renderCard)}
         </div>
       )}
 
@@ -475,10 +544,16 @@ export default function ModerationPage() {
         }}
       />
 
-      {/* D9 — geste groupé. Décoché, il laisse DÉLIBÉRÉMENT les rubriques manuelles en attente
-          (l'envoi reste ouvert). Sur un envoi 100 % manuel, un appel non attesté réussirait en
-          n'ayant rien fait : la case devient alors obligatoire, sinon l'agent lirait « approuvé »
-          sur un envoi où pas une ligne n'a bougé. */}
+      {/* D9 — geste groupé, et c'est LUI le vrai danger : il certifie N rubriques d'un clic.
+          Sa friction est donc alignée sur l'unitaire, pas allégée.
+          • Dès qu'une rubrique manuelle est en jeu, la certification est OBLIGATOIRE — la
+            version précédente ne l'exigeait que sur un envoi 100 % manuel, si bien qu'un envoi
+            mixte se validait en deux clics pendant que le message POUSSAIT à cocher.
+          • Les rubriques certifiées sont NOMMÉES : on ne signe pas un compteur, on signe une
+            liste qu'on peut relire.
+          • Le bouton devient « Certifier et valider », comme à l'unité.
+          Le chemin « n'appliquer que l'automatique » reste ouvert : ligne par ligne, avec ses
+          propres gardes. « Tout approuver » veut dire tout. */}
       <ConfirmDialog
         open={approveGroup !== null}
         title="Approuver l’envoi"
@@ -488,13 +563,15 @@ export default function ModerationPage() {
               Envoi de <strong>{approveGroup.actorLabel ?? 'ce partenaire'}</strong> sur{' '}
               <strong>{approveGroup.objectName}</strong> : {groupAutoCount} modification
               {groupAutoCount > 1 ? 's' : ''} applicable{groupAutoCount > 1 ? 's' : ''} automatiquement
-              {groupManualCount > 0 ? `, ${groupManualCount} à reporter à la main.` : '.'}
-              {groupManualCount > 0 && !includeManual && (
+              {groupManualCount > 0 ? (
                 <>
-                  {' '}
-                  Sans la certification ci-dessous, {groupManualCount > 1 ? 'elles resteront' : 'elle restera'} en
-                  attente et l’envoi ne se refermera pas.
+                  , et {groupManualCount > 1 ? `${groupManualCount} rubriques` : '1 rubrique'} sans report
+                  automatique : <strong>{groupManual.map(rubricLabel).join(', ')}</strong>. Valider
+                  n’écrira <strong>rien</strong> pour {groupManualCount > 1 ? 'celles-ci' : 'celle-ci'} —
+                  vous certifiez les avoir déjà reportées dans l’éditeur.
                 </>
+              ) : (
+                '.'
               )}
             </>
           ) : (
@@ -504,26 +581,29 @@ export default function ModerationPage() {
         attestation={
           groupManualCount > 0
             ? {
-                label: `Inclure ${groupManualCount > 1 ? `les ${groupManualCount} rubriques` : 'la rubrique'} sans report automatique — je certifie que j’ai reporté ces modifications dans l’éditeur.`,
+                label: `Je certifie que j’ai reporté ces modifications dans l’éditeur : ${groupManual.map(rubricLabel).join(', ')}.`,
                 checked: includeManual,
                 onChange: setIncludeManual,
-                // Obligatoire SEULEMENT si rien d'autre ne partirait : approuver « à vide »
-                // rendrait un succès sur zéro ligne traitée.
-                required: groupAutoCount === 0,
+                // OBLIGATOIRE dès qu'une rubrique manuelle est en jeu. Décochée, cette case
+                // ferait sauter ces rubriques côté RPC — un « Tout approuver » qui n'approuve
+                // pas tout, et que rien à l'écran ne distinguait d'un geste complet.
+                required: true,
                 hint:
                   groupAutoCount === 0
                     ? 'Toutes les rubriques de cet envoi sont à reporter à la main : sans cette certification, rien ne serait validé.'
-                    : undefined,
+                    : 'Pour n’appliquer que les rubriques automatiques, traitez-les ligne par ligne : « Tout approuver » vaut pour tout l’envoi.',
               }
             : undefined
         }
-        confirmLabel="Approuver"
+        confirmLabel={groupManualCount > 0 ? 'Certifier et valider' : 'Approuver'}
         cancelLabel="Annuler"
         busy={approveGroupMutation.isPending}
         onCancel={closeApproveGroup}
         onConfirm={() => {
           if (!approveGroup) return;
-          if (groupAutoCount === 0 && !includeManual) return;
+          // Ceinture et bretelles, comme à l'unité : l'attestation groupée ne doit jamais
+          // pouvoir partir à `true` sans le geste qui la signe.
+          if (groupManualCount > 0 && !includeManual) return;
           approveGroupMutation.mutate({ id: approveGroup.id, withManual: includeManual });
         }}
       />

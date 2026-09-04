@@ -267,6 +267,39 @@ describe('approveFicheSubmission / rejectFicheSubmission', () => {
     });
   });
 
+  // Le RPC ne traite pas forcément tout ce qu'on lui donne : sans attestation il SAUTE les
+  // rubriques sans writer. Jeter ces compteurs rendait un « Tout approuver » partiel
+  // indiscernable d'un geste complet, côté écran comme côté agent.
+  it('18a/D9 — rend les trois compteurs du RPC, pas seulement « ça a marché »', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        applied_count: 2,
+        approved_manual_count: 4,
+        skipped_manual_count: 1,
+        submission_status: 'partial',
+      },
+      error: null,
+    });
+    await expect(approveFicheSubmission('sub-1', null, true)).resolves.toEqual({
+      appliedCount: 2,
+      approvedManualCount: 4,
+      skippedManualCount: 1,
+      submissionStatus: 'partial',
+    });
+  });
+
+  // Un compteur absent ou aberrant ne doit pas produire « NaN modifications appliquées »
+  // dans une phrase que lit un agent d'office.
+  it('18a/D9 — un compteur manquant vaut 0, jamais NaN', async () => {
+    rpc.mockResolvedValue({ data: { applied_count: 'deux' }, error: null });
+    await expect(approveFicheSubmission('sub-1')).resolves.toEqual({
+      appliedCount: 0,
+      approvedManualCount: 0,
+      skippedManualCount: 0,
+      submissionStatus: null,
+    });
+  });
+
   // Le motif est la SEULE chose que le prestataire recevra : un refus muet le laisse
   // re-soumettre à l'identique. Garde client en plus de celle du RPC (défense en profondeur).
   it('refuse un rejet groupé sans motif, sans jamais appeler le RPC', async () => {

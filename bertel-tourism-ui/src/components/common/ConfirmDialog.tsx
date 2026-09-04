@@ -6,7 +6,7 @@
 // `.object-editor` (qui dépend de classes `.btn` indisponibles hors éditeur). Un seul design
 // system app-wide.
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
 
 export function ConfirmDialog({
@@ -67,9 +67,22 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   const [gateValue, setGateValue] = useState('');
+  // 18a/D9 — « on a cliqué alors que c'était bloqué ». Sans cet état, un clic sur un bouton
+  // verrouillé ne produit AUCUN changement visible : le hint est là depuis l'ouverture, donc
+  // `aria-live` n'annonce rien et l'écran a l'air en panne. C'est le clic qui doit provoquer
+  // la réponse, pas le montage.
+  const [blockedAttempt, setBlockedAttempt] = useState(false);
+  // Deux ConfirmDialog coexistent pendant le fondu de sortie : des id figés se dupliqueraient
+  // dans le document, et `htmlFor` pointerait sur la mauvaise case.
+  const fieldId = useId();
+  const attestationInputId = `${fieldId}-attestation`;
+  const attestationHintId = `${fieldId}-attestation-hint`;
   // Réinitialise la saisie à la fermeture pour que la prochaine ouverture reparte propre.
   useEffect(() => {
-    if (!open) setGateValue('');
+    if (!open) {
+      setGateValue('');
+      setBlockedAttempt(false);
+    }
   }, [open]);
 
   const gatePass =
@@ -88,7 +101,7 @@ export function ConfirmDialog({
     : confirmGate && !gatePass
       ? 'confirm-gate-hint'
       : attestationMissing
-        ? 'confirm-attestation-hint'
+        ? attestationHintId
         : undefined;
 
   return (
@@ -113,7 +126,10 @@ export function ConfirmDialog({
             aria-disabled={confirmBlocked || undefined}
             aria-describedby={confirmReasonId}
             onClick={() => {
-              if (confirmBlocked) return;
+              if (confirmBlocked) {
+                setBlockedAttempt(true);
+                return;
+              }
               onConfirm();
             }}
           >
@@ -125,19 +141,30 @@ export function ConfirmDialog({
       <p className="confirm-message">{message}</p>
       {attestation && (
         <div className="confirm-attestation">
-          <label htmlFor="confirm-attestation-input" className="confirm-attestation__label">
+          <label htmlFor={attestationInputId} className="confirm-attestation__label">
             <input
-              id="confirm-attestation-input"
+              id={attestationInputId}
               type="checkbox"
               checked={attestation.checked}
-              onChange={(event) => attestation.onChange(event.target.checked)}
-              aria-describedby={attestation.hint ? 'confirm-attestation-hint' : undefined}
+              onChange={(event) => {
+                // Cocher lève le blocage : la réponse au clic refusé n'a plus lieu d'être.
+                if (event.target.checked) setBlockedAttempt(false);
+                attestation.onChange(event.target.checked);
+              }}
+              aria-describedby={attestation.hint ? attestationHintId : undefined}
             />
             <span>{attestation.label}</span>
           </label>
           {attestation.hint && (
-            <p id="confirm-attestation-hint" className="confirm-attestation__hint" aria-live="polite">
+            <p id={attestationHintId} className="confirm-attestation__hint">
               {attestation.hint}
+            </p>
+          )}
+          {/* Élément NÉ du clic refusé — c'est lui, et non le hint permanent, qui prouve que
+              l'écran a réagi (et qu'un lecteur d'écran l'annonce). */}
+          {blockedAttempt && attestationMissing && (
+            <p className="confirm-attestation__blocked" role="alert">
+              Cochez la certification ci-dessus pour pouvoir valider.
             </p>
           )}
         </div>

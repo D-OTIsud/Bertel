@@ -144,18 +144,40 @@ export async function approvePendingChange(
 }
 
 /**
+ * Ce que le RPC a RÉELLEMENT fait. `approve_fiche_submission` ne traite pas forcément tout ce
+ * qu'on lui donne : sans attestation il SAUTE les rubriques sans writer et les laisse pending.
+ * Jeter ce retour laissait l'agent devant un panneau qui rétrécit, sans savoir ce qui est parti
+ * ni ce qui reste — et « approuvé » se mettait à désigner deux choses différentes.
+ */
+export interface FicheSubmissionApproval {
+  /** Lignes ré-appliquées par un writer automatique (status=applied). */
+  appliedCount: number;
+  /** Lignes SANS writer, validées sur l'attestation de l'agent (status=approved). */
+  approvedManualCount: number;
+  /** Lignes sans writer laissées en attente faute d'attestation : l'envoi reste ouvert. */
+  skippedManualCount: number;
+  /** Statut agrégé relu APRÈS le trigger de résolution (§8). */
+  submissionStatus: string | null;
+}
+
+/** Compteur du RPC : absent/aberrant ⇒ 0, jamais NaN dans une phrase lue par un agent. */
+function readCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+/**
  * 18a/D9 — approuve un ENVOI entier. `includeManual=false` (défaut) laisse DÉLIBÉRÉMENT les
  * rubriques sans report automatique en attente : l'envoi reste ouvert tant que l'office ne les
- * a pas reportées et attestées. Attention : sur un envoi 100 % manuel, un appel non attesté
- * réussit en n'ayant rien fait — l'écran doit donc le bloquer avant d'en arriver là.
+ * a pas reportées et attestées. Rend les trois compteurs du RPC pour que l'écran puisse DIRE
+ * ce qui vient de se passer — un « Tout approuver » partiel est invisible autrement.
  */
 export async function approveFicheSubmission(
   submissionId: string,
   reviewNote: string | null = null,
   includeManual = false,
-): Promise<void> {
+): Promise<FicheSubmissionApproval> {
   const client = requireApiClient();
-  const { error } = await client.schema('api').rpc('approve_fiche_submission', {
+  const { data, error } = await client.schema('api').rpc('approve_fiche_submission', {
     p_submission_id: submissionId,
     p_review_note: reviewNote,
     p_include_manual: includeManual,
@@ -163,6 +185,13 @@ export async function approveFicheSubmission(
   if (error) {
     throw mapDatabaseError(error, 'Approbation de l’envoi impossible.');
   }
+  const row = (data ?? {}) as GenericRecord;
+  return {
+    appliedCount: readCount(row.applied_count),
+    approvedManualCount: readCount(row.approved_manual_count),
+    skippedManualCount: readCount(row.skipped_manual_count),
+    submissionStatus: readNullableString(row.submission_status),
+  };
 }
 
 /** 18a/D9 — refuse un ENVOI entier. Motif obligatoire : c'est la seule chose que le partenaire

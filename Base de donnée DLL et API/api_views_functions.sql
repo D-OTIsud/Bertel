@@ -23,6 +23,15 @@ BEGIN
   END IF;
 END $$;
 
+-- current_user_test_realm (18a) : la feuille du cloisonnement « bac a sable ».
+-- Definie pour de vrai par migration_test_org_isolation.sql, appliquee EN DERNIER —
+-- mais plusieurs fonctions de CE fichier la referencent, et celles en `LANGUAGE sql`
+-- valident leur corps au CREATE. Stub ici, remplace plus tard par CREATE OR REPLACE
+-- (meme signature). Le stub renvoie FALSE = realm de production : une base restee au
+-- stub se comporte donc exactement comme avant le cloisonnement, jamais plus ouverte.
+CREATE OR REPLACE FUNCTION api.current_user_test_realm()
+RETURNS boolean LANGUAGE sql STABLE AS $realm_stub$ SELECT false $realm_stub$;
+
 CREATE OR REPLACE FUNCTION api.is_object_open_now(p_object_id TEXT)
 RETURNS BOOLEAN
 LANGUAGE sql

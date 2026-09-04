@@ -466,19 +466,51 @@ export async function listExplorerCardsByIds(
     });
   }
 
-  const { data, error } = await withAbort(
-    client.schema('api').rpc('get_object_cards_batch', {
-      p_ids: wanted,
-      p_lang_prefs: langPrefs,
-    }),
-    signal,
-  );
+  // §204 — `missing_essentials` n'est PAS dans le retour de get_object_cards_batch : la
+  // page de liste l'attache positionnellement après coup, via ce même helper. Sans lui,
+  // une fiche remontée ici perdrait sa pastille « N manquants » alors que la même fiche
+  // arrivée par la pagination l'aurait : deux rendus pour une seule fiche. Le helper est
+  // son propre gate — il rend 0 ligne à un appelant non éditeur, donc le champ reste
+  // absent exactement comme il l'est déjà pour un non-éditeur.
+  const [cardsResult, essentialsResult] = await Promise.all([
+    withAbort(
+      client.schema('api').rpc('get_object_cards_batch', {
+        p_ids: wanted,
+        p_lang_prefs: langPrefs,
+      }),
+      signal,
+    ),
+    withAbort(
+      client.schema('api').rpc('object_missing_essentials', { p_object_ids: wanted }),
+      signal,
+    ),
+  ]);
 
-  if (error) {
-    throw error;
+  if (cardsResult.error) {
+    throw cardsResult.error;
+  }
+  if (!Array.isArray(cardsResult.data)) {
+    return [];
   }
 
-  return Array.isArray(data) ? normalizeExplorerCards(data as ObjectCard[]) : [];
+  // Un échec du seul volet « remplissage » ne doit pas priver l'utilisateur de sa
+  // sélection : on dégrade en pastille absente (jamais en pastille fausse).
+  const missingByObject = new Map<string, string[]>();
+  if (!essentialsResult.error && Array.isArray(essentialsResult.data)) {
+    for (const row of essentialsResult.data as Array<{ object_id?: unknown; missing?: unknown }>) {
+      const id = row?.object_id != null ? String(row.object_id) : '';
+      if (id && Array.isArray(row?.missing)) {
+        missingByObject.set(id, (row.missing as unknown[]).map((entry) => String(entry)));
+      }
+    }
+  }
+
+  return normalizeExplorerCards(
+    (cardsResult.data as ObjectCard[]).map((card) => {
+      const missing = missingByObject.get(String(card?.id ?? ''));
+      return missing ? { ...card, missing_essentials: missing } : card;
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -41,35 +41,52 @@ LANGUAGE sql STABLE SECURITY DEFINER
 -- recréerait la forme faible et défairait le durcissement de la source amont.
 SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $fn$
-  -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
-  SELECT aor.object_id FROM actor_object_role aor
-  WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  UNION
-  -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
-  SELECT ool.object_id FROM object_org_link ool
-  WHERE ool.org_object_id IN (
+  -- CLOISONNEMENT DU BAC A SABLE — filtre pose sur l'UNION ENTIERE, en UN SEUL
+  -- point, et non chemin par chemin. C'est delibere : le predicat n'etait au
+  -- depart que sur le chemin 2C, et les chemins 1a/1b — qui relient un
+  -- UTILISATEUR a des fiches par son E-MAIL (user_actor_ids -> actor_channel) —
+  -- le contournaient entierement, dans les DEUX sens :
+  --   * un testeur dont l'e-mail est aussi celui d'un acteur reel voyait les
+  --     fiches de PRODUCTION de cet acteur ;
+  --   * un utilisateur de production dont l'e-mail atterrit sur un acteur du bac
+  --     a sable voyait des fiches de TEST — et poser un e-mail sur un acteur du
+  --     bac a sable est exactement ce qu'on y fait pour eprouver le portail acteur.
+  -- Un filtre pose chemin par chemin se serait re-oublie au prochain chemin
+  -- ajoute. Ici, aucun chemin present ou futur ne peut echapper au realm.
+  SELECT s.object_id
+  FROM (
+    -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
     SELECT aor.object_id FROM actor_object_role aor
     WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  )
-  UNION
-  -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
-  SELECT uom.org_object_id FROM user_org_membership uom
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
-  SELECT ool.object_id FROM user_org_membership uom
-  JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
-  SELECT o.id FROM object o
-  WHERE o.status = 'published'
-    AND EXISTS (
-      SELECT 1 FROM user_org_membership uom
-      JOIN org_config oc ON oc.org_object_id = uom.org_object_id
-      WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-        AND oc.access_scope = 'all_published'
-    );
+    UNION
+    -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
+    SELECT ool.object_id FROM object_org_link ool
+    WHERE ool.org_object_id IN (
+      SELECT aor.object_id FROM actor_object_role aor
+      WHERE aor.actor_id IN (SELECT api.user_actor_ids())
+    )
+    UNION
+    -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
+    SELECT uom.org_object_id FROM user_org_membership uom
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
+    SELECT ool.object_id FROM user_org_membership uom
+    JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
+    SELECT o.id FROM object o
+    WHERE o.status = 'published'
+      AND EXISTS (
+        SELECT 1 FROM user_org_membership uom
+        JOIN org_config oc ON oc.org_object_id = uom.org_object_id
+        WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+          AND oc.access_scope = 'all_published'
+      )
+  ) AS s(object_id)
+  JOIN object o ON o.id = s.object_id
+  WHERE o.is_test = (SELECT api.current_user_test_realm());
 $fn$;
 REVOKE EXECUTE ON FUNCTION api.current_user_extended_object_ids() FROM PUBLIC;
 -- anon must EXECUTE it: the object SELECT policy (role public, incl. anon) references it; without

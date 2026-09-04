@@ -887,6 +887,13 @@ CREATE TABLE IF NOT EXISTS object (
   id TEXT PRIMARY KEY,
   object_type object_type NOT NULL,
   name TEXT NOT NULL,
+  -- Realm de cloisonnement (18a) : la fiche appartient-elle au corpus de test ?
+  -- DECLAREE ICI et non dans migration_test_org_isolation.sql, qui est appliquee EN
+  -- DERNIER : get_filtered_object_ids est `LANGUAGE sql`, donc son corps est VALIDE
+  -- au CREATE (etape 5 du manifeste) et il reference cette colonne. Sans elle a
+  -- l'etape 1, une base fraiche echoue avant meme d'atteindre la migration.
+  -- Entretenue par TRIGGER depuis org_config.is_test_org — ne jamais l'ecrire a la main.
+  is_test BOOLEAN NOT NULL DEFAULT FALSE,
   business_timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
   commercial_visibility TEXT NOT NULL DEFAULT 'active',
   region_code TEXT CHECK (region_code IS NULL OR region_code ~ '^[A-Z0-9]{3}$'),
@@ -6344,6 +6351,9 @@ CREATE TABLE IF NOT EXISTS org_config (
   org_object_id  TEXT        NOT NULL UNIQUE REFERENCES object(id) ON DELETE CASCADE,
   access_scope   TEXT        NOT NULL DEFAULT 'own_objects_only'
                    CHECK (access_scope IN ('own_objects_only', 'all_published')),
+  -- ORG « bac a sable » (18a) : ses fiches sont is_test, ses membres ne voient QUE
+  -- le corpus de test. Reserve au superuser plateforme.
+  is_test_org    BOOLEAN     NOT NULL DEFAULT FALSE,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

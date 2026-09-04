@@ -147,35 +147,52 @@ LANGUAGE sql STABLE SECURITY DEFINER
 -- sur n'importe quel objet. Cette feuille décide de ~40 policies de lecture.
 SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
-  -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
-  SELECT aor.object_id FROM actor_object_role aor
-  WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  UNION
-  -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
-  SELECT ool.object_id FROM object_org_link ool
-  WHERE ool.org_object_id IN (
+  -- CLOISONNEMENT DU BAC A SABLE — filtre pose sur l'UNION ENTIERE, en UN SEUL
+  -- point, et non chemin par chemin. C'est delibere : le predicat n'etait au
+  -- depart que sur le chemin 2C, et les chemins 1a/1b — qui relient un
+  -- UTILISATEUR a des fiches par son E-MAIL (user_actor_ids -> actor_channel) —
+  -- le contournaient entierement, dans les DEUX sens :
+  --   * un testeur dont l'e-mail est aussi celui d'un acteur reel voyait les
+  --     fiches de PRODUCTION de cet acteur ;
+  --   * un utilisateur de production dont l'e-mail atterrit sur un acteur du bac
+  --     a sable voyait des fiches de TEST — et poser un e-mail sur un acteur du
+  --     bac a sable est exactement ce qu'on y fait pour eprouver le portail acteur.
+  -- Un filtre pose chemin par chemin se serait re-oublie au prochain chemin
+  -- ajoute. Ici, aucun chemin present ou futur ne peut echapper au realm.
+  SELECT s.object_id
+  FROM (
+    -- Chemin 1a : un acteur du user a un rôle directement sur l'objet
     SELECT aor.object_id FROM actor_object_role aor
     WHERE aor.actor_id IN (SELECT api.user_actor_ids())
-  )
-  UNION
-  -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
-  SELECT uom.org_object_id FROM user_org_membership uom
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
-  SELECT ool.object_id FROM user_org_membership uom
-  JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
-  WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-  UNION
-  -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
-  SELECT o.id FROM object o
-  WHERE o.status = 'published'
-    AND EXISTS (
-      SELECT 1 FROM user_org_membership uom
-      JOIN org_config oc ON oc.org_object_id = uom.org_object_id
-      WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
-        AND oc.access_scope = 'all_published'
-    );
+    UNION
+    -- Chemin 1b : un acteur du user a un rôle sur l'ORG publicatrice de l'objet
+    SELECT ool.object_id FROM object_org_link ool
+    WHERE ool.org_object_id IN (
+      SELECT aor.object_id FROM actor_object_role aor
+      WHERE aor.actor_id IN (SELECT api.user_actor_ids())
+    )
+    UNION
+    -- Chemin 2A : l'objet EST l'ORG du user (membership actif)
+    SELECT uom.org_object_id FROM user_org_membership uom
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2B : objet rattaché à l'ORG du user (tous rôles, publiés ou non)
+    SELECT ool.object_id FROM user_org_membership uom
+    JOIN object_org_link ool ON ool.org_object_id = uom.org_object_id
+    WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+    UNION
+    -- Chemin 2C : périmètre externe publié (org_config.access_scope = 'all_published')
+    SELECT o.id FROM object o
+    WHERE o.status = 'published'
+      AND EXISTS (
+        SELECT 1 FROM user_org_membership uom
+        JOIN org_config oc ON oc.org_object_id = uom.org_object_id
+        WHERE uom.user_id = auth.uid() AND uom.is_active = TRUE
+          AND oc.access_scope = 'all_published'
+      )
+  ) AS s(object_id)
+  JOIN object o ON o.id = s.object_id
+  WHERE o.is_test = (SELECT api.current_user_test_realm());
 $$;
 REVOKE EXECUTE ON FUNCTION api.current_user_extended_object_ids() FROM PUBLIC;
 GRANT  EXECUTE ON FUNCTION api.current_user_extended_object_ids() TO anon, authenticated, service_role;
@@ -200,6 +217,13 @@ $$;
 -- the canonical definitions later in THIS file replace them via CREATE OR REPLACE
 -- (same signatures), so runtime behaviour is unchanged. (Found by the SQL fresh-apply CI gate.)
 CREATE OR REPLACE FUNCTION api.is_platform_superuser() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
+-- current_user_test_realm: realm de lecture (production / bac à sable). Défini par
+-- migration_test_org_isolation.sql, \ir'd EN DERNIER — mais api_views_functions.sql et
+-- migration_cards_batch_authorize_definer.sql le référencent dans des corps SQL validés
+-- au CREATE. Stub ici (production = false, comportement d'AVANT le cloisonnement, donc
+-- une base restée au stub se comporte exactement comme aujourd'hui) ; la migration le
+-- remplace par le vrai corps via CREATE OR REPLACE (même signature).
+CREATE OR REPLACE FUNCTION api.current_user_test_realm() RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 CREATE OR REPLACE FUNCTION api.user_has_permission(p_permission_code text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT false $$;
 -- user_can_write_object_canonical: defined in migration_permission_write_paths.sql (SP-1), \ir'd
 -- AFTER this file — but the per-command canonical_* write policies below reference it (WITH CHECK /
@@ -213,9 +237,20 @@ RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, api, auth AS $$
   SELECT EXISTS (
     SELECT 1 FROM actor_object_role aor
+    JOIN object o ON o.id = aor.object_id
     WHERE aor.actor_id IN (SELECT * FROM api.user_actor_ids())
       AND aor.object_id = p_object_id
       AND aor.is_primary = TRUE
+      -- Cloisonnement du bac a sable : ce chemin relie un UTILISATEUR a une fiche
+      -- par son E-MAIL (user_actor_ids -> actor_channel), donc il ignore
+      -- completement l'organisation — et sans ce predicat il ouvrait l'ECRITURE
+      -- canonique d'une fiche de PRODUCTION a un compte de test dont l'e-mail se
+      -- trouve etre aussi celui d'un acteur reel.
+      -- La policy SELECT masque deja la ligne, donc un UPDATE direct ne touchait
+      -- rien : mais c'est un effet de bord, pas une garde. Un RPC SECURITY DEFINER
+      -- qui consulte cette fonction et ecrit ensuite contourne la RLS et n'aurait
+      -- eu, lui, aucun filet.
+      AND o.is_test = (SELECT api.current_user_test_realm())
   )
   OR auth.role() IN ('service_role','admin')
   OR api.is_platform_superuser();

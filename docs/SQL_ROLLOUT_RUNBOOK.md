@@ -1518,3 +1518,193 @@ par le step CI `ref_amenity visit modes test` (`.github/workflows/sql-fresh-appl
 Aucun changement front dans ce créneau. La rubrique « Équipements » du portail acteur pour les
 sites de visite (type `VIS`) est un chantier distinct (Task 13) qui dépend de ce seed pour ne
 plus buter sur `23503` dès qu'un mode de visite est sélectionné.
+
+## 18c / 18d — Organisation de test à données isolées
+
+`migration_test_org_isolation.sql` (la dimension) + `migration_test_org_seed.sql` (le corpus).
+Spec : `docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
+
+### Pourquoi
+
+Aucun moyen d'exercer la plateforme sur des données jetables : toute fiche créée pour essayer
+une fonctionnalité entrait dans le corpus réel, devenait visible de tous, et **partait à l'API
+partenaire**.
+
+`org_config.access_scope = 'own_objects_only'` existe depuis §172 et **ne restreint rien** : une
+policy distincte, `public_objects_published`, accorde `status='published'` au rôle `public`
+(donc `anon` compris), par un autre chemin. Le périmètre était déclaré, pas appliqué.
+
+### Ce que les migrations font
+
+Un unique prédicat, écrit partout à l'identique :
+
+```sql
+o.is_test = (SELECT api.current_user_test_realm())
+```
+
+Une **égalité**, donc les deux sens à la fois — le corpus de test ne sort pas, et le compte de
+test ne voit pas la production. Deux prédicats séparés auraient laissé un des sens s'oublier ;
+c'est exactement ce qui est arrivé à `access_scope`.
+
+`object.is_test` est dénormalisé mais **entretenu par trigger** depuis `org_config.is_test_org` :
+l'organisation reste la source de vérité, la garde ne lit qu'une constante par ligne (pas de
+jointure dans le chemin RLS le plus chaud, celui réécrit en ensembliste pour §35).
+
+### Ce que le plan n'avait pas vu, et que les tests ont trouvé
+
+| # | Trouvé par | Conséquence si non fermé |
+| --- | --- | --- |
+| `can_read_object` ne couvre que **15 policies de lecture sur 58** ; les 42 autres inlinent le contrôle de publication depuis §35 | revue avant application | media, contact_channel, descriptions, tarifs, horaires grands ouverts — *la fiche entière*, avec le test « la fiche est invisible » au vert |
+| Le chemin **2C** de `current_user_extended_object_ids` (`access_scope = 'all_published'`) accorde tout le corpus publié | bloc C du test, passé rouge | rouvre à lui seul ce que `public_objects_published` venait de fermer |
+| `object_deletion_log` ne portait aucune dimension de test | bloc G du test | supprimer une fiche de test publiait son id et son type au **flux de tombstones partenaire** (C-4) |
+
+Les 42 policies sont réécrites **génériquement**, à partir du `qual` décompilé : on n'injecte que
+le prédicat, chaque policy garde ses conditions propres. Un `DO` block **refuse de valider** s'il
+reste une seule policy de lecture testant la publication sans prédicat de realm.
+
+### L'API partenaire
+
+Elle appelle en `service_role`, qui **court-circuite toute la RLS** : aucune des gardes RLS ne la
+protège. Le prédicat est donc écrit dans les corps de fonction (21 emplacements), et testé
+séparément.
+
+### ✅ APPLIQUÉES EN PRODUCTION le 2026-09-04
+
+| Vérification | Mesure |
+| --- | --- |
+| Flux partenaire complet (parcours du curseur) | 5 pages, **848 fiches servies, 0 de test** — exactement le corpus de production |
+| Policies de lecture sans prédicat de realm | 0 |
+| Matview de l'Explorer | 848 lignes = published non-test |
+| Corpus de test | 271 fiches, **19 types couverts**, 200 acteurs fictifs |
+| Compte de test simulé | 271 fiches de test visibles, **0 fiche réelle** ; fiche complète (localisation, description, contacts) |
+| Fiche **creee** dans le bac a sable, puis publiee | `is_test` = true ; invisible de `anon` ; absente de l'API partenaire |
+| `test_test_org_isolation.sql` | 9 blocs verts, **rouge avant application** |
+| `test_test_org_seed.sql` | 7 blocs verts |
+
+### La profondeur PAR TYPE — `migration_test_org_facets.sql` (18d0)
+
+18d remplissait les tables **communes** (localisation, description, contacts, acteur, ouverture,
+équipements, tarifs, classements) et s'arrêtait là. Les 270 fiches n'avaient donc **aucune ligne
+de facette** : sentiers sans distance ni tracé ni étape, manifestations **sans date**, hôtels sans
+chambre, restaurants sans carte. Le corpus était complet au sens du *nombre* de fiches et vide au
+sens du *métier*.
+
+La garde de 18d ne le voyait pas : elle vérifiait la profondeur **commune**, c'est-à-dire
+exactement ce que le semeur construisait. *Une garde qui n'interroge que ce qu'on a fait ne dit
+rien de ce qu'on a oublié* — même motif que les 42 policies inlinées de 18c.
+
+- **Ordre** : 18d0 s'applique **avant** 18d, qui appelle `internal.seed_test_facets` depuis
+  `seed_test_corpus`. C'est la seule façon que `rpc_reset_test_data()` resème aussi les facettes ;
+  une passe de rattrapage séparée aurait disparu au premier « Réinitialiser » sans revenir.
+- **Le registre décide** : `ref_facet_applicability` (+ `trg_assert_facet_applicable`). 7 types
+  (COM, PCU, PNA, PRD, PSV, SPU, VIL) n'ont aucune facette et n'en reçoivent pas.
+- **Piège relevé** : `object_iti.open_status` n'accepte que 4 des 7 codes de
+  `ref_code_iti_open_status` — `not_managed`, `unknown` et `archived` sont refusés par le CHECK
+  de la colonne.
+
+| Type | Facettes semées |
+| --- | --- |
+| ITI | `object_iti` (distance, dénivelé, durée, boucle, statut, **tracé LineString**), 4 étapes géolocalisées, 1-3 pratiques, `object_iti_info`, 6 points de profil |
+| FMA | `object_fma` (dates, horaires, récurrence) + **3 occurrences étalées** (passée, proche, lointaine) |
+| ACT, ASC | `object_act` (durée, participants, difficulté, âge, encadrement) |
+| HOT, HLO, CAMP, HPA, RVA | 3 types de chambre (capacités, surface, literie, prix) ; salle de réunion 1 fiche sur 2 |
+| LOI | salle de réunion 1 fiche sur 2 |
+| RES | une carte + 4 plats |
+
+Le bloc I de `test_test_org_seed.sql` garde tout cela, et sa moitié générique est **pilotée par le
+registre** : si un type gagne une facette demain et que le semeur l'ignore, il rougit sans qu'on
+touche au test. **Non-vacuité prouvée par sabotage** — les 5 assertions rougissent quand on
+détruit tour à tour étapes, tracé, dates, chambres et cartes.
+
+### Creer une fiche DANS le bac a sable
+
+C'est la condition d'un bac a sable utile — on n'y vient pas pour lire — et le chemin le plus
+fragile du cloisonnement, parce qu'il repose sur un **enchainement de triggers** :
+
+```
+rpc_create_object
+  -> trg_auto_attach_object_to_creator_org   (AFTER INSERT sur object : pose object_org_link is_primary)
+     -> trg_object_org_link_is_test           (AFTER INSERT sur object_org_link : marque object.is_test)
+```
+
+Si l'auto-rattachement cesse un jour de poser `is_primary`, les fiches creees dans le bac a sable
+**naitront en production** — publiques des leur publication, et servies a l'API partenaire, sans
+aucune erreur. Le bloc I de `test_test_org_isolation.sql` garde precisement cela : creation,
+publication, puis verification par `anon` **et** par `service_role`.
+
+### L'identité d'acteur traverse les organisations (correctif 18c-bis)
+
+Un utilisateur est relié à des fiches **par son e-mail** — `api.user_actor_ids()` joint
+`actor_channel.kind='email'` sur l'e-mail de session. Ce chemin (1a/1b du read gate) **ignore
+complètement l'organisation**, donc il ignorait aussi le realm : le prédicat n'avait été posé que
+sur le chemin 2C.
+
+Les deux sens fuyaient, mesurés sur la base live :
+
+| Croisement | Avant | Après |
+| --- | --- | --- |
+| Testeur dont l'e-mail est celui d'un acteur **réel** | voyait la fiche de production `LOIRUN00000000VI` | 0 fiche réelle |
+| Utilisateur de production dont l'e-mail est posé sur un acteur du **bac à sable** | voyait la fiche de test `PNATST0000000012` | 0 fiche de test |
+
+Le second n'a rien de théorique : **poser un e-mail sur un acteur du bac à sable est exactement ce
+qu'on y fait pour éprouver le portail acteur** (§228).
+
+**Le correctif filtre l'UNION ENTIÈRE en un seul point** — un `JOIN object … WHERE o.is_test =
+(SELECT api.current_user_test_realm())` posé sur le résultat des 5 chemins, plutôt qu'un prédicat
+répété chemin par chemin qui se serait re-oublié au prochain chemin ajouté. Le prédicat inline de
+2C disparaît, devenu redondant.
+
+**L'écriture passait par le même trou** : `api.is_object_owner` s'appuie sur `user_actor_ids()` et
+renvoyait `true` sur une fiche de production pour un compte de test. L'`UPDATE` direct ne touchait
+0 ligne — mais **par effet de bord** de la policy SELECT, pas par une garde : un RPC
+`SECURITY DEFINER` qui consulte `is_object_owner` puis écrit n'aurait eu aucun filet. La garde
+porte désormais le prédicat. `user_can_write_canonical` était déjà sain (il exige le lien d'ORG).
+
+**Découverte annexe** : les e-mails d'acteurs sont **uniques globalement** (« Email … is already
+used by actor … »). Cela limite la portée du croisement — un même e-mail ne peut pas être porté
+par un acteur de chaque côté — mais ne l'empêche pas, puisqu'il suffit qu'un *utilisateur* d'un
+realm porte l'e-mail d'un *acteur* de l'autre.
+
+Bloc J de `test_test_org_isolation.sql`, **non-vacuité prouvée par sabotage** : en restaurant la
+forme d'avant (prédicat sur le seul 2C), le bloc rougit.
+
+### Ouvrir un compte de test
+
+Aucun code supplémentaire : l'ORG « Bac a sable (organisation de test) » apparaît dans le
+sélecteur d'organisation de **/settings > Équipe**. On y invite un compte par e-mail ; l'invité
+choisit son propre mot de passe via `/set-password`, comme pour toute autre organisation.
+
+Comptes **dédiés** : pas de double appartenance. Le realm se calcule par utilisateur, pas par
+session — un compte présent dans les deux mondes serait de test partout, y compris sur les
+fiches réelles.
+
+### Remise à zéro
+
+`api.rpc_reset_test_data()` — superuser plateforme, **sans argument** (la cible est constante, on
+ne peut pas la pointer sur une organisation de production), et refus si l'ORG visée n'est pas
+`is_test_org`. Exposée dans **/settings > Corpus de test**, avec confirmation par saisie.
+
+La purge porte sur `is_test`, **pas sur le préfixe d'id** : une fiche créée à la main dans le bac
+à sable doit disparaître aussi, et une fiche de production ne doit pas disparaître parce qu'elle
+porterait un id malheureux.
+
+### Ordre de déploiement
+
+1. `migration_test_org_isolation.sql` (18c) — **en dernier dans le manifeste** : sa réécriture
+   générique des policies doit voir toutes les policies déjà créées.
+2. Les fonctions modifiées d'`api_views_functions.sql` (extraites par
+   `tools/sql/extract_functions.cjs` — le fichier entier contient des `DROP … CASCADE` qu'on ne
+   rejoue pas sur la production).
+3. `migration_explorer_rls_setbased.sql` (chemin 2C), `migration_cards_batch_authorize_definer.sql`,
+   `migration_partner_tombstone_feed.sql`.
+4. `migration_test_org_seed.sql` (18d).
+
+## Integration portail et bac a sable — 2026-09-04
+
+Le portail conserve 18a et le seed des modes de visite 18b. Le bac a sable utilise
+18c (isolation), 18d0 (facettes) puis 18d (corpus), apres le portail.
+La migration du portail conserve le filtre de realm sur les cinq chemins de lecture
+historiques, sur la portee explicite du portail et sur le lien owner, en plus du refus
+d'ecriture canonique pour la persona actor. Le bloc J du test d'isolation est rejoue
+apres les deux migrations pour verifier que le portail ne rouvre pas le pont e-mail.
+Les numeros des anciens rapports restent des reperes historiques de leurs branches.

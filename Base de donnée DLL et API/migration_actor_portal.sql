@@ -11,6 +11,11 @@
 --     dans current_user_extended_object_ids (bras 1b fermé, liens expirés exclus,
 --     pont e-mail ignoré pour cette persona). can_read_extended délègue déjà à la
 --     fonction ensembliste : UNE seule fonction à brancher, l'équivalence tient seule.
+--     §1.3bis (revue sécurité 2026-09-04) : app_user_profile.actor_id devenant PORTEUSE
+--     de droits, elle cesse d'être écrivable par son sujet — privilège de colonne retiré
+--     à authenticated/anon (par REVOKE de TABLE + re-GRANT colonne par colonne, seule
+--     forme qui ferme réellement) ET bras `actor_id` ajoutés au trigger
+--     api.enforce_app_user_profile_role_change.
 --  2. D7 — is_object_owner ferme l'écriture canonique aux personas acteur.
 --  3. DDL — fiche_submission, pending_change.submission_id, org_actor_module_visibility,
 --     kind 'fiche_submission_reviewed' (CHECK + index outbox élargis).
@@ -23,6 +28,10 @@
 --     enrichi (submission_id, note, acteur, manual_apply).
 --  8. Résolution (trigger), notification acteur, outbox élargie, list_crm_tasks émet
 --     extra, RGPD (délie le compte portail).
+--  9. (revue sécurité 2026-09-04) api.submit_pending_change se ferme aux personas acteur :
+--     18a crée la PREMIÈRE population de comptes `authenticated` EXTERNES, et cette RPC
+--     historique — exécutable par tout authenticated, gatée sur le seul can_read_object —
+--     contournait TOUTES les protections de submit_actor_fiche (§5).
 --
 -- Idempotente. NON foldée dans schema_unified.sql (pattern 17i/17m).
 -- NOTIFY pgrst requis (fonctions api.* nouvelles/modifiées) — fait en fin de fichier.
@@ -68,6 +77,135 @@ SET search_path = public, api, auth, pg_temp
 AS $$
   SELECT p.actor_id FROM app_user_profile p WHERE p.id = (SELECT auth.uid());
 $$;
+
+-- 1.3bis — CE QUE 18a DOIT FERMER EN MÊME TEMPS QU'ELLE L'OUVRE (revue sécurité 2026-09-04).
+-- En faisant d'app_user_profile.actor_id « LA source de vérité » (§1.3 ci-dessus), cette
+-- migration transforme une colonne jusqu'ici DORMANTE en PORTEUSE DE DROITS. Or la colonne
+-- restait écrivable par son propre sujet : la policy « Mise à jour de son profil utilisateur »
+-- autorise `id = auth.uid()` SANS restriction de colonne, et le trigger
+-- api.enforce_app_user_profile_role_change ne gardait QUE `role`. Fait vérifié en base le
+-- 2026-09-04 : has_column_privilege('authenticated','app_user_profile','actor_id','UPDATE')
+-- = TRUE, et 907 acteurs n'ont AUCUN compte portail — soit 907 cibles atteignables, puisque
+-- l'index unique partiel uq_app_user_profile_actor_id n'interdit que les acteurs DÉJÀ liés.
+-- Sans ce qui suit, tout compte authentifié se serait attribué l'actor_id de l'un d'eux et
+-- aurait hérité de sa portée portail — donc la lecture de ses fiches.
+--
+-- ⚠ POURQUOI PAS UN SIMPLE `REVOKE UPDATE (actor_id) … FROM authenticated` : ce serait un
+-- NO-OP. authenticated et anon tiennent UPDATE/INSERT au niveau TABLE (constaté en base :
+-- information_schema.role_table_grants), et PostgreSQL ne soustrait pas une colonne d'un
+-- privilège de table — il émet un WARNING et ne change RIEN. Sondé en base sous
+-- BEGIN/ROLLBACK le 2026-09-04 : après le REVOKE de colonne seul, has_column_privilege
+-- rendait ENCORE TRUE. La seule forme qui ferme réellement est celle-ci : retirer le
+-- privilège de TABLE, puis le rendre COLONNE PAR COLONNE, sauf actor_id.
+--
+-- Les dix colonnes re-accordées sont l'intégralité de app_user_profile SAUF actor_id : la
+-- fermeture vise CETTE colonne, pas l'édition du profil (display_name, avatar_url,
+-- preferences… restent écrivables — c'est la policy RLS `id = auth.uid()` qui borne QUELLE
+-- ligne, elle n'a pas bougé). `role` reste dans le GRANT à dessein : sa garde est le
+-- TRIGGER, pas le privilège — déplacer la garde masquerait le vrai gardien.
+-- La voie LÉGITIME d'écriture du lien est la route /api/crm/actor-access, qui écrit en
+-- service_role (client `server` de src/app/api/_document-auth.ts) : ce rôle n'est pas touché.
+-- Contrôlé aussi côté front : getOrCreateUserProfile (src/services/user-profile.ts) insère
+-- id, display_name, role, lang_prefs, preferences — jamais actor_id ; et le type du patch de
+-- updateCurrentUserProfile ne porte pas la colonne. Aucun chemin applicatif ne casse.
+-- Idempotent : REVOKE puis GRANT rejoués donnent le même état.
+REVOKE INSERT, UPDATE ON public.app_user_profile FROM authenticated, anon;
+GRANT INSERT (id, display_name, avatar_url, locale, timezone, role, lang_prefs, preferences, created_at, updated_at),
+      UPDATE (id, display_name, avatar_url, locale, timezone, role, lang_prefs, preferences, created_at, updated_at)
+  ON public.app_user_profile TO authenticated, anon;
+
+-- CEINTURE ET BRETELLES — le privilège ferme la porte PostgREST, le trigger ferme le FAIT.
+-- Les deux sont nécessaires : un futur `GRANT UPDATE ON app_user_profile TO authenticated`
+-- (le geste le plus banal qui soit, et le motif exact de plusieurs incidents de ce dépôt)
+-- rouvrirait l'escalade en grand sans que rien ne proteste. Le trigger, lui, ne dépend
+-- d'aucun GRANT. Il couvre en outre le bras INSERT : un profil qui n'existe pas encore
+-- (tout premier login) ne peut pas NAÎTRE déjà lié à un acteur.
+-- Corps recopié depuis le corps VIF (md5(prosrc)=a06546bd84712bc239e5f013b2ec665f, relevé en
+-- base le 2026-09-04 juste avant cette écriture) — comparé octet à octet à sa source
+-- déclarative migration_unblock_team_legal_access.sql : IDENTIQUE une fois les fins de ligne
+-- normalisées en CRLF (le fichier est CRLF, le md5 du corps CRLF vaut exactement le md5 vif).
+-- Seuls les DEUX bras `actor_id` sont ajoutés, sur le modèle EXACT des deux bras `role`.
+-- Deux écarts délibérés au modèle `role`, chacun pour une raison :
+--   • `NEW.actor_id IS NOT NULL` conditionne AUSSI le bras UPDATE. On garde l'ATTRIBUTION,
+--     jamais l'effacement : mettre la colonne à NULL n'est pas une escalade, et c'est
+--     précisément ce que font le DÉLIAGE RGPD (§8.5, UPDATE … SET actor_id = NULL) et la
+--     cascade app_user_profile_actor_id_fkey (ON DELETE SET NULL), qui déclenche elle aussi
+--     ce trigger. Sans cette condition, l'effacement RGPD d'un acteur par un `super_admin`
+--     (qui n'est pas `owner`) partirait en 42501 — la garde casserait un droit fondamental.
+--   • `pg_temp` ajouté en fin de search_path (doctrine §208/R2.1 : cette fonction SECURITY
+--     DEFINER LIT app_user_profile). Absent du corps vif ; ajout défensif sans effet de bord.
+-- Épinglé au test, bloc J : J2 prouve le refus, J3 le prouve à privilège de colonne RENDU
+-- (donc le trigger SEUL), J4 le bras INSERT, J5 que service_role et le bras `role` sont intacts.
+CREATE OR REPLACE FUNCTION api.enforce_app_user_profile_role_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $function$
+DECLARE
+  requester_uid UUID := auth.uid();
+  requester_is_service BOOLEAN := false;
+  requester_is_owner BOOLEAN := false;
+BEGIN
+  IF current_setting('request.jwt.claims', true) IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  requester_is_service := auth.role() IN ('service_role', 'admin');
+  requester_is_owner := EXISTS (
+      SELECT 1 FROM app_user_profile me
+      WHERE me.id = requester_uid AND me.role = 'owner'
+    );
+
+  IF TG_OP = 'INSERT'
+     AND NEW.role IS NOT NULL
+     AND NOT requester_is_service
+     AND NOT (requester_is_owner AND NEW.id IS DISTINCT FROM requester_uid)
+  THEN
+    RAISE EXCEPTION 'Le rôle applicatif est attribué par un administrateur, jamais par le profil utilisateur.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+     AND NEW.role IS DISTINCT FROM OLD.role
+     AND NOT requester_is_service
+     AND NOT (requester_is_owner AND NEW.id IS DISTINCT FROM requester_uid)
+  THEN
+    RAISE EXCEPTION 'Le rôle applicatif est attribué par un administrateur, jamais par le profil utilisateur.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  -- 18a — le lien compte↔acteur PORTE la portée du portail (api.current_user_actor_id) :
+  -- il s'attribue par l'invitation (route /api/crm/actor-access, service_role), jamais par
+  -- le sujet lui-même. On ne garde que l'ATTRIBUTION (NEW.actor_id IS NOT NULL) : le
+  -- déliage RGPD et la cascade ON DELETE SET NULL doivent rester possibles.
+  IF TG_OP = 'INSERT'
+     AND NEW.actor_id IS NOT NULL
+     AND NOT requester_is_service
+     AND NOT (requester_is_owner AND NEW.id IS DISTINCT FROM requester_uid)
+  THEN
+    RAISE EXCEPTION 'Le lien vers un acteur est attribué à l''invitation, jamais par le profil utilisateur.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF TG_OP = 'UPDATE'
+     AND NEW.actor_id IS NOT NULL
+     AND NEW.actor_id IS DISTINCT FROM OLD.actor_id
+     AND NOT requester_is_service
+     AND NOT (requester_is_owner AND NEW.id IS DISTINCT FROM requester_uid)
+  THEN
+    RAISE EXCEPTION 'Le lien vers un acteur est attribué à l''invitation, jamais par le profil utilisateur.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
+-- Le trigger lui-même est déjà posé (schema_unified.sql) : CREATE OR REPLACE FUNCTION
+-- suffit, et préserve les GRANT en place (migration_revoke_anon_q1b_denylist.sql).
+REVOKE ALL ON FUNCTION api.enforce_app_user_profile_role_change() FROM PUBLIC, anon, authenticated;
+COMMENT ON FUNCTION api.enforce_app_user_profile_role_change() IS
+  'Garde d''écriture d''app_user_profile : `role` (historique) ET, depuis 18a, `actor_id` — le lien qui PORTE la portée du portail acteur. Attribution réservée au service_role (route /api/crm/actor-access) ou à un owner agissant sur un AUTRE profil ; l''effacement (NULL) reste libre pour le déliage RGPD et la cascade FK.';
 
 -- 1.4 La portée portail : les fiches où MON acteur (actor_id explicite, jamais l'e-mail)
 -- tient un lien NON expiré, hors objets ORG (l'éditeur ne les supporte pas).
@@ -513,7 +651,8 @@ DECLARE
   -- re-vérifié en base juste avant cette écriture, md5(prosrc)=3cf2a45631df18e22e0b4c5cd81d9e2e,
   -- IDENTIQUE à l'archive .superpowers/sdd/2026-09-01-portail-acteur/live/approve_pending_change.LIVE.sql —
   -- n'en porte que SEPT : SANS save_object_rooms. Cette liste DOIT rester un
-  -- SOUS-ENSEMBLE (ici : identique) de celle d'approve_pending_change, JAMAIS un
+  -- SOUS-ENSEMBLE (depuis la revue du 2026-09-04 : STRICT — voir plus bas) de celle
+  -- d'approve_pending_change, JAMAIS un
   -- sur-ensemble : si submit_actor_fiche acceptait un writer qu'approve_pending_change
   -- refuse, ce changement entrerait en base à la soumission puis ne pourrait plus
   -- JAMAIS être approuvé (22023 côté approve) — et comme uq_fiche_submission_open
@@ -523,10 +662,30 @@ DECLARE
   -- approve_pending_change — et sans mettre à jour l'assertion miroir de
   -- tests/test_actor_portal.sql (bloc D2, « épinglé save_object_rooms ») qui
   -- proteste explicitement contre cette divergence.
-  v_allowed   text[] := ARRAY[
-    'save_object_commercial','save_object_workspace_sustainability','save_object_workspace_tags',
-    'save_object_itinerary_nested','save_object_openings','save_object_places',
-    'save_object_relations'];
+  --
+  -- RÉDUCTION (revue sécurité 2026-09-04) — le défaut que ces DEUX entrées ferment :
+  -- le plancher dur est contrôlé sur `metadata.section`, le ré-dispatch d'écriture est
+  -- décidé sur `metadata.rpc`, et RIEN dans cette fonction ne COUPLE les deux clés. Une
+  -- enveloppe qui déclare une section anodine ('contacts', ni plancher ni masquée) et un
+  -- writer de la liste franchissait donc le plancher, entrait en base, puis se faisait
+  -- ré-dispatcher pour de bon à l'approbation. Trois des sept entrées étaient par ailleurs
+  -- explicitement interdites AILLEURS dans ce même fichier : `relationships`, `places` et
+  -- `media` sont dans api.actor_portal_floor_modules() (§4.1), dont le commentaire dit
+  -- pourquoi — save_object_relations « réécrit object_org_link ET actor_object_role, le
+  -- périmètre même de l'acteur », save_object_places « supprime les médias des sous-lieux
+  -- absents du payload ». Le plancher les fermait par la section ; la whitelist les
+  -- rouvrait par le rpc.
+  -- La liste est donc ramenée aux SEULS writers que le portail ÉMET réellement. Les cinq
+  -- autres n'ont aucun émetteur : les retirer ne retire aucune capacité existante.
+  -- L'invariant du §7 tient toujours, et plus largement qu'avant : cette liste reste un
+  -- SOUS-ENSEMBLE (ici STRICT) de celle d'api.approve_pending_change — donc aucun
+  -- changement accepté ici ne peut être refusé là-bas, et aucune fiche ne peut rester
+  -- bloquée à vie sur uq_fiche_submission_open. C'est le sens de l'inclusion qui compte :
+  -- rétrécir est TOUJOURS sûr, élargir ne l'est jamais.
+  -- Épinglé au test, bloc D2 : les cinq writers retirés y sont refusés UN PAR UN, et
+  -- save_object_commercial y a son contrôle positif (une whitelist vidée serait sinon
+  -- verte partout et le portail muet).
+  v_allowed   text[] := ARRAY['save_object_commercial','save_object_openings'];
   v_change    jsonb;
   v_section   text;
   v_rpc       text;
@@ -675,7 +834,7 @@ $$;
 REVOKE ALL ON FUNCTION api.submit_actor_fiche(text, jsonb, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION api.submit_actor_fiche(text, jsonb, text) TO authenticated, service_role;
 COMMENT ON FUNCTION api.submit_actor_fiche(text, jsonb, text) IS
-  '18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = SEPT entrées, identique à approve_pending_change (§120) — jamais un sur-ensemble, sous peine de fiche bloquée à vie.';
+  '18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = DEUX entrées (save_object_commercial, save_object_openings), les SEULES que le portail émet — sous-ensemble STRICT d''approve_pending_change (§120), jamais un sur-ensemble sous peine de fiche bloquée à vie. Les cinq autres writers ont été retirés le 2026-09-04 : le plancher dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien ne couplait les deux clés.';
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Lectures côté acteur. Auto-scopées : jamais de paramètre « pour qui » —
@@ -1786,6 +1945,99 @@ REVOKE ALL ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) FROM PUBL
 GRANT EXECUTE ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) TO authenticated, service_role;
 COMMENT ON FUNCTION api.rpc_gdpr_erase_subject(TEXT,TEXT,TEXT,TEXT) IS
   'Effacement/anonymisation RGPD Art. 17 d''un sujet. Anonymise (défaut) ou supprime, rédige le journal d''audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 9. La PORTE DÉROBÉE de la file de modération (revue sécurité 2026-09-04).
+-- ─────────────────────────────────────────────────────────────────────────────
+-- api.submit_pending_change (migration_moderation_rpcs.sql) est exécutable par TOUT
+-- `authenticated` et ne vérifie qu'une chose : api.can_read_object(p_object_id), c'est-à-dire
+-- « publié OU portée étendue ». Tant que la seule population `authenticated` était INTERNE
+-- (équipes éditrices), c'était le bon gate. 18a crée la PREMIÈRE population de comptes
+-- `authenticated` EXTERNES — les prestataires — et n'y posait aucune garde. Conséquence :
+-- TOUTES les protections de api.submit_actor_fiche (§5) — plancher dur des modules, matrice
+-- de masquage par ORG, whitelist de writers, plafond de 40 changements, verrou PT409 « une
+-- seule vérification ouverte » — se contournaient en appelant simplement l'AUTRE RPC. Pire :
+-- can_read_object accepte n'importe quel objet PUBLIÉ du realm, pas seulement les fiches du
+-- prestataire ; la porte dérobée était donc plus large que la porte qu'elle contourne.
+--
+-- La garde vit ICI, dans 18a, et pas dans migration_moderation_rpcs.sql : c'est 18a qui
+-- ouvre la population, donc c'est elle qui doit la refermer — et migration_moderation_rpcs
+-- reste lisible comme l'état antérieur, sans garde à expliquer par un chantier futur.
+--
+-- Corps recopié depuis le corps VIF (md5(prosrc)=663d7d7a92b58d3285a2df0aa1dbb946, len=1104,
+-- relevé en base le 2026-09-04 juste avant cette écriture). Comparaison avec sa source
+-- déclarative migration_moderation_rpcs.sql : le corps du fichier, fins de ligne normalisées
+-- en LF, vaut 1179 octets / md5 b808f1cb7e3305bdfea1ecf9c972df3d. L'UNIQUE écart est la ligne
+-- de commentaire « -- Garde de lisibilité : … » (75 octets), absente du corps vif ; le corps
+-- du fichier PRIVÉ de cette seule ligne rend exactement 1104 octets et le md5 vif. Écart
+-- purement cosmétique, aucune divergence de logique : le fichier a gagné un commentaire après
+-- le déploiement. On repart du corps VIF et on lui REND ce commentaire, ce qui réaligne enfin
+-- la base sur sa source déclarative. Seule la garde ci-dessous est ajoutée.
+-- Durcissement (doctrine §208/R2.1, comme §2 de ce fichier) : `pg_temp` ajouté en fin de
+-- search_path — cette fonction SECURITY DEFINER lit `object` (via can_read_object) et écrit
+-- `pending_change`. Absent du corps vif ; sans effet de bord.
+-- CREATE OR REPLACE (pas DROP+CREATE) : la signature ne bouge pas, les GRANT survivent —
+-- ils sont néanmoins re-posés plus bas, à l'identique de migration_moderation_rpcs.sql.
+-- Épinglé au test, bloc J6 : refus sur SA fiche ET sur une fiche publiée quelconque, aucune
+-- ligne écrite, et contrôle POSITIF qu'un tourism_agent passe toujours.
+CREATE OR REPLACE FUNCTION api.submit_pending_change(
+  p_object_id    text,
+  p_target_table text,
+  p_target_pk    text,
+  p_action       text,
+  p_payload      jsonb,
+  p_metadata     jsonb DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = public, api, auth, pg_temp
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_id  uuid;
+BEGIN
+  -- 18a — le portail acteur a SA porte : api.submit_actor_fiche. Elle seule applique le
+  -- plancher, le masquage, la whitelist, le plafond et le verrou. Celle-ci reste celle des
+  -- équipes internes. Le message doit rester compréhensible : c'est un prestataire qui le lit.
+  IF api.is_actor_persona() THEN
+    RAISE EXCEPTION 'Les comptes du portail acteur soumettent leurs modifications depuis leur fiche (bouton « Soumettre pour vérification »), pas par la file de modération.'
+      USING ERRCODE = '42501';
+  END IF;
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentification requise pour soumettre une modification'
+      USING ERRCODE = '42501';
+  END IF;
+  IF p_target_table IS NULL OR btrim(p_target_table) = '' THEN
+    RAISE EXCEPTION 'target_table requis' USING ERRCODE = '22023';
+  END IF;
+  IF COALESCE(p_action, '') NOT IN ('insert', 'update', 'delete') THEN
+    RAISE EXCEPTION 'action invalide (insert|update|delete attendu): %', p_action
+      USING ERRCODE = '22023';
+  END IF;
+  IF p_payload IS NULL THEN
+    RAISE EXCEPTION 'payload requis' USING ERRCODE = '22023';
+  END IF;
+  -- Garde de lisibilité : on ne suggère que sur un objet qu'on peut voir.
+  IF p_object_id IS NOT NULL AND NOT api.can_read_object(p_object_id) THEN
+    RAISE EXCEPTION 'Objet introuvable ou non lisible: %', p_object_id
+      USING ERRCODE = '42501';
+  END IF;
+
+  INSERT INTO pending_change (
+    object_id, target_table, target_pk, action, payload, submitted_by, status, metadata
+  )
+  VALUES (
+    p_object_id, p_target_table, p_target_pk, p_action, p_payload, v_uid, 'pending', p_metadata
+  )
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$$;
+REVOKE ALL ON FUNCTION api.submit_pending_change(text, text, text, text, jsonb, jsonb) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION api.submit_pending_change(text, text, text, text, jsonb, jsonb) TO authenticated, service_role;
+COMMENT ON FUNCTION api.submit_pending_change(text, text, text, text, jsonb, jsonb) IS
+  'Dépose une suggestion dans la file de modération (équipes internes). 18a : FERMÉE aux personas du portail acteur — elles ont leur propre porte, api.submit_actor_fiche, seule à appliquer le plancher de modules, la matrice de masquage, la whitelist de writers, le plafond de 40 changements et le verrou « une seule vérification ouverte ».';
 
 COMMIT;
 

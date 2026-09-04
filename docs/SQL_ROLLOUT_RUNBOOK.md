@@ -282,6 +282,18 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 17m. `migration_crm_task_email_documents.sql` — **Tâches CRM : outbox e-mail d'assignation, description, pièces jointes (spec `docs/superpowers/specs/2026-08-31-crm-task-email-description-attachments-design.md`)** (**APRÈS 16z**, qui est la source canonique du corps de `api.list_crm_tasks` — 17m le REDÉPLOIE avec une clé de plus, placée avant 16z elle serait ÉCRASÉE par la version 16z rejouée ensuite — et après toute migration ultérieure qui toucherait cette fonction ; idempotente ; **`NOTIFY pgrst, 'reload schema';` requis** et fait par le fichier, trois fonctions `api.*` neuves ou modifiées). **Créneau `17m` : vérifié libre** au manifeste et dans `ci_fresh_apply.sql` avant écriture. **⚠ RENUMÉROTÉ depuis le créneau initial** : ce chantier a été coupé de `master` avant qu'un AUTRE chantier (permissions par rôle métier, §227) ne pousse en premier et n'occupe désormais quatre créneaux sur `master` ; renommage documentaire pur, la migration est **déjà appliquée en production** (nom Supabase `crm_task_email_documents`, 2026-09-01) sous ce contenu. **⚠ LE SQL PART AVANT LE FRONT, ET CE N'EST PAS UNE PRÉFÉRENCE DE RANGEMENT.** Le déploiement n'est pas atomique (SQL à la main, front par build Coolify depuis `master`) et les deux sens d'inversion ne coûtent PAS la même chose. Front d'abord : (1) les trois routes `/api/task-document` appellent `api.user_can_write_crm_task`, qui n'existe pas encore — PostgREST rend `42883`, la route le lit comme un refus de droit et répond **403 avec un message de droits TROMPEUR** (« Cette action n'est pas autorisée avec vos droits actuels »), envoyant l'utilisateur et le support chercher une permission manquante là où il n'y a qu'une fonction absente ; (2) le ping `/api/crm/notify-drain` posé après chaque assignation appelle `api.claim_unmailed_notifications`, absente elle aussi — **les e-mails ne partent pas DU TOUT, et en silence** : le ping est délibérément *fire-and-forget*, personne ne voit son échec, et rien ne s'accumule côté DB puisque les colonnes d'outbox n'existent pas encore. SQL d'abord : les colonnes, la table et les fonctions attendent simplement un front qui ne les appelle pas encore — **aucun symptôme, aucune perte**. **Contenu.** (1) **`app_notification` devient un OUTBOX e-mail** (`email_claimed_at` / `email_sent_at` / `email_error` / `email_attempts`) drainé par la route Next `/api/crm/notify-drain` : le relais SMTP est autorisé **par IP du VPS**, ni une Edge Function ni un trigger DB ne peuvent envoyer — c'est ce qui interdit le trigger `pg_net` qu'on attendrait ici. Claim `SKIP LOCKED` + **TTL 10 min** : un crash entre le claim et l'envoi re-rend la ligne réclamable — un e-mail n'est jamais perdu, un doublon n'est possible QUE dans cette fenêtre de panne (arbitrage assumé, le même que celui du bras d'acquittement en échec). Le contenu du message est **100 % dérivé en DB** (aucune donnée client n'entre jamais dans un e-mail) et les libellés de personnes sont **JOINTS à la lecture, jamais stockés** (effacement RGPD respecté). Trois bras ferment la **boucle claim/échec** qui bouche la file : destinataire sans adresse **absente** ou **vide** (`NULLIF`) ⇒ ligne TERMINÉE sur place (`no_recipient_email`) ; et **`email_attempts < 5`**, qui ferme la MÊME classe de panne pour l'autre moitié du problème — l'adresse syntaxiquement valide dont la boîte refuse **définitivement** (compte fermé, domaine en rejet) échoue, redevient réclamable, et **reste en tête de `ORDER BY created_at`** : elle consomme un des 20 créneaux de CHAQUE drain, à jamais. Une ligne épuisée **sort** de la file : ni supprimée ni marquée envoyée (`email_sent_at` reste NULL — aucun e-mail n'est parti), diagnosticable par `email_error` + `email_attempts`, relançable par un geste EXPLICITE d'exploitation (`UPDATE … SET email_attempts = 0`). **⚠ BACKFILL DE L'ARRIÉRÉ** : `ADD COLUMN email_sent_at` fait naître toutes les lignes historiques à NULL, donc **réclamables** — sans le `UPDATE … email_error = 'backfill_pre_17i'` posé juste après l'ajout des colonnes, le premier drain e-maillerait des assignations vieilles de plusieurs jours, déjà vues dans l'interface. **⚠ `backfill_pre_17i` NE SE RENOMME PAS** : cette chaîne est une valeur déjà ÉCRITE EN PRODUCTION (une ligne `app_notification.email_error` la porte réellement depuis l'application du 2026-09-01) — elle garde le numéro de créneau `17i` sous lequel elle a été écrite, avant que ce créneau ne soit renuméroté `17m` pour collision avec §227 ; c'est un marqueur historique, le renommer ferait diverger le fichier de la base. **Ce backfill n'est PAS idempotent au sens métier** : le REJOUER sur une base vivante terminerait ce qui attend dans la file à cet instant (au pire quelques minutes, la file étant drainée à chaque assignation) — même classe d'avertissement que le rejeu de 17b/17g. Les deux RPC d'outbox sont **`service_role` seul** (`REVOKE … FROM PUBLIC, anon, authenticated`) : un navigateur ne doit pouvoir ni vider la file ni lire des adresses e-mail. Index de parcours **borné sur `kind` ET sur `email_attempts`**, et **`DROP` préalable obligatoire** : `CREATE INDEX IF NOT EXISTS` ne compare que le NOM, un environnement portant une rédaction antérieure du prédicat garderait silencieusement l'ancienne définition. (2) **`api.user_can_write_crm_task(uuid)`** — LE prédicat d'écriture d'une tâche, factorisé : **même règle que `api.save_crm_task`** (`user_can_write_crm` sur l'`object` de la tâche), tâche inconnue ⇒ `false` et jamais une erreur qui fuiterait. Gate des trois routes `/api/task-document`. (3) **`crm_task_document`** — pièces jointes d'une tâche : fichier dans le bucket **privé** `actor-documents` (chemin `tasks/{task_id}/…`), `ref_document.access_scope = 'crm_private'`, **RLS `service_role` only, zéro grant `anon`/`authenticated`** (comme `actor_document`) ; écrite par les routes Next en `service_role`, lue par `list_crm_tasks`. (4) **`api.list_crm_tasks` émet `documents[]`** par tâche (`[]` jamais null : le front itère, il ne teste pas la nullité ; `id` EST le `document_id`, jamais l'id de la ligne de liaison). **`size_bytes` est CASTÉ SOUS GARDE `^\d{1,18}$`** : `ref_document.extra` est un jsonb LIBRE partagé avec tous les autres flux documentaires, et un cast nu ferait lever `22P02` (valeur non numérique) ou `22003` (valeur numérique débordant `bigint`) **non pas sur la pièce fautive mais sur `api.list_crm_tasks()` TOUT ENTIÈRE** — une seule ligne malformée écrite par un autre flux abattrait le kanban CRM de TOUS les utilisateurs du périmètre ; 18 chiffres valent au plus 999 999 999 999 999 999, strictement sous le maximum d'un `bigint`, la borne ferme donc les deux moitiés PAR CONSTRUCTION. **⚠ REJEU** : `supabase/migrations/20260807124408_actor_prospects_documents.sql:428` porte le MÊME cast nu sur la même clé pour les documents d'ACTEUR — hors périmètre de 17m, tâche de fond ouverte. Couverte par `Base de donnée DLL et API/tests/test_crm_task_email_documents.sql` (étape **17m-test**), **prouvée ROUGE avant application** (`P0004` sur A1 : les colonnes d'outbox n'existaient pas), verte après, et **non vacante par douze sabotages** en transaction annulée levant chacun sur SA propre garde.
 
+> **Les trois étapes §227 qui suivent sont posées ICI, en fin de chaîne, et NON à leur place chronologique** (elles ont été appliquées en production le 2026-08-31, avant 17m ; la quatrième, 17l, n'est pas déclarée — voir l'encadré à la fin du bloc). Chacune remplace une fonction qu'un fichier **plus bas** du manifeste redéfinit — `api.rpc_list_org_members` (17d), `api.current_user_can_write_crm_notes` (17c), `api.user_can_write_list` / `api.create_list` (L1) — et 17j **patche une fonction sur place**. Les remonter à leur date les ferait écraser en silence par un fichier postérieur. Elles doivent en revanche rester **avant 18a**, dont la réécriture générique des policies de lecture doit voir toutes les policies déjà créées. **Absentes du manifeste jusqu'au 2026-09-04** : constaté en posant 18a — la garde CI ne les appliquait donc jamais et une base fraîche ne portait aucune des règles d'autorisation qu'elles installent (instance de la classe « Deploy integrity (no PROD-only DDL) » de CLAUDE.md).
+
+> **Parité PROD ↔ fichier vérifiée le 2026-09-04**, avant de les déclarer — on ne pose pas au manifeste un fichier dont on n'a pas prouvé qu'il décrit le vif. `md5(prosrc)` comparé au corps extrait du fichier (`\r` normalisés) : **identique** pour `api.user_has_permission`, `api.rpc_set_role_permission`, `api.rpc_list_role_permissions`, `api.rpc_list_org_members`, `public.seed_org_role_permission`, `api.user_can_write_crm`, `api.user_can_write_crm_actor`, `api.current_user_can_write_crm_notes` et `api.create_list`. **Une seule divergence, de COMMENTAIRE uniquement** : `api.user_can_write_list` porte au fichier trois lignes de commentaire ajoutées après le déploiement — parité **exacte** une fois les commentaires retirés (411 caractères, `9c51f7dedfa9d6e7af4d4795ce26d690` des deux côtés). Structure : `org_role_permission` existe (58 lignes actives), `trg_seed_org_role_permission` posé, `org_permission` à **0 ligne active**, `rpc_grant_org_permission` / `rpc_revoke_org_permission` **absentes**, `api.save_crm_actor` ne porte plus le motif patché, et la vérification **V1 de 17k** passe sur le vif : **0** fonction accepte encore `current_user_admin_rank() IS NOT NULL` hors commentaire.
+
+17i. `migration_role_permission_matrix.sql` — **Le rôle métier CONFÈRE les droits, réglés par ORG (§227)** (après **17d** `migration_team_roster_provenance.sql` ; idempotent ; détail complet à la section **17i** plus bas). Ajoute `org_role_permission` (ORG × rôle métier × permission) et un chemin « rôle » dans `api.user_has_permission` ; **retire** le chemin `org_permission`, qui accordait à TOUS les membres de l'ORG sans regarder leur rôle ; `user_permission` reste, lu pour ce qu'il est — des **exceptions**. **Garde pré-vol bloquante** : refuse de s'appliquer si `org_permission` porte encore une ligne active — sur base fraîche la table est **vide**, le seul `INSERT` du corpus étant logé dans le **corps** de `api.rpc_grant_org_permission` (`rls_policies.sql`), donc jamais exécuté au DDL. Seed du préréglage SP-2 par ORG existante **plus** trigger `trg_seed_org_role_permission` pour les ORG créées ensuite, sans quoi une ORG neuve naîtrait avec une matrice vide et ses Éditeurs porteraient l'étiquette sans aucun droit. `DROP` de `rpc_grant_org_permission` / `rpc_revoke_org_permission`. **Sa place est dictée par `api.rpc_list_org_members`**, qu'elle recrée : après **17d**, dernier autre définisseur du manifeste — la parité `md5(prosrc)` ↔ fichier sur la base vive confirme que 17i en est bien le dernier écrivain en production. Policy de lecture en forme initplan (`(SELECT auth.uid())`), conforme à la garde permanente **16h**. **Aucun fichier de test versionné** : éprouvée en production par sabotage en transaction annulée.
+
+17j. `migration_crm_write_requires_permission.sql` — **Écrire du CRM exige la permission, jamais le seul rang d'administration (§227)** (après **17i** et **17c** `migration_crm_notes_probe.sql` ; idempotent ; détail à la section **17j**). Retire le bras `api.current_user_admin_rank() IS NOT NULL` des **quatre** gardes d'écriture CRM : `user_can_write_crm`, `user_can_write_crm_actor`, `current_user_can_write_crm_notes`, et la branche « acteur en projet » de `save_crm_actor`. Le test retiré n'était pas un **seuil** mais une **non-nullité** — `team_lead` vaut 10, très en dessous du rang 30 exigé pour écrire une permission. **⚠ SA PLACE EST DICTÉE PAR SON PATCH SUR PLACE** : `save_crm_actor` fait ~200 lignes pour un seul bras à corriger, elle est donc lue par `pg_get_functiondef` puis réécrite par substitution d'un motif, avec `RAISE` si le motif est absent **ou** présent plus d'une fois (pas de no-op silencieux). Le motif est comparé **tel quel, en minuscules** : le dernier définisseur de `save_crm_actor` dans ce manifeste est l'étape **8z3** `../supabase/migrations/20260807124408_actor_prospects_documents.sql`, dont le corps le porte en minuscules et **exactement une fois** ; `migration_crm_module.sql`, bien plus haut, écrit le même prédicat en MAJUSCULES et ferait échouer le patch sur la branche « le bras a changé de forme ». **Aucun fichier de test versionné.**
+
+17k. `migration_list_write_creator_only.sql` — **Écrire une liste : son créateur, pas « n'importe quel rôle admin » (§227)** (après **L1** `migration_object_list.sql` ; idempotent ; détail à la section **17k**). Dernier porteur du motif fermé par 17j, même défaut : une non-nullité et non un seuil, si bien que `team_lead` (rang 10) pouvait modifier, partager, marquer envoyée ou **supprimer** la liste de n'importe qui dans l'ORG. **Pas de permission inventée ici, délibérément** : il n'existe aucun droit « écrire une liste » au catalogue et `api.create_list` n'en demandait aucun — une liste est une **sélection personnelle**, la bonne question n'est pas quel droit mais à qui elle appartient. Second bras étroit contre les listes **orphelines** : `object_list.created_by` ne porte aucune clé étrangère, donc au départ d'un membre sa liste resterait inéditable par toute l'ORG ; un administrateur d'ORG de rang ≥ 30 peut la reprendre **si et seulement si** le créateur n'est plus membre actif. `COALESCE(..., FALSE)` en tête (§204) : `is_platform_superuser()` rend NULL hors contexte HTTP et les appelants écrivent `IF NOT … THEN RAISE`, où `NOT NULL` ne déclenche **pas** le `RAISE` — la garde deviendrait fail-OPEN. **Aucun fichier de test versionné.**
+
+> **17l `migration_list_create_superuser_only.sql` — appliquée en PROD le 2026-08-31, DÉLIBÉRÉMENT NON DÉCLARÉE ici (2026-09-04).** La déclarer **ferait rougir la garde CI**, et le défaut n'est pas dans la migration : elle réserve `api.create_list` au superuser plateforme, or `tests/test_object_list.sql` — **rejoué par le workflow APRÈS le manifeste**, étape « §211 E1 Listes module non-regression » — appelle `api.create_list` (ligne 98) sous une persona `authenticated` dont `app_user_profile.role` vaut `tourism_agent` : `is_platform_superuser()` y est FALSE et l'appel lèverait `42501`. **Ce test encode la règle produit d'AVANT l'arbitrage PO du 2026-08-31** ; c'est lui qui doit être repris — persona superuser pour la création, ou assertion explicite du refus — et ce geste est une décision produit, pas une réparation de manifeste. **Tant que ce test n'est pas repris, ne pas déclarer 17l.** Vérifié le 2026-09-04 : `test_object_list.sql` est le **seul** test du dépôt qui appelle `api.create_list` ou `api.user_can_write_list`, donc c'est le seul obstacle. Voir la section **17l** plus bas.
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -1062,6 +1074,11 @@ pendant la fenêtre continue de fonctionner.
 `Base de donnée DLL et API/migration_role_permission_matrix.sql`
 Rollback : `Base de donnée DLL et API/rollback/rollback_role_permission_matrix.sql`
 
+**Manifeste : étape `17i`**, après **17d** `migration_team_roster_provenance.sql` — dernier
+autre définisseur d'`api.rpc_list_org_members`, que cette migration recrée. Déclarée dans
+`ci_fresh_apply.sql` le **2026-09-04** seulement ; jusque-là appliquée en PROD mais absente du
+manifeste, donc **jamais** exercée par la garde CI (cf. l'encadré de la liste ordonnée).
+
 ### Pourquoi
 
 Le rôle métier n'était qu'une **étiquette** (SP-2 §24 : « aucun droit implicite »). Le
@@ -1131,6 +1148,12 @@ Constaté en production : `xyz.makimura@gmail.com` est **Lecteur à 0 permission
 `team_lead` (rang 10) — il peut donc écrire du CRM. Décision en attente : un rôle
 d'administration doit-il conférer l'écriture CRM indépendamment du rôle métier ?
 
+> **Décidé le 2026-08-31, et FERMÉ** : arbitrage PO « non, un lecteur ne doit jamais écrire le
+> CRM ». **17j** retire le motif des quatre gardes CRM (`user_can_write_crm`,
+> `user_can_write_crm_actor`, `current_user_can_write_crm_notes`, `save_crm_actor`) et **17k**
+> du cinquième (`user_can_write_list`). Vérifié sur la base vive le **2026-09-04** : **0**
+> fonction porte encore `current_user_admin_rank() IS NOT NULL` hors commentaire.
+
 ### Ordre de déploiement
 
 Base d'abord, **front ensuite mais sans délai** : le front déployé appelle encore
@@ -1144,6 +1167,15 @@ d'accorder — le piège est désarmé, mais l'écran est incohérent.
 
 `Base de donnée DLL et API/migration_crm_write_requires_permission.sql`
 Rollback : `Base de donnée DLL et API/rollback/rollback_crm_write_requires_permission.sql`
+
+**Manifeste : étape `17j`**, après **17i** et **17c** `migration_crm_notes_probe.sql`.
+⚠️ **Sa place est dictée par le patch sur place de `save_crm_actor`** : le motif est comparé
+**tel quel, en minuscules**, or le dernier définisseur de cette fonction dans le manifeste est
+l'étape **8z3** `../supabase/migrations/20260807124408_actor_prospects_documents.sql`, qui le
+porte en minuscules et **exactement une fois** (`migration_crm_module.sql`, plus haut, l'écrit
+en MAJUSCULES et ferait lever le `RAISE` « le bras a changé de forme »). Toute remontée de cette
+étape au-dessus de 8z3 casse le fresh-apply. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04**
+seulement.
 
 ### Pourquoi
 
@@ -1207,6 +1239,9 @@ l'écriture CRM » : devenu faux, corrigé dans le même lot. La pastille « + r
 `Base de donnée DLL et API/migration_list_write_creator_only.sql`
 Rollback : `rollback/rollback_list_write_creator_only.sql`
 
+**Manifeste : étape `17k`**, après **L1** `migration_object_list.sql`, seul définisseur
+d'`api.user_can_write_list`. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04** seulement.
+
 Dernier porteur du motif fermé par 17j : `api.user_can_write_list` acceptait
 `current_user_admin_rank() IS NOT NULL`. `team_lead` (rang 10) donnait donc le droit de
 modifier, partager, marquer envoyée ou **supprimer** la liste de n'importe qui — y compris à un
@@ -1242,6 +1277,31 @@ Les deux dernières lignes diffèrent : le bras de reprise regarde bien l'appart
 ## 17l — Créer une liste : superuser plateforme UNIQUEMENT (§227)
 
 `Base de donnée DLL et API/migration_list_create_superuser_only.sql`
+
+⛔ **PAS ENCORE DÉCLARÉE au manifeste (état au 2026-09-04) — et c'est délibéré.** Sa place
+naturelle est après **L1** `migration_object_list.sql`, seul définisseur d'`api.create_list`,
+dans le bloc §227 de fin de chaîne. **La déclarer maintenant ferait rougir `sql-fresh-apply`** :
+`tests/test_object_list.sql`, que le workflow **rejoue après le manifeste** (étape « §211 E1
+Listes module non-regression »), appelle `api.create_list` ligne 98 sous une persona
+`authenticated` dont `app_user_profile.role` vaut `tourism_agent` — `is_platform_superuser()`
+y est FALSE, l'appel lèverait `42501` et les assertions suivantes tomberaient.
+
+Le test n'est pas cassé : il encode la règle produit **d'avant** l'arbitrage PO du 2026-08-31
+(« tout membre crée des listes »). Le rendre conforme est une décision produit, pas une
+réparation de manifeste — deux formes possibles, à trancher :
+
+1. donner à la persona de création `app_user_profile.role = 'super_admin'` (le test continue de
+   couvrir static/dynamic/partage/isolation, il change juste de créateur) ;
+2. **ou** garder la persona `tourism_agent` et retourner l'assertion : la création doit
+   désormais lever `42501` — ce qui ferait du test la garde manquante de 17l.
+
+La seconde est la seule qui **prouve** 17l ; la première ne fait que ne plus la contredire.
+
+Vérifié le 2026-09-04 : `test_object_list.sql` est le **seul** test du dépôt qui appelle
+`api.create_list` ou `api.user_can_write_list` — c'est donc le seul obstacle.
+
+Pas de fichier de rollback versionné : la restauration consiste à redéployer `api.create_list`
+depuis `migration_object_list.sql`.
 
 `api.create_list` ne portait **aucune** garde : tout membre créait des listes, Lecteur compris
 (2 des 12 listes en base sont d'un Lecteur). Arbitrage PO 2026-08-31, lecture stricte.

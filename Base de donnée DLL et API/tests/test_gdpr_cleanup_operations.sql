@@ -283,13 +283,13 @@ BEGIN
   -- PII visible SEULEMENT via handled_by_actor_id (actor_id pointe vers un AUTRE acteur — CE
   -- lien doit SURVIVRE intact : c'est exactement le bug que le CASE sur les deux colonnes corrige).
   INSERT INTO crm_interaction (object_id, interaction_type, direction, status, subject, body, source, occurred_at, is_actionable, actor_id, handled_by_actor_id)
-  VALUES (v_obj, 'note', 'internal', 'done', 'Sujet PII handled_by', 'Corps PII handled_by', 'test', now(), true, v_actor_other, v_actor_main)
+  VALUES (v_obj, 'note', 'internal', 'resolved', 'Sujet PII handled_by', 'Corps PII handled_by', 'test', now(), true, v_actor_other, v_actor_main)
   RETURNING id INTO v_int_handled;
 
   -- Ligne dont la SEULE trace d'audit portant l'acteur vit dans after_data (avant ce correctif,
   -- avant_data ne matchait rien et cette ligne échappait à toute rédaction).
   INSERT INTO crm_interaction (object_id, interaction_type, direction, status, subject, body, source, occurred_at, is_actionable)
-  VALUES (v_obj, 'note', 'internal', 'done', 'PII-historique-sans-lien', 'Corps historique sans acteur', 'test', now(), true)
+  VALUES (v_obj, 'note', 'internal', 'resolved', 'PII-historique-sans-lien', 'Corps historique sans acteur', 'test', now(), true)
   RETURNING id INTO v_int_afterdata;
   -- Le journal ne couvre pas les INSERT : une UPDATE AVANT la liaison crée
   -- explicitement une trace dont ni before_data ni after_data ne porte l'acteur.

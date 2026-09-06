@@ -1,6 +1,6 @@
 # Validation SQL locale — corrections RGPD et bornes d’âge
 
-Validation effectuée les 5–6 septembre 2026 sur le seul projet Supabase local `bertel-audit-20260905`. **Les validations ciblées ci-dessous passent. Le fresh apply complet reste en échec sur une limite d’ACL du socle.** Cette page ne constitue ni une validation complète du manifeste ni une preuve de déploiement en production.
+Validation initiale effectuée les 5–6 septembre 2026 sur le seul projet Supabase local `bertel-audit-20260905`. **Les validations ciblées ci-dessous passent. Le fresh apply local avec la CLI 2.109.1 reste en échec sur une limite d’ACL du socle.** Après intégration avec le `master` récent, le [fresh apply complet et les tests complémentaires passent dans la CI épinglée en 2.78.1](../../releases/2026-09-06-retour-arriere.md#contrôles-dintégration). Les preuves locales initiales et leurs empreintes ci-dessous restent une photographie antérieure à cette intégration ; aucune de ces validations n’est un déploiement en production.
 
 ## Résultats
 

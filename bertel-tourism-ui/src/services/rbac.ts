@@ -1,6 +1,7 @@
 import { getApiClient } from '../lib/supabase';
 import { getSupabaseClient } from '../lib/supabase';
 import { readApiErrorMessage } from './api-error';
+import type { RoleMatrix } from '@/features/team/role-permission-matrix';
 
 export interface OrgMember {
   membershipId: string;
@@ -15,13 +16,17 @@ export interface OrgMember {
   /** Dernière activité (ISO) = dernière connexion OU dernier refresh de session, au plus récent. */
   lastSeenAt: string | null;
   /**
-   * Droits venus de `org_permission`, hérités par TOUS les membres actifs de l'ORG (17d).
+   * Droits CONFÉRÉS par le rôle métier du membre, dans son ORG (§227, table `org_role_permission`).
    *
-   * Champ SÉPARÉ de `permissionCodes`, et c'est structurant : la case à cocher pilote
-   * `user_permission` et ne doit jamais prétendre piloter l'héritage. Les fusionner rendrait la
-   * case menteuse — la décocher ne retirerait pas le droit hérité.
+   * Remplace `inheritedPermissionCodes` (héritage `org_permission`), retiré le 2026-08-31 : cette
+   * couche-là accordait à TOUS les membres sans regarder leur rôle, et c'est elle qui a donné
+   * l'écriture CRM aux Lecteurs.
+   *
+   * Champ SÉPARÉ de `permissionCodes`, et c'est structurant : la case à cocher du tiroir pilote
+   * `user_permission` et ne doit jamais prétendre piloter le rôle. Les fusionner rendrait la case
+   * menteuse — la décocher ne retirerait pas un droit venu du rôle.
    */
-  inheritedPermissionCodes: string[];
+  rolePermissionCodes: string[];
   /**
    * Superuser plateforme (`app_user_profile.role`) — ouvre TOUT, indépendamment des permissions
    * et du rôle d'ORG (17d). Avec `adminRoleCode`, c'est l'accès que l'écran ne montrait pas :
@@ -58,10 +63,10 @@ export async function listOrgMembers(orgObjectId: string): Promise<OrgMember[]> 
     adminRoleCode: (r.admin_role_code as string) ?? null,
     permissionCodes: Array.isArray(r.permission_codes) ? (r.permission_codes as string[]) : [],
     lastSeenAt: (r.last_seen_at as string) ?? null,
-    // 17d — tolérant : un backend antérieur à la migration ne porte pas ces clés, et l'écran
-    // doit alors se comporter comme avant plutôt que casser.
-    inheritedPermissionCodes: Array.isArray(r.inherited_permission_codes)
-      ? (r.inherited_permission_codes as string[])
+    // Tolérant : un backend antérieur à 17i ne porte pas cette clé, et l'écran doit alors
+    // afficher « aucun droit conféré » plutôt que casser.
+    rolePermissionCodes: Array.isArray(r.role_permission_codes)
+      ? (r.role_permission_codes as string[])
       : [],
     isPlatformSuperuser: r.is_platform_superuser === true,
   }));
@@ -83,11 +88,21 @@ export async function listPermissionCatalog(): Promise<RefPermission[]> {
   if (error) throw error;
   return data ?? [];
 }
-export async function listOrgPermissions(orgObjectId: string): Promise<string[]> {
-  const { data, error } = await getSupabaseClient()!.from('org_permission')
-    .select('ref_permission(code)').eq('org_object_id', orgObjectId).eq('is_active', true);
+/**
+ * Matrice « rôle métier → permissions » de l'ORG (§227).
+ *
+ * Remplace `listOrgPermissions` : il n'y a plus de droits d'ORG accordés à tout le monde, il y a
+ * des droits attachés à un RÔLE. Un rôle absent de la réponse ne confère rien.
+ */
+export async function listRolePermissions(orgObjectId: string): Promise<RoleMatrix> {
+  const { data, error } = await requireClient().schema('api')
+    .rpc('rpc_list_role_permissions', { p_org_object_id: orgObjectId });
   if (error) throw error;
-  return (data ?? []).map((r: Record<string, unknown>) => (r.ref_permission as { code: string })?.code).filter(Boolean);
+  const matrix: RoleMatrix = {};
+  for (const row of (data ?? []) as Array<{ role_code: string; permission_code: string }>) {
+    (matrix[row.role_code] ??= []).push(row.permission_code);
+  }
+  return matrix;
 }
 
 // ---- Mutations (existing rank-gated RPCs; run as the logged-in admin) ----
@@ -113,10 +128,14 @@ export const grantUserPermission = (userId: string, code: string) =>
   rpc('rpc_grant_user_permission', { p_target_user_id: userId, p_permission_code: code });
 export const revokeUserPermission = (userId: string, code: string) =>
   rpc('rpc_revoke_user_permission', { p_target_user_id: userId, p_permission_code: code });
-export const grantOrgPermission = (orgObjectId: string, code: string) =>
-  rpc('rpc_grant_org_permission', { p_org_object_id: orgObjectId, p_permission_code: code });
-export const revokeOrgPermission = (orgObjectId: string, code: string) =>
-  rpc('rpc_revoke_org_permission', { p_org_object_id: orgObjectId, p_permission_code: code });
+/** Accorde ou retire une permission à un RÔLE métier, dans une ORG (§227, rang ≥ 30). */
+export const setRolePermission = (orgObjectId: string, roleCode: string, permissionCode: string, granted: boolean) =>
+  rpc('rpc_set_role_permission', {
+    p_org_object_id: orgObjectId,
+    p_role_code: roleCode,
+    p_permission_code: permissionCode,
+    p_granted: granted,
+  });
 
 /** Invite via the server route (service-role) — envoie l'e-mail d'invitation Supabase.
  *  `resend: true` = renvoyer l'invitation à un compte jamais connecté (delete + re-invite serveur). */

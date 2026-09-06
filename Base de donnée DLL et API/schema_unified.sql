@@ -222,7 +222,13 @@ BEGIN
     FROM pg_type
     WHERE typname = 'crm_status'
   ) THEN
-    CREATE TYPE crm_status AS ENUM ('planned','done','canceled');
+    -- Cycle de vie des DEMANDES (manifeste 17g). Ne pas confondre avec `crm_task_status`
+    -- douze lignes plus bas, qui porte sur les TÂCHES et partage `in_progress`/`canceled` :
+    -- les deux vocabulaires se ressemblent et ne se remplacent JAMAIS l'un l'autre.
+    -- OUVERTS : new, in_progress, awaiting_provider (temps déduit du traitement net).
+    -- FERMÉS  : resolved, closed, canceled.
+    CREATE TYPE crm_status AS ENUM
+      ('new','in_progress','awaiting_provider','resolved','closed','canceled');
   END IF;
 END $$;
 
@@ -881,6 +887,13 @@ CREATE TABLE IF NOT EXISTS object (
   id TEXT PRIMARY KEY,
   object_type object_type NOT NULL,
   name TEXT NOT NULL,
+  -- Realm de cloisonnement (18a) : la fiche appartient-elle au corpus de test ?
+  -- DECLAREE ICI et non dans migration_test_org_isolation.sql, qui est appliquee EN
+  -- DERNIER : get_filtered_object_ids est `LANGUAGE sql`, donc son corps est VALIDE
+  -- au CREATE (etape 5 du manifeste) et il reference cette colonne. Sans elle a
+  -- l'etape 1, une base fraiche echoue avant meme d'atteindre la migration.
+  -- Entretenue par TRIGGER depuis org_config.is_test_org — ne jamais l'ecrire a la main.
+  is_test BOOLEAN NOT NULL DEFAULT FALSE,
   business_timezone TEXT NOT NULL DEFAULT 'Indian/Reunion',
   commercial_visibility TEXT NOT NULL DEFAULT 'active',
   region_code TEXT CHECK (region_code IS NULL OR region_code ~ '^[A-Z0-9]{3}$'),
@@ -2202,8 +2215,9 @@ CREATE TABLE IF NOT EXISTS crm_interaction (
   parent_interaction_id UUID REFERENCES crm_interaction(id) ON DELETE CASCADE,
   interaction_type crm_interaction_type NOT NULL DEFAULT 'note',
   direction crm_direction NOT NULL DEFAULT 'internal',
-  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done', ce qui faisait naître
-  -- « traitée » toute demande créée sans statut explicite. Le remplacer par 'planned' aurait
+  -- PAS de DEFAULT (chantier 2026-08-28, manifeste 17b). Il valait 'done' — ANCIEN vocabulaire,
+  -- aujourd'hui 'resolved' (17g) — ce qui faisait naître « traitée » toute demande créée sans
+  -- statut explicite. Le remplacer par 'planned' (aujourd'hui 'new') aurait
   -- contredit la règle par-sujet de `api.save_crm_interaction` pour toute écriture DIRECTE ;
   -- l'absence de défaut, la colonne étant NOT NULL, fait ÉCHOUER une écriture directe sans
   -- statut au lieu de deviner. Les 3 seules fonctions qui insèrent ici passent toutes `status`
@@ -3246,7 +3260,7 @@ BEGIN
     NEW.object_id,
     'note',
     'internal',
-    'done',
+    'resolved',                    -- DEMANDE (crm_status, 17g) : la note de journal EST écrite.
     'Incident report received',
     COALESCE(NEW.description, 'No details provided'),
     'incident_report',
@@ -3272,7 +3286,7 @@ BEGIN
     NEW.object_id,
     'Maintenance incident to review',
     COALESCE(NEW.description, 'No details provided'),
-    'todo',
+    'todo',                        -- TÂCHE (crm_task_status) : INTOUCHÉ par 17g.
     v_priority,
     v_interaction_id,
     jsonb_build_object(
@@ -3382,7 +3396,7 @@ BEGIN
       NEW.object_id,
       'email',
       'outbound',
-      'done',
+      'resolved',                  -- le BAT EST parti : rien n'est en attente côté équipe (17g).
       'Proof sent for publication',
       'A PDF proof was sent for publication workflow.',
       'publication_workflow',
@@ -6337,6 +6351,9 @@ CREATE TABLE IF NOT EXISTS org_config (
   org_object_id  TEXT        NOT NULL UNIQUE REFERENCES object(id) ON DELETE CASCADE,
   access_scope   TEXT        NOT NULL DEFAULT 'own_objects_only'
                    CHECK (access_scope IN ('own_objects_only', 'all_published')),
+  -- ORG « bac a sable » (18a) : ses fiches sont is_test, ses membres ne voient QUE
+  -- le corpus de test. Reserve au superuser plateforme.
+  is_test_org    BOOLEAN     NOT NULL DEFAULT FALSE,
   created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -6660,6 +6677,64 @@ CREATE TRIGGER update_user_permission_updated_at
 SELECT audit.attach_missing_triggers();
 
 -- =====================================================
+-- Journal des transitions de statut d'une demande CRM (manifeste 17g) — FOLD de
+-- `migration_crm_lifecycle.sql`, corps identique.
+-- Placed AFTER attach_missing_triggers() ON PURPOSE, même précédent que gdpr_erasure_log
+-- ci-dessous : crm_interaction_status_event ne doit PAS porter de trigger d'audit sur un fresh
+-- apply, pour matcher la production (où la migration 17g n'a pas re-déclenché attach). Doctrine
+-- §61 : cette table porte SON PROPRE trigger append-only (trg_crm_interaction_status_event),
+-- RLS ON, ZÉRO policy, ZÉRO grant applicatif — un trigger d'audit ne serait pas dangereux (le
+-- journal est append-only) mais y ajouter en fresh apply ce que la production n'a jamais eu est
+-- une divergence évitable, pas un renfort.
+-- Il vit ICI et pas seulement dans la migration parce qu'un `schema_unified.sql` passé aux six
+-- valeurs SANS le journal ni les deux triggers d'écriture traduits donnerait un fresh apply
+-- VERT dont le premier incident lèverait 22P02.
+-- Il rend calculable le temps de traitement NET : l'attente prestataire (awaiting_provider) est
+-- déduite, parce qu'un indicateur ne doit mesurer que ce que l'équipe maîtrise.
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.crm_interaction_status_event (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  interaction_id uuid NOT NULL REFERENCES public.crm_interaction(id) ON DELETE CASCADE,
+  from_status    crm_status,          -- NULL = création
+  to_status      crm_status NOT NULL,
+  changed_at     timestamptz NOT NULL DEFAULT now(),
+  -- Attribution d'ÉQUIPE (auth.uid()), même classe de rétention que audit_log.changed_by ;
+  -- hors périmètre de rpc_gdpr_erase_subject (acteurs/déclarants), décision spec §10.5.
+  changed_by     uuid
+);
+
+CREATE INDEX IF NOT EXISTS idx_crm_status_event_interaction
+  ON public.crm_interaction_status_event (interaction_id, changed_at);
+
+-- Doctrine §61 : RLS ON, ZÉRO POLICY, AUCUN GRANT applicatif — la lecture passe uniquement par
+-- le RPC DEFINER `api.list_crm_status_events`, jamais par PostgREST en direct.
+ALTER TABLE public.crm_interaction_status_event ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.crm_interaction_status_event FROM PUBLIC, anon, authenticated;
+
+-- SECURITY DEFINER : le trigger écrit dans une table à RLS activée et sans policy ; sans
+-- DEFINER, toute écriture depuis un rôle applicatif serait refusée et le journal serait
+-- silencieusement vide.
+CREATE OR REPLACE FUNCTION api.log_crm_interaction_status_event()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, public, api, extensions, auth, audit, crm, ref
+AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, NULL, NEW.status, auth.uid());
+  ELSIF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO public.crm_interaction_status_event (interaction_id, from_status, to_status, changed_by)
+    VALUES (NEW.id, OLD.status, NEW.status, auth.uid());
+  END IF;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_crm_interaction_status_event ON public.crm_interaction;
+CREATE TRIGGER trg_crm_interaction_status_event
+  AFTER INSERT OR UPDATE OF status ON public.crm_interaction
+  FOR EACH ROW EXECUTE FUNCTION api.log_crm_interaction_status_event();
+
+-- =====================================================
 -- RGPD Art. 17 — effacement / anonymisation (folded from migration_gdpr_erasure.sql, runbook 14j)
 -- Placed AFTER attach_missing_triggers() ON PURPOSE: gdpr_erasure_log must NOT carry an audit
 -- trigger (matches live, where attach was not re-run after the migration). The RLS read policy
@@ -6717,6 +6792,7 @@ DECLARE
   v_uid UUID := auth.uid();
   v_actor UUID; v_report JSONB := '{}'::jsonb; v_media TEXT[] := ARRAY[]::TEXT[];
   v_photo TEXT; v_int_id UUID; v_task_id TEXT;
+  v_portal_user UUID;  -- 18a §8 — le compte portail délié, reporté à l'opérateur RGPD
   TOMBSTONE CONSTANT TEXT := '[Donnée effacée]';
 BEGIN
   IF current_setting('request.jwt.claims', true) IS NOT NULL AND NOT api.is_platform_superuser() THEN
@@ -6732,6 +6808,30 @@ BEGIN
       RAISE EXCEPTION 'Acteur introuvable: %', p_subject_id; END IF;
     SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
     IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
+    -- 18a §8 — AVANT la branche de mode (cf. l'avertissement ci-dessus) : l'accès portail
+    -- tombe immédiatement, et l'id du compte est CAPTURÉ pendant qu'il est encore lisible.
+    UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
+    RETURNING id INTO v_portal_user;
+    -- 18a §8 — l'ORIGINAL du message libre du prestataire. La branche anonymize efface plus
+    -- bas crm_task.description, qui n'en est qu'une COPIE (submit_actor_fiche écrit le même
+    -- texte aux deux endroits) ; fiche_submission.note, colonne créée par CETTE migration,
+    -- échappait aux deux modes et restait relue telle quelle par la file de modération.
+    -- AVANT la branche, pour la même raison que l'UPDATE ci-dessus : fiche_submission.actor_id
+    -- est ON DELETE SET NULL, donc en mode 'delete' le DELETE FROM actor délierait la ligne
+    -- en SILENCE et tout nettoyage placé après serait muet. Le bras submitted_by rattrape les
+    -- soumissions dont l'actor_id était déjà NULL (v_portal_user NULL ⇒ prédicat NULL ⇒
+    -- aucune ligne de plus, jamais un balayage).
+    -- La garde to_regclass n'est PAS de la superstition : ce corps est aussi la définition
+    -- canonique de schema_unified.sql, appliquée AVANT 18a dans le manifeste — donc à un
+    -- moment où fiche_submission (créée par la §3.1) n'existe pas encore. plpgsql ne résout
+    -- les noms de relation qu'à l'exécution : sans garde, la branche 'actor' deviendrait
+    -- inexécutable sur toute base où 18a n'est pas encore passée (test_gdpr_erasure.sql en
+    -- premier). Avec elle, les deux fichiers portent le MÊME texte — prosrc et source
+    -- restent md5-alignables — et la ligne s'active d'elle-même dès que la table existe.
+    IF to_regclass('public.fiche_submission') IS NOT NULL THEN
+      UPDATE fiche_submission SET note = NULL
+       WHERE actor_id = v_actor OR submitted_by = v_portal_user;
+    END IF;
     IF p_mode = 'anonymize' THEN
       UPDATE actor SET display_name = TOMBSTONE, first_name = NULL, last_name = NULL,
                        gender = NULL, photo_url = NULL, extra = NULL WHERE id = v_actor;
@@ -6747,6 +6847,13 @@ BEGIN
       DELETE FROM actor WHERE id = v_actor;
       v_report := jsonb_build_object('mode','delete','actor', v_actor);
     END IF;
+    -- Remontée APRÈS la branche : les deux modes viennent d'écraser v_report.
+    -- La suppression d'auth.users n'est pas faisable en SQL (même doctrine que la branche
+    -- 'user') : on NOMME le compte pour que le geste ne se perde pas.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
     PERFORM audit.redact_subject('actor','id', v_actor::text,
       ARRAY['display_name','first_name','last_name','gender','photo_url','extra',
             'display_name_normalized','first_name_normalized','last_name_normalized']);
@@ -6756,6 +6863,24 @@ BEGIN
       ARRAY['subject','body','source','extra','actor_id','handled_by_actor_id']);
     PERFORM audit.redact_subject('crm_task','actor_id', v_actor::text,
       ARRAY['title','description','extra','actor_id']);
+    -- 18a §8 — la SIXIÈME rédaction, et la seule qui nettoie une trace que l'effacement
+    -- vient de FABRIQUER lui-même : trg_audit_app_user_profile (AFTER UPDATE) a écrit dans
+    -- audit.audit_log une ligne dont before_data = to_jsonb(OLD) — elle RE-NOUE le lien
+    -- acteur↔compte que le déliage ci-dessus vient de couper, et y gèle le display_name du
+    -- compte portail. Sans elle, l'UPDATE de déliage serait la seule mutation de cette
+    -- branche sans son redact jumeau. audit.redact_subject apparie sur
+    -- `(row_pk ->> clé) = valeur OR (before_data ->> clé) = valeur` (prosrc vérifié) : la
+    -- clé actor_id attrape donc bien la ligne née de ce déliage.
+    PERFORM audit.redact_subject('app_user_profile','actor_id', v_actor::text,
+      ARRAY['actor_id','display_name','avatar_url','preferences']);
+    -- Et le résidu que le prédicat précédent ne peut pas voir : la ligne d'audit de CRÉATION
+    -- du lien (before_data.actor_id = null, after_data.actor_id = <A>) n'est appariée ni par
+    -- row_pk->>'actor_id' ni par before_data->>'actor_id'. Apparier sur `id` = le compte
+    -- portail attrape par row_pk TOUTES les lignes d'audit de ce compte, création comprise.
+    IF v_portal_user IS NOT NULL THEN
+      PERFORM audit.redact_subject('app_user_profile','id', v_portal_user::text,
+        ARRAY['actor_id','display_name','avatar_url','preferences']);
+    END IF;
 
   ELSIF p_subject_kind = 'incident' THEN
     IF NOT EXISTS (SELECT 1 FROM incident_report WHERE id = p_subject_id::uuid) THEN

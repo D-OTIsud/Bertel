@@ -302,7 +302,9 @@ AS $function$
       AND (
         p_status IS NULL
         OR p_status <@ ARRAY['published']::object_status[]
-      ) AS use_mv
+      )
+      -- La MV ne contient que la production ; un compte de test lit les tables vives.
+      AND (SELECT api.current_user_test_realm()) IS NOT TRUE AS use_mv
     FROM normalized n
   ),
   -- §157 — « ouvert à … » : le moteur d'ouverture (internal.compute_open_status,
@@ -383,6 +385,7 @@ AS $function$
       LIMIT 1
     ) ol ON TRUE
     WHERE NOT params.use_mv
+      AND o.is_test = (SELECT api.current_user_test_realm())
   ),
   -- §197 — LE REPLI. Le flou ne s'ajoute pas au plein texte : il le REMPLACE, et
   -- seulement quand le plein texte ne trouve RIEN. Une saisie correcte garde donc

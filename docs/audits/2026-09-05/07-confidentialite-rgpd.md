@@ -104,4 +104,3 @@ L'effacement agit par sujet avec une garde superuser SQL, une anonymisation par 
 Lecture Graphify, index DB puis SQL/route/UI/notice. Pas d'inspection des données personnelles, contrats, registre interne complet, sauvegardes ou paramètres cloud. Le changelog Supabase Markdown n'a pas pu être rendu par l'outil web ; documentation officielle Auth/Storage et CNIL consultée pour les critères cités, sans changement technique de version.
 
 Pour clôturer ce volet : dossier de preuves du responsable du traitement, matrice des flux réellement actifs, test complet d'effacement avec données synthétiques et contrôle de récupération dans les dérivés. Les correctifs sécurité SEC-01 et fichiers API-01/04 contribuent directement à la confidentialité et doivent être suivis conjointement, sans compter deux fois les mêmes défauts. SEC-02 est un point de surveillance d'invariant SQL, pas une escalade démontrée.
-

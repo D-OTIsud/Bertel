@@ -66,7 +66,7 @@ Un retour au code antérieur ne restaure pas les personnes, fichiers Storage ou 
 
 ## Contenu livré et validation
 
-Le lot regroupe les [17 audits](../audits/2026-09-05/README.md), les [dix lots de corrections](../remediation/2026-09-05/README.md), leurs tests, les migrations et cette procédure. Les évolutions déjà présentes sur `master` doivent être conservées lors de l’intégration. Les résultats de l’audit initial portent sur son ancien socle ; les contrôles d’intégration sont consignés ci-dessous après exécution.
+Le lot regroupe les [17 audits](../audits/2026-09-05/README.md), les [dix lots de corrections](../remediation/2026-09-05/README.md), leurs tests, les migrations et cette procédure. L’intégration conserve les évolutions déjà présentes sur `master` : notamment portail acteur, cloisonnement du bac à sable, règles CRM/listes, filtrage des messages moteur et pool SMTP partagé. La migration RGPD conserve le déliage du compte portail, l’effacement des notes de soumission et la rédaction de l’audit des profils. Les étapes de remédiation reçoivent les repères `19a`/`19b` pour éviter les numéros `17f`/`17g` déjà occupés. Les résultats de l’audit initial portent sur son ancien socle ; les contrôles d’intégration sont consignés ci-dessous après exécution.
 
 Les captures, prompts et diagnostics sous `scratch/` sont des preuves locales, exclues du dépôt public. Les documents peuvent y faire référence, mais ces liens ne constituent pas des pièces téléchargeables depuis GitHub.
 

@@ -88,9 +88,16 @@ export function useNotificationInbox(): NotificationInbox {
       if (announcedRef.current.has(notification.id)) continue;
       announcedRef.current.add(notification.id);
       if (silent) continue;
+      // 18a — le toast suit l'ESPÈCE. Il annonçait « Nouvelle tâche assignée » pour toute
+      // espèce : un membre d'équipe qui est AUSSI acteur d'une fiche aurait vu le retour de
+      // vérification de sa propre fiche annoncé comme une tâche à faire, et serait allé la
+      // chercher dans un kanban où elle n'est pas. Le sous-titre suit : pour un retour, le
+      // titre de la tâche de vérification (« Vérifier la fiche ») ne veut rien dire pour son
+      // destinataire — c'est le nom de SA fiche qui l'identifie.
+      const isReview = notification.kind === 'fiche_submission_reviewed';
       toastRef.current.info(
-        'Nouvelle tâche assignée',
-        notification.taskTitle ?? notification.objectName ?? undefined,
+        isReview ? 'Votre office a vérifié votre fiche' : 'Nouvelle tâche assignée',
+        (isReview ? notification.objectName : notification.taskTitle ?? notification.objectName) ?? undefined,
       );
     }
   }, [items]);

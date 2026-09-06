@@ -27,7 +27,7 @@ const mockedMagic = jest.mocked(sendMemberMagicLink);
 const alice: OrgMember = {
   membershipId: 'm1', userId: 'u1', email: 'alice@oti.re', displayName: 'Alice',
   isActive: true, businessRoleCode: 'editor', adminRoleCode: null,
-  permissionCodes: [], lastSeenAt: null, inheritedPermissionCodes: [], isPlatformSuperuser: false,
+  permissionCodes: [], lastSeenAt: null, rolePermissionCodes: [], isPlatformSuperuser: false,
 };
 const bob: OrgMember = { ...alice, membershipId: 'm2', userId: 'u2', email: 'bob@oti.re', displayName: 'Bob' };
 

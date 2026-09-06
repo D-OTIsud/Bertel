@@ -1,40 +1,77 @@
 /** @jest-environment node */
-import { sendListEmail, MailNotConfiguredError } from './mail.server';
+// M5 — `createTransport` était appelé À CHAQUE e-mail. Sans conséquence tant que `sendMail`
+// ne servait qu'un envoi unique ; le drain de l'outbox (17i) l'appelle DANS UNE BOUCLE —
+// vingt lignes par ping, donc vingt connexions successives au relais Google, dont
+// l'autorisation par IP du VPS est la capacité e-mail de TOUT le produit. La sanction d'une
+// rafale ne tomberait pas sur le drain seul.
+jest.mock('server-only', () => ({}));
 
-const sendMail = jest.fn();
-const close = jest.fn();
-const createTransport = jest.fn((_opts: unknown) => ({ sendMail, close }));
+const createTransport = jest.fn();
+jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: (...a: unknown[]) => createTransport(...a) } }));
 
-jest.mock('nodemailer', () => ({ createTransport: (opts: unknown) => createTransport(opts) }));
-jest.mock('./env.server', () => ({ readSmtpConfig: jest.fn() }));
+const readSmtpConfig = jest.fn();
+jest.mock('./env.server', () => ({ readSmtpConfig: () => readSmtpConfig() }));
 
-import { readSmtpConfig } from './env.server';
-const mockedConfig = jest.mocked(readSmtpConfig);
+type FakeTransport = { sendMail: jest.Mock; close: jest.Mock };
 
-describe('sendListEmail', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockedConfig.mockReturnValue({
-      host: 'smtp.example.com',
-      port: 587,
-      secure: false,
-      fromEmail: 'noreply@example.com',
-      fromName: 'Bertel',
-      user: null,
-      pass: null,
-    });
+const cfg = (over: Record<string, unknown> = {}) => ({
+  host: 'smtp-relay.gmail.com', port: 587, secure: false,
+  fromEmail: 'no-reply@bertel.re', fromName: 'Bertel', user: null, pass: null, ...over,
+});
+
+function transportFactory(): FakeTransport[] {
+  const made: FakeTransport[] = [];
+  createTransport.mockImplementation(() => {
+    const t: FakeTransport = { sendMail: jest.fn().mockResolvedValue(undefined), close: jest.fn() };
+    made.push(t);
+    return t;
+  });
+  return made;
+}
+
+async function loadModule() {
+  jest.resetModules();
+  return import('./mail.server');
+}
+
+beforeEach(() => {
+  createTransport.mockReset();
+  readSmtpConfig.mockReset();
+});
+
+describe('mail.server — transport réutilisé', () => {
+  it('vingt envois consécutifs ne construisent QU’UN transport', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendMail } = await loadModule();
+    for (let i = 0; i < 20; i += 1) {
+      await sendMail({ to: `d${i}@x.re`, subject: 's', html: '<p>h</p>' });
+    }
+    // C'est LE constat : une connexion par e-mail dans la boucle du drain.
+    expect(createTransport).toHaveBeenCalledTimes(1);
+    expect(made).toHaveLength(1);
+    expect(made[0].sendMail).toHaveBeenCalledTimes(20);
+    expect(made[0].close).not.toHaveBeenCalled();
   });
 
-  it('throws MailNotConfiguredError when SMTP is not configured', async () => {
-    mockedConfig.mockReturnValue(null);
-    await expect(sendListEmail({ to: 'a@example.com', subject: 's', html: '<p></p>' })).rejects.toBeInstanceOf(
-      MailNotConfiguredError,
-    );
-    expect(createTransport).not.toHaveBeenCalled();
+  it('le transport est POOLÉ et garde requireTLS', async () => {
+    transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'd@x.re', subject: 's', html: '<p>h</p>' });
+    const options = createTransport.mock.calls[0][0] as Record<string, unknown>;
+    expect(options.pool).toBe(true);
+    expect(options.maxConnections).toBe(2);
+    expect(options.maxMessages).toBe(100);
+    // requireTLS n'est pas décoratif : le relais Google refuse une session en clair. Réutiliser
+    // le transport ne doit pas être l'occasion de perdre la contrainte de chiffrement.
+    expect(options.requireTLS).toBe(true);
   });
 
-  it('applies bounded connection/greeting/socket timeouts', async () => {
-    sendMail.mockResolvedValue(undefined);
+  it('borne les délais de connexion, de salutation et de socket du pool', async () => {
+    transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendListEmail } = await loadModule();
     await sendListEmail({ to: 'a@example.com', subject: 's', html: '<p></p>' });
 
     expect(createTransport).toHaveBeenCalledWith(
@@ -42,17 +79,65 @@ describe('sendListEmail', () => {
     );
   });
 
-  it('closes the transport after a successful send', async () => {
-    sendMail.mockResolvedValue(undefined);
-    await sendListEmail({ to: 'a@example.com', subject: 's', html: '<p></p>' });
-    expect(close).toHaveBeenCalledTimes(1);
+  it('propage un refus SMTP sans fermer le pool partagé ni bloquer l’envoi suivant', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'a@example.com', subject: 'premier', html: '<p></p>' });
+    made[0].sendMail.mockRejectedValueOnce(new Error('smtp refused'));
+
+    await expect(sendMail({ to: 'b@example.com', subject: 'refus', html: '<p></p>' }))
+      .rejects.toThrow('smtp refused');
+    await expect(sendMail({ to: 'c@example.com', subject: 'suivant', html: '<p></p>' }))
+      .resolves.toBeUndefined();
+
+    expect(createTransport).toHaveBeenCalledTimes(1);
+    expect(made[0].sendMail).toHaveBeenCalledTimes(3);
+    expect(made[0].close).not.toHaveBeenCalled();
   });
 
-  it('closes the transport even when sendMail throws', async () => {
-    sendMail.mockRejectedValue(new Error('smtp refused'));
-    await expect(sendListEmail({ to: 'a@example.com', subject: 's', html: '<p></p>' })).rejects.toThrow(
-      'smtp refused',
-    );
-    expect(close).toHaveBeenCalledTimes(1);
+  it('les données de MESSAGE sont relues à chaque envoi, jamais figées avec le transport', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockReturnValueOnce(cfg({ fromName: 'Bertel' }))
+      .mockReturnValueOnce(cfg({ fromName: 'OTI du Sud' }));
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'a@x.re', subject: 's', html: '<p>h</p>' });
+    await sendMail({ to: 'b@x.re', subject: 's', html: '<p>h</p>' });
+    // Un changement de libellé d'expéditeur ne doit PAS jeter le pool…
+    expect(createTransport).toHaveBeenCalledTimes(1);
+    // …et ne doit pas non plus être ignoré : le `from` vient de la config du moment.
+    expect(made[0].sendMail.mock.calls[0][0].from).toContain('Bertel');
+    expect(made[0].sendMail.mock.calls[1][0].from).toContain('OTI du Sud');
+  });
+
+  it('un changement de config de TRANSPORT reconstruit le pool et ferme l’ancien', async () => {
+    // Rotation d'identifiants ou bascule de relais : continuer à parler à l'ancien hôte avec
+    // l'ancien secret serait une panne muette, et laisser vivre l'ancien pool garderait des
+    // sockets ouvertes vers un relais qu'on n'utilise plus.
+    const made = transportFactory();
+    readSmtpConfig.mockReturnValueOnce(cfg())
+      .mockReturnValueOnce(cfg({ host: 'smtp.autre.re' }));
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'a@x.re', subject: 's', html: '<p>h</p>' });
+    await sendMail({ to: 'b@x.re', subject: 's', html: '<p>h</p>' });
+    expect(createTransport).toHaveBeenCalledTimes(2);
+    expect(made[0].close).toHaveBeenCalledTimes(1);
+    expect(made[1].sendMail).toHaveBeenCalledTimes(1);
+  });
+
+  it('SMTP non configuré ⇒ MailNotConfiguredError et AUCUN transport construit', async () => {
+    transportFactory();
+    readSmtpConfig.mockReturnValue(null);
+    const { sendMail, MailNotConfiguredError } = await loadModule();
+    await expect(sendMail({ to: 'a@x.re', subject: 's', html: '<p>h</p>' }))
+      .rejects.toBeInstanceOf(MailNotConfiguredError);
+    expect(createTransport).not.toHaveBeenCalled();
+  });
+
+  it('l’alias historique sendListEmail reste LA MÊME fonction (routes listes)', async () => {
+    transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendMail, sendListEmail } = await loadModule();
+    expect(sendListEmail).toBe(sendMail);
   });
 });

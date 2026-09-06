@@ -52,10 +52,24 @@ function item(id: string, readAt: string | null = null) {
     objectName: 'Hôtel Test',
     createdById: 'u-jean',
     createdByName: 'Jean P.',
+    outcome: null,
   };
 }
 
-const inbox = (items: ReturnType<typeof item>[]) => ({
+/** 18a — la seconde espèce, celle du retour de l'office sur une fiche envoyée. */
+function reviewItem(id: string) {
+  return {
+    ...item(id),
+    kind: 'fiche_submission_reviewed' as const,
+    taskTitle: 'Vérifier la fiche',
+    objectName: 'Villa Vanille',
+    createdById: null,
+    createdByName: null,
+    outcome: 'partial' as const,
+  };
+}
+
+const inbox = (items: Array<ReturnType<typeof item> | ReturnType<typeof reviewItem>>) => ({
   items,
   unreadCount: items.filter((i) => !i.readAt).length,
 });
@@ -84,6 +98,21 @@ it('les non-lues DÉJÀ là ne sont pas rejouées quand une neuve arrive', async
   await pollAgain();
   await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
   expect(info).toHaveBeenCalledWith('Nouvelle tâche assignée', 'Tâche neuve');
+});
+
+// 18a — la veille annonçait « Nouvelle tâche assignée » pour TOUTE espèce. Un membre
+// d'équipe qui est aussi acteur d'une fiche verrait donc le retour de vérification de sa
+// propre fiche annoncé comme une tâche à faire — et irait la chercher dans le kanban.
+it('un retour de vérification ne s’annonce pas comme une tâche assignée', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('vieille')]));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+
+  mocked.listMyNotifications.mockResolvedValue(inbox([reviewItem('n-review'), item('vieille')]));
+  await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledTimes(1));
+  expect(info).toHaveBeenCalledWith('Votre office a vérifié votre fiche', 'Villa Vanille');
+  expect(info).not.toHaveBeenCalledWith('Nouvelle tâche assignée', expect.anything());
 });
 
 // ── Le défaut trouvé en revue ────────────────────────────────────────────────────────────

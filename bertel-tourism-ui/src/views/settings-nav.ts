@@ -10,6 +10,7 @@ import {
   Brush,
   Building2,
   CircleUser,
+  FlaskConical,
   KeyRound,
   ListChecks,
   MapPin,
@@ -68,6 +69,10 @@ function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
   const sections: SettingsNavSection[] = [];
   if (options.canManageTeam) sections.push({ id: 'team', label: 'Équipe', icon: Users });
   if (options.canManageOrgBranding) sections.push({ id: 'org-branding', label: 'Apparence de l’organisation', icon: Brush, isNew: true });
+  // Task 19 — la matrice du portail acteurs. MÊME seuil que le branding (rang ≥ 30), et le
+  // même que celui d'api.rpc_set_actor_section_visibility : proposer la section plus bas
+  // offrirait un écran dont chaque bascule échouerait en 42501.
+  if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Portail acteurs', icon: KeyRound, isNew: true });
   if (sections.length === 0) return null;
   return { id: 'org', label: 'Mon organisation', scope: { label: 'admin ORG', gated: true }, sections };
 }
@@ -83,6 +88,7 @@ const PLATFORM_GROUP: SettingsNavGroup = {
     { id: 'ai', label: 'Fournisseurs IA', icon: Bot },
     { id: 'partner-keys', label: 'Clés API partenaire', icon: KeyRound, isNew: true },
     { id: 'organisations', label: 'Organisations', icon: Building2, isNew: true },
+    { id: 'test-corpus', label: 'Corpus de test', icon: FlaskConical, isNew: true },
     { id: 'diagnostic', label: 'Diagnostic', icon: Activity },
   ],
 };
@@ -92,6 +98,8 @@ export interface SettingsNavOptions {
   canManageTeam?: boolean;
   /** L'utilisateur peut gérer le branding de son ORG (admin rang ≥ 30) ⇒ section « Apparence de l'organisation ». */
   canManageOrgBranding?: boolean;
+  /** L'utilisateur peut régler le portail acteurs de son ORG (admin rang ≥ 30) ⇒ section « Portail acteurs ». */
+  canManageActorPortal?: boolean;
 }
 
 /** Groupes du rail visibles pour ce rôle + périmètre (gating). Ordre : compte → organisation → plateforme. */

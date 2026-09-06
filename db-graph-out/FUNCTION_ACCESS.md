@@ -105,6 +105,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Auteur, supérieur hiérarchique direct dans la même ORG, ou superuser plateforme._
 
+### `api.can_read_actor_contacts(p_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/can_read_actor_contacts`
+- **object types served:** —
+- _SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d'un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d'une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l'éditeur. DEUX autres formulations existent (tâche 7, 2026-08-08, mise à jour depuis « UNE seule ») : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204), et le bras superuser de la cascade prestataire→fiche de api.list_selection_emails (migration_selection_emails.sql, §211 plié au régime §208) — faire évoluer les TROIS ensemble._
+
 ### `api.can_read_extended(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/can_read_extended`
@@ -165,6 +171,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Trigger : garantit que org_object_id pointe vers un objet de type 'ORG'._
 
+### `api.claim_unmailed_notifications(p_limit integer DEFAULT 20)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/claim_unmailed_notifications`
+- **object types served:** **all object types**
+- _Outbox e-mail (17i) : réclame les notifications crm_task_assigned non e-mailées (TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role._
+
 ### `api.commit_staging_to_public(p_batch_id text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/commit_staging_to_public`
@@ -175,16 +187,22 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/compose_object_resource_blocks`
 - **object types served:** —
 
+### `api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/configure_sandbox_discovery_user`
+- **object types served:** **all object types**
+
 ### `api.create_crm_artifacts_from_incident()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
+- _7.6  api.create_crm_artifacts_from_incident — corps schema_unified traduit_
 
 ### `api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_list`
 - **object types served:** **all object types**
-- _6.3 Création (statique depuis une sélection, ou dynamique depuis des filtres)_
+- _Création d'une liste : superuser plateforme UNIQUEMENT (17l, arbitrage PO 2026-08-31). Le rang d'administration d'ORG ne suffit pas._
 
 ### `api.create_membership_campaign(p_anchor_object_id text, p_name text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -201,6 +219,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/create_tag`
 - **object types served:** —
 - _§09: dedup-guarded GLOBAL tag creation. Gated per-object. Dedup on ref_tag.name_normalized; slug inline; gen_random_uuid; created_by set. Color is a HEX #rrggbb (global per tag); defaults to #64748b._
+
+### `api.crm_user_label(p_user uuid, p_display_name text)`
+- **returns:** `text`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/crm_user_label`
+- **object types served:** —
+- _Libellé affichable d'un utilisateur : display_name, à défaut « Utilisateur xxxxxxxx ». Source unique du repli — les sérialiseurs de tâche et de notification l'appellent tous._
 
 ### `api.current_user_active_org()` _(DEFINER)_
 - **returns:** `TABLE(org_id text, org_name text)`
@@ -231,6 +255,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_can_edit_objects`
 - **object types served:** —
 - _Capability check : "le user courant peut-il éditer des objets ?"_
+
+### `api.current_user_can_manage_actor_portal()`
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_can_manage_actor_portal`
+- **object types served:** —
+- _Permission dédiée au bloc CRM Accès portail. Superutilisateur plateforme ou permission explicite ; aucun rôle métier ne la reçoit par défaut. Les gardes CRM par acteur restent requises._
+
+### `api.current_user_can_write_crm_notes()` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_can_write_crm_notes`
+- **object types served:** —
+- _Sonde d'interface : l'utilisateur courant peut-il écrire des notes CRM ? Reproduit la garde de api.user_can_write_crm_actor (write_crm_notes OU rang admin d'ORG OU superuser) SANS son arme de périmètre. Source de vérité UNIQUE — le front ne doit jamais re-transcrire cette chaîne de OR. Chantier 2026-08-28, manifeste 17c._
 
 ### `api.current_user_crm_actor_ids()` _(DEFINER)_
 - **returns:** `SETOF uuid`
@@ -273,6 +309,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_readable_object_ids`
 - **object types served:** **all object types**
 - _1) "Objects visible to me" = published ∪ my extended scope. Single source of truth for the_
+
+### `api.current_user_test_realm()` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/current_user_test_realm`
+- **object types served:** **all object types**
+- _Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l'API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm())._
 
 ### `api.cursor_pack(p jsonb)`
 - **returns:** `text`
@@ -345,6 +387,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 - _Trigger : contrainte "1 user tourism_agent = 1 ORG active"._
+
+### `api.export_actor_capabilities(p_object_ids text[])` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/export_actor_capabilities`
+- **object types served:** **all object types**
+- _Préflight ERGONOMIQUE (§208 R2) de la modale d'export : deux booléens agrégés sur la sélection réelle — l'offre de colonnes acteur suit la consultation effective, pas un proxy « membre d'une ORG ». N'est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c'est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l'appelant (§36) — aucun oracle d'existence sur un id non lu. PLAFOND DUR de 500 ids après dédoublonnage (BATCH_TOO_LARGE, SQLSTATE 22023), identique à celui de api.export_actor_contacts : la garde appelée est SECURITY DEFINER donc non inlinable, et le pire cas (sélection intégralement refusée, le cas d'un appelant hostile) coûte 2 évaluations par id — le plafond est ce qui borne réellement ce fan-out, pas l'ordre des bras du OR._
+
+### `api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT 'xlsx'::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/export_actor_contacts`
+- **object types served:** **all object types**
+- _Export JOURNALISÉ des coordonnées d'acteur (§208), seule voie autorisée : autorise-une-fois (§36 — la liste d'ids du client n'est jamais de confiance, elle est réduite fiche par fiche au périmètre de l'appelant), finalité validée serveur (5–500 car.), format xlsx|csv, dédoublonnage serveur, plafond dur de 500 ids par appel, puis écriture d'une ligne dans public.actor_contact_export_log DANS LA MÊME TRANSACTION que la lecture. Sélection mixte : sert l'autorisé et NOMME le refusé (denied_object_ids) ; tout-refusé ⇒ FORBIDDEN (42501) et — limite assumée — aucune ligne de journal. Pas de GRANT à service_role : un export de PII est imputable à une personne. Le bras de périmètre est la forme ensembliste de api.can_read_actor_contacts (duplication délibérée §204) : faire évoluer les deux ensemble._
 
 ### `api.export_itineraries_gpx_batch(p_object_ids text[], p_include_stages boolean DEFAULT true)`
 - **returns:** `TABLE(object_id text, name text, gpx_data text, file_size integer)`
@@ -429,6 +483,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Dashboard Qualité: remplissage « perçu visiteur » par type. Lit internal.v_object_essentials_
 
+### `api.get_dashboard_crm_activity()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_crm_activity`
+- **object types served:** **all object types**
+- _Onglet Activité équipe §4 : arriéré CRM par âge et par sujet, flux mensuel, temps de_
+
+### `api.get_dashboard_crm_open()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_crm_open`
+- **object types served:** **all object types**
+- _Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d'attention du bandeau._
+
 ### `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_distinction_overview`
@@ -452,6 +518,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_scorecards`
 - **object types served:** **all object types**
 - _Dashboard §1: hero scorecard aggregates for the filtered object pool._
+
+### `api.get_dashboard_team_activity()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_dashboard_team_activity`
+- **object types served:** **all object types**
+- _Onglet Activité équipe §2 : rythme de saisie sur 12 semaines + table des contributeurs._
 
 ### `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -696,7 +768,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_object_workspace_permissions`
 - **object types served:** —
-- _Agrege en un appel les 8 sondes de permission de l'editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front._
+- _Agrège en un appel les 9 sondes de permission de l'éditeur pour un objet, dont la permission juridique dédiée. SECURITY INVOKER volontairement ; chaque sonde échoue fermée et indépendamment._
 
 ### `api.get_objects_by_type_with_deep_data(p_object_type text, p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - **returns:** `json`
@@ -773,6 +845,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.get_public_trail(p_slug text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_public_trail`
+- **object types served:** **all object types**
+
+### `api.get_ref_catalog(p_catalog_key text)` _(DEFINER, dyn-SQL)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_ref_catalog`
+- **object types served:** —
+
+### `api.get_sandbox_discovery_user()` _(DEFINER)_
+- **returns:** `uuid`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_sandbox_discovery_user`
 - **object types served:** **all object types**
 
 ### `api.get_trail(p_trail_id uuid)` _(DEFINER)_
@@ -901,6 +983,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Fiche acteur (navigation acteur → objets → interactions tous contextes) : identité, objets_
 
+### `api.list_actor_support(p_actor_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_actor_support`
+- **object types served:** —
+
 ### `api.list_ai_providers()` _(DEFINER)_
 - **returns:** `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, is_active boolean, extra jsonb, has_key boolean, created_at timestamp with time zone, updated_at timestamp with time zone)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ai_providers`
@@ -923,16 +1010,28 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_directory`
 - **object types served:** **all object types**
 
+### `api.list_crm_directory_linked(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_search text DEFAULT NULL::text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_directory_linked`
+- **object types served:** **all object types**
+
+### `api.list_crm_status_events(p_interaction_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_status_events`
+- **object types served:** **all object types**
+- _Journal des transitions de statut d'une demande CRM, ordonné du plus ancien au plus récent (manifeste 17g). Alimente l'encart « depuis quand » du sélecteur de statut. Périmètre §61 : la lisibilité du journal SUIT celle de son interaction (arme objet, à défaut arme acteur, à défaut la sonde d'écriture de notes). N'émet aucune coordonnée — seulement un libellé d'utilisateur via api.crm_user_label._
+
 ### `api.list_crm_tasks()` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_tasks`
 - **object types served:** **all object types**
-- _Tâches CRM du périmètre (échéance croissante, NULLS LAST)._
+- _7. LECTURES DE TÂCHE — clés `assignees[]`, `created_by_id`, `created_by_name`_
 
 ### `api.list_crm_timeline(p_object_id text DEFAULT NULL::text, p_topic_code text DEFAULT NULL::text, p_interaction_type text DEFAULT NULL::text, p_sentiment_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 50)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_crm_timeline`
 - **object types served:** **all object types**
+- _7.4  api.list_crm_timeline — corps 8z traduit : un filtre devient une FAMILLE_
 
 ### `api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)`
 - **returns:** `jsonb`
@@ -957,6 +1056,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_lists`
 - **object types served:** **all object types**
 - _6.1 Grille « Mes listes »_
+
+### `api.list_my_notifications(p_limit integer DEFAULT 50)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_notifications`
+- **object types served:** **all object types**
+- _Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide._
 
 ### `api.list_object_contact_suggestions(p_object_id text)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1035,6 +1140,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_public_trails`
 - **object types served:** **all object types**
 
+### `api.list_ref_catalogs()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ref_catalogs`
+- **object types served:** —
+
 ### `api.list_ref_code_domains()`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_ref_code_domains`
@@ -1046,6 +1156,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_reference_bundle`
 - **object types served:** —
 - _Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1._
+
+### `api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)` _(DEFINER)_
+- **returns:** `json`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/list_selection_emails`
+- **object types served:** **all object types**
+- _Export des e-mails d'une sélection Explorer (p_object_ids) OU d'une liste (p_list_id). Authorize-once SECURITY DEFINER : garde éditeur (§205) puis périmètre ORG publisher (= périmètre CRM — `readable` ne suffit pas pour une donnée partners). Cascade prestataire operator → fiche. Rend des lignes brutes ; dédoublonnage et formatage côté client. §211. RÉGIME §208 (tâche 7, 2026-08-08) : p_reason PREMIER paramètre, obligatoire (5–500 car., sinon PT400/REASON_REQUIRED) ; VOLATILE (écrit) ; journal public.actor_contact_export_log dans la MÊME transaction, UNIQUEMENT quand le bras acteur émet au moins une adresse (une sélection entièrement résolue par les adresses de fiche n'a rien à journaliser) ; AUCUNE valeur de coordonnée dans le journal ; bras superuser ALIGNÉ sur api.can_read_actor_contacts (jamais api.is_platform_superuser()) ; PAS de GRANT à service_role. Troisième formulation du périmètre « qui voit les coordonnées d'un acteur » (§208) — évolue avec api.can_read_actor_contacts et la forme ensembliste de api.export_actor_contacts._
 
 ### `api.list_trail_sync_runs(p_source_code text DEFAULT NULL::text, p_limit integer DEFAULT 20)` _(DEFINER)_
 - **returns:** `TABLE(id uuid, source_code text, trigger text, dry_run boolean, status text, started_at timestamp with time zone, finished_at timestamp with time zone, http_status integer, error text, layer_last_edit_date timestamp with time zone, counts jsonb, report jsonb)`
@@ -1063,10 +1179,17 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Notes privées : les champs de portée et d'auteur restent immuables même si_
 
+### `api.log_crm_interaction_status_event()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+- _Trigger AFTER INSERT OR UPDATE OF status sur crm_interaction : écrit une ligne de crm_interaction_status_event par transition RÉELLE (un UPDATE qui ne touche pas au statut n'écrit rien). from_status NULL = création. Manifeste 17g._
+
 ### `api.log_publication_proof_interaction()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
+- _7.7  api.log_publication_proof_interaction — corps schema_unified traduit_
 
 ### `api.manage_object_published_at()`
 - **returns:** `trigger`
@@ -1074,16 +1197,44 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Mise à jour published_at_
 
+### `api.mark_all_notifications_read()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/mark_all_notifications_read`
+- **object types served:** —
+
 ### `api.mark_list_sent(p_list_id uuid)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/mark_list_sent`
 - **object types served:** **all object types**
 - _7b. Marquer une liste « envoyée » (route email /api/lists/send)_
 
+### `api.mark_notification_read(p_id uuid)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/mark_notification_read`
+- **object types served:** —
+
+### `api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)` _(DEFINER)_
+- **returns:** `integer`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/mark_notifications_emailed`
+- **object types served:** —
+- _Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only._
+
 ### `api.norm_search(p text)`
 - **returns:** `text`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/norm_search`
 - **object types served:** —
+
+### `api.notify_task_assignees(p_task_id uuid, p_new_assignees uuid[], p_actor uuid)` _(DEFINER)_
+- **returns:** `integer`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/notify_task_assignees`
+- **object types served:** —
+- _Crée une notification crm_task_assigned par NOUVEL assigné, en excluant l'auteur de l'action (règle produit : on ne se notifie pas de sa propre auto-assignation). Appelée UNIQUEMENT depuis api.save_crm_task, dans la même transaction que le save._
+
+### `api.object_expected_is_test(p_object_id text)`
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/object_expected_is_test`
+- **object types served:** **all object types**
+- _Realm que la fiche DEVRAIT porter, d'apres son ORG primaire. Une fiche sans lien_
 
 ### `api.object_missing_essentials(p_object_ids text[])` _(DEFINER)_
 - **returns:** `TABLE(object_id text, missing text[])`
@@ -1359,17 +1510,16 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed)._
 
+### `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)` _(DEFINER, dyn-SQL)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_delete_ref_row`
+- **object types served:** —
+
 ### `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** Next.js route — `POST /api/rgpd/erase` (wraps `api.rpc_gdpr_erase_subject`, runs as the caller)
 - **object types served:** **all object types**
 - _Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme._
-
-### `api.rpc_grant_org_permission(p_org_object_id text, p_permission_code text)` _(DEFINER)_
-- **returns:** `void`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_grant_org_permission`
-- **object types served:** **all object types**
-- _D1. rpc_grant_org_permission_
 
 ### `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)` _(DEFINER)_
 - **returns:** `void`
@@ -1384,7 +1534,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - _Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable)._
 
 ### `api.rpc_list_org_members(p_org_object_id text)` _(DEFINER)_
-- **returns:** `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone)`
+- **returns:** `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone, role_permission_codes text[], is_platform_superuser boolean)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_list_org_members`
 - **object types served:** **all object types**
 
@@ -1393,6 +1543,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_list_orgs`
 - **object types served:** **all object types**
 - _Liste des organisations (ORG) avec périmètre d'accès et effectif actif. Superadmin plateforme uniquement._
+
+### `api.rpc_list_role_permissions(p_org_object_id text)` _(DEFINER)_
+- **returns:** `TABLE(role_code text, permission_code text)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_list_role_permissions`
+- **object types served:** **all object types**
+- _Lecture de la matrice pour l'écran /team. SECURITY DEFINER + prédicat d'appartenance :_
 
 ### `api.rpc_publish_object(p_object_id text, p_publish boolean DEFAULT true)` _(DEFINER)_
 - **returns:** `void`
@@ -1406,6 +1562,18 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _RÉORDONNE : position = rang (1-based) dans le tableau d'ids fourni._
 
+### `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)` _(DEFINER, dyn-SQL)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_reorder_ref_rows`
+- **object types served:** —
+- _Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches_
+
+### `api.rpc_reset_test_data()` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_reset_test_data`
+- **object types served:** **all object types**
+- _Vide et resseme le corpus du bac a sable. Superuser plateforme uniquement, et refuse de s'executer si l'ORG cible n'est pas is_test_org. Sans argument : la cible est constante et ne peut pas etre pointee sur une organisation de production._
+
 ### `api.rpc_restore_object_version(p_object_id text, p_version_number integer)` _(DEFINER)_
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_restore_object_version`
@@ -1417,12 +1585,6 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_revoke_admin_role`
 - **object types served:** **all object types**
 - _rpc_revoke_admin_role_
-
-### `api.rpc_revoke_org_permission(p_org_object_id text, p_permission_code text)` _(DEFINER)_
-- **returns:** `void`
-- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_revoke_org_permission`
-- **object types served:** **all object types**
-- _D2. rpc_revoke_org_permission_
 
 ### `api.rpc_revoke_partner_key(p_id uuid)` _(DEFINER)_
 - **returns:** `jsonb`
@@ -1459,6 +1621,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _(DÉS)ACTIVE une valeur ref_code._
 
+### `api.rpc_set_role_permission(p_org_object_id text, p_role_code text, p_permission_code text, p_granted boolean)` _(DEFINER)_
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_set_role_permission`
+- **object types served:** **all object types**
+- _4. Écriture de la matrice — rang ≥ 30, comme toute écriture de permission._
+
 ### `api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)` _(DEFINER)_
 - **returns:** `uuid`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_upsert_membership`
@@ -1477,6 +1645,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _CRÉE (p_id NULL) ou ÉDITE (p_id fourni) une valeur ref_code d'un domaine éditable._
 
+### `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)` _(DEFINER, dyn-SQL)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_upsert_ref_row`
+- **object types served:** —
+
 ### `api.rpc_write_org_description(p_object_id text, p_payload jsonb)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/rpc_write_org_description`
@@ -1494,6 +1667,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** —
 - _Upsert canal de contact. INSERT : actor_id + kind_code + value requis ; UPDATE partiel_
 
+### `api.save_actor_document(p_payload jsonb)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/save_actor_document`
+- **object types served:** —
+
 ### `api.save_crm_actor(p_payload jsonb)` _(DEFINER)_
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/save_crm_actor`
@@ -1510,7 +1688,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/save_crm_task`
 - **object types served:** **all object types**
-- _Upsert tâche (id présent = UPDATE partiel « clé présente ⇒ écrite », sinon INSERT)._
+- _6. api.save_crm_task — contrat `assignee_ids`_
 
 ### `api.save_object_commercial(p_object_id text, p_payload jsonb)`
 - **returns:** `jsonb`
@@ -1552,7 +1730,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 ### `api.search_actors(p_query text)` _(DEFINER)_
 - **returns:** `TABLE(id uuid, display_name text, first_name text, last_name text, gender text, email text)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/search_actors`
-- **object types served:** —
+- **object types served:** **all object types**
 
 ### `api.search_events_by_restaurant_cuisine(p_cuisine_types text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
 - **returns:** `json`
@@ -1564,6 +1742,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/search_objects_by_label`
 - **object types served:** **all object types**
 - _Search objects by label with partial action matches_
+
+### `api.search_objects_by_name(p_term text, p_limit integer DEFAULT 8)` _(DEFINER)_
+- **returns:** `TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/search_objects_by_name`
+- **object types served:** **all object types**
+- _Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K._
 
 ### `api.search_objects_with_deep_data(p_search_term text, p_object_types text[] DEFAULT NULL::text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - **returns:** `json`
@@ -1638,6 +1822,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 
+### `api.sync_object_is_test(p_object_id text)`
+- **returns:** `void`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/sync_object_is_test`
+- **object types served:** **all object types**
+
 ### `api.tg_object_list_touch()`
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
@@ -1694,6 +1883,23 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `void`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/trail_update_editorial`
 - **object types served:** —
+
+### `api.trg_object_deletion_log_is_test()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
+- _Le tombstone herite du realm de la fiche AU MOMENT de sa suppression._
+
+### `api.trg_object_org_link_is_test()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+
+### `api.trg_org_config_is_test()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
+- _Bascule d'une ORG entiere (is_test_org modifie) : re-synchronise ses fiches._
 
 ### `api.trg_refresh_caches_from_menu_item_link()` _(DEFINER)_
 - **returns:** `trigger`
@@ -1823,13 +2029,19 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_crm`
 - **object types served:** —
-- _Écriture : superuser OU (membre ORG publisher ET (permission write_crm_notes OU rôle_
+- _1. Écriture CRM sur un ÉTABLISSEMENT._
 
 ### `api.user_can_write_crm_actor(p_actor_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_crm_actor`
 - **object types served:** —
-- _Écriture ancrée acteur : mêmes ingrédients que user_can_write_crm (périmètre + permission_
+- _2. Écriture CRM sur un ACTEUR._
+
+### `api.user_can_write_crm_task(p_task_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_crm_task`
+- **object types served:** **all object types**
+- _true si l'appelant peut écrire la tâche (même prédicat que save_crm_task : user_can_write_crm sur son object). Gate des routes /api/task-document (17i)._
 
 ### `api.user_can_write_enrichment(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
@@ -1841,6 +2053,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_can_write_list`
 - **object types served:** **all object types**
+- _Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k)._
 
 ### `api.user_can_write_object_canonical(p_object_id text)` _(DEFINER)_
 - **returns:** `boolean`
@@ -1852,7 +2065,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `boolean`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/user_has_permission`
 - **object types served:** **all object types**
-- _B. Helper : api.user_has_permission(p_permission_code text)_
+- _Droits effectifs : exception individuelle OU rôle métier de l'ORG (§227). Le chemin org_permission a été retiré le 2026-08-31 — il accordait sans regarder le rôle._
 
 ### `api.validate_audit_result_points()`
 - **returns:** `trigger`
@@ -1944,10 +2157,86 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _§157 — LE moteur d'ouverture, paramétré par l'instant demandé. Source UNIQUE :_
 
+### `internal.crm_backfill_assignees_from_owner()`
+- **returns:** `integer`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie._
+
 ### `internal.recompute_trail_status(p_trail_id uuid)`
 - **returns:** `void`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
+
+### `internal.ref_catalog_access(p_catalog_key text)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être_
+
+### `internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Valeur castée au type découvert, réutilisée par l'INSERT, le SET et le WHERE._
+
+### `internal.ref_catalog_label_column(p_catalog_key text)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception_
+
+### `internal.ref_catalog_readonly_reason(p_catalog_key text)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.ref_catalog_row_count(p_table text)` _(dyn-SQL)_
+- **returns:** `bigint`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)` _(DEFINER)_
+- **returns:** `SETOF text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Moteur de résolution des listes dynamiques (plafond 2001). NON exposé : joignable uniquement depuis un SECURITY DEFINER qui a déjà appliqué sa propre garde. Le contrat public api.resolve_list_object_ids reste plafonné à 200. §211_
+
+### `internal.seed_test_corpus(p_per_type integer DEFAULT 15)`
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Chaque fiche est rattachee a l'ORG de test comme ORG PRIMAIRE : c'est CE lien_
+
+### `internal.seed_test_facets(p_id text, p_type text, p_i integer, p_src text DEFAULT NULL::text)`
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Profondeur PAR TYPE du corpus de test : object_iti (+etapes, pratiques, profil, trace), object_fma (+occurrences), object_act, types de chambre, salles de reunion, carte. Suit ref_facet_applicability a la lettre — 7 types n'ont aucune facette. Idempotent (purge avant reecriture)._
+
+### `internal.test_actor_name(p_type text, p_i integer)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Noms d'acteurs FICTIFS. Jamais tires du corpus reel : c'est la ligne rouge de_
+
+### `internal.test_corpus_id(p_type text, p_i integer)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Id conforme a chk_object_id_shape (3 lettres + 3 alphanum + 10 alphanum) :_
+
+### `internal.test_corpus_name(p_type text, p_i integer)`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Un nom credible par type. Volontairement realiste : un corpus intitule_
+
+### `internal.test_org_id()`
+- **returns:** `text`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+- _Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests._
 
 ### `internal.trail_expire_overrides()`
 - **returns:** `void`
@@ -2064,6 +2353,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `trigger`
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
+
+### `public.seed_org_role_permission()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
+- _2bis. Semer AUSSI les ORG créées plus tard._
 
 ### `public.sync_object_capacity_unit()`
 - **returns:** `trigger`

@@ -3,13 +3,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useUiStore } from '../../store/ui-store';
 import { useExplorerStore } from '../../store/explorer-store';
-import { usePrefetchObjectDetail } from '../../hooks/useExplorerQueries';
+import { usePrefetchObjectDetail, useExplorerSelectionCardsQuery } from '../../hooks/useExplorerQueries';
 import type { ObjectCard } from '../../types/domain';
 import { flyStarToSelection } from '../../utils/fly-to-selection';
 import { buildResultSections, buildGradeSections } from '../../utils/explorer-result-sections';
 import { EmptyState } from '../common/EmptyState';
 import { useExplorerEmptyState } from './explorer-empty-state';
 import { ResultCardView } from './ResultCardView';
+import { resolveSelectionHydrationIds } from './selection-hydration';
 import { cn } from '@/lib/utils';
 
 interface ResultsListProps {
@@ -100,6 +101,9 @@ export function ResultsList({
   const toggleSelectedObject = useExplorerStore((state) => state.toggleSelectedObject);
   const selectedObjectIds = useExplorerStore((state) => state.selectedObjectIds);
   const selectedCardId = useExplorerStore((state) => state.selectedCardId);
+  // Corpus filtré courant (les marqueurs, posés par ExplorerPage) : borne ce qu'on
+  // s'autorise à réclamer, cf. selection-hydration.ts.
+  const visibleObjectIds = useExplorerStore((state) => state.visibleObjectIds);
   const hoveredCardId = useExplorerStore((state) => state.hoveredCardId);
   const setHoveredCard = useExplorerStore((state) => state.setHoveredCard);
   const resetAllFilters = useExplorerStore((state) => state.resetAll);
@@ -112,23 +116,10 @@ export function ResultsList({
   // chargées. `?? ` (et non `||`) pour qu'un corpus légitimement vide affiche « 0 fiches ».
   const resultCount = totalCount ?? visibleCards.length;
 
-  const orderedCards = useMemo(() => {
-    if (selectedObjectIds.length === 0) {
-      return visibleCards;
-    }
-    const cardsById = new Map(visibleCards.map((card) => [card.id, card] as const));
-    const selectedCards = selectedObjectIds.flatMap((id) => {
-      const card = cardsById.get(id);
-      return card ? [card] : [];
-    });
-    const selectedSet = new Set(selectedCards.map((card) => card.id));
-    return [...selectedCards, ...visibleCards.filter((card) => !selectedSet.has(card.id))];
-  }, [selectedObjectIds, visibleCards]);
-
   // §labelsect Task 10 : sections « labellisés / actions compatibles » quand le filtre
   // label rank est actif ET les deux groupes sont non-vides (cf. buildResultSections).
   // Une section forte et un float de sélection sont contradictoires — le float est
-  // suspendu tant que la vue est groupée (voir orderedCards ci-dessus, non consommé ici).
+  // suspendu tant que la vue est groupée (voir orderedCards ci-dessous, non consommé ici).
   // §174 — quand un scheme classé est actif (gradeSection, résolu par ExplorerPage),
   // les sections deviennent des niveaux de classement à la place des sections §173 ;
   // les deux modes sont mutuellement exclusifs (jamais combinés).
@@ -139,6 +130,60 @@ export function ResultsList({
         : buildResultSections(visibleCards, labelRankCounts),
     [gradeSection, visibleCards, labelRankCounts],
   );
+
+  // §125 bis — la carte n'est PAS paginée : une sélection faite dessus (lasso, « tout
+  // sélectionner », clic sur un marqueur) désigne régulièrement des fiches absentes de
+  // la fenêtre chargée. Le flottement seul ne pouvait pas les remonter — il ne réordonne
+  // que ce qui est déjà là — et elles n'arrivaient qu'au prix d'un scroll jusqu'au bout.
+  // On les réclame. Suspendu quand la vue est groupée, comme le flottement lui-même.
+  const hydrationIds = useMemo(
+    () =>
+      resolveSelectionHydrationIds({
+        selectedObjectIds,
+        selectedCardId,
+        loadedCardIds: visibleCards.map((card) => card.id),
+        corpusObjectIds: visibleObjectIds,
+        enabled: !sections.grouped,
+      }),
+    [selectedCardId, selectedObjectIds, sections.grouped, visibleCards, visibleObjectIds],
+  );
+  const hydratedSelectionCards = useExplorerSelectionCardsQuery(hydrationIds).data;
+
+  const orderedCards = useMemo(() => {
+    if (selectedObjectIds.length === 0 && !selectedCardId) {
+      return visibleCards;
+    }
+    // `keepPreviousData` peut encore servir la réponse de la réclamation PRÉCÉDENTE le
+    // temps d'un aller-retour (changement de filtre, ajout à la sélection). On n'accepte
+    // donc que les fiches effectivement demandées CETTE fois : sinon une fiche sortie du
+    // corpus filtré clignoterait en tête avant d'être écartée.
+    const wanted = new Set(hydrationIds);
+    const hydrated = hydratedSelectionCards.filter((card) => wanted.has(card.id));
+    const cardsById = new Map<string, ObjectCard>([
+      ...visibleCards.map((card) => [card.id, card] as const),
+      ...hydrated.map((card) => [card.id, card] as const),
+    ]);
+    // La fiche cliquée sur un marqueur passe en tête UNIQUEMENT quand il a fallu la
+    // réclamer : elle n'a alors aucune place d'origine dans la liste, et le défilement
+    // ci-dessous a besoin qu'elle soit rendue. Déjà chargée, elle garde sa place.
+    const hydratedIds = new Set(hydrated.map((card) => card.id));
+    const floatIds =
+      selectedCardId && hydratedIds.has(selectedCardId)
+        ? [selectedCardId, ...selectedObjectIds]
+        : selectedObjectIds;
+
+    const floated: ObjectCard[] = [];
+    const floatedIds = new Set<string>();
+    for (const id of floatIds) {
+      const card = cardsById.get(id);
+      if (!card || floatedIds.has(id)) {
+        continue;
+      }
+      floatedIds.add(id);
+      floated.push(card);
+    }
+    return [...floated, ...visibleCards.filter((card) => !floatedIds.has(card.id))];
+  }, [hydrationIds, hydratedSelectionCards, selectedCardId, selectedObjectIds, visibleCards]);
 
   // §174 — état de repli des sections, local à la vue (pas store/URL) : purement une
   // préférence d'affichage temporaire. Les sections §173 partagent le même rendu
@@ -159,12 +204,22 @@ export function ResultsList({
     setHasMounted(true);
   }, []);
 
+  // Le défilement vers la fiche cliquée sur la carte doit attendre qu'elle soit RENDUE :
+  // quand elle vient d'être réclamée (§125 bis), l'élément n'existe pas encore au premier
+  // passage — d'où la dépendance à `orderedCards`. Le ref retient la dernière fiche
+  // atteinte pour ne pas reprendre la main sur le scroll à chaque re-rendu.
+  const scrolledToCardRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!selectedCardId) return;
+    if (!selectedCardId) {
+      scrolledToCardRef.current = null;
+      return;
+    }
+    if (scrolledToCardRef.current === selectedCardId) return;
     const el = document.getElementById(toResultCardDomId(selectedCardId));
     if (!el) return;
+    scrolledToCardRef.current = selectedCardId;
     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [selectedCardId]);
+  }, [orderedCards, selectedCardId]);
 
   // D25 — restauration du scroll : une seule fois, quand la liste a du contenu
   // (revenir de l'éditeur ou d'un autre module ne perd plus la position).

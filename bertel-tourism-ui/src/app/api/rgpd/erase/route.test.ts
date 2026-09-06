@@ -1,5 +1,6 @@
 /** @jest-environment node */
 import { POST } from './route';
+import { readApiErrorMessage } from '@/services/api-error';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
@@ -380,6 +381,57 @@ describe('start flow', () => {
     expect(res.status).toBe(207);
     expect(json.cleanupStatusUnavailable).toBe(true);
     expect(json.status).not.toBe('completed');
+  });
+});
+
+/** Preserve master's business-message / database-engine translation boundary with
+ * the durable-cleanup authorization, UUID validation and preflight fixtures. */
+describe('POST /api/rgpd/erase — le message métier passe, le brut moteur non', () => {
+  let warn: jest.SpyInstance;
+  beforeAll(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+  afterAll(() => warn.mockRestore());
+
+  async function eraseWith(error: RpcResult['error']) {
+    mockedServer.mockReturnValue(serverClient({}) as never);
+    const eraseRpc = jest.fn(() => ({ data: null, error }));
+    mockedCreate.mockReturnValue(superuserAsCaller({ rpc_gdpr_erase_subject: eraseRpc }) as never);
+    const res = await POST(req({ authorization: 'Bearer t' }, { subjectKind: 'actor', subjectId: TARGET_ID, mode: 'anonymize' }));
+    const payload = (await res.json()) as { error?: string; detail?: string };
+    // A refusal earlier in authorization/preflight must not make these assertions vacuous.
+    expect(eraseRpc).toHaveBeenCalledTimes(1);
+    return { status: res.status, payload, shown: readApiErrorMessage(payload, res.status) };
+  }
+
+  it('relaie TEL QUEL le message français du RAISE de la garde (raison d’être de l’allowlist)', async () => {
+    const message = 'Effacement RGPD réservé aux administrateurs plateforme (référent RGPD / superuser).';
+    const { status, shown } = await eraseWith({ code: 'P0001', message });
+    expect(status).toBe(403);
+    expect(shown).toBe(message);
+  });
+
+  it('relaie aussi un RAISE métier plus précis que le libellé générique', async () => {
+    const { status, shown } = await eraseWith({ code: 'P0001', message: 'Acteur introuvable: a1' });
+    expect(status).toBe(400);
+    expect(shown).toBe('Acteur introuvable: a1');
+  });
+
+  it('un refus RLS du moteur devient une phrase FR — jamais « permission denied for table … »', async () => {
+    const { payload, shown } = await eraseWith({ code: '42501', message: 'permission denied for table actor' });
+    expect(payload.detail).not.toMatch(/permission denied|for table/i);
+    expect(shown).toMatch(/pas autorisée/i);
+  });
+
+  it('un timeout du moteur devient une phrase FR actionnable', async () => {
+    const { shown } = await eraseWith({ code: '57014', message: 'canceling statement due to statement timeout' });
+    expect(shown).not.toMatch(/canceling statement/i);
+    expect(shown).toMatch(/trop de temps/);
+  });
+
+  it('un JWT expiré ne s’affiche plus en anglais', async () => {
+    const { shown } = await eraseWith({ code: 'PGRST301', message: 'JWT expired' });
+    expect(shown).toMatch(/reconnectez-vous/i);
   });
 });
 

@@ -9,6 +9,7 @@ import { MobileNavDrawer } from './MobileNavDrawer';
 import { NotificationDrawer } from './NotificationDrawer';
 import { ProfileDrawer } from './ProfileDrawer';
 import { RouteMotion } from './RouteMotion';
+import { SandboxBanner } from './SandboxBanner';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -39,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         unreadNotifications={unreadCount}
       />
       <div className={`app-shell__viewport${isObjectEdit ? ' app-shell__viewport--object-edit' : ''}`}>
+        <SandboxBanner />
         {!isObjectEdit ? <TopBar /> : null}
         <main
           id="main-content"

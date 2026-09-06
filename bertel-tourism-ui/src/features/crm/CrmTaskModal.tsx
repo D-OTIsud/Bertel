@@ -14,13 +14,19 @@
 // membre de l'ORG ; un ensemble vide est refusé côté serveur ET côté bouton).
 // Toujours ouvert sous gating write_crm_notes (boutons d'ouverture désactivés sinon).
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { ExternalLink, Trash2, Upload } from 'lucide-react';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
+import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../../services/task-documents';
+import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
+import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { CrmModal } from './CrmModal';
+import { formatDocumentSize, toDateInputValue } from './crm-view-utils';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
+import type { CrmTask } from '../../types/domain';
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le
@@ -66,6 +72,7 @@ export function CrmTaskFromInteractionModal({
 }
 
 export function CrmTaskModal({
+  task,
   actorId,
   objectOptions,
   picker,
@@ -74,6 +81,13 @@ export function CrmTaskModal({
   onClose,
   onSaved,
 }: {
+  /**
+   * Mode ÉDITION : tâche existante pré-remplie, établissement verrouillé (le serveur
+   * accepterait un déplacement mais on ne l'offre pas), soumission par `saveCrmTask({id,…})`
+   * — la description est TOUJOURS envoyée (`''` = effacement, NULLIF serveur). La Task 9
+   * y accrochera la section pièces jointes.
+   */
+  task?: CrmTask;
   /** Fiche acteur : rattache la tâche à l'acteur (save_crm_task.actor_id). */
   actorId?: string;
   objectOptions: Array<{ objectId: string; objectName: string }>;
@@ -100,19 +114,30 @@ export function CrmTaskModal({
   const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees });
   const assignees = assigneesQuery.data ?? [];
 
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(task?.title ?? '');
+  const [description, setDescription] = useState(task?.description ?? '');
   // Auto-sélection PO point 3 : en mode select avec UN SEUL établissement, on le pré-coche
   // (le champ est requis ⇒ formulaire plus proche du submit). Sinon vide (choix explicite).
+  // En édition, l'établissement vient de la tâche elle-même (verrouillé, cf. rendu plus bas).
   const [objectId, setObjectId] = useState(() => {
+    if (task) return task.objectId;
     if (fixedObject) return fixedObject.objectId;
     return picker === 'select' && objectOptions.length === 1 ? objectOptions[0].objectId : '';
   });
-  const [dueAt, setDueAt] = useState('');
+  // Pré-remplissage de l'échéance DANS LE FUSEAU D'AFFICHAGE DE LA CARTE, jamais en UTC.
+  // `dueAt.slice(0, 10)` prenait la date UTC de l'horodatage alors que la carte kanban la rend
+  // en heure locale (`formatShort`) : à UTC+4, une `due_at` entre 20:00Z et 24:00Z faisait
+  // afficher J+1 par la carte et J par le modal — et enregistrer PERSISTAIT l'écart.
+  const [dueAt, setDueAt] = useState(() => toDateInputValue(task?.dueAt));
   // 16w — `null` = « l'utilisateur n'a encore rien choisi », distinct de `[]` = « il a tout
   // décoché ». La sélection effective est DÉRIVÉE : le défaut s'applique donc même si la
   // liste des assignables arrive APRÈS l'ouverture du modal (aucune sélection perdue), et
   // le moindre geste de l'utilisateur l'emporte définitivement.
-  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(null);
+  // En édition, les assignés actuels de la tâche jouent le rôle du « déjà choisi » : pas de
+  // défaut à calculer, ils sont connus dès le départ.
+  const [pickedAssignees, setPickedAssignees] = useState<string[] | null>(
+    task ? task.assignees.map((assignee) => assignee.userId) : null,
+  );
 
   // Les deux modes (fiche acteur / onglet Tâches) résolvent désormais par objectId : le
   // SearchSelect ne rend que des options valides (plus de saisie libre nom → id fragile).
@@ -127,6 +152,20 @@ export function CrmTaskModal({
 
   const createMutation = useMutation({
     mutationFn: () => {
+      if (task) {
+        // Édition : update PARTIEL par id. `objectId` n'est jamais envoyé — l'établissement
+        // est verrouillé côté UI, et l'omettre de fait interdit tout déplacement, même si le
+        // serveur l'accepterait. La description est TOUJOURS envoyée : '' = effacement
+        // explicite (le serveur la convertit en NULL via NULLIF), contrairement à la
+        // création où la clé absente signifie « ne rien écrire ».
+        return saveCrmTask({
+          id: task.id,
+          title: title.trim(),
+          description: description.trim(),
+          dueAt: dueAt || null,
+          assigneeIds: selectedAssignees,
+        });
+      }
       if (!resolvedObject) return Promise.reject(new Error('Établissement non résolu'));
       return saveCrmTask({
         objectId: resolvedObject.objectId,
@@ -134,6 +173,8 @@ export function CrmTaskModal({
         // Clé ABSENTE quand il n'y a pas de lien : le RPC lit `payload ? 'related_interaction_id'`,
         // une clé présente à '' vaudrait un détachement explicite.
         ...(relatedInteractionId ? { relatedInteractionId } : {}),
+        // Clé ABSENTE quand vide à la création : ne rien écrire ≠ écrire un effacement.
+        ...(description.trim() ? { description: description.trim() } : {}),
         title: title.trim(),
         dueAt: dueAt || null,
         assigneeIds: selectedAssignees,
@@ -145,11 +186,58 @@ export function CrmTaskModal({
     },
   });
 
+  // Task 9 — pièces jointes (mode ÉDITION uniquement, cf. rendu plus bas). Les trois
+  // mutations appellent `onSaved()` (invalide `crm-tasks`, la liste `task.documents` se
+  // rafraîchit) mais NE FERMENT PAS le modal : contrairement à `createMutation`, l'utilisateur
+  // doit pouvoir enchaîner plusieurs ajouts/suppressions sans rouvrir la fenêtre. `task!`/
+  // `accessToken!` : ces mutations ne sont déclenchables que par des boutons désactivés tant
+  // que `task`/`accessToken` sont absents (cf. rendu), jamais appelées hors de ce cas.
+  const accessToken = useSupabaseAccessToken();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Bannière d'erreur = état local UNIQUE, plutôt que dérivée en cascade des trois
+  // `mutation.error` (upload ?? delete ?? open). Raison : `error` d'une `useMutation`
+  // react-query v5 n'est remise à zéro QUE quand cette même mutation est rejouée — une
+  // cascade de `??` peut donc afficher l'échec d'une mutation A alors qu'une mutation B,
+  // postérieure, vient de RÉUSSIR (A n'a jamais été rejouée, son `error` traîne). Avec un
+  // état local effacé au DÉBUT de chaque action (`onMutate`, avant même de savoir si elle
+  // va réussir) et renseigné seulement à l'échec (`onError`), chaque mutation porte sa
+  // propre règle sans avoir besoin de connaître ses sœurs. C'est délibérément préféré à
+  // « reset() des deux autres mutations à chaque déclenchement » : ce second schéma est
+  // symétrique en O(n²) entre mutations (ajouter une 4e action document imposerait de
+  // penser à la reset-er ET à la faire reset-er par les trois existantes) — un oubli
+  // reproduirait exactement ce bug sans qu'aucun test unitaire isolé par mutation ne
+  // l'attrape. L'état local, lui, reste correct par construction quel que soit le nombre
+  // de mutations futures.
+  const [documentError, setDocumentError] = useState<string | null>(null);
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => uploadTaskDocument({ taskId: task!.id, file, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
+    onSuccess: () => onSaved(),
+    onError: (error) => setDocumentError((error as Error).message),
+  });
+  const deleteMutation = useMutation({
+    mutationFn: (documentId: string) => deleteTaskDocument({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
+    onSuccess: () => onSaved(),
+    onError: (error) => setDocumentError((error as Error).message),
+  });
+  const openMutation = useMutation({
+    mutationFn: (documentId: string) => getTaskDocumentUrl({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    onMutate: () => setDocumentError(null),
+    onSuccess: (url) => window.open(url, '_blank', 'noopener'),
+    onError: (error) => setDocumentError((error as Error).message),
+  });
+  const documentPending = uploadMutation.isPending || deleteMutation.isPending || openMutation.isPending;
+
   // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
-  // un tableau vide « pour voir ».
+  // un tableau vide « pour voir ». `resolvedObject` n'est requis qu'à la CRÉATION — en
+  // édition `objectOptions` est vide (établissement verrouillé), donc `resolvedObject` est
+  // toujours nul et exiger sa présence rendrait « Enregistrer » mort sans explication.
   const canSubmit =
     Boolean(title.trim()) &&
-    Boolean(resolvedObject) &&
+    (Boolean(task) || Boolean(resolvedObject)) &&
     selectedAssignees.length > 0 &&
     !createMutation.isPending;
 
@@ -157,7 +245,7 @@ export function CrmTaskModal({
     <CrmModal
       // Le titre DIT le lien : c'est la seule chose qui distingue ce formulaire du formulaire
       // libre, et l'établissement en lecture seule serait autrement inexpliqué.
-      title={relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
+      title={task ? 'Modifier la tâche' : relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
       onClose={onClose}
       footer={
         <>
@@ -165,7 +253,7 @@ export function CrmTaskModal({
             Annuler
           </button>
           <button type="button" className="crm-btn primary" disabled={!canSubmit} onClick={() => createMutation.mutate()}>
-            Créer
+            {task ? 'Enregistrer' : 'Créer'}
           </button>
         </>
       }
@@ -181,13 +269,26 @@ export function CrmTaskModal({
       </label>
 
       <label className="crm-field">
+        Description
+        <textarea
+          aria-label="Description de la tâche"
+          placeholder="Décrire la tâche (optionnel)"
+          rows={3}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
+      </label>
+
+      <label className="crm-field">
         Établissement
-        {fixedObject ? (
-          // Lecture seule assumée : la tâche hérite de l'établissement de la demande, et le
-          // serveur refuserait tout autre choix (22023). On ne rend PAS un picker désactivé —
-          // SearchSelect n'a pas de prop `disabled`, et lui en ajouter une toucherait un
-          // composant partagé bien au-delà du CRM.
-          <span className="crm-field__static">{fixedObject.objectName}</span>
+        {task || fixedObject ? (
+          // Lecture seule assumée : en édition comme depuis une demande, l'établissement
+          // n'est PAS modifiable ici (le serveur accepterait un déplacement en édition, mais
+          // on ne l'offre pas — cf. docstring de `task`) ; le serveur refuserait tout autre
+          // choix pour `fixedObject` (22023). On ne rend PAS un picker désactivé — SearchSelect
+          // n'a pas de prop `disabled`, et lui en ajouter une toucherait un composant partagé
+          // bien au-delà du CRM.
+          <span className="crm-field__static">{task ? task.objectName : fixedObject!.objectName}</span>
         ) : (
           <SearchSelect
             aria-label="Établissement"
@@ -229,9 +330,72 @@ export function CrmTaskModal({
         <p className="crm-field__hint">Choisissez au moins une personne.</p>
       )}
 
+      {/* Task 9 — pièces jointes : SEULEMENT en édition, la tâche n'a pas encore d'id à la
+          création (rien à quoi ancrer un fichier). Boutons désactivés tant que le jeton de
+          session n'est pas lu : sans lui l'appel partirait sans Authorization (401 muet). */}
+      {task ? (
+        <div className="crm-field">
+          Pièces jointes
+          <ul className="crm-doc-list">
+            {task.documents.map((doc) => (
+              <li key={doc.id} className="crm-doc-list__row">
+                <span className="crm-doc-list__title">{doc.title}</span>
+                <span className="crm-doc-list__size">{formatDocumentSize(doc.sizeBytes)}</span>
+                <button
+                  type="button"
+                  className="crm-btn sm"
+                  aria-label={`Ouvrir « ${doc.title} »`}
+                  disabled={!accessToken || documentPending}
+                  onClick={() => openMutation.mutate(doc.id)}
+                >
+                  <ExternalLink size={11} aria-hidden /> Ouvrir
+                </button>
+                <button
+                  type="button"
+                  className="crm-btn sm crm-btn--danger-ghost"
+                  aria-label={`Supprimer « ${doc.title} »`}
+                  disabled={!accessToken || documentPending}
+                  onClick={() => {
+                    if (window.confirm(`Supprimer « ${doc.title} » ? Le fichier sera définitivement effacé.`)) {
+                      deleteMutation.mutate(doc.id);
+                    }
+                  }}
+                >
+                  <Trash2 size={11} aria-hidden /> Supprimer
+                </button>
+              </li>
+            ))}
+            {task.documents.length === 0 && <li className="crm-field__hint">Aucune pièce jointe.</li>}
+          </ul>
+          <input
+            ref={fileInputRef}
+            type="file"
+            aria-label="Ajouter un document"
+            accept={CRM_DOCUMENT_ACCEPT}
+            style={{ display: 'none' }}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (file) uploadMutation.mutate(file);
+            }}
+          />
+          <button
+            type="button"
+            className="crm-btn sm"
+            disabled={!accessToken || documentPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload size={11} aria-hidden /> Ajouter un document
+          </button>
+          {documentError && <div className="inline-alert" role="alert">{documentError}</div>}
+        </div>
+      ) : (
+        <p className="crm-field__hint">Enregistrez la tâche pour joindre des documents.</p>
+      )}
+
       {createMutation.isError && (
         <div className="inline-alert" role="alert">
-          Échec de la création : {(createMutation.error as Error).message}
+          {task ? 'Échec de l’enregistrement' : 'Échec de la création'} : {(createMutation.error as Error).message}
         </div>
       )}
     </CrmModal>

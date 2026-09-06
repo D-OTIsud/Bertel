@@ -76,4 +76,3 @@ La session navigateur est persistante avec les réglages usuels du client Supaba
 ## Vérification et suite
 
 Méthode : requête Graphify initiale, lecture de l'index du graphe DB, traçage des routes et gardes indirectes, comparaison avec SQL courant et lecture des tests existants. Aucun test destructif ni test réseau Auth/SMTP exécuté. Les suites existantes de suppression couvrent l'anti-soi simple et le périmètre partagé ; elles ne prouvent pas la hiérarchie ou le cas d'un ancien membre actif ailleurs. Traiter SEC-01 avant d'élargir les droits d'administration, puis les scénarios d'acceptation sur environnement isolé avec identités synthétiques.
-

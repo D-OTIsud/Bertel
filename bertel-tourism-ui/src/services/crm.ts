@@ -9,6 +9,7 @@ import type {
   CrmInteractionReply,
   CrmTask,
   CrmTaskAssignee,
+  CrmTaskDocument,
   CrmTaskPriority,
   CrmTaskStatus,
   CrmTimelinePage,
@@ -51,6 +52,31 @@ export function parseCrmTaskAssignees(value: unknown): CrmTaskAssignee[] {
   return assignees;
 }
 
+/**
+ * `documents` (17i) — tolérant : absent/null/malformé ⇒ []. Une entrée sans id est ignorée
+ * (même doctrine que `parseCrmTaskAssignees` : une pièce jointe abîmée ne doit pas vider le
+ * kanban). `id` est le `document_id` — voir la docstring de `CrmTaskDocument`.
+ */
+export function parseCrmTaskDocuments(value: unknown): CrmTaskDocument[] {
+  if (!Array.isArray(value)) return [];
+  const documents: CrmTaskDocument[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== 'object') continue;
+    const record = row as GenericRecord;
+    const id = readNullableString(record.id);
+    if (!id) continue;
+    documents.push({
+      id,
+      title: readString(record.title),
+      mimeType: readNullableString(record.mime_type),
+      // size_bytes peut être illisible côté SQL (garde délibérée) ⇒ null plutôt qu'une valeur inventée.
+      sizeBytes: typeof record.size_bytes === 'number' ? record.size_bytes : null,
+      createdAt: readNullableString(record.created_at),
+    });
+  }
+  return documents;
+}
+
 export function parseCrmTask(record: GenericRecord): CrmTask {
   const status = readString(record.status) as CrmTaskStatus;
   const priority = readString(record.priority) as CrmTaskPriority;
@@ -79,6 +105,16 @@ export function parseCrmTask(record: GenericRecord): CrmTask {
     relatedInteractionId: readNullableString(record.related_interaction_id),
     relatedInteractionSubject: readNullableString(record.related_interaction_subject),
     relatedInteractionStatus: readNullableString(record.related_interaction_status),
+    // 17i — pièces jointes de la tâche.
+    documents: parseCrmTaskDocuments(record.documents),
+    // 18a — `extra` BRUT, sans lecture ni typage : c'est `extra.kind` qui distingue une
+    // tâche de vérification de fiche, et seul un OBJET peut la porter. Un tableau, un
+    // scalaire ou `null` retombent à `null` — un `Array` passerait `typeof === 'object'`
+    // et se lirait ensuite `extra.kind === undefined`, silencieusement.
+    extra:
+      record.extra && typeof record.extra === 'object' && !Array.isArray(record.extra)
+        ? (record.extra as Record<string, unknown>)
+        : null,
   };
 }
 
@@ -120,7 +156,7 @@ export function parseCrmInteraction(record: GenericRecord): CrmInteraction {
     objectName: readNullableString(record.object_name),
     interactionType: readString(record.interaction_type) || 'note',
     direction: readString(record.direction) || 'internal',
-    status: readString(record.status) || 'done',
+    status: readString(record.status) || 'resolved',
     subject: readString(record.subject),
     body: readNullableString(record.body),
     occurredAt: readNullableString(record.occurred_at),
@@ -167,8 +203,10 @@ export interface CrmTimelineFilters {
   interactionType?: string;
   sentimentCode?: string;
   /**
-   * Statut PO (rectifs points 6+7) : 'active' = interactions `planned` (à traiter),
-   * 'done' = traitées ; absent = toutes. Validé serveur (22023 sinon).
+   * Statut PO (rectifs points 6+7) — vocabulaire d'INTERFACE, distinct de celui du cycle
+   * de vie et VOLONTAIREMENT inchangé par la bascule 17g : 'active' = la famille OUVERTE
+   * (new, in_progress, awaiting_provider), 'done' = la famille FERMÉE (resolved, closed,
+   * canceled) ; absent = toutes. Validé serveur (22023 sinon).
    */
   status?: 'active' | 'done';
   /** Borne basse ISO (`occurred_at >= from`) ; absent = pas de borne (« Tout »). */
@@ -204,6 +242,79 @@ export async function listCrmTimeline(filters: CrmTimelineFilters = {}): Promise
     throw error;
   }
   return parseCrmTimelinePage(data);
+}
+
+/**
+ * Journal des transitions de statut d'une demande (manifeste 17g).
+ *
+ * Le type vit ICI et non dans types/domain.ts : ce n'est pas une entite du domaine mais la
+ * forme de sortie d'un RPC, au meme titre qu'ActorSupportSnapshot.
+ *
+ * `changedByLabel` peut etre null, et l'est pour TOUT l'historique anterieur a la bascule :
+ * `audit.audit_log.changed_by` y stocke un e-mail (ou « postgres ») et non un uuid, si bien
+ * que le rejeu de 17g n'a pu rattacher aucune de ces transitions a un compte. C'est le bon
+ * comportement (invariant §218 : on n'invente pas une provenance), mais l'affichage doit le
+ * supporter au lieu de supposer un auteur.
+ */
+export interface CrmStatusEvent {
+  /** null = creation de la demande. */
+  fromStatus: string | null;
+  toStatus: string;
+  changedAt: string;
+  changedByLabel: string | null;
+}
+
+function parseCrmStatusEvent(record: GenericRecord): CrmStatusEvent {
+  return {
+    fromStatus: readNullableString(record.from_status),
+    toStatus: readString(record.to_status),
+    changedAt: readString(record.changed_at),
+    changedByLabel: readNullableString(record.changed_by_label),
+  };
+}
+
+/**
+ * Evenements ORDONNES du plus ancien au plus recent (tri porte par la RPC).
+ * La RPC rend une ENVELOPPE `{ events: [...] }`, jamais un tableau nu : deballer avec un
+ * `Array.isArray(data)` rendrait toujours [] en silence.
+ */
+export async function listCrmStatusEvents(interactionId: string): Promise<CrmStatusEvent[]> {
+  const client = requireCrmClient();
+  // Mode demo : aucun journal fabrique. Un historique de transitions invente se lirait
+  // comme un vrai.
+  if (!client) {
+    return [];
+  }
+  const { data, error } = await client
+    .schema('api')
+    .rpc('list_crm_status_events', { p_interaction_id: interactionId });
+  if (error) {
+    throw error;
+  }
+  const record = (data && typeof data === 'object' ? data : {}) as GenericRecord;
+  return Array.isArray(record.events)
+    ? record.events
+        .filter((row): row is GenericRecord => !!row && typeof row === 'object')
+        .map(parseCrmStatusEvent)
+    : [];
+}
+
+/**
+ * Date du DERNIER passage a « attente prestataire », ou null si la demande n'en a jamais eu
+ * — le cas de toute demande nee avant 17g, dont le journal ne porte aucun evenement.
+ * On prend le dernier evenement correspondant dans l'ordre rendu, sans recalculer de max :
+ * deux transitions ecrites dans la meme transaction portent la MEME date et rien ne les
+ * departage, donc un max() donnerait une fausse impression de precision.
+ */
+export async function loadAwaitingSince(interactionId: string): Promise<string | null> {
+  return awaitingSinceOf(await listCrmStatusEvents(interactionId));
+}
+
+export function awaitingSinceOf(events: CrmStatusEvent[]): string | null {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    if (events[i].toStatus === 'awaiting_provider') return events[i].changedAt;
+  }
+  return null;
 }
 
 export async function listCrmTasks(): Promise<CrmTask[]> {
@@ -308,8 +419,9 @@ export function parseCrmDirectoryEntry(record: GenericRecord): CrmDirectoryEntry
 /**
  * Filtres serveur de l'annuaire (rectifs PO points 6+7) : le RPC applique sujet / statut /
  * période à TOUS les agrégats (compteurs, dernière interaction, top sujets) — les KPIs de
- * l'annuaire sont donc réactifs sans recalcul client. `status`: 'active' = interactions
- * `planned` (à traiter), 'done' = traitées ; absent = toutes. Sous filtre, les acteurs
+ * l'annuaire sont donc réactifs sans recalcul client. `status` est le vocabulaire
+ * d'INTERFACE : 'active' = la famille OUVERTE, 'done' = la famille FERMÉE ; absent =
+ * toutes. Sous filtre, les acteurs
  * « lien seul » (0 interaction correspondante) sont exclus par le serveur.
  */
 export interface CrmDirectoryFilters {
@@ -538,10 +650,15 @@ export interface SaveCrmTaskInput {
 export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   const client = requireCrmClient();
   if (!client) {
-    // Mode démo : reflète le move dans le mock pour éviter un contrôle sans effet.
+    // Mode démo : reflète le move ET l'édition dans le mock pour éviter un contrôle sans effet.
     if (input.id) {
       const task = mockCrmTasks.find((t) => t.id === input.id);
-      if (task && input.status) task.status = input.status;
+      if (task) {
+        if (input.status) task.status = input.status;
+        if (input.title !== undefined) task.title = input.title;
+        if (input.description !== undefined) task.description = input.description || null;
+        if (input.dueAt !== undefined) task.dueAt = input.dueAt;
+      }
     }
     return input.id ?? 'demo-task';
   }
@@ -567,7 +684,32 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   if (!id) {
     throw new Error('Réponse RPC sans id');
   }
+  // Une écriture d'assignation vient peut-être de créer des notifications : on déclenche
+  // le drain. Clé `assigneeIds` absente (drag & drop) = aucune assignation possible = pas
+  // de ping. Le drain traite TOUTE la file, pas seulement cette tâche (filet de rattrapage).
+  if (input.assigneeIds !== undefined) void pingNotifyDrain();
   return id;
+}
+
+/**
+ * Ping fire-and-forget du drain e-mail (17i). L'échec est AVALÉ à dessein : la
+ * notification reste dans l'outbox et le prochain ping (de n'importe qui) la ramasse —
+ * un e-mail n'est jamais perdu, et l'écriture de la tâche n'attend jamais le SMTP.
+ */
+async function pingNotifyDrain(): Promise<void> {
+  try {
+    const client = getSupabaseClient();
+    if (!client) return;
+    const { data } = await client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+    await fetch('/api/crm/notify-drain', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // fire-and-forget : rien à faire, l'outbox rattrape.
+  }
 }
 
 /* ===== Assignables (PO point 4 — api.list_crm_assignees) ========================
@@ -1010,7 +1152,8 @@ export function parseObjectCrmSnapshot(payload: unknown): ObjectCrmSnapshot {
           // §65/§66 — fil de discussion (même contrat que parseCrmInteraction).
           interlocutorEmail: readNullableString(row.interlocutor_email),
           // Statut de la demande — list_object_crm le porte ; lu en nullable pour piloter la chip
-          // « En attente / Traitée » (planned/done) dans la vue objet aussi (était hard-codé null).
+          // La chip de statut dans la vue objet aussi (était hard-codé null) — libellé par
+          // le registre crm-status.ts, pas en dur ici.
           status: readNullableString(row.status),
           resolvedAt: readNullableString(row.resolved_at),
           replies: parseReplies(row.replies),

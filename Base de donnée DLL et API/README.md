@@ -56,6 +56,13 @@ Optionnel (uniquement si vous planifiez des taches programmees SQL):
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 ```
 
+> ⚠ **EXTRAIT INDICATIF, PAS UN MANIFESTE.** Le bloc ci-dessous est une liste **partielle**,
+> tenue a la main et incomplete depuis longtemps (CRM, listes, moderation, documents
+> prestataires et outbox e-mail n'y figurent pas). Le jouer tel quel produit une base
+> partielle, voire echoue. **La seule voie d'installation executable et tenue a jour est
+> `ci_fresh_apply.sql`** (manifeste ordonne complet, joue par la CI a chaque push) ; l'ordre
+> autoritaire et les caveats sont dans `docs/SQL_ROLLOUT_RUNBOOK.md`.
+
 ```sql
 -- 1) Schema
 \i schema_unified.sql
@@ -123,6 +130,37 @@ CREATE EXTENSION IF NOT EXISTS pg_cron;
 \i migration_object_location_address1_dedupe.sql
 -- §46: seed ref_capacity_applicability (facettes capacite Explorer HOT/RES) -- necessite ref_capacity_metric (seeds)
 \i migration_capacity_applicability_seed.sql
+
+-- 10) et 11) NE SONT PAS EXECUTABLES DEPUIS CE BLOC -- voir l'avertissement plus haut.
+--     Les deux chantiers ci-dessous sont documentes ICI parce qu'ils sont recents et qu'on
+--     les cherche d'abord dans ce fichier ; leur SEULE voie d'execution est
+--     `ci_fresh_apply.sql` (manifeste ordonne complet) et `docs/SQL_ROLLOUT_RUNBOOK.md`.
+--
+-- 10) 227 -- le role metier CONFERE les droits (matrice org_role_permission), l'ecriture CRM
+--     exige la permission, l'ecriture d'une liste appartient a son createur, la creation
+--     d'une liste est reservee au superuser plateforme. Quatre fichiers, dans cet ordre :
+--       migration_role_permission_matrix.sql        (17i)
+--       migration_crm_write_requires_permission.sql (17j)
+--       migration_list_write_creator_only.sql       (17k)
+--       migration_list_create_superuser_only.sql    (17l)
+--     Ces quatre etapes etaient deja en production et absentes du manifeste comme de ce
+--     fichier : dette de packaging rattrapee au packaging du portail acteur, qui depend
+--     d'org_role_permission. Prerequis ABSENTS de ce bloc : migration_crm_module.sql
+--     (api.current_user_crm_object_ids, exigee par 17j) et migration_object_list.sql
+--     (object_list / api.create_list, exigees par 17k et 17l).
+--
+-- 11) Portail acteur (18a, migration_actor_portal.sql) : persona `actor`, portee dediee,
+--     D7 (l'acteur n'ecrit pas le canonique), fiche_submission + tache de verification
+--     multi-assignee, D9 (validation totale ou partielle, manual_apply acquittable),
+--     outbox elargie. Prerequis ABSENTS de ce bloc, en plus des quatre ci-dessus :
+--     migration_moderation_rpcs.sql (pending_change / approve_pending_change),
+--     supabase/migrations/20260807124408_actor_prospects_documents.sql et
+--     migration_crm_task_email_documents.sql (colonnes d'outbox email_* de app_notification,
+--     et corps canonique de api.list_crm_tasks que 18a redeploie).
+--     L'ordre reel et les trois contraintes qui le fixent sont dans le manifeste et au
+--     runbook, section `## 18a` -- ils ne se deduisent PAS de ce bloc.
+--     NE PAS jouer migration_gdpr_erasure.sql APRES 18a : cette redaction ignore la branche
+--     acteur et effacerait le deliage du compte portail, sans lever.
 
 -- Ordre complet + refresh MV + rollback : voir docs/SQL_ROLLOUT_RUNBOOK.md
 ```
@@ -291,6 +329,31 @@ Le modele cible impose une unicite stricte sur `ref_code(domain, code)`.
 - RLS active dans `rls_policies.sql`.
 - Fonctions `SECURITY DEFINER` sensibles avec `SET search_path` explicite.
 - Eviter les grants globaux sur toutes les fonctions `api`; preferer une allowlist (voir `docs/SUPABASE_SETUP.md`).
+
+### Realm de test (bac a sable) — 18c/18d
+
+Un unique predicat cloisonne le corpus de test, ecrit partout a l'identique :
+
+    o.is_test = (SELECT api.current_user_test_realm())
+
+Une EGALITE, donc les deux sens a la fois : le corpus de test ne sort pas, et le compte de test
+ne voit pas la production.
+
+- `object.is_test` est **denormalise mais entretenu par trigger** depuis `org_config.is_test_org`.
+  Ne jamais l'ecrire a la main : l'organisation est la source de verite.
+- `api.current_user_test_realm()` est la feuille unique. `pg_temp` **en dernier** dans son
+  `search_path` (§208/R2.1). Elle ne renvoie JAMAIS NULL — c'est ce qui permet l'egalite.
+- Toute policy de lecture testant `status='published'` DOIT porter le predicat. Un `DO` block de
+  `migration_test_org_isolation.sql` refuse de valider sinon, et `tests/test_test_org_isolation.sql`
+  le reverifie (bloc A).
+- **L'API partenaire appelle en `service_role`, qui court-circuite la RLS** : le predicat est
+  ecrit dans les corps de fonction, pas seulement dans les policies. Toute nouvelle fonction
+  `SECURITY DEFINER` ou servie au partenaire doit le porter.
+- Les tombstones (`object_deletion_log.is_test`) figent le realm A LA SUPPRESSION : l'objet
+  n'existe plus, on ne peut pas le rejoindre apres coup.
+
+Voir `docs/SQL_ROLLOUT_RUNBOOK.md` (18c/18d) et
+`docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
 
 ## Scripts operationnels
 

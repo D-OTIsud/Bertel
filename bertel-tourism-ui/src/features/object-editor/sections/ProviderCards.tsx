@@ -24,8 +24,10 @@ interface ProviderCardsProps {
   /** Open a prestataire's CRM fiche (e.g. to edit its addresses). */
   onOpenActor?: (actorId: string) => void;
   /**
-   * Nombre d'interactions EN ATTENTE (status `planned`) par acteur (clé = actor.id). Dérivé du
-   * journal CRM dans SectionCrm. > 0 ⇒ badge de notification sur la carte du prestataire concerné.
+   * Nombre d'interactions OUVERTES par acteur (clé = actor.id) — « ouverte » au sens du
+   * registre crm-status.ts (isOpenInteractionStatus), et non d'un statut nommé : c'est ce
+   * que calcule réellement SectionCrm. > 0 ⇒ badge de notification sur la carte du
+   * prestataire concerné.
    */
   openCountByActor?: Record<string, number>;
 }

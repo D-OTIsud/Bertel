@@ -26,7 +26,7 @@ jest.mock('@/services/rbac', () => ({
   listBusinessRoles: jest.fn(),
   listAdminRoles: jest.fn().mockResolvedValue([]),
   listPermissionCatalog: jest.fn().mockResolvedValue([]),
-  listOrgPermissions: jest.fn().mockResolvedValue([]),
+  listRolePermissions: jest.fn().mockResolvedValue({}),
   setBusinessRole: jest.fn().mockResolvedValue(undefined),
   setAdminRole: jest.fn().mockResolvedValue(undefined),
   revokeAdminRole: jest.fn().mockResolvedValue(undefined),
@@ -54,7 +54,7 @@ const ALICE: OrgMember = {
   adminRoleCode: null,
   permissionCodes: [],
   lastSeenAt: null,
-  inheritedPermissionCodes: [],
+  rolePermissionCodes: [],
   isPlatformSuperuser: false,
 };
 

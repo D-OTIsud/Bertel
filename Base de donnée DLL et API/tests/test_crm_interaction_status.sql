@@ -2,20 +2,23 @@
 -- Prouve migration_crm_interaction_default_status.sql (manifeste 17b, chantier 2026-08-28 n°5) :
 --   (A) DDL — la colonne `status` n'a PLUS de DEFAULT, et une écriture DIRECTE sans statut
 --       ÉCHOUE au lieu de deviner. Sans cette assertion, on ne saurait pas distinguer « le
---       défaut a été retiré » de « le défaut a été remplacé par 'planned' ».
---   (B) RACINE AVEC SUJET, payload sans `status` ⇒ 'planned' + `resolved_at` NULL — et la ligne
+--       défaut a été retiré » de « le défaut a été remplacé par un statut ouvert ».
+--   (B) RACINE AVEC SUJET, payload sans `status` ⇒ 'new' + `resolved_at` NULL — et la ligne
 --       est réellement rendue par le filtre « Actives » (`p_status := 'active'`). GARDE NON
 --       VACANTE : on éprouve le VRAI chemin de lecture, pas seulement la colonne. C'est ce
 --       filtre qui était vide en production.
---   (C) RACINE SANS SUJET, payload sans `status` ⇒ 'done' + `resolved_at` RENSEIGNÉ. C'est CE
+--   (C) RACINE SANS SUJET, payload sans `status` ⇒ 'resolved' + `resolved_at` RENSEIGNÉ. C'est CE
 --       bloc qui prouve que la règle serveur ne transforme pas les NOTES INTERNES en demandes
 --       en attente — l'erreur symétrique de celle qu'on corrige.
 --   (D) Un `status` explicite dans le payload GAGNE sur le discriminant, dans les DEUX sens.
 --       (C'est le contrat dont dépend le choix « À traiter / Déjà traitée » de la modale.)
---   (E) RÉPONSE dans un fil ⇒ 'done' (décision §66 PRÉSERVÉE — une réponse n'est pas une
+--   (E) RÉPONSE dans un fil ⇒ 'resolved' (décision §66 PRÉSERVÉE — une réponse n'est pas une
 --       demande en attente), avec `resolved_at` cohérent.
---   (F) Cycle §66 intact : basculer la racine en 'done' pose `resolved_at`, la rebasculer en
---       'planned' le remet à NULL.
+--   (F) Cycle §66 intact : basculer la racine en 'resolved' pose `resolved_at`, la rebasculer en
+--       'new' le remet à NULL.
+--
+-- ⚠ VOCABULAIRE TRADUIT PAR LE MANIFESTE 17g : la règle §220 (défaut dérivé du SUJET) ne change
+--   pas d'un iota — seuls ses libellés changent, 'planned' → 'new' et 'done' → 'resolved'.
 --
 -- PERSONA OBLIGATOIRE : le test écrit via `api.save_crm_interaction`, dont la garde est
 -- `write_crm_notes` OU rang admin d'ORG OU superuser. Il s'exécute donc en tant que le persona
@@ -48,7 +51,7 @@ BEGIN
   -- ---------- (A) DDL : plus aucun DEFAULT sur status ----------
   ASSERT (SELECT column_default FROM information_schema.columns
            WHERE table_schema='public' AND table_name='crm_interaction' AND column_name='status') IS NULL,
-         'A1 : crm_interaction.status ne doit plus porter de DEFAULT (il valait ''done'')';
+         'A1 : crm_interaction.status ne doit plus porter de DEFAULT (il valait ''done'', ancien vocabulaire d avant 17g)';
 
   -- ---------- Fixture (superuser, RLS bypass) ----------
   SELECT id INTO v_pub_role FROM ref_org_role WHERE code='publisher' LIMIT 1;
@@ -117,7 +120,7 @@ BEGIN
     -- (D) Statut explicite, dans les deux sens.
     v_id_forced := (api.save_crm_interaction(jsonb_build_object(
       'object_id', v_obj, 'actor_id', v_actor, 'interaction_type','note',
-      'body','Note explicitement a traiter', 'status','planned'))->>'id')::uuid;
+      'body','Note explicitement a traiter', 'status','new'))->>'id')::uuid;
 
     -- (E) Réponse dans le fil de (B).
     v_id_reply := (api.save_crm_interaction(jsonb_build_object(
@@ -147,47 +150,47 @@ BEGIN
   -- admin-only sur les tables crm_*) : l'assertion comparerait a NULL et echouerait pour une
   -- raison etrangere a ce qu'elle teste (§218).
   SELECT status::text, resolved_at INTO v_status, v_resolved FROM crm_interaction WHERE id = v_id_topic;
-  ASSERT v_status = 'planned',
-         format('B1 : une racine AVEC sujet doit naitre « planned » ; obtenu %s', v_status);
+  ASSERT v_status = 'new',
+         format('B1 : une racine AVEC sujet doit naitre « new » ; obtenu %s', v_status);
   ASSERT v_resolved IS NULL,
          'B1b : une demande en attente ne peut pas porter de date de resolution';
 
   SELECT status::text, resolved_at INTO v_status, v_resolved FROM crm_interaction WHERE id = v_id_note;
-  ASSERT v_status = 'done',
-         format('C1 : une racine SANS sujet (note interne) doit naitre « done » ; obtenu %s', v_status);
+  ASSERT v_status = 'resolved',
+         format('C1 : une racine SANS sujet (note interne) doit naitre « resolved » ; obtenu %s', v_status);
   ASSERT v_resolved IS NOT NULL,
          'C2 : une ligne qui NAIT « traitee » doit porter sa date de resolution — sinon on recree '
          'l etat (done, resolved_at NULL) que le cycle §66 ne produit jamais';
 
   SELECT status::text, resolved_at INTO v_status, v_resolved FROM crm_interaction WHERE id = v_id_forced;
-  ASSERT v_status = 'planned',
+  ASSERT v_status = 'new',
          format('D1 : un `status` explicite doit gagner sur le discriminant ; obtenu %s', v_status);
-  ASSERT v_resolved IS NULL, 'D1b : « planned » explicite ne pose pas de date de resolution';
+  ASSERT v_resolved IS NULL, 'D1b : « new » explicite ne pose pas de date de resolution';
 
   SELECT status::text, resolved_at INTO v_status, v_resolved FROM crm_interaction WHERE id = v_id_reply;
-  ASSERT v_status = 'done',
-         format('E1 : une REPONSE reste « done » (decision §66 preservee) ; obtenu %s', v_status);
-  ASSERT v_resolved IS NOT NULL, 'E2 : une reponse nee « done » porte sa date de resolution';
+  ASSERT v_status = 'resolved',
+         format('E1 : une REPONSE reste « resolved » (decision §66 preservee) ; obtenu %s', v_status);
+  ASSERT v_resolved IS NOT NULL, 'E2 : une reponse nee « resolved » porte sa date de resolution';
 
-  -- (D2) L'autre sens : forcer « done » sur une racine PORTANT un sujet.
+  -- (D2) L'autre sens : forcer « resolved » sur une racine PORTANT un sujet.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_user, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
     v_id_forced := (api.save_crm_interaction(jsonb_build_object(
       'object_id', v_obj, 'actor_id', v_actor, 'interaction_type','call',
       'body','Demande deja traitee au telephone', 'topic_code', v_topic_code,
-      'status','done'))->>'id')::uuid;
+      'status','resolved'))->>'id')::uuid;
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
 
   SELECT status::text, resolved_at INTO v_status, v_resolved FROM crm_interaction WHERE id = v_id_forced;
-  ASSERT v_status = 'done',
-         format('D2 : « done » explicite doit gagner meme AVEC un sujet ; obtenu %s', v_status);
-  ASSERT v_resolved IS NOT NULL, 'D2b : « done » explicite pose la date de resolution des l INSERT';
+  ASSERT v_status = 'resolved',
+         format('D2 : « resolved » explicite doit gagner meme AVEC un sujet ; obtenu %s', v_status);
+  ASSERT v_resolved IS NOT NULL, 'D2b : « resolved » explicite pose la date de resolution des l INSERT';
 
   -- ---------- (F) Le cycle « marquer traitee / rouvrir » (§66) est intact ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_user, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
-    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_id_topic, 'status','done'));
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_id_topic, 'status','resolved'));
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
   SELECT resolved_at INTO v_resolved FROM crm_interaction WHERE id = v_id_topic;
@@ -195,12 +198,12 @@ BEGIN
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_user, 'role','authenticated')::text, true);
   SET LOCAL ROLE authenticated;
-    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_id_topic, 'status','planned'));
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_id_topic, 'status','new'));
   RESET ROLE;
   PERFORM set_config('request.jwt.claims', NULL, true);
   SELECT resolved_at INTO v_resolved FROM crm_interaction WHERE id = v_id_topic;
   ASSERT v_resolved IS NULL, 'F2 : rouvrir doit remettre resolved_at a NULL';
 
-  RAISE NOTICE 'crm interaction status assertions passed (A DDL sans defaut + ecriture directe refusee / B demande AVEC sujet nee en attente ET rendue par le filtre Actives / C note SANS sujet nee traitee avec sa date / D statut explicite gagnant dans les deux sens / E reponse toujours done / F cycle marquer-traitee-rouvrir intact).';
+  RAISE NOTICE 'crm interaction status assertions passed (A DDL sans defaut + ecriture directe refusee / B demande AVEC sujet nee « new » ET rendue par le filtre Actives / C note SANS sujet nee « resolved » avec sa date / D statut explicite gagnant dans les deux sens / E reponse toujours « resolved » / F cycle marquer-traitee-rouvrir intact).';
 END$$;
 ROLLBACK;

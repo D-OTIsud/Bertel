@@ -35,3 +35,17 @@ describe('resolveUserRoleTone', () => {
     expect(resolveUserRoleTone(null)).toBe('warn');
   });
 });
+
+describe('user-role-label — persona actor (portail 18a)', () => {
+  it('affiche « Partenaire » — le mot à l’écran, jamais « prestataire »', () => {
+    expect(resolveUserRoleLabel('actor')).toBe('Partenaire');
+    expect(resolveUserRoleTone('actor')).toBe('ok');
+  });
+
+  it('ne colle jamais « · Admin ORG » à un partenaire, quel que soit le rang', () => {
+    // Un partenaire n'administre aucune équipe : son rang est nul par construction
+    // (bootstrap court-circuité). La fonction ne doit pas produire ce libellé même
+    // si un rang non nul lui arrivait un jour.
+    expect(resolveUserRoleLabel('actor', 30)).toBe('Partenaire');
+  });
+});

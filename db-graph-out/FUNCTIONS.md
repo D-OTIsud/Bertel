@@ -113,6 +113,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Auteur, supérieur hiérarchique direct dans la même ORG, ou superuser plateforme.
 > Utilisé pour modifier / archiver une note.
 
+## `api.can_read_actor_contacts(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> SOURCE AUTORITAIRE (§208) de la règle « qui voit les coordonnées complètes d'un acteur » : superuser plateforme (lu dans app_user_profile.role — délibérément PAS api.is_platform_superuser(), dont le premier bras dirait TRUE à une clé service_role) OU membre d'une ORG publisher de la fiche (api.current_user_crm_object_ids). FALSE hors contexte HTTP et en service-role (auth.uid() NULL) : un export de PII est imputable à une personne. Forme PAR FICHE, appelée par api.export_actor_capabilities et par l'éditeur. DEUX autres formulations existent (tâche 7, 2026-08-08, mise à jour depuis « UNE seule ») : la forme ensembliste du périmètre dans api.export_actor_contacts (duplication délibérée §204), et le bras superuser de la cascade prestataire→fiche de api.list_selection_emails (migration_selection_emails.sql, §211 plié au régime §208) — faire évoluer les TROIS ensemble.
+
 ## `api.can_read_extended(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
@@ -153,7 +159,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Brique 2: fige le panel de KPIs dashboard pour p_date dans metric_snapshot (upsert idempotent).
 > Complétude via api.get_dashboard_completeness (pool publié), corpus net (tous statuts), classés
-> (granted, global+commune), couverture durable/accessibilité, backlog CRM (provisoire avant Brique 3).
+> (granted, global+commune), couverture durable/accessibilité, backlog CRM.
+> crm_backlog = liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et
+> resolved_at IS NULL — prédicat identique MOT POUR MOT à celui de api.get_dashboard_crm_open, sans
+> quoi la carte du bandeau et la courbe de l'onglet Activité afficheraient deux chiffres pour la
+> même réalité. Une comparaison EN TEXTE y serait une panne muette : elle survivrait à tout
+> renommage du vocabulaire en se réduisant à resolved_at IS NULL (manifeste 17g).
 > Exécutée par le cron quotidien capture-metric-snapshots.
 
 ## `api.check_membership_org_type()`
@@ -193,6 +204,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Un CHECK constraint ne peut pas référencer une autre table en PostgreSQL ;
 > le trigger est la solution correcte (même pattern que check_membership_org_type
 > et check_org_config_org_type).
+
+## `api.claim_unmailed_notifications(p_limit integer DEFAULT 20)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_notification` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
+- writes `public.app_notification` _(high)_
+
+> Outbox e-mail (17i) : réclame les notifications crm_task_assigned non e-mailées (TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.
 
 ## `api.commit_staging_to_public(p_batch_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -245,6 +267,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.compose_object_resource_blocks(p_payload jsonb)`
 - returns: `jsonb`
 
+## `api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+- writes `internal.sandbox_discovery_identity` _(high)_
+- writes `public.app_user_profile` _(high)_
+- writes `public.user_org_business_role` _(high)_
+- writes `public.user_org_membership` _(high)_
+
 ## `api.create_crm_artifacts_from_incident()`
 - returns: `trigger`
 - writes `public.crm_interaction` _(high)_
@@ -252,13 +285,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.incident_report` _(high)_
 - writes `public.object_iti` _(high)_
 
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.6  api.create_crm_artifacts_from_incident — corps schema_unified traduit
+> ─────────────────────────────────────────────────────────────────────────────────────
+> ⚠ CETTE FONCTION ÉCRIT DANS LES DEUX VOCABULAIRES. L'INSERT INTERACTION passe de 'done' à
+> 'resolved' (la note d'incident EST écrite) ; l'INSERT TÂCHE dix-neuf lignes plus bas garde
+> 'todo' — c'est un `crm_task_status`, il n'a RIEN à voir avec le cycle de vie des demandes.
+
 ## `api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)`
 - returns: `uuid` — SECURITY DEFINER
 - reads `public.object` _(high)_
 - writes `public.object_list` _(high)_
 - writes `public.object_list_item` _(high)_
 
-> 6.3 Création (statique depuis une sélection, ou dynamique depuis des filtres)
+> Création d'une liste : superuser plateforme UNIQUEMENT (17l, arbitrage PO 2026-08-31). Le rang d'administration d'ORG ne suffit pas.
 
 ## `api.create_membership_campaign(p_anchor_object_id text, p_name text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -276,6 +316,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.ref_tag` _(high)_
 
 > §09: dedup-guarded GLOBAL tag creation. Gated per-object. Dedup on ref_tag.name_normalized; slug inline; gen_random_uuid; created_by set. Color is a HEX #rrggbb (global per tag); defaults to #64748b.
+
+## `api.crm_user_label(p_user uuid, p_display_name text)`
+- returns: `text`
+
+> Libellé affichable d'un utilisateur : display_name, à défaut « Utilisateur xxxxxxxx ». Source unique du repli — les sérialiseurs de tâche et de notification l'appellent tous.
 
 ## `api.current_user_active_org()`
 - returns: `TABLE(org_id text, org_name text)` — SECURITY DEFINER
@@ -336,8 +381,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > STABLE + SECURITY DEFINER : pour traverser ref_permission / org_permission /
 > user_permission sans dépendre des policies RLS de ces tables.
 
+## `api.current_user_can_manage_actor_portal()`
+- returns: `boolean`
+
+> Permission dédiée au bloc CRM Accès portail. Superutilisateur plateforme ou permission explicite ; aucun rôle métier ne la reçoit par défaut. Les gardes CRM par acteur restent requises.
+
+## `api.current_user_can_write_crm_notes()`
+- returns: `boolean` — SECURITY DEFINER
+
+> Sonde d'interface : l'utilisateur courant peut-il écrire des notes CRM ? Reproduit la garde de api.user_can_write_crm_actor (write_crm_notes OU rang admin d'ORG OU superuser) SANS son arme de périmètre. Source de vérité UNIQUE — le front ne doit jamais re-transcrire cette chaîne de OR. Chantier 2026-08-28, manifeste 17c.
+
 ## `api.current_user_crm_actor_ids()`
 - returns: `SETOF uuid` — SECURITY DEFINER
+- reads `public.actor` _(high)_
 - reads `public.actor_object_role` _(high)_
 - reads `public.crm_interaction` _(high)_
 
@@ -391,6 +447,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > 1) "Objects visible to me" = published ∪ my extended scope. Single source of truth for the
 > object-level read visibility (the `object` table's own SELECT predicate, as a SET). SECURITY
 > DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35's set fn.
+
+## `api.current_user_test_realm()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.org_config` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l'API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).
 
 ## `api.cursor_pack(p jsonb)`
 - returns: `text`
@@ -477,6 +540,29 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > sur un membership actif, la contrainte est revérifiée pour le nouveau user_id.
 > 4. id IS DISTINCT FROM NEW.id remplace la condition TG_OP redondante :
 > en BEFORE INSERT la ligne n'existe pas encore, l'exclusion est toujours correcte.
+
+## `api.export_actor_capabilities(p_object_ids text[])`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_object_role` _(high)_
+
+> Préflight ERGONOMIQUE (§208 R2) de la modale d'export : deux booléens agrégés sur la sélection réelle — l'offre de colonnes acteur suit la consultation effective, pas un proxy « membre d'une ORG ». N'est JAMAIS une garde : api.export_actor_contacts refait tous les contrôles fiche par fiche et c'est lui seul qui journalise. Appelle api.can_read_actor_contacts (source autoritaire) plutôt que de la retranscrire ; chaque bras est intersecté avec le périmètre lisible de l'appelant (§36) — aucun oracle d'existence sur un id non lu. PLAFOND DUR de 500 ids après dédoublonnage (BATCH_TOO_LARGE, SQLSTATE 22023), identique à celui de api.export_actor_contacts : la garde appelée est SECURITY DEFINER donc non inlinable, et le pire cas (sélection intégralement refusée, le cas d'un appelant hostile) coûte 2 évaluations par id — le plafond est ce qui borne réellement ce fan-out, pas l'ordre des bras du OR.
+
+## `api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT 'xlsx'::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_contact_role` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.actor_contact_export_log` _(high)_
+
+> Export JOURNALISÉ des coordonnées d'acteur (§208), seule voie autorisée : autorise-une-fois (§36 — la liste d'ids du client n'est jamais de confiance, elle est réduite fiche par fiche au périmètre de l'appelant), finalité validée serveur (5–500 car.), format xlsx|csv, dédoublonnage serveur, plafond dur de 500 ids par appel, puis écriture d'une ligne dans public.actor_contact_export_log DANS LA MÊME TRANSACTION que la lecture. Sélection mixte : sert l'autorisé et NOMME le refusé (denied_object_ids) ; tout-refusé ⇒ FORBIDDEN (42501) et — limite assumée — aucune ligne de journal. Pas de GRANT à service_role : un export de PII est imputable à une personne. Le bras de périmètre est la forme ensembliste de api.can_read_actor_contacts (duplication délibérée §204) : faire évoluer les deux ensemble.
 
 ## `api.export_itineraries_gpx_batch(p_object_ids text[], p_include_stages boolean DEFAULT true)`
 - returns: `TABLE(object_id text, name text, gpx_data text, file_size integer)`
@@ -606,6 +692,46 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > moyen 0-100, % fiches complètes-visiteur, essentiel le plus manquant, liste des fiches <80
 > (plafonnée par p_below_limit). ORG exclus. p_updated_at_from/to bornes DATE inclusives.
 
+## `api.get_dashboard_crm_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.ref_code_demand_topic` _(high)_
+
+> Onglet Activité équipe §4 : arriéré CRM par âge et par sujet, flux mensuel, temps de
+> traitement NET. GLOBAL, sans paramètre (même raison que api.get_dashboard_crm_open).
+> Les statuts ouverts reprennent le prédicat exact de crm_backlog — liste positive TYPÉE
+> (new, in_progress, awaiting_provider) et resolved_at IS NULL, manifeste 17g.
+> open_by_age émet TOUJOURS les quatre tranches, une tranche vide à zéro : n'afficher que les
+> tranches peuplées mentirait par omission sur la forme de l'arriéré. Une demande sans date
+> d'occurrence vieillit au maximum — on ne rajeunit pas une demande faute d'information.
+> open_by_topic regroupe les demandes sans sujet sous un libellé explicite, jamais sous une case
+> vide, et la somme par sujet égale toujours open_interactions.
+> TEMPS NET = écoulé (resolved_at − occurred_at) MOINS l'attente prestataire, parce qu'un
+> indicateur ne doit mesurer que ce que l'équipe maîtrise. Il ne porte que sur les demandes
+> NÉES APRÈS la bascule 17g (leur premier événement de journal est la création) : les lignes
+> importées sans date de résolution n'ont pas d'événement de création et sont donc hors
+> moyenne PAR CONSTRUCTION, sans exclusion à maintenir. canceled exclu.
+> avg_days NULL = pas encore mesurable ; zéro voudrait dire instantané.
+> Manifeste 17h.
+
+## `api.get_dashboard_crm_open()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+
+> Dashboard §1 : compteur GLOBAL des éléments CRM ouverts pour la carte d'attention du bandeau.
+> open_interactions reprend le prédicat exact de crm_backlog (api.capture_metric_snapshots) : la
+> liste positive TYPÉE des statuts ouverts (new, in_progress, awaiting_provider) et resolved_at
+> IS NULL. open_tasks = crm_task en todo/in_progress/blocked (les statuts terminaux de TÂCHE sont
+> exclus — une tâche annulée n'est pas du travail en attente ; vocabulaire crm_task_status,
+> distinct de celui des demandes). GLOBAL par décision produit (2026-08-30) : la carte est un
+> signal stable « ce qui m'attend aujourd'hui », elle n'obéit pas au panneau de filtres.
+> recent_interactions / backlog_interactions (manifeste 17h) partagent le MÊME ensemble : moins
+> de 90 jours d'un côté, le reste de l'autre. backlog est calculé par soustraction, si bien que
+> recent + backlog = open_interactions PAR CONSTRUCTION et qu'une demande sans date d'occurrence
+> tombe dans l'arriéré au lieu de disparaître entre deux bornes.
+> N'émet aucune PII (cinq entiers). Manifeste 17g, étendu par 17h.
+
 ## `api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -656,6 +782,30 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > (ref_classification_scheme.is_distinction), scoped to the same dated pool.
 > ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
 
+## `api.get_dashboard_team_activity()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_version` _(high)_
+
+> Onglet Activité équipe §2 : rythme de saisie sur 12 semaines + table des contributeurs.
+> GLOBAL, sans paramètre — n'obéit pas au panneau de filtres (même raison que
+> api.get_dashboard_crm_open : « comment l'équipe a travaillé » n'a pas de sens restreint à une
+> sélection d'objets).
+> ON COMPTE DES JOURS, PAS DES VERSIONS : editor_days = couples (éditeur, jour). Une passe
+> d'import produit des centaines de versions en une après-midi ; les compter ferait de cette
+> après-midi le sommet de l'année et écraserait les semaines de travail régulier. Un indicateur
+> de RYTHME mesure la régularité, pas le débit.
+> Les versions sans auteur (imports, système — 57,5 % du corpus au 31/08) sont EXCLUES.
+> Une semaine sans activité est émise à ZÉRO, jamais omise : un trou se lit « pas de données »,
+> pas « pas de travail ». L'agrégation se fait AVANT la jointure sur la série des semaines,
+> sans quoi le ROW(NULL,NULL) de la jointure compterait pour un jour-éditeur fantôme.
+> bulk_days = jours où un éditeur touche au moins 10 objets. La distribution réelle est bimodale
+> (≤ 9 d'un côté, ≥ 58 de l'autre) : le seuil sépare deux régimes, il ne coupe pas une
+> population continue. Si elle se remplit entre les deux, le seuil est à rediscuter.
+> display_name vient de api.crm_user_label — MÊME source que le kanban CRM et le journal de
+> transitions, pour qu'une personne porte un seul nom d'un écran à l'autre.
+> Manifeste 17h.
+
 ## `api.get_dashboard_type_breakdown(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -685,7 +835,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)`
 - returns: `TABLE(object_id text, label_rank integer, label_match jsonb, relevance real)` — SECURITY DEFINER
 - reads `internal.mv_filtered_objects` _(high)_
-- reads `internal.v_object_essentials` _(high)_
 - reads `public.media` _(high)_
 - reads `public.meeting_room_equipment` _(high)_
 - reads `public.object` _(high)_
@@ -694,7 +843,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_capacity` _(high)_
 - reads `public.object_classification` _(high)_
 - reads `public.object_fma` _(high)_
-- reads `public.object_hotel_positioning` _(high)_
 - reads `public.object_iti` _(high)_
 - reads `public.object_iti_practice` _(high)_
 - reads `public.object_location` _(high)_
@@ -708,7 +856,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_equivalent_group` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 - reads `public.ref_classification_value` _(high)_
-- reads `public.ref_code` _(high)_
 - reads `public.ref_code_accommodation_unit_type` _(high)_
 - reads `public.ref_code_amenity_family` _(high)_
 - reads `public.ref_code_iti_practice` _(high)_
@@ -1156,8 +1303,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_classification_value` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 
-> FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
-> description_adapted preferred over regular description, essential location,
+> FALC/Accessibility-friendly resource read model. Returns a simplified JSON with
+> description_adapted preferred over regular description, essential location,
 > primary phone/email contacts, main image, and LBL_TOURISME_HANDICAP accessibility labels (V5 canonical code).
 
 ## `api.get_object_resources_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_track_format text DEFAULT 'none'::text, p_options jsonb DEFAULT '{}'::jsonb)`
@@ -1227,7 +1374,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_object_workspace_permissions(p_object_id text)`
 - returns: `jsonb`
 
-> Agrege en un appel les 8 sondes de permission de l'editeur pour un objet. SECURITY INVOKER volontairement : les feuilles sont deja DEFINER et gatent elles-memes. Chaque sonde est isolee dans un bloc EXCEPTION pour conserver la semantique Promise.allSettled du front.
+> Agrège en un appel les 9 sondes de permission de l'éditeur pour un objet, dont la permission juridique dédiée. SECURITY INVOKER volontairement ; chaque sonde échoue fermée et indépendamment.
 
 ## `api.get_objects_by_type_with_deep_data(p_object_type text, p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - returns: `json`
@@ -1245,14 +1392,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb)`
 - returns: `json`
-- reads `public.actor` _(high)_
-- reads `public.actor_channel` _(high)_
-- reads `public.actor_object_role` _(high)_
 - reads `public.contact_channel` _(high)_
 - reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
 - reads `public.object_relation` _(high)_
-- reads `public.ref_actor_role` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_contact_role` _(high)_
 - reads `public.ref_object_relation_type` _(high)_
@@ -1358,6 +1501,23 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.trail_manager_link` _(high)_
 - reads `public.trail_source_record` _(high)_
 
+## `api.get_ref_catalog(p_catalog_key text)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+- reads `public.ref_catalog_registry` _(high)_
+- reads `public.ref_code` _(high)_
+
+## `api.get_sandbox_discovery_user()`
+- returns: `uuid` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `internal.sandbox_discovery_identity` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
 ## `api.get_trail(p_trail_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.ref_code_iti_open_status` _(high)_
@@ -1442,6 +1602,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.is_object_owner(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
 
 > Vérifie si l'utilisateur est propriétaire (owner) de l'objet
 > via un rôle actor_object_role lié à son email dans actor_channel
@@ -1541,6 +1702,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > l'acteur (contexte objet du périmètre OU générale), répartition des sujets.
 > Superuser : sans restriction de périmètre.
 
+## `api.list_actor_support(p_actor_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_document` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_document_type` _(high)_
+- reads `public.ref_document` _(high)_
+
 ## `api.list_ai_providers()`
 - returns: `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, is_active boolean, extra jsonb, has_key boolean, created_at timestamp with time zone, updated_at timestamp with time zone)` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
@@ -1574,10 +1743,24 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor_channel` _(high)_
 - reads `public.actor_object_role` _(high)_
 - reads `public.crm_interaction` _(high)_
+
+## `api.list_crm_directory_linked(p_topic_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_to timestamp with time zone DEFAULT NULL::timestamp with time zone, p_search text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
 - reads `public.object` _(high)_
 - reads `public.ref_actor_role` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
+
+## `api.list_crm_status_events(p_interaction_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_interaction` _(high)_
+
+> Journal des transitions de statut d'une demande CRM, ordonné du plus ancien au plus récent (manifeste 17g). Alimente l'encart « depuis quand » du sélecteur de statut. Périmètre §61 : la lisibilité du journal SUIT celle de son interaction (arme objet, à défaut arme acteur, à défaut la sonde d'écriture de notes). N'émet aucune coordonnée — seulement un libellé d'utilisateur via api.crm_user_label.
 
 ## `api.list_crm_tasks()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1585,9 +1768,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.crm_interaction` _(high)_
 - reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- reads `public.crm_task_document` _(high)_
 - reads `public.object` _(high)_
+- reads `public.ref_document` _(high)_
 
-> Tâches CRM du périmètre (échéance croissante, NULLS LAST).
+> ═══════════════════════════════════════════════════════════════════════════════════════
+> 7. LECTURES DE TÂCHE — clés `assignees[]`, `created_by_id`, `created_by_name`
+> `owner_id`/`owner_name` sont CONSERVÉS le temps du déploiement (un front antérieur
+> les lit encore). Le nouveau front ne doit plus s'en servir.
+> ═══════════════════════════════════════════════════════════════════════════════════════
 
 ## `api.list_crm_timeline(p_object_id text DEFAULT NULL::text, p_topic_code text DEFAULT NULL::text, p_interaction_type text DEFAULT NULL::text, p_sentiment_code text DEFAULT NULL::text, p_status text DEFAULT NULL::text, p_from timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before timestamp with time zone DEFAULT NULL::timestamp with time zone, p_before_id uuid DEFAULT NULL::uuid, p_limit integer DEFAULT 50)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1597,6 +1787,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.ref_code_crm_sentiment` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.4  api.list_crm_timeline — corps 8z traduit : un filtre devient une FAMILLE
+> ─────────────────────────────────────────────────────────────────────────────────────
+> Le contrat EXTERNE de `p_status` NE CHANGE PAS : il reste `active | done`, c'est le
+> vocabulaire de l'INTERFACE (les deux chips « Actives » / « Traitées »), pas celui du type.
+> Ce qui change, c'est ce à quoi il se traduit : une VALEUR devient une FAMILLE.
 
 ## `api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)`
 - returns: `jsonb`
@@ -1634,6 +1831,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > 6.1 Grille « Mes listes »
 
+## `api.list_my_notifications(p_limit integer DEFAULT 50)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.object` _(high)_
+
+> Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide.
+
 ## `api.list_object_contact_suggestions(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.actor_channel` _(high)_
@@ -1656,6 +1862,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.crm_interaction` _(high)_
 - reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
 - reads `public.ref_actor_role` _(high)_
 - reads `public.ref_code_crm_sentiment` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
@@ -1734,6 +1941,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.trail_manager_link` _(high)_
 - reads `public.trail_source_record` _(high)_
 
+## `api.list_ref_catalogs()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_catalog_registry` _(high)_
+- reads `public.ref_code` _(high)_
+
 ## `api.list_ref_code_domains()`
 - returns: `jsonb`
 - reads `public.ref_code` _(high)_
@@ -1745,6 +1957,22 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb`
 
 > Plusieurs référentiels publics en un appel. p_domains NULL = tous. Audit API I1.
+
+## `api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_consent` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.contact_channel` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- writes `public.actor_contact_export_log` _(high)_
+
+> Export des e-mails d'une sélection Explorer (p_object_ids) OU d'une liste (p_list_id). Authorize-once SECURITY DEFINER : garde éditeur (§205) puis périmètre ORG publisher (= périmètre CRM — `readable` ne suffit pas pour une donnée partners). Cascade prestataire operator → fiche. Rend des lignes brutes ; dédoublonnage et formatage côté client. §211. RÉGIME §208 (tâche 7, 2026-08-08) : p_reason PREMIER paramètre, obligatoire (5–500 car., sinon PT400/REASON_REQUIRED) ; VOLATILE (écrit) ; journal public.actor_contact_export_log dans la MÊME transaction, UNIQUEMENT quand le bras acteur émet au moins une adresse (une sélection entièrement résolue par les adresses de fiche n'a rien à journaliser) ; AUCUNE valeur de coordonnée dans le journal ; bras superuser ALIGNÉ sur api.can_read_actor_contacts (jamais api.is_platform_superuser()) ; PAS de GRANT à service_role. Troisième formulation du périmètre « qui voit les coordonnées d'un acteur » (§208) — évolue avec api.can_read_actor_contacts et la forme ensembliste de api.export_actor_contacts.
 
 ## `api.list_trail_sync_runs(p_source_code text DEFAULT NULL::text, p_limit integer DEFAULT 20)`
 - returns: `TABLE(id uuid, source_code text, trigger text, dry_run boolean, status text, started_at timestamp with time zone, finished_at timestamp with time zone, http_status integer, error text, layer_last_edit_date timestamp with time zone, counts jsonb, report jsonb)` — SECURITY DEFINER
@@ -1765,14 +1993,27 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Notes privées : les champs de portée et d'auteur restent immuables même si
 > un responsable ORG supérieur modifie le contenu d'une note.
 
+## `api.log_crm_interaction_status_event()`
+- returns: `trigger` — SECURITY DEFINER
+
+> Trigger AFTER INSERT OR UPDATE OF status sur crm_interaction : écrit une ligne de crm_interaction_status_event par transition RÉELLE (un UPDATE qui ne touche pas au statut n'écrit rien). from_status NULL = création. Manifeste 17g.
+
 ## `api.log_publication_proof_interaction()`
 - returns: `trigger`
 - writes `public.crm_interaction` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────────────
+> 7.7  api.log_publication_proof_interaction — corps schema_unified traduit
+> ─────────────────────────────────────────────────────────────────────────────────────
 
 ## `api.manage_object_published_at()`
 - returns: `trigger`
 
 > Mise à jour published_at
+
+## `api.mark_all_notifications_read()`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
 
 ## `api.mark_list_sent(p_list_id uuid)`
 - returns: `void` — SECURITY DEFINER
@@ -1780,8 +2021,33 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > ---------- 7b. Marquer une liste « envoyée » (route email /api/lists/send) ----------
 
+## `api.mark_notification_read(p_id uuid)`
+- returns: `jsonb` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+## `api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)`
+- returns: `integer` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+> Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.
+
 ## `api.norm_search(p text)`
 - returns: `text`
+
+## `api.notify_task_assignees(p_task_id uuid, p_new_assignees uuid[], p_actor uuid)`
+- returns: `integer` — SECURITY DEFINER
+- writes `public.app_notification` _(high)_
+
+> Crée une notification crm_task_assigned par NOUVEL assigné, en excluant l'auteur de l'action (règle produit : on ne se notifie pas de sa propre auto-assignation). Appelée UNIQUEMENT depuis api.save_crm_task, dans la même transaction que le save.
+
+## `api.object_expected_is_test(p_object_id text)`
+- returns: `boolean`
+- reads `public.object_org_link` _(high)_
+- reads `public.org_config` _(high)_
+
+> Realm que la fiche DEVRAIT porter, d'apres son ORG primaire. Une fiche sans lien
+> d'ORG reste en production (false) — fail-closed du bon cote : une fiche orpheline
+> ne doit pas devenir invisible, elle doit rester visible et donc suspecte.
 
 ## `api.object_missing_essentials(p_object_ids text[])`
 - returns: `TABLE(object_id text, missing text[])` — SECURITY DEFINER
@@ -2103,6 +2369,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Phase 7.5 — suppression définitive d'une valeur ref_code, UNIQUEMENT à 0 référence (sinon 23503) ; super-admin + domaine éditable (fail-closed).
 
+## `api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)`
+- returns: `void` — SECURITY DEFINER, dynamic SQL
+
 ## `api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.actor` _(high)_
@@ -2127,23 +2396,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.
 
-## `api.rpc_grant_org_permission(p_org_object_id text, p_permission_code text)`
-- returns: `void` — SECURITY DEFINER
-- reads `public.object` _(high)_
-- reads `public.ref_org_admin_role` _(high)_
-- reads `public.ref_permission` _(high)_
-- reads `public.user_org_admin_role` _(high)_
-- reads `public.user_org_membership` _(high)_
-- writes `public.org_permission` _(high)_
-
-> -------------------------------------------------------
-> D1. rpc_grant_org_permission
-> Accorde une permission à une ORG entière.
-> Autorisation : org_admin (rank 30) de l'ORG cible, ou superuser plateforme.
-> Idempotent : si la permission existe et est inactive, elle est réactivée.
-> Pas d'anti-self : c'est une permission ORG, pas personnelle.
-> -------------------------------------------------------
-
 ## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
 - reads `public.ref_org_admin_role` _(high)_
@@ -2167,10 +2419,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Émet une clé : renvoie la clé BRUTE UNE SEULE FOIS (jamais re-consultable).
 
 ## `api.rpc_list_org_members(p_org_object_id text)`
-- returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone)` — SECURITY DEFINER
+- returns: `TABLE(membership_id uuid, user_id uuid, email text, display_name text, is_active boolean, business_role_code text, admin_role_code text, permission_codes text[], last_seen_at timestamp with time zone, role_permission_codes text[], is_platform_superuser boolean)` — SECURITY DEFINER
 - reads `auth.sessions` _(high)_
 - reads `auth.users` _(high)_
 - reads `public.app_user_profile` _(high)_
+- reads `public.org_role_permission` _(high)_
 - reads `public.ref_org_admin_role` _(high)_
 - reads `public.ref_org_business_role` _(high)_
 - reads `public.ref_permission` _(high)_
@@ -2186,6 +2439,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_membership` _(high)_
 
 > Liste des organisations (ORG) avec périmètre d'accès et effectif actif. Superadmin plateforme uniquement.
+
+## `api.rpc_list_role_permissions(p_org_object_id text)`
+- returns: `TABLE(role_code text, permission_code text)` — SECURITY DEFINER
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Lecture de la matrice pour l'écran /team. SECURITY DEFINER + prédicat d'appartenance :
+> la fonction ne rend la matrice qu'à un membre actif de l'ORG demandée.
 
 ## `api.rpc_publish_object(p_object_id text, p_publish boolean DEFAULT true)`
 - returns: `void` — SECURITY DEFINER
@@ -2209,6 +2472,32 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > RÉORDONNE : position = rang (1-based) dans le tableau d'ids fourni.
 
+## `api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)`
+- returns: `void` — SECURITY DEFINER, dynamic SQL
+- reads `public.ref_code` _(high)_
+
+> Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
+> monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
+> 
+> DEUX PIÈGES, tous deux vérifiés en base :
+> (a) `ref_language` porte `uq_ref_language_position` — un index UNIQUE PARTIEL sur
+> position. Permuter 1↔2 par deux UPDATE successifs viole l'unicité au premier.
+> L'écriture est donc EN DEUX PHASES : on pousse d'abord tout le monde dans une
+> plage libre (1 000 000 + rang), puis on redescend sur le rang final.
+> (b) une liste partielle ou dupliquée réordonnerait silencieusement de travers : on
+> exige l'ensemble EXACT des lignes du catalogue, sans doublon.
+
+## `api.rpc_reset_test_data()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.org_config` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.object` _(high)_
+
+> Vide et resseme le corpus du bac a sable. Superuser plateforme uniquement, et refuse de s'executer si l'ORG cible n'est pas is_test_org. Sans argument : la cible est constante et ne peut pas etre pointee sur une organisation de production.
+
 ## `api.rpc_restore_object_version(p_object_id text, p_version_number integer)`
 - returns: `void` — SECURITY DEFINER
 - reads `public.object_version` _(high)_
@@ -2231,22 +2520,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Anti-self (§2.6) : impossible de se retirer son propre rôle admin.
 > Gestion vers le bas seulement (§2.6) : rang cible < rang appelant.
 > No-op silencieux si la cible n'a pas de rôle admin actif.
-> -------------------------------------------------------
-
-## `api.rpc_revoke_org_permission(p_org_object_id text, p_permission_code text)`
-- returns: `void` — SECURITY DEFINER
-- reads `public.object` _(high)_
-- reads `public.ref_org_admin_role` _(high)_
-- reads `public.ref_permission` _(high)_
-- reads `public.user_org_admin_role` _(high)_
-- reads `public.user_org_membership` _(high)_
-- writes `public.org_permission` _(high)_
-
-> -------------------------------------------------------
-> D2. rpc_revoke_org_permission
-> Révoque une permission d'une ORG (soft revoke : is_active = FALSE).
-> Autorisation : org_admin (rank 30) de l'ORG cible, ou superuser plateforme.
-> No-op silencieux si la permission n'est pas active sur cette ORG.
 > -------------------------------------------------------
 
 ## `api.rpc_revoke_partner_key(p_id uuid)`
@@ -2319,6 +2592,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > (DÉS)ACTIVE une valeur ref_code.
 
+## `api.rpc_set_role_permission(p_org_object_id text, p_role_code text, p_permission_code text, p_granted boolean)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_role_permission` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 4. Écriture de la matrice — rang ≥ 30, comme toute écriture de permission.
+> ─────────────────────────────────────────────────────────────────────────────
+
 ## `api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)`
 - returns: `uuid` — SECURITY DEFINER
 - reads `public.ref_org_admin_role` _(high)_
@@ -2351,6 +2638,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > CRÉE (p_id NULL) ou ÉDITE (p_id fourni) une valeur ref_code d'un domaine éditable.
 
+## `api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)`
+- returns: `jsonb` — SECURITY DEFINER, dynamic SQL
+
 ## `api.rpc_write_org_description(p_object_id text, p_payload jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object_description` _(high)_
@@ -2376,6 +2666,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > trg_prevent_duplicate_actor_email (e-mail déjà porté par un autre acteur),
 > trg_actor_channel_email (forme d'e-mail), uq_actor_channel_primary (un primaire par
 > (acteur, kind)), uq_actor_channel_unique (doublon exact).
+
+## `api.save_actor_document(p_payload jsonb)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor_document` _(high)_
+- reads `public.ref_code_document_type` _(high)_
+- writes `public.actor_document` _(high)_
 
 ## `api.save_crm_actor(p_payload jsonb)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2406,9 +2702,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor` _(high)_
 - reads `public.crm_interaction` _(high)_
 - reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
 - writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
 
-> Upsert tâche (id présent = UPDATE partiel « clé présente ⇒ écrite », sinon INSERT).
+> ═══════════════════════════════════════════════════════════════════════════════════════
+> 6. api.save_crm_task — contrat `assignee_ids`
+> ═══════════════════════════════════════════════════════════════════════════════════════
 
 ## `api.save_object_commercial(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
@@ -2497,6 +2797,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_relation` _(high)_
 
 > ⚠ BODY SYNC: this function body must stay byte-identical to the copy in migration_actor_links_editor.sql (8r re-applies it after this file on fresh installs). Edit BOTH or fresh ≠ live.
+> ⚠ DEPENDENCY (§208/T13b): the `actors` branch calls api.can_read_actor_contacts(text), created by
+> migration_actor_contacts_org_gate.sql (manifest 16u). The reference is resolved at RUNTIME, not at
+> CREATE time (plpgsql validates syntax only), so a fresh apply in manifest order is fine — nothing
+> between step 7 and 16u calls this RPC. On a LIVE database, apply 16u BEFORE (or in the same pass as)
+> any re-apply of this file or of 8r, or the actors branch raises 42883 at the first save.
 
 ## `api.save_object_workspace_sustainability(p_object_id text, p_payload jsonb)`
 - returns: `jsonb`
@@ -2515,6 +2820,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(id uuid, display_name text, first_name text, last_name text, gender text, email text)` — SECURITY DEFINER
 - reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.app_user_profile` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 
 ## `api.search_events_by_restaurant_cuisine(p_cuisine_types text[], p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)`
@@ -2542,6 +2849,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Search objects by label with partial action matches
 > =====================================================
+
+## `api.search_objects_by_name(p_term text, p_limit integer DEFAULT 8)`
+- returns: `TABLE(id text, name text, object_type object_type, status object_status, city text, image_url text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_location` _(high)_
+
+> Concordance directe par nom (spec 2026-08-26) : navigation, pas filtrage — cherche tout le corpus visible indépendamment des filtres de l'Exploreur. Périmètre auto-gardé : published pour tous, + draft du périmètre étendu pour un éditeur (COALESCE sur la sonde à trois valeurs, §204) ; archived/hidden jamais. Consommée par le menu de la barre de recherche, le bandeau de résultats et la palette ⌘K.
 
 ## `api.search_objects_with_deep_data(p_search_term text, p_object_types text[] DEFAULT NULL::text[], p_languages text[] DEFAULT ARRAY['fr'::text], p_include_media text DEFAULT 'none'::text, p_filters jsonb DEFAULT '{}'::jsonb, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
 - returns: `json`
@@ -2638,6 +2952,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.audit_template` _(high)_
 - writes `public.object_classification` _(high)_
 
+## `api.sync_object_is_test(p_object_id text)`
+- returns: `void`
+- writes `public.object` _(high)_
+
 ## `api.tg_object_list_touch()`
 - returns: `trigger`
 
@@ -2693,6 +3011,22 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `void` — SECURITY DEFINER
 - reads `public.trail` _(high)_
 - writes `public.trail` _(high)_
+
+## `api.trg_object_deletion_log_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+> Le tombstone herite du realm de la fiche AU MOMENT de sa suppression.
+
+## `api.trg_object_org_link_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+
+## `api.trg_org_config_is_test()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object_org_link` _(high)_
+- writes `public.object` _(high)_
+
+> Bascule d'une ORG entiere (is_test_org modifie) : re-synchronise ses fiches.
 
 ## `api.trg_refresh_caches_from_menu_item_link()`
 - returns: `trigger` — SECURITY DEFINER
@@ -2852,14 +3186,22 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.user_can_write_crm(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 
-> Écriture : superuser OU (membre ORG publisher ET (permission write_crm_notes OU rôle
-> admin ORG actif — current_user_admin_rank() IS NOT NULL, cf. rls_policies.sql:331)).
+> ─────────────────────────────────────────────────────────────────────────────
+> 1. Écriture CRM sur un ÉTABLISSEMENT.
+> ─────────────────────────────────────────────────────────────────────────────
 
 ## `api.user_can_write_crm_actor(p_actor_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 
-> Écriture ancrée acteur : mêmes ingrédients que user_can_write_crm (périmètre + permission
-> write_crm_notes OU rôle admin ORG actif OU superuser), l'arme périmètre étant l'acteur.
+> ─────────────────────────────────────────────────────────────────────────────
+> 2. Écriture CRM sur un ACTEUR.
+> ─────────────────────────────────────────────────────────────────────────────
+
+## `api.user_can_write_crm_task(p_task_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+
+> true si l'appelant peut écrire la tâche (même prédicat que save_crm_task : user_can_write_crm sur son object). Gate des routes /api/task-document (17i).
 
 ## `api.user_can_write_enrichment(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -2881,6 +3223,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.user_can_write_list(p_list_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k).
 
 ## `api.user_can_write_object_canonical(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -2891,30 +3236,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.user_has_permission(p_permission_code text)`
 - returns: `boolean` — SECURITY DEFINER
-- reads `public.org_permission` _(high)_
+- reads `public.org_role_permission` _(high)_
 - reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
 
-> =====================================================
-> B. Helper : api.user_has_permission(p_permission_code text)
-> =====================================================
-> Résolution V1 — deux chemins, sans exceptions ni groupes :
-> Chemin 1 : permission accordée directement au user (user_permission)
-> Chemin 2 : permission accordée à l'ORG active du user (org_permission, héritage ORG)
-> 
-> CHOIX D'IMPLÉMENTATION — Pas de bypass automatique pour owner/super_admin :
-> §2.6 du plan : "Un admin doit avoir ses permissions dans org_permission
-> ou user_permission comme n'importe qui."
-> Ce principe s'étend aux autorités plateforme pour préserver l'auditabilité.
-> En pratique, les opérations owner/super_admin passent par service_role (bypass RLS
-> natif) et n'ont pas besoin de shortcut ici.
-> Si un owner a besoin d'une permission pour des tests UI, il reçoit une user_permission
-> explicite — tracée comme n'importe quelle autre attribution.
-> 
-> STABLE + SECURITY DEFINER : bypass RLS sur org_permission et user_permission
-> pour éviter toute récursion (même principe que current_user_org_id()).
-> =====================================================
+> Droits effectifs : exception individuelle OU rôle métier de l'ORG (§227). Le chemin org_permission a été retiré le 2026-08-31 — il accordait sans regarder le rôle.
 
 ## `api.validate_audit_result_points()`
 - returns: `trigger`
@@ -3016,6 +3344,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > FALSE = a des horaires, fermé à cet instant. Pas de scan catalogue (§37).
 > La récurrence saisonnière (§92) est portée par is_opening_period_active_on_date.
 
+## `internal.crm_backfill_assignees_from_owner()`
+- returns: `integer`
+- reads `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+
+> Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.
+
 ## `internal.recompute_trail_status(p_trail_id uuid)`
 - returns: `void`
 - reads `public.ref_code_iti_open_status` _(high)_
@@ -3025,6 +3360,138 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.trail_status_override` _(high)_
 - writes `public.trail` _(high)_
 - writes `public.trail_status_history` _(high)_
+
+## `internal.ref_catalog_access(p_catalog_key text)`
+- returns: `text`
+- reads `public.ref_catalog_registry` _(high)_
+
+> Accès EFFECTIF : DÉRIVÉ d'abord, registre ensuite. Les dérivés ne peuvent pas être
+> oubliés au seed. Consommé par le maître ET par le détail — sans quoi une table sans
+> clé primaire s'afficherait éditable dans la liste puis verrouillée à l'ouverture.
+
+## `internal.ref_catalog_cast_expr(p_columns jsonb, p_name text, p_src text)`
+- returns: `text`
+
+> Valeur castée au type découvert, réutilisée par l'INSERT, le SET et le WHERE.
+> Sans cast, (p_values->>'is_required') rend du texte et une colonne booléenne le refuse.
+> Le type vient de la VUE, jamais de l'appelant : un type fourni par le client serait une injection.
+
+## `internal.ref_catalog_label_column(p_catalog_key text)`
+- returns: `text`
+- reads `public.ref_catalog_registry` _(high)_
+
+> Cascade de libellé. Une déclaration par table serait la RÈGLE et non l'exception
+> (12 des 32 tables n'ont pas de `name`), et chaque oubli produirait une ligne muette.
+> Rend NULL pour les matrices : leur libellé se compose depuis la clé, côté front.
+
+## `internal.ref_catalog_readonly_reason(p_catalog_key text)`
+- returns: `text`
+- reads `public.ref_catalog_registry` _(high)_
+
+## `internal.ref_catalog_row_count(p_table text)`
+- returns: `bigint` — dynamic SQL
+
+## `internal.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
+- returns: `SETOF text` — SECURITY DEFINER
+
+> Moteur de résolution des listes dynamiques (plafond 2001). NON exposé : joignable uniquement depuis un SECURITY DEFINER qui a déjà appliqué sa propre garde. Le contrat public api.resolve_list_object_ids reste plafonné à 200. §211
+
+## `internal.seed_test_corpus(p_per_type integer DEFAULT 15)`
+- returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_amenity` _(high)_
+- reads `public.object_classification` _(high)_
+- reads `public.object_description` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_price` _(high)_
+- reads `public.opening_period` _(high)_
+- reads `public.ref_actor_role` _(high)_
+- reads `public.ref_amenity` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_price_kind` _(high)_
+- reads `public.ref_code_price_unit` _(high)_
+- reads `public.ref_org_role` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_object_role` _(high)_
+- writes `public.contact_channel` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_amenity` _(high)_
+- writes `public.object_classification` _(high)_
+- writes `public.object_description` _(high)_
+- writes `public.object_location` _(high)_
+- writes `public.object_org_link` _(high)_
+- writes `public.object_price` _(high)_
+- writes `public.opening_period` _(high)_
+
+> Chaque fiche est rattachee a l'ORG de test comme ORG PRIMAIRE : c'est CE lien
+> qui, via le trigger de migration_test_org_isolation.sql, la marque is_test. On
+> ne pose JAMAIS is_test a la main — l'organisation est la source de verite, et un
+> seed qui l'ecrirait directement pourrait diverger d'elle sans qu'on le voie.
+
+## `internal.seed_test_facets(p_id text, p_type text, p_i integer, p_src text DEFAULT NULL::text)`
+- returns: `void`
+- reads `public.object_act` _(high)_
+- reads `public.object_fma` _(high)_
+- reads `public.object_fma_occurrence` _(high)_
+- reads `public.object_iti` _(high)_
+- reads `public.object_iti_info` _(high)_
+- reads `public.object_iti_practice` _(high)_
+- reads `public.object_iti_profile` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_location` _(high)_
+- reads `public.object_meeting_room` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.ref_code_iti_practice` _(high)_
+- reads `public.ref_code_menu_category` _(high)_
+- reads `public.ref_code_room_type` _(high)_
+- reads `public.ref_code_view_type` _(high)_
+- writes `public.object_act` _(high)_
+- writes `public.object_fma` _(high)_
+- writes `public.object_fma_occurrence` _(high)_
+- writes `public.object_iti` _(high)_
+- writes `public.object_iti_info` _(high)_
+- writes `public.object_iti_practice` _(high)_
+- writes `public.object_iti_profile` _(high)_
+- writes `public.object_iti_stage` _(high)_
+- writes `public.object_meeting_room` _(high)_
+- writes `public.object_menu` _(high)_
+- writes `public.object_menu_item` _(high)_
+- writes `public.object_room_type` _(high)_
+
+> Profondeur PAR TYPE du corpus de test : object_iti (+etapes, pratiques, profil, trace), object_fma (+occurrences), object_act, types de chambre, salles de reunion, carte. Suit ref_facet_applicability a la lettre — 7 types n'ont aucune facette. Idempotent (purge avant reecriture).
+
+## `internal.test_actor_name(p_type text, p_i integer)`
+- returns: `text`
+
+> Noms d'acteurs FICTIFS. Jamais tires du corpus reel : c'est la ligne rouge de
+> l'arbitrage hybride — on emprunte des structures, jamais des personnes.
+> 
+> Les deux indices derivent d'un HACHAGE de (type, rang) et non d'une arithmetique
+> sur `length(p_type)` : tous les codes de type font 3 ou 4 caracteres, donc la
+> longueur ne prend que DEUX valeurs et ne produisait que 30 noms distincts pour
+> 270 fiches — un annuaire de test ou chaque personne detient neuf etablissements
+> ne permet d'exercer ni le CRM, ni la recherche d'acteurs, ni les regroupements.
+
+## `internal.test_corpus_id(p_type text, p_i integer)`
+- returns: `text`
+
+> Id conforme a chk_object_id_shape (3 lettres + 3 alphanum + 10 alphanum) :
+> `TST` occupe la place que `RUN` occupe sur les fiches reelles.
+
+## `internal.test_corpus_name(p_type text, p_i integer)`
+- returns: `text`
+
+> Un nom credible par type. Volontairement realiste : un corpus intitule
+> « Objet 12 » ne permet d'evaluer ni une recherche, ni un tri, ni une mise en page.
+
+## `internal.test_org_id()`
+- returns: `text`
+
+> Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.
 
 ## `internal.trail_expire_overrides()`
 - returns: `void`
@@ -3130,6 +3597,21 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `public.save_object_version()`
 - returns: `trigger` — SECURITY DEFINER
 - writes `public.object_version` _(high)_
+
+## `public.seed_org_role_permission()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- writes `public.org_role_permission` _(high)_
+
+> ─────────────────────────────────────────────────────────────────────────────
+> 2bis. Semer AUSSI les ORG créées plus tard.
+> 
+> Le seed ci-dessus ne couvre que les ORG existant au moment de la migration. Sans ce
+> trigger, une ORG créée demain naîtrait avec une matrice VIDE : ses Éditeurs auraient
+> l'étiquette et zéro droit, et l'écran d'onboarding — qui n'accorde plus de permission
+> individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et différée.
+> ─────────────────────────────────────────────────────────────────────────────
 
 ## `public.sync_object_capacity_unit()`
 - returns: `trigger`

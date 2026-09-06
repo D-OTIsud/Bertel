@@ -8,8 +8,9 @@
 // Écritures via api.save_crm_task ; gating page-wide write_crm_notes (no-write-trap).
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, GripVertical, Link2, Plus } from 'lucide-react';
+import { Bell, GripVertical, Link2, Paperclip, Pencil, Plus, ShieldCheck } from 'lucide-react';
 import { listCrmAssignees, listCrmDirectory, listCrmTasks, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import type { CrmTask, CrmTaskStatus } from '../../types/domain';
@@ -30,9 +31,9 @@ import {
   type TaskDateRange,
 } from './crm-task-filters';
 
-// §66 — une interaction « clôturable » : ni déjà traitée ni annulée. Le prompt de clôture ne
-// se déclenche que pour ces statuts (pas de proposition redondante).
-const CLOSED_INTERACTION_STATUSES = new Set(['done', 'canceled']);
+// §66 — une interaction « clôturable » : ni traitée, ni clôturée, ni annulée. Jeu partagé
+// bilingue (crm-status.ts) : le prompt reste juste avant ET après la bascule de vocabulaire.
+import { CLOSED_INTERACTION_STATUSES } from './crm-status';
 
 // 3 colonnes = les 3 statuts actifs du cycle de vie (canceled/blocked restent signalés
 // par le chip, jamais masqués en silence). cls pilote la couleur du dot + du liseré.
@@ -54,6 +55,11 @@ export function CrmTaches({
   onOpenObject: (objectId: string) => void;
   onOpenActor: (actorId: string) => void;
 }) {
+  // 18a — la puce « Vérification de fiche » quitte le CRM pour /moderation : c'est une vraie
+  // navigation, pas un panneau du module. Le `nav` du CRM est persisté (CrmPage) ; seuls les
+  // filtres LOCAUX de ce kanban (personne, période) sont perdus au retour — arbitrage assumé,
+  // le geste « je vais vérifier cette fiche » est un aller simple.
+  const router = useRouter();
   const queryClient = useQueryClient();
   const currentUserId = useSessionStore((state) => state.userId);
   const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
@@ -81,6 +87,11 @@ export function CrmTaches({
   // « Nouvelle tâche » se fait dans le modal partagé (rectif PO point 3) — résolution
   // datalist conservée, erreurs visibles dans le modal.
   const [taskModalOpen, setTaskModalOpen] = useState(false);
+  // Task 3 — édition (crayon de carte) : le même modal partagé, en mode `task`. On garde
+  // l'ID plutôt que l'objet tâche : après invalidation, `editTask` (dérivé plus bas) reçoit
+  // la tâche FRAÎCHE (pièces jointes à jour en Task 9) sans réinitialiser la saisie en cours
+  // (les useState du modal ne rejouent pas leur initialiseur au changement de props).
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   // DnD (PO point 5) : colonne actuellement survolée par une carte (surbrillance de dépôt).
   const [dropCol, setDropCol] = useState<CrmTaskStatus | null>(null);
   // Statut de la carte en cours de glissement (sa colonne source) — sert à MATÉRIALISER les
@@ -118,7 +129,7 @@ export function CrmTaches({
   // §66 — « Oui, clôturer » : marque l'interaction liée comme traitée (le serveur pose
   // resolved_at). Invalide le kanban + toutes les vues d'interaction. Erreur visible dans le prompt.
   const closeInteractionMutation = useMutation({
-    mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'done' }),
+    mutationFn: (interactionId: string) => saveCrmInteraction({ id: interactionId, status: 'resolved' }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
       void queryClient.invalidateQueries({ queryKey: ['crm-actor'] });
@@ -144,6 +155,9 @@ export function CrmTaches({
   const tasks = useMemo(() => tasksQuery.data ?? [], [tasksQuery.data]);
   // canceled/blocked hors colonnes : signalés par un chip, jamais masqués en silence.
   const hiddenCount = tasks.filter((task) => task.status === 'canceled' || task.status === 'blocked').length;
+  // L'id et non l'objet : après invalidation, le modal reçoit la tâche FRAÎCHE (documents
+  // à jour en Task 9) sans réinitialiser la saisie en cours (les useState ne rejouent pas).
+  const editTask = editTaskId ? tasks.find((task) => task.id === editTaskId) ?? null : null;
 
   // Options du filtre : les assignables ∪ les personnes réellement portées par une tâche
   // visible. L'union est nécessaire — une tâche assignée à quelqu'un qui a quitté la liste
@@ -282,6 +296,42 @@ export function CrmTaches({
               <Link2 size={11} aria-hidden /> {task.relatedInteractionSubject ?? 'Interaction liée'}
             </button>
           )}
+          {/* 18a — la SEULE marque qui distingue, dans le kanban, un envoi du portail acteur
+              d'une tâche CRM ordinaire (`crm_task` n'a pas de colonne `kind`). Sans elle,
+              l'agent ouvre le crayon, ne voit rien à faire, et la fiche du partenaire reste
+              bloquée — une seule vérification ouverte à la fois par fiche.
+              `stopPropagation` : ne déclenche ni le DnD ni la nav de la carte.
+              Jamais gatée par `canWrite` : lire une vérification n'est pas l'écrire, et la
+              page de modération porte déjà son propre contrôle de droits. */}
+          {task.extra?.kind === 'fiche_verification' && (
+            <button
+              type="button"
+              className="pill-mini"
+              title="Envoi du portail acteur — ouvrir la vérification"
+              aria-label={`Ouvrir la vérification de fiche « ${task.objectName} »`}
+              onClick={(event) => {
+                event.stopPropagation();
+                router.push(`/moderation?object=${encodeURIComponent(task.objectId)}`);
+              }}
+            >
+              <ShieldCheck size={11} aria-hidden /> Vérification de fiche
+            </button>
+          )}
+          {/* Task 9 — badge trombone : même modal que le crayon (édition), même gating
+              d'écriture. Le compteur reste le libellé (title) quel que soit `canWrite` — la
+              raison de lecture seule est déjà annoncée globalement dans la barre d'outils. */}
+          {task.documents.length > 0 && (
+            <button
+              type="button"
+              className="pill-mini"
+              title={`${task.documents.length} pièce(s) jointe(s)`}
+              aria-label={`${task.documents.length} pièce(s) jointe(s) — modifier « ${task.title} »`}
+              disabled={!canWrite}
+              onClick={() => setEditTaskId(task.id)}
+            >
+              <Paperclip size={11} aria-hidden /> {task.documents.length}
+            </button>
+          )}
         </div>
         {/* 16w — le créateur est une information SÉPARÉE des assignés. Créateur inconnu =
             on le dit ; on ne devine jamais un nom depuis la liste des assignés. */}
@@ -305,6 +355,18 @@ export function CrmTaches({
             <span className="sr-only">{assigneeLabel}</span>
           </span>
           <span className="ticket__actions">
+            {/* Task 3 — édition de la tâche (titre/description/échéance/assignés), AVANT les
+                boutons de statut : ce n'est pas un déplacement de colonne. */}
+            <button
+              type="button"
+              className="crm-btn sm"
+              aria-label={`Modifier « ${task.title} »`}
+              disabled={!canWrite}
+              title={canWrite ? undefined : CRM_READ_ONLY_REASON}
+              onClick={() => setEditTaskId(task.id)}
+            >
+              <Pencil size={12} aria-hidden />
+            </button>
             {task.status === 'in_progress' && (
               <button
                 type="button"
@@ -514,6 +576,18 @@ export function CrmTaches({
           picker="datalist"
           objectOptions={directoryObjects}
           onClose={() => setTaskModalOpen(false)}
+          onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
+        />
+      )}
+
+      {/* Task 3 — même modal partagé, en mode édition (`task`). `objectOptions=[]` : le champ
+          établissement est verrouillé, pas de picker à alimenter. */}
+      {editTask && canWrite && (
+        <CrmTaskModal
+          task={editTask}
+          picker="datalist"
+          objectOptions={[]}
+          onClose={() => setEditTaskId(null)}
           onSaved={() => void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] })}
         />
       )}

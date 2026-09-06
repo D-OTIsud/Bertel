@@ -1,7 +1,7 @@
 /** @jest-environment node */
 // POST /api/actor-document — API-01 body bound. Mirrors the pattern used by the other
-// upload routes: auth/permission tests stub formData() directly; the oversized-body test
-// exercises the real byte path (readBoundedFormData) via a Content-Length-only rejection.
+// upload routes: auth/permission tests stub formData() directly; oversized-body tests
+// exercise the real byte path with Content-Length absent or falsely small.
 import { POST } from './route';
 
 jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }));
@@ -86,7 +86,7 @@ describe('POST /api/actor-document', () => {
     expect(res.status).toBe(201);
   });
 
-  it('413s an oversized request before any permission probe (real byte path)', async () => {
+  it.each([undefined, '1'])('413s an oversized stream with Content-Length %s before any permission probe', async (contentLength) => {
     const { readBoundedFormData: real } = jest.requireActual('@/lib/request-body.server');
     const { readBoundedFormData } = jest.requireMock('@/lib/request-body.server') as { readBoundedFormData: jest.Mock };
     readBoundedFormData.mockImplementationOnce(real);
@@ -100,9 +100,9 @@ describe('POST /api/actor-document', () => {
       headers: {
         authorization: 'Bearer t',
         'content-type': 'multipart/form-data; boundary=x',
-        'content-length': String(100 * 1024 * 1024),
+        ...(contentLength === undefined ? {} : { 'content-length': contentLength }),
       },
-      body: new Uint8Array([1, 2, 3]),
+      body: new Uint8Array(22 * 1024 * 1024),
     });
 
     const res = await POST(realReq as never);

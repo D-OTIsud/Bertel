@@ -20,9 +20,10 @@
 --    (sujet/statut/période) avec KPI recalculés sur l'ensemble FILTRÉ — les acteurs
 --    « lien seul » disparaissent sous filtre ; p_status hors contrat → 22023 ; refus 42501
 --    membre sans permission (C) et cross-ORG (B).
--- F) ASSIGNATION DE TÂCHE (demande PO 2026-06-12) : list_crm_assignees liste les membres
---    actifs de l'ORG du caller (userA + userC, jamais userB) avec un display_name garanti ;
---    save_crm_task accepte owner = membre de la MÊME ORG (userC) et refuse 22023 un owner
+-- F) ASSIGNATION DE TÂCHE (demande PO 2026-06-12, durcie par 17c) : list_crm_assignees
+--    liste les membres actifs de l'ORG qui PEUVENT agir dans le CRM (userA + userC avec un
+--    octroi temporaire, jamais userB) avec un display_name garanti ; save_crm_task accepte
+--    owner = membre éligible de la MÊME ORG (userC) et refuse 22023 un owner
 --    d'une autre ORG (userB).
 -- G) PHOTO ACTEUR + SUGGESTIONS CONTACTS + TIMELINE FILTRÉE (demande PO 2026-06-12) :
 --    save_crm_actor accepte photo_url (set puis effacement clé+vide), re-lu par list_actor_crm ;
@@ -38,7 +39,7 @@
 --    save_crm_interaction accepte parent_interaction_id (réponse), NORMALISE la réponse-à-réponse
 --    vers la racine, hérite acteur+contexte, owner=auteur ; les 3 RPC de lecture ne renvoient que
 --    des RACINES (parent NULL) + 'replies' imbriquées + 'interlocutor_email' + 'resolved_at' ;
---    cycle « marquer traitée » (status=done ⇒ resolved_at) / « rouvrir » (planned ⇒ NULL) ;
+--    cycle « marquer traitée » (status=resolved ⇒ resolved_at) / « rouvrir » (new ⇒ NULL) ;
 --    répondre sans write_crm_notes (C) ou cross-ORG (B) → 42501 ; delete racine = CASCADE du fil.
 -- Contre une base sans 8z : échec immédiat (RPCs api.* absentes / vocabulaires non fusionnés) — état rouge.
 -- Auto-contenu + transactionnel (ROLLBACK ; rien ne persiste).
@@ -55,7 +56,7 @@ DECLARE
   v_objB   text := 'HOTRUN9999990812'; -- objet de l'ORG B (probes cross-ORG acteur-centrées)
   v_userA  uuid := '00000000-0000-4000-a000-000000000101'; -- membre ORG A, AVEC write_crm_notes
   v_userB  uuid := '00000000-0000-4000-a000-000000000102'; -- membre ORG B (étranger à l'objet)
-  v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- membre ORG A, SANS permission
+  v_userC  uuid := '00000000-0000-4000-a000-000000000103'; -- ORG A ; permission temporaire au bloc F seulement
   v_actorA uuid := '00000000-0000-4000-a000-000000000821'; -- acteur lié à objA (ORG A)
   v_actorB uuid := '00000000-0000-4000-a000-000000000822'; -- acteur lié à objB (ORG B)
   v_pub_role uuid;
@@ -191,7 +192,10 @@ BEGIN
     (v_userA, v_orgA, TRUE), (v_userB, v_orgB, TRUE), (v_userC, v_orgA, TRUE)
     ON CONFLICT DO NOTHING;
   INSERT INTO user_permission (user_id, permission_id, is_active, granted_by, granted_at, created_at, updated_at) VALUES
-    (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
+    (v_userA, v_perm, TRUE, v_userA, NOW(), NOW(), NOW()),
+    -- 17c : être dans la même ORG ne suffit plus pour être assignable. Cet octroi rend le
+    -- témoin positif userC réellement éligible ; il est retiré avant les blocs de refus.
+    (v_userC, v_perm, TRUE, v_userA, NOW(), NOW(), NOW())
     ON CONFLICT DO NOTHING;
   -- Contact d'établissement (§03) pour prouver list_object_contact_suggestions (demande PO
   -- 2026-06-12) : 'email' fixture-guardé (sinon premier kind actif, mais l'assertion email est
@@ -266,11 +270,21 @@ BEGIN
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA)->'items') >= 1,
            'list_crm_timeline: le membre doit lire son interaction';
     -- ----- Timeline filtrée (demande PO 2026-06-12) : statut + période (vocabulaire PO) -----
-    -- L'interaction ci-dessus est 'done' (défaut save_crm_interaction) ⇒ done renvoie ≥1.
+    -- L'interaction créée plus haut porte un SUJET. Depuis le manifeste 17b (2026-08-28) le
+    -- DEFAULT de colonne n'existe plus et le statut se DÉRIVE du sujet : un sujet ⇒ c'est une
+    -- demande, elle naît OUVERTE. Le commentaire d'origine de ce bloc promettait l'inverse
+    -- (« 'done' par défaut ») et l'assertion suivante était donc ROUGE depuis 17b — 17g n'a
+    -- fait qu'en traduire le vocabulaire, reconduisant la prémisse périmée.
+    -- On marque la demande traitée EXPLICITEMENT, par le VRAI chemin d'écriture : la prémisse
+    -- du filtre est ainsi POSÉE par le test, au lieu d'être héritée d'un défaut disparu.
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_int_id, 'status', 'resolved'));
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'done')->'items') >= 1,
-           'list_crm_timeline (done): l''interaction done doit remonter';
-    ASSERT jsonb_typeof(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 'array',
-           'list_crm_timeline (active=planned): items doit être un tableau (≥0)';
+           'list_crm_timeline (done): l''interaction traitée doit remonter';
+    -- Le filtre SYMÉTRIQUE ne doit plus la rendre. Sans cette assertion, un « done » qui
+    -- rendrait TOUT passerait quand même — l'ancienne rédaction ne vérifiait que le TYPE du
+    -- tableau (≥ 0), ce qu'aucune implémentation ne pouvait faire échouer.
+    ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_status := 'active')->'items') = 0,
+           'list_crm_timeline (active = famille ouverte): une demande traitée ne doit PAS remonter dans les Actives';
     -- p_from futur ⇒ aucune interaction passée ne remonte.
     ASSERT jsonb_array_length(api.list_crm_timeline(p_object_id := v_objA, p_from := NOW() + interval '1 day')->'items') = 0,
            'list_crm_timeline (p_from futur): aucune interaction passée ne doit remonter';
@@ -420,20 +434,20 @@ BEGIN
            format('§66: une réponse ne doit PAS incrémenter interaction_count de l''annuaire (avant=%s, après=%s)',
                   v_dir_count_before, v_dir_count_after);
 
-    -- Cycle « marquer traitée » : status='done' pose resolved_at ; 'planned' (rouvrir) l'efface.
-    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'done'));
+    -- Cycle « marquer traitée » : status='resolved' pose resolved_at ; 'new' (rouvrir) l'efface.
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'resolved'));
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     ASSERT NULLIF(v_root->>'resolved_at','') IS NOT NULL,
-           '§66 (marquer traitée): status=done doit poser resolved_at';
-    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'planned'));
+           '§66 (marquer traitée): status=resolved doit poser resolved_at';
+    v_payload := api.save_crm_interaction(jsonb_build_object('id', v_demande, 'status', 'new'));
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     ASSERT NULLIF(v_root->>'resolved_at','') IS NULL,
-           '§66 (rouvrir): status=planned doit effacer resolved_at';
+           '§66 (rouvrir): status=new doit effacer resolved_at';
 
     -- ----- §66. Lien tâche↔interaction (demande PO 2026-06-14) -----
-    -- Statut courant de la demande racine (rouverte ⇒ 'planned') pour la cohérence du _status exposé.
+    -- Statut courant de la demande racine (rouverte ⇒ 'new') pour la cohérence du _status exposé.
     v_root := (SELECT i FROM jsonb_array_elements(api.list_object_crm(v_objA)->'interactions') i
                WHERE (i->>'id')::uuid = v_demande);
     v_demande_status := v_root->>'status';
@@ -506,6 +520,10 @@ BEGIN
     -- v_demande reste vivante : les blocs USER C / USER B probent l'autorisation de réponse
     -- dessus ; le bloc USER A final la supprime (CASCADE) avant le cycle de contexte v_ctx.
   RESET ROLE;
+
+  -- Le reste du fichier éprouve userC SANS permission. Retirer l'octroi temporaire ici
+  -- conserve ces gardes tout en alignant le bloc d'assignation sur la règle 17c.
+  DELETE FROM user_permission WHERE user_id = v_userC AND permission_id = v_perm;
 
   -- ---------- USER C (membre SANS permission) : lit mais n'écrit pas ----------
   PERFORM set_config('request.jwt.claims', json_build_object('sub', v_userC, 'role','authenticated')::text, true);
@@ -746,11 +764,19 @@ BEGIN
                          api.list_crm_directory(p_from := NOW() + interval '1 day')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),
            'annuaire filtré (période future): l''acteur PO ne doit pas apparaître';
-    -- Statuts : Actives = planned, Traitées = done (les interactions de test sont 'done').
+    -- Statuts : « Actives » = famille ouverte, « Traitées » = famille fermée. Le vocabulaire
+    -- d'INTERFACE (active | done) est INCHANGÉ.
+    -- MÊME PRÉMISSE PÉRIMÉE QU'AU BLOC TIMELINE : depuis 17b, l'interaction TOPIQUE de cette
+    -- fixture naît OUVERTE (un sujet ⇒ une demande) et seule la note SANS sujet naît fermée.
+    -- L'acteur porte donc une interaction de chaque famille, si bien que les DEUX filtres le
+    -- rendraient et que la paire d'assertions ci-dessous n'établirait plus aucune
+    -- discrimination. On ferme la topique EXPLICITEMENT pour restaurer la prémisse que ces
+    -- assertions éprouvent : l'acteur n'a plus AUCUNE interaction ouverte.
+    PERFORM api.save_crm_interaction(jsonb_build_object('id', v_po_int_id, 'status', 'resolved'));
     ASSERT NOT EXISTS (SELECT 1 FROM jsonb_array_elements(
                          api.list_crm_directory(p_status := 'active')) d
                        WHERE (d->>'actor_id')::uuid = v_new_actor),
-           'annuaire filtré (active=planned): interactions done → acteur absent';
+           'annuaire filtré (active = famille ouverte): interactions resolved → acteur absent';
     ASSERT EXISTS (SELECT 1 FROM jsonb_array_elements(
                      api.list_crm_directory(p_status := 'done')) d
                    WHERE (d->>'actor_id')::uuid = v_new_actor),

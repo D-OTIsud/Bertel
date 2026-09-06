@@ -12,6 +12,10 @@ export default function HomePage() {
   const role = useSessionStore((state) => state.role);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('test') === 'true') {
+      router.replace('/test');
+      return;
+    }
     if (status === 'guest') {
       router.replace('/login');
       return;

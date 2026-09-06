@@ -29,14 +29,17 @@ import {
   listCrmDirectory,
   listDemandTopics,
   listObjectAddresses,
+  loadAwaitingSince,
   saveCrmInteraction,
 } from '../../services/crm';
 import { CrmTimeline, Kpi, Pav, TypeTag, type CrmTimelineCardItem } from './crm-primitives';
+import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmInteractionModal } from './CrmInteractionModal';
 import { CrmModal } from './CrmModal';
 import { CrmTaskFromInteractionModal, CrmTaskModal } from './CrmTaskModal';
 import { CrmActorEditModal } from './CrmActorModals';
 import { CrmActorDocumentDropzone, CrmActorDocuments } from './CrmActorDocuments';
+import { CrmActorPortalAccess } from './CrmActorPortalAccess';
 import { CopyButton } from '../../components/common/CopyButton';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON, channelHrefOf, formatShort, topicTintOf } from './crm-view-utils';
@@ -385,8 +388,8 @@ export function CrmActorFiche({
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchActor();
   };
-  const handleResolve = async (rootId: string, done: boolean) => {
-    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+  const handleChangeStatus = async (rootId: string, status: AnyCrmInteractionStatus) => {
+    await saveCrmInteraction({ id: rootId, status });
     await refetchActor();
   };
   // Édition / suppression d'un commentaire (§66) — racine OU réponse. Édition PARTIELLE
@@ -559,7 +562,8 @@ export function CrmActorFiche({
                     canWrite={canWrite}
                     readOnlyReason={CRM_READ_ONLY_REASON}
                     onReply={handleReply}
-                    onResolve={handleResolve}
+                    onChangeStatus={handleChangeStatus}
+                    loadAwaitingSince={loadAwaitingSince}
                     onEditInteraction={handleEditInteraction}
                     onDeleteInteraction={handleDeleteInteraction}
                     onCreateTask={setTaskFromInteraction}
@@ -586,6 +590,19 @@ export function CrmActorFiche({
             channels={channels}
             canWrite={canWrite}
             onEdit={() => setModal('edit')}
+          />
+
+          {/* 18a/D1 — accès au portail partenaire. Comme la carte acteur : TOUJOURS visible,
+              hors de la région repliable et des deux onglets. Les canaux e-mail sont ceux
+              déjà chargés par le snapshot ; le principal d'abord, pour que l'adresse
+              proposée par défaut soit celle que l'office considère comme la bonne. */}
+          <CrmActorPortalAccess
+            actorId={actorId}
+            canWrite={canWrite}
+            emailChannels={channels
+              .filter((channel) => channel.kindCode === 'email')
+              .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+              .map((channel) => channel.value)}
           />
 
           {activeTab === 'documents' ? (

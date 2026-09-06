@@ -3,6 +3,7 @@
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import { Button } from '@/components/ui/button';
+import { leaveSandbox } from '@/services/sandbox';
 
 /**
  * Écran de session hors shell (boot / erreur), même identité que /login en
@@ -37,7 +38,7 @@ export function SessionScreen() {
               </Button>
               <Button variant="outline" asChild>
                 {/* <a> volontaire (pas de Link) : repartir d'un chargement propre */}
-                <a href="/login">Aller à la connexion</a>
+                <a href="/login" onClick={() => leaveSandbox()}>Aller à la connexion</a>
               </Button>
             </div>
           </>

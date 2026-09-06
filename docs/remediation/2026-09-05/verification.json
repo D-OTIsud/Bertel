@@ -1,0 +1,95 @@
+{
+  "date": "2026-09-06",
+  "baseCommit": "5873ec69879e61ff34030d196c65f2eb0ac14de0",
+  "remoteMutations": false,
+  "jest": {
+    "fullSuites": 420,
+    "fullTests": 3553,
+    "initialPassedSuites": 419,
+    "initialPassedTests": 3551,
+    "initialFailures": 2,
+    "failedFixtureCorrectedAndRechecked": true,
+    "finalTargetedSuites": 5,
+    "finalTargetedTestsPassed": 126
+  },
+  "browser": {
+    "uniqueScenarios": 19,
+    "initialPassed": 16,
+    "rerunPassed": 8,
+    "mode": "local-demo"
+  },
+  "npm": {
+    "productionVulnerabilities": 0,
+    "developmentVulnerabilities": 26
+  },
+  "sql": {
+    "targetedChecks": "passed",
+    "fullFreshApply": "failed-actor-acl",
+    "project": "bertel-audit-20260905"
+  },
+  "files": [
+    {
+      "path": "supabase/migrations/20260905195257_gdpr_cleanup_operations.sql",
+      "sha256": "dcca23bc8590af01bf6b1ddd21a0becdb91fe22fe37b8e9bf7d5f878e99627f7"
+    },
+    {
+      "path": "supabase/migrations/20260905200731_tourinsoft_service_read_grants.sql",
+      "sha256": "cc0ba97d3fbf764a82a4f5ef1889c8d9111afd4ef57ab3636a4706413adab52f"
+    },
+    {
+      "path": "supabase/migrations/20260905204133_audit_price_age_bounds.sql",
+      "sha256": "58cb6e181a22c49118f6ded0a900d00f9e5b0e070865d904f5ff71724593865d"
+    },
+    {
+      "path": "bertel-tourism-ui/public/legal/rgpd.md",
+      "sha256": "54c106a3ebaa4c4dc743c5155fd5e20d53167dcdfe35a9aef0943c4ee7ef74d5"
+    },
+    {
+      "path": "bertel-tourism-ui/public/legal/rgpd.html",
+      "sha256": "1b2838a06bb0aad62becbe3f6d45744a19e06d1cf7255dec5aec8834004ca98e"
+    },
+    {
+      "path": "bertel-tourism-ui/public/legal/rgpd.pdf",
+      "sha256": "666f8dedb5b2602e7bc1721bffe3411df6e673299e55bdd9835a9bb9ba1b67da"
+    },
+    {
+      "path": "bertel-tourism-ui/package-lock.json",
+      "sha256": "a7983a5bbf6ff53d58870d1c71d8e2656a30200b3117b51cdd63e101b7305932"
+    },
+    {
+      "path": "bertel-tourism-ui/src/app/api/ready/route.ts",
+      "sha256": "f4df86107a7b13e904069304fe301bb7c3ebd23488950868dccb5d9838571232"
+    },
+    {
+      "path": "bertel-tourism-ui/src/app/api/rgpd/erase/route.ts",
+      "sha256": "b952d906b3350513ba28119612f77d761772e00ca58364092492c6aa730679e3"
+    }
+  ],
+  "docker": {
+    "build": "passed",
+    "node": "22.23.2",
+    "image": "bertel-audit-local-20260906:node22-runtime-fixed",
+    "imageId": "sha256:3c8f2aadaf7e07d95fb121f7d480efd6ccc89524f24eca287726806dc1d06298",
+    "runtimeCasesPassed": 4,
+    "network": "none-loopback-stub-only"
+  },
+  "graphify": {
+    "result": "updated",
+    "nodes": 22482,
+    "edges": 38111,
+    "htmlRegenerated": false,
+    "htmlNodeLimit": 8000
+  },
+  "cleanup": {
+    "taskNextStopped": true,
+    "taskSupabaseStopped": true,
+    "sqlVolumesPreserved": true
+  },
+  "residuals": [
+    "full SQL fresh apply: actor table privileges",
+    "26 dev dependency alerts",
+    "privacy notice institutional validation",
+    "ModerationPage hydration warning observed; not resolved",
+    "see remediation report for other out-of-scope audit findings"
+  ]
+}

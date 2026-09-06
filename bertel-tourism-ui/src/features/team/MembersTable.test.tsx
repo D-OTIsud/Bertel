@@ -104,3 +104,62 @@ describe('MembersTable — action Modifier', () => {
     expect(screen.queryByRole('button', { name: 'Modifier le profil de Alice' })).not.toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------------------
+// SEC-01 (audit sécurité 2026-09-05) — la suppression définitive est une capacité PLATEFORME :
+// TeamAdminPage ne passe `onDelete` que pour un appelant owner/super_admin (pas un rang d'ORG
+// local), et ce composant masque en plus le bouton sur une cible superuser tant que l'appelant
+// n'est pas owner (le serveur reste seul autorité pour la distinction owner/super_admin fine).
+// « Désactiver » reste offert dans tous les cas — c'est la voie qui reste aux admins d'ORG.
+// ---------------------------------------------------------------------------------------
+describe('MembersTable — action Supprimer (SEC-01)', () => {
+  it('n’affiche pas Supprimer quand onDelete n’est pas fourni (admin d’ORG local)', () => {
+    render(<MembersTable members={[base]} currentUserId="autre" onManagePermissions={() => {}} onDeactivate={() => {}} />);
+    expect(screen.queryByText('Supprimer')).not.toBeInTheDocument();
+    expect(screen.getByText('Désactiver')).toBeInTheDocument();
+  });
+
+  it('affiche Supprimer sur une cible ORDINAIRE dès que onDelete est fourni', () => {
+    render(<MembersTable members={[base]} currentUserId="autre" onManagePermissions={() => {}} onDelete={() => {}} />);
+    expect(screen.getByText('Supprimer')).toBeInTheDocument();
+  });
+
+  it('masque Supprimer sur une cible SUPERUSER quand l’appelant n’est PAS owner', () => {
+    render(
+      <MembersTable
+        members={[{ ...base, isPlatformSuperuser: true }]}
+        currentUserId="autre"
+        onManagePermissions={() => {}}
+        onDelete={() => {}}
+        callerIsOwner={false}
+      />,
+    );
+    expect(screen.queryByText('Supprimer')).not.toBeInTheDocument();
+  });
+
+  it('offre Supprimer sur une cible SUPERUSER quand l’appelant EST owner (le serveur tranche owner vs super_admin)', () => {
+    render(
+      <MembersTable
+        members={[{ ...base, isPlatformSuperuser: true }]}
+        currentUserId="autre"
+        onManagePermissions={() => {}}
+        onDelete={() => {}}
+        callerIsOwner
+      />,
+    );
+    expect(screen.getByText('Supprimer')).toBeInTheDocument();
+  });
+
+  it('n’offre jamais Supprimer sur sa propre ligne, même owner', () => {
+    render(
+      <MembersTable
+        members={[base]}
+        currentUserId="u1"
+        onManagePermissions={() => {}}
+        onDelete={() => {}}
+        callerIsOwner
+      />,
+    );
+    expect(screen.queryByText('Supprimer')).not.toBeInTheDocument();
+  });
+});

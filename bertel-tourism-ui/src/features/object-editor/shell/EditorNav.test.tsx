@@ -18,6 +18,22 @@ describe('EditorNav', () => {
   });
 });
 
+describe('EditorNav mobile select', () => {
+  it('exposes a native "Aller à la section" select mirroring the active section', () => {
+    render(<EditorNav groups={makeSections('HEB')} activeNum="05" onSelect={() => {}} />);
+    const select = screen.getByRole('combobox', { name: 'Aller à la section' });
+    expect(select).toHaveValue('05');
+  });
+
+  it('fires onSelect when picking a distant section from the select', () => {
+    const onSelect = jest.fn();
+    render(<EditorNav groups={makeSections('HEB')} activeNum="01" onSelect={onSelect} />);
+    const select = screen.getByRole('combobox', { name: 'Aller à la section' });
+    fireEvent.change(select, { target: { value: '05' } });
+    expect(onSelect).toHaveBeenCalledWith('05');
+  });
+});
+
 const TOOLS: EditorToolItem[] = [
   { key: 'versions', label: 'Versions / historique', disabled: true, disabledReason: 'Bientôt disponible' },
   { key: 'import-export', label: 'Import / export', disabled: true, disabledReason: 'Bientôt disponible' },

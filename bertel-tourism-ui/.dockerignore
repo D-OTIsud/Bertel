@@ -1,5 +1,48 @@
+# Version control and editor metadata
+.git
+.gitignore
+.vscode
+.idea
+
+# Dependencies and build output (reinstalled/rebuilt in the image)
 node_modules
 dist
-.git
-npm-debug.log
 .next
+
+# Local env files — never enter the build context; only .env.example (no secret) may.
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Credential-shaped files that must never reach a build context or layer cache
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_rsa.*
+*credentials*.json
+*service-account*.json
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/id_rsa
+**/id_rsa.*
+**/*credentials*.json
+**/*service-account*.json
+
+# Test artefacts, caches and reports
+coverage
+.playwright-browsers
+playwright-report
+test-results
+storybook-static
+tests/e2e
+*.log
+npm-debug.log
+
+# Docs and scratch, not needed to build the runtime image
+scratch

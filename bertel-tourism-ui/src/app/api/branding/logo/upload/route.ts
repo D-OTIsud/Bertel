@@ -1,7 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { processImage, MediaProcessingError } from '../../../media/upload/process-image';
+import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../../media/upload/process-image';
+import {
+  readBoundedFormData,
+  assertFormDataShape,
+  FormDataShapeError,
+  BodyTooLargeError,
+  acquireLease,
+  SEMAPHORE_RETRY_AFTER_SECONDS,
+} from '@/lib/request-body.server';
 
 // Logo white-label (branding global). Modèle sécurité = upload média/avatar (§59) :
 // le storage tourne en service-role (bypass RLS) — le bucket branding-assets
@@ -16,6 +24,8 @@ export const runtime = 'nodejs'; // sharp requires Node, not Edge
 
 const BUCKET = 'branding-assets';
 const MAX_LOGO_DIMENSION_PX = 1024; // login hero l'affiche plus grand qu'un avatar; borne quand même
+// Raw multipart envelope: single accepted file (image, 20 MiB) + 1 MiB overhead.
+const MAX_MULTIPART_BYTES = MAX_INPUT_BYTES + 1024 * 1024;
 
 function extensionFor(mimeType: string): string {
   if (mimeType === 'image/png') return 'png';
@@ -39,13 +49,44 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const { data: userData, error: userErr } = await server.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
+  const lease = acquireLease('upload');
+  if (!lease) {
+    return NextResponse.json(
+      { error: 'too_many_requests', detail: 'Trop de téléversements en cours, réessayez.' },
+      { status: 429, headers: { 'Retry-After': String(SEMAPHORE_RETRY_AFTER_SECONDS) } },
+    );
+  }
+  try {
+    return await handlePostAuthenticated(req, server, jwt);
+  } finally {
+    lease.release();
+  }
+}
+
+async function handlePostAuthenticated(
+  req: NextRequest,
+  server: NonNullable<ReturnType<typeof getServerSupabaseClient>>,
+  jwt: string,
+): Promise<NextResponse> {
   // Parse le multipart AVANT de choisir la garde : orgObjectId (optionnel) décide de
   // l'autorisation (branding d'une ORG vs branding plateforme).
   let form: FormData;
   try {
-    form = await req.formData();
-  } catch {
+    form = await readBoundedFormData(req, MAX_MULTIPART_BYTES);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) {
+      return NextResponse.json(
+        { error: 'request_body_too_large', detail: 'Le fichier envoyé dépasse la taille maximale autorisée.' },
+        { status: 413 },
+      );
+    }
     return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+  }
+  try {
+    assertFormDataShape(form, { allowedFields: ['file', 'orgObjectId'] });
+  } catch (err) {
+    if (err instanceof FormDataShapeError) return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+    throw err;
   }
   const file = form.get('file');
   if (!(file instanceof File)) {
@@ -73,10 +114,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const fileBuffer = Buffer.from(await file.arrayBuffer());
-
   let processed;
   try {
+    // Declared-size preflight BEFORE arrayBuffer() — see media/upload/route.ts for why.
+    if (file.size > MAX_INPUT_BYTES) {
+      throw new MediaProcessingError(
+        'size',
+        `Image trop volumineuse (max ${Math.round(MAX_INPUT_BYTES / (1024 * 1024))} Mo).`,
+      );
+    }
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
     processed = await processImage({
       buffer: fileBuffer,
       mimeType: file.type,

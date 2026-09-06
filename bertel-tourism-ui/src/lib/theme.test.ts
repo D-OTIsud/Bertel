@@ -1,4 +1,10 @@
-import { applyThemeToDocument, coerceThemeSettings, defaultThemeSettings, sanitizeHexColor } from './theme';
+import {
+  applyThemeToDocument,
+  coerceThemeSettings,
+  contrastRatio,
+  defaultThemeSettings,
+  sanitizeHexColor,
+} from './theme';
 
 describe('theme helpers', () => {
   it('sanitizes invalid hex colors with fallback', () => {
@@ -59,6 +65,28 @@ describe('theme helpers', () => {
     expect(rootStyle.getPropertyValue('--theme-bg')).toBe('#FAF7F0');
     expect(rootStyle.getPropertyValue('--theme-surface')).toBe('#FFFFFF');
     expect(rootStyle.getPropertyValue('--background')).toBe('#FAF7F0');
+    expect(rootStyle.getPropertyValue('--surface')).toBe('#FFFFFF');
+  });
+
+  it('picks primary-foreground by real WCAG contrast, not luminance guesswork', () => {
+    // #F28B54 (audit example): black ratio ~8.60, cream ratio ~2.40 → black wins.
+    applyThemeToDocument({ ...defaultThemeSettings, primaryColor: '#F28B54' });
+    let foreground = document.documentElement.style.getPropertyValue('--primary-foreground');
+    expect(foreground).toBe('#000000');
+    expect(contrastRatio('#F28B54', foreground)).toBeGreaterThanOrEqual(4.5);
+
+    // Dark primary → white foreground.
+    applyThemeToDocument({ ...defaultThemeSettings, primaryColor: '#101418' });
+    foreground = document.documentElement.style.getPropertyValue('--primary-foreground');
+    expect(foreground).toBe('#FFFFFF');
+    expect(contrastRatio('#101418', foreground)).toBeGreaterThanOrEqual(4.5);
+
+    // Mid-tone primary: pick whichever of black/white clears AA (or the best ratio).
+    applyThemeToDocument({ ...defaultThemeSettings, primaryColor: '#7A8B99' });
+    foreground = document.documentElement.style.getPropertyValue('--primary-foreground');
+    const blackRatio = contrastRatio('#7A8B99', '#000000');
+    const whiteRatio = contrastRatio('#7A8B99', '#FFFFFF');
+    expect(foreground).toBe(blackRatio >= whiteRatio ? '#000000' : '#FFFFFF');
   });
 });
 

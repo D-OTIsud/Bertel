@@ -1,0 +1,68 @@
+{
+  "date": "2026-09-05",
+  "revision": "5873ec69879e61ff34030d196c65f2eb0ac14de0",
+  "runtime": {
+    "node": "25.8.1",
+    "npm": "11.11.0",
+    "os": "Windows"
+  },
+  "jest": {
+    "numTotalTestSuites": 407,
+    "numPassedTestSuites": 407,
+    "numFailedTestSuites": 0,
+    "numTotalTests": 3374,
+    "numPassedTests": 3374,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "startTime": 1788605203032,
+    "success": true
+  },
+  "jest_duration_seconds": 292.672,
+  "jest_warning": "A worker process has failed to exit gracefully and has been force exited.",
+  "typecheck": {
+    "exit_code": 2,
+    "error_count": 10,
+    "errors": [
+      "src/features/crm/CrmActorFiche.coord-copy.test.tsx(20,5): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: true; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.coord-copy.test.tsx(21,5): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: false; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.coord-copy.test.tsx(22,5): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: false; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.test.tsx(29,5): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: true; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.test.tsx(30,5): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: false; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.test.tsx(635,9): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: false; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.test.tsx(636,9): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: true; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorFiche.test.tsx(639,9): error TS2741: Property 'isPublic' is missing in type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: true; }' but required in type 'ActorCrmChannel'.",
+      "src/features/crm/CrmActorModals.test.tsx(45,40): error TS2322: Type '{ id: string; kindCode: string; kindName: string; value: string; isPrimary: boolean; }[]' is not assignable to type 'ActorCrmChannel[]'.",
+      "src/services/export/export-columns.test.ts(331,25): error TS2531: Object is possibly 'null'."
+    ]
+  },
+  "build": {
+    "exit_code": 0,
+    "webpack_compile_seconds": 55,
+    "prerender_pages": 34
+  },
+  "pytest": {
+    "exit_code": 0,
+    "passed": 40,
+    "duration_seconds": 1.26
+  },
+  "tourinsoft": {
+    "contract_fields": 314,
+    "approved": 55,
+    "pending_crt": 96,
+    "excluded": 163,
+    "crosswalks": 30,
+    "payload_documents_tested": 1,
+    "regional_feeds": 6,
+    "regional_objects": 411,
+    "regional_union_paths": 683,
+    "regional_field_occurrences": 1983,
+    "checks_passed": true
+  },
+  "not_executed": [
+    "SQL fresh-apply: Docker daemon unavailable",
+    "Deno tests: Deno unavailable",
+    "Full Playwright suite",
+    "Remote production authentication, RLS and storage tests",
+    "Production performance and backup restoration"
+  ]
+}

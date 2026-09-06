@@ -864,6 +864,8 @@ textarea::placeholder {
    NB `explorer-result-card`, PAS `.result-card` : cette dernière est une classe
    legacy encore stylée plus bas (grille 160px/1fr…) — collision constatée. */
 .explorer-result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+/* DES-01 : le clamp 2 lignes du titre est porté par la classe Tailwind `line-clamp-2`
+   directement sur le `<h3>` (ResultCardView.tsx) — pas de règle CSS dédiée ici. */
 .map-hover-card__tag[role='button']:focus-visible {
   outline: 2px solid var(--theme-primary);
   outline-offset: 2px;
@@ -8880,6 +8882,8 @@ a {
   z-index: 3;
 }
 
+/* DES-02 : le placement (plus de centrage absolu, header `flex-wrap`) vit dans
+   MapPanel.tsx — cette classe ne porte plus que l'espacement des boutons. */
 .map-panel__toolbar {
   display: inline-flex;
   align-items: center;
@@ -13226,13 +13230,44 @@ a {
 }
 
 /* D12 : < 768px le rail (64px) mangeait le viewport — masqué ; le bouton Menu
-   de la TopBar (md:hidden, même seuil) ouvre le tiroir MobileNavDrawer. */
+   de la TopBar (md:hidden, même seuil) ouvre le tiroir MobileNavDrawer.
+   UX-07 : même seuil pour la grille du shell — sans ça .app-shell garde ses
+   deux colonnes `var(--sidebar-w) minmax(0, 1fr)` et le viewport se place tout
+   seul dans la première (64px), même rail masqué. */
 @media (max-width: 767px) {
   .app-sidebar { display: none; }
+
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* D12 : items du tiroir de navigation mobile. */
 .mobile-nav { display: flex; flex-direction: column; gap: 2px; }
+.mobile-nav__divider { height: 1px; background: var(--line); margin: 6px 2px; }
+.mobile-nav__item--action {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Contraste : même paire que .badge--danger (fond doux + encre sombre, ~6.5:1),
+   PAS blanc sur --accent-brand (#f28b54 vs #fff ≈ 2.44:1, audit A11Y-06). */
+.mobile-nav__badge {
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--danger-bg);
+  color: var(--danger-ink);
+  font-size: 11px;
+  font-weight: 700;
+}
 .mobile-nav__item {
   display: flex;
   align-items: center;

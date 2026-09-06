@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { registerNavigationGuard } from '@/lib/navigation-guard';
 
 /** Shown on in-app leave attempts; `beforeunload` uses the browser’s generic dialog. */
 export const UNSAVED_DRAFT_LEAVE_MESSAGE =
-  'Vous avez des modifications non publiées. Publiez la fiche pour les enregistrer et les conserver. Quitter cette page sans publier ?';
+  'Vous avez des modifications non enregistrées. Enregistrez un brouillon pour les conserver (la publication n’est pas nécessaire). Quitter cette page sans enregistrer ?';
 
 function isLeavingEditPageLink(anchor: HTMLAnchorElement): boolean {
   if (anchor.target === '_blank' || anchor.hasAttribute('download')) {
@@ -23,20 +24,32 @@ function isLeavingEditPageLink(anchor: HTMLAnchorElement): boolean {
   }
 }
 
+export interface UnsavedDraftGuardOptions {
+  /** Overrides the default confirm-dialog wording (e.g. list composition vs. object editor). */
+  message?: string;
+}
+
 /**
- * Warns before the user loses unpublished local draft edits (refresh, close tab,
+ * Warns before the user loses unsaved local draft edits (refresh, close tab,
  * in-app links, browser back, programmatic navigation via `confirmLeave`).
+ * Also registers itself as the page's active navigation guard so callers that
+ * navigate programmatically (e.g. the command palette) can consult it without
+ * importing this hook or coupling to editor/view-specific state.
  */
-export function useUnsavedDraftGuard(active: boolean) {
+export function useUnsavedDraftGuard(active: boolean, options?: UnsavedDraftGuardOptions) {
   const activeRef = useRef(active);
   activeRef.current = active;
+  const messageRef = useRef(options?.message ?? UNSAVED_DRAFT_LEAVE_MESSAGE);
+  messageRef.current = options?.message ?? UNSAVED_DRAFT_LEAVE_MESSAGE;
 
   const confirmLeave = useCallback((): boolean => {
     if (!activeRef.current) {
       return true;
     }
-    return window.confirm(UNSAVED_DRAFT_LEAVE_MESSAGE);
+    return window.confirm(messageRef.current);
   }, []);
+
+  useEffect(() => registerNavigationGuard(confirmLeave), [confirmLeave]);
 
   useEffect(() => {
     if (!active) {
@@ -63,7 +76,7 @@ export function useUnsavedDraftGuard(active: boolean) {
       if (!anchor || !isLeavingEditPageLink(anchor)) {
         return;
       }
-      if (!window.confirm(UNSAVED_DRAFT_LEAVE_MESSAGE)) {
+      if (!window.confirm(messageRef.current)) {
         event.preventDefault();
         event.stopImmediatePropagation();
       }
@@ -90,7 +103,7 @@ export function useUnsavedDraftGuard(active: boolean) {
       if (!activeRef.current) {
         return;
       }
-      if (!window.confirm(UNSAVED_DRAFT_LEAVE_MESSAGE)) {
+      if (!window.confirm(messageRef.current)) {
         window.history.pushState({ bertelUnsavedDraftGuard: true }, '', url);
       }
     };

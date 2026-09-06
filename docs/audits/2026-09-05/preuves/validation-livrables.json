@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-05",
+  "revision": "5873ec69879e61ff34030d196c65f2eb0ac14de0",
+  "aspect_reports": 17,
+  "findings": 78,
+  "priorities": {
+    "P2": 63,
+    "P1": 13,
+    "P3": 2
+  },
+  "local_markdown_links_checked": 44,
+  "explicit_source_references_checked_for_existence_and_line_bounds": 260,
+  "duplicate_ids": [],
+  "issues": [],
+  "credential_pattern_matches": 0,
+  "json_parsing": "passed",
+  "scope": "Validation documentaire et controle heuristique de secrets; pas une nouvelle execution des tests applicatifs."
+}

@@ -11,7 +11,7 @@ interface EnvSources {
   build?: Record<string, string | boolean | undefined>;
 }
 
-const DEFAULT_MAP_STYLES = {
+export const DEFAULT_MAP_STYLES = {
   classic: 'https://demotiles.maplibre.org/style.json',
   satellite: 'https://tiles.openfreemap.org/styles/liberty',
   topo: 'https://tiles.openfreemap.org/styles/bright',

@@ -13,6 +13,7 @@
 // pourraient montrer deux boîtes différentes — la pastille disant 3, la liste en montrant 2.
 
 import { useRouter } from 'next/navigation';
+import { confirmNavigation } from '@/lib/navigation-guard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BellOff, CheckCheck, X } from 'lucide-react';
 import {
@@ -77,6 +78,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
   const unread = inboxQuery.data?.unreadCount ?? 0;
 
   function openTask(notification: AppNotification) {
+    if (!confirmNavigation()) return;
     // Marquer lu AVANT de naviguer, mais sans attendre : la navigation ne doit pas dépendre
     // d'un aller-retour réseau, et l'échec du marquage laisse simplement la ligne non lue.
     if (!notification.readAt) readOneMutation.mutate(notification.id);

@@ -112,6 +112,7 @@ export function EditorTopbar({
           <button
             type="button"
             className={mode === 'rapide' ? 'is-on' : ''}
+            aria-pressed={mode === 'rapide'}
             onClick={() => onModeChange('rapide')}
           >
             Rapide
@@ -119,6 +120,7 @@ export function EditorTopbar({
           <button
             type="button"
             className={mode === 'complet' ? 'is-on' : ''}
+            aria-pressed={mode === 'complet'}
             onClick={() => onModeChange('complet')}
           >
             Complet

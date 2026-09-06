@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { confirmNavigation } from '@/lib/navigation-guard';
 import { useSessionStore } from '../../../store/session-store';
 import { CreateObjectDialog } from './CreateObjectDialog';
 
@@ -26,9 +27,12 @@ export function CreateObjectButton() {
 
   return (
     <>
-      <Button type="button" size="sm" onClick={() => setOpen(true)}>
+      <Button type="button" size="sm" aria-label="Créer une fiche" onClick={() => {
+        if (confirmNavigation()) setOpen(true);
+      }}>
         <Plus className="h-4 w-4" />
-        Créer une fiche
+        <span className="sm:hidden">Créer</span>
+        <span className="hidden sm:inline">Créer une fiche</span>
       </Button>
       <CreateObjectDialog
         open={open}

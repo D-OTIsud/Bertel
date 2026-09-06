@@ -81,7 +81,7 @@ export function rgbChannels(hex: string): string {
   return `${r} ${g} ${b}`;
 }
 
-function luminance(hex: string): number {
+export function luminance(hex: string): number {
   const { r, g, b } = hexToRgb(hex);
   const channels = [r, g, b].map((channel) => {
     const srgb = channel / 255;
@@ -90,8 +90,21 @@ function luminance(hex: string): number {
   return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
+// Ratio de contraste WCAG 2.x entre deux couleurs (formule (L1+0.05)/(L2+0.05)).
+export function contrastRatio(hexA: string, hexB: string): number {
+  const a = luminance(hexA) + 0.05;
+  const b = luminance(hexB) + 0.05;
+  return a > b ? a / b : b / a;
+}
+
+// Choisit noir ou blanc selon le ratio AA (4.5:1) réel plutôt qu'un seuil de luminance
+// arbitraire, pour rester lisible avec n'importe quelle couleur primaire valide.
 function contrastText(background: string): string {
-  return luminance(background) > 0.52 ? defaultThemeSettings.textColor : defaultThemeSettings.surfaceColor;
+  const black = '#000000';
+  const white = '#FFFFFF';
+  const ratioBlack = contrastRatio(background, black);
+  const ratioWhite = contrastRatio(background, white);
+  return ratioBlack >= ratioWhite ? black : white;
 }
 
 export async function readFileAsDataUrl(file: File): Promise<string> {
@@ -154,6 +167,7 @@ export function applyThemeToDocument(theme: ThemeSettings): void {
     '--shadow-l': `0 24px 60px -20px rgba(${shadowColor}, 0.3)`,
     '--background': background,
     '--foreground': text,
+    '--surface': surface,
     '--card': surface,
     '--card-foreground': text,
     '--popover': surface,

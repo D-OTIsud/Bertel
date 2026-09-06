@@ -14,7 +14,7 @@ const geocodeAddressMock = geocodeAddress as jest.Mock;
 const searchAddressesMock = searchAddresses as jest.Mock;
 
 const actor = { id: 'actor-1', displayName: 'Mme Marie Hoarau', gender: 'Mme', firstName: 'Marie', lastName: 'Hoarau', photoUrl: null };
-const channels = [{ id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'marie@basalte.re', isPrimary: true }];
+const channels = [{ id: 'ch-1', kindCode: 'email', kindName: 'Email', value: 'marie@basalte.re', isPrimary: true, isPublic: false }];
 const BAN_HIT = {
   latitude: '-21.271070',
   longitude: '55.467030',

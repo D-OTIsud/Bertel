@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommandPalette } from './CommandPalette';
 import { useSessionStore } from '../../store/session-store';
 import { useUiStore } from '../../store/ui-store';
+import { registerNavigationGuard } from '@/lib/navigation-guard';
 
 const pushMock = jest.fn();
 jest.mock('next/navigation', () => ({
@@ -89,5 +90,43 @@ describe('CommandPalette (D24)', () => {
     useUiStore.setState({ commandPaletteOpen: true });
     renderPalette();
     expect(screen.queryByRole('option', { name: /Créer une fiche/ })).not.toBeInTheDocument();
+  });
+
+  describe('garde de sortie (MET-01)', () => {
+    it('un refus de la garde bloque le clic : palette et route inchangées', () => {
+      const unregister = registerNavigationGuard(() => false);
+      useUiStore.setState({ commandPaletteOpen: true });
+      renderPalette();
+      fireEvent.click(screen.getByRole('option', { name: /Dashboard/ }));
+      expect(pushMock).not.toHaveBeenCalled();
+      expect(useUiStore.getState().commandPaletteOpen).toBe(true);
+      unregister();
+    });
+
+    it('un refus de la garde bloque aussi Entrée', () => {
+      const unregister = registerNavigationGuard(() => false);
+      useUiStore.setState({ commandPaletteOpen: true });
+      renderPalette();
+      const input = screen.getByRole('combobox');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(pushMock).not.toHaveBeenCalled();
+      unregister();
+    });
+
+    it("une confirmation de la garde laisse la navigation passer", () => {
+      const unregister = registerNavigationGuard(() => true);
+      useUiStore.setState({ commandPaletteOpen: true });
+      renderPalette();
+      fireEvent.click(screen.getByRole('option', { name: /Dashboard/ }));
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
+      unregister();
+    });
+
+    it('sans garde active, la navigation se fait normalement', () => {
+      useUiStore.setState({ commandPaletteOpen: true });
+      renderPalette();
+      fireEvent.click(screen.getByRole('option', { name: /Dashboard/ }));
+      expect(pushMock).toHaveBeenCalledWith('/dashboard');
+    });
   });
 });

@@ -4,7 +4,7 @@ Application front-end dediee a la gestion touristique et CRM collaborative de Be
 
 ## Prérequis
 
-- **Node.js 20+** recommandé (certaines dépendances comme Supabase et un futur passage à Tailwind v4 le demandent). En Node 18 le projet peut encore builder avec Tailwind v3.
+- **Node.js 22** (voir `.nvmrc` et `package.json#engines`) : version utilisée par le Dockerfile et la CI. `nvm use` s'aligne dessus.
 
 ## Choix techniques
 
@@ -13,7 +13,7 @@ Application front-end dediee a la gestion touristique et CRM collaborative de Be
 - TanStack Query pour les requetes et la pagination keyset
 - Zustand pour l'etat UI, session et filtres
 - MapLibre GL JS + Mapbox Draw pour la carte et le lasso
-- Docker + Nginx avec injection runtime des variables pour Coolify
+- Docker multi-étage (build → `next build` standalone, runtime → serveur Node généré par Next, utilisateur non-root) avec injection runtime des variables `NEXT_PUBLIC_*` via `docker/entrypoint.sh` (envsubst) pour Coolify
 
 ## Demarrage local
 
@@ -34,7 +34,7 @@ Pour Next.js (`npm run dev` / `npm run build`), utilisez les variables **NEXT_PU
 - `NEXT_PUBLIC_MAP_STYLE_SATELLITE`
 - `NEXT_PUBLIC_MAP_STYLE_TOPO`
 
-`NEXT_PUBLIC_ENABLE_DEMO_MODE` est desactive par defaut. Le mode mock doit etre active explicitement.
+`NEXT_PUBLIC_ENABLE_DEMO_MODE` est desactive par defaut (build, Docker et runtime). Le mode mock doit etre active explicitement ; hors demo, `NEXT_PUBLIC_SUPABASE_URL` et `NEXT_PUBLIC_SUPABASE_ANON_KEY` sont requis et le conteneur refuse de demarrer sans eux (`docker/entrypoint.sh`).
 
 ## Demarrage Docker
 

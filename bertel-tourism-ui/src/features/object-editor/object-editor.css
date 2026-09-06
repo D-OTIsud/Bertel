@@ -102,6 +102,9 @@
   background: var(--bg-tint);
 }
 
+/* Sélecteur natif de repli, affiché uniquement quand .edit-nav se masque (≤760px). */
+.object-editor .edit-nav__mobile-select { display: none; }
+
 /* ---------- Left section nav ---------- */
 .object-editor .edit-nav {
   min-height: 0;
@@ -2319,8 +2322,19 @@
 }
 
 @media (max-width: 760px) {
-  .object-editor .edit-body { grid-template-columns: 1fr; }
+  .object-editor .edit-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .object-editor .edit-nav { display: none; }
+  .object-editor .edit-nav__mobile-select {
+    display: block;
+    margin: 10px 12px 0;
+    width: calc(100% - 24px);
+    padding: 10px 12px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid var(--line-soft);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 13.5px;
+  }
   .object-editor .edit-main { padding: 12px; }
   .object-editor .grid-2,
   .object-editor .grid-3,

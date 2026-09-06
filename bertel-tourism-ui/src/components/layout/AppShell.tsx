@@ -54,7 +54,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* D24 : palette ⌘K globale (écouteur clavier + modale + dialogs associés). */}
       <CommandPalette />
       {/* D12 : tiroir de navigation mobile (rail masqué < 768px). */}
-      <MobileNavDrawer />
+      <MobileNavDrawer
+        onOpenProfile={() => setProfileOpen(true)}
+        onOpenNotifications={() => setNotificationsOpen(true)}
+        unreadNotifications={unreadCount}
+      />
       <Suspense
         fallback={
           drawerObjectId ? (

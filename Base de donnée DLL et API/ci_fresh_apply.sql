@@ -382,6 +382,9 @@ ROLLBACK;
 \echo '== I4f    migration_tourinsoft_reunion_regional_v1.sql  (opt-in reunion-regional-v1: six exact feed profiles, taxonomy-aware routing, canonical+extension serializer, legacy and accommodation contracts preserved) =='
 \ir migration_tourinsoft_reunion_regional_v1.sql
 
+\echo '== I4f-acl Explicit service reads for the regional INVOKER serializer =='
+\ir ../supabase/migrations/20260905200731_tourinsoft_service_read_grants.sql
+
 \echo '== I4f-test Tourinsoft Reunion six-family regional export assertions =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
 
@@ -498,6 +501,18 @@ ROLLBACK;
 
 \echo '== I4f-final-test Tourinsoft regional contract after every downstream migration =='
 \ir tests/test_tourinsoft_reunion_regional_v1.sql
+
+\echo '== 17f    supabase/migrations/20260905195257_gdpr_cleanup_operations.sql  (PRIV-01/02 : internal.gdpr_cleanup_task + audit.redact_subject after_data + api.rpc_gdpr_erase_subject étendu (actor_document/actor_consent, rétention documents partagés, garde-fous compte user, mise en file Storage/Auth) + api.rpc_gdpr_get_cleanup_status/rpc_gdpr_ack_cleanup_task ; APRES migration_unblock_team_legal_access.sql (A-LEGAL, storage_bucket/storage_path/access_scope) et 8z3 actor_prospects_documents.sql (actor_document) ; redéfinit par CREATE OR REPLACE le corps foldé dans schema_unified.sql (1/13), donc dernier mot sur base fraîche ET base upgradée. NOTIFY pgrst requis (2 fonctions api exposées neuves)) =='
+\ir ../supabase/migrations/20260905195257_gdpr_cleanup_operations.sql
+
+\echo '== 17f-test garde permanente : voir tests/test_gdpr_cleanup_operations.sql =='
+\ir tests/test_gdpr_cleanup_operations.sql
+
+\echo '== 17g    supabase/migrations/20260905204133_audit_price_age_bounds.sql  (DB-02 : chk_age_ranges_valid seul laissait passer age_max_enfant/age_max_junior negatif des que le age_min correspondant etait NULL, car NULL >= x vaut NULL et une CHECK laisse passer NULL. Ajoute chk_age_max_nonneg, garde par pg_constraint/conrelid, posee NOT VALID puis VALIDATEe dans la meme migration si aucune ligne existante ne la viole ; sinon NOTICE le compte (sans PII) et la laisse NOT VALID pour revue operateur — aucune reparation ni suppression automatique. N ecrase pas chk_age_ranges_valid) =='
+\ir ../supabase/migrations/20260905204133_audit_price_age_bounds.sql
+
+\echo '== 17g-test garde permanente DB-02 : voir tests/test_audit_price_age_bounds.sql =='
+\ir tests/test_audit_price_age_bounds.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

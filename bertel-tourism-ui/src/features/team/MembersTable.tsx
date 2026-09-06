@@ -7,7 +7,7 @@ import { formatLastSeen } from './format-last-seen';
 /** Shape returned by the `children` render-prop — controls both role cells. */
 export interface RoleCells { business: React.ReactNode; admin: React.ReactNode; }
 
-export function MembersTable({ members, currentUserId, onManagePermissions, onEditProfile, onDeactivate, onDelete, children }: {
+export function MembersTable({ members, currentUserId, onManagePermissions, onEditProfile, onDeactivate, onDelete, callerIsOwner, children }: {
   members: OrgMember[];
   currentUserId: string | null;
   onManagePermissions: (m: OrgMember) => void;
@@ -17,6 +17,15 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
   onDeactivate?: (m: OrgMember) => void;
   /** Called when the admin clicks "Supprimer" (hard delete) on a non-self row. */
   onDelete?: (m: OrgMember) => void;
+  /**
+   * SEC-01 (audit sécurité 2026-09-05) — `isPlatformSuperuser` ne distingue pas owner de
+   * super_admin (les deux sources exposent le même booléen agrégé) : on ne peut donc pas deviner
+   * côté client LEQUEL des deux la cible est. Server-side, un owner reste refusé (toujours), et un
+   * super_admin exige un owner appelant — le client se contente de MASQUER le bouton pour toute
+   * cible superuser quand l'appelant n'est pas owner, sans prétendre à plus de précision que la
+   * donnée n'en expose. Le serveur reste la seule autorité.
+   */
+  callerIsOwner?: boolean;
   /** When provided, renders interactive role selects in the Rôle métier + Rôle admin cells. */
   children?: (m: OrgMember, isSelf: boolean) => RoleCells;
 }) {
@@ -139,7 +148,7 @@ export function MembersTable({ members, currentUserId, onManagePermissions, onEd
                     Désactiver
                   </button>
                 )}
-                {!isSelf && onDelete && (
+                {!isSelf && onDelete && (!m.isPlatformSuperuser || callerIsOwner) && (
                   <button
                     type="button"
                     className="ghost-button members-delete"

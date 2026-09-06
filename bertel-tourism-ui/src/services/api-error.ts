@@ -66,6 +66,20 @@ export const API_ERROR_LABELS: Record<string, string> = {
   rank_violation: 'Action impossible sur un membre dont le rang d’administration est égal ou supérieur au vôtre.',
   target_rank_check_failed:
     "La vérification du rang d'administration a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  // SEC-01 (audit sécurité 2026-09-05) — /api/admin/delete-user : la suppression définitive de
+  // compte est une capacité PLATEFORME, jamais une capacité d'ORG.
+  platform_superuser_required:
+    "Seul un administrateur plateforme (owner ou super administrateur) peut supprimer définitivement un compte — utilisez « Désactiver » pour retirer l'accès.",
+  target_profile_check_failed:
+    "La vérification du compte cible a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  operation_not_found: "Cette opération d'effacement est introuvable. Vérifiez son identifiant.",
+  operation_lookup_failed: "Le suivi de l'effacement est momentanément indisponible. Conservez son identifiant pour reprendre le nettoyage.",
+  authorization_check_failed: "Vos droits n'ont pas pu être vérifiés. Réessayez dans quelques instants.",
+  invalid_operation_id: "L'identifiant de l'opération d'effacement n'est pas valide.",
+  owner_delete_forbidden:
+    "La suppression directe du compte owner est interdite — rétrogradez-le d'abord explicitement.",
+  owner_required_for_super_admin_delete:
+    'Seul un propriétaire (owner) de la plateforme peut supprimer un compte super administrateur.',
 
   // --- Requête malformée ------------------------------------------------------------------
   bad_json: 'Requête invalide. Rechargez la page et réessayez.',

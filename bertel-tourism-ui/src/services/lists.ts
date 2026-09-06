@@ -418,11 +418,18 @@ export async function deleteList(listId: string): Promise<void> {
 }
 
 // ---------- envoi e-mail ----------
+/** Résultat d'un envoi accepté par le relais SMTP : `trackingUpdated` distingue l'e-mail
+ * effectivement parti (toujours vrai ici) du marquage `sent` en base, qui peut échouer sans
+ * jamais justifier un nouvel envoi (cf. ListComposeView.handleSend). */
+export interface SendListEmailResult {
+  trackingUpdated: boolean;
+}
+
 /**
  * Envoie la liste par e-mail via la route serveur POST /api/lists/send (relais SMTP côté VPS).
  * Passe le JWT de l'appelant en Bearer ; la route ré-autorise via get_list (en tant qu'appelant).
  */
-export async function sendListByEmail(listId: string, toEmail: string): Promise<void> {
+export async function sendListByEmail(listId: string, toEmail: string): Promise<SendListEmailResult> {
   const client = getApiClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();
@@ -438,6 +445,8 @@ export async function sendListByEmail(listId: string, toEmail: string): Promise<
     if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
     throw new Error(readApiErrorMessage(j, res.status));
   }
+  const body = (await res.json().catch(() => ({}))) as { trackingUpdated?: boolean };
+  return { trackingUpdated: body.trackingUpdated === true };
 }
 
 // ---------- partage ----------

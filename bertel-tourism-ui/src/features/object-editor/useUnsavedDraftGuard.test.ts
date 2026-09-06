@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { UNSAVED_DRAFT_LEAVE_MESSAGE, useUnsavedDraftGuard } from './useUnsavedDraftGuard';
+import { confirmNavigation } from '@/lib/navigation-guard';
 
 describe('useUnsavedDraftGuard', () => {
   let confirmSpy: jest.MockedFunction<typeof window.confirm>;
@@ -71,5 +72,22 @@ describe('useUnsavedDraftGuard', () => {
     expect(preventDefault).toHaveBeenCalled();
     expect(stopImmediatePropagation).toHaveBeenCalled();
     document.body.removeChild(anchor);
+  });
+
+  it('registers itself as the active navigation guard and unregisters on unmount', () => {
+    confirmSpy.mockReturnValue(false);
+    const { unmount } = renderHook(() => useUnsavedDraftGuard(true));
+    expect(confirmNavigation()).toBe(false);
+    unmount();
+    expect(confirmNavigation()).toBe(true);
+  });
+
+  it('uses a custom message when provided, for both confirmLeave and the registered guard', () => {
+    const customMessage = 'Cette liste contient des modifications non enregistrées. Continuer ?';
+    const { result } = renderHook(() => useUnsavedDraftGuard(true, { message: customMessage }));
+    result.current.confirmLeave();
+    expect(confirmSpy).toHaveBeenCalledWith(customMessage);
+    confirmNavigation();
+    expect(confirmSpy).toHaveBeenLastCalledWith(customMessage);
   });
 });

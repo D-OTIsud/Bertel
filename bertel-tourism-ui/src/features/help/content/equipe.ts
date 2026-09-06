@@ -63,9 +63,11 @@ export const EQUIPE_FAQ: FaqEntry[] = [
     question: 'Retirer un compte de l\'organisation ?',
     keywords: ['supprimer', 'retirer', 'départ', 'compte'],
     related: ['equipe-roles'],
-    answer: `Le bouton **« Supprimer »** de la table Équipe supprime le compte **définitivement** (accès, profil, rattachement, permissions) — une confirmation explicite le rappelle avant validation.
+    answer: `Le bouton **« Supprimer »** de la table Équipe supprime le compte **plateforme définitivement**, avec **toutes** ses adhésions à des organisations (pas seulement celle affichée) — une confirmation explicite le rappelle avant validation.
 
-**Alternative réversible.** Pour un retrait temporaire (congé, suspension), préférez **« Désactiver »** : le membre perd l'accès mais son compte peut être réactivé plus tard, sans repasser par une nouvelle invitation.
+**Réservé aux administrateurs plateforme.** Seul un **owner** ou un **super administrateur** peut supprimer un compte ; un administrateur d'organisation (même de rang 50) ne voit pas ce bouton et retire l'accès via « Désactiver ». Le compte d'un **owner** ne peut jamais être supprimé directement, et supprimer un **super administrateur** est réservé à un **owner**.
+
+**Alternative réversible.** Pour un retrait temporaire (congé, suspension) ou pour un administrateur d'organisation, préférez **« Désactiver »** : le membre perd l'accès à l'organisation mais son compte peut être réactivé plus tard, sans repasser par une nouvelle invitation.
 
 **Impossible sur vous-même.** Ni la suppression ni la désactivation ne sont proposées sur votre propre compte — un administrateur ne peut pas se retirer lui-même.`,
   },

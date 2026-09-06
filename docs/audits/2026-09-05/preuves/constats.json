@@ -1,0 +1,470 @@
+[
+  {
+    "id": "ARC-01",
+    "priority": "P2",
+    "title": "Concentration des responsabilités dans quelques fichiers",
+    "document": "01-architecture-maintenabilite.md"
+  },
+  {
+    "id": "ARC-02",
+    "priority": "P2",
+    "title": "Contrat base/frontend largement porté par des conversions manuelles",
+    "document": "01-architecture-maintenabilite.md"
+  },
+  {
+    "id": "ARC-03",
+    "priority": "P2",
+    "title": "Documentation de démarrage en décalage avec le code",
+    "document": "01-architecture-maintenabilite.md"
+  },
+  {
+    "id": "SEC-01",
+    "priority": "P1",
+    "title": "Suppression globale sans contrôle du rôle ou du rang cible",
+    "document": "02-securite-authentification.md"
+  },
+  {
+    "id": "SEC-02",
+    "priority": "P3",
+    "title": "Dépendance à l'invariant d'une seule organisation active",
+    "document": "02-securite-authentification.md"
+  },
+  {
+    "id": "SEC-03",
+    "priority": "P2",
+    "title": "Le renvoi d'invitation détruit le compte avant de garantir son remplacement",
+    "document": "02-securite-authentification.md"
+  },
+  {
+    "id": "SEC-04",
+    "priority": "P2",
+    "title": "Protection des sessions privilégiées à renforcer et à prouver en déploiement",
+    "document": "02-securite-authentification.md"
+  },
+  {
+    "id": "API-01",
+    "priority": "P1",
+    "title": "La taille des requêtes n'est contrôlée qu'après matérialisation en mémoire",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "API-02",
+    "priority": "P2",
+    "title": "Limitation d'abus incomplète pour les e-mails, uploads et extraction IA",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "API-03",
+    "priority": "P2",
+    "title": "Les vidéos sont acceptées sur le seul MIME déclaré",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "API-04",
+    "priority": "P2",
+    "title": "Nettoyage Storage non fiable lors des échecs et remplacements",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "API-05",
+    "priority": "P2",
+    "title": "L'envoi d'une liste active un partage sans expiration avant l'envoi SMTP",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "API-06",
+    "priority": "P2",
+    "title": "Les scopes partenaires sont transportés mais ne filtrent pas les endpoints",
+    "document": "03-api-fichiers-medias.md"
+  },
+  {
+    "id": "DB-01",
+    "priority": "P2",
+    "title": "Le prix minimum peut rester périmé après une transition de date",
+    "document": "04-base-de-donnees-integrite.md"
+  },
+  {
+    "id": "DB-02",
+    "priority": "P2",
+    "title": "Une borne d'âge maximale négative passe le CHECK si le minimum est NULL",
+    "document": "04-base-de-donnees-integrite.md"
+  },
+  {
+    "id": "DB-03",
+    "priority": "P2",
+    "title": "Le minimum agrège plusieurs devises et peut être publié comme EUR",
+    "document": "04-base-de-donnees-integrite.md"
+  },
+  {
+    "id": "RLS-01",
+    "priority": "P2",
+    "title": "Les révocations anon Q1a/Q1b restent hors du manifeste testé",
+    "document": "05-autorisations-rls-rpc.md"
+  },
+  {
+    "id": "RLS-02",
+    "priority": "P2",
+    "title": "Les RPC de gestion IA ne refusent pas une autorisation NULL",
+    "document": "05-autorisations-rls-rpc.md"
+  },
+  {
+    "id": "RLS-03",
+    "priority": "P2",
+    "title": "La visibilité actuelle d'un objet ouvre aussi ses anciens snapshots",
+    "document": "05-autorisations-rls-rpc.md"
+  },
+  {
+    "id": "SQL-01",
+    "priority": "P2",
+    "title": "La sauvegarde des tarifs refait tous les agrégats à chaque ligne",
+    "document": "06-performance-sql.md"
+  },
+  {
+    "id": "SQL-02",
+    "priority": "P2",
+    "title": "La timeline de versions parcourt l'historique avant pagination et accepte une limite sans plafond",
+    "document": "06-performance-sql.md"
+  },
+  {
+    "id": "SQL-03",
+    "priority": "P2",
+    "title": "Le RPC de cartes accepte un tableau d'identifiants non borné et réémet les doublons",
+    "document": "06-performance-sql.md"
+  },
+  {
+    "id": "PRIV-01",
+    "priority": "P1",
+    "title": "L'effacement ne couvre pas plusieurs fichiers liés à la personne",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "PRIV-02",
+    "priority": "P1",
+    "title": "Occultation du journal d'audit et anonymisation incomplètes malgré l'annonce d'achèvement",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "PRIV-03",
+    "priority": "P1",
+    "title": "La notice publiée ne décrit plus les traitements effectivement disponibles",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "PRIV-04",
+    "priority": "P2",
+    "title": "Demande systématique de copie de pièce d'identité dans la notice",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "PRIV-05",
+    "priority": "P2",
+    "title": "Politique de conservation déclarative sans preuve de son exécution",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "PRIV-06",
+    "priority": "P2",
+    "title": "Portraits et métadonnées vidéo diffusables sans contrôle de finalité à l'upload",
+    "document": "07-confidentialite-rgpd.md"
+  },
+  {
+    "id": "MET-01",
+    "priority": "P1",
+    "title": "La palette contourne la protection des modifications de fiche",
+    "document": "08-fonctionnel-parcours-metiers.md"
+  },
+  {
+    "id": "MET-02",
+    "priority": "P1",
+    "title": "L'envoi d'une liste ignore les notes et l'ordre visibles non enregistrés",
+    "document": "08-fonctionnel-parcours-metiers.md"
+  },
+  {
+    "id": "MET-03",
+    "priority": "P2",
+    "title": "Des sauvegardes de liste échouent sans retour utilisateur",
+    "document": "08-fonctionnel-parcours-metiers.md"
+  },
+  {
+    "id": "MET-04",
+    "priority": "P2",
+    "title": "La composition de liste ne protège pas le travail non sauvegardé",
+    "document": "08-fonctionnel-parcours-metiers.md"
+  },
+  {
+    "id": "MET-05",
+    "priority": "P2",
+    "title": "Les modules Audits et Publications ne couvrent pas leur promesse métier en mode réel",
+    "document": "08-fonctionnel-parcours-metiers.md"
+  },
+  {
+    "id": "UX-07",
+    "priority": "P1",
+    "title": "Le shell écrase toute l'application dans une colonne de 64 px sur téléphone",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-01",
+    "priority": "P2",
+    "title": "Les notifications et le tiroir profil perdent leur point d'accès mobile",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-02",
+    "priority": "P2",
+    "title": "La composition mobile conserve les commandes d'aperçu mais masque tout l'aperçu",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-03",
+    "priority": "P2",
+    "title": "L'éditeur supprime son sommaire sur téléphone",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-04",
+    "priority": "P2",
+    "title": "L'avertissement de sortie demande de publier pour conserver le travail",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-05",
+    "priority": "P2",
+    "title": "Une panne réseau du lien public est présentée comme un lien supprimé ou expiré",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "UX-06",
+    "priority": "P2",
+    "title": "L'aperçu e-mail ne représente pas exactement le contenu envoyé",
+    "document": "09-ux-interface-responsive.md"
+  },
+  {
+    "id": "A11Y-01",
+    "priority": "P1",
+    "title": "Réordonner une liste exige un glisser-déposer",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-02",
+    "priority": "P2",
+    "title": "Le contenu anglais n'expose pas sa langue au navigateur",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-03",
+    "priority": "P2",
+    "title": "Les libellés visibles des champs de liste ne sont pas associés aux contrôles",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-04",
+    "priority": "P2",
+    "title": "L'état sélectionné des langues et modes n'est que visuel",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-05",
+    "priority": "P2",
+    "title": "Le blanc sur l'orange par défaut n'atteint pas le contraste du texte",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-06",
+    "priority": "P2",
+    "title": "Le branding accepte des paires de couleurs illisibles",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "A11Y-07",
+    "priority": "P2",
+    "title": "Le titre anglais d'une liste ne peut pas être édité depuis la composition",
+    "document": "10-accessibilite-internationalisation.md"
+  },
+  {
+    "id": "PERF-01",
+    "priority": "P2",
+    "title": "Les pages chargées s'accumulent dans le DOM",
+    "document": "11-performance-frontend.md"
+  },
+  {
+    "id": "PERF-02",
+    "priority": "P2",
+    "title": "La carte charge tout l'ensemble géolocalisé correspondant",
+    "document": "11-performance-frontend.md"
+  },
+  {
+    "id": "PERF-03",
+    "priority": "P2",
+    "title": "Le streaming réseau de l'export ne borne pas la mémoire du classeur final",
+    "document": "11-performance-frontend.md"
+  },
+  {
+    "id": "PERF-04",
+    "priority": "P2",
+    "title": "Absence de budget de performance automatisé identifié",
+    "document": "11-performance-frontend.md"
+  },
+  {
+    "id": "QA-01",
+    "priority": "P2",
+    "title": "Le typage des tests est cassé malgré Jest et build verts",
+    "document": "12-tests-assurance-qualite.md"
+  },
+  {
+    "id": "QA-02",
+    "priority": "P1",
+    "title": "Aucun contrôle frontend automatique identifié dans la CI versionnée",
+    "document": "12-tests-assurance-qualite.md"
+  },
+  {
+    "id": "QA-03",
+    "priority": "P2",
+    "title": "La couverture navigateur ne valide pas la largeur utile ni les parcours réels",
+    "document": "12-tests-assurance-qualite.md"
+  },
+  {
+    "id": "QA-04",
+    "priority": "P2",
+    "title": "Un worker Jest se termine de force après les tests",
+    "document": "12-tests-assurance-qualite.md"
+  },
+  {
+    "id": "QA-05",
+    "priority": "P2",
+    "title": "Couverture et accessibilité visuelle sans garantie automatisée mesurée",
+    "document": "12-tests-assurance-qualite.md"
+  },
+  {
+    "id": "DEP-01",
+    "priority": "P1",
+    "title": "Versions de production signalées par des avis élevés",
+    "document": "13-dependances-chaine-logicielle.md"
+  },
+  {
+    "id": "DEP-02",
+    "priority": "P2",
+    "title": "Pas de contrôle de dépendances continu dans la CI examinée",
+    "document": "13-dependances-chaine-logicielle.md"
+  },
+  {
+    "id": "DEP-03",
+    "priority": "P2",
+    "title": "Références d'exécution et de construction hétérogènes",
+    "document": "13-dependances-chaine-logicielle.md"
+  },
+  {
+    "id": "OPS-01",
+    "priority": "P1",
+    "title": "Les fichiers d'environnement locaux ne sont pas exclus du contexte Docker",
+    "document": "14-deploiement-exploitation.md"
+  },
+  {
+    "id": "OPS-02",
+    "priority": "P1",
+    "title": "Le déploiement active la démo par défaut",
+    "document": "14-deploiement-exploitation.md"
+  },
+  {
+    "id": "OPS-03",
+    "priority": "P2",
+    "title": "Processus applicatif root et confinement non spécifié",
+    "document": "14-deploiement-exploitation.md"
+  },
+  {
+    "id": "OPS-04",
+    "priority": "P2",
+    "title": "Le déclenchement CI ne couvre pas toutes les entrées de reconstruction",
+    "document": "14-deploiement-exploitation.md"
+  },
+  {
+    "id": "OPS-05",
+    "priority": "P2",
+    "title": "Reprise complète et objectifs de continuité non démontrés",
+    "document": "14-deploiement-exploitation.md"
+  },
+  {
+    "id": "OBS-01",
+    "priority": "P2",
+    "title": "Les références d'incident frontend ne sont pas reliées à un collecteur identifié",
+    "document": "15-observabilite-diagnostic.md"
+  },
+  {
+    "id": "OBS-02",
+    "priority": "P2",
+    "title": "Le healthcheck ne mesure que la disponibilité du processus HTTP",
+    "document": "15-observabilite-diagnostic.md"
+  },
+  {
+    "id": "OBS-03",
+    "priority": "P2",
+    "title": "Les journaux métier ne prouvent pas une supervision technique complète",
+    "document": "15-observabilite-diagnostic.md"
+  },
+  {
+    "id": "OBS-04",
+    "priority": "P2",
+    "title": "Un échec métier ONF peut retourner HTTP 200",
+    "document": "15-observabilite-diagnostic.md"
+  },
+  {
+    "id": "INT-01",
+    "priority": "P2",
+    "title": "La classification des champs ne vaut pas homologation externe",
+    "document": "16-integrations-ia-interoperabilite.md"
+  },
+  {
+    "id": "INT-02",
+    "priority": "P2",
+    "title": "Coût IA non consolidé et quota limité au processus",
+    "document": "16-integrations-ia-interoperabilite.md"
+  },
+  {
+    "id": "INT-03",
+    "priority": "P2",
+    "title": "Envoi SMTP sans garantie d'idempotence ni suivi fiable du résultat",
+    "document": "16-integrations-ia-interoperabilite.md"
+  },
+  {
+    "id": "INT-04",
+    "priority": "P2",
+    "title": "Les fonds par défaut ne correspondent pas tous à leur nom",
+    "document": "16-integrations-ia-interoperabilite.md"
+  },
+  {
+    "id": "DES-01",
+    "priority": "P2",
+    "title": "Les noms des résultats sont sacrifiés au profit de l'image et du statut",
+    "document": "17-design-systeme-visuel.md"
+  },
+  {
+    "id": "DES-02",
+    "priority": "P2",
+    "title": "Les outils centrés de la carte chevauchent le choix du fond",
+    "document": "17-design-systeme-visuel.md"
+  },
+  {
+    "id": "DES-03",
+    "priority": "P2",
+    "title": "Les changements de marque ne se propagent pas à tous les tokens d'interface",
+    "document": "17-design-systeme-visuel.md"
+  },
+  {
+    "id": "DES-04",
+    "priority": "P2",
+    "title": "Les aperçus de diffusion contiennent une identité OTI codée en dur",
+    "document": "17-design-systeme-visuel.md"
+  },
+  {
+    "id": "DES-05",
+    "priority": "P3",
+    "title": "Le CRM présente plusieurs actions primaires concurrentes",
+    "document": "17-design-systeme-visuel.md"
+  },
+  {
+    "id": "DES-06",
+    "priority": "P2",
+    "title": "Le catalogue visuel ne couvre pas les composants réellement livrés",
+    "document": "17-design-systeme-visuel.md"
+  }
+]

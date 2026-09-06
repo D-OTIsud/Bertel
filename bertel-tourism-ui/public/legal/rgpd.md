@@ -2,7 +2,9 @@
 
 **Plateforme Bertel 3.0 — Système d'Information Touristique (SIT) & CRM**
 
-Dernière mise à jour : 16 juin 2026
+Dernière mise à jour : 6 septembre 2026
+
+Version documentaire en révision : les prestataires actifs, leurs lieux de traitement et certaines durées de conservation restent à confirmer avant validation définitive.
 
 ---
 
@@ -21,8 +23,6 @@ Téléphone : 06 93 41 92 91
 
 > SPL OTI DU SUD n'a pas désigné de Délégué à la Protection des Données (DPO) au sens de l'Art. 37 du RGPD. M. Philippe assure la fonction de **référent RGPD interne**, point de contact privilégié pour les personnes concernées et l'autorité de contrôle.
 
-> [À VALIDER PAR LE DPO : harmoniser la qualification du référent dans tout le pack — employer « référent RGPD interne » partout. Signaler le point d'indépendance Art. 38(6) : le cumul des fonctions Manager SI / référent RGPD est à arbitrer avec la direction afin d'éviter un conflit d'intérêts.]
-
 **Responsabilité conjointe (Art. 26 RGPD).** Bertel est une plateforme mutualisée. Chaque ORG partenaire (autres OTI, structures SIT) qui publie ses propres contenus touristiques via Bertel reste responsable du traitement pour les données dont elle est éditrice (contenu publié, données opérateurs qu'elle saisit, son CRM). SPL OTI DU SUD demeure responsable des données techniques de la plateforme (comptes éditeurs, logs, infrastructure) et fournit le cadre RGPD commun décrit dans le présent document.
 
 > ⚠️ **Convention à formaliser.** Une convention écrite (Art. 26 §1) détaillant la répartition précise des obligations entre SPL OTI DU SUD et chaque ORG partenaire (information des personnes concernées, exercice des droits RGPD, gestion des violations, pilotage des sous-traitants, durées de conservation, responsabilités éditoriales) est en cours de rédaction. À défaut, le présent document fait office de cadre commun provisoire et chaque ORG demeure responsable pour son périmètre éditorial.
@@ -37,6 +37,8 @@ Bertel est utilisée pour :
 - **Gestion des comptes éditeurs** : authentification, autorisations (RBAC), appartenance à une ORG, suivi des actions (audit trail).
 - **CRM tourisme** : suivi de la relation avec les opérateurs commerciaux (prestataires), demandes entrantes, comptes-rendus de visite, animation du réseau.
 - **Modération et workflow de publication** : revue des modifications proposées, historisation des versions, traçabilité éditoriale.
+- **Envoi de sélections par e-mail** : lorsque cette fonction est activée et qu'un conseiller l'utilise, transmission d'une sélection touristique à un destinataire choisi par ce conseiller.
+- **Assistance à la saisie de menus** : lorsque cette fonction est activée, aide à l'extraction du contenu d'un menu à partir d'images pour proposer un brouillon que l'éditeur vérifie avant de l'ajouter.
 - **Conformité et sécurité** : journalisation des accès administratifs, contrôle d'intégrité, sauvegardes, supervision technique.
 
 > **Important** : Bertel ne fait pas de profilage commercial des utilisateurs finaux. Les contenus publiés sont des informations professionnelles et touristiques destinées à la diffusion publique.
@@ -71,7 +73,7 @@ Bertel traite des catégories de données différenciées selon la qualité de l
 
 Données professionnelles et, le cas échéant, personnelles lorsque l'opérateur est une personne physique (auto-entrepreneur, indépendant) :
 
-- **Identité commerciale** : raison sociale ou nom commercial, SIREN/SIRET [à valider : préciser si la donnée stockée est le SIREN (entité) ou le SIRET (établissement)], statut juridique.
+- **Identité commerciale** : raison sociale ou nom commercial, SIREN/SIRET, statut juridique.
 - **Contact pro** : email professionnel, téléphone fixe / mobile, site web, comptes réseaux sociaux.
 - **Coordonnées d'exploitation** : adresse de l'établissement, point de rendez-vous, zone d'intervention.
 - **Liens institutionnels** : ORG de rattachement (publication), rôles opérationnels (`actor_object_role`).
@@ -88,7 +90,10 @@ Données professionnelles et, le cas échéant, personnelles lorsque l'opérateu
 
 - **Établissements touristiques** : descriptifs, accroches, photos, vidéos, classements, labels.
 - **Métadonnées des médias** : les images sont ré-encodées à l'upload, ce qui supprime leurs métadonnées EXIF/IPTC/XMP (GPS, appareil) — mesure en place. Les vidéos sont en revanche stockées telles quelles : leurs métadonnées de conteneur (pouvant contenir GPS/appareil) NE SONT PAS supprimées (limite documentée, pas de transcodeur serveur), à traiter comme un risque résiduel.
-- **Photo de portrait d'acteur** : la fiche acteur peut porter une photo de portrait (image d'une personne physique) stockée dans un bucket public (seule protection : un chemin de fichier non devinable, ce qui n'est pas un contrôle d'accès). La table `actor_consent` existe mais n'est alimentée par aucun chemin d'écriture : le consentement n'est pas capté à ce jour. Le consentement ne peut donc PAS être présenté comme une mesure en place — c'est une mesure à mettre en œuvre.
+- **Documents privés et portraits publics** : les documents ajoutés à la bibliothèque privée d'un acteur sont destinés aux utilisateurs habilités à consulter sa fiche dans le CRM. Leur consultation passe par un contrôle d'accès et un lien temporaire. Cette bibliothèque est distincte des médias destinés à être diffusés et des portraits associés aux acteurs : un portrait enregistré par le parcours de publication de photo dispose d'une adresse accessible publiquement.
+- **Consentements de contact** : Bertel prévoit l'enregistrement des accords ou des refus de contact des acteurs, par moyen de communication, avec leur date et leur source. L'existence de ce registre ne signifie pas qu'un accord a été recueilli pour chaque personne ou pour chaque usage, notamment pour la publication d'un portrait. Pour signaler votre choix ou retirer un consentement, vous pouvez contacter le référent RGPD indiqué dans cette notice.
+- **Sélections envoyées par e-mail** : lorsque l'envoi de sélections est activé, l'adresse du destinataire est utilisée pour transmettre le message. Celui-ci peut contenir la sélection touristique, des notes, un lien de consultation et les coordonnées ou la photo du conseiller qui le signe.
+- **Images de menus** : lorsque l'assistance à la saisie de menus est activée, les images du menu, y compris les pages d'un document converties en images, peuvent être transmises à un fournisseur d'intelligence artificielle avec les indications nécessaires à leur lecture ; les informations visibles sur ces images peuvent donc lui être communiquées.
 
 ### 4.5 Avis de tiers et signalements citoyens
 
@@ -114,16 +119,16 @@ Données professionnelles et, le cas échéant, personnelles lorsque l'opérateu
 |---|---|
 | Comptes éditeurs (actifs) | Pendant la durée du mandat ou contrat éditeur |
 | Comptes éditeurs (inactifs) | Cible : anonymisation 24 mois après dernière connexion (à appliquer manuellement — voir l'avertissement ci-dessous) |
-| Logs d'authentification Supabase | Selon politique Supabase Auth (≈ 30 à 90 jours) |
+| Logs d'authentification Supabase | Durée de l'offre et de la configuration actives, en cours de vérification |
 | Journal d'audit (`audit.audit_log`) | 12 mois glissants (rotation mensuelle des partitions) — copie complète avant/après, données personnelles incluses |
 | Versioning éditorial (`object_version`) | Conservé sans purge automatique à ce jour |
 | Contacts CRM (prospects) | 3 ans après dernier contact |
 | Contacts CRM (partenaires actifs) | Durée de la relation + 3 ans |
 | Données opérateurs publiés | Tant que l'opérateur est référencé + archivage 3 ans après désinscription |
 | Médias archivés | Durée de vie de l'objet touristique associé |
-| Sauvegardes (backups Supabase) | 30 jours glissants (rétention par défaut Supabase Cloud) |
+| Sauvegardes (backups Supabase) | Durée contractuelle en cours de vérification |
 
-> ⚠️ **Purge** : aucune purge ni anonymisation automatique des données personnelles n'est en place à ce jour (les seules tâches planifiées concernent le rafraîchissement de vues et la rotation des partitions d'audit à 12 mois). Les durées de conservation indiquées sont des cibles de politique, à appliquer manuellement tant que des purges automatiques ne sont pas implémentées. Les sauvegardes Supabase sont, elles, automatiquement supprimées au-delà de la fenêtre de rétention.
+> ⚠️ **Purge** : la purge périodique automatique de l'ensemble des données personnelles n'est pas en place à ce jour pour toutes les catégories (les seules tâches planifiées concernent le rafraîchissement de vues et la rotation des partitions d'audit à 12 mois). Les durées de conservation indiquées ci-dessus sont des cibles de politique, à appliquer manuellement tant que des purges automatiques ne sont pas implémentées pour la catégorie concernée. Le traitement d'une demande individuelle d'effacement (voir §7) est distinct de cette purge périodique : la présence de l'outil d'effacement ne signifie pas que toutes les durées de conservation sont appliquées automatiquement. Les copies de sauvegarde sont traitées séparément des données actives ; l'outil d'effacement de l'application ne supprime pas les copies déjà présentes dans les sauvegardes.
 
 ---
 
@@ -136,26 +141,25 @@ Les données peuvent être communiquées à :
 - **API publique Bertel** : diffusion des contenus touristiques publiés vers les sites partenaires et applications grand public (uniquement les données professionnelles destinées à publication, jamais les données de comptes ou de CRM).
 - **Sous-traitants techniques et destinataires** : voir §6.1 (hébergement) et §6.2 (sous-traitants).
 
-### 6.1 Hébergement et localisation des données (toutes dans l'Union européenne)
+### 6.1 Hébergement et localisation des données
 
-- **Application web (frontend Next.js, conteneur Docker)** : OVHcloud, France (UE).
-- **Données personnelles (base de données PostgreSQL managée, authentification, stockage de fichiers, temps réel)** : Supabase Inc. sur Amazon Web Services, région `eu-west-1` (Irlande, UE) — projet « ryycrdhlkmzpxwwwwupy ».
-
-Aucune donnée n'est hébergée hors de l'Union européenne.
+L'application, les données, l'authentification et les fichiers peuvent relever de services distincts. Le prestataire d'hébergement effectivement utilisé, les régions de traitement et la localisation des sauvegardes restent à confirmer dans la version définitive de cette notice. L'utilisation de Supabase ne permet pas, à elle seule, d'affirmer que tous les traitements ont lieu dans l'Union européenne.
 
 ### 6.2 Sous-traitants et destinataires réels (Art. 28 RGPD)
 
-| Sous-traitant | Rôle | Localisation | Conformité documentée |
-|---|---|---|---|
-| OVHcloud | Hébergement de l'application web (frontend) | France (UE) | **DPA OVHcloud** à archiver · **Engagements publics RGPD** : traitement selon les instructions du client, absence de réutilisation commerciale, notification en cas de violation, documentation, transparence · Lorsque le client sélectionne une zone de stockage située dans l'UE, OVHcloud s'engage à ne pas traiter les données hors UE ni aux États-Unis · Certifications **ISO/IEC 27001:2022**, **ISO/IEC 27017:2015**, **ISO/IEC 27018:2019** et **ISO/IEC 27701:2019** sur le périmètre non-US |
-| Supabase Inc. | Base de données, authentification, stockage de fichiers, temps réel | UE — AWS `eu-west-1` (Irlande) | **DPA à archiver** · **Chiffrement AES-256 au repos** et **TLS en transit** (garantie plateforme) · **Sauvegarde et restauration** intégrées, **PITR** disponible en option |
-| Google (Google Ireland Ltd / Google LLC) | Authentification via Google OAuth, **uniquement pour les utilisateurs internes de l'organisation** (agents de l'office) ; les prestataires/acteurs et le public ne s'authentifient jamais via Google | Transfert hors UE potentiel | Encadré par le **EU-US Data Privacy Framework** [à confirmer et archiver] |
-| API Adresse / Base Adresse Nationale (data.gouv.fr) | Géocodage des adresses saisies (appel côté serveur) | France (UE) | Service public de l'État français |
-| Services chargés dans le navigateur du visiteur (reçoivent son adresse IP) | Tuiles cartographiques OpenFreeMap + MapLibre, favicons DuckDuckGo, Google Fonts | Tiers | L'auto-hébergement de ces ressources est recommandé pour limiter ces flux |
+Bertel fait appel à des services techniques pour son fonctionnement. Selon les fonctions activées, les traitements peuvent faire intervenir l'hébergement de l'application, le stockage des données et des fichiers, l'authentification, l'envoi d'e-mails, l'assistance par intelligence artificielle et le chargement de ressources cartographiques. Les éventuels transferts hors de l'Union européenne doivent être appréciés pour chacun de ces services ; ils ne se limitent pas à la connexion avec Google.
 
-Aucun envoi d'e-mail/SMS applicatif n'est en place à ce jour.
+| Service | Usage et données concernées |
+|---|---|
+| Hébergement de l'application | Exécution du site et informations techniques de connexion. Prestataire actif à confirmer. |
+| Supabase | Base de données, authentification, stockage de fichiers et temps réel. Région et conditions de l'offre active à confirmer. |
+| Google, si la connexion Google est activée | Authentification des comptes qui utilisent ce mode de connexion. Pays de traitement et garanties applicables à confirmer. |
+| Service de messagerie configuré | Adresse du destinataire et contenu de la sélection envoyée par un conseiller. Fournisseur actif, lieux et conservation à confirmer. |
+| Fournisseur d'intelligence artificielle configuré | Images du menu et indications de lecture lorsque l'éditeur utilise l'assistance. Fournisseur actif, lieux, conservation et éventuelle réutilisation à confirmer. |
+| Recherche Base Adresse Nationale | Texte d'adresse saisi, transmis depuis le navigateur pour obtenir des suggestions, et informations de connexion dont l'adresse IP. |
+| Services cartographiques et icônes de sites | Cartes MapLibre/OpenFreeMap et icônes DuckDuckGo selon la configuration. Ces chargements transmettent notamment l'adresse IP. |
 
-✓ **Pas de transfert hors UE pour l'hébergement** : l'application web est hébergée en France (OVHcloud) et l'ensemble des données personnelles est hébergé en Irlande (Supabase/AWS `eu-west-1`) — l'intégralité reste donc dans l'Union européenne. **Seule nuance** : les **utilisateurs internes** (agents de l'office) peuvent s'authentifier via **Google OAuth**, ce qui constitue le seul flux susceptible d'impliquer un transfert hors UE ; ce transfert est encadrable par le EU-US Data Privacy Framework [à confirmer]. Les prestataires/acteurs et le public ne sont pas concernés par ce flux. En cas de transfert hors UE, les garanties appropriées (Art. 46 — clauses contractuelles types) doivent être documentées.
+Ce tableau décrit les services identifiés à ce jour ; il ne constitue pas à lui seul une information complète sur l'ensemble des destinataires et des transferts, en particulier lorsque l'envoi d'e-mails ou l'assistance par intelligence artificielle sont activés avec un fournisseur non encore documenté.
 
 ---
 
@@ -165,7 +169,7 @@ Conformément au RGPD, vous disposez des droits suivants :
 
 - **Droit d'accès** : obtenir confirmation que vos données sont traitées et en demander une copie.
 - **Droit de rectification** : faire corriger des données inexactes ou incomplètes.
-- **Droit à l'effacement** : demander la suppression de vos données dans les limites légales (les obligations de traçabilité métier peuvent prévaloir pour le journal d'audit). État réel de l'effacement et du journal d'audit (à connaître pour répondre aux demandes au titre de l'Art. 17) : aucune fonction automatisée d'effacement ou d'anonymisation n'existe à ce jour — un effacement est une opération **MANUELLE** (suppression ciblée sous contrôle technique). De plus, le journal d'audit (`audit.audit_log`) conserve une copie complète (état avant/après, données personnelles incluses) de chaque modification et suppression sur l'ensemble des tables, attribuée à l'utilisateur, pendant 12 mois glissants. Une donnée supprimée reste donc présente dans le journal d'audit jusqu'à 12 mois ; sa purge ciblée doit être effectuée manuellement lorsque la demande l'exige. Le versioning `object_version` n'est, lui, pas purgé automatiquement.
+- **Droit à l'effacement** : demander la suppression de vos données dans les limites légales (les obligations de traçabilité métier peuvent prévaloir pour le journal d'audit). Le traitement d'une demande d'effacement peut s'appuyer sur un outil de suppression ou d'anonymisation réservé aux administrateurs habilités. Selon les données concernées, il traite les informations de la fiche, les informations liées dans le CRM, certaines données présentes dans le journal des modifications et les fichiers identifiés. La suppression d'un compte de connexion fait l'objet d'une étape distincte. L'opération est suivie afin de repérer les étapes en échec et de pouvoir les reprendre. Cet outil ne garantit pas à lui seul un effacement de toutes les copies : les documents encore partagés avec d'autres fiches et les fichiers qui ne peuvent pas être identifiés demandent un examen complémentaire, et les anciens fichiers sans rattachement, les fichiers ajoutés pendant l'opération, les caches et les sauvegardes ne sont pas couverts par ce nettoyage automatique. Le journal des modifications conserve, indépendamment de cette opération, une copie de certains changements pendant la durée indiquée au §5 ; sa purge ciblée doit être effectuée manuellement lorsque la demande l'exige.
 - **Droit à la limitation** : demander la suspension temporaire d'un traitement contesté.
 - **Droit d'opposition** : vous opposer au traitement fondé sur l'intérêt légitime, pour des motifs tenant à votre situation particulière.
 - **Droit à la portabilité** : récupérer vos données dans un format structuré et lisible par machine.
@@ -176,7 +180,7 @@ Conformément au RGPD, vous disposez des droits suivants :
 **Pour exercer vos droits**, contactez le référent RGPD :
 - Email : d.philippe@otisud.com
 - Téléphone : 06 93 41 92 91
-- Précisez votre demande, votre qualité (éditeur Bertel, opérateur référencé, contact CRM) et joignez une copie de votre pièce d'identité.
+- Précisez votre demande, votre lien avec Bertel et les informations utiles pour retrouver les données qui vous concernent. Il n'est pas nécessaire de joindre systématiquement une copie de votre pièce d'identité. En cas de doute raisonnable sur votre identité, des informations complémentaires pourront vous être demandées ; une copie de pièce d'identité ne sera demandée que si elle est nécessaire à cette vérification.
 
 Délai de réponse : **1 mois** maximum (extensible à 3 mois pour les demandes complexes).
 
@@ -193,24 +197,22 @@ SPL OTI DU SUD met en œuvre des mesures techniques et organisationnelles. État
 - **Journal d'audit** : journalisation systématique des créations, modifications et suppressions (`audit.audit_log`, conservation 12 mois).
 - **Workflow de modération** : revue préalable des publications sensibles.
 - **Chiffrement au repos** : assuré comme **garantie des plateformes** d'hébergement (OVHcloud, AWS/Supabase) ; **il n'existe pas de chiffrement applicatif des colonnes** au niveau de Bertel. Le transport est protégé par TLS (HTTPS).
-- **Sauvegardes** : backups automatiques Supabase (rétention 30j) ; tests de restauration **à industrialiser** sur un rythme trimestriel (action planifiée).
+- **Protections applicatives** : l'application prévoit des protections destinées à limiter les ressources externes chargées par les pages, à encadrer leur affichage dans un autre site et à demander au navigateur de privilégier les connexions sécurisées. Leur application effective dépend aussi de la configuration du service en ligne.
+- **Sauvegardes** : backups automatiques Supabase (durée contractuelle en cours de vérification) ; tests de restauration **à industrialiser** sur un rythme trimestriel (action planifiée).
 - **Mises à jour de sécurité** : application régulière des correctifs sur la stack Supabase, Next.js, dépendances.
 - **Gestion des secrets** : aucune clé sensible dans le dépôt source ; variables d'environnement injectées au runtime.
 
-> ⚠️ **Points d'amélioration identifiés (à ne pas présenter comme acquis)** : aucun en-tête de sécurité applicatif (HSTS / CSP / X-Frame-Options) n'est configuré à ce jour ; l'authentification multifacteur (MFA) n'est pas déployée ; la protection « mot de passe compromis » est désactivée ; deux vues `SECURITY DEFINER` sont lisibles par le rôle anonyme ; les buckets de stockage publics sont listables (un fichier média n'est protégé que par un chemin non devinable). Ces points font l'objet d'un plan d'action (voir `dpia.md`).
+Les contrôles de sécurité et les paramètres du service en ligne font l'objet d'un suivi distinct. Cette notice ne constitue pas une certification de sécurité.
 
 ---
 
 ## 9. Cookies et traceurs
 
-Bertel utilise uniquement des cookies strictement nécessaires :
+Bertel utilise le stockage du navigateur pour maintenir la connexion, mémoriser certains réglages d'affichage et de carte, retrouver une vue de travail et conserver temporairement des informations utiles à la navigation. Les préférences d'export et certains référentiels peuvent également être enregistrés sur l'appareil. Certaines informations restent disponibles après la fermeture de la page ; d'autres sont limitées à l'onglet. Les réglages du navigateur permettent d'effacer ces données, ce qui peut déconnecter votre compte ou réinitialiser vos préférences.
 
-- **Cookies de session Supabase Auth** : maintien de l'authentification (durée : session ou refresh token).
-- **Cookies de préférences UI** : thème (clair / sombre), langue, état des panneaux.
+Selon la page consultée, votre navigateur peut charger des cartes et des icônes de sites auprès de services externes (voir §6.2). Ces chargements communiquent notamment votre adresse IP au service concerné. Les polices intégrées à l'application sont servies par Bertel ; leur utilisation ne nécessite pas un chargement direct de Google Fonts par votre navigateur.
 
-> ⚠️ **Aucun cookie publicitaire, aucun outil d'analyse comportementale** (pas de Google Analytics, pas de Meta Pixel).
-
-> **Précision** : si Bertel n'emploie aucun traceur publicitaire ni outil d'analyse, certaines ressources sont chargées depuis des services tiers dans le navigateur du visiteur (tuiles cartographiques OpenFreeMap + MapLibre, favicons DuckDuckGo, Google Fonts), lesquels reçoivent de ce fait son adresse IP. Ces flux sont décrits au §6.2 ; l'auto-hébergement de ces ressources est recommandé pour les supprimer.
+Le code applicatif examiné ne prévoit pas d'outil publicitaire ou d'analyse comportementale. L'inventaire des cookies et stockages doit également tenir compte des services activés sur le site en ligne.
 
 ---
 
@@ -235,10 +237,10 @@ David Philippe — Manager SI
 Email : d.philippe@otisud.com
 Téléphone : 06 93 41 92 91
 
-✓ **Analyse d'impact documentée** : une analyse d'impact relative à la protection des données (DPIA) a été conduite à titre préventif pour Bertel ; un plan d'action est en cours de mise en œuvre (voir document `dpia.md`).
+✓ **Analyse d'impact documentée** : une analyse d'impact relative à la protection des données (DPIA) a été conduite à titre préventif pour Bertel ; un plan d'action est en cours de mise en œuvre.
 
 ✓ **Information CSE** : à ce jour, aucun Comité Social et Économique n'est en place au sein de SPL OTI DU SUD. L'organisation s'engage à informer cette instance dès son installation, conformément à l'article L.2312-38 du Code du travail, étant entendu que Bertel n'est pas un outil de surveillance de l'activité des salariés (cf. §2 — pas de profilage, pas de suivi de productivité).
 
 ---
 
-*Dernière mise à jour : 16 juin 2026*
+*Dernière mise à jour : 6 septembre 2026*

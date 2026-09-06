@@ -48,7 +48,7 @@
     "idb-keyval": "^6.2.1",
     "lucide-react": "^0.577.0",
     "maplibre-gl": "^5.20.1",
-    "markdown-to-jsx": "^7.7.17",
+    "markdown-to-jsx": "^9.10.2",
     "next": "16.2.11",
     "nodemailer": "^9.0.3",
     "pdfjs-dist": "4.10.38",

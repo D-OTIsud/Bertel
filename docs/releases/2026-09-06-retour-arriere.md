@@ -72,4 +72,21 @@ Les captures, prompts et diagnostics sous `scratch/` sont des preuves locales, e
 
 ### Contrôles d’intégration
 
-Préparation en cours : cette section sera complétée avec les résultats du code intégré avant promotion sur `master`.
+Code intégré validé : **`2a73e036af4d09fd46126ab4c5a078b0a37cf04e`**. Les commits suivants de documentation peuvent compléter ce relevé sans modifier ce code.
+
+| Contrôle | Résultat |
+|---|---|
+| Typage local | Réussi après résolution des conflits |
+| Jest local et GitHub | **477 suites / 4 355 tests réussis** |
+| Build Next.js dans GitHub | Réussi ; **41 pages générées** |
+| Chromium dans GitHub | **19 tests réussis** |
+| Frontend CI | [Exécution réussie 34007127469](https://github.com/D-OTIsud/Bertel/actions/runs/34007127469), commit `25265093e885640509c27394515c8e5daf042d54` ; aucun fichier frontend ni workflow frontend modifié dans `2a73e03` |
+| SQL fresh apply + contrôles complémentaires | [Exécution réussie 34007323505](https://github.com/D-OTIsud/Bertel/actions/runs/34007323505), commit `2a73e036af4d09fd46126ab4c5a078b0a37cf04e`, CLI **2.78.1**, PostgreSQL **17** |
+| Point de retour | Tag annoté publié ; référence distante vérifiée vers `9fcb6f0474afcd1b61c2621413a82a0638f655a3` |
+| Diff / publication | Pas de marqueur de conflit ni erreur de whitespace dans le diff de livraison par rapport à `master` ; `scratch/` exclu et adresse de fixture documentaire anonymisée |
+
+La première CI SQL a détecté deux fixtures RGPD utilisant `done`, ancien statut d’interaction CRM. Elles utilisent désormais `resolved`, conformément à la migration de cycle de vie présente sur `master`. Le second passage a terminé **tout le manifeste**, puis les contrôles RLS, CRM, portail, RGPD et d’alignement des définitions historiques. Cette réussite concerne le bootstrap CI épinglé ; elle ne signifie pas que le contrat de grants de la CLI 2.109.1 de l’audit initial a été réparé.
+
+Le passage Jest local termine avec un avertissement de worker ayant nécessité une fermeture forcée, malgré les 4 355 assertions réussies et le code de sortie 0. Le pipeline GitHub est vert. Les E2E utilisent le serveur de développement ; le build de production est vérifié séparément, comme décrit dans le bilan.
+
+Ces contrôles ne sont pas une application des migrations à Bertel ni une recette SMTP/Storage/Auth destructive en production. Le déploiement opérationnel et ses migrations doivent suivre les consignes ci-dessus.

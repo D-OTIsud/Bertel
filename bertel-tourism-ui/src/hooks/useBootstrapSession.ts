@@ -3,8 +3,10 @@ import { AuthSessionMissingError } from '@supabase/supabase-js';
 import type { AuthChangeEvent } from '@supabase/supabase-js';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { getOrCreateUserProfile, readLangPrefsFromAuth } from '../services/user-profile';
-import { useSessionStore } from '../store/session-store';
+import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
 import type { UserRole } from '../types/domain';
+import { isSandboxMode } from '../lib/sandbox-mode';
+import { leaveSandbox } from '../services/sandbox';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -72,6 +74,29 @@ async function fetchActiveOrg(): Promise<{ orgId: string | null; orgName: string
   }
 }
 
+// Resolves whether the current user belongs to a sandbox organisation, from
+// `api.current_user_test_realm()` — la MEME feuille que la garde SQL. On ne
+// re-transcrit surtout pas la regle en TypeScript : c'est ainsi qu'on cree une
+// divergence front/serveur (§214, §17c). Purement indicatif — le cloisonnement
+// est fait par le serveur, ce drapeau ne fait que l'AFFICHER.
+// Faux par defaut : afficher a tort « bac a sable » sur la production ferait
+// croire a un testeur qu'il peut casser des fiches reelles.
+async function fetchTestRealm(): Promise<boolean> {
+  const apiClient = getApiClient();
+  if (!apiClient) return false;
+  try {
+    const { data, error } = await apiClient.schema('api').rpc('current_user_test_realm');
+    if (error) {
+      console.warn('current_user_test_realm unavailable, assuming production realm.', error);
+      return false;
+    }
+    return data === true;
+  } catch (err) {
+    console.warn('current_user_test_realm threw, assuming production realm.', err);
+    return false;
+  }
+}
+
 // Resolves the current user's team-admin rank from `api.current_user_admin_rank()`.
 // Returns null when the user has no admin role or the helper is unavailable.
 async function fetchAdminRank(): Promise<number | null> {
@@ -96,8 +121,13 @@ async function fetchAdminRoleCode(): Promise<string | null> {
   } catch (err) { console.warn('current_user_admin_role_code threw.', err); return null; }
 }
 
+// Allowlist stricte, jamais un cast : un rôle inconnu doit rendre null pour tomber dans
+// `setSessionError` plus bas. La persona `actor` (18a) doit donc y figurer explicitement,
+// sans quoi un partenaire authentifié se retrouve bloqué sur l'écran de session.
 function normalizeRole(value: unknown): UserRole | null {
-  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' ? value : null;
+  return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' || value === 'actor'
+    ? value
+    : null;
 }
 
 function initialsFromName(name: string): string {
@@ -157,10 +187,13 @@ export function useBootstrapSession() {
       }
 
       if (!data.user) {
+        if (isSandboxMode()) {
+          leaveSandbox();
+          window.location.replace('/login');
+          return;
+        }
         setGuest(
-          options.authEvent === 'SIGNED_OUT'
-            ? 'Vous avez ete deconnecte. Reconnectez-vous avec Google.'
-            : 'Connectez-vous avec Google pour acceder a la plateforme.',
+          options.authEvent === 'SIGNED_OUT' ? GUEST_SIGNED_OUT_MESSAGE : GUEST_SIGN_IN_MESSAGE,
         );
         return;
       }
@@ -186,6 +219,31 @@ export function useBootstrapSession() {
         ? profile.lang_prefs
         : fallbackLangPrefs;
 
+      // Persona partenaire (18a) : aucune des sondes back-office ne s'applique — on hydrate
+      // directement avec les valeurs neutres au lieu de payer 5 allers-retours qui
+      // rendraient tous false/null. Le portail fait ses propres lectures.
+      if (role === 'actor') {
+        const isTestRealm = await fetchTestRealm();
+        if (cancelled) return;
+        hydrateFromAuth({
+          isTestRealm,
+          role,
+          userId: user.id,
+          email: String(user.email ?? ''),
+          userName,
+          avatar: initialsFromName(userName),
+          avatarUrl: typeof profile?.avatar_url === 'string' && profile.avatar_url.length > 0 ? profile.avatar_url : null,
+          langPrefs,
+          canEditObjects: false,
+          canCreateObjects: false,
+          orgId: null,
+          orgName: null,
+          adminRank: null,
+          adminRoleCode: null,
+        });
+        return;
+      }
+
       const canEditObjects = await fetchCanEditObjects();
       if (cancelled) {
         return;
@@ -209,6 +267,14 @@ export function useBootstrapSession() {
       if (cancelled) {
         return;
       }
+      const isTestRealm = await fetchTestRealm();
+      if (cancelled) {
+        return;
+      }
+      if (isSandboxMode() && !isTestRealm) {
+        setSessionError('Le cloisonnement de l’espace de test n’a pas pu être vérifié. Revenez à la connexion pour réessayer.');
+        return;
+      }
 
       hydrateFromAuth({
         role,
@@ -224,6 +290,7 @@ export function useBootstrapSession() {
         orgName: activeOrg.orgName,
         adminRank,
         adminRoleCode,
+        isTestRealm,
       });
     }
 

@@ -2,6 +2,7 @@ import {
   PAV_TINTS,
   channelHrefOf,
   dueBadgeClassOf,
+  formatDocumentSize,
   formatRelative,
   formatShort,
   initialsOf,
@@ -12,6 +13,7 @@ import {
   pavTintOf,
   taskGroupOf,
   tlIcoClassOf,
+  toDateInputValue,
   topicTintOf,
   TOPIC_TINT_COUNT,
 } from './crm-view-utils';
@@ -156,6 +158,47 @@ describe('formats date', () => {
     expect(formatShort(null)).toBe('—');
   });
 
+  // M4 — le modal d'édition pré-remplissait son champ d'échéance par `dueAt.slice(0, 10)`,
+  // c'est-à-dire la date UTC, alors que la carte kanban rend la même valeur en heure LOCALE.
+  // À UTC+4 (La Réunion), une due_at entre 20:00Z et 24:00Z fait afficher J+1 par la carte et
+  // J par le modal — et enregistrer PERSISTE l'écart.
+  describe('toDateInputValue — même fuseau que l’affichage de la carte', () => {
+    it('rend une valeur d’input valide et cohérente avec formatShort, quelle que soit l’heure', () => {
+      // L'INVARIANT, pas une constante : les deux surfaces doivent dater le même instant
+      // dans le même fuseau. Vrai dans tous les fuseaux, y compris UTC.
+      for (const iso of ['2026-09-15T00:00:00Z', '2026-09-15T21:30:00Z', '2026-09-15T12:00:00Z']) {
+        const [jour, mois, annee] = formatShort(iso).split('/');
+        expect(toDateInputValue(iso)).toBe(`${annee}-${mois}-${jour}`);
+      }
+    });
+
+    it('DANS LA FENÊTRE À RISQUE : la date locale l’emporte sur la date UTC', () => {
+      // Témoins CONSTRUITS depuis le fuseau du runtime, jamais des littéraux : un ISO écrit en
+      // dur ne serait discriminant que dans le fuseau où il a été écrit, et passerait au vert
+      // ailleurs en ne prouvant rien. 00:30 local mord à l'est de UTC (La Réunion, la cible),
+      // 23:30 local mord à l'ouest ; sous UTC pile les deux sont vacants — mais la panne
+      // n'existe pas non plus dans ce fuseau, la garde ne mord donc que là où elle a un objet.
+      const minuitTrente = new Date(2026, 8, 16, 0, 30, 0); // 16/09/2026 00:30 LOCAL
+      expect(toDateInputValue(minuitTrente.toISOString())).toBe('2026-09-16');
+      const veilleTard = new Date(2026, 8, 15, 23, 30, 0); // 15/09/2026 23:30 LOCAL
+      expect(toDateInputValue(veilleTard.toISOString())).toBe('2026-09-15');
+      // Et l'ancien comportement (`slice(0, 10)`) est bien celui qui divergeait : hors UTC,
+      // l'un des deux témoins au moins porte une date UTC différente de sa date locale.
+      const offset = new Date(2026, 8, 16).getTimezoneOffset();
+      if (offset !== 0) {
+        const temoin = offset < 0 ? minuitTrente : veilleTard;
+        expect(temoin.toISOString().slice(0, 10)).not.toBe(toDateInputValue(temoin.toISOString()));
+      }
+    });
+
+    it('valeur absente ou illisible → chaîne vide (jamais une valeur qu’un input date ignore)', () => {
+      expect(toDateInputValue(null)).toBe('');
+      expect(toDateInputValue(undefined)).toBe('');
+      expect(toDateInputValue('')).toBe('');
+      expect(toDateInputValue('pas-une-date')).toBe('');
+    });
+  });
+
   it('formatRelative — minutes, heures, jours, semaines, mois', () => {
     expect(formatRelative('2026-06-11T11:30:00', NOW)).toBe('il y a 30 min');
     expect(formatRelative('2026-06-11T07:00:00', NOW)).toBe('il y a 5 h');
@@ -244,5 +287,36 @@ describe('channelHrefOf — coordonnées cliquables', () => {
     // Un website sans rien qui ressemble à un domaine ne devient pas un lien cassé.
     expect(channelHrefOf('website', 'à compléter')).toEqual({ href: null, external: false });
     expect(channelHrefOf('email', '')).toEqual({ href: null, external: false });
+  });
+});
+
+describe('formatDocumentSize — taille de pièce jointe (0 ≠ inconnue)', () => {
+  // LA frontière que la spec « pièces jointes » exige, et la seule raison pour laquelle
+  // cette fonction est partagée plutôt que recopiée : une taille illisible sort à `null`
+  // côté SQL (garde délibérée) et ne doit JAMAIS s'afficher comme une taille de zéro.
+  it('null → « taille inconnue », jamais un nombre', () => {
+    expect(formatDocumentSize(null)).toBe('taille inconnue');
+  });
+
+  it('0 → « 0 o » : une taille CONNUE et valide, distincte de null', () => {
+    expect(formatDocumentSize(0)).toBe('0 o');
+    expect(formatDocumentSize(0)).not.toBe(formatDocumentSize(null));
+  });
+
+  it('sous 1 Kio → octets bruts', () => {
+    expect(formatDocumentSize(1)).toBe('1 o');
+    expect(formatDocumentSize(1023)).toBe('1023 o');
+  });
+
+  it('à partir de 1 Kio → Ko arrondi ; les deux bornes basculent au bon endroit', () => {
+    expect(formatDocumentSize(1024)).toBe('1 Ko');
+    expect(formatDocumentSize(1234)).toBe('1 Ko');
+    expect(formatDocumentSize(2048)).toBe('2 Ko');
+    expect(formatDocumentSize(1024 * 1024 - 1)).toBe('1024 Ko');
+  });
+
+  it('à partir de 1 Mio → Mo à une décimale, séparateur FRANÇAIS (virgule)', () => {
+    expect(formatDocumentSize(1024 * 1024)).toBe('1,0 Mo');
+    expect(formatDocumentSize(2.5 * 1024 * 1024)).toBe('2,5 Mo');
   });
 });

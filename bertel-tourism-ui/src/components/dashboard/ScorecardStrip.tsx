@@ -1,14 +1,48 @@
 "use client";
 
 import Link from 'next/link';
-import { Bell, CheckCircle2 } from 'lucide-react';
-import type { DashboardScorecards } from '../../types/dashboard';
+import { Bell, CheckCircle2, MinusCircle } from 'lucide-react';
+import type { DashboardScorecards, DashboardCrmOpen } from '../../types/dashboard';
 
 interface Props {
   data: DashboardScorecards;
+  /** Compteur CRM GLOBAL. Absent tant que la requête n'a pas répondu. */
+  crmOpen?: DashboardCrmOpen;
 }
 
 const nf = new Intl.NumberFormat('fr-FR');
+
+/** « +5 ce mois · +25 % vs 30 j préc. » — jamais un blanc : un mois à zéro est une information. */
+function deltaLabel(delta30d: number, deltaPct: number | null): string {
+  const head = `+${nf.format(delta30d)} ce mois`;
+  if (deltaPct === null) return head;
+  const sign = deltaPct < 0 ? '−' : '+';
+  return `${head} · ${sign}${nf.format(Math.abs(deltaPct))} % vs 30 j préc.`;
+}
+
+function deltaTone(delta30d: number, deltaPct: number | null): string {
+  if (deltaPct !== null && deltaPct < 0) return ' summary-stat__delta--down';
+  if (delta30d > 0) return ' summary-stat__delta--up';
+  return ' summary-stat__delta--flat';
+}
+
+/**
+ * État de la carte d'attention CRM. `crmOpen === undefined` couvre AUTANT le chargement en
+ * cours que l'échec de la requête (elle n'est couverte par aucun WidgetFrame) : dans les deux
+ * cas c'est un INCONNU, jamais un « À jour · 0 » — confondre les deux est le défaut que ce lot
+ * existe pour supprimer. Le vrai « À jour · 0 » n'apparaît que lorsque `crmOpen` est défini ET
+ * que son `total` vaut zéro : un zéro observé, pas un zéro par défaut.
+ */
+type CrmAttnState = 'unknown' | 'ok' | 'attention';
+
+function crmAttnState(crmOpen: DashboardCrmOpen | undefined): CrmAttnState {
+  if (!crmOpen) return 'unknown';
+  // L'état suit le chiffre RÉELLEMENT AFFICHÉ (récent + tâches), pas `total`, qui inclut
+  // l'arriéré. Sans cela, « À traiter » se poserait au-dessus d'un « 0 » dès que le seul
+  // reste est un arriéré ancien : exactement l'écran incohérent que ce lot existe pour
+  // supprimer. La troisième ligne empêche le vert de mentir, en disant l'arriéré.
+  return crmOpen.recent_interactions + crmOpen.open_tasks > 0 ? 'attention' : 'ok';
+}
 
 /**
  * Bandeau résumé du dashboard (impl. 5.1) — remplace les 6 cartes-chiffres au poids
@@ -16,21 +50,17 @@ const nf = new Intl.NumberFormat('fr-FR');
  * deux secondaires (complétude, classés/labellisés) + une carte d'attention dédiée
  * aux demandes en cours qui mène au CRM. Contraste d'échelle = critère d'acceptation.
  */
-export function ScorecardStrip({ data }: Props) {
-  const pending = data.pending_changes;
-  const hasPending = pending > 0;
-
+export function ScorecardStrip({ data, crmOpen }: Props) {
+  const attnState = crmAttnState(crmOpen);
   return (
     <section className="dashboard-summary" aria-label="Résumé du tableau de bord">
       {/* Métrique meneuse — domine par l'échelle (≈44px) et le fond plein. */}
       <article className="summary-stat summary-stat--lead">
         <span className="summary-stat__label">Inscrits SIT</span>
         <strong className="summary-stat__value">{nf.format(data.total)}</strong>
-        {data.delta_30d > 0 && (
-          <span className="summary-stat__delta summary-stat__delta--up">
-            +{nf.format(data.delta_30d)} ce mois
-          </span>
-        )}
+        <span className={`summary-stat__delta${deltaTone(data.delta_30d, data.delta_pct)}`}>
+          {deltaLabel(data.delta_30d, data.delta_pct)}
+        </span>
       </article>
 
       {/* Secondaire 1 — complétude moyenne perçue visiteur. */}
@@ -49,27 +79,61 @@ export function ScorecardStrip({ data }: Props) {
         <span className="summary-stat__sub">{Math.round(data.distinctions_pct)} % du corpus</span>
       </article>
 
-      {/* Carte d'attention — orange uniquement quand il y a des demandes à traiter ;
-          état calme « à jour » sinon. Toujours un accès direct au suivi CRM. */}
+      {/* Compteur CRM GLOBAL — il n'obéit pas au panneau de filtres (décision PO 2026-08-30),
+          et la carte le dit, parce qu'un chiffre non filtré au milieu de chiffres filtrés
+          doit s'annoncer. pending_change n'est plus lu : la table est vide depuis toujours.
+          `attnState === 'unknown'` (chargement ou erreur, non couvert par WidgetFrame ici) rend
+          un état NEUTRE, jamais le « À jour · 0 » sain — c'est l'écran que ce lot supprime. */}
       <article
-        className={`summary-attn${hasPending ? '' : ' summary-attn--ok'}`}
+        className={`summary-attn${attnState === 'unknown' ? ' summary-attn--unknown' : attnState === 'ok' ? ' summary-attn--ok' : ''}`}
         role="region"
         aria-label="Demandes à traiter"
       >
         <span className="summary-attn__top">
-          {hasPending ? <Bell aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
-          {hasPending ? 'À traiter' : 'À jour'}
+          {attnState === 'attention' && <Bell aria-hidden="true" />}
+          {attnState === 'ok' && <CheckCircle2 aria-hidden="true" />}
+          {attnState === 'unknown' && <MinusCircle aria-hidden="true" />}
+          {attnState === 'attention' ? 'À traiter' : attnState === 'ok' ? 'À jour' : 'Indisponible'}
         </span>
         <span className="summary-attn__line">
-          <span className="summary-attn__big">{hasPending ? nf.format(pending) : '0'}</span>
+          {/* « éléments » et non « demandes » : ce chiffre additionne des DEMANDES et des
+              TÂCHES, deux vocabulaires que la base tient soigneusement séparés. Le nommer
+              « demandes récentes », comme le proposait le plan, ferait passer une tâche pour
+              une demande — et « récente » pour une tâche, dont rien ne borne l'âge. */}
+          <span className="summary-attn__big">
+            {attnState === 'unknown' ? '—' : nf.format(crmOpen!.recent_interactions + crmOpen!.open_tasks)}
+          </span>
           <span className="summary-attn__txt">
-            {hasPending
-              ? `demande${pending > 1 ? 's' : ''} en cours`
-              : 'demande en cours'}
+            {attnState === 'unknown'
+              ? 'chiffre non disponible'
+              : crmOpen!.recent_interactions + crmOpen!.open_tasks > 1
+                ? 'éléments à traiter'
+                : 'élément à traiter'}
           </span>
         </span>
+        {crmOpen && (
+          <>
+            {/* « Tout le périmètre » : un chiffre non filtré au milieu de chiffres filtrés doit
+                s'annoncer. */}
+            <span className="summary-attn__breakdown">
+              {`Tout le périmètre · ${nf.format(crmOpen.recent_interactions)} demande${
+                crmOpen.recent_interactions > 1 ? 's' : ''
+              } de moins de 90 jours, ${nf.format(crmOpen.open_tasks)} tâche${
+                crmOpen.open_tasks > 1 ? 's' : ''
+              } à faire`}
+            </span>
+            {/* L'arriéré est HORS du chiffre de tête, et on ne lui prête pas d'âge : il est
+                obtenu par soustraction, donc il ramasse aussi les demandes sans date. « Plus
+                anciennes » est vrai ; « en attente depuis plus de 90 jours » ne le serait pas. */}
+            <span className="summary-attn__breakdown">
+              {`+ ${nf.format(crmOpen.backlog_interactions)} demande${
+                crmOpen.backlog_interactions > 1 ? 's' : ''
+              } plus ancienne${crmOpen.backlog_interactions > 1 ? 's' : ''}`}
+            </span>
+          </>
+        )}
         <Link href="/crm" className="summary-attn__cta">
-          {hasPending ? 'Ouvrir le suivi CRM' : 'Voir le suivi CRM'}
+          {attnState === 'attention' ? 'Ouvrir le suivi CRM' : 'Voir le suivi CRM'}
         </Link>
       </article>
     </section>

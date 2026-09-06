@@ -1,5 +1,7 @@
 import { isAuthApiError, isAuthWeakPasswordError, type WeakPasswordReasons } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../lib/supabase';
+import { isSandboxMode } from '../lib/sandbox-mode';
+import { leaveSandbox } from './sandbox';
 
 const weakPasswordReasonLabels: Readonly<Record<WeakPasswordReasons, string>> = {
   length: 'longueur minimale non respectee',
@@ -101,6 +103,11 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function signOut() {
+  if (isSandboxMode()) {
+    leaveSandbox();
+    window.location.replace('/login');
+    return;
+  }
   const client = getSupabaseClient();
   if (!client) {
     return;

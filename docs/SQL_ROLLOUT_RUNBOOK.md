@@ -125,7 +125,7 @@ A2. `branding_assets_bucket.sql` — **White-label brand logo**: creates the pub
 
 14i. `migration_opening_period_type.sql` — **§81 explicit, admin-extensible opening-period type** (the §14 editor «périodes d'ouverture» now requires picking a type instead of inferring it from the label): adds (1) the `opening_period_type` FK-target `ref_code` partition (`ref_code_opening_period_type` + `id`/`code` uniques + the house RLS pair — mirrors `ref_code_opening_schedule_type`), (2) **4 seeded types** with a ribbon colour + `metadata.all_year` flag in metadata (`high_season` teal, `mid_season` amber, `off_season` slate, `year_round` green `{all_year:true}` — admin can add more), (3) `opening_period.period_type_id` **nullable** FK (the 191 legacy periods stay valid → the UI falls back to label-inference until they are edited, which then requires a type), and `CREATE OR REPLACE` of (4) `api.save_object_openings` (resolves `period_type_code → id`, mirrors the schedule-type lookup) + (5) `api.build_opening_period_json` (emits `period_type_code` + `all_years` so the editor round-trips). The frontend reads the catalog via a direct `ref_code` select (domain filter, like §41 zones). The selected **type drives the date UI**: an `all_year` type means "no dates", others are dated. After step 1 (`schema_unified.sql` — `ref_code` parent + `opening_period`), the api functions file (`api_views_functions.sql`) + `object_workspace_safe_write_rpcs.sql` (the `CREATE OR REPLACE` overrides their bodies), and step 11 (`seeds_data.sql`). Validated transactionally (apply → `RAISE` → rollback) then live-applied as MCP migration `opening_period_type` (verified: 4 seeds + colours, FK column + enforcement, `build_opening_period_json` emits `period_type_code`, anon read / write-deny; security advisor clean). Idempotent. Covered by `tests/test_opening_period_type.sql`. Decision log §81.
 
-14j. `migration_gdpr_erasure.sql` — **Art. 17 effacement / anonymisation** (plan `docs/conformite-rgpd/PLAN_effacement_art17.md`, décisions D1–D4). Ajoute (1) `gdpr_erasure_log` (registre de preuve ; RLS lecture superuser, écriture DEFINER seulement), (2) `audit.redact_subject(table,key,val,cols[])` — retire les clés PII de `audit.audit_log.before_data/after_data` en matchant `row_pk` OU le contenu `before_data` (capture les lignes DELETE dont la PK ne porte pas la FK), (3) `api.rpc_gdpr_erase_subject(kind,id,mode,reason)` `SECURITY DEFINER`, garde `api.is_platform_superuser()` avec contournement « connexion privilégiée sans JWT » (migration/test/psql). Proportionné (agit PAR SUJET, ne balaie jamais le référentiel public) : kinds actor (Tier A : identité+canaux+consentements+CRM) / incident / review / object_legal / contact_channel / user. Anonymisation par défaut (tombstone, FK préservées) ; `delete` = cascade dure. Retourne les URLs Storage à supprimer côté serveur (média = string sans FK). After step 1 (infra audit + tables PII) + step 4 (`api.is_platform_superuser`). **Live-applied 2026-06-16 as MCP migration `gdpr_erasure`** (vérifié au préalable en `BEGIN…(DDL+test)…ROLLBACK` = `VERIFICATION PASSED` ; post-apply : 3 objets présents, RLS on `gdpr_erasure_log`, advisor sécurité = uniquement le `0029_*_security_definer_function_executable` attendu sur le RPC — classe §36). **Folded into `schema_unified.sql`** (table + `ENABLE RLS` + grants + the 2 functions, placed AFTER the file's `SELECT audit.attach_missing_triggers()` call ON PURPOSE so `gdpr_erasure_log` is NOT auto-audited = matches live) + **`rls_policies.sql`** (the `gdpr_erasure_log_admin_read` SELECT policy — needs `api.is_platform_superuser`, defined in that file) ⇒ **fresh==live**, idempotent no-op on a fresh build. The Storage strip + `auth.users` delete live in `src/app/api/rgpd/erase/route.ts`. Idempotent (`CREATE TABLE IF NOT EXISTS` + `CREATE OR REPLACE`). Couvert par `tests/test_gdpr_erasure.sql`. Fold verified (transient parse-check on live: `FOLD OK`, policy resolves).
+14j. `migration_gdpr_erasure.sql` — **Art. 17 effacement / anonymisation** (plan `docs/conformite-rgpd/PLAN_effacement_art17.md`, décisions D1–D4). Ajoute (1) `gdpr_erasure_log` (registre de preuve ; RLS lecture superuser, écriture DEFINER seulement), (2) `audit.redact_subject(table,key,val,cols[])` — retire les clés PII de `audit.audit_log.before_data/after_data` en matchant `row_pk` OU le contenu `before_data` (capture les lignes DELETE dont la PK ne porte pas la FK), (3) `api.rpc_gdpr_erase_subject(kind,id,mode,reason)` `SECURITY DEFINER`, garde `api.is_platform_superuser()` avec contournement « connexion privilégiée sans JWT » (migration/test/psql). Proportionné (agit PAR SUJET, ne balaie jamais le référentiel public) : kinds actor (Tier A : identité+canaux+consentements+CRM) / incident / review / object_legal / contact_channel / user. Anonymisation par défaut (tombstone, FK préservées) ; `delete` = cascade dure. Retourne les URLs Storage à supprimer côté serveur (média = string sans FK). After step 1 (infra audit + tables PII) + step 4 (`api.is_platform_superuser`). **Live-applied 2026-06-16 as MCP migration `gdpr_erasure`** (vérifié au préalable en `BEGIN…(DDL+test)…ROLLBACK` = `VERIFICATION PASSED` ; post-apply : 3 objets présents, RLS on `gdpr_erasure_log`, advisor sécurité = uniquement le `0029_*_security_definer_function_executable` attendu sur le RPC — classe §36). **Folded into `schema_unified.sql`** (table + `ENABLE RLS` + grants + the 2 functions, placed AFTER the file's `SELECT audit.attach_missing_triggers()` call ON PURPOSE so `gdpr_erasure_log` is NOT auto-audited = matches live) + **`rls_policies.sql`** (the `gdpr_erasure_log_admin_read` SELECT policy — needs `api.is_platform_superuser`, defined in that file) ⇒ **fresh==live**, idempotent no-op on a fresh build. The Storage strip + `auth.users` delete live in `src/app/api/rgpd/erase/route.ts`. Idempotent (`CREATE TABLE IF NOT EXISTS` + `CREATE OR REPLACE`). Couvert par `tests/test_gdpr_erasure.sql`. Fold verified (transient parse-check on live: `FOLD OK`, policy resolves). **⚠ CAVEAT DE REJEU — 18a §8.5 est le DERNIER mot sur `api.rpc_gdpr_erase_subject`.** Ce fichier porte une troisième rédaction, plus ancienne, **sans** la branche acteur qui délie le compte portail (`UPDATE app_user_profile SET actor_id = NULL`). Signature identique (`TEXT,TEXT,TEXT,TEXT`) ⇒ un rejeu **isolé** sur une base où 18a est appliqué écrase le déliage **sans lever**, et l'effacement Art. 17 d'un acteur laisse son compte portail ouvert sur sa fiche. Le step CI *RGPD mirror alignment* ne garde que `ci_fresh_apply.sql` : **il ne voit pas un rejeu manuel.** Une bannière est posée en tête du fichier lui-même.
 
 14j. `migration_pricing_vocabulary.sql` — **§83 §13 « Tarifs & extras » two-axis vocabulary** (the §13 editor now distinguishes the PUBLIC from the TYPE of tariff): adds (1) the `price_type` `ref_code` partition (`ref_code_price_type` + `id`/`code` uniques + the house RLS pair — mirrors every other ref_code partition; the parent's `(domain,code)`/`(domain,parent_id)` indexes propagate automatically), (2) **8 seeded types** (`principal`/`option`/`menu`/`pack`/`abonnement`/`taxe`/`caution`/`devis`) stored in the already-wired but unused **`object_price.indication_code` text column — NO new column, NO `save_object_commercial` change** (the saver already persists `indication_code`); a `COMMENT ON COLUMN` documents the repurpose, (3) **price_unit +10** (par chambre / logement entier / personne·jour / véhicule / entrée·billet / séance / couvert / an / unité / trajet → 20 total) and **price_kind +5** audiences (bébé / jeune·junior / scolaire / abonné / demandeur d'emploi → 15 total), (4) **`position` set on all three domains** (previously all NULL → unordered dropdowns). The editor reads the three catalogs via direct `ref_code` selects (domain filter, like §41 zones / §81 opening types); the frontend §13 became modal-driven (PricingLineEditModal / DiscountEditModal + compact lists) and dropped the write-trap «Politique & règles» block. **0 `object_price` rows live ⇒ greenfield, no data migration.** After step 1 (`schema_unified.sql` — `ref_code` parent + the partition/index fold) and step 11 (`seeds_data.sql` — the seed rows + positions). Live-applied as MCP migration `pricing_vocabulary_price_type` (verified: 3 domains 8/20/15 rows, all positioned + ordered, anon read of `price_type` OK). Idempotent (`CREATE TABLE/INDEX IF NOT EXISTS`, `WHERE NOT EXISTS` seeds, `IS DISTINCT FROM` position update). Frontend covered by `pricing-row.test.ts`, `widgets/PricingLineEditModal.test.tsx`, `widgets/DiscountEditModal.test.tsx`, `SectionPricing.test.tsx`. Decision log §84.
 
@@ -278,7 +278,27 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 17e. `migration_actor_channel_visibility.sql` — **Visibilité d'un canal d'acteur (lot 2026-08-28, chantier 1 sous-lot 1b ; arbitrage PO Q1 : OUI, défaut PRIVÉ)** (après **8z** ; idempotent). **Ce n'était PAS une garde trop stricte, c'était une fonctionnalité ABSENTE aux trois étages** : marquer un canal d'acteur comme privé était impossible pour **tout le monde**, superuser compris — `actor_channel` n'avait ni `is_public` ni `visibility`, `api.save_actor_channel` n'acceptait que 5 clés, et le répéteur du CRM n'avait aucun contrôle. La garde d'autorisation, elle, acceptait déjà l'Éditeur et n'est pas touchée. **SÉMANTIQUE ARRÊTÉE AVANT D'ÉCRIRE LA MIGRATION** : `is_public` ne gate **que** les surfaces de DIFFUSION ; le CRM et l'éditeur émettent toujours **tous** les canaux aux membres autorisés (le périmètre est déjà gardé par `api.can_read_actor_contacts`, §208). C'est ce choix qui rend `DEFAULT false` **sans effet visible** le jour du déploiement — sans lui, la migration aurait vidé les fiches de tous les agents d'un coup. **Mesure préalable (production)** : 1 370 canaux (689 e-mails, 674 mobiles, 7 fixes), dont **4 seulement** rattachés à un acteur dont le lien objet est `public` ; à comparer à `contact_channel`, 1 889 publics / 3 privés avec un `DEFAULT TRUE` — **le défaut inverse est délibéré**, un canal d'acteur est une coordonnée de **personne**, sa diffusion se demande et ne s'obtient jamais par omission. **État dit sans fard** : **aucune voie de lecture ne FILTRE encore sur ce drapeau**, et c'est normal — depuis §213, aucune surface ne diffuse de coordonnées d'acteur à un anonyme. C'est une **déclaration** saisissable dès maintenant, que la première surface de diffusion devra composer **DANS** le bras autorisé, jamais en s'y substituant (invariant §49). `api.export_actor_contacts` n'est **pas** filtré non plus, délibérément : c'est un contrat §208/§211 déjà arbitré, et le filtrer casserait « Copier les e-mails ». **(A)** colonne `NOT NULL DEFAULT false`. **(B)** `save_actor_channel` accepte la clé `is_public`, **gardée par `p_payload ? 'is_public'`** comme ses voisines — le RPC est appelé champ par champ, et un enregistrement partiel ne doit pas écraser la visibilité. **(C)** `list_actor_crm` **émet** `is_public` : sans voie de lecture la colonne serait **morte** (classe §16q/§209). Signatures inchangées ⇒ **pas** de `NOTIFY pgrst`. **Discipline §213 des deux côtés** : les deux `prosrc` vifs ont été vérifiés **md5-identiques** aux corps du fichier **avant** patch (54 et 98 lignes normalisées), et la parité **re-vérifiée après** (56 et 99). Un premier déploiement de `list_actor_crm` par patch chirurgical a laissé une divergence de **1 ligne** de formatage : la fonction a été **redéployée depuis le fichier** pour que la comparaison `prosrc`/source reste exploitable — c'est l'outil sur lequel repose toute cette discipline. **Live-applied 2026-08-28** (MCP `actor_channel_visibility` + `actor_channel_visibility_read_path_align`). Couvert par `tests/test_actor_channel_visibility.sql` — garde **non vacante**, vérifiée rouge avant application et verte après ; le bloc **A4** asserte **en creux** que `contact_channel` garde son `DEFAULT TRUE`, pour que l'asymétrie soit un fait vérifié et non une intention écrite en commentaire, et le bloc **E** prouve qu'un canal privé reste **rendu** au membre autorisé. Décision log §222.
 
-17f. `supabase/migrations/20260905195257_gdpr_cleanup_operations.sql` — **PRIV-01/02, remédiation bornée de l'effacement RGPD (Art. 17)** (après `migration_unblock_team_legal_access.sql` pour `ref_document.storage_bucket/storage_path/access_scope`, et après `supabase/migrations/20260807124408_actor_prospects_documents.sql` pour `actor_document` ; **redéfinit par `CREATE OR REPLACE`** `audit.redact_subject` et `api.rpc_gdpr_erase_subject` foldés dans `schema_unified.sql` — dernier mot sur base **fraîche** (appliqué en fin de manifeste) **et** base **upgradée** ; ne touche pas au fold historique lui-même). **Table neuve** `internal.gdpr_cleanup_task` (deny-all-direct, zéro policy/grant hors `service_role`) : tâches `storage_remove`/`auth_delete` rattachées à `gdpr_erasure_log.id` (`operationId`), survivant au sujet effacé, lues/acquittées uniquement par les 2 RPC neuves `api.rpc_gdpr_get_cleanup_status`/`api.rpc_gdpr_ack_cleanup_task` (`service_role` uniquement — le serveur Next.js revérifie lui-même JWT + `api.is_platform_superuser` avant tout appel). **Correctifs du corps existant :** `audit.redact_subject` matche désormais aussi `after_data` (une valeur qui n'apparaît QUE dans `after_data` était invisible) ; l'acteur redige désormais `crm_interaction` sur **les deux** clés `actor_id` **et** `handled_by_actor_id` (une interaction où seul `handled_by_actor_id` portait le sujet n'était jamais rédigée) ; l'ID `crm_task` lié à un signalement (collecté mais inexploité) voit désormais sa `description` (copie en clair de la description de l'incident) effacée et rédigée ; la bibliothèque privée d'acteur (`actor_document`) et les justificatifs de consentement (`actor_consent.document_id`) sont détachés à l'effacement, avec **rétention** des documents encore réellement utilisés ailleurs (`object_document`/`object_classification`/`object_legal`/`object_sustainability_action`/`object_iti.status_document_id`/`actor_consent`/autre `actor_document`) — seuls les documents devenus orphelins sont mis en file pour suppression Storage puis détachés de `ref_document` ; le rapport porte `retainedSharedDocuments`/`manualReviewRequired` et un `unresolvedScope` honnête (aucune affirmation « PII purgée » globale, orphelins Storage historiques et sauvegardes/caches dits **non couverts** par ce lot, instantané ponctuel — pas un balayage du bucket). **`subject_kind='user'`** : garde-fous de compte alignés sur `/api/admin/delete-user` (SEC-01) — auto-cible refusée insensible à la casse, cible `owner` toujours refusée, cible `super_admin` réservée à un appelant `owner` (`api.is_platform_owner()`, jamais `user_metadata`) ; `mode='delete'` met en file une tâche `auth_delete` (exécutée par l'API Admin Supabase, hors SQL, jamais par suppression SQL de `auth.users`) et `mode='anonymize'` ne touche **jamais** le compte `auth.users` (`authRetained:true` explicite dans le rapport — anonymisation du PROFIL seul, pas de la personne). Avatar utilisateur retiré via le chemin **connu** du serveur (`avatars/<userId>/avatar.jpg`), jamais reconstruit depuis la colonne. Contrat d'entrée de `api.rpc_gdpr_erase_subject` inchangé (même signature, même garde D4 superuser/JWT). Côté application : `src/app/api/rgpd/erase/route.ts` (résolution des tâches Storage/Auth par bucket connu ou origine Supabase configurée, jamais une URL étrangère ; bouton de reprise par `operationId`, qui ne rappelle jamais le RPC d'effacement), `src/services/rgpd.ts`, `src/views/RgpdErasurePage.tsx`/`ErasureResultPanel.tsx`. Couvert par `Base de donnée DLL et API/tests/test_gdpr_cleanup_operations.sql` (fixtures avatar/incident/`handled_by_actor_id`/document privé d'acteur/document partagé-promu retenu/match `after_data`-seul/refus de permission anon-authenticated sur les 2 RPC de nettoyage/rollback atomique sabotage). **Portée explicitement NON résolue par ce lot** : énumération des orphelins Storage antérieurs à ce lot, upload concurrent à l'instantané ponctuel, sauvegardes/caches — voir `report.unresolvedScope`.
+17f. `migration_dashboard_crm_open.sql` — **La carte d'attention du dashboard comptait une table vide (§226)** (après **8z** pour `crm_interaction` et **16z** pour `crm_task` ; foldée dans `api_views_functions.sql` ; idempotente). **Mesuré, pas déduit** : `pending_change` contient **0 ligne depuis toujours**, si bien que le bandeau affichait « À jour — 0 demande en cours » avec un bouton vers `/crm`, pendant que 170 interactions planifiées et 2 tâches y attendaient. **`open_interactions` reprend MOT POUR MOT le prédicat de `crm_backlog`** (`api.capture_metric_snapshots`) : `resolved_at IS NULL AND status <> 'done'` — sans cette identité, la carte du bandeau et la courbe « Interactions planifiées dans le temps » de l'onglet Activité afficheraient deux chiffres différents pour la même réalité. **`open_tasks` exclut `canceled`** (`IN ('todo','in_progress','blocked')`, et non `<> 'done'`) : l'enum `crm_task_status` porte cinq valeurs et une tâche annulée n'est pas du travail en attente. **Compteur GLOBAL par décision produit (PO, 2026-08-30)** : il ne prend aucun paramètre de filtre, la carte étant un signal stable « ce qui m'attend aujourd'hui » ; l'interface le dit explicitement (« Tout le périmètre »). **N'émet aucune PII** — trois entiers, ni sujet, ni corps, ni acteur, ni assigné : c'est ce qui la dispense de reproduire la doctrine de périmètre CRM (§61) tout en restant sûre. **`REVOKE ALL … FROM PUBLIC, anon` obligatoire** (§204) suivi d'une garde `DO` qui échoue fort si le REVOKE n'a pas pris. **Fonction exposée neuve ⇒ `NOTIFY pgrst, 'reload schema';`**. Couverte par `tests/test_dashboard_crm_open.sql` — garde **non vacante**, vérifiée rouge avant application (`function api.get_dashboard_crm_open() does not exist`) et verte après. Plan `docs/superpowers/plans/2026-08-30-dashboard-etapes-1-4.md`.
+
+17g. `migration_crm_lifecycle.sql` — **Cycle de vie des demandes CRM : `crm_status` recréé aux six valeurs, journal de transitions, temps de traitement net (tranche A2, spec `docs/superpowers/specs/2026-08-31-onglet-activite-cycle-vie-crm-design.md` §6)** (après **schema_unified.sql**, **api_views_functions.sql**, **8z**, **8z2**, le renommage `supabase/migrations/20260807124408_actor_prospects_documents.sql`, **16z**, **17b**, **17e** et **17f** ; foldée dans `schema_unified.sql` pour le type, les deux triggers d'écriture et la table journal ; idempotente ; **no-op sur la bascule** en base fraîche). **Créneau `17g` : `17a`–`17f` sont pris** — et `17c` porte une **collision connue** (`migration_crm_assignee_eligibility.sql` ET `migration_crm_notes_probe.sql` partagent l'identifiant), signalée, **non touchée ici** ; elle relève d'une passe dédiée. **Le type passe de `('planned','done','canceled')` à `('new','in_progress','awaiting_provider','resolved','closed','canceled')` par RECRÉATION** (`crm_status_v2` → `ALTER COLUMN … TYPE … USING` → `DROP TYPE` → `RENAME`) : PostgreSQL ne sait pas retirer une valeur d'un enum, et ajouter les cinq neuves laisserait un type à huit valeurs dont trois mortes que rien ne signalerait. Remappage `planned→new`, `done→resolved`, `canceled→canceled` ; le `CASE` est **exhaustif sans `ELSE`** (une valeur imprévue rend NULL et la colonne `NOT NULL` fait échouer fort — voulu). `ALTER COLUMN … TYPE` réécrit la table **sans déclencher les triggers de ligne** : **toute variante « backfill par `UPDATE` » est interdite**, elle polluerait `audit_log` d'un faux événement métier par demande. Le type ne sert qu'à UNE colonne (`crm_interaction.status`), aucune signature de fonction ne le porte : le `DROP TYPE` est donc circonscrit. **LES TROIS PANNES SILENCIEUSES, mesurées le 31/08 et non déduites.** Trois prédicats comparaient le statut **EN TEXTE** (`status::text <> 'done'`, `p_payload->>'status'`), ce qui **désarme le typage** : après renommage aucune erreur ne se produit, le prédicat se réduit à `resolved_at IS NULL` et le compteur passe de **170 à 1 891 — onze fois plus** — parce que **1 721 lignes `done` importées portent `resolved_at NULL`** (§218, 17b avait refusé de leur inventer une date). (1) `api.capture_metric_snapshots` : le cron de 03:00 aurait écrit cette valeur **chaque nuit** dans une série de 73 jours, et la rupture ressemble à un événement métier réel — personne ne l'aurait lue comme un bug. (2) `api.get_dashboard_crm_open` : la carte du bandeau aurait affiché 1 891. (3) `api.save_crm_interaction`, bras UPDATE — **le pire** : ni `'done'` ni `'planned'` ne matchent plus, on tombe dans le `ELSE` et **`resolved_at` n'est plus jamais posé**, c'est-à-dire précisément la colonne sur laquelle reposent les deux prédicats précédents. Les deux prédicats de comptage sont désormais une **liste positive TYPÉE** — `resolved_at IS NULL AND status = ANY (ARRAY['new','in_progress','awaiting_provider']::crm_status[])` — écrite **mot pour mot, indentation comprise**, dans `api.capture_metric_snapshots` et `api.get_dashboard_crm_open` ; le test compare les deux `prosrc` **littéralement**, parce qu'un test d'exécution ne voit une divergence que si le corpus la révèle. **Cinq autres fonctions échouent BRUYAMMENT — mais au PREMIER APPEL, pas au déploiement** : PL/pgSQL ne valide pas les littéraux de son corps à la création, et `DROP TYPE` **ne cascade pas** sur un `'planned'::crm_status` écrit dans un corps de fonction (la dépendance n'est tracée que pour les signatures et les types de colonne). **Un DDL vert ne vaut donc PAS validation : c'est la garde `prosrc` de fin de migration qui protège, pas le système de types.** **Précision, indispensable pour ne pas retirer une garde à tort : cette protection ne couvre PAS les trois pannes silencieuses à parts égales.** Seule (1) `capture_metric_snapshots` entre dans le volet 1b (elle ne touche pas `crm_task`) ; (2) `get_dashboard_crm_open` en est EXCLUE (son CTE `tasks` lit `crm_task`) et (3) `save_crm_interaction` en est exclue NOMINALEMENT par `TOLERANCE-17g` — ce sont les blocs (B) et (D)/(E) de `tests/test_crm_lifecycle.sql` qui gardent (2) et (3), pas cette garde `prosrc`. Retirer le bloc (B) du test en croyant la garde `prosrc` suffisante laisserait (2) sans filet. **Sept fonctions redéployées**, chaque corps **copié depuis sa source canonique** puis traduit (jamais réécrit de mémoire — le discriminant par sujet de `save_crm_interaction` est le résultat du chantier §220, il se traduit) : `capture_metric_snapshots` (api_views_functions), `get_dashboard_crm_open` (17f), `save_crm_interaction` (17b), `list_crm_timeline` (8z), `list_crm_directory_linked` (**8z2 sous son nom d'origine `list_crm_directory`, renommé par `20260807124408_actor_prospects_documents.sql` qui a créé au-dessus un wrapper homonyme ; seul le corps renommé connaît `crm_status`**), `create_crm_artifacts_from_incident` et `log_publication_proof_interaction` (schema_unified). Dans les deux RPC de liste, `p_status` **garde son contrat externe `active | done`** (vocabulaire d'INTERFACE, que le front continue d'envoyer) mais chaque filtre devient une **FAMILLE** : « Actives » = `new, in_progress, awaiting_provider`, « Traitées » = `resolved, closed, canceled` (arbitrage plan n°8). **Le journal `public.crm_interaction_status_event`** (`id, interaction_id, from_status, to_status, changed_at, changed_by`) + trigger `trg_crm_interaction_status_event` `AFTER INSERT OR UPDATE OF status`, alimenté par une fonction **SECURITY DEFINER** — sans quoi la RLS sans policy refuserait l'écriture et le journal serait **silencieusement vide**. Doctrine §61 : **RLS ON, zéro policy, zéro grant applicatif**, lecture par le seul RPC `api.list_crm_status_events(uuid)` (`REVOKE … FROM PUBLIC, anon` puis `GRANT … TO authenticated, service_role`, garde `DO` fail-closed). **Table dédiée et non `audit_log`** : sur 4 595 lignes d'audit CRM, **57** seulement sont de vrais changements de statut (1,2 %) — balayer un journal générique en JSONB qui grossit à chaque édition de champ n'est pas tenable sur un chemin d'affichage. **Amorçage par rejeu TRADUISANT** des transitions déjà présentes dans `audit.audit_log` (idempotent par `NOT EXISTS`) : c'est un backfill de **fait avéré** (chaque ligne porte son `changed_at` et son `changed_by` réels), pas une reconstitution. **CÉSURE ASSUMÉE — `audit.audit_log` n'est PAS réécrit.** Il contient déjà 4 216 `"status":"done"` et 342 `"planned"` ; les lignes neuves porteront `"resolved"` / `"new"`. **La piste d'audit est coupée en deux vocabulaires, et c'est délibéré** : un journal d'audit se lit, il ne se corrige pas — remapper son JSON falsifierait l'historique. **La traduction vit dans le LECTEUR**, c'est-à-dire dans le rejeu. **TOLÉRANCE TRANSITOIRE — `TOLERANCE-17g`, à retirer par une migration dédiée quand plus aucun front n'envoie `done`/`planned`.** Le déploiement n'est pas atomique (SQL à la main, front par build Coolify depuis `master`) : sans elle, « Marquer traitée » serait **mort** le temps du build, les sites d'écriture du front envoyant encore l'ancien vocabulaire que `save_crm_interaction` rejetterait en `22P02`. Elle vit **dans `save_crm_interaction` et nulle part ailleurs**, et son identifiant de retrait est inscrit ici **dès le premier jour** — sinon la tolérance devient elle-même une panne muette permanente. **GARDE 3 VOLETS** en fin de migration, dans un `DO` qui échoue fort. **1a** — `'planned'` n'appartient à aucun autre vocabulaire : zéro tolérance sur `pg_proc.prosrc` dans `api`/`public`/`crm`, sauf `save_crm_interaction`. **1b** — `'done'` est partagé avec `crm_task_status`, donc le volet est **ancré sur les fonctions qui touchent `crm_interaction` SANS toucher `crm_task`**, jamais sur la chaîne seule ; il **neutralise en plus la construction exacte `p_status = 'done'`** (le contrat externe de filtre, qui n'est pas le vocabulaire du type) — **sans ce retrait ciblé le volet rougirait sur `list_crm_timeline` et `list_crm_directory_linked` le jour même de son installation, quelqu'un ajouterait une exclusion PAR NOM, et cette exclusion masquerait le lendemain un vrai oubli**. **RÉSIDU ASSUMÉ du volet 1b** : une fonction qui touche les DEUX tables lui échappe (aujourd'hui `create_crm_artifacts_from_incident`, `get_dashboard_crm_open`, `save_crm_task`) — couvert par le fait que toutes les fonctions mixtes actuelles sont redéployées ici même, et par la garde CI côté dépôt (volet 3). **1c** — la tolérance existe **tant que l'exclusion existe** : retirer `TOLERANCE-17g` sans retirer les exclusions 1a/1b fait échouer ICI. **2** — `prosrc` ne contient pas les `COMMENT ON FUNCTION` (ils vivent dans `pg_description`), or deux commentaires recopiaient le prédicat mot pour mot ; le volet les balaie (jointure qualifiée par `classoid`). **RGPD — vérifié sur pièces AVANT d'écrire la table (spec §10.5)** : `changed_by` est une **attribution d'ÉQUIPE** (`auth.uid()`), même classe de rétention que `audit.audit_log.changed_by` et `object_version.created_by` ; `api.rpc_gdpr_erase_subject` opère sur les **acteurs** (tiers externes) et les déclarants d'incident, donc **aucun câblage nécessaire et aucune rétention nouvelle créée**. **⚠ FENÊTRE D'APPLICATION** : le cron `capture-metric-snapshots` écrit `crm_backlog` à 03:00 — appliquer hors de ce créneau, sans quoi `metric_snapshot` porterait une journée hybride. **⚠ ATTENTION AU REJEU** (même classe que le `crm_body_deploy.tmp.sql` de 17b) : `Base de donnée DLL et API/migration_metric_snapshot.sql`, **absent du manifeste**, porte encore l'ancien prédicat `status::text <> 'done'` de `capture_metric_snapshots` ; un rejeu manuel depuis ce fichier réintroduirait silencieusement la panne n°1. **Fonction exposée neuve ⇒ `NOTIFY pgrst, 'reload schema';`** (fait par le fichier après son `COMMIT`). Couverte par `tests/test_crm_lifecycle.sql` (étape 17g-test) — blocs A→I, dont l'invariant carte↔courbe éprouvé **par exécution ET par identité littérale des deux `prosrc`**, le temps net sur un cycle fabriqué (14 jours écoulés − 7 d'attente = 7 nets, avec sa prémisse de non-vacuité), et l'idempotence du rejeu **jouée avant toute fixture** (les transitions du test écrivent elles-mêmes dans `audit_log`, et le bloc F recule les `changed_at` — la mesurer après ferait rougir la garde pour une raison étrangère). **Fixtures des 6 tests SQL existants migrées au nouveau vocabulaire dans le même commit** : une fixture restée sur `'planned'` passerait au vert en décrivant un état qui n'existe plus. **⚠ RÉSERVE — ordre du fresh-apply, RÉSOLUE EN REVUE.** `schema_unified.sql` déclare désormais les six valeurs dès l'étape 1, alors que 8z, 8z2 et 17b conservent (par convention deploy-integrity) des corps qui écrivent encore `'planned'`/`'done'` jusqu'à ce que 17g les remplace. Les deux gardes intermédiaires du manifeste qui EXERCENT ces corps — **16z-test** (`tests/test_crm_task_multi_assignee.sql`, qui crée une interaction sans `status` ⇒ défaut `'done'::crm_status`) et **17b-test** (`tests/test_crm_interaction_status.sql`, dont le bloc B emprunte le défaut par sujet ⇒ `'planned'::crm_status`) — lèveraient donc **22P02** sur une base FRAÎCHE, avant que 17g n'ait tourné. **La production n'est pas concernée** (8z/17b y sont appliqués de longue date ; 17g ne fait que remplacer leurs corps), et le gate `sql-fresh-apply` est **déjà rouge sur `master`** pour des raisons antérieures (cf. l'encadré de 16u). **Appliqué en revue** : ces deux blocs `\ir` de test (et leur `\echo`) vivent désormais dans `ci_fresh_apply.sql` APRÈS `17g-test`, précédés d'une note de manifeste qui explique pourquoi ils n'y sont pas à leur place chronologique — ils ne pouvaient de toute façon plus passer qu'après la bascule, leurs littéraux ayant été traduits. L'alternative (traduire aussi les corps de 8z/8z2/17b sur place) reste écartée : elle créerait deux sources pour une même fonction et contredirait la convention « la dernière définition du manifeste fait foi ».
+
+17h. `migration_dashboard_activity.sql` — **Les deux RPC de l'onglet « Activité équipe » et l'extension de la carte d'attention (tranche C-SQL, spec `docs/superpowers/specs/2026-08-31-onglet-activite-cycle-vie-crm-design.md` §2 et §4)** (après **17g**, qui redéploie `get_dashboard_crm_open` : placée avant, son corps étendu serait ÉCRASÉ par la version 17g rejouée ensuite ; foldée dans `api_views_functions.sql` ; idempotente — tout est `CREATE OR REPLACE`). **Créneau `17h` : vérifié libre** au manifeste et dans `ci_fresh_apply.sql` avant écriture. **`api.get_dashboard_team_activity()`** — rythme de saisie sur 12 semaines + table des contributeurs. **ON COMPTE DES JOURS, PAS DES VERSIONS** : `editor_days` = couples (éditeur, jour). Une passe d'import produit des centaines de versions en une après-midi — les compter ferait de cette après-midi le sommet de l'année et écraserait visuellement les semaines de travail régulier ; un indicateur de RYTHME mesure la régularité, pas le débit. Les versions sans auteur (imports et système, **57,5 % du corpus** — 2 299 sur 3 995 au 31/08) sont **exclues** : les compter ferait du « rythme de l'équipe » une mesure des imports. **Une semaine sans activité sort à ZÉRO, jamais omise** — un trou dans une série se lit « pas de données », pas « pas de travail », et les deux ne veulent pas dire la même chose. ⚠ **L'agrégation se fait AVANT la jointure sur la série des semaines.** Posé directement au-dessus du `LEFT JOIN`, `count(DISTINCT (created_by, created_at::date))` compte la ligne toute-NULL fabriquée par la jointure, parce que **`ROW(NULL,NULL)` n'est pas NULL** : une semaine vide rapporte alors **1 jour-éditeur pour 0 éditeur et 0 objet**. Mesuré sur la base vive (semaine du 2026-07-06) ; c'est la formule que le plan proposait, et le bloc (B5) du test la garde. `bulk_days` = jours où un éditeur touche **≥ 10 objets**. La distribution réelle est **bimodale** — 1, 2, 9 d'un côté ; 58, 251, 277, 308, 482 de l'autre — et **rien ne vit entre 10 et 57** : le seuil sépare deux régimes réels, il ne coupe pas une population continue. **Ce n'est pas un curseur à régler mais une hypothèse : si la distribution se remplit entre les deux modes, le seuil doit être rediscuté.** Aucune donnée vive n'éprouve la bascule ; seul le bloc (D) du test, qui fabrique 9 puis 10, la prouve. `display_name` vient de **`api.crm_user_label`** — la source UNIQUE déjà employée par le kanban CRM (16w), le journal de transitions (17g) et les notifications. **Arbitrage PO du 31/08** : le plan proposait `COALESCE(display_name, split_part(email,'@',1))` en posant la règle « jamais l'adresse entière », mais **cette formule ne tient pas sa propre règle** — deux des trois contributeurs ont leur adresse complète EN `display_name`, donc le `COALESCE` la rend telle quelle et le repli ne se déclenche jamais. Réutiliser la source unique évite qu'une personne s'appelle « cl.metro » ici et « cl.metro@otisud.com » dans le kanban ; **le correctif est en amont, dans /team**. **`api.get_dashboard_crm_activity()`** — arriéré par âge et par sujet, flux mensuel, temps net. **Les QUATRE tranches d'âge sont TOUJOURS émises**, une tranche vide à zéro (au 31/08 `d30_90` est vide sur la base vive) : n'afficher que les tranches peuplées mentirait par omission sur la forme de l'arriéré. Une demande sans date d'occurrence **vieillit au maximum** — on ne rajeunit pas une demande faute d'information. Les demandes sans sujet sont regroupées sous un libellé explicite, jamais sous une case vide. **TEMPS NET = écoulé − attente prestataire**, parce qu'un indicateur ne doit mesurer que ce que l'équipe maîtrise. Il ne porte que sur les demandes **nées après 17g** (leur premier événement de journal est la création) : les 1 721 lignes importées sans date de résolution n'en ont pas et sont donc hors moyenne **PAR CONSTRUCTION**, sans exclusion à maintenir (invariant §218 — aucune date inventée). `canceled` exclu. `avg_days` **null = pas encore mesurable**, là où zéro voudrait dire « instantané » ; au 31/08 la RPC rend `{null, 0}` sur le corpus réel, et seul le cycle fabriqué du test éprouve le calcul. **`api.get_dashboard_crm_open()`** gagne `recent_interactions` (< 90 j) et `backlog_interactions` (≥ 90 j), **calculés par SOUSTRACTION** : leur somme égale `open_interactions` **par construction** et une demande sans date d'occurrence tombe dans l'arriéré au lieu de disparaître entre deux bornes. **Les trois clés historiques sont CONSERVÉES** — l'invariant carte ↔ courbe de 17g repose dessus. ⚠ **Le bloc de prédicat canonique de 17g y est reproduit MOT POUR MOT, indentation comprise** : le bloc (B3b) de `tests/test_crm_lifecycle.sql` compare les `prosrc` de cette fonction et de `capture_metric_snapshots` à l'octet près. Le « ré-aligner » ferait rougir une garde d'un AUTRE fichier ; une garde de fin de migration **et** le bloc (I6) de 17h-test échouent des deux côtés si le bloc disparaît. Séries **GLOBALES**, sans paramètre : elles n'obéissent pas au panneau de filtres (même raison que 17f). §204 sur les deux fonctions neuves ; `NOTIFY pgrst`. Garde : `tests/test_dashboard_activity.sql`, **prouvée ROUGE avant application** (42883 : les fonctions n'existaient pas), verte après, et **non vacante par SIX sabotages** en transaction annulée levant chacun sur sa propre garde.
+
+17m. `migration_crm_task_email_documents.sql` — **Tâches CRM : outbox e-mail d'assignation, description, pièces jointes (spec `docs/superpowers/specs/2026-08-31-crm-task-email-description-attachments-design.md`)** (**APRÈS 16z**, qui est la source canonique du corps de `api.list_crm_tasks` — 17m le REDÉPLOIE avec une clé de plus, placée avant 16z elle serait ÉCRASÉE par la version 16z rejouée ensuite — et après toute migration ultérieure qui toucherait cette fonction ; idempotente ; **`NOTIFY pgrst, 'reload schema';` requis** et fait par le fichier, trois fonctions `api.*` neuves ou modifiées). **Créneau `17m` : vérifié libre** au manifeste et dans `ci_fresh_apply.sql` avant écriture. **⚠ RENUMÉROTÉ depuis le créneau initial** : ce chantier a été coupé de `master` avant qu'un AUTRE chantier (permissions par rôle métier, §227) ne pousse en premier et n'occupe désormais quatre créneaux sur `master` ; renommage documentaire pur, la migration est **déjà appliquée en production** (nom Supabase `crm_task_email_documents`, 2026-09-01) sous ce contenu. **⚠ LE SQL PART AVANT LE FRONT, ET CE N'EST PAS UNE PRÉFÉRENCE DE RANGEMENT.** Le déploiement n'est pas atomique (SQL à la main, front par build Coolify depuis `master`) et les deux sens d'inversion ne coûtent PAS la même chose. Front d'abord : (1) les trois routes `/api/task-document` appellent `api.user_can_write_crm_task`, qui n'existe pas encore — PostgREST rend `42883`, la route le lit comme un refus de droit et répond **403 avec un message de droits TROMPEUR** (« Cette action n'est pas autorisée avec vos droits actuels »), envoyant l'utilisateur et le support chercher une permission manquante là où il n'y a qu'une fonction absente ; (2) le ping `/api/crm/notify-drain` posé après chaque assignation appelle `api.claim_unmailed_notifications`, absente elle aussi — **les e-mails ne partent pas DU TOUT, et en silence** : le ping est délibérément *fire-and-forget*, personne ne voit son échec, et rien ne s'accumule côté DB puisque les colonnes d'outbox n'existent pas encore. SQL d'abord : les colonnes, la table et les fonctions attendent simplement un front qui ne les appelle pas encore — **aucun symptôme, aucune perte**. **Contenu.** (1) **`app_notification` devient un OUTBOX e-mail** (`email_claimed_at` / `email_sent_at` / `email_error` / `email_attempts`) drainé par la route Next `/api/crm/notify-drain` : le relais SMTP est autorisé **par IP du VPS**, ni une Edge Function ni un trigger DB ne peuvent envoyer — c'est ce qui interdit le trigger `pg_net` qu'on attendrait ici. Claim `SKIP LOCKED` + **TTL 10 min** : un crash entre le claim et l'envoi re-rend la ligne réclamable — un e-mail n'est jamais perdu, un doublon n'est possible QUE dans cette fenêtre de panne (arbitrage assumé, le même que celui du bras d'acquittement en échec). Le contenu du message est **100 % dérivé en DB** (aucune donnée client n'entre jamais dans un e-mail) et les libellés de personnes sont **JOINTS à la lecture, jamais stockés** (effacement RGPD respecté). Trois bras ferment la **boucle claim/échec** qui bouche la file : destinataire sans adresse **absente** ou **vide** (`NULLIF`) ⇒ ligne TERMINÉE sur place (`no_recipient_email`) ; et **`email_attempts < 5`**, qui ferme la MÊME classe de panne pour l'autre moitié du problème — l'adresse syntaxiquement valide dont la boîte refuse **définitivement** (compte fermé, domaine en rejet) échoue, redevient réclamable, et **reste en tête de `ORDER BY created_at`** : elle consomme un des 20 créneaux de CHAQUE drain, à jamais. Une ligne épuisée **sort** de la file : ni supprimée ni marquée envoyée (`email_sent_at` reste NULL — aucun e-mail n'est parti), diagnosticable par `email_error` + `email_attempts`, relançable par un geste EXPLICITE d'exploitation (`UPDATE … SET email_attempts = 0`). **⚠ BACKFILL DE L'ARRIÉRÉ** : `ADD COLUMN email_sent_at` fait naître toutes les lignes historiques à NULL, donc **réclamables** — sans le `UPDATE … email_error = 'backfill_pre_17i'` posé juste après l'ajout des colonnes, le premier drain e-maillerait des assignations vieilles de plusieurs jours, déjà vues dans l'interface. **⚠ `backfill_pre_17i` NE SE RENOMME PAS** : cette chaîne est une valeur déjà ÉCRITE EN PRODUCTION (une ligne `app_notification.email_error` la porte réellement depuis l'application du 2026-09-01) — elle garde le numéro de créneau `17i` sous lequel elle a été écrite, avant que ce créneau ne soit renuméroté `17m` pour collision avec §227 ; c'est un marqueur historique, le renommer ferait diverger le fichier de la base. **Ce backfill n'est PAS idempotent au sens métier** : le REJOUER sur une base vivante terminerait ce qui attend dans la file à cet instant (au pire quelques minutes, la file étant drainée à chaque assignation) — même classe d'avertissement que le rejeu de 17b/17g. Les deux RPC d'outbox sont **`service_role` seul** (`REVOKE … FROM PUBLIC, anon, authenticated`) : un navigateur ne doit pouvoir ni vider la file ni lire des adresses e-mail. Index de parcours **borné sur `kind` ET sur `email_attempts`**, et **`DROP` préalable obligatoire** : `CREATE INDEX IF NOT EXISTS` ne compare que le NOM, un environnement portant une rédaction antérieure du prédicat garderait silencieusement l'ancienne définition. (2) **`api.user_can_write_crm_task(uuid)`** — LE prédicat d'écriture d'une tâche, factorisé : **même règle que `api.save_crm_task`** (`user_can_write_crm` sur l'`object` de la tâche), tâche inconnue ⇒ `false` et jamais une erreur qui fuiterait. Gate des trois routes `/api/task-document`. (3) **`crm_task_document`** — pièces jointes d'une tâche : fichier dans le bucket **privé** `actor-documents` (chemin `tasks/{task_id}/…`), `ref_document.access_scope = 'crm_private'`, **RLS `service_role` only, zéro grant `anon`/`authenticated`** (comme `actor_document`) ; écrite par les routes Next en `service_role`, lue par `list_crm_tasks`. (4) **`api.list_crm_tasks` émet `documents[]`** par tâche (`[]` jamais null : le front itère, il ne teste pas la nullité ; `id` EST le `document_id`, jamais l'id de la ligne de liaison). **`size_bytes` est CASTÉ SOUS GARDE `^\d{1,18}$`** : `ref_document.extra` est un jsonb LIBRE partagé avec tous les autres flux documentaires, et un cast nu ferait lever `22P02` (valeur non numérique) ou `22003` (valeur numérique débordant `bigint`) **non pas sur la pièce fautive mais sur `api.list_crm_tasks()` TOUT ENTIÈRE** — une seule ligne malformée écrite par un autre flux abattrait le kanban CRM de TOUS les utilisateurs du périmètre ; 18 chiffres valent au plus 999 999 999 999 999 999, strictement sous le maximum d'un `bigint`, la borne ferme donc les deux moitiés PAR CONSTRUCTION. **⚠ REJEU** : `supabase/migrations/20260807124408_actor_prospects_documents.sql:428` porte le MÊME cast nu sur la même clé pour les documents d'ACTEUR — hors périmètre de 17m, tâche de fond ouverte. Couverte par `Base de donnée DLL et API/tests/test_crm_task_email_documents.sql` (étape **17m-test**), **prouvée ROUGE avant application** (`P0004` sur A1 : les colonnes d'outbox n'existaient pas), verte après, et **non vacante par douze sabotages** en transaction annulée levant chacun sur SA propre garde.
+
+17i. `migration_role_permission_matrix.sql` — **Le rôle métier CONFÈRE les droits, réglables par ORG (§227)** (après `rls_policies.sql` et `migration_sp4_list_org_members.sql` ; idempotente ; `NOTIFY pgrst` requis). **⚠ NUMÉROTÉE 17i MAIS APPLIQUÉE ICI, APRÈS 17m** — et ce n'est pas un rangement : `17j` retire le bras `current_user_admin_rank() IS NOT NULL` des gardes d'écriture CRM, or l'étape **17c-test** (`tests/test_crm_notes_probe.sql`, bloc B) EXIGE qu'un membre au seul rang d'administration d'ORG, sans aucune permission, puisse écrire des notes CRM — c'était le fait à corriger à l'époque, c'est le fait à retirer depuis. Remonter ces quatre étapes à leur place numérique rendrait `17c-test` rouge sur base fraîche. **Conséquence à connaître** : `17c-test`, `16z-test`, `17b-test` et `17m-test` sont jouées SOUS LE RÉGIME PRÉ-§227, celui sous lequel elles ont été écrites ; ce ne sont pas des gardes de l'état final. **⚠ DETTE DE PACKAGING CONSTATÉE AU PACKAGING DE 18a** : ces quatre étapes étaient **déjà en production** (2026-08-31) et **absentes** de ce manifeste comme de `ci_fresh_apply.sql` — trou d'intégrité fresh-apply révélé par 18a, qui dépend d'`org_role_permission`. **Contenu.** Trois couches d'octroi passent à DEUX : AJOUT d'`org_role_permission` (ORG × rôle métier × permission) et d'un chemin « rôle » dans `api.user_has_permission()` ; RETRAIT du chemin `org_permission`, qui accordait à TOUS les membres d'une ORG sans regarder leur rôle (le 31/08, douze appels à `rpc_grant_org_permission` ont ainsi donné les 12 permissions du catalogue à trois Lecteurs) ; `user_permission` reste, lu comme ce qu'il est : des EXCEPTIONS. Sème la matrice SP-2 documentée pour chaque ORG existante **et** pose un trigger `AFTER INSERT ON object` qui la sème pour toute ORG créée ensuite — sans quoi une ORG neuve naîtrait avec une matrice VIDE, ses Éditeurs porteraient l'étiquette et zéro droit, et la panne serait muette et différée. `rpc_list_org_members` émet désormais `role_permission_codes` (DROP + CREATE : `CREATE OR REPLACE` ne renomme pas une colonne de sortie) et `is_platform_superuser`. **Garde pré-vol** : la migration REFUSE de s'appliquer si `org_permission` porte encore une ligne active — vacante sur base fraîche (0 ligne), elle ne mord qu'en reprise. **⚠ CE QUE CETTE ÉTAPE A COÛTÉ AUX TESTS D'AUTRUI, dans le même commit** : `tests/test_unblock_team_legal_access.sql` donnait le rôle `editor` à ses trois témoins ; depuis §227 ce rôle confère `edit_canonical_when_publisher`, `attach_documents` ET `manage_legal_compliance`, ce qui retournait quatre de ses assertions (le témoin « seule permission = juridique » gagnait l'écriture canonique et l'ajout de pièces, le témoin « sans permission juridique » gagnait la gestion juridique, et la révocation de l'exception individuelle ne changeait plus rien). Le fait gardé n'a pas changé — la porte juridique lit une PERMISSION, pas une appartenance — ce sont les rôles-témoins qui ont été retournés : `viewer` pour isoler l'exception individuelle, `contributor` (sept droits, aucun juridique) pour le témoin négatif, témoin PLUS FORT que `viewer` qui ne prouverait que l'absence de tout.
+
+17j. `migration_crm_write_requires_permission.sql` — **L'écriture CRM exige la permission, jamais le seul rang d'administration (§227)** (après **17i** ; idempotente). Retire `api.current_user_admin_rank() IS NOT NULL` des QUATRE gardes d'écriture CRM. Le test n'était pas un SEUIL mais une NON-NULLITÉ : `team_lead` vaut 10, très en dessous du rang 30 exigé pour écrire une permission — n'importe quel rôle d'administration ouvrait donc l'écriture CRM en court-circuitant le système de permissions, donc le rôle métier. Constaté en production APRÈS 17i : un compte rétrogradé Lecteur, 0 permission, conservait `team_lead` et écrivait toujours le CRM. `api.user_can_write_list` porte le même motif et n'est **pas** touchée ici : sa règle est « créateur OU admin d'ORG », sans permission en jeu — c'est 17k qui la traite. Patch gardé qui **lève** si le motif est absent : interdit le no-op silencieux.
+
+17k. `migration_list_write_creator_only.sql` — **Écrire une liste : son créateur, pas « n'importe quel rôle admin » (§227)** (après **17j** ; idempotente). Dernier porteur du motif fermé par 17j. Pas de permission inventée : il n'existe aucun droit « écrire une liste » au catalogue `ref_permission`, et en créer un retirerait aux Lecteurs une fonction de travail qu'ils ont toujours eue. Second bras étroit contre les listes ORPHELINES — `object_list.created_by` ne porte AUCUNE clé étrangère : un administrateur d'ORG de rang ≥ 30 peut reprendre une liste dont le créateur n'est plus membre actif. `COALESCE(..., FALSE)` §204 : sans lui la garde serait fail-OPEN chez ses appelants (`IF NOT …`).
+
+17l. `migration_list_create_superuser_only.sql` — **Créer une liste : superuser plateforme UNIQUEMENT (§227)** (après **17k** ; idempotente ; détail complet en section `## 17l`). **⚠ CE QUE CETTE ÉTAPE A COÛTÉ AUX TESTS D'AUTRUI, dans le même commit** : `tests/test_object_list.sql` créait ses listes sous un `tourism_agent` membre d'ORG — refusé en `42501` depuis 17l, le fichier mourait à sa première ligne utile. Son `userA` devient `super_admin`, seul persona qui PEUT désormais créer une liste ; `userB` reste `tourism_agent` puisque c'est LUI qui porte l'isolation cross-org assertée en fin de fichier, et l'élever ferait passer cette garde pour de mauvaises raisons.
+
+18a. `migration_actor_portal.sql` — **Portail acteur (spec `docs/superpowers/specs/2026-09-01-portail-acteur-design.md`)** (idempotente ; **`NOTIFY pgrst, 'reload schema';` requis** et fait par le fichier ; détail complet en section `## 18a`). **Créneau `18a` : vérifié libre** au manifeste, dans `ci_fresh_apply.sql` et dans le `README.md` avant écriture ; le bloc `17a`–`17m` est épuisé. **TROIS contraintes d'ordre, toutes tenues :** (1) **APRÈS 17i** — la migration LIT `org_role_permission` pour dériver les vérificateurs (`api.list_object_verifier_ids`) ; (2) **APRÈS 17m**, source canonique du corps d'`api.list_crm_tasks` — 18a la REDÉPLOIE avec la clé `extra`, placée avant 17m elle serait ÉCRASÉE par la version 17m rejouée ensuite ; (3) **APRÈS `schema_unified.sql`**, qui porte le MIROIR d'`api.rpc_gdpr_erase_subject` : la section 8.5 de 18a redéploie cette fonction avec la branche acteur qui délie le compte portail (`app_user_profile.actor_id`) dans les DEUX modes, et passer avant `schema_unified.sql` ferait écraser ce déliage **sans la moindre erreur**. **⚠ TROISIÈME RÉDACTION AU DÉPÔT** : `migration_gdpr_erasure.sql` porte une variante de cette même fonction **sans** la branche acteur ; elle est **volontairement absente** de `ci_fresh_apply.sql` — rejouée après 18a elle effacerait le déliage en silence. Le step CI **RGPD mirror alignment** garde les deux faits : `schema_unified.sql ≡ migration_actor_portal.sql` (md5 du corps, prémisse de non-vacuité incluse) et « `migration_gdpr_erasure.sql` n'est pas inclus au manifeste ».
+
+18b. `migration_ref_amenity_visit_modes.sql` — **Seed `ref_amenity` : trois modes de visite déjà écrits par l'éditeur, absents de tout catalogue (arbitrage PO 2026-09-03 ; détail complet en section `## 18b`)** (idempotente, aucun `NOTIFY pgrst` requis — donnée pure, aucune fonction/vue touchée). `visite_libre` / `visite_guidee` / `audioguide` (`VISIT_MODE_CODES`, `editor-completion.ts` + `BlockVIS.tsx` §06) n'existaient dans **aucun** catalogue, ni en prod ni dans les seeds. **Ce n'est pas un orphelinat de données silencieux, c'est un blocage de sauvegarde** : `object_amenity.amenity_id` est une FK `NOT NULL` → `ref_amenity(id)`, et le bras `amenities` d'`object_workspace_safe_write_rpcs.sql` lève `ERRCODE 23503` dès qu'un code ne résout à aucun `ref_amenity.code` — comme `characteristics` est un module à écriture groupée (§48 single-owner : amenities + moyens de paiement + tags environnement dans le même payload), cocher un seul de ces trois boutons en §06 et sauvegarder faisait échouer la sauvegarde **entière** de la fiche VIS. Vérifié en base : 0 ligne `object_amenity` ne référence ces codes aujourd'hui (impossible structurellement, pas une coïncidence). **Famille NEUVE `visit_mediation`, jamais `accessibility`** : ce sont des modes de visite, pas des aides d'accessibilité — le catalogue porte déjà ce rôle sous des codes `acc_*` distincts (`acc_flexible_visit`, `acc_visit_device`), et le filtre public d'accessibilité ne lit **que** la famille `accessibility`. Aucune des 21 familles existantes ne convenait (`services`/`entertainment` sont un fourre-tout hôtelier/loisirs). Conventions reproduites du bloc B-3/B-4 de `seeds_data.sql` (famille `accessibility`) : `INSERT INTO ref_code (domain='amenity_family', ...) ON CONFLICT DO NOTHING` pour la famille, `WITH family AS (...) INSERT ... ON CONFLICT (code) DO UPDATE` pour les équipements. `scope='object'`. Couverte par `tests/test_ref_amenity_visit_modes.sql`, **prouvée ROUGE avant application** (`P0004` : les trois codes absents), verte après, rejeu (2 applications dans la même transaction) sans doublon.
+
+19a. `supabase/migrations/20260905195257_gdpr_cleanup_operations.sql` — **PRIV-01/02, remédiation bornée de l'effacement RGPD (Art. 17)** (après `migration_unblock_team_legal_access.sql` pour `ref_document.storage_bucket/storage_path/access_scope`, et après `supabase/migrations/20260807124408_actor_prospects_documents.sql` pour `actor_document` ; **redéfinit par `CREATE OR REPLACE`** `audit.redact_subject` et `api.rpc_gdpr_erase_subject` foldés dans `schema_unified.sql` — dernier mot sur base **fraîche** (appliqué en fin de manifeste) **et** base **upgradée** ; ne touche pas au fold historique lui-même). **Table neuve** `internal.gdpr_cleanup_task` (deny-all-direct, zéro policy/grant hors `service_role`) : tâches `storage_remove`/`auth_delete` rattachées à `gdpr_erasure_log.id` (`operationId`), survivant au sujet effacé, lues/acquittées uniquement par les 2 RPC neuves `api.rpc_gdpr_get_cleanup_status`/`api.rpc_gdpr_ack_cleanup_task` (`service_role` uniquement — le serveur Next.js revérifie lui-même JWT + `api.is_platform_superuser` avant tout appel). **Correctifs du corps existant :** `audit.redact_subject` matche désormais aussi `after_data` (une valeur qui n'apparaît QUE dans `after_data` était invisible) ; l'acteur redige désormais `crm_interaction` sur **les deux** clés `actor_id` **et** `handled_by_actor_id` (une interaction où seul `handled_by_actor_id` portait le sujet n'était jamais rédigée) ; l'ID `crm_task` lié à un signalement (collecté mais inexploité) voit désormais sa `description` (copie en clair de la description de l'incident) effacée et rédigée ; la bibliothèque privée d'acteur (`actor_document`) et les justificatifs de consentement (`actor_consent.document_id`) sont détachés à l'effacement, avec **rétention** des documents encore réellement utilisés ailleurs (`object_document`/`object_classification`/`object_legal`/`object_sustainability_action`/`object_iti.status_document_id`/`actor_consent`/autre `actor_document`) — seuls les documents devenus orphelins sont mis en file pour suppression Storage puis détachés de `ref_document` ; le rapport porte `retainedSharedDocuments`/`manualReviewRequired` et un `unresolvedScope` honnête (aucune affirmation « PII purgée » globale, orphelins Storage historiques et sauvegardes/caches dits **non couverts** par ce lot, instantané ponctuel — pas un balayage du bucket). **`subject_kind='user'`** : garde-fous de compte alignés sur `/api/admin/delete-user` (SEC-01) — auto-cible refusée insensible à la casse, cible `owner` toujours refusée, cible `super_admin` réservée à un appelant `owner` (`api.is_platform_owner()`, jamais `user_metadata`) ; `mode='delete'` met en file une tâche `auth_delete` (exécutée par l'API Admin Supabase, hors SQL, jamais par suppression SQL de `auth.users`) et `mode='anonymize'` ne touche **jamais** le compte `auth.users` (`authRetained:true` explicite dans le rapport — anonymisation du PROFIL seul, pas de la personne). Avatar utilisateur retiré via le chemin **connu** du serveur (`avatars/<userId>/avatar.jpg`), jamais reconstruit depuis la colonne. Contrat d'entrée de `api.rpc_gdpr_erase_subject` inchangé (même signature, même garde D4 superuser/JWT). Côté application : `src/app/api/rgpd/erase/route.ts` (résolution des tâches Storage/Auth par bucket connu ou origine Supabase configurée, jamais une URL étrangère ; bouton de reprise par `operationId`, qui ne rappelle jamais le RPC d'effacement), `src/services/rgpd.ts`, `src/views/RgpdErasurePage.tsx`/`ErasureResultPanel.tsx`. Couvert par `Base de donnée DLL et API/tests/test_gdpr_cleanup_operations.sql` (fixtures avatar/incident/`handled_by_actor_id`/document privé d'acteur/document partagé-promu retenu/match `after_data`-seul/refus de permission anon-authenticated sur les 2 RPC de nettoyage/rollback atomique sabotage). **Portée explicitement NON résolue par ce lot** : énumération des orphelins Storage antérieurs à ce lot, upload concurrent à l'instantané ponctuel, sauvegardes/caches — voir `report.unresolvedScope`.
 
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
@@ -287,8 +307,16 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 Fresh-install migrations and post-seed fixups use idempotent DDL/data patterns and are transaction-wrapped where the files contain `BEGIN`/`COMMIT`. RPC scripts are idempotent through `CREATE OR REPLACE` plus grants/revokes; review local/pilot-only scripts before reapplying.
 
+18c. `migration_test_org_isolation.sql` — Isolation du bac a sable. Apres toutes les policies et le portail ; applique la dimension de test et rejoue `tests/test_test_org_isolation.sql`, y compris le croisement des liens explicites du portail.
+
+18c1. `migration_partner_tombstone_feed.sql` — Flux des suppressions definitives partenaire, excluant le bac a sable ; apres creation de `object_deletion_log.is_test` par 18c, avant le test d'isolation.
+
+18d0. `migration_test_org_facets.sql` — Fonction de generation des facettes par type, avant le seed qui l'appelle.
+
+18d. `migration_test_org_seed.sql` — Corpus et remise a zero du bac a sable, apres 18c et 18d0 ; suivi de `tests/test_test_org_seed.sql`.
+
 ### CI enforcement (deploy integrity)
-A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest exactly, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
+A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this manifest against a fresh Supabase local database on every change to `Base de donnée DLL et API/*.sql`, via the executable driver `Base de donnée DLL et API/ci_fresh_apply.sql` (which mirrors the manifest step for step **hormis les étapes foldées — no-op sur base fraîche — et `migration_gdpr_erasure.sql` (14j), dont l'entrée est activement INTERDITE par le step CI *RGPD mirror alignment***, with `ON_ERROR_STOP`). If a migration is ever applied only to live PROD and never folded into the manifest/files, a fresh apply diverges and the gate goes red. Run it on demand from the Actions tab (**Run workflow** / `workflow_dispatch`). The driver is also the recommended way to bootstrap a local dev DB: `psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/ci_fresh_apply.sql"`.
 
 ## Incremental Update Order
 
@@ -300,6 +328,7 @@ A GitHub Actions gate, `.github/workflows/sql-fresh-apply.yml`, executes this ma
    > **Q1b caveat (audit 2026-06-30, denylist — applied 2026-07-01):** run `migration_revoke_anon_q1b_denylist.sql` **last** (after ALL files that create/replace `api.*`, incl. the `16b`/`15e`/dashboard migrations) — it removes `anon` (via `PUBLIC`) from **57** functions proven not anon-needed: **31 trigger functions** (`RETURNS trigger`; EXECUTE not checked when a trigger fires ⇒ `REVOKE` only, no re-grant) + **26 write/admin/dashboard** functions (legal writes, `rpc_*_ref_code` admin, `get_dashboard_*`, `upsert_app_branding`, `set_itinerary_track`, exports… ⇒ `REVOKE PUBLIC,anon` + re-`GRANT authenticated, service_role`). Same fresh-DB rationale as Q1a (functions born `PUBLIC EXECUTE`). **KEEPS anon** on the 13 SELECT-applicable RLS-policy helpers + the public reader RPCs + i18n helpers (`user_can_write_canonical`/`user_can_create_object` are policy-referenced only in WRITE arms ⇒ already NOT anon-exec, untouched). Outside the fresh-apply gate (grant hygiene, like Q1a); verified LIVE by `tests/test_revoke_anon_q1b.sql` (anon-exec `api` count 180 → 123). Idempotent.
    > ⚠ **§47/§48 caveat (manifest 8o + 8r):** After re-applying `rls_policies.sql` or `object_workspace_safe_write_rpcs.sql` to a deployed DB, ALWAYS re-run `migration_write_policy_percommand.sql` (8o) **and `migration_actor_links_editor.sql` (8r)** — those source files still create the retired `FOR ALL` write families (`rls_policies.sql` also recreates the legacy `admin_actor_object_role_write` FOR ALL + the per-row read policy on `actor_object_role`, and `object_workspace_safe_write_rpcs.sql` still ships the actors-skip `save_object_relations` body), and this incremental order runs `migration_*` (step 1) before them, so skipping this silently **resurrects ~90 FOR ALL policies** on live (the P0.3 write-predicate-pollutes-read gotcha returns; `test_write_policy_percommand.sql` flags it as live-vs-fresh drift) and reverts the §48 actors write path. A **fresh** apply is safe without this — all FOR ALL creators sit at steps 6/7/8b/8c/8g, before 8o/8r.
    > ⚠ **§146 caveat (manifest 16h) :** après re-application de `rls_policies.sql` (ou de tout fichier créant des policies avec `auth.*()` brut) sur une base déployée, re-run **`migration_rls_initplan_broad_sweep.sql` (16h)** — `rls_policies.sql` recrée encore des centaines de policies en forme brute (seules les boucles par-partition, `admin_pending_change`/`admin_object_version` et la paire `ref_code`/`ref_code_other` sont wrappées à la source) ; 16h est catalog-driven donc reconverge tout en un run. Le test `test_rls_initplan_broad_sweep.sql` (gate CI, fin de manifest) matérialise l'oubli en rouge.
+   > ⚠ **Caveat 18a §8.5 (manifest 14j) :** après toute ré-application de `migration_gdpr_erasure.sql` **ou** de `schema_unified.sql` sur une base déployée, TOUJOURS re-jouer `migration_actor_portal.sql` (18a) — sinon `api.rpc_gdpr_erase_subject` retombe silencieusement sur une rédaction sans le déliage `app_user_profile.actor_id`, et l'effacement Art. 17 d'un acteur laisse son compte portail ouvert. Hors portée du gate fresh-apply, qui ne surveille que `ci_fresh_apply.sql`.
 3. Apply changed post-seed/post-import fixups only when their preconditions match the target database.
 4. Reload the PostgREST schema cache after function, grant, or exposed-schema changes: `NOTIFY pgrst, 'reload schema';`
 5. Refresh materialized views introduced or affected by the update:
@@ -1042,7 +1071,7 @@ changement au second passage. Vérifications :
   provenance, aucun chemin de lecture ne filtre dessus (même arbitrage que 16g pour les
   petites tables). À revoir si un écran d'imputabilité les interroge un jour.
 
-## 17g — `supabase/migrations/20260905204133_audit_price_age_bounds.sql` (DB-02, bornes d'âge `object_price`)
+## 19b — `supabase/migrations/20260905204133_audit_price_age_bounds.sql` (DB-02, bornes d'âge `object_price`)
 
 `chk_age_ranges_valid` est une seule `CHECK` en `AND` de quatre comparaisons ; quand un
 `age_min_*` est `NULL`, `age_max_* >= NULL` vaut `NULL`, et `NULL` **passe** une `CHECK`. Un
@@ -1086,3 +1115,1002 @@ pendant la fenêtre continue de fonctionner.
 > antérieures et étrangères à 16z (cf. l'encadré de 16u). Cette garde a donc été jouée **à la
 > main** contre le déployé (migration + test dans une transaction annulée) ; elle ne protège
 > rien automatiquement tant que le manifeste n'est pas réparé.
+
+---
+
+## 17i — Permissions par rôle métier, réglées par ORG (§227)
+
+`Base de donnée DLL et API/migration_role_permission_matrix.sql`
+Rollback : `Base de donnée DLL et API/rollback/rollback_role_permission_matrix.sql`
+
+**Manifeste : étape `17i`**, après **17d** `migration_team_roster_provenance.sql` — dernier
+autre définisseur d'`api.rpc_list_org_members`, que cette migration recrée. Déclarée dans
+`ci_fresh_apply.sql` le **2026-09-04** seulement ; jusque-là appliquée en PROD mais absente du
+manifeste, donc **jamais** exercée par la garde CI (cf. l'encadré de la liste ordonnée).
+
+**Intégration CI du 2026-09-04 :** le premier run (`33837270977`) applique les trois
+migrations mais échoue sur `test_unblock_team_legal_access.sql` : ses témoins `editor`
+héritent désormais des droits canoniques, documentaires et juridiques. La correction
+de fixture issue du chantier portail conserve toutes les assertions : `viewer` avec
+exception juridique individuelle, `contributor` sans droit juridique, et `editor`
+dans une autre ORG pour vérifier la frontière de périmètre. Aucune règle de production
+n'est modifiée par cette correction.
+
+### Pourquoi
+
+Le rôle métier n'était qu'une **étiquette** (SP-2 §24 : « aucun droit implicite »). Le
+2026-08-31 à 11:54, douze appels à `rpc_grant_org_permission` — depuis les cases
+« Permissions par défaut de l'organisation », logées dans le tiroir d'un MEMBRE nommé — ont
+accordé les 12 permissions du catalogue à l'ORG entière. `api.user_has_permission` acceptant
+le chemin ORG, les **trois Lecteurs** de l'ORG ont gagné écriture CRM, publication, horaires,
+tarifs, galerie et conformité juridique. Le compteur de /team affichait « 12 permissions »
+pour tout le monde : il ne mentait pas, il constatait.
+
+La couche fautive est une couche d'octroi **aveugle au rôle**. Elle est retirée.
+
+### Ce que la migration fait
+
+| | |
+| --- | --- |
+| **+** | `org_role_permission` (ORG × rôle × permission), RLS lecture par membre de l'ORG, écriture par RPC seulement |
+| **+** | Chemin « rôle » dans `api.user_has_permission` (corrélé sur `ubr.role_id`) |
+| **+** | `api.rpc_set_role_permission` / `api.rpc_list_role_permissions` (rang ≥ 30) |
+| **+** | Trigger `trg_seed_org_role_permission` — une ORG créée plus tard naît avec sa matrice |
+| **~** | `api.rpc_list_org_members` : `inherited_permission_codes` → `role_permission_codes` |
+| **−** | Chemin `org_permission` dans `user_has_permission` |
+| **−** | `api.rpc_grant_org_permission`, `api.rpc_revoke_org_permission` |
+
+`org_permission` (la TABLE) est conservée pour la traçabilité de l'incident.
+
+### Garde pré-vol — bloquante
+
+La migration **refuse de s'appliquer** si `org_permission` porte encore une ligne active :
+
+```sql
+SELECT count(*) FROM org_permission WHERE is_active;   -- doit valoir 0
+```
+
+Sinon, chaque ligne doit d'abord être reportée dans `org_role_permission` ou en
+`user_permission`, faute de quoi des membres perdent l'accès sans préavis.
+
+### ✅ APPLIQUÉE EN PRODUCTION le 2026-08-31
+
+Précédée d'une remédiation de données : les 12 `org_permission` de `ORGRUN000000000B` ont été
+désactivées, et deux droits ré-accordés en individuel (`a.mir` → `manage_team_messages`,
+`d.philippe` → `write_crm_notes`) parce qu'ils n'étaient tenus que par l'héritage.
+
+| Contrôle | Résultat |
+| --- | --- |
+| Dry-run transactionnel avant application | syntaxe OK, garde pré-vol passante, seed 7 (contributor) / 12 (editor) par ORG |
+| Seed après application | 38 lignes actives, 2 ORG × (7 + 12) |
+| **Sabotage** de la garde de rôle | Lecteur avant = `false` → droit accordé au rôle `viewer` = `true` → retiré = `false` ; Éditeur par son rôle seul = `true`. Joué en transaction **annulée**, 0 trace |
+| Trigger nouvelle ORG | ORG factice insérée en transaction annulée ⇒ contributor 7, editor 12, viewer 0 |
+| Consommateurs | les 13 fonctions dépendantes intactes (elles héritent), 0 policy RLS à retoucher |
+| Accès effectifs avant/après | inchangés pour 9 membres sur 10 ; `s.gaze` passe 11 → 12 (gagne `write_crm_notes` par son rôle — arbitrage §214, il l'avait déjà via son rang `org_admin`) |
+
+Le va-et-vient du sabotage est la seule preuve qui vaille : une jointure de rôle morte
+rendrait `false` en permanence et un test « le Lecteur ne peut pas écrire » passerait quand même.
+
+### Trou connu, NON fermé par cette migration
+
+Cinq fonctions court-circuitent les permissions pour quiconque porte **un** rôle admin, quel
+qu'il soit — le test est `api.current_user_admin_rank() IS NOT NULL`, pas un seuil :
+
+```
+api.user_can_write_crm · api.user_can_write_crm_actor · api.current_user_can_write_crm_notes
+api.save_crm_actor · api.user_can_write_list
+```
+
+Constaté en production : `xyz.makimura@gmail.com` est **Lecteur à 0 permission** mais garde
+`team_lead` (rang 10) — il peut donc écrire du CRM. Décision en attente : un rôle
+d'administration doit-il conférer l'écriture CRM indépendamment du rôle métier ?
+
+> **Décidé le 2026-08-31, et FERMÉ** : arbitrage PO « non, un lecteur ne doit jamais écrire le
+> CRM ». **17j** retire le motif des quatre gardes CRM (`user_can_write_crm`,
+> `user_can_write_crm_actor`, `current_user_can_write_crm_notes`, `save_crm_actor`) et **17k**
+> du cinquième (`user_can_write_list`). Vérifié sur la base vive le **2026-09-04** : **0**
+> fonction porte encore `current_user_admin_rank() IS NOT NULL` hors commentaire.
+
+### Ordre de déploiement
+
+Base d'abord, **front ensuite mais sans délai** : le front déployé appelle encore
+`rpc_grant_org_permission` / `rpc_revoke_org_permission`, supprimées ici. Pendant la fenêtre,
+cliquer une case « Permissions par défaut de l'organisation » affiche une erreur au lieu
+d'accorder — le piège est désarmé, mais l'écran est incohérent.
+
+---
+
+## 17j — L'écriture CRM exige la permission, jamais le seul rang admin (§227)
+
+`Base de donnée DLL et API/migration_crm_write_requires_permission.sql`
+Rollback : `Base de donnée DLL et API/rollback/rollback_crm_write_requires_permission.sql`
+
+**Manifeste : étape `17j`**, après **17i** et **17c** `migration_crm_notes_probe.sql`.
+⚠️ **Sa place est dictée par le patch sur place de `save_crm_actor`** : le motif est comparé
+**tel quel, en minuscules**, or le dernier définisseur de cette fonction dans le manifeste est
+l'étape **8z3** `../supabase/migrations/20260807124408_actor_prospects_documents.sql`, qui le
+porte en minuscules et **exactement une fois** (`migration_crm_module.sql`, plus haut, l'écrit
+en MAJUSCULES et ferait lever le `RAISE` « le bras a changé de forme »). Toute remontée de cette
+étape au-dessus de 8z3 casse le fresh-apply. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04**
+seulement.
+
+### Pourquoi
+
+17i a fait du rôle métier la source des droits. Restait un second système d'autorisation qui
+l'ignorait : quatre gardes d'écriture CRM acceptaient `api.current_user_admin_rank() IS NOT NULL`
+— une **non-nullité**, pas un seuil. `team_lead` vaut 10, très en dessous du rang 30 exigé pour
+écrire une permission, et suffisait pourtant à ouvrir tout le CRM.
+
+Constaté APRÈS 17i : `xyz.makimura@gmail.com`, rétrogradé Lecteur à 0 permission, gardait
+`team_lead` et écrivait toujours le CRM. /team affichait « 0 permission » à côté d'un accès
+réel — 17i avait rendu le compteur honnête, ce bras le rendait de nouveau menteur.
+
+Arbitrage PO 2026-08-31 : **« non, un lecteur ne doit jamais écrire le CRM »**.
+
+### Ce que la migration fait
+
+Retire le bras de rang admin de quatre gardes. Après elle : superuser plateforme, ou
+`write_crm_notes` (conférée par le rôle, ou accordée en exception).
+
+| Fonction | Traitement |
+| --- | --- |
+| `api.user_can_write_crm(text)` | réécrite |
+| `api.user_can_write_crm_actor(uuid)` | réécrite |
+| `api.current_user_can_write_crm_notes()` | réécrite (COALESCE §204 conservé — sans lui la sonde est à 3 valeurs et le front devient fail-OPEN) |
+| `api.save_crm_actor` | patch guardé sur la source vive (~200 lignes, un seul bras à corriger) |
+
+Le patch de `save_crm_actor` porte deux gardes : **motif absent ⇒ RAISE** (pas de no-op
+silencieux) et **motif en plusieurs exemplaires ⇒ RAISE** (`replace` remplace tout, on
+n'édite pas un site non relu).
+
+### Volontairement NON touché
+
+`api.user_can_write_list` porte le même motif mais une règle différente — « créateur de la
+liste OU admin de l'ORG », aucune permission en jeu, et `ref_permission` n'a pas de droit
+« écrire une liste ». Le retirer fermerait l'édition des listes d'autrui sans rien pour la
+rouvrir. Décision distincte.
+`can_delete_object_private_note` / `can_manage_object_private_note` comparent un **seuil** de
+rang, pas une non-nullité : classe différente, hors sujet.
+
+### ✅ APPLIQUÉE EN PRODUCTION le 2026-08-31
+
+| Contrôle | Résultat |
+| --- | --- |
+| Relevé pré-application | 1 seul membre concerné : `xyz.makimura` (Lecteur + `team_lead`, 0 permission) |
+| Dry-run transactionnel | patch + sabotage joués puis annulés, 0 trace |
+| **Sabotage** de la garde | Lecteur+`team_lead` = `false` → `write_crm_notes` accordée en exception = `true` → retirée = `false`. La garde lit bien la permission |
+| `save_crm_actor` | 3867 → 3822 caractères, soit exactement les 45 du bras retiré — le reste de la fonction intact |
+| Balayage final | les 10 membres testés en se plaçant dans leur session : **4 Lecteurs à `false`** (`team_lead` compris), **6 Éditeurs à `true`** |
+| Policies RLS | aucune ne porte le motif sur une écriture CRM (1 seule mention, en SELECT sur `actor_contact_export_log`) |
+
+### ✅ APPLIQUÉE EN PRODUCTION — 2026-09-04
+
+Appliquée par `node tools/sql/apply.cjs` (runner node-pg du dépôt, qui lit le fichier lui-même —
+`psql` n'est pas installé sur ce poste et le plafond de l'outil MCP interdisait un envoi de 123 Ko).
+
+| Étape | Résultat |
+|---|---|
+| `apply.cjs migration_actor_portal.sql --dry-run` | `DRY-RUN OK (annule)` — la migration entière exécutée puis annulée |
+| `apply.cjs migration_actor_portal.sql` | `APPLIQUE` |
+| `apply.cjs migration_ref_amenity_visit_modes.sql --dry-run` puis réel | `DRY-RUN OK` puis `APPLIQUE` |
+| **`apply.cjs tests/test_actor_portal.sql`** | **`blocs A-D1, E, H, D2, G, F2, F, I, J OK`** — ⇒ **le bloc F est enfin exécuté** (obligation O5 levée) |
+
+**Contrôles d'après déploiement, tous verts :**
+
+```
+fiche_submission + org_actor_module_visibility      créées
+fonctions 18a                                       14 / 14
+approve_pending_change                              (p_id, p_review_note, p_applied_manually)
+codes 18b dans la famille visit_mediation           3 / 3
+cloisonnement du bac à sable préservé               3 / 3 fonctions
+whitelist déployée de submit_actor_fiche            ARRAY['save_object_commercial','save_object_openings']
+garde is_actor_persona sur submit_pending_change    posée
+actor_id écrivable par authenticated                FALSE   (display_name reste TRUE)
+résidus de fixtures / soumissions / matrice         0 / 0 / 0
+comptes role='actor'                                0
+```
+
+**md5 `prosrc` après déploiement** — `user_actor_ids` est la SEULE des dix fonctions de référence à
+n'avoir pas bougé, ce qui est exact : 18a ne la re-déploie pas. Les dix autres ont changé parce que
+les sections 1, 2, 7 et 8 les re-déploient toutes.
+
+```
+approve_pending_change                78b171f997cd630da118ecc81382448d
+claim_unmailed_notifications          8877cac288096b255ab0f076fe79f030
+current_user_extended_object_ids      2f6785003718cdfa4030bb4ea4970ef8
+enforce_app_user_profile_role_change  5250d35c5c517eb095e687f36bb6ea0b
+is_object_owner                       ebc71d1957e73a2544a1797551b1f9e6
+list_crm_tasks                        4b86ecd1fdda5509b4e4d897dc27a78a
+list_pending_changes                  e7cfcdc8ac6ee7e76010536bd10e9bc1
+mark_notifications_emailed            cc42feea883957a9dbd2671d83201d08
+rpc_gdpr_erase_subject                af723bd148603158d64f15062cf559bc
+submit_pending_change                 998569fd10b16ffd408fd8fed5563b29
+user_actor_ids                        2bd0f6be5734b46322d1ba8239175d6f   (INCHANGÉE)
+```
+
+⚠ **La branche n'est PAS poussée** (`git push` refusé par les permissions du poste). La production
+porte donc quatre commits de correction de sécurité qui n'existent encore dans aucune référence
+distante : `02edef8`, `e044cfb`, `acb5012`, `bfe55c0`, plus le merge `34ccbe1`. **À pousser dès que
+possible** — c'est le seul écart dépôt↔prod ouvert par ce déploiement, et il est connu.
+
+### Front
+
+`MembersTable` affirmait en `title` qu'un rôle d'administration « ouvre notamment toute
+l'écriture CRM » : devenu faux, corrigé dans le même lot. La pastille « + rôle admin » reste —
+à partir du rang 30 le membre peut s'accorder des permissions, ce que le compteur ne dit pas.
+
+---
+
+## 17k — Écrire une liste : son créateur, pas « n'importe quel rôle admin » (§227)
+
+`Base de donnée DLL et API/migration_list_write_creator_only.sql`
+Rollback : `rollback/rollback_list_write_creator_only.sql`
+
+**Manifeste : étape `17k`**, après **L1** `migration_object_list.sql`, seul définisseur
+d'`api.user_can_write_list`. Déclarée dans `ci_fresh_apply.sql` le **2026-09-04** seulement.
+
+Dernier porteur du motif fermé par 17j : `api.user_can_write_list` acceptait
+`current_user_admin_rank() IS NOT NULL`. `team_lead` (rang 10) donnait donc le droit de
+modifier, partager, marquer envoyée ou **supprimer** la liste de n'importe qui — y compris à un
+Lecteur (`xyz.makimura@gmail.com`).
+
+**Pas une permission, contrairement au CRM** : `ref_permission` n'a aucun droit « écrire une
+liste », et une liste est une sélection personnelle, pas du contenu publié. La règle juste est
+l'appartenance, pas le droit.
+
+**Le piège évité** : « créateur seul » pur créerait des listes orphelines — `object_list.created_by`
+ne porte AUCUNE clé étrangère (seule `org_object_id` en a une). Au départ d'un membre, sa liste
+resterait inéditable par tous. D'où un second bras étroit : un admin d'ORG **rang ≥ 30** peut
+reprendre une liste dont le créateur n'est plus membre actif.
+
+`COALESCE(..., FALSE)` ajouté (§204) : `is_platform_superuser()` rend NULL sans claim `role`, et
+`IF NOT NULL THEN RAISE` ne se déclenche pas — la garde aurait été fail-OPEN.
+
+### ✅ APPLIQUÉE le 2026-08-31 — sabotage 5 cas, transaction annulée
+
+| Cas | Attendu | Obtenu |
+| --- | --- | --- |
+| Lecteur + `team_lead`, liste d'autrui | `false` | `false` |
+| Éditeur + `team_lead` (rang 10), liste d'autrui | `false` | `false` |
+| le créateur | `true` | `true` |
+| rang 30, créateur **désactivé** (orpheline) | `true` | `true` |
+| rang 30, créateur **actif** | `false` | `false` |
+
+Les deux dernières lignes diffèrent : le bras de reprise regarde bien l'appartenance.
+**Balayage final : 0 fonction ne porte plus `current_user_admin_rank() IS NOT NULL`.**
+
+---
+
+## 17l — Créer une liste : superuser plateforme UNIQUEMENT (§227)
+
+`Base de donnée DLL et API/migration_list_create_superuser_only.sql`
+
+⛔ **PAS ENCORE DÉCLARÉE au manifeste (état au 2026-09-04) — et c'est délibéré.** Sa place
+naturelle est après **L1** `migration_object_list.sql`, seul définisseur d'`api.create_list`,
+dans le bloc §227 de fin de chaîne. **La déclarer maintenant ferait rougir `sql-fresh-apply`** :
+`tests/test_object_list.sql`, que le workflow **rejoue après le manifeste** (étape « §211 E1
+Listes module non-regression »), appelle `api.create_list` ligne 98 sous une persona
+`authenticated` dont `app_user_profile.role` vaut `tourism_agent` — `is_platform_superuser()`
+y est FALSE, l'appel lèverait `42501` et les assertions suivantes tomberaient.
+
+Le test n'est pas cassé : il encode la règle produit **d'avant** l'arbitrage PO du 2026-08-31
+(« tout membre crée des listes »). Le rendre conforme est une décision produit, pas une
+réparation de manifeste — deux formes possibles, à trancher :
+
+1. donner à la persona de création `app_user_profile.role = 'super_admin'` (le test continue de
+   couvrir static/dynamic/partage/isolation, il change juste de créateur) ;
+2. **ou** garder la persona `tourism_agent` et retourner l'assertion : la création doit
+   désormais lever `42501` — ce qui ferait du test la garde manquante de 17l.
+
+La seconde est la seule qui **prouve** 17l ; la première ne fait que ne plus la contredire.
+
+Vérifié le 2026-09-04 : `test_object_list.sql` est le **seul** test du dépôt qui appelle
+`api.create_list` ou `api.user_can_write_list` — c'est donc le seul obstacle.
+
+Pas de fichier de rollback versionné : la restauration consiste à redéployer `api.create_list`
+depuis `migration_object_list.sql`.
+
+`api.create_list` ne portait **aucune** garde : tout membre créait des listes, Lecteur compris
+(2 des 12 listes en base sont d'un Lecteur). Arbitrage PO 2026-08-31, lecture stricte.
+
+⚠️ **Coût assumé, signalé avant application** : l'ORG `ORGRUN00000001C4` n'a aucun superuser
+plateforme (`s.gaze` est `org_admin` mais `tourism_agent`). Elle ne peut plus créer de liste par
+elle-même. Si cette autonomie redevient nécessaire, une ligne suffit :
+`OR COALESCE(api.current_user_admin_rank(), 0) >= 30`.
+
+`NO_ORG` devient inconditionnel : l'ancien test laissait un superuser sans ORG créer une liste à
+`org_object_id` NULL — invisible et inéditable pour tout le monde, son auteur compris.
+
+**Les 12 listes existantes ne sont pas touchées** : ni transfert, ni suppression. Seule la
+création est fermée.
+
+### ✅ APPLIQUÉE le 2026-08-31 — sabotage, transaction annulée
+
+| Appelant | Résultat |
+| --- | --- |
+| Éditeur + `team_lead` | `42501` |
+| `org_admin` **non** superuser | `42501` (c'est le point de l'arbitrage) |
+| superuser plateforme | liste créée, `org_object_id` renseigné |
+| listes existantes | 12, intactes |
+
+### Front
+
+Le bouton « Nouvelle liste » (`ListsManageView`, deux emplacements) et « Créer une liste »
+(`SelectionBar` de l'Exploreur) sont masqués hors superuser — sans quoi l'écran promettrait une
+action que le serveur refuse. Sélecteur `isPlatformSuperuser`, **délibérément distinct** de
+`canAdministerTeam` (qui accepte le rang ≥ 10) ; un test garde les deux séparés.
+
+## 18a — Portail acteur : persona, portée, soumissions vérifiées, validation D9
+
+`Base de donnée DLL et API/migration_actor_portal.sql`
+Spec : `docs/superpowers/specs/2026-09-01-portail-acteur-design.md`
+
+Un prestataire n'avait aucune place dans le modèle d'accès : il fallait ou bien lui donner un
+compte d'équipe (donc l'écriture canonique sur tout un périmètre), ou bien ne rien lui donner.
+Cette migration ouvre la troisième voie : une **persona `actor`** dont la portée est le lien
+`actor_object_role` de son propre profil — pas le pont e-mail historique, qui résout un compte
+vers *tout* acteur partageant l'adresse. Un acteur **propose** ; il n'écrit jamais le canonique
+(**D7** : `api.is_object_owner` lui répond FALSE, alors que ce même prédicat donnait déjà
+l'écriture canonique aux acteurs primaires). Chaque proposition devient une `fiche_submission`
++ N `pending_change` + une **tâche de vérification multi-assignée** aux vérificateurs de l'ORG,
+dérivés d'`org_role_permission` (§227, 17i). Côté équipe, **D9** ferme le trou « `manual_apply`
+jamais approuvable » : `api.approve_pending_change(p_applied_manually)` permet d'acquitter une
+rubrique qu'aucun writer structuré ne sait appliquer, et la validation peut être **partielle**.
+
+**Whitelist de re-dispatch à SEPT writers.** La section 7 redéploie `api.approve_pending_change`
+sur la liste **VIVE** du `prosrc` de production — `save_object_rooms` **exclu**, alors que
+`migration_moderation_rpcs.sql` (16c) en listait huit. C'est la liste d'`api.submit_actor_fiche`
+qui commande : une asymétrie entre les deux ferait entrer une proposition qui ne pourrait plus
+jamais être approuvée, et `uq_fiche_submission_open` garderait la fiche bloquée **à vie**.
+Conséquence assumée et **portée dans le même commit** : la section F de
+`tests/test_moderation_rpcs.sql` est retournée en **sonde de refus** (`22023`, ligne intacte,
+`capacity_total` inchangé) et le libellé du step CI dit désormais « save_object_rooms EXCLU ».
+Une ronde précédente avait retourné la section **sans** l'insertion au manifeste : la CI est
+passée au rouge et le retournement a été annulé (`7ebccc5`). Les deux vont ensemble ou pas du tout.
+
+**Miroir RGPD.** La section 8.5 redéploie `api.rpc_gdpr_erase_subject` avec la branche acteur qui
+délie le compte portail. Le même corps vit dans `schema_unified.sql` ; sur base fraîche 18a passe
+APRÈS et gagne, donc une divergence du miroir **ne lèverait nulle part** — elle se paierait à la
+prochaine install qui rejouerait `schema_unified.sql` seul. Le step CI **RGPD mirror alignment**
+compare les deux corps octet pour octet, avec une prémisse de non-vacuité (extraction ≥ 50 lignes)
+sans laquelle un renommage rendrait deux extractions vides, donc deux md5 égaux, donc un vert qui
+ne compare plus rien. Le même step refuse l'entrée de `migration_gdpr_erasure.sql`
+(troisième rédaction, sans la branche acteur) dans `ci_fresh_apply.sql`.
+
+### ⏳ PAS ENCORE APPLIQUÉE — packaging seul
+
+Ce chantier est **packagé, pas déployé**. Le tableau de sabotage ci-dessous est à remplir APRÈS
+application, comme pour 17g/17l.
+
+Les sondes se jouent en `BEGIN; … ROLLBACK;` (un appel `execute_sql` = une transaction), sauf celles
+du tableau A, qui sont toutes en lecture seule. Aucune ne demande de créer un compte `role='actor'`
+durable : les fixtures naissent et meurent dans la transaction annulée.
+
+**A. Non-régression — la migration ne doit rien avoir bougé d'autre**
+
+| Sabotage / sonde | Attendu | Constaté |
+| --- | --- | --- |
+| `SELECT count(*) FROM app_user_profile WHERE role='actor'` | `0` — la migration est **inerte** tant qu'aucun compte acteur n'existe | _à relever_ |
+| `api.current_user_extended_object_ids` sur un `tourism_agent` réel connu | ensemble **inchangé** avant/après | _à relever_ |
+| md5 des `prosrc` des 9 fonctions du relevé initial (valeurs de référence ci-dessous) | **seules** les fonctions écrites par 18a ont changé — les autres à l'octet près | _à relever_ |
+| `SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api' AND p.proname='approve_pending_change'` | `1` — le `DROP FUNCTION IF EXISTS api.approve_pending_change(uuid, text)` a laissé **une seule** signature, à trois paramètres. Deux signatures ⇒ `42725` sur tout appel à deux arguments | _à relever_ |
+
+Valeurs de référence, relevées en production le 2026-09-02 puis re-relevées identiques le
+2026-09-03 (la base n'avait pas bougé entre les deux) :
+
+```
+approve_pending_change            3cf2a45631df18e22e0b4c5cd81d9e2e   ← 18a §7 la réécrit
+can_read_extended                 4d6febed63160210d5a6de7e37143314
+claim_unmailed_notifications      a6fed3aaf46683854a1c266c673aa7aa   ← 18a §8 la réécrit
+current_user_extended_object_ids  490062f9215cec873569f1f91fef32e8   ← 18a §1.5 la réécrit
+is_object_owner                   c1cc3ac8996cf9cdf0f5dd0adb7ae53c   ← 18a §2 la réécrit (D7)
+list_crm_tasks                    05fc0595046e4bc0e28579fa082b8459   ← 18a §8 la réécrit (extra)
+list_pending_changes              437a70e99f4825173c0a0d6d15dad465   ← 18a §7 la réécrit
+mark_notifications_emailed        dfe7343cc63971b8fc7f369e1f52e58f   ← 18a §8 la réécrit
+rpc_gdpr_erase_subject            073dc1ae220a13d304e70321465d33e9   ← 18a §8.5 la réécrit
+user_actor_ids                    2bd0f6be5734b46322d1ba8239175d6f
+```
+
+Deux seulement doivent rester **identiques** après application : `can_read_extended` et
+`user_actor_ids`. Toute autre immobilité est un signe que la section correspondante n'a pas pris.
+
+**B. Les invariants du chantier — un par ligne**
+
+| Invariant | Sabotage / sonde | Attendu | Constaté |
+| --- | --- | --- | --- |
+| **D7 — l'écriture canonique est fermée aux acteurs** | `api.is_object_owner(<fiche de l'acteur>)` sous un JWT acteur, puis sous un membre publisher de la même fiche | `FALSE` pour l'acteur, `TRUE` pour le membre. Avant 18a ce même prédicat rendait **TRUE** pour un acteur primaire : c'est un droit qu'on retire, pas un droit qu'on n'a jamais donné. Bloc C de `tests/test_actor_portal.sql` | _à relever_ |
+| **Portée — lien expiré** | `actor_object_role` posé avec `valid_to = CURRENT_DATE - 1` | la fiche **n'apparaît pas** dans `api.current_user_portal_object_ids()` (`migration_actor_portal.sql:95-96`) | _à relever_ |
+| **Portée — lien futur** | même fixture avec `valid_from = CURRENT_DATE + 1` | la fiche **n'apparaît pas** | _à relever_ |
+| **Portée — objet ORG** | lien valide vers un objet `object_type = 'ORG'` | la fiche **n'apparaît pas** (`:97` — l'éditeur ne sait pas les ouvrir) | _à relever_ |
+| **Portée — le pont e-mail ne l'élargit pas** | un second acteur partageant l'adresse du compte, lié à une **autre** fiche | cette autre fiche **n'apparaît pas** : la portée passe par `app_user_profile.actor_id` (D8), jamais par `api.user_actor_ids` | _à relever_ |
+| **Portée — deux rôles sur la même fiche** | poser `operator` **et** `sales_manager` valides sur le même objet | la fiche apparaît **une seule fois** (`SELECT DISTINCT`, `:91`). Sans lui l'accueil du portail la montrerait en double | _à relever_ |
+| **Verrou « une seule vérification ouverte »** | deux `api.submit_actor_fiche` sur la même fiche, la première non résolue | le second lève **`PT409`**, jamais `23505`. Les deux chemins sont couverts : le pré-check (`:547`) et le blindage `EXCEPTION WHEN unique_violation` autour de l'INSERT réel (`:602`), **même message et même code** | _à relever_ |
+| **Attestation imputable — ce qu'elle écrit** | `api.approve_pending_change(<ligne manual_apply>, …, p_applied_manually => TRUE)` | `status='approved'` (**jamais** `applied`), `applied_at` **NULL**, et `metadata` porte `applied_manually` / `attested_by` / `attested_at` (`:948-951`). Ces trois clés sont écrites **explicitement**, pas déduites de `status` | _à relever_ |
+| **Attestation — aucun re-dispatch** | même appel, puis relire la table cible de la rubrique (p. ex. `object_description`) | **rien n'a été écrit** : une attestation acquitte, elle n'applique pas | _à relever_ |
+| **Attestation — refus sans elle** | même ligne, `p_applied_manually => FALSE` | `22023`, ligne **intacte** en `pending`. C'est ce refus qui bloquait la fiche à vie avant 18a | _à relever_ |
+| **Whitelist §120 — SEPT, et miroir exact** | lire les deux tableaux `v_allowed` : `api.submit_actor_fiche` (`:517-520`) et `api.approve_pending_change` (`:884-892`) | **7 entrées identiques**, `save_object_rooms` **absent des deux**. Une asymétrie où `submit` est plus permissif fabrique une fiche acceptée puis jamais approuvable, donc bloquée à vie par `uq_fiche_submission_open` | _à relever_ |
+| **Plancher dur de la matrice de visibilité** | `api.rpc_set_actor_section_visibility(<org>, <type>, 'legal', TRUE)` — c'est-à-dire une tentative de **re-rendre visible** un module du plancher | refus explicite « Le module … appartient au plancher non paramétrable » (`:444-445`). Les 9 modules du plancher sont dans une fonction `IMMUTABLE` (`:299-305`), non paramétrable par construction | _à relever_ |
+| **La résolution libère le verrou (UPDATE)** | résoudre la dernière ligne `pending` d'une soumission par `approve`/`reject` | `fiche_submission.status` quitte `pending` **par trigger**, et une nouvelle `submit_actor_fiche` passe (plus de PT409) | _à relever_ |
+| **La résolution libère le verrou (DELETE / déliage)** | **supprimer** la dernière ligne `pending`, ou lui mettre `submission_id = NULL` | même résultat. Le trigger est `AFTER DELETE OR UPDATE OF status, submission_id` et résout `OLD` **et** `NEW` : sans ce bras, aucune RPC ne savait plus refermer la soumission et la fiche restait en PT409 à vie | _à relever_ |
+| **Une soumission vidée n'annonce pas une validation** | vider une soumission de toutes ses lignes, puis lire la notification produite | l'issue n'est **pas** `approved` — on n'annonce pas « vos modifications ont été validées » à quelqu'un dont on vient de détruire les lignes | _à relever_ |
+| **RGPD — aucun nom dans le payload** | lire `app_notification.payload` d'une ligne `kind='fiche_submission_reviewed'` | jeu de clés **exactement** `{submission_id, outcome, object_id}` (`:1288-1289`), et **aucune** valeur égale à un `display_name` de la base. `object_id` est un identifiant technique, assumé (arbitrage Task 8) | _à relever_ |
+| **RGPD — déliage du compte portail, mode `anonymize`** | `api.rpc_gdpr_erase_subject(<acteur>, 'anonymize')` | `app_user_profile.actor_id` passe à NULL, `fiche_submission.note` (l'**original** du message libre) est nettoyée, et les lignes d'audit `app_user_profile` sont rédigées — sinon le trigger d'audit re-noue lui-même le lien acteur↔compte qu'on vient de couper | _à relever_ |
+| **RGPD — déliage du compte portail, mode `delete`** | même appel en `delete` | même résultat. Le nettoyage de `fiche_submission.note` se fait **avant** la branche de mode : après, la FK `ON DELETE SET NULL` a déjà délié et le nettoyage serait muet | _à relever_ |
+
+### 🔴 OBLIGATOIRE — le bloc F du test n'a JAMAIS tourné ; c'est le PUSH qui le referme
+
+`Base de donnée DLL et API/tests/test_actor_portal.sql` **lignes 1891-2399 (bloc F)** n'a été
+exécuté par **aucune** passe de validation, dans **aucun** environnement. **La migration est
+prouvée** (harnais de mutation + rejeu) ; **le test censé la garder ne l'est pas.**
+
+⛔ **NE JAMAIS DÉCOUPER CE FICHIER, ET NE JAMAIS LE COLLER DANS `execute_sql`.** Il fait
+**175 977 octets** — au-dessus du plafond MCP (~120 Ko) **à lui seul**, migration ou pas ; le
+déploiement de 18a n'y change rien. Et c'est **UN SEUL** `BEGIN` (l. 189) / `DO $$` / `ROLLBACK`
+(l. 2514) : le couper en deux passes ne « contourne » rien — c'est **exactement** le geste qui a
+fait tomber le bloc F entre deux passes la première fois, et il permettrait de cocher cette étape
+en croyant l'avoir jouée.
+
+✅ **La voie existe déjà, et elle joue le fichier ENTIER, bloc F compris, sans aucun plafond** :
+le step CI **« Actor portal test »** (`.github/workflows/sql-fresh-apply.yml:436-439`) lance
+`psql -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"`, et l'étape
+`18a-test` du manifeste (`ci_fresh_apply.sql:543`) le rejoue par `\ir`. Le workflow se déclenche
+sur tout `push` touchant `Base de donnée DLL et API/**.sql`.
+
+⇒ **POUSSER LA BRANCHE REFERME O5.** Rien à jouer à la main.
+
+**Comment cocher cette étape :** attendre le run vert, le lire, et **consigner son lien ici** :
+
+> Run CI qui a joué le bloc F pour la première fois : _\<lien du run\>_ — _\<date\>_
+
+Tant que ce lien n'est pas collé ci-dessus, le bloc F ne garde rien.
+
+En complément **facultatif** — et seulement là où `psql` et une chaîne de connexion existent
+(absents de ce worktree) — le fichier peut être rejoué contre la base vive :
+`psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_actor_portal.sql"`.
+**Sans `BEGIN` externe** : le fichier porte les siens.
+
+### ⚠ AVANT LE PREMIER COMPTE `role='actor'` — prérequis de mise en service
+
+Déployer 18a est sans risque : la migration est **inerte** tant qu'aucun compte acteur n'existe
+(D7 est gaté par `AND NOT api.is_actor_persona()`, `migration_actor_portal.sql:195`).
+**Inviter un partenaire ne l'est pas.** Les six prérequis ci-dessous se vérifient avant la
+**première invitation**, pas avant l'application.
+
+Les états portés au tableau ont été relevés en base au packaging de 18a. Les n°5 et n°6 portent
+sur des **données**, pas sur du code : ils **doivent être re-relevés au moment de la mise en
+service**. La matrice §227 est réglable par ORG, et un canal de contact peut être saisi ou retiré
+à tout moment.
+
+| # | Prérequis | État vérifié en base au packaging de 18a |
+| --- | --- | --- |
+| 1 | **18a déployée**, avec `p_applied_manually` | ⛔ **NON** — c'est le prérequis dont tout dépend. Voir « Ordre de déploiement » ci-dessous |
+| 2 | **Le front accepte le rôle `actor`** (`normalizeRole`, `USER_ROLE_LABELS_FR`, routage par défaut) | livré en branche. Sans lui, tout compte acteur bloque sur l'écran de session |
+| 3 | **17i-17l en production ET au manifeste fresh-apply** | ✅ **vert** — `org_role_permission` **existe en production** (58 lignes, les 2 permissions présentes). Seul le manifeste `ci_fresh_apply.sql` les ignorait ; corrigé au packaging de 18a |
+| 4 | **La description canonique arrive sur le chemin réel** | ⏳ **invérifiable avant déploiement** — demande un JWT acteur, qui n'existe pas encore. À vérifier au premier parcours de recette : la présentation existante doit arriver dans `descriptions.object`, sinon la rubrique s'affiche vide et un report manuel effacerait le texte |
+| 5 | **Les canaux publics de l'office sont saisis** | ⛔ **ROUGE** — détail ci-dessous |
+| 6 | **Les vérificateurs ont aussi l'écriture canonique** | ✅ **vert** — détail ci-dessous |
+
+**Prérequis 5 — le détail, et il est pire que « aucun canal public ».** Les **trois** ORG n'ont
+**aucun canal de contact du tout** :
+
+```
+OTI du Sud                      0 e-mail public · 0 tél public · 0 canal privé
+Comité Régional de Tourisme     0 · 0 · 0
+Bac a sable (test)              0 · 0 · 0
+```
+
+Conséquence exacte : `office_email` et `office_phone` seront **NULL pour toutes les fiches**, et
+les deux replis du portail — « envoyez vos photos à l'office » (les photos sont en lecture seule
+pour un partenaire, D11) et « signaler une erreur » — se termineront sur
+« Contactez votre office de tourisme. » **sans adresse ni numéro**. Le partenaire lit une phrase
+qui ne mène nulle part. **C'est une saisie côté OTI, pas du code** : aucun correctif logiciel ne
+peut inventer une adresse.
+
+**Prérequis 6 — le détail, et pourquoi un zéro compte.** Un **seul** rôle métier porte
+`validate_changes`, et ce même rôle porte **aussi** `edit_canonical_when_publisher` dans les
+3 ORG — donc quiconque peut vérifier peut aussi appliquer. Porteurs :
+
+```
+ORGRUN000000000B   OTI du Sud                    5
+ORGRUN00000001C4   Comité Régional de Tourisme   1
+ORGTST0000000001   Bac a sable (test)            0
+```
+
+Le **0** du bac à sable n'est pas anodin. Pour une fiche publiée par cette ORG, la branche
+primaire de `api.list_object_verifier_ids` ne rendrait **personne**, et le repli tomberait sur
+l'unique superutilisateur plateforme. Cela **fonctionne** — c'est exactement ce que le repli
+superutilisateur a été écrit pour couvrir — mais il faut le savoir avant de recetter sur cette
+ORG : la tâche de vérification n'ira pas à un agent de l'office.
+
+⚠ Ce prérequis se re-vérifie **par ORG et à chaque mise en service**. Un rôle métier auquel on
+retire `edit_canonical_when_publisher` en gardant `validate_changes` produirait un vérificateur
+qui voit la tâche, clique « Approuver », et prend un `42501` au re-dispatch — la fiche du
+partenaire resterait bloquée.
+
+#### Trois prérequis hors code, découverts en cours de chantier
+
+Ils ne sont dans aucun plan et **aucune ligne de code ne peut les fermer**.
+
+**a. `NEXT_PUBLIC_APP_URL` DOIT être posée en production.** Sans elle, l'origine des liens
+retombe sur l'en-tête `Host` de l'appelant, dans **deux** routes :
+`bertel-tourism-ui/src/app/api/crm/notify-drain/route.ts:62` (l'e-mail de retour au partenaire) et
+la fonction `inviteOrigin()` de `bertel-tourism-ui/src/app/api/crm/actor-access/route.ts`
+(le lien d'invitation, qui porte un jeton). C'était sans grande portée tant que ces liens ne partaient qu'à des membres de
+l'équipe ; **depuis 18a ils partent à des partenaires externes**. ⚠ **Rien n'échoue si elle
+manque** : le repli est silencieux, aucune erreur, aucun log. C'est un prérequis qu'on ne
+découvre pas en le ratant.
+
+**b. L'allowlist Supabase (Auth → URL Configuration) doit accepter `…/set-password*` AVEC la
+query string.** La route d'invitation demande
+`redirectTo: <origine>/set-password?espace=1` (`actor-access/route.ts`, champ `redirectTo` de
+l'appel `inviteUserByEmail`). Si le motif
+autorisé ne couvre pas la query string, Supabase retombe sur le *Site URL* et **`?espace=1` est
+perdu** : `/set-password` affiche alors la copie destinée au personnel de l'office, et le
+partenaire lit un texte qui ne le concerne pas. C'est aussi la **seule** défense contre un
+`redirectTo` forgé — raison de plus pour la vérifier plutôt que de la supposer.
+
+**c. Le gabarit d'e-mail « Invite user » est un champ du dashboard Supabase — arbitrage PO.**
+Copie de référence : `docs/supabase-email-templates/invite-user.html`. Il est **partagé entre le
+personnel de l'office et les partenaires** : un seul gabarit pour les deux publics. Il dit
+aujourd'hui « Plateforme tourisme & CRM » (`:38`) et « Rejoignez-nous ! » (`:46`) — du jargon
+interne pour un gîteur, et **c'est le premier texte qu'il lira de Bertel**. **Aucune ligne de code
+ne peut le corriger** : il vit dans le dashboard. Deux issues ont été identifiées, **aucune n'est
+posée** : neutraliser le gabarit pour qu'il convienne aux deux publics, ou le brancher sur
+`{{ .Data.espace }}` pour qu'il dise deux choses différentes. **Décision PO requise avant la
+première invitation.**
+
+#### Une contrainte produit à consigner, pas une contrainte technique
+
+`uq_fiche_submission_open` n'autorise **qu'une seule vérification ouverte par fiche**. Tant que
+l'office n'a pas répondu, le partenaire ne peut rien renvoyer sur sa propre fiche. L'office
+s'engage donc sur un délai — **5 jours ouvrés** (arbitrage PO du 2026-09-03, copie affichée
+« en général sous une semaine ») — et doit **surveiller l'âge des vérifications en attente**. Une
+vérification oubliée n'est pas un retard : c'est un partenaire muré.
+
+### Ordre de déploiement
+
+Chaque geste vient à sa place pour une raison ; elle est écrite en dessous.
+
+**1. Pousser la branche.** C'est ce geste qui referme la **seule preuve manquante du SQL**. Le
+bloc F de `tests/test_actor_portal.sql` (lignes 1891-2399) **n'a jamais été exécuté**, dans aucun
+environnement : le plafond de l'outil MCP (~120 Ko) a forcé un découpage en deux passes et le
+bloc F est tombé entre les deux. Le step CI le joue **en entier** par `psql -f`, sans plafond
+(cf. la sous-section 🔴 ci-dessus). ⛔ Ne jamais découper le fichier ni le coller dans
+`execute_sql` pour « rattraper » : c'est exactement le geste qui a fait tomber le bloc F.
+
+**2. Attendre le run CI vert, et le lire.** C'est le **premier fresh-apply portant 17i→18b** : la
+première épreuve réelle des quatre créneaux §227 qui manquaient au manifeste, et des deux fichiers
+de test d'autres chantiers corrigés dans le même commit (`tests/test_unblock_team_legal_access.sql`
+et `tests/test_object_list.sql`, qui encodaient la règle **pré-§227**). Vérifier nommément les
+étapes `18a` (`ci_fresh_apply.sql:540`), `18a-test` (`:543`), et les steps « Actor portal test »,
+« RGPD erasure test » et « RGPD mirror alignment ». **Ne rien appliquer en production avant
+d'avoir ce run**, et coller son lien dans la sous-section 🔴 ci-dessus.
+
+**3. Déployer 18a, PUIS 18b.** 18a est un unique `BEGIN;…COMMIT;` : tout ou rien, un échec ne
+laisse rien derrière lui. Les quatre étapes §227 (17i-17l) sont **déjà en production** — ne rien y
+rejouer. Relever les 9 md5 juste avant (tableau A ci-dessus).
+
+**4. ⛔ Ne mettre le front en production qu'APRÈS le SQL. Jamais l'inverse.**
+`bertel-tourism-ui/src/services/moderation.ts:139` envoie désormais **toujours**
+`p_applied_manually`. La base d'avant 18a n'a que `api.approve_pending_change(uuid, text)`, et
+**PostgREST résout les surcharges par le jeu de noms de paramètres** ⇒ **`PGRST202`** tant que la
+§7 n'est pas là, rendu à l'écran comme « Approbation impossible. ».
+`api.list_pending_changes` change d'arité mais **pas** de jeu de paramètres, **donc la file
+d'attente s'affiche normalement** : la panne est **muette et localisée au bouton**. Concrètement,
+l'agent d'office ne peut plus approuver **une seule ligne**, avec un message qui ne dit pas
+pourquoi, et le partenaire reste bloqué en `PT409` sur sa propre fiche jusqu'à ce que quelqu'un
+comprenne.
+
+**5. Rejouer `tests/test_actor_portal.sql` seul** contre la base migrée, **sans la migration dans
+le payload** — c'est la seconde façon de refermer le bloc F, et elle vaut confirmation du run CI
+sur des données réelles. **Sans `BEGIN` externe** : le fichier porte les siens
+(`BEGIN` l. 189, `ROLLBACK` l. 2514). Là où `psql` et une chaîne de connexion existent
+uniquement — le fichier fait 175 977 octets et ne passe pas par `execute_sql`.
+
+**6. Re-relever les 9 md5 `prosrc`** du relevé initial et prouver que **seules les fonctions
+visées** ont bougé (tableau A ci-dessus, valeurs de référence incluses). Vérifier dans la foulée
+que la whitelist d'`api.approve_pending_change` porte bien **sept** writers, `save_object_rooms`
+exclu, et qu'il ne reste **qu'une seule** signature à trois paramètres.
+
+Puis, et seulement alors : remplir le tableau de sabotage, basculer le marqueur
+« ⏳ PAS ENCORE APPLIQUÉE », et **ne créer aucun compte `app_user_profile.role = 'actor'`** tant
+que les six prérequis de mise en service ne sont pas verts.
+
+### Trois invariants à ne pas re-perdre
+
+Ils sont défendus dans le code, mais chacun se re-perdrait sous un remaniement de bonne foi.
+
+1. **La whitelist §120 est à SEPT writers, et `submit` et `approve` doivent porter la MÊME.**
+   `api.submit_actor_fiche` (`migration_actor_portal.sql:517-520`) et
+   `api.approve_pending_change` (`:884-892`). **Une asymétrie fabrique une fiche bloquée à vie** :
+   si `submit` est le plus permissif, la proposition entre en base, l'approbation la refuse en
+   `22023`, et `uq_fiche_submission_open` ne libère jamais le partenaire. N'ajouter une entrée
+   qu'après l'avoir posée **des deux côtés**, et mettre à jour l'assertion miroir du bloc D2 de
+   `tests/test_actor_portal.sql`.
+
+2. **Le plancher dur de la matrice de visibilité n'est pas paramétrable.**
+   `api.actor_portal_floor_modules()` (`:299-305`) est une fonction `IMMUTABLE`, pas une table, et
+   `api.rpc_set_actor_section_visibility` refuse le plancher **même pour le re-rendre visible**
+   (`:444-445`). Les 9 modules y sont pour des raisons distinctes, pas par prudence générale :
+   `relationships` parce que son writer réécrit `actor_object_role`, c'est-à-dire **le périmètre
+   même de l'acteur** ; `places` parce que son writer supprime les médias des sous-lieux absents
+   du payload ; `media` parce qu'aucun chemin d'application n'existe (D11).
+
+3. **L'attestation de report manuel est déclarative.** La base la rend **imputable et visible**
+   (`applied_manually` / `attested_by` / `attested_at`, `:948-951`), elle **ne peut pas vérifier
+   que le report a eu lieu**. **L'écran est donc la seule garde** : case obligatoire, décochée à
+   chaque ouverture, bouton « Certifier et valider ». Si l'office demande à réduire la friction du
+   geste groupé, la reprise correcte est un **second bouton nommé** — jamais une case redevenue
+   facultative. Une attestation cochée par réflexe fait cesser « validée » de vouloir dire quelque
+   chose, et le partenaire lit « validée » sur une fiche publique qui n'a pas bougé.
+
+### Front
+
+L'interface du portail (spec D10 §228) est **livrée en branche, non poussée** : l'espace
+`/espace` et les 8 rubriques du registre
+`bertel-tourism-ui/src/features/portal/portal-rubrics.ts`, l'écran d'attestation de
+`/moderation`, la carte d'accès portail du CRM, le réglage de visibilité de `/settings`, et le
+retour au partenaire par notification et e-mail.
+
+La migration reste **inerte** tant qu'aucun `app_user_profile.role = 'actor'` n'existe — mais le
+front, lui, **ne l'est pas** : voir le geste n°4 de l'ordre de déploiement ci-dessus. Le front en
+production avant le SQL casse l'approbation pour l'office entier, en silence.
+
+## 18b — Seed `ref_amenity` : trois modes de visite hors catalogue depuis la mise en service de l'éditeur
+
+`Base de donnée DLL et API/migration_ref_amenity_visit_modes.sql`
+
+**Constat.** `VISIT_MODE_CODES` (`bertel-tourism-ui/src/features/object-editor/editor-completion.ts`)
+et les trois `Toggle` de `BlockVIS.tsx` (§06) écrivent depuis leur mise en service les codes
+`visite_libre`, `visite_guidee` et `audioguide`. Une recherche en base (`ILIKE` sur
+`%visit%`/`%guid%`/`%audio%`/`%tour%` + `%visite%`/`%guid%`/`%audio%` sur `code`/`name`) ne
+remonte **aucun** de ces trois codes — ni en production, ni dans `seeds_data.sql`. Seuls des
+codes de la famille `accessibility` (`acc_audio_description`, `acc_flexible_visit`,
+`acc_visit_device`, `acc_sign_language`, `acc_tactile_guidance`, `acc_braille_or_audio_docs`,
+`acc_guide_dog_welcome`, `acc_visual_audio_announce`) plus `boutique`/`tour_desk` remontent :
+aucun « mode de visite ».
+
+**Ce que ça casse réellement — pas un orphelinat silencieux, un blocage de sauvegarde.**
+`object_amenity.amenity_id` est une FK `NOT NULL REFERENCES ref_amenity(id) ON DELETE CASCADE` :
+il ne peut structurellement jamais exister de ligne « orpheline » qui référencerait un code
+absent du catalogue. La preuve tient dans le bras `amenities` d'`object_workspace_safe_write_rpcs.sql` :
+
+```sql
+v_id := internal.workspace_uuid(v_row->>'amenity_id');
+IF v_id IS NULL THEN
+  SELECT id INTO v_id FROM public.ref_amenity WHERE lower(code) = lower(v_row->>'amenity_code');
+END IF;
+IF v_id IS NULL THEN
+  RAISE EXCEPTION 'Unknown amenity reference: %', v_row USING ERRCODE = '23503';
+END IF;
+```
+
+Le front (`object-workspace.ts`, `buildCharacteristicsRpcPayload`) envoie `{ amenity_code: code }`
+pour chaque code sélectionné — jamais d'`amenity_id`. Tant qu'un code n'a pas de ligne
+`ref_amenity`, la résolution échoue et la fonction lève `23503`. Or `characteristics` est un
+module à **écriture groupée** (règle §48 single-owner citée dans `BlockVIS.tsx` : « tariffs are
+edited in §13, opening hours in §14 ») — `amenities`, moyens de paiement et tags environnement
+partagent le **même payload**. Cocher **un seul** des trois boutons « Visite libre / Visite
+guidée / Audioguide » en §06 et sauvegarder faisait donc échouer **toute la sauvegarde** de la
+fiche VIS, pas seulement la rubrique Visite. Vérifié en base : `SELECT count(*) FROM
+object_amenity oa JOIN ref_amenity ra ON ra.id = oa.amenity_id WHERE ra.code IN
+('visite_libre','visite_guidee','audioguide')` → **0**, sur un total de 6210 lignes
+`object_amenity` — attendu, pas une coïncidence : la garde `23503` rend la chose impossible.
+
+**Famille : `visit_mediation` (NEUVE), jamais `accessibility`.** Ce sont des modes de visite —
+comment le visiteur parcourt le site — pas des aides d'accessibilité. Le catalogue porte déjà ce
+rôle-là sous des codes `acc_*` dédiés et **distincts** : `acc_flexible_visit` (rythme/horaires
+adaptables sur demande) et `acc_visit_device` (dispositif d'aide de visite accessible). Les
+ranger sous `accessibility` **fausserait le filtre public d'accessibilité**, qui ne lit **que**
+cette famille-là — et `nonAccessibilityAmenityCount()` (`editor-completion.ts`) exclut
+explicitement `accessibility` du calcul de complétude §06 ; la réciproque doit rester vraie :
+rien qui n'est pas une aide d'accessibilité ne doit s'y trouver. Aucune des 21 familles
+existantes ne convenait davantage : `services` (bureau d'excursions, conciergerie, pressing…) et
+`entertainment` (jeux de société, bibliothèque…) sont un fourre-tout hôtelier/loisirs, pas la
+médiation d'un site de visite patrimonial/muséal. `visit_mediation` reprend le vocabulaire du
+sous-titre §06 de l'éditeur lui-même (« Modes de visite et équipements de médiation »).
+
+**Conventions reproduites** (bloc B-3/B-4 de `seeds_data.sql`, famille `accessibility`) : la
+famille est semée par `INSERT INTO ref_code (domain='amenity_family', code, name, description)
+... ON CONFLICT DO NOTHING` — la forme à 4 colonnes que suivent 20 des 21 familles existantes
+(seule `accessibility` porte un `metadata` enrichi, non repris ici pour une famille à 3 membres).
+Les équipements suivent le patron exact des 43 codes `acc_*` : `WITH family AS (...) INSERT INTO
+ref_amenity (...) ... ON CONFLICT (code) DO UPDATE SET ...`. `scope='object'` (comme les 113
+autres lignes `scope='object'` du catalogue — un mode de visite est une propriété du site visité,
+jamais d'une chambre). `position` laissé `NULL`, comme toutes les familles/équipements ajoutés
+après la passe de tri par popularité réelle (`migration_amenity_popularity_order.sql`, §73) —
+`business`/`comforts`/`equipment`/`family`/`sustainable` et leurs membres portent déjà
+`position=NULL` pour la même raison.
+
+**Idempotence.** `ON CONFLICT DO NOTHING` (famille) / `ON CONFLICT (code) DO UPDATE` (équipements,
+contrainte `ref_amenity_code_key`). Aucun `DROP` : rien n'est recréé dans ce fichier — pas de
+risque de la classe Task 7 (un `DROP` incomplet qui abat un rejeu transactionnel).
+
+### ⏳ PAS ENCORE APPLIQUÉE — packaging seul
+
+Comme 18a, ce chantier est **packagé, pas déployé** ; le déploiement est fait par le contrôleur.
+
+### Preuve TDD (menée en base LIVE, lecture seule + transactions annulées uniquement)
+
+| Étape | Résultat |
+| --- | --- |
+| ROUGE (`tests/test_ref_amenity_visit_modes.sql` seul, `BEGIN…ROLLBACK`, avant migration) | `ERROR: P0004: A: visite_libre doit exister exactement une fois dans ref_amenity` |
+| VERT (migration + test dans le même `BEGIN…ROLLBACK`) | tous les `ASSERT` passent, aucune erreur |
+| REJEU (migration appliquée **deux fois** dans le même `BEGIN…ROLLBACK`, puis test) | `visit_mediation` : 1 ligne ; les 3 codes : 1 ligne chacun — aucun doublon |
+
+Couverte par `tests/test_ref_amenity_visit_modes.sql` (étape **18b-test**, `ci_fresh_apply.sql`) et
+par le step CI `ref_amenity visit modes test` (`.github/workflows/sql-fresh-apply.yml`).
+
+### Front
+
+Aucun changement front dans ce créneau. La rubrique « Équipements » du portail acteur pour les
+sites de visite (type `VIS`) est un chantier distinct (Task 13) qui dépend de ce seed pour ne
+plus buter sur `23503` dès qu'un mode de visite est sélectionné.
+
+## 18c / 18d — Organisation de test à données isolées
+
+`migration_test_org_isolation.sql` (la dimension) + `migration_test_org_seed.sql` (le corpus).
+Spec : `docs/superpowers/specs/2026-09-04-test-org-isolated-data-design.md`.
+
+### Pourquoi
+
+Aucun moyen d'exercer la plateforme sur des données jetables : toute fiche créée pour essayer
+une fonctionnalité entrait dans le corpus réel, devenait visible de tous, et **partait à l'API
+partenaire**.
+
+`org_config.access_scope = 'own_objects_only'` existe depuis §172 et **ne restreint rien** : une
+policy distincte, `public_objects_published`, accorde `status='published'` au rôle `public`
+(donc `anon` compris), par un autre chemin. Le périmètre était déclaré, pas appliqué.
+
+### Ce que les migrations font
+
+Un unique prédicat, écrit partout à l'identique :
+
+```sql
+o.is_test = (SELECT api.current_user_test_realm())
+```
+
+Une **égalité**, donc les deux sens à la fois — le corpus de test ne sort pas, et le compte de
+test ne voit pas la production. Deux prédicats séparés auraient laissé un des sens s'oublier ;
+c'est exactement ce qui est arrivé à `access_scope`.
+
+`object.is_test` est dénormalisé mais **entretenu par trigger** depuis `org_config.is_test_org` :
+l'organisation reste la source de vérité, la garde ne lit qu'une constante par ligne (pas de
+jointure dans le chemin RLS le plus chaud, celui réécrit en ensembliste pour §35).
+
+### Ce que le plan n'avait pas vu, et que les tests ont trouvé
+
+| # | Trouvé par | Conséquence si non fermé |
+| --- | --- | --- |
+| `can_read_object` ne couvre que **15 policies de lecture sur 58** ; les 42 autres inlinent le contrôle de publication depuis §35 | revue avant application | media, contact_channel, descriptions, tarifs, horaires grands ouverts — *la fiche entière*, avec le test « la fiche est invisible » au vert |
+| Le chemin **2C** de `current_user_extended_object_ids` (`access_scope = 'all_published'`) accorde tout le corpus publié | bloc C du test, passé rouge | rouvre à lui seul ce que `public_objects_published` venait de fermer |
+| `object_deletion_log` ne portait aucune dimension de test | bloc G du test | supprimer une fiche de test publiait son id et son type au **flux de tombstones partenaire** (C-4) |
+
+Les 42 policies sont réécrites **génériquement**, à partir du `qual` décompilé : on n'injecte que
+le prédicat, chaque policy garde ses conditions propres. Un `DO` block **refuse de valider** s'il
+reste une seule policy de lecture testant la publication sans prédicat de realm.
+
+### L'API partenaire
+
+Elle appelle en `service_role`, qui **court-circuite toute la RLS** : aucune des gardes RLS ne la
+protège. Le prédicat est donc écrit dans les corps de fonction (21 emplacements), et testé
+séparément.
+
+### ✅ APPLIQUÉES EN PRODUCTION le 2026-09-04
+
+| Vérification | Mesure |
+| --- | --- |
+| Flux partenaire complet (parcours du curseur) | 5 pages, **848 fiches servies, 0 de test** — exactement le corpus de production |
+| Policies de lecture sans prédicat de realm | 0 |
+| Matview de l'Explorer | 848 lignes = published non-test |
+| Corpus de test | 271 fiches, **19 types couverts**, 200 acteurs fictifs |
+| Compte de test simulé | 271 fiches de test visibles, **0 fiche réelle** ; fiche complète (localisation, description, contacts) |
+| Fiche **creee** dans le bac a sable, puis publiee | `is_test` = true ; invisible de `anon` ; absente de l'API partenaire |
+| `test_test_org_isolation.sql` | 9 blocs verts, **rouge avant application** |
+| `test_test_org_seed.sql` | 7 blocs verts |
+
+### La profondeur PAR TYPE — `migration_test_org_facets.sql` (18d0)
+
+18d remplissait les tables **communes** (localisation, description, contacts, acteur, ouverture,
+équipements, tarifs, classements) et s'arrêtait là. Les 270 fiches n'avaient donc **aucune ligne
+de facette** : sentiers sans distance ni tracé ni étape, manifestations **sans date**, hôtels sans
+chambre, restaurants sans carte. Le corpus était complet au sens du *nombre* de fiches et vide au
+sens du *métier*.
+
+La garde de 18d ne le voyait pas : elle vérifiait la profondeur **commune**, c'est-à-dire
+exactement ce que le semeur construisait. *Une garde qui n'interroge que ce qu'on a fait ne dit
+rien de ce qu'on a oublié* — même motif que les 42 policies inlinées de 18c.
+
+- **Ordre** : 18d0 s'applique **avant** 18d, qui appelle `internal.seed_test_facets` depuis
+  `seed_test_corpus`. C'est la seule façon que `rpc_reset_test_data()` resème aussi les facettes ;
+  une passe de rattrapage séparée aurait disparu au premier « Réinitialiser » sans revenir.
+- **Le registre décide** : `ref_facet_applicability` (+ `trg_assert_facet_applicable`). 7 types
+  (COM, PCU, PNA, PRD, PSV, SPU, VIL) n'ont aucune facette et n'en reçoivent pas.
+- **Piège relevé** : `object_iti.open_status` n'accepte que 4 des 7 codes de
+  `ref_code_iti_open_status` — `not_managed`, `unknown` et `archived` sont refusés par le CHECK
+  de la colonne.
+
+| Type | Facettes semées |
+| --- | --- |
+| ITI | `object_iti` (distance, dénivelé, durée, boucle, statut, **tracé LineString**), 4 étapes géolocalisées, 1-3 pratiques, `object_iti_info`, 6 points de profil |
+| FMA | `object_fma` (dates, horaires, récurrence) + **3 occurrences étalées** (passée, proche, lointaine) |
+| ACT, ASC | `object_act` (durée, participants, difficulté, âge, encadrement) |
+| HOT, HLO, CAMP, HPA, RVA | 3 types de chambre (capacités, surface, literie, prix) ; salle de réunion 1 fiche sur 2 |
+| LOI | salle de réunion 1 fiche sur 2 |
+| RES | une carte + 4 plats |
+
+Le bloc I de `test_test_org_seed.sql` garde tout cela, et sa moitié générique est **pilotée par le
+registre** : si un type gagne une facette demain et que le semeur l'ignore, il rougit sans qu'on
+touche au test. **Non-vacuité prouvée par sabotage** — les 5 assertions rougissent quand on
+détruit tour à tour étapes, tracé, dates, chambres et cartes.
+
+### Creer une fiche DANS le bac a sable
+
+C'est la condition d'un bac a sable utile — on n'y vient pas pour lire — et le chemin le plus
+fragile du cloisonnement, parce qu'il repose sur un **enchainement de triggers** :
+
+```
+rpc_create_object
+  -> trg_auto_attach_object_to_creator_org   (AFTER INSERT sur object : pose object_org_link is_primary)
+     -> trg_object_org_link_is_test           (AFTER INSERT sur object_org_link : marque object.is_test)
+```
+
+Si l'auto-rattachement cesse un jour de poser `is_primary`, les fiches creees dans le bac a sable
+**naitront en production** — publiques des leur publication, et servies a l'API partenaire, sans
+aucune erreur. Le bloc I de `test_test_org_isolation.sql` garde precisement cela : creation,
+publication, puis verification par `anon` **et** par `service_role`.
+
+### L'identité d'acteur traverse les organisations (correctif 18c-bis)
+
+Un utilisateur est relié à des fiches **par son e-mail** — `api.user_actor_ids()` joint
+`actor_channel.kind='email'` sur l'e-mail de session. Ce chemin (1a/1b du read gate) **ignore
+complètement l'organisation**, donc il ignorait aussi le realm : le prédicat n'avait été posé que
+sur le chemin 2C.
+
+Les deux sens fuyaient, mesurés sur la base live :
+
+| Croisement | Avant | Après |
+| --- | --- | --- |
+| Testeur dont l'e-mail est celui d'un acteur **réel** | voyait la fiche de production `LOIRUN00000000VI` | 0 fiche réelle |
+| Utilisateur de production dont l'e-mail est posé sur un acteur du **bac à sable** | voyait la fiche de test `PNATST0000000012` | 0 fiche de test |
+
+Le second n'a rien de théorique : **poser un e-mail sur un acteur du bac à sable est exactement ce
+qu'on y fait pour éprouver le portail acteur** (§228).
+
+**Le correctif filtre l'UNION ENTIÈRE en un seul point** — un `JOIN object … WHERE o.is_test =
+(SELECT api.current_user_test_realm())` posé sur le résultat des 5 chemins, plutôt qu'un prédicat
+répété chemin par chemin qui se serait re-oublié au prochain chemin ajouté. Le prédicat inline de
+2C disparaît, devenu redondant.
+
+**L'écriture passait par le même trou** : `api.is_object_owner` s'appuie sur `user_actor_ids()` et
+renvoyait `true` sur une fiche de production pour un compte de test. L'`UPDATE` direct ne touchait
+0 ligne — mais **par effet de bord** de la policy SELECT, pas par une garde : un RPC
+`SECURITY DEFINER` qui consulte `is_object_owner` puis écrit n'aurait eu aucun filet. La garde
+porte désormais le prédicat. `user_can_write_canonical` était déjà sain (il exige le lien d'ORG).
+
+**Découverte annexe** : les e-mails d'acteurs sont **uniques globalement** (« Email … is already
+used by actor … »). Cela limite la portée du croisement — un même e-mail ne peut pas être porté
+par un acteur de chaque côté — mais ne l'empêche pas, puisqu'il suffit qu'un *utilisateur* d'un
+realm porte l'e-mail d'un *acteur* de l'autre.
+
+Bloc J de `test_test_org_isolation.sql`, **non-vacuité prouvée par sabotage** : en restaurant la
+forme d'avant (prédicat sur le seul 2C), le bloc rougit.
+
+### Ouvrir un compte de test
+
+Aucun code supplémentaire : l'ORG « Bac a sable (organisation de test) » apparaît dans le
+sélecteur d'organisation de **/settings > Équipe**. On y invite un compte par e-mail ; l'invité
+choisit son propre mot de passe via `/set-password`, comme pour toute autre organisation.
+
+Comptes **dédiés** : pas de double appartenance. Le realm se calcule par utilisateur, pas par
+session — un compte présent dans les deux mondes serait de test partout, y compris sur les
+fiches réelles.
+
+### Remise à zéro
+
+`api.rpc_reset_test_data()` — superuser plateforme, **sans argument** (la cible est constante, on
+ne peut pas la pointer sur une organisation de production), et refus si l'ORG visée n'est pas
+`is_test_org`. Exposée dans **/settings > Corpus de test**, avec confirmation par saisie.
+
+La purge porte sur `is_test`, **pas sur le préfixe d'id** : une fiche créée à la main dans le bac
+à sable doit disparaître aussi, et une fiche de production ne doit pas disparaître parce qu'elle
+porterait un id malheureux.
+
+### Ordre de déploiement
+
+1. `migration_test_org_isolation.sql` (18c) — **en dernier dans le manifeste** : sa réécriture
+   générique des policies doit voir toutes les policies déjà créées.
+2. Les fonctions modifiées d'`api_views_functions.sql` (extraites par
+   `tools/sql/extract_functions.cjs` — le fichier entier contient des `DROP … CASCADE` qu'on ne
+   rejoue pas sur la production).
+3. `migration_explorer_rls_setbased.sql` (chemin 2C), `migration_cards_batch_authorize_definer.sql`,
+   `migration_partner_tombstone_feed.sql`.
+4. `migration_test_org_seed.sql` (18d).
+
+## Integration portail et bac a sable — 2026-09-04
+
+Le portail conserve 18a et le seed des modes de visite 18b. Le bac a sable utilise
+18c (isolation), 18d0 (facettes) puis 18d (corpus), apres le portail.
+La migration du portail conserve le filtre de realm sur les cinq chemins de lecture
+historiques, sur la portee explicite du portail et sur le lien owner, en plus du refus
+d'ecriture canonique pour la persona actor. Le bloc J du test d'isolation est rejoue
+apres les deux migrations pour verifier que le portail ne rouvre pas le pont e-mail.
+Les numeros des anciens rapports restent des reperes historiques de leurs branches.
+
+La CI a egalement revele que `migration_explorer_name_relevance.sql` est le dernier
+definisseur de `get_filtered_object_ids` : le filtre de realm et le contournement
+de la MV pour un compte de test y sont conserves, comme dans `api_views_functions.sql`.
+
+## 18e — Permission du bloc CRM Accès portail — 2026-09-04
+
+Appliquer `supabase/migrations/20260904060259_actor_portal_access_permission.sql`
+avant le déploiement de l’interface et de la route `/api/crm/actor-access`.
+Le manifeste de création utilise la copie identique
+`Base de donnée DLL et API/migration_actor_portal_access_permission.sql`, puis
+`tests/test_actor_portal_access_permission.sql` (fixtures annulées par ROLLBACK).
+
+La permission `manage_actor_portal_access`, catégorie CRM, apparaît dans
+Administration → Équipe → Permissions par rôle métier, sous le libellé
+« Gérer l’accès au portail prestataire ». Elle n’est accordée à aucun rôle par défaut.
+Seuls les superutilisateurs plateforme (`super_admin` / propriétaire `owner`, selon
+la définition existante) voient initialement le bloc. Cocher Éditeur permet ensuite
+de le déléguer aux éditeurs de l’organisation. Les exceptions individuelles existantes
+fonctionnent également. Le périmètre CRM de chaque acteur reste vérifié côté serveur.
+
+En l’absence du RPC ou en cas de refus, le bloc est masqué ; la route refuse les
+quatre opérations, y compris la lecture du statut. La migration est rejouable sans
+effacer les permissions accordées ultérieurement. Aucun compte portail n’est modifié.
+
+Validation du 2026-09-04 : 130 tests Jest ciblés passent (route, service, carte et
+fiche CRM, matrice et tiroir des permissions), ainsi que `tsc --noEmit`. Le test SQL
+transactionnel passe sur la base connectée, puis le manifeste complet et ses tests
+passent en CI sur une base vierge : [run 33843400996](https://github.com/D-OTIsud/Bertel/actions/runs/33843400996),
+commit `cea707a`. La migration incrémentale a ensuite été appliquée en base.
+Le masquage côté interface et la garde de route nécessitent le redéploiement de l’application.
+
+Contrôle après application : catalogue et RPC présents, zéro octroi actif par rôle
+et zéro exception individuelle. Le graphe DB a été régénéré avec les fonctions et
+policies du catalogue vivant ; l’export `tbls` ayant dépassé 180 secondes, le relevé
+existant des tables a été conservé (cette migration ne change ni table, ni colonne, ni FK).
+
+## 18f — Découverte publique du bac à sable — 2026-09-04
+
+`https://bertel.re/?test=true` ouvre `/test`, sans identifiants. Le lien discret
+« Essayer l’espace de test » du login utilise cette même entrée. `/login?test=true`
+fonctionne également. Le bandeau propose « Quitter le test ».
+
+La migration `supabase/migrations/20260904062635_public_sandbox_entry.sql` a été
+appliquée en base ; sa copie canonique `migration_public_sandbox_entry.sql` et le
+test transactionnel `tests/test_public_sandbox_entry.sql` sont ajoutés au manifeste.
+Le premier appel à `/api/sandbox/session` prépare une identité de découverte
+partagée, marquée exclusivement via Auth Admin, membre contributeur de l’ORG de
+test. Aucun e-mail n’est envoyé. Aucun compte de travail n’est converti, aucun rôle
+administrateur ni permission portail n’est accordé. Les fiches fictives sont
+modifiables ; CRM en écriture, administration et remise à zéro restent fermés.
+
+Le serveur vérifie ce périmètre avant d’émettre une session. Les RPC de préparation
+ne sont exécutables que par `service_role`. Le marqueur signé `app_metadata` garde
+le realm de test même après révocation de l’appartenance (jamais `user_metadata`).
+La clé serveur existante `SUPABASE_SERVICE_ROLE_KEY` reste nécessaire, comme pour
+les autres routes Admin ; aucune clé supplémentaire n’est requise.
+
+Dans le navigateur, tokens et cache de découverte utilisent des clés distinctes,
+dans `sessionStorage`. La session de travail en `localStorage` reste intacte, ainsi
+que les autres onglets. Entrée et sortie rechargent la page pour reconstruire les
+clients avec le bon stockage. Une erreur de vérification du realm bloque l’ouverture.
+
+Validation : les assertions SQL passent sur la base connectée et sont annulées par
+ROLLBACK. Le parcours navigateur local utilise des réponses Auth simulées : il
+vérifie le lien, l’entrée directe, le stockage séparé, la récupération après erreur
+et la sortie. L’émission d’une session Auth réelle doit être confirmée après
+redéploiement : aucune clé Admin n’est disponible dans l’environnement local de test.
+
+Résultats du 2026-09-04 : 44 tests Jest ciblés passent ; le build de production
+(`npm run build`) passe sur un checkout propre du commit `2debe19`, avec `/test`
+et `/api/sandbox/session` présents. Le manifeste SQL complet et ses régressions
+passent en CI : [run 33845734056](https://github.com/D-OTIsud/Bertel/actions/runs/33845734056).
+Le graphe DB a été rafraîchi avec les fonctions/policies vivantes et une extraction
+ciblée de `internal.sandbox_discovery_identity` depuis `pg_catalog` (export tbls
+trop long). La prévisualisation a confirmé l’entrée, la sortie et la préservation
+du stockage de travail, avec Auth simulée. Le cache de développement de la
+prévisualisation n’a pas été utilisé pour valider le build de production.

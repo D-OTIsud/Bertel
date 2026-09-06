@@ -10,7 +10,9 @@
 
 import { Seg } from './crm-primitives';
 
-// Statut PO : Actives = interactions `planned` (à traiter), Traitées = `done`, Toutes = libre.
+// Statut PO — vocabulaire d'INTERFACE, distinct du cycle de vie et VOLONTAIREMENT inchangé
+// par la bascule 17g : Actives = la famille OUVERTE (new, in_progress, awaiting_provider),
+// Traitées = la famille FERMÉE (resolved, closed, canceled), Toutes = libre.
 export const STATUS_ITEMS = ['Actives', 'Traitées', 'Toutes'] as const;
 export type StatusItem = (typeof STATUS_ITEMS)[number];
 export const STATUS_DEFAULT: StatusItem = 'Toutes';

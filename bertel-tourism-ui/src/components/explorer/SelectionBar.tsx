@@ -13,6 +13,7 @@ import { getObjectResource } from '../../services/rpc';
 import { OtiCarnetCard, type OtiPoi } from '@/features/lists/OtiTemplate';
 import { MAX_PRINT_SELECTION, preloadImages, selectionDetailToOtiPoi } from './selection-print';
 import { CopyEmailsModal } from './CopyEmailsModal';
+import { isPlatformSuperuser } from '../../store/session-selectors';
 import { cn } from '@/lib/utils';
 
 /**
@@ -38,6 +39,9 @@ export function SelectionBar() {
   // Cartes prêtes à imprimer : non-vide ⇒ le portail .oti-print-portal est monté.
   const [printPois, setPrintPois] = useState<OtiPoi[]>([]);
   const router = useRouter();
+  // 17l — creer une liste est reserve au superuser plateforme ; api.create_list rend 42501
+  // sinon. Le bouton disparait plutot que d'echouer apres coup.
+  const canCreateList = useSessionStore(isPlatformSuperuser);
   const count = selectedObjectIds.length;
   const empty = count === 0;
   // Au-delà du plafond, « Imprimer » est désactivé AVEC sa raison (label + title) plutôt
@@ -191,19 +195,21 @@ export function SelectionBar() {
 
           {/* La sélection active se transforme en LISTE (statique) : imprimer / envoyer / partager
               se font ensuite depuis le module Listes. Remplace l'ancien « Envoyer » inerte. */}
-          <button
-            type="button"
-            disabled={creating}
-            onClick={() => void handleCreateList()}
-            title="Transformer la sélection en liste (imprimer, envoyer, partager)"
-            className={cn(
-              'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold transition',
-              creating ? 'cursor-not-allowed bg-orange/30 text-white/70' : 'bg-orange text-white hover:bg-orange/90',
-            )}
-          >
-            <ListPlus className="h-3.5 w-3.5 shrink-0" />
-            {creating ? 'Création…' : 'Créer une liste'}
-          </button>
+          {canCreateList && (
+            <button
+              type="button"
+              disabled={creating}
+              onClick={() => void handleCreateList()}
+              title="Transformer la sélection en liste (imprimer, envoyer, partager)"
+              className={cn(
+                'inline-flex h-[30px] shrink-0 items-center gap-1.5 rounded-[9px] px-3 text-[12.5px] font-semibold transition',
+                creating ? 'cursor-not-allowed bg-orange/30 text-white/70' : 'bg-orange text-white hover:bg-orange/90',
+              )}
+            >
+              <ListPlus className="h-3.5 w-3.5 shrink-0" />
+              {creating ? 'Création…' : 'Créer une liste'}
+            </button>
+          )}
         </>
       )}
 

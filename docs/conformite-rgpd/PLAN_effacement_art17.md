@@ -85,7 +85,7 @@ Les portraits/médias sont dans le **bucket Storage** (`media.url` = string sans
 5. Re-lecture (`get_*`) : plus aucune PII du sujet.
 
 ## 7. Livrables & ordre (à l'implémentation)
-1. `migration_gdpr_erasure.sql` (registre PII + RPC + redaction + tables demandes/log) — **idempotent, réversible**.
+1. `migration_gdpr_erasure.sql` (registre PII + RPC + redaction + tables demandes/log) — **idempotent, réversible** ⚠ **dépassé depuis 18a** : le corps canonique d'`api.rpc_gdpr_erase_subject` vit désormais dans `Base de donnée DLL et API/migration_actor_portal.sql` §8.5 (branche acteur = déliage du compte portail). Ne pas rejouer ce fichier seul — il écraserait 18a sans lever.
 2. `tests/test_gdpr_erasure.sql` (cas 6.x).
 3. Route serveur de suppression Storage (média) + branchement.
 4. Manifest + `SQL_ROLLOUT_RUNBOOK.md` (ordre d'apply) + note d'invariant CLAUDE.md.

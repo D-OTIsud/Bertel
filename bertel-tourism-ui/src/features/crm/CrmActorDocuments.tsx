@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ExternalLink, FileText, Trash2, Upload } from 'lucide-react';
-import { getSupabaseClient } from '../../lib/supabase';
 import {
   listActorSupport,
   listObjectDocumentTypes,
@@ -15,7 +14,9 @@ import {
   promoteActorDocument,
   uploadActorDocument,
 } from '../../services/actor-documents';
-import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
+import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
+import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
+import { CRM_READ_ONLY_REASON, formatDocumentSize, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
 
 interface LinkedObjectOption {
@@ -34,31 +35,6 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Une erreur est survenue.';
 }
 
-function formatBytes(value: number): string {
-  if (!value) return '';
-  if (value < 1024) return `${value} o`;
-  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
-  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
-}
-
-function useActorDocumentAccessToken() {
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    const client = getSupabaseClient();
-    if (!client) return;
-    void client.auth.getSession().then(({ data }) => {
-      if (alive) setAccessToken(data.session?.access_token ?? null);
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  return accessToken;
-}
-
 /** Zone d'ajout dédiée au rail droit de l'onglet Documents. */
 export function CrmActorDocumentDropzone({
   actorId,
@@ -69,7 +45,7 @@ export function CrmActorDocumentDropzone({
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const accessToken = useActorDocumentAccessToken();
+  const accessToken = useSupabaseAccessToken();
   const [isDragging, setIsDragging] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
@@ -128,7 +104,7 @@ export function CrmActorDocumentDropzone({
         ref={fileInputRef}
         className="crm-actor-docs__file-input"
         type="file"
-        accept="application/pdf,image/jpeg,image/png,image/webp"
+        accept={CRM_DOCUMENT_ACCEPT}
         aria-label="Sélectionner un document à ajouter"
         onChange={(event) => addFile(event.target.files?.[0])}
       />
@@ -153,7 +129,7 @@ export function CrmActorDocuments({
   objects: LinkedObjectOption[];
 }) {
   const queryClient = useQueryClient();
-  const accessToken = useActorDocumentAccessToken();
+  const accessToken = useSupabaseAccessToken();
   const [promotion, setPromotion] = useState<PromotionDraft | null>(null);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
@@ -249,7 +225,18 @@ export function CrmActorDocuments({
                   <div className="crm-actor-docs__meta">
                     <strong>{document.title}</strong>
                     <small>
-                      {[document.intendedRoleName, formatBytes(document.sizeBytes), document.createdAt ? formatShort(document.createdAt) : '']
+                      {[
+                        document.intendedRoleName,
+                        // `api.list_actor_support` émet `coalesce(size_bytes, 0)` : sur CETTE
+                        // route, 0 est LA SENTINELLE d'une taille absente autant qu'un fichier
+                        // réellement vide, et rien côté client ne les sépare. On OMET donc le
+                        // segment plutôt que d'afficher « 0 o », qui affirmerait une taille
+                        // qu'on n'a pas — le mensonge même que `formatDocumentSize` refuse de
+                        // faire pour `null`. Rétablir la distinction ici suppose de faire
+                        // cesser le `coalesce` côté SQL (hors périmètre).
+                        document.sizeBytes === 0 ? '' : formatDocumentSize(document.sizeBytes),
+                        document.createdAt ? formatShort(document.createdAt) : '',
+                      ]
                         .filter(Boolean)
                         .join(' · ')}
                     </small>

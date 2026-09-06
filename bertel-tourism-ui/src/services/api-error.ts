@@ -15,12 +15,12 @@
  *     noms de tables, des données ou de la configuration.
  *  2. **Un code inconnu ne fait pas échouer la traduction** : il retombe sur un message générique
  *     qui donne au moins le statut, de quoi ouvrir un ticket utile.
+ *
+ * Le vocabulaire SQLSTATE vit dans `@/lib/db-error-message` : les routes `src/app/api/**` en ont
+ * besoin AUSSI, pour ne pas alimenter un code allowlisté avec la sortie brute du moteur. Une
+ * seconde table ici dériverait de la première.
  */
-
-/** Vrai en dev/test, faux en production — décide de ce qui part au journal. */
-function isVerboseEnv(): boolean {
-  return process.env.NODE_ENV !== 'production';
-}
+import { SQLSTATE_LABELS, isVerboseEnv, readErrorCode, readErrorMessage } from '@/lib/db-error-message';
 
 /**
  * Journalise un brut NON traduit. En production, seuls le statut et le code sortent : le `detail`
@@ -123,6 +123,29 @@ export const API_ERROR_LABELS: Record<string, string> = {
   promotion_document_failed: "L'enregistrement du document rattaché a échoué.",
   document_create_failed: "L'enregistrement du document a échoué.",
   actor_document_create_failed: "L'enregistrement du document du contact a échoué.",
+  // --- Pièces jointes de tâche CRM (17i, /api/task-document) ------------------------------
+  // Les cinq codes ci-dessous sont NÉS d'un clone d'`actor-document`, dont la couverture était
+  // de 100 % : `actor_document_create_failed` figure juste au-dessus. Sans eux, l'utilisateur
+  // lisait « Une erreur est survenue (code 500) » précisément sur les chemins que la route
+  // distingue avec le plus de soin — erreur de LECTURE ≠ absence, orphelin storage, bucket
+  // inattendu. Le travail de distinction était fait côté route et jeté côté écran.
+  // AUCUN d'eux ne doit rejoindre `CODES_WITH_BUSINESS_DETAIL` : leur `detail` porte un
+  // message Postgres/Storage brut, pas un `RAISE` métier français (règle 1 du module).
+  task_document_create_failed: "L'enregistrement de la pièce jointe a échoué.",
+  // Erreur de LECTURE, pas une absence : le fichier existe peut-être encore. Le dire
+  // autrement (« introuvable ») ferait croire à une suppression qui n'a pas eu lieu.
+  link_lookup_failed:
+    "La vérification de la pièce jointe a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  document_lookup_failed:
+    "La lecture de la pièce jointe a échoué. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  // La suppression a été INTERROMPUE AVANT d'effacer quoi que ce soit : le message doit dire
+  // que la pièce est toujours là, sinon l'utilisateur la croit partie et ne réessaie pas.
+  storage_remove_failed:
+    "Le retrait du fichier a échoué : la pièce jointe n'a pas été supprimée. Réessayez ; si le problème persiste, contactez l'administrateur.",
+  // 409 : la ligne pointe hors du bucket des pièces jointes. Rien à faire depuis l'écran —
+  // c'est une anomalie de données, et l'utilisateur doit savoir que réessayer ne servira à rien.
+  unexpected_bucket:
+    "Cette pièce jointe pointe vers un espace de stockage inattendu : elle ne peut être ni ouverte ni supprimée depuis cet écran. Signalez-la à l'administrateur.",
   image_prep_failed: "L'image n'a pas pu être préparée. Réessayez avec un autre fichier.",
   download_failed: 'Le téléchargement a échoué.',
   signed_url_failed: "Le lien de téléchargement n'a pas pu être généré.",
@@ -174,6 +197,17 @@ export const API_ERROR_LABELS: Record<string, string> = {
  * à relayer de l'anglais technique, c'est un défaut à corriger À LA SOURCE (comme le pipeline
  * média l'a été), pas une devinette à faire ici. Tous les autres codes gardent leur `detail` au
  * journal — il est technique, anglais, ou porte de la configuration.
+ *
+ * CE DÉFAUT A EXISTÉ, il est fermé (2026-09-01). Quatre routes alimentaient ces deux codes ;
+ * trois le faisaient avec la sortie BRUTE du moteur, et l'utilisateur qui retirait une pièce
+ * jointe lisait « update or delete on table "ref_document" violates foreign key constraint … ».
+ * L'INVARIANT QUI EN SORT, à tenir par toute route qui émettra un jour un code de cette liste :
+ * elle ne met dans `detail` QUE le message d'un `RAISE` à elle, jamais un `error.message` de
+ * PostgREST / Postgres / GoTrue. Le tri se fait avec `engineErrorDetail` (@/lib/db-error-message),
+ * qui rend une phrase FR pour les SQLSTATE actionnables et `undefined` sinon — auquel cas la route
+ * OMET `detail` et l'utilisateur retombe ici, sur le libellé générique. Couvert par
+ * `route.delete.test.ts` (actor-document), `route.test.ts` (delete-user, objects/delete,
+ * rgpd/erase) : chacun vérifie le rendu FINAL via `readApiErrorMessage`, pas seulement la réponse.
  */
 const CODES_WITH_BUSINESS_DETAIL = new Set(['delete_failed', 'erase_failed']);
 
@@ -228,37 +262,6 @@ export function networkError(cause: unknown): Error {
 }
 
 /**
- * SQLSTATE PostgreSQL → message FR. Table volontairement courte : ne sont traduits que les codes
- * dont l'utilisateur peut faire quelque chose.
- */
-const SQLSTATE_LABELS: Record<string, string> = {
-  '42501': "Cette action n'est pas autorisée avec vos droits actuels.",
-  '23505': 'Cette valeur existe déjà (doublon).',
-  '23503': 'Un élément lié a été supprimé entre-temps — rechargez la fiche.',
-  '23514': 'Une valeur enregistrée est invalide.',
-  '23502': 'Une valeur obligatoire est manquante.',
-  '22P02': 'Format de valeur invalide.',
-  '22001': 'Texte trop long pour ce champ.',
-  '57014': 'La requête a pris trop de temps. Affinez vos filtres et réessayez.',
-  PGRST301: 'Session expirée — reconnectez-vous.',
-};
-
-function readMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-    return error.message;
-  }
-  return '';
-}
-
-function readCode(error: unknown): string {
-  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
-    return error.code;
-  }
-  return '';
-}
-
-/**
  * Traduit une erreur PostgREST / Supabase en message FR.
  *
  * **La priorité est INVERSÉE par rapport à l'ancien `mapMutationError`** : on mappe d'abord, et à
@@ -274,8 +277,8 @@ function readCode(error: unknown): string {
  * court-circuiterait.
  */
 export function mapDatabaseError(error: unknown, fallback: string): Error {
-  const message = readMessage(error);
-  const code = readCode(error);
+  const message = readErrorMessage(error);
+  const code = readErrorCode(error);
   const normalized = `${code} ${message}`.toLowerCase();
 
   if (code && SQLSTATE_LABELS[code]) {

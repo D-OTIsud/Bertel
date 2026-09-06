@@ -92,4 +92,3 @@ Le résultat d'authentification contient `scopes`, mais les routes partenaires e
 ## Limites et validation recommandée
 
 La revue a retracé les principaux chemins API et lu les tests existants ; elle n'a pas chargé le VPS, scanné un bucket ni sollicité les fournisseurs. Vérifier en environnement isolé : refus inter-organisation, 413 avant allocation, quotas multi-instance, contenu média corrompu, rollback/reprise Storage, expiration des partages et révocation de clés. Les pages de documentation ou commentaires mentionnant des contrôles « vérifiés live » ne sont pas une vérification de production du 5 septembre.
-

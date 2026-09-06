@@ -22,7 +22,12 @@ CREATE TABLE IF NOT EXISTS object_deletion_log (
   document_deleted_count INT  NOT NULL DEFAULT 0,
   performed_by           UUID,
   performed_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-  report                 JSONB
+  report                 JSONB,
+  -- Realm de la fiche AU MOMENT de sa suppression (18a). Fige par trigger :
+  -- l'objet n'existe plus, on ne peut pas rejoindre son realm apres coup. Sans
+  -- cette colonne, supprimer une fiche de test publiait son id et son type au
+  -- flux de tombstones partenaire (C-4, list_deleted_objects_since).
+  is_test                BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 COMMENT ON TABLE object_deletion_log IS

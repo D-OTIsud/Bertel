@@ -147,6 +147,54 @@ export function formatShort(value: string | null): string {
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(ts));
 }
 
+/**
+ * Taille lisible d'une pièce jointe — SOURCE UNIQUE des deux panneaux qui en affichent une
+ * (`CrmTaskModal`, `CrmActorDocuments`). Chacun portait sa copie, et elles avaient déjà
+ * divergé sur le cas qui compte.
+ *
+ * `null` est une garde SQL DÉLIBÉRÉE (taille illisible côté serveur : le cast de
+ * `ref_document.extra->>'size_bytes'` est borné, une valeur non numérique sort à NULL au
+ * lieu d'abattre la lecture entière) et doit rester distinguable d'une taille de 0 octet —
+ * les confondre ferait mentir l'interface (« 0 Ko » n'est pas « on ne sait pas »).
+ *
+ * Cette fonction FORMATE une taille ; elle ne décide pas s'il faut en afficher une. Un
+ * appelant dont la route ne sait PAS distinguer 0 de « inconnu » doit garder son appel :
+ * c'est le cas de `CrmActorDocuments`, dont le SQL émet `coalesce(size_bytes, 0)`.
+ */
+export function formatDocumentSize(value: number | null): string {
+  if (value === null) return 'taille inconnue';
+  if (value < 1024) return `${value} o`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} Ko`;
+  return `${(value / (1024 * 1024)).toFixed(1).replace('.', ',')} Mo`;
+}
+
+/**
+ * `AAAA-MM-JJ` pour un `<input type="date">`, dérivé DANS LE MÊME FUSEAU que `formatShort`.
+ *
+ * POURQUOI CETTE FONCTION EXISTE. Le modal d'édition pré-remplissait son champ d'échéance
+ * par `task.dueAt.slice(0, 10)`, c'est-à-dire la date **UTC** de l'horodatage, alors que la
+ * carte kanban rend la même valeur par `formatShort`, qui n'impose aucun `timeZone` et
+ * s'affiche donc en heure **locale**. La Réunion étant à UTC+4, une `due_at` entre 20:00Z et
+ * 24:00Z fait afficher J+1 par la carte et J par le modal — et **enregistrer persiste le
+ * décalage** (`save_crm_task` accepte des heures, la valeur écrite est bien celle du champ).
+ * La fenêtre est étroite mais réelle, et la divergence est silencieuse : deux surfaces qui
+ * lisent la MÊME donnée doivent la dater dans le MÊME fuseau.
+ *
+ * Les accesseurs `getFullYear/getMonth/getDate` sont LOCAUX, exactement comme le formateur
+ * `Intl` sans `timeZone` de `formatShort` : la parité des deux surfaces est structurelle,
+ * pas une coïncidence de constantes recopiées. `''` sur valeur absente ou illisible — un
+ * `<input type="date">` n'accepte que le format exact, une valeur douteuse y serait ignorée
+ * en silence par le navigateur.
+ */
+export function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return '';
+  const ts = Date.parse(value);
+  if (!Number.isFinite(ts)) return '';
+  const date = new Date(ts);
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 /** Date relative compacte (« il y a 5 sem. ») pour l'annuaire et la fiche. */
 export function formatRelative(value: string | null, now: Date = new Date()): string {
   if (!value) return '—';

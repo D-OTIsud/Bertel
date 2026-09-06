@@ -28,16 +28,16 @@ BEGIN
     RETURNING id INTO v_chan;
   -- `status` explicite : la colonne n'a plus de DEFAULT depuis le chantier 2026-08-28
   -- (manifeste 17b) — une écriture directe sans statut ÉCHOUE désormais, au lieu de deviner.
-  -- 'planned' au départ pour que l'UPDATE ci-dessous soit une vraie mutation (c'est lui qui
+  -- 'new' au départ pour que l'UPDATE ci-dessous soit une vraie mutation (c'est lui qui
   -- déclenche le trigger d'audit AFTER UPDATE dont ce test a besoin).
   INSERT INTO crm_interaction(object_id, actor_id, interaction_type, status, subject, body)
-    VALUES (v_obj, v_actor, 'note', 'planned', 'Sujet test', 'Note privée mentionnant Jean Dupont')
+    VALUES (v_obj, v_actor, 'note', 'new', 'Sujet test', 'Note privée mentionnant Jean Dupont')
     RETURNING id INTO v_int;
 
   -- --- Générer des lignes de journal d'audit (triggers AFTER UPDATE) portant la PII ---
   UPDATE actor           SET gender = 'm' WHERE id = v_actor;
   UPDATE actor_channel   SET position = 1 WHERE id = v_chan;
-  UPDATE crm_interaction SET status = 'done' WHERE id = v_int;
+  UPDATE crm_interaction SET status = 'resolved' WHERE id = v_int;
 
   -- --- Effacement (anonymisation) ---
   PERFORM api.rpc_gdpr_erase_subject('actor', v_actor::text, 'anonymize', 'test RGPD');

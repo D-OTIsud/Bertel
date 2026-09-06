@@ -11,9 +11,16 @@
 
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import { deleteCrmInteraction, listCrmTimeline, listDemandTopics, saveCrmInteraction } from '../../services/crm';
+import {
+  deleteCrmInteraction,
+  listCrmTimeline,
+  listDemandTopics,
+  loadAwaitingSince,
+  saveCrmInteraction,
+} from '../../services/crm';
 import type { CrmInteraction } from '../../types/domain';
 import { CrmTimeline, type CrmTimelineCardItem } from './crm-primitives';
+import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmTaskFromInteractionModal } from './CrmTaskModal';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
 import { CRM_READ_ONLY_REASON } from './crm-view-utils';
@@ -140,8 +147,8 @@ export function CrmTimelineView({
     await saveCrmInteraction({ parentInteractionId: rootId, body, ...(sentimentCode ? { sentimentCode } : {}) });
     await refetchTimeline();
   };
-  const handleResolve = async (rootId: string, done: boolean) => {
-    await saveCrmInteraction({ id: rootId, status: done ? 'done' : 'planned' });
+  const handleChangeStatus = async (rootId: string, status: AnyCrmInteractionStatus) => {
+    await saveCrmInteraction({ id: rootId, status });
     await refetchTimeline();
   };
   // Édition / suppression d'un commentaire (§66) — racine OU réponse. L'édition est PARTIELLE
@@ -194,7 +201,8 @@ export function CrmTimelineView({
                 canWrite={canWrite}
                 readOnlyReason={CRM_READ_ONLY_REASON}
                 onReply={handleReply}
-                onResolve={handleResolve}
+                onChangeStatus={handleChangeStatus}
+                loadAwaitingSince={loadAwaitingSince}
                 onEditInteraction={handleEditInteraction}
                 onDeleteInteraction={handleDeleteInteraction}
                 onCreateTask={setTaskFromInteraction}

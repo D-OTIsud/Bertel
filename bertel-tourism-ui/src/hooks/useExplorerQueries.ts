@@ -12,6 +12,7 @@ import {
   explorerCardsHasNextPage,
   fetchExplorerCardsPage,
   getObjectResource,
+  listExplorerCardsByIds,
   listObjectMarkers,
   updateObjectPrivateNote,
   type ExplorerBucketCursorMap,
@@ -243,6 +244,41 @@ export function useExplorerMarkersQuery() {
     queryFn: ({ signal }) => listObjectMarkers(queryFilters, signal),
     placeholderData: keepPreviousData,
   });
+}
+
+/**
+ * §125 bis — les cartes SÉLECTIONNÉES qui manquent à la fenêtre paginée de la liste.
+ *
+ * La carte n'est pas paginée : une sélection faite dessus désigne régulièrement des
+ * fiches que la liste n'a pas encore chargées, et le flottement en tête ne pouvait pas
+ * les remonter. Les ids sont résolus par `resolveSelectionHydrationIds` (bornés, et
+ * déjà intersectés avec le corpus filtré) ; ici on ne fait que les chercher.
+ *
+ * La clé est triée pour que deux sélections identiques faites dans un ordre différent
+ * partagent la même entrée de cache — l'ordre d'AFFICHAGE reste porté par le panier,
+ * pas par la réponse. `keepPreviousData` évite que la tête de liste clignote à chaque
+ * ajout dans la sélection.
+ */
+export function useExplorerSelectionCardsQuery(ids: string[]) {
+  const langPrefs = useSessionStore((state) => state.langPrefs);
+  const queryFilters = useExplorerQueryFilters();
+  const cacheKeyIds = useMemo(() => [...ids].sort(), [ids]);
+
+  const query = useQuery({
+    queryKey: ['explorer-selection-cards', cacheKeyIds, langPrefs],
+    queryFn: ({ signal }) => listExplorerCardsByIds(cacheKeyIds, langPrefs, signal),
+    enabled: cacheKeyIds.length > 0,
+    placeholderData: keepPreviousData,
+  });
+
+  // Même raffinement client que la liste (`useExplorerCardsQuery`) : le filtre polygone
+  // n'a pas d'équivalent serveur, et get_object_cards_batch ne connaît aucun filtre.
+  const data = useMemo(
+    () => refineCardsByPolygon(query.data ?? [], queryFilters),
+    [query.data, queryFilters],
+  );
+
+  return { ...query, data };
 }
 
 export function useExplorerReferencesQuery() {

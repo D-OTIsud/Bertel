@@ -4,6 +4,14 @@ import type { UserRole } from '../types/domain';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
 
+// Messages de l'état invité. Ils s'affichent à TOUT LE MONDE — dont un partenaire invité
+// par e-mail qui n'a jamais vu de bouton Google — d'où l'absence de toute mention d'un
+// fournisseur d'identité. Exportés parce que /login décide d'en faire un toast : la page
+// les comparait par `includes('deconnecte')`, un fragment sans accent qu'un simple
+// renommage aurait rendu muet. Une constante partagée, pas un mot deviné.
+export const GUEST_SIGNED_OUT_MESSAGE = 'Vous êtes déconnecté.';
+export const GUEST_SIGN_IN_MESSAGE = 'Connectez-vous pour accéder à votre espace.';
+
 // Initiales (≤ 2) dérivées du nom — repli d'avatar quand aucune photo. Même logique que
 // useBootstrapSession/ProfileDrawer/Sidebar (dette pré-existante à consolider un jour).
 function initialsFromName(name: string): string {
@@ -64,6 +72,17 @@ interface SessionState {
    * no admin role or the helper is unavailable.
    */
   adminRoleCode: string | null;
+  /**
+   * VRAI quand le compte appartient a une organisation « bac a sable »
+   * (org_config.is_test_org). Source de verite : `api.current_user_test_realm()`,
+   * la MEME feuille que la garde SQL — on ne re-transcrit pas la regle ici, sinon
+   * l'interface et le serveur divergeraient au premier changement (cf. §214, §17c).
+   *
+   * Purement INDICATIF : c'est le serveur qui cloisonne. Ce drapeau ne sert qu'a
+   * dire au testeur ou il se trouve — sans lui, un corpus volontairement realiste
+   * est indiscernable de la production, ce qui est exactement ce qu'on a fabrique.
+   */
+  isTestRealm: boolean;
   setDemoRole: (role: UserRole) => void;
   setLangPrefs: (langPrefs: string[]) => void;
   /**
@@ -85,6 +104,7 @@ interface SessionState {
     orgName: string | null;
     adminRank: number | null;
     adminRoleCode: string | null;
+    isTestRealm: boolean;
   }) => void;
   setBooting: () => void;
   setGuest: (message?: string | null) => void;
@@ -111,6 +131,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   orgName: env.demoMode ? 'OTI du Sud' : null,
   adminRank: null,
   adminRoleCode: null,
+  isTestRealm: false,
   setDemoRole: (role) => {
     const state = useSessionStore.getState();
     if (!state.demoMode) {
@@ -131,7 +152,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       avatar: userName ? initialsFromName(userName) : state.avatar,
       avatarUrl: avatarUrl === undefined ? state.avatarUrl : avatarUrl,
     })),
-  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode }) =>
+  hydrateFromAuth: ({ role, userId, email, userName, avatar, avatarUrl, langPrefs, canEditObjects, canCreateObjects, orgId, orgName, adminRank, adminRoleCode, isTestRealm }) =>
     set({
       status: 'ready',
       role,
@@ -147,6 +168,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       orgName,
       adminRank,
       adminRoleCode,
+      isTestRealm,
       errorMessage: null,
     }),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
@@ -166,6 +188,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       orgName: null,
       adminRank: null,
       adminRoleCode: null,
+      isTestRealm: false,
     });
   },
   setSessionError: (message) => {
@@ -184,6 +207,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       orgName: null,
       adminRank: null,
       adminRoleCode: null,
+      isTestRealm: false,
     });
   },
 }));

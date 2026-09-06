@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaches } from './CrmTaches';
+import { toDateInputValue } from './crm-view-utils';
 import * as crm from '../../services/crm';
 import { mockCrmDirectory } from '../../data/mock';
 import { useSessionStore } from '../../store/session-store';
@@ -9,7 +11,17 @@ import { pickerListbox } from '../../components/ui/pickers/pickers.test-utils';
 
 jest.mock('../../services/crm');
 
+// 18a — la puce « Vérification de fiche » route vers /moderation : le kanban a désormais un
+// routeur. Sans ce mock, `useRouter` lève hors d'un App Router monté.
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+
 const crmMock = crm as jest.Mocked<typeof crm>;
+
+// Le VRAI parseur, malgré l'automock du module : la puce doit être produite par le PARCOURS
+// (ligne RPC → parseCrmTask → rendu), pas par une fixture qui poserait `extra` à la main.
+const { parseCrmTask: parseCrmTaskReal } =
+  jest.requireActual<typeof import('../../services/crm')>('../../services/crm');
 
 // L'établissement est un SearchSelect (combobox + popover) : ouvrir puis cliquer l'option.
 // Borné au listbox du picker comme `toggleAssignee` — le popover est portalisé sous <body>
@@ -52,25 +64,44 @@ const DAY_MS = 86_400_000;
 const iso = (offsetDays: number) => new Date(Date.now() + offsetDays * DAY_MS).toISOString();
 
 // Kanban (rectif PO point 1) : une tâche par statut + une todo en retard.
-// §66 — task-late est LIÉE à une interaction encore OUVERTE (planned) ⇒ son move→done doit
+// §66 — task-late est LIÉE à une demande encore OUVERTE ⇒ son move→done (statut de TÂCHE) doit
 // proposer la clôture ; task-doing est liée à une interaction DÉJÀ traitée (done) ⇒ pas de
 // prompt ; task-later/task-done sont NON liées ⇒ jamais de prompt.
 // 16w — chaque tâche porte ses ASSIGNÉS (c'est eux que le filtre lit) et son créateur.
 // `ownerId` reste renseigné volontairement : un code resté sur l'ancienne clé passerait
 // inaperçu si la fixture l'avait supprimé.
 const tasks: CrmTask[] = [
-  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), createdAt: iso(-3), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'planned' },
+  { id: 'task-late', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Rappeler le directeur', description: 'Point médiation', status: 'todo', priority: 'high', dueAt: iso(-2), createdAt: iso(-3), assignees: [ME], createdById: 'usr-local-jean', createdByName: 'Jean P.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-9', relatedInteractionSubject: 'Demande de visite', relatedInteractionStatus: 'new', documents: [] },
   // Tâche CONJOINTE : elle doit remonter sous le filtre de Marie ET sous celui de Jean.
-  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), createdAt: iso(-1), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'done' },
+  { id: 'task-doing', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Valider le contrat photo', description: null, status: 'in_progress', priority: 'medium', dueAt: iso(0), createdAt: iso(-1), assignees: [ME, JEAN], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-jean', ownerName: 'Jean', relatedInteractionId: 'int-done', relatedInteractionSubject: 'Photos validées', relatedInteractionStatus: 'resolved', documents: [] },
   // Créateur inconnu (createdById null) : la carte doit dire « Créateur inconnu ».
-  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), createdAt: iso(-60), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-done', objectId: 'obj-3', objectName: 'Sentier des Trois Cascades', actorId: null, actorName: null, title: 'Confirmer les horaires', description: null, status: 'done', priority: 'low', dueAt: iso(3), createdAt: iso(-60), assignees: [ME], createdById: null, createdByName: null, ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
   // Sans échéance : visible par défaut (case « Inclure sans échéance » cochée).
-  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, createdAt: iso(-4), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-later', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Préparer la convention', description: null, status: 'todo', priority: 'low', dueAt: null, createdAt: iso(-4), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
   // Assignée à quelqu'un d'AUTRE : invisible sous le filtre par défaut « mes tâches ».
-  { id: 'task-autre', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Tâche de Luc', description: null, status: 'todo', priority: 'low', dueAt: iso(1), createdAt: iso(-2), assignees: [LUC], createdById: 'usr-local-luc', createdByName: 'Luc T.', ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-autre', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', actorId: null, actorName: null, title: 'Tâche de Luc', description: null, status: 'todo', priority: 'low', dueAt: iso(1), createdAt: iso(-2), assignees: [LUC], createdById: 'usr-local-luc', createdByName: 'Luc T.', ownerId: 'usr-local-luc', ownerName: 'Luc', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
   // Échéance HORS fenêtre par défaut (+40 j) : masquée tant que la plage n'est pas élargie.
-  { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+  { id: 'task-loin', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche lointaine', description: null, status: 'todo', priority: 'low', dueAt: iso(40), createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
 ];
+
+// 18a — une ligne telle que `api.list_crm_tasks` la rend pour une tâche de vérification de
+// fiche : `crm_task` n'a pas de colonne `kind`, c'est `extra.kind` qui la type. On la fait
+// TRAVERSER le vrai parseur — si `extra` cesse d'être reporté, la puce s'éteint ici.
+const verificationTask: CrmTask = parseCrmTaskReal({
+  id: 'task-verif',
+  object_id: 'obj-7',
+  object_name: 'Villa Vanille',
+  title: 'Vérifier la fiche envoyée',
+  description: null,
+  status: 'todo',
+  priority: 'medium',
+  due_at: iso(1),
+  created_at: iso(0),
+  assignees: [{ user_id: ME.userId, display_name: ME.displayName }],
+  created_by_id: null,
+  created_by_name: null,
+  extra: { kind: 'fiche_verification', submission_id: 'sub-1' },
+});
 
 function renderTaches(overrides: Partial<Parameters<typeof CrmTaches>[0]> = {}) {
   const props = { canWrite: true, onOpenObject: jest.fn(), onOpenActor: jest.fn(), ...overrides };
@@ -593,11 +624,58 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(props.onOpenActor).not.toHaveBeenCalled();
   });
 
+  /* ===== Task 9 — badge trombone (pièces jointes) ===== */
+
+  it('affiche le badge trombone quand la tâche a des pièces jointes', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [
+          { id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null },
+          { id: 'doc-2', title: 'Photo.jpg', mimeType: 'image/jpeg', sizeBytes: null, createdAt: null },
+        ],
+      },
+    ]);
+    renderTaches();
+    expect(await screen.findByTitle('2 pièce(s) jointe(s)')).toBeInTheDocument();
+  });
+
+  it('pas de badge trombone quand la tâche n a aucune pièce jointe', async () => {
+    renderTaches();
+    const card = (await screen.findByText('Rappeler le directeur')).closest('.ticket') as HTMLElement;
+    expect(within(card).queryByTitle(/pièce\(s\) jointe/)).not.toBeInTheDocument();
+  });
+
+  it('clic sur le badge trombone → ouvre le même modal que le crayon (mode édition)', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [{ id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null }],
+      },
+    ]);
+    renderTaches();
+    const badge = await screen.findByTitle('1 pièce(s) jointe(s)');
+    await userEvent.click(badge);
+    expect(await screen.findByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+    expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
+  });
+
+  it('badge trombone gaté en lecture seule (même gating que le crayon)', async () => {
+    crmMock.listCrmTasks.mockResolvedValue([
+      {
+        ...tasks[0],
+        documents: [{ id: 'doc-1', title: 'Devis.pdf', mimeType: 'application/pdf', sizeBytes: 1200, createdAt: null }],
+      },
+    ]);
+    renderTaches({ canWrite: false });
+    expect(await screen.findByTitle('1 pièce(s) jointe(s)')).toBeDisabled();
+  });
+
   /* ===== §66 — prompt de clôture de l'interaction liée après un move→done ===== */
 
   it('Avancer une tâche liée à une interaction OUVERTE vers Terminées → prompt de clôture', async () => {
     renderTaches();
-    // task-late (todo, lien planned) → Avancer la met en in_progress (pas de prompt encore).
+    // task-late (tâche todo, demande liée OUVERTE) → Avancer la met en in_progress (pas de prompt encore).
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Rappeler le directeur »' }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-late', status: 'in_progress' }));
     // Pas de prompt sur un move vers in_progress.
@@ -618,7 +696,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     // Prompt affiché (sujet de l'interaction visible).
     expect(await screen.findByText(/marquer aussi comme traitée/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /oui, clôturer/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-9', status: 'done' }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-9', status: 'resolved' }));
     // Le prompt se ferme après clôture.
     await waitFor(() => expect(screen.queryByText(/marquer aussi comme traitée/i)).not.toBeInTheDocument());
   });
@@ -626,14 +704,14 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
   it('Avancer in_progress→done (bouton) d une tâche liée OUVERTE → prompt sur le chemin bouton aussi', async () => {
     // Une tâche in_progress liée à une interaction encore ouverte.
     crmMock.listCrmTasks.mockResolvedValue([
-      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'planned' },
+      { id: 'task-ip', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: 'actor-1', actorName: 'Mme Marie Hoarau', title: 'Suivi médiation', description: null, status: 'in_progress', priority: 'high', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: 'usr-local-marie', createdByName: 'Marie D.', ownerId: 'usr-local-marie', ownerName: 'Marie', relatedInteractionId: 'int-7', relatedInteractionSubject: 'Médiation litige', relatedInteractionStatus: 'new', documents: [] },
     ]);
     renderTaches();
     fireEvent.click(await screen.findByRole('button', { name: 'Avancer « Suivi médiation »' }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalledWith({ id: 'task-ip', status: 'done' }));
     expect(await screen.findByText(/marquer aussi comme traitée/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /oui, clôturer/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-7', status: 'done' }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'int-7', status: 'resolved' }));
   });
 
   it('« Non » ferme le prompt sans clôturer l interaction', async () => {
@@ -682,14 +760,83 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     expect(await screen.findByText(/refus clôture/i)).toBeInTheDocument();
   });
 
+  /* ===== Task 3 — crayon d'édition sur la carte : ouvre le modal en mode ÉDITION ===== */
+
+  // Revue : le titre « Modifier la tâche » est IDENTIQUE pour toutes les tâches — l'asserter
+  // seul passerait au vert même si le kanban ouvrait la MAUVAISE tâche (ex. régression
+  // `tasks.find((task) => task.id === editTaskId)` → `tasks[0]`). On clique donc le crayon de
+  // « Valider le contrat photo », qui n'est PAS la première entrée de `tasks` (task-late l'est),
+  // et on vérifie dans le modal deux valeurs PROPRES à cette tâche (titre + échéance) : une
+  // régression vers `tasks[0]` afficherait celles de « Rappeler le directeur » et rougirait ici.
+  it('ouvre le modal d’édition pré-rempli AVEC LES VALEURS DE LA TÂCHE CLIQUÉE (pas tasks[0])', async () => {
+    renderTaches();
+    // Le filtre par défaut (« mes tâches ») laisse PLUSIEURS cartes visibles : un
+    // `findByRole` générique sur toutes les cartes serait ambigu, on cible donc le crayon
+    // d'une carte précise (le libellé accessible porte le titre de LA tâche).
+    await screen.findByText('Valider le contrat photo');
+    const edit = screen.getByRole('button', { name: 'Modifier « Valider le contrat photo »' });
+    await userEvent.click(edit);
+    expect(await screen.findByRole('heading', { name: 'Modifier la tâche' })).toBeInTheDocument();
+    // Titre : lu depuis la fixture, pas recopié en dur, pour rester lié à la tâche ciblée.
+    const clicked = tasks.find((task) => task.id === 'task-doing')!;
+    expect(screen.getByLabelText('Titre de la tâche')).toHaveValue(clicked.title);
+    // Échéance : second témoin discriminant — task-doing (iso(0)) diffère de task-late
+    // (iso(-2), première entrée de `tasks`), donc un retour à `tasks[0]` rougirait aussi ici.
+    // L'attente passe par `toDateInputValue` et non par `slice(0, 10)` : depuis M4, le modal
+    // date l'échéance dans le fuseau d'AFFICHAGE (local), et `iso(0)` — construit sur
+    // `Date.now()` — porte une date UTC différente de sa date locale chaque fois que le test
+    // tourne entre minuit et 04:00 à La Réunion. La discrimination est intacte (les deux
+    // témoins restent à deux jours d'écart), la dépendance à l'heure de passage disparaît.
+    expect(screen.getByLabelText('Échéance')).toHaveValue(toDateInputValue(clicked.dueAt));
+  });
+
   it('chip « N annulée(s)/bloquée(s) » conservé pour les statuts hors colonnes', async () => {
     crmMock.listCrmTasks.mockResolvedValue([
       ...tasks,
-      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: null, createdByName: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null },
+      { id: 'task-x', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', actorId: null, actorName: null, title: 'Tâche annulée', description: null, status: 'canceled', priority: 'low', dueAt: null, createdAt: iso(-1), assignees: [ME], createdById: null, createdByName: null, ownerId: null, ownerName: null, relatedInteractionId: null, relatedInteractionSubject: null, relatedInteractionStatus: null, documents: [] },
     ]);
     renderTaches();
     await screen.findByText('Rappeler le directeur');
     expect(screen.getByText('1 annulée(s)/bloquée(s)')).toBeInTheDocument();
     expect(screen.queryByText('Tâche annulée')).not.toBeInTheDocument();
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  // Task 19 — la puce « Vérification de fiche ». Elle est le SEUL signal qui distingue,
+  // dans le kanban, une soumission du portail acteur d'une tâche CRM ordinaire : sans elle
+  // l'agent d'office ouvre le crayon, ne voit rien à faire, et la fiche du partenaire reste
+  // bloquée (une seule vérification ouverte à la fois).
+  // ═════════════════════════════════════════════════════════════════════════════════════
+  describe('puce « Vérification de fiche » (18a)', () => {
+    it('une tâche typée par extra.kind porte la puce et ouvre la modération sur SA fiche', async () => {
+      crmMock.listCrmTasks.mockResolvedValue([verificationTask]);
+      renderTaches();
+      const chip = await screen.findByRole('button', { name: /vérification de fiche/i });
+      fireEvent.click(chip);
+      expect(push).toHaveBeenCalledWith('/moderation?object=obj-7');
+    });
+
+    it('une tâche CRM ordinaire ne porte PAS la puce', async () => {
+      renderTaches();
+      await screen.findByText('Rappeler le directeur');
+      expect(screen.queryByRole('button', { name: /vérification de fiche/i })).not.toBeInTheDocument();
+    });
+
+    it('un `extra` sans le bon kind ne porte pas la puce non plus', async () => {
+      // `crm_task.extra` est du jsonb LIBRE, écrit par plusieurs producteurs : la présence
+      // de la clé ne suffit pas, c'est sa VALEUR qui type la tâche.
+      crmMock.listCrmTasks.mockResolvedValue([
+        parseCrmTaskReal({
+          id: 'task-autre-extra', object_id: 'obj-7', object_name: 'Villa Vanille',
+          title: 'Autre tâche', status: 'todo', priority: 'medium',
+          due_at: iso(1), created_at: iso(0),
+          assignees: [{ user_id: ME.userId, display_name: ME.displayName }],
+          extra: { kind: 'import_batch' },
+        }),
+      ]);
+      renderTaches();
+      await screen.findByText('Autre tâche');
+      expect(screen.queryByRole('button', { name: /vérification de fiche/i })).not.toBeInTheDocument();
+    });
   });
 });

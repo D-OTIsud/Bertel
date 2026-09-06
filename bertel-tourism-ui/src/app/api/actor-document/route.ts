@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { engineErrorDetail } from '@/lib/db-error-message';
 import { MediaProcessingError, MAX_INPUT_BYTES } from '../media/upload/process-image';
 import { processActorDocumentBuffer, ACTOR_PDF_MAX_BYTES } from './process-actor-document';
 import {
@@ -12,64 +11,30 @@ import {
   acquireLease,
   SEMAPHORE_RETRY_AFTER_SECONDS,
 } from '@/lib/request-body.server';
+import {
+  PRIVATE_BUCKET,
+  UUID_SHAPE,
+  authenticated,
+  rejectOversizedBody,
+  type AuthenticatedRequest,
+} from '../_document-auth';
+import { authorizeActor, authorizeObject } from './authorize';
 
-const PRIVATE_BUCKET = 'actor-documents';
+// Documents privés d'un ACTEUR CRM. Le socle d'authentification (Bearer → getUser, client
+// « en tant qu'appelant », bucket privé, forme UUID) est partagé avec /api/task-document
+// dans ../_document-auth ; les deux prédicats d'autorisation vivent dans ./authorize,
+// partagés avec url/route.ts. Ici ne restent que le traitement de fichier, les rollbacks et
+// les formes de réponse métier.
+
+/** Bucket PUBLIC de destination de la promotion (PATCH) — l'espace média d'un objet. */
 const PUBLIC_BUCKET = 'documents';
-const ACTOR_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const DOCUMENT_ID_SHAPE = ACTOR_ID_SHAPE;
+/** Identifiant canonique d'objet : 3 lettres de type + 3 + 10. Ce n'est pas un UUID. */
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/;
 // Raw multipart envelope for POST: largest accepted single file (image, 20 MiB) + 1 MiB overhead.
 // PDFs are capped lower (5 MiB, see process-actor-document.ts) but share this ceiling.
 const MAX_MULTIPART_BYTES = MAX_INPUT_BYTES + 1024 * 1024;
 
 export const runtime = 'nodejs';
-
-function bearer(req: NextRequest): string {
-  const value = req.headers.get('authorization') ?? '';
-  return value.startsWith('Bearer ') ? value.slice(7).trim() : '';
-}
-
-function callerClient(jwt: string) {
-  return createClient(
-    (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim(),
-    (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim(),
-    { global: { headers: { Authorization: `Bearer ${jwt}` } }, auth: { persistSession: false, autoRefreshToken: false } },
-  );
-}
-
-async function authorizeActor(jwt: string, actorId: string, write = true): Promise<boolean> {
-  const { data, error } = await callerClient(jwt).schema('api').rpc(
-    write ? 'user_can_write_crm_actor' : 'user_can_read_crm_actor',
-    { p_actor_id: actorId },
-  );
-  return !error && data === true;
-}
-
-async function authorizeObject(jwt: string, objectId: string): Promise<boolean> {
-  const { data, error } = await callerClient(jwt)
-    .schema('api')
-    .rpc('user_can_write_object_canonical', { p_object_id: objectId });
-  return !error && data === true;
-}
-
-type AuthenticatedRequest =
-  | { ok: false; response: NextResponse }
-  | {
-      ok: true;
-      server: NonNullable<ReturnType<typeof getServerSupabaseClient>>;
-      jwt: string;
-      userId: string;
-    };
-
-async function authenticated(req: NextRequest): Promise<AuthenticatedRequest> {
-  const server = getServerSupabaseClient();
-  if (!server) return { ok: false, response: NextResponse.json({ error: 'server_misconfigured' }, { status: 500 }) };
-  const jwt = bearer(req);
-  if (!jwt) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  const { data, error } = await server.auth.getUser(jwt);
-  if (error || !data.user) return { ok: false, response: NextResponse.json({ error: 'unauthenticated' }, { status: 401 }) };
-  return { ok: true, server, jwt, userId: data.user.id };
-}
 
 async function processFile(file: File) {
   return processActorDocumentBuffer(Buffer.from(await file.arrayBuffer()), file.type);
@@ -78,6 +43,10 @@ async function processFile(file: File) {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authenticated(req);
   if (!auth.ok) return auth.response;
+  // Preserve the shared early 413 response; the bounded reader below also checks the actual
+  // stream when Content-Length is absent or false, before parsing or processing any file.
+  const oversized = rejectOversizedBody(req);
+  if (oversized) return oversized;
   const lease = acquireLease('upload');
   if (!lease) {
     return NextResponse.json(
@@ -116,7 +85,7 @@ async function handlePostAuthenticated(
   }
   const actorId = form.get('actor_id');
   const file = form.get('file');
-  if (typeof actorId !== 'string' || !ACTOR_ID_SHAPE.test(actorId) || !(file instanceof File)) {
+  if (typeof actorId !== 'string' || !UUID_SHAPE.test(actorId) || !(file instanceof File)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   if (!await authorizeActor(auth.jwt, actorId)) {
@@ -200,7 +169,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const body = await readJson(req);
   const actorId = typeof body?.actorId === 'string' ? body.actorId : '';
   const documentId = typeof body?.documentId === 'string' ? body.documentId : '';
-  if (!ACTOR_ID_SHAPE.test(actorId) || !DOCUMENT_ID_SHAPE.test(documentId)) {
+  if (!UUID_SHAPE.test(actorId) || !UUID_SHAPE.test(documentId)) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   if (!await authorizeActor(auth.jwt, actorId)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
@@ -224,7 +193,18 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
   const path = String((document as { storage_path?: string } | null)?.storage_path ?? '');
   if (bucket && path) await auth.server.storage.from(bucket).remove([path]);
   const { error } = await auth.server.from('ref_document').delete().eq('id', documentId);
-  if (error) return NextResponse.json({ error: 'delete_failed', detail: error.message }, { status: 500 });
+  if (error) {
+    // `delete_failed` est dans `CODES_WITH_BUSINESS_DETAIL` (api-error.ts) : son `detail` est
+    // affiché VERBATIM. Ici il ne vient d'aucun `RAISE` métier — c'est la sortie brute du moteur.
+    // Sans ce filtre, l'utilisateur qui retire une pièce jointe lisait « update or delete on table
+    // "ref_document" violates foreign key constraint … ». `engineErrorDetail` rend une phrase FR
+    // pour les SQLSTATE actionnables et `undefined` sinon, auquel cas le client retombe sur
+    // « La suppression a échoué. » — générique, mais jamais l'anglais du moteur.
+    return NextResponse.json(
+      { error: 'delete_failed', detail: engineErrorDetail(error, { operation: 'delete' }) },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ deleted: true });
 }
 
@@ -237,7 +217,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   const objectId = typeof body?.objectId === 'string' ? body.objectId : '';
   const roleCode = typeof body?.roleCode === 'string' ? body.roleCode.trim() : '';
   const requestedTitle = typeof body?.title === 'string' ? body.title.trim() : '';
-  if (!ACTOR_ID_SHAPE.test(actorId) || !DOCUMENT_ID_SHAPE.test(documentId) || !OBJECT_ID_SHAPE.test(objectId) || !roleCode) {
+  if (!UUID_SHAPE.test(actorId) || !UUID_SHAPE.test(documentId) || !OBJECT_ID_SHAPE.test(objectId) || !roleCode) {
     return NextResponse.json({ error: 'invalid_fields' }, { status: 400 });
   }
   const [canActor, canObject] = await Promise.all([

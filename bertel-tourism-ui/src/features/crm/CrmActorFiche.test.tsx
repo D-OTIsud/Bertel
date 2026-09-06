@@ -35,21 +35,21 @@ const snapshot: ActorCrmSnapshot = {
       // de contexte/filtre s'ancrent dessus. La couverture du fallback topicName→subject→type
       // est testée à l'unité dans crm-primitives.test.tsx.
       id: 'i1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',
-      direction: 'outbound', status: 'done', subject: 'Appel tarifs', body: 'Tarifs 2026 validés.',
+      direction: 'outbound', status: 'resolved', subject: 'Appel tarifs', body: 'Tarifs 2026 validés.',
       occurredAt: '2026-06-04T10:00:00Z', actorName: null, topicCode: 'modification_infos_bdd',
       topicName: null, sentimentCode: 'positif', sentimentName: 'Positif',
       ownerName: 'Florence', source: 'bertel_ui', interlocutorEmail: null, resolvedAt: null, replies: [],
     },
     {
       id: 'i2', actorId: 'actor-1', objectId: 'obj-2', objectName: 'Le Comptoir des Epices', interactionType: 'email',
-      direction: 'outbound', status: 'done', subject: 'Photos plats', body: null,
+      direction: 'outbound', status: 'resolved', subject: 'Photos plats', body: null,
       occurredAt: '2026-05-18T08:00:00Z', actorName: null, topicCode: null, topicName: null,
       sentimentCode: 'inquiet', sentimentName: 'Inquiet', ownerName: 'Jean', source: 'bertel_ui',
       interlocutorEmail: null, resolvedAt: null, replies: [],
     },
     {
       id: 'i3', actorId: 'actor-1', objectId: null, objectName: null, interactionType: 'note',
-      direction: 'internal', status: 'done', subject: 'Vœux annuels', body: 'Tour d’horizon.',
+      direction: 'internal', status: 'resolved', subject: 'Vœux annuels', body: 'Tour d’horizon.',
       occurredAt: '2026-01-08T09:00:00Z', actorName: null, topicCode: null, topicName: null,
       sentimentCode: null, sentimentName: null, ownerName: 'Florence', source: 'bertel_ui',
       interlocutorEmail: null, resolvedAt: null, replies: [],
@@ -183,6 +183,45 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     expect(within(typeSelect).getByRole('option', { name: 'Brochure' })).toHaveValue('brochure');
     expect(within(typeSelect).getByRole('option', { name: 'Certificat' })).toHaveValue('certificat');
     expect(typeSelect).toHaveValue('brochure');
+  });
+
+  // Taille de pièce jointe — `formatDocumentSize` est désormais PARTAGÉE avec CrmTaskModal :
+  // une seule fonction pour les deux panneaux. Sur CETTE route, `api.list_actor_support` émet
+  // `coalesce(size_bytes, 0)` : 0 ne dit pas « fichier vide » mais « taille absente », et rien
+  // ici ne sépare les deux. Le segment est donc OMIS plutôt que rendu « 0 o », qui affirmerait
+  // une taille qu'on n'a pas — c'est le comportement visible que l'extraction devait préserver.
+  it('taille : 2048 → « 2 Ko » dans la méta ; 0 (sentinelle SQL) → aucun segment de taille', async () => {
+    const baseDocument = {
+      notes: null,
+      validFrom: null,
+      validTo: null,
+      status: 'active' as const,
+      intendedRoleCode: null,
+      intendedRoleName: null,
+      mimeType: 'application/pdf',
+      promotedToObjectId: null,
+      promotedDocumentId: null,
+      promotedAt: null,
+      createdAt: '2026-08-12T08:00:00Z',
+    };
+    crmMock.listActorSupport.mockResolvedValue({
+      defaultRole: { code: 'operator', name: 'Exploitant' },
+      documents: [
+        { ...baseDocument, documentId: 'doc-taille', title: 'Avec-taille.pdf', sizeBytes: 2048 },
+        { ...baseDocument, documentId: 'doc-sans', title: 'Sans-taille.pdf', sizeBytes: 0 },
+      ],
+    });
+
+    renderFiche();
+    fireEvent.click(await screen.findByRole('tab', { name: /Documents d'accompagnement/ }));
+
+    const withSize = (await screen.findByText('Avec-taille.pdf')).closest('.crm-actor-docs__row') as HTMLElement;
+    expect(within(withSize).getByText('2 Ko · 12/08/2026')).toBeInTheDocument();
+
+    const withoutSize = (await screen.findByText('Sans-taille.pdf')).closest('.crm-actor-docs__row') as HTMLElement;
+    expect(within(withoutSize).getByText('12/08/2026')).toBeInTheDocument();
+    expect(within(withoutSize).queryByText(/0 o/)).not.toBeInTheDocument();
+    expect(within(withoutSize).queryByText(/taille inconnue/)).not.toBeInTheDocument();
   });
 
   it('rend la carte acteur (rôles distincts en sous-ligne), les établissements liés et le badge principal', async () => {
@@ -359,7 +398,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
         // Chantier 2026-08-28 n°5 — la modale envoie DÉSORMAIS toujours la suite à donner, et
         // un SUJET de demande place la position initiale sur « À traiter ». C'est exactement le
         // cas qui naissait « traitée » en production et qu'un agent rouvrait à la main.
-        status: 'planned',
+        status: 'new',
       }),
     );
     // Refresh après écriture : la fiche est rechargée depuis le RPC. Phase 5.2 — le modal
@@ -402,7 +441,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
       interactionType: 'call',
       body: 'Point établissement.',
       // Chantier 2026-08-28 n°5 — suite à donner toujours envoyée ; sans sujet ⇒ note interne.
-      status: 'done',
+      status: 'resolved',
     });
   });
 
@@ -737,22 +776,25 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
   });
 
-  // §65/§66 — i1 est 'done' ⇒ le bouton bascule sur « Rouvrir » → status planned.
-  it('Rouvrir une interaction traitée → saveCrmInteraction({ id, status: planned })', async () => {
+  // §6.1 — rouvrir une demande traitée passe désormais par le sélecteur, qui offre les SIX
+  // états : on la remet « En cours », un état que l'ancien bouton bascule ne savait pas exprimer.
+  it('Sélecteur de statut → rouvrir une demande traitée en « En cours »', async () => {
     renderFiche();
     const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
-    fireEvent.click(within(actionsBar).getByRole('button', { name: /rouvrir/i }));
-    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'i1', status: 'planned' }));
+    fireEvent.click(within(actionsBar).getByRole('button', { name: /^statut :/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'En cours' }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer/i }));
+    await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({ id: 'i1', status: 'in_progress' }));
   });
 
   // Gating (no-write-trap) : sans permission, les actions du fil sont désactivées avec raison.
-  it('sans permission : Répondre / Rouvrir du fil désactivés', async () => {
+  it('sans permission : Répondre / Statut du fil désactivés', async () => {
     renderFiche({ canWrite: false });
     const card = (await screen.findByText('Tarifs 2026 validés.')).closest('.tl-card') as HTMLElement;
     const actionsBar = card.querySelector('.tl-actions') as HTMLElement;
     expect(within(actionsBar).getByRole('button', { name: /répondre/i })).toBeDisabled();
-    expect(within(actionsBar).getByRole('button', { name: /rouvrir/i })).toBeDisabled();
+    expect(within(actionsBar).getByRole('button', { name: /^statut :/i })).toBeDisabled();
   });
 
   // §66 (PO) — modifier un commentaire depuis la fiche : saveCrmInteraction({id, body, sentimentCode})

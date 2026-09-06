@@ -2,11 +2,11 @@
 -- PRIV-01/02 — durcissement borné de l'effacement RGPD (Art. 17).
 -- APRÈS migration_unblock_team_legal_access.sql (ref_document.storage_bucket/storage_path/
 -- access_scope) et supabase/migrations/20260807124408_actor_prospects_documents.sql
--- (actor_document). Ce fichier NE modifie PAS le fold historique de schema_unified.sql
--- (audit.redact_subject / api.rpc_gdpr_erase_subject y sont définis à l'identique de
--- l'ancien migration_gdpr_erasure.sql) : il les redéfinit ici via CREATE OR REPLACE, ce qui
--- l'emporte à la fois sur une base FRAÎCHE (appliqué après le fold, en fin de manifeste) et
--- sur une base LIVE déjà upgradée (dernier mot sur ces deux corps).
+-- (actor_document). Ce fichier ne modifie ni le socle schema_unified.sql ni son miroir
+-- portail migration_actor_portal.sql : il redéfinit audit.redact_subject et
+-- api.rpc_gdpr_erase_subject via CREATE OR REPLACE, en conservant les invariants portail
+-- (déliage du compte, note de soumission et rédaction de l'audit des profils). Il s'applique
+-- après les définitions historiques, en fin de manifeste FRAIS ou en mise à niveau LIVE.
 --
 -- Contenu :
 --  1. internal.gdpr_cleanup_task — tâches de nettoyage (Storage/Auth) qui survivent au sujet
@@ -20,7 +20,9 @@
 --     justificatifs de consentement (actor_consent.document_id), la tâche CRM liée à un
 --     signalement, la rédaction actor_id ET handled_by_actor_id, la mise en file des
 --     suppressions Storage/Auth (au lieu d'un simple champ de rapport), et les garde-fous
---     de compte (self/owner/super_admin) pour subject_kind='user'.
+--     de compte (self/owner/super_admin) pour subject_kind='user'. Le déliage et le rapport
+--     portal_user_id/portal_note restent ceux du module portail ; aucune suppression du
+--     compte portail n'est implicitement ajoutée à subject_kind='actor'.
 --  4. api.rpc_gdpr_get_cleanup_status / api.rpc_gdpr_ack_cleanup_task — lecture et
 --     acquittement idempotent des tâches, service_role uniquement (le serveur Next.js les
 --     appelle avec la clé de service APRÈS avoir revérifié lui-même le JWT/superuser).
@@ -109,6 +111,7 @@ AS $$
 DECLARE
   v_uid              UUID := auth.uid();
   v_actor            UUID;
+  v_portal_user      UUID;
   v_user_id          UUID;
   v_prev_avatar      TEXT;
   v_report           JSONB := '{}'::jsonb;
@@ -182,6 +185,20 @@ BEGIN
     SELECT photo_url INTO v_photo FROM actor WHERE id = v_actor;
     IF v_photo IS NOT NULL THEN v_media := array_append(v_media, v_photo); END IF;
 
+    -- Portail 18a §8 : capturer le compte et couper l'accès AVANT les deux modes.
+    -- En delete, la FK ON DELETE SET NULL ferait sinon disparaître l'identité du compte
+    -- avant sa remontée au rapport. L'UPDATE et ses rédactions restent dans l'effacement.
+    UPDATE app_user_profile SET actor_id = NULL WHERE actor_id = v_actor
+    RETURNING id INTO v_portal_user;
+    -- La note originale du prestataire est distincte de sa copie CRM. Nettoyer avant
+    -- le DELETE de l'acteur, qui délie aussi fiche_submission.actor_id. submitted_by
+    -- couvre les soumissions déjà déliées ; un v_portal_user NULL n'élargit pas la portée.
+    -- La table est optionnelle tant que le module portail 18a n'a pas été appliqué.
+    IF to_regclass('public.fiche_submission') IS NOT NULL THEN
+      UPDATE fiche_submission SET note = NULL
+       WHERE actor_id = v_actor OR submitted_by = v_portal_user;
+    END IF;
+
     -- Inventaire PONCTUEL (avant mutation) des documents personnels déjà référencés par cet
     -- acteur : bibliothèque privée (actor_document) + justificatifs de consentement
     -- (actor_consent.document_id). Ce n'est PAS une énumération du bucket, seulement les
@@ -234,6 +251,13 @@ BEGIN
       v_report := jsonb_build_object('mode', 'delete', 'actor', v_actor);
     END IF;
 
+    -- APRÈS les deux réaffectations de v_report : conserver l'identité du compte
+    -- délié pour le geste Admin explicite, sans prétendre l'avoir supprimé ici.
+    IF v_portal_user IS NOT NULL THEN
+      v_report := v_report || jsonb_build_object('portal_user_id', v_portal_user,
+        'portal_note', 'Compte portail délié. Supprimer auth.users via l''API Admin (action Révoquer de la fiche CRM).');
+    END IF;
+
     -- Rédaction du journal d'audit — APRÈS toute mutation (une mutation ultérieure sur la
     -- même table recréerait un before_data non rédigé). actor_id ET handled_by_actor_id sont
     -- rédigés séparément : une interaction où seul handled_by_actor_id porte le sujet ne
@@ -250,6 +274,15 @@ BEGIN
               ARRAY['subject', 'body', 'source', 'extra', 'actor_id', 'handled_by_actor_id']);
     PERFORM audit.redact_subject('crm_task', 'actor_id', v_actor::text,
               ARRAY['title', 'description', 'extra', 'actor_id']);
+    -- Le déliage crée lui-même une trace avant/après portant le lien et l'identité.
+    -- actor_id couvre ce lien ; id couvre toute l'histoire du compte capturé, y compris
+    -- les traces antérieures à sa liaison à l'acteur (pas de rédaction globale des profils).
+    PERFORM audit.redact_subject('app_user_profile', 'actor_id', v_actor::text,
+              ARRAY['actor_id', 'display_name', 'avatar_url', 'preferences']);
+    IF v_portal_user IS NOT NULL THEN
+      PERFORM audit.redact_subject('app_user_profile', 'id', v_portal_user::text,
+                ARRAY['actor_id', 'display_name', 'avatar_url', 'preferences']);
+    END IF;
     -- Couverture PAR IDENTITÉ (IDs capturés avant mutation) : redige la vie d'audit ENTIÈRE des
     -- lignes concernées, y compris les entrées antérieures à la liaison avec v_actor que le
     -- matching par valeur ci-dessus ne peut pas voir. Bornée aux lignes déjà identifiées ci-avant
@@ -605,4 +638,5 @@ COMMENT ON FUNCTION api.rpc_gdpr_ack_cleanup_task(UUID, UUID, BOOLEAN, TEXT) IS
   'Idempotent : un acquittement répété d''une tâche déjà succeeded ne régresse rien. '
   'service_role uniquement, association operation_id/task_id stricte.';
 
+NOTIFY pgrst, 'reload schema';
 COMMIT;

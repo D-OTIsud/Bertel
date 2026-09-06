@@ -5,6 +5,7 @@ import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-work
 import { listObjectCrm } from '../../../services/crm';
 import { EditorCrmDrawer } from '../widgets/EditorCrmDrawer';
 import { ProviderCards } from './ProviderCards';
+import { isOpenInteractionStatus } from '../../crm/crm-status';
 
 const YEAR_MS = 365 * 86_400_000;
 
@@ -54,10 +55,10 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
   const last12Months = occurredTimestamps.filter((timestamp) => now - timestamp <= YEAR_MS).length;
   const lastContact = occurredTimestamps.length > 0 ? new Date(Math.max(...occurredTimestamps)).toISOString() : null;
 
-  // Interactions EN ATTENTE (status 'planned' — même prédicat que la chip « En attente » §65/§66)
+  // Interactions OUVERTES (prédicat partagé crm-status.ts — mêmes statuts que la chip §65/§66)
   // par acteur ⇒ badge de notification sur la carte du prestataire concerné (§19).
   const openCountByActor = interactions.reduce<Record<string, number>>((counts, item) => {
-    if (item.status === 'planned' && item.actorId) {
+    if (isOpenInteractionStatus(item.status) && item.actorId) {
       counts[item.actorId] = (counts[item.actorId] ?? 0) + 1;
     }
     return counts;

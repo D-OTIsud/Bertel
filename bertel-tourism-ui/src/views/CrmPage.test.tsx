@@ -10,6 +10,10 @@ jest.mock('../services/crm');
 jest.mock('../hooks/usePresenceRoom', () => ({
   usePresenceRoom: () => ({ peers: [], typingUsers: [], announceTyping: jest.fn() }),
 }));
+// 18a — le kanban route désormais vers /moderation (puce « Vérification de fiche »), donc
+// il appelle useRouter, qui exige un App Router monté.
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 const crmMock = crm as jest.Mocked<typeof crm>;
 
@@ -22,7 +26,7 @@ const actorSnapshot: ActorCrmSnapshot = {
   interactions: [
     {
       id: 'i1', actorId: 'actor-1', objectId: 'obj-1', objectName: 'Hotel Basalte & Lagon', interactionType: 'call',
-      direction: 'outbound', status: 'done', subject: 'Appel tarifs', body: 'Tarifs validés.',
+      direction: 'outbound', status: 'resolved', subject: 'Appel tarifs', body: 'Tarifs validés.',
       occurredAt: '2026-06-04T10:00:00Z', actorName: null, topicCode: null, topicName: null,
       sentimentCode: 'positif', sentimentName: 'Positif', ownerName: 'Florence', source: 'bertel_ui',
       interlocutorEmail: null, resolvedAt: null, replies: [],
@@ -154,7 +158,7 @@ describe('CrmPage (§61 — shell acteur-centré)', () => {
         ...mockCrmTimeline.items,
         {
           id: 'evt-general', actorId: 'actor-1', objectId: null, objectName: null, interactionType: 'note',
-          direction: 'internal', status: 'done', subject: 'Note acteur seul', body: null,
+          direction: 'internal', status: 'resolved', subject: 'Note acteur seul', body: null,
           occurredAt: '2026-06-10T08:00:00Z', actorName: 'Mme Marie Hoarau', topicCode: null,
           topicName: null, sentimentCode: null, sentimentName: null, ownerName: 'Florence', source: 'bertel_ui',
           interlocutorEmail: null, resolvedAt: null, replies: [],

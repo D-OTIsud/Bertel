@@ -1,7 +1,7 @@
 # Codebase dead-code and simplification audit
 
-**Date:** 2026-08-28  
-**Scope:** entire tracked repository, with detailed static analysis of the Next.js/TypeScript application and targeted review of SQL, Python tooling, tests, documentation, and dependencies.  
+**Date:** 2026-08-28
+**Scope:** entire tracked repository, with detailed static analysis of the Next.js/TypeScript application and targeted review of SQL, Python tooling, tests, documentation, and dependencies.
 **Constraint:** report only; no production source, test, schema, or configuration file was changed.
 
 ## Executive summary

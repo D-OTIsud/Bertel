@@ -83,8 +83,8 @@ export function CrmInteractionModal({
   // règle que `api.save_crm_interaction` applique en l'absence de statut. Dès que l'agent
   // touche le bouton, SON choix gagne et ne bouge plus, même s'il change de sujet ensuite.
   const [statusTouched, setStatusTouched] = useState(false);
-  const [statusChoice, setStatusChoice] = useState<'planned' | 'done'>('done');
-  const effectiveStatus: 'planned' | 'done' = statusTouched ? statusChoice : topicCode ? 'planned' : 'done';
+  const [statusChoice, setStatusChoice] = useState<'new' | 'resolved'>('resolved');
+  const effectiveStatus: 'new' | 'resolved' = statusTouched ? statusChoice : topicCode ? 'new' : 'resolved';
 
   // Phase 5.2 — flux 2-temps : `savedInteractionId` non-null ⇒ l'interaction est consignée,
   // on passe à l'état « relance ». `addingRelance` ⇒ les champs de la relance sont révélés.
@@ -263,29 +263,29 @@ export function CrmInteractionModal({
             <div className="composer__kinds">
               <button
                 type="button"
-                className={'kind-chip' + (effectiveStatus === 'planned' ? ' is-on' : '')}
-                aria-pressed={effectiveStatus === 'planned'}
+                className={'kind-chip' + (effectiveStatus === 'new' ? ' is-on' : '')}
+                aria-pressed={effectiveStatus === 'new'}
                 onClick={() => {
                   setStatusTouched(true);
-                  setStatusChoice('planned');
+                  setStatusChoice('new');
                 }}
               >
                 <Plus size={12} aria-hidden /> À traiter
               </button>
               <button
                 type="button"
-                className={'kind-chip' + (effectiveStatus === 'done' ? ' is-on' : '')}
-                aria-pressed={effectiveStatus === 'done'}
+                className={'kind-chip' + (effectiveStatus === 'resolved' ? ' is-on' : '')}
+                aria-pressed={effectiveStatus === 'resolved'}
                 onClick={() => {
                   setStatusTouched(true);
-                  setStatusChoice('done');
+                  setStatusChoice('resolved');
                 }}
               >
                 <Check size={12} aria-hidden /> Déjà traitée
               </button>
             </div>
             <p className="crm-field__note">
-              {effectiveStatus === 'planned'
+              {effectiveStatus === 'new'
                 ? 'Restera dans les demandes actives jusqu’à ce qu’elle soit marquée traitée.'
                 : 'Simple compte rendu : rien ne reste à faire.'}
             </p>

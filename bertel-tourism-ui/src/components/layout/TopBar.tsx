@@ -180,21 +180,21 @@ export function TopBar() {
         </div>
       ) : null}
 
-      <header className="relative z-40 grid h-14 flex-none grid-cols-[auto_1fr_auto] items-center gap-4 border-b border-line bg-[rgba(255,253,248,0.72)] px-5 backdrop-blur-xl">
-        <div className="flex items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
+      <header className="relative z-40 grid min-h-14 flex-none grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-line bg-[rgba(255,253,248,0.72)] px-3 py-2 backdrop-blur-xl md:h-14 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-4 md:px-5 md:py-0">
+        <div className="flex min-w-0 items-center gap-2.5 font-display text-[15px] font-bold tracking-tight">
           {/* D12 : ouvre le tiroir de navigation mobile (le rail est masqué < 768px). */}
           <button
             type="button"
-            className="grid h-8 w-8 place-items-center rounded-[8px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-ink-3 hover:bg-surface2 hover:text-ink md:hidden"
             aria-label="Ouvrir la navigation"
             onClick={() => setMobileNavOpen(true)}
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="text-ink">{pageLabel}</span>
+          <span className="truncate text-ink">{pageLabel}</span>
         </div>
 
-        <label className="relative flex h-10 w-full max-w-[860px] items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3.5">
+        <label className="relative order-3 col-span-2 flex h-10 w-full min-w-0 max-w-[860px] items-center gap-2 justify-self-center rounded-shellMd border border-line bg-bgTint px-3.5 md:order-none md:col-span-1">
           <Search className="h-3.5 w-3.5 shrink-0 text-ink-3" />
           <Input
             type="search"
@@ -241,7 +241,7 @@ export function TopBar() {
           <LivePresenceIndicator />
           <button
             type="button"
-            className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink hover:bg-surface2 sm:inline-flex"
+            className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink hover:bg-surface2 lg:inline-flex"
             suppressHydrationWarning
           >
             {safeDateLabel} · {safeTimeLabel}

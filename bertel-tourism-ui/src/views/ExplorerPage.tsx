@@ -58,6 +58,17 @@ export default function ExplorerPage() {
   const cardsQuery = useExplorerCardsQuery();
   const markersQuery = useExplorerMarkersQuery();
   const referencesQuery = useExplorerReferencesQuery();
+  // Hydration guard : `explorer-references` est persistée (meta.persist, Providers.tsx) et le
+  // repli démo la résout quasi immédiatement — le premier rendu client peut donc déjà porter
+  // des données que le serveur (jamais côté références) n'a pas rendues, ce qui fait diverger
+  // FiltersPanel (groupe « Labels & certifications » vs « Tags » seul) entre SSR et hydratation.
+  // Même convention que TopBar.tsx (isMounted) : on ne relâche les vraies références qu'après
+  // le montage, jamais pendant le rendu qui doit correspondre au HTML serveur.
+  const [referencesHydrated, setReferencesHydrated] = useState(false);
+  useEffect(() => {
+    setReferencesHydrated(true);
+  }, []);
+  const filtersReferences = referencesHydrated ? referencesQuery.data : undefined;
 
   const cards = cardsQuery.data ?? [];
   // §125 — the map is fed by its own lightweight markers query (the full matching
@@ -113,7 +124,7 @@ export default function ExplorerPage() {
 
   const renderMobilePanel = (panel: ExplorerPanelKey) => {
     if (panel === 'filters') {
-      return <FiltersPanel references={referencesQuery.data} />;
+      return <FiltersPanel references={filtersReferences} />;
     }
     if (panel === 'results') {
       return (
@@ -211,7 +222,7 @@ export default function ExplorerPage() {
             GRID_BY_MODE[viewMode],
           )}
         >
-          <FiltersPanel references={referencesQuery.data} />
+          <FiltersPanel references={filtersReferences} />
           {viewMode === 'split' || viewMode === 'liste' ? (
             <ResultsList
               cards={cards}

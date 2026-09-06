@@ -113,3 +113,6 @@ docs/superpowers/plans/.*
 
 # Sorties generees par les exports (ex. export Tourinsoft) — jamais versionnees
 outputs/
+
+# Diagnostics, captures et copies locales de validation : jamais publies
+/scratch/

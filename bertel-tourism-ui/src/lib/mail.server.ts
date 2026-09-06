@@ -24,13 +24,20 @@ export async function sendListEmail(opts: { to: string; subject: string; html: s
     port: cfg.port,
     secure: cfg.secure, // false pour 587 (STARTTLS), true pour 465
     requireTLS: true, // Google exige TLS sur le relais
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
     ...(cfg.user && cfg.pass ? { auth: { user: cfg.user, pass: cfg.pass } } : {}),
   });
 
-  await transport.sendMail({
-    from: `${cfg.fromName} <${cfg.fromEmail}>`,
-    to: opts.to,
-    subject: opts.subject,
-    html: opts.html,
-  });
+  try {
+    await transport.sendMail({
+      from: `${cfg.fromName} <${cfg.fromEmail}>`,
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html,
+    });
+  } finally {
+    transport.close();
+  }
 }

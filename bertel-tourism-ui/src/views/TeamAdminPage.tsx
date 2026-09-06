@@ -266,7 +266,11 @@ export default function TeamAdminPage() {
             onManagePermissions={(m) => setManagingId(m.membershipId)}
             onEditProfile={canManageOrgDefaults ? (m) => setEditingProfileId(m.membershipId) : undefined}
             onDeactivate={(m) => setConfirmDeactivate(m)}
-            onDelete={canManageOrgDefaults ? (m) => setConfirmDelete(m) : undefined}
+            // SEC-01 (audit sécurité 2026-09-05) : la suppression définitive traverse toutes les
+            // organisations — capacité PLATEFORME (owner/super_admin), jamais un rang d'ORG local
+            // (`canManageOrgDefaults` inclut le rang ≥ 30, qui ne garde que « Désactiver »).
+            onDelete={isSuperuser ? (m) => setConfirmDelete(m) : undefined}
+            callerIsOwner={role === 'owner'}
           >
             {(m, isSelf) => ({
               business: (
@@ -332,7 +336,7 @@ export default function TeamAdminPage() {
         busy={deleteBusy}
         message={
           confirmDelete
-            ? `Le compte de ${confirmDelete.displayName ?? confirmDelete.email ?? 'ce membre'} sera supprimé définitivement : accès, profil, rattachement à l’organisation et permissions. Cette action est irréversible — pour un retrait temporaire, utilisez « Désactiver ».`
+            ? `Le compte plateforme de ${confirmDelete.displayName ?? confirmDelete.email ?? 'ce membre'} sera supprimé définitivement, avec TOUTES ses adhésions à des organisations (pas seulement celle-ci). Cette action est irréversible — pour un retrait temporaire, utilisez « Désactiver ».`
             : ''
         }
         onCancel={() => setConfirmDelete(null)}

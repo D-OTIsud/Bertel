@@ -19,13 +19,16 @@ on:
       - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
+      - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   pull_request:
     paths:
       - 'Base de donnée DLL et API/**.sql'
       - 'supabase/migrations/**.sql'
+      - 'supabase/config.toml'
       - 'docs/integrations/tourinsoft/**'
       - 'tools/tourinsoft/**'
+      - 'docs/SQL_ROLLOUT_RUNBOOK.md'
       - '.github/workflows/sql-fresh-apply.yml'
   workflow_dispatch:
 

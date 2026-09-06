@@ -658,7 +658,12 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
       )}
     >
       {isColumn ? (
-        <div className="relative flex h-14 flex-none items-center border-b border-line bg-surface px-4">
+        // DES-02 — le bloc lasso/réinitialisation était centré en `position: absolute`,
+        // indifférent aux groupes voisins : sur une carte de 420 à 585px (colonne Split
+        // au bureau), il chevauchait le sélecteur de fond. Header `flex-wrap` (plus de
+        // hauteur figée à 56px) : les 3 groupes vivent dans le flux, le dernier passe sur
+        // une 2e ligne s'il ne tient pas — jamais de recouvrement ni de libellé coupé.
+        <div className="flex flex-none flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line bg-surface px-4 py-2.5">
           <div className="flex items-baseline gap-2">
             <span className="font-display text-[13px] font-bold tracking-tight text-ink">Carte</span>
             {/* D19 : divulgation honnête — seules les fiches géolocalisées sont épinglées. */}
@@ -669,11 +674,7 @@ export function MapPanel({ objects, variant = 'panel', onCollapse, headerActions
               {geoZoneCount} localisée{geoZoneCount > 1 ? 's' : ''}
             </span>
           </div>
-          <div
-            className="map-panel__toolbar absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            role="toolbar"
-            aria-label="Outils carte"
-          >
+          <div className="map-panel__toolbar" role="toolbar" aria-label="Outils carte">
             {resetZoomButton}
             {lassoButton}
           </div>

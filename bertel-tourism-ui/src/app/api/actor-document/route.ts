@@ -2,14 +2,25 @@ import { randomUUID } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { MediaProcessingError } from '../media/upload/process-image';
-import { processActorDocumentBuffer } from './process-actor-document';
+import { MediaProcessingError, MAX_INPUT_BYTES } from '../media/upload/process-image';
+import { processActorDocumentBuffer, ACTOR_PDF_MAX_BYTES } from './process-actor-document';
+import {
+  readBoundedFormData,
+  assertFormDataShape,
+  FormDataShapeError,
+  BodyTooLargeError,
+  acquireLease,
+  SEMAPHORE_RETRY_AFTER_SECONDS,
+} from '@/lib/request-body.server';
 
 const PRIVATE_BUCKET = 'actor-documents';
 const PUBLIC_BUCKET = 'documents';
 const ACTOR_ID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DOCUMENT_ID_SHAPE = ACTOR_ID_SHAPE;
 const OBJECT_ID_SHAPE = /^[A-Z]{3}[A-Z0-9]{3}[0-9A-Z]{10}$/;
+// Raw multipart envelope for POST: largest accepted single file (image, 20 MiB) + 1 MiB overhead.
+// PDFs are capped lower (5 MiB, see process-actor-document.ts) but share this ceiling.
+const MAX_MULTIPART_BYTES = MAX_INPUT_BYTES + 1024 * 1024;
 
 export const runtime = 'nodejs';
 
@@ -67,8 +78,42 @@ async function processFile(file: File) {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const auth = await authenticated(req);
   if (!auth.ok) return auth.response;
+  const lease = acquireLease('upload');
+  if (!lease) {
+    return NextResponse.json(
+      { error: 'too_many_requests', detail: 'Trop de téléversements en cours, réessayez.' },
+      { status: 429, headers: { 'Retry-After': String(SEMAPHORE_RETRY_AFTER_SECONDS) } },
+    );
+  }
+  try {
+    return await handlePostAuthenticated(req, auth);
+  } finally {
+    lease.release();
+  }
+}
+
+async function handlePostAuthenticated(
+  req: NextRequest,
+  auth: Extract<AuthenticatedRequest, { ok: true }>,
+): Promise<NextResponse> {
   let form: FormData;
-  try { form = await req.formData(); } catch { return NextResponse.json({ error: 'bad_multipart' }, { status: 400 }); }
+  try {
+    form = await readBoundedFormData(req, MAX_MULTIPART_BYTES);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) {
+      return NextResponse.json(
+        { error: 'request_body_too_large', detail: 'Le fichier envoyé dépasse la taille maximale autorisée.' },
+        { status: 413 },
+      );
+    }
+    return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+  }
+  try {
+    assertFormDataShape(form, { allowedFields: ['actor_id', 'file'] });
+  } catch (err) {
+    if (err instanceof FormDataShapeError) return NextResponse.json({ error: 'bad_multipart' }, { status: 400 });
+    throw err;
+  }
   const actorId = form.get('actor_id');
   const file = form.get('file');
   if (typeof actorId !== 'string' || !ACTOR_ID_SHAPE.test(actorId) || !(file instanceof File)) {
@@ -79,6 +124,19 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   try {
+    // Declared-size preflight BEFORE arrayBuffer(): the envelope alone (sized for the larger
+    // of the two accepted kinds, a 20 MiB image) would otherwise let an oversized declared PDF
+    // be fully buffered before processActorDocumentBuffer's own 5 MiB check rejects it.
+    const isPdf = file.type === 'application/pdf';
+    const maxDeclaredBytes = isPdf ? ACTOR_PDF_MAX_BYTES : MAX_INPUT_BYTES;
+    if (file.size > maxDeclaredBytes) {
+      throw new MediaProcessingError(
+        'size',
+        isPdf
+          ? `Le PDF dépasse la limite de ${ACTOR_PDF_MAX_BYTES} octets (5 Mo).`
+          : `Image trop volumineuse (max ${Math.round(MAX_INPUT_BYTES / (1024 * 1024))} Mo).`,
+      );
+    }
     const processed = await processFile(file);
     const path = `actors/${actorId}/${randomUUID()}.${processed.extension}`;
     const { error: uploadError } = await auth.server.storage.from(PRIVATE_BUCKET).upload(path, processed.buffer, {

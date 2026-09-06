@@ -1,0 +1,63 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - 'bertel-tourism-ui/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    paths:
+      - 'bertel-tourism-ui/**'
+      - '.github/workflows/frontend.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: bertel-tourism-ui
+
+env:
+  # Explicit demo mode for CI builds/tests: no Supabase project credentials needed here.
+  NEXT_PUBLIC_ENABLE_DEMO_MODE: 'true'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: bertel-tourism-ui/package-lock.json
+
+      # --legacy-peer-deps mirrors the Dockerfile install: next@16 pins @swc/helpers to
+      # 0.5.15 while @storybook/test-runner's optional @swc/core peer wants >=0.5.17.
+      - run: npm ci --legacy-peer-deps
+
+      - run: npm run typecheck
+
+      - run: npm run test:run -- --ci --maxWorkers=2
+
+      - run: npm run build
+
+      - name: Install Playwright Chromium
+        run: node scripts/run-playwright.mjs install --with-deps chromium
+
+      - name: Critical e2e (Chromium, demo mode)
+        run: npm run test:e2e -- --project=chromium --workers=2
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: bertel-tourism-ui/playwright-report
+          retention-days: 7

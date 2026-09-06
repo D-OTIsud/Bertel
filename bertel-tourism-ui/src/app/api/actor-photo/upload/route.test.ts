@@ -8,6 +8,7 @@ jest.mock('@/lib/supabase-server', () => ({ getServerSupabaseClient: jest.fn() }
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
 jest.mock('../../media/upload/process-image', () => ({
   processImage: jest.fn(async () => ({ buffer: Buffer.from([9, 9, 9]), width: 512, height: 512, mimeType: 'image/jpeg' })),
+  MAX_INPUT_BYTES: 20 * 1024 * 1024,
   MediaProcessingError: class extends Error {
     code: string;
     constructor(code: string, message: string) {
@@ -16,6 +17,14 @@ jest.mock('../../media/upload/process-image', () => ({
     }
   },
 }));
+// Auth/permission-focused tests below stub `formData` directly on fake `req` objects.
+jest.mock('@/lib/request-body.server', () => {
+  const actual = jest.requireActual('@/lib/request-body.server');
+  return {
+    ...actual,
+    readBoundedFormData: jest.fn((req: { formData: () => Promise<FormData> }) => req.formData()),
+  };
+});
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';

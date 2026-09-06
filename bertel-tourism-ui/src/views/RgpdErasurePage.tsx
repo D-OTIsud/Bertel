@@ -20,6 +20,7 @@ import { SubjectResolver } from './rgpd/SubjectResolver';
 import { ErasureResultPanel } from './rgpd/ErasureResultPanel';
 import {
   requestErasure,
+  resumeErasureCleanup,
   ERASURE_SUBJECT_KINDS,
   ERASURE_KIND_LABELS,
   ERASURE_ID_HINT,
@@ -44,6 +45,7 @@ export default function RgpdErasurePage() {
   const [mode, setMode] = useState<ErasureMode>('anonymize');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resuming, setResuming] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState(false);
   const [done, setDone] = useState<DoneState | null>(null);
   const [resolverKey, setResolverKey] = useState(0);
@@ -97,15 +99,43 @@ export default function RgpdErasurePage() {
         accessToken: token,
       });
       setDone({ result: res, mode, kind: subjectKind, id: subjectId.trim() });
-      toast.success(mode === 'delete' ? 'Sujet supprimé.' : 'Sujet anonymisé.');
-      setSubjectId('');
-      setReason('');
-      setResolverKey((key) => key + 1);
+      if (res.status === 'completed') {
+        toast.success(mode === 'delete' ? 'Sujet supprimé.' : 'Sujet anonymisé.');
+        setSubjectId('');
+        setReason('');
+        setResolverKey((key) => key + 1);
+      } else {
+        toast.warning("Effacement enregistré, nettoyage incomplet — voir le rapport ci-dessous.");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Échec de l'effacement.");
     } finally {
       setBusy(false);
       setPendingConfirm(false);
+    }
+  }
+
+  async function resumeCleanup() {
+    if (!done) return;
+    setResuming(true);
+    try {
+      const client = getSupabaseClient();
+      const token = client ? ((await client.auth.getSession()).data.session?.access_token ?? '') : '';
+      if (!token) {
+        toast.error('Session expirée — reconnectez-vous.');
+        return;
+      }
+      const res = await resumeErasureCleanup(done.result.operationId, token);
+      setDone({ ...done, result: res });
+      if (res.status === 'completed') {
+        toast.success('Nettoyage repris et terminé.');
+      } else {
+        toast.warning('Nettoyage repris — toujours incomplet, voir le rapport.');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Échec de la reprise.');
+    } finally {
+      setResuming(false);
     }
   }
 
@@ -207,6 +237,8 @@ export default function RgpdErasurePage() {
           mode={done.mode}
           subjectLabel={ERASURE_KIND_LABELS[done.kind]}
           subjectId={done.id}
+          onResume={resumeCleanup}
+          resuming={resuming}
         />
       )}
 

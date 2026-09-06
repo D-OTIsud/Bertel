@@ -9,6 +9,7 @@ import { NotificationDrawer, notificationLabel } from './NotificationDrawer';
 import { useSessionStore } from '../../store/session-store';
 import * as notifications from '../../services/notifications';
 import type { AppNotification } from '../../services/notifications';
+import { registerNavigationGuard } from '@/lib/navigation-guard';
 
 jest.mock('../../services/notifications', () => ({
   ...jest.requireActual('../../services/notifications'),
@@ -70,6 +71,18 @@ describe('notificationLabel', () => {
 });
 
 describe('NotificationDrawer', () => {
+  it('conserve le brouillon et la notification non lue si le départ est refusé', async () => {
+    const unregister = registerNavigationGuard(() => false);
+    try {
+      const { onOpenChange } = renderDrawer();
+      fireEvent.click(await screen.findByText(/Rappeler le directeur/));
+      expect(push).not.toHaveBeenCalled();
+      expect(mocked.markNotificationRead).not.toHaveBeenCalled();
+      expect(onOpenChange).not.toHaveBeenCalled();
+    } finally {
+      unregister();
+    }
+  });
   it('tiroir FERMÉ : la boîte est déjà chargée (cache partagé avec la pastille)', async () => {
     // Le tiroir ne fait plus sa propre requête : il lit l'entrée de cache que la veille
     // alimente. Elle est donc peuplée AVANT l'ouverture — le tiroir s'ouvre plein, et il ne

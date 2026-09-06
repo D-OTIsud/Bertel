@@ -512,7 +512,7 @@ export default function OtiTemplate({
   const Body = template === 'grille' ? TplGrille : template === 'itineraire' ? TplItineraire : TplCarnet;
 
   return (
-    <div className={`oti${narrow ? ' oti--narrow' : ''}`} style={style}>
+    <div className={`oti${narrow ? ' oti--narrow' : ''}`} style={style} lang={lang}>
       <Hero
         name={name}
         recipient={recipient}

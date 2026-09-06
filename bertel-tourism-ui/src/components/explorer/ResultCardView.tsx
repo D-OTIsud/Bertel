@@ -74,7 +74,7 @@ function RatingCockade({ count, unit, typeLabel }: { count: number; unit: Classe
 }
 
 /**
- * Pure presentational Explorer result card (116px tall, grows on demand). Single source of truth
+ * Pure presentational Explorer result card (128px tall, grows on demand). Single source of truth
  * shared by the Explorer results list AND the §09 "Tags & étiquettes" editor preview (interactive=
  * false) so the preview shows EXACTLY what the live card renders. Owns no store/selection/drawer
  * state — the container passes data (an already-normalizeExplorerCard'd card) + interaction handlers.
@@ -322,7 +322,9 @@ export function ResultCardView({
         // colonnes, padding, radius 28px) et cassait la mise en page (étoile éjectée
         // en 2e rangée clippée, révélée au survol via l'expansion).
         'explorer-result-card grid shrink-0 grid-cols-[96px_minmax(0,1fr)_28px] items-stretch gap-3 rounded-shellMd border border-line bg-surface p-2.5 text-left shadow-s',
-        expanded ? 'min-h-[116px]' : 'h-[116px]',
+        // A minimum lets a narrow card grow for its title, badges and metadata.
+        // A fixed height makes flexbox shrink the title to zero on rich cards.
+        'min-h-[128px]',
         containerInteractive && 'cursor-pointer transition hover:-translate-y-px hover:border-lineStrong hover:shadow-m',
         isSelected && 'border-teal shadow-[0_0_0_3px_rgba(23,107,106,0.14),var(--shadow-s)]',
         isHovered && !isSelected && 'border-lineStrong shadow-m',
@@ -355,16 +357,24 @@ export function ResultCardView({
       <div
         className={cn(
           'flex min-w-0 flex-col gap-2 py-0.5',
-          // Collapsed: center + clip to the fixed 116px. Expanded: let the column (and the grid row)
+          // Collapsed: center within the minimum height. Expanded: let the column (and the grid row)
           // grow to fit the wrapped chips — overflow-hidden on a grid item caps its min size to 0,
           // so it must be removed here or the extra chip lines get clipped.
           expanded ? 'justify-start' : 'justify-center overflow-hidden',
         )}
       >
-        <div className="flex min-w-0 items-center gap-2">
-          <h3 className="m-0 truncate font-display text-[14px] font-semibold leading-tight tracking-tight text-ink">
-            {card.name}
-          </h3>
+        {/* DES-01 — le nom vivait sur la même ligne qu'un statut `shrink-0` et un
+            96px d'image : il partait en ellipse à quelques lettres. Le titre a
+            maintenant sa propre ligne (2 lignes garanties) ; les pastilles vivent
+            en dessous, sur une ligne qui s'enroule (pas de dépendance à un seul
+            breakpoint : ça reste robuste aux cartes étroites de la vue Split). */}
+        <h3
+          title={card.name}
+          className="m-0 line-clamp-2 break-words font-display text-[14px] font-semibold leading-tight tracking-tight text-ink"
+        >
+          {card.name}
+        </h3>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           {/* Pastille « ouvert/fermé » — TRI-ÉTAT (§133) piloté par la DONNÉE, pour TOUS les types :
               open_now null/undefined = aucune donnée d'ouverture → AUCUNE pastille ;
               true = Ouvert (dont « ouvert sans horaire », §93) ; false = Fermé. */}

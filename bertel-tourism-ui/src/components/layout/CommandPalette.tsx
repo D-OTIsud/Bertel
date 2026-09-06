@@ -11,6 +11,7 @@ import { useUiStore } from '../../store/ui-store';
 import { resolveTypeLabel } from '../../utils/labels';
 import { Modal } from '../common/Modal';
 import { CreateObjectDialog } from '../../features/object-editor/create/CreateObjectDialog';
+import { confirmNavigation } from '@/lib/navigation-guard';
 import { cn } from '@/lib/utils';
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -126,6 +127,9 @@ export function CommandPalette() {
         label: item.label,
         caption: item.caption,
         run: () => {
+          // MET-01 — a dirty editor's guard must be honored before leaving via the palette,
+          // same as an in-app link; cancelling keeps the palette open with its state intact.
+          if (!confirmNavigation()) return;
           setOpen(false);
           router.push(item.to);
         },
@@ -139,6 +143,7 @@ export function CommandPalette() {
         label: 'Créer une fiche',
         caption: 'Nouvel établissement, itinéraire, événement…',
         run: () => {
+          if (!confirmNavigation()) return;
           setOpen(false);
           setCreateOpen(true);
         },

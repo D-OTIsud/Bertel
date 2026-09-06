@@ -124,8 +124,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  // 8. Marquer envoyée (best-effort : l'e-mail est parti).
-  await asCaller.schema('api').rpc('mark_list_sent', { p_list_id: listId });
+  // 8. Marquer envoyée (best-effort : le relais SMTP a déjà accepté l'e-mail). Un échec ici — que
+  // ce soit une erreur retournée par le RPC ou une exception (réseau, session) — ne doit JAMAIS
+  // renvoyer autre chose que 200 : l'UI ne doit pas proposer de renvoyer un e-mail déjà parti.
+  let trackingUpdated = true;
+  try {
+    const { error: markErr } = await asCaller.schema('api').rpc('mark_list_sent', { p_list_id: listId });
+    if (markErr) trackingUpdated = false;
+  } catch {
+    trackingUpdated = false;
+  }
 
-  return NextResponse.json({ ok: true, sentTo: toEmail }, { status: 200 });
+  return NextResponse.json(
+    trackingUpdated
+      ? { ok: true, sentTo: toEmail, trackingUpdated: true }
+      : { ok: true, sentTo: toEmail, trackingUpdated: false, warning: 'tracking_update_failed' },
+    { status: 200 },
+  );
 }

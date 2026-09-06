@@ -20,6 +20,7 @@ export function LangTabs({ tabs, active, onSelect }: LangTabsProps) {
           className={active === t.code ? 'is-on' : ''}
           title={t.label}
           aria-label={t.label}
+          aria-pressed={active === t.code}
           onClick={() => onSelect(t.code)}
         >
           {t.code.slice(0, 2).toUpperCase()}

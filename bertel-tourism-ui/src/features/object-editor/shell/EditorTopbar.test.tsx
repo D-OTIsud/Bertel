@@ -30,6 +30,12 @@ describe('EditorTopbar', () => {
     expect(onModeChange).toHaveBeenCalledWith('rapide');
   });
 
+  it('reflects the active mode via aria-pressed on the mode toggle buttons', () => {
+    render(<EditorTopbar {...baseProps} mode="complet" />);
+    expect(screen.getByRole('button', { name: 'Rapide' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Complet' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('shows last update in edit-top__save when clean', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-05-20T12:00:00Z'));

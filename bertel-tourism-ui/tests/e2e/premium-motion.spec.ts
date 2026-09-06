@@ -9,7 +9,7 @@ import { test, expect } from '@playwright/test';
  *  2/3. Open/close a centered Modal (ConfirmDialog), a drawer-variant Modal
  *       (MobileNavDrawer) and the object drawer (Sheet) — asserting the closing
  *       surface is briefly observable mid-exit before it unmounts.
- *  4. Editor draft save: pending -> success feedback on the topbar save button.
+ *  4. Editor draft save: confirmed success feedback on the topbar save button.
  *  5. Explorer view-mode switch: aria-pressed flips + indicator transform changes.
  *  6. Same modal/drawer checks under `prefers-reduced-motion: reduce` — no delayed exit.
  *
@@ -31,7 +31,7 @@ test('navigates Dashboard -> Explorer -> CRM without a blank workspace', async (
   await page.goto('/explorer');
   await expect(page.locator('#main-content')).not.toBeEmpty();
   await expect(page.getByRole('navigation', { name: 'Modules' })).toBeVisible();
-  await expect(page.getByText('Resultats').first()).toBeVisible();
+  await expect(page.getByText('Résultats', { exact: true }).first()).toBeVisible();
 
   await page.goto('/crm');
   await expect(page.locator('#main-content')).not.toBeEmpty();
@@ -88,7 +88,7 @@ test('opens and closes the ObjectDrawer Sheet from the editor preview', async ({
   await expect(sheet).toHaveCount(0, { timeout: 1000 });
 });
 
-test('saves an editor draft and shows pending then success feedback', async ({ page }) => {
+test('saves an editor draft and shows success feedback', async ({ page }) => {
   await page.goto('/objects/HOTRUN0000000001/edit');
   await expect(page.locator('.edit-flat.object-editor')).toBeVisible({ timeout: 15000 });
 
@@ -98,8 +98,10 @@ test('saves an editor draft and shows pending then success feedback', async ({ p
   await expect(saveButton).toBeEnabled();
   await saveButton.click();
 
-  await expect(saveButton).toHaveText(/Enregistrement/, { timeout: 2000 });
+  // The demo save resolves immediately. Pending feedback is covered with a controlled
+  // pending state in EditorTopbar.test.tsx, instead of racing a transient browser frame.
   await expect(saveButton).toHaveText('Enregistré', { timeout: 5000 });
+  await expect(saveButton).toBeDisabled();
 });
 
 test('switches the Explorer view mode and updates aria-pressed + indicator transform', async ({ page }) => {

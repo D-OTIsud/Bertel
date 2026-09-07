@@ -2,11 +2,11 @@
  "meta": {
   "table_count": 371,
   "view_count": 13,
-  "function_count": 425,
-  "policy_count": 565,
+  "function_count": 476,
+  "policy_count": 567,
   "trigger_count": 565,
   "enum_count": 9,
-  "edge_count": 3661
+  "edge_count": 3811
  },
  "nodes": [
   {
@@ -39914,170 +39914,6 @@
    }
   },
   {
-   "id": "public.object_list",
-   "kind": "table",
-   "label": "object_list",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "columns": [
-     {
-      "name": "id",
-      "type": "uuid",
-      "nullable": false,
-      "pk": true
-     },
-     {
-      "name": "org_object_id",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "created_by",
-      "type": "uuid",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "kind",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "name",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "name_en",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "recipient_label",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "intro_fr",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "intro_en",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "template",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "accent",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "lang",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "cover_url",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "show_map",
-      "type": "boolean",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "status",
-      "type": "text",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "filters",
-      "type": "jsonb",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "filters_url",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "share_token",
-      "type": "text",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "share_enabled",
-      "type": "boolean",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "share_expires_at",
-      "type": "timestamp with time zone",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "last_sent_at",
-      "type": "timestamp with time zone",
-      "nullable": true,
-      "pk": false
-     },
-     {
-      "name": "created_at",
-      "type": "timestamp with time zone",
-      "nullable": false,
-      "pk": false
-     },
-     {
-      "name": "updated_at",
-      "type": "timestamp with time zone",
-      "nullable": false,
-      "pk": false
-     }
-    ],
-    "rls_enabled": true
-   }
-  },
-  {
-   "id": "trigger:public.object_list:trg_object_list_touch",
-   "kind": "trigger",
-   "label": "trg_object_list_touch",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_list",
-    "timing": null,
-    "events": []
-   }
-  },
-  {
    "id": "public.object_list_item",
    "kind": "table",
    "label": "object_list_item",
@@ -42823,24 +42659,266 @@
    }
   },
   {
-   "id": "internal.sandbox_discovery_identity",
+   "id": "public.object_list",
    "kind": "table",
-   "label": "sandbox_discovery_identity",
-   "schema": "internal",
-   "domain": "other",
-   "doc": "Identité publique de découverte, sans droits d’administration. Sessions séparées, corpus fictif partagé. Préparation serveur obligatoire avant émission de tokens.",
+   "label": "object_list",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
    "props": {
     "columns": [
      {
-      "name": "singleton",
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "org_object_id",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "created_by",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "kind",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "name",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "name_en",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "recipient_label",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "intro_fr",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "intro_en",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "template",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "accent",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "lang",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "cover_url",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "show_map",
       "type": "boolean",
       "nullable": false,
       "pk": false
      },
      {
-      "name": "user_id",
-      "type": "uuid",
+      "name": "status",
+      "type": "text",
       "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "filters",
+      "type": "jsonb",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "filters_url",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "share_token",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "share_enabled",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "share_expires_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "last_sent_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "last_activity_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "is_featured",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "feature_requested_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true
+   }
+  },
+  {
+   "id": "trigger:public.object_list:trg_object_list_touch",
+   "kind": "trigger",
+   "label": "trg_object_list_touch",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_list",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
+   "id": "public.app_smtp_config",
+   "kind": "table",
+   "label": "app_smtp_config",
+   "schema": "public",
+   "domain": "other",
+   "doc": "Configuration SMTP globale des e-mails métier. Secret Vault, aucune lecture directe client. RPCs admin sans secret; lecture déchiffrée service_role uniquement.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "boolean",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "enabled",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "host",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "port",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "secure",
+      "type": "boolean",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "from_email",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "from_name",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "auth_mode",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "username",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "password_secret_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "updated_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "updated_by",
+      "type": "uuid",
+      "nullable": true,
       "pk": false
      }
     ],
@@ -42878,7 +42956,7 @@
    "label": "rpc_gdpr_erase_subject",
    "schema": "api",
    "domain": "api",
-   "doc": "Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.",
+   "doc": "Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.",
    "props": {
     "signature": "rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
     "returns": "jsonb",
@@ -42888,7 +42966,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 1625
+      "line": 1784
      },
      {
       "path": "Base de donnée DLL et API/migration_gdpr_erasure.sql",
@@ -43418,6 +43496,21 @@
      "path": "Base de donnée DLL et API/migration_crm_lifecycle.sql",
      "line": 1243
     }
+   }
+  },
+  {
+   "id": "api.restore_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "restore_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "restore_list(p_list_id uuid)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -44381,6 +44474,46 @@
      {
       "path": "Base de donnée DLL et API/migration_crm_write_requires_permission.sql",
       "line": 46
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.get_smtp_config()",
+   "kind": "function",
+   "label": "get_smtp_config",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_smtp_config()",
+    "returns": "TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "kind": "function",
+   "label": "claim_unmailed_notifications",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.",
+   "props": {
+    "signature": "claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1528
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
+      "line": 112
      }
     ]
    }
@@ -46083,7 +46216,7 @@
    "label": "is_object_owner",
    "schema": "api",
    "domain": "api",
-   "doc": "Vérifie si l'utilisateur est propriétaire (owner) de l'objet\nvia un rôle actor_object_role lié à son email dans actor_channel",
+   "doc": "18a/D7 — owner historique (lien primaire via pont e-mail) FERMÉ aux personas actor ; intact pour le reste.",
    "props": {
     "signature": "is_object_owner(p_object_id text)",
     "returns": "boolean",
@@ -46093,7 +46226,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 188
+      "line": 326
      },
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
@@ -46971,6 +47104,60 @@
    }
   },
   {
+   "id": "api.enforce_app_user_profile_role_change()",
+   "kind": "function",
+   "label": "enforce_app_user_profile_role_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Garde d'écriture d'app_user_profile : `role` (historique) ET, depuis 18a, `actor_id` — le lien qui PORTE la portée du portail acteur. Attribution réservée au service_role (route /api/crm/actor-access) ou à un owner agissant sur un AUTRE profil ; l'effacement (NULL) reste libre pour le déliage RGPD et la cascade FK.",
+   "props": {
+    "signature": "enforce_app_user_profile_role_change()",
+    "returns": "trigger",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 139
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_unblock_team_legal_access.sql",
+      "line": 166
+     },
+     {
+      "path": "Base de donnée DLL et API/schema_unified.sql",
+      "line": 2648
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.actor_portal_floor_modules()",
+   "kind": "function",
+   "label": "actor_portal_floor_modules",
+   "schema": "api",
+   "domain": "api",
+   "doc": "4.1 Le plancher dur : modules JAMAIS montrés/acceptés côté acteur, quelle que soit la\nconfig. §18 Juridique (legal), §19 Suivi prestataire (provider-follow-up = notes\nprivées), §21 Publication (publication), §22 Identifiants externes (sync-identifiers),\nplus les modules READONLY de l'éditeur (distribution, provider). Ajout 2026-09-02 :\nrelationships (son writer auto save_object_relations réécrit object_org_link ET\nactor_object_role — le périmètre même de l'acteur), places (save_object_places\nsupprime les médias des sous-lieux absents du payload), media (aucun chemin\nd'upload ni d'application pour un acteur, D11). Fonction plutôt que table : non\nparamétrable PAR CONSTRUCTION.",
+   "props": {
+    "signature": "actor_portal_floor_modules()",
+    "returns": "text[]",
+    "security_definer": false,
+    "volatility": "i",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 446
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 446
+    }
+   }
+  },
+  {
    "id": "api.resource_block_render(p_payload jsonb)",
    "kind": "function",
    "label": "resource_block_render",
@@ -47018,6 +47205,56 @@
      "path": "Base de donnée DLL et API/schema_unified.sql",
      "line": 5123
     }
+   }
+  },
+  {
+   "id": "api.get_my_actor_profile()",
+   "kind": "function",
+   "label": "get_my_actor_profile",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien.",
+   "props": {
+    "signature": "get_my_actor_profile()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 948
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 948
+    }
+   }
+  },
+  {
+   "id": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "kind": "function",
+   "label": "approve_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d'un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l'appel historique à deux arguments est inchangé.",
+   "props": {
+    "signature": "approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": true,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1038
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 192
+     }
+    ]
    }
   },
   {
@@ -47566,31 +47803,6 @@
    }
   },
   {
-   "id": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
-   "kind": "function",
-   "label": "submit_pending_change",
-   "schema": "api",
-   "domain": "api",
-   "doc": "P2.1 §120 — Dépose une suggestion (pending). Large : authentifié + objet lisible. submitted_by=auth.uid().",
-   "props": {
-    "signature": "submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
-    "returns": "uuid",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
-      "line": 58
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
-     "line": 58
-    }
-   }
-  },
-  {
    "id": "api.resource_block_legal(p_payload jsonb)",
    "kind": "function",
    "label": "resource_block_legal",
@@ -47613,56 +47825,6 @@
      "path": "Base de donnée DLL et API/api_views_functions.sql",
      "line": 2924
     }
-   }
-  },
-  {
-   "id": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
-   "kind": "function",
-   "label": "list_pending_changes",
-   "schema": "api",
-   "domain": "api",
-   "doc": "P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement.",
-   "props": {
-    "signature": "list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
-    "returns": "TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 1118
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
-      "line": 111
-     }
-    ]
-   }
-  },
-  {
-   "id": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
-   "kind": "function",
-   "label": "approve_pending_change",
-   "schema": "api",
-   "domain": "api",
-   "doc": "P2.1 §120 — Approuve : re-dispatch vers le writer structuré (metadata->>'rpc', whitelisté) puis status=applied.",
-   "props": {
-    "signature": "approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": true,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 879
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
-      "line": 192
-     }
-    ]
    }
   },
   {
@@ -48291,31 +48453,6 @@
      "path": "Base de donnée DLL et API/api_views_functions.sql",
      "line": 2333
     }
-   }
-  },
-  {
-   "id": "api.enforce_app_user_profile_role_change()",
-   "kind": "function",
-   "label": "enforce_app_user_profile_role_change",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Never trust raw_user_meta_data for authorization. A signed-in user may edit\nit, so only service/admin or an existing platform owner may change roles.",
-   "props": {
-    "signature": "enforce_app_user_profile_role_change()",
-    "returns": "trigger",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_unblock_team_legal_access.sql",
-      "line": 166
-     },
-     {
-      "path": "Base de donnée DLL et API/schema_unified.sql",
-      "line": 2648
-     }
-    ]
    }
   },
   {
@@ -50369,31 +50506,6 @@
    }
   },
   {
-   "id": "api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
-   "kind": "function",
-   "label": "mark_notifications_emailed",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.",
-   "props": {
-    "signature": "mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
-    "returns": "integer",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 1460
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
-      "line": 204
-     }
-    ]
-   }
-  },
-  {
    "id": "api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)",
    "kind": "function",
    "label": "get_dashboard_city_distribution",
@@ -50827,31 +50939,6 @@
    }
   },
   {
-   "id": "api.user_can_read_list(p_list_id uuid)",
-   "kind": "function",
-   "label": "user_can_read_list",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "user_can_read_list(p_list_id uuid)",
-    "returns": "boolean",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 82
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 82
-    }
-   }
-  },
-  {
    "id": "api.tg_object_list_touch()",
    "kind": "function",
    "label": "tg_object_list_touch",
@@ -50901,31 +50988,6 @@
      {
       "path": "Base de donnée DLL et API/rls_policies.sql",
       "line": 2619
-     }
-    ]
-   }
-  },
-  {
-   "id": "api.user_can_write_list(p_list_id uuid)",
-   "kind": "function",
-   "label": "user_can_write_list",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k).",
-   "props": {
-    "signature": "user_can_write_list(p_list_id uuid)",
-    "returns": "boolean",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_list_write_creator_only.sql",
-      "line": 40
-     },
-     {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 91
      }
     ]
    }
@@ -51086,7 +51148,7 @@
    "label": "list_effective_object_ids",
    "schema": "api",
    "domain": "api",
-   "doc": "---------- 5. Membres effectifs d'une liste (statique OU dynamique) ----------\nHelper interne : jamais exposé (les callers DEFINER l'exécutent en tant qu'owner).\nStatique : object_list_item ordonné ; published_only filtre sur object.status.\nDynamique : résolveur ci-dessus (ordinalité = position), notes NULL.",
+   "doc": "Ensemble effectif d'une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n'est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql.",
    "props": {
     "signature": "list_effective_object_ids(p_list_id uuid, p_published_only boolean)",
     "returns": "TABLE(object_id text, pos integer, note_fr text, note_en text)",
@@ -51571,31 +51633,6 @@
    }
   },
   {
-   "id": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
-   "kind": "function",
-   "label": "create_list",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Création d'une liste : superuser plateforme UNIQUEMENT (17l, arbitrage PO 2026-08-31). Le rang d'administration d'ORG ne suffit pas.",
-   "props": {
-    "signature": "create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
-    "returns": "uuid",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_list_create_superuser_only.sql",
-      "line": 38
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_list_create_superuser_only.sql",
-     "line": 38
-    }
-   }
-  },
-  {
    "id": "api.update_list(p_list_id uuid, p_patch jsonb)",
    "kind": "function",
    "label": "update_list",
@@ -51671,78 +51708,28 @@
    }
   },
   {
-   "id": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "id": "api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
    "kind": "function",
-   "label": "set_list_items",
+   "label": "mark_notifications_emailed",
    "schema": "api",
    "domain": "api",
-   "doc": "6.5 Remplacement des items statiques (reconcile non-destructif — §40)",
+   "doc": "Acquittement du drain e-mail (17m + 18a §8, les DEUX espèces). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.",
    "props": {
-    "signature": "set_list_items(p_list_id uuid, p_items jsonb)",
-    "returns": "json",
+    "signature": "mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
+    "returns": "integer",
     "security_definer": true,
     "volatility": "v",
     "dynamic_sql": false,
     "sources": [
      {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 389
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 389
-    }
-   }
-  },
-  {
-   "id": "api.delete_list(p_list_id uuid)",
-   "kind": "function",
-   "label": "delete_list",
-   "schema": "api",
-   "domain": "api",
-   "doc": "6.6 Suppression",
-   "props": {
-    "signature": "delete_list(p_list_id uuid)",
-    "returns": "void",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1619
+     },
      {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 424
+      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
+      "line": 204
      }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 424
-    }
-   }
-  },
-  {
-   "id": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
-   "kind": "function",
-   "label": "share_list",
-   "schema": "api",
-   "domain": "api",
-   "doc": "6.7 Partage : génère/rote le token, (dé)active le lien",
-   "props": {
-    "signature": "share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 437
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 437
-    }
+    ]
    }
   },
   {
@@ -51771,6 +51758,46 @@
    }
   },
   {
+   "id": "internal.test_org_id()",
+   "kind": "function",
+   "label": "test_org_id",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.",
+   "props": {
+    "signature": "test_org_id()",
+    "returns": "text",
+    "security_definer": false,
+    "volatility": "i",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_test_org_seed.sql",
+      "line": 34
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_test_org_seed.sql",
+     "line": 34
+    }
+   }
+  },
+  {
+   "id": "internal.seed_test_crm()",
+   "kind": "function",
+   "label": "seed_test_crm",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "CRM du corpus de test : interactions variees (types, sens, 6 statuts, sujets/sous-sujets coherents, sentiments, 8 mois d'historique), taches (4 statuts, 4 priorites, moitie en retard, multi-assignees) et prospects (acteurs rattaches a l'ORG, e-mails en .test). Cloisonne PAR CONSTRUCTION : current_user_crm_object_ids part de l'ORG.",
+   "props": {
+    "signature": "seed_test_crm()",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.get_object_jsonld(p_object_id text, p_profile text DEFAULT 'jsonld'::text)",
    "kind": "function",
    "label": "get_object_jsonld",
@@ -51793,6 +51820,21 @@
      "path": "Base de donnée DLL et API/migration_object_jsonld_schemaorg.sql",
      "line": 144
     }
+   }
+  },
+  {
+   "id": "api.check_org_smtp_org_type()",
+   "kind": "function",
+   "label": "check_org_smtp_org_type",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "check_org_smtp_org_type()",
+    "returns": "trigger",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -51821,28 +51863,33 @@
    }
   },
   {
-   "id": "api.mark_list_sent(p_list_id uuid)",
+   "id": "api.user_can_manage_org_smtp(p_org_object_id text)",
    "kind": "function",
-   "label": "mark_list_sent",
+   "label": "user_can_manage_org_smtp",
    "schema": "api",
    "domain": "api",
-   "doc": "---------- 7b. Marquer une liste « envoyée » (route email /api/lists/send) ----------",
+   "doc": "Qui règle le relais SMTP d'une ORG : superadmin plateforme, ou admin ACTIF de rang >= 30 de\nCETTE ORG. Même seuil que le branding et le portail acteurs — proposer la section plus bas\noffrirait un écran dont chaque enregistrement échouerait en 42501.",
    "props": {
-    "signature": "mark_list_sent(p_list_id uuid)",
-    "returns": "void",
+    "signature": "user_can_manage_org_smtp(p_org_object_id text)",
+    "returns": "boolean",
     "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 528
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 528
-    }
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_org_smtp(p_org_object_id text)",
+   "kind": "function",
+   "label": "get_org_smtp",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_org_smtp(p_org_object_id text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
    }
   },
   {
@@ -52104,6 +52151,36 @@
    }
   },
   {
+   "id": "api.delete_org_smtp(p_org_object_id text)",
+   "kind": "function",
+   "label": "delete_org_smtp",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "delete_org_smtp(p_org_object_id text)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_org_smtp_secret(p_org_object_id text)",
+   "kind": "function",
+   "label": "get_org_smtp_secret",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_org_smtp_secret(p_org_object_id text)",
+    "returns": "TABLE(host text, port integer, secure boolean, from_email text, from_name text, username text, password text)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.current_user_extended_object_ids()",
    "kind": "function",
    "label": "current_user_extended_object_ids",
@@ -52119,7 +52196,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 114
+      "line": 252
      },
      {
       "path": "Base de donnée DLL et API/migration_explorer_rls_setbased.sql",
@@ -52183,31 +52260,6 @@
    }
   },
   {
-   "id": "internal.test_org_id()",
-   "kind": "function",
-   "label": "test_org_id",
-   "schema": "internal",
-   "domain": "api",
-   "doc": "Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.",
-   "props": {
-    "signature": "test_org_id()",
-    "returns": "text",
-    "security_definer": false,
-    "volatility": "i",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_test_org_seed.sql",
-      "line": 34
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_test_org_seed.sql",
-     "line": 34
-    }
-   }
-  },
-  {
    "id": "internal.test_corpus_id(p_type text, p_i integer)",
    "kind": "function",
    "label": "test_corpus_id",
@@ -52230,6 +52282,21 @@
      "path": "Base de donnée DLL et API/migration_test_org_seed.sql",
      "line": 42
     }
+   }
+  },
+  {
+   "id": "api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)",
+   "kind": "function",
+   "label": "record_org_smtp_test",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -52502,7 +52569,7 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 1509
+      "line": 1668
      },
      {
       "path": "Base de donnée DLL et API/migration_crm_module.sql",
@@ -52824,6 +52891,36 @@
    }
   },
   {
+   "id": "api.list_org_smtp_status()",
+   "kind": "function",
+   "label": "list_org_smtp_status",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_org_smtp_status()",
+    "returns": "TABLE(org_object_id text, org_name text, host text, port integer, from_email text, is_enabled boolean, has_password boolean, last_test_at timestamp with time zone, last_test_ok boolean)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)",
+   "kind": "function",
+   "label": "notification_relay_org",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "notification_relay_org(p_task_id uuid, p_recipient_id uuid)",
+    "returns": "text",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
    "kind": "function",
    "label": "configure_sandbox_discovery_user",
@@ -52846,6 +52943,36 @@
      "path": "Base de donnée DLL et API/migration_public_sandbox_entry.sql",
      "line": 51
     }
+   }
+  },
+  {
+   "id": "api.count_notifications_blocked_no_smtp()",
+   "kind": "function",
+   "label": "count_notifications_blocked_no_smtp",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "count_notifications_blocked_no_smtp()",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "kind": "function",
+   "label": "seed_test_media",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Medias du corpus de test : 3-5 photos par fiche (une principale), etiquettes, et les liens de facette (etapes ITI, chambres, plats). Emprunte un vivier BORNE de 24 URLs publiques reelles — la chaine seulement, jamais un octet ; ne touche JAMAIS au stockage. Idempotent.",
+   "props": {
+    "signature": "seed_test_media(p_id text, p_type text, p_i integer)",
+    "returns": "void",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -53099,6 +53226,66 @@
    }
   },
   {
+   "id": "internal.org_membership_active(p_user_id uuid, p_org_object_id text)",
+   "kind": "function",
+   "label": "org_membership_active",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "org_membership_active(p_user_id uuid, p_org_object_id text)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.org_admin_rank(p_user_id uuid, p_org_object_id text)",
+   "kind": "function",
+   "label": "org_admin_rank",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "org_admin_rank(p_user_id uuid, p_org_object_id text)",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.org_is_admin(p_user_id uuid, p_org_object_id text)",
+   "kind": "function",
+   "label": "org_is_admin",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "org_is_admin(p_user_id uuid, p_org_object_id text)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.list_is_archived(p_is_featured boolean, p_last_activity_at timestamp with time zone)",
+   "kind": "function",
+   "label": "list_is_archived",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_is_archived(p_is_featured boolean, p_last_activity_at timestamp with time zone)",
+    "returns": "boolean",
+    "security_definer": false,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.list_my_notifications(p_limit integer DEFAULT 50)",
    "kind": "function",
    "label": "list_my_notifications",
@@ -53164,6 +53351,101 @@
    }
   },
   {
+   "id": "api.user_can_read_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "user_can_read_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "user_can_read_list(p_list_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 82
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 82
+    }
+   }
+  },
+  {
+   "id": "api.user_can_use_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "user_can_use_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "user_can_use_list(p_list_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.user_can_write_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "user_can_write_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k).",
+   "props": {
+    "signature": "user_can_write_list(p_list_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_list_write_creator_only.sql",
+      "line": 40
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 91
+     }
+    ]
+   }
+  },
+  {
+   "id": "api.user_is_list_org_admin(p_list_id uuid)",
+   "kind": "function",
+   "label": "user_is_list_org_admin",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "user_is_list_org_admin(p_list_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.user_can_manage_list_feature_action(p_list_id uuid)",
+   "kind": "function",
+   "label": "user_can_manage_list_feature_action",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "user_can_manage_list_feature_action(p_list_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
    "id": "api.rpc_set_role_permission(p_org_object_id text, p_role_code text, p_permission_code text, p_granted boolean)",
    "kind": "function",
    "label": "rpc_set_role_permission",
@@ -53218,14 +53500,164 @@
    }
   },
   {
-   "id": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "id": "api.current_user_portal_object_ids()",
    "kind": "function",
-   "label": "claim_unmailed_notifications",
+   "label": "current_user_portal_object_ids",
    "schema": "api",
    "domain": "api",
-   "doc": "Outbox e-mail (17i) : réclame les notifications crm_task_assigned non e-mailées (TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.",
+   "doc": "18a portail acteur — fiches du portail : liens actor_object_role NON expirés de MON actor_id, hors ORG.",
    "props": {
-    "signature": "claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+    "signature": "current_user_portal_object_ids()",
+    "returns": "SETOF text",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 214
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 214
+    }
+   }
+  },
+  {
+   "id": "api.is_actor_persona()",
+   "kind": "function",
+   "label": "is_actor_persona",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a portail acteur — TRUE si le profil courant est role=actor. Fail-closed (§204).",
+   "props": {
+    "signature": "is_actor_persona()",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 60
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 60
+    }
+   }
+  },
+  {
+   "id": "api.current_user_actor_id()",
+   "kind": "function",
+   "label": "current_user_actor_id",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l'invitation). Jamais le pont e-mail.",
+   "props": {
+    "signature": "current_user_actor_id()",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 73
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 73
+    }
+   }
+  },
+  {
+   "id": "api.list_object_verifier_ids(p_object_id text)",
+   "kind": "function",
+   "label": "list_object_verifier_ids",
+   "schema": "api",
+   "domain": "api",
+   "doc": "4.2 Les vérificateurs d'une fiche (D3) : membres ACTIFS d'une ORG publisher de l'objet\ntenant validate_changes — par la matrice de rôle (17i) OU par grant individuel.\nREPLI (corrigé en revue Task 4, ruling contrôleur) : superutilisateurs plateforme\nactifs (app_user_profile.role IN ('owner','super_admin')) — JAMAIS les rangs admin\nde l'ORG. Fait vérifié en base : api.user_has_permission() (donc\napi.user_can_moderate_object, donc le bouton Approuver) n'a que DEUX chemins —\ngrant individuel (user_permission) et rôle métier (user_org_business_role ×\norg_role_permission, §227) — et ignore TOTALEMENT user_org_admin_role. Un rang\nadmin sans validate_changes échouerait donc user_can_moderate_object en 42501 :\nla tâche assignée serait injouable et la fiche resterait bloquée à vie\n(uq_fiche_submission_open n'autorise qu'une soumission ouverte à la fois) — pire\nqu'une liste vide, car muet. Un superuser plateforme, lui, satisfait\nuser_can_moderate_object ET is_object_owner INCONDITIONNELLEMENT (leur bras\nis_platform_superuser(), commun aux deux) : le prérequis « tout vérificateur a\naussi l'écriture canonique » tient toujours. Peut rendre VIDE si aucun\nsuperuser n'existe (la soumission n'échoue pas pour ça — spec §7, tâche part\nnon assignée, assignee_count=0 signalé au client).",
+   "props": {
+    "signature": "list_object_verifier_ids(p_object_id text)",
+    "returns": "SETOF uuid",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 471
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 471
+    }
+   }
+  },
+  {
+   "id": "api.get_actor_section_visibility(p_org_object_id text, p_object_type text)",
+   "kind": "function",
+   "label": "get_actor_section_visibility",
+   "schema": "api",
+   "domain": "api",
+   "doc": "4.3 Lecture de la matrice pour /settings (org + type explicites). Membres actifs de\nl'ORG uniquement (même périmètre que la policy SELECT d'org_role_permission).",
+   "props": {
+    "signature": "get_actor_section_visibility(p_org_object_id text, p_object_type text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 517
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 517
+    }
+   }
+  },
+  {
+   "id": "api.get_portal_section_visibility(p_object_id text)",
+   "kind": "function",
+   "label": "get_portal_section_visibility",
+   "schema": "api",
+   "domain": "api",
+   "doc": "4.4 Variante portail : résout l'ORG publisher (primaire d'abord) et le type depuis la\nfiche. Autorisée : persona acteur pour une fiche de SA portée, membres de l'ORG,\nsuperuser. C'est elle que consomme l'éditeur en mode portail (front ET section 5).",
+   "props": {
+    "signature": "get_portal_section_visibility(p_object_id text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 542
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 542
+    }
+   }
+  },
+  {
+   "id": "api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
+   "kind": "function",
+   "label": "rpc_set_actor_section_visibility",
+   "schema": "api",
+   "domain": "api",
+   "doc": "4.5 Écriture de la matrice : rang admin ≥ 30 sur l'ORG (même seuil que\nrpc_set_role_permission). Refuse le plancher dur — même pour le RE-rendre visible :\nune ligne « legal visible » en base serait un mensonge, la fonction l'ignorerait.",
+   "props": {
+    "signature": "rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
     "returns": "jsonb",
     "security_definer": true,
     "volatility": "v",
@@ -53233,13 +53665,588 @@
     "sources": [
      {
       "path": "Base de donnée DLL et API/migration_actor_portal.sql",
-      "line": 1369
+      "line": 584
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 584
+    }
+   }
+  },
+  {
+   "id": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "submit_actor_fiche",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = DEUX entrées (save_object_commercial, save_object_openings), les SEULES que le portail émet — sous-ensemble STRICT d'approve_pending_change (§120), jamais un sur-ensemble sous peine de fiche bloquée à vie. Les cinq autres writers ont été retirés le 2026-09-04 : le plancher dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien ne couplait les deux clés.",
+   "props": {
+    "signature": "submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 635
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 635
+    }
+   }
+  },
+  {
+   "id": "api.list_my_portal_fiches()",
+   "kind": "function",
+   "label": "list_my_portal_fiches",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne.",
+   "props": {
+    "signature": "list_my_portal_fiches()",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 843
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 843
+    }
+   }
+  },
+  {
+   "id": "api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "list_my_submissions",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a — historique des soumissions de l'acteur COURANT (auto-scopé, jamais de paramètre destinataire). p_object_id filtre STRICTEMENT (révision 2026-09-02) — sans lui un acteur multi-fiches verrait la soumission ouverte d'UNE fiche apparaître sous une AUTRE. section = metadata.section (le module id stable), field = le libellé lisible (D12).",
+   "props": {
+    "signature": "list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 902
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 902
+    }
+   }
+  },
+  {
+   "id": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+   "kind": "function",
+   "label": "approve_fiche_submission",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a/D9 — approuve une soumission entière. p_include_manual=FALSE (défaut) SAUTE les changements sans writer et les laisse pending : la soumission reste ouverte tant que l'office n'a pas attesté les avoir reportés. Ne pose pas le statut agrégé (trigger §8).",
+   "props": {
+    "signature": "approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1165
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 1165
+    }
+   }
+  },
+  {
+   "id": "api.reject_fiche_submission(p_submission_id uuid, p_review_note text)",
+   "kind": "function",
+   "label": "reject_fiche_submission",
+   "schema": "api",
+   "domain": "api",
+   "doc": "18a/D9 — refuse une soumission entière. Motif OBLIGATOIRE (le prestataire doit savoir pourquoi) ; ne touche que les lignes encore pending.",
+   "props": {
+    "signature": "reject_fiche_submission(p_submission_id uuid, p_review_note text)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1219
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 1219
+    }
+   }
+  },
+  {
+   "id": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "kind": "function",
+   "label": "list_pending_changes",
+   "schema": "api",
+   "domain": "api",
+   "doc": "P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.",
+   "props": {
+    "signature": "list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+    "returns": "TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1277
      },
      {
-      "path": "Base de donnée DLL et API/migration_crm_task_email_documents.sql",
-      "line": 112
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 111
      }
     ]
+   }
+  },
+  {
+   "id": "public.fiche_submission_after_review()",
+   "kind": "function",
+   "label": "fiche_submission_after_review",
+   "schema": "public",
+   "domain": "other",
+   "doc": "18a §8 — trigger de résolution sur pending_change. SECURITY DEFINER : la résolution doit tourner quel que soit le chemin qui a tranché la ligne (unitaire, groupé, correctif service_role).",
+   "props": {
+    "signature": "fiche_submission_after_review()",
+    "returns": "trigger",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1469
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 1469
+    }
+   }
+  },
+  {
+   "id": "internal.resolve_fiche_submission(p_submission_id uuid)",
+   "kind": "function",
+   "label": "resolve_fiche_submission",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "18a §8 — statut agrégé d'une soumission dont plus aucune ligne n'est pending : approved (tout applied/approved), rejected (tout rejected), partial (mélange) ; ferme la tâche et notifie l'acteur (payload SANS nom, RGPD). Appelée par le trigger trg_fiche_submission_resolve, jamais directement.",
+   "props": {
+    "signature": "resolve_fiche_submission(p_submission_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1383
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+     "line": 1383
+    }
+   }
+  },
+  {
+   "id": "internal.list_grid_summary(p_list_id uuid)",
+   "kind": "function",
+   "label": "list_grid_summary",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_grid_summary(p_list_id uuid)",
+    "returns": "TABLE(item_count integer, type_breakdown jsonb, cover_image text)",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+   "kind": "function",
+   "label": "submit_pending_change",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Dépose une suggestion dans la file de modération (équipes internes). 18a : FERMÉE aux personas du portail acteur — elles ont leur propre porte, api.submit_actor_fiche, seule à appliquer le plancher de modules, la matrice de masquage, la whitelist de writers, le plafond de 40 changements et le verrou « une seule vérification ouverte ».",
+   "props": {
+    "signature": "submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_actor_portal.sql",
+      "line": 1983
+     },
+     {
+      "path": "Base de donnée DLL et API/migration_moderation_rpcs.sql",
+      "line": 58
+     }
+    ]
+   }
+  },
+  {
+   "id": "internal.build_list_detail_json(p_list_id uuid)",
+   "kind": "function",
+   "label": "build_list_detail_json",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "build_list_detail_json(p_list_id uuid)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.grant_test_org_permissions()",
+   "kind": "function",
+   "label": "grant_test_org_permissions",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Donne aux membres NOMMES du bac a sable les droits d'un EDITEUR au sens de §227 : jeu complet (12) sur le role `editor`, + ce role aux membres qui n'en ont aucun. Le role `contributor` reste a 7 — le compte decouverte partage de codex/public-sandbox-entry le porte, et son test exige qu'il n'ait PAS write_crm_notes. N'ECRASE JAMAIS un role existant — le visiteur decouverte DOIT rester `contributor`, sans quoi api.get_sandbox_discovery_user() leve UNSAFE_SANDBOX_IDENTITY et l'Espace de test devient indisponible. Desactive au passage toute ligne org_permission (table RETIREE par §227, dont la migration refuse de s'appliquer s'il en reste une active).",
+   "props": {
+    "signature": "grant_test_org_permissions()",
+    "returns": "jsonb",
+    "security_definer": false,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)",
+   "kind": "function",
+   "label": "upsert_org_smtp",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "create_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Création d'une liste : tout membre connecté d'une ORG (lecteurs compris). Items statiques admis published ET du bon corpus de test (§2/§4 revue architecte).",
+   "props": {
+    "signature": "create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_list_create_superuser_only.sql",
+      "line": 38
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_list_create_superuser_only.sql",
+     "line": 38
+    }
+   }
+  },
+  {
+   "id": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "kind": "function",
+   "label": "set_list_items",
+   "schema": "api",
+   "domain": "api",
+   "doc": "6.5 Remplacement des items statiques (reconcile non-destructif — §40)",
+   "props": {
+    "signature": "set_list_items(p_list_id uuid, p_items jsonb)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 389
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 389
+    }
+   }
+  },
+  {
+   "id": "api.delete_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "delete_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": "6.6 Suppression",
+   "props": {
+    "signature": "delete_list(p_list_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 424
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 424
+    }
+   }
+  },
+  {
+   "id": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
+   "kind": "function",
+   "label": "share_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": "6.7 Partage : génère/rote le token, (dé)active le lien",
+   "props": {
+    "signature": "share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 437
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 437
+    }
+   }
+  },
+  {
+   "id": "api.list_featured_lists()",
+   "kind": "function",
+   "label": "list_featured_lists",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_featured_lists()",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.list_list_proposals()",
+   "kind": "function",
+   "label": "list_list_proposals",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_list_proposals()",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.request_list_feature(p_list_id uuid)",
+   "kind": "function",
+   "label": "request_list_feature",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "request_list_feature(p_list_id uuid)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "kind": "function",
+   "label": "review_list_feature",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "review_list_feature(p_list_id uuid, p_accept boolean)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "kind": "function",
+   "label": "set_list_featured",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "set_list_featured(p_list_id uuid, p_featured boolean)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.duplicate_list(p_list_id uuid)",
+   "kind": "function",
+   "label": "duplicate_list",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "duplicate_list(p_list_id uuid)",
+    "returns": "uuid",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.ensure_list_share_link(p_list_id uuid)",
+   "kind": "function",
+   "label": "ensure_list_share_link",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "ensure_list_share_link(p_list_id uuid)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)",
+   "kind": "function",
+   "label": "list_sender_authorized",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_sender_authorized(p_list_id uuid, p_user_id uuid)",
+    "returns": "boolean",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.mark_list_sent(p_list_id uuid, p_sender_id uuid)",
+   "kind": "function",
+   "label": "mark_list_sent",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Suivi serveur après acceptation SMTP (route /api/lists/send), service_role UNIQUEMENT. Remplace api.mark_list_sent(uuid) (grantée à authenticated), révoquée : un client ne peut plus se déclarer « envoyé » sans preuve. p_sender_id est vérifié contre internal.list_sender_authorized — existence du profil ET adhésion active exigées AVANT tout bras propriétaire/featured.",
+   "props": {
+    "signature": "mark_list_sent(p_list_id uuid, p_sender_id uuid)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 528
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 528
+    }
+   }
+  },
+  {
+   "id": "internal.purge_expired_lists()",
+   "kind": "function",
+   "label": "purge_expired_lists",
+   "schema": "internal",
+   "domain": "api",
+   "doc": "Purge annuelle des listes NON mises à la une, inactives depuis 1 an (last_activity_at). Cascade object_list_item (FK ON DELETE CASCADE) : les items disparaissent, jamais les fiches touristiques/media. Inaccessible à tout client (REVOKE ALL FROM PUBLIC, aucun GRANT posé) ; exécutée par le cron quotidien purge-expired-lists (voir docs/listes-cycle-vie.md).",
+   "props": {
+    "signature": "purge_expired_lists()",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+   "kind": "function",
+   "label": "upsert_smtp_config",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+    "returns": "void",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.get_smtp_config_secret()",
+   "kind": "function",
+   "label": "get_smtp_config_secret",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "get_smtp_config_secret()",
+    "returns": "TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
    }
   },
   {
@@ -54311,22 +55318,6 @@
    }
   },
   {
-   "id": "policy:public.object_list:read_object_list",
-   "kind": "policy",
-   "label": "read_object_list",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_list",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_read_list(id)"
-   }
-  },
-  {
    "id": "policy:public.object_list_item:read_object_list_item",
    "kind": "policy",
    "label": "read_object_list_item",
@@ -54340,6 +55331,22 @@
      "public"
     ],
     "predicate": "api.user_can_read_list(list_id)"
+   }
+  },
+  {
+   "id": "policy:public.object_list:read_object_list",
+   "kind": "policy",
+   "label": "read_object_list",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_list",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_read_list(id)"
    }
   },
   {
@@ -54648,6 +55655,22 @@
    }
   },
   {
+   "id": "policy:public.pending_change:admin_pending_change",
+   "kind": "policy",
+   "label": "admin_pending_change",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.pending_change",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
    "id": "policy:public.object_description:canonical_del_object_description",
    "kind": "policy",
    "label": "canonical_del_object_description",
@@ -54901,22 +55924,6 @@
      "public"
     ],
     "predicate": "((EXISTS ( SELECT 1\n   FROM object o\n  WHERE ((o.id = object_payment_method.object_id) AND ((o.status = 'published'::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))"
-   }
-  },
-  {
-   "id": "policy:public.pending_change:admin_pending_change",
-   "kind": "policy",
-   "label": "admin_pending_change",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.pending_change",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
    }
   },
   {
@@ -57615,6 +58622,105 @@
    }
   },
   {
+   "id": "policy:audit.audit_log_2026_11:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_11",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_11",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:public.app_user_profile:Administration des profils utilisateur",
+   "kind": "policy",
+   "label": "Administration des profils utilisateur",
+   "schema": "public",
+   "domain": "rbac",
+   "doc": null,
+   "props": {
+    "table": "public.app_user_profile",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.is_platform_owner()"
+   }
+  },
+  {
+   "id": "policy:public.app_user_profile:Insertion de son profil utilisateur",
+   "kind": "policy",
+   "label": "Insertion de son profil utilisateur",
+   "schema": "public",
+   "domain": "rbac",
+   "doc": null,
+   "props": {
+    "table": "public.app_user_profile",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
+   }
+  },
+  {
+   "id": "policy:public.app_user_profile:Lecture de son profil utilisateur",
+   "kind": "policy",
+   "label": "Lecture de son profil utilisateur",
+   "schema": "public",
+   "domain": "rbac",
+   "doc": null,
+   "props": {
+    "table": "public.app_user_profile",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
+   }
+  },
+  {
+   "id": "policy:public.app_user_profile:Mise à jour de son profil utilisateur",
+   "kind": "policy",
+   "label": "Mise à jour de son profil utilisateur",
+   "schema": "public",
+   "domain": "rbac",
+   "doc": null,
+   "props": {
+    "table": "public.app_user_profile",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner()) | ((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
+   }
+  },
+  {
    "id": "policy:public.ref_code_crm_sentiment:admin_ref_code_write",
    "kind": "policy",
    "label": "admin_ref_code_write",
@@ -57646,6 +58752,38 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
+   }
+  },
+  {
+   "id": "policy:public.fiche_submission:admin_fiche_submission",
+   "kind": "policy",
+   "label": "admin_fiche_submission",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.fiche_submission",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:public.org_actor_module_visibility:admin_org_actor_module_visibility",
+   "kind": "policy",
+   "label": "admin_org_actor_module_visibility",
+   "schema": "public",
+   "domain": "actor-org",
+   "doc": null,
+   "props": {
+    "table": "public.org_actor_module_visibility",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
    }
   },
   {
@@ -58028,41 +59166,6 @@
      "public"
     ],
     "predicate": "true"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_11:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_11",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_11",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -59321,6 +60424,41 @@
    }
   },
   {
+   "id": "policy:audit.audit_log_2026_10:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_10",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_10",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
    "id": "policy:public.opening_time_period_weekday:canonical_del_opening_time_period_weekday",
    "kind": "policy",
    "label": "canonical_del_opening_time_period_weekday",
@@ -59382,41 +60520,6 @@
      "public"
     ],
     "predicate": "(EXISTS ( SELECT 1\n   FROM ((opening_time_period tp\n     JOIN opening_schedule s ON ((s.id = tp.schedule_id)))\n     JOIN opening_period p ON ((p.id = s.period_id)))\n  WHERE ((tp.id = opening_time_period_weekday.time_period_id) AND api.can_read_object(p.object_id))))"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_10:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_10",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_10",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -60248,6 +61351,23 @@
    }
   },
   {
+   "id": "policy:public.object_version_2026_11:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_11",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
+   }
+  },
+  {
    "id": "policy:public.ref_contact_role:admin_contact_role_write",
    "kind": "policy",
    "label": "admin_contact_role_write",
@@ -60311,23 +61431,6 @@
     ],
     "predicate": "true",
     "partition_of": "public.ref_code"
-   }
-  },
-  {
-   "id": "policy:public.object_version_2026_11:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_11",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
    }
   },
   {
@@ -60491,6 +61594,23 @@
    }
   },
   {
+   "id": "policy:public.object_version_2026_09:admin_object_version",
+   "kind": "policy",
+   "label": "admin_object_version",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_version_2026_09",
+    "cmd": "ALL",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
+    "partition_of": "public.object_version"
+   }
+  },
+  {
    "id": "policy:public.ref_capacity_applicability:Lecture publique des applicabilités de capacité",
    "kind": "policy",
    "label": "Lecture publique des applicabilités de capacité",
@@ -60572,23 +61692,6 @@
    }
   },
   {
-   "id": "policy:public.object_version_2026_09:admin_object_version",
-   "kind": "policy",
-   "label": "admin_object_version",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_version_2026_09",
-    "cmd": "ALL",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))",
-    "partition_of": "public.object_version"
-   }
-  },
-  {
    "id": "policy:public.ref_review_source:Lecture publique des sources d'avis",
    "kind": "policy",
    "label": "Lecture publique des sources d'avis",
@@ -60650,70 +61753,6 @@
      "public"
     ],
     "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())"
-   }
-  },
-  {
-   "id": "policy:public.app_user_profile:Administration des profils utilisateur",
-   "kind": "policy",
-   "label": "Administration des profils utilisateur",
-   "schema": "public",
-   "domain": "rbac",
-   "doc": null,
-   "props": {
-    "table": "public.app_user_profile",
-    "cmd": "DELETE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.is_platform_owner()"
-   }
-  },
-  {
-   "id": "policy:public.app_user_profile:Insertion de son profil utilisateur",
-   "kind": "policy",
-   "label": "Insertion de son profil utilisateur",
-   "schema": "public",
-   "domain": "rbac",
-   "doc": null,
-   "props": {
-    "table": "public.app_user_profile",
-    "cmd": "INSERT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
-   }
-  },
-  {
-   "id": "policy:public.app_user_profile:Lecture de son profil utilisateur",
-   "kind": "policy",
-   "label": "Lecture de son profil utilisateur",
-   "schema": "public",
-   "domain": "rbac",
-   "doc": null,
-   "props": {
-    "table": "public.app_user_profile",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
-   }
-  },
-  {
-   "id": "policy:public.app_user_profile:Mise à jour de son profil utilisateur",
-   "kind": "policy",
-   "label": "Mise à jour de son profil utilisateur",
-   "schema": "public",
-   "domain": "rbac",
-   "doc": null,
-   "props": {
-    "table": "public.app_user_profile",
-    "cmd": "UPDATE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner()) | ((id = ( SELECT auth.uid() AS uid)) OR api.is_platform_owner())"
    }
   },
   {
@@ -60943,41 +61982,6 @@
    }
   },
   {
-   "id": "policy:audit.audit_log_2026_07:Insertion via triggers",
-   "kind": "policy",
-   "label": "Insertion via triggers",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_07",
-    "cmd": "INSERT",
-    "roles": [
-     "postgres",
-     "service_role"
-    ],
-    "predicate": "true",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
-   "id": "policy:audit.audit_log_2026_07:Lecture audit (admin/service_role)",
-   "kind": "policy",
-   "label": "Lecture audit (admin/service_role)",
-   "schema": "audit",
-   "domain": "audit",
-   "doc": null,
-   "props": {
-    "table": "audit.audit_log_2026_07",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
-    "partition_of": "audit.audit_log"
-   }
-  },
-  {
    "id": "policy:public.app_notification:admin_del_app_notification",
    "kind": "policy",
    "label": "admin_del_app_notification",
@@ -61039,6 +62043,41 @@
      "public"
     ],
     "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_07:Insertion via triggers",
+   "kind": "policy",
+   "label": "Insertion via triggers",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_07",
+    "cmd": "INSERT",
+    "roles": [
+     "postgres",
+     "service_role"
+    ],
+    "predicate": "true",
+    "partition_of": "audit.audit_log"
+   }
+  },
+  {
+   "id": "policy:audit.audit_log_2026_07:Lecture audit (admin/service_role)",
+   "kind": "policy",
+   "label": "Lecture audit (admin/service_role)",
+   "schema": "audit",
+   "domain": "audit",
+   "doc": null,
+   "props": {
+    "table": "audit.audit_log_2026_07",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())",
+    "partition_of": "audit.audit_log"
    }
   },
   {
@@ -61873,7 +62912,7 @@
     "roles": [
      "public"
     ],
-    "predicate": "(EXISTS ( SELECT 1\n   FROM media m\n  WHERE ((m.id = media_tag.media_id) AND ((m.is_published IS TRUE) OR api.can_read_extended(m.object_id)))))"
+    "predicate": "(EXISTS ( SELECT 1\n   FROM (media m\n     LEFT JOIN object o ON ((o.id = m.object_id)))\n  WHERE ((m.id = media_tag.media_id) AND (((m.is_published IS TRUE) AND (COALESCE(o.is_test, false) = ( SELECT api.current_user_test_realm() AS current_user_test_realm))) OR api.can_read_extended(m.object_id)))))"
    }
   },
   {
@@ -62615,6 +63654,32 @@
    "id": "public.actor_contact_export_log",
    "kind": "table",
    "label": "actor_contact_export_log",
+   "schema": "public",
+   "domain": "actor-org",
+   "doc": "(outside tbls scope — stub carrying RLS policies)",
+   "props": {
+    "columns": [],
+    "rls_enabled": true,
+    "external": true
+   }
+  },
+  {
+   "id": "public.fiche_submission",
+   "kind": "table",
+   "label": "fiche_submission",
+   "schema": "public",
+   "domain": "other",
+   "doc": "(outside tbls scope — stub carrying RLS policies)",
+   "props": {
+    "columns": [],
+    "rls_enabled": true,
+    "external": true
+   }
+  },
+  {
+   "id": "public.org_actor_module_visibility",
+   "kind": "table",
+   "label": "org_actor_module_visibility",
    "schema": "public",
    "domain": "actor-org",
    "doc": "(outside tbls scope — stub carrying RLS policies)",
@@ -68915,18 +69980,6 @@
    "props": {}
   },
   {
-   "source": "trigger:public.object_list:trg_object_list_touch",
-   "target": "public.object_list",
-   "kind": "trigger_on",
-   "props": {}
-  },
-  {
-   "source": "trigger:public.object_list:trg_object_list_touch",
-   "target": "api.tg_object_list_touch()",
-   "kind": "executes",
-   "props": {}
-  },
-  {
    "source": "trigger:public.object_version_2026_06:trg_audit_object_version",
    "target": "public.object_version_2026_06",
    "kind": "trigger_on",
@@ -69211,6 +70264,18 @@
   {
    "source": "trigger:public.object_hotel_positioning:trg_validate_object_hotel_positioning",
    "target": "api.validate_object_hotel_positioning()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_list:trg_object_list_touch",
+   "target": "public.object_list",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_list:trg_object_list_touch",
+   "target": "api.tg_object_list_touch()",
    "kind": "executes",
    "props": {}
   },
@@ -77804,19 +78869,6 @@
    }
   },
   {
-   "source": "public.object_list",
-   "target": "public.object",
-   "kind": "fk",
-   "props": {
-    "columns": [
-     [
-      "org_object_id",
-      "id"
-     ]
-    ]
-   }
-  },
-  {
    "source": "public.object_list_item",
    "target": "public.object",
    "kind": "fk",
@@ -80246,26 +81298,14 @@
    }
   },
   {
-   "source": "internal.sandbox_discovery_identity",
-   "target": "auth.users",
+   "source": "public.object_list",
+   "target": "public.object",
    "kind": "fk",
    "props": {
     "columns": [
      [
-      "{",
-      "{"
-     ],
-     [
-      "u",
-      "i"
-     ],
-     [
-      "s",
-      "d"
-     ],
-     [
-      "e",
-      "}"
+      "org_object_id",
+      "id"
      ]
     ]
    }
@@ -80693,14 +81733,14 @@
    }
   },
   {
-   "source": "policy:public.object_list:read_object_list",
-   "target": "public.object_list",
+   "source": "policy:public.object_list_item:read_object_list_item",
+   "target": "public.object_list_item",
    "kind": "gates",
    "props": {}
   },
   {
-   "source": "policy:public.object_list_item:read_object_list_item",
-   "target": "public.object_list_item",
+   "source": "policy:public.object_list:read_object_list",
+   "target": "public.object_list",
    "kind": "gates",
    "props": {}
   },
@@ -80821,6 +81861,12 @@
    "props": {}
   },
   {
+   "source": "policy:public.pending_change:admin_pending_change",
+   "target": "public.pending_change",
+   "kind": "gates",
+   "props": {}
+  },
+  {
    "source": "policy:public.object_description:canonical_del_object_description",
    "target": "public.object_description",
    "kind": "gates",
@@ -80913,12 +81959,6 @@
   {
    "source": "policy:public.object_payment_method:read_object_payment_method",
    "target": "public.object_payment_method",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.pending_change:admin_pending_change",
-   "target": "public.pending_change",
    "kind": "gates",
    "props": {}
   },
@@ -82023,6 +83063,46 @@
    "props": {}
   },
   {
+   "source": "policy:audit.audit_log_2026_11:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_11"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_11"
+   }
+  },
+  {
+   "source": "policy:public.app_user_profile:Administration des profils utilisateur",
+   "target": "public.app_user_profile",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_user_profile:Insertion de son profil utilisateur",
+   "target": "public.app_user_profile",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_user_profile:Lecture de son profil utilisateur",
+   "target": "public.app_user_profile",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_user_profile:Mise à jour de son profil utilisateur",
+   "target": "public.app_user_profile",
+   "kind": "gates",
+   "props": {}
+  },
+  {
    "source": "policy:public.ref_code_crm_sentiment:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -82037,6 +83117,18 @@
    "props": {
     "via_partition": "public.ref_code_crm_sentiment"
    }
+  },
+  {
+   "source": "policy:public.fiche_submission:admin_fiche_submission",
+   "target": "public.fiche_submission",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.org_actor_module_visibility:admin_org_actor_module_visibility",
+   "target": "public.org_actor_module_visibility",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "policy:public.ref_code_accommodation_unit_type:admin_ref_code_write",
@@ -82203,22 +83295,6 @@
    "target": "public.ref_catalog_registry",
    "kind": "gates",
    "props": {}
-  },
-  {
-   "source": "policy:audit.audit_log_2026_11:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_11"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_11:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_11"
-   }
   },
   {
    "source": "policy:public.user_permission:admin_user_permission_write",
@@ -82701,6 +83777,22 @@
    "props": {}
   },
   {
+   "source": "policy:audit.audit_log_2026_10:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_10"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_10"
+   }
+  },
+  {
    "source": "policy:public.opening_time_period_weekday:canonical_del_opening_time_period_weekday",
    "target": "public.opening_time_period_weekday",
    "kind": "gates",
@@ -82723,22 +83815,6 @@
    "target": "public.opening_time_period_weekday",
    "kind": "gates",
    "props": {}
-  },
-  {
-   "source": "policy:audit.audit_log_2026_10:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_10"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_10:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_10"
-   }
   },
   {
    "source": "policy:public.promotion:Lecture publique des promotions",
@@ -83085,6 +84161,14 @@
    }
   },
   {
+   "source": "policy:public.object_version_2026_11:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_11"
+   }
+  },
+  {
    "source": "policy:public.ref_contact_role:admin_contact_role_write",
    "target": "public.ref_contact_role",
    "kind": "gates",
@@ -83110,14 +84194,6 @@
    "kind": "gates",
    "props": {
     "via_partition": "public.ref_code_price_kind"
-   }
-  },
-  {
-   "source": "policy:public.object_version_2026_11:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_11"
    }
   },
   {
@@ -83181,6 +84257,14 @@
    "props": {}
   },
   {
+   "source": "policy:public.object_version_2026_09:admin_object_version",
+   "target": "public.object_version",
+   "kind": "gates",
+   "props": {
+    "via_partition": "public.object_version_2026_09"
+   }
+  },
+  {
    "source": "policy:public.ref_capacity_applicability:Lecture publique des applicabilités de capacité",
    "target": "public.ref_capacity_applicability",
    "kind": "gates",
@@ -83211,14 +84295,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.object_version_2026_09:admin_object_version",
-   "target": "public.object_version",
-   "kind": "gates",
-   "props": {
-    "via_partition": "public.object_version_2026_09"
-   }
-  },
-  {
    "source": "policy:public.ref_review_source:Lecture publique des sources d'avis",
    "target": "public.ref_review_source",
    "kind": "gates",
@@ -83239,30 +84315,6 @@
   {
    "source": "policy:public.ref_sustainability_action_category:Écriture admin des catégories DD",
    "target": "public.ref_sustainability_action_category",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_user_profile:Administration des profils utilisateur",
-   "target": "public.app_user_profile",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_user_profile:Insertion de son profil utilisateur",
-   "target": "public.app_user_profile",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_user_profile:Lecture de son profil utilisateur",
-   "target": "public.app_user_profile",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_user_profile:Mise à jour de son profil utilisateur",
-   "target": "public.app_user_profile",
    "kind": "gates",
    "props": {}
   },
@@ -83355,22 +84407,6 @@
    "props": {}
   },
   {
-   "source": "policy:audit.audit_log_2026_07:Insertion via triggers",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_07"
-   }
-  },
-  {
-   "source": "policy:audit.audit_log_2026_07:Lecture audit (admin/service_role)",
-   "target": "audit.audit_log",
-   "kind": "gates",
-   "props": {
-    "via_partition": "audit.audit_log_2026_07"
-   }
-  },
-  {
    "source": "policy:public.app_notification:admin_del_app_notification",
    "target": "public.app_notification",
    "kind": "gates",
@@ -83393,6 +84429,22 @@
    "target": "public.app_notification",
    "kind": "gates",
    "props": {}
+  },
+  {
+   "source": "policy:audit.audit_log_2026_07:Insertion via triggers",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_07"
+   }
+  },
+  {
+   "source": "policy:audit.audit_log_2026_07:Lecture audit (admin/service_role)",
+   "target": "audit.audit_log",
+   "kind": "gates",
+   "props": {
+    "via_partition": "audit.audit_log_2026_07"
+   }
   },
   {
    "source": "policy:public.crm_task_assignee:admin_del_crm_task_assignee",
@@ -84226,13 +85278,37 @@
   },
   {
    "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.app_user_profile",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
    "target": "public.actor",
    "kind": "writes",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "UPDATE actor"
+     "evidence": "DELETE FROM actor"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
+   "target": "public.fiche_submission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE fiche_submission"
     }
    }
   },
@@ -84329,18 +85405,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "DELETE FROM contact_channel"
-    }
-   }
-  },
-  {
-   "source": "api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT 'anonymize'::text, p_reason text DEFAULT NULL::text)",
-   "target": "public.app_user_profile",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE app_user_profile"
     }
    }
   },
@@ -85637,6 +86701,30 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.restore_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.restore_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
     }
    }
   },
@@ -87053,6 +88141,90 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN ref_code_iti_open_status"
+    }
+   }
+  },
+  {
+   "source": "api.get_smtp_config()",
+   "target": "public.app_smtp_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN auth.users"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE app_notification"
     }
    }
   },
@@ -89253,6 +90425,78 @@
    }
   },
   {
+   "source": "api.enforce_app_user_profile_role_change()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_my_actor_profile()",
+   "target": "public.actor_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor_channel"
+    }
+   }
+  },
+  {
+   "source": "api.get_my_actor_profile()",
+   "target": "public.ref_code_contact_kind",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_contact_kind"
+    }
+   }
+  },
+  {
+   "source": "api.get_my_actor_profile()",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE pending_change"
+    }
+   }
+  },
+  {
    "source": "api.user_can_write_canonical(p_object_id text)",
    "target": "public.object_org_link",
    "kind": "reads",
@@ -90113,78 +91357,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "UPDATE staging.media_temp"
-    }
-   }
-  },
-  {
-   "source": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
-   "target": "public.pending_change",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO pending_change"
-    }
-   }
-  },
-  {
-   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM pending_change"
-    }
-   }
-  },
-  {
-   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN object"
-    }
-   }
-  },
-  {
-   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
-   "target": "public.pending_change",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM pending_change"
-    }
-   }
-  },
-  {
-   "source": "api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)",
-   "target": "public.pending_change",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE pending_change"
     }
    }
   },
@@ -91337,18 +92509,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.enforce_app_user_profile_role_change()",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM app_user_profile"
     }
    }
   },
@@ -94449,18 +95609,6 @@
    }
   },
   {
-   "source": "api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
-   "target": "public.app_notification",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE app_notification"
-    }
-   }
-  },
-  {
    "source": "api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)",
    "target": "public.object",
    "kind": "reads",
@@ -95013,18 +96161,6 @@
    }
   },
   {
-   "source": "api.user_can_read_list(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
    "source": "api.user_has_permission(p_permission_code text)",
    "target": "public.ref_permission",
    "kind": "reads",
@@ -95081,30 +96217,6 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN user_org_business_role"
-    }
-   }
-  },
-  {
-   "source": "api.user_can_write_list(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.user_can_write_list(p_list_id uuid)",
-   "target": "public.user_org_membership",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM user_org_membership"
     }
    }
   },
@@ -95290,13 +96402,13 @@
   },
   {
    "source": "api.list_my_lists()",
-   "target": "public.object",
+   "target": "public.app_user_profile",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "JOIN object"
+     "evidence": "JOIN app_user_profile"
     }
    }
   },
@@ -95673,38 +96785,14 @@
    }
   },
   {
-   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
-   "target": "public.object",
+   "source": "api.update_list(p_list_id uuid, p_patch jsonb)",
+   "target": "public.object_list",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO object_list"
-    }
-   }
-  },
-  {
-   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
-   "target": "public.object_list_item",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "INSERT INTO object_list_item"
+     "evidence": "FROM object_list"
     }
    }
   },
@@ -95781,110 +96869,14 @@
    }
   },
   {
-   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
-   "target": "public.object_list_item",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list_item"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
-   "target": "public.object_list_item",
+   "source": "api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT '[]'::jsonb)",
+   "target": "public.app_notification",
    "kind": "writes",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "DELETE FROM object_list_item"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE object_list"
-    }
-   }
-  },
-  {
-   "source": "api.delete_list(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.delete_list(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "DELETE FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE object_list"
+     "evidence": "UPDATE app_notification"
     }
    }
   },
@@ -95897,6 +96889,198 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.ref_code_contact_kind",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_contact_kind"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_task_assignee",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM crm_task_assignee"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM crm_task"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_interaction",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM crm_interaction"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.actor_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor_channel"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.ref_code_demand_subtopic",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_demand_subtopic"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.actor_object_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM actor_object_role"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.ref_code_crm_sentiment",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_crm_sentiment"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_task_assignee",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM crm_task_assignee"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM crm_task"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.crm_interaction",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM crm_interaction"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.actor_channel",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM actor_channel"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_crm()",
+   "target": "public.actor",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM actor"
     }
    }
   },
@@ -95985,6 +97169,18 @@
    }
   },
   {
+   "source": "api.check_org_smtp_org_type()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
    "source": "api.search_actors(p_query text)",
    "target": "public.app_user_profile",
    "kind": "reads",
@@ -96045,14 +97241,62 @@
    }
   },
   {
-   "source": "api.mark_list_sent(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "writes",
+   "source": "api.user_can_manage_org_smtp(p_org_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "UPDATE object_list"
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_manage_org_smtp(p_org_object_id text)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_manage_org_smtp(p_org_object_id text)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_org_smtp(p_org_object_id text)",
+   "target": "public.org_branding_settings",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN org_branding_settings"
+    }
+   }
+  },
+  {
+   "source": "api.get_org_smtp(p_org_object_id text)",
+   "target": "public.app_branding_settings",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_branding_settings"
     }
    }
   },
@@ -96213,18 +97457,6 @@
    }
   },
   {
-   "source": "api.get_list(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
    "source": "api.object_expected_is_test(p_object_id text)",
    "target": "public.object_org_link",
    "kind": "reads",
@@ -96317,6 +97549,66 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN public.org_config"
+    }
+   }
+  },
+  {
+   "source": "api.delete_org_smtp(p_org_object_id text)",
+   "target": "vault.secrets",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.delete_org_smtp(p_org_object_id text)",
+   "target": "vault.secrets",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.get_org_smtp_secret(p_org_object_id text)",
+   "target": "vault.decrypted_secrets",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN vault.decrypted_secrets"
+    }
+   }
+  },
+  {
+   "source": "api.get_org_smtp_secret(p_org_object_id text)",
+   "target": "public.org_branding_settings",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.org_branding_settings"
+    }
+   }
+  },
+  {
+   "source": "api.get_org_smtp_secret(p_org_object_id text)",
+   "target": "public.app_branding_settings",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.app_branding_settings"
     }
    }
   },
@@ -97882,18 +99174,6 @@
   },
   {
    "source": "api.get_sandbox_discovery_user()",
-   "target": "internal.sandbox_discovery_identity",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM internal.sandbox_discovery_identity"
-    }
-   }
-  },
-  {
-   "source": "api.get_sandbox_discovery_user()",
    "target": "auth.users",
    "kind": "reads",
    "props": {
@@ -97973,6 +99253,54 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN public.user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.list_org_smtp_status()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object"
+    }
+   }
+  },
+  {
+   "source": "api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)",
+   "target": "public.object_org_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
     }
    }
   },
@@ -98061,14 +99389,218 @@
    }
   },
   {
-   "source": "api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)",
-   "target": "internal.sandbox_discovery_identity",
+   "source": "api.count_notifications_blocked_no_smtp()",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.ref_code_media_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_media_type"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_iti_stage_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_stage_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_room_type_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_room_type_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_menu_item_media",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_menu_item_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.ref_code_media_tag",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_code_media_tag"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_iti_stage",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_iti_stage"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_room_type",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_room_type"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_menu_item",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_menu_item"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_menu",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object_menu"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_iti_stage_media",
    "kind": "writes",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "INSERT INTO internal.sandbox_discovery_identity"
+     "evidence": "DELETE FROM object_iti_stage_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_room_type_media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM object_room_type_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object_menu_item_media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM object_menu_item_media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.media",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM media"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.media_tag",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO media_tag"
+    }
+   }
+  },
+  {
+   "source": "internal.seed_test_media(p_id text, p_type text, p_i integer)",
+   "target": "public.object",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object"
     }
    }
   },
@@ -98301,6 +99833,54 @@
    }
   },
   {
+   "source": "internal.org_membership_active(p_user_id uuid, p_org_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.org_admin_rank(p_user_id uuid, p_org_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.org_admin_rank(p_user_id uuid, p_org_object_id text)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.org_admin_rank(p_user_id uuid, p_org_object_id text)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
    "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
    "target": "public.app_notification",
    "kind": "reads",
@@ -98441,6 +100021,66 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "join public.ref_code_document_type"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_read_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_use_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_write_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.user_is_list_org_admin(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.user_can_manage_list_feature_action(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
     }
    }
   },
@@ -98661,55 +100301,19 @@
    }
   },
   {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.app_notification",
+   "source": "api.current_user_portal_object_ids()",
+   "target": "public.actor_object_role",
    "kind": "reads",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "FROM app_notification"
+     "evidence": "FROM actor_object_role"
     }
    }
   },
   {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "auth.users",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN auth.users"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
-   "target": "public.crm_task",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN crm_task"
-    }
-   }
-  },
-  {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "source": "api.current_user_portal_object_ids()",
    "target": "public.object",
    "kind": "reads",
    "props": {
@@ -98721,14 +100325,1250 @@
    }
   },
   {
-   "source": "api.claim_unmailed_notifications(p_limit integer DEFAULT 20)",
+   "source": "api.is_actor_persona()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.current_user_actor_id()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.object_org_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.ref_org_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.ref_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_permission"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.user_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.org_role_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN org_role_permission"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.user_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_permission"
+    }
+   }
+  },
+  {
+   "source": "api.list_object_verifier_ids(p_object_id text)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.get_actor_section_visibility(p_org_object_id text, p_object_type text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.get_actor_section_visibility(p_org_object_id text, p_object_type text)",
+   "target": "public.org_actor_module_visibility",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM org_actor_module_visibility"
+    }
+   }
+  },
+  {
+   "source": "api.get_portal_section_visibility(p_object_id text)",
+   "target": "public.object_org_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.get_portal_section_visibility(p_object_id text)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.get_portal_section_visibility(p_object_id text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.get_portal_section_visibility(p_object_id text)",
+   "target": "public.ref_org_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "api.get_portal_section_visibility(p_object_id text)",
+   "target": "public.org_actor_module_visibility",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM org_actor_module_visibility"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)",
+   "target": "public.org_actor_module_visibility",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO org_actor_module_visibility"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.fiche_submission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.crm_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)",
+   "target": "public.crm_task_assignee",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO crm_task_assignee"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.object_org_link",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_org_link"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.ref_org_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_org_role"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.contact_channel",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN contact_channel"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.ref_code_contact_kind",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN ref_code_contact_kind"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_portal_fiches()",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.reject_fiche_submission(p_submission_id uuid, p_review_note text)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.reject_fiche_submission(p_submission_id uuid, p_review_note text)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)",
+   "target": "public.actor",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN actor"
+    }
+   }
+  },
+  {
+   "source": "internal.resolve_fiche_submission(p_submission_id uuid)",
+   "target": "public.fiche_submission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "internal.resolve_fiche_submission(p_submission_id uuid)",
+   "target": "public.pending_change",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM pending_change"
+    }
+   }
+  },
+  {
+   "source": "internal.resolve_fiche_submission(p_submission_id uuid)",
+   "target": "public.fiche_submission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE fiche_submission"
+    }
+   }
+  },
+  {
+   "source": "internal.resolve_fiche_submission(p_submission_id uuid)",
+   "target": "public.crm_task",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE crm_task"
+    }
+   }
+  },
+  {
+   "source": "internal.resolve_fiche_submission(p_submission_id uuid)",
    "target": "public.app_notification",
    "kind": "writes",
    "props": {
     "inference": {
      "method": "regex",
      "confidence": "high",
-     "evidence": "UPDATE app_notification"
+     "evidence": "INSERT INTO app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.list_grid_summary(p_list_id uuid)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)",
+   "target": "public.pending_change",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO pending_change"
+    }
+   }
+  },
+  {
+   "source": "internal.build_list_detail_json(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.build_list_detail_json(p_list_id uuid)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.ref_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.ref_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM ref_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.user_org_business_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.org_role_permission",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM org_role_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.org_permission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE org_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.org_role_permission",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO org_role_permission"
+    }
+   }
+  },
+  {
+   "source": "internal.grant_test_org_permissions()",
+   "target": "public.user_org_business_role",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO user_org_business_role"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)",
+   "target": "vault.secrets",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)",
+   "target": "vault.secrets",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object"
+    }
+   }
+  },
+  {
+   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_list"
+    }
+   }
+  },
+  {
+   "source": "api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)",
+   "target": "public.object_list_item",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_list_item"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "target": "public.object_list_item",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list_item"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN object"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "target": "public.object_list_item",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM object_list_item"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_items(p_list_id uuid, p_items jsonb)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.delete_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.delete_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.share_list(p_list_id uuid, p_enable boolean DEFAULT true, p_expires_at timestamp with time zone DEFAULT NULL::timestamp with time zone)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_featured_lists()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_featured_lists()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_list_proposals()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_list_proposals()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.request_list_feature(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.request_list_feature(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.duplicate_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.duplicate_list(p_list_id uuid)",
+   "target": "public.object_list_item",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list_item"
+    }
+   }
+  },
+  {
+   "source": "api.duplicate_list(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_list"
+    }
+   }
+  },
+  {
+   "source": "api.duplicate_list(p_list_id uuid)",
+   "target": "public.object_list_item",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO object_list_item"
+    }
+   }
+  },
+  {
+   "source": "api.ensure_list_share_link(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.ensure_list_share_link(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.mark_list_sent(p_list_id uuid, p_sender_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.purge_expired_lists()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.purge_expired_lists()",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+   "target": "public.app_smtp_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+   "target": "vault.secrets",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+   "target": "vault.secrets",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM vault.secrets"
+    }
+   }
+  },
+  {
+   "source": "api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)",
+   "target": "public.app_smtp_config",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "api.get_smtp_config_secret()",
+   "target": "public.app_smtp_config",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_smtp_config"
+    }
+   }
+  },
+  {
+   "source": "api.get_smtp_config_secret()",
+   "target": "vault.decrypted_secrets",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN vault.decrypted_secrets"
     }
    }
   },
@@ -98955,6 +101795,7 @@
   "public.ref_code_package_type": "public.ref_code",
   "public.ref_code_opening_period_type": "public.ref_code",
   "public.ref_code_bed_type": "public.ref_code",
+  "audit.audit_log_2026_11": "audit.audit_log",
   "public.ref_code_crm_sentiment": "public.ref_code",
   "public.ref_code_accommodation_unit_type": "public.ref_code",
   "public.ref_code_membership_campaign": "public.ref_code",
@@ -98963,7 +101804,6 @@
   "public.ref_code_view_type": "public.ref_code",
   "public.ref_code_amenity_type": "public.ref_code",
   "public.ref_code_membership_tier": "public.ref_code",
-  "audit.audit_log_2026_11": "audit.audit_log",
   "public.ref_code_environment_tag": "public.ref_code",
   "public.ref_code_amenity_family": "public.ref_code",
   "audit.audit_log_2026_09": "audit.audit_log",
@@ -98981,8 +101821,8 @@
   "public.ref_code_weekday": "public.ref_code",
   "public.ref_code_language_level": "public.ref_code",
   "public.object_version_2026_07": "public.object_version",
-  "public.ref_code_price_kind": "public.ref_code",
   "public.object_version_2026_11": "public.object_version",
+  "public.ref_code_price_kind": "public.ref_code",
   "public.object_version_2026_09": "public.object_version",
   "public.ref_code_other": "public.ref_code",
   "audit.audit_log_2026_07": "audit.audit_log",

@@ -9,6 +9,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Fermetures exclues, périodes sans dates ignorées. Miroir SQL EXACT de la fonction pure
 > TS periodsPartialOverlap : intersection ensembliste des jours couverts.
 
+## `api.actor_portal_floor_modules()`
+- returns: `text[]`
+
+> 4.1 Le plancher dur : modules JAMAIS montrés/acceptés côté acteur, quelle que soit la
+> config. §18 Juridique (legal), §19 Suivi prestataire (provider-follow-up = notes
+> privées), §21 Publication (publication), §22 Identifiants externes (sync-identifiers),
+> plus les modules READONLY de l'éditeur (distribution, provider). Ajout 2026-09-02 :
+> relationships (son writer auto save_object_relations réécrit object_org_link ET
+> actor_object_role — le périmètre même de l'acteur), places (save_object_places
+> supprime les médias des sous-lieux absents du payload), media (aucun chemin
+> d'upload ni d'application pour un acteur, D11). Fonction plutôt que table : non
+> paramétrable PAR CONSTRUCTION.
+
 ## `api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT 'fixed_end_date'::legal_validity_mode, p_status text DEFAULT 'active'::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)`
 - returns: `uuid`
 - reads `public.ref_legal_type` _(high)_
@@ -18,12 +31,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to add a legal record
 > =====================================================
 
-## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text)`
+## `api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a/D9 — approuve une soumission entière. p_include_manual=FALSE (défaut) SAUTE les changements sans writer et les laisse pending : la soumission reste ouverte tant que l'office n'a pas attesté les avoir reportés. Ne pose pas le statut agrégé (trigger §8).
+
+## `api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER, dynamic SQL
 - reads `public.pending_change` _(high)_
 - writes `public.pending_change` _(high)_
 
-> P2.1 §120 — Approuve : re-dispatch vers le writer structuré (metadata->>'rpc', whitelisté) puis status=applied.
+> P2.1 §120 + 18a/D9 — approuve : re-dispatch whitelisté (SEPT writers, miroir de submit_actor_fiche), OU approbation ATTESTÉE (p_applied_manually) d'un changement sans writer, qui pose status=approved (jamais applied) et estampille metadata.applied_manually/attested_by/attested_at. Le 3e paramètre a un DÉFAUT : l'appel historique à deux arguments est inchangé.
 
 ## `api.assert_facet_applicable()`
 - returns: `trigger`
@@ -205,6 +225,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > le trigger est la solution correcte (même pattern que check_membership_org_type
 > et check_org_config_org_type).
 
+## `api.check_org_smtp_org_type()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
 ## `api.claim_unmailed_notifications(p_limit integer DEFAULT 20)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `auth.users` _(high)_
@@ -214,7 +238,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - writes `public.app_notification` _(high)_
 
-> Outbox e-mail (17i) : réclame les notifications crm_task_assigned non e-mailées (TTL 10 min, SKIP LOCKED) et retourne le contenu du message dérivé en DB. Appelée UNIQUEMENT par la route Next /api/crm/notify-drain en service_role.
+> Outbox e-mail : crm_task_assigned et fiche_submission_reviewed (TTL 10 min, SKIP LOCKED, 5 tentatives). Contenu joint en DB, creator_email/creator_name issus de crm_task.created_by pour les assignations uniquement. Réservée au drain Next en service_role.
 
 ## `api.commit_staging_to_public(p_batch_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -273,10 +297,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
-- writes `internal.sandbox_discovery_identity` _(high)_
 - writes `public.app_user_profile` _(high)_
 - writes `public.user_org_business_role` _(high)_
 - writes `public.user_org_membership` _(high)_
+
+## `api.count_notifications_blocked_no_smtp()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
 
 ## `api.create_crm_artifacts_from_incident()`
 - returns: `trigger`
@@ -298,7 +325,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_list` _(high)_
 - writes `public.object_list_item` _(high)_
 
-> Création d'une liste : superuser plateforme UNIQUEMENT (17l, arbitrage PO 2026-08-31). Le rang d'administration d'ORG ne suffit pas.
+> Création d'une liste : tout membre connecté d'une ORG (lecteurs compris). Items statiques admis published ET du bon corpus de test (§2/§4 revue architecte).
 
 ## `api.create_membership_campaign(p_anchor_object_id text, p_name text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -330,6 +357,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Retourne l'ORG active de l'utilisateur courant (id + nom), pour le libellé
 > côté éditeur du sélecteur de périmètre des descriptions. Le serveur reste
 > autoritaire ; le client n'utilise ce nom que pour l'affichage.
+
+## `api.current_user_actor_id()`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> 18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l'invitation). Jamais le pont e-mail.
 
 ## `api.current_user_admin_rank()`
 - returns: `integer` — SECURITY DEFINER
@@ -371,7 +404,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > 2. rôle admin actif dans son ORG (peu importe le rang),
 > 3. permission métier d'édition sur n'importe quel objet : create_object,
 > edit_canonical_when_publisher, edit_org_enrichment, publish_object.
-> 
+>
 > Usage : la fonction est consommée par le frontend Explorer pour décider
 > s'il doit afficher les statuts non publiés (draft) des objets de l'ORG.
 > Elle ne porte AUCUNE logique d'autorisation sur une fiche précise — la RLS
@@ -440,6 +473,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Pour un tourism_agent, au plus une ORG active existe (contrainte enforce_single_active_org_membership).
 > Pour un owner/super_admin, retourne la première trouvée (usage interne uniquement).
 
+## `api.current_user_portal_object_ids()`
+- returns: `SETOF text` — SECURITY DEFINER
+- reads `public.actor_object_role` _(high)_
+- reads `public.object` _(high)_
+
+> 18a portail acteur — fiches du portail : liens actor_object_role NON expirés de MON actor_id, hors ORG.
+
 ## `api.current_user_readable_object_ids()`
 - returns: `SETOF text` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -490,6 +530,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > 6.6 Suppression
 
+## `api.delete_org_smtp(p_org_object_id text)`
+- returns: `void` — SECURITY DEFINER
+- reads `vault.secrets` _(high)_
+- writes `vault.secrets` _(high)_
+
 ## `api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT 'active'::text)`
 - returns: `boolean`
 - writes `public.object_legal` _(high)_
@@ -500,6 +545,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.disable_cache_triggers()`
 - returns: `void` — SECURITY DEFINER
+
+## `api.duplicate_list(p_list_id uuid)`
+- returns: `uuid` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- reads `public.object_list_item` _(high)_
+- writes `public.object_list` _(high)_
+- writes `public.object_list_item` _(high)_
 
 ## `api.enable_cache_triggers()`
 - returns: `void` — SECURITY DEFINER
@@ -512,8 +564,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 
-> Never trust raw_user_meta_data for authorization. A signed-in user may edit
-> it, so only service/admin or an existing platform owner may change roles.
+> Garde d'écriture d'app_user_profile : `role` (historique) ET, depuis 18a, `actor_id` — le lien qui PORTE la portée du portail acteur. Attribution réservée au service_role (route /api/crm/actor-access) ou à un owner agissant sur un AUTRE profil ; l'effacement (NULL) reste libre pour le déliage RGPD et la cascade FK.
 
 ## `api.enforce_contact_email_shape()`
 - returns: `trigger`
@@ -529,7 +580,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Trigger : contrainte "1 user tourism_agent = 1 ORG active".
 > Un index partiel unique WHERE is_active = TRUE s'appliquerait à TOUS les users,
 > y compris owner/super_admin. Le trigger permet d'appliquer la règle sélectivement.
-> 
+>
 > Durcissements par rapport à la version naïve :
 > 1. pg_advisory_xact_lock(user_id) : sérialise les transactions concurrentes sur le
 > même user_id — élimine le TOCTOU sur les INSERTs simultanés.
@@ -540,6 +591,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > sur un membership actif, la contrainte est revérifiée pour le nouveau user_id.
 > 4. id IS DISTINCT FROM NEW.id remplace la condition TG_OP redondante :
 > en BEFORE INSERT la ligne n'existe pas encore, l'exclusion est toujours correcte.
+
+## `api.ensure_list_share_link(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
 
 ## `api.export_actor_capabilities(p_object_ids text[])`
 - returns: `jsonb` — SECURITY DEFINER
@@ -631,6 +687,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Helper: Get enriched actor data with contacts
 > =====================================================
 
+## `api.get_actor_section_visibility(p_org_object_id text, p_object_type text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> 4.3 Lecture de la matrice pour /settings (org + type explicites). Membres actifs de
+> l'ORG uniquement (même périmètre que la policy SELECT d'org_role_permission).
+
 ## `api.get_all_opening_time_slots(p_period_id uuid)`
 - returns: `jsonb`
 - reads `public.opening_schedule` _(high)_
@@ -654,12 +718,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 
-> Dashboard §10: per-type freshness breakdown against a configurable threshold.
-> Tiers: up_to_date (< p_threshold_days old), to_review (threshold..2x threshold),
-> stale (> 2x threshold). rate = percentage up_to_date.
-> weekly_rates is NULL until Phase 2B adds the object_version time-series join.
-> updated_at reflects meaningful business edits only (cache-only changes are excluded
-> by the update_object_updated_at_business trigger).
+> Dashboard §10: per-type freshness breakdown against a configurable threshold.
+> Tiers: up_to_date (< p_threshold_days old), to_review (threshold..2x threshold),
+> stale (> 2x threshold). rate = percentage up_to_date.
+> weekly_rates is NULL until Phase 2B adds the object_version time-series join.
+> updated_at reflects meaningful business edits only (cache-only changes are excluded
+> by the update_object_updated_at_business trigger).
 > ORG objects excluded. p_updated_at_from/to scope the object pool (inclusive DATE boundaries).
 
 ## `api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)`
@@ -667,9 +731,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
-> Dashboard §2b: top cities by object count within the filtered pool.
-> Reads is_main_location=true from object_location; excludes null/empty cities.
-> delta_30d counts objects created (not updated) in that city in the last 30 days.
+> Dashboard §2b: top cities by object count within the filtered pool.
+> Reads is_main_location=true from object_location; excludes null/empty cities.
+> delta_30d counts objects created (not updated) in that city in the last 30 days.
 > ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
 
 ## `api.get_dashboard_city_options()`
@@ -677,9 +741,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
-> Returns a sorted TEXT[] of distinct cities present in object_location
-> (is_main_location=true, non-null/non-empty) for all non-ORG objects, any status.
-> No filter parameters. Used to populate the dashboard city filter dropdown.
+> Returns a sorted TEXT[] of distinct cities present in object_location
+> (is_main_location=true, non-null/non-empty) for all non-ORG objects, any status.
+> No filter parameters. Used to populate the dashboard city filter dropdown.
 > Represents the full corpus city domain, not the current filtered slice.
 
 ## `api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)`
@@ -738,11 +802,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_classification` _(high)_
 - reads `public.ref_classification_scheme` _(high)_
 
-> Dashboard §5: overview of objects carrying at least one granted qualification,
-> classification, or label. Scope is driven by ref_classification_scheme.is_distinction = TRUE —
-> no hardcoded list. To add a new label, seed its scheme with is_distinction = TRUE; this
-> function picks it up automatically. Typological schemes (type_hot, retail_category) keep
-> is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakdown sorted
+> Dashboard §5: overview of objects carrying at least one granted qualification,
+> classification, or label. Scope is driven by ref_classification_scheme.is_distinction = TRUE —
+> no hardcoded list. To add a new label, seed its scheme with is_distinction = TRUE; this
+> function picks it up automatically. Typological schemes (type_hot, retail_category) keep
+> is_distinction = FALSE and are excluded. Returns global rate + per-scheme breakdown sorted
 > by count DESC. ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
 
 ## `api.get_dashboard_filter_options()`
@@ -750,9 +814,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
-> Returns { cities: text[], lieu_dits: text[] } as jsonb — sorted, btrim-cleaned,
-> distinct values from object_location (is_main_location=true) for all non-ORG objects,
-> any status. Both arrays represent the full corpus domain (not the current filtered slice).
+> Returns { cities: text[], lieu_dits: text[] } as jsonb — sorted, btrim-cleaned,
+> distinct values from object_location (is_main_location=true) for all non-ORG objects,
+> any status. Both arrays represent the full corpus domain (not the current filtered slice).
 > Used to populate the city and lieu-dit filter dropdowns on the dashboard sidebar in one call.
 
 ## `api.get_dashboard_lieu_dit_options()`
@@ -760,9 +824,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 - reads `public.object_location` _(high)_
 
-> Returns a sorted TEXT[] of distinct lieux-dits (btrim-cleaned, non-null/non-empty)
-> from object_location (is_main_location=true) for all non-ORG objects, any status.
-> No filter parameters. Used to populate the dashboard lieu-dit filter dropdown.
+> Returns a sorted TEXT[] of distinct lieux-dits (btrim-cleaned, non-null/non-empty)
+> from object_location (is_main_location=true) for all non-ORG objects, any status.
+> No filter parameters. Used to populate the dashboard lieu-dit filter dropdown.
 > Represents the full corpus lieu-dit domain, not the current filtered slice.
 
 ## `api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY['published'::object_status], p_filters jsonb DEFAULT '{}'::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)`
@@ -810,8 +874,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.object` _(high)_
 
-> Dashboard §2a: object count broken down by object_type within the filtered pool.
-> Each row includes per-status counts and the type's share of the total.
+> Dashboard §2a: object count broken down by object_type within the filtered pool.
+> Each row includes per-status counts and the type's share of the total.
 > ORG objects excluded. p_updated_at_from/to are inclusive DATE boundaries.
 
 ## `api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])`
@@ -867,7 +931,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.tag_link` _(high)_
 
 > ---- 4) get_filtered_object_ids : les deux cles de remplissage ------------
-> 
+>
 > COUT MESURE ET ASSUME — +4,4 ms de PLANIFICATION par appel, filtre ETEINT.
 > Localise par bissection sur live (30 iterations x 2 series, ecart stable) :
 > temoin sans patch ................................. 22,7 ms
@@ -879,7 +943,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > planificateur plante le sous-plan a chaque appel meme quand la branche n'est
 > jamais prise, et la fonction etant SECURITY DEFINER elle n'est pas inlinee.
 > AUCUNE garde ne peut supprimer ce cout : il precede l'execution.
-> 
+>
 > Pourquoi on l'accepte plutot que de le supprimer :
 > * le supprimer vraiment demanderait de materialiser les essentiels (une MV
 > rafraichie par le cron des 10 min). La planification tomberait a ~0, mais
@@ -931,7 +995,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_list(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER
-- reads `public.object_list` _(high)_
 
 > 6.2 Détail d'une liste (compose)
 
@@ -966,6 +1029,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)`
 - returns: `TABLE(yr integer, mon integer, value numeric)` — SECURITY DEFINER
 - reads `public.metric_snapshot` _(high)_
+
+## `api.get_my_actor_profile()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+
+> 18a — profil de LA persona acteur courante (current_user_actor_id()), lecture seule v1. Ne constitue PAS une 5e formulation du périmètre PII can_read_actor_contacts : il ne lit jamais qu'UN acteur, le sien.
 
 ## `api.get_object_amenity_codes_compact(p_object_id text)`
 - returns: `jsonb`
@@ -1246,10 +1317,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Manifest id: 15c
 > Decision log: §112
 > Date: 2026-06-22
-> 
+>
 > Summary:
 > One body-only edit inside api.get_object_resource (CREATE OR REPLACE, signature unchanged):
-> 
+>
 > api.get_object_resource -- places block (~line 3878 in api_views_functions.sql):
 > BEFORE: 'descriptions', COALESCE((
 > SELECT jsonb_agg((to_jsonb(pd) - 'place_id')  <-- leaks all raw prose + *_i18n columns
@@ -1277,15 +1348,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > ... (same pattern for mobile/edition/adapted)
 > )
 > ORDER BY ...
-> 
+>
 > Per field, the public keys are <col> (stripped) + <col>_md (resolved raw); the editor legs are
 > <col>_raw (raw scalar base, read by parseDescriptionScope scope='place') AND the kept raw
 > <col>_i18n map (per-language values). Only <col> (flat scalar) is dropped from to_jsonb so the
 > stripped override wins; <col>_i18n stays raw (no flat consumer resolves it).
-> 
+>
 > No schema_unified.sql fold needed: api.get_object_resource body lives ONLY in api_views_functions.sql.
 > Folded: api_views_functions.sql (canonical source, updated in place).
-> 
+>
 > Deploy:
 > 1. Deploy api.get_object_resource via:
 > node .tmp_pgapply/apply_range.cjs <start_line> <end_line>
@@ -1438,6 +1509,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > 4) Lecture admin (éditeur de branding) : ligne brute (NULL = hérite) + payload résolu.
 > -----------------------------------------------------
 
+## `api.get_org_smtp(p_org_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+
+## `api.get_org_smtp_secret(p_org_object_id text)`
+- returns: `TABLE(host text, port integer, secure boolean, from_email text, from_name text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_branding_settings` _(high)_
+- reads `public.org_branding_settings` _(high)_
+- reads `vault.decrypted_secrets` _(high)_
+
 ## `api.get_organization_data(p_object_id text)`
 - returns: `jsonb`
 - reads `public.contact_channel` _(high)_
@@ -1478,6 +1560,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Function to get pending document requests in API format
 > =====================================================
 
+## `api.get_portal_section_visibility(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_actor_module_visibility` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> 4.4 Variante portail : résout l'ORG publisher (primaire d'abord) et le type depuis la
+> fiche. Autorisée : persona acteur pour une fiche de SA portée, membres de l'ORG,
+> superuser. C'est elle que consomme l'éditeur en mode portail (front ET section 5).
+
 ## `api.get_public_branding()`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.app_branding_settings` _(high)_
@@ -1509,7 +1603,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.get_sandbox_discovery_user()`
 - returns: `uuid` — SECURITY DEFINER
 - reads `auth.users` _(high)_
-- reads `internal.sandbox_discovery_identity` _(high)_
 - reads `public.app_user_profile` _(high)_
 - reads `public.org_config` _(high)_
 - reads `public.ref_org_business_role` _(high)_
@@ -1517,6 +1610,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_business_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - reads `public.user_permission` _(high)_
+
+## `api.get_smtp_config()`
+- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+
+## `api.get_smtp_config_secret()`
+- returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+- reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_trail(p_trail_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1590,6 +1692,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Shared interop core reader (audit API I4 §137): flat gated core of a PUBLISHED object (public-only) for the profile serializers.
 
+## `api.is_actor_persona()`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+
+> 18a portail acteur — TRUE si le profil courant est role=actor. Fail-closed (§204).
+
 ## `api.is_object_open_now(p_object_id text)`
 - returns: `boolean`
 - reads `public.opening_period` _(high)_
@@ -1604,8 +1712,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.actor_object_role` _(high)_
 - reads `public.object` _(high)_
 
-> Vérifie si l'utilisateur est propriétaire (owner) de l'objet
-> via un rôle actor_object_role lié à son email dans actor_channel
+> 18a/D7 — owner historique (lien primaire via pont e-mail) FERMÉ aux personas actor ; intact pour le reste.
 
 ## `api.is_opening_period_active_on_date(p_all_years boolean, p_date_start date, p_date_end date, p_local_date date)`
 - returns: `boolean`
@@ -1807,10 +1914,15 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object_list` _(high)_
 - reads `public.object_list_item` _(high)_
 
-> ---------- 5. Membres effectifs d'une liste (statique OU dynamique) ----------
-> Helper interne : jamais exposé (les callers DEFINER l'exécutent en tant qu'owner).
-> Statique : object_list_item ordonné ; published_only filtre sur object.status.
-> Dynamique : résolveur ci-dessus (ordinalité = position), notes NULL.
+> Ensemble effectif d'une liste (statique = items curatés ; dynamique = résolution vive des filtres). published_only=TRUE exige désormais status = published ET is_test = current_user_test_realm() (§2, 2e revue architecte) — published seul n'est pas lisibilité. Périmètre/signature/ACL et branche dynamique inchangés depuis migration_object_list.sql.
+
+## `api.list_featured_lists()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+## `api.list_is_archived(p_is_featured boolean, p_last_activity_at timestamp with time zone)`
+- returns: `boolean`
 
 ## `api.list_item_contacts(p_ids text[])`
 - returns: `TABLE(object_id text, contacts jsonb)` — SECURITY DEFINER
@@ -1824,9 +1936,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > d'ids (borné 200 par le résolveur) — pas de fonction par ligne (§125).
 > Helper interne : jamais exposé (les RPCs DEFINER l'exécutent en tant qu'owner).
 
+## `api.list_list_proposals()`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
 ## `api.list_my_lists()`
 - returns: `json` — SECURITY DEFINER
-- reads `public.object` _(high)_
+- reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
 
 > 6.1 Grille « Mes listes »
@@ -1839,6 +1956,26 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.object` _(high)_
 
 > Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide.
+
+## `api.list_my_portal_fiches()`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.contact_channel` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_org_role` _(high)_
+
+> 18a — accueil du portail : les fiches de la portée acteur, avec la soumission ouverte (le cas échéant), la dernière résolue, et les canaux PUBLICS de l'office publisher (office_email/office_phone, D11) — jamais un canal interne.
+
+## `api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a — historique des soumissions de l'acteur COURANT (auto-scopé, jamais de paramètre destinataire). p_object_id filtre STRICTEMENT (révision 2026-09-02) — sans lui un acteur multi-fiches verrait la soumission ouverte d'UNE fiche apparaître sous une AUTRE. section = metadata.section (le module id stable), field = le libellé lisible (D12).
 
 ## `api.list_object_contact_suggestions(p_object_id text)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -1907,6 +2044,35 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.list_object_resources_since_fast_text(p_since timestamp with time zone, p_cursor text DEFAULT NULL::text, p_use_source boolean DEFAULT false, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 50, p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_search text DEFAULT NULL::text, p_track_format text DEFAULT 'none'::text, p_include_stages boolean DEFAULT NULL::boolean, p_stage_color text DEFAULT NULL::text, p_view text DEFAULT 'card'::text)`
 - returns: `json`
 
+## `api.list_object_verifier_ids(p_object_id text)`
+- returns: `SETOF uuid` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+> 4.2 Les vérificateurs d'une fiche (D3) : membres ACTIFS d'une ORG publisher de l'objet
+> tenant validate_changes — par la matrice de rôle (17i) OU par grant individuel.
+> REPLI (corrigé en revue Task 4, ruling contrôleur) : superutilisateurs plateforme
+> actifs (app_user_profile.role IN ('owner','super_admin')) — JAMAIS les rangs admin
+> de l'ORG. Fait vérifié en base : api.user_has_permission() (donc
+> api.user_can_moderate_object, donc le bouton Approuver) n'a que DEUX chemins —
+> grant individuel (user_permission) et rôle métier (user_org_business_role ×
+> org_role_permission, §227) — et ignore TOTALEMENT user_org_admin_role. Un rang
+> admin sans validate_changes échouerait donc user_can_moderate_object en 42501 :
+> la tâche assignée serait injouable et la fiche resterait bloquée à vie
+> (uq_fiche_submission_open n'autorise qu'une soumission ouverte à la fois) — pire
+> qu'une liste vide, car muet. Un superuser plateforme, lui, satisfait
+> user_can_moderate_object ET is_object_owner INCONDITIONNELLEMENT (leur bras
+> is_platform_superuser(), commun aux deux) : le prérequis « tout vérificateur a
+> aussi l'écriture canonique » tient toujours. Peut rendre VIDE si aucun
+> superuser n'existe (la soumission n'échoue pas pour ça — spec §7, tâche part
+> non assignée, assignee_count=0 signalé au client).
+
 ## `api.list_objects_map_view(p_types text[] DEFAULT NULL::text[], p_status text[] DEFAULT ARRAY['published'::text], p_filters jsonb DEFAULT '{}'::jsonb, p_lang_prefs text[] DEFAULT ARRAY['fr'::text], p_limit integer DEFAULT 500, p_offset integer DEFAULT 0)`
 - returns: `json`
 - reads `public.object` _(high)_
@@ -1918,6 +2084,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Returns a JSON array of object IDs that have had validated modifications (approved or applied) since the specified date. Uses applied_at timestamp if available, otherwise reviewed_at.
 
+## `api.list_org_smtp_status()`
+- returns: `TABLE(org_object_id text, org_name text, host text, port integer, from_email text, is_enabled boolean, has_password boolean, last_test_at timestamp with time zone, last_test_ok boolean)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
 ## `api.list_partner_keys()`
 - returns: `TABLE(id uuid, label text, key_prefix text, scopes text[], is_active boolean, expires_at timestamp with time zone, revoked_at timestamp with time zone, last_used_at timestamp with time zone, created_at timestamp with time zone)` — SECURITY DEFINER
 - reads `internal.partner_api_key` _(high)_
@@ -1925,12 +2095,14 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Liste les clés (métadonnées seulement — JAMAIS le hash ni la clé).
 
 ## `api.list_pending_changes(p_status text DEFAULT 'pending'::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)`
-- returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone)` — SECURITY DEFINER
+- returns: `TABLE(id uuid, object_id text, object_name text, target_table text, target_pk text, action text, status text, field_label text, before_value text, after_value text, submitted_by uuid, submitter_label text, submitted_at timestamp with time zone, reviewed_by uuid, reviewer_label text, reviewed_at timestamp with time zone, review_note text, applied_at timestamp with time zone, submission_id uuid, submission_note text, actor_label text, manual_apply boolean)` — SECURITY DEFINER
+- reads `public.actor` _(high)_
 - reads `public.app_user_profile` _(high)_
+- reads `public.fiche_submission` _(high)_
 - reads `public.object` _(high)_
 - reads `public.pending_change` _(high)_
 
-> P2.1 §120 — File de modération auto-autorisée (§36) : lignes des objets modérables par l'appelant uniquement.
+> P2.1 §120 + 18a/D9 — file de modération. Ajoute submission_id / submission_note / actor_label / manual_apply. Jointures soumission et acteur LEFT : une ligne sans soumission (§120/§122) doit rester listée.
 
 ## `api.list_public_trails(p_status_code text DEFAULT NULL::text, p_simplify boolean DEFAULT true, p_tolerance numeric DEFAULT 0.0001, p_limit integer DEFAULT 100, p_offset integer DEFAULT 0)`
 - returns: `TABLE(id uuid, slug text, name text, status_code text, status_label text, not_guaranteed boolean, manager_labels text[], source_label text, source_website text, last_update timestamp with time zone, length_m numeric, geom jsonb)` — SECURITY DEFINER
@@ -2015,11 +2187,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `jsonb` — SECURITY DEFINER
 - writes `public.app_notification` _(high)_
 
-## `api.mark_list_sent(p_list_id uuid)`
+## `api.mark_list_sent(p_list_id uuid, p_sender_id uuid)`
 - returns: `void` — SECURITY DEFINER
 - writes `public.object_list` _(high)_
 
-> ---------- 7b. Marquer une liste « envoyée » (route email /api/lists/send) ----------
+> Suivi serveur après acceptation SMTP (route /api/lists/send), service_role UNIQUEMENT. Remplace api.mark_list_sent(uuid) (grantée à authenticated), révoquée : un client ne peut plus se déclarer « envoyé » sans preuve. p_sender_id est vérifié contre internal.list_sender_authorized — existence du profil ET adhésion active exigées AVANT tout bras propriétaire/featured.
 
 ## `api.mark_notification_read(p_id uuid)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2029,10 +2201,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `integer` — SECURITY DEFINER
 - writes `public.app_notification` _(high)_
 
-> Acquittement du drain e-mail (17i). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.
+> Acquittement du drain e-mail (17m + 18a §8, les DEUX espèces). Succès = email_sent_at ; échec = email_error + email_attempts+1 + claim levé (re-réclamable jusqu'à 5 tentatives). Service_role only.
 
 ## `api.norm_search(p text)`
 - returns: `text`
+
+## `api.notification_relay_org(p_task_id uuid, p_recipient_id uuid)`
+- returns: `text` — SECURITY DEFINER
+- reads `public.crm_task` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.user_org_membership` _(high)_
 
 ## `api.notify_task_assignees(p_task_id uuid, p_new_assignees uuid[], p_actor uuid)`
 - returns: `integer` — SECURITY DEFINER
@@ -2136,6 +2314,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.audit_result` _(high)_
 - writes `public.audit_session` _(high)_
 
+## `api.record_org_smtp_test(p_org_object_id text, p_ok boolean, p_error text)`
+- returns: `void` — SECURITY DEFINER
+
 ## `api.ref_code_domain_is_editable(p_domain text)`
 - returns: `boolean`
 - reads `public.ref_code_domain_registry` _(high)_
@@ -2205,6 +2386,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.ref_code_taxonomy_closure` _(high)_
 - writes `public.ref_code_taxonomy_closure` _(high)_
 
+## `api.reject_fiche_submission(p_submission_id uuid, p_review_note text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+
+> 18a/D9 — refuse une soumission entière. Motif OBLIGATOIRE (le prestataire doit savoir pourquoi) ; ne touche que les lignes encore pending.
+
 ## `api.reject_pending_change(p_id uuid, p_review_note text)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `public.pending_change` _(high)_
@@ -2241,6 +2429,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > =====================================================
 > Function to request a document for a legal record
 > =====================================================
+
+## `api.request_list_feature(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
 
 ## `api.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
 - returns: `SETOF text` — SECURITY DEFINER
@@ -2281,10 +2474,20 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.resource_block_render(p_payload jsonb)`
 - returns: `jsonb`
 
+## `api.restore_list(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
 ## `api.retry_failed_media_downloads(p_limit integer DEFAULT 200)`
 - returns: `jsonb` — SECURITY DEFINER
 - reads `staging.media_temp` _(high)_
 - writes `staging.media_temp` _(high)_
+
+## `api.review_list_feature(p_list_id uuid, p_accept boolean)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
 
 ## `api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2389,12 +2592,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.contact_channel` _(high)_
 - writes `public.crm_interaction` _(high)_
 - writes `public.crm_task` _(high)_
+- writes `public.fiche_submission` _(high)_
 - writes `public.gdpr_erasure_log` _(high)_
 - writes `public.incident_report` _(high)_
 - writes `public.object_legal` _(high)_
 - writes `public.object_review` _(high)_
 
-> Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme.
+> Effacement/anonymisation RGPD Art. 17 d'un sujet. Anonymise (défaut) ou supprime, rédige le journal d'audit, journalise dans gdpr_erasure_log, retourne les URLs Storage à supprimer. Gated superuser plateforme. 18a §8 : la branche acteur délie le compte portail (app_user_profile.actor_id) dans les DEUX modes et reporte portal_user_id.
 
 ## `api.rpc_grant_user_permission(p_target_user_id uuid, p_permission_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -2457,7 +2661,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > F2. api.rpc_publish_object(p_object_id, p_publish)
 > Publie (TRUE) ou dépublie (FALSE) un objet.
 > Exige : permission publish_object + ORG active = publisher sur l'objet.
-> 
+>
 > Publication  (p_publish = TRUE)  → status = 'published'
 > published_at géré par trg_manage_object_published_at (premier passage uniquement).
 > Dépublication (p_publish = FALSE) → status = 'hidden'
@@ -2478,7 +2682,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Réordonnancement. Sans cette RPC, absorber RefCodeEditor ferait disparaître les flèches
 > monter/descendre des 52 domaines : une régression fonctionnelle déguisée en refonte.
-> 
+>
 > DEUX PIÈGES, tous deux vérifiés en base :
 > (a) `ref_language` porte `uq_ref_language_position` — un index UNIQUE PARTIEL sur
 > position. Permuter 1↔2 par deux UPDATE successifs viole l'unicité au premier.
@@ -2543,6 +2747,17 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Anti-self (§2.6) : un admin ne peut pas se retirer une permission lui-même.
 > No-op silencieux si la permission n'est pas active pour ce user.
 > -------------------------------------------------------
+
+## `api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_actor_module_visibility` _(high)_
+
+> 4.5 Écriture de la matrice : rang admin ≥ 30 sur l'ORG (même seuil que
+> rpc_set_role_permission). Refuse le plancher dur — même pour le RE-rendre visible :
+> une ligne « legal visible » en base serait un mensonge, la fonction l'ignorerait.
 
 ## `api.rpc_set_admin_role(p_membership_id uuid, p_role_code text)`
 - returns: `void` — SECURITY DEFINER
@@ -2895,6 +3110,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > SECURITY INVOKER + workspace_assert_can_write_object gate, like every canonical write.
 > =====================================================================
 
+## `api.set_list_featured(p_list_id uuid, p_featured boolean)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
 ## `api.set_list_items(p_list_id uuid, p_items jsonb)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.object` _(high)_
@@ -2937,11 +3157,22 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > {lang: markdown} -> {lang: plain text}. Empty/whitespace values dropped, keys lowercased,
 > NULL / '{}' / all-empty -> NULL (jsonb_strip_nulls-friendly). Reuses api.strip_markdown.
 
+## `api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.object` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+- writes `public.fiche_submission` _(high)_
+- writes `public.pending_change` _(high)_
+
+> 18a — « Soumettre pour vérification » du portail : soumission + N pending_change + tâche multi-assignée + notifications, en UNE transaction. Whitelist writers = DEUX entrées (save_object_commercial, save_object_openings), les SEULES que le portail émet — sous-ensemble STRICT d'approve_pending_change (§120), jamais un sur-ensemble sous peine de fiche bloquée à vie. Les cinq autres writers ont été retirés le 2026-09-04 : le plancher dur se contrôle sur metadata.section, le ré-dispatch se décide sur metadata.rpc, et rien ne couplait les deux clés.
+
 ## `api.submit_pending_change(p_object_id text, p_target_table text, p_target_pk text, p_action text, p_payload jsonb, p_metadata jsonb DEFAULT NULL::jsonb)`
 - returns: `uuid` — SECURITY DEFINER
 - writes `public.pending_change` _(high)_
 
-> P2.1 §120 — Dépose une suggestion (pending). Large : authentifié + objet lisible. submitted_by=auth.uid().
+> Dépose une suggestion dans la file de modération (équipes internes). 18a : FERMÉE aux personas du portail acteur — elles ont leur propre porte, api.submit_actor_fiche, seule à appliquer le plancher de modules, la matrice de masquage, la whitelist de writers, le plafond de 40 changements et le verrou « une seule vérification ouverte ».
 
 ## `api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT '{}'::jsonb, p_raw_app_meta_data jsonb DEFAULT '{}'::jsonb)`
 - returns: `void` — SECURITY DEFINER
@@ -3064,6 +3295,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.update_list(p_list_id uuid, p_patch jsonb)`
 - returns: `json` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
 - writes `public.object_list` _(high)_
 
 > 6.4 Mise à jour des métadonnées (patch whitelisté)
@@ -3089,6 +3321,18 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Le dialog recharge d'abord get_org_branding().raw et renvoie TOUS les champs.
 > p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 > -----------------------------------------------------
+
+## `api.upsert_org_smtp(p_org_object_id text, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text DEFAULT NULL::text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text, p_is_enabled boolean DEFAULT false, p_clear_password boolean DEFAULT false)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `vault.secrets` _(high)_
+- writes `vault.secrets` _(high)_
+
+## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.app_smtp_config` _(high)_
+- reads `vault.secrets` _(high)_
+- writes `public.app_smtp_config` _(high)_
+- writes `vault.secrets` _(high)_
 
 ## `api.user_actor_ids()`
 - returns: `SETOF uuid`
@@ -3123,6 +3367,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > exister au moment du CREATE POLICY.
 > -------------------------------------------------------
 
+## `api.user_can_manage_list_feature_action(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
 ## `api.user_can_manage_object_legal(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_org_link` _(high)_
@@ -3137,6 +3385,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > -----------------------------------------------------
 > 3) Gouvernance : superuser plateforme OU admin (rang >= 30) actif de CETTE ORG.
 > -----------------------------------------------------
+
+## `api.user_can_manage_org_smtp(p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+> Qui règle le relais SMTP d'une ORG : superadmin plateforme, ou admin ACTIF de rang >= 30 de
+> CETTE ORG. Même seuil que le branding et le portail acteurs — proposer la section plus bas
+> offrirait un écran dont chaque enregistrement échouerait en 42501.
 
 ## `api.user_can_moderate_object(p_object_id text)`
 - returns: `boolean` — SECURITY DEFINER
@@ -3165,6 +3423,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 
 ## `api.user_can_read_list(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
+## `api.user_can_use_list(p_list_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
 
@@ -3223,7 +3485,6 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `api.user_can_write_list(p_list_id uuid)`
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
-- reads `public.user_org_membership` _(high)_
 
 > Écriture d'une liste : son créateur, ou un admin d'ORG (rang >= 30) si le créateur n'est plus membre actif (reprise d'orpheline), ou le superuser plateforme. Le bras « n'importe quel rôle admin » a été retiré le 2026-08-31 (17k).
 
@@ -3243,6 +3504,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_permission` _(high)_
 
 > Droits effectifs : exception individuelle OU rôle métier de l'ORG (§227). Le chemin org_permission a été retiré le 2026-08-31 — il accordait sans regarder le rôle.
+
+## `api.user_is_list_org_admin(p_list_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
 
 ## `api.validate_audit_result_points()`
 - returns: `trigger`
@@ -3324,6 +3589,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
 > ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
 
+## `internal.build_list_detail_json(p_list_id uuid)`
+- returns: `json` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
 ## `internal.compute_open_status(p_at timestamp with time zone)`
 - returns: `TABLE(object_id text, is_open boolean)`
 - reads `public.object` _(high)_
@@ -3350,6 +3620,48 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.crm_task_assignee` _(high)_
 
 > Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.
+
+## `internal.grant_test_org_permissions()`
+- returns: `jsonb`
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_business_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.org_permission` _(high)_
+- writes `public.org_role_permission` _(high)_
+- writes `public.user_org_business_role` _(high)_
+
+> Donne aux membres NOMMES du bac a sable les droits d'un EDITEUR au sens de §227 : jeu complet (12) sur le role `editor`, + ce role aux membres qui n'en ont aucun. Le role `contributor` reste a 7 — le compte decouverte partage de codex/public-sandbox-entry le porte, et son test exige qu'il n'ait PAS write_crm_notes. N'ECRASE JAMAIS un role existant — le visiteur decouverte DOIT rester `contributor`, sans quoi api.get_sandbox_discovery_user() leve UNSAFE_SANDBOX_IDENTITY et l'Espace de test devient indisponible. Desactive au passage toute ligne org_permission (table RETIREE par §227, dont la migration refuse de s'appliquer s'il en reste une active).
+
+## `internal.list_grid_summary(p_list_id uuid)`
+- returns: `TABLE(item_count integer, type_breakdown jsonb, cover_image text)` — SECURITY DEFINER
+- reads `public.object` _(high)_
+
+## `internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+
+## `internal.org_admin_rank(p_user_id uuid, p_org_object_id text)`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+
+## `internal.org_is_admin(p_user_id uuid, p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `internal.org_membership_active(p_user_id uuid, p_org_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.user_org_membership` _(high)_
+
+## `internal.purge_expired_lists()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+- writes `public.object_list` _(high)_
+
+> Purge annuelle des listes NON mises à la une, inactives depuis 1 an (last_activity_at). Cascade object_list_item (FK ON DELETE CASCADE) : les items disparaissent, jamais les fiches touristiques/media. Inaccessible à tout client (REVOKE ALL FROM PUBLIC, aucun GRANT posé) ; exécutée par le cron quotidien purge-expired-lists (voir docs/listes-cycle-vie.md).
 
 ## `internal.recompute_trail_status(p_trail_id uuid)`
 - returns: `void`
@@ -3391,6 +3703,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 ## `internal.ref_catalog_row_count(p_table text)`
 - returns: `bigint` — dynamic SQL
 
+## `internal.resolve_fiche_submission(p_submission_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `public.fiche_submission` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.app_notification` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.fiche_submission` _(high)_
+
+> 18a §8 — statut agrégé d'une soumission dont plus aucune ligne n'est pending : approved (tout applied/approved), rejected (tout rejected), partial (mélange) ; ferme la tâche et notifie l'acteur (payload SANS nom, RGPD). Appelée par le trigger trg_fiche_submission_resolve, jamais directement.
+
 ## `internal.resolve_list_object_ids(p_buckets jsonb, p_published_only boolean DEFAULT true, p_limit integer DEFAULT 200)`
 - returns: `SETOF text` — SECURITY DEFINER
 
@@ -3430,6 +3752,27 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > ne pose JAMAIS is_test a la main — l'organisation est la source de verite, et un
 > seed qui l'ecrirait directement pourrait diverger d'elle sans qu'on le voie.
 
+## `internal.seed_test_crm()`
+- returns: `jsonb`
+- reads `public.actor` _(high)_
+- reads `public.actor_channel` _(high)_
+- reads `public.actor_object_role` _(high)_
+- reads `public.crm_interaction` _(high)_
+- reads `public.crm_task` _(high)_
+- reads `public.crm_task_assignee` _(high)_
+- reads `public.object` _(high)_
+- reads `public.ref_code_contact_kind` _(high)_
+- reads `public.ref_code_crm_sentiment` _(high)_
+- reads `public.ref_code_demand_subtopic` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.actor` _(high)_
+- writes `public.actor_channel` _(high)_
+- writes `public.crm_interaction` _(high)_
+- writes `public.crm_task` _(high)_
+- writes `public.crm_task_assignee` _(high)_
+
+> CRM du corpus de test : interactions variees (types, sens, 6 statuts, sujets/sous-sujets coherents, sentiments, 8 mois d'historique), taches (4 statuts, 4 priorites, moitie en retard, multi-assignees) et prospects (acteurs rattaches a l'ORG, e-mails en .test). Cloisonne PAR CONSTRUCTION : current_user_crm_object_ids part de l'ORG.
+
 ## `internal.seed_test_facets(p_id text, p_type text, p_i integer, p_src text DEFAULT NULL::text)`
 - returns: `void`
 - reads `public.object_act` _(high)_
@@ -3464,12 +3807,34 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Profondeur PAR TYPE du corpus de test : object_iti (+etapes, pratiques, profil, trace), object_fma (+occurrences), object_act, types de chambre, salles de reunion, carte. Suit ref_facet_applicability a la lettre — 7 types n'ont aucune facette. Idempotent (purge avant reecriture).
 
+## `internal.seed_test_media(p_id text, p_type text, p_i integer)`
+- returns: `void`
+- reads `public.media` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_iti_stage` _(high)_
+- reads `public.object_iti_stage_media` _(high)_
+- reads `public.object_menu` _(high)_
+- reads `public.object_menu_item` _(high)_
+- reads `public.object_menu_item_media` _(high)_
+- reads `public.object_room_type` _(high)_
+- reads `public.object_room_type_media` _(high)_
+- reads `public.ref_code_media_tag` _(high)_
+- reads `public.ref_code_media_type` _(high)_
+- writes `public.media` _(high)_
+- writes `public.media_tag` _(high)_
+- writes `public.object` _(high)_
+- writes `public.object_iti_stage_media` _(high)_
+- writes `public.object_menu_item_media` _(high)_
+- writes `public.object_room_type_media` _(high)_
+
+> Medias du corpus de test : 3-5 photos par fiche (une principale), etiquettes, et les liens de facette (etapes ITI, chambres, plats). Emprunte un vivier BORNE de 24 URLs publiques reelles — la chaine seulement, jamais un octet ; ne touche JAMAIS au stockage. Idempotent.
+
 ## `internal.test_actor_name(p_type text, p_i integer)`
 - returns: `text`
 
 > Noms d'acteurs FICTIFS. Jamais tires du corpus reel : c'est la ligne rouge de
 > l'arbitrage hybride — on emprunte des structures, jamais des personnes.
-> 
+>
 > Les deux indices derivent d'un HACHAGE de (type, rang) et non d'une arithmetique
 > sur `length(p_type)` : tous les codes de type font 3 ou 4 caracteres, donc la
 > longueur ne prend que DEUX valeurs et ne produisait que 30 noms distincts pour
@@ -3561,6 +3926,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > 16e (§146): monthly horizon for object_version — called by audit.maintain_partitions() (daily
 > cron), mirror of audit.ensure_future_partitions.
 
+## `public.fiche_submission_after_review()`
+- returns: `trigger` — SECURITY DEFINER
+
+> 18a §8 — trigger de résolution sur pending_change. SECURITY DEFINER : la résolution doit tourner quel que soit le chemin qui a tranché la ligne (unitaire, groupé, correctif service_role).
+
 ## `public.immutable_unaccent(text)`
 - returns: `text`
 
@@ -3606,7 +3976,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > ─────────────────────────────────────────────────────────────────────────────
 > 2bis. Semer AUSSI les ORG créées plus tard.
-> 
+>
 > Le seed ci-dessus ne couvre que les ORG existant au moment de la migration. Sans ce
 > trigger, une ORG créée demain naîtrait avec une matrice VIDE : ses Éditeurs auraient
 > l'étiquette et zéro droit, et l'écran d'onboarding — qui n'accorde plus de permission

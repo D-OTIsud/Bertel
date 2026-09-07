@@ -608,6 +608,10 @@ ROLLBACK;
 \ir tests/test_listes_cycle_vie.sql
 \ir tests/test_listes_dynamic_cover_realm.sql
 
+\echo '== 19e notifications inbox des propositions de listes (reviewers ORG actifs/superusers, in-app only, cleanup et lien de partage actif) =='
+\ir ../supabase/migrations/20260907085838_list_feature_notifications.sql
+\ir tests/test_list_feature_notifications.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

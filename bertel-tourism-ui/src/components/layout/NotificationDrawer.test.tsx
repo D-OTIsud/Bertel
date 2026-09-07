@@ -75,6 +75,10 @@ beforeEach(() => {
 });
 
 describe('notificationLabel', () => {
+  it('une proposition nomme le créateur et la liste', () => {
+    expect(notificationLabel(notif({ kind: 'list_feature_requested', createdByName: 'Élise', listName: 'Les balades du Sud' })))
+      .toBe('Élise propose « Les balades du Sud » à la une');
+  });
   it('nomme l’émetteur et la tâche', () => {
     expect(notificationLabel(notif())).toBe('Jean P. vous a assigné « Rappeler le directeur »');
   });
@@ -104,6 +108,19 @@ describe('notificationLabel', () => {
       'Vos modifications de « votre fiche » ont été vérifiées',
     );
   });
+});
+
+it('ouvre directement la validation de la liste depuis la notification et la marque lue', async () => {
+  mocked.listMyNotifications.mockResolvedValue({
+    items: [notif({ kind: 'list_feature_requested', listId: 'list-1', listName: 'Les balades du Sud' })], unreadCount: 1,
+  });
+  const { onOpenChange, client } = renderDrawer();
+  const invalidate = jest.spyOn(client, 'invalidateQueries');
+  fireEvent.click(await screen.findByRole('button', { name: /propose « Les balades du Sud »/ }));
+  await waitFor(() => expect(mocked.markNotificationRead).toHaveBeenCalledWith('n1'));
+  expect(push).toHaveBeenCalledWith('/listes?section=featured&state=pending&review=list-1');
+  expect(onOpenChange).toHaveBeenCalledWith(false);
+  expect(invalidate).toHaveBeenCalledWith({ queryKey: ['list-proposals'] });
 });
 
 describe('NotificationDrawer', () => {

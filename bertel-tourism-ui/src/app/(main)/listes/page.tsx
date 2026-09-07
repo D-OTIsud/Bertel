@@ -1,7 +1,12 @@
-'use client';
+"use client";
 
-import ListsManageView from '@/views/ListsManageView';
+import { Suspense } from "react";
+import ListsManageView from "@/views/ListsManageView";
 
 export default function ListesPage() {
-  return <ListsManageView />;
+  return (
+    <Suspense fallback={null}>
+      <ListsManageView />
+    </Suspense>
+  );
 }

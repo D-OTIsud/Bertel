@@ -152,6 +152,24 @@ describe('espèce fiche_submission_reviewed', () => {
   });
 });
 
+describe('proposition de liste à la une', () => {
+  it('lit la destination et le titre depuis le payload, sans tâche CRM', () => {
+    const parsed = parseAppNotification({
+      id: 'n-list', kind: 'list_feature_requested', created_by_name: 'Élise',
+      payload: { list_id: 'list-1', list_name: 'Les balades du Sud', org_object_id: 'ORG1' },
+    });
+    expect(parsed).toMatchObject({
+      kind: 'list_feature_requested', listId: 'list-1', listName: 'Les balades du Sud',
+      orgObjectId: 'ORG1', taskId: null, createdByName: 'Élise',
+    });
+  });
+
+  it('un payload incomplet reste neutre et ne devine pas une destination', () => {
+    expect(parseAppNotification({ id: 'n-list', kind: 'list_feature_requested', payload: [] }))
+      .toMatchObject({ listId: null, listName: null, orgObjectId: null });
+  });
+});
+
 describe('contrat RPC', () => {
   it('list : envoie le plafond demandé et AUCUN identifiant de destinataire', async () => {
     const rpc = fakeRpcClient({ items: [{ id: 'n1', kind: 'crm_task_assigned' }], unread_count: 1 });

@@ -24,9 +24,9 @@ function readNullableString(value: unknown): string | null {
 }
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */
-export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed';
+export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested';
 
-const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed'];
+const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed', 'list_feature_requested'];
 
 export interface AppNotification {
   id: string;
@@ -48,6 +48,10 @@ export interface AppNotification {
    * chaque consommateur devrait re-tester la FORME de l'objet au lieu de la valeur.
    */
   outcome: SubmissionOutcome | null;
+  /** Proposition à la une, sans tâche CRM associée. */
+  listId?: string | null;
+  listName?: string | null;
+  orgObjectId?: string | null;
 }
 
 export interface AppNotificationInbox {
@@ -90,6 +94,11 @@ export function parseAppNotification(record: GenericRecord): AppNotification | n
     // Une issue hors des trois connues rend `null` : le libellé dira « vérifiées », neutre
     // et vrai, plutôt qu'un verdict inventé.
     outcome: isSubmissionOutcome(outcome) ? outcome : null,
+    ...(kind === 'list_feature_requested' ? {
+      listId: readNullableString(payload.list_id),
+      listName: readNullableString(payload.list_name),
+      orgObjectId: readNullableString(payload.org_object_id),
+    } : {}),
   };
 }
 

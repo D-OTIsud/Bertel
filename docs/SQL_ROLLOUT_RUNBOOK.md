@@ -2193,3 +2193,42 @@ elle ne nécessite aucune nouvelle migration en production.
 L'ordre corrigé a été vérifié sur PostgreSQL local : contrat historique avant
 la migration, puis S0–S14 et les cas dynamique/couverture/realm après migration.
 Les fixtures, les claims et les changements locaux sont annulés par rollback.
+
+## 19e — Inbox des propositions de listes — 2026-09-07
+
+La migration `supabase/migrations/20260907085838_list_feature_notifications.sql`
+ajoute l'espèce `list_feature_requested` à `app_notification`. Une proposition
+notifie les administrateurs actifs de rang au moins 30 de l'ORG exacte, ainsi que
+les superusers plateforme. Le payload est strictement
+`{list_id, list_name, org_object_id}` ; `task_id` reste `NULL` et aucun CRM task
+n'est créé.
+
+Cette espèce est seulement dans l'inbox. `api.claim_unmailed_notifications` et
+l'index de file e-mail continuent de ne sélectionner que
+`crm_task_assigned` et `fiche_submission_reviewed`, donc une proposition ne peut
+pas être envoyée par SMTP. Les reprises de proposition et le backfill sont
+dédupliqués. Une acceptation, un refus, ou la suppression/purge de la liste retire
+les lignes inbox ; une proposition devenue archivée ou dont le reviewer a perdu le
+droit est masquée dynamiquement de `items` et de `unread_count`.
+
+Les trois grilles de listes émettent aussi `has_active_share_link`, calculé de
+`share_enabled`, du token et de l'expiration. `status = 'shared'` conserve sa
+signification éditoriale et historique : il ne doit jamais servir de preuve qu'un
+lien de capacité est encore actif.
+
+Validation transactionnelle, sans envoi SMTP :
+
+```powershell
+node tools/sql/apply.cjs "Base de donnée DLL et API/tests/test_list_feature_notifications.sql" --dry-run
+```
+
+Pour une cible Supabase déjà liée, appliquer la migration ciblée via le flux de
+release, puis rejouer le test transactionnel. Le manifeste frais l'insère après
+19d, car il dépend de `app_notification` (16z/18a) et du contrat de listes 19d.
+
+Appliquée en production le 7 septembre 2026, projet `ryycrdhlkmzpxwwwwupy`,
+version `20260907085838`, après validation de la migration et de ses fixtures
+dans une transaction annulée. Le contrôle à 09:17 UTC confirme l'historique,
+RLS sur l'inbox, les helpers internes interdits aux clients et à `service_role`,
+le champ de partage actif, 15 listes conservées et aucun claim e-mail de
+proposition. Le déploiement du front-end via Codify reste à réaliser.

@@ -48,6 +48,9 @@ function formatWhen(value: string | null): string {
 
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
+  if (notification.kind === 'list_feature_requested') {
+    return `${notification.createdByName ?? 'Un membre'} propose « ${notification.listName ?? 'une liste'} » à la une`;
+  }
   // 18a — le retour de l'office sur une fiche envoyée. Ni émetteur (le payload est SANS nom,
   // RGPD) ni titre de tâche : ce qui compte pour son lecteur, c'est SA fiche et le verdict.
   //
@@ -68,10 +71,11 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
   const router = useRouter();
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
+  const orgId = useSessionStore((state) => state.orgId);
 
   // MÊME entrée de cache que la veille de la pastille (AppShell) : le tiroir s'ouvre déjà
   // rempli, et il ne peut pas afficher une boîte différente de ce que compte la cloche.
-  const inboxQuery = useQuery(notificationInboxQueryOptions(userId));
+  const inboxQuery = useQuery(notificationInboxQueryOptions(userId, orgId));
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: notificationKeys.inbox(userId) });
@@ -104,6 +108,13 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       router.push('/espace');
       return;
     }
+    if (notification.kind === 'list_feature_requested') {
+      void queryClient.invalidateQueries({ queryKey: ['list-proposals'] });
+      const params = new URLSearchParams({ section: 'featured', state: 'pending' });
+      if (notification.listId) params.set('review', notification.listId);
+      router.push(`/listes?${params.toString()}`);
+      return;
+    }
     void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
     router.push('/crm?tab=taches');
   }
@@ -118,7 +129,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       >
         <SheetTitle className="sr-only">Notifications</SheetTitle>
         <SheetDescription className="sr-only">
-          Notifications reçues : tâches qui vous ont été assignées.
+          Vos tâches, retours de vérification et propositions de listes à la une.
         </SheetDescription>
         <div className="profile-drawer__inner">
           <div className="profile-drawer__header">
@@ -181,7 +192,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
                       {notificationLabel(notification)}
                     </span>
                     <span className="notif-item__meta">
-                      {notification.objectName ?? '—'}
+                      {notification.kind === 'list_feature_requested' ? 'Liste à valider' : notification.objectName ?? '—'}
                       {formatWhen(notification.createdAt) ? ` · ${formatWhen(notification.createdAt)}` : ''}
                     </span>
                     {!notification.readAt && <span className="sr-only">Non lue</span>}

@@ -109,6 +109,11 @@ describe('parseListDetail', () => {
 });
 
 describe('parseListCard', () => {
+  it('sépare le lien actif du statut, y compris les liens révoqués ou expirés', () => {
+    expect(parseListCard({ status: 'draft', has_active_share_link: true }).hasActiveShareLink).toBe(true);
+    expect(parseListCard({ status: 'shared', has_active_share_link: false }).hasActiveShareLink).toBe(false);
+    expect(parseListCard({ status: 'shared' }).hasActiveShareLink).toBe(true);
+  });
   it('maps grid summary incl. item count and type breakdown', () => {
     const c = parseListCard({
       id: 'L1',

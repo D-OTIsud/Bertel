@@ -77,8 +77,10 @@ export const PORTAL_SEASONAL_OPENING_REASON =
 
 // ═══════════════════════════════ Présentation ═══════════════════════════════
 
+export type PortalPresentationTranslations = Record<string, Partial<{ chapo: string; description: string }>>;
+
 /**
- * Accroche + présentation, en français, sur la fiche de l'objet.
+ * Accroche + présentation en français et traductions modifiées sur la fiche de l'objet.
  *
  * `updateTranslatableField(field, 'fr', 'fr', value)` : la langue est passée DEUX fois en
  * dur, pour que `baseValue` ET `values.fr` bougent ensemble — écrire `baseValue` seul
@@ -89,13 +91,25 @@ export function setPresentation(
   descriptions: ObjectWorkspaceDescriptionsModule,
   chapo: string,
   description: string,
+  translations: PortalPresentationTranslations = {},
 ): ObjectWorkspaceDescriptionsModule {
+  let nextChapo = updateTranslatableField(descriptions.object.chapo, PORTAL_LANGUAGE, PORTAL_LANGUAGE, chapo);
+  let nextDescription = updateTranslatableField(descriptions.object.description, PORTAL_LANGUAGE, PORTAL_LANGUAGE, description);
+  for (const [language, fields] of Object.entries(translations)) {
+    if (language === PORTAL_LANGUAGE) continue;
+    if (typeof fields.chapo === 'string') {
+      nextChapo = updateTranslatableField(nextChapo, language, PORTAL_LANGUAGE, fields.chapo);
+    }
+    if (typeof fields.description === 'string') {
+      nextDescription = updateTranslatableField(nextDescription, language, PORTAL_LANGUAGE, fields.description);
+    }
+  }
   return {
     ...descriptions,
     object: {
       ...descriptions.object,
-      chapo: updateTranslatableField(descriptions.object.chapo, PORTAL_LANGUAGE, PORTAL_LANGUAGE, chapo),
-      description: updateTranslatableField(descriptions.object.description, PORTAL_LANGUAGE, PORTAL_LANGUAGE, description),
+      chapo: nextChapo,
+      description: nextDescription,
     },
   };
 }

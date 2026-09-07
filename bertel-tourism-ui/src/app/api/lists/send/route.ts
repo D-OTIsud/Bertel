@@ -6,9 +6,11 @@ import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/ema
 import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 
 // Envoi d'une liste par e-mail MÉTIER (relais Google par IP du VPS). Modèle sécurité = upload média
-// (§59) : JWT appelant → get_list DEFINER auto-autorise → envoi seulement si autorisé → mark_list_sent.
-// La service-role ne sert QU'À vérifier le JWT ; l'autorisation d'accès à la liste passe par le
-// client « en tant qu'appelant » (jamais la service key). SMTP absent ⇒ 503 sans casser lien/PDF.
+// (§59) : JWT appelant → get_list + ensure_list_share_link DEFINER auto-autorisent (en tant
+// qu'appelant, jamais la service key) → envoi une seule fois → marquage mark_list_sent fait
+// APRÈS coup par le client SERVICE-ROLE, avec p_sender_id = l'appelant authentifié (contrat
+// listes 2026-09-07 : la signature UUID-only du RPC est retirée aux clients ordinaires — seul
+// service_role peut l'appeler). SMTP absent ⇒ 503 sans casser lien/PDF.
 export const runtime = 'nodejs';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,10 +60,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const list = asRec(listData);
   if (!list) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
-  // 5. S'assurer d'un lien public pour le bouton « sélection complète ».
+  // 5. S'assurer d'un lien public pour le bouton « sélection complète » — en tant qu'appelant,
+  // via ensure_list_share_link (contrat listes 2026-09-07) : génère le premier lien s'il n'existe
+  // pas, ou réutilise le lien actif SANS toucher son expiration. Un membre non-éditeur ne peut PAS
+  // réactiver un lien explicitement désactivé/expiré (SHARE_NOT_AVAILABLE) — l'envoi échoue alors
+  // proprement plutôt que de forcer une réactivation que `share_list` (éditeur uniquement) ferait.
   const { data: shareData, error: shareErr } = await asCaller
     .schema('api')
-    .rpc('share_list', { p_list_id: listId, p_enable: true, p_expires_at: null });
+    .rpc('ensure_list_share_link', { p_list_id: listId });
   if (shareErr) return NextResponse.json({ error: 'forbidden', detail: shareErr.message }, { status: 403 });
   const token = nstr(asRec(shareData)?.share_token);
   if (!token) return NextResponse.json({ error: 'share_failed' }, { status: 500 });
@@ -127,9 +133,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // 8. Marquer envoyée (best-effort : le relais SMTP a déjà accepté l'e-mail). Un échec ici — que
   // ce soit une erreur retournée par le RPC ou une exception (réseau, session) — ne doit JAMAIS
   // renvoyer autre chose que 200 : l'UI ne doit pas proposer de renvoyer un e-mail déjà parti.
+  // Contrat listes 2026-09-07 : `mark_list_sent(p_list_id, p_sender_id)` est grant service_role
+  // UNIQUEMENT — c'est pourquoi ce SEUL appel utilise `server` (client service-role déjà détenu
+  // pour la vérification du JWT), avec `p_sender_id` = l'utilisateur authentifié à l'étape 1.
+  // Le RPC contrôle lui-même que ce sender est autorisé à utiliser la liste.
   let trackingUpdated = true;
   try {
-    const { error: markErr } = await asCaller.schema('api').rpc('mark_list_sent', { p_list_id: listId });
+    const { error: markErr } = await server
+      .schema('api')
+      .rpc('mark_list_sent', { p_list_id: listId, p_sender_id: userData.user.id });
     if (markErr) trackingUpdated = false;
   } catch {
     trackingUpdated = false;

@@ -1,4 +1,4 @@
-import { canAdministerTeam, isPlatformSuperuser } from './session-selectors';
+import { canAdministerTeam, canCreateLists, isListsAdmin, isPlatformSuperuser } from './session-selectors';
 
 describe('canAdministerTeam', () => {
   it('true for platform owner/super_admin regardless of admin rank', () => {
@@ -35,5 +35,35 @@ describe('isPlatformSuperuser', () => {
     const orgAdmin = { role: 'tourism_agent' as const, adminRank: 30 };
     expect(canAdministerTeam(orgAdmin)).toBe(true);
     expect(isPlatformSuperuser(orgAdmin)).toBe(false);
+  });
+});
+
+// Listes 2026-09-07 règle 1 : remplace l'ancienne garde 17l (superuser-only).
+describe('canCreateLists', () => {
+  it('vrai pour tout membre connecté ayant une organisation active, lecteur compris', () => {
+    expect(canCreateLists({ orgId: 'org-1' })).toBe(true);
+  });
+
+  it('faux sans organisation active (invité, session non résolue)', () => {
+    expect(canCreateLists({ orgId: null })).toBe(false);
+  });
+});
+
+describe('isListsAdmin', () => {
+  it('vrai pour owner/super_admin quel que soit le rang', () => {
+    expect(isListsAdmin({ role: 'owner', adminRank: null })).toBe(true);
+    expect(isListsAdmin({ role: 'super_admin', adminRank: null })).toBe(true);
+  });
+
+  it('vrai pour un rang d’administration d’ORG >= 30', () => {
+    expect(isListsAdmin({ role: 'tourism_agent', adminRank: 30 })).toBe(true);
+  });
+
+  it('faux pour un rang insuffisant (team_lead rang 10)', () => {
+    expect(isListsAdmin({ role: 'tourism_agent', adminRank: 10 })).toBe(false);
+  });
+
+  it('faux sans rôle ni rang', () => {
+    expect(isListsAdmin({ role: null, adminRank: null })).toBe(false);
   });
 });

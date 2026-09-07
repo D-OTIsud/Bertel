@@ -300,6 +300,8 @@ PERM2. `supabase/migrations/20260731092819_fix_legal_workspace_permission.sql` �
 
 19a. `supabase/migrations/20260905195257_gdpr_cleanup_operations.sql` — **PRIV-01/02, remédiation bornée de l'effacement RGPD (Art. 17)** (après `migration_unblock_team_legal_access.sql` pour `ref_document.storage_bucket/storage_path/access_scope`, et après `supabase/migrations/20260807124408_actor_prospects_documents.sql` pour `actor_document` ; **redéfinit par `CREATE OR REPLACE`** `audit.redact_subject` et `api.rpc_gdpr_erase_subject` foldés dans `schema_unified.sql` — dernier mot sur base **fraîche** (appliqué en fin de manifeste) **et** base **upgradée** ; ne touche pas au fold historique lui-même). **Table neuve** `internal.gdpr_cleanup_task` (deny-all-direct, zéro policy/grant hors `service_role`) : tâches `storage_remove`/`auth_delete` rattachées à `gdpr_erasure_log.id` (`operationId`), survivant au sujet effacé, lues/acquittées uniquement par les 2 RPC neuves `api.rpc_gdpr_get_cleanup_status`/`api.rpc_gdpr_ack_cleanup_task` (`service_role` uniquement — le serveur Next.js revérifie lui-même JWT + `api.is_platform_superuser` avant tout appel). **Correctifs du corps existant :** `audit.redact_subject` matche désormais aussi `after_data` (une valeur qui n'apparaît QUE dans `after_data` était invisible) ; l'acteur redige désormais `crm_interaction` sur **les deux** clés `actor_id` **et** `handled_by_actor_id` (une interaction où seul `handled_by_actor_id` portait le sujet n'était jamais rédigée) ; l'ID `crm_task` lié à un signalement (collecté mais inexploité) voit désormais sa `description` (copie en clair de la description de l'incident) effacée et rédigée ; la bibliothèque privée d'acteur (`actor_document`) et les justificatifs de consentement (`actor_consent.document_id`) sont détachés à l'effacement, avec **rétention** des documents encore réellement utilisés ailleurs (`object_document`/`object_classification`/`object_legal`/`object_sustainability_action`/`object_iti.status_document_id`/`actor_consent`/autre `actor_document`) — seuls les documents devenus orphelins sont mis en file pour suppression Storage puis détachés de `ref_document` ; le rapport porte `retainedSharedDocuments`/`manualReviewRequired` et un `unresolvedScope` honnête (aucune affirmation « PII purgée » globale, orphelins Storage historiques et sauvegardes/caches dits **non couverts** par ce lot, instantané ponctuel — pas un balayage du bucket). **`subject_kind='user'`** : garde-fous de compte alignés sur `/api/admin/delete-user` (SEC-01) — auto-cible refusée insensible à la casse, cible `owner` toujours refusée, cible `super_admin` réservée à un appelant `owner` (`api.is_platform_owner()`, jamais `user_metadata`) ; `mode='delete'` met en file une tâche `auth_delete` (exécutée par l'API Admin Supabase, hors SQL, jamais par suppression SQL de `auth.users`) et `mode='anonymize'` ne touche **jamais** le compte `auth.users` (`authRetained:true` explicite dans le rapport — anonymisation du PROFIL seul, pas de la personne). Avatar utilisateur retiré via le chemin **connu** du serveur (`avatars/<userId>/avatar.jpg`), jamais reconstruit depuis la colonne. Contrat d'entrée de `api.rpc_gdpr_erase_subject` inchangé (même signature, même garde D4 superuser/JWT). Côté application : `src/app/api/rgpd/erase/route.ts` (résolution des tâches Storage/Auth par bucket connu ou origine Supabase configurée, jamais une URL étrangère ; bouton de reprise par `operationId`, qui ne rappelle jamais le RPC d'effacement), `src/services/rgpd.ts`, `src/views/RgpdErasurePage.tsx`/`ErasureResultPanel.tsx`. Couvert par `Base de donnée DLL et API/tests/test_gdpr_cleanup_operations.sql` (fixtures avatar/incident/`handled_by_actor_id`/document privé d'acteur/document partagé-promu retenu/match `after_data`-seul/refus de permission anon-authenticated sur les 2 RPC de nettoyage/rollback atomique sabotage). **Portée explicitement NON résolue par ce lot** : énumération des orphelins Storage antérieurs à ce lot, upload concurrent à l'instantané ponctuel, sauvegardes/caches — voir `report.unresolvedScope`.
 
+19c. `supabase/migrations/20260906034134_task_notification_creator_sender.sql` — Expéditeur des notifications d'assignation : ajoute `creator_email` / `creator_name` au JSON de `api.claim_unmailed_notifications`, joints à la lecture depuis `crm_task.created_by` → `auth.users` / `app_user_profile`. Le créateur est celui enregistré à la création, même si une autre personne réaffecte la tâche ; aucun nom ni e-mail n'est stocké dans la notification. Historique sans créateur, compte supprimé ou adresse absente : repli SMTP côté serveur. Les notifications `fiche_submission_reviewed` gardent l'expéditeur SMTP configuré. À appliquer **après `migration_actor_portal.sql`**, puis déployer le serveur Next ; `NOTIFY pgrst` inclus. Préserve les deux espèces, TTL 10 min, `SKIP LOCKED`, limite de cinq tentatives et accès `service_role` seul. Test transactionnel : `tests/test_task_notification_creator_sender.sql` (identités distinctes, payload falsifié ignoré, coordonnées relues, repli, portail, TTL et droits).
+
 14. `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_ref_data_json;` then `REFRESH MATERIALIZED VIEW CONCURRENTLY internal.mv_filtered_objects;`
 15. Smoke tests (see Verification below).
 
@@ -2114,3 +2116,62 @@ ciblée de `internal.sandbox_discovery_identity` depuis `pg_catalog` (export tbl
 trop long). La prévisualisation a confirmé l’entrée, la sortie et la préservation
 du stockage de travail, avec Auth simulée. Le cache de développement de la
 prévisualisation n’a pas été utilisé pour valider le build de production.
+
+## Listes personnelles, mise à la une et cycle de vie — 2026-09-07
+
+SQL appliqué en production le 7 septembre 2026. La migration ciblée est
+`supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql` ;
+le retour arrière est `Base de donnée DLL et API/rollback/rollback_listes_personnelles_une_cycle_vie.sql`.
+Le manifeste frais applique cette migration puis `tests/test_listes_cycle_vie.sql`
+et `tests/test_listes_dynamic_cover_realm.sql` en étape 19d, après les fixtures
+des anciennes permissions de listes.
+
+La route d'envoi et la base doivent être publiées ensemble :
+`mark_list_sent(uuid, uuid)` devient réservée au serveur après acceptation SMTP.
+L'ancienne signature `mark_list_sent(uuid)` est retirée. Le retour arrière SQL
+nécessite aussi le retour arrière de l'interface et de la route serveur.
+
+Préflight en lecture seule du 7 septembre à 05:09 UTC, projet
+`ryycrdhlkmzpxwwwwupy` : 12 listes, dont 10 dépassant 21 jours d'inactivité,
+aucune dépassant un an, aucun lien activé, 12 couvertures explicites vides.
+`pg_cron` est installé. Ces comptes ont été confirmés avant application à
+06:48 UTC, puis après application à 06:53 UTC : 12 listes conservées,
+10 archivées, aucune suppression. Ils ne prouvent pas l'exécution quotidienne
+du job. La migration programme
+`purge-expired-lists` à 04:00 UTC, sans exécuter de purge immédiatement.
+
+Le déploiement doit utiliser seulement la migration ciblée, après revue des
+résultats et des sauvegardes habituelles, sans rejouer le manifeste complet.
+Les listes à la une sont exemptées de rétention ; les autres sont archivées
+à 21 jours, puis supprimées à un an depuis la dernière activité métier.
+L'archivage conserve les règles existantes des liens publics.
+
+Consulter `docs/listes-cycle-vie.md` pour les règles, la validation locale et
+les limites connues, les sauvegardes et les preuves d'application. La version
+`20260907044528` est enregistrée dans l'historique Supabase ; les privilèges de
+la nouvelle signature et l'unicité du job actif ont été contrôlés en lecture seule.
+Le déploiement de l'application et de sa route d'envoi via Codify reste à réaliser.
+
+## Publication des autres changements prêts — 2026-09-07
+
+Le même lot de code inclut les paramètres SMTP, l'expéditeur des notifications
+CRM, la traduction IA dans l'éditeur et le portail, et les pages de paramètres.
+Les validations locales déjà réalisées sont conservées ; aucune nouvelle
+campagne Claude, aucun e-mail réel et aucun appel au fournisseur IA n'ont été
+lancés pour la publication.
+
+Deux migrations supplémentaires ont été appliquées individuellement, sans
+rejouer le manifeste complet, puis enregistrées dans l'historique Supabase :
+
+- `20260906031607_smtp_settings` : table de configuration SMTP, RPC admin et
+  lecture du secret réservée au serveur. Aucun paramètre ni secret inséré.
+- `20260906034134_task_notification_creator_sender` : le drain reçoit
+  l'identité du créateur initial de la tâche pour l'expédition.
+
+Les prérequis Vault/RBAC/CRM ont été vérifiés et les définitions des fonctions
+existantes sauvegardées localement avant application. Le contrôle du catalogue
+à 06:55 UTC confirme RLS, restrictions des RPC à `service_role`, présence du
+créateur dans la fonction de drain et les deux versions de migration.
+Voir `docs/smtp-settings.md` et `docs/ai-translation.md` pour le fonctionnement
+et les limites restantes. Le lot de préparation des réseaux sociaux appartient
+à une tâche distincte encore en cours et n'est pas inclus dans cette publication.

@@ -45,18 +45,30 @@ const LIST_ROW = {
   cover_url: null,
 };
 
+/**
+ * Contrat listes 2026-09-07 — `mark_list_sent(p_list_id, p_sender_id)` est grant service_role
+ * UNIQUEMENT : ce marquage passe donc par `server` (le client service-role tenu depuis la
+ * vérification du JWT), JAMAIS par `asCaller`. `ensure_list_share_link` remplace `share_list`
+ * pour le lien « sélection complète » (un membre non-éditeur ne doit pas pouvoir réactiver un
+ * lien explicitement désactivé — ce que `share_list(p_enable:true)` aurait fait).
+ */
 function setup(opts: { markError?: { message: string } | null; markThrows?: boolean }) {
-  mockedServer.mockReturnValue({
-    auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1', email: 'u1@example.com', user_metadata: {} } }, error: null }) },
-  } as never);
-
-  const rpc = jest.fn((name: string) => {
-    if (name === 'get_list') return Promise.resolve({ data: LIST_ROW, error: null });
-    if (name === 'share_list') return Promise.resolve({ data: { share_token: 'tok' }, error: null });
+  const serverRpc = jest.fn((name: string) => {
     if (name === 'mark_list_sent') {
       if (opts.markThrows) return Promise.reject(new Error('db down'));
       return Promise.resolve({ data: null, error: opts.markError ?? null });
     }
+    throw new Error(`unexpected server rpc ${name}`);
+  });
+
+  mockedServer.mockReturnValue({
+    auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1', email: 'u1@example.com', user_metadata: {} } }, error: null }) },
+    schema: () => ({ rpc: serverRpc }),
+  } as never);
+
+  const rpc = jest.fn((name: string) => {
+    if (name === 'get_list') return Promise.resolve({ data: LIST_ROW, error: null });
+    if (name === 'ensure_list_share_link') return Promise.resolve({ data: { share_token: 'tok' }, error: null });
     throw new Error(`unexpected rpc ${name}`);
   });
 
@@ -67,7 +79,7 @@ function setup(opts: { markError?: { message: string } | null; markThrows?: bool
     }),
   } as never);
 
-  return { rpc };
+  return { rpc, serverRpc };
 }
 
 describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
@@ -118,5 +130,46 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
     expect(res.status).toBe(502);
     const body = (await res.json()) as Record<string, unknown>;
     expect(body.error).toBe('send_failed');
+  });
+
+  it('marque via le client SERVICE-ROLE (jamais asCaller), avec p_sender_id = l’appelant authentifié', async () => {
+    const { rpc, serverRpc } = setup({ markError: null });
+
+    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    expect(res.status).toBe(200);
+
+    expect(serverRpc).toHaveBeenCalledWith('mark_list_sent', { p_list_id: 'list-1', p_sender_id: 'u1' });
+    // asCaller n'a JAMAIS reçu mark_list_sent — seuls get_list et ensure_list_share_link.
+    expect(rpc).not.toHaveBeenCalledWith('mark_list_sent', expect.anything());
+    expect(rpc.mock.calls.map((c) => c[0]).sort()).toEqual(['ensure_list_share_link', 'get_list']);
+  });
+
+  it('génère le lien public via ensure_list_share_link (en tant qu’appelant), pas share_list', async () => {
+    const { rpc } = setup({ markError: null });
+    await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    expect(rpc).toHaveBeenCalledWith('ensure_list_share_link', { p_list_id: 'list-1' });
+  });
+
+  it('SHARE_NOT_AVAILABLE (lien coupé, appelant non-éditeur) => 403, aucun envoi SMTP', async () => {
+    mockedServer.mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1', email: 'u1@example.com', user_metadata: {} } }, error: null }) },
+      schema: () => ({ rpc: jest.fn() }),
+    } as never);
+    const rpc = jest.fn((name: string) => {
+      if (name === 'get_list') return Promise.resolve({ data: LIST_ROW, error: null });
+      if (name === 'ensure_list_share_link') {
+        return Promise.resolve({ data: null, error: { message: 'SHARE_NOT_AVAILABLE: link disabled' } });
+      }
+      throw new Error(`unexpected rpc ${name}`);
+    });
+    mockedCreate.mockReturnValue({
+      schema: () => ({ rpc }),
+      from: () => ({ select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: null, error: null }) }) }) }),
+    } as never);
+
+    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+
+    expect(res.status).toBe(403);
+    expect(mockedSend).not.toHaveBeenCalled();
   });
 });

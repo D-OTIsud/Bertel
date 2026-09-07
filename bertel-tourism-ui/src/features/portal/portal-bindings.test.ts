@@ -99,6 +99,22 @@ describe('setPresentation', () => {
     const next = setPresentation(base, 'A **gras**', '# Titre\n\n- point');
     expect(next.object.description.values.fr).toBe('# Titre\n\n- point');
   });
+
+  it('fusionne les traductions modifiées, conserve les autres champs et ne change jamais la base française', () => {
+    const next = setPresentation(base, 'Ancien', 'Texte', {
+      en: { description: '**Welcome**' },
+      cre: { chapo: 'Byenveni' },
+    });
+    expect(next.object.chapo).toEqual({ baseValue: 'Ancien', values: { fr: 'Ancien', en: 'Old', cre: 'Byenveni' } });
+    expect(next.object.description).toEqual({ baseValue: 'Texte', values: { fr: 'Texte', en: '**Welcome**' } });
+    expect(next.object.adaptedDescription).toBe(base.object.adaptedDescription);
+    expect(next.places).toBe(base.places);
+  });
+
+  it('vider un champ traduit ne supprime ni le français ni les autres traductions', () => {
+    const next = setPresentation(base, 'Ancien', 'Texte', { en: { chapo: '' } });
+    expect(next.object.chapo).toEqual({ baseValue: 'Ancien', values: { fr: 'Ancien' } });
+  });
 });
 
 // ─────────────────────────── upsertPublicContact ───────────────────────────

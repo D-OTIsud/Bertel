@@ -43,11 +43,11 @@ describe('describePortalChange', () => {
     expect(describePortalChange('contacts', base, next, 'RES').after).toBe('Téléphone : 0692 00');
   });
 
-  it('borne les textes longs à 4000 caractères comme l’enveloppe d’origine', () => {
+  it('conserve une description longue entière pour que l’office puisse la recopier', () => {
     const long = 'x'.repeat(5000);
     const base = modules({ descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: '', values: {} } } } });
     const next = modules({ descriptions: { object: { chapo: { baseValue: '', values: {} }, description: { baseValue: long, values: { fr: long } } } } });
-    expect(describePortalChange('descriptions', base, next, 'RES').after.length).toBeLessThanOrEqual(4000);
+    expect(describePortalChange('descriptions', base, next, 'RES').after).toBe(`Présentation : ${long}`);
   });
 
   it('descriptions : accroche et présentation nommées en clair', () => {
@@ -57,6 +57,37 @@ describe('describePortalChange', () => {
     expect(change.field).toBe('Présentez votre établissement');
     expect(change.before).toBe('Accroche : A\nPrésentation : B');
     expect(change.after).toBe('Accroche : A2\nPrésentation : B');
+  });
+
+  it('les traductions modifiées sont lisibles par l’office même après un long texte français inchangé', () => {
+    const base = modules({ descriptions: { object: {
+      chapo: { baseValue: 'A', values: { fr: 'A', en: 'Old hook' } },
+      description: { baseValue: 'x'.repeat(4000), values: {} },
+    } } });
+    const next = modules({ descriptions: { object: {
+      chapo: { baseValue: 'A', values: { fr: 'A', en: 'New hook' } },
+      description: { baseValue: 'x'.repeat(4000), values: { en: 'New description' } },
+    } } });
+    const change = describePortalChange('descriptions', base, next, 'RES');
+    expect(change.before).toMatch(/^Accroche \(English\) : Old hook/);
+    expect(change.after).toMatch(/^Accroche \(English\) : New hook\nPrésentation \(English\) : New description/);
+    expect(change.after).toContain(`Présentation : ${'x'.repeat(4000)}`);
+  });
+
+  it('plusieurs traductions longues restent intégralement lisibles avant et après la modification', () => {
+    const previous = { en: `Old English ${'e'.repeat(2100)}`, cre: `Avan ${'k'.repeat(2100)}`, de: `Alt ${'a'.repeat(2100)}` };
+    const translated = { en: `English ${'E'.repeat(2200)}`, cre: `Kréol ${'K'.repeat(2200)}`, de: `Deutsch ${'D'.repeat(2200)}` };
+    const shape = (values: Record<string, string>) => modules({ descriptions: { object: {
+      chapo: { baseValue: 'Accroche FR', values: {} },
+      description: { baseValue: 'Texte FR inchangé', values },
+    } } });
+    const change = describePortalChange('descriptions', shape(previous), shape(translated), 'RES');
+    for (const [code, label] of [['en', 'English'], ['cre', 'Créole'], ['de', 'Deutsch']] as const) {
+      expect(change.before).toContain(`Présentation (${label}) : ${previous[code]}`);
+      expect(change.after).toContain(`Présentation (${label}) : ${translated[code]}`);
+    }
+    expect(change.before.length).toBeGreaterThan(6000);
+    expect(change.after.length).toBeGreaterThan(6000);
   });
 
   it('horaires : un jour par ligne, la sentinelle dite en toutes lettres', () => {

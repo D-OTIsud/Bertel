@@ -213,6 +213,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== 16a    migration_ai_provider_config.sql  (AI provider config for §06 carte extraction: app_ai_provider_config table + Vault-backed key + super-admin RPCs upsert/list/set_active/delete + service_role-only get_active_ai_provider_secret; needs api.is_platform_superuser + supabase_vault; self-contained, CREATE TABLE IF NOT EXISTS idempotent) =='
 \ir migration_ai_provider_config.sql
 
+\echo '== SMTP   platform business-mail configuration (Vault password, super-admin settings, service-role sender) =='
+\ir ../supabase/migrations/20260906031607_smtp_settings.sql
+\ir tests/test_smtp_settings.sql
+
 \echo '== 16c    migration_moderation_rpcs.sql  (P2.1 §120 Moderation: user_can_moderate_object + submit/list/approve/reject_pending_change DEFINER authorize-once; approve re-dispatches the whitelisted section writer (Option A); pending_change table already in schema_unified; needs rls_policies helpers + object_workspace_*_rpcs writers) =='
 \ir migration_moderation_rpcs.sql
 
@@ -591,6 +595,15 @@ ROLLBACK;
 
 \echo '== 19b-test garde permanente DB-02 : voir tests/test_audit_price_age_bounds.sql =='
 \ir tests/test_audit_price_age_bounds.sql
+
+\echo '== 19c task notification sender from immutable task creator (after actor portal outbox) =='
+\ir ../supabase/migrations/20260906034134_task_notification_creator_sender.sql
+\ir tests/test_task_notification_creator_sender.sql
+
+\echo '== 19d listes personnelles, une organisationnelle et retention (remplace les regles historiques 17k/17l apres leurs fixtures) =='
+\ir ../supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql
+\ir tests/test_listes_cycle_vie.sql
+\ir tests/test_listes_dynamic_cover_realm.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

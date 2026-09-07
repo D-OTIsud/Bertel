@@ -17,6 +17,7 @@ import { updateCurrentUserProfile } from '../services/user-profile';
 import { AiProviderSettings } from '../features/settings/AiProviderSettings';
 import { PartnerKeysSettings } from '../features/settings/PartnerKeysSettings';
 import { TestCorpusSettings } from '../features/settings/TestCorpusSettings';
+import { SmtpSettings } from '../features/settings/SmtpSettings';
 import { OrgsPanel } from '../features/orgs/OrgsPanel';
 import { OrgBrandingForm } from '../features/orgs/OrgBrandingForm';
 import { ActorSectionVisibilityForm } from '../features/orgs/ActorSectionVisibilityForm';
@@ -796,17 +797,11 @@ export default function SettingsPage() {
         </article>
       )}
 
-      {activeSection === 'ai' && role === 'super_admin' && (
-        <article className="panel-card">
-          <AiProviderSettings />
-        </article>
-      )}
+      {activeSection === 'smtp' && role === 'super_admin' && <SmtpSettings />}
 
-      {activeSection === 'partner-keys' && role === 'super_admin' && (
-        <article className="panel-card">
-          <PartnerKeysSettings />
-        </article>
-      )}
+      {activeSection === 'ai' && role === 'super_admin' && <AiProviderSettings />}
+
+      {activeSection === 'partner-keys' && role === 'super_admin' && <PartnerKeysSettings />}
 
       {activeSection === 'organisations' && role === 'super_admin' && (
         <article className="panel-card">
@@ -816,11 +811,7 @@ export default function SettingsPage() {
 
       {/* 18b — corpus du bac a sable : remise a zero. Le gating de role ici n'est
           qu'un confort d'affichage ; la RPC porte ses propres gardes serveur. */}
-      {activeSection === 'test-corpus' && role === 'super_admin' && (
-        <article className="panel-card">
-          <TestCorpusSettings />
-        </article>
-      )}
+      {activeSection === 'test-corpus' && role === 'super_admin' && <TestCorpusSettings />}
 
       {/* 7.4 — Équipe (Mon organisation) : Team emménage ici depuis /team (retiré du sidebar).
           TeamAdminPage porte son propre gating + chargement + contrôles serveur (vraie frontière). */}

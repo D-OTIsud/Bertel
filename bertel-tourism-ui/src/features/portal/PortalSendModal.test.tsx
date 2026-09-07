@@ -19,7 +19,7 @@ import userEvent from '@testing-library/user-event';
 import { PortalSendModal } from './PortalSendModal';
 import { buildContributorSubmission } from '../object-editor/contributor-proposal';
 import { buildPortalRubrics, type BuiltPortalRubric } from './portal-rubrics';
-import { portalDraftKey } from './usePortalDraft';
+import { portalDraftKey, readPortalSent } from './usePortalDraft';
 import * as portalService from '../../services/portal';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
@@ -116,8 +116,8 @@ function rubrics(over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}): 
   });
 }
 
-function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock } = {}) {
-  const editor = fakeEditor();
+function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor?: ObjectEditorState } = {}) {
+  const editor = over.editor ?? fakeEditor();
   const onSent = over.onSent ?? jest.fn();
   const onNoteChange = jest.fn();
   render(
@@ -204,6 +204,30 @@ describe('PortalSendModal', () => {
     await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
     const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
     expect(envelopes.map((entry) => (entry.metadata as { section: string }).section)).toEqual(['contacts']);
+  });
+
+  it('envoie toutes les traductions longues en clair et les conserve dans le récapitulatif envoyé', async () => {
+    const values = { en: 'English '.repeat(300), cre: 'Kréol '.repeat(400), de: 'Deutsch '.repeat(300) };
+    const translated = modules({ descriptions: { object: {
+      chapo: { baseValue: 'Accroche', values: { fr: 'Accroche' } },
+      description: { baseValue: 'Présentation FR', values: { fr: 'Présentation FR', ...values } },
+    } } });
+    const editor = { ...fakeEditor(), draft: translated, dirtySections: { descriptions: true } };
+    setup({ editor, rubrics: rubrics({ draft: translated, dirty: { descriptions: true } }) });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
+    const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
+    expect(envelopes).toHaveLength(1);
+    expect(envelopes[0].payload).toEqual(translated.descriptions);
+    const after = String(envelopes[0].metadata?.after);
+    const sent = readPortalSent(USER, OBJ)?.lines.descriptions?.join('\n') ?? '';
+    for (const [code, label] of [['en', 'English'], ['cre', 'Créole'], ['de', 'Deutsch']] as const) {
+      const fullTranslation = `Présentation (${label}) : ${values[code].trim()}`;
+      expect(after).toContain(fullTranslation);
+      expect(sent).toContain(fullTranslation);
+    }
+    expect(after.length).toBeGreaterThan(6000);
   });
 
   it('« déjà en cours » (PT409) → phrase dédiée DANS la fenêtre, et le brouillon reste intact', async () => {

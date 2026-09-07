@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Fs, Field, LangTabs, ScopeTabs } from '../primitives';
 import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
+import { AiTranslateButton } from '../../../components/ai/AiTranslateButton';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDescriptionScope } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -8,6 +9,9 @@ import { SpokenLanguagesField } from './commercial-controls';
 import { descLanguageTabs, resolveLanguageLabel } from './spoken-languages';
 
 const EMPTY_FIELD = { baseValue: '', values: {} as Record<string, string> };
+// Canonical description columns are French. localLanguage is a user preference,
+// so it must never determine the source text's language or overwrite the base column.
+const BASE_LANGUAGE = 'fr';
 const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
   recordId: null, scope: 'object', placeId: null, label: 'Personnalisée', visibility: 'public',
   description: { ...EMPTY_FIELD }, chapo: { ...EMPTY_FIELD }, adaptedDescription: { ...EMPTY_FIELD },
@@ -37,20 +41,23 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
   }
 
   function patchField(field: 'chapo' | 'description', value: string) {
-    const updated = updateTranslatableField(activeScopeData[field], active, descriptions.localLanguage, value);
+    const updated = updateTranslatableField(activeScopeData[field], active, BASE_LANGUAGE, value);
     const nextScope = { ...activeScopeData, [field]: updated };
     editor.replaceModule('descriptions', onOrg
       ? { ...descriptions, orgOverlay: nextScope }
       : { ...descriptions, object: nextScope });
   }
 
-  const tabCodes = descLanguageTabs(descriptions.availableLanguages, characteristics.selectedLanguages);
+  const tabCodes = descLanguageTabs(
+    ['fr', 'en', 'cre', 'de', 'es', ...descriptions.availableLanguages],
+    characteristics.selectedLanguages,
+  );
   const tabs = tabCodes.map((code) => ({
     code,
     label: resolveLanguageLabel(code, characteristics.languageOptions),
     filled: Boolean(
-      readTranslatableField(activeScopeData.description, code, descriptions.localLanguage).trim()
-      || readTranslatableField(activeScopeData.chapo, code, descriptions.localLanguage).trim(),
+      readTranslatableField(activeScopeData.description, code, BASE_LANGUAGE).trim()
+      || readTranslatableField(activeScopeData.chapo, code, BASE_LANGUAGE).trim(),
     ),
   }));
 
@@ -63,10 +70,10 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
 
   // In the personalised scope, show the default value as a greyed fallback hint when the overlay field is empty.
   const fallback = (field: 'chapo' | 'description') =>
-    onOrg ? readTranslatableField(descriptions.object[field], active, descriptions.localLanguage) : '';
+    onOrg ? readTranslatableField(descriptions.object[field], active, BASE_LANGUAGE) : '';
   const hint = (base: string, field: 'chapo' | 'description') => {
     const fb = fallback(field);
-    const current = readTranslatableField(activeScopeData[field], active, descriptions.localLanguage).trim();
+    const current = readTranslatableField(activeScopeData[field], active, BASE_LANGUAGE).trim();
     // Only surface the "inherited from default" hint while the overlay field is
     // still empty — once the user types their own version, show the normal hint.
     return onOrg && fb && current === ''
@@ -101,30 +108,63 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
         {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
       </div>
 
+      {!readOnly && active === BASE_LANGUAGE && (
+        <p className="muted">Choisissez une autre langue pour traduire vos textes en un clic avec l’IA.</p>
+      )}
+      {!readOnly && active !== BASE_LANGUAGE && (
+        <AiTranslateButton
+          objectId={editor.objectId}
+          sourceLanguage={BASE_LANGUAGE}
+          targetLanguage={active}
+          sourceLabel={resolveLanguageLabel(BASE_LANGUAGE, characteristics.languageOptions)}
+          targetLabel={resolveLanguageLabel(active, characteristics.languageOptions)}
+          contextKey={JSON.stringify([scope, descriptions])}
+          fields={{
+            chapo: readTranslatableField(activeScopeData.chapo, BASE_LANGUAGE, BASE_LANGUAGE),
+            description: readTranslatableField(activeScopeData.description, BASE_LANGUAGE, BASE_LANGUAGE),
+          }}
+          existingValues={{
+            chapo: readTranslatableField(activeScopeData.chapo, active, BASE_LANGUAGE),
+            description: readTranslatableField(activeScopeData.description, active, BASE_LANGUAGE),
+          }}
+          onTranslated={(translations) => {
+            const nextScope = { ...activeScopeData };
+            for (const field of ['chapo', 'description'] as const) {
+              if (translations[field] !== undefined) {
+                nextScope[field] = updateTranslatableField(nextScope[field], active, BASE_LANGUAGE, translations[field]);
+              }
+            }
+            editor.replaceModule('descriptions', onOrg
+              ? { ...descriptions, orgOverlay: nextScope }
+              : { ...descriptions, object: nextScope });
+          }}
+        />
+      )}
+
       <Field label="Accroche" required={!onOrg} hint={hint('≤ 160 caractères — accroche courte affichée en tête de la fiche', 'chapo')}>
         <MarkdownEditorLazy
-          value={readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage)}
+          value={readTranslatableField(activeScopeData.chapo, active, BASE_LANGUAGE)}
           onChange={(md) => patchField('chapo', md)}
           disabled={readOnly}
           ariaLabel={`Accroche — ${resolveLanguageLabel(active, characteristics.languageOptions)}`}
           variant="inline"
         />
         {(() => {
-          const len = readTranslatableField(activeScopeData.chapo, active, descriptions.localLanguage).length;
+          const len = readTranslatableField(activeScopeData.chapo, active, BASE_LANGUAGE).length;
           return <div className={`char-count${len > 160 ? ' over' : ''}`}>{len} / 160 caractères</div>;
         })()}
       </Field>
 
       <Field label="Descriptif" required={!onOrg} hint={hint('Texte principal de la fiche détail', 'description')}>
         <MarkdownEditorLazy
-          value={readTranslatableField(activeScopeData.description, active, descriptions.localLanguage)}
+          value={readTranslatableField(activeScopeData.description, active, BASE_LANGUAGE)}
           onChange={(md) => patchField('description', md)}
           disabled={readOnly}
           ariaLabel={`Descriptif — ${resolveLanguageLabel(active, characteristics.languageOptions)}`}
           variant="block"
         />
         {(() => {
-          const len = readTranslatableField(activeScopeData.description, active, descriptions.localLanguage).length;
+          const len = readTranslatableField(activeScopeData.description, active, BASE_LANGUAGE).length;
           return <div className={`char-count${len > 2000 ? ' over' : ''}`}>{len} / 2000 caractères</div>;
         })()}
       </Field>

@@ -6,7 +6,7 @@ jest.mock('@/lib/mail.server', () => ({
   sendMail: jest.fn(),
   MailNotConfiguredError: class MailNotConfiguredError extends Error {},
 }));
-jest.mock('@/lib/env.server', () => ({ readSmtpConfig: jest.fn() }));
+jest.mock('@/lib/smtp-settings.server', () => ({ resolveSmtpConfig: jest.fn() }));
 
 // Le gabarit RÉEL par défaut (les sujets et corps assertés plus bas sont les vrais), mais
 // espionnable : un seul test le fait JETER, pour éprouver que la composition est protégée
@@ -18,12 +18,12 @@ jest.mock('@/emails/TaskAssignedEmail', () => {
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { sendMail } from '@/lib/mail.server';
-import { readSmtpConfig } from '@/lib/env.server';
+import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderTaskAssignedEmailHtml } from '@/emails/TaskAssignedEmail';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedSend = jest.mocked(sendMail);
-const mockedSmtp = jest.mocked(readSmtpConfig);
+const mockedSmtp = jest.mocked(resolveSmtpConfig);
 const mockedRenderTask = jest.mocked(renderTaskAssignedEmailHtml);
 
 const smtpOk = { host: 'smtp', port: 587, secure: false, user: null, pass: null, fromName: 'Bertel', fromEmail: 'no-reply@x' };
@@ -55,7 +55,7 @@ const reviewRow = (id: string, outcome: string | null = 'approved') => ({
 });
 
 describe('POST /api/crm/notify-drain', () => {
-  beforeEach(() => { jest.clearAllMocks(); mockedSmtp.mockReturnValue(smtpOk as never); });
+  beforeEach(() => { jest.clearAllMocks(); mockedSmtp.mockResolvedValue(smtpOk); });
 
   it('401 sans Bearer', async () => {
     mockedServer.mockReturnValue(serverWith(jest.fn()));
@@ -64,12 +64,63 @@ describe('POST /api/crm/notify-drain', () => {
   });
 
   it('503 SMTP absent — et ne réclame RIEN (le TTL ne doit pas être consommé pour rien)', async () => {
-    mockedSmtp.mockReturnValue(null);
+    mockedSmtp.mockResolvedValue(null);
     const rpc = jest.fn();
     mockedServer.mockReturnValue(serverWith(rpc));
     const res = await POST(req({ authorization: 'Bearer jwt' }));
     expect(res.status).toBe(503);
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('expédie une affectation au nom du créateur initial fourni par la base, pas de l’assignateur ni de l’appelant', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [{ ...row('n-creator'), creator_email: 'creator@example.com', creator_name: 'Alice', assigner_name: 'Bob', assigner_email: 'assigner@example.com' }], error: null })
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const request = { ...req({ authorization: 'Bearer jwt' }) as object, json: jest.fn().mockResolvedValue({ creator_email: 'forged@example.com' }) };
+    const response = await POST(request as never);
+    await expect(response.json()).resolves.toEqual({ sent: 1, failed: 0 });
+    expect(mockedSend).toHaveBeenCalledWith(expect.objectContaining({ to: 'dest@x.re', sender: { address: 'creator@example.com', name: 'Alice' } }));
+    expect(request.json).not.toHaveBeenCalled();
+    // The body can still identify the person who assigned the task.
+    expect(mockedSend.mock.calls[0][0].html).toContain('Confiée par Bob');
+  });
+
+  it('garde un expéditeur distinct pour chaque créateur dans le même lot', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [
+        { ...row('n-1'), creator_email: 'alice@example.com', creator_name: 'Alice' },
+        { ...row('n-2'), creator_email: 'bob@example.com', creator_name: null },
+      ], error: null })
+      .mockResolvedValueOnce({ data: 2, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    await POST(req({ authorization: 'Bearer jwt' }));
+    expect(mockedSend.mock.calls.map(([mail]) => mail.sender)).toEqual([
+      { address: 'alice@example.com', name: 'Alice' }, { address: 'bob@example.com', name: '' },
+    ]);
+  });
+
+  it('conserve l’expéditeur SMTP pour une tâche historique sans créateur et pour une autre notification', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [
+        { ...row('old-task'), creator_email: null, creator_name: null },
+        { ...reviewRow('review'), creator_email: 'creator@example.com', creator_name: 'Alice' },
+      ], error: null })
+      .mockResolvedValueOnce({ data: 2, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    await POST(req({ authorization: 'Bearer jwt' }));
+    for (const [mail] of mockedSend.mock.calls) expect(mail).not.toHaveProperty('sender');
+  });
+
+  it('503 avant claim si le résolveur base/Vault est indisponible', async () => {
+    mockedSmtp.mockRejectedValueOnce(new Error('database error with sensitive details'));
+    const rpc = jest.fn();
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({ error: 'smtp_unavailable' });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(mockedSend).not.toHaveBeenCalled();
   });
 
   it('draine : claim → envoi par ligne → acquittement p_sent', async () => {

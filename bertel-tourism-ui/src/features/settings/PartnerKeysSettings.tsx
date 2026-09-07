@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, ShieldAlert } from 'lucide-react';
+import { Copy, KeyRound, Plus, RefreshCw, ShieldAlert } from 'lucide-react';
 import {
   issuePartnerKey,
   listPartnerKeys,
@@ -10,6 +10,7 @@ import {
   type IssuedPartnerKey,
   type PartnerKey,
 } from '../../services/partner-keys';
+import './settings-panels.css';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -90,73 +91,115 @@ export function PartnerKeysSettings() {
     );
   };
 
+  const activeKeyCount = keys.filter((key) => key.isActive).length;
+
   return (
-    <section className="settings-pane">
-      <div className="settings-pane__head">
-        <div>
-          <h2><KeyRound size={18} aria-hidden /> Clés API partenaire</h2>
-          <p>Émettez une clé par prestataire externe pour l’API publique <code>/api/public/*</code>. Traçable, révocable, jamais l’accès <code>anon</code> partagé.</p>
+    <section className="settings-pane settings-admin" aria-labelledby="partner-keys-heading">
+      <header className="settings-pane__head settings-admin__header">
+        <div className="settings-admin__heading">
+          <span className="settings-admin__icon"><KeyRound size={22} aria-hidden /></span>
+          <div>
+            <p className="settings-admin__eyebrow">Intégrations</p>
+            <h2 id="partner-keys-heading">Clés API partenaire</h2>
+            <p>Créez un accès dédié à chaque partenaire et suivez l’utilisation de ses clés.</p>
+          </div>
         </div>
         <div className="settings-pane__actions">
           <span className="badge badge--info badge--xs">Super-admin</span>
         </div>
-      </div>
+      </header>
+
+      <div className="settings-admin__body">
 
       {/* Clé émise — affichée UNE SEULE FOIS */}
       {issued && (
-        <div className="inline-alert inline-alert--ok motion-status-enter" role="status">
-          <div>
+        <div className="settings-admin__note settings-admin__note--success motion-status-enter" role="status">
+          <ShieldAlert size={20} aria-hidden />
+          <div className="settings-admin__key-list">
             <strong>Clé pour « {issued.label} » — copiez-la maintenant.</strong>
-            <p className="muted" style={{ margin: '4px 0' }}>
-              <ShieldAlert size={14} aria-hidden /> Elle ne sera <strong>plus jamais affichée</strong>. Transmettez-la au partenaire par un canal sûr.
+            <p>
+              Elle ne sera <strong>plus jamais affichée</strong>. Transmettez-la au partenaire par un canal sûr.
             </p>
-            <code className="mono" style={{ wordBreak: 'break-all' }}>{issued.apiKey}</code>
-          </div>
-          <div className="inline-actions">
-            <button type="button" className="ghost-button" onClick={copyKey}><Copy size={14} aria-hidden /> Copier</button>
-            <button type="button" className="ghost-button" onClick={() => setIssued(null)}>J’ai copié la clé</button>
+            <code className="mono settings-admin__secret">{issued.apiKey}</code>
+            <div className="settings-admin__actions">
+              <button type="button" className="ghost-button" onClick={copyKey}><Copy size={14} aria-hidden /> Copier</button>
+              <button type="button" className="ghost-button" onClick={() => setIssued(null)}>J’ai copié la clé</button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Émission */}
-      <article className="panel-card panel-card--nested">
-        <div className="field-block">
-          <label htmlFor="partner-label">Nouveau partenaire</label>
-          <div className="inline-actions">
+      <form className="settings-admin__section" onSubmit={(event) => { event.preventDefault(); void handleIssue(); }}>
+        <div className="settings-admin__section-head">
+          <div>
+            <h3>Nouveau partenaire</h3>
+            <p>Une clé par prestataire permet de retirer un accès sans affecter les autres.</p>
+          </div>
+          <Plus size={18} aria-hidden />
+        </div>
+        <div className="settings-admin__form-grid">
+          <div className="settings-admin__field settings-admin__field--wide">
+            <label htmlFor="partner-label">Nom du partenaire</label>
             <input
               id="partner-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Nom du prestataire (ex. Portail régional)"
+              aria-describedby="partner-label-help"
               maxLength={120}
               disabled={issuing}
             />
-            <button type="button" className="primary-button" onClick={() => void handleIssue()} disabled={issuing || !label.trim()}>
-              {issuing ? 'Émission…' : 'Émettre une clé'}
-            </button>
+            <small id="partner-label-help">Choisissez un nom qui vous permettra d’identifier cet accès.</small>
           </div>
         </div>
-      </article>
+        <div className="settings-admin__footer">
+          <p>La clé complète sera affichée une seule fois, à sa création.</p>
+          <button type="submit" className="primary-button" disabled={issuing || !label.trim()}>
+            <KeyRound size={16} aria-hidden /> {issuing ? 'Émission…' : 'Émettre une clé'}
+          </button>
+        </div>
+      </form>
 
       {/* Liste */}
+      <section className="settings-admin__key-list" aria-labelledby="partner-keys-list-heading">
+        <div className="settings-admin__section-head">
+          <div>
+            <h3 id="partner-keys-list-heading">Accès partenaires</h3>
+            <p>Consultez les derniers usages et révoquez les clés qui ne sont plus nécessaires.</p>
+          </div>
+          {!loading && !error && <span className="badge badge--info badge--xs">{activeKeyCount} active{activeKeyCount > 1 ? 's' : ''}</span>}
+        </div>
       {error ? (
-        <div className="inline-alert inline-alert--danger" role="alert">{error}</div>
+        <div className="settings-admin__note settings-admin__note--danger" role="alert">
+          <ShieldAlert size={18} aria-hidden />
+          <div>
+            <strong>Impossible de charger les clés</strong>
+            <p>{error}</p>
+            <button type="button" className="ghost-button" onClick={() => void load()}><RefreshCw size={14} aria-hidden /> Réessayer</button>
+          </div>
+        </div>
       ) : loading ? (
-        <p className="muted">Chargement des clés…</p>
+        <div className="settings-admin__section settings-admin__empty" role="status">Chargement des clés…</div>
       ) : keys.length === 0 ? (
-        <p className="muted">Aucune clé partenaire émise pour l’instant.</p>
+        <div className="settings-admin__section settings-admin__empty">
+          <KeyRound size={28} aria-hidden />
+          <strong>Aucune clé partenaire émise pour l’instant.</strong>
+          <p>Ajoutez votre premier partenaire avec le formulaire ci-dessus.</p>
+        </div>
       ) : (
-        <div className="partner-key-list">
+        <div className="settings-admin__key-list">
           {keys.map((key) => (
-            <article key={key.id} className="panel-card panel-card--nested">
-              <div className="settings-pane__head" style={{ marginBottom: 8 }}>
+            <article key={key.id} className="settings-admin__section">
+              <div className="settings-admin__section-head">
                 <div>
-                  <strong>{key.label}</strong>{' '}
-                  <span className={key.isActive ? 'badge badge--ok badge--xs' : 'badge badge--danger badge--xs'}>
-                    {key.isActive ? 'Active' : 'Révoquée'}
-                  </span>
-                  <p className="mono muted" style={{ margin: '2px 0' }}>{key.keyPrefix}…</p>
+                  <div className="settings-admin__actions">
+                    <h4>{key.label}</h4>
+                    <span className={key.isActive ? 'badge badge--ok badge--xs' : 'badge badge--danger badge--xs'}>
+                      {key.isActive ? 'Active' : 'Révoquée'}
+                    </span>
+                  </div>
+                  <p className="mono">{key.keyPrefix}…</p>
                 </div>
                 {key.isActive && (
                   <button
@@ -169,18 +212,20 @@ export function PartnerKeysSettings() {
                   </button>
                 )}
               </div>
-              <div className="state-card">
-                <div className="state-row"><span className="state-row__k">Créée</span><span className="state-row__v">{formatDate(key.createdAt)}</span></div>
-                <div className="state-row"><span className="state-row__k">Dernier usage</span><span className="state-row__v">{formatDate(key.lastUsedAt)}</span></div>
-                <div className="state-row"><span className="state-row__k">Expire</span><span className="state-row__v">{key.expiresAt ? formatDate(key.expiresAt) : 'jamais'}</span></div>
+              <dl className="settings-admin__key-meta">
+                <div><dt>Créée le</dt><dd>{formatDate(key.createdAt)}</dd></div>
+                <div><dt>Dernier usage</dt><dd>{key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Pas encore utilisée'}</dd></div>
+                <div><dt>Expiration</dt><dd>{key.expiresAt ? formatDate(key.expiresAt) : 'Sans expiration'}</dd></div>
                 {key.revokedAt && (
-                  <div className="state-row"><span className="state-row__k">Révoquée le</span><span className="state-row__v">{formatDate(key.revokedAt)}</span></div>
+                  <div><dt>Révoquée le</dt><dd>{formatDate(key.revokedAt)}</dd></div>
                 )}
-              </div>
+              </dl>
             </article>
           ))}
         </div>
       )}
+      </section>
+      </div>
     </section>
   );
 }

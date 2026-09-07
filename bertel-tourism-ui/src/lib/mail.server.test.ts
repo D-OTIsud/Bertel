@@ -10,9 +10,9 @@ const createTransport = jest.fn();
 jest.mock('nodemailer', () => ({ __esModule: true, default: { createTransport: (...a: unknown[]) => createTransport(...a) } }));
 
 const readSmtpConfig = jest.fn();
-jest.mock('./env.server', () => ({ readSmtpConfig: () => readSmtpConfig() }));
+jest.mock('./smtp-settings.server', () => ({ resolveSmtpConfig: () => readSmtpConfig() }));
 
-type FakeTransport = { sendMail: jest.Mock; close: jest.Mock };
+type FakeTransport = { sendMail: jest.Mock; close: jest.Mock; verify: jest.Mock };
 
 const cfg = (over: Record<string, unknown> = {}) => ({
   host: 'smtp-relay.gmail.com', port: 587, secure: false,
@@ -22,7 +22,7 @@ const cfg = (over: Record<string, unknown> = {}) => ({
 function transportFactory(): FakeTransport[] {
   const made: FakeTransport[] = [];
   createTransport.mockImplementation(() => {
-    const t: FakeTransport = { sendMail: jest.fn().mockResolvedValue(undefined), close: jest.fn() };
+    const t: FakeTransport = { sendMail: jest.fn().mockResolvedValue(undefined), close: jest.fn(), verify: jest.fn().mockResolvedValue(true) };
     made.push(t);
     return t;
   });
@@ -87,7 +87,7 @@ describe('mail.server — transport réutilisé', () => {
     made[0].sendMail.mockRejectedValueOnce(new Error('smtp refused'));
 
     await expect(sendMail({ to: 'b@example.com', subject: 'refus', html: '<p></p>' }))
-      .rejects.toThrow('smtp refused');
+      .rejects.toThrow('L’opération SMTP a échoué');
     await expect(sendMail({ to: 'c@example.com', subject: 'suivant', html: '<p></p>' }))
       .resolves.toBeUndefined();
 
@@ -106,8 +106,8 @@ describe('mail.server — transport réutilisé', () => {
     // Un changement de libellé d'expéditeur ne doit PAS jeter le pool…
     expect(createTransport).toHaveBeenCalledTimes(1);
     // …et ne doit pas non plus être ignoré : le `from` vient de la config du moment.
-    expect(made[0].sendMail.mock.calls[0][0].from).toContain('Bertel');
-    expect(made[0].sendMail.mock.calls[1][0].from).toContain('OTI du Sud');
+    expect(made[0].sendMail.mock.calls[0][0].from).toEqual({ name: 'Bertel', address: 'no-reply@bertel.re' });
+    expect(made[0].sendMail.mock.calls[1][0].from).toEqual({ name: 'OTI du Sud', address: 'no-reply@bertel.re' });
   });
 
   it('un changement de config de TRANSPORT reconstruit le pool et ferme l’ancien', async () => {
@@ -134,10 +134,93 @@ describe('mail.server — transport réutilisé', () => {
     expect(createTransport).not.toHaveBeenCalled();
   });
 
-  it('l’alias historique sendListEmail reste LA MÊME fonction (routes listes)', async () => {
-    transportFactory();
+  it('utilise le créateur pour une notification puis l’adresse configurée pour une liste sur le même transport', async () => {
+    const made = transportFactory();
     readSmtpConfig.mockReturnValue(cfg());
     const { sendMail, sendListEmail } = await loadModule();
-    expect(sendListEmail).toBe(sendMail);
+    await sendMail({ to: 'editor@example.com', subject: 'Tâche', html: '<p>t</p>', sender: { address: 'creator@example.com', name: 'Alice' } });
+    // Even a stray extra sender property must not change a list's sender.
+    const list = { to: 'visitor@example.com', subject: 'Liste', html: '<p>l</p>', sender: { address: 'wrong@example.com', name: 'Wrong' } };
+    await sendListEmail(list);
+    expect(createTransport).toHaveBeenCalledTimes(1);
+    expect(made[0].sendMail.mock.calls[0][0].from).toEqual({ address: 'creator@example.com', name: 'Alice' });
+    expect(made[0].sendMail.mock.calls[1][0].from).toEqual({ address: 'no-reply@bertel.re', name: 'Bertel' });
+  });
+
+  it('ne modifie ni le relais ni ses identifiants pour envoyer au nom du créateur', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockReturnValue(cfg({ user: 'smtp-account', pass: 'smtp-secret' }));
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'editor@example.com', subject: 'Tâche', html: '<p>t</p>', sender: { address: 'creator@example.com', name: 'Alice <other@example.com>' } });
+    expect(createTransport).toHaveBeenCalledWith(expect.objectContaining({ host: 'smtp-relay.gmail.com', auth: { user: 'smtp-account', pass: 'smtp-secret' } }));
+    expect(made[0].sendMail.mock.calls[0][0].from).toEqual({ address: 'creator@example.com', name: 'Alice <other@example.com>' });
+  });
+
+  it('refuse une adresse de créateur contenant plusieurs adresses avant de créer le transport', async () => {
+    transportFactory();
+    readSmtpConfig.mockReturnValue(cfg());
+    const { sendMail } = await loadModule();
+    await expect(sendMail({ to: 'editor@example.com', subject: 'Tâche', html: '<p>t</p>', sender: { address: 'alice@example.com,other@example.com', name: 'Alice' } })).rejects.toThrow('créateur de la tâche est invalide');
+    expect(createTransport).not.toHaveBeenCalled();
+  });
+
+  it('une sauvegarde SMTP laisse terminer les envois déjà engagés sur l’ancien pool', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockResolvedValueOnce(cfg()).mockResolvedValueOnce(cfg({ host: 'new.example.com' }));
+    const { sendMail } = await loadModule();
+    let finishFirst: () => void = () => {};
+    createTransport.mockImplementationOnce(() => {
+      const t = { sendMail: jest.fn(() => new Promise<void>((resolve) => { finishFirst = resolve; })), close: jest.fn(), verify: jest.fn() };
+      made.push(t);
+      return t;
+    });
+    const first = sendMail({ to: 'a@example.com', subject: 'a', html: '<p>a</p>' });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    await sendMail({ to: 'b@example.com', subject: 'b', html: '<p>b</p>' });
+    expect(made).toHaveLength(2);
+    expect(made[0].close).not.toHaveBeenCalled();
+    finishFirst();
+    await first;
+    expect(made[0].close).toHaveBeenCalledTimes(1);
+    expect(made[1].close).not.toHaveBeenCalled();
+  });
+
+  it('ne propage pas les réponses SMTP brutes vers les listes ou le journal de notifications', async () => {
+    readSmtpConfig.mockResolvedValue(cfg());
+    createTransport.mockReturnValue({ sendMail: jest.fn().mockRejectedValue({ code: 'EAUTH', message: 'password=secret-value' }), close: jest.fn() });
+    const { sendMail } = await loadModule();
+    await expect(sendMail({ to: 'a@example.com', subject: 'a', html: '<p>a</p>' })).rejects.toThrow('Authentification refusée');
+  });
+
+  it('le nom ne peut pas remplacer l’adresse d’expédition par une adresse qu’il contient', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockResolvedValue(cfg({ fromName: 'Bertel <other@example.org>' }));
+    const { sendMail } = await loadModule();
+    await sendMail({ to: 'a@x.re', subject: 's', html: '<p>h</p>' });
+    expect(made[0].sendMail.mock.calls[0][0].from).toEqual({ name: 'Bertel <other@example.org>', address: 'no-reply@bertel.re' });
+  });
+
+  it('le test SMTP vérifie une connexion séparée sans envoyer ni fermer le pool des listes', async () => {
+    const made = transportFactory();
+    readSmtpConfig.mockResolvedValue(cfg());
+    const { sendMail, verifySmtpConnection } = await loadModule();
+    await sendMail({ to: 'a@x.re', subject: 's', html: '<p>h</p>' });
+    await expect(verifySmtpConnection()).resolves.toEqual(expect.objectContaining({ ok: true }));
+    expect(made[0].close).not.toHaveBeenCalled();
+    expect(made[1].verify).toHaveBeenCalledTimes(1);
+    expect(made[1].sendMail).not.toHaveBeenCalled();
+    expect(made[1].close).toHaveBeenCalledTimes(1);
+  });
+
+  it('ne retourne jamais une réponse SMTP brute susceptible de contenir le mot de passe', async () => {
+    readSmtpConfig.mockResolvedValue(cfg());
+    const close = jest.fn();
+    createTransport.mockReturnValue({ close, verify: jest.fn().mockRejectedValue({ code: 'EAUTH', message: 'password=secret' }) });
+    const { verifySmtpConnection } = await loadModule();
+    const result = await verifySmtpConnection();
+    expect(result.ok).toBe(false);
+    expect(result.detail).toContain('Authentification refusée');
+    expect(result.detail).not.toContain('secret');
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });

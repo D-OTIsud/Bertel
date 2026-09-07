@@ -9,6 +9,7 @@
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
 import { mapDatabaseError, readApiErrorMessage } from './api-error';
+import { readErrorMessage } from '../lib/db-error-message';
 import type { ExplorerFilters, ObjectCard } from '../types/domain';
 import { buildBucketRpcFilters, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets } from '../utils/facets';
 
@@ -51,8 +52,33 @@ export interface ObjectListItem {
   web: string | null;
 }
 
-/** Résumé pour la grille « Mes listes ». */
-export interface ObjectListCard {
+/**
+ * Capacités et cycle de vie résolus SERVEUR (17m/226-listes) — identiques sur la carte de grille
+ * et le détail. `canEdit` absent du payload RPC (ancien contrat, autre organisation…) DOIT valoir
+ * FALSE : `readBool` ci-dessous rend `false` sur `undefined`, jamais un défaut permissif.
+ */
+export interface ListLifecycle {
+  createdBy: string | null;
+  creatorName: string | null;
+  orgObjectId: string | null;
+  lastActivityAt: string | null;
+  isArchived: boolean;
+  isFeatured: boolean;
+  featureRequestedAt: string | null;
+  /** Écriture (nom, items, notes, réglages…). Absent ⇒ FALSE — jamais un défaut permissif. */
+  canEdit: boolean;
+  /** Admin de l'organisation : mettre à la une / retirer sa PROPRE liste directement. */
+  canManageFeature: boolean;
+  /** Créateur non-admin : proposer sa liste personnelle à la une. */
+  canProposeFeature: boolean;
+  /** Propriétaire d'une personnelle archivée (ou reprise orpheline) : réactiver explicitement. */
+  canRestore: boolean;
+  /** Éditeur : modifier les réglages de partage (share_list). Un lecteur utilise ensure_list_share_link. */
+  canManageSharing: boolean;
+}
+
+/** Résumé pour les grilles (Mes listes / À la une / Archives / Propositions). */
+export interface ObjectListCard extends ListLifecycle {
   id: string;
   name: string;
   nameEn: string | null;
@@ -68,7 +94,7 @@ export interface ObjectListCard {
 }
 
 /** Détail complet d'une liste (vue composition). */
-export interface ObjectListDetail {
+export interface ObjectListDetail extends ListLifecycle {
   id: string;
   kind: ListKind;
   name: string;
@@ -79,7 +105,11 @@ export interface ObjectListDetail {
   template: ListTemplate;
   accent: ListAccent;
   lang: 'fr' | 'en';
+  /** Couverture EXPLICITE (éditable) — permet de revenir au mode automatique (null). */
   coverUrl: string | null;
+  /** Couverture RENDUE : `coverUrl` si choisie, sinon le repli serveur (premier lieu illustré).
+   *  Ne jamais persister ce repli automatiquement — seul `coverUrl` s'écrit. */
+  effectiveCoverUrl: string | null;
   showMap: boolean;
   status: ListStatus;
   filters: ListFilterBuckets | null;
@@ -181,9 +211,28 @@ function parseItem(row: GenericRecord): ObjectListItem {
   };
 }
 
+/** Lifecycle/capacités communs carte+détail — un champ absent (ancien payload) reste `false`/`null`. */
+function parseLifecycle(row: GenericRecord): ListLifecycle {
+  return {
+    createdBy: readNullableString(row.created_by),
+    creatorName: readNullableString(row.creator_name),
+    orgObjectId: readNullableString(row.org_object_id),
+    lastActivityAt: readNullableString(row.last_activity_at),
+    isArchived: readBool(row.is_archived),
+    isFeatured: readBool(row.is_featured),
+    featureRequestedAt: readNullableString(row.feature_requested_at),
+    canEdit: readBool(row.can_edit),
+    canManageFeature: readBool(row.can_manage_feature),
+    canProposeFeature: readBool(row.can_propose_feature),
+    canRestore: readBool(row.can_restore),
+    canManageSharing: readBool(row.can_manage_sharing),
+  };
+}
+
 export function parseListCard(row: GenericRecord): ObjectListCard {
   const breakdown = Array.isArray(row.type_breakdown) ? row.type_breakdown : [];
   return {
+    ...parseLifecycle(row),
     id: readString(row.id),
     name: readString(row.name),
     nameEn: readNullableString(row.name_en),
@@ -205,7 +254,9 @@ export function parseListCard(row: GenericRecord): ObjectListCard {
 export function parseListDetail(row: GenericRecord): ObjectListDetail {
   const items = Array.isArray(row.items) ? row.items : [];
   const filters = asRecord(row.filters);
+  const coverUrl = readNullableString(row.cover_url);
   return {
+    ...parseLifecycle(row),
     id: readString(row.id),
     kind: (readString(row.kind, 'static') as ListKind),
     name: readString(row.name),
@@ -216,7 +267,10 @@ export function parseListDetail(row: GenericRecord): ObjectListDetail {
     template: (readString(row.template, 'carnet') as ListTemplate),
     accent: (readString(row.accent, 'teal') as ListAccent),
     lang: (readString(row.lang, 'fr') as 'fr' | 'en'),
-    coverUrl: readNullableString(row.cover_url),
+    coverUrl,
+    // Repli si le serveur omet encore `effective_cover_url` (ancien payload) : la couverture
+    // explicite reste le meilleur repli connu — jamais un calcul client du "premier lieu illustré".
+    effectiveCoverUrl: readNullableString(row.effective_cover_url) ?? coverUrl,
     showMap: readBool(row.show_map),
     status: (readString(row.status, 'draft') as ListStatus),
     filters: filters ? (filters as unknown as ListFilterBuckets) : null,
@@ -232,6 +286,23 @@ export function parseListDetail(row: GenericRecord): ObjectListDetail {
       .map(parseItem),
   };
 }
+
+/**
+ * Clés React Query PARTAGÉES entre `ListsManageView` et `ListComposeView` — une seule
+ * définition garantit que les deux vues invalident/écrivent EXACTEMENT la même entrée de cache.
+ * Les trois grilles ET le détail incluent `orgId` et `userId` : elles portent des capacités et
+ * des listes PERSONNELLES propres à l'appelant, jamais seulement à son organisation. Sans
+ * `userId`, deux membres de la même ORG partageraient la grille/les capacités du premier arrivé
+ * dans le cache mémoire du même onglet ; `Providers.buster` ne gouverne que la réhydratation du
+ * cache PERSISTÉ au chargement, pas les entrées déjà en mémoire pendant la session (§listes
+ * 2026-09-07, revue architecte).
+ */
+export const listsQueryKeys = {
+  myLists: (orgId: string | null, userId: string | null) => ['my-lists', orgId, userId] as const,
+  featured: (orgId: string | null, userId: string | null) => ['featured-lists', orgId, userId] as const,
+  proposals: (orgId: string | null, userId: string | null) => ['list-proposals', orgId, userId] as const,
+  detail: (listId: string, userId: string | null, orgId: string | null) => ['list', listId, userId, orgId] as const,
+};
 
 function requireApiClient() {
   const client = getApiClient();
@@ -256,6 +327,28 @@ export async function getList(listId: string): Promise<ObjectListDetail | null> 
   if (error) throw mapDatabaseError(error, 'Liste introuvable.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
+}
+
+/** Listes à la une de l'organisation active (api.list_featured_lists) — visibles à tous ses membres. */
+export async function listFeaturedLists(): Promise<ObjectListCard[]> {
+  const client = getApiClient();
+  if (!client) return [];
+  const { data, error } = await client.schema('api').rpc('list_featured_lists');
+  if (error) throw mapDatabaseError(error, 'Chargement des listes à la une impossible.');
+  return Array.isArray(data) ? data.map((row) => parseListCard(row as GenericRecord)) : [];
+}
+
+/**
+ * Propositions en attente de l'organisation active (api.list_list_proposals) — réservé côté
+ * serveur aux admins (rang >= 30 ou superuser) ; l'appelant ne doit l'invoquer QUE pour un admin
+ * (cf. `isListsAdmin`), sans quoi le RPC renverra un ensemble vide ou une erreur d'autorisation.
+ */
+export async function listListProposals(): Promise<ObjectListCard[]> {
+  const client = getApiClient();
+  if (!client) return [];
+  const { data, error } = await client.schema('api').rpc('list_list_proposals');
+  if (error) throw mapDatabaseError(error, 'Chargement des propositions impossible.');
+  return Array.isArray(data) ? data.map((row) => parseListCard(row as GenericRecord)) : [];
 }
 
 // ---------- créations ----------
@@ -326,15 +419,34 @@ export function listItemFromObjectCard(card: ObjectCard, position: number): Obje
  * d'édition : appartenance, ordre et notes restent ceux du client (une frappe ou un ajout en
  * vol pendant le round-trip n'est jamais écrasé — même classe de piège que §138 hydratedListId).
  */
+export interface MergeEnrichedListItemsResult {
+  items: ObjectListItem[];
+  /** Ids ENVOYÉS au serveur mais absents du résultat — rejetés (ex. brouillon exclu côté SQL),
+   *  jamais persistés, retirés de `items`. Distinct d'un ajout local survenu APRÈS l'envoi (lui
+   *  aussi absent de `fresh`, mais absent aussi de `sent` — donc conservé). */
+  rejectedIds: string[];
+}
+
 export function mergeEnrichedListItems(
   local: ObjectListItem[],
   fresh: ObjectListItem[],
-): ObjectListItem[] {
-  const byId = new Map(fresh.map((it) => [it.objectId, it]));
-  return local.map((it) => {
-    const enriched = byId.get(it.objectId);
-    return enriched ? { ...it, card: enriched.card, phone: enriched.phone, web: enriched.web } : it;
-  });
+  sent: ObjectListItem[],
+): MergeEnrichedListItemsResult {
+  const freshById = new Map(fresh.map((it) => [it.objectId, it]));
+  const sentIds = new Set(sent.map((it) => it.objectId));
+  const rejectedIds: string[] = [];
+  const items = local.reduce<ObjectListItem[]>((acc, it) => {
+    const enriched = freshById.get(it.objectId);
+    if (enriched) {
+      acc.push({ ...it, card: enriched.card, phone: enriched.phone, web: enriched.web });
+    } else if (sentIds.has(it.objectId)) {
+      rejectedIds.push(it.objectId);
+    } else {
+      acc.push(it);
+    }
+    return acc;
+  }, []);
+  return { items, rejectedIds };
 }
 
 /** Réordonnancement immuable d'un item (drag & drop de la composition). Indices hors bornes = no-op. */
@@ -380,6 +492,68 @@ export async function setListItems(listId: string, items: ListItemInput[]): Prom
   if (error) throw mapDatabaseError(error, 'Enregistrement des lieux impossible.');
   const row = asRecord(data);
   return row ? parseListDetail(row) : null;
+}
+
+// ---------- cycle de vie / mise à la une ----------
+/** Le créateur propose sa liste personnelle à la une de son organisation ; idempotent si déjà en attente. */
+export async function requestListFeature(listId: string): Promise<ObjectListDetail | null> {
+  const client = requireApiClient();
+  const { data, error } = await client.schema('api').rpc('request_list_feature', { p_list_id: listId });
+  if (error) throw mapDatabaseError(error, 'Proposition à la une impossible.');
+  const row = asRecord(data);
+  return row ? parseListDetail(row) : null;
+}
+
+/**
+ * Admin : accepte (met à la une) ou refuse une proposition de SON organisation. Le détail rendu
+ * peut être `null` si l'appelant perd l'accès en lecture après un refus (normal — l'appelant
+ * n'était lecteur que via la proposition) : l'écran doit alors revenir à la grille.
+ */
+export async function reviewListFeature(listId: string, accept: boolean): Promise<ObjectListDetail | null> {
+  const client = requireApiClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('review_list_feature', { p_list_id: listId, p_accept: accept });
+  if (error) throw mapDatabaseError(error, 'Traitement de la proposition impossible.');
+  const row = asRecord(data);
+  return row ? parseListDetail(row) : null;
+}
+
+/**
+ * Admin : met directement sa propre liste à la une, ou retire une liste à la une de son
+ * organisation. Peut rendre `null` si l'appelant perd l'accès (retrait d'une liste dont il
+ * n'était ni créateur ni membre lecteur au sens personnel).
+ */
+export async function setListFeatured(listId: string, featured: boolean): Promise<ObjectListDetail | null> {
+  const client = requireApiClient();
+  const { data, error } = await client
+    .schema('api')
+    .rpc('set_list_featured', { p_list_id: listId, p_featured: featured });
+  if (error) throw mapDatabaseError(error, 'Mise à la une impossible.');
+  const row = asRecord(data);
+  return row ? parseListDetail(row) : null;
+}
+
+/** Propriétaire d'une personnelle archivée (ou reprise orpheline) : réactivation explicite, idempotente sur une active. */
+export async function restoreList(listId: string): Promise<ObjectListDetail | null> {
+  const client = requireApiClient();
+  const { data, error } = await client.schema('api').rpc('restore_list', { p_list_id: listId });
+  if (error) throw mapDatabaseError(error, 'Restauration impossible.');
+  const row = asRecord(data);
+  return row ? parseListDetail(row) : null;
+}
+
+/**
+ * Copie indépendante d'une liste utilisable (propriétaire, ou membre pour une liste à la une) :
+ * nouveau propriétaire, jamais à la une/proposée, sans token ni destinataire hérités. Renvoie le
+ * nouvel id (même contrat que `create_list`).
+ */
+export async function duplicateList(listId: string): Promise<string> {
+  const client = requireApiClient();
+  const { data, error } = await client.schema('api').rpc('duplicate_list', { p_list_id: listId });
+  if (error) throw mapDatabaseError(error, 'Duplication impossible.');
+  if (typeof data !== 'string') throw new Error('Réponse RPC sans id.');
+  return data;
 }
 
 /**
@@ -443,6 +617,12 @@ export async function sendListByEmail(listId: string, toEmail: string): Promise<
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
     if (res.status === 503) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
+    // La route relaie tel quel le message brut d'`ensure_list_share_link` (ex. « forbidden » +
+    // detail:"SHARE_NOT_AVAILABLE: …") quand elle ne peut pas générer le lien « sélection
+    // complète » qu'embarque l'e-mail : sans ce test, l'utilisateur lirait le libellé générique
+    // « action non autorisée » au lieu de comprendre que le LIEN, pas ses droits, est en cause.
+    const shareFriendly = j.detail ? shareLinkFriendlyMessage(j.detail) : null;
+    if (shareFriendly) throw new Error(shareFriendly);
     throw new Error(readApiErrorMessage(j, res.status));
   }
   const body = (await res.json().catch(() => ({}))) as { trackingUpdated?: boolean };
@@ -450,6 +630,16 @@ export async function sendListByEmail(listId: string, toEmail: string): Promise<
 }
 
 // ---------- partage ----------
+function parseShareInfo(row: GenericRecord): ShareInfo {
+  return {
+    shareToken: readNullableString(row.share_token),
+    shareUrlPath: readNullableString(row.share_url_path),
+    shareEnabled: readBool(row.share_enabled),
+    shareExpiresAt: readNullableString(row.share_expires_at),
+  };
+}
+
+/** Réservé à l'éditeur : active/désactive le lien ou change son expiration (api.share_list). */
 export async function shareList(
   listId: string,
   enable: boolean,
@@ -462,11 +652,41 @@ export async function shareList(
     p_expires_at: expiresAt,
   });
   if (error) throw mapDatabaseError(error, 'Partage impossible.');
-  const row = asRecord(data) ?? {};
-  return {
-    shareToken: readNullableString(row.share_token),
-    shareUrlPath: readNullableString(row.share_url_path),
-    shareEnabled: readBool(row.share_enabled),
-    shareExpiresAt: readNullableString(row.share_expires_at),
-  };
+  return parseShareInfo(asRecord(data) ?? {});
+}
+
+/**
+ * Codes métier de `ensure_list_share_link` traduits en FR (même pattern que `rbac.ts:FRIENDLY`).
+ * Consommé à la fois par `ensureListShareLink` (message RPC direct) ET par `sendListByEmail`
+ * (message relayé par la route `/api/lists/send`, qui appelle le MÊME RPC en tant qu'appelant) —
+ * une seule table pour ne jamais laisser l'un des deux chemins afficher le code technique brut.
+ */
+const SHARE_LINK_FRIENDLY: Array<[string, string]> = [
+  [
+    'SHARE_NOT_AVAILABLE',
+    'Ce lien a été désactivé ou a expiré — seul un éditeur peut le réactiver depuis les réglages de partage.',
+  ],
+];
+function shareLinkFriendlyMessage(raw: string): string | null {
+  for (const [code, friendly] of SHARE_LINK_FRIENDLY) {
+    if (raw.includes(code)) return friendly;
+  }
+  return null;
+}
+
+/**
+ * Tout utilisateur autorisé à UTILISER la liste (propriétaire, ou membre pour une liste à la
+ * une) : génère le premier lien s'il n'en existe pas, ou réutilise le lien actif SANS toucher son
+ * expiration. Un lecteur ne peut PAS réactiver un lien explicitement désactivé/expiré — l'éditeur
+ * passe par `shareList` pour ça (api.ensure_list_share_link).
+ */
+export async function ensureListShareLink(listId: string): Promise<ShareInfo> {
+  const client = requireApiClient();
+  const { data, error } = await client.schema('api').rpc('ensure_list_share_link', { p_list_id: listId });
+  if (error) {
+    const friendly = shareLinkFriendlyMessage(readErrorMessage(error));
+    if (friendly) throw new Error(friendly);
+    throw mapDatabaseError(error, 'Partage indisponible.');
+  }
+  return parseShareInfo(asRecord(data) ?? {});
 }

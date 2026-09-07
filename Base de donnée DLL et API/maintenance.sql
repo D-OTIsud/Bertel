@@ -198,6 +198,20 @@ BEGIN
         $cron$SELECT api.capture_metric_snapshots()$cron$
       );
     END IF;
+
+    -- Listes personnelles / cycle de vie (2026-09-07) : purge annuelle des
+    -- listes non mises à la une, inactives depuis 1 an (last_activity_at).
+    -- maintenance.sql s'applique AVANT la migration dans ci_fresh_apply :
+    -- vérifier que la fonction existe déjà, sinon cron.schedule enregistrerait
+    -- un job dont le corps SQL ne résoudrait qu'à l'exécution (revue SQL).
+    IF to_regprocedure('internal.purge_expired_lists()') IS NOT NULL
+       AND NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'purge-expired-lists') THEN
+      PERFORM cron.schedule(
+        'purge-expired-lists',
+        '0 4 * * *',
+        $cron$SELECT internal.purge_expired_lists()$cron$
+      );
+    END IF;
   ELSE
     RAISE NOTICE 'pg_cron extension is not installed; skipping schedule creation.';
   END IF;

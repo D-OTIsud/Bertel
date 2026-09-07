@@ -5,15 +5,16 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { FileSpreadsheet, ListPlus, Mail, Printer, ShoppingBag, Trash2 } from 'lucide-react';
+import { queryClient } from '@/app/query-client';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 import { ExportExcelModal } from '@/features/explorer/export/ExportExcelModal';
-import { createListFromSelection } from '@/services/lists';
+import { createListFromSelection, listsQueryKeys } from '@/services/lists';
 import { getObjectResource } from '../../services/rpc';
 import { OtiCarnetCard, type OtiPoi } from '@/features/lists/OtiTemplate';
 import { MAX_PRINT_SELECTION, preloadImages, selectionDetailToOtiPoi } from './selection-print';
 import { CopyEmailsModal } from './CopyEmailsModal';
-import { isPlatformSuperuser } from '../../store/session-selectors';
+import { canCreateLists } from '../../store/session-selectors';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,6 +33,8 @@ export function SelectionBar() {
   const clearSelection = useExplorerStore((state) => state.clearSelection);
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const canEditObjects = useSessionStore((state) => state.canEditObjects);
+  const orgId = useSessionStore((state) => state.orgId);
+  const userId = useSessionStore((state) => state.userId);
   const [exportOpen, setExportOpen] = useState(false);
   const [emailsOpen, setEmailsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -39,9 +42,9 @@ export function SelectionBar() {
   // Cartes prêtes à imprimer : non-vide ⇒ le portail .oti-print-portal est monté.
   const [printPois, setPrintPois] = useState<OtiPoi[]>([]);
   const router = useRouter();
-  // 17l — creer une liste est reserve au superuser plateforme ; api.create_list rend 42501
-  // sinon. Le bouton disparait plutot que d'echouer apres coup.
-  const canCreateList = useSessionStore(isPlatformSuperuser);
+  // Listes 2026-09-07 règle 1 — création ouverte à tout membre connecté d'une organisation
+  // (lecteurs compris) ; l'ancienne garde 17l (superuser plateforme) est retirée.
+  const canCreateList = useSessionStore(canCreateLists);
   const count = selectedObjectIds.length;
   const empty = count === 0;
   // Au-delà du plafond, « Imprimer » est désactivé AVEC sa raison (label + title) plutôt
@@ -56,7 +59,10 @@ export function SelectionBar() {
     try {
       const name = `Sélection · ${count} ${count > 1 ? 'lieux' : 'lieu'}`;
       const id = await createListFromSelection(name, selectedObjectIds);
+      void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(orgId, userId) });
       router.push(`/listes/${id}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Création de la liste impossible.');
     } finally {
       setCreating(false);
     }

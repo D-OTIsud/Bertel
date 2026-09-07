@@ -117,13 +117,13 @@ const VALIDATION_RULES: ValidationRule[] = [
   },
   ({ draft }) => {
     // Each spoken language should have a complete translation (accroche + descriptif).
-    // Non-blocking — content translation is deferred post-MVP (FR fallback at launch).
+    // Non-blocking: missing translations can be drafted with AI in the descriptions section.
     const characteristics = draft.characteristics;
     if (characteristics.unavailableReason) {
       return null;
     }
     const object = draft.descriptions.object;
-    const local = draft.descriptions.localLanguage;
+    const local = 'fr'; // Canonical base text, independent of the account's language preference.
     const missing = characteristics.selectedLanguages
       .filter((lang) => {
         const key = spokenCodeToDescKey(lang.code);

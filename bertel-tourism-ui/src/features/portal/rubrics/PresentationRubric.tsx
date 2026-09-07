@@ -1,16 +1,18 @@
 'use client';
 
 /**
- * « Présentez votre établissement » — l'accroche et le texte de présentation, en français.
+ * « Présentez votre établissement » — le français et ses traductions, gardés en brouillon.
  *
  * Le texte n'est JAMAIS nettoyé : un texte simple est déjà du Markdown valide, et
  * « nettoyer » abîmerait une saisie riche. Le compteur est annoncé (`aria-live`) mais
  * discrètement : il compte, il ne gronde pas.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { PortalField, PortalRubricActions, useRubricForm } from './rubric-kit';
-import { setPresentation } from '../portal-bindings';
+import { setPresentation, type PortalPresentationTranslations } from '../portal-bindings';
 import { readTranslatableField } from '../../object-editor/sections/descriptions-field';
+import { descLanguageTabs, resolveLanguageLabel } from '../../object-editor/sections/spoken-languages';
+import { AiTranslateButton } from '../../../components/ai/AiTranslateButton';
 import type { PortalRubricFormProps } from './types';
 import type { ObjectWorkspaceDescriptionsModule } from '../../../services/object-workspace-parser';
 
@@ -22,6 +24,8 @@ const DESCRIPTION_SHORT = 120;
 interface PresentationForm {
   chapo: string;
   description: string;
+  // Facultatif pour relire sans perte les anciens caches, qui ne contenaient que le FR.
+  translations?: PortalPresentationTranslations;
 }
 
 export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
@@ -30,19 +34,79 @@ export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyC
     chapo: readTranslatableField(descriptions.object.chapo, 'fr', 'fr') ?? '',
     description: readTranslatableField(descriptions.object.description, 'fr', 'fr') ?? '',
   }), formCache);
+  const [selection, setSelection] = useState({ formKey, language: 'fr' });
+  const language = selection.formKey === formKey ? selection.language : 'fr';
+  const characteristics = editor.draft.characteristics;
+  const languageOptions = characteristics.languageOptions ?? [];
+  const languages = descLanguageTabs(
+    ['fr', 'en', 'cre', 'de', 'es', ...(descriptions.availableLanguages ?? []),
+      ...Object.keys(descriptions.object.chapo.values), ...Object.keys(descriptions.object.description.values),
+      ...Object.keys(form.translations ?? {})],
+    characteristics.selectedLanguages ?? [],
+  );
+
+  function readField(field: 'chapo' | 'description', code = language): string {
+    return code === 'fr'
+      ? form[field]
+      : form.translations?.[code]?.[field] ?? readTranslatableField(descriptions.object[field], code, 'fr');
+  }
+
+  function patchFields(fields: Partial<{ chapo: string; description: string }>) {
+    setForm((previous) => language === 'fr'
+      ? { ...previous, ...fields }
+      : { ...previous, translations: {
+          ...previous.translations,
+          [language]: { ...previous.translations?.[language], ...fields },
+        } });
+  }
 
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
-  const tooShort = form.description.trim().length > 0 && form.description.trim().length < DESCRIPTION_SHORT;
+  const chapo = readField('chapo');
+  const description = readField('description');
+  const languageLabel = resolveLanguageLabel(language, languageOptions);
+  const tooShort = description.trim().length > 0 && description.trim().length < DESCRIPTION_SHORT;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    editor.replaceModule('descriptions', setPresentation(descriptions, form.chapo, form.description));
+    editor.replaceModule('descriptions', setPresentation(descriptions, form.chapo, form.description, form.translations));
     onDone();
   }
 
   return (
     <form className="portal-form" onSubmit={handleSubmit} noValidate>
+      <div className="portal-shortcuts" role="group" aria-label="Langue de la présentation">
+        {languages.map((code) => (
+          <button
+            key={code}
+            type="button"
+            className="portal-pill"
+            aria-pressed={language === code}
+            onClick={() => setSelection({ formKey, language: code })}
+          >
+            {resolveLanguageLabel(code, languageOptions)}
+          </button>
+        ))}
+      </div>
+      <p className="muted" aria-live="polite">Langue de saisie : {languageLabel}</p>
+      {language !== 'fr' ? (
+        <AiTranslateButton
+          objectId={editor.objectId}
+          sourceLanguage="fr"
+          targetLanguage={language}
+          sourceLabel="Français"
+          targetLabel={languageLabel}
+          fields={{ chapo: form.chapo, description: form.description }}
+          existingValues={{ chapo, description }}
+          contextKey={formKey}
+          onTranslated={(translations) => patchFields({
+            ...(typeof translations.chapo === 'string' ? { chapo: translations.chapo } : {}),
+            ...(typeof translations.description === 'string' ? { description: translations.description } : {}),
+          })}
+        />
+      ) : (
+        <p className="muted">Choisissez une autre langue pour traduire vos textes en un clic avec l’IA.</p>
+      )}
       <PortalField
         id="portal-chapo"
         label="En une phrase"
@@ -53,13 +117,14 @@ export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyC
             {...slots}
             rows={2}
             maxLength={CHAPO_MAX}
-            value={form.chapo}
-            onChange={(event) => setForm((previous) => ({ ...previous, chapo: event.target.value }))}
+            lang={language === 'cre' ? 'rcf' : language}
+            value={chapo}
+            onChange={(event) => patchFields({ chapo: event.target.value })}
           />
         )}
       </PortalField>
       <p className="muted portal-counter" aria-live="polite">
-        {`${form.chapo.length} caractères sur ${CHAPO_MAX}`}
+        {`${chapo.length} caractères sur ${CHAPO_MAX}`}
       </p>
 
       <PortalField
@@ -72,13 +137,14 @@ export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyC
             {...slots}
             rows={8}
             maxLength={DESCRIPTION_MAX}
-            value={form.description}
-            onChange={(event) => setForm((previous) => ({ ...previous, description: event.target.value }))}
+            lang={language === 'cre' ? 'rcf' : language}
+            value={description}
+            onChange={(event) => patchFields({ description: event.target.value })}
           />
         )}
       </PortalField>
       <p className="muted portal-counter" aria-live="polite">
-        {`${form.description.length} caractères sur ${DESCRIPTION_MAX}`}
+        {`${description.length} caractères sur ${DESCRIPTION_MAX}`}
       </p>
       {tooShort ? (
         <p className="muted">

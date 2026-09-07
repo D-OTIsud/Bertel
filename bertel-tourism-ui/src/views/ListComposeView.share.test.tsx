@@ -8,6 +8,7 @@ import ListComposeView from './ListComposeView';
 import { getList, shareList, type ObjectListDetail } from '@/services/lists';
 
 jest.mock('@/services/lists', () => ({
+  ...jest.requireActual('@/services/lists'),
   getList: jest.fn(),
   shareList: jest.fn(),
   updateList: jest.fn(),
@@ -52,6 +53,7 @@ const baseDetail: ObjectListDetail = {
   accent: 'teal',
   lang: 'fr',
   coverUrl: null,
+  effectiveCoverUrl: null,
   showMap: false,
   status: 'draft',
   filters: null,
@@ -62,6 +64,19 @@ const baseDetail: ObjectListDetail = {
   updatedAt: null,
   resolvedFrom: 'filters',
   items: [],
+  // Ces tests couvrent le flux ÉDITEUR (réglages de partage) — canEdit/canManageSharing vrais.
+  createdBy: 'user-1',
+  creatorName: null,
+  orgObjectId: 'ORG1',
+  lastActivityAt: null,
+  isArchived: false,
+  isFeatured: false,
+  featureRequestedAt: null,
+  canEdit: true,
+  canManageFeature: false,
+  canProposeFeature: false,
+  canRestore: false,
+  canManageSharing: true,
 };
 
 function renderView() {

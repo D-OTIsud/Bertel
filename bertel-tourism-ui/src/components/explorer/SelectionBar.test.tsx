@@ -1,15 +1,22 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'sonner';
 import { SelectionBar } from './SelectionBar';
 import { MAX_PRINT_SELECTION } from './selection-print';
 import { getObjectResource } from '../../services/rpc';
+import { createListFromSelection } from '@/services/lists';
+import { queryClient } from '@/app/query-client';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
 
 // La barre importe le routeur App Router et les services (chaîne supabase) : on les
 // neutralise — ce test ne couvre que le rendu adaptatif de la barre.
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
-jest.mock('@/services/lists', () => ({ createListFromSelection: jest.fn() }));
+const push = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+jest.mock('@/services/lists', () => ({
+  ...jest.requireActual('@/services/lists'),
+  createListFromSelection: jest.fn(),
+}));
 jest.mock('../../services/rpc', () => ({ getObjectResource: jest.fn() }));
 jest.mock('@/features/explorer/export/ExportExcelModal', () => ({
   ExportExcelModal: ({ open }: { open: boolean }) =>
@@ -20,7 +27,7 @@ describe('SelectionBar — barre adaptative', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useExplorerStore.setState({ selectedObjectIds: [], visibleObjectIds: [] });
-    useSessionStore.setState({ canEditObjects: true, role: 'super_admin' });
+    useSessionStore.setState({ canEditObjects: true, role: 'super_admin', orgId: 'org-1' });
   });
 
   it('sans sélection : seuls le compteur et « Sélection » existent (pas de CTA qui déborde)', () => {
@@ -92,21 +99,64 @@ describe('SelectionBar — barre adaptative', () => {
   });
 });
 
-// 17l — « Créer une liste » est réservé au superuser plateforme : `api.create_list` rend 42501
-// pour tout le monde d'autre. Le bouton doit DISPARAÎTRE, pas échouer après le clic.
-describe('SelectionBar — création de liste réservée au superuser (17l)', () => {
-  it('un membre ordinaire ne voit pas « Créer une liste », mais garde les autres actions', () => {
-    useSessionStore.setState({ canEditObjects: true, role: 'tourism_agent' });
+// Listes 2026-09-07 règle 1 — création ouverte à tout membre connecté d'une organisation, y
+// compris un lecteur ; seule l'absence d'organisation active masque le bouton (ex-garde 17l
+// superuser-only, retirée).
+describe('SelectionBar — création de liste ouverte à tout membre d’une organisation', () => {
+  it('un lecteur ordinaire voit « Créer une liste » dès qu’il a une organisation active', () => {
+    useSessionStore.setState({ canEditObjects: false, role: 'tourism_agent', orgId: 'org-1' });
     useExplorerStore.setState({ selectedObjectIds: ['obj-1', 'obj-2'] });
     render(<SelectionBar />);
-    expect(screen.queryByRole('button', { name: /Créer une liste/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Créer une liste/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Imprimer/ })).toBeInTheDocument();
   });
 
-  it('un superuser plateforme le voit', () => {
-    useSessionStore.setState({ canEditObjects: true, role: 'super_admin' });
+  it('un superuser plateforme le voit aussi', () => {
+    useSessionStore.setState({ canEditObjects: true, role: 'super_admin', orgId: 'org-1' });
     useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
     render(<SelectionBar />);
     expect(screen.getByRole('button', { name: /Créer une liste/ })).toBeInTheDocument();
+  });
+
+  it('sans organisation active, le bouton disparaît', () => {
+    useSessionStore.setState({ canEditObjects: false, role: 'tourism_agent', orgId: null });
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'] });
+    render(<SelectionBar />);
+    expect(screen.queryByRole('button', { name: /Créer une liste/ })).not.toBeInTheDocument();
+  });
+});
+
+// Revue finale (§listes 2026-09-07) — handleCreateList n'avait aucun catch : un échec restait
+// une rejection non gérée, sans retour visible pour l'utilisateur.
+describe('SelectionBar — création de liste : erreurs et invalidation (revue finale)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useExplorerStore.setState({ selectedObjectIds: ['obj-1'], visibleObjectIds: [] });
+    useSessionStore.setState({ canEditObjects: true, role: 'tourism_agent', orgId: 'org-1', userId: 'user-1' });
+  });
+
+  it('un échec de création affiche un message visible (toast), pas de crash silencieux', async () => {
+    jest.mocked(createListFromSelection).mockRejectedValue(new Error('réseau indisponible'));
+    const errorSpy = jest.spyOn(toast, 'error').mockImplementation(() => '');
+    render(<SelectionBar />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Créer une liste/ }));
+
+    await waitFor(() => expect(errorSpy).toHaveBeenCalledWith('réseau indisponible'));
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('une création réussie invalide la grille « mes listes » avant de naviguer', async () => {
+    jest.mocked(createListFromSelection).mockResolvedValue('new-list-id');
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    render(<SelectionBar />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Créer une liste/ }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/listes/new-list-id'));
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ['my-lists', 'org-1', 'user-1'] }),
+    );
+    invalidateSpy.mockRestore();
   });
 });

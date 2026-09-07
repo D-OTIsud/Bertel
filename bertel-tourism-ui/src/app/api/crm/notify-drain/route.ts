@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { sendMail } from '@/lib/mail.server';
-import { readSmtpConfig } from '@/lib/env.server';
+import { sendMail, type MailSender } from '@/lib/mail.server';
+import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import {
   renderTaskAssignedEmailHtml,
   taskAssignedEmailSubject,
@@ -40,7 +40,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // SMTP absent ⇒ on sort AVANT de réclamer quoi que ce soit : chaque ligne réclamée a un TTL
   // de 10 minutes pendant lequel elle est invisible aux autres appels — la consommer sans
   // pouvoir envoyer retarderait le vrai drain (le prochain passage utile) de 10 minutes pour rien.
-  if (!readSmtpConfig()) return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
+  try {
+    if (!await resolveSmtpConfig()) return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
+  } catch {
+    return NextResponse.json({ error: 'smtp_unavailable' }, { status: 503 });
+  }
 
   const { data, error } = await server.schema('api').rpc('claim_unmailed_notifications', { p_limit: 20 });
   if (error) {
@@ -100,7 +104,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      let mail: { subject: string; html: string };
+      let mail: { subject: string; html: string; sender?: MailSender };
       if (kind === 'fiche_submission_reviewed') {
         // L'ISSUE décide de tout le message, et elle ne se devine pas. Le brief proposait un
         // repli sur 'approved' ; il est refusé ici, et c'est le seul écart assumé de la Task :
@@ -131,6 +135,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           html: renderSubmissionReviewedEmailHtml(reviewData),
         };
       } else {
+        // The claim joins crm_task.created_by to auth.users. This is the initial creator,
+        // not the last assigner, the recipient or the authenticated caller draining the queue.
+        // Old tasks without creator provenance (or deleted accounts) keep the SMTP default.
+        const creatorEmail = nstr(row.creator_email)?.trim();
         const emailData: TaskAssignedEmailData = {
           taskTitle: str(row.task_title) || 'Tâche',
           objectName: str(row.object_name) || 'Établissement',
@@ -145,10 +153,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         mail = {
           subject: taskAssignedEmailSubject(emailData),
           html: renderTaskAssignedEmailHtml(emailData),
+          ...(creatorEmail ? { sender: { address: creatorEmail, name: nstr(row.creator_name) ?? '' } } : {}),
         };
       }
 
-      await sendMail({ to, subject: mail.subject, html: mail.html });
+      await sendMail({ to, ...mail });
       sent.push(id);
     } catch (err) {
       // UN seul bras d'échec pour la composition ET l'envoi : dans les deux cas la ligne

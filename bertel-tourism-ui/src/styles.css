@@ -14497,6 +14497,11 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
   cursor: pointer;
 }
 .portal-pill:hover { border-color: var(--teal); color: var(--teal); }
+.portal-pill[aria-pressed='true'] {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgb(var(--theme-primary-rgb) / 0.08);
+}
 
 .portal-week { display: grid; gap: 10px; }
 .portal-week__day {

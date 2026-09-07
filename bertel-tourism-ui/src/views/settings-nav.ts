@@ -13,6 +13,7 @@ import {
   FlaskConical,
   KeyRound,
   ListChecks,
+  Mail,
   MapPin,
   Palette,
   ShieldCheck,
@@ -27,8 +28,16 @@ export interface SettingsNavSection {
   label: string;
   /** Icône lucide affichée dans le rail (fidélité maquette p7-01). */
   icon?: LucideIcon;
-  /** Marqueur « Nouveau » optionnel (badge--ok) sur l'item de rail. */
-  isNew?: boolean;
+  /** Date d’introduction (ISO) : « Nouveau » expire 14 jours après cette date. */
+  introducedAt?: string;
+}
+
+export const SETTINGS_NEW_BADGE_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** La fenêtre commence à l’introduction et exclut son instant de fin. */
+export function isSettingsSectionNew(section: Pick<SettingsNavSection, 'introducedAt'>, now: number): boolean {
+  const introducedAt = section.introducedAt ? Date.parse(section.introducedAt) : NaN;
+  return Number.isFinite(introducedAt) && now >= introducedAt && now < introducedAt + SETTINGS_NEW_BADGE_DURATION_MS;
 }
 
 /** Périmètre du groupe : « tout le monde » (non gated) ou un badge de rôle requis (gated). */
@@ -68,11 +77,11 @@ const ACCOUNT_GROUP: SettingsNavGroup = {
 function buildOrgGroup(options: SettingsNavOptions): SettingsNavGroup | null {
   const sections: SettingsNavSection[] = [];
   if (options.canManageTeam) sections.push({ id: 'team', label: 'Équipe', icon: Users });
-  if (options.canManageOrgBranding) sections.push({ id: 'org-branding', label: 'Apparence de l’organisation', icon: Brush, isNew: true });
+  if (options.canManageOrgBranding) sections.push({ id: 'org-branding', label: 'Apparence de l’organisation', icon: Brush });
   // Task 19 — la matrice du portail acteurs. MÊME seuil que le branding (rang ≥ 30), et le
   // même que celui d'api.rpc_set_actor_section_visibility : proposer la section plus bas
   // offrirait un écran dont chaque bascule échouerait en 42501.
-  if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Portail acteurs', icon: KeyRound, isNew: true });
+  if (options.canManageActorPortal) sections.push({ id: 'actor-portal', label: 'Portail acteurs', icon: KeyRound, introducedAt: '2026-09-04T00:00:00Z' });
   if (sections.length === 0) return null;
   return { id: 'org', label: 'Mon organisation', scope: { label: 'admin ORG', gated: true }, sections };
 }
@@ -84,11 +93,12 @@ const PLATFORM_GROUP: SettingsNavGroup = {
   sections: [
     { id: 'appearance', label: 'Apparence', icon: Palette },
     { id: 'markers', label: 'Marqueurs', icon: MapPin },
-    { id: 'referentiels', label: 'Listes & référentiels', icon: ListChecks, isNew: true },
+    { id: 'referentiels', label: 'Listes & référentiels', icon: ListChecks },
+    { id: 'smtp', label: 'E-mails & SMTP', icon: Mail, introducedAt: '2026-09-06T00:00:00Z' },
     { id: 'ai', label: 'Fournisseurs IA', icon: Bot },
-    { id: 'partner-keys', label: 'Clés API partenaire', icon: KeyRound, isNew: true },
-    { id: 'organisations', label: 'Organisations', icon: Building2, isNew: true },
-    { id: 'test-corpus', label: 'Corpus de test', icon: FlaskConical, isNew: true },
+    { id: 'partner-keys', label: 'Clés API partenaire', icon: KeyRound },
+    { id: 'organisations', label: 'Organisations', icon: Building2 },
+    { id: 'test-corpus', label: 'Corpus de test', icon: FlaskConical, introducedAt: '2026-09-04T00:00:00Z' },
     { id: 'diagnostic', label: 'Diagnostic', icon: Activity },
   ],
 };

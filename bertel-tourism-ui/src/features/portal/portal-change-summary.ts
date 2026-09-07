@@ -10,10 +10,13 @@
  * une ligne par champ — et RIEN d'autre : `section`, `rpc`, `manual_apply` et `payload`
  * restent byte-identiques, ce sont les seules que le serveur valide et rejoue.
  *
- * Même plafond de 4000 caractères que l'enveloppe d'origine.
+ * Plafond de 4000 caractères, sauf pour les descriptions : le report manuel par
+ * l'office exige le texte intégral de chaque langue. `pending_change.metadata` est
+ * du jsonb sans plafond de texte et `list_pending_changes` restitue ces valeurs entières.
  */
 import { OPENING_WEEKDAYS } from '../object-editor/sections/opening-period-edit';
 import { readTranslatableField } from '../object-editor/sections/descriptions-field';
+import { resolveLanguageLabel } from '../object-editor/sections/spoken-languages';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { readStayOpening, readWeekHours } from './portal-bindings';
@@ -66,19 +69,28 @@ function projectContacts(draft: ObjectWorkspaceModules): string[] {
 
 // ──────────────────────────────── descriptions ──────────────────────────────
 
-function frField(draft: ObjectWorkspaceModules, field: 'chapo' | 'description'): string {
+function descriptionField(draft: ObjectWorkspaceModules, field: 'chapo' | 'description', language: string): string {
   const object = slice(draft, 'descriptions').object as Loose | undefined;
   const value = object?.[field];
   if (!value || typeof value !== 'object') return '';
-  return readTranslatableField(value as never, 'fr', 'fr') ?? '';
+  return readTranslatableField(value as never, language, 'fr') ?? '';
 }
 
-function projectDescriptions(draft: ObjectWorkspaceModules): string[] {
+function descriptionLanguages(draft: ObjectWorkspaceModules): string[] {
+  const object = slice(draft, 'descriptions').object as Loose | undefined;
+  const keys = (field: string) => Object.keys((object?.[field] as { values?: Loose } | undefined)?.values ?? {});
+  return Array.from(new Set(['fr', ...keys('chapo'), ...keys('description')]));
+}
+
+function projectDescriptions(draft: ObjectWorkspaceModules, languages: string[]): string[] {
   const lines: string[] = [];
-  const chapo = frField(draft, 'chapo').trim();
-  const description = frField(draft, 'description').trim();
-  if (chapo) lines.push(`Accroche : ${chapo}`);
-  if (description) lines.push(`Présentation : ${description}`);
+  for (const language of languages) {
+    const chapo = descriptionField(draft, 'chapo', language).trim();
+    const description = descriptionField(draft, 'description', language).trim();
+    const suffix = language === 'fr' ? '' : ` (${resolveLanguageLabel(language, [])})`;
+    if (chapo) lines.push(`Accroche${suffix} : ${chapo}`);
+    if (description) lines.push(`Présentation${suffix} : ${description}`);
+  }
   return lines;
 }
 
@@ -203,7 +215,6 @@ type Projection = (draft: ObjectWorkspaceModules, archetype: ArchetypeCode) => s
 
 const PROJECTIONS: Partial<Record<WorkspaceModuleId, Projection>> = {
   contacts: projectContacts,
-  descriptions: projectDescriptions,
   // Le MÊME module, deux lectures : un gîte parle de saison et de fermetures, un
   // restaurant d'heures d'ouverture. C'est la saisie qui change, pas le modèle.
   openings: (draft, archetype) => (archetype === 'HEB' ? projectStayOpening(draft) : projectWeekHours(draft)),
@@ -233,6 +244,18 @@ export function describePortalChange(
   draft: ObjectWorkspaceModules,
   archetype: ArchetypeCode,
 ): { field: string; before: string; after: string } {
+  if (module === 'descriptions') {
+    // Montrer d'abord les langues modifiées et garder leur texte intégral : le modérateur
+    // recopie ces descriptions à la main, y compris plusieurs traductions de 2000 caractères.
+    // Le plafond de l'enveloppe contributeur est uniquement un choix d'affichage client,
+    // pas une limite de submit_actor_fiche / list_pending_changes (migration_actor_portal.sql).
+    const languages = Array.from(new Set([...descriptionLanguages(baseline), ...descriptionLanguages(draft)]));
+    const changed = (language: string) => (['chapo', 'description'] as const).some((field) =>
+      descriptionField(baseline, field, language) !== descriptionField(draft, field, language));
+    const ordered = [...languages.filter(changed), ...languages.filter((language) => !changed(language))];
+    const render = (source: ObjectWorkspaceModules) => projectDescriptions(source, ordered).join('\n');
+    return { field: titleFor(module, archetype), before: render(baseline), after: render(draft) };
+  }
   const project = PROJECTIONS[module];
   const render = (source: ObjectWorkspaceModules) => (project ? project(source, archetype).join('\n').slice(0, MAX_CHARS) : '');
   return { field: titleFor(module, archetype), before: render(baseline), after: render(draft) };

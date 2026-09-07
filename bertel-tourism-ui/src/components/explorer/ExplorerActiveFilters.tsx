@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type {
   AccessibilityDisabilityTypeCode,
   ExplorerBucketKey,
@@ -10,10 +11,13 @@ import type {
 } from '../../types/domain';
 import { DEFAULT_EXPLORER_FILTERS } from '../../utils/facets';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useSessionStore } from '../../store/session-store';
+import { canCreateLists } from '../../store/session-selectors';
 import { buildSearchParams } from '../../lib/explorer-search-params';
-import { buildDynamicListFilters, createDynamicList } from '../../services/lists';
+import { buildDynamicListFilters, createDynamicList, listsQueryKeys } from '../../services/lists';
 import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chips';
 import { cn } from '@/lib/utils';
+import { queryClient } from '@/app/query-client';
 import { ExplorerBridgeButton } from '../dashboard/ExplorerBridgeButton';
 
 /**
@@ -63,6 +67,11 @@ export function ExplorerActiveFilters({
   const resetAll = useStore((s) => s.resetAll);
   const router = useRouter();
   const [savingDynamic, setSavingDynamic] = useState(false);
+  const orgId = useSessionStore((s) => s.orgId);
+  const userId = useSessionStore((s) => s.userId);
+  // Listes 2026-09-07 règle 1 — ouvert à tout membre connecté d'une organisation ; sans
+  // organisation active, l'action est indisponible plutôt que d'échouer après coup.
+  const canCreateDynamicList = useSessionStore(canCreateLists);
 
   const filters: ExplorerFilters = { ...DEFAULT_EXPLORER_FILTERS, common, selectedBuckets, hot, res, iti, vis, srv, evt };
   const chips = buildExplorerActiveChips(filters);
@@ -75,7 +84,7 @@ export function ExplorerActiveFilters({
   // On snapshot l'état COMPLET du store (facettes par bucket incluses, absentes de `filters` ci-dessus)
   // pour bâtir le payload de résolution, dans la même forme que le moteur DB.
   const saveDynamic = async () => {
-    if (savingDynamic) return;
+    if (savingDynamic || !canCreateDynamicList) return;
     const snapshot = useStore.getState() as unknown as ExplorerFilters;
     const payload = buildDynamicListFilters(snapshot);
     if (payload.buckets.length === 0) return;
@@ -84,7 +93,10 @@ export function ExplorerActiveFilters({
       const url = `/explorer?${buildSearchParams(snapshot).toString()}`;
       const name = `Liste dynamique · ${chips.length} filtre${chips.length > 1 ? 's' : ''}`;
       const id = await createDynamicList(name, payload, url);
+      void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(orgId, userId) });
       router.push(`/listes/${id}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Création de la liste dynamique impossible.');
     } finally {
       setSavingDynamic(false);
     }
@@ -252,7 +264,7 @@ export function ExplorerActiveFilters({
           {chip.label} ✕
         </button>
       ))}
-      {chips.length > 0 && (
+      {chips.length > 0 && canCreateDynamicList && (
         <button
           type="button"
           className="ghost-button active-filter-strip__reset"

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { AiProviderSettings } from './AiProviderSettings';
 
 jest.mock('sonner', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
-jest.mock('../../lib/supabase', () => ({ getSupabaseClient: () => null }));
+jest.mock('../../lib/supabase', () => ({ getSupabaseClient: jest.fn(() => null) }));
 jest.mock('../../services/ai-provider', () => ({
   listAiProviders: jest.fn(),
   upsertAiProvider: jest.fn(async () => 'id'),
@@ -11,7 +11,8 @@ jest.mock('../../services/ai-provider', () => ({
   testAiConnection: jest.fn(async () => ({ ok: true, detail: 'ok' })),
 }));
 
-import { listAiProviders, upsertAiProvider, setActiveAiProvider, deleteAiProvider } from '../../services/ai-provider';
+import { listAiProviders, upsertAiProvider, setActiveAiProvider, deleteAiProvider, testAiConnection } from '../../services/ai-provider';
+import { getSupabaseClient } from '../../lib/supabase';
 import { toast } from 'sonner';
 
 const PROVIDERS = [
@@ -21,10 +22,39 @@ const PROVIDERS = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (getSupabaseClient as jest.Mock).mockReturnValue(null);
   (listAiProviders as jest.Mock).mockResolvedValue(PROVIDERS);
 });
 
 describe('AiProviderSettings', () => {
+  it('shows a recoverable load error without claiming there are no providers', async () => {
+    (listAiProviders as jest.Mock).mockRejectedValueOnce(new Error('Connexion indisponible'));
+    render(<AiProviderSettings />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Connexion indisponible');
+    expect(screen.queryByText('Aucun fournisseur configuré')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Réessayer' }));
+    expect(await screen.findByText('OpenRouter')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+  });
+
+  it('disables the connection test without an active saved provider', async () => {
+    (listAiProviders as jest.Mock).mockResolvedValue([PROVIDERS[1]]);
+    render(<AiProviderSettings />);
+    await screen.findByText('Ollama local');
+    expect(screen.getByRole('button', { name: 'Tester la connexion' })).toBeDisabled();
+  });
+
+  it('reports connection failures and lets the user retry', async () => {
+    (getSupabaseClient as jest.Mock).mockReturnValue({ auth: { getSession: async () => ({ data: { session: { access_token: 'session-token' } } }) } });
+    (testAiConnection as jest.Mock).mockRejectedValueOnce(new Error('Service IA indisponible'));
+    render(<AiProviderSettings />);
+    await screen.findByText('OpenRouter');
+    fireEvent.click(screen.getByRole('button', { name: 'Tester la connexion' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Service IA indisponible'));
+    expect(screen.getByRole('button', { name: 'Tester la connexion' })).toBeEnabled();
+  });
+
   it('lists configured providers with their active state and key badge', async () => {
     render(<AiProviderSettings />);
     expect(await screen.findByText('OpenRouter')).toBeInTheDocument();

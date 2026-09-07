@@ -243,6 +243,18 @@ describe('editor publication validation', () => {
     expect(result.warnings.some((w) => /traduction complète/.test(w.message))).toBe(false);
   });
 
+  it('does not mistake French base text for a translation matching the account preference', () => {
+    const draft = fullModulesFixture();
+    draft.descriptions.localLanguage = 'en';
+    draft.descriptions.object.chapo = { baseValue: 'Accroche française', values: {} };
+    draft.descriptions.object.description = { baseValue: 'Présentation française', values: {} };
+    draft.characteristics.selectedLanguages = [
+      { languageId: 'en', code: 'en', label: 'Anglais', levelId: '', levelCode: '', levelLabel: '' },
+    ];
+    const result = validateForPublication(draft, allowAll, 'HEB');
+    expect(result.warnings).toContainEqual({ section: '04', message: expect.stringContaining('Anglais'), tone: 'warn' });
+  });
+
   it('does not warn about spoken languages when the characteristics module is degraded', () => {
     const draft = fullModulesFixture();
     draft.characteristics.unavailableReason = 'Module dégradé';

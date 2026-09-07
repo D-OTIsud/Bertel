@@ -72,6 +72,7 @@ function baseDetail(overrides: Partial<ObjectListDetail> = {}): ObjectListDetail
     accent: 'teal',
     lang: 'fr',
     coverUrl: null,
+    effectiveCoverUrl: null,
     showMap: false,
     status: 'draft',
     filters: null,
@@ -82,6 +83,20 @@ function baseDetail(overrides: Partial<ObjectListDetail> = {}): ObjectListDetail
     updatedAt: null,
     resolvedFrom: 'items',
     items: [],
+    // Ces tests couvrent le flux ÉDITEUR (MET-02/A11Y) — canEdit doit rester vrai, sans quoi
+    // le nouveau garde-fou lecture-seule (§listes 2026-09-07) désactiverait les champs testés.
+    createdBy: 'user-1',
+    creatorName: null,
+    orgObjectId: 'ORG1',
+    lastActivityAt: null,
+    isArchived: false,
+    isFeatured: false,
+    featureRequestedAt: null,
+    canEdit: true,
+    canManageFeature: false,
+    canProposeFeature: false,
+    canRestore: false,
+    canManageSharing: true,
     ...overrides,
   };
 }

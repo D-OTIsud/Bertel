@@ -600,6 +600,9 @@ ROLLBACK;
 \ir ../supabase/migrations/20260906034134_task_notification_creator_sender.sql
 \ir tests/test_task_notification_creator_sender.sql
 
+\echo '== 19d-legacy-test contrat Listes 17k/17l avant son remplacement (brouillons internes et lecture par ORG historiques) =='
+\ir tests/test_object_list.sql
+
 \echo '== 19d listes personnelles, une organisationnelle et retention (remplace les regles historiques 17k/17l apres leurs fixtures) =='
 \ir ../supabase/migrations/20260907044528_listes_personnelles_une_cycle_vie.sql
 \ir tests/test_listes_cycle_vie.sql

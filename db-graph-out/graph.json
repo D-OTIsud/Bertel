@@ -1,12 +1,12 @@
 {
  "meta": {
-  "table_count": 371,
+  "table_count": 372,
   "view_count": 13,
-  "function_count": 476,
+  "function_count": 479,
   "policy_count": 567,
-  "trigger_count": 565,
+  "trigger_count": 566,
   "enum_count": 9,
-  "edge_count": 3811
+  "edge_count": 3831
  },
  "nodes": [
   {
@@ -42828,6 +42828,19 @@
    }
   },
   {
+   "id": "trigger:public.object_list:trg_object_list_remove_feature_notifications",
+   "kind": "trigger",
+   "label": "trg_object_list_remove_feature_notifications",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_list",
+    "timing": null,
+    "events": []
+   }
+  },
+  {
    "id": "trigger:public.object_list:trg_object_list_touch",
    "kind": "trigger",
    "label": "trg_object_list_touch",
@@ -42853,7 +42866,7 @@
       "name": "id",
       "type": "boolean",
       "nullable": false,
-      "pk": true
+      "pk": false
      },
      {
       "name": "enabled",
@@ -42923,6 +42936,91 @@
      }
     ],
     "rls_enabled": false
+   }
+  },
+  {
+   "id": "public.app_notification",
+   "kind": "table",
+   "label": "app_notification",
+   "schema": "public",
+   "domain": "other",
+   "doc": "Notifications applicatives persistantes (16w). `recipient_id` EST la frontière de sécurité : aucune décision d'autorisation ne se lit dans `payload`. `payload` ne contient JAMAIS de nom de personne — tout libellé est joint à la lecture depuis app_user_profile, pour rester dans la portée de l'effacement RGPD (§C). Aucun accès PostgREST direct ni Realtime : RLS + REVOKE, lecture par RPC seulement.",
+   "props": {
+    "columns": [
+     {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": true
+     },
+     {
+      "name": "recipient_id",
+      "type": "uuid",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "kind",
+      "type": "text",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "task_id",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_by",
+      "type": "uuid",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "created_at",
+      "type": "timestamp with time zone",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "read_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "payload",
+      "type": "jsonb",
+      "nullable": false,
+      "pk": false
+     },
+     {
+      "name": "email_claimed_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "email_sent_at",
+      "type": "timestamp with time zone",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "email_error",
+      "type": "text",
+      "nullable": true,
+      "pk": false
+     },
+     {
+      "name": "email_attempts",
+      "type": "integer",
+      "nullable": false,
+      "pk": false
+     }
+    ],
+    "rls_enabled": true
    }
   },
   {
@@ -51168,31 +51266,6 @@
    }
   },
   {
-   "id": "api.list_my_lists()",
-   "kind": "function",
-   "label": "list_my_lists",
-   "schema": "api",
-   "domain": "api",
-   "doc": "6.1 Grille « Mes listes »",
-   "props": {
-    "signature": "list_my_lists()",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_object_list.sql",
-      "line": 231
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_object_list.sql",
-     "line": 231
-    }
-   }
-  },
-  {
    "id": "api.i18n_get_text_strict(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)",
    "kind": "function",
    "label": "i18n_get_text_strict",
@@ -53286,31 +53359,6 @@
    }
   },
   {
-   "id": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "kind": "function",
-   "label": "list_my_notifications",
-   "schema": "api",
-   "domain": "api",
-   "doc": "Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide.",
-   "props": {
-    "signature": "list_my_notifications(p_limit integer DEFAULT 50)",
-    "returns": "jsonb",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false,
-    "sources": [
-     {
-      "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
-      "line": 729
-     }
-    ],
-    "source": {
-     "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
-     "line": 729
-    }
-   }
-  },
-  {
    "id": "public.seed_org_role_permission()",
    "kind": "function",
    "label": "seed_org_role_permission",
@@ -54060,81 +54108,6 @@
    }
   },
   {
-   "id": "api.list_featured_lists()",
-   "kind": "function",
-   "label": "list_featured_lists",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "list_featured_lists()",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.list_list_proposals()",
-   "kind": "function",
-   "label": "list_list_proposals",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "list_list_proposals()",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "s",
-    "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.request_list_feature(p_list_id uuid)",
-   "kind": "function",
-   "label": "request_list_feature",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "request_list_feature(p_list_id uuid)",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
-   "kind": "function",
-   "label": "review_list_feature",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "review_list_feature(p_list_id uuid, p_accept boolean)",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false
-   }
-  },
-  {
-   "id": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
-   "kind": "function",
-   "label": "set_list_featured",
-   "schema": "api",
-   "domain": "api",
-   "doc": null,
-   "props": {
-    "signature": "set_list_featured(p_list_id uuid, p_featured boolean)",
-    "returns": "json",
-    "security_definer": true,
-    "volatility": "v",
-    "dynamic_sql": false
-   }
-  },
-  {
    "id": "api.duplicate_list(p_list_id uuid)",
    "kind": "function",
    "label": "duplicate_list",
@@ -54244,6 +54217,176 @@
    "props": {
     "signature": "get_smtp_config_secret()",
     "returns": "TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.list_featured_lists()",
+   "kind": "function",
+   "label": "list_featured_lists",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_featured_lists()",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.list_list_proposals()",
+   "kind": "function",
+   "label": "list_list_proposals",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "list_list_proposals()",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.list_my_lists()",
+   "kind": "function",
+   "label": "list_my_lists",
+   "schema": "api",
+   "domain": "api",
+   "doc": "6.1 Grille « Mes listes »",
+   "props": {
+    "signature": "list_my_lists()",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_object_list.sql",
+      "line": 231
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_object_list.sql",
+     "line": 231
+    }
+   }
+  },
+  {
+   "id": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "kind": "function",
+   "label": "list_my_notifications",
+   "schema": "api",
+   "domain": "api",
+   "doc": "Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide.",
+   "props": {
+    "signature": "list_my_notifications(p_limit integer DEFAULT 50)",
+    "returns": "jsonb",
+    "security_definer": true,
+    "volatility": "s",
+    "dynamic_sql": false,
+    "sources": [
+     {
+      "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
+      "line": 729
+     }
+    ],
+    "source": {
+     "path": "Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql",
+     "line": 729
+    }
+   }
+  },
+  {
+   "id": "api.request_list_feature(p_list_id uuid)",
+   "kind": "function",
+   "label": "request_list_feature",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "request_list_feature(p_list_id uuid)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "kind": "function",
+   "label": "review_list_feature",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "review_list_feature(p_list_id uuid, p_accept boolean)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "kind": "function",
+   "label": "set_list_featured",
+   "schema": "api",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "set_list_featured(p_list_id uuid, p_featured boolean)",
+    "returns": "json",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.backfill_list_feature_notifications()",
+   "kind": "function",
+   "label": "backfill_list_feature_notifications",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "backfill_list_feature_notifications()",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "kind": "function",
+   "label": "notify_list_feature_reviewers",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "notify_list_feature_reviewers(p_list_id uuid)",
+    "returns": "integer",
+    "security_definer": true,
+    "volatility": "v",
+    "dynamic_sql": false
+   }
+  },
+  {
+   "id": "internal.tg_remove_list_feature_notifications()",
+   "kind": "function",
+   "label": "tg_remove_list_feature_notifications",
+   "schema": "internal",
+   "domain": "api",
+   "doc": null,
+   "props": {
+    "signature": "tg_remove_list_feature_notifications()",
+    "returns": "trigger",
     "security_definer": true,
     "volatility": "v",
     "dynamic_sql": false
@@ -55331,22 +55474,6 @@
      "public"
     ],
     "predicate": "api.user_can_read_list(list_id)"
-   }
-  },
-  {
-   "id": "policy:public.object_list:read_object_list",
-   "kind": "policy",
-   "label": "read_object_list",
-   "schema": "public",
-   "domain": "object-core",
-   "doc": null,
-   "props": {
-    "table": "public.object_list",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "api.user_can_read_list(id)"
    }
   },
   {
@@ -61982,70 +62109,6 @@
    }
   },
   {
-   "id": "policy:public.app_notification:admin_del_app_notification",
-   "kind": "policy",
-   "label": "admin_del_app_notification",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.app_notification",
-    "cmd": "DELETE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
-   }
-  },
-  {
-   "id": "policy:public.app_notification:admin_ins_app_notification",
-   "kind": "policy",
-   "label": "admin_ins_app_notification",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.app_notification",
-    "cmd": "INSERT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
-   }
-  },
-  {
-   "id": "policy:public.app_notification:admin_read_app_notification",
-   "kind": "policy",
-   "label": "admin_read_app_notification",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.app_notification",
-    "cmd": "SELECT",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
-   }
-  },
-  {
-   "id": "policy:public.app_notification:admin_upd_app_notification",
-   "kind": "policy",
-   "label": "admin_upd_app_notification",
-   "schema": "public",
-   "domain": "other",
-   "doc": null,
-   "props": {
-    "table": "public.app_notification",
-    "cmd": "UPDATE",
-    "roles": [
-     "public"
-    ],
-    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
-   }
-  },
-  {
    "id": "policy:audit.audit_log_2026_07:Insertion via triggers",
    "kind": "policy",
    "label": "Insertion via triggers",
@@ -63486,6 +63549,86 @@
    }
   },
   {
+   "id": "policy:public.app_notification:admin_del_app_notification",
+   "kind": "policy",
+   "label": "admin_del_app_notification",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.app_notification",
+    "cmd": "DELETE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:public.app_notification:admin_ins_app_notification",
+   "kind": "policy",
+   "label": "admin_ins_app_notification",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.app_notification",
+    "cmd": "INSERT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:public.app_notification:admin_read_app_notification",
+   "kind": "policy",
+   "label": "admin_read_app_notification",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.app_notification",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:public.app_notification:admin_upd_app_notification",
+   "kind": "policy",
+   "label": "admin_upd_app_notification",
+   "schema": "public",
+   "domain": "other",
+   "doc": null,
+   "props": {
+    "table": "public.app_notification",
+    "cmd": "UPDATE",
+    "roles": [
+     "public"
+    ],
+    "predicate": "(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))"
+   }
+  },
+  {
+   "id": "policy:public.object_list:read_object_list",
+   "kind": "policy",
+   "label": "read_object_list",
+   "schema": "public",
+   "domain": "object-core",
+   "doc": null,
+   "props": {
+    "table": "public.object_list",
+    "cmd": "SELECT",
+    "roles": [
+     "public"
+    ],
+    "predicate": "api.user_can_read_list(id)"
+   }
+  },
+  {
    "id": "public.object_type",
    "kind": "enum",
    "label": "object_type",
@@ -63695,19 +63838,6 @@
    "label": "ref_catalog_registry",
    "schema": "public",
    "domain": "ref-lookups",
-   "doc": "(outside tbls scope — stub carrying RLS policies)",
-   "props": {
-    "columns": [],
-    "rls_enabled": true,
-    "external": true
-   }
-  },
-  {
-   "id": "public.app_notification",
-   "kind": "table",
-   "label": "app_notification",
-   "schema": "public",
-   "domain": "other",
    "doc": "(outside tbls scope — stub carrying RLS policies)",
    "props": {
     "columns": [],
@@ -70264,6 +70394,18 @@
   {
    "source": "trigger:public.object_hotel_positioning:trg_validate_object_hotel_positioning",
    "target": "api.validate_object_hotel_positioning()",
+   "kind": "executes",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_list:trg_object_list_remove_feature_notifications",
+   "target": "public.object_list",
+   "kind": "trigger_on",
+   "props": {}
+  },
+  {
+   "source": "trigger:public.object_list:trg_object_list_remove_feature_notifications",
+   "target": "internal.tg_remove_list_feature_notifications()",
    "kind": "executes",
    "props": {}
   },
@@ -81311,6 +81453,45 @@
    }
   },
   {
+   "source": "public.app_notification",
+   "target": "auth.users",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "created_by",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.app_notification",
+   "target": "auth.users",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "recipient_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
+   "source": "public.app_notification",
+   "target": "public.crm_task",
+   "kind": "fk",
+   "props": {
+    "columns": [
+     [
+      "task_id",
+      "id"
+     ]
+    ]
+   }
+  },
+  {
    "source": "policy:public.ref_code_mood:admin_ref_code_write",
    "target": "public.ref_code",
    "kind": "gates",
@@ -81735,12 +81916,6 @@
   {
    "source": "policy:public.object_list_item:read_object_list_item",
    "target": "public.object_list_item",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.object_list:read_object_list",
-   "target": "public.object_list",
    "kind": "gates",
    "props": {}
   },
@@ -84407,30 +84582,6 @@
    "props": {}
   },
   {
-   "source": "policy:public.app_notification:admin_del_app_notification",
-   "target": "public.app_notification",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_notification:admin_ins_app_notification",
-   "target": "public.app_notification",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_notification:admin_read_app_notification",
-   "target": "public.app_notification",
-   "kind": "gates",
-   "props": {}
-  },
-  {
-   "source": "policy:public.app_notification:admin_upd_app_notification",
-   "target": "public.app_notification",
-   "kind": "gates",
-   "props": {}
-  },
-  {
    "source": "policy:audit.audit_log_2026_07:Insertion via triggers",
    "target": "audit.audit_log",
    "kind": "gates",
@@ -84991,6 +85142,36 @@
    "props": {
     "via_partition": "public.ref_code_service_type"
    }
+  },
+  {
+   "source": "policy:public.app_notification:admin_del_app_notification",
+   "target": "public.app_notification",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_notification:admin_ins_app_notification",
+   "target": "public.app_notification",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_notification:admin_read_app_notification",
+   "target": "public.app_notification",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.app_notification:admin_upd_app_notification",
+   "target": "public.app_notification",
+   "kind": "gates",
+   "props": {}
+  },
+  {
+   "source": "policy:public.object_list:read_object_list",
+   "target": "public.object_list",
+   "kind": "gates",
+   "props": {}
   },
   {
    "source": "internal.mv_filtered_objects",
@@ -96389,30 +96570,6 @@
    }
   },
   {
-   "source": "api.list_my_lists()",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_lists()",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
    "source": "api.i18n_get_text_strict(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT 'fr'::text, p_fallback_lang text DEFAULT 'fr'::text)",
    "target": "public.i18n_translation",
    "kind": "reads",
@@ -99881,54 +100038,6 @@
    }
   },
   {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.app_notification",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM app_notification"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.crm_task",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN crm_task"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.object",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN object"
-    }
-   }
-  },
-  {
-   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
    "source": "public.seed_org_role_permission()",
    "target": "public.ref_org_business_role",
    "kind": "reads",
@@ -101249,126 +101358,6 @@
    }
   },
   {
-   "source": "api.list_featured_lists()",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.list_featured_lists()",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.list_list_proposals()",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.list_list_proposals()",
-   "target": "public.app_user_profile",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "JOIN app_user_profile"
-    }
-   }
-  },
-  {
-   "source": "api.request_list_feature(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.request_list_feature(p_list_id uuid)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE object_list"
-    }
-   }
-  },
-  {
-   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE object_list"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
-   "target": "public.object_list",
-   "kind": "reads",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "FROM object_list"
-    }
-   }
-  },
-  {
-   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
-   "target": "public.object_list",
-   "kind": "writes",
-   "props": {
-    "inference": {
-     "method": "regex",
-     "confidence": "high",
-     "evidence": "UPDATE object_list"
-    }
-   }
-  },
-  {
    "source": "api.duplicate_list(p_list_id uuid)",
    "target": "public.object_list",
    "kind": "reads",
@@ -101569,6 +101558,378 @@
      "method": "regex",
      "confidence": "high",
      "evidence": "JOIN vault.decrypted_secrets"
+    }
+   }
+  },
+  {
+   "source": "api.list_featured_lists()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_featured_lists()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_list_proposals()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_list_proposals()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_lists()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_lists()",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.crm_task",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.crm_task"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.object",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.object"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "api.list_my_notifications(p_limit integer DEFAULT 50)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_list"
+    }
+   }
+  },
+  {
+   "source": "api.request_list_feature(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.request_list_feature(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.review_list_feature(p_list_id uuid, p_accept boolean)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.object_list",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "UPDATE object_list"
+    }
+   }
+  },
+  {
+   "source": "api.set_list_featured(p_list_id uuid, p_featured boolean)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.backfill_list_feature_notifications()",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.object_list",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM object_list"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "auth.users",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM auth.users"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.user_org_membership",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.user_org_membership"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.user_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.user_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.ref_org_admin_role",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "JOIN public.ref_org_admin_role"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.app_user_profile",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_user_profile"
+    }
+   }
+  },
+  {
+   "source": "internal.notify_list_feature_reviewers(p_list_id uuid)",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "INSERT INTO public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.tg_remove_list_feature_notifications()",
+   "target": "public.app_notification",
+   "kind": "reads",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "FROM public.app_notification"
+    }
+   }
+  },
+  {
+   "source": "internal.tg_remove_list_feature_notifications()",
+   "target": "public.app_notification",
+   "kind": "writes",
+   "props": {
+    "inference": {
+     "method": "regex",
+     "confidence": "high",
+     "evidence": "DELETE FROM public.app_notification"
     }
    }
   },

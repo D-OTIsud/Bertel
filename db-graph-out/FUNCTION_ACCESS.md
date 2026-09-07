@@ -1169,7 +1169,7 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/list_my_notifications`
 - **object types served:** **all object types**
-- _Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide._
+- _Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide._
 
 ### `api.list_my_portal_fiches()` _(DEFINER)_
 - **returns:** `jsonb`
@@ -2361,6 +2361,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ## schema `internal`
 
+### `internal.backfill_list_feature_notifications()` _(DEFINER)_
+- **returns:** `integer`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.build_list_detail_json(p_list_id uuid)` _(DEFINER)_
 - **returns:** `json`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -2391,6 +2396,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.list_sender_authorized(p_list_id uuid, p_user_id uuid)` _(DEFINER)_
 - **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.notify_list_feature_reviewers(p_list_id uuid)` _(DEFINER)_
+- **returns:** `integer`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2507,6 +2517,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
 - _Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests._
+
+### `internal.tg_remove_list_feature_notifications()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
 
 ### `internal.trail_expire_overrides()`
 - **returns:** `void`

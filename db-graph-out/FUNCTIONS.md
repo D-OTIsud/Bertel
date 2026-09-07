@@ -1954,8 +1954,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.app_user_profile` _(high)_
 - reads `public.crm_task` _(high)_
 - reads `public.object` _(high)_
+- reads `public.object_list` _(high)_
 
-> Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Anon ⇒ boîte vide.
+> Boîte de réception de l'appelant UNIQUEMENT (recipient_id = auth.uid(), jamais un paramètre). Renvoie {items[], unread_count}. Les propositions de listes sont rendues seulement aux reviewers encore éligibles dans leur ORG active (ou superuser) et tant qu'elles sont pending/non archivées. Anon ⇒ boîte vide.
 
 ## `api.list_my_portal_fiches()`
 - returns: `jsonb` — SECURITY DEFINER
@@ -2486,7 +2487,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.review_list_feature(p_list_id uuid, p_accept boolean)`
 - returns: `json` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
 - reads `public.object_list` _(high)_
+- writes `public.app_notification` _(high)_
 - writes `public.object_list` _(high)_
 
 ## `api.rollback_staging_batch_compensate(p_batch_id text, p_force boolean DEFAULT false)`
@@ -3112,7 +3115,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.set_list_featured(p_list_id uuid, p_featured boolean)`
 - returns: `json` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
 - reads `public.object_list` _(high)_
+- writes `public.app_notification` _(high)_
 - writes `public.object_list` _(high)_
 
 ## `api.set_list_items(p_list_id uuid, p_items jsonb)`
@@ -3589,6 +3594,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
 > ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
 
+## `internal.backfill_list_feature_notifications()`
+- returns: `integer` — SECURITY DEFINER
+- reads `public.object_list` _(high)_
+
 ## `internal.build_list_detail_json(p_list_id uuid)`
 - returns: `json` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
@@ -3642,6 +3651,16 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.app_user_profile` _(high)_
 - reads `public.object_list` _(high)_
+
+## `internal.notify_list_feature_reviewers(p_list_id uuid)`
+- returns: `integer` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object_list` _(high)_
+- reads `public.ref_org_admin_role` _(high)_
+- reads `public.user_org_admin_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- writes `public.app_notification` _(high)_
 
 ## `internal.org_admin_rank(p_user_id uuid, p_org_object_id text)`
 - returns: `integer` — SECURITY DEFINER
@@ -3857,6 +3876,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `text`
 
 > Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.
+
+## `internal.tg_remove_list_feature_notifications()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.app_notification` _(high)_
+- writes `public.app_notification` _(high)_
 
 ## `internal.trail_expire_overrides()`
 - returns: `void`

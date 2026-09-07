@@ -13,6 +13,7 @@ import { setPresentation, type PortalPresentationTranslations } from '../portal-
 import { readTranslatableField } from '../../object-editor/sections/descriptions-field';
 import { descLanguageTabs, resolveLanguageLabel } from '../../object-editor/sections/spoken-languages';
 import { AiTranslateButton } from '../../../components/ai/AiTranslateButton';
+import { useServiceAvailability } from '../../../hooks/useServiceAvailability';
 import type { PortalRubricFormProps } from './types';
 import type { ObjectWorkspaceDescriptionsModule } from '../../../services/object-workspace-parser';
 
@@ -29,6 +30,7 @@ interface PresentationForm {
 }
 
 export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
+  const { translation } = useServiceAvailability();
   const descriptions = editor.draft.descriptions as ObjectWorkspaceDescriptionsModule;
   const { form, setForm, dirty } = useRubricForm<PresentationForm>(formKey, () => ({
     chapo: readTranslatableField(descriptions.object.chapo, 'fr', 'fr') ?? '',
@@ -89,7 +91,7 @@ export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyC
         ))}
       </div>
       <p className="muted" aria-live="polite">Langue de saisie : {languageLabel}</p>
-      {language !== 'fr' ? (
+      {translation && language !== 'fr' ? (
         <AiTranslateButton
           objectId={editor.objectId}
           sourceLanguage="fr"
@@ -104,9 +106,9 @@ export function PresentationRubric({ editor, formKey, onDone, onCancel, onDirtyC
             ...(typeof translations.description === 'string' ? { description: translations.description } : {}),
           })}
         />
-      ) : (
+      ) : translation ? (
         <p className="muted">Choisissez une autre langue pour traduire vos textes en un clic avec l’IA.</p>
-      )}
+      ) : null}
       <PortalField
         id="portal-chapo"
         label="En une phrase"

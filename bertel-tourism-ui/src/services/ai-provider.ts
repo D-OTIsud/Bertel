@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { invalidateServiceAvailability } from './service-availability';
 
 /**
  * Super-admin client for the platform AI provider config (§06 carte extraction). Calls the
@@ -72,17 +73,20 @@ export async function upsertAiProvider(input: AiProviderInput): Promise<string> 
     p_api_key: input.apiKey && input.apiKey.trim() ? input.apiKey : null,
   });
   if (error) throw new Error(error.message);
+  invalidateServiceAvailability();
   return String(data);
 }
 
 export async function setActiveAiProvider(id: string): Promise<void> {
   const { error } = await client().rpc('set_active_ai_provider', { p_id: id });
   if (error) throw new Error(error.message);
+  invalidateServiceAvailability();
 }
 
 export async function deleteAiProvider(id: string): Promise<void> {
   const { error } = await client().rpc('delete_ai_provider', { p_id: id });
   if (error) throw new Error(error.message);
+  invalidateServiceAvailability();
 }
 
 /** Ask the server route to do a tiny round-trip against the ACTIVE provider (key stays server-side). */

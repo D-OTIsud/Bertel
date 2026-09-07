@@ -39,6 +39,7 @@ import { ACCENT_INK } from '@/features/lists/type-meta';
 import { useObjectSearch, type ObjectSearchResult } from '@/features/object-editor/useObjectSearch';
 import { useUnsavedDraftGuard } from '@/features/object-editor/useUnsavedDraftGuard';
 import { useSessionStore } from '@/store/session-store';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import {
   deleteList,
   duplicateList,
@@ -129,6 +130,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   const userAvatarUrl = useSessionStore((s) => s.avatarUrl);
   const userId = useSessionStore((s) => s.userId);
   const orgId = useSessionStore((s) => s.orgId);
+  const serviceAvailability = useServiceAvailability();
 
   // Clés PARTAGÉES avec ListsManageView (services/lists.ts:listsQueryKeys) — un changement de
   // session/organisation dans le même onglet (sans rechargement) ne doit jamais servir depuis le
@@ -199,6 +201,12 @@ export default function ListComposeView({ listId }: { listId: string }) {
   }, [items]);
 
   useEffect(() => setMounted(true), []);
+
+  // A configuration may disappear while this page stays open. The send control vanishes
+  // immediately; the service repeats the same fresh guard before it can POST.
+  useEffect(() => {
+    if (!serviceAvailability.email) setSending(false);
+  }, [serviceAvailability.email]);
 
   // Hydrate l'état d'édition à l'arrivée de la liste (ou au changement de liste) UNIQUEMENT :
   // re-hydrater à chaque refetch clobberait les notes/l'ordre non enregistrés (write-trap).
@@ -623,7 +631,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   }
 
   async function handleSend() {
-    if (actionLockRef.current || !detail) return;
+    if (actionLockRef.current || !detail || !serviceAvailability.email) return;
     const email = window.prompt('Adresse e-mail du destinataire :', '')?.trim();
     if (!email) return;
     actionLockRef.current = true;
@@ -809,15 +817,17 @@ export default function ListComposeView({ listId }: { listId: string }) {
             <Printer className="h-4 w-4" /> Imprimer
           </button>
           <ListComposeEmailsButton listId={detail.id} />
-          <button
-            type="button"
-            disabled={locked || !canUse}
-            onClick={() => void handleSend()}
-            title={canUse ? undefined : PROPOSAL_REVIEW_ONLY_TITLE}
-            className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5 disabled:opacity-40"
-          >
-            <Mail className="h-4 w-4" /> {sending ? 'Envoi…' : 'Envoyer'}
-          </button>
+          {serviceAvailability.email ? (
+            <button
+              type="button"
+              disabled={locked || !canUse}
+              onClick={() => void handleSend()}
+              title={canUse ? undefined : PROPOSAL_REVIEW_ONLY_TITLE}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold text-ink/80 hover:bg-ink/5 disabled:opacity-40"
+            >
+              <Mail className="h-4 w-4" /> {sending ? 'Envoi…' : 'Envoyer'}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={locked || !canUse || share.isPending || ensureShare.isPending || remove.isPending}

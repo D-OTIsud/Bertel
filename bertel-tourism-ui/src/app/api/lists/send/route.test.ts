@@ -10,6 +10,7 @@ jest.mock('@/lib/mail.server', () => ({
   sendListEmail: jest.fn(),
   MailNotConfiguredError: class extends Error {},
 }));
+jest.mock('@/lib/smtp-settings.server', () => ({ resolveSmtpConfig: jest.fn() }));
 jest.mock('@/emails/ListEmail', () => ({
   renderListEmailHtml: jest.fn(() => '<html></html>'),
   listEmailSubject: jest.fn(() => 'subject'),
@@ -22,10 +23,12 @@ jest.mock('@/features/lists/type-meta', () => ({
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { createClient } from '@supabase/supabase-js';
 import { sendListEmail } from '@/lib/mail.server';
+import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 
 const mockedServer = jest.mocked(getServerSupabaseClient);
 const mockedCreate = jest.mocked(createClient);
 const mockedSend = jest.mocked(sendListEmail);
+const mockedSmtp = jest.mocked(resolveSmtpConfig);
 
 function req(body: Record<string, unknown>): NextRequest {
   return new NextRequest('https://app.test/api/lists/send', {
@@ -86,6 +89,17 @@ describe('POST /api/lists/send — marquage après envoi SMTP accepté', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedSend.mockResolvedValue(undefined);
+    mockedSmtp.mockResolvedValue({ host: 'smtp', port: 587, secure: false, user: null, pass: null, fromName: 'Bertel', fromEmail: 'no-reply@x' });
+  });
+
+  it('SMTP absent : ni lien, ni e-mail, ni marquage', async () => {
+    mockedSmtp.mockResolvedValue(null);
+    const { rpc, serverRpc } = setup({ markError: null });
+    const res = await POST(req({ listId: 'list-1', toEmail: 'a@example.com' }) as never);
+    expect(res.status).toBe(503);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(serverRpc).not.toHaveBeenCalled();
+    expect(mockedSend).not.toHaveBeenCalled();
   });
 
   it('mark_list_sent renvoie une erreur => 200, trackingUpdated:false, un seul envoi SMTP', async () => {

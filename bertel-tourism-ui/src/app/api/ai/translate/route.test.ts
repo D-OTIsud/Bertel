@@ -119,6 +119,14 @@ describe('POST /api/ai/translate', () => {
     expect(mockedTranslate).not.toHaveBeenCalled();
   });
 
+  it('refuses an unsupported saved provider without contacting it', async () => {
+    providerRpc.mockReturnValueOnce({ abortSignal: jest.fn().mockResolvedValue({ data: [{ ...provider, api_kind: 'anthropic' }], error: null }) });
+    const result = await POST(req());
+    expect(result.status).toBe(503);
+    expect((await result.json()).error).toBe('not_configured');
+    expect(mockedTranslate).not.toHaveBeenCalled();
+  });
+
   it('does not expose secret-bearing configuration errors', async () => {
     providerRpc.mockReturnValueOnce({ abortSignal: jest.fn().mockRejectedValue(new Error('vault-secret')) });
     const result = await POST(req());

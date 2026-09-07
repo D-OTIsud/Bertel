@@ -17,7 +17,7 @@ jest.mock('@/emails/TaskAssignedEmail', () => {
 });
 
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { sendMail } from '@/lib/mail.server';
+import { MailNotConfiguredError, sendMail } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderTaskAssignedEmailHtml } from '@/emails/TaskAssignedEmail';
 
@@ -152,6 +152,16 @@ describe('POST /api/crm/notify-drain', () => {
     await expect(res.json()).resolves.toEqual({ sent: 1, failed: 1 });
     expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed',
       { p_sent: ['n-1'], p_failed: [{ id: 'n-2', error: 'smtp boom' }] });
+  });
+
+  it('SMTP retiré pendant le lot : n’acquitte pas ni ne compte les lignes restantes', async () => {
+    const rpc = jest.fn().mockResolvedValueOnce({ data: [row('n-1'), row('n-2')], error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedSend.mockRejectedValueOnce(new MailNotConfiguredError());
+    const res = await POST(req({ authorization: 'Bearer jwt' }));
+    await expect(res.json()).resolves.toEqual({ sent: 0, failed: 0 });
+    expect(mockedSend).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   // M3 (repli) — le claim peut rendre une ligne SANS nom de destinataire (profil vide,

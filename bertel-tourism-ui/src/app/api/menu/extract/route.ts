@@ -2,10 +2,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
 import { MediaProcessingError } from '../../media/upload/process-image';
 import { prepareVisionImage, MAX_VISION_IMAGES } from './media-prep';
 import { orchestrateExtraction } from './orchestrate';
-import type { ProviderConfig } from './provider';
 import {
   readBoundedJson,
   BodyTooLargeError,
@@ -158,6 +158,18 @@ async function handlePostAuthenticated(
     return NextResponse.json({ error: 'forbidden', detail: 'caller cannot edit this object' }, { status: 403 });
   }
 
+  // Resolve and validate before decoding any image.  This is deliberately a configuration
+  // read only: an absent, malformed, or unsupported provider must not consume sharp/CPU.
+  let configuredProvider;
+  try {
+    configuredProvider = await resolveActiveAiProvider(server, req.signal);
+  } catch {
+    return NextResponse.json({ error: 'provider_unavailable', detail: 'La configuration IA est indisponible.' }, { status: 503 });
+  }
+  if (!configuredProvider) {
+    return NextResponse.json({ error: 'not_configured', detail: 'Aucun fournisseur IA compatible actif.' }, { status: 503 });
+  }
+
   // Cap image count (cost) and re-encode each (resize + EXIF strip) before sending to the provider.
   // Prepared SEQUENTIALLY, not via Promise.all: a rejection from one image must not leave OTHER
   // sharp jobs still running in the background after this function returns — Promise.all rejects
@@ -185,20 +197,10 @@ async function handlePostAuthenticated(
     return NextResponse.json({ error: 'image_prep_failed', detail: err instanceof Error ? err.message : 'unknown' }, { status: 400 });
   }
 
-  const getActiveProvider = async (): Promise<{ config: ProviderConfig; apiKey: string | null } | null> => {
-    const { data, error } = await server.schema('api').rpc('get_active_ai_provider_secret');
-    if (error) throw new Error(error.message);
-    const row = (Array.isArray(data) ? data[0] : data) as
-      | { api_kind: ProviderConfig['apiKind']; base_url: string; model: string; max_output_tokens: number; extra: Record<string, unknown> | null; api_key: string | null }
-      | undefined;
-    if (!row) return null;
-    return {
-      config: { apiKind: row.api_kind, baseUrl: row.base_url, model: row.model, maxOutputTokens: row.max_output_tokens, extra: row.extra },
-      apiKey: row.api_key ?? null,
-    };
-  };
-
+  // Re-read immediately before the provider request.  If an administrator has disabled
+  // the service while images were being prepared, orchestration receives no stale config.
   const controller = new AbortController();
+  const getActiveProvider = () => resolveActiveAiProvider(server, controller.signal);
   const timeout = setTimeout(() => controller.abort(), 55_000);
   try {
     const result = await orchestrateExtraction(

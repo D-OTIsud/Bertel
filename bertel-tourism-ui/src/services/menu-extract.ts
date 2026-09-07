@@ -1,4 +1,5 @@
 import type { ObjectWorkspaceMenu } from './object-workspace-parser';
+import { getServiceAvailability } from './service-availability';
 
 /**
  * Client bridge to POST /api/menu/extract (§06 carte → draft menu). The route holds the AI key
@@ -35,7 +36,14 @@ export async function extractMenuFromImages(
   input: ExtractInput,
   accessToken: string,
   fetchImpl: typeof fetch = fetch,
+  signal?: AbortSignal,
 ): Promise<ExtractResult> {
+  if (signal?.aborted) throw new DOMException('Analyse annulée', 'AbortError');
+  const availability = await getServiceAvailability({ force: true });
+  if (signal?.aborted) throw new DOMException('Analyse annulée', 'AbortError');
+  if (!availability.imageAnalysis) {
+    throw new Error('L’analyse IA n’est pas configurée. Contactez votre administrateur.');
+  }
   const resp = await fetchImpl('/api/menu/extract', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -47,6 +55,7 @@ export async function extractMenuFromImages(
       allowed_dietary: input.allowedDietary,
       lang: input.lang ?? 'fr',
     }),
+    signal,
   });
 
   let payload: unknown = null;

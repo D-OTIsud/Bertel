@@ -21,9 +21,11 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import * as portal from '../../services/portal';
 import * as explorerQueries from '../../hooks/useExplorerQueries';
 import { useSessionStore } from '../../store/session-store';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 
 jest.mock('../../services/portal');
 jest.mock('../../hooks/useExplorerQueries');
+jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 const routerPush = jest.fn();
 let searchParams = new URLSearchParams('');
 jest.mock('next/navigation', () => ({
@@ -143,6 +145,7 @@ function renderHub(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   window.localStorage.clear();
   searchParams = new URLSearchParams('');
 });
@@ -341,6 +344,12 @@ describe('PortalFicheHub — la liste des rubriques', () => {
     expect(card).toHaveTextContent('Merci ! Vos modifications ont été envoyées à l’office.');
     expect(card).toHaveTextContent('en général sous une semaine');
     expect(card).toHaveFocus();
+  });
+
+  it('sans SMTP, la confirmation ne promet pas un e-mail', () => {
+    jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: false });
+    renderHub({ justSent: true });
+    expect(screen.getByRole('status')).not.toHaveTextContent(/recevrez un e-mail/i);
   });
 });
 

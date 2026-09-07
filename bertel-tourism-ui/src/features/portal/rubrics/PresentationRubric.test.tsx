@@ -8,6 +8,7 @@ import { translateWithAi } from '../../../services/ai-translate';
 import type { ObjectWorkspaceDescriptionsModule } from '../../../services/object-workspace-parser';
 
 jest.mock('../../../services/ai-translate', () => ({ translateWithAi: jest.fn() }));
+jest.mock('../../../hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn(() => ({ translation: true, imageAnalysis: true, email: true })) }));
 const translate = jest.mocked(translateWithAi);
 
 function descriptions(): ObjectWorkspaceDescriptionsModule {
@@ -129,4 +130,14 @@ it('conserve une traduction existante et traduit seulement le champ manquant', a
   expect(translateButton()).toBeDisabled();
   fireEvent.click(screen.getByLabelText('Remplacer les traductions existantes'));
   expect(translateButton()).toBeEnabled();
+});
+
+it('does not show an AI promise or control when translation is unavailable', () => {
+  const { useServiceAvailability } = jest.requireMock('../../../hooks/useServiceAvailability') as { useServiceAvailability: jest.Mock };
+  useServiceAvailability.mockReturnValue({ translation: false, imageAnalysis: false, email: false });
+  setup();
+  choose('English');
+  expect(screen.queryByRole('button', { name: 'Traduire avec l’IA' })).not.toBeInTheDocument();
+  expect(screen.queryByText(/traduire vos textes en un clic avec l’IA/i)).not.toBeInTheDocument();
+  expect(screen.queryByText('Français → English', { exact: true })).not.toBeInTheDocument();
 });

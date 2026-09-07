@@ -3,6 +3,7 @@ import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 import { itemsToOtiPois } from '../features/lists/OtiTemplate';
 import { webHref, webLabel } from '../features/lists/type-meta';
 import { getApiClient } from '../lib/supabase';
+import { getServiceAvailability } from './service-availability';
 import {
   buildDynamicListFilters,
   duplicateList,
@@ -23,6 +24,7 @@ import {
 } from './lists';
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn() }));
+jest.mock('./service-availability', () => ({ getServiceAvailability: jest.fn() }));
 
 function mockApiClient(rpc: jest.Mock) {
   (getApiClient as jest.Mock).mockReturnValue({ schema: () => ({ rpc }) });
@@ -490,6 +492,17 @@ describe('sendListByEmail — messages FR (revue architecte §4)', () => {
   const originalFetch = global.fetch;
   afterEach(() => {
     global.fetch = originalFetch;
+  });
+
+  beforeEach(() => {
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
+  });
+
+  it('SMTP absent : ne fait aucun POST', async () => {
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: false });
+    global.fetch = jest.fn() as unknown as typeof fetch;
+    await expect(sendListByEmail('L1', 'a@example.com')).rejects.toThrow(/SMTP/);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   function mockAuthClient() {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { translateWithAi, type AiTranslationInput } from '../../services/ai-translate';
+import { useServiceAvailability } from '../../hooks/useServiceAvailability';
 
 export interface AiTranslateButtonProps extends AiTranslationInput {
   existingValues?: Record<string, string>;
@@ -27,6 +28,7 @@ function TranslationAction({
   objectId, sourceLanguage, targetLanguage, fields, existingValues = {},
   sourceLabel = sourceLanguage, targetLabel = targetLanguage, disabled, onTranslated,
 }: AiTranslateButtonProps) {
+  const { translation } = useServiceAvailability();
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +36,22 @@ function TranslationAction({
   const onResult = useRef(onTranslated);
   onResult.current = onTranslated;
   useEffect(() => () => { request.current?.abort(); }, []);
+  // Settings can change while a draft is open. Abort before hiding so a late
+  // response cannot overwrite text after translation was disabled.
+  useEffect(() => {
+    if (!translation) {
+      request.current?.abort();
+      request.current = null;
+      setBusy(false);
+    }
+  }, [translation]);
 
   const sourceEntries = Object.entries(fields).filter(([, value]) => value.trim());
   const hasExisting = sourceEntries.some(([key]) => existingValues[key]?.trim());
   const selectedFields = Object.fromEntries(sourceEntries.filter(([key]) => replaceExisting || !existingValues[key]?.trim()));
   const noSource = sourceEntries.length === 0;
   const noMissing = Object.keys(selectedFields).length === 0;
-  const unavailable = disabled || noSource || noMissing || sourceLanguage === targetLanguage;
+  const unavailable = !translation || disabled || noSource || noMissing || sourceLanguage === targetLanguage;
 
   async function translate() {
     // Ref closes the double-click window before React commits the disabled state.
@@ -61,6 +72,8 @@ function TranslationAction({
       }
     }
   }
+
+  if (!translation) return null;
 
   return (
     <div className="rounded-xl border border-line bg-surface2 p-3 text-sm">

@@ -2,6 +2,8 @@ import { translateWithAi } from './ai-translate';
 import { getSupabaseClient } from '../lib/supabase';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn() }));
+jest.mock('./service-availability', () => ({ getServiceAvailability: jest.fn() }));
+import { getServiceAvailability } from './service-availability';
 const getSession = jest.fn();
 const fetcher = jest.fn();
 const input = { objectId: 'HOTRUN0000000001', sourceLanguage: 'fr', targetLanguage: 'en', fields: { description: '**Bonjour**' } };
@@ -10,6 +12,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   (getSupabaseClient as jest.Mock).mockReturnValue({ auth: { getSession } });
   getSession.mockResolvedValue({ data: { session: { access_token: 'user-token' } }, error: null });
+  (getServiceAvailability as jest.Mock).mockResolvedValue({ translation: true, imageAnalysis: true, email: false });
   fetcher.mockResolvedValue({ ok: true, json: async () => ({ translations: { description: '**Hello**' } }) });
 });
 
@@ -44,5 +47,11 @@ it('does not send after cancellation while retrieving the session', async () => 
   const controller = new AbortController();
   controller.abort();
   await expect(translateWithAi(input, controller.signal, fetcher)).rejects.toMatchObject({ name: 'AbortError' });
+  expect(fetcher).not.toHaveBeenCalled();
+});
+
+it('checks fresh availability before posting the draft', async () => {
+  (getServiceAvailability as jest.Mock).mockResolvedValue({ translation: false, imageAnalysis: false, email: false });
+  await expect(translateWithAi(input, undefined, fetcher)).rejects.toThrow('administrateur');
   expect(fetcher).not.toHaveBeenCalled();
 });

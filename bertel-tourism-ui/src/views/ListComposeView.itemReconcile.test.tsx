@@ -6,9 +6,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import ListComposeView from './ListComposeView';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import { getList, setListItems, type ObjectListDetail, type ObjectListItem } from '@/services/lists';
 import { useObjectSearch } from '@/features/object-editor/useObjectSearch';
 
+jest.mock('@/services/service-availability', () => ({
+  getServiceAvailability: jest.fn(() => Promise.resolve({ translation: false, imageAnalysis: false, email: true })),
+}));
 jest.mock('@/services/lists', () => ({
   ...jest.requireActual('@/services/lists'),
   getList: jest.fn(),
@@ -20,6 +24,7 @@ jest.mock('@/services/lists', () => ({
 }));
 
 jest.mock('@/features/object-editor/useObjectSearch', () => ({ useObjectSearch: jest.fn() }));
+jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
 jest.mock('@/store/session-store', () => ({
   useSessionStore: (selector: (state: { userName: string; email: string; avatarUrl: string | null }) => unknown) =>
@@ -105,6 +110,7 @@ function renderView() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
   jest.mocked(useObjectSearch).mockReturnValue({ results: [], loading: false, error: null });
 });
 

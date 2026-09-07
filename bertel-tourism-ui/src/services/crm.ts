@@ -2,6 +2,7 @@
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { getServiceAvailability } from './service-availability';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
 import type {
@@ -698,6 +699,8 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
  */
 async function pingNotifyDrain(): Promise<void> {
   try {
+    // This is deliberately fresh: a setting can be disabled while this background task is queued.
+    if (!(await getServiceAvailability({ force: true })).email) return;
     const client = getSupabaseClient();
     if (!client) return;
     const { data } = await client.auth.getSession();

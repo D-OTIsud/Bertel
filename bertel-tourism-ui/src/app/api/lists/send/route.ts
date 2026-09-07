@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { sendListEmail, MailNotConfiguredError } from '@/lib/mail.server';
+import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import { renderListEmailHtml, listEmailSubject, type ListEmailItem } from '@/emails/ListEmail';
 import { ACCENT_INK, typeLabel } from '@/features/lists/type-meta';
 
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const toEmail = str(body.toEmail).trim();
   if (!listId) return NextResponse.json({ error: 'missing_list' }, { status: 400 });
   if (!EMAIL_RE.test(toEmail)) return NextResponse.json({ error: 'invalid_email' }, { status: 400 });
+
+  // Resolve before creating a share link or reading any mutable list side effect. A disabled
+  // database setting intentionally wins over environment fallback in resolveSmtpConfig.
+  try {
+    if (!await resolveSmtpConfig()) return NextResponse.json({ error: 'smtp_not_configured' }, { status: 503 });
+  } catch {
+    return NextResponse.json({ error: 'smtp_unavailable' }, { status: 503 });
+  }
 
   // 3. Client « en tant qu'appelant » — c'est CE client (JWT) qui autorise, pas la service key.
   const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();

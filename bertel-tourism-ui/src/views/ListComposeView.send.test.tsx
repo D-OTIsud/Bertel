@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import ListComposeView from './ListComposeView';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import {
   getList,
   sendListByEmail,
@@ -14,6 +15,11 @@ import {
   type ObjectListItem,
 } from '@/services/lists';
 
+// `lists` imports this service directly; mock it before requireActual so the lightweight
+// session fixture used by this view suite does not need Zustand's static store methods.
+jest.mock('@/services/service-availability', () => ({
+  getServiceAvailability: jest.fn(() => Promise.resolve({ translation: false, imageAnalysis: false, email: true })),
+}));
 jest.mock('@/services/lists', () => ({
   ...jest.requireActual('@/services/lists'),
   getList: jest.fn(),
@@ -27,6 +33,7 @@ jest.mock('@/services/lists', () => ({
 jest.mock('@/features/object-editor/useObjectSearch', () => ({
   useObjectSearch: () => ({ results: [], loading: false }),
 }));
+jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
 jest.mock('@/store/session-store', () => ({
   useSessionStore: (selector: (state: { userName: string; email: string; avatarUrl: string | null }) => unknown) =>
@@ -114,6 +121,15 @@ describe('ListComposeView — envoi et sauvegarde confirmée (MET-02)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(window, 'alert').mockImplementation(() => {});
+    jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
+  });
+
+  it('sans SMTP, le bouton Envoyer disparaît', async () => {
+    jest.mocked(getList).mockResolvedValue(baseDetail());
+    jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: false });
+    renderView();
+    await screen.findByLabelText('Nom de la liste');
+    expect(screen.queryByRole('button', { name: /^envoyer$/i })).not.toBeInTheDocument();
   });
 
   it('attend une sauvegarde différée avant d’envoyer', async () => {

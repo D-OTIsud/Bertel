@@ -211,6 +211,10 @@
 - **UPDATE** `admin_upd_crm_task_document` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
+## `public.fiche_submission`
+- **ALL** `admin_fiche_submission` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
+
 ## `public.gdpr_erasure_log`
 - **SELECT** `gdpr_erasure_log_admin_read` — roles ['authenticated']
   - `( SELECT api.is_platform_superuser() AS is_platform_superuser)`
@@ -266,8 +270,9 @@
      JOIN object o ON …[truncated — full text in catalog_extra.json or live pg_policies]`
 - **SELECT** `read_media_tag` — roles ['public']
   - `(EXISTS ( SELECT 1
-   FROM media m
-  WHERE ((m.id = media_tag.media_id) AND ((m.is_published IS TRUE) OR api.can_read_extended(m.object_id)))))`
+   FROM (media m
+     LEFT JOIN object o ON ((o.id = m.object_id)))
+  WHERE ((m.id = media_tag.media_id) AND (((m.is_published IS TRUE) AND (COALESCE(o.is_test, false) = ( SELECT api.current_user_test_realm() AS current_user_test_realm))) OR api.can_read_extended(m.object_id)))))`
 - **UPDATE** `canonical_upd_media_tag` — roles ['public']
   - `((EXISTS ( SELECT 1
    FROM media m
@@ -1306,6 +1311,10 @@
    FROM ((opening_time_period tp
      JOIN opening_schedule s ON ((s.id = tp.schedule_id)))
      …[truncated — full text in catalog_extra.json or live pg_policies]`
+
+## `public.org_actor_module_visibility`
+- **ALL** `admin_org_actor_module_visibility` — roles ['public']
+  - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.org_branding_settings`
 - **SELECT** `read_org_branding` — roles ['authenticated']

@@ -2175,3 +2175,10 @@ créateur dans la fonction de drain et les deux versions de migration.
 Voir `docs/smtp-settings.md` et `docs/ai-translation.md` pour le fonctionnement
 et les limites restantes. Le lot de préparation des réseaux sociaux appartient
 à une tâche distincte encore en cours et n'est pas inclus dans cette publication.
+
+Le graphe DB et la référence HTML ont été régénérés après application : fonctions
+et policies complètes du catalogue vivant, tables Listes et SMTP relues intégralement.
+L'export global tbls ayant dépassé 90 secondes, les autres tables conservent leur
+snapshot antérieur. La portée exacte est consignée dans
+`db-graph-out/REFRESH_20260907.md` ; les pages `dbdoc/` restent des sorties locales
+régénérables conformément au `.gitignore` du dépôt.

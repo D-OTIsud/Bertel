@@ -2182,3 +2182,14 @@ L'export global tbls ayant dépassé 90 secondes, les autres tables conservent l
 snapshot antérieur. La portée exacte est consignée dans
 `db-graph-out/REFRESH_20260907.md` ; les pages `dbdoc/` restent des sorties locales
 régénérables conformément au `.gitignore` du dépôt.
+
+Le premier contrôle CI de cette publication a appliqué le manifeste complet,
+puis échoué en rejouant après 19d le contrat historique de `test_object_list.sql`
+(brouillons internes et lecture des listes des collègues). Ce test est conservé
+dans le manifeste juste avant 19d. Le contrôle final du workflow exécute les
+tests du cycle de vie et des couvertures/realms, conformes aux nouvelles règles.
+Cette correction concerne uniquement l'ordre des vérifications d'installation ;
+elle ne nécessite aucune nouvelle migration en production.
+L'ordre corrigé a été vérifié sur PostgreSQL local : contrat historique avant
+la migration, puis S0–S14 et les cas dynamique/couverture/realm après migration.
+Les fixtures, les claims et les changements locaux sont annulés par rollback.

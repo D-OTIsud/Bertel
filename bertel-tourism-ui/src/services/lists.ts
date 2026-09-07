@@ -85,6 +85,8 @@ export interface ObjectListCard extends ListLifecycle {
   nameEn: string | null;
   kind: ListKind;
   status: ListStatus;
+  /** État réel du lien, indépendant du dernier envoi et du statut éditorial. */
+  hasActiveShareLink?: boolean;
   lang: 'fr' | 'en';
   accent: ListAccent;
   recipientLabel: string | null;
@@ -239,6 +241,9 @@ export function parseListCard(row: GenericRecord): ObjectListCard {
     nameEn: readNullableString(row.name_en),
     kind: (readString(row.kind, 'static') as ListKind),
     status: (readString(row.status, 'draft') as ListStatus),
+    hasActiveShareLink: typeof row.has_active_share_link === 'boolean'
+      ? row.has_active_share_link
+      : row.status === 'shared',
     lang: (readString(row.lang, 'fr') as 'fr' | 'en'),
     accent: (readString(row.accent, 'teal') as ListAccent),
     recipientLabel: readNullableString(row.recipient_label),

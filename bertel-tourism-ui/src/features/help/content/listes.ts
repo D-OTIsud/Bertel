@@ -79,11 +79,11 @@ export const LISTES_FAQ: FaqEntry[] = [
     keywords: ['une', 'proposer', 'featured', 'mettre en avant', 'organisation'],
     routes: ['/listes'],
     related: ['listes-creer', 'listes-propositions'],
-    answer: `Une liste **à la une** est visible à **tous les membres** de votre organisation depuis l'écran Listes, au-dessus de « Mes listes ».
+    answer: `Une liste **à la une** est visible à **tous les membres** de votre organisation dans l'onglet **À la une**. L'écran s'ouvre sur **Mes listes**, votre espace personnel. La recherche et le bouton **Filtres** se trouvent dans l'en-tête ; le filtre **Lien actif** se combine avec l'état de la liste.
 
 **Proposer sa liste.** Depuis la composition d'une de vos listes, le bouton **« Proposer à la une »** l'envoie à la validation d'un administrateur ; « Proposition envoyée » s'affiche tant qu'elle attend une réponse.
 
-**Administrateur.** Un administrateur de l'organisation peut mettre **directement** l'une de ses propres listes à la une, et **retirer** n'importe quelle liste actuellement à la une (la vôtre ou celle d'un collègue). Pour accepter ou refuser la proposition d'un collègue, il passe par l'onglet **Propositions**.
+**Administrateur.** Un administrateur de l'organisation peut mettre **directement** l'une de ses propres listes à la une, et **retirer** n'importe quelle liste actuellement à la une (la vôtre ou celle d'un collègue). Les propositions à examiner sont signalées dans les **notifications globales** et par une **petite horloge sur leur carte**, dans **À la une**.
 
 **Édition gelée pendant la mise en avant.** Tant qu'une liste est à la une, seul un administrateur peut modifier son contenu — l'auteur d'origine (s'il n'est pas administrateur) garde l'usage (imprimer, envoyer, partager, dupliquer) mais pas l'édition.`,
   },
@@ -94,7 +94,9 @@ export const LISTES_FAQ: FaqEntry[] = [
     keywords: ['propositions', 'accepter', 'refuser', 'administrateur', 'valider'],
     routes: ['/listes'],
     related: ['listes-une'],
-    answer: `L'onglet **Propositions** n'apparaît que pour un administrateur de l'organisation ; il liste les listes personnelles proposées par des collègues, avec le nom du proposant (jamais le destinataire de la liste).
+    answer: `Une proposition arrive dans les **notifications globales** de l'administrateur. Cliquez sur la notification pour ouvrir sa validation, ou sur la **petite horloge** de sa carte dans **À la une**. Le bouton **Filtres → État → À valider** permet de retrouver les propositions en attente.
+
+Seuls les administrateurs voient les propositions des collègues dans cet onglet, avec le nom du proposant. Les autres membres voient uniquement les listes approuvées ; l'auteur retrouve sa propre proposition dans **Mes listes**.
 
 **Accepter** met la liste à la une immédiatement. **Refuser** annule la proposition — la liste redevient une simple liste personnelle pour son auteur.
 

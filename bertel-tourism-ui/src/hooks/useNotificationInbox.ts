@@ -36,9 +36,10 @@ export const NOTIFICATION_WINDOW = 50;
  * Options PARTAGÉES par la veille et le tiroir : une seule requête en cache pour les deux, donc
  * le tiroir s'ouvre déjà rempli et ne peut pas diverger de la pastille.
  */
-export function notificationInboxQueryOptions(userId: string | null) {
+export function notificationInboxQueryOptions(userId: string | null, orgId: string | null = null) {
   return {
-    queryKey: notificationKeys.inbox(userId),
+    // Les propositions de listes dépendent aussi de l'organisation active.
+    queryKey: [...notificationKeys.inbox(userId), orgId],
     queryFn: () => listMyNotifications(NOTIFICATION_WINDOW),
     enabled: Boolean(userId),
     refetchInterval: NOTIFICATION_POLL_MS,
@@ -53,6 +54,7 @@ export interface NotificationInbox {
 
 export function useNotificationInbox(): NotificationInbox {
   const userId = useSessionStore((state) => state.userId);
+  const orgId = useSessionStore((state) => state.orgId);
   const toast = useToast();
   // `toast` est lu DEPUIS UN REF, jamais depuis les dépendances de l'effet : une identité
   // instable en dépendance ferait ré-exécuter l'effet à chaque rendu, ce qui n'annoncerait
@@ -64,18 +66,19 @@ export function useNotificationInbox(): NotificationInbox {
   // rechargement de page rejouerait toutes les non-lues en attente.
   const announcedRef = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
-  const prevUserRef = useRef<string | null | undefined>(undefined);
+  const prevScopeRef = useRef<string | undefined>(undefined);
+  const scope = JSON.stringify([userId, orgId]);
 
   // Remise à zéro PENDANT LE RENDU, pas dans un effet : deux effets du même commit lisent
   // tous deux l'état d'AVANT, donc l'effet d'annonce repartirait avec les ids de
   // l'utilisateur PRÉCÉDENT. Muter un ref au rendu est sans effet de bord ici.
-  if (prevUserRef.current !== userId) {
-    prevUserRef.current = userId;
+  if (prevScopeRef.current !== scope) {
+    prevScopeRef.current = scope;
     announcedRef.current = new Set();
     seededRef.current = false;
   }
 
-  const inboxQuery = useQuery(notificationInboxQueryOptions(userId));
+  const inboxQuery = useQuery(notificationInboxQueryOptions(userId, orgId));
   const items = inboxQuery.data?.items;
 
   useEffect(() => {
@@ -95,9 +98,10 @@ export function useNotificationInbox(): NotificationInbox {
       // titre de la tâche de vérification (« Vérifier la fiche ») ne veut rien dire pour son
       // destinataire — c'est le nom de SA fiche qui l'identifie.
       const isReview = notification.kind === 'fiche_submission_reviewed';
+      const isListProposal = notification.kind === 'list_feature_requested';
       toastRef.current.info(
-        isReview ? 'Votre office a vérifié votre fiche' : 'Nouvelle tâche assignée',
-        (isReview ? notification.objectName : notification.taskTitle ?? notification.objectName) ?? undefined,
+        isListProposal ? 'Une liste est à valider' : isReview ? 'Votre office a vérifié votre fiche' : 'Nouvelle tâche assignée',
+        (isListProposal ? notification.listName : isReview ? notification.objectName : notification.taskTitle ?? notification.objectName) ?? undefined,
       );
     }
   }, [items]);

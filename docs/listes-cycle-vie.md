@@ -13,9 +13,10 @@ précisées ci-dessous.
 ## Comportement livré
 
 - Tous les membres d'une organisation peuvent créer des listes statiques
-  et dynamiques depuis Listes ou Explorer. La page affiche « À la une » puis
-  « Mes listes », avec un accès volontaire aux archives et, pour les admins,
-  aux propositions. Les cartes indiquent le créateur.
+  et dynamiques depuis Listes ou Explorer. La page ouvre « Mes listes » ;
+  « À la une » et « Archives » sont des onglets du même en-tête compact,
+  avec recherche et filtres. Une liste personnelle à la une reste aussi
+  présente dans l'onglet personnel de son auteur.
 - La couverture automatique utilise la première photo disponible parmi les
   lieux effectifs. La personne autorisée à modifier la liste peut choisir une autre
   photo de la sélection, puis revenir au mode automatique. Une image cassée
@@ -34,8 +35,23 @@ précisées ci-dessous.
 - La duplication crée une liste personnelle indépendante : ordre et notes
   statiques ou filtres dynamiques conservés ; destinataire, token, historique
   d'envoi, proposition et mise à la une ne sont pas copiés.
-- L'aide intégrée décrit ces règles. Les propositions restent internes à
-  l'interface et ne déclenchent aucune notification externe.
+- L'aide intégrée décrit ces règles. Les propositions apparaissent aux admins
+  dans les notifications globales et dans « À la une », avec une horloge sur
+  la carte et le filtre « À valider ». Elles restent masquées aux autres
+  membres jusqu'à approbation. Ces notifications ne déclenchent aucun e-mail.
+
+## En-tête compact et notifications — complément du 7 septembre 2026
+
+Intégration par Terra, architecture et revue par Codex après approbation de
+l'aperçu. Le filtre « Avec un lien actif » est indépendant de l'état de la
+liste. Le lien direct d'une notification ouvre la validation de la proposition.
+
+La migration `20260907085838_list_feature_notifications` est appliquée en
+production et enregistrée dans l'historique Supabase. Contrôle à 09:17 UTC :
+15 listes conservées, aucune proposition en attente, deux notifications CRM
+conservées, aucun envoi ni claim e-mail de proposition. La migration et ses
+assertions de droits, déduplication, archivage et partage ont d'abord été
+validées dans une transaction annulée. Le front-end reste à déployer via Codify.
 
 ## Fichiers du lot
 

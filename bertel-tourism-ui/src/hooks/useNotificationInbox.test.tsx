@@ -11,7 +11,7 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { useNotificationInbox } from './useNotificationInbox';
+import { useNotificationInbox, notificationInboxQueryOptions } from './useNotificationInbox';
 import { useSessionStore } from '../store/session-store';
 import * as notifications from '../services/notifications';
 
@@ -28,6 +28,11 @@ jest.mock('./useToast', () => ({
 const mocked = notifications as jest.Mocked<typeof notifications>;
 
 let client: QueryClient;
+
+it('isole la boîte des propositions par organisation active', () => {
+  expect(notificationInboxQueryOptions('u-me', 'ORG-A').queryKey)
+    .not.toEqual(notificationInboxQueryOptions('u-me', 'ORG-B').queryKey);
+});
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
@@ -87,6 +92,18 @@ it('la PREMIÈRE lecture ne toaste rien, même avec des non-lues en attente', as
   await waitFor(() => expect(result.current.unreadCount).toBe(3));
   // La pastille dit 3… et rien n'est annoncé : ces 3 existaient avant l'ouverture de l'onglet.
   expect(info).not.toHaveBeenCalled();
+});
+
+it('annonce une nouvelle proposition comme une liste à valider', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('ancienne')]));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+  mocked.listMyNotifications.mockResolvedValue({
+    items: [{ ...item('nouvelle-liste'), kind: 'list_feature_requested', listId: 'L1', listName: 'Les balades du Sud' }, item('ancienne')],
+    unreadCount: 2,
+  });
+  await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledWith('Une liste est à valider', 'Les balades du Sud'));
 });
 
 it('les non-lues DÉJÀ là ne sont pas rejouées quand une neuve arrive', async () => {

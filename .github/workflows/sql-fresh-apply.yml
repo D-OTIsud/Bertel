@@ -420,6 +420,11 @@ jobs:
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_listes_cycle_vie.sql"
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_listes_dynamic_cover_realm.sql"
 
+      - name: "19e — Inbox des propositions de listes (reviewers actuels, dedupe, no-mail, resolution)"
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f "Base de donnée DLL et API/tests/test_list_feature_notifications.sql"
+
       - name: "§211 E2 — bulk email export (operator→object cascade, publisher scope isolates a PUBLISHED foreign-ORG object, expired/future/private/non-operator links ignored, consent refusal honoured, PT400/PT404/PT413 contracts, reader refused)"
         env:
           DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres

@@ -51,7 +51,7 @@ function req(headers: Record<string, string>, body: unknown): never {
 function serverWithUser() {
   return {
     auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: `test-user-${testUser}` } }, error: null }) },
-    schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: [{ api_kind: 'openai', base_url: 'x', model: 'm', max_output_tokens: 100, extra: null, api_key: 'k' }], error: null }) }),
+    schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: [{ api_kind: 'openai_compatible', base_url: 'https://provider.example/v1', model: 'm', max_output_tokens: 256, extra: null, api_key: 'k' }], error: null }) }),
   } as never;
 }
 
@@ -77,6 +77,21 @@ describe('POST /api/menu/extract', () => {
     mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
     const res = await POST(req({ authorization: 'Bearer t' }, makeBody()));
     expect(res.status).toBe(403);
+  });
+
+  it('does not decode or prepare an image when no compatible AI provider is configured', async () => {
+    mockedServer.mockReturnValue({
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'no-provider' } }, error: null }) },
+      schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: [], error: null }) }),
+    } as never);
+    const rpc = jest.fn().mockResolvedValue({ data: true, error: null });
+    mockedCreate.mockReturnValue({ schema: () => ({ rpc }) } as never);
+
+    const res = await POST(req({ authorization: 'Bearer t' }, makeBody()));
+    expect(res.status).toBe(503);
+    expect((await res.json()).error).toBe('not_configured');
+    expect(mockedPrepareVisionImage).not.toHaveBeenCalled();
+    expect(mockedOrchestrate).not.toHaveBeenCalled();
   });
 
   it('200 when authorized', async () => {

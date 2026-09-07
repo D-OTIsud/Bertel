@@ -1,4 +1,5 @@
 import { getSupabaseClient } from '../lib/supabase';
+import { getServiceAvailability } from './service-availability';
 
 export interface AiTranslationInput {
   objectId: string;
@@ -18,6 +19,11 @@ export async function translateWithAi(
   const token = session?.data.session?.access_token;
   if (session?.error || !token) throw new Error('Reconnectez-vous pour traduire ce texte.');
   if (signal?.aborted) throw new DOMException('Traduction annulée', 'AbortError');
+  const availability = await getServiceAvailability({ force: true });
+  if (signal?.aborted) throw new DOMException('Traduction annulée', 'AbortError');
+  if (!availability.translation) {
+    throw new Error('La traduction IA n’est pas configurée. Contactez votre administrateur.');
+  }
 
   let response: Response;
   try {

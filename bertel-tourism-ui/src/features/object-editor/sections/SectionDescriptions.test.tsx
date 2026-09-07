@@ -6,6 +6,7 @@ import type { ObjectWorkspacePermissions } from '../../../services/object-worksp
 import { translateWithAi } from '../../../services/ai-translate';
 
 jest.mock('../../../services/ai-translate', () => ({ translateWithAi: jest.fn() }));
+jest.mock('../../../hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn(() => ({ translation: true, imageAnalysis: true, email: true })) }));
 
 // The Descriptif/Accroche are now MarkdownEditorLazy (TipTap, async + ProseMirror — unreliable in
 // jsdom). Mock it as a plain textarea that forwards value + onChange and exposes ariaLabel, so the
@@ -95,6 +96,15 @@ describe('SectionDescriptions AI translation', () => {
   it('does not offer translation for a read-only scope', () => {
     const permissions = { descriptions: { canEditCanonical: false, canEditOrgEnrichment: false } } as unknown as ObjectWorkspacePermissions;
     render(<Harness initial={modules()} permissions={permissions} />);
+    fireEvent.click(screen.getByRole('button', { name: 'English' }));
+    expect(screen.queryByRole('button', { name: 'Traduire avec l’IA' })).not.toBeInTheDocument();
+  });
+
+  it('hides AI copy and the translation control when the service is unavailable', () => {
+    const { useServiceAvailability } = jest.requireMock('../../../hooks/useServiceAvailability') as { useServiceAvailability: jest.Mock };
+    useServiceAvailability.mockReturnValue({ translation: false, imageAnalysis: false, email: false });
+    render(<Harness initial={modules()} />);
+    expect(screen.queryByText(/traduire vos textes en un clic avec l’IA/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     expect(screen.queryByRole('button', { name: 'Traduire avec l’IA' })).not.toBeInTheDocument();
   });

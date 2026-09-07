@@ -1,12 +1,15 @@
 import { listAiProviders, upsertAiProvider, setActiveAiProvider, deleteAiProvider } from './ai-provider';
+import { invalidateServiceAvailability } from './service-availability';
 
 const rpc = jest.fn();
 jest.mock('../lib/supabase', () => ({
   getSupabaseClient: () => ({ schema: () => ({ rpc }) }),
 }));
+jest.mock('./service-availability', () => ({ invalidateServiceAvailability: jest.fn() }));
 
 beforeEach(() => {
   rpc.mockReset();
+  jest.mocked(invalidateServiceAvailability).mockClear();
 });
 
 describe('ai-provider service', () => {
@@ -39,6 +42,7 @@ describe('ai-provider service', () => {
       p_model: 'x', p_max_output_tokens: 2048, p_is_active: true,
       p_extra: { headers: { 'X-Title': 'B' } }, p_api_key: 'sk-1',
     });
+    expect(invalidateServiceAvailability).toHaveBeenCalledTimes(1);
   });
 
   it('omits the key (null) when not provided on edit', async () => {
@@ -53,10 +57,12 @@ describe('ai-provider service', () => {
     expect(rpc).toHaveBeenCalledWith('set_active_ai_provider', { p_id: 'p2' });
     await deleteAiProvider('p3');
     expect(rpc).toHaveBeenCalledWith('delete_ai_provider', { p_id: 'p3' });
+    expect(invalidateServiceAvailability).toHaveBeenCalledTimes(2);
   });
 
   it('throws the RPC error message', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'FORBIDDEN' } });
     await expect(listAiProviders()).rejects.toThrow('FORBIDDEN');
+    expect(invalidateServiceAvailability).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
-import { sendMail, type MailSender } from '@/lib/mail.server';
+import { MailNotConfiguredError, sendMail, type MailSender } from '@/lib/mail.server';
 import { resolveSmtpConfig } from '@/lib/smtp-settings.server';
 import {
   renderTaskAssignedEmailHtml,
@@ -160,6 +160,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       await sendMail({ to, ...mail });
       sent.push(id);
     } catch (err) {
+      // SMTP may have been disabled after the batch was claimed. Do not turn the remaining
+      // notifications into failed attempts: leave them in the outbox for a future configured drain.
+      if (err instanceof MailNotConfiguredError) break;
       // UN seul bras d'échec pour la composition ET l'envoi : dans les deux cas la ligne
       // est acquittée en p_failed (email_attempts+1, claim levé), jamais laissée en suspens.
       failed.push({ id, error: err instanceof Error ? err.message : 'send_failed' });

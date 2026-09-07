@@ -44,4 +44,8 @@ Le serveur et les identifiants SMTP restent ceux des paramètres pour tous ces m
 
 La table `public.app_smtp_config` active RLS et refuse tout accès direct aux rôles clients. `api.get_smtp_config()` et `api.upsert_smtp_config(...)` contrôlent aussi le rôle plateforme et la présence d’un utilisateur. Le lecteur déchiffrant `api.get_smtp_config_secret()` n’est exécutable que par `service_role`. Aucune erreur SMTP ou SQL brute n’est renvoyée au client.
 
+## Service optionnel
+
+Les commandes d’envoi par e-mail sont masquées tant qu’aucune configuration SMTP active n’est disponible. Une configuration explicite par variables d’environnement reste utilisable lorsqu’aucune configuration de base n’est enregistrée; une configuration de base désactivée prime toujours sur elle. Les notifications dans l’application restent actives sans SMTP. Ce comportement n’ajoute aucune migration SQL.
+
 Après application sur un environnement de test, exécuter le test SQL ci-dessus puis les tests Jest `smtp-settings.server.test.ts`, `mail.server.test.ts` et `api/admin/smtp-config/route.test.ts`. Les tests utilisent des identifiants fictifs et n’envoient aucun message. Régénérer le graphe de base à partir du catalogue de l’environnement où la migration a été appliquée selon `tools/db-graph/README.md`.

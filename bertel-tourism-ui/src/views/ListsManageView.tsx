@@ -414,6 +414,57 @@ export default function ListsManageView() {
           </div>
         )}
 
+        {/* Navigation et état des listes personnelles : regroupés avant toute grille, et sticky
+            dans la zone défilante pour rester accessibles sans masquer les cartes. */}
+        <div className="sticky top-0 z-10 mx-auto mb-6 max-w-6xl bg-white/95 py-2 backdrop-blur">
+          <div className="flex flex-col gap-3 rounded-xl border bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Vues des listes">
+              <button
+                type="button"
+                aria-pressed={sectionTab === 'mine'}
+                onClick={() => setSectionTab('mine')}
+                className={cn('rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'mine' ? 'bg-orange text-white shadow-sm' : 'text-ink/60 hover:bg-ink/5 hover:text-ink')}
+              >
+                Mes listes <span className="ml-1 text-[11px] tabular-nums opacity-80">{activeMine.length}</span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={sectionTab === 'archives'}
+                onClick={() => setSectionTab('archives')}
+                className={cn('rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'archives' ? 'bg-orange text-white shadow-sm' : 'text-ink/60 hover:bg-ink/5 hover:text-ink')}
+              >
+                Archives <span className="ml-1 text-[11px] tabular-nums opacity-80">{archivedMine.length}</span>
+              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  aria-pressed={sectionTab === 'proposals'}
+                  onClick={() => setSectionTab('proposals')}
+                  className={cn('rounded-lg px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'proposals' ? 'bg-orange text-white shadow-sm' : 'text-ink/60 hover:bg-ink/5 hover:text-ink')}
+                >
+                  Propositions <span className="ml-1 text-[11px] tabular-nums opacity-80">{proposals.length}</span>
+                </button>
+              )}
+            </div>
+            {sectionTab === 'mine' && (
+              <div className="flex flex-wrap items-center gap-1" role="group" aria-label="État de mes listes">
+                <span className="mr-1 text-[11px] font-bold uppercase tracking-wide text-ink/45">État de mes listes</span>
+                {statusTabs.map((t) => (
+                  <button
+                    key={t.k}
+                    type="button"
+                    aria-pressed={statusTab === t.k}
+                    onClick={() => setStatusTab(t.k)}
+                    className={cn('inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[12px] font-semibold transition', statusTab === t.k ? 'bg-ink text-white' : 'text-ink/60 hover:bg-ink/5 hover:text-ink')}
+                  >
+                    {t.label}<span className="text-[11px] tabular-nums opacity-70">{counts[t.k]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* À la une de l'organisation — au-dessus de « Mes listes », visible à tous les membres. */}
         <section className="mx-auto mb-8 max-w-6xl">
           <h2 className="mb-3 flex items-center gap-1.5 text-[13px] font-extrabold uppercase tracking-wide text-ink/60">
@@ -444,53 +495,10 @@ export default function ListsManageView() {
           )}
         </section>
 
-        {/* Onglets volontaires : Mes listes (défaut) / Archives / Propositions (admin uniquement). */}
-        <div className="mx-auto mb-5 flex max-w-6xl flex-wrap items-center gap-1 rounded-full bg-ink/5 p-1">
-          <button
-            type="button"
-            onClick={() => setSectionTab('mine')}
-            className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'mine' ? 'bg-white text-orange shadow-sm' : 'text-ink/60 hover:text-ink')}
-          >
-            Mes listes <span className="text-[11px] tabular-nums text-ink/40">{activeMine.length}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setSectionTab('archives')}
-            className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'archives' ? 'bg-white text-orange shadow-sm' : 'text-ink/60 hover:text-ink')}
-          >
-            Archives <span className="text-[11px] tabular-nums text-ink/40">{archivedMine.length}</span>
-          </button>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => setSectionTab('proposals')}
-              className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition', sectionTab === 'proposals' ? 'bg-white text-orange shadow-sm' : 'text-ink/60 hover:text-ink')}
-            >
-              Propositions <span className="text-[11px] tabular-nums text-ink/40">{proposals.length}</span>
-            </button>
-          )}
-        </div>
-
-        {sectionTab === 'mine' && (
-          <div className="mx-auto mb-4 flex max-w-6xl flex-wrap gap-1 rounded-full bg-ink/5 p-1">
-            {statusTabs.map((t) => (
-              <button
-                key={t.k}
-                type="button"
-                onClick={() => setStatusTab(t.k)}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold transition',
-                  statusTab === t.k ? 'bg-white text-orange shadow-sm' : 'text-ink/60 hover:text-ink',
-                )}
-              >
-                {t.label}
-                <span className="text-[11px] tabular-nums text-ink/40">{counts[t.k]}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
         <div className="mx-auto max-w-6xl">
+          <h2 className="mb-3 text-[13px] font-extrabold uppercase tracking-wide text-ink/60">
+            {sectionTab === 'mine' ? 'Mes listes' : sectionTab === 'archives' ? 'Archives' : 'Propositions'}
+          </h2>
           {sectionTab === 'mine' &&
             (myListsQuery.isLoading ? (
               <div className="flex items-center gap-2 text-ink/50">

@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import ListComposeView from './ListComposeView';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import {
   duplicateList,
   ensureListShareLink,
@@ -41,6 +42,7 @@ jest.mock('@/services/lists', () => ({
 jest.mock('@/features/object-editor/useObjectSearch', () => ({
   useObjectSearch: () => ({ results: [], loading: false }),
 }));
+jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
 jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 
@@ -104,6 +106,7 @@ function renderWithClient(queryClient: QueryClient) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });
 });
 
 describe('ListComposeView — isolation du cache par identité sur le MÊME listId (revue architecte §1)', () => {

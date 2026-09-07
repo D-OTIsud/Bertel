@@ -7,6 +7,7 @@ import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from
 import type { UserRole } from '../types/domain';
 import { isSandboxMode } from '../lib/sandbox-mode';
 import { leaveSandbox } from '../services/sandbox';
+import { clearServiceAvailabilityForSessionTransition } from '../services/service-availability';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -298,6 +299,11 @@ export function useBootstrapSession() {
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((event) => {
+      // Do not leave a prior user's capability result visible while session bootstrap
+      // resolves a sign-in/sign-out event (including a quick same-user reconnection).
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+        clearServiceAvailabilityForSessionTransition();
+      }
       void syncUser(client, { preserveReadyState: true, authEvent: event });
     });
 

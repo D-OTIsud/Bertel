@@ -13,3 +13,7 @@ Le fournisseur actif de **Paramètres → Fournisseurs IA** sert à la traductio
 `POST /api/ai/translate` prend `{ objectId, sourceLanguage, targetLanguage, fields }`, avec un jeton utilisateur Bearer, et renvoie `{ translations }`. L’accès est limité aux droits d’écriture canonique, d’enrichissement ou au lien acteur effectif avec la fiche. Le service génère un brouillon et n’écrit pas en base. Les réponses incomplètes sont refusées ; le français canonique et la mise en forme Markdown sont conservés. Un changement de texte ou de contexte annule la requête devenue obsolète.
 
 Limites : 30 000 caractères source, 100 champs, délai serveur de 45 secondes pour le fournisseur, 12 demandes par minute et utilisateur sur chaque instance, avec le sémaphore IA commun. La limitation de fréquence et de concurrence est locale au processus, comme pour l’extraction de cartes.
+
+## Services optionnels
+
+Les commandes de traduction et d’analyse d’images sont masquées tant qu’aucun fournisseur IA compatible actif n’est configuré. Un fournisseur local peut volontairement ne pas avoir de clé API. Ce réglage n’ajoute aucune migration SQL. Les notifications dans l’application restent disponibles indépendamment de la configuration IA ou SMTP.

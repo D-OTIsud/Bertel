@@ -3,6 +3,7 @@ import { AiTranslateButton, type AiTranslateButtonProps } from './AiTranslateBut
 import { translateWithAi } from '../../services/ai-translate';
 
 jest.mock('../../services/ai-translate', () => ({ translateWithAi: jest.fn() }));
+jest.mock('../../hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn(() => ({ translation: true, imageAnalysis: true, email: true })) }));
 const translate = translateWithAi as jest.Mock;
 const props: AiTranslateButtonProps = {
   objectId: 'o1', sourceLanguage: 'fr', targetLanguage: 'en',
@@ -82,4 +83,16 @@ it('explains an empty source without calling the AI', () => {
   render(<AiTranslateButton {...props} fields={{ chapo: ' ', description: '' }} />);
   expect(screen.getByRole('button', { name: 'Traduire avec l’IA' })).toBeDisabled();
   expect(screen.getByRole('status')).toHaveTextContent('Saisissez d’abord un texte en Français.');
+});
+
+it('is absent and aborts an in-flight request when translation becomes unavailable', () => {
+  const { useServiceAvailability } = jest.requireMock('../../hooks/useServiceAvailability') as { useServiceAvailability: jest.Mock };
+  translate.mockImplementation(() => new Promise(() => {}));
+  const view = render(<AiTranslateButton {...props} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Traduire avec l’IA' }));
+  const signal = translate.mock.calls[0][1] as AbortSignal;
+  useServiceAvailability.mockReturnValue({ translation: false, imageAnalysis: false, email: false });
+  view.rerender(<AiTranslateButton {...props} />);
+  expect(signal.aborted).toBe(true);
+  expect(screen.queryByText(/IA|traduction/i)).not.toBeInTheDocument();
 });

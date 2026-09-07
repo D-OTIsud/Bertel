@@ -1,21 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { z } from 'zod';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
+import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
 import { acquireLease, BodyTooLargeError, readBoundedJson, SEMAPHORE_RETRY_AFTER_SECONDS } from '@/lib/request-body.server';
 import { MAX_TRANSLATION_BODY_BYTES, translateFields, TranslationError, translationRequestSchema, type TranslationRequest } from './translation';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
-
-const providerSchema = z.object({
-  api_kind: z.enum(['openai_compatible', 'anthropic']),
-  base_url: z.string().url(),
-  model: z.string().min(1),
-  max_output_tokens: z.number().int().min(256).max(32768),
-  extra: z.record(z.unknown()).nullable(),
-  api_key: z.string().nullable(),
-});
 
 // As with menu extraction, this is a per-instance throttle; the shared AI lease also caps concurrency.
 const recentHits = new Map<string, number[]>();
@@ -95,19 +86,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       const timeout = setTimeout(() => controller.abort(), 45_000);
       try {
         // Only the service-role client reads the Vault key, after caller-scoped authorization.
-        const provider = await server.schema('api').rpc('get_active_ai_provider_secret').abortSignal(controller.signal);
-        if (provider.error) return errorResponse('provider_unavailable', 'La configuration IA est indisponible.', 503);
-        const row = Array.isArray(provider.data) ? provider.data[0] : provider.data;
-        if (!row) return errorResponse('not_configured', 'Aucun fournisseur IA actif. Contactez votre administrateur.', 503);
-        const config = providerSchema.safeParse(row);
-        if (!config.success) return errorResponse('provider_unavailable', 'La configuration IA est invalide. Contactez votre administrateur.', 503);
+        const provider = await resolveActiveAiProvider(server, controller.signal);
+        if (!provider) return errorResponse('not_configured', 'Aucun fournisseur IA compatible actif. Contactez votre administrateur.', 503);
         const translations = await translateFields(body, {
-          apiKind: config.data.api_kind,
-          baseUrl: config.data.base_url,
-          model: config.data.model,
-          maxOutputTokens: config.data.max_output_tokens,
-          extra: config.data.extra,
-        }, config.data.api_key, { signal: controller.signal });
+          apiKind: provider.config.apiKind,
+          baseUrl: provider.config.baseUrl,
+          model: provider.config.model,
+          maxOutputTokens: provider.config.maxOutputTokens,
+          extra: provider.config.extra,
+        }, provider.apiKey, { signal: controller.signal });
         return NextResponse.json({ translations }, { headers: { 'Cache-Control': 'no-store' } });
       } catch (error) {
         if (controller.signal.aborted) return errorResponse('translation_timeout', 'La traduction prend trop de temps. Réessayez.', 504);

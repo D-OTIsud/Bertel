@@ -8,6 +8,7 @@
 //   * DYNAMIQUE — filtres Explorer sauvegardés (filters jsonb), ré-résolus live à chaque accès.
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
+import { getServiceAvailability } from './service-availability';
 import { mapDatabaseError, readApiErrorMessage } from './api-error';
 import { readErrorMessage } from '../lib/db-error-message';
 import type { ExplorerFilters, ObjectCard } from '../types/domain';
@@ -604,6 +605,9 @@ export interface SendListEmailResult {
  * Passe le JWT de l'appelant en Bearer ; la route ré-autorise via get_list (en tant qu'appelant).
  */
 export async function sendListByEmail(listId: string, toEmail: string): Promise<SendListEmailResult> {
+  // A stale visible action must not start an SMTP request after an administrator disables it.
+  const availability = await getServiceAvailability({ force: true });
+  if (!availability.email) throw new Error("L'envoi d'e-mail n'est pas encore configuré (SMTP).");
   const client = getApiClient();
   if (!client) throw new Error('Supabase non configuré.');
   const { data } = await client.auth.getSession();

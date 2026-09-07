@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Fs, Field, LangTabs, ScopeTabs } from '../primitives';
 import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import { AiTranslateButton } from '../../../components/ai/AiTranslateButton';
+import { useServiceAvailability } from '../../../hooks/useServiceAvailability';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceDescriptionScope } from '../../../services/object-workspace-parser';
 import { readTranslatableField, updateTranslatableField } from './descriptions-field';
@@ -20,6 +21,7 @@ const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
 
 /** Section 04 — multilingual descriptions: default (shared) layer + per-organisation personalised overlay. */
 export function SectionDescriptions({ editor, permissions, folded }: SectionProps) {
+  const { translation } = useServiceAvailability();
   const descriptions = editor.draft.descriptions;
   const characteristics = editor.draft.characteristics;
   const active = descriptions.activeLanguage;
@@ -108,10 +110,10 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
         {tabs.length > 0 && <LangTabs tabs={tabs} active={active} onSelect={setLanguage} />}
       </div>
 
-      {!readOnly && active === BASE_LANGUAGE && (
+      {!readOnly && translation && active === BASE_LANGUAGE && (
         <p className="muted">Choisissez une autre langue pour traduire vos textes en un clic avec l’IA.</p>
       )}
-      {!readOnly && active !== BASE_LANGUAGE && (
+      {!readOnly && translation && active !== BASE_LANGUAGE && (
         <AiTranslateButton
           objectId={editor.objectId}
           sourceLanguage={BASE_LANGUAGE}

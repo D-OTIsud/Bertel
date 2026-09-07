@@ -31,6 +31,7 @@ import {
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { mockCrmDirectory } from '../data/mock';
 import { useSessionStore } from '../store/session-store';
+import { getServiceAvailability } from './service-availability';
 
 // Rectifs PO §61 : les tests de contrat RPC (paramètres réellement envoyés) mockent le
 // client API ; les chemins démo/parse n'y touchent pas (getApiClient → undefined = le
@@ -40,6 +41,7 @@ jest.mock('../lib/supabase', () => ({
   getApiClient: jest.fn(),
   getSupabaseClient: jest.fn(),
 }));
+jest.mock('./service-availability', () => ({ getServiceAvailability: jest.fn() }));
 
 const mockedGetApiClient = jest.mocked(getApiClient);
 const mockedGetSupabaseClient = jest.mocked(getSupabaseClient);
@@ -612,6 +614,7 @@ describe('saveCrmActor / saveActorChannel / deleteActorChannel (rectifs PO point
 
   beforeEach(() => {
     useSessionStore.setState({ demoMode: false });
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
   });
   afterEach(() => {
     useSessionStore.setState({ demoMode: initialDemoMode });
@@ -950,6 +953,7 @@ describe('saveCrmTask — ping notify-drain (17i)', () => {
     fetchMock.mockClear();
     global.fetch = fetchMock as unknown as typeof fetch;
     useSessionStore.setState({ demoMode: false });
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: true });
     // getSupabaseClient().auth.getSession() → un access_token de test (même pattern que
     // describe('uploadActorPhoto') plus haut dans ce fichier).
     mockedGetSupabaseClient.mockReturnValue({
@@ -972,6 +976,14 @@ describe('saveCrmTask — ping notify-drain (17i)', () => {
       method: 'POST',
       headers: expect.objectContaining({ Authorization: 'Bearer jwt-ping' }),
     }));
+  });
+
+  it('SMTP absent : garde la tâche et ne POSTe pas le drain', async () => {
+    jest.mocked(getServiceAvailability).mockResolvedValue({ translation: false, imageAnalysis: false, email: false });
+    fakeRpcClient({ id: 't-1' });
+    await saveCrmTask({ objectId: 'OBJ1', title: 'T', assigneeIds: ['u-col'] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('NE ping PAS un save sans assigneeIds (drag & drop statut seul)', async () => {

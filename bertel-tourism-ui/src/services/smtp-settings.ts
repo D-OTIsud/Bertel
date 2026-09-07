@@ -1,3 +1,5 @@
+import { invalidateServiceAvailability } from './service-availability';
+
 export interface SmtpSettings {
   enabled: boolean;
   host: string;
@@ -42,8 +44,10 @@ export function getSmtpSettings(accessToken: string): Promise<SmtpSettings> {
   return request(accessToken, '');
 }
 
-export function saveSmtpSettings(accessToken: string, input: SmtpSettingsInput): Promise<SmtpSettings> {
-  return request(accessToken, '', { method: 'PUT', body: JSON.stringify(input) });
+export async function saveSmtpSettings(accessToken: string, input: SmtpSettingsInput): Promise<SmtpSettings> {
+  const settings = await request<SmtpSettings>(accessToken, '', { method: 'PUT', body: JSON.stringify(input) });
+  invalidateServiceAvailability();
+  return settings;
 }
 
 /** Verifies the saved server/authentication without sending a message. */

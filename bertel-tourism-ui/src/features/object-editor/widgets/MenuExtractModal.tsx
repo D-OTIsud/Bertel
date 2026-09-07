@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Image as ImageIcon, Loader2, Sparkles } from 'lucide-react';
 import { EditorModal, Field, Input } from '../primitives';
 import type { ObjectWorkspaceMenu, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
@@ -12,6 +12,8 @@ import {
   type ExtractImage,
 } from '../../../services/menu-extract';
 import { rasterizePdfToImages } from '../../../lib/pdf-rasterize';
+import { useServiceAvailability } from '../../../hooks/useServiceAvailability';
+import { getServiceAvailability } from '../../../services/service-availability';
 
 interface Props {
   open: boolean;
@@ -60,6 +62,7 @@ export function MenuExtractModal({
   onInject,
   onCarteUploaded,
 }: Props) {
+  const { imageAnalysis } = useServiceAvailability();
   const [files, setFiles] = useState<ModalFile[]>([]);
   const [confirmed, setConfirmed] = useState(false);
   const [title, setTitle] = useState('Carte');
@@ -67,6 +70,42 @@ export function MenuExtractModal({
   const [result, setResult] = useState<ExtractResult | null>(null);
   const [accepted, setAccepted] = useState<string[][]>([]);
   const [error, setError] = useState<string | null>(null);
+  const actionGeneration = useRef(0);
+  const analysisRequest = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const modalVersion = useRef(0);
+
+  useEffect(() => {
+    // StrictMode runs setup → cleanup → setup in development.
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      modalVersion.current += 1;
+      actionGeneration.current += 1;
+      analysisRequest.current?.abort();
+      analysisRequest.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    modalVersion.current += 1;
+    actionGeneration.current += 1;
+    analysisRequest.current?.abort();
+    analysisRequest.current = null;
+    setPhase('collect');
+    setResult(null);
+    setAccepted([]);
+  }, [open, objectId]);
+
+  useEffect(() => {
+    if (imageAnalysis) return;
+    actionGeneration.current += 1;
+    analysisRequest.current?.abort();
+    analysisRequest.current = null;
+    setPhase('collect');
+    setResult(null);
+    setAccepted([]);
+  }, [imageAnalysis]);
 
   const dietaryLabel = useMemo(() => {
     const map = new Map(allowedDietary.map((o) => [o.code, o.label]));
@@ -77,31 +116,59 @@ export function MenuExtractModal({
     .filter((f) => f.status === 'ready')
     .flatMap((f) => f.images ?? [])
     .slice(0, MAX_ANALYZE_IMAGES);
-  const canAnalyze = phase === 'collect' && confirmed && analyzableImages.length > 0;
+  const canAnalyze = imageAnalysis && phase === 'collect' && confirmed && analyzableImages.length > 0;
 
   async function addFiles(fileList: FileList) {
     setError(null);
     for (const file of Array.from(fileList)) {
+      const generation = actionGeneration.current;
+      const version = modalVersion.current;
       const key = `${file.name}-${file.size}-${files.length}-${Math.round(performance.now())}`;
       const isPdf = file.type === 'application/pdf';
       setFiles((prev) => [...prev, { key, name: file.name, isPdf, status: 'uploading' }]);
+      let linked = false;
       try {
         const uploaded = await uploadDocument({ file, objectId, accessToken });
         await linkObjectCarte(objectId, uploaded.documentId, Math.floor(performance.now()));
+        linked = true;
         onCarteUploaded?.();
-        // PDFs are rasterized to page images in the browser; an image becomes a single image.
+        // The upload itself remains useful even if AI was switched off while it
+        // was in flight. Only update the same still-open modal instance.
+        if (!mounted.current || version !== modalVersion.current) continue;
+        setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'ready' } : f)));
+        // Uploading a downloadable carte is always available. Do not decode or
+        // rasterize it unless availability is freshly confirmed for AI analysis.
+        const availability = await getServiceAvailability({ force: true });
+        if (generation !== actionGeneration.current || version !== modalVersion.current
+          || !mounted.current || !availability.imageAnalysis) continue;
         const images = isPdf ? await rasterizePdfToImages(file) : [await readFileAsBase64(file)];
-        setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'ready', images } : f)));
+        if (generation === actionGeneration.current && version === modalVersion.current
+          && mounted.current && imageAnalysis) {
+          setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'ready', images } : f)));
+        }
       } catch (err) {
-        setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'error', error: errMsg(err) } : f)));
+        if (!linked && mounted.current && version === modalVersion.current) {
+          setFiles((prev) => prev.map((f) => (f.key === key ? { ...f, status: 'error', error: errMsg(err) } : f)));
+        }
       }
     }
   }
 
   async function analyze() {
+    if (analysisRequest.current || !imageAnalysis || !canAnalyze) return;
+    const generation = actionGeneration.current;
+    const version = modalVersion.current;
+    const controller = new AbortController();
+    analysisRequest.current = controller;
     setPhase('analyzing');
     setError(null);
     try {
+      const availability = await getServiceAvailability({ force: true });
+      if (generation !== actionGeneration.current || version !== modalVersion.current
+        || controller.signal.aborted || !mounted.current || !availability.imageAnalysis) {
+        if (analysisRequest.current === controller && !controller.signal.aborted) setPhase('collect');
+        return;
+      }
       const res = await extractMenuFromImages(
         {
           objectId,
@@ -111,13 +178,20 @@ export function MenuExtractModal({
           allowedDietary: allowedDietary.map((o) => ({ id: o.id, code: o.code, label: o.label })),
         },
         accessToken,
+        globalThis.fetch,
+        controller.signal,
       );
+      if (generation !== actionGeneration.current || version !== modalVersion.current
+        || controller.signal.aborted || !mounted.current || !imageAnalysis) return;
       setResult(res);
       setAccepted(res.suggestedDietaryByDish.map(() => []));
       setPhase('preview');
     } catch (err) {
+      if (generation !== actionGeneration.current || version !== modalVersion.current || controller.signal.aborted || !mounted.current) return;
       setError(errMsg(err));
       setPhase('collect');
+    } finally {
+      if (analysisRequest.current === controller) analysisRequest.current = null;
     }
   }
 
@@ -132,24 +206,34 @@ export function MenuExtractModal({
   function inject() {
     if (!result) return;
     onInject(applyDietarySuggestions(result.menu, accepted));
+    close();
+  }
+
+  function close() {
+    modalVersion.current += 1;
+    actionGeneration.current += 1;
+    analysisRequest.current?.abort();
+    analysisRequest.current = null;
     onClose();
   }
 
   return (
     <EditorModal
       open={open}
-      title="Ajouter une carte"
+      title={imageAnalysis ? 'Ajouter une carte' : 'Importer une carte'}
       size="lg"
-      saveLabel="Ajouter ce menu au brouillon"
-      saveDisabled={phase !== 'preview'}
-      onSave={inject}
-      onClose={onClose}
+      saveLabel={imageAnalysis ? 'Ajouter ce menu au brouillon' : 'Fermer'}
+      saveDisabled={imageAnalysis ? phase !== 'preview' : false}
+      onSave={imageAnalysis ? inject : close}
+      onClose={close}
     >
       {phase !== 'preview' && (
         <>
           <Field
             label="Fichiers (images de la carte ou PDF)"
-            hint="Images (JPEG/PNG) ou PDF — tous analysés par l'IA. Chaque fichier est aussi conservé comme carte téléchargeable."
+            hint={imageAnalysis
+              ? "Images (JPEG/PNG) ou PDF — tous analysés par l'IA. Chaque fichier est aussi conservé comme carte téléchargeable."
+              : 'Images (JPEG/PNG) ou PDF — chaque fichier est conservé comme carte téléchargeable.'}
           >
             <input
               type="file"
@@ -170,7 +254,7 @@ export function MenuExtractModal({
                   {f.isPdf ? <FileText size={14} aria-hidden /> : <ImageIcon size={14} aria-hidden />}
                   <span>{f.name}</span>
                   {f.status === 'uploading' && <span className="muted">· envoi…</span>}
-                  {f.status === 'ready' && f.isPdf && <span className="muted">· carte · {f.images?.length ?? 0} page(s)</span>}
+                  {f.status === 'ready' && f.isPdf && <span className="muted">· carte{imageAnalysis ? ` · ${f.images?.length ?? 0} page(s)` : ''}</span>}
                   {f.status === 'ready' && !f.isPdf && <span className="muted">· prête</span>}
                   {f.status === 'error' && <span role="alert" style={{ color: 'var(--danger, #c00)' }}>· {f.error}</span>}
                 </li>
@@ -178,20 +262,22 @@ export function MenuExtractModal({
             </ul>
           )}
 
-          <Field label="Titre du menu généré">
-            <Input value={title} onChange={setTitle} placeholder="Carte de la semaine" />
-          </Field>
+          {imageAnalysis && <>
+            <Field label="Titre du menu généré">
+              <Input value={title} onChange={setTitle} placeholder="Carte de la semaine" />
+            </Field>
 
-          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, margin: '6px 0' }}>
-            <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
-            <span>
-              Il s'agit de la <strong>carte complète</strong> : toutes les pages/images sont importées avant l'analyse.
-            </span>
-          </label>
+            <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, margin: '6px 0' }}>
+              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
+              <span>
+                Il s'agit de la <strong>carte complète</strong> : toutes les pages/images sont importées avant l'analyse.
+              </span>
+            </label>
+          </>}
 
           {error && <p role="alert" style={{ color: 'var(--danger, #c00)', fontSize: 13 }}>{error}</p>}
 
-          <button
+          {imageAnalysis && <button
             type="button"
             className="btn primary"
             disabled={!canAnalyze && phase !== 'analyzing'}
@@ -201,7 +287,7 @@ export function MenuExtractModal({
           >
             {phase === 'analyzing' ? <Loader2 size={15} className="spin" aria-hidden /> : <Sparkles size={15} aria-hidden />}
             {phase === 'analyzing' ? 'Analyse en cours…' : 'Analyser et créer un menu'}
-          </button>
+          </button>}
         </>
       )}
 

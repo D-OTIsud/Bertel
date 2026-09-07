@@ -1,5 +1,8 @@
 import { extractMenuFromImages, applyDietarySuggestions } from './menu-extract';
 import type { ObjectWorkspaceMenu, ObjectWorkspaceMenuItem } from './object-workspace-parser';
+import { getServiceAvailability } from './service-availability';
+
+jest.mock('./service-availability', () => ({ getServiceAvailability: jest.fn() }));
 
 function dish(name: string, over: Partial<ObjectWorkspaceMenuItem> = {}): ObjectWorkspaceMenuItem {
   return {
@@ -45,6 +48,10 @@ describe('extractMenuFromImages', () => {
     allowedDietary: [{ id: 'd1', code: 'vegetarian', label: 'Végétarien' }],
   };
 
+  beforeEach(() => {
+    (getServiceAvailability as jest.Mock).mockResolvedValue({ translation: true, imageAnalysis: true, email: false });
+  });
+
   it('POSTs to /api/menu/extract with a bearer token and returns the parsed result', async () => {
     const calls: Array<{ url: string; init: RequestInit }> = [];
     const fetchImpl = (async (url: string, init: RequestInit) => {
@@ -68,5 +75,12 @@ describe('extractMenuFromImages', () => {
     const fetchImpl = (async () =>
       ({ ok: false, status: 503, json: async () => ({ error: 'not_configured', detail: 'aucun fournisseur' }) }) as unknown as Response) as unknown as typeof fetch;
     await expect(extractMenuFromImages(input, 'tok', fetchImpl)).rejects.toThrow(/fournisseur|not_configured/i);
+  });
+
+  it('does not POST when a fresh availability check disables image analysis', async () => {
+    (getServiceAvailability as jest.Mock).mockResolvedValue({ translation: true, imageAnalysis: false, email: false });
+    const fetchImpl = jest.fn() as unknown as typeof fetch;
+    await expect(extractMenuFromImages(input, 'tok', fetchImpl)).rejects.toThrow('administrateur');
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

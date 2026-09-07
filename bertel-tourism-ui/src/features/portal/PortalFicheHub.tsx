@@ -39,6 +39,7 @@ import {
 import { PortalRubricScreen } from './PortalRubricScreen';
 import { PortalSendBar } from './PortalSendBar';
 import { PortalVerifyCard } from './PortalVerifyCard';
+import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import { PhotosRubric, PORTAL_PHOTO_TARGET, countPortalPhotos } from './rubrics/PhotosRubric';
 import { formatPortalDate, portalProgressLabel } from './portal-format';
 import type { PortalFormCache } from './rubrics/rubric-kit';
@@ -160,6 +161,7 @@ export function PortalFicheHub({
   onBackToHub,
   onNavigate,
 }: PortalFicheHubProps) {
+  const serviceAvailability = useServiceAvailability();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const thanksRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLElement>(null);
@@ -232,7 +234,10 @@ export function PortalFicheHub({
           <div className="portal-card panel-card motion-success portal-thanks" role="status" tabIndex={-1} ref={thanksRef}>
             <CheckCircle size={28} aria-hidden />
             <h2>Merci ! Vos modifications ont été envoyées à l’office.</h2>
-            <p>L’office les vérifie, en général sous une semaine. Vous recevrez un e-mail quand ce sera fait.</p>
+            <p>
+              L’office les vérifie, en général sous une semaine.
+              {serviceAvailability.email ? ' Vous recevrez un e-mail quand ce sera fait.' : ''}
+            </p>
             {fiche.count >= 2 ? (
               <Link className="ghost-button" href="/espace" onClick={guardedLeave('/espace')}>
                 Retour à vos fiches

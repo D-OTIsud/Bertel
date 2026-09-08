@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { Toaster } from 'sonner';
@@ -9,11 +10,12 @@ import { OfflineBanner } from '@/components/common/OfflineBanner';
 import { ThemeBootstrap } from '@/components/common/ThemeBootstrap';
 import { queryCacheBuster, queryCacheMaxAgeMs, queryClient, queryPersister } from '@/app/query-client';
 import { useSessionStore } from '@/store/session-store';
+import { sessionQueryScopeKey } from '@/app/session-query-cache';
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const userId = useSessionStore((state) => state.userId);
+  const sessionScope = useSessionStore(sessionQueryScopeKey);
   const langPrefs = useSessionStore((state) => state.langPrefs);
-  const buster = `${queryCacheBuster}:${userId ?? 'anon'}:${langPrefs.join(',')}`;
+  const buster = `${queryCacheBuster}:${sessionScope}:${langPrefs.join(',')}`;
 
   // D4 : le boundary englobe aussi les bootstraps (thème/session) — un throw à cet
   // étage affichait une page blanche ; Toaster/OfflineBanner restent hors boundary.
@@ -22,7 +24,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ErrorBoundary>
         <AppBootstrap />
         <ThemeBootstrap />
-        {children}
+        {/* Old query observers also hold results after cache eviction. Recreate views
+            when their session scope changes so those results cannot remain visible. */}
+        <Fragment key={sessionScope}>{children}</Fragment>
       </ErrorBoundary>
       <Toaster richColors position="top-right" />
       <OfflineBanner />

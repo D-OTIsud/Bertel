@@ -14620,3 +14620,100 @@ html:has(.portal-shell) { scroll-padding-bottom: calc(140px + env(safe-area-inse
     display: none;
   }
 }
+.detail-documents-card .detail-section__body {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-documents-card .detail-section__body p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.detail-documents-card__button {
+  width: 100%;
+  justify-content: center;
+}
+
+.object-documents-modal__state {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.object-documents-modal__state p,
+.object-documents-modal__state strong {
+  margin: 0;
+}
+
+.object-documents-modal__state--error {
+  color: var(--brand-red);
+}
+
+.object-documents-modal__state--error > div {
+  display: grid;
+  gap: 6px;
+}
+
+.object-documents-modal__groups,
+.object-documents-modal__group {
+  display: grid;
+  gap: 12px;
+}
+
+.object-documents-modal__group h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.object-documents-modal__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.object-documents-modal__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.object-documents-modal__item > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.object-documents-modal__item span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.object-documents-modal__item a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--brand-teal);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.object-documents-modal__item a:hover {
+  text-decoration: underline;
+}

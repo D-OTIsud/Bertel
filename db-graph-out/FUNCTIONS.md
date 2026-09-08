@@ -360,6 +360,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.current_user_actor_id()`
 - returns: `uuid` — SECURITY DEFINER
+- reads `public.actor` _(high)_
 - reads `public.app_user_profile` _(high)_
 
 > 18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l'invitation). Jamais le pont e-mail.
@@ -436,6 +437,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.current_user_crm_object_ids()`
 - returns: `SETOF text` — SECURITY DEFINER
+- reads `public.object` _(high)_
 - reads `public.object_org_link` _(high)_
 - reads `public.ref_org_role` _(high)_
 - reads `public.user_org_membership` _(high)_
@@ -490,6 +492,8 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.current_user_test_realm()`
 - returns: `boolean` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
 - reads `public.org_config` _(high)_
 - reads `public.user_org_membership` _(high)_
 
@@ -673,6 +677,12 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `TABLE(id uuid, label text, api_kind text, base_url text, model text, max_output_tokens integer, extra jsonb, api_key text)` — SECURITY DEFINER
 - reads `public.app_ai_provider_config` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
+
+## `api.get_active_object_documents(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_document` _(high)_
 
 ## `api.get_actor_data(p_object_id text)`
 - returns: `jsonb`
@@ -1613,11 +1623,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.get_smtp_config()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)` — SECURITY DEFINER
-- reads `public.app_smtp_config` _(high)_
 
 ## `api.get_smtp_config_secret()`
 - returns: `TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)` — SECURITY DEFINER
-- reads `public.app_smtp_config` _(high)_
 - reads `vault.decrypted_secrets` _(high)_
 
 ## `api.get_trail(p_trail_id uuid)`
@@ -2001,6 +2009,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.crm_interaction` _(high)_
 - reads `public.crm_task` _(high)_
 - reads `public.crm_task_assignee` _(high)_
+- reads `public.object` _(high)_
 - reads `public.ref_actor_role` _(high)_
 - reads `public.ref_code_crm_sentiment` _(high)_
 - reads `public.ref_code_demand_topic` _(high)_
@@ -2290,6 +2299,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.prevent_duplicate_actor_email()`
 - returns: `trigger`
+- reads `public.actor` _(high)_
 - reads `public.actor_channel` _(high)_
 - reads `public.ref_code_contact_kind` _(high)_
 
@@ -3334,9 +3344,7 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 ## `api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)`
 - returns: `void` — SECURITY DEFINER
-- reads `public.app_smtp_config` _(high)_
 - reads `vault.secrets` _(high)_
-- writes `public.app_smtp_config` _(high)_
 - writes `vault.secrets` _(high)_
 
 ## `api.user_actor_ids()`
@@ -3594,6 +3602,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 > Rédaction ciblée du journal d'audit : retire les clés PII d'un sujet (row_pk OU before_data->>key,
 > ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb - text[] = null.
 
+## `internal.actor_in_current_realm(p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+
 ## `internal.backfill_list_feature_notifications()`
 - returns: `integer` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
@@ -3630,6 +3642,19 @@ _Reads/writes are regex-inferred and flagged by confidence._
 
 > Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie.
 
+## `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+
+## `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)`
+- returns: `jsonb` — SECURITY DEFINER
+- reads `public.object_classification` _(high)_
+- reads `public.object_legal` _(high)_
+- reads `public.ref_classification_scheme` _(high)_
+- reads `public.ref_document` _(high)_
+- reads `public.ref_legal_type` _(high)_
+
+> Returns active private Bertel attachment documents for one object. Authorization is object-scoped through user_can_write_object_canonical; unauthorized callers receive {authorized:false,documents:[]}.
+
 ## `internal.grant_test_org_permissions()`
 - returns: `jsonb`
 - reads `public.org_role_permission` _(high)_
@@ -3642,6 +3667,11 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.user_org_business_role` _(high)_
 
 > Donne aux membres NOMMES du bac a sable les droits d'un EDITEUR au sens de §227 : jeu complet (12) sur le role `editor`, + ce role aux membres qui n'en ont aucun. Le role `contributor` reste a 7 — le compte decouverte partage de codex/public-sandbox-entry le porte, et son test exige qu'il n'ait PAS write_crm_notes. N'ECRASE JAMAIS un role existant — le visiteur decouverte DOIT rester `contributor`, sans quoi api.get_sandbox_discovery_user() leve UNSAFE_SANDBOX_IDENTITY et l'Espace de test devient indisponible. Desactive au passage toute ligne org_permission (table RETIREE par §227, dont la migration refuse de s'appliquer s'il en reste une active).
+
+## `internal.guard_actor_object_realm()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.actor` _(high)_
+- reads `public.object` _(high)_
 
 ## `internal.list_grid_summary(p_list_id uuid)`
 - returns: `TABLE(item_count integer, type_breakdown jsonb, cover_image text)` — SECURITY DEFINER
@@ -3661,6 +3691,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - reads `public.user_org_admin_role` _(high)_
 - reads `public.user_org_membership` _(high)_
 - writes `public.app_notification` _(high)_
+
+## `internal.object_in_current_realm(p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.object` _(high)_
 
 ## `internal.org_admin_rank(p_user_id uuid, p_org_object_id text)`
 - returns: `integer` — SECURITY DEFINER
@@ -3847,6 +3881,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.object_room_type_media` _(high)_
 
 > Medias du corpus de test : 3-5 photos par fiche (une principale), etiquettes, et les liens de facette (etapes ITI, chambres, plats). Emprunte un vivier BORNE de 24 URLs publiques reelles — la chaine seulement, jamais un octet ; ne touche JAMAIS au stockage. Idempotent.
+
+## `internal.stamp_actor_test_realm()`
+- returns: `trigger` — SECURITY DEFINER
+- reads `public.org_config` _(high)_
 
 ## `internal.test_actor_name(p_type text, p_i integer)`
 - returns: `text`

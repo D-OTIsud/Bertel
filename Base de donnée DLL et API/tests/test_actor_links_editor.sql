@@ -22,7 +22,9 @@ BEGIN
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND policyname='canonical_ins_actor_object_role' AND cmd='INSERT'), 'canonical_ins missing';
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND policyname='canonical_upd_actor_object_role' AND cmd='UPDATE'), 'canonical_upd missing';
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND policyname='canonical_del_actor_object_role' AND cmd='DELETE'), 'canonical_del missing';
-  ASSERT NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND cmd='ALL'), 'FOR ALL must be retired on actor_object_role (P0.3 gotcha class)';
+  -- A restrictive ALL policy can only narrow the per-command grants. The legacy
+  -- permissive ALL policy would re-open every command and must stay retired.
+  ASSERT NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND cmd='ALL' AND permissive='PERMISSIVE'), 'permissive FOR ALL must be retired on actor_object_role (P0.3 gotcha class)';
   ASSERT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='actor_object_role' AND policyname='ext_actor_object_role_read' AND cmd='SELECT'), 'ext_actor_object_role_read (rewritten §38/§39 form) missing';
   ASSERT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='api' AND p.proname='search_actors'), 'api.search_actors missing';
   ASSERT NOT has_function_privilege('anon', 'api.search_actors(text)', 'EXECUTE'), 'anon must not execute search_actors';

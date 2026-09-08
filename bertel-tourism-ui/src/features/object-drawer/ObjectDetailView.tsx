@@ -90,6 +90,7 @@ import {
 } from './utils';
 import { measureAmenitiesLineClamp } from './amenities-line-clamp';
 import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta, type ArchetypeCode } from '../object-editor/archetypes';
+import { ObjectDocumentsCard } from './ObjectDocumentsCard';
 
 // §48: FMA is no longer rendered as an itinerary — events fall through to GenericDetailView
 // (no trail/GPX panels); the editor gives them BlockFMA (object_fma dates/occurrences).
@@ -4074,6 +4075,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   // Sections d'aside sans onglet (ordre historique de buildAsideSections, moins la carte
   // horaires devenue `hoursSection`).
   const asideExtras: ResolvedDrawerSection[] = [
+    { key: 'documents', id: '', label: '', placement: 'aside', render: () => <ObjectDocumentsCard objectId={data.id} /> },
     { key: 'map', id: '', label: '', placement: 'aside', render: () => <LocationMapSection preview={preview} /> },
     { key: 'contact', id: '', label: '', placement: 'aside', render: () => <ContactSection contacts={preview.contacts} /> },
     { key: 'web-channels', id: '', label: '', placement: 'aside', render: () => <WebChannelsSection channels={preview.webChannels} /> },

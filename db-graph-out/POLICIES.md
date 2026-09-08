@@ -67,6 +67,8 @@
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR api.is_platform_superuser())`
 
 ## `public.actor`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `(is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)) | (is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))`
 - **ALL** `admin_actor_write` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_read` — roles ['public']
@@ -76,12 +78,16 @@
   WHERE ((aor.actor_id = actor.id) AND api.can_read_extended(o.id)))))`
 
 ## `public.actor_channel`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)`
 - **ALL** `admin_actor_channel_write` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **SELECT** `ext_actor_channel_read` — roles ['public']
   - `((( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) OR (actor_id = ( SELECT auth.uid() AS uid)))`
 
 ## `public.actor_consent`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)`
 - **ALL** `own_actor_consent_write` — roles ['public']
   - `(actor_id = ( SELECT auth.uid() AS uid))`
 - **SELECT** `own_actor_consent_read` — roles ['public']
@@ -92,6 +98,8 @@
   - `(( SELECT api.is_platform_superuser() AS is_platform_superuser) OR ((( SELECT api.current_user_admin_rank() AS current_user_admin_rank) IS NOT NULL) AND (( SELECT api.current_user_org_id() AS current_user_org_id) = ANY (org_object_ids))))`
 
 ## `public.actor_document`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)`
 - **DELETE** `admin_del_actor_document` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **INSERT** `admin_ins_actor_document` — roles ['public']
@@ -102,6 +110,8 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.actor_object_role`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)`
 - **DELETE** `canonical_del_actor_object_role` — roles ['public']
   - `api.user_can_write_object_canonical(object_id)`
 - **INSERT** `canonical_ins_actor_object_role` — roles ['public']
@@ -172,6 +182,8 @@
   - `api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)`
 
 ## `public.crm_interaction`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.crm_row_in_current_realm(object_id, actor_id) | internal.crm_row_in_current_realm(object_id, actor_id)`
 - **DELETE** `admin_del_crm_interaction` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **INSERT** `admin_ins_crm_interaction` — roles ['public']
@@ -182,6 +194,8 @@
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 
 ## `public.crm_task`
+- **ALL RESTRICTIVE** `actor_test_realm` — roles ['anon', 'authenticated']
+  - `internal.crm_row_in_current_realm(object_id, actor_id) | internal.crm_row_in_current_realm(object_id, actor_id)`
 - **DELETE** `admin_del_crm_task` — roles ['public']
   - `(( SELECT auth.role() AS role) = ANY (ARRAY['service_role'::text, 'admin'::text]))`
 - **INSERT** `admin_ins_crm_task` — roles ['public']

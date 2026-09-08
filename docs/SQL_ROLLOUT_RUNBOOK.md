@@ -2194,7 +2194,7 @@ L'ordre corrigé a été vérifié sur PostgreSQL local : contrat historique ava
 la migration, puis S0–S14 et les cas dynamique/couverture/realm après migration.
 Les fixtures, les claims et les changements locaux sont annulés par rollback.
 
-## 19e — Inbox des propositions de listes — 2026-09-07
+## 19f — Inbox des propositions de listes — 2026-09-07
 
 La migration `supabase/migrations/20260907085838_list_feature_notifications.sql`
 ajoute l'espèce `list_feature_requested` à `app_notification`. Une proposition
@@ -2232,3 +2232,26 @@ dans une transaction annulée. Le contrôle à 09:17 UTC confirme l'historique,
 RLS sur l'inbox, les helpers internes interdits aux clients et à `service_role`,
 le champ de partage actif, 15 listes conservées et aucun claim e-mail de
 proposition. Le déploiement du front-end via Codify reste à réaliser.
+
+## 19g–19h — Documents actifs des fiches — 2026-09-08
+
+Les migrations `20260908051913_active_object_documents.sql` et
+`20260908053837_attach_classification_evidence.sql` ont été appliquées le
+8 septembre 2026. Le manifeste frais les applique après les notifications
+et avant le rafraîchissement final des vues matérialisées.
+
+La RPC `api.get_active_object_documents(text)` vérifie le droit d'édition sur
+la fiche et renvoie ses documents actifs, groupés en documentation juridique
+et justificatifs de classement ou de label. Les documents expirés, futurs ou
+inactifs sont exclus. L'interface ajoute une carte compacte qui ouvre leur liste
+dans une modale ; sa disponibilité dépend du déploiement du front-end.
+
+Le fichier public de la seconde migration conserve uniquement le filtrage
+générique des dates et statuts. Les 64 affectations réelles de justificatifs ont
+été appliquées séparément ; leur SQL exact est conservé localement sous
+`outputs/private-data-migrations/`, exclu de Git. Ne pas rejouer cette affectation
+ni les migrations déjà enregistrées en production.
+
+Validation : contrôle des autorisations de la RPC et d'un document expiré sur
+la base ; typecheck et 36 tests frontend ciblés réussis sur le checkout de
+publication. Aucun appel supplémentaire au fournisseur IA.

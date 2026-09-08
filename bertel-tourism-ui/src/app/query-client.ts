@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import { isSandboxMode } from '@/lib/sandbox-mode';
+import { bindSessionQueryCache } from './session-query-cache';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -25,7 +26,8 @@ export const queryClient = new QueryClient({
   },
 });
 
-export const queryCacheBuster = 'v1';
+// Discard records persisted before actor realm isolation was enforced server-side.
+export const queryCacheBuster = 'v2-actor-realm-isolation';
 export const queryCacheStorageKey = isSandboxMode() ? 'bertel-test-rq-cache' : 'bertel-rq-cache';
 export const queryCacheMaxAgeMs = DAY_MS;
 
@@ -36,3 +38,5 @@ export const queryPersister =
         storage: isSandboxMode() ? window.sessionStorage : window.localStorage,
       })
     : undefined;
+
+bindSessionQueryCache(queryClient, () => { void queryPersister?.removeClient(); });

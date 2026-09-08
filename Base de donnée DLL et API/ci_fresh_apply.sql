@@ -608,9 +608,20 @@ ROLLBACK;
 \ir tests/test_listes_cycle_vie.sql
 \ir tests/test_listes_dynamic_cover_realm.sql
 
-\echo '== 19e notifications inbox des propositions de listes (reviewers ORG actifs/superusers, in-app only, cleanup et lien de partage actif) =='
+\echo '== 19e actor test realm isolation: existing seed backfill, CRM/search/read/write boundaries =='
+\ir ../supabase/migrations/20260907073235_actor_test_realm_isolation.sql
+\ir tests/test_actor_test_realm.sql
+\ir tests/test_actor_email_realm.sql
+
+\echo '== 19f notifications inbox des propositions de listes (reviewers ORG actifs/superusers, in-app only, cleanup et lien de partage actif) =='
 \ir ../supabase/migrations/20260907085838_list_feature_notifications.sql
 \ir tests/test_list_feature_notifications.sql
+
+\echo '== 19g documents actifs d une fiche: RPC prive et autorisation objet =='
+\ir ../supabase/migrations/20260908051913_active_object_documents.sql
+
+\echo '== 19h filtrage generique des dates et statuts des justificatifs actifs =='
+\ir ../supabase/migrations/20260908053837_attach_classification_evidence.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

@@ -226,6 +226,20 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
   ]);
   if (!canActor || !canObject) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
+  // Canonical object writers include platform superusers across realms. Promotion
+  // runs with service_role, so compare the stored realms before copying the file
+  // into public storage; the actor permission alone cannot constrain its target.
+  const [actorRealm, objectRealm] = await Promise.all([
+    auth.server.from('actor').select('is_test').eq('id', actorId).maybeSingle(),
+    auth.server.from('object').select('is_test').eq('id', objectId).maybeSingle(),
+  ]);
+  if (actorRealm.error || objectRealm.error
+      || typeof actorRealm.data?.is_test !== 'boolean'
+      || typeof objectRealm.data?.is_test !== 'boolean'
+      || actorRealm.data.is_test !== objectRealm.data.is_test) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+
   const { data: link } = await auth.server
     .from('actor_document')
     .select('status, title, valid_from, valid_to')

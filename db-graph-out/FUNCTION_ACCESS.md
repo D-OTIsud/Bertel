@@ -490,6 +490,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_active_ai_provider_secret`
 - **object types served:** —
 
+### `api.get_active_object_documents(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_active_object_documents`
+- **object types served:** **all object types**
+
 ### `api.get_actor_data(p_object_id text)`
 - **returns:** `jsonb`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_actor_data`
@@ -2361,6 +2366,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ## schema `internal`
 
+### `internal.actor_in_current_realm(p_actor_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
 ### `internal.backfill_list_feature_notifications()` _(DEFINER)_
 - **returns:** `integer`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -2383,11 +2393,27 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **object types served:** **all object types**
 - _Reprise des assignations depuis crm_task.owner (16w) : une ligne par owner non nul, SANS provenance (assigned_by et assigned_at à NULL — voir §A). Idempotente. Nommée pour que tests/test_crm_task_multi_assignee.sql éprouve LA règle et non une copie._
 
+### `internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** —
+
+### `internal.get_active_object_documents_unfiltered_20260908(p_object_id text)` _(DEFINER)_
+- **returns:** `jsonb`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Returns active private Bertel attachment documents for one object. Authorization is object-scoped through user_can_write_object_canonical; unauthorized callers receive {authorized:false,documents:[]}._
+
 ### `internal.grant_test_org_permissions()`
 - **returns:** `jsonb`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 - _Donne aux membres NOMMES du bac a sable les droits d'un EDITEUR au sens de §227 : jeu complet (12) sur le role `editor`, + ce role aux membres qui n'en ont aucun. Le role `contributor` reste a 7 — le compte decouverte partage de codex/public-sandbox-entry le porte, et son test exige qu'il n'ait PAS write_crm_notes. N'ECRASE JAMAIS un role existant — le visiteur decouverte DOIT rester `contributor`, sans quoi api.get_sandbox_discovery_user() leve UNSAFE_SANDBOX_IDENTITY et l'Espace de test devient indisponible. Desactive au passage toute ligne org_permission (table RETIREE par §227, dont la migration refuse de s'appliquer s'il en reste une active)._
+
+### `internal.guard_actor_object_realm()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
 
 ### `internal.list_grid_summary(p_list_id uuid)` _(DEFINER)_
 - **returns:** `TABLE(item_count integer, type_breakdown jsonb, cover_image text)`
@@ -2401,6 +2427,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 
 ### `internal.notify_list_feature_reviewers(p_list_id uuid)` _(DEFINER)_
 - **returns:** `integer`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
+### `internal.object_in_current_realm(p_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
@@ -2493,6 +2524,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 - _Medias du corpus de test : 3-5 photos par fiche (une principale), etiquettes, et les liens de facette (etapes ITI, chambres, plats). Emprunte un vivier BORNE de 24 URLs publiques reelles — la chaine seulement, jamais un octet ; ne touche JAMAIS au stockage. Idempotent._
+
+### `internal.stamp_actor_test_realm()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** **all object types**
 
 ### `internal.test_actor_name(p_type text, p_i integer)`
 - **returns:** `text`

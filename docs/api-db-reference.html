@@ -16,18 +16,18 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 <main><nav class="toc"><b>Navigation</b><a href="#coverage">Couverture</a><a href="#rpcs">RPC / fonctions</a><a href="#tables">Connexions tables</a><a href="#rls">RLS policies</a><a href="#enums">Enums & types</a><a href="#refs">CID, tags, refcodes</a><a href="#ref-tables">Tables de référence</a><a href="index.html">Retour doc API</a></nav><div>
 <section id="coverage"><h2>0) Couverture et sources</h2>
 <div class="grid cards">
-<article class="mini-card"><div class="metric">372</div><b>tables</b><p class="muted">13 vues · 9 enums</p></article>
-<article class="mini-card"><div class="metric">479</div><b>fonctions/RPC</b><p class="muted">567 policies · 566 triggers</p></article>
+<article class="mini-card"><div class="metric">370</div><b>tables</b><p class="muted">13 vues · 9 enums</p></article>
+<article class="mini-card"><div class="metric">486</div><b>fonctions/RPC</b><p class="muted">574 policies · 565 triggers</p></article>
 <article class="mini-card"><div class="metric">2992</div><b>valeurs référentielles</b><p class="muted">live si disponible, seeds sinon</p></article>
-<article class="mini-card"><div class="metric">3831</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
+<article class="mini-card"><div class="metric">3848</div><b>connexions graphe</b><p class="muted">lectures, écritures, FK, RLS</p></article>
 </div>
 <p>Les lectures/écritures des fonctions sont inférées par analyse SQL et portent un niveau de confiance. Les valeurs de référentiel listées ici viennent du fichier live <code>db-graph-out/reference_live.json</code> quand il existe, sinon des <code>INSERT ... VALUES</code> et CTE <code>VALUES</code> versionnés dans les SQL du dépôt.</p>
 <p class="muted">État source live au moment de la génération : Supabase MCP JSON=db-graph-out/reference_live.json. Workflow conseillé : lancer <code>tools/db-graph/db_reference_audit.sql</code> via Supabase MCP <code>execute_sql</code>, récupérer l'URL projet et une clé publishable via MCP, exécuter <code>tools/db-graph/export_reference_live_rest.py</code>, puis relancer <code>.tools/python/Scripts/python.exe tools/db-graph/db_graph.py</code>. Le dump MCP pur <code>tools/db-graph/db_reference_extract.sql</code> reste disponible si le client MCP accepte le volume complet.</p>
-<p class="muted">Aucune lecture live MCP : les valeurs affichées viennent des seeds SQL versionnées.</p>
+<p class="muted">Lecture live MCP vérifiée + REST Supabase publishable effectuée sur 26 tables publiques de référence. 2546 lignes seed SQL restent disponibles comme filet de secours. 3 écart(s) de visibilité REST, seeds conservés pour ces tables.</p>
 <details><summary>Écarts de couverture à surveiller</summary>
 <table><thead><tr><th>Signal</th><th>Volume</th><th>Exemples</th></tr></thead><tbody>
-<tr><td>Fonctions sans source SQL retrouvée</td><td>71</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.check_org_smtp_org_type()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.count_notifications_blocked_no_smtp()</code>, <code>api.delete_org_smtp(p_org_object_id text)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code>, <code>api.get_smtp_config()</code> <span class="muted">+59</span></td></tr>
-<tr><td>Fonctions sans lecture/écriture inférée</td><td>123</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.compose_object_resource_blocks(p_payload jsonb)</code> <span class="muted">+111</span></td></tr>
+<tr><td>Fonctions sans source SQL retrouvée</td><td>78</td><td><code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.check_org_smtp_org_type()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.count_notifications_blocked_no_smtp()</code>, <code>api.delete_org_smtp(p_org_object_id text)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code>, <code>api.get_active_object_documents(p_object_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.get_ingestor_scheduler_health()</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code> <span class="muted">+66</span></td></tr>
+<tr><td>Fonctions sans lecture/écriture inférée</td><td>125</td><td><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code>, <code>api.actor_portal_floor_modules()</code>, <code>api.assert_no_period_overlap(p_periods jsonb)</code>, <code>api.assert_staging_batch_integrity(p_batch_id text)</code>, <code>api.b64url_decode(p text)</code>, <code>api.b64url_encode(p bytea)</code>, <code>api.before_insert_object_generate_id()</code>, <code>api.build_opening_period_json(p_period_id uuid, p_object_id text, p_date_start date, p_date_end date)</code>, <code>api.can_read_extended(p_object_id text)</code>, <code>api.can_read_object_private_notes(p_object_id text)</code>, <code>api.can_write_object_private_notes(p_object_id text)</code>, <code>api.compose_object_resource_blocks(p_payload jsonb)</code> <span class="muted">+113</span></td></tr>
 <tr><td>Fonctions avec SQL dynamique</td><td>13</td><td><code>api.approve_pending_change(p_id uuid, p_review_note text DEFAULT NULL::text, p_applied_manually boolean DEFAULT false)</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code>, <code>api.get_ref_catalog(p_catalog_key text)</code>, <code>api.ref_code_usage_counts(p_domain text)</code>, <code>api.rpc_delete_ref_row(p_catalog_key text, p_key jsonb)</code>, <code>api.rpc_reorder_ref_rows(p_catalog_key text, p_keys jsonb)</code>, <code>api.rpc_upsert_ref_row(p_catalog_key text, p_key jsonb, p_values jsonb)</code>, <code>audit.attach_missing_triggers()</code>, <code>audit.create_monthly_partition(partition_date timestamp with time zone)</code>, <code>audit.drop_old_partitions(months_to_keep integer DEFAULT 12)</code>, <code>internal.ref_catalog_row_count(p_table text)</code> <span class="muted">+1</span></td></tr>
 <tr><td>Tables publiques de référence sans ligne directe extraite</td><td>0</td><td><span class="muted">aucun</span></td></tr>
 </tbody></table>
@@ -39,7 +39,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}th,td{border-bottom:1px
 </details>
 </section>
 <section id="rpcs"><h2>1) RPC / fonctions et connexions base</h2><p>Chaque bloc liste le retour, les propriétés de sécurité, le commentaire SQL disponible, puis les tables lues ou écrites.</p>
-<h3>Schéma <code>api</code> (409)</h3>
+<h3>Schéma <code>api</code> (410)</h3>
 <details class="rpc" data-search="api._covered_days(p_all_years boolean, p_s date, p_e date) ">
 <summary><code>api._covered_days(p_all_years boolean, p_s date, p_e date)</code></summary>
 <div class="detail-grid">
@@ -715,7 +715,7 @@ autoritaire ; le client n&#x27;utilise ce nom que pour l&#x27;affichage.</blockq
 <tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.current_user_actor_id() public.app_user_profile">
+<details class="rpc" data-search="api.current_user_actor_id() public.actor public.app_user_profile">
 <summary><code>api.current_user_actor_id()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>uuid</code></p>
@@ -725,6 +725,7 @@ autoritaire ; le client n&#x27;utilise ce nom que pour l&#x27;affichage.</blockq
 </div>
 <blockquote>18a portail acteur — actor_id EXPLICITE du compte (app_user_profile.actor_id, posé à l&#x27;invitation). Jamais le pont e-mail.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
@@ -833,7 +834,7 @@ user_permission sans dépendre des policies RLS de ces tables.</blockquote>
 <p><b>Retour</b><br><code>SETOF uuid</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:317</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:197</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:317</code></p>
 </div>
 <blockquote>Acteurs du périmètre CRM : liés (actor_object_role) à un objet du périmètre publisher,
 + arme défensive : acteurs portant une interaction sur un objet du périmètre (couvre un
@@ -844,19 +845,20 @@ acteur dont le lien aurait été retiré mais dont l&#x27;historique reste ratta
 <tr><td>lecture</td><td><a href="#table-public-crm_interaction"><code>public.crm_interaction</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.current_user_crm_object_ids() public.object_org_link public.ref_org_role public.user_org_membership">
+<details class="rpc" data-search="api.current_user_crm_object_ids() public.object public.object_org_link public.ref_org_role public.user_org_membership">
 <summary><code>api.current_user_crm_object_ids()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>SETOF text</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:269</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:152</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:269</code></p>
 </div>
 <blockquote>---------- 7. Helpers d&#x27;autorisation (style current_user_extended_object_ids, §35) ----------
 Périmètre CRM = objets dont une ORG du user (membership actif) est PUBLISHER.
 Volontairement plus étroit que extended (pas d&#x27;arme acteur, pas d&#x27;arme all_published) :
 le CRM est le pilotage interne de l&#x27;ORG publicatrice, pas un droit d&#x27;édition.</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-object_org_link"><code>public.object_org_link</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_org_role"><code>public.ref_org_role</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
@@ -945,7 +947,7 @@ DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35
 <tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.current_user_test_realm() public.org_config public.user_org_membership">
+<details class="rpc" data-search="api.current_user_test_realm() public.actor public.app_user_profile public.org_config public.user_org_membership">
 <summary><code>api.current_user_test_realm()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>boolean</code></p>
@@ -955,6 +957,8 @@ DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35
 </div>
 <blockquote>Realm de lecture du user courant : true = bac a sable, false = production (jamais NULL). service_role et anon renvoient false — l&#x27;API partenaire ne voit donc jamais le corpus de test. Garde a double sens : o.is_test = (SELECT api.current_user_test_realm()).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-app_user_profile"><code>public.app_user_profile</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-org_config"><code>public.org_config</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
 </tbody></table>
@@ -985,7 +989,7 @@ DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1521</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1353</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1521</code></p>
 </div>
 <blockquote>Suppression d&#x27;un canal (gate par l&#x27;acteur de la ligne, mêmes erreurs P0002/42501).</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
@@ -1014,7 +1018,7 @@ DEFINER so the published scan bypasses RLS; returns only object ids. Reuses §35
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1329</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1168</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1329</code></p>
 </div>
 <blockquote>Suppression d&#x27;une interaction (même gate d&#x27;écriture ; arme objet si contexte, sinon arme
 acteur — object_id nullable ⇒ existence par FOUND, pas par IS NULL).</blockquote>
@@ -1320,6 +1324,20 @@ Function to generate legal expiry notifications
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-app_ai_provider_config"><code>public.app_ai_provider_config</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-vault-decrypted_secrets"><code>vault.decrypted_secrets</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="api.get_active_object_documents(p_object_id text) public.object_classification public.object_legal public.ref_document">
+<summary><code>api.get_active_object_documents(p_object_id text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-object_classification"><code>public.object_classification</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-object_legal"><code>public.object_legal</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="api.get_actor_data(p_object_id text) public.actor public.actor_channel public.actor_object_role public.ref_actor_role public.ref_code_contact_kind public.ref_contact_role">
@@ -2795,7 +2813,7 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <tr><td>lecture</td><td><a href="#table-public-user_permission"><code>public.user_permission</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.get_smtp_config() public.app_smtp_config">
+<details class="rpc" data-search="api.get_smtp_config() ">
 <summary><code>api.get_smtp_config()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, has_password boolean, updated_at timestamp with time zone)</code></p>
@@ -2803,11 +2821,9 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
 <p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
 </div>
-<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
-<tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
-</tbody></table>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
-<details class="rpc" data-search="api.get_smtp_config_secret() public.app_smtp_config vault.decrypted_secrets">
+<details class="rpc" data-search="api.get_smtp_config_secret() vault.decrypted_secrets">
 <summary><code>api.get_smtp_config_secret()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>TABLE(enabled boolean, host text, port integer, secure boolean, from_email text, from_name text, auth_mode text, username text, password text)</code></p>
@@ -2816,7 +2832,6 @@ Objets PUBLIÉS uniquement ; AUCUNE PII destinataire ; réponse indifférenciée
 <p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
-<tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-vault-decrypted_secrets"><code>vault.decrypted_secrets</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
@@ -3128,7 +3143,7 @@ JSON Helper: Prune empty top-level keys (arrays/objects)
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1605</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1437</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1605</code></p>
 </div>
 <blockquote>Affecter un établissement à un acteur EXISTANT (demande PO 2026-06-14). Symétrique de la
 création d&#x27;acteur de save_crm_actor (qui crée acteur + lien), mais ici l&#x27;acteur existe déjà
@@ -3151,7 +3166,7 @@ linked=FOUND (true si une ligne a été insérée, false si le lien existait dé
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_channel_visibility.sql:155</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1204</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1048</code><br><code>Base de donnée DLL et API/migration_actor_channel_visibility.sql:155</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1204</code></p>
 </div>
 <blockquote>Fiche acteur (navigation acteur → objets → interactions tous contextes) : identité, objets
 liés du périmètre, canaux de contact (rectif PO 2026-06-11), TOUTES les interactions de
@@ -3223,7 +3238,7 @@ Superuser : sans restriction de périmètre.</blockquote>
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_assignee_eligibility.sql:165</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:520</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:400</code><br><code>Base de donnée DLL et API/migration_crm_assignee_eligibility.sql:165</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:520</code></p>
 </div>
 <blockquote>Assignataires possibles d&#x27;une tâche (demande PO 2026-06-12) : membres ACTIFS DISTINCTS des
 ORG du caller (eux-mêmes inclus). Peuple le select « attribuer à » de l&#x27;UI. display_name
@@ -3241,7 +3256,7 @@ user_can_assign_crm reste possible — documenté). Trié par display_name.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_directory_search.sql:69</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1049</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:893</code><br><code>Base de donnée DLL et API/migration_crm_directory_search.sql:69</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1049</code></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
 <tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
@@ -3289,7 +3304,7 @@ user_can_assign_crm reste possible — documenté). Trié par display_name.</blo
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1668</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:540</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:303</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:555</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:420</code><br><code>Base de donnée DLL et API/migration_actor_portal.sql:1668</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:540</code><br><code>Base de donnée DLL et API/migration_crm_task_email_documents.sql:303</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:555</code></p>
 </div>
 <blockquote>═══════════════════════════════════════════════════════════════════════════════════════
 7. LECTURES DE TÂCHE — clés `assignees[]`, `created_by_id`, `created_by_name`
@@ -3313,7 +3328,7 @@ les lit encore). Le nouveau front ne doit plus s&#x27;en servir.
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:746</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:400</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:280</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:746</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:400</code></p>
 </div>
 <blockquote>─────────────────────────────────────────────────────────────────────────────────────
 7.4  api.list_crm_timeline — corps 8z traduit : un filtre devient une FAMILLE
@@ -3484,7 +3499,7 @@ Helper interne : jamais exposé (les RPCs DEFINER l&#x27;exécutent en tant qu&#
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1548</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1380</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1548</code></p>
 </div>
 <blockquote>Suggestions de contacts pour l&#x27;authoring d&#x27;un acteur (demande PO 2026-06-12). Le caller
 crée/édite un acteur SOUS cet objet ⇒ gate = arme objet user_can_write_crm (même prédicat
@@ -3500,13 +3515,13 @@ primaires, puis valeur. PII réservée au périmètre publisher (jamais en Postg
 <tr><td>lecture</td><td><a href="#table-public-ref_code_contact_kind"><code>public.ref_code_contact_kind</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.list_object_crm(p_object_id text) public.actor public.actor_object_role public.app_user_profile public.crm_interaction public.crm_task public.crm_task_assignee public.ref_actor_role public.ref_code_crm_sentiment public.ref_code_demand_topic">
+<details class="rpc" data-search="api.list_object_crm(p_object_id text) public.actor public.actor_object_role public.app_user_profile public.crm_interaction public.crm_task public.crm_task_assignee public.object public.ref_actor_role public.ref_code_crm_sentiment public.ref_code_demand_topic">
 <summary><code>api.list_object_crm(p_object_id text)</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:720</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:616</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:598</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:720</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:616</code></p>
 </div>
 <blockquote>Vue CRM d&#x27;un objet : interactions + tâches + répartition des sujets + acteurs liés
 (navigation objet → acteurs du modèle acteur-centré ; cf. en-tête point 5).</blockquote>
@@ -3517,6 +3532,7 @@ primaires, puis valeur. PII réservée au périmètre publisher (jamais en Postg
 <tr><td>lecture</td><td><a href="#table-public-crm_interaction"><code>public.crm_interaction</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-crm_task"><code>public.crm_task</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-crm_task_assignee"><code>public.crm_task_assignee</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_actor_role"><code>public.ref_actor_role</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_code_crm_sentiment"><code>public.ref_code_crm_sentiment</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_code_demand_topic"><code>public.ref_code_demand_topic</code></a></td><td>high</td></tr>
@@ -4105,7 +4121,7 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
-<details class="rpc" data-search="api.prevent_duplicate_actor_email() public.actor_channel public.ref_code_contact_kind">
+<details class="rpc" data-search="api.prevent_duplicate_actor_email() public.actor public.actor_channel public.ref_code_contact_kind">
 <summary><code>api.prevent_duplicate_actor_email()</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>trigger</code></p>
@@ -4115,6 +4131,7 @@ ponytail: met à jour last_used_at à chaque appel (write par requête) — thro
 </div>
 <blockquote>Unicité email cross-actors</blockquote>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-actor_channel"><code>public.actor_channel</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-ref_code_contact_kind"><code>public.ref_code_contact_kind</code></a></td><td>high</td></tr>
 </tbody></table>
@@ -5208,7 +5225,7 @@ Payload tout-vide =&gt; suppression de la ligne (fallback canonique au rendu).</
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_actor_channel_visibility.sql:77</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1448</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1287</code><br><code>Base de donnée DLL et API/migration_actor_channel_visibility.sql:77</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1448</code></p>
 </div>
 <blockquote>Upsert canal de contact. INSERT : actor_id + kind_code + value requis ; UPDATE partiel
 value/kind_code/is_primary. Gate = arme acteur (l&#x27;acteur de la ligne pour l&#x27;update).
@@ -5242,7 +5259,7 @@ trg_actor_channel_email (forme d&#x27;e-mail), uq_actor_channel_primary (un prim
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:1365</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:1204</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:1365</code></p>
 </div>
 <blockquote>Upsert acteur. INSERT : display_name + object_id requis — l&#x27;acteur ENTRE dans le périmètre
 CRM PAR son lien actor_object_role (gate = arme objet user_can_write_crm) ; role_code
@@ -5262,7 +5279,7 @@ arme acteur user_can_write_crm_actor (l&#x27;acteur est déjà dans le périmèt
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_interaction_default_status.sql:88</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:517</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:823</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:701</code><br><code>Base de donnée DLL et API/migration_crm_interaction_default_status.sql:88</code><br><code>Base de donnée DLL et API/migration_crm_lifecycle.sql:517</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:823</code></p>
 </div>
 <blockquote>Upsert interaction (id présent = UPDATE partiel ; topic/sentiment par code, clé présente
 + valeur vide ⇒ effacement explicite). Modèle acteur-centré : ancrage acteur OU objet (au
@@ -5280,7 +5297,7 @@ moins un) ; autorisation par l&#x27;arme objet quand un contexte objet existe, s
 <p><b>Retour</b><br><code>jsonb</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:585</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:310</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:463</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:585</code><br><code>Base de donnée DLL et API/migration_crm_task_multi_assignee_notifications.sql:310</code></p>
 </div>
 <blockquote>═══════════════════════════════════════════════════════════════════════════════════════
 6. api.save_crm_task — contrat `assignee_ids`
@@ -6090,7 +6107,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <tr><td>écriture</td><td><a href="#table-vault-secrets"><code>vault.secrets</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<details class="rpc" data-search="api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text default null::text, p_password text default null::text) public.app_smtp_config vault.secrets public.app_smtp_config vault.secrets">
+<details class="rpc" data-search="api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text default null::text, p_password text default null::text) vault.secrets vault.secrets">
 <summary><code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code></summary>
 <div class="detail-grid">
 <p><b>Retour</b><br><code>void</code></p>
@@ -6099,9 +6116,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
 </div>
 <table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
-<tr><td>lecture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-vault-secrets"><code>vault.secrets</code></a></td><td>high</td></tr>
-<tr><td>écriture</td><td><a href="#table-public-app_smtp_config"><code>public.app_smtp_config</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-vault-secrets"><code>vault.secrets</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
@@ -6125,7 +6140,7 @@ p_reset = TRUE supprime la ligne (retour complet au thème plateforme).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_assignee_eligibility.sql:119</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:366</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:246</code><br><code>Base de donnée DLL et API/migration_crm_assignee_eligibility.sql:119</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:366</code></p>
 </div>
 <blockquote>Assignabilité d&#x27;une tâche (demande PO 2026-06-12) : p_user est assignable ssi il partage
 une ORG (membership actif) avec le caller — MÊME ensemble que api.list_crm_assignees, qui
@@ -6264,7 +6279,7 @@ Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:285</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:165</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:285</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -6274,7 +6289,7 @@ Conçu pour être appelé par rpc_publish_object (à créer en Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:332</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:212</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:332</code></p>
 </div>
 <p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
 </details>
@@ -6330,7 +6345,7 @@ Conçu pour être appelé par les RPC d&#x27;écriture canonique (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:296</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:46</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:176</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:296</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:46</code></p>
 </div>
 <blockquote>─────────────────────────────────────────────────────────────────────────────
 1. Écriture CRM sur un ÉTABLISSEMENT.
@@ -6343,7 +6358,7 @@ Conçu pour être appelé par les RPC d&#x27;écriture canonique (Phase 6).
 <p><b>Retour</b><br><code>boolean</code></p>
 <p><b>Propriétés</b><br>SECURITY DEFINER</p>
 <p><b>Exposition</b><br>RPC PostgREST (<code>api</code>)</p>
-<p><b>Source SQL</b><br><code>Base de donnée DLL et API/migration_crm_module.sql:343</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:62</code></p>
+<p><b>Source SQL</b><br><code>Base de donnée DLL et API/crm_body_deploy.tmp.sql:223</code><br><code>Base de donnée DLL et API/migration_crm_module.sql:343</code><br><code>Base de donnée DLL et API/migration_crm_write_requires_permission.sql:62</code></p>
 </div>
 <blockquote>─────────────────────────────────────────────────────────────────────────────
 2. Écriture CRM sur un ACTEUR.
@@ -6637,7 +6652,19 @@ ce dernier capture les lignes DELETE dont la PK ne porte pas la FK). null::jsonb
 <tr><td>écriture</td><td><a href="#table-audit-audit_log"><code>audit.audit_log</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
-<h3>Schéma <code>internal</code> (38)</h3>
+<h3>Schéma <code>internal</code> (44)</h3>
+<details class="rpc" data-search="internal.actor_in_current_realm(p_actor_id uuid) public.actor">
+<summary><code>internal.actor_in_current_realm(p_actor_id uuid)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>boolean</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
 <details class="rpc" data-search="internal.backfill_list_feature_notifications() public.object_list">
 <summary><code>internal.backfill_list_feature_notifications()</code></summary>
 <div class="detail-grid">
@@ -6704,6 +6731,33 @@ La récurrence saisonnière (§92) est portée par is_opening_period_active_on_d
 <tr><td>écriture</td><td><a href="#table-public-crm_task_assignee"><code>public.crm_task_assignee</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
+<details class="rpc" data-search="internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid) ">
+<summary><code>internal.crm_row_in_current_realm(p_object_id text, p_actor_id uuid)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>boolean</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<p class="muted">Aucune lecture/écriture inférée par le graphe. Cas fréquent pour les helpers purs, triggers simples ou SQL dynamique non analysable.</p>
+</details>
+<details class="rpc" data-search="internal.get_active_object_documents_unfiltered_20260908(p_object_id text) public.object_classification public.object_legal public.ref_classification_scheme public.ref_document public.ref_legal_type">
+<summary><code>internal.get_active_object_documents_unfiltered_20260908(p_object_id text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>jsonb</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<blockquote>Returns active private Bertel attachment documents for one object. Authorization is object-scoped through user_can_write_object_canonical; unauthorized callers receive {authorized:false,documents:[]}.</blockquote>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-object_classification"><code>public.object_classification</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-object_legal"><code>public.object_legal</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_classification_scheme"><code>public.ref_classification_scheme</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_document"><code>public.ref_document</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-ref_legal_type"><code>public.ref_legal_type</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
 <details class="rpc" data-search="internal.grant_test_org_permissions() public.org_role_permission public.ref_org_business_role public.ref_permission public.user_org_business_role public.user_org_membership public.org_permission public.org_role_permission public.user_org_business_role">
 <summary><code>internal.grant_test_org_permissions()</code></summary>
 <div class="detail-grid">
@@ -6722,6 +6776,19 @@ La récurrence saisonnière (§92) est portée par is_opening_period_active_on_d
 <tr><td>écriture</td><td><a href="#table-public-org_permission"><code>public.org_permission</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-org_role_permission"><code>public.org_role_permission</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-user_org_business_role"><code>public.user_org_business_role</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="internal.guard_actor_object_realm() public.actor public.object">
+<summary><code>internal.guard_actor_object_realm()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-actor"><code>public.actor</code></a></td><td>high</td></tr>
+<tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="internal.list_grid_summary(p_list_id uuid) public.object">
@@ -6765,6 +6832,18 @@ La récurrence saisonnière (§92) est portée par is_opening_period_active_on_d
 <tr><td>lecture</td><td><a href="#table-public-user_org_admin_role"><code>public.user_org_admin_role</code></a></td><td>high</td></tr>
 <tr><td>lecture</td><td><a href="#table-public-user_org_membership"><code>public.user_org_membership</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-app_notification"><code>public.app_notification</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
+<details class="rpc" data-search="internal.object_in_current_realm(p_object_id text) public.object">
+<summary><code>internal.object_in_current_realm(p_object_id text)</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>boolean</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-object"><code>public.object</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
 <details class="rpc" data-search="internal.org_admin_rank(p_user_id uuid, p_org_object_id text) public.ref_org_admin_role public.user_org_admin_role public.user_org_membership">
@@ -7067,6 +7146,18 @@ seed qui l&#x27;ecrirait directement pourrait diverger d&#x27;elle sans qu&#x27;
 <tr><td>écriture</td><td><a href="#table-public-object_room_type_media"><code>public.object_room_type_media</code></a></td><td>high</td></tr>
 </tbody></table>
 </details>
+<details class="rpc" data-search="internal.stamp_actor_test_realm() public.org_config">
+<summary><code>internal.stamp_actor_test_realm()</code></summary>
+<div class="detail-grid">
+<p><b>Retour</b><br><code>trigger</code></p>
+<p><b>Propriétés</b><br>SECURITY DEFINER</p>
+<p><b>Exposition</b><br>helper / privé</p>
+<p><b>Source SQL</b><br><span class="muted">non retrouvée dans les SQL versionnés</span></p>
+</div>
+<table><thead><tr><th>Connexion</th><th>Table/vue</th><th>Confiance</th></tr></thead><tbody>
+<tr><td>lecture</td><td><a href="#table-public-org_config"><code>public.org_config</code></a></td><td>high</td></tr>
+</tbody></table>
+</details>
 <details class="rpc" data-search="internal.test_actor_name(p_type text, p_i integer) ">
 <summary><code>internal.test_actor_name(p_type text, p_i integer)</code></summary>
 <div class="detail-grid">
@@ -7132,7 +7223,6 @@ ne permet d&#x27;exercer ni le CRM, ni la recherche d&#x27;acteurs, ni les regro
 <tr><td>lecture</td><td><a href="#table-public-app_notification"><code>public.app_notification</code></a></td><td>high</td></tr>
 <tr><td>écriture</td><td><a href="#table-public-app_notification"><code>public.app_notification</code></a></td><td>high</td></tr>
 </tbody></table>
-<p><b>Déclenchée par</b><br><code>trigger:public.object_list:trg_object_list_remove_feature_notifications</code></p>
 </details>
 <details class="rpc" data-search="internal.trail_expire_overrides() public.trail public.trail_source_record public.trail_status_override public.trail_status_history">
 <summary><code>internal.trail_expire_overrides()</code></summary>
@@ -7563,17 +7653,17 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 </section>
 <section id="tables"><h2>2) Connexions par table/vue</h2>
 <table><thead><tr><th>Table/vue</th><th>Type</th><th>Domaine</th><th>RLS</th><th>Lue par</th><th>Écrite par</th><th>Autres connexions</th></tr></thead><tbody>
-<tr id="table-public-actor"><td><code>public.actor</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_crm_actor_ids()</code>, <code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_my_actor_profile()</code> <span class="muted">+17</span></td><td><code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.rpc_reset_test_data()</code>, <code>api.save_crm_actor(p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code> <span class="muted">+1</span></td><td>2 policies · 2 triggers · FK → 2 · FK ← 7</td></tr>
-<tr id="table-public-actor_channel"><td><code>public.actor_channel</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.delete_actor_channel(p_id uuid)</code>, <code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_my_actor_profile()</code> <span class="muted">+12</span></td><td><code>api.delete_actor_channel(p_id uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.save_actor_channel(p_payload jsonb)</code>, <code>internal.seed_test_crm()</code></td><td>2 policies · 4 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-actor_consent"><td><code>public.actor_consent</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code></td><td><code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code></td><td>2 policies · 1 triggers · FK → 2 · FK ← 0</td></tr>
+<tr id="table-public-actor"><td><code>public.actor</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_actor_id()</code>, <code>api.current_user_crm_actor_ids()</code>, <code>api.current_user_test_realm()</code>, <code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code> <span class="muted">+22</span></td><td><code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.rpc_reset_test_data()</code>, <code>api.save_crm_actor(p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code> <span class="muted">+1</span></td><td>3 policies · 2 triggers · FK → 2 · FK ← 7</td></tr>
+<tr id="table-public-actor_channel"><td><code>public.actor_channel</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.delete_actor_channel(p_id uuid)</code>, <code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_my_actor_profile()</code> <span class="muted">+12</span></td><td><code>api.delete_actor_channel(p_id uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.save_actor_channel(p_payload jsonb)</code>, <code>internal.seed_test_crm()</code></td><td>3 policies · 4 triggers · FK → 3 · FK ← 0</td></tr>
+<tr id="table-public-actor_consent"><td><code>public.actor_consent</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code></td><td><code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code></td><td>3 policies · 1 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-actor_contact_export_log"><td><code>public.actor_contact_export_log</code></td><td>table</td><td>actor-org</td><td>oui</td><td><span class="muted">-</span></td><td><code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)</code></td><td>1 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
-<tr id="table-public-actor_document"><td><code>public.actor_document</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.list_actor_support(p_actor_id uuid)</code>, <code>api.save_actor_document(p_payload jsonb)</code></td><td><code>api.save_actor_document(p_payload jsonb)</code></td><td>4 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
-<tr id="table-public-actor_object_role"><td><code>public.actor_object_role</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_crm_actor_ids()</code>, <code>api.current_user_extended_object_ids()</code>, <code>api.current_user_portal_object_ids()</code>, <code>api.export_actor_capabilities(p_object_ids text[])</code> <span class="muted">+17</span></td><td><code>api.link_actor_to_object(p_payload jsonb)</code>, <code>api.save_crm_actor(p_payload jsonb)</code>, <code>api.save_object_relations(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
+<tr id="table-public-actor_document"><td><code>public.actor_document</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.list_actor_support(p_actor_id uuid)</code>, <code>api.save_actor_document(p_payload jsonb)</code></td><td><code>api.save_actor_document(p_payload jsonb)</code></td><td>5 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
+<tr id="table-public-actor_object_role"><td><code>public.actor_object_role</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_crm_actor_ids()</code>, <code>api.current_user_extended_object_ids()</code>, <code>api.current_user_portal_object_ids()</code>, <code>api.export_actor_capabilities(p_object_ids text[])</code> <span class="muted">+17</span></td><td><code>api.link_actor_to_object(p_payload jsonb)</code>, <code>api.save_crm_actor(p_payload jsonb)</code>, <code>api.save_object_relations(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>5 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-object_membership"><td><code>public.object_membership</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.handle_membership_status_transition()</code></td><td><span class="muted">-</span></td><td>5 policies · 4 triggers · FK → 6 · FK ← 0</td></tr>
 <tr id="table-public-object_org_link"><td><code>public.object_org_link</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.current_user_crm_object_ids()</code>, <code>api.current_user_extended_object_ids()</code>, <code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code> <span class="muted">+17</span></td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.save_object_relations(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 3 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-org_actor_module_visibility"><td><code>public.org_actor_module_visibility</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.get_actor_section_visibility(p_org_object_id text, p_object_type text)</code>, <code>api.get_portal_section_visibility(p_object_id text)</code></td><td><code>api.rpc_set_actor_section_visibility(p_org_object_id text, p_object_type text, p_module_id text, p_visible boolean)</code></td><td>1 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-org_branding_settings"><td><code>public.org_branding_settings</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.get_app_branding()</code>, <code>api.get_org_branding(p_org_object_id text)</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code> <span class="muted">+1</span></td><td><code>api.upsert_org_branding(p_org_object_id text, p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_reset boolean DEFAULT false)</code></td><td>1 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-org_config"><td><code>public.org_config</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_extended_object_ids()</code>, <code>api.current_user_test_realm()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.object_expected_is_test(p_object_id text)</code> <span class="muted">+2</span></td><td><code>api.rpc_create_org(p_name text, p_region_code text DEFAULT &#x27;RUN&#x27;::text, p_access_scope text DEFAULT &#x27;own_objects_only&#x27;::text)</code></td><td>2 policies · 3 triggers · FK → 1 · FK ← 0</td></tr>
+<tr id="table-public-org_config"><td><code>public.org_config</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.current_user_extended_object_ids()</code>, <code>api.current_user_test_realm()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.object_expected_is_test(p_object_id text)</code> <span class="muted">+3</span></td><td><code>api.rpc_create_org(p_name text, p_region_code text DEFAULT &#x27;RUN&#x27;::text, p_access_scope text DEFAULT &#x27;own_objects_only&#x27;::text)</code></td><td>2 policies · 3 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-public-org_permission"><td><code>public.org_permission</code></td><td>table</td><td>actor-org</td><td>oui</td><td><span class="muted">-</span></td><td><code>internal.grant_test_org_permissions()</code></td><td>2 policies · 3 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-org_role_permission"><td><code>public.org_role_permission</code></td><td>table</td><td>actor-org</td><td>oui</td><td><code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code>, <code>api.rpc_list_role_permissions(p_org_object_id text)</code>, <code>api.user_has_permission(p_permission_code text)</code> <span class="muted">+1</span></td><td><code>api.rpc_set_role_permission(p_org_object_id text, p_role_code text, p_permission_code text, p_granted boolean)</code>, <code>internal.grant_test_org_permissions()</code>, <code>public.seed_org_role_permission()</code></td><td>1 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-staging-actor_channel_temp"><td><code>staging.actor_channel_temp</code></td><td>table</td><td>actor-org</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
@@ -7597,10 +7687,10 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-staging-media_galerie_lot1_temp"><td><code>staging.media_galerie_lot1_temp</code></td><td>table</td><td>media</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-media_tag_temp"><td><code>staging.media_tag_temp</code></td><td>table</td><td>media</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-media_temp"><td><code>staging.media_temp</code></td><td>table</td><td>media</td><td>non</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_ingestor_metrics()</code>, <code>api.retry_failed_media_downloads(p_limit integer DEFAULT 200)</code></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.retry_failed_media_downloads(p_limit integer DEFAULT 200)</code></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
-<tr id="table-public-object"><td><code>public.object</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.build_iti_track(p_object_id text, p_format text DEFAULT &#x27;kml&#x27;::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT &#x27;red&#x27;::text)</code>, <code>api.can_read_object(p_object_id text)</code> <span class="muted">+97</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.handle_membership_status_transition()</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code>, <code>api.refresh_object_taxonomy_cache_for_domain(p_domain text)</code> <span class="muted">+18</span></td><td>6 policies · 11 triggers · FK → 2 · FK ← 81</td></tr>
+<tr id="table-public-object"><td><code>public.object</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.build_iti_track(p_object_id text, p_format text DEFAULT &#x27;kml&#x27;::text, p_include_stages boolean DEFAULT true, p_stage_color text DEFAULT &#x27;red&#x27;::text)</code>, <code>api.can_read_object(p_object_id text)</code> <span class="muted">+101</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.handle_membership_status_transition()</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code>, <code>api.refresh_object_taxonomy_cache_for_domain(p_domain text)</code> <span class="muted">+18</span></td><td>6 policies · 11 triggers · FK → 2 · FK ← 81</td></tr>
 <tr id="table-public-object_accommodation_unit_type"><td><code>public.object_accommodation_unit_type</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code></td><td><span class="muted">-</span></td><td>4 policies · 0 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_amenity"><td><code>public.object_amenity</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.get_object_badges_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code> <span class="muted">+5</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 2 triggers · FK → 2 · FK ← 0</td></tr>
-<tr id="table-public-object_classification"><td><code>public.object_classification</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code> <span class="muted">+10</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.sync_classification_from_audit_session()</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 4 triggers · FK → 4 · FK ← 1</td></tr>
+<tr id="table-public-object_classification"><td><code>public.object_classification</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_active_object_documents(p_object_id text)</code>, <code>api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code> <span class="muted">+12</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.sync_classification_from_audit_session()</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 4 triggers · FK → 4 · FK ← 1</td></tr>
 <tr id="table-public-object_cuisine_type"><td><code>public.object_cuisine_type</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code></td><td><span class="muted">-</span></td><td>4 policies · 1 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_deletion_log"><td><code>public.object_deletion_log</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.list_deleted_objects_since(p_since timestamp with time zone DEFAULT NULL::timestamp with time zone, p_limit integer DEFAULT 500)</code></td><td><code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code></td><td>1 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-object_description"><td><code>public.object_description</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.export_itinerary_gpx(p_object_id text, p_include_stages boolean DEFAULT true, p_include_metadata boolean DEFAULT true)</code>, <code>api.export_publication_indesign(p_publication_id uuid, p_min_width integer DEFAULT 1600, p_min_height integer DEFAULT 1200)</code>, <code>api.get_object_card(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code> <span class="muted">+9</span></td><td><code>api.rpc_write_org_description(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 4 triggers · FK → 2 · FK ← 0</td></tr>
@@ -7610,8 +7700,8 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-public-object_group_policy"><td><code>public.object_group_policy</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code></td><td><code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code></td><td>4 policies · 2 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-public-object_hotel_positioning"><td><code>public.object_hotel_positioning</code></td><td>table</td><td>object-core</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>4 policies · 1 triggers · FK → 56 · FK ← 0</td></tr>
 <tr id="table-public-object_language"><td><code>public.object_language</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.refresh_object_filter_caches(p_object_id text)</code>, <code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code></td><td><code>api.save_object_commercial(p_object_id text, p_payload jsonb)</code></td><td>4 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-object_legal"><td><code>public.object_legal</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.check_object_legal_compliance(p_object_id text)</code>, <code>api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])</code>, <code>api.get_object_legal_compliance(p_object_id text)</code> <span class="muted">+9</span></td><td><code>api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT &#x27;fixed_end_date&#x27;::legal_validity_mode, p_status text DEFAULT &#x27;active&#x27;::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)</code>, <code>api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT &#x27;active&#x27;::text)</code>, <code>api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code> <span class="muted">+1</span></td><td>4 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-object_list"><td><code>public.object_list</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.delete_list(p_list_id uuid)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code>, <code>api.get_public_list_by_token(p_token text)</code> <span class="muted">+23</span></td><td><code>api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)</code>, <code>api.delete_list(p_list_id uuid)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code> <span class="muted">+9</span></td><td>1 policies · 2 triggers · FK → 1 · FK ← 1</td></tr>
+<tr id="table-public-object_legal"><td><code>public.object_legal</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.check_object_legal_compliance(p_object_id text)</code>, <code>api.get_active_object_documents(p_object_id text)</code>, <code>api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])</code> <span class="muted">+11</span></td><td><code>api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT &#x27;fixed_end_date&#x27;::legal_validity_mode, p_status text DEFAULT &#x27;active&#x27;::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)</code>, <code>api.deliver_legal_document(p_legal_id uuid, p_document_id uuid, p_delivered_at timestamp with time zone DEFAULT now(), p_new_status text DEFAULT &#x27;active&#x27;::text)</code>, <code>api.request_legal_document(p_legal_id uuid, p_requested_at timestamp with time zone DEFAULT now())</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code> <span class="muted">+1</span></td><td>4 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
+<tr id="table-public-object_list"><td><code>public.object_list</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.delete_list(p_list_id uuid)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code>, <code>api.get_public_list_by_token(p_token text)</code> <span class="muted">+23</span></td><td><code>api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)</code>, <code>api.delete_list(p_list_id uuid)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.ensure_list_share_link(p_list_id uuid)</code> <span class="muted">+9</span></td><td>1 policies · 1 triggers · FK → 1 · FK ← 1</td></tr>
 <tr id="table-public-object_list_item"><td><code>public.object_list_item</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.duplicate_list(p_list_id uuid)</code>, <code>api.list_effective_object_ids(p_list_id uuid, p_published_only boolean)</code>, <code>api.list_selection_emails(p_reason text, p_object_ids text[] DEFAULT NULL::text[], p_list_id uuid DEFAULT NULL::uuid)</code>, <code>api.set_list_items(p_list_id uuid, p_items jsonb)</code></td><td><code>api.create_list(p_kind text, p_name text, p_from_object_ids text[] DEFAULT NULL::text[], p_filters jsonb DEFAULT NULL::jsonb, p_filters_url text DEFAULT NULL::text)</code>, <code>api.duplicate_list(p_list_id uuid)</code>, <code>api.set_list_items(p_list_id uuid, p_items jsonb)</code></td><td>1 policies · 0 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_location"><td><code>public.object_location</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.export_publication_indesign(p_publication_id uuid, p_min_width integer DEFAULT 1600, p_min_height integer DEFAULT 1200)</code>, <code>api.get_dashboard_city_distribution(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_limit integer DEFAULT 20)</code>, <code>api.get_dashboard_city_options()</code> <span class="muted">+18</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.save_object_places(p_object_id text, p_payload jsonb)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 2 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-object_origin"><td><code>public.object_origin</code></td><td>table</td><td>object-core</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td><span class="muted">-</span></td><td>4 policies · 2 triggers · FK → 1 · FK ← 0</td></tr>
@@ -7727,7 +7817,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-auth-sessions"><td><code>auth.sessions</code></td><td>table</td><td>other</td><td>non</td><td><code>api.rpc_list_org_members(p_org_object_id text)</code></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 2 · FK ← 2</td></tr>
 <tr id="table-auth-sso_domains"><td><code>auth.sso_domains</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-sso_providers"><td><code>auth.sso_providers</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 3</td></tr>
-<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>non</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+3</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 67</td></tr>
+<tr id="table-auth-users"><td><code>auth.users</code></td><td>table</td><td>other</td><td>non</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_sandbox_discovery_user()</code> <span class="muted">+3</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 65</td></tr>
 <tr id="table-auth-webauthn_challenges"><td><code>auth.webauthn_challenges</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-auth-webauthn_credentials"><td><code>auth.webauthn_credentials</code></td><td>table</td><td>other</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-cron-job"><td><code>cron.job</code></td><td>table</td><td>other</td><td>non</td><td><code>api.get_ingestor_scheduler_health()</code></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 0 · FK ← 0</td></tr>
@@ -7745,15 +7835,14 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-internal-v_object_essentials"><td><code>internal.v_object_essentials</code></td><td>view</td><td>other</td><td>non</td><td><code>api.get_dashboard_completeness(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date, p_below_limit integer DEFAULT 10)</code>, <code>api.object_missing_essentials(p_object_ids text[])</code></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-app_ai_provider_config"><td><code>public.app_ai_provider_config</code></td><td>table</td><td>other</td><td>non</td><td><code>api.delete_ai_provider(p_id uuid)</code>, <code>api.get_active_ai_provider_secret()</code>, <code>api.list_ai_providers()</code>, <code>api.set_active_ai_provider(p_id uuid)</code> <span class="muted">+1</span></td><td><code>api.delete_ai_provider(p_id uuid)</code>, <code>api.set_active_ai_provider(p_id uuid)</code>, <code>api.upsert_ai_provider(p_id uuid, p_label text, p_api_kind text, p_base_url text, p_model text, p_max_output_tokens integer, p_is_active boolean, p_extra jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_api_key text DEFAULT NULL::text)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-app_branding_settings"><td><code>public.app_branding_settings</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_app_branding()</code>, <code>api.get_org_branding(p_org_object_id text)</code>, <code>api.get_org_smtp(p_org_object_id text)</code>, <code>api.get_org_smtp_secret(p_org_object_id text)</code> <span class="muted">+1</span></td><td><code>api.upsert_app_branding(p_brand_name text DEFAULT NULL::text, p_logo_storage_path text DEFAULT NULL::text, p_logo_public_url text DEFAULT NULL::text, p_logo_mime_type text DEFAULT NULL::text, p_primary_color text DEFAULT NULL::text, p_accent_color text DEFAULT NULL::text, p_text_color text DEFAULT NULL::text, p_background_color text DEFAULT NULL::text, p_surface_color text DEFAULT NULL::text, p_marker_styles jsonb DEFAULT NULL::jsonb, p_extra jsonb DEFAULT NULL::jsonb, p_clear_logo boolean DEFAULT false)</code></td><td>2 policies · 2 triggers · FK → 2 · FK ← 0</td></tr>
-<tr id="table-public-app_notification"><td><code>public.app_notification</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.count_notifications_blocked_no_smtp()</code>, <code>api.list_my_notifications(p_limit integer DEFAULT 50)</code>, <code>api.review_list_feature(p_list_id uuid, p_accept boolean)</code> <span class="muted">+2</span></td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.mark_all_notifications_read()</code>, <code>api.mark_notification_read(p_id uuid)</code>, <code>api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT &#x27;[]&#x27;::jsonb)</code> <span class="muted">+6</span></td><td>4 policies · 0 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-app_smtp_config"><td><code>public.app_smtp_config</code></td><td>table</td><td>other</td><td>non</td><td><code>api.get_smtp_config()</code>, <code>api.get_smtp_config_secret()</code>, <code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code></td><td><code>api.upsert_smtp_config(p_enabled boolean, p_host text, p_port integer, p_secure boolean, p_from_email text, p_from_name text, p_auth_mode text, p_username text DEFAULT NULL::text, p_password text DEFAULT NULL::text)</code></td><td>0 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
+<tr id="table-public-app_notification"><td><code>public.app_notification</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.count_notifications_blocked_no_smtp()</code>, <code>api.list_my_notifications(p_limit integer DEFAULT 50)</code>, <code>api.review_list_feature(p_list_id uuid, p_accept boolean)</code> <span class="muted">+2</span></td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.mark_all_notifications_read()</code>, <code>api.mark_notification_read(p_id uuid)</code>, <code>api.mark_notifications_emailed(p_sent uuid[], p_failed jsonb DEFAULT &#x27;[]&#x27;::jsonb)</code> <span class="muted">+6</span></td><td>4 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-audit_criteria"><td><code>public.audit_criteria</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.validate_audit_result_points()</code></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 3 · FK ← 1</td></tr>
 <tr id="table-public-audit_result"><td><code>public.audit_result</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.recompute_audit_session_score()</code></td><td><span class="muted">-</span></td><td>1 policies · 4 triggers · FK → 4 · FK ← 0</td></tr>
 <tr id="table-public-audit_session"><td><code>public.audit_session</code></td><td>table</td><td>other</td><td>oui</td><td><span class="muted">-</span></td><td><code>api.recompute_audit_session_score()</code></td><td>1 policies · 3 triggers · FK → 5 · FK ← 1</td></tr>
 <tr id="table-public-audit_template"><td><code>public.audit_template</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.sync_classification_from_audit_session()</code></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 4 · FK ← 2</td></tr>
 <tr id="table-public-contact_channel"><td><code>public.contact_channel</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.get_object_jsonld(p_object_id text, p_profile text DEFAULT &#x27;jsonld&#x27;::text)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_object_resource_adapted(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_include_media text DEFAULT &#x27;none&#x27;::text, p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code> <span class="muted">+7</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>internal.seed_test_corpus(p_per_type integer DEFAULT 15)</code></td><td>4 policies · 3 triggers · FK → 3 · FK ← 0</td></tr>
-<tr id="table-public-crm_interaction"><td><code>public.crm_interaction</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.current_user_crm_actor_ids()</code>, <code>api.delete_crm_interaction(p_id uuid)</code>, <code>api.get_dashboard_crm_activity()</code> <span class="muted">+11</span></td><td><code>api.create_crm_artifacts_from_incident()</code>, <code>api.delete_crm_interaction(p_id uuid)</code>, <code>api.log_publication_proof_interaction()</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code> <span class="muted">+2</span></td><td>4 policies · 3 triggers · FK → 9 · FK ← 3</td></tr>
-<tr id="table-public-crm_task"><td><code>public.crm_task</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.get_dashboard_crm_open()</code>, <code>api.list_crm_tasks()</code>, <code>api.list_my_notifications(p_limit integer DEFAULT 50)</code> <span class="muted">+6</span></td><td><code>api.create_crm_artifacts_from_incident()</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.save_crm_task(p_payload jsonb)</code>, <code>api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)</code> <span class="muted">+2</span></td><td>4 policies · 2 triggers · FK → 4 · FK ← 2</td></tr>
+<tr id="table-public-crm_interaction"><td><code>public.crm_interaction</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.capture_metric_snapshots(p_date date DEFAULT CURRENT_DATE)</code>, <code>api.current_user_crm_actor_ids()</code>, <code>api.delete_crm_interaction(p_id uuid)</code>, <code>api.get_dashboard_crm_activity()</code> <span class="muted">+11</span></td><td><code>api.create_crm_artifacts_from_incident()</code>, <code>api.delete_crm_interaction(p_id uuid)</code>, <code>api.log_publication_proof_interaction()</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code> <span class="muted">+2</span></td><td>5 policies · 3 triggers · FK → 9 · FK ← 3</td></tr>
+<tr id="table-public-crm_task"><td><code>public.crm_task</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.get_dashboard_crm_open()</code>, <code>api.list_crm_tasks()</code>, <code>api.list_my_notifications(p_limit integer DEFAULT 50)</code> <span class="muted">+6</span></td><td><code>api.create_crm_artifacts_from_incident()</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.save_crm_task(p_payload jsonb)</code>, <code>api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)</code> <span class="muted">+2</span></td><td>5 policies · 2 triggers · FK → 4 · FK ← 1</td></tr>
 <tr id="table-public-crm_task_assignee"><td><code>public.crm_task_assignee</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.list_crm_tasks()</code>, <code>api.list_object_crm(p_object_id text)</code>, <code>api.save_crm_task(p_payload jsonb)</code>, <code>internal.seed_test_crm()</code></td><td><code>api.save_crm_task(p_payload jsonb)</code>, <code>api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)</code>, <code>internal.crm_backfill_assignees_from_owner()</code>, <code>internal.seed_test_crm()</code></td><td>4 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-crm_task_document"><td><code>public.crm_task_document</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.list_crm_tasks()</code></td><td><span class="muted">-</span></td><td>4 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-fiche_submission"><td><code>public.fiche_submission</code></td><td>table</td><td>other</td><td>oui</td><td><code>api.approve_fiche_submission(p_submission_id uuid, p_review_note text DEFAULT NULL::text, p_include_manual boolean DEFAULT false)</code>, <code>api.list_my_portal_fiches()</code>, <code>api.list_my_submissions(p_limit integer DEFAULT 20, p_object_id text DEFAULT NULL::text)</code>, <code>api.list_pending_changes(p_status text DEFAULT &#x27;pending&#x27;::text, p_object_id text DEFAULT NULL::text, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)</code> <span class="muted">+3</span></td><td><code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.submit_actor_fiche(p_object_id text, p_changes jsonb, p_note text DEFAULT NULL::text)</code>, <code>internal.resolve_fiche_submission(p_submission_id uuid)</code></td><td>1 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
@@ -7841,7 +7930,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-staging-object_discount_temp"><td><code>staging.object_discount_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_period_temp"><td><code>staging.object_price_period_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-staging-object_price_temp"><td><code>staging.object_price_temp</code></td><td>table</td><td>pricing</td><td>non</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>0 policies · 1 triggers · FK → 1 · FK ← 0</td></tr>
-<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.current_user_actor_id()</code> <span class="muted">+32</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 3 triggers · FK → 2 · FK ← 0</td></tr>
+<tr id="table-public-app_user_profile"><td><code>public.app_user_profile</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.can_manage_object_private_note(p_note_id uuid)</code>, <code>api.can_read_actor_contacts(p_object_id text)</code>, <code>api.claim_unmailed_notifications(p_limit integer DEFAULT 20)</code>, <code>api.current_user_actor_id()</code> <span class="muted">+33</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_gdpr_erase_subject(p_subject_kind text, p_subject_id text, p_mode text DEFAULT &#x27;anonymize&#x27;::text, p_reason text DEFAULT NULL::text)</code>, <code>api.sync_app_user_profile_from_auth_user(p_user_id uuid, p_email text, p_raw_user_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_raw_app_meta_data jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code></td><td>4 policies · 3 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-user_org_admin_role"><td><code>public.user_org_admin_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_admin_rank()</code>, <code>api.current_user_admin_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.object_private_note_author_admin_rank(p_note_id uuid)</code> <span class="muted">+14</span></td><td><code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_revoke_admin_role(p_membership_id uuid)</code>, <code>api.rpc_set_admin_role(p_membership_id uuid, p_role_code text)</code></td><td>2 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-user_org_business_role"><td><code>public.user_org_business_role</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.current_user_business_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.list_object_verifier_ids(p_object_id text)</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+3</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_set_business_role(p_membership_id uuid, p_role_code text)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code> <span class="muted">+1</span></td><td>2 policies · 2 triggers · FK → 3 · FK ← 0</td></tr>
 <tr id="table-public-user_org_membership"><td><code>public.user_org_membership</code></td><td>table</td><td>rbac</td><td>oui</td><td><code>api.auto_attach_object_to_creator_org()</code>, <code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.current_user_active_org()</code>, <code>api.current_user_admin_rank()</code> <span class="muted">+36</span></td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code>, <code>api.rpc_upsert_membership(p_target_user_id uuid, p_org_object_id text, p_business_role_code text)</code></td><td>2 policies · 4 triggers · FK → 3 · FK ← 2</td></tr>
@@ -7853,7 +7942,7 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-public-ref_catalog_registry"><td><code>public.ref_catalog_registry</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_ref_catalog(p_catalog_key text)</code>, <code>api.list_ref_catalogs()</code>, <code>internal.ref_catalog_access(p_catalog_key text)</code>, <code>internal.ref_catalog_label_column(p_catalog_key text)</code> <span class="muted">+1</span></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 0 · FK ← 0</td></tr>
 <tr id="table-public-ref_classification_equivalent_action"><td><code>public.ref_classification_equivalent_action</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.search_objects_by_label(p_label_value_id uuid, p_include_partial boolean DEFAULT true, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)</code></td><td><span class="muted">-</span></td><td>2 policies · 1 triggers · FK → 2 · FK ← 0</td></tr>
 <tr id="table-public-ref_classification_equivalent_group"><td><code>public.ref_classification_equivalent_group</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.search_objects_by_label(p_label_value_id uuid, p_include_partial boolean DEFAULT true, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_limit integer DEFAULT 20, p_offset integer DEFAULT 0)</code></td><td><span class="muted">-</span></td><td>2 policies · 1 triggers · FK → 2 · FK ← 0</td></tr>
-<tr id="table-public-ref_classification_scheme"><td><code>public.ref_classification_scheme</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code> <span class="muted">+8</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code></td><td>2 policies · 2 triggers · FK → 0 · FK ← 6</td></tr>
+<tr id="table-public-ref_classification_scheme"><td><code>public.ref_classification_scheme</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.get_dashboard_distinction_overview(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_dashboard_scorecards(p_types object_type[] DEFAULT NULL::object_type[], p_status object_status[] DEFAULT ARRAY[&#x27;published&#x27;::object_status], p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb, p_updated_at_from date DEFAULT NULL::date, p_updated_at_to date DEFAULT NULL::date)</code>, <code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code> <span class="muted">+9</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code></td><td>2 policies · 2 triggers · FK → 0 · FK ← 6</td></tr>
 <tr id="table-public-ref_classification_scheme_applicability"><td><code>public.ref_classification_scheme_applicability</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><span class="muted">-</span></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-public-ref_classification_value"><td><code>public.ref_classification_value</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_filtered_object_ids(p_filters jsonb, p_types object_type[], p_status object_status[], p_search text DEFAULT NULL::text)</code>, <code>api.get_object_badges_compact(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code> <span class="muted">+4</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code></td><td>2 policies · 2 triggers · FK → 2 · FK ← 3</td></tr>
 <tr id="table-public-ref_code"><td><code>public.ref_code</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.create_membership_campaign(p_anchor_object_id text, p_name text)</code>, <code>api.create_membership_tier(p_anchor_object_id text, p_name text)</code>, <code>api.get_object_cards_batch(p_ids text[], p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text])</code> <span class="muted">+17</span></td><td><code>api.commit_staging_to_public(p_batch_id text)</code>, <code>api.create_membership_campaign(p_anchor_object_id text, p_name text)</code>, <code>api.create_membership_tier(p_anchor_object_id text, p_name text)</code>, <code>api.rpc_delete_ref_code(p_domain text, p_id uuid)</code> <span class="muted">+3</span></td><td>112 policies · 4 triggers · FK → 0 · FK ← 6</td></tr>
@@ -7915,13 +8004,13 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr id="table-public-ref_code_weekday"><td><code>public.ref_code_weekday</code></td><td>table</td><td>ref-lookups</td><td>non</td><td><code>api.get_all_opening_time_slots(p_period_id uuid)</code>, <code>api.get_opening_slots_by_day(p_period_id uuid)</code>, <code>api.get_opening_time_slots(p_period_id uuid, p_weekday_code text, p_slot_number integer DEFAULT 1)</code>, <code>api.is_object_open_now(p_object_id text)</code> <span class="muted">+2</span></td><td><span class="muted">-</span></td><td>0 policies · 4 triggers · FK → 0 · FK ← 7</td></tr>
 <tr id="table-public-ref_commune"><td><code>public.ref_commune</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_trail(p_trail_id uuid)</code>, <code>api.list_catalog(p_domain text, p_lang text DEFAULT &#x27;fr&#x27;::text)</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 0 · FK ← 2</td></tr>
 <tr id="table-public-ref_contact_role"><td><code>public.ref_contact_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.export_actor_contacts(p_object_ids text[], p_reason text, p_format text DEFAULT &#x27;xlsx&#x27;::text, p_export_run_id uuid DEFAULT NULL::uuid, p_batch_index integer DEFAULT 1, p_batch_count integer DEFAULT 1)</code>, <code>api.get_actor_data(p_object_id text)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_include_media text DEFAULT &#x27;none&#x27;::text, p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code> <span class="muted">+1</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 2</td></tr>
-<tr id="table-public-ref_document"><td><code>public.ref_document</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.list_actor_support(p_actor_id uuid)</code>, <code>api.list_crm_tasks()</code>, <code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code></td><td><code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code></td><td>3 policies · 2 triggers · FK → 0 · FK ← 6</td></tr>
+<tr id="table-public-ref_document"><td><code>public.ref_document</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_active_object_documents(p_object_id text)</code>, <code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.list_actor_support(p_actor_id uuid)</code>, <code>api.list_crm_tasks()</code> <span class="muted">+2</span></td><td><code>api.rpc_delete_object(p_object_id text, p_confirm_name text)</code></td><td>3 policies · 2 triggers · FK → 0 · FK ← 6</td></tr>
 <tr id="table-public-ref_facet_applicability"><td><code>public.ref_facet_applicability</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 1 · FK ← 0</td></tr>
 <tr id="table-public-ref_facet_registry"><td><code>public.ref_facet_registry</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.assert_facet_applicable()</code>, <code>api.assert_object_type_change_consistent()</code>, <code>api.facet_applicability_violations()</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_interop_crosswalk"><td><code>public.ref_interop_crosswalk</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_interop(p_object_id text, p_profile text)</code>, <code>api.get_object_jsonld(p_object_id text, p_profile text DEFAULT &#x27;jsonld&#x27;::text)</code></td><td><span class="muted">-</span></td><td>2 policies · 0 triggers · FK → 55 · FK ← 0</td></tr>
 <tr id="table-public-ref_iti_assoc_role"><td><code>public.ref_iti_assoc_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.save_object_itinerary_nested(p_object_id text, p_payload jsonb)</code></td><td><span class="muted">-</span></td><td>1 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_language"><td><code>public.ref_language</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.i18n_get_text(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT &#x27;fr&#x27;::text, p_fallback_lang text DEFAULT &#x27;fr&#x27;::text)</code>, <code>api.i18n_get_text_strict(p_target_table text, p_target_pk text, p_target_column text, p_lang_code text DEFAULT &#x27;fr&#x27;::text, p_fallback_lang text DEFAULT &#x27;fr&#x27;::text)</code>, <code>api.list_catalog(p_domain text, p_lang text DEFAULT &#x27;fr&#x27;::text)</code> <span class="muted">+3</span></td><td><span class="muted">-</span></td><td>2 policies · 3 triggers · FK → 0 · FK ← 4</td></tr>
-<tr id="table-public-ref_legal_type"><td><code>public.ref_legal_type</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT &#x27;fixed_end_date&#x27;::legal_validity_mode, p_status text DEFAULT &#x27;active&#x27;::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.check_object_legal_compliance(p_object_id text)</code>, <code>api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])</code> <span class="muted">+8</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
+<tr id="table-public-ref_legal_type"><td><code>public.ref_legal_type</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.add_legal_record(p_object_id text, p_type_code text, p_value jsonb, p_document_id uuid DEFAULT NULL::uuid, p_valid_from date DEFAULT CURRENT_DATE, p_valid_to date DEFAULT NULL::date, p_validity_mode legal_validity_mode DEFAULT &#x27;fixed_end_date&#x27;::legal_validity_mode, p_status text DEFAULT &#x27;active&#x27;::text, p_document_requested_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_document_delivered_at timestamp with time zone DEFAULT NULL::timestamp with time zone, p_note text DEFAULT NULL::text)</code>, <code>api.audit_legal_compliance(p_object_types text[] DEFAULT NULL::text[], p_include_expired boolean DEFAULT false)</code>, <code>api.check_object_legal_compliance(p_object_id text)</code>, <code>api.get_expiring_legal_records(p_days_ahead integer DEFAULT 30, p_object_id text DEFAULT NULL::text, p_type_codes text[] DEFAULT NULL::text[])</code> <span class="muted">+9</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_object_relation_type"><td><code>public.ref_object_relation_type</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.get_object_resource(p_object_id text, p_lang_prefs text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_track_format text DEFAULT &#x27;none&#x27;::text, p_options jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_objects_with_deep_data(p_object_ids text[], p_languages text[] DEFAULT ARRAY[&#x27;fr&#x27;::text], p_include_media text DEFAULT &#x27;none&#x27;::text, p_filters jsonb DEFAULT &#x27;{}&#x27;::jsonb)</code>, <code>api.get_parent_object_data(p_object_id text)</code>, <code>api.save_object_relations(p_object_id text, p_payload jsonb)</code></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_org_admin_role"><td><code>public.ref_org_admin_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.current_user_admin_rank()</code>, <code>api.current_user_admin_role_code()</code>, <code>api.object_private_note_author_admin_rank(p_note_id uuid)</code>, <code>api.rpc_deactivate_membership(p_membership_id uuid)</code> <span class="muted">+13</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
 <tr id="table-public-ref_org_business_role"><td><code>public.ref_org_business_role</code></td><td>table</td><td>ref-lookups</td><td>oui</td><td><code>api.configure_sandbox_discovery_user(p_user_id uuid DEFAULT NULL::uuid)</code>, <code>api.current_user_business_role_code()</code>, <code>api.get_sandbox_discovery_user()</code>, <code>api.rpc_list_org_members(p_org_object_id text)</code> <span class="muted">+6</span></td><td><span class="muted">-</span></td><td>2 policies · 2 triggers · FK → 0 · FK ← 1</td></tr>
@@ -8014,21 +8103,24 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <tr><td><code>INSERT</code></td><td><code>Insertion via triggers</code></td><td>postgres, service_role</td><td>PERMISSIVE</td><td><code>true</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>Lecture audit (admin/service_role)</code></td><td>public</td><td>PERMISSIVE</td><td><code>((( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) OR api.is_platform_superuser())</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.actor</code> (2 policies)</summary>
+<details><summary><code>public.actor</code> (3 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>(is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)) | (is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm))</code></td></tr>
 <tr><td><code>ALL</code></td><td><code>admin_actor_write</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>ext_actor_read</code></td><td>public</td><td>PERMISSIVE</td><td><code>((( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) OR ( SELECT api.is_platform_superuser() AS is_platform_superuser) OR (id = ( SELECT auth.uid() AS uid)) OR (EXISTS ( SELECT 1
    FROM (actor_object_role aor
      JOIN object o ON ((o.id = aor.object_id)))
   WHERE ((aor.actor_id = actor.id) AND api.can_read_extended(o.id)))))</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.actor_channel</code> (2 policies)</summary>
+<details><summary><code>public.actor_channel</code> (3 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)</code></td></tr>
 <tr><td><code>ALL</code></td><td><code>admin_actor_channel_write</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>ext_actor_channel_read</code></td><td>public</td><td>PERMISSIVE</td><td><code>((( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) OR (actor_id = ( SELECT auth.uid() AS uid)))</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.actor_consent</code> (2 policies)</summary>
+<details><summary><code>public.actor_consent</code> (3 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)</code></td></tr>
 <tr><td><code>ALL</code></td><td><code>own_actor_consent_write</code></td><td>public</td><td>PERMISSIVE</td><td><code>(actor_id = ( SELECT auth.uid() AS uid))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>own_actor_consent_read</code></td><td>public</td><td>PERMISSIVE</td><td><code>(actor_id = ( SELECT auth.uid() AS uid))</code></td></tr>
 </tbody></table></details>
@@ -8036,15 +8128,17 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
 <tr><td><code>SELECT</code></td><td><code>actor_contact_export_log_read</code></td><td>authenticated</td><td>PERMISSIVE</td><td><code>(( SELECT api.is_platform_superuser() AS is_platform_superuser) OR ((( SELECT api.current_user_admin_rank() AS current_user_admin_rank) IS NOT NULL) AND (( SELECT api.current_user_org_id() AS current_user_org_id) = ANY (org_object_ids))))</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.actor_document</code> (4 policies)</summary>
+<details><summary><code>public.actor_document</code> (5 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)</code></td></tr>
 <tr><td><code>DELETE</code></td><td><code>admin_del_actor_document</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>INSERT</code></td><td><code>admin_ins_actor_document</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>admin_read_actor_document</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>UPDATE</code></td><td><code>admin_upd_actor_document</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.actor_object_role</code> (4 policies)</summary>
+<details><summary><code>public.actor_object_role</code> (5 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.actor_in_current_realm(actor_id) | internal.actor_in_current_realm(actor_id)</code></td></tr>
 <tr><td><code>DELETE</code></td><td><code>canonical_del_actor_object_role</code></td><td>public</td><td>PERMISSIVE</td><td><code>api.user_can_write_object_canonical(object_id)</code></td></tr>
 <tr><td><code>INSERT</code></td><td><code>canonical_ins_actor_object_role</code></td><td>public</td><td>PERMISSIVE</td><td><code>api.user_can_write_object_canonical(object_id)</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>ext_actor_object_role_read</code></td><td>public</td><td>PERMISSIVE</td><td><code>((( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) OR (actor_id = ( SELECT auth.uid() AS uid)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))</code></td></tr>
@@ -8098,15 +8192,17 @@ individuelle depuis §227 — ne le rattraperait pas. La panne serait muette et 
   WHERE ((o.id = contact_channel.object_id) AND ((o.status = &#x27;published&#x27;::object_status) AND (o.is_test = ( SELECT api.current_user_test_realm() AS current_user_test_realm)))))) AND (is_public IS TRUE)) OR (object_id IN ( SELECT api.current_user_extended_object_ids() AS current_user_extended_object_ids)))</code></td></tr>
 <tr><td><code>UPDATE</code></td><td><code>canonical_upd_contact_channel</code></td><td>public</td><td>PERMISSIVE</td><td><code>api.user_can_write_object_canonical(object_id) | api.user_can_write_object_canonical(object_id)</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.crm_interaction</code> (4 policies)</summary>
+<details><summary><code>public.crm_interaction</code> (5 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.crm_row_in_current_realm(object_id, actor_id) | internal.crm_row_in_current_realm(object_id, actor_id)</code></td></tr>
 <tr><td><code>DELETE</code></td><td><code>admin_del_crm_interaction</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>INSERT</code></td><td><code>admin_ins_crm_interaction</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>admin_read_crm_interaction</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>UPDATE</code></td><td><code>admin_upd_crm_interaction</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text])) | (( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 </tbody></table></details>
-<details><summary><code>public.crm_task</code> (4 policies)</summary>
+<details><summary><code>public.crm_task</code> (5 policies)</summary>
 <table><thead><tr><th>Commande</th><th>Policy</th><th>Rôles</th><th>Mode</th><th>Predicate</th></tr></thead><tbody>
+<tr><td><code>ALL</code></td><td><code>actor_test_realm</code></td><td>anon, authenticated</td><td>RESTRICTIVE</td><td><code>internal.crm_row_in_current_realm(object_id, actor_id) | internal.crm_row_in_current_realm(object_id, actor_id)</code></td></tr>
 <tr><td><code>DELETE</code></td><td><code>admin_del_crm_task</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>INSERT</code></td><td><code>admin_ins_crm_task</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>
 <tr><td><code>SELECT</code></td><td><code>admin_read_crm_task</code></td><td>public</td><td>PERMISSIVE</td><td><code>(( SELECT auth.role() AS role) = ANY (ARRAY[&#x27;service_role&#x27;::text, &#x27;admin&#x27;::text]))</code></td></tr>

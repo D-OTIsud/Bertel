@@ -599,12 +599,10 @@ END$$;
 -- asserter : comparer la garde au PRÉFLIGHT serait tautologique, puisque le
 -- préflight APPELLE la garde.
 --
--- PÉRIMÈTRE (§1 et §3 du fichier de migration le disent tous deux) : les deux
--- formes s'accordent SUR LES IDS QUI EXISTENT dans `object`. Le bras superuser de
--- l'export exige EN PLUS l'existence, que la garde ne porte pas — écart
--- DÉLIBÉRÉ et fail-closed, épinglé par M2-bis plus bas. Une assertion d'égalité
--- NON BORNÉE rougirait pour cette seule raison et pousserait à « réparer » la
--- garde en lui ajoutant un contrôle d'existence qu'elle ne doit pas porter.
+-- PÉRIMÈTRE : les deux formes s'accordent SUR LES IDS QUI EXISTENT dans `object`.
+-- Avant le cloisonnement des acteurs, seul l'export exigeait l'existence dans le
+-- bras superuser. Depuis actor.is_test, la garde doit aussi connaître le realm de
+-- l'objet et refuse un id inexistant. M2-bis couvre les deux étapes du manifeste.
 --
 -- NON-VACUITÉ : la matrice contient 4 couples TRUE/TRUE et 5 FALSE/FALSE. Le
 -- témoin OBJ2 (lien ORG `reader`) est là exprès : le membre u1 y est ÉTENDU mais
@@ -651,26 +649,29 @@ BEGIN
   RAISE NOTICE '16u M2: 9 couples persona x fiche EXISTANTE — garde et forme ensembliste accordees.';
 END$$;
 
--- M2-bis. L'écart DÉLIBÉRÉ, épinglé pour qu'on ne le « corrige » pas.
--- Sur un id qui n'existe PAS, un superuser passe la garde (elle répond « cette
--- règle autorise-t-elle ? », pas « cette fiche existe-t-elle ? ») mais l'export
--- refuse (son bras superuser exige l'existence). L'écart est du côté FAIL-CLOSED :
--- c'est la forme qui laisse RÉELLEMENT sortir la PII qui est la plus stricte.
+-- M2-bis. Un objet inconnu ne permet pas de prouver son realm : après la migration
+-- des acteurs, garde et export le refusent même au superuser. Ce test tourne aussi
+-- avant cette migration, où l'ancien écart garde/export reste attendu.
 DO $$
-DECLARE ok boolean := FALSE;
+DECLARE
+  ok boolean := FALSE;
+  v_actor_realms boolean;
 BEGIN
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns
+    WHERE table_schema='public' AND table_name='actor' AND column_name='is_test')
+  INTO v_actor_realms;
   PERFORM set_config('request.jwt.claims',
     '{"role":"authenticated","sub":"16000000-0000-4000-8000-000000000003"}', true);
   SET LOCAL ROLE authenticated;
-  ASSERT COALESCE(api.can_read_actor_contacts('ZZZRUN00000016U9'), FALSE) IS TRUE,
-    'M2-bis FAIL: la garde ne doit PAS porter de controle d existence — ne pas la « reparer »';
+  ASSERT COALESCE(api.can_read_actor_contacts('ZZZRUN00000016U9'), FALSE) = (NOT v_actor_realms),
+    'M2-bis FAIL: un objet inexistant doit etre refuse lorsque son realm est requis';
   BEGIN
     PERFORM api.export_actor_contacts(ARRAY['ZZZRUN00000016U9'], 'Ecart delibere 16u', 'xlsx');
   EXCEPTION WHEN insufficient_privilege THEN ok := TRUE;
   END;
   ASSERT ok, 'M2-bis FAIL: l export doit refuser un id inexistant meme a un superuser (fail-closed)';
   RESET ROLE;
-  RAISE NOTICE '16u M2-bis: ecart garde/export sur un id INEXISTANT — delibere et fail-closed.';
+  RAISE NOTICE '16u M2-bis: id INEXISTANT — garde conforme au stade du manifeste, export toujours refuse.';
 END$$;
 
 -- ---------------------------------------------------------------------

@@ -354,6 +354,7 @@ BEGIN
     v_u_prod    uuid := '00000000-0000-4000-a000-0000000000f7'::uuid;
     v_role      uuid;
     v_n         integer;
+    v_denied    boolean;
   BEGIN
     SELECT id INTO v_kind FROM ref_code_contact_kind WHERE code = 'email';
     SELECT id INTO v_role FROM ref_actor_role ORDER BY code LIMIT 1;
@@ -413,17 +414,36 @@ BEGIN
              'J: l utilisateur de production ne voit plus sa propre fiche — la garde coupe trop';
     RESET ROLE;
 
-    -- J3. Integration portail : un lien explicite vers l'autre realm ne suffit pas.
-    -- Chaque persona a une fiche autorisee ET une fiche etrangere : ni un refus
-    -- systematique, ni un simple filtre du pont e-mail ne peut faire passer ce test.
+    -- J3. Integration portail : chaque persona garde sa fiche autorisee.
+    -- Avant la migration des acteurs, le lien etranger est pose pour eprouver la
+    -- garde de lecture. Apres cette migration, le lien doit etre refuse a l'ecriture.
+    -- Ce fichier est aussi execute au creneau 18c, avant actor.is_test (19e).
     -- La fixture change un role applicatif : utiliser le contexte d'administration,
     -- puis restaurer les JWT des deux acteurs avant toute assertion d'acces.
     PERFORM set_config('request.jwt.claims', json_build_object('role','service_role')::text, true);
     UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_t WHERE id = v_u_test;
     UPDATE app_user_profile SET role = 'actor', actor_id = v_actor_r WHERE id = v_u_prod;
-    INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
-    VALUES (v_actor_t, v_obj_r, v_role, FALSE, 'public'),
-           (v_actor_r, v_obj_t, v_role, FALSE, 'public');
+    IF EXISTS (SELECT 1 FROM information_schema.columns
+               WHERE table_schema='public' AND table_name='actor' AND column_name='is_test') THEN
+      v_denied := false;
+      BEGIN
+        INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+        VALUES (v_actor_t, v_obj_r, v_role, FALSE, 'public');
+      EXCEPTION WHEN check_violation OR insufficient_privilege THEN v_denied := true;
+      END;
+      ASSERT v_denied, 'J3: un acteur de test peut etre rattache a une fiche reelle';
+      v_denied := false;
+      BEGIN
+        INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+        VALUES (v_actor_r, v_obj_t, v_role, FALSE, 'public');
+      EXCEPTION WHEN check_violation OR insufficient_privilege THEN v_denied := true;
+      END;
+      ASSERT v_denied, 'J3: un acteur reel peut etre rattache a une fiche de test';
+    ELSE
+      INSERT INTO actor_object_role (actor_id, object_id, role_id, is_primary, visibility)
+      VALUES (v_actor_t, v_obj_r, v_role, FALSE, 'public'),
+             (v_actor_r, v_obj_t, v_role, FALSE, 'public');
+    END IF;
 
     PERFORM set_config('request.jwt.claims',
       json_build_object('sub', v_u_test, 'role','authenticated', 'email', v_mail_t)::text, true);

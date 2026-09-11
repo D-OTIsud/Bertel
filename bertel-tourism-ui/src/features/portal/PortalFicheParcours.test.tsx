@@ -25,6 +25,10 @@ import { useSessionStore } from '../../store/session-store';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 
 jest.mock('../../services/portal');
+jest.mock('../../lib/supabase', () => ({
+  ...jest.requireActual('../../lib/supabase'),
+  getApiClient: jest.fn(),
+}));
 jest.mock('../../hooks/useExplorerQueries');
 
 /**

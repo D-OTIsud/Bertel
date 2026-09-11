@@ -2,20 +2,22 @@
 -- test_gdpr_erasure.sql — vérifie api.rpc_gdpr_erase_subject (Art. 17)
 -- Exécution privilégiée (psql / MCP / CI) : pas de JWT → la garde D4 est contournée.
 -- Auto-nettoyant : tout est encapsulé dans une transaction terminée par ROLLBACK.
--- Pré-requis : au moins un object pour ancrer une interaction CRM (vrai sur live + seeds).
+-- Pré-requis : catalogue des genres de contact. La fiche CRM est une fixture dédiée.
 -- =====================================================================
 BEGIN;
 DO $$
 DECLARE
-  v_obj        TEXT;
+  v_obj        TEXT := 'HOTRUN9999989917';
   v_actor      UUID;
   v_chan       UUID;
   v_int        UUID;
   v_email_kind UUID;
   v_n          INTEGER;
 BEGIN
-  v_obj := (SELECT id FROM object LIMIT 1);
-  IF v_obj IS NULL THEN RAISE EXCEPTION 'test_gdpr_erasure: aucun object pour ancrer le test'; END IF;
+  -- Une fiche dédiée partage le realm production de l'acteur créé ci-dessous.
+  -- Un objet arbitraire du corpus peut appartenir au bac à sable depuis 19e.
+  INSERT INTO object(id, object_type, name, status, is_test)
+    VALUES (v_obj, 'HOT', 'Fixture effacement RGPD', 'draft', false);
   v_email_kind := (SELECT id FROM ref_code_contact_kind WHERE lower(code) = 'email' LIMIT 1);
   IF v_email_kind IS NULL THEN RAISE EXCEPTION 'test_gdpr_erasure: ref_code_contact_kind email manquant'; END IF;
 

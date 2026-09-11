@@ -3709,6 +3709,10 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `boolean` — SECURITY DEFINER
 - reads `public.user_org_membership` _(high)_
 
+## `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `public.pending_change` _(high)_
+
 ## `internal.purge_expired_lists()`
 - returns: `integer` — SECURITY DEFINER
 - reads `public.object_list` _(high)_
@@ -3886,6 +3890,13 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `trigger` — SECURITY DEFINER
 - reads `public.org_config` _(high)_
 
+## `internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)`
+- returns: `void` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.app_notification` _(high)_
+- reads `public.pending_change` _(high)_
+- writes `public.app_notification` _(high)_
+
 ## `internal.test_actor_name(p_type text, p_i integer)`
 - returns: `text`
 
@@ -3914,6 +3925,9 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - returns: `text`
 
 > Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests.
+
+## `internal.tg_pending_change_notifications()`
+- returns: `trigger` — SECURITY DEFINER
 
 ## `internal.tg_remove_list_feature_notifications()`
 - returns: `trigger` — SECURITY DEFINER
@@ -3946,6 +3960,26 @@ _Reads/writes are regex-inferred and flagged by confidence._
 - writes `public.trail_manager_link` _(high)_
 - writes `public.trail_source_record` _(high)_
 - writes `public.trail_status_history` _(high)_
+
+## `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)`
+- returns: `boolean` — SECURITY DEFINER
+- reads `auth.users` _(high)_
+- reads `public.actor` _(high)_
+- reads `public.app_user_profile` _(high)_
+- reads `public.object` _(high)_
+- reads `public.object_org_link` _(high)_
+- reads `public.org_config` _(high)_
+- reads `public.org_role_permission` _(high)_
+- reads `public.ref_org_role` _(high)_
+- reads `public.ref_permission` _(high)_
+- reads `public.user_org_business_role` _(high)_
+- reads `public.user_org_membership` _(high)_
+- reads `public.user_permission` _(high)_
+
+> Recipient form of api.user_can_moderate_object. No JWT substitution: the
+> caller remains the contributor throughout submission. This internal helper
+> mirrors the effective permission's two independent grants and the publisher
+> scope; administrative rank alone never grants moderation.
 
 ## `internal.workspace_assert_can_write_object(p_object_id text)`
 - returns: `void` — SECURITY DEFINER

@@ -1,6 +1,9 @@
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 jest.mock('../store/session-store', () => ({
-  useSessionStore: { getState: jest.fn(() => ({ demoMode: false })) },
+  useSessionStore: {
+    getState: jest.fn(() => ({ demoMode: false })),
+    subscribe: jest.fn(() => () => {}),
+  },
 }));
 jest.mock('../data/mock', () => ({
   mockObjectDetails: {},

@@ -23,6 +23,19 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
 }
 
+function withCachedEmptyModerationQueue() {
+  const client = new QueryClient();
+  const queueKey = ['pending-changes', 'pending'] as const;
+  client.setQueryData(queueKey, []);
+  return {
+    client,
+    queueKey,
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  };
+}
+
 function perm(canDirectWrite: boolean, canPrepareProposal = false) {
   return {
     canDirectWrite,
@@ -143,7 +156,8 @@ describe('useEditorSave.save — fork routing', () => {
     const permissions = {} as ObjectWorkspacePermissions;
     const draft = makeModules();
     const baseline = makeModules();
-    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+    const queue = withCachedEmptyModerationQueue();
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper: queue.wrapper });
 
     let outcome!: Awaited<ReturnType<typeof result.current.save>>;
     await act(async () => {
@@ -157,8 +171,9 @@ describe('useEditorSave.save — fork routing', () => {
     expect(mockSubmit).toHaveBeenCalledTimes(2);
     expect(outcome.submitted).toEqual(['characteristics', 'contacts']);
     expect(outcome.saved).toEqual([]);
-    // Proposals are pending moderation — nothing changed on the object, no cache refresh.
+    // Object rows stay unchanged, but an already-visited empty moderation queue must refresh.
     expect(mockInvalidate).not.toHaveBeenCalled();
+    expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(true);
 
     // The auto-dispatch section carries its whitelisted RPC; the manual one carries a null rpc.
     const submittedRpcs = mockSubmit.mock.calls.map((call) => (call[0].metadata as Record<string, unknown>).rpc);
@@ -170,7 +185,8 @@ describe('useEditorSave.save — fork routing', () => {
       submission.metadata.section === 'characteristics' ? Promise.reject(new Error('réseau')) : Promise.resolve('pc-ok'),
     );
     const draft = makeModules();
-    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+    const queue = withCachedEmptyModerationQueue();
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper: queue.wrapper });
 
     let outcome!: Awaited<ReturnType<typeof result.current.save>>;
     await act(async () => {
@@ -181,5 +197,28 @@ describe('useEditorSave.save — fork routing', () => {
 
     expect(outcome.submitted).toEqual(['contacts']);
     expect(outcome.failed).toEqual([{ module: 'characteristics', message: 'réseau' }]);
+    expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(true);
+    expect(mockInvalidate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the cached moderation queue valid when every proposal submission fails', async () => {
+    mockSubmit.mockRejectedValue(new Error('réseau'));
+    const queue = withCachedEmptyModerationQueue();
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper: queue.wrapper });
+
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['characteristics', 'contacts'], {} as ObjectWorkspacePermissions, makeModules(), {
+        canWriteCanonicalDirect: false,
+      });
+    });
+
+    expect(outcome.submitted).toEqual([]);
+    expect(outcome.failed).toEqual([
+      { module: 'characteristics', message: 'réseau' },
+      { module: 'contacts', message: 'réseau' },
+    ]);
+    expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(false);
+    expect(mockInvalidate).not.toHaveBeenCalled();
   });
 });

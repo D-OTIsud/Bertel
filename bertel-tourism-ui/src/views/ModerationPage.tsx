@@ -197,6 +197,9 @@ export default function ModerationPage() {
     // remonte pas le composant, et React Query re-servirait alors le cache de l'objet précédent.
     queryKey: ['pending-changes', status, objectFilter],
     queryFn: () => listPendingChanges(status, objectFilter),
+    // Another user can submit while this queue is cached or open in a background tab.
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   function refresh() {
@@ -399,6 +402,14 @@ export default function ModerationPage() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={query.isFetching}
+            onClick={() => void query.refetch()}
+          >
+            {query.isFetching ? 'Actualisation…' : 'Actualiser'}
+          </button>
         </div>
         {/* Une file restreinte à une fiche doit le DIRE : sinon elle se lit comme la file
             entière, et son EmptyState comme « plus rien à modérer » pour toute l'organisation. */}
@@ -423,7 +434,7 @@ export default function ModerationPage() {
 
       {items.length === 0 ? (
         <EmptyState
-          mode="coming-soon"
+          mode="no-data"
           title="Aucune suggestion à modérer"
           description={
             objectFilter

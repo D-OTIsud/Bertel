@@ -3711,8 +3711,9 @@ export async function getObjectWorkspacePermissions(objectId: string): Promise<O
   let canManageLegal = directWrite;
   let isOrgAdmin = directWrite;
   let isPlatformSuperuser = directWrite;
-  if (!session.demoMode && apiClient) {
+  if (!session.demoMode) {
     try {
+      if (!apiClient) throw new Error('Permission client unavailable');
       // UN seul aller-retour pour les neuf sondes. La resilience par sonde n'est pas
       // perdue : elle a migre DANS la fonction SQL (un bloc EXCEPTION par sonde),
       // qui conserve la semantique Promise.allSettled — une sonde en echec rend
@@ -3726,9 +3727,14 @@ export async function getObjectWorkspacePermissions(objectId: string): Promise<O
       const { data: probes, error: probesError } = await apiClient
         .schema('api')
         .rpc('get_object_workspace_permissions', { p_object_id: objectId });
-      const p = (probesError == null && probes && typeof probes === 'object'
-        ? probes
-        : {}) as Record<string, unknown>;
+      if (probesError) throw probesError;
+      const p = probes as Record<string, unknown> | null;
+      // Unknown permissions must never select the contributor save path: that
+      // would queue an editor's work instead of saving it directly.
+      const keys = ['canonical', 'enrichment', 'owner', 'publish', 'private_notes', 'crm', 'legal', 'org_admin', 'platform_superuser'];
+      if (!p || Array.isArray(p) || keys.some((key) => typeof p[key] !== 'boolean')) {
+        throw new Error('Invalid workspace permissions response');
+      }
 
       canonical = p.canonical === true;
       enrichment = p.enrichment === true;
@@ -3742,15 +3748,8 @@ export async function getObjectWorkspacePermissions(objectId: string): Promise<O
 
       canPrepareProposal = directWrite || canonical || enrichment;
       canWriteSafeWorkspaceRpc = canWriteCanonicalDirect({ directWrite, objectOwner, canonical });
-    } catch {
-      canPrepareProposal = directWrite;
-      canWriteSafeWorkspaceRpc = directWrite;
-      canPublishObject = directWrite;
-      canWriteProviderFollowUp = directWrite;
-      crmWrite = false;
-      canManageLegal = directWrite;
-      isOrgAdmin = directWrite;
-      isPlatformSuperuser = directWrite;
+    } catch (cause) {
+      throw new Error('Vos droits de modification n’ont pas pu être vérifiés. Réessayez dans quelques instants.', { cause });
     }
   }
 

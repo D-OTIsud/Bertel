@@ -8,6 +8,7 @@
  */
 import { getObjectWorkspacePermissions, type ObjectWorkspacePermissions } from '../../../services/object-workspace';
 import { useSessionStore } from '../../../store/session-store';
+import * as supabase from '../../../lib/supabase';
 import type { ObjectEditorState } from '../../object-editor/useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../../services/object-workspace-parser';
 
@@ -110,15 +111,33 @@ export function portalModules(over: Record<string, unknown> = {}): ObjectWorkspa
  * canonique DIRECTE — un droit que D7 lui refuse volontairement — et non « peut-il
  * proposer ? », qui est la seule question du portail.
  *
- * `getApiClient()` rend `null` sous jest (pas de configuration Supabase) : les sondes
- * gardent leurs valeurs par défaut, exactement celles que le SQL rend à un acteur.
+ * Le client simulé renvoie explicitement les neuf sondes refusées, comme le SQL pour
+ * un acteur. Un client indisponible est une erreur de vérification, pas un refus.
  */
 export async function actorPortalPermissions(): Promise<ObjectWorkspacePermissions> {
   const before = useSessionStore.getState();
+  const permissionRpc = jest.fn().mockResolvedValue({
+    data: {
+      canonical: false,
+      enrichment: false,
+      owner: false,
+      publish: false,
+      private_notes: false,
+      crm: false,
+      legal: false,
+      org_admin: false,
+      platform_superuser: false,
+    },
+    error: null,
+  });
+  const apiClient = jest.spyOn(supabase, 'getApiClient').mockReturnValue({
+    schema: jest.fn().mockReturnValue({ rpc: permissionRpc }),
+  } as unknown as ReturnType<typeof supabase.getApiClient>);
   useSessionStore.setState({ demoMode: false, role: 'actor' } as never);
   try {
     return await getObjectWorkspacePermissions('HOTRUN0001');
   } finally {
+    apiClient.mockRestore();
     useSessionStore.setState({ demoMode: before.demoMode, role: before.role } as never);
   }
 }

@@ -2,7 +2,10 @@ import type { ObjectWorkspaceMediaItem, ObjectWorkspaceMediaModule } from './obj
 
 jest.mock('../lib/supabase', () => ({ getApiClient: jest.fn(), getSupabaseClient: jest.fn() }));
 jest.mock('../store/session-store', () => ({
-  useSessionStore: { getState: () => ({ demoMode: false }) },
+  useSessionStore: {
+    getState: () => ({ demoMode: false }),
+    subscribe: jest.fn(() => () => {}),
+  },
 }));
 
 import { getSupabaseClient } from '../lib/supabase';

@@ -88,7 +88,10 @@ export async function listPendingChanges(
   if (error) {
     throw mapDatabaseError(error, 'File de modération indisponible.');
   }
-  return Array.isArray(data) ? data.map((row) => parsePendingChange(row as GenericRecord)) : [];
+  if (!Array.isArray(data) || data.some((row) => !row || typeof row !== 'object' || typeof row.id !== 'string')) {
+    throw new Error('Réponse de modération invalide. Réessayez de charger les suggestions.');
+  }
+  return data.map((row) => parsePendingChange(row as GenericRecord));
 }
 
 export interface SubmitPendingChangeInput {

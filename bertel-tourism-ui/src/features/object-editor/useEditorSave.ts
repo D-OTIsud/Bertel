@@ -164,6 +164,9 @@ export function useEditorSave(objectId: string) {
       if (saved.length > 0) {
         invalidateObjectWorkspaceCaches(queryClient, objectId);
       }
+      if (submitted.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: ['pending-changes'] });
+      }
       return { saved, submitted, failed, blocked: plan.blocked };
     },
     [queryClient, objectId],

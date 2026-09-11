@@ -623,6 +623,10 @@ ROLLBACK;
 \echo '== 19h filtrage generique des dates et statuts des justificatifs actifs =='
 \ir ../supabase/migrations/20260908053837_attach_classification_evidence.sql
 
+\echo '== 19i ordinary contributor bell and email notifications (current moderation rights, coalesced sections, portal exclusion) =='
+\ir ../supabase/migrations/20260911152231_internal_pending_change_notifications.sql
+\ir tests/test_internal_pending_change_notifications.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

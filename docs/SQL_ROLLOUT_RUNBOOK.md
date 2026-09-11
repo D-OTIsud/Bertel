@@ -2255,3 +2255,29 @@ ni les migrations déjà enregistrées en production.
 Validation : contrôle des autorisations de la RPC et d'un document expiré sur
 la base ; typecheck et 36 tests frontend ciblés réussis sur le checkout de
 publication. Aucun appel supplémentaire au fournisseur IA.
+
+## 19i — Notifications des propositions internes — 2026-09-11
+
+La migration `supabase/migrations/20260911152231_internal_pending_change_notifications.sql`
+ajoute `pending_change_submitted` à la cloche et à l'outbox e-mail existante.
+Le déclencheur sur `pending_change` couvre les propositions internes dont
+`submission_id` est nul. Le portail garde ses notifications de vérification.
+
+Une seule notification reste ouverte par destinataire, fiche et auteur tant
+qu'une rubrique attend une décision. Une validation partielle conserve son
+identité et ses états de lecture/envoi ; la dernière résolution ou suppression
+la retire. Les destinataires suivent les droits effectifs de modération et le
+realm de la fiche, en excluant l'auteur. Ces droits sont revérifiés à la lecture
+et avant de réclamer un e-mail. Aucun nom de personne n'est figé dans le payload.
+
+Déployer d'abord l'application qui reconnaît la nouvelle espèce, puis appliquer
+la migration ciblée : un ancien drain ne sait pas rendre ce type d'e-mail.
+La migration ne configure pas SMTP et ne crée pas d'alertes historiques.
+L'absence de SMTP laisse les e-mails en attente dans l'outbox.
+
+Le manifeste frais applique cette étape après 19h. Le test transactionnel
+`Base de donnée DLL et API/tests/test_internal_pending_change_notifications.sql`
+vérifie les destinataires, la déduplication, le cycle de modération, les contrats
+cloche/e-mail et la non-régression du portail. Le workflow SQL le rejoue après
+l'installation complète. Les soumissions simultanées et la résolution concurrente
+doivent aussi être vérifiées avec deux connexions sur une base de test.

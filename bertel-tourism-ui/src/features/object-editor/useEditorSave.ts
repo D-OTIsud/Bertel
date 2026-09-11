@@ -8,6 +8,7 @@ import {
 import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { submitPendingChange } from '../../services/moderation';
+import { pingNotifyDrain } from '../../services/notification-delivery';
 import { MODULE_KEY_MAP } from './editor-state';
 import { buildContributorSubmission } from './contributor-proposal';
 
@@ -166,6 +167,8 @@ export function useEditorSave(objectId: string) {
       }
       if (submitted.length > 0) {
         void queryClient.invalidateQueries({ queryKey: ['pending-changes'] });
+        // All sections have settled: one delivery request for the batch, including partial success.
+        void pingNotifyDrain();
       }
       return { saved, submitted, failed, blocked: plan.blocked };
     },

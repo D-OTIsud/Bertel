@@ -8,16 +8,21 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
 jest.mock('../../services/moderation', () => ({
   submitPendingChange: jest.fn(),
 }));
+jest.mock('../../services/notification-delivery', () => ({
+  pingNotifyDrain: jest.fn(),
+}));
 
 import { planSaveBatch, useEditorSave } from './useEditorSave';
 import { saveWorkspaceModule, invalidateObjectWorkspaceCaches } from '../../hooks/useExplorerQueries';
 import { submitPendingChange } from '../../services/moderation';
+import { pingNotifyDrain } from '../../services/notification-delivery';
 import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 
 const mockSaveModule = saveWorkspaceModule as jest.Mock;
 const mockInvalidate = invalidateObjectWorkspaceCaches as jest.Mock;
 const mockSubmit = submitPendingChange as jest.Mock;
+const mockPing = pingNotifyDrain as jest.Mock;
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return <QueryClientProvider client={new QueryClient()}>{children}</QueryClientProvider>;
@@ -102,6 +107,7 @@ describe('useEditorSave.save — fork routing', () => {
     mockSaveModule.mockReset().mockResolvedValue(undefined);
     mockInvalidate.mockReset();
     mockSubmit.mockReset().mockResolvedValue('pc-id');
+    mockPing.mockReset().mockResolvedValue(undefined);
   });
 
   it('canonical writer writes directly and never submits a proposal', async () => {
@@ -121,6 +127,7 @@ describe('useEditorSave.save — fork routing', () => {
 
     expect(mockSaveModule).toHaveBeenCalledTimes(2);
     expect(mockSubmit).not.toHaveBeenCalled();
+    expect(mockPing).not.toHaveBeenCalled();
     expect(outcome.saved).toEqual(['contacts', 'characteristics']);
     expect(outcome.submitted).toEqual([]);
     // One cache refresh for the whole batch — not one per module.
@@ -169,6 +176,7 @@ describe('useEditorSave.save — fork routing', () => {
 
     expect(mockSaveModule).not.toHaveBeenCalled();
     expect(mockSubmit).toHaveBeenCalledTimes(2);
+    expect(mockPing).toHaveBeenCalledTimes(1);
     expect(outcome.submitted).toEqual(['characteristics', 'contacts']);
     expect(outcome.saved).toEqual([]);
     // Object rows stay unchanged, but an already-visited empty moderation queue must refresh.
@@ -196,6 +204,7 @@ describe('useEditorSave.save — fork routing', () => {
     });
 
     expect(outcome.submitted).toEqual(['contacts']);
+    expect(mockPing).toHaveBeenCalledTimes(1);
     expect(outcome.failed).toEqual([{ module: 'characteristics', message: 'réseau' }]);
     expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(true);
     expect(mockInvalidate).not.toHaveBeenCalled();
@@ -219,6 +228,22 @@ describe('useEditorSave.save — fork routing', () => {
       { module: 'contacts', message: 'réseau' },
     ]);
     expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(false);
+    expect(mockPing).not.toHaveBeenCalled();
     expect(mockInvalidate).not.toHaveBeenCalled();
+  });
+
+  it('finishes a submitted save without waiting for the email relay', async () => {
+    mockPing.mockReturnValue(new Promise<void>(() => {}));
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+
+    await act(async () => {
+      const outcome = await result.current.save(['contacts'], {} as ObjectWorkspacePermissions, makeModules(), {
+        canWriteCanonicalDirect: false,
+      });
+      expect(outcome.submitted).toEqual(['contacts']);
+    });
+
+    expect(result.current.saving).toBe(false);
+    expect(mockPing).toHaveBeenCalledTimes(1);
   });
 });

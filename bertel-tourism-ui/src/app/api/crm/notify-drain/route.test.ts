@@ -54,6 +54,12 @@ const reviewRow = (id: string, outcome: string | null = 'approved') => ({
   recipient_name: 'Marie', object_name: 'Villa Vanille', submission_id: 'sub-1',
 });
 
+const proposalRow = (id: string) => ({
+  ...row(id), kind: 'pending_change_submitted', task_title: null,
+  object_id: 'HLORUN00000001CS', object_name: 'Ti Kaz Komela',
+  assigner_name: 'Clément', pending_change_id: 'pc-1',
+});
+
 describe('POST /api/crm/notify-drain', () => {
   beforeEach(() => { jest.clearAllMocks(); mockedSmtp.mockResolvedValue(smtpOk); });
 
@@ -61,6 +67,78 @@ describe('POST /api/crm/notify-drain', () => {
     mockedServer.mockReturnValue(serverWith(jest.fn()));
     const res = await POST(req({}));
     expect(res.status).toBe(401);
+  });
+
+  it('envoie une alerte de modération par notification groupée avec la destination fournie par la base', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [{ ...proposalRow('n-proposal'), object_id: 'fiche&autre=1', creator_email: 'creator@example.com' }], error: null })
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    const request = {
+      ...req({ authorization: 'Bearer jwt' }) as object,
+      json: jest.fn().mockResolvedValue({ object_id: 'forged', recipient_email: 'forged@example.com' }),
+    };
+
+    const response = await POST(request as never);
+
+    await expect(response.json()).resolves.toEqual({ sent: 1, failed: 0 });
+    expect(mockedSend).toHaveBeenCalledTimes(1);
+    expect(mockedSend).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'dest@x.re', subject: 'Modifications à modérer — Ti Kaz Komela',
+    }));
+    const mail = mockedSend.mock.calls[0][0];
+    expect(mail.html).toContain('Bonjour Dest,');
+    expect(mail.html).toContain('Clément a proposé des modifications');
+    expect(mail.html).toContain('/moderation?object=fiche%26autre%3D1');
+    expect(mail).not.toHaveProperty('sender');
+    expect(request.json).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', { p_sent: ['n-proposal'], p_failed: [] });
+  });
+
+  it('un lot mêlant tâche, retour partenaire et proposition interne garde trois messages distincts', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [row('n-task'), reviewRow('n-review'), proposalRow('n-proposal')], error: null })
+      .mockResolvedValueOnce({ data: 3, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+
+    await POST(req({ authorization: 'Bearer jwt' }));
+
+    expect(mockedSend.mock.calls.map(([mail]) => mail.subject)).toEqual([
+      'Nouvelle tâche : Tâche — Hôtel',
+      'Vos modifications ont été validées — Villa Vanille',
+      'Modifications à modérer — Ti Kaz Komela',
+    ]);
+    expect(mockedSend.mock.calls[2][0].html).toContain('/moderation?object=HLORUN00000001CS');
+  });
+
+  it('acquitte en échec une alerte sans fiche pour éviter un lien vers une autre proposition', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [{ ...proposalRow('n-proposal'), object_id: null }], error: null })
+      .mockResolvedValueOnce({ data: 1, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+
+    await expect(response.json()).resolves.toEqual({ sent: 0, failed: 1 });
+    expect(mockedSend).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', {
+      p_sent: [], p_failed: [{ id: 'n-proposal', error: 'missing_object_id' }],
+    });
+  });
+
+  it('un refus SMTP de l’alerte conserve un échec réessayable sans bloquer les autres messages', async () => {
+    const rpc = jest.fn()
+      .mockResolvedValueOnce({ data: [proposalRow('n-proposal'), row('n-task')], error: null })
+      .mockResolvedValueOnce({ data: 2, error: null });
+    mockedServer.mockReturnValue(serverWith(rpc));
+    mockedSend.mockRejectedValueOnce(new Error('smtp unavailable')).mockResolvedValueOnce();
+
+    const response = await POST(req({ authorization: 'Bearer jwt' }));
+
+    await expect(response.json()).resolves.toEqual({ sent: 1, failed: 1 });
+    expect(rpc).toHaveBeenNthCalledWith(2, 'mark_notifications_emailed', {
+      p_sent: ['n-task'], p_failed: [{ id: 'n-proposal', error: 'smtp unavailable' }],
+    });
   });
 
   it('503 SMTP absent — et ne réclame RIEN (le TTL ne doit pas être consommé pour rien)', async () => {

@@ -2450,6 +2450,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
 
+### `internal.pending_change_notification_is_open(p_object_id text, p_submitter_id uuid)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.purge_expired_lists()` _(DEFINER)_
 - **returns:** `integer`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -2530,6 +2535,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** trigger function — fires from a table trigger, not callable directly
 - **object types served:** **all object types**
 
+### `internal.sync_pending_change_notifications(p_object_id text, p_submitter_id uuid)` _(DEFINER)_
+- **returns:** `void`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+
 ### `internal.test_actor_name(p_type text, p_i integer)`
 - **returns:** `text`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
@@ -2553,6 +2563,11 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** —
 - _Id de l'ORG bac a sable. Source unique pour le seed, la remise a zero et les tests._
+
+### `internal.tg_pending_change_notifications()` _(DEFINER)_
+- **returns:** `trigger`
+- **access:** trigger function — fires from a table trigger, not callable directly
+- **object types served:** —
 
 ### `internal.tg_remove_list_feature_notifications()` _(DEFINER)_
 - **returns:** `trigger`
@@ -2578,6 +2593,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **returns:** `jsonb`
 - **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
 - **object types served:** **all object types**
+
+### `internal.user_can_moderate_pending_object(p_user_id uuid, p_object_id text)` _(DEFINER)_
+- **returns:** `boolean`
+- **access:** internal — SQL-callable by other functions/triggers; **not** PostgREST-exposed
+- **object types served:** **all object types**
+- _Recipient form of api.user_can_moderate_object. No JWT substitution: the_
 
 ### `internal.workspace_assert_can_write_object(p_object_id text)` _(DEFINER)_
 - **returns:** `void`

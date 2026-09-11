@@ -48,6 +48,9 @@ function formatWhen(value: string | null): string {
 
 /** Phrase d'une notification. Un émetteur inconnu se DIT, il ne se devine pas. */
 export function notificationLabel(notification: AppNotification): string {
+  if (notification.kind === 'pending_change_submitted') {
+    return `${notification.createdByName ?? 'Un contributeur'} propose des modifications de « ${notification.objectName ?? 'une fiche'} »`;
+  }
   if (notification.kind === 'list_feature_requested') {
     return `${notification.createdByName ?? 'Un membre'} propose « ${notification.listName ?? 'une liste'} » à la une`;
   }
@@ -99,6 +102,11 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
     // d'un aller-retour réseau, et l'échec du marquage laisse simplement la ligne non lue.
     if (!notification.readAt) readOneMutation.mutate(notification.id);
     onOpenChange(false);
+    if (notification.kind === 'pending_change_submitted') {
+      void queryClient.invalidateQueries({ queryKey: ['pending-changes'] });
+      router.push(notification.objectId ? `/moderation?object=${encodeURIComponent(notification.objectId)}` : '/moderation');
+      return;
+    }
     // 18a — la destination suit l'ESPÈCE, pas le tiroir. Un membre d'équipe peut aussi être
     // acteur d'une fiche : son tiroir back-office porte alors les deux espèces. Le kanban
     // n'affiche RIEN d'un retour de vérification, et l'invalidation des tâches n'a pas lieu
@@ -129,7 +137,7 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
       >
         <SheetTitle className="sr-only">Notifications</SheetTitle>
         <SheetDescription className="sr-only">
-          Vos tâches, retours de vérification et propositions de listes à la une.
+          Vos tâches, modifications à modérer, retours de vérification et propositions de listes à la une.
         </SheetDescription>
         <div className="profile-drawer__inner">
           <div className="profile-drawer__header">
@@ -192,7 +200,9 @@ export function NotificationDrawer({ open, onOpenChange }: NotificationDrawerPro
                       {notificationLabel(notification)}
                     </span>
                     <span className="notif-item__meta">
-                      {notification.kind === 'list_feature_requested' ? 'Liste à valider' : notification.objectName ?? '—'}
+                      {notification.kind === 'pending_change_submitted'
+                        ? 'En attente de modération'
+                        : notification.kind === 'list_feature_requested' ? 'Liste à valider' : notification.objectName ?? '—'}
                       {formatWhen(notification.createdAt) ? ` · ${formatWhen(notification.createdAt)}` : ''}
                     </span>
                     {!notification.readAt && <span className="sr-only">Non lue</span>}

@@ -75,6 +75,12 @@ beforeEach(() => {
 });
 
 describe('notificationLabel', () => {
+  it('une proposition interne nomme le contributeur et la fiche', () => {
+    expect(notificationLabel(notif({ kind: 'pending_change_submitted', taskId: null, taskTitle: null })))
+      .toBe('Jean P. propose des modifications de « Hôtel Test »');
+    expect(notificationLabel(notif({ kind: 'pending_change_submitted', createdByName: null, objectName: null })))
+      .toBe('Un contributeur propose des modifications de « une fiche »');
+  });
   it('une proposition nomme le créateur et la liste', () => {
     expect(notificationLabel(notif({ kind: 'list_feature_requested', createdByName: 'Élise', listName: 'Les balades du Sud' })))
       .toBe('Élise propose « Les balades du Sud » à la une');
@@ -124,6 +130,45 @@ it('ouvre directement la validation de la liste depuis la notification et la mar
 });
 
 describe('NotificationDrawer', () => {
+  it('ouvre la fiche concernée en modération, rafraîchit la file et marque la proposition lue', async () => {
+    mocked.listMyNotifications.mockResolvedValue({
+      items: [notif({ kind: 'pending_change_submitted', objectId: 'fiche&autre=1', taskId: null, taskTitle: null })],
+      unreadCount: 1,
+    });
+    const { onOpenChange, client } = renderDrawer();
+    client.setQueryData(['pending-changes', 'pending'], []);
+    fireEvent.click(await screen.findByRole('button', { name: /propose des modifications de « Hôtel Test »/ }));
+    await waitFor(() => expect(mocked.markNotificationRead).toHaveBeenCalledWith('n1'));
+    expect(push).toHaveBeenCalledWith('/moderation?object=fiche%26autre%3D1');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(client.getQueryState(['pending-changes', 'pending'])?.isInvalidated).toBe(true);
+  });
+
+  it('présente explicitement une proposition interne en attente de modération', async () => {
+    mocked.listMyNotifications.mockResolvedValue({
+      items: [notif({ kind: 'pending_change_submitted', objectId: null, taskId: null, taskTitle: null })],
+      unreadCount: 1,
+    });
+    renderDrawer();
+    expect(await screen.findByText(/En attente de modération/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /propose des modifications/ }));
+    expect(push).toHaveBeenCalledWith('/moderation');
+  });
+
+  it('ne marque pas la proposition lue quand la navigation abandonnerait un brouillon', async () => {
+    mocked.listMyNotifications.mockResolvedValue({ items: [notif({ kind: 'pending_change_submitted' })], unreadCount: 1 });
+    const unregister = registerNavigationGuard(() => false);
+    try {
+      const { onOpenChange } = renderDrawer();
+      fireEvent.click(await screen.findByRole('button', { name: /propose des modifications/ }));
+      expect(push).not.toHaveBeenCalled();
+      expect(mocked.markNotificationRead).not.toHaveBeenCalled();
+      expect(onOpenChange).not.toHaveBeenCalled();
+    } finally {
+      unregister();
+    }
+  });
+
   it('conserve le brouillon et la notification non lue si le départ est refusé', async () => {
     const unregister = registerNavigationGuard(() => false);
     try {

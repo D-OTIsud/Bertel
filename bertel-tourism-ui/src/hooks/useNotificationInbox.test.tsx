@@ -14,11 +14,13 @@ import type { ReactNode } from 'react';
 import { useNotificationInbox, notificationInboxQueryOptions } from './useNotificationInbox';
 import { useSessionStore } from '../store/session-store';
 import * as notifications from '../services/notifications';
+import { pingNotifyDrain } from '../services/notification-delivery';
 
 jest.mock('../services/notifications', () => ({
   ...jest.requireActual('../services/notifications'),
   listMyNotifications: jest.fn(),
 }));
+jest.mock('../services/notification-delivery', () => ({ pingNotifyDrain: jest.fn().mockResolvedValue(undefined) }));
 
 const info = jest.fn();
 jest.mock('./useToast', () => ({
@@ -92,6 +94,31 @@ it('la PREMIÈRE lecture ne toaste rien, même avec des non-lues en attente', as
   await waitFor(() => expect(result.current.unreadCount).toBe(3));
   // La pastille dit 3… et rien n'est annoncé : ces 3 existaient avant l'ouverture de l'onglet.
   expect(info).not.toHaveBeenCalled();
+  expect(pingNotifyDrain).not.toHaveBeenCalled();
+});
+
+it('réessaie l’envoi des alertes internes à chaque relevé réussi, même si elles sont déjà lues', async () => {
+  const proposal = { ...item('proposal', '2026-09-11T10:00:00Z'), kind: 'pending_change_submitted' as const };
+  mocked.listMyNotifications.mockResolvedValue({ items: [proposal], unreadCount: 0 });
+  const { rerender } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(pingNotifyDrain).toHaveBeenCalledTimes(1));
+
+  rerender();
+  expect(pingNotifyDrain).toHaveBeenCalledTimes(1);
+  await pollAgain();
+  await waitFor(() => expect(pingNotifyDrain).toHaveBeenCalledTimes(2));
+  expect(info).not.toHaveBeenCalled();
+
+  mocked.listMyNotifications.mockRejectedValueOnce(new Error('réseau coupé'));
+  await pollAgain();
+  expect(pingNotifyDrain).toHaveBeenCalledTimes(2);
+
+  await pollAgain();
+  await waitFor(() => expect(pingNotifyDrain).toHaveBeenCalledTimes(3));
+
+  mocked.listMyNotifications.mockResolvedValue({ items: [], unreadCount: 0 });
+  await pollAgain();
+  expect(pingNotifyDrain).toHaveBeenCalledTimes(3);
 });
 
 it('annonce une nouvelle proposition comme une liste à valider', async () => {
@@ -104,6 +131,20 @@ it('annonce une nouvelle proposition comme une liste à valider', async () => {
   });
   await pollAgain();
   await waitFor(() => expect(info).toHaveBeenCalledWith('Une liste est à valider', 'Les balades du Sud'));
+});
+
+it('annonce une proposition interne à modérer une seule fois pour son groupe', async () => {
+  mocked.listMyNotifications.mockResolvedValue(inbox([item('ancienne')]));
+  const { result } = renderHook(() => useNotificationInbox(), { wrapper });
+  await waitFor(() => expect(result.current.unreadCount).toBe(1));
+  mocked.listMyNotifications.mockResolvedValue({
+    items: [{ ...item('nouvelle-proposition'), kind: 'pending_change_submitted', taskId: null, taskTitle: null }, item('ancienne')],
+    unreadCount: 2,
+  });
+  await pollAgain();
+  await waitFor(() => expect(info).toHaveBeenCalledWith('Des modifications sont à modérer', 'Hôtel Test'));
+  await pollAgain();
+  expect(info).toHaveBeenCalledTimes(1);
 });
 
 it('les non-lues DÉJÀ là ne sont pas rejouées quand une neuve arrive', async () => {

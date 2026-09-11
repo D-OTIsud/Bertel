@@ -18,6 +18,8 @@ services:
     ports:
       - "8081:3000"
     environment:
+      # Canonical origin used by server-generated notification links.
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       NEXT_PUBLIC_ENABLE_DEMO_MODE: ${NEXT_PUBLIC_ENABLE_DEMO_MODE:-false}

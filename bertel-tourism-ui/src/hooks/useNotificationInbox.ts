@@ -20,6 +20,7 @@
 import { useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { listMyNotifications, notificationKeys } from '../services/notifications';
+import { pingNotifyDrain } from '../services/notification-delivery';
 import { useSessionStore } from '../store/session-store';
 import { useToast } from './useToast';
 
@@ -80,6 +81,14 @@ export function useNotificationInbox(): NotificationInbox {
 
   const inboxQuery = useQuery(notificationInboxQueryOptions(userId, orgId));
   const items = inboxQuery.data?.items;
+  const hasPendingModeration = items?.some((notification) => notification.kind === 'pending_change_submitted') ?? false;
+
+  useEffect(() => {
+    // Retry queued mail when SMTP recovers. A read notification still represents open work;
+    // the server removes this grouped alert when its last proposal has been reviewed.
+    // dataUpdatedAt advances on successful polls even when the returned items are unchanged.
+    if (inboxQuery.isSuccess && hasPendingModeration) void pingNotifyDrain();
+  }, [inboxQuery.dataUpdatedAt, inboxQuery.isSuccess, hasPendingModeration, scope]);
 
   useEffect(() => {
     if (!items) return;
@@ -91,6 +100,10 @@ export function useNotificationInbox(): NotificationInbox {
       if (announcedRef.current.has(notification.id)) continue;
       announcedRef.current.add(notification.id);
       if (silent) continue;
+      if (notification.kind === 'pending_change_submitted') {
+        toastRef.current.info('Des modifications sont à modérer', notification.objectName ?? undefined);
+        continue;
+      }
       // 18a — le toast suit l'ESPÈCE. Il annonçait « Nouvelle tâche assignée » pour toute
       // espèce : un membre d'équipe qui est AUSSI acteur d'une fiche aurait vu le retour de
       // vérification de sa propre fiche annoncé comme une tâche à faire, et serait allé la

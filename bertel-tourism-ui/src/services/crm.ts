@@ -2,7 +2,7 @@
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
-import { getServiceAvailability } from './service-availability';
+import { pingNotifyDrain } from './notification-delivery';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
 import type {
@@ -690,29 +690,6 @@ export async function saveCrmTask(input: SaveCrmTaskInput): Promise<string> {
   // de ping. Le drain traite TOUTE la file, pas seulement cette tâche (filet de rattrapage).
   if (input.assigneeIds !== undefined) void pingNotifyDrain();
   return id;
-}
-
-/**
- * Ping fire-and-forget du drain e-mail (17i). L'échec est AVALÉ à dessein : la
- * notification reste dans l'outbox et le prochain ping (de n'importe qui) la ramasse —
- * un e-mail n'est jamais perdu, et l'écriture de la tâche n'attend jamais le SMTP.
- */
-async function pingNotifyDrain(): Promise<void> {
-  try {
-    // This is deliberately fresh: a setting can be disabled while this background task is queued.
-    if (!(await getServiceAvailability({ force: true })).email) return;
-    const client = getSupabaseClient();
-    if (!client) return;
-    const { data } = await client.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return;
-    await fetch('/api/crm/notify-drain', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
-    // fire-and-forget : rien à faire, l'outbox rattrape.
-  }
 }
 
 /* ===== Assignables (PO point 4 — api.list_crm_assignees) ========================

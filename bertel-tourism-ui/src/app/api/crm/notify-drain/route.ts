@@ -13,8 +13,13 @@ import {
   type SubmissionReviewedEmailData,
 } from '@/emails/SubmissionReviewedEmail';
 import { isSubmissionOutcome } from '@/lib/submission-outcome';
+import {
+  pendingChangeSubmittedEmailSubject,
+  renderPendingChangeSubmittedEmailHtml,
+  type PendingChangeSubmittedEmailData,
+} from '@/emails/PendingChangeSubmittedEmail';
 
-// Drainage de l'outbox e-mail d'assignation (17i). N'importe quel utilisateur CONNECTÉ
+// Drainage de l'outbox e-mail de notifications. N'importe quel utilisateur CONNECTÉ
 // peut pinger : le corps de requête est IGNORÉ — la route ne fait que déclencher l'envoi
 // de messages dont destinataires et contenu sont 100 % dérivés en DB par
 // api.claim_unmailed_notifications (⇒ pas de vecteur spam/relais). SMTP absent ⇒ 503
@@ -75,8 +80,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // Ligne malformée ou sans e-mail (le claim les termine normalement lui-même) :
     // on la SAUTE — le claim la re-traitera, jamais de boucle d'erreur ici.
     if (!id || !to) continue;
-    // 18a — le claim rend DEUX espèces (crm_task_assigned et fiche_submission_reviewed) et
-    // chacune a SON gabarit. Composer la seconde avec TaskAssignedEmail enverrait au
+    // Chaque espèce a son gabarit. Composer un retour avec TaskAssignedEmail enverrait au
     // partenaire une notification d'assignation interne — sujet « Nouvelle tâche », bouton
     // pointant /crm, une page que la persona `actor` ne peut pas ouvrir — et `outcome`, la
     // seule information utile, serait jeté.
@@ -99,13 +103,29 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // pour empêcher. Le `continue` d'un bras d'échec reste valide depuis un `try`.
     try {
       const kind = str(row.kind) || 'crm_task_assigned';
-      if (kind !== 'crm_task_assigned' && kind !== 'fiche_submission_reviewed') {
+      if (kind !== 'crm_task_assigned' && kind !== 'fiche_submission_reviewed' && kind !== 'pending_change_submitted') {
         failed.push({ id, error: 'unsupported_kind' });
         continue;
       }
 
       let mail: { subject: string; html: string; sender?: MailSender };
-      if (kind === 'fiche_submission_reviewed') {
+      if (kind === 'pending_change_submitted') {
+        const objectId = nstr(row.object_id);
+        if (!objectId) {
+          failed.push({ id, error: 'missing_object_id' });
+          continue;
+        }
+        const proposalData: PendingChangeSubmittedEmailData = {
+          objectName: str(row.object_name) || 'Fiche',
+          submitterName: nstr(row.assigner_name),
+          recipientName: nstr(row.recipient_name),
+          appUrl: `${origin}/moderation?object=${encodeURIComponent(objectId)}`,
+        };
+        mail = {
+          subject: pendingChangeSubmittedEmailSubject(proposalData),
+          html: renderPendingChangeSubmittedEmailHtml(proposalData),
+        };
+      } else if (kind === 'fiche_submission_reviewed') {
         // L'ISSUE décide de tout le message, et elle ne se devine pas. Le brief proposait un
         // repli sur 'approved' ; il est refusé ici, et c'est le seul écart assumé de la Task :
         // annoncer « vos modifications ont été validées » à un partenaire dont le travail a

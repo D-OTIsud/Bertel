@@ -170,6 +170,21 @@ describe('proposition de liste à la une', () => {
   });
 });
 
+describe('proposition interne à modérer', () => {
+  it('conserve la fiche et le contributeur sans inventer une tâche CRM', () => {
+    const parsed = parseAppNotification({
+      id: 'n-change', kind: 'pending_change_submitted',
+      object_id: 'HLORUN00000001CS', object_name: 'Ti Kaz Komela',
+      created_by_id: 'contributor-1', created_by_name: 'Clément',
+      payload: { object_id: 'HLORUN00000001CS', pending_change_id: 'pc-1', submitted_by: 'contributor-1' },
+    });
+    expect(parsed).toMatchObject({
+      kind: 'pending_change_submitted', objectId: 'HLORUN00000001CS', objectName: 'Ti Kaz Komela',
+      createdById: 'contributor-1', createdByName: 'Clément', taskId: null, taskTitle: null,
+    });
+  });
+});
+
 describe('contrat RPC', () => {
   it('list : envoie le plafond demandé et AUCUN identifiant de destinataire', async () => {
     const rpc = fakeRpcClient({ items: [{ id: 'n1', kind: 'crm_task_assigned' }], unread_count: 1 });

@@ -24,9 +24,9 @@ function readNullableString(value: unknown): string | null {
 }
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */
-export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested';
+export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested' | 'pending_change_submitted';
 
-const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed', 'list_feature_requested'];
+const KNOWN_KINDS: readonly string[] = ['crm_task_assigned', 'fiche_submission_reviewed', 'list_feature_requested', 'pending_change_submitted'];
 
 export interface AppNotification {
   id: string;

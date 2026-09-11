@@ -96,6 +96,36 @@ describe('ModerationPage (P2.1)', () => {
     mock.listPendingChanges.mockResolvedValue([]);
     renderPage();
     expect(await screen.findByText('Aucune suggestion à modérer')).toBeInTheDocument();
+    expect(screen.queryByText('Bientôt')).not.toBeInTheDocument();
+  });
+
+  it('reloads a cached empty queue when the moderation page opens', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 30_000 } } });
+    client.setQueryData(['pending-changes', 'pending', null], []);
+
+    renderPage(client);
+
+    expect(await screen.findByText('Bras-Long')).toBeInTheDocument();
+    expect(mock.listPendingChanges).toHaveBeenCalledWith('pending', null);
+  });
+
+  it('lets the moderator refresh an empty queue after another user submits', async () => {
+    mock.listPendingChanges.mockResolvedValueOnce([]).mockResolvedValueOnce([ITEM]);
+    renderPage();
+    await screen.findByText('Aucune suggestion à modérer');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Actualiser' }));
+
+    expect(await screen.findByText('Bras-Long')).toBeInTheDocument();
+    expect(screen.queryByText('Aucune suggestion à modérer')).not.toBeInTheDocument();
+  });
+
+  it('shows load failures instead of reporting that there are no suggestions', async () => {
+    mock.listPendingChanges.mockRejectedValue(new Error('File de modération indisponible.'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Modération indisponible');
+    expect(screen.queryByText('Aucune suggestion à modérer')).not.toBeInTheDocument();
   });
 
   it('D6 : approuver passe par une confirmation nommant fiche + champ, puis applique', async () => {

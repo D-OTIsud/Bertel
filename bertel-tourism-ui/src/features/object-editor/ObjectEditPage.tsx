@@ -52,12 +52,17 @@ import './editor-print.css';
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
 export function ObjectEditPage({ objectId }: { objectId: string }) {
-  const { data, isError, error } = useObjectWorkspaceQuery(objectId);
-  if (isError) {
-    return <div className="panel-card panel-card--warning">{(error as Error).message}</div>;
-  }
+  const { data, isError, error, refetch, isFetching } = useObjectWorkspaceQuery(objectId);
+  const loadError = isError ? (
+      <div className="panel-card panel-card--warning" role="alert">
+        <p>{(error as Error).message}</p>
+        <button type="button" className="btn btn--ghost" disabled={isFetching} onClick={() => void refetch()}>
+          {isFetching ? 'Vérification…' : 'Réessayer'}
+        </button>
+      </div>
+  ) : null;
   if (!data) {
-    return <div className="panel-card">Chargement de l&apos;éditeur…</div>;
+    return loadError ?? <div className="panel-card">Chargement de l&apos;éditeur…</div>;
   }
   // §46: no silent archetype fallback — an unmapped type (ORG, or future enum values not yet
   // wired) gets an explicit unsupported panel instead of rendering as a Hébergement.
@@ -70,7 +75,16 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
       </div>
     );
   }
-  return <EditorReady resource={data} objectId={objectId} meta={meta} />;
+  // Keep the editor mounted after a failed background refresh: its unsaved draft
+  // lives in component state. Pause interaction until the permissions reload succeeds.
+  return (
+    <>
+      {loadError}
+      <div style={{ display: 'contents' }} inert={isError || undefined}>
+        <EditorReady resource={data} objectId={objectId} meta={meta} />
+      </div>
+    </>
+  );
 }
 
 function flattenSectionItems(groups: ReturnType<typeof makeSections>): SectionItem[] {

@@ -146,6 +146,14 @@ describe('listPendingChanges', () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
     await expect(listPendingChanges()).rejects.toThrow(/boom|modération/i);
   });
+
+  it.each([null, {}, { data: [RPC_ROW] }, [null], [{}]])(
+    'does not disguise an invalid queue response as an empty moderation queue (%j)',
+    async (data) => {
+      rpc.mockResolvedValue({ data, error: null });
+      await expect(listPendingChanges()).rejects.toThrow(/Réponse de modération invalide/);
+    },
+  );
 });
 
 describe('submitPendingChange', () => {

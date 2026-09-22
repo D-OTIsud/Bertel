@@ -46,7 +46,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "idb-keyval": "^6.2.1",
-    "lucide-react": "^0.577.0",
+    "lucide-react": "^1.39.0",
     "maplibre-gl": "^5.20.1",
     "markdown-to-jsx": "^7.7.17",
     "next": "16.2.11",

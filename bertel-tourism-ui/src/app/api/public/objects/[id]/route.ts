@@ -1,5 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { authenticatePartner, checkPartnerRate, logPartnerCall } from '@/lib/partner-auth';
+import { partnerRequestMetrics } from '@/lib/partner-request-metrics';
+import { type NextResponse, type NextRequest } from 'next/server';
+import { admitPartner } from '@/lib/partner-auth';
 import { callPublicRpc, publicHeaders, PUBLIC_API_CONTRACT_VERSION } from '@/lib/public-api';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { isRegionalTourinsoftVariant, resolveTourinsoftVariant } from '@/lib/tourinsoft-export';
@@ -31,25 +32,26 @@ const INTEROP_FORMATS = new Set(['datatourisme', 'apidae', 'tourinsoft']);
  * Orthogonal to `?lang` and additive — the base keys are never mutated (garde §103). Best-effort.
  */
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<NextResponse> {
+  const metrics = partnerRequestMetrics('detail');
   const headers = publicHeaders();
-  const partner = await authenticatePartner(req.headers.get('authorization'));
-  if (!partner) return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers });
+  const admission = await metrics.measure('admission', () => admitPartner(req.headers.get('authorization')));
+  if (!admission) return metrics.json({ error: 'unauthorized' }, { status: 401, headers });
 
-  const rate = await checkPartnerRate(partner.keyId);
+  const { partner, rate } = admission;
   // Rate-limit headers on every subsequent response (partners self-throttle). remaining=0 on a 429.
   headers['X-RateLimit-Limit'] = String(rate.limit);
   headers['X-RateLimit-Remaining'] = String(rate.remaining);
   if (!rate.allowed) {
-    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 429);
-    return NextResponse.json({ error: 'rate_limited', retry_after: rate.retryAfter }, {
+    metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', 429);
+    return metrics.json({ error: 'rate_limited', retry_after: rate.retryAfter }, {
       status: 429, headers: { ...headers, 'Retry-After': String(rate.retryAfter) },
     });
   }
 
   const { id } = await ctx.params;
   if (!OBJECT_ID_SHAPE.test(id)) {
-    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 400);
-    return NextResponse.json({ error: 'invalid_object_id' }, { status: 400, headers });
+    metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', 400);
+    return metrics.json({ error: 'invalid_object_id' }, { status: 400, headers });
   }
 
   const url = new URL(req.url);
@@ -60,28 +62,28 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const format = (url.searchParams.get('format') ?? '').trim().toLowerCase();
   const tourinsoftVariant = resolveTourinsoftVariant(format, url.searchParams.get('variant'));
   if (!tourinsoftVariant.ok) {
-    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 400);
-    return NextResponse.json({ error: 'bad_request', detail: tourinsoftVariant.detail }, { status: 400, headers });
+    metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', 400);
+    return metrics.json({ error: 'bad_request', detail: tourinsoftVariant.detail }, { status: 400, headers });
   }
 
   // Published gate — the security boundary for the single-object read (service-role bypasses RLS).
   const server = getServerSupabaseClient();
-  if (!server) return NextResponse.json({ error: 'server_misconfigured' }, { status: 500, headers });
-  const { data: statusRow, error: statusErr } = await server
-    .from('object').select('status').eq('id', id).maybeSingle();
+  if (!server) return metrics.json({ error: 'server_misconfigured' }, { status: 500, headers });
+  const { data: statusRow, error: statusErr } = await metrics.measure('published_gate', async () => server
+    .from('object').select('status').eq('id', id).maybeSingle());
   if (statusErr || !statusRow || statusRow.status !== 'published') {
-    await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', 404);
-    return NextResponse.json({ error: 'not_found' }, { status: 404, headers });
+    metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', 404);
+    return metrics.json({ error: 'not_found' }, { status: 404, headers });
   }
 
-  const result = await callPublicRpc('get_object_resource', {
+  const result = await metrics.measure('detail_rpc', () => callPublicRpc('get_object_resource', {
     p_object_id: id,
     p_lang_prefs: [baseLang],
     p_track_format: 'none',
     p_options: {},
-  });
-  await logPartnerCall(partner.keyId, 'GET /api/public/objects/{id}', result.status);
-  if (!result.ok) return NextResponse.json(result.body, { status: result.status, headers });
+  }));
+  metrics.audit(partner.keyId, 'GET /api/public/objects/{id}', result.status);
+  if (!result.ok) return metrics.json(result.body, { status: result.status, headers });
 
   // Shallow copy so we can trim/augment without mutating the RPC result in place.
   const data: Record<string, unknown> | unknown =
@@ -95,33 +97,33 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     if (wantAllLangs) {
       // Additive multi-language block. Best-effort: a failure here degrades to the base (FR)
       // resource rather than failing the whole response — the object is still fully returned.
-      const i18n = await callPublicRpc('get_object_i18n_all', { p_object_id: id });
+      const i18n = await metrics.measure('i18n', () => callPublicRpc('get_object_i18n_all', { p_object_id: id }));
       if (i18n.ok) (data as Record<string, unknown>).i18n = i18n.body ?? {};
     }
 
     if (format === 'jsonld') {
       // Additive schema.org JSON-LD block (I4). Best-effort: a failure degrades to the base resource.
       // Profile defaults to 'jsonld' (schema.org) in the RPC; @type comes from ref_interop_crosswalk.
-      const jsonld = await callPublicRpc('get_object_jsonld', { p_object_id: id });
+      const jsonld = await metrics.measure('pivot', () => callPublicRpc('get_object_jsonld', { p_object_id: id }));
       if (jsonld.ok && jsonld.body != null) (data as Record<string, unknown>).jsonld = jsonld.body;
     } else if (format === 'tourinsoft' && isRegionalTourinsoftVariant(tourinsoftVariant.variant)) {
       // Regional, opt-in contract. The default/legacy path below remains byte-identical to I4b.
-      const tourinsoft = await callPublicRpc('get_object_tourinsoft', {
+      const tourinsoft = await metrics.measure('pivot', () => callPublicRpc('get_object_tourinsoft', {
         p_object_id: id,
         p_variant: tourinsoftVariant.variant,
-      });
+      }));
       if (tourinsoft.ok && tourinsoft.body != null) {
         (data as Record<string, unknown>).tourinsoft = tourinsoft.body;
       }
     } else if (INTEROP_FORMATS.has(format)) {
       // Additive sector-interop block (I4b): datatourisme / apidae / tourinsoft. Merged under a key
       // named after the profile (data.datatourisme, data.apidae, data.tourinsoft). Best-effort.
-      const interop = await callPublicRpc('get_object_interop', { p_object_id: id, p_profile: format });
+      const interop = await metrics.measure('pivot', () => callPublicRpc('get_object_interop', { p_object_id: id, p_profile: format }));
       if (interop.ok && interop.body != null) (data as Record<string, unknown>)[format] = interop.body;
     }
   }
 
-  return NextResponse.json(
+  return metrics.json(
     { meta: { contract_version: PUBLIC_API_CONTRACT_VERSION }, data },
     { status: 200, headers },
   );

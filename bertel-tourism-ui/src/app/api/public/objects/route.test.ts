@@ -2,16 +2,17 @@
  * @jest-environment node
  */
 jest.mock('server-only', () => ({}));
-jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn() }));
+jest.mock('next/server', () => ({ ...jest.requireActual('next/server'), after: jest.fn() }));
+jest.mock('@/lib/partner-auth', () => ({ authenticatePartner: jest.fn(), checkPartnerRate: jest.fn(), logPartnerCall: jest.fn(), admitPartner: jest.fn() }));
 jest.mock('@/lib/public-api', () => ({
   callPublicRpc: jest.fn(),
   publicHeaders: () => ({ 'X-Bertel-Api-Version': '1.0.0' }),
   PUBLIC_API_CONTRACT_VERSION: '1.0.0',
 }));
 
-import { NextRequest } from 'next/server';
+import { after, NextRequest } from 'next/server';
 import { GET } from './route';
-import { authenticatePartner, checkPartnerRate } from '@/lib/partner-auth';
+import { authenticatePartner, checkPartnerRate, admitPartner, logPartnerCall } from '@/lib/partner-auth';
 import { callPublicRpc } from '@/lib/public-api';
 
 const authMock = authenticatePartner as jest.Mock;
@@ -24,7 +25,15 @@ function req(qs = '') {
   });
 }
 
+beforeAll(() => { jest.spyOn(console, 'info').mockImplementation(() => {}); });
+afterAll(() => { jest.restoreAllMocks(); });
 beforeEach(() => {
+  (after as jest.Mock).mockReset();
+  (logPartnerCall as jest.Mock).mockReset();
+  (admitPartner as jest.Mock).mockImplementation(async () => {
+    const partner = await authMock();
+    return partner ? { partner, rate: await checkMock() } : null;
+  });
   authMock.mockReset();
   checkMock.mockReset();
   rpcMock.mockReset();
@@ -302,5 +311,32 @@ describe('GET /api/public/objects', () => {
   it('track invalide (view=full) — ignoré (p_track_format:none)', async () => {
     await GET(req('?view=full&track=shp'));
     expect(rpcMock.mock.calls[0][1].p_track_format).toBe('none');
+  });
+});
+
+
+describe('deferred audit and server measurements', () => {
+  it.each([200, 429, 502])('registers one audit before returning %s, executes it only after response', async (status) => {
+
+    checkMock.mockResolvedValue({ allowed: status !== 429, retryAfter: 42, limit: 120, remaining: 0 });
+    rpcMock.mockResolvedValue({ ok: status === 200, status, body: { info: {}, data: [{ name: 'Hôtel' }] } });
+    const response = await GET(req());
+    expect(response.status).toBe(status);
+    expect(after).toHaveBeenCalledTimes(1);
+    expect(logPartnerCall).not.toHaveBeenCalled();
+    const timing = response.headers.get('Server-Timing');
+    expect(timing).toMatch(/admission;dur=\d+\.\d{2}/);
+    expect(timing).toMatch(/serialization;dur=\d+\.\d{2}/);
+    expect(timing).toMatch(/total;dur=\d+\.\d{2}/);
+    const text = await response.text();
+    const event = (console.info as jest.Mock).mock.calls.at(-1)![0];
+    expect(event.bytes).toBe(Buffer.byteLength(text, 'utf8'));
+    expect(JSON.stringify(event)).not.toMatch(/bk_live_|Hôtel|k1|localhost/);
+    (logPartnerCall as jest.Mock).mockRejectedValueOnce(new Error('audit unavailable'));
+    await expect((after as jest.Mock).mock.calls[0][0]()).resolves.toBeUndefined();
+    expect(logPartnerCall).toHaveBeenCalledTimes(1);
+    expect(logPartnerCall).toHaveBeenCalledWith('k1', 'GET /api/public/objects', status);
+    expect(response.status).toBe(status);
+    expect(response.headers.get('Server-Timing')).toBe(timing);
   });
 });

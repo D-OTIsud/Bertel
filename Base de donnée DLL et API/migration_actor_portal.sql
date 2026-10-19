@@ -255,6 +255,12 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path = pg_catalog, public, api, auth, pg_temp
 AS $$
 BEGIN
+  -- No user identity: no actor, membership or portal scope can exist.
+  -- Keep email-only and uid-only sessions eligible for their existing paths.
+  IF auth.uid() IS NULL
+     AND NULLIF(btrim(api.current_user_email()), '') IS NULL THEN
+    RETURN;
+  END IF;
   IF api.is_actor_persona() THEN
     RETURN QUERY SELECT * FROM api.current_user_portal_object_ids();
     RETURN;

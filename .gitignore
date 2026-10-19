@@ -116,3 +116,6 @@ outputs/
 
 # Diagnostics, captures et copies locales de validation : jamais publies
 /scratch/
+
+# Isolated PostgreSQL/PostGIS runtime for local itinerary-section verification.
+/.tmp-iti-sections-local/

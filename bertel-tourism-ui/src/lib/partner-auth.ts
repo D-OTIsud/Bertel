@@ -68,6 +68,45 @@ export interface RateVerdict {
   remaining: number;
 }
 
+/** Authenticate and consume quota in one short RPC. Never cache partner identities. */
+export async function admitPartner(
+  authHeader: string | null | undefined,
+  limit = 120,
+  windowSeconds = 60,
+): Promise<{ partner: PartnerIdentity; rate: RateVerdict } | null> {
+  const rawKey = extractPartnerKey(authHeader);
+  if (!rawKey) return null;
+  try {
+    const server = getServerSupabaseClient();
+    if (!server) return null;
+    const { data, error } = await server.schema('api').rpc('partner_admit', {
+      p_key_hash: hashPartnerKey(rawKey), p_limit: limit, p_window_seconds: windowSeconds,
+    });
+    if (error || !data || typeof data !== 'object' || Array.isArray(data)) return null;
+    const row = data as Record<string, unknown>;
+    if (row.ok !== true || typeof row.id !== 'string'
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.id)
+      || typeof row.label !== 'string' || !Array.isArray(row.scopes)
+      || !row.scopes.every((scope): scope is string => typeof scope === 'string')) return null;
+    const partner = { keyId: row.id, label: row.label, scopes: row.scopes };
+    const fallback = { allowed: true, retryAfter: 0, limit, remaining: limit };
+    const rate = row.rate as Record<string, unknown> | null;
+    if (!rate || typeof rate !== 'object' || Array.isArray(rate)
+      || typeof rate.allowed !== 'boolean'
+      || !Number.isInteger(rate.retry_after) || (rate.retry_after as number) < 0
+      || !Number.isInteger(rate.limit) || rate.limit !== limit
+      || !Number.isInteger(rate.remaining) || (rate.remaining as number) < 0
+      || (rate.remaining as number) > limit
+      || (!rate.allowed && ((rate.retry_after as number) <= 0 || rate.remaining !== 0))) {
+      return { partner, rate: fallback };
+    }
+    return { partner, rate: { allowed: rate.allowed, retryAfter: rate.retry_after as number,
+      limit, remaining: rate.remaining as number } };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Fixed-window rate check for a partner key (audit API R2). FAIL-OPEN: an abuse limiter must not
  * block legitimate traffic if the DB call fails — access is already gated by authenticatePartner

@@ -229,6 +229,10 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto  WITH SCHEMA extensions;
 \echo '== R2     migration_partner_rate_limit.sql  (partner gateway rate-limit: internal.partner_rate_bucket + api.partner_rate_check fixed-window, service-role-only; after partner_api_keys) =='
 \ir migration_partner_rate_limit.sql
 
+\echo '== R2a partner admission (authentication + atomic quota in one service-role RPC; after partner keys and rate limit) =='
+\ir ../supabase/migrations/20261019145445_partner_admission.sql
+\ir tests/test_partner_admission.sql
+
 \echo '== L1     migration_object_list.sql  (Listes & templates d envoi: object_list/object_list_item tables + RLS lock (no direct PostgREST) + DEFINER authorize-once RPCs create/get/update/set_items/delete/share/list_my_lists + resolve_list_object_ids wrapper over api.get_filtered_object_ids (published-only, bounded) + anon get_public_list_by_token (published-only, no recipient PII); self-contained, needs object + api.get_filtered_object_ids/get_object_cards_batch + rls_policies helpers is_platform_superuser/current_user_org_id/current_user_admin_rank) =='
 \ir migration_object_list.sql
 
@@ -626,6 +630,18 @@ ROLLBACK;
 \echo '== 19i ordinary contributor bell and email notifications (current moderation rights, coalesced sections, portal exclusion) =='
 \ir ../supabase/migrations/20260911152231_internal_pending_change_notifications.sql
 \ir tests/test_internal_pending_change_notifications.sql
+
+\echo '== 19j partner API identity InitPlan and empty-identity extended read fast path (after portal and actor realm) =='
+\ir ../supabase/migrations/20261019142132_partner_api_identity_initplan.sql
+\ir tests/test_partner_identity_gate.sql
+
+\echo '== 19k render reuse: original baseline versus optimized JSON, fresh database only =='
+-- api_views_functions.sql already contains the optimized source. Restore its
+-- predecessor ONLY during this fresh bootstrap to capture an independent oracle.
+\ir rollback/rollback_partner_resource_render_reuse.sql
+\ir tests/fixtures/capture_render_reuse_baseline.sql
+\ir ../supabase/migrations/20261019151241_partner_resource_render_reuse.sql
+\ir tests/test_render_reuse.sql
 
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;

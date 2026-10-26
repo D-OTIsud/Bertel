@@ -1,1 +1,9 @@
 *.sh text eol=lf
+
+# Keep reviewed SQL migration bytes; retain normal text diffs.
+/supabase/migrations/20261026080219_partner_legal_render_visibility.sql -text
+/supabase/migrations/20261026080812_partner_page_cursor_bounds.sql -text
+/supabase/migrations/20261026081114_partner_editor_description_visibility.sql -text
+/supabase/migrations/20261026104513_open_status_priority.sql -text
+/supabase/migrations/20261026102949_object_rooms_reconcile_v1.sql -text
+/supabase/migrations/20261026102125_object_places_reconcile_v1.sql -text

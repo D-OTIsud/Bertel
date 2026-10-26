@@ -46,6 +46,7 @@ export function DiscountEditModal({
 
   return (
     <EditorModal
+      className="ed-record-modal--discount"
       open={open}
       title={mode === 'edit' ? 'Modifier la remise' : 'Ajouter une remise'}
       eyebrow="Tarifs · Remise"

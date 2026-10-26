@@ -59,10 +59,10 @@ export function AssociatedObjectModal({
 
   return (
     <EditorModal
+      className="ed-record-modal--associated"
       open={open}
       title="Lier une fiche au parcours"
       eyebrow="Itinéraire · Objets liés"
-      size="lg"
       onClose={() => {
         reset();
         onClose();
@@ -73,10 +73,10 @@ export function AssociatedObjectModal({
     >
       {!picked ? (
         <>
+          <RelationPicker currentObjectId={objectId} onPick={setPicked} />
           {trackGeojson && trackGeojson.coordinates.length > 1 && (
             <NearbyObjects objectId={objectId} line={trackGeojson.coordinates} onPick={setPicked} />
           )}
-          <RelationPicker currentObjectId={objectId} onPick={setPicked} />
         </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -162,7 +162,7 @@ function NearbyObjects({
       {isPending && <p className="muted">Recherche des fiches proches…</p>}
       {isError && (
         <p role="status" className="muted">
-          Les fiches proches sont indisponibles. La recherche reste accessible ci-dessous.
+          Les fiches proches sont indisponibles. La recherche reste accessible ci-dessus.
         </p>
       )}
       {!isPending && !isError && nearby.length === 0 && (

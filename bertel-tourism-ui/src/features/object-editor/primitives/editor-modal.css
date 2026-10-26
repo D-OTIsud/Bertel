@@ -1,4 +1,4 @@
-/* Record dialogs follow the supplied modal models. Only the body scrolls. */
+/* Model dimensions; each desktop column scrolls inside the fixed header/footer. */
 .ed-record-modal-overlay {
   background: rgb(52 80 93 / 18%);
 }
@@ -25,7 +25,7 @@
 }
 .ed-record-modal.ed-record-modal--xl,
 .ed-record-modal.ed-record-modal--preview {
-  max-width: 1000px;
+  max-width: var(--ed-modal-width, 1000px);
 }
 .ed-record-modal__header {
   display: flex;
@@ -33,7 +33,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding: 20px 24px 16px;
+  padding: 18px 24px 14px;
   border-bottom: 1px solid var(--line-soft);
 }
 .ed-record-modal__eyebrow {
@@ -82,23 +82,30 @@
 }
 .ed-record-modal__layout {
   display: flex;
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
+}
+.ed-record-modal--preview .ed-record-modal__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ed-modal-aside-width, 300px);
+  height: var(--ed-modal-body-height, 760px);
 }
 .object-editor.ed-record-modal .ed-modal__body {
   flex: 1;
   min-width: 0;
-  padding: 22px 24px;
-  gap: 18px;
-}
-.object-editor.ed-record-modal--preview .ed-modal__body {
-  flex-basis: 70%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 20px 24px 24px;
+  gap: 20px;
 }
 .ed-record-modal__aside {
-  flex: 0 0 30%;
   min-width: 0;
-  padding: 22px 18px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 20px 18px;
   background: var(--bg-tint, #f4f7f8);
   border-left: 1px solid var(--line-soft);
 }
@@ -235,13 +242,53 @@
 .ed-record-modal .ed-modal__calendar i[data-active='true'] {
   background: var(--accent);
 }
+/* The itinerary picker leaves its search field the full available width. */
+.ed-record-modal--associated .rpick__hint,
+.ed-record-modal--associated .rpick__foot {
+  display: none;
+}
+/* Exact body heights and column widths from the approved models. */
+.ed-record-modal--closure,
+.ed-record-modal--meeting-room {
+  --ed-modal-body-height: 700px;
+}
+.ed-record-modal--discount {
+  --ed-modal-body-height: 640px;
+}
+.ed-record-modal--legal,
+.ed-record-modal--media,
+.ed-record-modal--crm-interaction {
+  --ed-modal-body-height: 740px;
+}
+.ed-record-modal--place {
+  --ed-modal-body-height: 720px;
+  --ed-modal-aside-width: 380px;
+}
+.ed-record-modal--stage {
+  --ed-modal-width: 1080px;
+  --ed-modal-body-height: 740px;
+  --ed-modal-aside-width: 460px;
+}
+.ed-record-modal--media {
+  --ed-modal-aside-width: 320px;
+}
+.ed-record-modal--crm-task {
+  --ed-modal-body-height: 620px;
+}
 @media (max-width: 760px) {
   .object-editor.ed-record-modal {
     width: calc(100vw - 20px);
     max-height: calc(100dvh - 20px);
   }
-  .ed-record-modal__layout {
+  .ed-record-modal .ed-record-modal__layout {
     display: block;
+    height: auto;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+  .object-editor.ed-record-modal .ed-modal__body,
+  .ed-record-modal__aside {
+    overflow: visible;
   }
   .ed-record-modal__aside {
     border-left: 0;

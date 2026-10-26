@@ -1,0 +1,19 @@
+/* Local composition for the supplied site, stage and media models. */
+.ed-geography-preview strong { display: block; font-size: 13px; line-height: 1.45; }
+.ed-geography-check-note { margin-left: auto; font-size: 11px; }
+.object-editor.ed-record-modal--media .ed-media-type { flex-wrap: wrap; }
+.object-editor.ed-record-modal--media .ed-media-type button { flex: 1 1 110px; }
+.ed-record-modal--media .ed-media-section { display: flex; flex-direction: column; gap: 14px; }
+.ed-record-modal--media .ed-media-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.ed-record-modal--media .ed-media-heading h3 { margin: 0; }
+.object-editor.ed-record-modal--media .ed-media-heading .lang-tabs { width: auto; margin: 0; flex: none; }
+.object-editor.ed-record-modal--media .ed-media-section > .field + .field { margin-top: 0; }
+.ed-record-modal--media .ed-media-audience { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ed-record-modal--media .ed-media-audience > span { margin-right: 4px; color: var(--ink-3); font-size: 12px; }
+.ed-record-modal--media .ed-media-audience-note { margin: 0; color: var(--ink-3); font-size: 12px; }
+.ed-record-modal--media .ed-media-publication { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.object-editor.ed-record-modal--media .ed-media-publication .tog { display: flex; flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: 10px; padding: 10px 12px; border: 0; background: var(--bg-tint, var(--surface-2)); }
+.object-editor.ed-record-modal--media .ed-media-publication .tog > div { min-width: 0; font-size: 12.5px; }
+@media (max-width: 520px) {
+  .ed-record-modal--media .ed-media-publication { grid-template-columns: 1fr; }
+}

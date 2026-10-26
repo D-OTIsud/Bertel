@@ -87,6 +87,7 @@ export function ClosureEditModal({
 
   return (
     <EditorModal
+      className="ed-record-modal--closure"
       open={open}
       title={
         exceptionalHours

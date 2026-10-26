@@ -66,6 +66,7 @@ export function MenuEditModal({
     <EditorModal
       open={open}
       size="xl"
+      className="ed-menu-modal"
       title={menu.recordId ? 'Modifier le menu' : 'Ajouter un menu'}
       onClose={onClose}
       onSave={saveMenu}

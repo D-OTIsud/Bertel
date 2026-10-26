@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { OpeningPeriodEditModal } from './OpeningPeriodEditModal';
 import { createPeriodDraft } from '../sections/opening-period-edit';
 
@@ -151,4 +151,45 @@ test('short time entry is normalized on apply, while invalid times block the dra
   fireEvent.change(screen.getByLabelText('lundi · Plage 1 · début'), { target: { value: '9h30' } });
   fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
   expect(onSave.mock.calls[0][0].weekdays[0].slots[0].start).toBe('09:30');
+});
+
+
+test('public-card preview follows the actual days and time frames as the draft changes', () => {
+  render(<OpeningPeriodEditModal open mode="edit" draft={{ ...createPeriodDraft(), recurrence: 'always', weekdays: [
+    { code: 'monday', label: 'lundi', slots: [{ start: '09:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+    { code: 'tuesday', label: 'mardi', slots: [{ start: '09:00', end: '12:00' }, { start: '14:00', end: '18:00' }] },
+  ] }} existingPeriods={[]} periodTypeOptions={[]} onClose={noop} onSave={noop} />);
+  const preview = screen.getByLabelText('Aperçu des horaires hebdomadaires');
+  expect(within(preview).getByText('lun., mar.')).toBeInTheDocument();
+  expect(within(preview).getByText('09:00–12:00, 14:00–18:00')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('lundi · Plage 1 · début'), { target: { value: '8h30' } });
+  expect(within(preview).getByText('lun.')).toBeInTheDocument();
+  expect(within(preview).getByText('08:30–12:00, 14:00–18:00')).toBeInTheDocument();
+  expect(within(preview).getByText('09:00–12:00, 14:00–18:00')).toBeInTheDocument();
+});
+
+test('day presets keep hours outside the group and keep each source note', () => {
+  const onSave = jest.fn();
+  const draft = { ...createPeriodDraft(), recurrence: 'always' as const, sourcePeriodId: 'period-source',
+    weekdayNotes: { saturday: 'Sur réservation' }, weekdays: [
+      { code: 'saturday', label: 'samedi', slots: [{ start: '10:00', end: '13:00' }] },
+    ] };
+  render(<OpeningPeriodEditModal open mode="edit" draft={draft} existingPeriods={[]} periodTypeOptions={[]} onClose={noop} onSave={onSave} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Lun-Ven' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+  expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ sourcePeriodId: draft.sourcePeriodId,
+    weekdayNotes: draft.weekdayNotes, weekdays: expect.arrayContaining([
+      { code: 'saturday', label: 'samedi', slots: [{ start: '10:00', end: '13:00' }] },
+      { code: 'monday', label: 'lundi', slots: [{ start: '', end: '' }] },
+    ]) }));
+});
+
+
+test('does not present an incomplete guarded structure as closed hours in the simplified preview', () => {
+  render(<OpeningPeriodEditModal open mode="edit" draft={{ ...createPeriodDraft(), recurrence: 'always',
+    editingUnavailableReason: 'Plusieurs horaires distincts sont conservés.',
+  }} existingPeriods={[]} periodTypeOptions={[]} onClose={noop} onSave={noop} />);
+  expect(screen.queryByLabelText('Aperçu des horaires hebdomadaires')).not.toBeInTheDocument();
+  expect(screen.getByText('Horaires complexes conservés ; cet aperçu simplifié ne les représente pas.')).toBeInTheDocument();
+  expect(screen.getByRole('status')).toHaveTextContent('Plusieurs horaires distincts sont conservés.');
 });

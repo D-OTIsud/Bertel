@@ -21,6 +21,7 @@ import type {
 import { isInsideCorridor, metersToTrack } from '../sections/blocks/corridor';
 import { MediaLinkField } from './MediaLinkField';
 import { resolveMediaLinks } from './media-links';
+import './geography-media-modals.css';
 
 interface StageEditModalProps {
   open: boolean;
@@ -89,6 +90,7 @@ export function StageEditModal({
 
   return (
     <EditorModal
+      className="ed-record-modal--stage"
       open={open}
       title={stage.recordId ? 'Modifier l’étape' : 'Ajouter une étape'}
       eyebrow="Itinéraire · Étapes et points d’intérêt"
@@ -98,7 +100,7 @@ export function StageEditModal({
           <h3>Où sur le tracé ?</h3>{' '}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ fontSize: 12, color: 'var(--ink-4)' }}>Position sur la carte</div>
-            <div className="map-mini" style={{ height: 320, overflow: 'hidden' }}>
+            <div className="map-mini" style={{ height: 380, overflow: 'hidden' }}>
               <Map
                 reuseMaps
                 mapStyle={DEFAULT_APP_MAP_STYLE}
@@ -198,6 +200,16 @@ export function StageEditModal({
               </button>
             )}
           </div>
+          <h3>Avant d’appliquer</h3>
+          <ul className="ed-record-modal__checks">
+            <li data-complete={Boolean(draft.name.trim())}>
+              <span aria-hidden>{draft.name.trim() ? '✓' : '○'}</span> Nom
+            </li>
+            <li data-complete={hasPoint}>
+              <span aria-hidden>{hasPoint ? '✓' : '!'}</span> Position
+              <span className="ed-geography-check-note">recommandée</span>
+            </li>
+          </ul>
         </>
       }
       onClose={onClose}

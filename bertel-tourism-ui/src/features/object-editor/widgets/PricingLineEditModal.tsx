@@ -247,7 +247,7 @@ export function PricingLineEditModal({
       <DialogContent
         showClose={false}
         overlayClassName="ed-record-modal-overlay"
-        className="object-editor plm flex max-h-[calc(100vh-2rem)] max-w-[960px] flex-col gap-0 overflow-hidden p-0"
+        className="object-editor plm"
         onOpenAutoFocus={() => {
           openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
         }}

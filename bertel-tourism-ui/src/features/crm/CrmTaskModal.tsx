@@ -284,7 +284,7 @@ export function CrmTaskModal({
   return (
     <EditorModal
       open
-      className="crm-app"
+      className="crm-app ed-record-modal--crm-task"
       title={task ? 'Modifier la tâche' : relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
       eyebrow="Relation professionnels"
       onClose={onClose}

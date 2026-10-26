@@ -5,6 +5,14 @@
    ============================================================ */
 
 .object-editor.plm {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: calc(100vw - 40px);
+  max-width: 1000px;
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  overflow: hidden;
   background: var(--surface);
   color: var(--ink);
   border-radius: var(--r-lg);
@@ -13,12 +21,13 @@
 
 /* ---------- Header ---------- */
 .object-editor.plm .plm__head {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  display: flex; flex-shrink: 0; align-items: flex-start; justify-content: space-between; gap: 16px;
   padding: 18px 24px 14px;
   border-bottom: 1px solid var(--line-soft);
 }
+.object-editor.plm .plm__head-text { min-width: 0; overflow-wrap: anywhere; }
 .object-editor.plm .plm__eyebrow {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   font-size: 12px; color: var(--ink-3); margin-bottom: 4px;
 }
 .object-editor.plm .plm__tag {
@@ -40,16 +49,16 @@
 
 /* ---------- Body: form | aside ---------- */
 .object-editor.plm .plm__body {
-  flex: 1; min-height: 0;
+  flex: 0 1 700px; min-height: 0; overflow: hidden;
   display: grid; grid-template-columns: minmax(0, 1fr) 300px;
 }
 .object-editor.plm .plm__form {
-  min-height: 0; overflow-y: auto;
+  min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
   padding: 18px 24px 22px;
   display: flex; flex-direction: column; gap: 18px;
 }
 .object-editor.plm .plm__aside {
-  min-height: 0; overflow-y: auto;
+  min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
   padding: 18px 18px 22px;
   background: var(--bg-tint);
   border-left: 1px solid var(--line-soft);
@@ -151,17 +160,18 @@
 
 /* ---------- Footer ---------- */
 .object-editor.plm .plm__foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 12px;
   padding: 12px 24px;
   border-top: 1px solid var(--line-soft);
   background: var(--surface);
 }
-.object-editor.plm .plm__status { margin: 0; font-size: 12px; color: var(--ink-3); }
+.object-editor.plm .plm__status { min-width: 0; margin: 0; font-size: 12px; color: var(--ink-3); }
 .object-editor.plm .plm__status.is-error { color: var(--red); font-weight: 600; }
-.object-editor.plm .plm__actions { display: flex; gap: 8px; }
+.object-editor.plm .plm__actions { display: flex; flex-shrink: 0; gap: 8px; }
 
 /* ---------- Narrow screens: aside drops under the form, whole body scrolls ---------- */
 @media (max-width: 760px) {
+  .object-editor.plm { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
   .object-editor.plm .plm__body { display: block; overflow-y: auto; }
   .object-editor.plm .plm__form,
   .object-editor.plm .plm__aside { overflow: visible; }
@@ -172,6 +182,8 @@
   .object-editor.plm .plm-ages__label { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) {
+  .object-editor.plm .plm__foot { flex-wrap: wrap; }
+  .object-editor.plm .plm__actions { width: 100%; justify-content: flex-end; }
   .object-editor.plm .plm-grid-2 { grid-template-columns: 1fr; }
   .object-editor.plm .plm__head,
   .object-editor.plm .plm__form,

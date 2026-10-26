@@ -1,0 +1,23 @@
+/* Meeting room follows the model's wide name and four illustrated capacity cards. */
+.object-editor.ed-meeting-room-modal [hidden] { display: none !important; }
+.object-editor.ed-meeting-room-modal .meeting-room-identity { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; }
+.object-editor.ed-meeting-room-modal .input { height: 40px; border-radius: 10px; font-size: 13.5px; }
+.object-editor.ed-meeting-room-modal .input.has-suffix { padding-right: 42px; }
+.object-editor.ed-meeting-room-modal .field__label { font-size: 12px; }
+.object-editor.ed-meeting-room-modal .meeting-room-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.object-editor.ed-meeting-room-modal .meeting-room-heading h3 { margin: 0; font-size: 13.5px; }
+.object-editor.ed-meeting-room-modal .meeting-room-heading > span { font-size: 11.5px; color: var(--ink-3); }
+.object-editor.ed-meeting-room-modal .meeting-room-layouts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 10px; }
+.object-editor.ed-meeting-room-modal .meeting-room-layout { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.object-editor.ed-meeting-room-modal .meeting-room-layout[data-active='true'] { border-color: var(--accent); }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__heading { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 92px; padding: 12px; border: 0; border-radius: 11px; color: var(--ink-2); background: transparent; font: 500 12.5px var(--font-sans, 'Manrope', system-ui, sans-serif); cursor: pointer; }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__heading:hover { background: var(--surface-2); }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__heading:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__capacity { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 10px 10px; }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__capacity .input { text-align: center; }
+.object-editor.ed-meeting-room-modal .meeting-room-layout__capacity > span { color: var(--ink-3); font-size: 11px; }
+@media (max-width: 760px) {
+  .object-editor.ed-meeting-room-modal .meeting-room-identity { grid-template-columns: minmax(0, 1fr); }
+  .object-editor.ed-meeting-room-modal .meeting-room-identity .field:last-child { max-width: 150px; }
+  .object-editor.ed-meeting-room-modal .meeting-room-layouts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

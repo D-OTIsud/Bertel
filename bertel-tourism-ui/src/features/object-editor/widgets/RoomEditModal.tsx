@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
-import { Trash2, Search, Lock, Plus, ChevronDown, ChevronRight } from 'lucide-react';
-import { Disclosure, EditorModal, ReferenceSelect, Field, Input, Toggle, Chip, ChipSet } from '../primitives';
+import { useId, useState, type ComponentProps } from 'react';
+import { Trash2, Search, Minus, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { EditorModal, ReferenceSelect, Field, Input, Toggle, Chip, ChipSet } from '../primitives';
 import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import { fold } from '../../../components/ui/pickers/fold';
 import type {
@@ -19,6 +19,7 @@ import {
 } from '../sections/blocks/rooms-utils';
 import { MediaLinkField } from './MediaLinkField';
 import { resolveMediaLinks } from './media-links';
+import './room-edit-modal.css';
 
 interface RoomEditModalProps {
   open: boolean;
@@ -36,43 +37,47 @@ interface RoomEditModalProps {
   onSave: (room: ObjectWorkspaceRoomTypeItem) => void;
 }
 
-/** Section header with a divider above (first section omits the rule) — gives the modal the
- *  grouped rhythm of the approved mockup. */
-function SectionLabel({ children, first }: { children: ReactNode; first?: boolean }) {
+/** Compact controls keep the model's rhythm while retaining direct numeric entry. */
+function RoomStepper({
+  value, onChange, min = 0, 'aria-label': label, ...inputProps
+}: Omit<ComponentProps<'input'>, 'value' | 'onChange'> & {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const minimum = Number(min);
+  const current = Number.parseInt(value, 10) || 0;
   return (
-    <div
-      className="chip-group__label"
-      style={{ margin: 0, paddingTop: first ? 0 : 14, borderTop: first ? 'none' : '1px solid var(--line)' }}
-    >
-      {children}
+    <div className="room-stepper">
+      <button type="button" aria-label={`Diminuer ${label}`} disabled={current <= minimum}
+        onClick={() => onChange(String(Math.max(minimum, current - 1)))}>
+        <Minus size={13} aria-hidden />
+      </button>
+      <input {...inputProps} type="number" min={min} value={value} aria-label={label}
+        onChange={(event) => onChange(event.target.value)} />
+      <button type="button" aria-label={`Augmenter ${label}`}
+        onClick={() => onChange(String(Math.max(minimum, current + 1)))}>
+        <Plus size={13} aria-hidden />
+      </button>
     </div>
   );
 }
 
-const COL3 = { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'start' } as const;
-const BED_ROW = {
-  display: 'grid',
-  gridTemplateColumns: '72px 1fr 36px',
-  gap: 8,
-  alignItems: 'center',
-} as const;
-const ICON_BTN = {
-  display: 'inline-grid',
-  placeItems: 'center',
-  width: 32,
-  height: 32,
-  border: '1px solid transparent',
-  borderRadius: 8,
-  background: 'transparent',
-  color: 'var(--ink-3)',
-  cursor: 'pointer',
-} as const;
 /** Focused per-room editor. Edits a draft copy of one room type; onSave returns the patched item.
  *  Grouped column layout + numeric capacities (total anchors a locked adults/enfants split) +
  *  inline searchable equipment (selected pulled to the top). */
 export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditModalProps) {
   const [draft, setDraft] = useState(room);
   const isNew = room.isNew ?? !room.recordId;
+  const expansionId = useId();
+  const [showOtherTypes, setShowOtherTypes] = useState(Boolean(room.roomTypeCode &&
+    !module.roomTypeOptions.slice(0, 6).some((option) => option.code === room.roomTypeCode)));
+  const [showSplit, setShowSplit] = useState(Number.parseInt(room.capacityChildren, 10) > 0);
+  const [bedsOpen, setBedsOpen] = useState(false);
+  const [allEquipmentOpen, setAllEquipmentOpen] = useState(false);
+  const [optional, setOptional] = useState({
+    view: Boolean(room.viewTypeCode), size: Boolean(room.sizeSqm),
+    description: Boolean(room.description), photos: room.mediaIds.length > 0,
+  });
   const [equipQuery, setEquipQuery] = useState('');
   const [openFamilies, setOpenFamilies] = useState<Set<string>>(new Set());
   const set = (patch: Partial<ObjectWorkspaceRoomTypeItem>) => setDraft((d) => ({ ...d, ...patch }));
@@ -140,9 +145,14 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
   // both and auto-expands the categories with hits (§74).
   const isAmenityAvailable = (o: { code: string; label: string }) =>
     !draft.amenityCodes.includes(o.code) && (foldedQuery === '' || fold(o.label).includes(foldedQuery));
+  const allCommon = splitRoomAmenities(module.amenityGroups, () => true).common.slice(0, 10);
+  const compactCodes = new Set(allCommon.map((option) => option.code));
+  const compactAmenities = [...allCommon, ...selectedAmenities.filter((option) => !compactCodes.has(option.code))];
+  const visibleCompactAmenities = compactAmenities.filter((option) =>
+    !searchingEquip || fold(option.label).includes(foldedQuery));
   const { common: courantAmenities, categories: dispoGroups } = splitRoomAmenities(
     module.amenityGroups,
-    isAmenityAvailable,
+    (option) => !compactCodes.has(option.code) && isAmenityAvailable(option),
   );
 
   // Room photos = a curation of the establishment's media (object_room_type_media). Linking points
@@ -150,9 +160,19 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
   const linkedMedia = resolveMediaLinks(draft.mediaIds, module.mediaOptions);
   const linkedMediaCount = linkedMedia.length;
 
+  const bedsSummary = draft.beds.length
+    ? draft.beds.map((bed) => `${bed.quantity || '1'} × ${bed.bedTypeLabel || bed.bedTypeCode || 'lit à préciser'}`).join(' + ')
+    : draft.bedConfig || 'Aucun lit indiqué';
+  const previewFacts = [draft.capacityTotal ? `${draft.capacityTotal} pers.` : null,
+    draft.beds.length ? bedsSummary : draft.bedConfig || null,
+    draft.sizeSqm ? `${draft.sizeSqm} m²` : null].filter(Boolean).join(' · ');
+  const toggleOptional = (key: keyof typeof optional) =>
+    setOptional((value) => ({ ...value, [key]: !value[key] }));
+
   return (
     <EditorModal
       open={open}
+      className="ed-room-modal"
       title={isNew ? 'Ajouter un type de chambre' : 'Modifier le type de chambre'}
       eyebrow="Chambres · Capacité et équipements"
       saveLabel={isNew ? 'Ajouter' : 'Appliquer'}
@@ -162,333 +182,176 @@ export function RoomEditModal({ open, room, module, onClose, onSave }: RoomEditM
       aside={
         <>
           <h3>Sur la fiche</h3>
-          <div className="ed-record-modal__preview">
-            {linkedMedia[0]?.url && (
-              <img className="ed-modal__preview" src={linkedMedia[0].url} alt="" aria-hidden />
-            )}
-            <strong>{draft.name || draft.roomTypeLabel || 'Nouveau type de chambre'}</strong>
-            <p>
-              {draft.capacityTotal || '—'} pers. · ×{draft.quantity || '1'} chambre(s)
-            </p>
-            {draft.beds.length > 0 && (
-              <p>
-                {draft.beds
-                  .map((bed) => `${bed.quantity || '1'} × ${bed.bedTypeLabel || bed.bedTypeCode}`)
-                  .join(' · ')}
-              </p>
-            )}
-            {draft.basePrice && (
-              <p>
-                À partir de {draft.basePrice} {priceUnit}
-              </p>
-            )}
-            {selectedAmenities.length > 0 && (
-              <p>{selectedAmenities.map((option) => option.label).join(' · ')}</p>
-            )}
-            {draft.accessible && <p>Accessible (PMR)</p>}
+          <div className="ed-record-modal__preview room-preview">
+            <div className="room-preview__photo">
+              {linkedMedia[0]?.url ? <img src={linkedMedia[0].url} alt="" aria-hidden /> : 'Aucune photo'}
+            </div>
+            <div className="room-preview__content">
+              <div className="room-preview__name">
+                <strong>{draft.name || draft.roomTypeLabel || 'Nouveau type de chambre'}</strong>
+                <span>×{draft.quantity || '1'}</span>
+              </div>
+              {(draft.roomTypeLabel || draft.viewTypeLabel) && <p>{[draft.roomTypeLabel, draft.viewTypeLabel].filter(Boolean).join(' · ')}</p>}
+              {previewFacts && <p>{previewFacts}</p>}
+              {selectedAmenities.length > 0 && <div className="room-preview__tags">
+                {selectedAmenities.slice(0, 4).map((option) => <span key={option.code}>{option.label}</span>)}
+                {selectedAmenities.length > 4 && <span>+{selectedAmenities.length - 4}</span>}
+              </div>}
+              {draft.basePrice && <p>À partir de <b>{draft.basePrice} {priceUnit}</b></p>}
+              {draft.accessible && <p>Accessible (PMR)</p>}
+              {!draft.published && <p>Non visible sur la fiche</p>}
+            </div>
           </div>
           <h3>Avant d’appliquer</h3>
           <ul className="ed-record-modal__checks">
-            <li data-complete={Boolean(draft.roomTypeCode)}>
-              {draft.roomTypeCode ? '✓' : '○'} Type de chambre
-            </li>
+            <li data-complete={Boolean(draft.roomTypeCode)}>{draft.roomTypeCode ? '✓' : '○'} Type de chambre</li>
             <li data-complete={Boolean(draft.name.trim())}>{draft.name.trim() ? '✓' : '○'} Nom</li>
-            <li data-complete={Boolean(draft.capacityTotal)}>
-              {draft.capacityTotal ? '✓' : '○'} Capacité et lits
-            </li>
+            <li data-complete={Boolean(draft.capacityTotal)}>{draft.capacityTotal ? '✓' : '○'} Capacité et lits</li>
           </ul>
         </>
       }
     >
-      <SectionLabel first>Identité</SectionLabel>
-      <div className="grid-2" style={{ alignItems: 'start' }}>
-        <Field label="Type de chambre">
-          <ChipSet>
-            {module.roomTypeOptions.slice(0, 6).map((option) => (
-              <Chip
-                key={option.id || option.code}
-                label={option.label}
-                on={draft.roomTypeCode === option.code}
-                onClick={() => selectRoomType(option.code)}
-              />
-            ))}
-          </ChipSet>
-          <Disclosure title="Autre type de chambre…">
-            <ReferenceSelect
-              value={draft.roomTypeCode}
-              options={module.roomTypeOptions}
-              allowEmpty
-              emptyLabel="— Type non défini —"
-              aria-label="Type de chambre"
-              onChange={selectRoomType}
-            />
-          </Disclosure>
-        </Field>
-        <Disclosure title="Vue" defaultOpen={Boolean(draft.viewTypeCode)}>
-          <Field label="Vue">
-            <ReferenceSelect
-              value={draft.viewTypeCode}
-              options={module.viewTypeOptions}
-              allowEmpty
-              emptyLabel="— Aucune —"
-              aria-label="Vue"
-              onChange={(code, opt) =>
-                set({ viewTypeCode: code, viewTypeId: opt?.id ?? '', viewTypeLabel: opt?.label ?? '' })
-              }
-            />
-          </Field>
-        </Disclosure>
-      </div>
-      <Field label="Nom / libellé">
-        <Input value={draft.name} onChange={(name) => set({ name })} />
-      </Field>
-      {/* `quantity` = object_room_type.total_rooms — INVENTORY of this room TYPE, not rooms-inside-a-suite.
-          Standalone + explained (PO §74) so it isn't misread as a per-room physical attribute. */}
-      <Field label="Nombre de chambres de ce type">
-        <Input
-          type="number"
-          value={draft.quantity}
-          mono
-          aria-label="Nb. de chambres (de ce type)"
-          onChange={(quantity) => set({ quantity })}
-        />
-        <span className="muted" style={{ fontSize: 11 }}>
-          Combien de chambres identiques de ce type l'établissement propose-t-il&nbsp;? (ex.&nbsp;5 suites
-          «&nbsp;Vue Mer&nbsp;» identiques)
-        </span>
-      </Field>
+      <section className="room-section room-section--first" aria-labelledby={`${expansionId}-type-title`}>
+        <div className="room-section__heading">
+          <h3 id={`${expansionId}-type-title`}>Quel type de chambre ?</h3>
+          <span>pré-remplit la capacité et les lits</span>
+        </div>
+        <ChipSet>
+          {module.roomTypeOptions.slice(0, 6).map((option) => <Chip key={option.id || option.code}
+            label={option.label} on={draft.roomTypeCode === option.code} onClick={() => selectRoomType(option.code)} />)}
+          <button type="button" className="chip room-more" aria-expanded={showOtherTypes}
+            aria-controls={`${expansionId}-types`} onClick={() => setShowOtherTypes((value) => !value)}>Autre type…</button>
+        </ChipSet>
+        <div id={`${expansionId}-types`} hidden={!showOtherTypes}>
+          <ReferenceSelect value={draft.roomTypeCode} options={module.roomTypeOptions} allowEmpty
+            emptyLabel="— Type non défini —" aria-label="Type de chambre" onChange={selectRoomType} />
+        </div>
+      </section>
 
-      <SectionLabel>Couchages &amp; capacité</SectionLabel>
-      {/* Total is the anchor — adults/children stay locked to it (applyAdults/applyChildren rebalance). */}
-      <div style={COL3}>
-        <Field label="Couchages (total)">
-          <Input
-            type="number"
-            value={draft.capacityTotal}
-            mono
-            aria-label="Couchages (total)"
-            onChange={(v) => set(applyCouchagesTotal(v))}
-          />
-        </Field>
-        <Field label="Adultes">
-          <Input
-            type="number"
-            value={draft.capacityAdults}
-            mono
-            aria-label="Adultes"
-            onChange={(v) => set(applyAdults(v, draft.capacityTotal))}
-          />
-        </Field>
-        <Field label="Enfants">
-          <Input
-            type="number"
-            value={draft.capacityChildren}
-            mono
-            aria-label="Enfants"
-            onChange={(v) => set(applyChildren(v, draft.capacityTotal))}
-          />
+      <div className="room-identity">
+        <Field label="Nom affiché sur la fiche"><Input value={draft.name} onChange={(name) => set({ name })} /></Field>
+        <Field label="Nombre de chambres identiques">
+          <RoomStepper value={draft.quantity} min={1} aria-label="Nb. de chambres (de ce type)" onChange={(quantity) => set({ quantity })} />
         </Field>
       </div>
-      <p
-        className="muted"
-        style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, margin: '2px 0 0' }}
-      >
-        <Lock size={13} aria-hidden /> Adultes + enfants suivent toujours le total
-        {draft.capacityTotal ? ` (${draft.capacityTotal})` : ''}.
-      </p>
 
-      <SectionLabel>Configuration des lits</SectionLabel>
-      {/* Structured « quantité × type de lit » list (§72). Blank rows are dropped at save (buildBedRows). */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {draft.beds.map((bed, i) => (
-          <div key={i} style={BED_ROW}>
-            <Input
-              type="number"
-              value={bed.quantity}
-              mono
-              aria-label={`Nombre de lits ${i + 1}`}
-              onChange={(q) => setDraft((d) => ({ ...d, beds: updateBedQuantity(d.beds, i, q) }))}
-            />
-            <ReferenceSelect
-              value={bed.bedTypeCode}
-              options={module.bedTypeOptions}
-              allowEmpty
-              emptyLabel="— Type de lit —"
-              aria-label={`Type de lit ${i + 1}`}
-              onChange={(code, opt) =>
-                setDraft((d) => ({
-                  ...d,
-                  beds: setBedType(d.beds, i, { id: opt?.id ?? '', code, label: opt?.label ?? '' }),
-                }))
-              }
-            />
-            <button
-              type="button"
-              aria-label={`Supprimer le lit ${i + 1}`}
-              style={ICON_BTN}
-              onClick={() => setDraft((d) => ({ ...d, beds: removeBedRow(d.beds, i) }))}
-            >
-              <Trash2 size={15} aria-hidden />
+      <section className="room-section" aria-labelledby={`${expansionId}-capacity-title`}>
+        <h3 id={`${expansionId}-capacity-title`}>Couchage</h3>
+        <div className="room-capacity">
+          <div className="room-inline-field">
+            <label htmlFor={`${expansionId}-capacity-input`}>Personnes</label>
+            <RoomStepper id={`${expansionId}-capacity-input`} value={draft.capacityTotal} aria-label="Couchages (total)"
+              onChange={(value) => set(applyCouchagesTotal(value))} />
+          </div>
+          <button type="button" className="room-link" aria-expanded={showSplit} aria-controls={`${expansionId}-split`}
+            onClick={() => setShowSplit((value) => !value)}>{showSplit ? 'Masquer adultes / enfants' : 'Préciser adultes / enfants'}</button>
+        </div>
+        <div className="room-split" id={`${expansionId}-split`} hidden={!showSplit}>
+          <Field label="Adultes"><RoomStepper value={draft.capacityAdults} aria-label="Adultes"
+            onChange={(value) => set(applyAdults(value, draft.capacityTotal))} /></Field>
+          <Field label="Enfants"><RoomStepper value={draft.capacityChildren} aria-label="Enfants"
+            onChange={(value) => set(applyChildren(value, draft.capacityTotal))} /></Field>
+          <p>Adultes + enfants suivent le total{draft.capacityTotal ? ` (${draft.capacityTotal})` : ''}.</p>
+        </div>
+        <div className="room-beds">
+          <div className="room-beds__summary"><span>Lits : <strong>{bedsSummary}</strong></span>
+            <button type="button" className="room-link" aria-expanded={bedsOpen} aria-controls={`${expansionId}-beds`}
+              onClick={() => setBedsOpen((value) => !value)}>{bedsOpen ? 'Réduire' : 'Modifier'}</button>
+          </div>
+          <div id={`${expansionId}-beds`} hidden={!bedsOpen}>
+            <div className="room-beds__rows">
+              {draft.beds.map((bed, index) => <div className="room-bed-row" key={index}>
+                <RoomStepper value={bed.quantity} min={1} aria-label={`Nombre de lits ${index + 1}`}
+                  onChange={(quantity) => setDraft((value) => ({ ...value, beds: updateBedQuantity(value.beds, index, quantity) }))} />
+                <ReferenceSelect value={bed.bedTypeCode} options={module.bedTypeOptions} allowEmpty
+                  emptyLabel="— Type de lit —" aria-label={`Type de lit ${index + 1}`}
+                  onChange={(code, option) => setDraft((value) => ({ ...value,
+                    beds: setBedType(value.beds, index, { id: option?.id ?? '', code, label: option?.label ?? '' }) }))} />
+                <button type="button" className="room-icon-button" aria-label={`Supprimer le lit ${index + 1}`}
+                  onClick={() => setDraft((value) => ({ ...value, beds: removeBedRow(value.beds, index) }))}><Trash2 size={15} aria-hidden /></button>
+              </div>)}
+            </div>
+            <button type="button" className="room-link" onClick={() => setDraft((value) => ({ ...value, beds: addBedRow(value.beds) }))}>
+              <Plus size={14} aria-hidden /> Ajouter un lit
             </button>
           </div>
-        ))}
-      </div>
-      <button
-        type="button"
-        className="rep-add"
-        onClick={() => setDraft((d) => ({ ...d, beds: addBedRow(d.beds) }))}
-      >
-        <Plus size={14} aria-hidden /> Ajouter un lit
-      </button>
-
-      <Disclosure title="Prix indicatif et surface" defaultOpen={Boolean(draft.basePrice || draft.sizeSqm)}>
-        <div className="grid-2" style={{ alignItems: 'start' }}>
-          <Field label="Surface">
-            <Input
-              type="number"
-              value={draft.sizeSqm}
-              mono
-              suffix="m²"
-              aria-label="Surface"
-              onChange={(sizeSqm) => set({ sizeSqm })}
-            />
-          </Field>
-          <Field label="Tarif indicatif">
-            <Input
-              type="number"
-              value={draft.basePrice}
-              mono
-              suffix={priceUnit}
-              aria-label="Tarif indicatif"
-              onChange={(basePrice) => set({ basePrice })}
-            />
-          </Field>
         </div>
-      </Disclosure>
+      </section>
 
-      <Disclosure title="Description" defaultOpen={Boolean(draft.description)}>
-        <Field label="Description">
-          <MarkdownEditorLazy
-            value={draft.description}
-            onChange={(description) => set({ description })}
-            ariaLabel="Description de la chambre"
-            variant="block"
-          />
-        </Field>
-      </Disclosure>
+      <section className="room-section" aria-labelledby={`${expansionId}-price-title`}>
+        <div className="room-section__heading"><h3 id={`${expansionId}-price-title`}>Prix indicatif</h3>
+          <span>facultatif · le détail se saisit dans la section Tarifs</span></div>
+        <div className="room-price"><span>À partir de</span><div>
+          <Input type="number" value={draft.basePrice} mono suffix={draft.currency === 'EUR' ? '€' : draft.currency}
+            aria-label="Tarif indicatif" onChange={(basePrice) => set({ basePrice })} /></div><span>par nuit</span></div>
+      </section>
 
-      <Disclosure
-        title="Photos et médias"
-        summary={linkedMediaCount ? `${linkedMediaCount}` : undefined}
-        defaultOpen={linkedMediaCount > 0}
-      >
-        {/* Rattache des photos de l'établissement à cette chambre (object_room_type_media). Les
-          fichiers eux-mêmes s'ajoutent dans la section Médias — ici on choisit lesquels montrer. */}
-        <MediaLinkField
-          mediaIds={draft.mediaIds}
-          options={module.mediaOptions}
-          onChange={(mediaIds) => set({ mediaIds })}
-          emptyLinkedHint="Aucune photo rattachée à cette chambre."
-        />
-      </Disclosure>
-
-      <SectionLabel>Équipements de la chambre</SectionLabel>
-      {/* Inline searchable picker — selected pulled to the top, available below (the mockup). */}
-      <Input
-        value={equipQuery}
-        onChange={setEquipQuery}
-        placeholder="Rechercher un équipement…"
-        aria-label="Rechercher un équipement"
-        prefix={<Search size={15} aria-hidden />}
-      />
-      <div className="chip-group__label" style={{ margin: '4px 0 6px' }}>
-        Sélectionnés ({selectedAmenities.length})
-      </div>
-      {selectedAmenities.length > 0 ? (
+      <section className="room-section" aria-labelledby={`${expansionId}-equipment-title`}>
+        <h3 id={`${expansionId}-equipment-title`}>Équipements de la chambre</h3>
         <ChipSet>
-          {selectedAmenities.map((o) => (
-            <Chip key={o.code} label={o.label} on sm title="Retirer" onClick={() => toggleAmenity(o.code)} />
-          ))}
+          {visibleCompactAmenities.map((option) => <Chip key={option.code} label={option.label}
+            on={draft.amenityCodes.includes(option.code)} sm onClick={() => toggleAmenity(option.code)} />)}
+          <button type="button" className="chip size-sm room-more" aria-expanded={allEquipmentOpen}
+            aria-controls={`${expansionId}-equipment`} onClick={() => {
+              setAllEquipmentOpen((value) => !value);
+              setEquipQuery('');
+            }}>{allEquipmentOpen ? 'Réduire les équipements' : 'Tous les équipements…'}</button>
         </ChipSet>
-      ) : (
-        <span className="muted" style={{ fontSize: 12 }}>
-          Aucune sélection
-        </span>
-      )}
-      {/* Curated common room amenities — flat + always visible, one click away (§74). */}
-      {courantAmenities.length > 0 && (
-        <>
-          <div className="chip-group__label" style={{ margin: '10px 0 6px' }}>
-            Les plus courants
-          </div>
-          <ChipSet>
-            {courantAmenities.map((o) => (
-              <Chip key={o.code} label={o.label} sm onClick={() => toggleAmenity(o.code)} />
-            ))}
-          </ChipSet>
-        </>
-      )}
-      <div className="chip-group__label" style={{ margin: '12px 0 6px' }}>
-        Par catégorie
-      </div>
-      {dispoGroups.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {dispoGroups.map((g) => {
-            const open = searchingEquip || openFamilies.has(g.familyCode);
-            return (
-              <div key={g.familyCode}>
-                <button
-                  type="button"
-                  onClick={() => toggleFamily(g.familyCode)}
-                  aria-expanded={open}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    width: '100%',
-                    padding: '6px 4px',
-                    background: 'transparent',
-                    border: 0,
-                    cursor: 'pointer',
-                    color: 'var(--ink-2)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    textAlign: 'left',
-                  }}
-                >
-                  {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
-                  <span style={{ flex: 1 }}>{g.familyLabel}</span>
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {g.options.length}
-                  </span>
-                </button>
-                {open && (
-                  <div style={{ padding: '2px 0 8px 20px' }}>
-                    <ChipSet>
-                      {g.options.map((o) => (
-                        <Chip key={o.code} label={o.label} sm onClick={() => toggleAmenity(o.code)} />
-                      ))}
-                    </ChipSet>
-                  </div>
-                )}
-              </div>
-            );
+        <div className="room-equipment-details" id={`${expansionId}-equipment`} hidden={!allEquipmentOpen}>
+          <Input value={equipQuery} onChange={setEquipQuery} placeholder="Rechercher un équipement…"
+            aria-label="Rechercher un équipement" prefix={<Search size={15} aria-hidden />} />
+          {courantAmenities.length > 0 && <ChipSet>{courantAmenities.map((option) =>
+            <Chip key={option.code} label={option.label} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet>}
+          {dispoGroups.map((group) => {
+            const expanded = searchingEquip || openFamilies.has(group.familyCode);
+            return <div key={group.familyCode}>
+              <button type="button" className="room-equipment-family" aria-expanded={expanded}
+                onClick={() => toggleFamily(group.familyCode)}>
+                {expanded ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+                <span>{group.familyLabel}</span><small>{group.options.length}</small>
+              </button>
+              {expanded && <div className="room-equipment-family__body"><ChipSet>{group.options.map((option) =>
+                <Chip key={option.code} label={option.label} sm onClick={() => toggleAmenity(option.code)} />)}</ChipSet></div>}
+            </div>;
           })}
+          {searchingEquip && visibleCompactAmenities.length + courantAmenities.length + dispoGroups.length === 0 &&
+            <p className="muted">Aucun équipement ne correspond à cette recherche.</p>}
         </div>
-      ) : (
-        <span className="muted" style={{ fontSize: 12 }}>
-          Aucun équipement disponible
-        </span>
-      )}
+      </section>
 
-      <SectionLabel>Accessibilité &amp; publication</SectionLabel>
-      <Toggle
-        label="Chambre accessible (PMR)"
-        sub="Aménagée pour les personnes à mobilité réduite."
-        on={draft.accessible}
-        onChange={(accessible) => set({ accessible })}
-      />
-      <Toggle label="Publiée" on={draft.published} onChange={(published) => set({ published })} />
+      <section className="room-section room-options" aria-label="Informations complémentaires">
+        <div className="room-option-links">
+          <button type="button" className="room-link" aria-expanded={optional.view} aria-controls={`${expansionId}-view`}
+            onClick={() => toggleOptional('view')}>{optional.view ? 'Vue' : '+ Vue'}</button>
+          <button type="button" className="room-link" aria-expanded={optional.size} aria-controls={`${expansionId}-size`}
+            onClick={() => toggleOptional('size')}>{optional.size ? 'Surface' : '+ Surface'}</button>
+          <button type="button" className="room-link" aria-expanded={optional.description} aria-controls={`${expansionId}-description`}
+            onClick={() => toggleOptional('description')}>{optional.description ? 'Description' : '+ Description'}</button>
+          <button type="button" className="room-link" aria-label={`Photos et médias${linkedMediaCount ? ` ${linkedMediaCount}` : ''}`}
+            aria-expanded={optional.photos} aria-controls={`${expansionId}-photos`} onClick={() => toggleOptional('photos')}>
+            {optional.photos ? 'Photos' : '+ Photos'}{linkedMediaCount ? ` (${linkedMediaCount})` : ''}</button>
+        </div>
+        <div id={`${expansionId}-view`} hidden={!optional.view}><Field label="Vue">
+          <ReferenceSelect value={draft.viewTypeCode} options={module.viewTypeOptions} allowEmpty emptyLabel="— Aucune —"
+            aria-label="Vue" onChange={(code, option) => set({ viewTypeCode: code, viewTypeId: option?.id ?? '', viewTypeLabel: option?.label ?? '' })} />
+        </Field></div>
+        <div id={`${expansionId}-size`} className="room-surface" hidden={!optional.size}><Field label="Surface">
+          <Input type="number" value={draft.sizeSqm} mono suffix="m²" aria-label="Surface" onChange={(sizeSqm) => set({ sizeSqm })} />
+        </Field></div>
+        <div id={`${expansionId}-description`} hidden={!optional.description}><Field label="Description">
+          <MarkdownEditorLazy value={draft.description} onChange={(description) => set({ description })}
+            ariaLabel="Description de la chambre" variant="block" />
+        </Field></div>
+        <div id={`${expansionId}-photos`} hidden={!optional.photos}>
+          <MediaLinkField mediaIds={draft.mediaIds} options={module.mediaOptions}
+            onChange={(mediaIds) => set({ mediaIds })} emptyLinkedHint="Aucune photo rattachée à cette chambre." />
+        </div>
+      </section>
+
+      <div className="room-section room-toggles">
+        <Toggle label="Chambre accessible (PMR)" on={draft.accessible} onChange={(accessible) => set({ accessible })} />
+        <Toggle label="Visible sur la fiche" on={draft.published} onChange={(published) => set({ published })} />
+      </div>
     </EditorModal>
   );
 }

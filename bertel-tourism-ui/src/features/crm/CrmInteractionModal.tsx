@@ -223,7 +223,7 @@ export function CrmInteractionModal({
   return (
     <EditorModal
       open
-      className="crm-app"
+      className="crm-app ed-record-modal--crm-interaction"
       title={savedInteractionId ? 'Interaction enregistrée' : 'Nouvelle interaction'}
       eyebrow="Relation professionnels"
       onClose={onClose}

@@ -8,6 +8,7 @@ import type { ObjectWorkspacePlaceItem } from '../../../services/object-workspac
 import { readTranslatableField, updateTranslatableField } from '../sections/descriptions-field';
 import { AddressBanCombobox } from './AddressBanCombobox';
 import { LocationPinMap } from './LocationPinMap';
+import './geography-media-modals.css';
 import { LocationReferenceCombobox } from './LocationReferenceCombobox';
 import {
   PLACE_VISIBILITY_OPTIONS,
@@ -75,9 +76,15 @@ export function PlaceEditModal({
   }
 
   const descriptionValue = readTranslatableField(draft.description, activeLanguage, localLanguage);
+  const hasPosition = hasLat && hasLng && Number.isFinite(latValue) && Number.isFinite(lngValue) && !coordInvalid;
+  const addressPreview = [
+    draft.location.address1,
+    [draft.location.postcode, draft.location.city].filter(Boolean).join(' '),
+  ].filter(Boolean).join(', ');
 
   return (
     <EditorModal
+      className="ed-record-modal--place"
       open={open}
       title={isNew ? 'Ajouter un site secondaire' : 'Modifier le site'}
       eyebrow="Sites secondaires · Adresse et position"
@@ -122,6 +129,21 @@ export function PlaceEditModal({
               )}
             </Field>
           </div>
+          <h3>Sur la fiche</h3>
+          <div className="ed-record-modal__preview ed-geography-preview">
+            <strong>{draft.label || 'Nouveau site'}</strong>
+            <p>{addressPreview || 'Adresse à renseigner'}</p>
+          </div>
+          <h3>Avant d’appliquer</h3>
+          <ul className="ed-record-modal__checks">
+            <li data-complete={Boolean(draft.label.trim())}>
+              <span aria-hidden>{draft.label.trim() ? '✓' : '○'}</span> Nom
+            </li>
+            <li data-complete={hasPosition}>
+              <span aria-hidden>{hasPosition ? '✓' : '!'}</span> Position
+              <span className="ed-geography-check-note">recommandée</span>
+            </li>
+          </ul>
         </>
       }
       onClose={onClose}

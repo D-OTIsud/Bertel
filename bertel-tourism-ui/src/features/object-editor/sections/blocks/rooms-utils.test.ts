@@ -5,6 +5,7 @@ import {
   applyCouchagesTotal,
   buildBedRows,
   computeRoomsCapacitySum,
+  createRoomDraft,
   computeUnitCount,
   removeBedRow,
   roomCouchages,
@@ -60,6 +61,15 @@ describe('roomCouchages / computeRoomsCapacitySum', () => {
         { capacityTotal: '3', quantity: '4' }, // 3 × 4
       ]),
     ).toBe(14);
+  });
+});
+
+describe('createRoomDraft', () => {
+  it('assigns a stable UUID and marks the unsaved row as new', () => {
+    const draft = createRoomDraft([]);
+    expect(draft.recordId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(draft.isNew).toBe(true);
+    expect(createRoomDraft([draft]).recordId).not.toBe(draft.recordId);
   });
 });
 

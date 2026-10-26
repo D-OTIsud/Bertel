@@ -47,14 +47,20 @@ function renderModal(props: Partial<React.ComponentProps<typeof CrmTaskModal>> =
   );
 }
 
+async function openAttachments() {
+  const summary = screen.getByText(/Pièces jointes/);
+  if (!summary.closest('details')?.open) await userEvent.click(summary);
+}
+
 describe('CrmTaskModal — description', () => {
   beforeEach(() => mockedSave.mockClear());
 
   it('envoie la description saisie à la création', async () => {
     renderModal();
     await userEvent.type(screen.getByLabelText('Titre de la tâche'), 'Rappeler le client');
+    await userEvent.click(screen.getByText('+ Ajouter des détails'));
     await userEvent.type(screen.getByLabelText('Description de la tâche'), 'Voir le devis n°42');
-    await userEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() => expect(mockedSave).toHaveBeenCalled());
     expect(mockedSave.mock.calls[0][0]).toMatchObject({ description: 'Voir le devis n°42' });
   });
@@ -62,9 +68,23 @@ describe('CrmTaskModal — description', () => {
   it("n'envoie PAS la clé description quand le champ est vide (création)", async () => {
     renderModal();
     await userEvent.type(screen.getByLabelText('Titre de la tâche'), 'Sans description');
-    await userEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() => expect(mockedSave).toHaveBeenCalled());
     expect(mockedSave.mock.calls[0][0]).not.toHaveProperty('description');
+  });
+
+  it('un raccourci d’échéance pilote l’aperçu et la date enregistrée', async () => {
+    renderModal();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dueAt = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+    await userEvent.type(screen.getByLabelText('Titre de la tâche'), 'Envoyer le devis');
+    await userEvent.click(screen.getByRole('button', { name: 'Demain' }));
+    expect(screen.getByRole('button', { name: 'Demain' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/Envoyer le devis/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
+    await waitFor(() => expect(mockedSave).toHaveBeenCalled());
+    expect(mockedSave.mock.calls[0][0]).toMatchObject({ dueAt });
   });
 });
 
@@ -89,9 +109,10 @@ describe('CrmTaskModal — édition', () => {
   it('pré-remplit titre, description, échéance, assignés ; établissement en lecture seule', async () => {
     renderModal({ task: taskFixture, objectOptions: [] });
     expect(screen.getByLabelText('Titre de la tâche')).toHaveValue('Titre initial');
+    expect(screen.getByText('Masquer les détails')).toBeInTheDocument();
     expect(screen.getByLabelText('Description de la tâche')).toHaveValue('Description initiale');
     expect(screen.getByLabelText('Échéance')).toHaveValue('2026-09-15');
-    expect(screen.getByText('Hôtel Test')).toBeInTheDocument(); // static, pas un picker
+    expect(screen.getAllByText('Hôtel Test').some((node) => node.classList.contains('crm-field__static'))).toBe(true);
     expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeInTheDocument();
   });
 
@@ -150,7 +171,12 @@ describe('CrmTaskModal — pièces jointes', () => {
 
   it('édition : aucune pièce jointe → message dédié dans la liste', () => {
     renderModal({ task: taskFixture, objectOptions: [] }); // taskFixture.documents = []
-    expect(screen.getByText('Pièces jointes')).toBeInTheDocument();
+    expect(screen.getByText(/Pièces jointes/)).toBeInTheDocument();
+  });
+
+  it('édition : ouvre la section repliée pour afficher la liste', async () => {
+    renderModal({ task: taskFixture, objectOptions: [] });
+    await openAttachments();
     expect(screen.getByText('Aucune pièce jointe.')).toBeInTheDocument();
   });
 
@@ -159,6 +185,7 @@ describe('CrmTaskModal — pièces jointes', () => {
     const onClose = jest.fn();
     window.confirm = jest.fn().mockReturnValue(true);
     renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
+    await openAttachments();
     expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
     await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalledWith({
@@ -175,6 +202,7 @@ describe('CrmTaskModal — pièces jointes', () => {
   it('édition : suppression refusée à la confirmation → aucun appel', async () => {
     window.confirm = jest.fn().mockReturnValue(false);
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
     expect(deleteTaskDocument).not.toHaveBeenCalled();
   });
@@ -183,6 +211,7 @@ describe('CrmTaskModal — pièces jointes', () => {
     const onSaved = jest.fn();
     const onClose = jest.fn();
     renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
+    await openAttachments();
     const file = new File(['x'], 'Nouveau.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
     await waitFor(() => expect(jest.mocked(uploadTaskDocument)).toHaveBeenCalledWith(
@@ -202,6 +231,7 @@ describe('CrmTaskModal — pièces jointes', () => {
   it('édition : upload en échec → erreur visible (pas d’échec silencieux)', async () => {
     jest.mocked(uploadTaskDocument).mockRejectedValueOnce(new Error('Fichier trop volumineux'));
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
     const file = new File(['x'], 'Trop-gros.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Ajouter un document'), file);
     expect(await screen.findByText('Fichier trop volumineux')).toBeInTheDocument();
@@ -215,6 +245,7 @@ describe('CrmTaskModal — pièces jointes', () => {
     jest.mocked(uploadTaskDocument).mockRejectedValueOnce(new Error('Fichier trop volumineux'));
     window.confirm = jest.fn().mockReturnValue(true);
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
 
     const badFile = new File(['x'], 'Trop-gros.pdf', { type: 'application/pdf' });
     await userEvent.upload(screen.getByLabelText('Ajouter un document'), badFile);
@@ -230,6 +261,7 @@ describe('CrmTaskModal — pièces jointes', () => {
   it('édition : Ouvrir demande l’URL signée et ouvre un nouvel onglet', async () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
     await userEvent.click(screen.getByRole('button', { name: 'Ouvrir « Devis.pdf »' }));
     await waitFor(() => expect(getTaskDocumentUrl).toHaveBeenCalledWith({
       taskId: 't-9', documentId: 'd-1', accessToken: 'token-test',
@@ -240,18 +272,20 @@ describe('CrmTaskModal — pièces jointes', () => {
 
   // Résolution controleur — sizeBytes: null est une garde SQL délibérée (taille illisible),
   // à ne JAMAIS confondre avec une taille de 0 octet : les deux doivent rester distinguables.
-  it('sizeBytes null affiche « taille inconnue », jamais « 0 Ko »', () => {
+  it('sizeBytes null affiche « taille inconnue », jamais « 0 Ko »', async () => {
     const taskWithUnknownSize = {
       ...taskFixture,
       documents: [{ id: 'd-3', title: 'Sans-taille.pdf', mimeType: 'application/pdf', sizeBytes: null, createdAt: null }],
     };
     renderModal({ task: taskWithUnknownSize, objectOptions: [] });
+    await openAttachments();
     expect(screen.getByText('taille inconnue')).toBeInTheDocument();
     expect(screen.queryByText('0 Ko')).not.toBeInTheDocument();
   });
 
-  it('sizeBytes: 1234 → arrondi en Ko, distinct de « taille inconnue »', () => {
+  it('sizeBytes: 1234 → arrondi en Ko, distinct de « taille inconnue »', async () => {
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
     expect(screen.getByText('1 Ko')).toBeInTheDocument();
     expect(screen.queryByText('taille inconnue')).not.toBeInTheDocument();
   });
@@ -261,12 +295,13 @@ describe('CrmTaskModal — pièces jointes', () => {
   // `value === null` AVANT `value < 1024` — si l'ordre s'inversait, `0` tomberait dans la
   // branche `null` (0 est faux comme condition, mais `0 < 1024` est vrai AVANT le check
   // null si celui-ci passe après) et devrait rendre « 0 o », pas « taille inconnue ».
-  it('sizeBytes: 0 affiche « 0 o », jamais « taille inconnue »', () => {
+  it('sizeBytes: 0 affiche « 0 o », jamais « taille inconnue »', async () => {
     const taskWithZeroSize = {
       ...taskFixture,
       documents: [{ id: 'd-4', title: 'Vide.pdf', mimeType: 'application/pdf', sizeBytes: 0, createdAt: null }],
     };
     renderModal({ task: taskWithZeroSize, objectOptions: [] });
+    await openAttachments();
     expect(screen.getByText('0 o')).toBeInTheDocument();
     expect(screen.queryByText('taille inconnue')).not.toBeInTheDocument();
   });
@@ -274,9 +309,10 @@ describe('CrmTaskModal — pièces jointes', () => {
   // Jeton pas encore lu (accessToken === null) : les boutons restent désactivés — sinon
   // l'appel partirait sans Authorization et la route répondrait 401 sans que l'utilisateur
   // comprenne pourquoi.
-  it('jeton non encore lu : Ouvrir/Supprimer/Ajouter restent désactivés', () => {
+  it('jeton non encore lu : Ouvrir/Supprimer/Ajouter restent désactivés', async () => {
     mockAccessToken.mockReturnValue(null);
     renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
     expect(screen.getByRole('button', { name: 'Ouvrir « Devis.pdf »' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Ajouter un document' })).toBeDisabled();

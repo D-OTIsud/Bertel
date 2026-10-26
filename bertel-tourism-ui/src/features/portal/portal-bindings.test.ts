@@ -653,10 +653,24 @@ describe('setStartingPrice / readStartingPrice', () => {
     expect(setStartingPrice(pricing, { free: false, amount: '12,50', amountMax: '', unitCode: 'par_nuit' }).prices[0].amount).toBe('12.50');
   });
 
-  it('« gratuit » bascule le public sur gratuit et remet le montant à 0', () => {
+  it('« gratuit » met le montant à 0 sans remplacer le public adulte', () => {
     const next = setStartingPrice(pricing, { free: true, amount: '', amountMax: '', unitCode: 'par_nuit' });
-    expect(next.prices[0]).toMatchObject({ kindCode: 'gratuit', kindId: 'pk2', amount: '0', amountMax: '' });
+    expect(next.prices[0]).toMatchObject({ kindCode: 'adulte', kindId: 'pk1', amount: '0', amountMax: '' });
     expect(readStartingPrice(next).free).toBe(true);
+  });
+
+  it('un tarif enfant à zéro est lu gratuit sans perdre son public', () => {
+    const childFree = { ...pricing, prices: [{ ...pricing.prices[1], indicationCode: 'principal', amount: '0.00' }] } as unknown as ObjectWorkspacePricingModule;
+    expect(readStartingPrice(childFree)).toMatchObject({ free: true, amount: '', unitCode: 'par_nuit' });
+    const saved = setStartingPrice(childFree, { free: true, amount: '', amountMax: '', unitCode: 'par_nuit' });
+    expect(saved.prices[0]).toMatchObject({ kindCode: 'enfant', kindId: 'pk3', amount: '0' });
+  });
+
+  it('un ancien code gratuit reste lisible et redevient adulte quand le tarif est payé', () => {
+    const legacy = { ...pricing, prices: [{ ...pricing.prices[0], kindId: 'pk2', kindCode: 'gratuit', kindLabel: 'Gratuit', amount: '0' }] } as unknown as ObjectWorkspacePricingModule;
+    expect(readStartingPrice(legacy).free).toBe(true);
+    const paid = setStartingPrice(legacy, { free: false, amount: '25', amountMax: '', unitCode: 'par_nuit' });
+    expect(paid.prices[0]).toMatchObject({ kindCode: 'adulte', kindId: 'pk1', amount: '25' });
   });
 
   it('crée une ligne principale « adulte » quand il n’y en a pas', () => {
@@ -665,6 +679,12 @@ describe('setStartingPrice / readStartingPrice', () => {
     expect(next.prices[0]).toMatchObject({
       recordId: null, kindCode: 'adulte', indicationCode: 'principal', unitCode: 'par_personne', unitId: 'pu2', amount: '45', currency: 'EUR',
     });
+  });
+
+  it('crée un tarif gratuit avec le public adulte et un montant nul', () => {
+    const empty = { ...pricing, prices: [] } as unknown as ObjectWorkspacePricingModule;
+    const next = setStartingPrice(empty, { free: true, amount: '', amountMax: '', unitCode: 'par_personne' });
+    expect(next.prices[0]).toMatchObject({ kindCode: 'adulte', kindId: 'pk1', amount: '0' });
   });
 
   it('ne crée aucune ligne vide', () => {

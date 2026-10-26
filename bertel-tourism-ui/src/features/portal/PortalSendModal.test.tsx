@@ -9,8 +9,8 @@
  *     rejoue à l'approbation. Une projection qui déborderait sur `payload` ferait approuver un
  *     contenu que personne n'a construit.
  *
- *  2. Une rubrique en mode dégradé (`unavailable`) n'est JAMAIS envoyée. `buildContributorSubmission`
- *     n'a aucune garde de ce genre : elle est ici, et nulle part ailleurs côté front.
+ *  2. Une rubrique en mode dégradé (`unavailable`) n'est JAMAIS envoyée. Le builder revérifie
+ *     baseline et brouillon pour bloquer aussi une copie locale ancienne ou des rubriques périmées.
  *
  *  3. UN SEUL appel : le RPC est transactionnel, un échec ne laisse rien passer.
  */
@@ -23,8 +23,14 @@ import { portalDraftKey, readPortalSent } from './usePortalDraft';
 import * as portalService from '../../services/portal';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import type { WorkspaceModuleId } from '../../services/object-workspace';
+import { readWriteCompatibility } from '../../services/write-compatibility';
+import { useSessionStore } from '../../store/session-store';
 
 jest.mock('../../services/portal');
+jest.mock('../../services/write-compatibility', () => ({
+  readWriteCompatibility: jest.fn().mockResolvedValue({ compatible: true, clientVersion: 1, minimumClientVersion: 1, serverWriteContractVersion: 1 }),
+}));
 const mockedPortal = portalService as jest.Mocked<typeof portalService>;
 
 const OBJ = 'RESRUN0001';
@@ -116,7 +122,7 @@ function rubrics(over: Partial<Parameters<typeof buildPortalRubrics>[0]> = {}): 
   });
 }
 
-function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor?: ObjectEditorState } = {}) {
+function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor?: ObjectEditorState; recoveryConflicts?: WorkspaceModuleId[] } = {}) {
   const editor = over.editor ?? fakeEditor();
   const onSent = over.onSent ?? jest.fn();
   const onNoteChange = jest.fn();
@@ -132,6 +138,7 @@ function setup(over: { rubrics?: BuiltPortalRubric[]; onSent?: jest.Mock; editor
       note=""
       onNoteChange={onNoteChange}
       onSent={onSent}
+      recoveryConflicts={over.recoveryConflicts}
     />,
   );
   return { editor, onSent, onNoteChange };
@@ -149,6 +156,24 @@ beforeEach(() => {
 });
 
 describe('PortalSendModal', () => {
+  it('bloque l’envoi si le protocole serveur est incompatible', async () => {
+    const priorDemoMode = useSessionStore.getState().demoMode;
+    useSessionStore.setState({ demoMode: false });
+    (readWriteCompatibility as jest.Mock).mockResolvedValueOnce({ compatible: false, clientVersion: 2, minimumClientVersion: 1, serverWriteContractVersion: 1, reason: 'versions incompatibles' });
+    setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText(/versions incompatibles/)).toBeInTheDocument();
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+    useSessionStore.setState({ demoMode: priorDemoMode });
+  });
+
+  it('ne soumet pas tant qu’un conflit de reprise du brouillon reste à vérifier', async () => {
+    render(<PortalSendModal open onOpenChange={jest.fn()} objectId={OBJ} userId={USER} archetype="RES" editor={fakeEditor()} rubrics={rubrics()} note="" onNoteChange={jest.fn()} onSent={jest.fn()} recoveryConflicts={['contacts']} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByText(/brouillon a été conservé/)).toBeInTheDocument();
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+  });
+
   it('liste les rubriques modifiées avec leur régime, en mots', () => {
     setup();
 
@@ -190,7 +215,7 @@ describe('PortalSendModal', () => {
   });
 
   it('une rubrique INDISPONIBLE mais modifiée n’est JAMAIS envoyée', async () => {
-    // `buildContributorSubmission` n'a aucune garde `unavailableReason` : elle est ici.
+    // Le filtrage de rubrique écarte d'abord les lectures dégradées visibles dans l'UI.
     const degraded = rubrics({
       draft: modules({
         contacts: { objectItems: [], webItems: [], kindOptions: [], roleOptions: [] },
@@ -204,6 +229,17 @@ describe('PortalSendModal', () => {
     await waitFor(() => expect(mockedPortal.submitActorFiche).toHaveBeenCalledTimes(1));
     const [, envelopes] = mockedPortal.submitActorFiche.mock.calls[0];
     expect(envelopes.map((entry) => (entry.metadata as { section: string }).section)).toEqual(['contacts']);
+  });
+
+  it.each(['baseline', 'draft'] as const)('refuse tout RPC si la tranche %s est indisponible malgré une rubrique dirty', async (source) => {
+    const editor = fakeEditor();
+    const incomplete = modules({ openings: { periods: [], periodTypeOptions: [], unavailableReason: 'Horaires non chargés.' } });
+    const guardedEditor = { ...editor, [source]: incomplete } as ObjectEditorState;
+    setup({ editor: guardedEditor, rubrics: rubrics({ dirty: { openings: true } }) });
+    await userEvent.click(screen.getByRole('button', { name: 'Envoyer' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/préparer/i);
+    expect(mockedPortal.submitActorFiche).not.toHaveBeenCalled();
+    expect(guardedEditor.commitModules).not.toHaveBeenCalled();
   });
 
   it('envoie toutes les traductions longues en clair et les conserve dans le récapitulatif envoyé', async () => {

@@ -27,11 +27,12 @@ export function RelationPicker({ currentObjectId, onPick }: RelationPickerProps)
         <span className="rpick__icon">⌕</span>
         <input
           className="rpick__input"
+          aria-label="Rechercher une fiche à lier"
           value={query}
           placeholder="Rechercher une fiche à lier"
           onChange={(event) => setQuery(event.target.value)}
         />
-        <span className="rpick__hint">↑ ↓ naviguer · Entrée sélectionner · Esc fermer</span>
+        <span className="rpick__hint">Tab naviguer · Entrée sélectionner · Esc fermer</span>
       </div>
       <div className="rpick__filters">
         {FILTERS.map((item) => (

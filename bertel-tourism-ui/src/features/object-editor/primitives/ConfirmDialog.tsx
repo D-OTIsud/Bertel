@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -35,7 +35,7 @@ export function ConfirmDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <p className="confirm-dialog__message">{message}</p>
+        <DialogDescription asChild><p className="confirm-dialog__message">{message}</p></DialogDescription>
         <DialogFooter>
           <button type="button" className="btn" onClick={onCancel}>{cancelLabel}</button>
           <button

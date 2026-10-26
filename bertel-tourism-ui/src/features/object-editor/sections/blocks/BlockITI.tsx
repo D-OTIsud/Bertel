@@ -276,6 +276,7 @@ export function BlockITI({ editor, folded }: SectionProps) {
             open={assocOpen}
             objectId={editor.objectId}
             roleOptions={itinerary.assocRoleOptions}
+            trackGeojson={itinerary.trackGeojson}
             onSave={(assoc) => { patch({ associatedObjects: [...itinerary.associatedObjects, assoc] }); setAssocOpen(false); }}
             onClose={() => setAssocOpen(false)}
           />

@@ -72,11 +72,11 @@ describe('writePortalDraft / readPortalDraft', () => {
     expect(read?.savedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
-  it('ÉCARTE les tranches que l’office a modifiées depuis la prise', () => {
+  it('préserve les valeurs locales conflictuelles quand l’office a modifié la même tranche', () => {
     writePortalDraft(USER, OBJ, server(), dirty(), 'un mot');
 
-    // L'office a retouché LA tranche que le brouillon porte : la rejouer écraserait son
-    // travail.
+    // La saisie locale est conservée, nommée comme conflit, et ne peut pas être envoyée
+    // avant que le partenaire vérifie explicitement cette rubrique.
     const moved = server({
       contacts: {
         objectItems: [{ id: 'c1', kindCode: 'phone', isPublic: true, value: '0262 11 11 11' }],
@@ -84,7 +84,7 @@ describe('writePortalDraft / readPortalDraft', () => {
       },
     });
     const read = readPortalDraft(USER, OBJ, moved);
-    expect(read?.draft).toEqual({});
+    expect((read?.draft.contacts as { objectItems: { value: string }[] }).objectItems[0].value).toBe('0692 45 12 30');
     expect(read?.droppedModules).toEqual(['contacts']);
   });
 
@@ -141,7 +141,7 @@ describe('writePortalDraft / readPortalDraft', () => {
     expect(readPortalDraft(USER, OBJ, elsewhere)?.draft.contacts).toBeDefined();
   });
 
-  it('le MESSAGE survit même quand les tranches sont écartées, et les rubriques perdues sont NOMMÉES', () => {
+  it('le MESSAGE et le brouillon survivent aux conflits, qui sont nommés', () => {
     // La bannière disait « refaites vos changements » alors que le contenu venait d'être
     // supprimé, message à l'office compris. Un message libre n'écrase rien : il n'y a
     // aucune raison de le jeter.
@@ -155,7 +155,7 @@ describe('writePortalDraft / readPortalDraft', () => {
     });
     const read = readPortalDraft(USER, OBJ, moved);
     expect(read?.note).toBe('ma piscine est en travaux');
-    expect(read?.draft).toEqual({});
+    expect((read?.draft.contacts as { objectItems: { value: string }[] }).objectItems[0].value).toBe('0692 45 12 30');
     expect(read?.droppedModules).toEqual(['contacts']);
   });
 
@@ -272,7 +272,7 @@ describe('usePortalDraft', () => {
     expect(result.current.discarded).toBe(false);
   });
 
-  it('signale l’abandon quand l’office a retouché la MÊME tranche (et n’écrase rien)', () => {
+  it('préserve un ancien brouillon sans baseline et signale la tranche à vérifier', () => {
     writePortalDraft(USER, OBJ, server(), dirty(), 'gardé quand même');
     const editor = fakeEditor();
 
@@ -285,8 +285,8 @@ describe('usePortalDraft', () => {
     const { result } = renderHook(() => usePortalDraft({ userId: USER, objectId: OBJ, serverModules: moved, editor }));
 
     expect(result.current.discarded).toBe(true);
-    expect(editor.replaceModule).not.toHaveBeenCalled();
-    // Le message, lui, n'écrase rien : il survit à l'abandon des tranches.
+    expect(editor.replaceModule).toHaveBeenCalledWith('contacts', expect.objectContaining({ objectItems: expect.anything() }));
+    // Le message et la saisie restent disponibles pour vérification explicite.
     expect(result.current.note).toBe('gardé quand même');
   });
 

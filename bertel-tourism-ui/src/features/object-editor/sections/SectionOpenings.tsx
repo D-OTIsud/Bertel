@@ -8,6 +8,7 @@ import { OpeningPeriodEditModal } from '../widgets/OpeningPeriodEditModal';
 import { ClosureEditModal } from '../widgets/ClosureEditModal';
 import { createPeriodDraft } from './opening-period-edit';
 import { currentPeriodIndex, formatPeriodRange } from './blocks/opening-period-meta';
+import { isOpeningHoursException, openingExceptionKind } from './opening-exception';
 
 /** Human label for a closure row: explicit name, else its formatted date range. */
 function closureLabel(closure: ObjectWorkspaceOpeningPeriod): string {
@@ -22,10 +23,9 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
   const [addingClosure, setAddingClosure] = useState(false);
   const [editingClosure, setEditingClosure] = useState<ObjectWorkspaceOpeningPeriod | null>(null);
 
-  // Closures are authored separately (see ClosureEditModal). The weekly-hours period
-  // editor and its overlap check only see OPEN periods, never the closure layer.
-  const openPeriods = periods.filter((period) => !period.isClosure);
-  const closures = periods.filter((period) => period.isClosure);
+  // This marker only selects the editor; SQL priority comes from dates/rank, never extra.
+  const openPeriods = periods.filter((period) => !period.isClosure && !isOpeningHoursException(period));
+  const closures = periods.filter((period) => period.isClosure || isOpeningHoursException(period));
 
   function replace(next: ObjectWorkspaceOpeningPeriod[]) {
     editor.replaceModule('openings', { ...openings, periods: next });
@@ -55,7 +55,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
   }
 
   function deleteClosure(closure: ObjectWorkspaceOpeningPeriod) {
-    if (!window.confirm(`Supprimer la fermeture « ${closureLabel(closure)} » ?`)) {
+    if (!window.confirm(`Supprimer ${closure.isClosure ? 'la fermeture' : 'l’exception'} « ${closureLabel(closure)} » ?`)) {
       return;
     }
     replace(periods.filter((period) => period !== closure));
@@ -84,11 +84,11 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
 
       <div className="op-closures">
         <div className="chip-group__label" style={{ margin: '16px 0 6px' }}>
-          Fermetures exceptionnelles
+          Exceptions
         </div>
         {closures.length === 0 ? (
           <p className="muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
-            Jours fériés, travaux ou fermetures ponctuelles — prioritaires sur les horaires.
+            Jours fériés, travaux ou fermetures ponctuelles.
           </p>
         ) : (
           <div className="repeater">
@@ -98,7 +98,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
                 className="rep-row"
                 style={{ gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr) auto', alignItems: 'center' }}
               >
-                <span style={{ fontWeight: 600, minWidth: 0 }}>{closure.label || 'Fermeture'}</span>
+                <span style={{ fontWeight: 600, minWidth: 0 }}>{closure.label || (closure.isClosure ? 'Fermeture' : openingExceptionKind(closure) === 'modified' ? 'Horaires modifiés' : 'Ouverture exceptionnelle')}</span>
                 <span className="muted" style={{ fontSize: 12 }}>
                   {formatPeriodRange(closure)}
                 </span>
@@ -125,7 +125,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           </div>
         )}
         <button type="button" className="rep-add" onClick={() => setAddingClosure(true)}>
-          <Plus size={14} aria-hidden style={{ verticalAlign: 'middle' }} /> Ajouter une fermeture
+          <Plus size={14} aria-hidden style={{ verticalAlign: 'middle' }} /> Ajouter une exception
         </button>
       </div>
 
@@ -133,8 +133,8 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
         <OpeningPeriodEditModal
           open
           mode="add"
-          draft={createPeriodDraft(openPeriods.length)}
-          existingPeriods={openPeriods}
+          draft={createPeriodDraft(periods.length)}
+          existingPeriods={periods.filter((period) => !period.isClosure)}
           periodTypeOptions={openings.periodTypeOptions}
           onClose={() => setAdding(false)}
           onSave={(period) => {
@@ -149,7 +149,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           open
           mode="edit"
           draft={openPeriods[editingIndex]}
-          existingPeriods={openPeriods}
+          existingPeriods={periods.filter((period) => !period.isClosure)}
           periodTypeOptions={openings.periodTypeOptions}
           onClose={() => setEditingIndex(null)}
           onSave={handleEditSave}
@@ -160,9 +160,10 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
         <ClosureEditModal
           open
           mode="add"
+          existingPeriods={periods}
           onClose={() => setAddingClosure(false)}
           onSave={(closure) => {
-            replace([...periods, closure]);
+            replace([...periods, { ...closure, order: String(periods.length + 1) }]);
             setAddingClosure(false);
           }}
         />
@@ -173,6 +174,7 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           open
           mode="edit"
           draft={editingClosure}
+          existingPeriods={periods}
           onClose={() => setEditingClosure(null)}
           onSave={(closure) => {
             replace(periods.map((period) => (period === editingClosure ? closure : period)));

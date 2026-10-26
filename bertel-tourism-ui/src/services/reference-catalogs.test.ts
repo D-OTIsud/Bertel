@@ -45,7 +45,7 @@ describe('fetchReferenceCatalogs', () => {
     selectSpy.mockClear();
   });
 
-  test('couvre les 27 domaines ref_code en UN seul appel', async () => {
+  test('couvre les domaines ref_code, dont weekday, en UN seul appel', async () => {
     await fetchReferenceCatalogs();
 
     const refCodeCalls = inSpy.mock.calls.filter(([table]) => table === 'ref_code');

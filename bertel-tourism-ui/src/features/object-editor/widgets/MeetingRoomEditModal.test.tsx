@@ -18,7 +18,7 @@ describe('MeetingRoomEditModal', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: 'Vidéoprojecteur' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceMeetingRoomItem).equipmentCodes).toEqual(['projector']);
   });
 });

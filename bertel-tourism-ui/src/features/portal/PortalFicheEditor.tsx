@@ -29,6 +29,8 @@ import {
 import { readPublicContact } from './portal-bindings';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 import { useObjectEditorState } from '../object-editor/useObjectEditorState';
+import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
+import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { useSessionStore } from '../../store/session-store';
 import type { ArchetypeCode } from '../object-editor/archetypes';
 import type { MySubmission, PortalFiche, PortalVisibility } from '../../services/portal';
@@ -86,6 +88,14 @@ export function PortalFicheEditor({
     editor,
     onStorageFailure: reportStorageFailure,
   });
+  const portalEditor: ObjectEditorState = {
+    ...editor,
+    replaceModule: <K extends keyof ObjectWorkspaceModules>(key: K, value: ObjectWorkspaceModules[K]) => {
+      editor.replaceModule(key, value);
+      const module = (Object.keys(MODULE_KEY_MAP) as WorkspaceModuleId[]).find((entry) => MODULE_KEY_MAP[entry] === key);
+      if (module) draft.resolveConflict(module);
+    },
+  };
 
   const [sendOpen, setSendOpen] = useState(false);
   const [justSent, setJustSent] = useState(false);
@@ -333,7 +343,7 @@ export function PortalFicheEditor({
         archetype={archetype}
         rubrics={rubrics}
         activeRubricId={activeRubricId}
-        editor={editor}
+        editor={portalEditor}
         rejections={rejections}
         approvedModules={approvedModules}
         discardedRubrics={discardedRubrics}
@@ -358,11 +368,12 @@ export function PortalFicheEditor({
         objectId={objectId}
         userId={userId}
         archetype={archetype}
-        editor={editor}
+        editor={portalEditor}
         rubrics={rubrics}
         note={draft.note}
         onNoteChange={draft.setNote}
         onSent={handleSent}
+      recoveryConflicts={draft.discardedModules}
       />
     </>
   );

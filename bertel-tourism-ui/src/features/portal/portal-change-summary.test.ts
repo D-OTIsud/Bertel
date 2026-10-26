@@ -187,6 +187,14 @@ describe('describePortalChange', () => {
     expect(describePortalChange('pricing', modules(shape([])), after, 'VIS').after).toBe('Gratuit');
   });
 
+  it('tarifs : un montant public nul se dit gratuit, une chaîne vide reste sur demande', () => {
+    const shape = (prices: unknown[]) => ({ pricing: { prices, priceUnitOptions: [], priceKindOptions: [], priceTypeOptions: [], discounts: [], promotions: [] } });
+    const zeroChild = modules(shape([{ recordId: 'p1', kindCode: 'enfant', indicationCode: 'principal', amount: '0,00', amountMax: '' }]));
+    const blank = modules(shape([{ recordId: 'p2', kindCode: 'adulte', indicationCode: 'principal', amount: '', amountMax: '' }]));
+    expect(describePortalChange('pricing', modules(shape([])), zeroChild, 'HEB').after).toBe('Gratuit');
+    expect(describePortalChange('pricing', modules(shape([])), blank, 'HEB').after).toBe('Tarif sur demande');
+  });
+
   it('activité : durée, participants et âge sur une ligne', () => {
     const before = modules({ activity: { durationMin: '', minParticipants: '', maxParticipants: '', minAge: '' } });
     const after = modules({ activity: { durationMin: '120', minParticipants: '2', maxParticipants: '8', minAge: '6' } });

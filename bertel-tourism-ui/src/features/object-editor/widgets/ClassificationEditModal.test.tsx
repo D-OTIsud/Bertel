@@ -33,10 +33,8 @@ const grantedLabel: ObjectWorkspaceDistinctionSchemeOption = {
 const SCHEMES = [starsScheme, grantedLabel];
 
 /** Drive the searchable référentiel picker: open → type → click the matching option. */
-function selectRef(search: string, label: string) {
-  fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-  fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: search } });
-  fireEvent.click(screen.getByRole('option', { name: label }));
+function selectRef(_search: string, label: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
 }
 
 function renderAdd(over: Partial<Parameters<typeof ClassificationEditModal>[0]> = {}) {
@@ -60,9 +58,8 @@ function renderAdd(over: Partial<Parameters<typeof ClassificationEditModal>[0]> 
 describe('ClassificationEditModal', () => {
   it('groups the référentiel picker into collapsible categories', () => {
     renderAdd();
-    fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-    expect(screen.getByRole('button', { name: /Classements officiels/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Labels qualité/ })).toBeInTheDocument();
+    expect(screen.getByText('Classements officiels')).toBeInTheDocument();
+    expect(screen.getByText('Labels qualité')).toBeInTheDocument();
   });
 
   it('labels the sustainability category for durabilité labels', () => {
@@ -76,16 +73,14 @@ describe('ClassificationEditModal', () => {
       valueOptions: [{ id: 'g', code: 'granted', label: 'Obtenu' }],
     };
     renderAdd({ schemes: [starsScheme, sustaScheme] });
-    fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-    expect(screen.getByRole('button', { name: /Durabilité \/ environnement/ })).toBeInTheDocument();
+    expect(screen.getByText('Durabilité / environnement')).toBeInTheDocument();
   });
 
   it('shows a value selector with levels for a star scheme', () => {
     renderAdd();
     selectRef('hotel', 'Classement hôtelier');
-    const valueSelect = screen.getByLabelText('Valeur attribuée');
-    expect(valueSelect.tagName).toBe('SELECT');
-    expect(within(valueSelect).getByRole('option', { name: '3 étoiles' })).toBeInTheDocument();
+    const valueSelect = screen.getByRole('group', { name: 'Valeur attribuée' });
+    expect(within(valueSelect).getByRole('button', { name: '3 étoiles' })).toBeInTheDocument();
   });
 
   it('hides the value selector for a single-value label and resolves the value automatically', () => {
@@ -93,8 +88,8 @@ describe('ClassificationEditModal', () => {
     selectRef('maitre', 'Maîtres Restaurateurs');
     expect(screen.queryByLabelText('Valeur attribuée')).not.toBeInTheDocument();
     expect(screen.getByText('Marque accordée')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-01-01' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceDistinctionItem;
     expect(saved.valueCode).toBe('granted');
   });
@@ -103,41 +98,40 @@ describe('ClassificationEditModal', () => {
     renderAdd();
     selectRef('hotel', 'Classement hôtelier');
     // Defaults to status "Accordée" → save blocked until an acquisition date is set.
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-01-01' } });
     // Validity left empty — still saveable (some labels never expire).
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeEnabled();
   });
 
   it('does not require an acquisition date for an en cours / requested entry', () => {
     renderAdd();
     selectRef('hotel', 'Classement hôtelier');
-    fireEvent.change(screen.getByLabelText('Statut'), { target: { value: 'requested' } });
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'En cours' }));
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeEnabled();
   });
 
   it('blocks saving when the validity date precedes the acquisition date', () => {
     renderAdd();
     selectRef('hotel', 'Classement hôtelier');
-    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-06-01' } });
+    fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-06-01' } });
     fireEvent.change(screen.getByLabelText("Valable jusqu'au"), { target: { value: '2025-01-01' } });
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeDisabled();
     expect(screen.getByRole('alert')).toHaveTextContent(/postérieure/);
   });
 
   it('offers the canonical granted status, not the legacy active alias', () => {
     renderAdd();
-    const statusValues = screen.getAllByRole('option').map((o) => o.getAttribute('value'));
-    expect(statusValues).toContain('granted');
-    expect(statusValues).not.toContain('active');
+    expect(screen.getByRole('button', { name: 'Accordé' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('button', { name: 'Active' })).not.toBeInTheDocument();
   });
 
   it('returns the chosen scheme + value on save', () => {
     const { onSave } = renderAdd();
     selectRef('hotel', 'Classement hôtelier');
-    fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '3' } });
-    fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: '3 étoiles' }));
+    fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-01-01' } });
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceDistinctionItem;
     expect(saved.schemeCode).toBe('hot_stars');
     expect(saved.valueCode).toBe('3');
@@ -148,9 +142,7 @@ describe('ClassificationEditModal', () => {
     renderAdd({
       existingItems: [{ ...createClassificationDraft(), schemeCode: 'hot_stars', valueCode: '4' }],
     });
-    fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-    fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'classement' } });
-    expect(screen.queryByRole('option', { name: 'Classement hôtelier' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Classement hôtelier' })).not.toBeInTheDocument();
   });
 
   it('locks the référentiel in edit mode but keeps the value editable', () => {
@@ -169,7 +161,7 @@ describe('ClassificationEditModal', () => {
       />,
     );
     expect(screen.queryByRole('combobox', { name: 'Référentiel' })).not.toBeInTheDocument();
-    expect(screen.getByText('Classement hôtelier')).toBeInTheDocument();
+    expect(screen.getAllByText('Classement hôtelier').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Valeur attribuée')).toBeInTheDocument();
   });
 });

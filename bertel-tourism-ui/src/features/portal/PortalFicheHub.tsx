@@ -279,11 +279,11 @@ export function PortalFicheHub({
               {discardedRubrics.length > 0 ? (
                 <>
                   {' '}
-                  Ces rubriques n’ont pas été reprises, pour ne pas écraser son travail :{' '}
-                  <strong>{discardedRubrics.join(', ')}</strong>. Vérifiez la fiche, puis refaites ces changements.
+                  Votre brouillon est conservé. Vérifiez ces rubriques avant l’envoi :{' '}
+                  <strong>{discardedRubrics.join(', ')}</strong>.
                 </>
               ) : (
-                <> Les modifications enregistrées sur cet appareil n’ont pas été reprises.</>
+                <> Les modifications enregistrées sur cet appareil sont conservées pour vérification.</>
               )}{' '}
               Votre message à l’office a été gardé.
             </span>

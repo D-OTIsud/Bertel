@@ -43,6 +43,7 @@ import { useEditorPresence } from './presence/useEditorPresence';
 import { SectionPresenceBadge } from './widgets/SectionPresenceBadge';
 import { PeerSavedBanner } from './widgets/PeerSavedBanner';
 import { ConfirmDialog } from './primitives';
+import { EditorModalContext } from './primitives/EditorModal';
 import { buildEditorTools, archiveTargetStatus, type EditorToolKey } from './shell/editor-tools';
 import type { HistoryRailItem } from './widgets/HistoryRail';
 import { useEditorScrollSpy } from './useEditorScrollSpy';
@@ -80,9 +81,11 @@ export function ObjectEditPage({ objectId }: { objectId: string }) {
   return (
     <>
       {loadError}
+      <EditorModalContext.Provider value={`${data.name} · ${data.type ? TYPE_LABEL[data.type as keyof typeof TYPE_LABEL] || data.type : meta.family}`}>
       <div style={{ display: 'contents' }} inert={isError || undefined}>
         <EditorReady resource={data} objectId={objectId} meta={meta} />
       </div>
+      </EditorModalContext.Provider>
     </>
   );
 }
@@ -168,7 +171,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const router = useRouter();
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
-  const editor = useObjectEditorState(objectId, resource.modules);
+  const userId = useSessionStore((state) => state.userId);
+  const editor = useObjectEditorState(objectId, resource.modules, userId);
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
@@ -384,6 +388,11 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
 
   /** Persist local draft modules to the database (shared by publish and draft-save). */
   async function persistDirtyModules(): Promise<{ ok: boolean; saveErrors: Issue[] }> {
+    if (editor.recoveryConflicts.length > 0) {
+      const message = 'Des modifications locales et celles du serveur se chevauchent. Gardez votre brouillon ou choisissez les valeurs du serveur avant de sauvegarder.';
+      setStatusMessage(message);
+      return { ok: false, saveErrors: [{ section: 'Brouillon local', message, tone: 'warn' }] };
+    }
     const dirty = (Object.keys(editor.dirtySections) as WorkspaceModuleId[]).filter(
       (m) => editor.dirtySections[m],
     );
@@ -395,12 +404,15 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       canWriteCanonicalDirect,
       baseline: editor.baseline,
     });
-    // Both direct saves and submitted proposals fold back into the baseline so the editor reads
-    // clean (a contributor's submitted section is no longer dirty — it is pending moderation).
+    // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(
-      [...result.saved, ...result.submitted].flatMap((m) =>
-        m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]],
-      ),
+      result.saved.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
+      { canonicalRooms: true, canonicalPlaces: true },
+    );
+    // Submitted proposals fold into the local baseline so the contributor isn't asked to
+    // submit the same unchanged values again, but they do not become canonical room records.
+    editor.commitModules(
+      result.submitted.flatMap((m) => m === 'publication' ? ['generalInfo'] : [MODULE_KEY_MAP[m]]),
     );
 
     // Tell the other editors of this fiche so they can reload before clobbering. Only direct saves
@@ -551,6 +563,23 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
         <div className="contributor-banner" role="note">
           <strong>Mode contributeur</strong> — vos modifications ne s’appliquent pas directement :
           elles sont soumises à la modération de l’organisation avant publication.
+        </div>
+      )}
+      {editor.recoveryConflicts.length > 0 && (
+        <div className="contributor-banner" role="alert">
+          <strong>Brouillon à vérifier</strong> — vos modifications locales sont conservées, mais certaines données ont aussi changé sur le serveur. La sauvegarde est bloquée jusqu’à votre choix.
+          <button
+            type="button"
+            className="ghost-button"
+            onClick={() => {
+              const keys = new Set(editor.recoveryConflicts.map((path) => path.split('.')[0].split('[')[0] as keyof ObjectWorkspaceModules));
+              for (const key of keys) {
+                if (Object.prototype.hasOwnProperty.call(editor.draft, key)) editor.resetModule(key);
+              }
+            }}
+          >
+            Utiliser les valeurs du serveur
+          </button>
         </div>
       )}
       <PeerSavedBanner

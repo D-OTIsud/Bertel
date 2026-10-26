@@ -11,7 +11,7 @@ import {
   todayMonthFraction,
   type OpeningPeriodKind,
 } from './blocks/opening-period-meta';
-import { scheduleRowsFromPeriod } from './blocks/opening-schedule';
+import { openingPeriodEditingReason, openingPeriodNotes, scheduleRowsFromPeriod } from './blocks/opening-schedule';
 import { classifyClosedDays } from './opening-period-edit';
 import { tagChipStyle } from '../../../utils/explorer-card';
 
@@ -256,6 +256,14 @@ export function OpeningPeriodsEditor({ periods, periodTypeOptions, currentIndex,
                       </span>
                     ))}
                   </div>
+                  {openingPeriodNotes(period).map(({ days, note }) => (
+                    <p key={note} className="muted" style={{ fontSize: 12, margin: '6px 0', whiteSpace: 'pre-wrap' }}>
+                      {days} — {note}
+                    </p>
+                  ))}
+                  {openingPeriodEditingReason(period) && (
+                    <p className="muted" style={{ fontSize: 12, margin: '6px 0' }}>{openingPeriodEditingReason(period)}</p>
+                  )}
                   {dateClosures.length > 0 && (
                     <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
                       Fermetures exceptionnelles : {dateClosures.join(', ')}

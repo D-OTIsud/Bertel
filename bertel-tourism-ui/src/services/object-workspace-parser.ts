@@ -115,6 +115,8 @@ export const EMPTY_POSITIONINGS: ObjectWorkspacePositionings = {
 
 export interface ObjectWorkspaceLocationForm {
   recordId: string | null;
+  altitude?: string;
+  raw?: Record<string, unknown>;
   address1: string;
   address1Suite: string;
   address2: string;
@@ -182,16 +184,24 @@ export interface ObjectWorkspaceDescriptionsModule {
 
 export interface ObjectWorkspacePlaceItem {
   recordId: string | null;
+  isNew?: boolean;
   label: string;
+  rawName?: string | null;
+  rawPlace?: Record<string, unknown>;
+  rawLocations?: Record<string, unknown>[];
+  rawDescriptions?: Record<string, unknown>[];
   position: number;
   descriptionRecordId: string | null;
   description: WorkspaceTranslatableField;
   visibility: 'public' | 'private' | 'partners';
+  rawVisibility?: string | null;
+  visibilityEdited?: boolean;
   location: ObjectWorkspaceLocationForm;
 }
 
 export interface ObjectWorkspacePlacesModule {
   items: ObjectWorkspacePlaceItem[];
+  knownPlaceIds?: string[];
   unavailableReason: string | null;
 }
 
@@ -491,12 +501,17 @@ export interface ObjectWorkspaceRoomBed {
   bedTypeCode: string;
   bedTypeLabel: string;
   quantity: string;
+  position?: number | null;
 }
 
 export interface ObjectWorkspaceRoomTypeItem {
   recordId: string | null;
+  /** Editor-only marker: stable client IDs on drafts must not be mistaken for persisted rows. */
+  isNew?: boolean;
   code: string;
   name: string;
+  rawName?: string | null;
+  extra?: Record<string, unknown> | null;
   nameTranslations: Record<string, string>;
   description: string;
   descriptionTranslations: Record<string, string>;
@@ -517,7 +532,9 @@ export interface ObjectWorkspaceRoomTypeItem {
   basePrice: string;
   currency: string;
   accessible: boolean;
+  rawAccessible?: boolean | null;
   published: boolean;
+  rawPublished?: boolean | null;
   position: string;
   amenityCodes: string[];
   mediaIds: string[];
@@ -534,12 +551,18 @@ export interface ObjectWorkspaceRoomsModule {
   bedTypeOptions: WorkspaceReferenceOption[];
   mediaOptions: WorkspaceMediaOption[];
   items: ObjectWorkspaceRoomTypeItem[];
+  /** IDs present when this editor snapshot was loaded; only omissions from this set are deletions. */
+  knownRoomIds?: string[];
   unavailableReason: string | null;
 }
 
 export interface ObjectWorkspaceMeetingRoomItem {
   recordId: string | null;
+  uid?: string;
   name: string;
+  rawName?: string | null;
+  extra?: Record<string, unknown> | null;
+  equipmentDetails?: { equipmentId: string; note: string | null; position: number | null }[];
   nameTranslations: Record<string, string>;
   areaM2: string;
   capacityTheatre: string;
@@ -552,6 +575,8 @@ export interface ObjectWorkspaceMeetingRoomItem {
 export interface ObjectWorkspaceMeetingRoomsModule {
   equipmentOptions: WorkspaceReferenceOption[];
   items: ObjectWorkspaceMeetingRoomItem[];
+  /** IDs present when this editor snapshot was loaded; protects rooms added concurrently. */
+  knownRoomIds?: string[];
   unavailableReason: string | null;
 }
 
@@ -585,9 +610,11 @@ export interface ObjectWorkspaceMenu {
   categoryCode: string;
   categoryLabel: string;
   name: string;
+  rawName?: string | null;
   description: string;
   active: boolean;
   visibility: string;
+  rawVisibility?: string | null;
   position: string;
   items: ObjectWorkspaceMenuItem[];
 }
@@ -652,6 +679,10 @@ export interface ObjectWorkspaceItineraryStageSummary {
   /** §111 C: client-only stable id for DnD keying of not-yet-saved stages (recordId is null). Not persisted. */
   uid?: string;
   name: string;
+  rawName?: string | null;
+  nameTranslations?: Record<string, string>;
+  descriptionTranslations?: Record<string, string>;
+  extra?: Record<string, unknown>;
   description: string;
   position: string;
   /** §111 C: stage type code (ref_code iti_stage_kind), stored in object_iti_stage.extra.kind. */
@@ -703,6 +734,7 @@ export interface ObjectWorkspaceItineraryModule {
   requiredEquipment: string;
   infoPlaces: string;
   childFriendly: boolean;
+  infoTranslations?: Record<string, unknown>;
   /** §111 itinerary_details.track_geojson — the trace geometry for the editor MapLibre map (null = no trace yet). */
   trackGeojson: { type: string; coordinates: number[][] } | null;
   stages: ObjectWorkspaceItineraryStageSummary[];
@@ -726,6 +758,34 @@ export interface ObjectWorkspaceOpeningWeekday {
   slots: ObjectWorkspaceOpeningSlot[];
 }
 
+/** Fields accepted by save_object_openings, kept alongside the weekly editing projection. */
+export interface ObjectWorkspaceOpeningTimeFrame {
+  id: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  recurrence: string | null;
+}
+
+export interface ObjectWorkspaceOpeningTimePeriod {
+  id: string | null;
+  closed: boolean;
+  note: string | null;
+  weekdays: { weekday_code: string }[];
+  time_frames: ObjectWorkspaceOpeningTimeFrame[];
+}
+
+export interface ObjectWorkspaceOpeningSchedule {
+  id: string | null;
+  schedule_type_id: string | null;
+  schedule_type_code: string | null;
+  name: string | null;
+  note: string | null;
+  name_i18n: Record<string, unknown> | null;
+  note_i18n: Record<string, unknown> | null;
+  extra: Record<string, unknown>;
+  time_periods: ObjectWorkspaceOpeningTimePeriod[];
+}
+
 export interface ObjectWorkspaceOpeningPeriod {
   recordId: string | null;
   order: string;
@@ -742,6 +802,19 @@ export interface ObjectWorkspaceOpeningPeriod {
   isClosure: boolean;
   closedDays: string[];
   weekdays: ObjectWorkspaceOpeningWeekday[];
+  sourcePeriodId?: string | null;
+  periodTypeId?: string | null;
+  originalSeasonTypeCode?: string;
+  originalRecurrence?: ObjectWorkspaceOpeningPeriod['recurrence'];
+  originalAllYears?: boolean;
+  nameI18n?: Record<string, unknown> | null;
+  extra?: Record<string, unknown>;
+  /** Full writer-compatible tree, including closed days and otherwise hidden notes. */
+  schedules?: ObjectWorkspaceOpeningSchedule[];
+  /** Notes belong to time periods; a simple weekly projection keeps their origin per day. */
+  weekdayNotes?: Record<string, string | null>;
+  /** Only this period is read-only when its full tree cannot be edited by one weekly grid. */
+  editingUnavailableReason?: string | null;
 }
 
 /** Admin-extensible period-type option (ref_code domain `opening_period_type`). */
@@ -1325,6 +1398,7 @@ function parseLocationRecord(value: unknown): ObjectWorkspaceLocationForm {
   const record = readRecord(value);
   return {
     recordId: readString(record.id) || null,
+    altitude: readString(record.altitude_m, readString(record.altitude)),
     address1: readString(record.address1, readString(record.address)),
     address1Suite: readString(record.address1_suite),
     address2: readString(record.address2),
@@ -1423,14 +1497,15 @@ function normalizePlaceVisibilityCode(value: string): 'public' | 'private' | 'pa
 
 export function createEmptyPlaceItem(position = 0): ObjectWorkspacePlaceItem {
   return {
-    recordId: null,
+    recordId: crypto.randomUUID(),
+    isNew: true,
     label: '',
     position,
-    descriptionRecordId: null,
+    descriptionRecordId: crypto.randomUUID(),
     description: { baseValue: '', values: {} },
     visibility: 'public',
     location: {
-      recordId: null,
+      recordId: crypto.randomUUID(),
       address1: '',
       address1Suite: '',
       address2: '',
@@ -1447,34 +1522,43 @@ export function createEmptyPlaceItem(position = 0): ObjectWorkspacePlaceItem {
   };
 }
 
-function parseWorkspacePlacesModule(raw: Record<string, unknown>): ObjectWorkspacePlacesModule {
+export function parseWorkspacePlacesModule(raw: Record<string, unknown>): ObjectWorkspacePlacesModule {
   const items = readArray(raw.places).map((place, index) => {
     const descriptions = readArray(place.descriptions);
     const source = descriptions[0] ?? readRecord(place.object_place_description);
-    const locationRecord = readRecord(place.location ?? place.object_location);
+    const locations = readArray(place.locations);
+    const locationRecord = locations.find((row) => row.is_main_location === true)
+      ?? locations[0] ?? readRecord(place.location ?? place.object_location);
     const descriptionScope = parseDescriptionScope({
       record: source,
       scope: 'place',
       placeId: readString(place.id, `place-${index}`),
-      label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
+      label: readString(place.name, readString(place.label)),
     });
     const location = parseLocationRecord(locationRecord);
     return {
       recordId: readString(place.id) || null,
-      label: readString(place.name, readString(place.label, `Sous-lieu ${index + 1}`)),
+      label: readString(place.name, readString(place.label)),
+      rawName: typeof (place.name ?? place.label) === 'string' ? String(place.name ?? place.label) : null,
+      rawPlace: place,
+      rawLocations: readArray(place.locations).length ? readArray(place.locations) : Object.keys(locationRecord).length ? [locationRecord] : [],
+      rawDescriptions: descriptions,
       position: readPosition(place.position, index),
       descriptionRecordId: readString(source.id) || null,
       description: descriptionScope.description,
       visibility: normalizePlaceVisibilityCode(readString(source.visibility, 'public')),
+      rawVisibility: source.id ? (typeof source.visibility === 'string' ? source.visibility : null) : undefined,
       location: {
         ...location,
+        raw: locationRecord,
+        altitude: readString(locationRecord.altitude_m, readString(locationRecord.altitude)),
         recordId: readString(locationRecord.id) || null,
         direction: readString(locationRecord.direction_md, readString(locationRecord.direction)),
       },
     } satisfies ObjectWorkspacePlaceItem;
   });
 
-  return { items, unavailableReason: null };
+  return { items, knownPlaceIds: items.map((item) => item.recordId).filter((id): id is string => Boolean(id)), unavailableReason: null };
 }
 
 function parseDescriptionScope(params: {
@@ -2097,7 +2181,10 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
     return {
       recordId: readString(record.id) || null,
       code: readString(record.code, `room-${index + 1}`),
-      name: readString(record.name, `Unite ${index + 1}`),
+      name: readString(record.name),
+      rawName: typeof record.name === 'string' ? record.name : null,
+    extra: record.extra !== null && typeof record.extra === 'object' && !Array.isArray(record.extra)
+      ? record.extra as Record<string, unknown> : null,
       nameTranslations: readTextMap(record.name_i18n),
       description: readString(record.description),
       descriptionTranslations: readTextMap(record.description_i18n),
@@ -2116,18 +2203,20 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
       roomTypeCode: readString(record.room_type_code),
       roomTypeLabel: readString(record.room_type_label),
       basePrice: readString(record.base_price),
-      currency: readString(record.currency, 'EUR'),
+      currency: readString(record.currency),
       accessible: readBoolean(record.is_accessible ?? record.accessible),
+      rawAccessible: record.is_accessible == null ? null : readBoolean(record.is_accessible),
       published: record.is_published == null ? true : readBoolean(record.is_published),
-      position: readString(record.position, String(index + 1)),
+      rawPublished: record.is_published == null ? null : readBoolean(record.is_published),
+      position: readString(record.position),
       amenityCodes: readReferenceCodes(record.amenities ?? record.room_type_amenities, 'amenity'),
       mediaIds: readArray(record.media ?? record.room_type_media).map((media) =>
         readString(media.media_id, readString(readRecord(media.media).id, readString(media.id))),
       ).filter(Boolean),
       // §72 structured bed list (get_object_resource emits `beds` as [{quantity, bed_type:{code,name}}]).
-      beds: readArray(record.beds ?? record.room_type_beds).map((bed) => {
+      beds: readArray(record.beds ?? record.room_type_beds).map((bed, bedIndex) => {
         const ref = readNamedReference(bed.bed_type ?? bed);
-        return { bedTypeId: ref.id, bedTypeCode: ref.code, bedTypeLabel: ref.label, quantity: readString(bed.quantity, '1') };
+        return { bedTypeId: ref.id, bedTypeCode: ref.code, bedTypeLabel: ref.label, quantity: readString(bed.quantity, '1'), position: readPosition(bed.position, bedIndex) };
       }).filter((bed) => bed.bedTypeCode),
     };
   });
@@ -2154,6 +2243,7 @@ function parseWorkspaceRoomsModule(raw: Record<string, unknown>): ObjectWorkspac
     amenityGroups: [],
     mediaOptions: [],
     items,
+    knownRoomIds: items.map((item) => item.recordId).filter((id): id is string => Boolean(id)),
     unavailableReason: null,
   };
 }
@@ -2162,7 +2252,11 @@ function parseWorkspaceMeetingRoomsModule(raw: Record<string, unknown>): ObjectW
   const roomRecords = readArray(raw.meeting_rooms ?? raw.object_meeting_rooms);
   const items = roomRecords.map<ObjectWorkspaceMeetingRoomItem>((record, index) => ({
     recordId: readString(record.id) || null,
-    name: readString(record.name, `Salle ${index + 1}`),
+    uid: readString(record.id, `meeting-room-${index + 1}`),
+    name: readString(record.name),
+    rawName: typeof record.name === 'string' ? record.name : null,
+    extra: record.extra !== null && typeof record.extra === 'object' && !Array.isArray(record.extra)
+      ? record.extra as Record<string, unknown> : null,
     nameTranslations: readTextMap(record.name_i18n),
     areaM2: readString(record.area_m2, readString(record.area_m2, readString(record.surface_m2))),
     capacityTheatre: readString(record.cap_theatre, readString(record.capacity_theatre, readString(record.capacity_seated))),
@@ -2179,6 +2273,7 @@ function parseWorkspaceMeetingRoomsModule(raw: Record<string, unknown>): ObjectW
       ),
     ),
     items,
+    knownRoomIds: items.map((item) => item.recordId).filter((id): id is string => Boolean(id)),
     unavailableReason: null,
   };
 }
@@ -2206,10 +2301,12 @@ function parseWorkspaceMenusModule(raw: Record<string, unknown>): ObjectWorkspac
       categoryId: readString(record.category_id, category.id),
       categoryCode: readString(record.category_code, category.code),
       categoryLabel: readString(record.category_label, category.label),
-      name: readString(record.name, `Menu ${index + 1}`),
+      name: readString(record.name),
+      rawName: typeof record.name === 'string' ? record.name : null,
       description: readString(record.description),
       active: record.is_active == null ? true : readBoolean(record.is_active),
-      visibility: readString(record.visibility, 'public'),
+      visibility: readString(record.visibility),
+      rawVisibility: typeof record.visibility === 'string' ? record.visibility : null,
       position: readString(record.position, String(index + 1)),
       items: readArray(record.items ?? record.menu_items ?? record.object_menu_items).map<ObjectWorkspaceMenuItem>((item, itemIndex) => {
         const kind = readNamedReference(item.kind, readString(item.kind_code));
@@ -2325,8 +2422,12 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     const extra = readRecord(stage.extra);
     return {
       recordId: readString(stage.id) || null,
-      name: readString(stage.name, `Etape ${index + 1}`),
-      description: readString(stage.description),
+      name: readString(stage.name),
+      rawName: typeof stage.name === 'string' ? stage.name : null,
+      nameTranslations: readTextMap(stage.name_i18n),
+      description: readString(stage.description_md, readString(stage.description)),
+      descriptionTranslations: readTextMap(stage.description_i18n),
+      extra,
       position: readString(stage.position, String(index + 1)),
       kind: readString(extra.kind),
       lng: readString(stage.lng),
@@ -2383,6 +2484,7 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
     requiredEquipment: readString(infoRecord.required_equipment),
     infoPlaces: readString(infoRecord.info_places),
     childFriendly: readBoolean(infoRecord.is_child_friendly),
+    infoTranslations: Object.fromEntries(Object.entries(infoRecord).filter(([key]) => key.endsWith('_i18n'))),
     trackGeojson,
     stages,
     sectionsCount: readArray(details.sections).length,
@@ -2558,6 +2660,95 @@ function buildWorkspaceOpeningWeekdaysFromLegacySchedules(record: GenericRecord)
   return sortWorkspaceOpeningWeekdays(Array.from(weekdaysByCode.values()));
 }
 
+function openingJsonObject(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
+}
+
+/** Normalize only writer-supported fields; the weekly grid is a projection, never the source tree. */
+function parseWorkspaceOpeningSchedules(value: unknown): ObjectWorkspaceOpeningSchedule[] {
+  const text = (input: unknown) => typeof input === 'string' && input !== '' ? input : null;
+  return readArray(value).map((schedule) => ({
+    id: text(schedule.id),
+    schedule_type_id: text(schedule.schedule_type_id),
+    schedule_type_code: text(schedule.schedule_type_code),
+    name: text(schedule.name),
+    note: text(schedule.note),
+    name_i18n: openingJsonObject(schedule.name_i18n),
+    note_i18n: openingJsonObject(schedule.note_i18n),
+    extra: openingJsonObject(schedule.extra) ?? {},
+    time_periods: readArray(schedule.time_periods ?? schedule.opening_time_periods).map((timePeriod) => ({
+      id: text(timePeriod.id),
+      closed: readBoolean(timePeriod.closed),
+      note: text(timePeriod.note),
+      weekdays: readArray(timePeriod.weekdays ?? timePeriod.opening_time_period_weekdays).map((day) => ({
+        weekday_code: normalizeWorkspaceWeekdayCode(readString(day.weekday_code,
+          readString(day.code, readString(readRecord(day.weekday).code)))),
+      })),
+      time_frames: readArray(timePeriod.time_frames ?? timePeriod.frames ?? timePeriod.opening_time_frames).map((frame) => ({
+        id: text(frame.id),
+        start_time: text(frame.start_time ?? frame.start),
+        end_time: text(frame.end_time ?? frame.end),
+        recurrence: text(frame.recurrence),
+      })),
+    })),
+  }));
+}
+
+export function projectWorkspaceOpeningSchedules(schedules: ObjectWorkspaceOpeningSchedule[]): {
+  weekdays: ObjectWorkspaceOpeningWeekday[];
+  closedDays: string[];
+  weekdayNotes: Record<string, string | null>;
+  editingUnavailableReason: string | null;
+} {
+  const days = new Map<string, ObjectWorkspaceOpeningWeekday>();
+  const closedDays = new Set<string>();
+  const weekdayNotes: Record<string, string | null> = {};
+  const origins = new Map<string, string>();
+  let reason: string | null = schedules.length > 1
+    ? 'Cette période contient plusieurs horaires. Sa structure complète est conservée ; la grille simple ne permet pas de la modifier.' : null;
+  for (const schedule of schedules) {
+    if (schedule.note || Object.keys(schedule.note_i18n ?? {}).length > 0) {
+      reason ??= 'Cette période contient une note d’horaire non prise en charge par la grille. Ses données sont conservées.';
+    }
+    for (const timePeriod of schedule.time_periods) {
+      if (!timePeriod.weekdays.length) {
+        reason ??= 'Un créneau ne comporte aucun jour. Sa structure complète est conservée ; la grille ne permet pas de le modifier.';
+      }
+      if (timePeriod.time_frames.some((frame) => frame.recurrence)) {
+        reason ??= 'Cette période contient une récurrence de plage non prise en charge par la grille. Ses données sont conservées.';
+      }
+      const slots = timePeriod.time_frames.map((frame) => ({
+        start: formatOpeningTime(frame.start_time), end: formatOpeningTime(frame.end_time),
+      }));
+      const signature = JSON.stringify([timePeriod.closed, timePeriod.note, slots]);
+      for (const { weekday_code: code } of timePeriod.weekdays) {
+        if (!code) continue;
+        if (origins.has(code) && origins.get(code) !== signature) {
+          reason ??= 'Un même jour comporte plusieurs créneaux distincts. La grille ne permet pas de les modifier sans ambiguïté ; leurs données sont conservées.';
+        }
+        origins.set(code, signature);
+        weekdayNotes[code] ??= timePeriod.note;
+        if (timePeriod.closed) {
+          closedDays.add(code);
+          continue;
+        }
+        const day = days.get(code) ?? { code, label: humanizeWorkspaceWeekday(code), slots: [] };
+        for (const slot of slots.length ? slots : [{ start: '', end: '' }]) {
+          if (!day.slots.some((current) => current.start === slot.start && current.end === slot.end)) day.slots.push({ ...slot });
+        }
+        if (day.slots.length > 2) {
+          reason ??= 'Un jour comporte plus de deux plages. La grille simple ne permet pas de modifier cette période ; ses données sont conservées.';
+        }
+        days.set(code, day);
+      }
+    }
+  }
+  return {
+    weekdays: sortWorkspaceOpeningWeekdays(Array.from(days.values())),
+    closedDays: Array.from(closedDays), weekdayNotes, editingUnavailableReason: reason,
+  };
+}
+
 /**
  * Dérive le mode de récurrence + l'effet "all years" d'un enregistrement de période.
  * - cyclic : `all_years=true` AVEC dates (stockées en année-sentinelle 2000 côté backend)
@@ -2582,6 +2773,10 @@ function parseWorkspaceOpeningPeriodRecord(
   index: number,
   bucket: ObjectWorkspaceOpeningBucket,
 ): ObjectWorkspaceOpeningPeriod {
+  const hasSchedules = Array.isArray(record.schedules ?? record.opening_schedules ?? record.schedule_blocks);
+  const schedules = hasSchedules
+    ? parseWorkspaceOpeningSchedules(record.schedules ?? record.opening_schedules ?? record.schedule_blocks) : undefined;
+  const projected = schedules ? projectWorkspaceOpeningSchedules(schedules) : null;
   const weekdaySlots = buildWorkspaceOpeningWeekdaysFromCanonical(record.weekday_slots);
   const fallbackWeekdays =
     weekdaySlots.length > 0
@@ -2595,18 +2790,32 @@ function parseWorkspaceOpeningPeriodRecord(
 
   return {
     recordId: readString(record.id) || null,
-    order: readString(record.order, String(index + 1)),
+    order: readString(record.order, readString(readRecord(record.extra).workspace_order, String(index + 1))),
     bucket,
-    label: readString(record.label, readString(record.name, `Periode ${index + 1}`)),
+    label: readString(record.label, readString(record.name, hasSchedules ? '' : `Periode ${index + 1}`)),
     seasonTypeCode: readString(record.period_type_code),
     startDate,
     endDate,
     allYears,
     recurrence,
     isClosure,
-    closedDays: readStringList(record.closed_days),
-    weekdays: fallbackWeekdays,
+    closedDays: projected?.closedDays ?? readStringList(record.closed_days),
+    weekdays: projected?.weekdays ?? fallbackWeekdays,
+    sourcePeriodId: typeof record.source_period_id === 'string' ? record.source_period_id : null,
+    periodTypeId: typeof record.period_type_id === 'string' ? record.period_type_id : null,
+    originalSeasonTypeCode: readString(record.period_type_code),
+    ...(hasSchedules ? { originalRecurrence: recurrence, originalAllYears: readBoolean(record.all_years) } : {}),
+    nameI18n: openingJsonObject(record.name_i18n),
+    extra: openingJsonObject(record.extra) ?? {},
+    ...(schedules ? { schedules, weekdayNotes: projected!.weekdayNotes,
+      editingUnavailableReason: projected!.editingUnavailableReason } : {}),
   };
+}
+
+/** The canonical editor read contains every period, not just the public current/next-year projection. */
+export function parseWorkspaceOpeningPeriodRows(rows: Record<string, unknown>[]): ObjectWorkspaceOpeningPeriod[] {
+  return rows.map((row, index) => parseWorkspaceOpeningPeriodRecord(row, index,
+    row.bucket === 'current' || row.bucket === 'next-year' ? row.bucket : 'undated'));
 }
 
 function parseWorkspaceOpeningPeriodsFromRaw(raw: Record<string, unknown>): ObjectWorkspaceOpeningPeriod[] {

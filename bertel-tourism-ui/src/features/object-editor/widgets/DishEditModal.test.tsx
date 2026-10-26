@@ -20,13 +20,25 @@ describe('DishEditModal (§06 P2c — single dish)', () => {
       <DishEditModal open dish={dish} sectionLabel="Entrées" dietaryOptions={DIETARY} allergenOptions={ALLERGEN} onClose={() => {}} onSave={onSave} />,
     );
 
-    expect(screen.getByText('Plat — Entrées')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ajouter un plat' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Prix du plat'), { target: { value: '7.5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Végan' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
 
     const saved = onSave.mock.calls[0][0];
     expect(saved).toMatchObject({ name: 'Samoussas', price: '7.5', sectionCode: 'entree', dietaryTagCodes: ['vegan'] });
+  });
+
+  it('separates origin and quality from diets while keeping their existing storage codes and hidden fields', () => {
+    const onSave = jest.fn();
+    const dish = { ...createMenuItem(0, 'main', 'Plats'), name: 'Cari', mediaIds: ['photo-1'], cuisineTypeCodes: ['creole'], kindId: 'kind-1', unitId: 'unit-1' };
+    render(<DishEditModal open dish={dish} sectionLabel="Plats" dietaryOptions={[...DIETARY, { id: 'local', code: 'local', label: 'Local' }, { id: 'bio', code: 'organic', label: 'Bio' }]} allergenOptions={ALLERGEN} onClose={() => {}} onSave={onSave} />);
+    const origin = screen.getByRole('region', { name: 'Origine et qualité' });
+    expect(origin).toHaveTextContent('Local');
+    expect(origin).toHaveTextContent('Bio');
+    fireEvent.click(screen.getByRole('button', { name: 'Local' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    expect(onSave.mock.calls[0][0]).toMatchObject({ dietaryTagCodes: ['local'], mediaIds: ['photo-1'], cuisineTypeCodes: ['creole'], kindId: 'kind-1', unitId: 'unit-1' });
   });
 
   it('offers a delete action only for an existing dish', () => {

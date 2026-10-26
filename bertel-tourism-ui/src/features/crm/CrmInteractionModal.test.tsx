@@ -11,6 +11,8 @@ const crmMock = crm as jest.Mocked<typeof crm>;
 // Les champs longs (sujet/établissement/acteur) sont des SearchSelect (combobox + popover),
 // plus des <select> natifs : on ouvre puis on clique l'option.
 function pickFromCombobox(name: string | RegExp, optionName: string | RegExp) {
+  if (name === 'Sujet normalisé') fireEvent.click(screen.getByText('Détails facultatifs'));
+  if (name === 'Acteur') fireEvent.click(screen.getByText('Préciser l’interlocuteur'));
   fireEvent.click(screen.getByRole('combobox', { name }));
   fireEvent.click(screen.getByRole('option', { name: optionName }));
 }
@@ -42,6 +44,15 @@ beforeEach(() => {
 });
 
 describe('CrmInteractionModal — établissement requis (§66 décision 1)', () => {
+  it('les détails optionnels sont repliés, puis le ressenti met à jour l’aperçu', () => {
+    renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
+    expect(screen.getByText('Détails facultatifs').parentElement).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('Détails facultatifs'));
+    fireEvent.click(screen.getByRole('button', { name: 'Positif' }));
+    expect(screen.getByRole('button', { name: 'Positif' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('Ressenti : Positif')).toBeInTheDocument();
+  });
+
   it('fiche : pas d option « Contexte : général » dans le select', () => {
     renderModal({
       actorId: 'a1',
@@ -61,29 +72,29 @@ describe('CrmInteractionModal — établissement requis (§66 décision 1)', () 
         { objectId: 'o2', objectName: 'Restaurant B' },
       ],
     });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel passé' } });
-    expect(screen.getByRole('button', { name: /consigner/i })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel passé' } });
+    expect(screen.getByRole('button', { name: /enregistrer l’interaction/i })).toBeDisabled();
     // Choisir un établissement débloque.
     pickFromCombobox('Contexte', 'Restaurant B');
-    expect(screen.getByRole('button', { name: /consigner/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /enregistrer l’interaction/i })).toBeEnabled();
   });
 
   it('fiche, 1 seul établissement : pré-sélectionné ⇒ Consigner actif dès la saisie du corps', () => {
     renderModal({ actorId: 'a1', contexts: [{ objectId: 'o1', objectName: 'Hôtel A' }] });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel passé' } });
-    expect(screen.getByRole('button', { name: /consigner/i })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel passé' } });
+    expect(screen.getByRole('button', { name: /enregistrer l’interaction/i })).toBeEnabled();
   });
 
   it('vue établissement (fixedContext) : objet imposé, Consigner actif dès la saisie', () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Visite' } });
-    expect(screen.getByRole('button', { name: /consigner/i })).toBeEnabled();
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Visite' } });
+    expect(screen.getByRole('button', { name: /enregistrer l’interaction/i })).toBeEnabled();
   });
 
   it('consigne avec l objectId choisi (fiche)', async () => {
     renderModal({ actorId: 'a1', contexts: [{ objectId: 'o1', objectName: 'Hôtel A' }] });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel passé' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel passé' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     await waitFor(() =>
       expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ actorId: 'a1', objectId: 'o1' })),
     );
@@ -101,9 +112,9 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 
   it('après consignation : confirmation + « Ajouter une relance » révèle titre / échéance / Attribuer à', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
-    expect(await screen.findByText(/interaction enregistrée/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
+    expect(await screen.findByRole('status')).toHaveTextContent(/interaction enregistrée/i);
     fireEvent.click(screen.getByRole('button', { name: /ajouter une relance/i }));
     expect(screen.getByLabelText('Titre de la tâche')).toBeInTheDocument();
     expect(screen.getByLabelText('Échéance')).toBeInTheDocument();
@@ -113,17 +124,17 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
   it('titre de relance pré-rempli depuis le sujet sélectionné (éditable)', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
     pickFromCombobox('Sujet normalisé', 'Demande de visite');
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     expect((screen.getByLabelText('Titre de la tâche') as HTMLInputElement).value).toBe('Demande de visite');
   });
 
   it('flux séquentiel : Consigner (saveCrmInteraction) PUIS relance (saveCrmTask, relatedInteractionId = id renvoyé)', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' }, actorOptions: [{ actorId: 'a1', displayName: 'Mme Hoarau' }] });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
     pickFromCombobox('Acteur', 'Mme Hoarau');
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
     // À ce stade, AUCUNE tâche : la relance est une étape distincte, après coup.
     expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
@@ -156,8 +167,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
   // 16w — la voie « relance » accepte PLUSIEURS personnes, comme la voie « Nouvelle tâche ».
   it('relance : plusieurs assignés partent avec le lien vers l’interaction', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
@@ -177,8 +188,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 
   it('relance : aucun assigné ⇒ enregistrement bloqué avec raison visible', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     const trigger = await screen.findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
@@ -191,8 +202,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 
   it('relance : titre vidé ⇒ « Enregistrer la relance » bloqué avec raison visible', async () => {
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: '   ' } });
     expect(screen.getByRole('button', { name: /enregistrer la relance/i })).toBeDisabled();
@@ -201,8 +212,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 
   it('Consigner sans relance : onSaved appelé, aucune tâche créée', async () => {
     const props = renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     await waitFor(() => expect(props.onSaved).toHaveBeenCalled());
     expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
   });
@@ -211,8 +222,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
   it('échec de relance : retry ne re-crée pas l interaction, ne rejoue que la tâche', async () => {
     crmMock.saveCrmTask.mockRejectedValueOnce(new Error('refus tâche')).mockResolvedValueOnce('task-new');
     renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
@@ -228,8 +239,8 @@ describe('CrmInteractionModal — relance en 2 temps (Phase 5.2, dé-modalisatio
 
   it('succès avec relance : onSaved puis onClose appelés', async () => {
     const props = renderModal({ fixedContext: { objectId: 'o1', objectName: 'Hôtel A' } });
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Appel' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Appel' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
     fireEvent.click(await screen.findByRole('button', { name: /ajouter une relance/i }));
     await screen.findByLabelText('Attribuer à');
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Suivi' } });
@@ -251,8 +262,8 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
     expect(screen.getByRole('button', { name: /déjà traitée/i })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'false');
 
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Compte rendu' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Compte rendu' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'resolved' }));
@@ -264,8 +275,8 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
     pickFromCombobox('Sujet normalisé', 'Demande de visite');
     expect(screen.getByRole('button', { name: /à traiter/i })).toHaveAttribute('aria-pressed', 'true');
 
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Demande reçue' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Demande reçue' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(expect.objectContaining({ status: 'new' }));
@@ -284,8 +295,8 @@ describe('CrmInteractionModal — suite à donner (chantier 2026-08-28)', () => 
 
     // Et l'inverse : forcer « Déjà traitée » sur une interaction AVEC sujet doit tenir.
     fireEvent.click(screen.getByRole('button', { name: /déjà traitée/i }));
-    fireEvent.change(screen.getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Réglé au téléphone' } });
-    fireEvent.click(screen.getByRole('button', { name: /consigner/i }));
+    fireEvent.change(screen.getByLabelText('Compte rendu'), { target: { value: 'Réglé au téléphone' } });
+    fireEvent.click(screen.getByRole('button', { name: /enregistrer l’interaction/i }));
 
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalledTimes(1));
     expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith(

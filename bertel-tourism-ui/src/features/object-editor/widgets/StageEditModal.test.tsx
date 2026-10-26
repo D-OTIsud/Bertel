@@ -61,21 +61,23 @@ describe('StageEditModal — stage photos (§111 closeout)', () => {
 
   it('links an existing object photo and returns it on save', () => {
     const { onSave } = renderModal({ stage: stage({ mediaIds: [] }) });
+    fireEvent.click(screen.getByRole('button', { name: 'Photos et médias' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier une photo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier la photo Sentier en forêt' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceItineraryStageSummary).mediaIds).toEqual(['med-2']);
   });
 
   it('unlinks a linked photo and returns the remainder on save', () => {
     const { onSave } = renderModal({ stage: stage({ mediaIds: ['med-1', 'med-2'] }) });
     fireEvent.click(screen.getByRole('button', { name: 'Retirer la photo Vue du belvédère' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceItineraryStageSummary).mediaIds).toEqual(['med-2']);
   });
 
   it('guides to the Médias section when the object has no media to link', () => {
     renderModal({ stage: stage({ mediaIds: [] }), mediaOptions: [] });
+    fireEvent.click(screen.getByRole('button', { name: 'Photos et médias' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier une photo' }));
     expect(screen.getByText(/Ajoutez des photos dans la/i)).toBeInTheDocument();
   });

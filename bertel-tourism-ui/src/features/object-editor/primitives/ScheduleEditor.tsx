@@ -34,7 +34,12 @@ function rowIsOpen(row: ScheduleRow): boolean {
   return normalizeSlots(row).some((slot) => slot !== null);
 }
 
-export function ScheduleEditor({ rows, colA = 'Service midi', colB = 'Service soir', onChange }: ScheduleEditorProps) {
+export function ScheduleEditor({
+  rows,
+  colA = 'Service midi',
+  colB = 'Service soir',
+  onChange,
+}: ScheduleEditorProps) {
   function replaceRow(index: number, nextRow: ScheduleRow) {
     onChange?.(rows.map((row, rowIndex) => (rowIndex === index ? nextRow : row)));
   }
@@ -73,14 +78,22 @@ export function ScheduleEditor({ rows, colA = 'Service midi', colB = 'Service so
     if (!row || rowIndex + 1 >= rows.length) {
       return;
     }
-    onChange?.(rows.map((other, otherIndex) => (otherIndex === rowIndex + 1 ? { ...other, slots: normalizeSlots(row) } : other)));
+    onChange?.(
+      rows.map((other, otherIndex) =>
+        otherIndex === rowIndex + 1 ? { ...other, slots: normalizeSlots(row) } : other,
+      ),
+    );
   }
 
   // Quick-select: ensure every day in the group is open (adds an empty slot to closed ones);
   // days outside the group are left as-is (non-destructive).
   function openGroup(codes: string[]) {
     const set = new Set(codes);
-    onChange?.(rows.map((row) => (set.has(row.code) && !rowIsOpen(row) ? { ...row, slots: [emptySlot(), null] } : row)));
+    onChange?.(
+      rows.map((row) =>
+        set.has(row.code) && !rowIsOpen(row) ? { ...row, slots: [emptySlot(), null] } : row,
+      ),
+    );
   }
 
   return (
@@ -112,17 +125,31 @@ export function ScheduleEditor({ rows, colA = 'Service midi', colB = 'Service so
                   {slot ? (
                     <>
                       <input
-                        type="time"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="hh:mm"
                         aria-label={`${row.label} · ${colLabel} · début`}
                         value={slot.start}
+                        aria-invalid={formatScheduleTime(slot.start) === null || undefined}
                         onChange={(event) => patchSlot(rowIndex, slotIndex, { start: event.target.value })}
+                        onBlur={(event) => {
+                          const start = formatScheduleTime(event.target.value);
+                          if (start !== null) patchSlot(rowIndex, slotIndex, { start });
+                        }}
                       />
                       <span className="dash">-</span>
                       <input
-                        type="time"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="hh:mm"
                         aria-label={`${row.label} · ${colLabel} · fin`}
                         value={slot.end}
+                        aria-invalid={formatScheduleTime(slot.end) === null || undefined}
                         onChange={(event) => patchSlot(rowIndex, slotIndex, { end: event.target.value })}
+                        onBlur={(event) => {
+                          const end = formatScheduleTime(event.target.value);
+                          if (end !== null) patchSlot(rowIndex, slotIndex, { end });
+                        }}
                       />
                     </>
                   ) : (
@@ -141,8 +168,8 @@ export function ScheduleEditor({ rows, colA = 'Service midi', colB = 'Service so
             <button
               type="button"
               className="sched__copy"
-              title="Copier sur le jour suivant"
-              aria-label={`Copier ${row.label} sur le jour suivant`}
+              title="Copier les heures sur le jour suivant"
+              aria-label={`Copier les heures de ${row.label} sur le jour suivant`}
               disabled={isLast || !isOpen}
               onClick={() => copyToNextDay(rowIndex)}
             >
@@ -165,3 +192,4 @@ export function ScheduleEditor({ rows, colA = 'Service midi', colB = 'Service so
     </div>
   );
 }
+import { formatScheduleTime } from './schedule-time';

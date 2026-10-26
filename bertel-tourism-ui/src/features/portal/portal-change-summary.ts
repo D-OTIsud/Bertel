@@ -183,8 +183,8 @@ function projectPricing(draft: ObjectWorkspaceModules): string[] {
     prices.find((price) => text(price.indicationCode) === 'principal' && text(price.kindCode) === 'adulte') ??
     prices.find((price) => text(price.indicationCode) === 'principal');
   if (!main) return ['Aucun tarif indiqué'];
-  if (text(main.kindCode) === 'gratuit') return ['Gratuit'];
   const amount = text(main.amount).trim();
+  if (text(main.kindCode) === 'gratuit' || (amount !== '' && Number(amount.replace(',', '.')) === 0)) return ['Gratuit'];
   if (!amount) return ['Tarif sur demande'];
   const unitLabel =
     text(main.unitLabel).trim() || labelFor(rows(pricing.priceUnitOptions), text(main.unitCode));

@@ -86,6 +86,20 @@ describe('serializePortalDraft / parsePortalDraft', () => {
     expect(parsed?.note).toBe('');
   });
 
+  it('migre un brouillon v1 sans supprimer ses tranches', () => {
+    const parsed = parsePortalDraft(JSON.stringify({
+      version: 1,
+      objectId: 'obj-1',
+      fingerprint: 'old-fingerprint',
+      note: 'à vérifier',
+      modules: { contacts: { objectItems: [{ id: 'c1', value: '0692' }] } },
+      savedAt: '2026-10-01T00:00:00.000Z',
+    }));
+    expect(parsed?.version).toBe(PORTAL_DRAFT_VERSION);
+    expect(parsed?.modules.contacts).toEqual({ objectItems: [{ id: 'c1', value: '0692' }] });
+    expect(parsed?.baseline).toBeUndefined();
+  });
+
   it('ne garde que les tranches du portail (une tranche hors registre serait envoyée sans écran)', () => {
     const raw = serializePortalDraft({
       objectId: 'obj-1',

@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
-import { EditorModal, ReferenceSelect, Field, Input, Readout, Textarea, Toggle, Select, LangTabs } from '../primitives';
-import type { ObjectWorkspaceMediaItem, WorkspaceReferenceOption } from '../../../services/object-workspace-parser';
+import {
+  Disclosure,
+  EditorModal,
+  ReferenceSelect,
+  Field,
+  Input,
+  Readout,
+  Textarea,
+  Toggle,
+  Select,
+  LangTabs,
+} from '../primitives';
+import type {
+  ObjectWorkspaceMediaItem,
+  WorkspaceReferenceOption,
+} from '../../../services/object-workspace-parser';
 import { MediaUploadField } from './MediaUploadField';
 import { getSupabaseClient } from '../../../lib/supabase';
 
@@ -44,6 +58,9 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
   // (type outside the offered options) keeps its type/file read-only — documents are
   // created from their owning sections (§05 decision).
   const typeIsAuthorable = typeOptions.some((option) => option.code === draft.typeCode);
+  const rightsExpired = Boolean(
+    draft.rightsExpiresAt && draft.rightsExpiresAt < new Date().toISOString().slice(0, 10),
+  );
 
   const isPrimary = lang === primary;
   const titleValue = isPrimary ? draft.title : (draft.titleTranslations[lang] ?? '');
@@ -68,25 +85,58 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
   return (
     <EditorModal
       open={open}
-      title={draft.title || 'Média'}
+      title={media.url ? 'Modifier le média' : 'Ajouter un média'}
+      eyebrow="Médias · Légende et diffusion"
       onClose={onClose}
       onSave={() => onSave(draft)}
       // A media row without a file would fail the DB chk_media_url_* constraints at
       // global save — block here with a disabled action instead of a late raw error.
       saveDisabled={!draft.url.trim()}
+      saveLabel={media.url ? 'Appliquer' : 'Ajouter'}
+      aside={
+        <>
+          <h3>Sur la fiche</h3>
+          <div className="ed-record-modal__preview">
+            {draft.url ? (
+              draft.typeCode === 'video' ? (
+                <video className="ed-modal__preview" src={draft.url} controls preload="metadata" />
+              ) : typeIsAuthorable ? (
+                <img
+                  className="ed-modal__preview"
+                  src={draft.url}
+                  alt={draft.description || draft.title || 'Aperçu'}
+                />
+              ) : (
+                <p>Document joint</p>
+              )
+            ) : (
+              <p>Aperçu après dépôt du fichier</p>
+            )}
+            <strong>{titleValue || 'Sans titre'}</strong>
+            {draft.credit && <p>© {draft.credit}</p>}
+            <p>{VISIBILITY.find((option) => option.v === draft.visibility)?.l || 'Visibilité non définie'}</p>
+          </div>
+          <h3>Avant d’appliquer</h3>
+          <ul className="ed-record-modal__checks">
+            <li data-complete={Boolean(draft.url)}>{draft.url ? '✓' : '○'} Fichier</li>
+            <li data-complete={Boolean(titleValue)}>{titleValue ? '✓' : '!'} Titre · recommandé</li>
+            <li data-complete={Boolean(descValue)}>
+              {descValue ? '✓' : '!'} Description de l’image · accessibilité
+            </li>
+            <li data-complete={Boolean(draft.credit)}>{draft.credit ? '✓' : '!'} Crédit · recommandé</li>
+          </ul>
+        </>
+      }
     >
-      {typeIsAuthorable && draft.url && (
-        draft.typeCode === 'video'
-          ? <video className="ed-modal__preview" src={draft.url} controls preload="metadata" />
-          : <img className="ed-modal__preview" src={draft.url} alt={draft.description || draft.title || 'Aperçu'} />
-      )}
       {typeIsAuthorable ? (
         <Field label="Type de média">
           <ReferenceSelect
             value={draft.typeCode}
             options={typeOptions}
             aria-label="Type de média"
-            onChange={(code, opt) => set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })}
+            onChange={(code, opt) =>
+              set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })
+            }
           />
         </Field>
       ) : (
@@ -98,8 +148,8 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
       )}
       {!typeIsAuthorable && (
         <p className="ed-modal__note">
-          Ce document est géré depuis sa section dédiée — seules les informations (titre, crédit,
-          visibilité) sont modifiables ici.
+          Ce document est géré depuis sa section dédiée — seules les informations (titre, crédit, visibilité)
+          sont modifiables ici.
         </p>
       )}
       {typeIsAuthorable && accessToken && (
@@ -125,19 +175,24 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
           tabs={languages.map((code) => ({
             code,
             label: LANG_LABELS[code] ?? code.toUpperCase(),
-            filled: code === primary
-              ? Boolean(draft.title.trim())
-              : Boolean((draft.titleTranslations[code] ?? '').trim()),
+            filled:
+              code === primary
+                ? Boolean(draft.title.trim())
+                : Boolean((draft.titleTranslations[code] ?? '').trim()),
           }))}
           active={lang}
           onSelect={setLang}
         />
       )}
-      <Field label="Titre"><Input value={titleValue} aria-label="Titre" onChange={setTitle} /></Field>
+      <Field label="Titre">
+        <Input value={titleValue} aria-label="Titre" onChange={setTitle} />
+      </Field>
       <Field label="Description (texte alternatif)">
         <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
       </Field>
-      <Field label="Crédit / auteur"><Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} /></Field>
+      <Field label="Crédit / auteur">
+        <Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} />
+      </Field>
       {/* Publication settings cluster — Visibilité + Photo de couverture share
           a 2-column grid (.ed-modal__group), Publié sits below as a full-width
           final toggle. Styling lives in object-editor.css under .ed-modal__group. */}
@@ -147,9 +202,11 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
               "Publique" display — picking a real value is an explicit user choice. */}
           <Select
             value={draft.visibility}
-            options={draft.visibility === ''
-              ? [{ v: '', l: '— Visibilité non définie —' }, ...VISIBILITY]
-              : VISIBILITY}
+            options={
+              draft.visibility === ''
+                ? [{ v: '', l: '— Visibilité non définie —' }, ...VISIBILITY]
+                : VISIBILITY
+            }
             aria-label="Visibilité"
             onChange={(visibility) => set({ visibility })}
           />
@@ -157,6 +214,22 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
         <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
       </div>
       <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
+      <Disclosure title="Droits d’utilisation" defaultOpen={rightsExpired}>
+        <Field label="Fin des droits d’utilisation">
+          <Input
+            type="date"
+            aria-label="Fin des droits d’utilisation"
+            value={draft.rightsExpiresAt}
+            onChange={(rightsExpiresAt) => set({ rightsExpiresAt })}
+          />
+        </Field>
+        {rightsExpired && (
+          <p role="status" className="muted">
+            Les droits d’utilisation sont expirés. Vérifiez l’autorisation avant diffusion ; la visibilité
+            n’est pas modifiée automatiquement.
+          </p>
+        )}
+      </Disclosure>
     </EditorModal>
   );
 }

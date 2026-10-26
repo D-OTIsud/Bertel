@@ -1,4 +1,4 @@
-import { classifyOpeningSeason, formatPeriodRange } from './opening-period-meta';
+import { buildRibbonSegments, classifyOpeningSeason, formatPeriodRange } from './opening-period-meta';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../../services/object-workspace-parser';
 
 const p = (o: Partial<ObjectWorkspaceOpeningPeriod>): ObjectWorkspaceOpeningPeriod => ({
@@ -42,4 +42,13 @@ describe('formatPeriodRange', () => {
     const label = formatPeriodRange(p({ recurrence: 'fixed', allYears: false, startDate: '2025-01-15', endDate: '2025-12-15' }));
     expect(label).toMatch(/→/);
   });
+});
+
+test('annual ribbon splits a recurring period across New Year without negative widths', () => {
+  const segments = buildRibbonSegments([p({ recurrence: 'cyclic', startDate: '2000-11-01', endDate: '2000-03-31' })]);
+  expect(segments).toHaveLength(2);
+  expect(segments.every((segment) => segment.end >= segment.start)).toBe(true);
+  expect(segments[0]).toMatchObject({ periodIndex: 0, start: 10, end: 12 });
+  expect(segments[1]).toMatchObject({ periodIndex: 0, start: 0 });
+  expect(segments[1].end).toBeGreaterThan(2);
 });

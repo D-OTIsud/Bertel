@@ -12,10 +12,10 @@
  * byte-identiques : ce sont les seules clés que le serveur valide, et que
  * `approve_pending_change` rejoue.
  *
- * LA GARDE `unavailableReason` EST ICI. `buildContributorSubmission` n'en a aucune : elle
- * bâtirait sans broncher l'enveloppe d'une rubrique dont la donnée n'a pas chargé. On
- * n'envoie donc QUE ce que `buildPortalRubrics` a marqué `dirty` — un module masqué, sous
- * plancher, ou en mode dégradé n'y figure jamais.
+ * Seules les rubriques `dirty` sont proposées. `buildContributorSubmission` revérifie la
+ * baseline et le brouillon avant de construire les enveloppes : une ancienne copie locale
+ * ne peut pas masquer un échec de lecture fraîche. Une erreur de préparation bloque tout
+ * l'envoi avant le RPC.
  *
  * UN SEUL APPEL, tout ou rien : `submit_actor_fiche` est transactionnel. En cas d'échec,
  * rien n'est parti et le brouillon local n'est pas touché.
@@ -32,6 +32,8 @@ import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
 import type { BuiltPortalRubric } from './portal-rubrics';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { SubmitPendingChangeInput } from '../../services/moderation';
+import { readWriteCompatibility } from '../../services/write-compatibility';
+import { useSessionStore } from '../../store/session-store';
 
 /** Les refus que le partenaire peut TRAITER, et ce qu'il doit faire de chacun. Le repli
  *  générique du service (« Rien n'est perdu ») ne dit aucune action : on comble ce blanc. */
@@ -66,6 +68,7 @@ export interface PortalSendModalProps {
   note: string;
   onNoteChange: (value: string) => void;
   onSent: (result: { submissionId: string; modules: WorkspaceModuleId[] }) => void;
+  recoveryConflicts?: WorkspaceModuleId[];
 }
 
 export function PortalSendModal({
@@ -79,6 +82,7 @@ export function PortalSendModal({
   note,
   onNoteChange,
   onSent,
+  recoveryConflicts = [],
 }: PortalSendModalProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,8 +111,21 @@ export function PortalSendModal({
 
   async function handleSend() {
     if (busy || sending.length === 0) return;
+    if (recoveryConflicts.length > 0) {
+      setError('Votre brouillon a été conservé, mais certaines rubriques ont aussi changé côté office. Vérifiez ou abandonnez ces rubriques avant l’envoi.');
+      return;
+    }
     setBusy(true);
     setError(null);
+
+    if (!useSessionStore.getState().demoMode) {
+      const compatibility = await readWriteCompatibility();
+      if (!compatibility.compatible) {
+        setError(compatibility.reason ?? 'Envoi bloqué : impossible de vérifier la compatibilité avec le serveur. Vos modifications sont conservées.');
+        setBusy(false);
+        return;
+      }
+    }
 
     const seen = new Set<WorkspaceModuleId>();
     const modules: WorkspaceModuleId[] = [];
@@ -175,7 +192,7 @@ export function PortalSendModal({
             type="button"
             className="primary-button"
             aria-busy={busy || undefined}
-            aria-disabled={busy || sending.length === 0 || undefined}
+            aria-disabled={busy || sending.length === 0 || recoveryConflicts.length > 0 || undefined}
             onClick={() => void handleSend()}
           >
             {busy ? 'Envoi…' : 'Envoyer'}

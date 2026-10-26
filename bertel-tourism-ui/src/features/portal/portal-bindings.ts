@@ -38,6 +38,7 @@ import {
 import { createContactDraft, reconcileContactPrimary } from '../object-editor/sections/contacts-edit';
 import { updateTranslatableField } from '../object-editor/sections/descriptions-field';
 import { createPricingDraft } from '../object-editor/sections/pricing-row';
+import { isOpeningHoursException } from '../object-editor/sections/opening-exception';
 import { mergeEstablishmentAmenitySelection } from '../../services/object-workspace';
 import type {
   ObjectWorkspaceActivityModule,
@@ -225,7 +226,7 @@ function weekdayLabel(code: string): string {
 function openPeriodIndexes(openings: ObjectWorkspaceOpeningsModule): number[] {
   const indexes: number[] = [];
   openings.periods.forEach((period, index) => {
-    if (!period.isClosure) indexes.push(index);
+    if (!period.isClosure && !isOpeningHoursException(period)) indexes.push(index);
   });
   return indexes;
 }
@@ -282,7 +283,7 @@ export function readWeekHours(openings: ObjectWorkspaceOpeningsModule): {
     // « Mono-période / saisonnier » n'existe pas dans le modèle : ni `open_all_year`
     // (qui rend « Oui » pour un gîte à deux saisons) ni `bucket` (qui dépend de la forme
     // du JSON lu) ne le disent. Le seul signal juste est le NOMBRE de périodes ouvertes.
-    readOnlyReason: indexes.length > 1 ? PORTAL_SEASONAL_HOURS_REASON : null,
+    readOnlyReason: indexes.length > 1 ? PORTAL_SEASONAL_HOURS_REASON : period?.editingUnavailableReason ?? null,
   };
 }
 
@@ -376,6 +377,7 @@ function applyWeekHours(period: ObjectWorkspaceOpeningPeriod, hours: WeekHours):
 export function setWeekHours(openings: ObjectWorkspaceOpeningsModule, hours: WeekHours): ObjectWorkspaceOpeningsModule {
   const indexes = openPeriodIndexes(openings);
   if (indexes.length > 1) return openings;
+  if (indexes.length === 1 && openings.periods[indexes[0]].editingUnavailableReason) return openings;
 
   if (indexes.length === 0) {
     const created = applyWeekHours(
@@ -447,7 +449,7 @@ export function readStayOpening(openings: ObjectWorkspaceOpeningsModule): {
         }
       : { openAllYear: null, startDate: '', endDate: '' },
     closures,
-    readOnlyReason: indexes.length > 1 ? PORTAL_SEASONAL_OPENING_REASON : null,
+    readOnlyReason: indexes.length > 1 ? PORTAL_SEASONAL_OPENING_REASON : period?.editingUnavailableReason ?? null,
   };
 }
 
@@ -468,6 +470,7 @@ export function setStayOpening(
   if (opening.openAllYear === null) return openings;
 
   const current = indexes.length > 0 ? openings.periods[indexes[0]] : null;
+  if (current?.editingUnavailableReason) return openings;
   const allYear = opening.openAllYear === true;
   // `readStayOpening` replie `fixed` ET `cyclic` sur « pas toute l'année » : réécrire
   // 'cyclic' en dur ferait basculer `all_years` de false à true dans buildOpeningsPayload,
@@ -716,9 +719,12 @@ function findMainPrice(pricing: ObjectWorkspacePricingModule): ObjectWorkspacePr
 export function readStartingPrice(pricing: ObjectWorkspacePricingModule): StartingPriceInput {
   const main = findMainPrice(pricing);
   if (!main) return { free: false, amount: '', amountMax: '', unitCode: '' };
+  const normalizedAmount = normalizeAmount(main.amount);
+  const amountIsZero = normalizedAmount !== '' && Number(normalizedAmount) === 0;
+  const free = main.kindCode === FREE_PRICE_KIND || amountIsZero;
   return {
-    free: main.kindCode === FREE_PRICE_KIND,
-    amount: main.kindCode === FREE_PRICE_KIND ? '' : main.amount,
+    free,
+    amount: free ? '' : main.amount,
     amountMax: main.amountMax,
     unitCode: main.unitCode,
   };
@@ -743,14 +749,12 @@ export function setStartingPrice(
 ): ObjectWorkspacePricingModule {
   const amount = input.free ? '0' : normalizeAmount(input.amount);
   const amountMax = input.free ? '' : normalizeAmount(input.amountMax);
-  const kindCode = input.free ? FREE_PRICE_KIND : DEFAULT_PRICE_KIND;
+  const kindCode = DEFAULT_PRICE_KIND;
   const unit = resolveOption(pricing.priceUnitOptions, input.unitCode);
   const existing = findMainPrice(pricing);
 
   if (existing) {
-    const kind = input.free
-      ? resolveOption(pricing.priceKindOptions, FREE_PRICE_KIND)
-      : existing.kindCode === FREE_PRICE_KIND
+    const kind = !input.free && existing.kindCode === FREE_PRICE_KIND
         ? resolveOption(pricing.priceKindOptions, DEFAULT_PRICE_KIND)
         : null;
     const next: ObjectWorkspacePriceItem = {

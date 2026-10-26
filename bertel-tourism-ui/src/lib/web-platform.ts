@@ -61,7 +61,11 @@ function faviconUrl(host: string): string {
 function toWebUrl(value: string): URL | null {
   const raw = value.trim();
   if (!raw || raw.includes('@')) return null; // exclut e-mails et userinfo
-  const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  const hasWebScheme = /^https?:\/\//i.test(raw);
+  // URL treats numeric hosts as IPv4 (including octal when they start with zero).
+  // Keep phone values intact; explicit http(s) URLs may still use IP addresses.
+  if (!hasWebScheme && /^[+()\d\s.-]+$/.test(raw)) return null;
+  const candidate = hasWebScheme ? raw : `https://${raw}`;
   try {
     const url = new URL(candidate);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;

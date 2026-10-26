@@ -38,9 +38,19 @@ describe('resolveWebPlatform', () => {
     expect(platform?.faviconUrl).toBe('https://icons.duckduckgo.com/ip3/maplateforme.re.ico');
   });
 
+  it('accepts an explicit web URL with an IP address', () => {
+    expect(resolveWebPlatform('https://127.0.0.1/contact')?.hostname).toBe('127.0.0.1');
+  });
+
   it.each([
     ['an email', 'contact@booking.com'],
     ['a phone number', '+262 692 00 00 00'],
+    ['the Entre-Deux phone number', '0262373711'],
+    ['a padded phone number', ' 0262373711 '],
+    ['a numeric phone value without its leading zero', '262373711'],
+    ['a phone number with spaces', '0262 37 37 11'],
+    ['a phone number with dots', '0262.37.37.11'],
+    ['a compact international phone number', '+262262373711'],
     ['an empty string', ''],
     ['a bare handle', 'skypeuser'],
     ['a host without a dot', 'localhost:3000'],

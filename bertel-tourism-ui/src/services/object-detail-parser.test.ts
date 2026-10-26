@@ -140,6 +140,23 @@ describe('parseObjectDetail', () => {
     expect(phone).toMatchObject({ displayValue: '+262 262 00 00 00', iconUrl: '' });
   });
 
+  it('keeps a compact phone number intact for display, copying and calling', () => {
+    const parsed = parseObjectDetail({
+      id: 'obj-entre-deux',
+      name: 'OTI du Sud — Entre-Deux',
+      contacts: [{ id: 'oc-tel', kind_code: 'phone', value: '0262373711', is_public: true }],
+    });
+
+    expect(parsed.contacts.public).toEqual([
+      expect.objectContaining({
+        value: '0262373711',
+        displayValue: '0262373711',
+        href: 'tel:0262373711',
+        iconUrl: '',
+      }),
+    ]);
+  });
+
   it('exposes raw Markdown *_md siblings from the resource payload', () => {
     const parsed = parseObjectDetail({
       id: 'X',

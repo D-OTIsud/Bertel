@@ -18,13 +18,13 @@ import {
   buildRibbonSegments,
   formatPeriodRange,
   MONTHS,
-  periodWeekSummary,
 } from '../sections/blocks/opening-period-meta';
 import { formatScheduleTime } from '../primitives/schedule-time';
 import type {
   ObjectWorkspaceOpeningPeriod,
   ObjectWorkspaceOpeningPeriodTypeOption,
 } from '../../../services/object-workspace-parser';
+import './opening-period-edit-modal.css';
 
 interface OpeningPeriodEditModalProps {
   open: boolean;
@@ -66,6 +66,26 @@ const DAY_OPTIONS = [
   { v: '', l: '—' },
   ...Array.from({ length: 31 }, (_, i) => ({ v: String(i + 1), l: String(i + 1) })),
 ];
+
+/** Build the visible day groups from the editable draft without changing its source data. */
+function weeklyPreview(period: ObjectWorkspaceOpeningPeriod): { days: string; hours: string }[] {
+  const groups = new Map<string, { index: number; label: string }[]>();
+  scheduleRowsFromPeriod(period).forEach((row, index) => {
+    const slots = row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot));
+    const hours = period.isClosure || slots.length === 0 ? 'Fermé' : slots.map((slot) =>
+      !slot.start && !slot.end ? 'Sans horaire fixe' :
+        `${formatScheduleTime(slot.start) || slot.start || '—'}–${formatScheduleTime(slot.end) || slot.end || '—'}`,
+    ).join(', ');
+    const days = groups.get(hours) ?? [];
+    days.push({ index, label: `${(row.shortLabel ?? row.label).toLocaleLowerCase('fr-FR')}.` });
+    groups.set(hours, days);
+  });
+  return [...groups].map(([hours, days]) => ({
+    hours,
+    days: days.length === 7 ? 'Tous les jours' : days.length > 2 && days[days.length - 1].index - days[0].index === days.length - 1
+      ? `${days[0].label} → ${days[days.length - 1].label}` : days.map((day) => day.label).join(', '),
+  }));
+}
 
 /**
  * Focused add/edit modal for one §14 opening period (parallel to ClassificationEditModal).
@@ -140,6 +160,7 @@ export function OpeningPeriodEditModal({
 
   return (
     <EditorModal
+      className="ed-opening-period-modal"
       open={open}
       title={mode === 'edit' ? 'Modifier la période' : 'Ajouter une période'}
       eyebrow="Horaires · Période d’ouverture"
@@ -199,7 +220,13 @@ export function OpeningPeriodEditModal({
           <div className="ed-record-modal__preview">
             <strong>{draft.label || 'Nouvelle période'}</strong>
             <p>{formatPeriodRange(draft)}</p>
-            <p>{periodWeekSummary(draft)}</p>
+            {editingReason ? <p>Horaires complexes conservés ; cet aperçu simplifié ne les représente pas.</p> :
+              <dl className="opening-preview-hours" aria-label="Aperçu des horaires hebdomadaires">
+                {weeklyPreview(draft).map(({ days, hours }) => <div key={hours}>
+                  <dt>{days}</dt><dd>{hours}</dd>
+                </div>)}
+              </dl>}
+
           </div>
           <h3>Avant d’appliquer</h3>
           <ul className="ed-record-modal__checks">
@@ -361,6 +388,7 @@ export function OpeningPeriodEditModal({
       >
         <fieldset disabled={Boolean(editingReason)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <ScheduleEditor
+            presetsBeforeGrid
             rows={scheduleRowsFromPeriod(draft)}
             colA="Plage 1"
             colB="Plage 2"

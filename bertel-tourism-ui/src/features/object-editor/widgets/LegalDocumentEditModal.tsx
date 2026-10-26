@@ -105,6 +105,7 @@ export function LegalDocumentEditModal({
 
   return (
     <EditorModal
+      className="ed-record-modal--legal"
       open={open}
       title={mode === 'edit' ? 'Modifier le document' : 'Ajouter un document'}
       eyebrow="Dossier administratif"
@@ -153,14 +154,12 @@ export function LegalDocumentEditModal({
         />
       </Field>
 
-      <div className="grid-2">
-        <Field label="Validité">
-          <div className="ed-modal__segmented" role="group" aria-label="Mode de validité">
-            {LEGAL_VALIDITY_OPTIONS.map((option) => <button key={option.v} type="button" aria-pressed={(isForever ? 'forever' : 'fixed_end_date') === option.v}
-              onClick={() => set({ validityMode: option.v, validTo: option.v === 'forever' ? '' : draft.validTo })}>{option.l}</button>)}
-          </div>
-        </Field>
-      </div>
+      <Field label="Validité">
+        <div className="ed-modal__segmented" role="group" aria-label="Mode de validité">
+          {LEGAL_VALIDITY_OPTIONS.map((option) => <button key={option.v} type="button" aria-pressed={(isForever ? 'forever' : 'fixed_end_date') === option.v}
+            onClick={() => set({ validityMode: option.v, validTo: option.v === 'forever' ? '' : draft.validTo })}>{option.l}</button>)}
+        </div>
+      </Field>
 
       <div className="grid-2">
         <Field label="Valide à partir du">
@@ -190,24 +189,6 @@ export function LegalDocumentEditModal({
         </p>
       )}
 
-      <Disclosure title="Ajouter une note interne" defaultOpen={Boolean(draft.note)}>
-      <Field label="Note">
-        <Textarea
-          value={draft.note}
-          placeholder="Précisions internes (assureur, conditions, rappel de renouvellement…)"
-          aria-label="Note"
-          rows={2}
-          onChange={(note) => set({ note })}
-        />
-      </Field>
-      </Disclosure>
-
-      <Disclosure title="Statut administratif" defaultOpen={Boolean(draft.status && draft.status !== 'active')}>
-        <Field label="Statut">
-          <Select aria-label="Statut du document" value={draft.status || 'active'} options={statusOptions.map((option) => ({ v: option.v, l: option.l }))} onChange={(status) => set({ status })} />
-        </Field>
-      </Disclosure>
-
       {/* Justificatif (ref_document) — optional. Shows the attached file with a remove action,
           or the upload field once an access token is resolved. Mirrors §08 classifications. */}
       {draft.documentUrl ? (
@@ -236,6 +217,25 @@ export function LegalDocumentEditModal({
           />
         )
       )}
+
+      <Disclosure title="Ajouter une note interne" defaultOpen={Boolean(draft.note)}>
+      <Field label="Note">
+        <Textarea
+          value={draft.note}
+          placeholder="Précisions internes (assureur, conditions, rappel de renouvellement…)"
+          aria-label="Note"
+          rows={2}
+          onChange={(note) => set({ note })}
+        />
+      </Field>
+      </Disclosure>
+
+      <Disclosure title="Statut administratif" defaultOpen={Boolean(draft.status && draft.status !== 'active')}>
+        <Field label="Statut">
+          <Select aria-label="Statut du document" value={draft.status || 'active'} options={statusOptions.map((option) => ({ v: option.v, l: option.l }))} onChange={(status) => set({ status })} />
+        </Field>
+      </Disclosure>
+
     </EditorModal>
   );
 }

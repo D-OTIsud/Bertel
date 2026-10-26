@@ -1,0 +1,16 @@
+/* Keep the existing non-destructive day presets before their weekly grid. */
+.object-editor.ed-opening-period-modal .sched__hint {
+  align-items: center;
+  margin-top: 0;
+  padding-bottom: 10px;
+}
+.object-editor.ed-opening-period-modal .sched__hint::before {
+  content: 'Jours ouverts :';
+  margin-right: 2px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.object-editor.ed-opening-period-modal .opening-preview-hours { display: grid; gap: 6px; margin: 8px 0 0; }
+.object-editor.ed-opening-period-modal .opening-preview-hours > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.4fr); align-items: baseline; gap: 8px; }
+.object-editor.ed-opening-period-modal .opening-preview-hours dt { color: var(--ink-3); font-size: 11px; }
+.object-editor.ed-opening-period-modal .opening-preview-hours dd { margin: 0; color: var(--ink); text-align: right; font: 500 10.5px/1.5 var(--font-mono, 'IBM Plex Mono', monospace); overflow-wrap: anywhere; }

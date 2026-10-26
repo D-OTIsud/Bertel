@@ -2,13 +2,12 @@ import { useState, useEffect } from 'react';
 import {
   Disclosure,
   EditorModal,
-  ReferenceSelect,
+  Chip,
   Field,
   Input,
   Readout,
   Textarea,
   Toggle,
-  Select,
   LangTabs,
 } from '../primitives';
 import type {
@@ -17,6 +16,7 @@ import type {
 } from '../../../services/object-workspace-parser';
 import { MediaUploadField } from './MediaUploadField';
 import { getSupabaseClient } from '../../../lib/supabase';
+import './geography-media-modals.css';
 
 interface Props {
   open: boolean;
@@ -31,7 +31,7 @@ interface Props {
 // Read-audience vocabulary (§52 precedent — aligned with §16): media.visibility gates
 // WHO reads the row, it is not a publication switch ("Publié" is). 'private' = Interne.
 const VISIBILITY = [
-  { v: 'public', l: 'Publique' },
+  { v: 'public', l: 'Tout le monde' },
   { v: 'partners', l: 'Partenaires' },
   { v: 'private', l: 'Interne' },
 ];
@@ -84,6 +84,7 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
 
   return (
     <EditorModal
+      className="ed-record-modal--media"
       open={open}
       title={media.url ? 'Modifier le média' : 'Ajouter un média'}
       eyebrow="Médias · Légende et diffusion"
@@ -130,14 +131,18 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
     >
       {typeIsAuthorable ? (
         <Field label="Type de média">
-          <ReferenceSelect
-            value={draft.typeCode}
-            options={typeOptions}
-            aria-label="Type de média"
-            onChange={(code, opt) =>
-              set({ typeCode: code, typeId: opt?.id ?? '', typeLabel: opt?.label ?? '' })
-            }
-          />
+          <div className="ed-modal__segmented ed-media-type" role="group" aria-label="Type de média">
+            {typeOptions.map((option) => (
+              <button
+                key={option.id || option.code}
+                type="button"
+                aria-pressed={draft.typeCode === option.code}
+                onClick={() => set({ typeCode: option.code, typeId: option.id ?? '', typeLabel: option.label ?? '' })}
+              >
+                {option.label || option.code}
+              </button>
+            ))}
+          </div>
         </Field>
       ) : (
         // Documents are created from their owning sections (menus, labels…) — the type
@@ -170,50 +175,59 @@ export function MediaEditModal({ open, media, typeOptions, languages, objectId, 
           }}
         />
       )}
-      {languages.length > 1 && (
-        <LangTabs
-          tabs={languages.map((code) => ({
-            code,
-            label: LANG_LABELS[code] ?? code.toUpperCase(),
-            filled:
-              code === primary
-                ? Boolean(draft.title.trim())
-                : Boolean((draft.titleTranslations[code] ?? '').trim()),
-          }))}
-          active={lang}
-          onSelect={setLang}
-        />
-      )}
-      <Field label="Titre">
-        <Input value={titleValue} aria-label="Titre" onChange={setTitle} />
-      </Field>
-      <Field label="Description (texte alternatif)">
-        <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
-      </Field>
-      <Field label="Crédit / auteur">
-        <Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} />
-      </Field>
-      {/* Publication settings cluster — Visibilité + Photo de couverture share
-          a 2-column grid (.ed-modal__group), Publié sits below as a full-width
-          final toggle. Styling lives in object-editor.css under .ed-modal__group. */}
-      <div className="ed-modal__group">
-        <Field label="Visibilité">
-          {/* A NULL DB visibility renders honestly (§16 precedent) instead of a fake
-              "Publique" display — picking a real value is an explicit user choice. */}
-          <Select
-            value={draft.visibility}
-            options={
-              draft.visibility === ''
-                ? [{ v: '', l: '— Visibilité non définie —' }, ...VISIBILITY]
-                : VISIBILITY
-            }
-            aria-label="Visibilité"
-            onChange={(visibility) => set({ visibility })}
-          />
+      <section className="ed-modal__section ed-media-section">
+        <div className="ed-media-heading">
+          <h3>Légende</h3>
+          {languages.length > 1 && (
+            <LangTabs
+              tabs={languages.map((code) => ({
+                code,
+                label: LANG_LABELS[code] ?? code.toUpperCase(),
+                filled:
+                  code === primary
+                    ? Boolean(draft.title.trim())
+                    : Boolean((draft.titleTranslations[code] ?? '').trim()),
+              }))}
+              active={lang}
+              onSelect={setLang}
+            />
+          )}
+        </div>
+        <Field label="Titre">
+          <Input value={titleValue} aria-label="Titre" onChange={setTitle} />
         </Field>
-        <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
-      </div>
-      <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
+        <Field label="Description (texte alternatif)">
+          <Textarea value={descValue} rows={3} aria-label="Description (texte alternatif)" onChange={setDesc} />
+        </Field>
+      </section>
+      <section className="ed-modal__section ed-media-section">
+        <Field label="Crédit / auteur">
+          <Input value={draft.credit} aria-label="Crédit / auteur" onChange={(credit) => set({ credit })} />
+        </Field>
+      </section>
+      <section className="ed-modal__section ed-media-section">
+        <h3>Diffusion</h3>
+        <div className="ed-media-audience" role="group" aria-label="Visibilité">
+          <span>Visible par :</span>
+          {VISIBILITY.map((option) => (
+            <Chip
+              key={option.v}
+              label={option.l}
+              on={draft.visibility === option.v}
+              onClick={() => set({ visibility: option.v })}
+            />
+          ))}
+        </div>
+        {!VISIBILITY.some((option) => option.v === draft.visibility) && (
+          <p className="ed-media-audience-note" role="status">
+            {draft.visibility ? 'Visibilité actuelle : ' + draft.visibility : 'Visibilité non définie'}
+          </p>
+        )}
+        <div className="ed-media-publication">
+          <Toggle label="Photo de couverture" on={draft.isMain} onChange={(isMain) => set({ isMain })} />
+          <Toggle label="Publié" on={draft.isPublished} onChange={(isPublished) => set({ isPublished })} />
+        </div>
+      </section>
       <Disclosure title="Droits d’utilisation" defaultOpen={rightsExpired}>
         <Field label="Fin des droits d’utilisation">
           <Input

@@ -14,6 +14,8 @@ interface ScheduleEditorProps {
   rows: ScheduleRow[];
   colA?: string;
   colB?: string;
+  /** Render modal day presets before the grid in both visual and keyboard order. */
+  presetsBeforeGrid?: boolean;
   onChange?: (rows: ScheduleRow[]) => void;
 }
 
@@ -38,6 +40,7 @@ export function ScheduleEditor({
   rows,
   colA = 'Service midi',
   colB = 'Service soir',
+  presetsBeforeGrid = false,
   onChange,
 }: ScheduleEditorProps) {
   function replaceRow(index: number, nextRow: ScheduleRow) {
@@ -96,100 +99,107 @@ export function ScheduleEditor({
     );
   }
 
-  return (
-    <div className="sched">
-      <div className="sched__head">Jour</div>
-      <div className="sched__head">{colA}</div>
-      <div className="sched__head">{colB}</div>
-      <div className="sched__head">Copier</div>
-      {rows.map((row, rowIndex) => {
-        const slots = normalizeSlots(row);
-        const isOpen = rowIsOpen(row);
-        const isLast = rowIndex === rows.length - 1;
-        return (
-          <div key={row.code} style={{ display: 'contents' }}>
-            <button
-              type="button"
-              className={`sched__day ${isOpen ? 'is-on' : ''}`}
-              aria-pressed={isOpen}
-              onClick={() => toggleRow(rowIndex)}
-            >
-              <span className="ck">{isOpen ? '✓' : ''}</span>
-              {row.shortLabel ?? row.code}
-              <small>{row.label}</small>
-            </button>
-            {slots.map((slot, slotIndex) => {
-              const colLabel = slotIndex === 0 ? colA : colB;
-              return (
-                <div key={`${row.code}-${slotIndex}`} className={`sched__slot ${!slot ? 'is-closed' : ''}`}>
-                  {slot ? (
-                    <>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="hh:mm"
-                        aria-label={`${row.label} · ${colLabel} · début`}
-                        value={slot.start}
-                        aria-invalid={formatScheduleTime(slot.start) === null || undefined}
-                        onChange={(event) => patchSlot(rowIndex, slotIndex, { start: event.target.value })}
-                        onBlur={(event) => {
-                          const start = formatScheduleTime(event.target.value);
-                          if (start !== null) patchSlot(rowIndex, slotIndex, { start });
-                        }}
-                      />
-                      <span className="dash">-</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="hh:mm"
-                        aria-label={`${row.label} · ${colLabel} · fin`}
-                        value={slot.end}
-                        aria-invalid={formatScheduleTime(slot.end) === null || undefined}
-                        onChange={(event) => patchSlot(rowIndex, slotIndex, { end: event.target.value })}
-                        onBlur={(event) => {
-                          const end = formatScheduleTime(event.target.value);
-                          if (end !== null) patchSlot(rowIndex, slotIndex, { end });
-                        }}
-                      />
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="sched__open-slot"
-                      aria-label={`Ouvrir ${row.label} · ${colLabel}`}
-                      onClick={() => openSlot(rowIndex, slotIndex)}
-                    >
-                      Fermé
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            <button
-              type="button"
-              className="sched__copy"
-              title="Copier les heures sur le jour suivant"
-              aria-label={`Copier les heures de ${row.label} sur le jour suivant`}
-              disabled={isLast || !isOpen}
-              onClick={() => copyToNextDay(rowIndex)}
-            >
-              ↓
-            </button>
-          </div>
-        );
-      })}
-      <div className="sched__hint">
-        <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_ALL)}>
-          Tous les jours
-        </button>
-        <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_WEEK)}>
-          Lun-Ven
-        </button>
-        <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_WEEKEND)}>
-          Week-end
-        </button>
-      </div>
+  const groupPresets = (
+    <div className="sched__hint">
+      <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_ALL)}>
+        Tous les jours
+      </button>
+      <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_WEEK)}>
+        Lun-Ven
+      </button>
+      <button type="button" className="chip size-sm" onClick={() => openGroup(GROUP_WEEKEND)}>
+        Week-end
+      </button>
     </div>
+  );
+
+  return (
+    <>
+      {presetsBeforeGrid && groupPresets}
+      <div className="sched">
+        <div className="sched__head">Jour</div>
+        <div className="sched__head">{colA}</div>
+        <div className="sched__head">{colB}</div>
+        <div className="sched__head">Copier</div>
+        {rows.map((row, rowIndex) => {
+          const slots = normalizeSlots(row);
+          const isOpen = rowIsOpen(row);
+          const isLast = rowIndex === rows.length - 1;
+          return (
+            <div key={row.code} style={{ display: 'contents' }}>
+              <button
+                type="button"
+                className={`sched__day ${isOpen ? 'is-on' : ''}`}
+                aria-pressed={isOpen}
+                onClick={() => toggleRow(rowIndex)}
+              >
+                <span className="ck">{isOpen ? '✓' : ''}</span>
+                {row.shortLabel ?? row.code}
+                <small>{row.label}</small>
+              </button>
+              {slots.map((slot, slotIndex) => {
+                const colLabel = slotIndex === 0 ? colA : colB;
+                return (
+                  <div key={`${row.code}-${slotIndex}`} className={`sched__slot ${!slot ? 'is-closed' : ''}`}>
+                    {slot ? (
+                      <>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="hh:mm"
+                          aria-label={`${row.label} · ${colLabel} · début`}
+                          value={slot.start}
+                          aria-invalid={formatScheduleTime(slot.start) === null || undefined}
+                          onChange={(event) => patchSlot(rowIndex, slotIndex, { start: event.target.value })}
+                          onBlur={(event) => {
+                            const start = formatScheduleTime(event.target.value);
+                            if (start !== null) patchSlot(rowIndex, slotIndex, { start });
+                          }}
+                        />
+                        <span className="dash">-</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="hh:mm"
+                          aria-label={`${row.label} · ${colLabel} · fin`}
+                          value={slot.end}
+                          aria-invalid={formatScheduleTime(slot.end) === null || undefined}
+                          onChange={(event) => patchSlot(rowIndex, slotIndex, { end: event.target.value })}
+                          onBlur={(event) => {
+                            const end = formatScheduleTime(event.target.value);
+                            if (end !== null) patchSlot(rowIndex, slotIndex, { end });
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="sched__open-slot"
+                        aria-label={`Ouvrir ${row.label} · ${colLabel}`}
+                        onClick={() => openSlot(rowIndex, slotIndex)}
+                      >
+                        Fermé
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                className="sched__copy"
+                title="Copier les heures sur le jour suivant"
+                aria-label={`Copier les heures de ${row.label} sur le jour suivant`}
+                disabled={isLast || !isOpen}
+                onClick={() => copyToNextDay(rowIndex)}
+              >
+                ↓
+              </button>
+            </div>
+          );
+        })}
+        {!presetsBeforeGrid && groupPresets}
+      </div>
+    </>
   );
 }
 import { formatScheduleTime } from './schedule-time';

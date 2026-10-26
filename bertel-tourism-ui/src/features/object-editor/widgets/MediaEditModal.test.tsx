@@ -110,12 +110,46 @@ describe('MediaEditModal', () => {
       />,
     );
     // NULL visibility renders honestly instead of a fake "public" display (§16 precedent).
-    expect(screen.getByDisplayValue('— Visibilité non définie —')).toBeInTheDocument();
-    // Audience vocabulary (§52): Publique / Partenaires / Interne — 'private' = Interne.
-    fireEvent.change(screen.getByLabelText('Visibilité'), { target: { value: 'private' } });
+    expect(screen.getAllByText('Visibilité non définie')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Tout le monde' })).toHaveAttribute('aria-pressed', 'false');
+    // Audience vocabulary (§52): public / partners / private — 'private' = Interne.
+    fireEvent.click(screen.getByRole('button', { name: 'Interne' }));
     fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.visibility).toBe('private');
+  });
+
+  it('changes the segmented type with its reference ID and keeps the other metadata', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, tags: ['existing'], rightsExpiresAt: '2027-12-31' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }, { id: 'mt2', code: 'video', label: 'Vidéo' }]}
+        objectId="m1" onClose={() => {}} onSave={onSave}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Vidéo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[0][0]).toMatchObject({ typeCode: 'video', typeId: 'mt2', typeLabel: 'Vidéo',
+      visibility: 'public', isMain: true, isPublished: true, tags: ['existing'], rightsExpiresAt: '2027-12-31' });
+  });
+
+  it('shows and preserves an unknown audience until an explicit supported choice is made', () => {
+    const onSave = jest.fn();
+    render(
+      <MediaEditModal
+        open media={{ ...media, visibility: 'legacy-audience' }} languages={['fr']}
+        typeOptions={[{ id: 'mt1', code: 'photo', label: 'Photo' }]}
+        objectId="m1" onClose={() => {}} onSave={onSave}
+      />,
+    );
+    expect(screen.getByText('Visibilité actuelle : legacy-audience')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tout le monde' })).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[0][0].visibility).toBe('legacy-audience');
+    fireEvent.click(screen.getByRole('button', { name: 'Partenaires' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
+    expect(onSave.mock.calls[1][0].visibility).toBe('partners');
   });
 
   it('keeps an untouched NULL visibility empty on save (no silent widening)', () => {

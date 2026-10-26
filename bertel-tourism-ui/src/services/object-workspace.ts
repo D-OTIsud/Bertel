@@ -12,6 +12,9 @@ import {
   type ObjectWorkspaceAmenityOption,
   type ObjectWorkspaceCharacteristicsModule,
   parseObjectWorkspace,
+  parseWorkspacePlacesModule,
+  parseWorkspaceOpeningPeriodRows,
+  projectWorkspaceOpeningSchedules,
   type ObjectWorkspaceContactItem,
   type ObjectWorkspaceContactsModule,
   type ObjectWorkspaceDescriptionScope,
@@ -33,6 +36,8 @@ import {
   type ObjectWorkspacePlaceItem,
   type ObjectWorkspacePlacesModule,
   type ObjectWorkspaceOpeningPeriod,
+  type ObjectWorkspaceOpeningSchedule,
+  type ObjectWorkspaceOpeningTimePeriod,
   type ObjectWorkspaceOpeningPeriodTypeOption,
   type ObjectWorkspaceOpeningsModule,
   type ObjectWorkspaceSyncIdentifiersModule,
@@ -46,6 +51,7 @@ import {
   type ObjectWorkspaceLegalRecord,
   type ObjectWorkspaceLegalTypeOption,
   type ObjectWorkspaceMeetingRoomsModule,
+  type ObjectWorkspaceMeetingRoomItem,
   type ObjectWorkspaceMenuItem,
   type ObjectWorkspaceMenusModule,
   type ObjectWorkspaceCuisineModule,
@@ -77,6 +83,7 @@ import {
 import { validateDiscountRowsForSave } from '../features/object-editor/sections/discount-row';
 import { listObjectCrm } from './crm';
 import { mapDatabaseError } from './api-error';
+import { assertWorkspaceSaveAvailable, knownWorkspaceIdsPresent, LEGAL_SUMMARY_UNAVAILABLE, workspaceReadRows } from './object-workspace-safety';
 
 // Re-export normalizeTagColor so callers and tests that import from this entry point can reach it
 // without importing from object-workspace-parser directly.
@@ -2378,7 +2385,7 @@ function normalizeWorkspaceLegalComplianceSummary(value: unknown): ObjectWorkspa
   };
 }
 
-async function getObjectWorkspaceLegalModule(
+export async function getObjectWorkspaceLegalModule(
   objectId: string,
   baseModule: ObjectWorkspaceLegalModule,
   catalogs: ReferenceCatalogs,
@@ -2416,7 +2423,9 @@ async function getObjectWorkspaceLegalModule(
     }),
   ]);
 
-  if (legalDataResult.status !== 'fulfilled' || legalDataResult.value.error) {
+  const legalRows = workspaceReadRows(legalDataResult);
+  if (!legalRows || !knownWorkspaceIdsPresent(baseModule.records, legalRows)
+    || legalRows.some((row) => !readString(readRecord(row.type).code, readString(row.type_code)).trim())) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore un module D6 exploitable pour ce profil.',
@@ -2440,11 +2449,7 @@ async function getObjectWorkspaceLegalModule(
     };
   });
   const typeByCode = new Map(typeOptions.map((option) => [option.code.toLowerCase(), option]));
-  const records = Array.isArray(legalDataResult.value.data)
-    ? (legalDataResult.value.data as unknown[]).map((entry) =>
-        normalizeWorkspaceLegalRecord(readRecord(entry), typeByCode),
-      )
-    : [];
+  const records = legalRows.map((row) => normalizeWorkspaceLegalRecord(row, typeByCode));
 
   // Resolve attached justificatifs (document_id → url/title) for display. get_object_legal_data
   // returns only document_id; the editor needs a clickable link, so batch-select ref_document
@@ -2463,7 +2468,7 @@ async function getObjectWorkspaceLegalModule(
     unavailableReason:
       complianceResult.status === 'fulfilled' && complianceResult.value.error == null
         ? null
-        : 'Le resume de conformite n est pas completement expose pour ce profil.',
+        : LEGAL_SUMMARY_UNAVAILABLE,
   };
 }
 
@@ -2641,7 +2646,7 @@ async function getObjectWorkspaceCrmModule(
   }
 }
 
-async function getObjectWorkspaceRoomsModule(
+export async function getObjectWorkspaceRoomsModule(
   objectId: string,
   baseModule: ObjectWorkspaceRoomsModule,
   catalogs: ReferenceCatalogs,
@@ -2653,9 +2658,7 @@ async function getObjectWorkspaceRoomsModule(
 
   const client = getSupabaseClient();
   if (!client) {
-    return baseModule.items.length > 0
-      ? baseModule
-      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les chambres et unites.' };
   }
 
   // 4 catalogues depuis le cache de session : 6 requetes -> 2. Le filtre de
@@ -2673,20 +2676,20 @@ async function getObjectWorkspaceRoomsModule(
   const [roomsResult, mediaResult] = await Promise.allSettled([
     client
       .from('object_room_type')
-      .select('id, code, name, name_i18n, description, description_i18n, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
+      .select('id, code, name, name_i18n, description, description_i18n, extra, capacity_adults, capacity_children, capacity_total, size_sqm, bed_config, bed_config_i18n, total_rooms, floor_level, view_type_id, room_type_id, base_price, currency, is_accessible, is_published, position')
       .eq('object_id', objectId)
       .order('position', { ascending: true }),
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
-  if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
+  const rows = workspaceReadRows(roomsResult);
+  if (!rows || !knownWorkspaceIdsPresent(baseModule.items, rows)) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore les chambres et unites pour ce profil.',
     };
   }
 
-  const rows = (roomsResult.value.data ?? []) as Record<string, unknown>[];
   const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
   const [amenityLinksResult, mediaLinksResult, bedLinksResult] = roomIds.length > 0
     ? await Promise.allSettled([
@@ -2699,6 +2702,10 @@ async function getObjectWorkspaceRoomsModule(
         { status: 'fulfilled' as const, value: { data: [], error: null } },
         { status: 'fulfilled' as const, value: { data: [], error: null } },
       ];
+
+  if ([amenityLinksResult, mediaLinksResult, bedLinksResult].some((result) => workspaceReadRows(result) === null)) {
+    return { ...baseModule, unavailableReason: 'Les équipements, médias ou lits des chambres ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
 
   const viewTypeOptions = roomRefs.view.length > 0
     ? dedupeReferenceOptions(roomRefs.view.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
@@ -2722,6 +2729,13 @@ async function getObjectWorkspaceRoomsModule(
   const roomTypeById = optionMapById(roomTypeOptions);
   const amenityById = optionMapById(amenityOptions);
   const bedTypeById = optionMapById(bedTypeOptions);
+  if (rows.some((row) => (row.view_type_id && !viewTypeById.has(readString(row.view_type_id)))
+    || (row.room_type_id && !roomTypeById.has(readString(row.room_type_id))))
+    || workspaceReadRows(amenityLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !amenityById.has(readString(row.amenity_id)))
+    || workspaceReadRows(bedLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !bedTypeById.has(readString(row.bed_type_id)))
+    || workspaceReadRows(mediaLinksResult)!.some((row) => !roomIds.includes(readString(row.room_type_id)) || !readString(row.media_id))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des chambres ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
   const amenityCodesByRoom = new Map<string, string[]>();
   const mediaIdsByRoom = new Map<string, string[]>();
   const bedsByRoom = new Map<string, ObjectWorkspaceRoomBed[]>();
@@ -2761,9 +2775,25 @@ async function getObjectWorkspaceRoomsModule(
       }
       bedsByRoom.set(roomId, [
         ...(bedsByRoom.get(roomId) ?? []),
-        { bedTypeId: option.id, bedTypeCode: option.code, bedTypeLabel: option.label, quantity: readString(row.quantity, '1') },
+        {
+          bedTypeId: option.id,
+          bedTypeCode: option.code,
+          bedTypeLabel: option.label,
+          quantity: readString(row.quantity, '1'),
+          position: Number.isFinite(Number.parseInt(readString(row.position), 10)) ? Number.parseInt(readString(row.position), 10) : null,
+        },
       ]);
     }
+  }
+
+  if (baseModule.items.some((room) => room.recordId && (
+    room.amenityCodes.some((code) => !(amenityCodesByRoom.get(room.recordId!) ?? []).includes(code))
+    || room.mediaIds.some((id) => !(mediaIdsByRoom.get(room.recordId!) ?? []).includes(id))
+    || room.beds.some((bed) => !(bedsByRoom.get(room.recordId!) ?? []).some((loaded) =>
+      // The resource getter exposes code/name without an ID; the parser uses code as ID fallback.
+      isUuid(bed.bedTypeId) ? loaded.bedTypeId === bed.bedTypeId : loaded.bedTypeCode === bed.bedTypeCode))
+  ))) {
+    return { ...baseModule, unavailableReason: 'Certaines données associées aux chambres ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
   }
 
   return {
@@ -2780,7 +2810,10 @@ async function getObjectWorkspaceRoomsModule(
       return {
         recordId: roomId || null,
         code: readString(row.code, `room-${index + 1}`),
-        name: readString(row.name, `Unite ${index + 1}`),
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
+        extra: row.extra !== null && typeof row.extra === 'object' && !Array.isArray(row.extra)
+          ? row.extra as Record<string, unknown> : null,
         nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
         description: readString(row.description),
         descriptionTranslations: readRecord(row.description_i18n) as Record<string, string>,
@@ -2799,20 +2832,23 @@ async function getObjectWorkspaceRoomsModule(
         roomTypeCode: roomType?.code ?? '',
         roomTypeLabel: roomType?.label ?? '',
         basePrice: readString(row.base_price),
-        currency: readString(row.currency, 'EUR'),
+        currency: readString(row.currency),
         accessible: readBoolean(row.is_accessible),
+        rawAccessible: row.is_accessible == null ? null : readBoolean(row.is_accessible),
         published: row.is_published == null ? true : readBoolean(row.is_published),
-        position: readString(row.position, String(index + 1)),
+        rawPublished: row.is_published == null ? null : readBoolean(row.is_published),
+        position: readString(row.position),
         amenityCodes: amenityCodesByRoom.get(roomId) ?? [],
         mediaIds: mediaIdsByRoom.get(roomId) ?? [],
         beds: bedsByRoom.get(roomId) ?? [],
       };
     }),
+    knownRoomIds: rows.map((row) => readString(row.id)).filter(Boolean),
     unavailableReason: null,
   };
 }
 
-async function getObjectWorkspaceMeetingRoomsModule(
+export async function getObjectWorkspaceMeetingRoomsModule(
   objectId: string,
   baseModule: ObjectWorkspaceMeetingRoomsModule,
   catalogs: ReferenceCatalogs,
@@ -2824,9 +2860,7 @@ async function getObjectWorkspaceMeetingRoomsModule(
 
   const client = getSupabaseClient();
   if (!client) {
-    return baseModule.items.length > 0
-      ? baseModule
-      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les salles MICE.' };
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les salles MICE.' };
   }
 
   // 1 catalogue depuis le cache de session.
@@ -2835,46 +2869,67 @@ async function getObjectWorkspaceMeetingRoomsModule(
   const [roomsResult] = await Promise.allSettled([
     client
       .from('object_meeting_room')
-      .select('id, name, name_i18n, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
+      .select('id, name, name_i18n, extra, area_m2, cap_theatre, cap_u, cap_classroom, cap_boardroom')
       .eq('object_id', objectId)
       .order('name', { ascending: true }),
   ]);
 
-  if (roomsResult.status !== 'fulfilled' || roomsResult.value.error) {
+  const rows = workspaceReadRows(roomsResult);
+  if (!rows || !knownWorkspaceIdsPresent(baseModule.items, rows)) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore les salles MICE pour ce profil.',
     };
   }
 
-  const rows = (roomsResult.value.data ?? []) as Record<string, unknown>[];
   const roomIds = rows.map((row) => readString(row.id)).filter(Boolean);
-  const linksResult = roomIds.length > 0
-    ? await client.from('meeting_room_equipment').select('room_id, equipment_id').in('room_id', roomIds)
-    : { data: [], error: null };
+  const [linksResult] = await Promise.allSettled([
+    roomIds.length > 0
+      ? client.from('meeting_room_equipment').select('room_id, equipment_id, position, note').in('room_id', roomIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const links = workspaceReadRows(linksResult);
+  if (!links) {
+    return { ...baseModule, unavailableReason: 'Les équipements des salles ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
   const equipmentOptions = equipmentRefs.length > 0
     ? dedupeReferenceOptions(equipmentRefs.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.equipmentOptions;
   const equipmentById = optionMapById(equipmentOptions);
+  if (links.some((row) => !roomIds.includes(readString(row.room_id)) || !equipmentById.has(readString(row.equipment_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des salles ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
   const equipmentCodesByRoom = new Map<string, string[]>();
+  const equipmentDetailsByRoom = new Map<string, { equipmentId: string; note: string | null; position: number | null }[]>();
 
-  if (linksResult.error == null) {
-    for (const row of (linksResult.data ?? []) as Record<string, unknown>[]) {
-      const roomId = readString(row.room_id);
-      const option = equipmentById.get(readString(row.equipment_id));
-      if (roomId && option) {
-        equipmentCodesByRoom.set(roomId, [...(equipmentCodesByRoom.get(roomId) ?? []), option.code]);
-      }
+  for (const row of links) {
+    const roomId = readString(row.room_id);
+    const option = equipmentById.get(readString(row.equipment_id));
+    if (roomId && option) {
+      equipmentCodesByRoom.set(roomId, [...(equipmentCodesByRoom.get(roomId) ?? []), option.code]);
+      equipmentDetailsByRoom.set(roomId, [...(equipmentDetailsByRoom.get(roomId) ?? []), {
+        equipmentId: option.id,
+        note: typeof row.note === 'string' ? row.note : null,
+        position: row.position == null ? null : Number(row.position),
+      }]);
     }
+  }
+  if (baseModule.items.some((room) => room.recordId && room.equipmentCodes.some((code) =>
+    !(equipmentCodesByRoom.get(room.recordId!) ?? []).includes(code)))) {
+    return { ...baseModule, unavailableReason: 'Certains équipements des salles ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
   }
 
   return {
     equipmentOptions,
-    items: rows.map((row, index) => {
+    items: rows.map((row) => {
       const roomId = readString(row.id);
       return {
         recordId: roomId || null,
-        name: readString(row.name, `Salle ${index + 1}`),
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
+        extra: row.extra !== null && typeof row.extra === 'object' && !Array.isArray(row.extra)
+          ? row.extra as Record<string, unknown> : null,
+        equipmentDetails: equipmentDetailsByRoom.get(roomId) ?? [],
         nameTranslations: readRecord(row.name_i18n) as Record<string, string>,
         areaM2: readString(row.area_m2),
         capacityTheatre: readString(row.cap_theatre),
@@ -2884,6 +2939,7 @@ async function getObjectWorkspaceMeetingRoomsModule(
         equipmentCodes: equipmentCodesByRoom.get(roomId) ?? [],
       };
     }),
+    knownRoomIds: rows.map((row) => readString(row.id)).filter(Boolean),
     unavailableReason: null,
   };
 }
@@ -2934,7 +2990,7 @@ async function getObjectWorkspaceCuisineModule(
   return { codes, options, unavailableReason: null };
 }
 
-async function getObjectWorkspaceMenusModule(
+export async function getObjectWorkspaceMenusModule(
   objectId: string,
   baseModule: ObjectWorkspaceMenusModule,
   catalogs: ReferenceCatalogs,
@@ -2946,9 +3002,7 @@ async function getObjectWorkspaceMenusModule(
 
   const client = getSupabaseClient();
   if (!client) {
-    return baseModule.items.length > 0
-      ? baseModule
-      : { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les menus.' };
+    return { ...baseModule, unavailableReason: 'Connexion backend indisponible pour charger les menus.' };
   }
 
   // 6 catalogues depuis le cache de session : ce module passe de 8 requetes a 2
@@ -2968,25 +3022,27 @@ async function getObjectWorkspaceMenusModule(
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
-  if (menusResult.status !== 'fulfilled' || menusResult.value.error) {
+  const menus = workspaceReadRows(menusResult);
+  if (!menus || !knownWorkspaceIdsPresent(baseModule.items, menus)) {
     return {
       ...baseModule,
       unavailableReason: 'Le live actuel ne fournit pas encore les menus pour ce profil.',
     };
   }
 
-  const menus = (menusResult.value.data ?? []) as Record<string, unknown>[];
   const menuIds = menus.map((row) => readString(row.id)).filter(Boolean);
-  const itemRowsResult = menuIds.length > 0
-    ? await client
+  const [itemRowsResult] = await Promise.allSettled([menuIds.length > 0
+    ? client
         .from('object_menu_item')
         .select('id, menu_id, name, description, price, currency, kind_id, unit_id, media_id, is_available, position, section_id')
         .in('menu_id', menuIds)
         .order('position', { ascending: true })
-    : { data: [], error: null };
-  const itemRows = itemRowsResult.error == null
-    ? (itemRowsResult.data ?? []) as Record<string, unknown>[]
-    : [];
+    : Promise.resolve({ data: [], error: null })]);
+  const itemRows = workspaceReadRows(itemRowsResult);
+  if (!itemRows || !knownWorkspaceIdsPresent(baseModule.items.flatMap((menu) => menu.items), itemRows)
+    || itemRows.some((row) => !menuIds.includes(readString(row.menu_id)))) {
+    return { ...baseModule, unavailableReason: 'Les plats des menus ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
   const itemIds = itemRows.map((row) => readString(row.id)).filter(Boolean);
   const [mediaLinksResult, dietaryLinksResult, allergenLinksResult, cuisineLinksResult] = itemIds.length > 0
     ? await Promise.allSettled([
@@ -3005,6 +3061,9 @@ async function getObjectWorkspaceMenusModule(
         { status: 'fulfilled' as const, value: { data: [], error: null } },
         { status: 'fulfilled' as const, value: { data: [], error: null } },
       ];
+  if ([mediaLinksResult, dietaryLinksResult, allergenLinksResult, cuisineLinksResult].some((result) => workspaceReadRows(result) === null)) {
+    return { ...baseModule, unavailableReason: 'Les médias, régimes, allergènes ou cuisines des plats ne sont pas complètement chargés. Rechargez la fiche avant de sauvegarder.' };
+  }
   const categoryOptions = menuRefs.category.length > 0
     ? dedupeReferenceOptions(menuRefs.category.map((row) => normalizeReferenceOption(row as unknown as Record<string, unknown>)))
     : baseModule.categoryOptions;
@@ -3032,6 +3091,16 @@ async function getObjectWorkspaceMenusModule(
   const dietaryById = optionMapById(dietaryTagOptions);
   const allergenById = optionMapById(allergenOptions);
   const cuisineById = optionMapById(cuisineTypeOptions);
+  if (menus.some((row) => row.category_id && !categoryById.has(readString(row.category_id)))
+    || itemRows.some((row) => (row.kind_id && !kindById.has(readString(row.kind_id)))
+      || (row.unit_id && !unitById.has(readString(row.unit_id)))
+      || (row.section_id && !categoryById.has(readString(row.section_id))))
+    || workspaceReadRows(mediaLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !readString(row.media_id))
+    || workspaceReadRows(dietaryLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !dietaryById.has(readString(row.dietary_tag_id)))
+    || workspaceReadRows(allergenLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !allergenById.has(readString(row.allergen_id)))
+    || workspaceReadRows(cuisineLinksResult)!.some((row) => !itemIds.includes(readString(row.menu_item_id)) || !cuisineById.has(readString(row.cuisine_type_id)))) {
+    return { ...baseModule, unavailableReason: 'Certaines références des menus ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
   const mediaIdsByItem = new Map<string, string[]>();
   const tagCodesByItem = new Map<string, string[]>();
   const allergenCodesByItem = new Map<string, string[]>();
@@ -3107,6 +3176,17 @@ async function getObjectWorkspaceMenusModule(
     itemsByMenuId.set(menuId, [...(itemsByMenuId.get(menuId) ?? []), item]);
   }
 
+  if (baseModule.items.some((menu) => menu.recordId && menu.items.some((item) => {
+    if (!item.recordId) return false;
+    const loaded = (itemsByMenuId.get(menu.recordId!) ?? []).find((row) => row.recordId === item.recordId);
+    return !loaded || item.mediaIds.some((id) => !loaded.mediaIds.includes(id))
+      || item.dietaryTagCodes.some((code) => !loaded.dietaryTagCodes.includes(code))
+      || item.allergenCodes.some((code) => !loaded.allergenCodes.includes(code))
+      || item.cuisineTypeCodes.some((code) => !loaded.cuisineTypeCodes.includes(code));
+  }))) {
+    return { ...baseModule, unavailableReason: 'Certaines données associées aux plats ont changé ou ne sont pas lisibles. Rechargez la fiche avant de sauvegarder.' };
+  }
+
   return {
     categoryOptions,
     dietaryTagOptions,
@@ -3123,10 +3203,12 @@ async function getObjectWorkspaceMenusModule(
         categoryId: readString(row.category_id),
         categoryCode: category?.code ?? '',
         categoryLabel: category?.label ?? '',
-        name: readString(row.name, `Menu ${index + 1}`),
+        name: readString(row.name),
+        rawName: typeof row.name === 'string' ? row.name : null,
         description: readString(row.description),
         active: row.is_active == null ? true : readBoolean(row.is_active),
         visibility: readString(row.visibility, 'public'),
+        rawVisibility: typeof row.visibility === 'string' ? row.visibility : null,
         position: readString(row.position, String(index + 1)),
         items: itemsByMenuId.get(menuId) ?? [],
       };
@@ -3278,7 +3360,7 @@ async function getObjectWorkspaceItineraryModule(
     assocRole: catalogs.tables.ref_iti_assoc_role ?? [],
   };
 
-  const [itiResult, practicesResult, mediaResult] = await Promise.allSettled([
+  const [itiResult, practicesResult, mediaResult, stageTranslationsResult] = await Promise.allSettled([
     client
       .from('object_iti')
       .select('distance_km, duration_min, difficulty_level, elevation_gain, elevation_loss, is_loop, open_status, status_note, geom')
@@ -3288,6 +3370,7 @@ async function getObjectWorkspaceItineraryModule(
     // §111 stage-photos closeout: the object's §05 media rows, to curate per stage (object_iti_stage_media).
     // Stages LINK existing object media (single-writer); same source as the rooms loader's mediaOptions.
     client.from('media').select('id, title, url, position').eq('object_id', objectId).order('position', { ascending: true }),
+    client.from('object_iti_stage').select('id, name_i18n, description_i18n').eq('object_id', objectId).order('position', { ascending: true }),
   ]);
 
   if (itiResult.status !== 'fulfilled' || itiResult.value.error) {
@@ -3298,6 +3381,12 @@ async function getObjectWorkspaceItineraryModule(
   }
 
   const row = readRecord(itiResult.value.data);
+  const translatedStages = workspaceReadRows(stageTranslationsResult);
+  if (!translatedStages || !knownWorkspaceIdsPresent(baseModule.stages, translatedStages)
+    || translatedStages.some((stage) => !baseModule.stages.some((base) => base.recordId === readString(stage.id)))) {
+    return { ...baseModule, unavailableReason: 'Les traductions des étapes ne sont pas complètement chargées. Rechargez la fiche avant de sauvegarder.' };
+  }
+  const stageById = new Map(translatedStages.map((stage) => [readString(stage.id), stage]));
   const practiceOptions = itiRefs.practice.length > 0
     ? dedupeReferenceOptions(itiRefs.practice.map((entry) => normalizeReferenceOption(entry as unknown as Record<string, unknown>)))
     : baseModule.practiceOptions;
@@ -3323,7 +3412,14 @@ async function getObjectWorkspaceItineraryModule(
         .map((entry) => practiceById.get(readString(entry.practice_id))?.code ?? '')
         .filter(Boolean)
     : baseModule.practiceCodes;
-  const stages = baseModule.stages;
+  const stages = baseModule.stages.map((stage) => {
+    const translated = stage.recordId ? stageById.get(stage.recordId) : undefined;
+    return translated ? {
+      ...stage,
+      nameTranslations: readRecord(translated.name_i18n) as Record<string, string>,
+      descriptionTranslations: readRecord(translated.description_i18n) as Record<string, string>,
+    } : stage;
+  });
 
   // object_iti.duration_min is stored in minutes (greenfield retype from duration_hours); read it
   // directly — no hours->minutes round-trip. elevation_loss carries descent (was unavailable before).
@@ -3374,7 +3470,7 @@ function loadOpeningPeriodTypeOptions(
   });
 }
 
-async function getObjectWorkspaceOpeningsModule(
+export async function getObjectWorkspaceOpeningsModule(
   objectId: string,
   baseModule: ObjectWorkspaceOpeningsModule,
   catalogs: ReferenceCatalogs,
@@ -3386,40 +3482,79 @@ async function getObjectWorkspaceOpeningsModule(
 
   const client = getSupabaseClient();
   if (!client) {
-    return baseModule.periods.length > 0
-      ? baseModule
-      : {
+    return {
           ...baseModule,
           unavailableReason: 'Connexion backend indisponible pour charger les horaires et periodes.',
         };
   }
 
-  const [{ count, error }, periodTypeOptions] = await Promise.all([
-    client.from('opening_period').select('id', { head: true, count: 'exact' }).eq('object_id', objectId),
-    Promise.resolve(loadOpeningPeriodTypeOptions(catalogs)),
-  ]);
-
-  if (error) {
-    return {
-      ...baseModule,
-      periodTypeOptions,
-      unavailableReason: 'Le live actuel ne fournit pas encore un module C6 complet pour ce profil.',
-    };
-  }
-
-  if ((count ?? 0) > 0 && baseModule.periods.length === 0) {
-    return {
-      ...baseModule,
-      periodTypeOptions,
-      unavailableReason: 'Des ouvertures existent en base mais ne remontent pas encore correctement dans le payload de travail.',
-    };
-  }
-
-  return {
-    ...baseModule,
-    periodTypeOptions,
-    unavailableReason: null,
+  const periodTypeOptions = loadOpeningPeriodTypeOptions(catalogs);
+  const unavailable = () => ({
+    ...baseModule, periodTypeOptions,
+    unavailableReason: 'Les horaires ou leurs données associées ne sont pas complètement chargés. Rechargez la fiche avant de les enregistrer.',
+  });
+  // Exact counts detect a PostgREST page cap. An error/partial child read must never look like [].
+  const rowsOf = (result: { data: unknown; error: unknown; count?: number | null }) => {
+    if (result.error || !Array.isArray(result.data)
+      || result.data.some((row) => row === null || typeof row !== 'object' || Array.isArray(row))) return null;
+    const rows = result.data as Record<string, unknown>[];
+    if (typeof result.count === 'number' ? result.count !== rows.length : rows.length >= 1000) return null;
+    return rows;
   };
+  try {
+    const periods = rowsOf(await client.from('opening_period')
+      .select('id, name, date_start, date_end, source_period_id, all_years, name_i18n, extra, period_type_id, is_closure', { count: 'exact' })
+      .eq('object_id', objectId).order('id'));
+    if (!periods || !knownWorkspaceIdsPresent(baseModule.periods, periods)) return unavailable();
+    if (periods.length === 0) return { periods: [], periodTypeOptions, unavailableReason: null };
+
+    const schedules = rowsOf(await client.from('opening_schedule')
+      .select('id, period_id, schedule_type_id, name, note, name_i18n, note_i18n, extra', { count: 'exact' })
+      .in('period_id', periods.map((row) => row.id)).order('id'));
+    const knownSchedules = baseModule.periods.flatMap((period) => period.schedules ?? []);
+    if (!schedules || !knownWorkspaceIdsPresent(knownSchedules.map((schedule) => ({ recordId: schedule.id })), schedules)) return unavailable();
+    const timePeriods = schedules.length ? rowsOf(await client.from('opening_time_period')
+      .select('id, schedule_id, closed, note', { count: 'exact' })
+      .in('schedule_id', schedules.map((row) => row.id)).order('id')) : [];
+    const knownTimePeriods = knownSchedules.flatMap((schedule) => schedule.time_periods);
+    if (!timePeriods || !knownWorkspaceIdsPresent(knownTimePeriods.map((period) => ({ recordId: period.id })), timePeriods)) return unavailable();
+    const timePeriodIds = timePeriods.map((row) => row.id);
+    const [weekdayResult, frameResult] = timePeriods.length ? await Promise.all([
+      client.from('opening_time_period_weekday').select('time_period_id, weekday_id', { count: 'exact' }).in('time_period_id', timePeriodIds),
+      client.from('opening_time_frame').select('id, time_period_id, start_time, end_time, recurrence', { count: 'exact' }).in('time_period_id', timePeriodIds).order('start_time').order('id'),
+    ]) : [{ data: [], error: null, count: 0 }, { data: [], error: null, count: 0 }];
+    const weekdays = rowsOf(weekdayResult);
+    const frames = rowsOf(frameResult);
+    if (!weekdays || !frames || !knownWorkspaceIdsPresent(knownTimePeriods.flatMap((period) =>
+      period.time_frames.map((frame) => ({ recordId: frame.id }))), frames)) return unavailable();
+    const weekdayById = new Map((catalogs.refCodeByDomain.weekday ?? []).map((row) => [row.id, row.code]));
+    if (weekdays.some((row) => !weekdayById.has(readString(row.weekday_id)))) return unavailable();
+    const readDayLinks = new Set(weekdays.map((row) => `${row.time_period_id}:${normalizeOpeningWeekdayCode(weekdayById.get(readString(row.weekday_id))!)}`));
+    if (knownTimePeriods.some((period) => period.id && period.weekdays.some((day) =>
+      !readDayLinks.has(`${period.id}:${normalizeOpeningWeekdayCode(day.weekday_code)}`)))) return unavailable();
+    const periodTypeById = new Map((catalogs.refCodeByDomain.opening_period_type ?? []).map((row) => [row.id, row.code]));
+    const baseById = new Map(baseModule.periods.map((period) => [period.recordId, period]));
+    const enriched = periods.map((period) => ({
+      ...period,
+      // Keep a missing name empty in the model. A display fallback must not become a saved name.
+      label: readString(period.name),
+      bucket: baseById.get(readString(period.id))?.bucket ?? 'undated',
+      period_type_code: periodTypeById.get(readString(period.period_type_id)) ?? '',
+      schedules: schedules.filter((schedule) => schedule.period_id === period.id).map((schedule) => ({
+        ...schedule,
+        time_periods: timePeriods.filter((timePeriod) => timePeriod.schedule_id === schedule.id).map((timePeriod) => ({
+          ...timePeriod,
+          weekdays: weekdays.filter((day) => day.time_period_id === timePeriod.id)
+            .map((day) => ({ weekday_code: weekdayById.get(readString(day.weekday_id)) })),
+          time_frames: frames.filter((frame) => frame.time_period_id === timePeriod.id),
+        })),
+      })),
+    }));
+    const parsed = parseWorkspaceOpeningPeriodRows(enriched);
+    return { periods: parsed, periodTypeOptions, unavailableReason: null };
+  } catch {
+    return unavailable();
+  }
 }
 
 async function getObjectWorkspacePublicationModule(
@@ -4000,6 +4135,7 @@ export async function getObjectWorkspaceResource(
     contactsModule,
     characteristicsModule,
     locationModule,
+    placesModule,
     permissions,
     mediaModule,
     capacityPoliciesModule,
@@ -4038,6 +4174,7 @@ export async function getObjectWorkspaceResource(
     // Zones (communes desservies): ref_commune catalog (public read) + the object's object_zone
     // (can_read_object). Enriched unconditionally like contacts/characteristics (§41).
     getObjectWorkspaceZonesModule(objectId, parsedModules.location),
+    getObjectWorkspacePlacesModule(objectId, parsedModules.places),
     getObjectWorkspacePermissions(objectId),
     getObjectWorkspaceMediaModule(objectId, parsedModules.media, placeLabelById, catalogs),
     getObjectWorkspaceCapacityPoliciesModule(objectId, parsedModules.capacityPolicies, detail.type ?? '', catalogs),
@@ -4058,6 +4195,7 @@ export async function getObjectWorkspaceResource(
   const modules: ObjectWorkspaceModules = {
     ...parsedModules,
     location: locationModule,
+    places: placesModule,
     taxonomy: taxonomyModule,
     distinctions: distinctionsModule,
     publication: publicationModule,
@@ -4244,6 +4382,7 @@ export async function saveObjectWorkspaceTaxonomy(objectId: string, input: Objec
   if (session.demoMode) {
     return;
   }
+  assertWorkspaceSaveAvailable('taxonomy', input);
 
   const client = getSupabaseClient();
   if (!client) {
@@ -4798,6 +4937,7 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
   if (session.demoMode) {
     return;
   }
+  assertWorkspaceSaveAvailable('pricing', input);
 
   // §48 — mirror the object_discount DB CHECKs client-side before the RPC (FMA occurrence-saver precedent).
   const discounts = validateDiscountRowsForSave(input.discounts);
@@ -4846,35 +4986,76 @@ export async function saveObjectWorkspacePricing(objectId: string, input: Object
   }, 'Impossible d enregistrer les tarifs.');
 }
 
-export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
-  return periods.map((period, periodIndex) => {
-    const openTimePeriods = period.weekdays
-      // Only days the user opened persist; closed days are omitted (the read won't surface them).
-      // An open day with no time frames => open WITHOUT fixed hours (round-trips as closed:false + []).
-      .filter((weekday) => weekday.slots.length > 0)
-      .map((weekday) => {
-        const frames = weekday.slots
-          .map((slot) => ({
-            start_time: toNullableText(slot.start),
-            end_time: toNullableText(slot.end),
-          }))
-          .filter((slot) => slot.start_time || slot.end_time);
+function openingProjectionKey(period: Pick<ObjectWorkspaceOpeningPeriod, 'weekdays' | 'closedDays' | 'weekdayNotes'>): string {
+  return JSON.stringify([
+    period.weekdays.map((day) => [normalizeOpeningWeekdayCode(day.code), day.slots.map((slot) => [slot.start, slot.end])])
+      .sort((left, right) => String(left[0]).localeCompare(String(right[0]))),
+    [...period.closedDays].sort(),
+    Object.entries(period.weekdayNotes ?? {}).sort(([left], [right]) => left.localeCompare(right)),
+  ]);
+}
 
-        return {
-          closed: false,
-          weekdays: [{ weekday_code: normalizeOpeningWeekdayCode(weekday.code) }],
-          time_frames: frames,
-        };
-      })
-      .filter((timePeriod) => timePeriod.weekdays[0]?.weekday_code);
-    const openCodes = new Set(openTimePeriods.map((timePeriod) => timePeriod.weekdays[0]?.weekday_code));
-    const closedTimePeriods = Array.from(new Set(period.closedDays.map(normalizeOpeningWeekdayCode)))
-      .filter((weekdayCode) => weekdayCode && !openCodes.has(weekdayCode))
-      .map((weekdayCode) => ({
-        closed: true,
-        weekdays: [{ weekday_code: weekdayCode }],
-        time_frames: [],
-      }));
+function openingTimePeriodKey(timePeriod: Pick<ObjectWorkspaceOpeningTimePeriod, 'closed' | 'note' | 'time_frames'>): string {
+  return JSON.stringify([timePeriod.closed, timePeriod.note || null, timePeriod.time_frames.map((frame) => [
+    frame.start_time?.slice(0, 5) ?? null, frame.end_time?.slice(0, 5) ?? null, frame.recurrence,
+  ])]);
+}
+
+function buildOpeningSchedules(period: ObjectWorkspaceOpeningPeriod): ObjectWorkspaceOpeningSchedule[] {
+  const source = period.schedules ?? [];
+  const projected = projectWorkspaceOpeningSchedules(source);
+  if (projected.editingUnavailableReason) {
+    if (openingProjectionKey(period) !== openingProjectionKey(projected)) {
+      throw new Error(projected.editingUnavailableReason);
+    }
+    // Saving another period must not flatten an untouched, more complex schedule.
+    return source;
+  }
+  const notes = { ...projected.weekdayNotes, ...period.weekdayNotes };
+  const groups = new Map<string, ObjectWorkspaceOpeningTimePeriod>();
+  const openCodes = new Set<string>();
+  const addDay = (code: string, closed: boolean, slots: ObjectWorkspaceOpeningPeriod['weekdays'][number]['slots']) => {
+    if (!code) return;
+    const timePeriod: ObjectWorkspaceOpeningTimePeriod = {
+      id: null, closed, note: notes[code] || null, weekdays: [{ weekday_code: code }],
+      time_frames: closed ? [] : slots.filter((slot) => slot.start || slot.end).map((slot) => ({
+        id: null, start_time: toNullableText(slot.start), end_time: toNullableText(slot.end), recurrence: null,
+      })),
+    };
+    const key = openingTimePeriodKey(timePeriod);
+    const group = groups.get(key);
+    if (group) group.weekdays.push({ weekday_code: code });
+    else groups.set(key, timePeriod);
+  };
+  for (const day of period.weekdays) {
+    if (!day.slots.length) continue;
+    const code = normalizeOpeningWeekdayCode(day.code);
+    if (openCodes.has(code)) throw new Error('Un jour apparaît plusieurs fois dans les horaires.');
+    openCodes.add(code);
+    addDay(code, false, day.slots);
+  }
+  // A source day that the user closes retains its note instead of silently disappearing.
+  const closedCodes = new Set([...period.closedDays, ...Object.keys(projected.weekdayNotes)].map(normalizeOpeningWeekdayCode));
+  for (const code of closedCodes) if (!openCodes.has(code)) addDay(code, true, []);
+  const originalTimePeriods = source[0]?.time_periods ?? [];
+  const timePeriods = Array.from(groups.values()).map((group) => {
+    const daysKey = (days: { weekday_code: string }[]) => days.map((day) => day.weekday_code).sort().join(',');
+    const unchanged = originalTimePeriods.find((original) => openingTimePeriodKey(original) === openingTimePeriodKey(group)
+      && daysKey(original.weekdays) === daysKey(group.weekdays));
+    return unchanged ? { ...unchanged, weekdays: [...unchanged.weekdays], time_frames: [...unchanged.time_frames] } : group;
+  });
+  if (period.schedules && source.length === 0 && timePeriods.length === 0) return [];
+  return [{
+    ...(source[0] ?? {
+      id: null, schedule_type_id: null, schedule_type_code: 'regular', name: 'Horaires', note: null,
+      name_i18n: null, note_i18n: null, extra: {},
+    }),
+    time_periods: timePeriods,
+  }];
+}
+
+export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
+  const output = periods.map((period, periodIndex) => {
 
     // recurrence → RPC mapping:
     //  - always: no dates, treated as all-year (date_start/date_end nulled)
@@ -4883,24 +5064,36 @@ export function buildOpeningsPayload(periods: ObjectWorkspaceOpeningPeriod[]) {
     const hasDates = period.recurrence !== 'always';
     return {
       id: toRpcUuid(period.recordId),
-      name: toNullableText(period.label),
+      name: period.label === '' ? null : period.label,
+      source_period_id: period.sourcePeriodId ?? null,
+      name_i18n: period.nameI18n ?? null,
+      period_type_id: period.originalSeasonTypeCode === undefined || period.seasonTypeCode === period.originalSeasonTypeCode
+        ? toRpcUuid(period.periodTypeId) : null,
       period_type_code: toNullableText(period.seasonTypeCode),
       date_start: hasDates ? toNullableText(period.startDate) : null,
       date_end: hasDates ? toNullableText(period.endDate) : null,
-      all_years: period.recurrence === 'fixed' ? false : true,
+      all_years: period.originalRecurrence === period.recurrence && period.originalAllYears !== undefined
+        ? period.originalAllYears : period.recurrence !== 'fixed',
       is_closure: period.isClosure,
       extra: {
+        ...period.extra,
         workspace_order: period.order || String(periodIndex + 1),
       },
-      schedules: [
-        {
-          schedule_type_code: 'regular',
-          name: 'Horaires',
-          time_periods: [...openTimePeriods, ...closedTimePeriods],
-        },
-      ],
+      schedules: buildOpeningSchedules(period),
     };
   });
+  const schedules = output.flatMap((period) => period.schedules);
+  const timePeriods = schedules.flatMap((schedule) => schedule.time_periods);
+  for (const ids of [output.map((period) => period.id), schedules.map((schedule) => schedule.id),
+    timePeriods.map((period) => period.id), timePeriods.flatMap((period) => period.time_frames.map((frame) => frame.id))]) {
+    const usedIds = new Set<string>();
+    for (const id of ids) {
+      if (!id) continue;
+      if (usedIds.has(id)) throw new Error('Un identifiant est utilisé plusieurs fois dans les horaires. Rechargez la fiche.');
+      usedIds.add(id);
+    }
+  }
+  return output;
 }
 
 export async function saveObjectWorkspaceOpenings(objectId: string, input: ObjectWorkspaceOpeningsModule): Promise<void> {
@@ -4908,6 +5101,7 @@ export async function saveObjectWorkspaceOpenings(objectId: string, input: Objec
   if (session.demoMode) {
     return;
   }
+  assertWorkspaceSaveAvailable('openings', input);
 
   await callObjectWorkspaceRpc(
     'save_object_openings',
@@ -5067,16 +5261,77 @@ function ensureKnownCodes(codes: string[], idByCode: Map<string, string>, label:
   }
 }
 
+function workspaceNameForSave(name: string, rawName: string | null | undefined): string | null {
+  const normalized = toNullableText(name);
+  if (rawName === null && name.trim() === '') return null;
+  const normalizedRawName = rawName == null ? null : toNullableText(rawName);
+  if (rawName !== undefined && normalized === normalizedRawName) return rawName;
+  return normalized;
+}
+
+export function buildMeetingRoomSavePayload(
+  objectId: string,
+  item: ObjectWorkspaceMeetingRoomItem,
+): Record<string, unknown> {
+  const id = item.recordId ?? (item.uid && isUuid(item.uid) ? item.uid : null);
+  if (!id) throw new Error('Nouvelle salle MICE sans identifiant stable. Rechargez la fiche, puis recréez la salle.');
+  return {
+    id,
+    object_id: objectId,
+    name: workspaceNameForSave(item.name, item.rawName),
+    name_i18n: item.nameTranslations,
+    extra: item.extra ?? null,
+    area_m2: toNullableNumber(item.areaM2),
+    cap_theatre: toNullableInteger(item.capacityTheatre),
+    cap_u: toNullableInteger(item.capacityU),
+    cap_classroom: toNullableInteger(item.capacityClassroom),
+    cap_boardroom: toNullableInteger(item.capacityBoardroom),
+  };
+}
+
+export function buildMeetingRoomEquipmentReconcile(
+  roomId: string,
+  item: ObjectWorkspaceMeetingRoomItem,
+  equipmentIdByCode: Map<string, string>,
+): { upsertRows: Array<{ room_id: string; equipment_id: string; position: number | null; note: string | null }>; removedIds: string[] } {
+  const selectedIds = Array.from(new Set(item.equipmentCodes))
+    .map((code) => equipmentIdByCode.get(code.toLowerCase()) as string);
+  const selected = new Set(selectedIds);
+  const oldDetails = item.equipmentDetails ?? [];
+  const oldById = new Map(oldDetails.map((detail) => [detail.equipmentId, detail]));
+  return {
+    removedIds: oldDetails.map((detail) => detail.equipmentId).filter((id) => !selected.has(id)),
+    upsertRows: selectedIds.map((equipmentId, position) => {
+      const old = oldById.get(equipmentId);
+      return { room_id: roomId, equipment_id: equipmentId, position: old ? old.position : position + 1, note: old?.note ?? null };
+    }),
+  };
+}
+
+export function buildMeetingRoomDeletedIds(
+  knownRoomIds: string[],
+  items: ObjectWorkspaceMeetingRoomItem[],
+): string[] {
+  const currentIds = new Set(items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
+  return [...new Set(knownRoomIds)].filter((id) => !currentIds.has(id));
+}
+
 /** Pure payload for api.save_object_rooms — one atomic reconcile per save. */
 export function buildRoomsRpcPayload(input: ObjectWorkspaceRoomsModule): Record<string, unknown> {
+  const knownIds = new Set(input.knownRoomIds ?? input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
+  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
+  if (new Set(currentIds).size !== currentIds.length) throw new Error('Une même chambre apparaît plusieurs fois. Rechargez la fiche avant de sauvegarder.');
   return {
-    rooms: input.items.map((item, index) => ({
+    write_contract: 'rooms-reconcile-v1',
+    deleted_ids: [...knownIds].filter((id) => !currentIds.includes(id)),
+    rooms: input.items.map((item) => ({
       id: toRpcUuid(item.recordId),
       code: item.code,
-      name: item.name || null,
+      name: workspaceNameForSave(item.name, item.rawName) ?? '',
       name_i18n: Object.keys(item.nameTranslations).length > 0 ? item.nameTranslations : null,
-      description: toNullableText(item.description),
+      description: item.description || null,
       description_i18n: Object.keys(item.descriptionTranslations).length > 0 ? item.descriptionTranslations : null,
+      extra: item.extra ?? null,
       room_type_code: item.roomTypeCode || null,
       view_type_code: item.viewTypeCode || null,
       capacity_adults: toNullableInteger(item.capacityAdults),
@@ -5089,15 +5344,15 @@ export function buildRoomsRpcPayload(input: ObjectWorkspaceRoomsModule): Record<
       floor_level: toNullableInteger(item.floorLevel),
       base_price: toNullableNumber(item.basePrice),
       currency: item.currency || null,
-      is_accessible: item.accessible,
-      is_published: item.published,
-      position: toNullableInteger(item.position) ?? index,
+      is_accessible: item.rawAccessible === null && !item.accessible ? null : item.accessible,
+      is_published: item.rawPublished === null && item.published ? null : item.published,
+      position: toNullableInteger(item.position),
       amenity_codes: Array.from(new Set(item.amenityCodes)),
       media_ids: Array.from(new Set(item.mediaIds.filter((id) => isUuid(id)))),
       beds: item.beds.map((bed, bedIndex) => ({
         bed_type_code: bed.bedTypeCode,
         quantity: toNullableInteger(bed.quantity) ?? 1,
-        position: bedIndex + 1,
+        position: bed.position ?? bedIndex + 1,
       })),
     })),
   };
@@ -5108,9 +5363,7 @@ export async function saveObjectWorkspaceRooms(objectId: string, input: ObjectWo
   if (session.demoMode) {
     return;
   }
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
+  assertWorkspaceSaveAvailable('rooms', input);
 
   await callObjectWorkspaceRpc(
     'save_object_rooms',
@@ -5126,9 +5379,7 @@ export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: O
     return;
   }
   // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
+  assertWorkspaceSaveAvailable('meeting-rooms', input);
 
   const client = getSupabaseClient();
   if (!client) {
@@ -5152,43 +5403,43 @@ export async function saveObjectWorkspaceMeetingRooms(objectId: string, input: O
   const existingRoomIds = (existingRoomsResult.data ?? [])
     .map((row) => readString((row as Record<string, unknown>).id))
     .filter(Boolean);
-  if (existingRoomIds.length > 0) {
-    const { error } = await client.from('meeting_room_equipment').delete().in('room_id', existingRoomIds);
-    if (error) {
-      throw mapMutationError(error, 'Impossible de reinitialiser les equipements MICE.');
-    }
+  const knownIds = new Set(input.knownRoomIds ?? input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id)));
+  const existingIdSet = new Set(existingRoomIds);
+  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
+  if (new Set(currentIds).size !== currentIds.length || currentIds.some((id) => !knownIds.has(id) || !existingIdSet.has(id))) {
+    throw new Error('Les salles MICE ont changé depuis leur chargement. Rechargez la fiche avant de sauvegarder.');
   }
-  const { error: deleteRoomsError } = await client.from('object_meeting_room').delete().eq('object_id', objectId);
-  if (deleteRoomsError) {
-    throw mapMutationError(deleteRoomsError, 'Impossible de reinitialiser les salles MICE.');
-  }
-
+  let writesStarted = false;
   for (const item of input.items) {
-    const payload = {
-      object_id: objectId,
-      name: toNullableText(item.name) ?? 'Salle',
-      name_i18n: item.nameTranslations,
-      area_m2: toNullableNumber(item.areaM2),
-      cap_theatre: toNullableInteger(item.capacityTheatre),
-      cap_u: toNullableInteger(item.capacityU),
-      cap_classroom: toNullableInteger(item.capacityClassroom),
-      cap_boardroom: toNullableInteger(item.capacityBoardroom),
-    };
-    const { data, error } = await client.from('object_meeting_room').insert(payload).select('id').single();
+    const payload = buildMeetingRoomSavePayload(objectId, item);
+    const roomId = readString(payload.id);
+    const { error } = await client.from('object_meeting_room').upsert(payload, { onConflict: 'id' });
     if (error) {
-      throw mapMutationError(error, 'Impossible de sauvegarder une salle MICE.');
+      const detail = mapMutationError(error, 'Impossible de sauvegarder une salle MICE.');
+      const message = detail instanceof Error ? detail.message : detail;
+      throw new Error(writesStarted ? `Enregistrement partiel des salles MICE : ${message}` : message);
     }
-    const roomId = readString((data as Record<string, unknown>).id);
-    const equipmentRows = Array.from(new Set(item.equipmentCodes))
-      .map((code) => ({
-        room_id: roomId,
-        equipment_id: equipmentIdByCode.get(code.toLowerCase()) as string,
-      }));
+    writesStarted = true;
+    const reconcile = buildMeetingRoomEquipmentReconcile(roomId, item, equipmentIdByCode);
+    if (reconcile.removedIds.length > 0) {
+      const { error: removeError } = await client.from('meeting_room_equipment').delete().eq('room_id', roomId).in('equipment_id', reconcile.removedIds);
+      if (removeError) throw new Error(`Enregistrement partiel des salles MICE : ${mapMutationError(removeError, 'Impossible de retirer un équipement.')}`);
+    }
+    const equipmentRows = reconcile.upsertRows;
     if (equipmentRows.length > 0) {
-      const { error: equipmentError } = await client.from('meeting_room_equipment').insert(equipmentRows);
+      const { error: equipmentError } = await client.from('meeting_room_equipment').upsert(equipmentRows, { onConflict: 'room_id,equipment_id' });
       if (equipmentError) {
-        throw mapMutationError(equipmentError, 'Impossible de sauvegarder les equipements MICE.');
+        throw new Error(`Enregistrement partiel des salles MICE : ${mapMutationError(equipmentError, 'Impossible de sauvegarder les equipements MICE.')}`);
       }
+    }
+  }
+  const deletedIds = buildMeetingRoomDeletedIds([...knownIds], input.items);
+  if (deletedIds.length > 0) {
+    const { error } = await client.from('object_meeting_room').delete().eq('object_id', objectId).in('id', deletedIds);
+    if (error) {
+      const detail = mapMutationError(error, 'Impossible de supprimer les salles retirées.');
+      const message = detail instanceof Error ? detail.message : detail;
+      throw new Error(writesStarted ? `Enregistrement partiel des salles MICE : ${message}` : message);
     }
   }
 }
@@ -5250,9 +5501,7 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
     return;
   }
   // §46: type-gated module — throw (not silent return) so a stray save routes to the failed path.
-  if (input.unavailableReason) {
-    throw new Error(input.unavailableReason);
-  }
+  assertWorkspaceSaveAvailable('menus', input);
 
   const client = getSupabaseClient();
   if (!client) {
@@ -5357,10 +5606,10 @@ export async function saveObjectWorkspaceMenus(objectId: string, input: ObjectWo
     const menuPayload = {
       object_id: objectId,
       category_id: menu.categoryCode ? categoryIdByCode.get(menu.categoryCode.toLowerCase()) ?? null : null,
-      name: toNullableText(menu.name) ?? 'Menu',
+      name: workspaceNameForSave(menu.name, menu.rawName) ?? '',
       description: toNullableText(menu.description),
       is_active: menu.active,
-      visibility: toNullableText(menu.visibility) ?? 'public',
+      visibility: toNullableText(menu.visibility) ?? (menu.rawVisibility === null ? null : 'public'),
       position: toNullableInteger(menu.position),
     };
     const { data: menuData, error: menuError } = await client.from('object_menu').insert(menuPayload).select('id').single();
@@ -5567,7 +5816,9 @@ export function buildItineraryStagesPayload(
   name: string;
   description: string;
   position: string;
-  extra: Record<string, string>;
+  extra: Record<string, unknown>;
+  name_i18n: Record<string, string> | null;
+  description_i18n: Record<string, string> | null;
   lng?: string;
   lat?: string;
   media: Array<{ media_id: string; position: number }>;
@@ -5579,10 +5830,12 @@ export function buildItineraryStagesPayload(
   // RPC delete+reinsert preserves them — sending only name/description would wipe stage geom + photos.
   return input.stages.map((stage) => ({
     ...(stage.recordId ? { id: stage.recordId } : {}),
-    name: stage.name,
+    name: workspaceNameForSave(stage.name, stage.rawName) ?? '',
     description: stage.description,
     position: stage.position,
-    extra: (stage.kind ? { kind: stage.kind } : {}) as Record<string, string>,
+    extra: { ...Object.fromEntries(Object.entries(stage.extra ?? {}).filter(([key]) => key !== 'kind')), ...(stage.kind ? { kind: stage.kind } : {}) },
+    name_i18n: stage.nameTranslations && Object.keys(stage.nameTranslations).length > 0 ? stage.nameTranslations : null,
+    description_i18n: stage.descriptionTranslations && Object.keys(stage.descriptionTranslations).length > 0 ? stage.descriptionTranslations : null,
     ...(stage.lng && stage.lat ? { lng: stage.lng, lat: stage.lat } : {}),
     media: stage.mediaIds.map((mediaId, mediaIndex) => ({ media_id: mediaId, position: mediaIndex })),
   }));
@@ -5614,6 +5867,7 @@ export function buildItineraryInfoPayload(
     required_equipment: input.requiredEquipment,
     info_places: input.infoPlaces,
     is_child_friendly: input.childFriendly,
+    ...(input.infoTranslations ?? {}),
   };
 }
 
@@ -5772,6 +6026,7 @@ export async function saveObjectWorkspaceLegal(objectId: string, input: ObjectWo
   if (session.demoMode) {
     return;
   }
+  assertWorkspaceSaveAvailable('legal', input);
 
   const client = getSupabaseClient();
   if (!client) {
@@ -6038,6 +6293,7 @@ export async function saveObjectWorkspaceMemberships(objectId: string, input: Ob
   if (session.demoMode) {
     return;
   }
+  assertWorkspaceSaveAvailable('memberships', input);
 
   const client = getSupabaseClient();
   if (!client) {
@@ -6195,6 +6451,68 @@ export function buildZonesPayload(zoneCodes: string[]): { insee_commune: string;
   return rows;
 }
 
+/** The partner projection omits address columns, location IDs and secondary locations. */
+export async function getObjectWorkspacePlacesModule(
+  objectId: string,
+  baseModule: ObjectWorkspacePlacesModule,
+): Promise<ObjectWorkspacePlacesModule> {
+  if (useSessionStore.getState().demoMode) return baseModule;
+  const client = getSupabaseClient();
+  const unavailable = () => ({
+    ...baseModule,
+    unavailableReason: 'Les sites ou leurs données associées ne sont pas complètement chargés. Rechargez la fiche avant de les enregistrer.',
+  });
+  if (!client) return unavailable();
+
+  try {
+    // All three start in the existing workspace wave. Join through place_id because a
+    // place location may have no object_id of its own. Counts catch PostgREST page caps.
+    const results = await Promise.allSettled([
+      client.from('object_place').select('*', { count: 'exact' }).eq('object_id', objectId).order('position').order('id'),
+      client.from('object_location').select('*, object_place!inner(object_id)', { count: 'exact' })
+        .eq('object_place.object_id', objectId).order('position').order('id'),
+      client.from('object_place_description').select('*, object_place!inner(object_id)', { count: 'exact' })
+        .eq('object_place.object_id', objectId).order('position').order('id'),
+    ]);
+    const rows = results.map((result) => {
+      const data = workspaceReadRows(result);
+      if (!data || result.status !== 'fulfilled' || result.value.count !== data.length
+        || !knownWorkspaceIdsPresent([], data)) return null;
+      return data;
+    });
+    const [places, locations, descriptions] = rows;
+    if (!places || !locations || !descriptions || !knownWorkspaceIdsPresent(baseModule.items, places)) return unavailable();
+    const placeIds = new Set(places.map((row) => readString(row.id)));
+    if ([...locations, ...descriptions].some((row) => !placeIds.has(readString(row.place_id)))) return unavailable();
+    for (const item of baseModule.items) {
+      if (!item.recordId) continue;
+      const loadedLocations = locations.filter((row) => row.place_id === item.recordId);
+      const loadedDescriptions = descriptions.filter((row) => row.place_id === item.recordId);
+      const knownLocations = [...(item.rawLocations ?? []).map((row) => ({ recordId: readString(row.id) || null })), { recordId: item.location.recordId }];
+      const knownDescriptions = [...(item.rawDescriptions ?? []).map((row) => ({ recordId: readString(row.id) || null })), { recordId: item.descriptionRecordId }];
+      if (!knownWorkspaceIdsPresent(knownLocations, loadedLocations)
+        || !knownWorkspaceIdsPresent(knownDescriptions, loadedDescriptions)) return unavailable();
+    }
+    const withoutJoin = ({ object_place: _joinedPlace, ...row }: Record<string, unknown>) => row;
+    const loaded = parseWorkspacePlacesModule({
+      places: places.map((place) => ({
+        ...place,
+        locations: locations.filter((row) => row.place_id === place.id).map(withoutJoin),
+        descriptions: descriptions.filter((row) => row.place_id === place.id).map(withoutJoin),
+      })),
+    });
+    // A first address/description on an existing site also needs a client ID that
+    // survives a failed save and retry. Capture it at load, never in the builder.
+    return { ...loaded, items: loaded.items.map((item) => ({
+      ...item,
+      location: { ...item.location, recordId: item.location.recordId ?? crypto.randomUUID() },
+      descriptionRecordId: item.descriptionRecordId ?? crypto.randomUUID(),
+    })) };
+  } catch {
+    return unavailable();
+  }
+}
+
 function assertPlaceCoordsPaired(items: ObjectWorkspacePlaceItem[]): void {
   for (const item of items) {
     const hasLat = Boolean(item.location.latitude.trim());
@@ -6208,35 +6526,78 @@ function assertPlaceCoordsPaired(items: ObjectWorkspacePlaceItem[]): void {
 /** Pure payload for api.save_object_places (secondary sites only — zones use buildZonesPayload). */
 export function buildPlacesRpcPayload(input: ObjectWorkspacePlacesModule): Record<string, unknown> {
   assertPlaceCoordsPaired(input.items);
+  const stableId = (value: string | null): string => {
+    const id = toRpcUuid(value);
+    if (!id) throw new Error('Un site, une adresse ou une description n’a pas d’identifiant stable. Rechargez la fiche avant de sauvegarder.');
+    return id;
+  };
+  const currentIds = input.items.map((item) => item.recordId).filter((id): id is string => Boolean(id));
+  if (new Set(currentIds).size !== currentIds.length) throw new Error('Un même site apparaît plusieurs fois. Rechargez la fiche avant de sauvegarder.');
   return {
-    places: input.items.map((item, index) => ({
-      id: toRpcUuid(item.recordId),
-      label: item.label,
-      position: index,
-      locations: [{
-        id: toRpcUuid(item.location.recordId),
-        address1: toNullableText(item.location.address1),
-        address1_suite: toNullableText(item.location.address1Suite),
-        address2: toNullableText(item.location.address2),
-        address3: toNullableText(item.location.address3),
-        postcode: toNullableText(item.location.postcode),
-        city: toNullableText(item.location.city),
-        code_insee: toNullableText(item.location.codeInsee),
-        lieu_dit: toNullableText(item.location.lieuDit),
-        direction: toNullableText(item.location.direction),
-        latitude: toNullableNumber(item.location.latitude),
-        longitude: toNullableNumber(item.location.longitude),
-        is_main_location: true,
-        position: 0,
-      }],
-      descriptions: [{
-        id: toRpcUuid(item.descriptionRecordId),
-        description: toNullableText(item.description.baseValue),
-        description_i18n: Object.keys(item.description.values).length > 0 ? item.description.values : null,
-        visibility: item.visibility,
-        position: 0,
-      }],
-    })),
+    write_contract: 'places-reconcile-v1',
+    deleted_ids: [...new Set(input.knownPlaceIds ?? [])].filter((id) => !currentIds.includes(id)),
+    places: input.items.map((item, index) => {
+      const rawPlace = item.rawPlace ?? {};
+      const rawLocations = item.rawLocations ?? [];
+      const locationIndex = rawLocations.findIndex((row) => readString(row.id) === item.location.recordId);
+      const selectedLocationIndex = locationIndex >= 0
+        ? locationIndex
+        : Math.max(0, rawLocations.findIndex((row) => readBoolean(row.is_main_location ?? row.is_main)));
+      const locationPayload = (raw: Record<string, unknown>, position: number) => ({
+        ...raw,
+        id: stableId(readString(raw.id) || (position === selectedLocationIndex ? item.location.recordId : null)),
+        address1: position === selectedLocationIndex ? toNullableText(item.location.address1) : raw.address1 ?? null,
+        address1_suite: position === selectedLocationIndex ? toNullableText(item.location.address1Suite) : raw.address1_suite ?? null,
+        address2: position === selectedLocationIndex ? toNullableText(item.location.address2) : raw.address2 ?? null,
+        address3: position === selectedLocationIndex ? toNullableText(item.location.address3) : raw.address3 ?? null,
+        postcode: position === selectedLocationIndex ? toNullableText(item.location.postcode) : raw.postcode ?? null,
+        city: position === selectedLocationIndex ? toNullableText(item.location.city) : raw.city ?? null,
+        code_insee: position === selectedLocationIndex ? toNullableText(item.location.codeInsee) : raw.code_insee ?? null,
+        lieu_dit: position === selectedLocationIndex ? toNullableText(item.location.lieuDit) : raw.lieu_dit ?? null,
+        direction: position === selectedLocationIndex ? (item.location.direction || null) : raw.direction ?? null,
+        latitude: position === selectedLocationIndex ? toNullableNumber(item.location.latitude) : raw.latitude ?? null,
+        longitude: position === selectedLocationIndex ? toNullableNumber(item.location.longitude) : raw.longitude ?? null,
+        altitude_m: position === selectedLocationIndex
+          ? (item.location.altitude?.trim() ? toNullableInteger(item.location.altitude) : raw.altitude_m ?? null)
+          : raw.altitude_m ?? null,
+        is_main_location: raw.id ? (raw.is_main_location ?? raw.is_main ?? null) : position === selectedLocationIndex,
+        ...(raw.position == null ? {} : { position: raw.position }),
+      });
+      const locations = rawLocations.length > 0
+        ? rawLocations.map(locationPayload)
+        : [locationPayload(item.location.raw ?? {}, 0)];
+
+      const rawDescriptions = item.rawDescriptions ?? [];
+      const descriptionIndex = rawDescriptions.findIndex((row) => readString(row.id) === item.descriptionRecordId);
+      const selectedDescriptionIndex = descriptionIndex >= 0 ? descriptionIndex : 0;
+      const descriptionPayload = (raw: Record<string, unknown>, position: number) => {
+        if (position !== selectedDescriptionIndex) return raw;
+        const { extra, ...rawWithoutExtra } = raw;
+        return {
+          ...rawWithoutExtra,
+          ...(extra == null ? {} : { extra }),
+          id: stableId(readString(raw.id) || item.descriptionRecordId),
+          description: item.description.baseValue || null,
+          description_i18n: Object.keys(item.description.values).length > 0 ? item.description.values : (raw.description_i18n ?? null),
+          visibility: item.rawVisibility === null && !item.visibilityEdited && item.visibility === 'public' ? null : item.visibility,
+          ...(raw.position == null ? {} : { position: raw.position }),
+        };
+      };
+      const descriptions = rawDescriptions.length > 0
+        ? rawDescriptions.map(descriptionPayload)
+        : [descriptionPayload({}, 0)];
+
+      const { extra, ...rawPlaceWithoutExtra } = rawPlace;
+      return {
+        ...rawPlaceWithoutExtra,
+        id: stableId(item.recordId),
+        label: workspaceNameForSave(item.label, item.rawName),
+        position: Object.prototype.hasOwnProperty.call(rawPlace, 'position') ? rawPlace.position : item.position ?? index,
+        ...(extra == null ? {} : { extra }),
+        locations,
+        descriptions,
+      };
+    }),
   };
 }
 

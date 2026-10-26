@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { EditorModal, Field, Input, Select, Toggle } from '../primitives';
+import { EditorModal, Field, Chip, ChipSet, Toggle } from '../primitives';
 import { ACTOR_VISIBILITY_OPTIONS } from '../sections/actor-links';
 import type {
   ObjectWorkspaceActorLinkItem,
   WorkspaceReferenceOption,
 } from '../../../services/object-workspace-parser';
+import './catalog-modals.css';
 
 interface ProviderEditModalProps {
   open: boolean;
@@ -27,9 +28,17 @@ interface ProviderEditModalProps {
  * visibility, "principal" flag and free note. Mirrors §03/§08 (display card → modal). The
  * attach itself stays in ProviderCards (ActorPicker); this modal never changes the actor identity.
  */
-export function ProviderEditModal({ open, actor, roleOptions, noteUnavailableReason, onClose, onSave }: ProviderEditModalProps) {
+export function ProviderEditModal({
+  open,
+  actor,
+  roleOptions,
+  noteUnavailableReason,
+  onClose,
+  onSave,
+}: ProviderEditModalProps) {
   const [draft, setDraft] = useState(actor);
-  const set = (patch: Partial<ObjectWorkspaceActorLinkItem>) => setDraft((current) => ({ ...current, ...patch }));
+  const set = (patch: Partial<ObjectWorkspaceActorLinkItem>) =>
+    setDraft((current) => ({ ...current, ...patch }));
 
   // Keep the current role selectable even if the catalog no longer lists it (legacy code).
   const roleSelectOptions = [
@@ -47,50 +56,91 @@ export function ProviderEditModal({ open, actor, roleOptions, noteUnavailableRea
   return (
     <EditorModal
       open={open}
-      title={`Modifier le rattachement — ${actor.displayName}`}
+      eyebrow="Prestataire rattaché à la fiche"
+      title={actor.displayName}
+      footerNote="Prêt à appliquer au brouillon"
+      saveLabel="Appliquer"
       onClose={onClose}
-      onSave={() => onSave({ ...draft, note: draft.note.trim() })}
+      onSave={() =>
+        onSave({ ...draft, note: noteUnavailableReason === null ? draft.note.trim() : actor.note })
+      }
     >
-      <div className="provider-modal__grid">
-        <Field label="Rôle">
-          <Select
-            value={draft.roleCode}
-            aria-label={`Rôle de ${actor.displayName}`}
-            options={roleSelectOptions}
-            onChange={setRole}
-          />
-        </Field>
-        <Field label="Visibilité">
-          <Select
-            value={draft.visibility || 'public'}
-            aria-label={`Visibilité de ${actor.displayName}`}
-            options={ACTOR_VISIBILITY_OPTIONS.map((option) => ({ v: option.v, l: option.l }))}
-            onChange={(visibility) => set({ visibility })}
-          />
-        </Field>
-      </div>
-
-      <Toggle
-        label="Prestataire principal pour ce rôle"
-        sub="Mis en avant pour ce rôle sur la fiche. Un seul principal par rôle."
-        on={draft.isPrimary}
-        onChange={(isPrimary) => set({ isPrimary })}
-      />
-
-      <Field label="Note" hint={noteUnavailableReason ?? undefined}>
-        <Input
-          value={draft.note}
-          placeholder="Rôle réel, référent, conditions…"
-          aria-label={`Note sur ${actor.displayName}`}
-          readOnly={noteUnavailableReason !== null}
-          // §208/T13b — un appelant restreint qui enregistre voit sa note REPORTÉE par le
-          // serveur quoi qu'il envoie (api.save_object_relations) ; sur un lien NEUF, elle part
-          // à NULL. Un champ éditable ici saisirait une valeur silencieusement ignorée à
-          // l'enregistrement (write-trap). Le motif vient du module (verdict par fiche), jamais
-          // de `actor.contactsRestricted` — qui est muet sur un lien pas encore enregistré.
-          onChange={noteUnavailableReason !== null ? () => undefined : (note) => set({ note })}
+      <section className="ed-catalog-section ed-provider-role" aria-label={`Rôle de ${actor.displayName}`}>
+        <h3>Quel est son rôle ici ?</h3>
+        <ChipSet>
+          {roleSelectOptions.map((role) => (
+            <Chip
+              key={role.v}
+              label={role.l}
+              on={draft.roleCode === role.v}
+              onClick={() => setRole(role.v)}
+            />
+          ))}
+        </ChipSet>
+        <Toggle
+          label="Contact principal pour ce rôle"
+          sub={`C’est la personne à contacter en premier comme ${draft.roleLabel.toLowerCase() || 'prestataire'}.`}
+          on={draft.isPrimary}
+          onChange={(isPrimary) => set({ isPrimary })}
         />
-      </Field>
+      </section>
+      <section className="ed-catalog-section" aria-label={`Visibilité de ${actor.displayName}`}>
+        <h3>Qui peut voir ce rattachement ?</h3>
+        <div className="ed-modal__segmented">
+          {['public', 'partners', 'private'].map((visibility) => (
+            <button
+              key={visibility}
+              type="button"
+              aria-pressed={(draft.visibility || 'public') === visibility}
+              onClick={() => set({ visibility })}
+            >
+              {visibility === 'public'
+                ? 'Tout le monde'
+                : ACTOR_VISIBILITY_OPTIONS.find((option) => option.v === visibility)?.l}
+            </button>
+          ))}
+        </div>
+        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          {draft.visibility === 'private'
+            ? 'Visible seulement dans Bertel, par votre équipe.'
+            : draft.visibility === 'partners'
+              ? 'Visible par les partenaires autorisés.'
+              : 'Visible sur la fiche publique.'}
+        </p>
+      </section>
+      <details
+        className="ed-catalog-section ed-catalog-details"
+        open={Boolean(draft.note) || noteUnavailableReason !== null}
+      >
+        <summary>Ajouter une note interne</summary>
+        <Field label="Note" hint={noteUnavailableReason ?? undefined}>
+          <textarea
+            className="input ed-provider-note"
+            value={draft.note}
+            placeholder="Rôle réel, référent, conditions…"
+            aria-label={`Note sur ${actor.displayName}`}
+            readOnly={noteUnavailableReason !== null}
+            // §208/T13b — un appelant restreint qui enregistre voit sa note REPORTÉE par le
+            // serveur quoi qu'il envoie (api.save_object_relations) ; sur un lien NEUF, elle part
+            // à NULL. Un champ éditable ici saisirait une valeur silencieusement ignorée à
+            // l'enregistrement (write-trap). Le motif vient du module (verdict par fiche), jamais
+            // de `actor.contactsRestricted` — qui est muet sur un lien pas encore enregistré.
+            onChange={
+              noteUnavailableReason !== null ? () => undefined : (event) => set({ note: event.target.value })
+            }
+          />
+        </Field>
+      </details>
+      <div className="ed-catalog-summary">
+        <small>Sur la fiche : </small>
+        <strong>
+          {draft.visibility === 'private'
+            ? 'Non affiché publiquement'
+            : draft.visibility === 'partners'
+              ? 'Visible par les partenaires'
+              : `${actor.displayName} · ${draft.roleLabel}`}
+        </strong>
+      </div>
     </EditorModal>
   );
 }

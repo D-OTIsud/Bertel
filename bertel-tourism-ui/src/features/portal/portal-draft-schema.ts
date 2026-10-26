@@ -22,7 +22,7 @@ import type { ObjectWorkspaceModules } from '../../services/object-workspace-par
 import { PORTAL_MODULES } from './portal-rubrics';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
 
-export const PORTAL_DRAFT_VERSION = 1;
+export const PORTAL_DRAFT_VERSION = 2;
 
 export interface PortalDraftPayload {
   version: number;
@@ -33,6 +33,8 @@ export interface PortalDraftPayload {
   note: string;
   /** Les tranches modifiées, par module. Seuls les modules du registre sont conservés. */
   modules: Partial<Record<WorkspaceModuleId, unknown>>;
+  /** Server baseline for the saved slices; absent only on migrated v1 drafts. */
+  baseline?: Partial<Record<WorkspaceModuleId, unknown>>;
   savedAt: string;
 }
 
@@ -67,7 +69,7 @@ export function portalDraftFingerprint(modules: ObjectWorkspaceModules): string 
 }
 
 export function serializePortalDraft(input: Omit<PortalDraftPayload, 'version'>): string {
-  return JSON.stringify({ ...input, version: PORTAL_DRAFT_VERSION, modules: keepPortalModules(input.modules) });
+  return JSON.stringify({ ...input, version: PORTAL_DRAFT_VERSION, modules: keepPortalModules(input.modules), ...(input.baseline ? { baseline: keepPortalModules(input.baseline) } : {}) });
 }
 
 function keepPortalModules(modules: unknown): Partial<Record<WorkspaceModuleId, unknown>> {
@@ -98,7 +100,9 @@ export function parsePortalDraft(raw: string | null | undefined): PortalDraftPay
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
   const record = parsed as Record<string, unknown>;
-  if (record.version !== PORTAL_DRAFT_VERSION) return null;
+  // Version 1 stored only a fingerprint and draft. Keep it readable; on a fingerprint
+  // mismatch the caller preserves it and asks for review instead of deleting it.
+  if (record.version !== 1 && record.version !== PORTAL_DRAFT_VERSION) return null;
   if (typeof record.objectId !== 'string' || !record.objectId) return null;
   return {
     version: PORTAL_DRAFT_VERSION,
@@ -106,6 +110,8 @@ export function parsePortalDraft(raw: string | null | undefined): PortalDraftPay
     fingerprint: typeof record.fingerprint === 'string' ? record.fingerprint : '',
     note: typeof record.note === 'string' ? record.note : '',
     modules: keepPortalModules(record.modules),
+    ...(record.baseline && typeof record.baseline === 'object' && !Array.isArray(record.baseline)
+      ? { baseline: keepPortalModules(record.baseline) } : {}),
     savedAt: typeof record.savedAt === 'string' ? record.savedAt : '',
   };
 }

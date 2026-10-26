@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { EditorModal, Field, Input, ReferenceSelect, Select } from '../primitives';
+import { Chip, ChipSet, Disclosure, EditorModal, Field, Input, ReferenceSelect, Select } from '../primitives';
 import { MarkdownEditorLazy } from '../../../components/markdown/MarkdownEditorLazy';
 import { useLocationReferenceOptionsQuery } from '../../../hooks/useExplorerQueries';
 import type { ObjectWorkspacePlaceItem } from '../../../services/object-workspace-parser';
@@ -9,7 +9,11 @@ import { readTranslatableField, updateTranslatableField } from '../sections/desc
 import { AddressBanCombobox } from './AddressBanCombobox';
 import { LocationPinMap } from './LocationPinMap';
 import { LocationReferenceCombobox } from './LocationReferenceCombobox';
-import { PLACE_VISIBILITY_OPTIONS, normalizePlaceVisibility, type PlaceVisibility } from '../visibility-vocab';
+import {
+  PLACE_VISIBILITY_OPTIONS,
+  normalizePlaceVisibility,
+  type PlaceVisibility,
+} from '../visibility-vocab';
 import type { ObjectWorkspaceZoneOption } from '../../../services/object-workspace-parser';
 
 interface PlaceEditModalProps {
@@ -42,10 +46,15 @@ export function PlaceEditModal({
   const latValue = Number.parseFloat(draft.location.latitude);
   const lngValue = Number.parseFloat(draft.location.longitude);
   const coordOutOfRange =
-    hasLat && hasLng &&
-    Number.isFinite(latValue) && Number.isFinite(lngValue) &&
+    hasLat &&
+    hasLng &&
+    Number.isFinite(latValue) &&
+    Number.isFinite(lngValue) &&
     (latValue < -90 || latValue > 90 || lngValue < -180 || lngValue > 180);
   const coordInvalid = coordMismatch || coordOutOfRange;
+  const isNew = draft.isNew ?? !draft.recordId;
+  const nameMissing = isNew && !draft.label.trim();
+  const visibilityUnset = draft.rawVisibility === null && !draft.visibilityEdited;
 
   useEffect(() => {
     if (open) setDraft(place);
@@ -61,7 +70,7 @@ export function PlaceEditModal({
       onClose();
       return;
     }
-    if (!draft.label.trim() || coordInvalid) return;
+    if (nameMissing || coordInvalid) return;
     onSave({ ...draft, visibility: normalizePlaceVisibility(draft.visibility) as PlaceVisibility });
   }
 
@@ -70,16 +79,59 @@ export function PlaceEditModal({
   return (
     <EditorModal
       open={open}
-      title={draft.recordId ? 'Modifier le site' : 'Ajouter un site secondaire'}
+      title={isNew ? 'Ajouter un site secondaire' : 'Modifier le site'}
+      eyebrow="Sites secondaires · Adresse et position"
       size="xl"
+      aside={
+        <>
+          <h3>Position</h3>{' '}
+          <div>
+            <Field label="Coordonnées GPS" hint="Latitude et longitude ensemble, ou aucune.">
+              <div className="grid-2" style={{ marginBottom: 8 }}>
+                <Input
+                  value={draft.location.latitude}
+                  mono
+                  readOnly={readOnly}
+                  placeholder="Latitude"
+                  onChange={(latitude) => patchLocation({ latitude })}
+                />
+                <Input
+                  value={draft.location.longitude}
+                  mono
+                  readOnly={readOnly}
+                  placeholder="Longitude"
+                  onChange={(longitude) => patchLocation({ longitude })}
+                />
+              </div>
+              {coordMismatch && (
+                <p style={{ color: 'var(--danger)', fontSize: 12, margin: '0 0 8px' }}>
+                  Renseignez les deux coordonnées ou aucune.
+                </p>
+              )}
+              {coordOutOfRange && (
+                <p style={{ color: 'var(--danger)', fontSize: 12, margin: '0 0 8px' }}>
+                  Coordonnées hors plage (latitude -90 à 90, longitude -180 à 180).
+                </p>
+              )}
+              {!readOnly && (
+                <LocationPinMap
+                  latitude={draft.location.latitude}
+                  longitude={draft.location.longitude}
+                  onCoordsChange={(latitude, longitude) => patchLocation({ latitude, longitude })}
+                />
+              )}
+            </Field>
+          </div>
+        </>
+      }
       onClose={onClose}
       onSave={handleSave}
-      saveDisabled={!readOnly && (!draft.label.trim() || coordInvalid)}
-      saveLabel={readOnly ? 'Fermer' : 'Enregistrer'}
+      saveDisabled={!readOnly && (nameMissing || coordInvalid)}
+      saveLabel={readOnly ? 'Fermer' : isNew ? 'Ajouter' : 'Appliquer'}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Field label="Nom du site" required>
+          <Field label="Nom du site" required={isNew}>
             <Input
               value={draft.label}
               readOnly={readOnly}
@@ -87,6 +139,18 @@ export function PlaceEditModal({
               onChange={(label) => !readOnly && setDraft((d) => ({ ...d, label }))}
             />
           </Field>
+          {!readOnly && (
+            <ChipSet>
+              {['Point de rendez-vous', 'Départ', 'Arrivée', 'Parking', 'Accueil'].map((label) => (
+                <Chip
+                  key={label}
+                  label={label}
+                  on={draft.label === label}
+                  onClick={() => setDraft((current) => ({ ...current, label }))}
+                />
+              ))}
+            </ChipSet>
+          )}
           <Field label="Adresse">
             {readOnly ? (
               <Input value={draft.location.address1} readOnly onChange={() => undefined} />
@@ -98,7 +162,10 @@ export function PlaceEditModal({
                   patchLocation({
                     address1: hit.name || draft.location.address1,
                     postcode: hit.postcode || draft.location.postcode,
-                    city: communeOptions.find((c) => c.code === hit.citycode)?.label ?? hit.city ?? draft.location.city,
+                    city:
+                      communeOptions.find((c) => c.code === hit.citycode)?.label ??
+                      hit.city ??
+                      draft.location.city,
                     codeInsee: hit.citycode || draft.location.codeInsee,
                     latitude: hit.latitude || draft.location.latitude,
                     longitude: hit.longitude || draft.location.longitude,
@@ -107,99 +174,77 @@ export function PlaceEditModal({
               />
             )}
           </Field>
-          <div className="grid-2">
-            <Field label="Code postal">
-              <Input value={draft.location.postcode} readOnly={readOnly} onChange={(postcode) => patchLocation({ postcode })} />
-            </Field>
-            <Field label="Commune">
-              <ReferenceSelect
-                value={draft.location.codeInsee}
-                options={communeOptions}
-                placeholder="Commune"
-                onChange={(codeInsee) => {
-                  const commune = communeOptions.find((c) => c.code === codeInsee);
-                  patchLocation({ codeInsee, city: commune?.label ?? draft.location.city });
-                }}
-              />
-            </Field>
-          </div>
-          <Field label="Lieu-dit">
-            {readOnly ? (
-              <Input value={draft.location.lieuDit} readOnly onChange={() => undefined} />
-            ) : (
-              <LocationReferenceCombobox
-                value={draft.location.lieuDit}
-                options={locationReferences?.lieuDits ?? []}
-                onChange={(lieuDit) => patchLocation({ lieuDit })}
-              />
-            )}
-          </Field>
-          <Field label="Itinéraire d'accès">
-            <MarkdownEditorLazy
-              variant="block"
-              ariaLabel="Itinéraire d'accès"
-              value={draft.location.direction}
-              onChange={(direction) => patchLocation({ direction })}
-            />
-          </Field>
-          <Field label="Visibilité de la description">
-            <Select
-              value={normalizePlaceVisibility(draft.visibility)}
-              options={PLACE_VISIBILITY_OPTIONS.map((o) => ({ v: o.v, l: o.l }))}
-              onChange={(visibility) => !readOnly && setDraft((d) => ({ ...d, visibility: visibility as PlaceVisibility }))}
-            />
-          </Field>
-          <Field label="Description">
-            <MarkdownEditorLazy
-              variant="block"
-              ariaLabel="Description du site"
-              value={descriptionValue}
-              onChange={(value) =>
-                !readOnly &&
-                setDraft((d) => ({
-                  ...d,
-                  description: updateTranslatableField(d.description, activeLanguage, localLanguage, value),
-                }))
-              }
-            />
-          </Field>
-        </div>
-        <div>
-          <Field label="Coordonnées GPS" hint="Latitude et longitude ensemble, ou aucune.">
-            <div className="grid-2" style={{ marginBottom: 8 }}>
-              <Input
-                value={draft.location.latitude}
-                mono
-                readOnly={readOnly}
-                placeholder="Latitude"
-                onChange={(latitude) => patchLocation({ latitude })}
-              />
-              <Input
-                value={draft.location.longitude}
-                mono
-                readOnly={readOnly}
-                placeholder="Longitude"
-                onChange={(longitude) => patchLocation({ longitude })}
-              />
+          <Disclosure title="Détails de l’adresse">
+            <div className="grid-2">
+              <Field label="Code postal">
+                <Input
+                  value={draft.location.postcode}
+                  readOnly={readOnly}
+                  onChange={(postcode) => patchLocation({ postcode })}
+                />
+              </Field>
+              <Field label="Commune">
+                <ReferenceSelect
+                  value={draft.location.codeInsee}
+                  options={communeOptions}
+                  placeholder="Commune"
+                  onChange={(codeInsee) => {
+                    const commune = communeOptions.find((c) => c.code === codeInsee);
+                    patchLocation({ codeInsee, city: commune?.label ?? draft.location.city });
+                  }}
+                />
+              </Field>
             </div>
-            {coordMismatch && (
-              <p style={{ color: 'var(--danger)', fontSize: 12, margin: '0 0 8px' }}>
-                Renseignez les deux coordonnées ou aucune.
-              </p>
-            )}
-            {coordOutOfRange && (
-              <p style={{ color: 'var(--danger)', fontSize: 12, margin: '0 0 8px' }}>
-                Coordonnées hors plage (latitude -90 à 90, longitude -180 à 180).
-              </p>
-            )}
-            {!readOnly && (
-              <LocationPinMap
-                latitude={draft.location.latitude}
-                longitude={draft.location.longitude}
-                onCoordsChange={(latitude, longitude) => patchLocation({ latitude, longitude })}
+            <Field label="Lieu-dit">
+              {readOnly ? (
+                <Input value={draft.location.lieuDit} readOnly onChange={() => undefined} />
+              ) : (
+                <LocationReferenceCombobox
+                  value={draft.location.lieuDit}
+                  options={locationReferences?.lieuDits ?? []}
+                  onChange={(lieuDit) => patchLocation({ lieuDit })}
+                />
+              )}
+            </Field>
+          </Disclosure>
+          <Disclosure title="Comment s’y rendre" defaultOpen={Boolean(draft.location.direction)}>
+            <Field label="Itinéraire d'accès">
+              <MarkdownEditorLazy
+                variant="block"
+                ariaLabel="Itinéraire d'accès"
+                value={draft.location.direction}
+                onChange={(direction) => patchLocation({ direction })}
               />
-            )}
-          </Field>
+            </Field>
+          </Disclosure>
+          <Disclosure title="Description" defaultOpen={Boolean(descriptionValue)}>
+            <Field label="Visibilité de la description">
+              <Select
+                value={visibilityUnset ? '' : normalizePlaceVisibility(draft.visibility)}
+                options={[
+                  ...(visibilityUnset ? [{ v: '', l: 'Non définie (accès restreint)' }] : []),
+                  ...PLACE_VISIBILITY_OPTIONS.map((o) => ({ v: o.v, l: o.l })),
+                ]}
+                onChange={(visibility) =>
+                  !readOnly && setDraft((d) => ({ ...d, visibility: visibility as PlaceVisibility, visibilityEdited: true }))
+                }
+              />
+            </Field>
+            <Field label="Description">
+              <MarkdownEditorLazy
+                variant="block"
+                ariaLabel="Description du site"
+                value={descriptionValue}
+                onChange={(value) =>
+                  !readOnly &&
+                  setDraft((d) => ({
+                    ...d,
+                    description: updateTranslatableField(d.description, activeLanguage, localLanguage, value),
+                  }))
+                }
+              />
+            </Field>
+          </Disclosure>
         </div>
       </div>
     </EditorModal>

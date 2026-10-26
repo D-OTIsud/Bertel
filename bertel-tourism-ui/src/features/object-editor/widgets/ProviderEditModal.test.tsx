@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ProviderEditModal } from './ProviderEditModal';
 import type { ObjectWorkspaceActorLinkItem } from '../../../services/object-workspace-parser';
 
@@ -37,20 +37,19 @@ function renderModal(over: Partial<Parameters<typeof ProviderEditModal>[0]> = {}
 describe('ProviderEditModal', () => {
   it('titles the modal with the prestataire name and lists the role catalog', () => {
     renderModal();
-    expect(screen.getByText('Modifier le rattachement — Marie Guide')).toBeInTheDocument();
-    const role = screen.getByRole('combobox', { name: 'Rôle de Marie Guide' });
-    expect(within(role).getAllByRole('option').map((o) => o.textContent)).toEqual(
-      expect.arrayContaining(['Exploitant', 'Guide']),
-    );
+    expect(screen.getByRole('heading', { name: 'Marie Guide' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Exploitant' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Guide' })).toBeInTheDocument();
   });
 
   it('returns the patched role / visibility / primary / trimmed note on save', () => {
     const { onSave } = renderModal({ actor: actor({ note: '' }) });
-    fireEvent.change(screen.getByLabelText('Rôle de Marie Guide'), { target: { value: 'guide' } });
-    fireEvent.change(screen.getByLabelText('Visibilité de Marie Guide'), { target: { value: 'private' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Prestataire principal pour ce rôle' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Guide' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Interne' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Contact principal pour ce rôle' }));
+    fireEvent.click(screen.getByText('Ajouter une note interne'));
     fireEvent.change(screen.getByLabelText('Note sur Marie Guide'), { target: { value: '  Référent terrain  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
 
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceActorLinkItem;
     expect(saved).toMatchObject({
@@ -61,8 +60,7 @@ describe('ProviderEditModal', () => {
 
   it('keeps a legacy role selectable even when absent from the catalog', () => {
     renderModal({ actor: actor({ roleCode: 'legacy_role', roleLabel: 'Ancien rôle' }) });
-    const role = screen.getByRole('combobox', { name: 'Rôle de Marie Guide' });
-    expect(within(role).getByRole('option', { name: 'Ancien rôle' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ancien rôle' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('§208 — disables the Note field and states the per-fiche reason (no silent write-trap)', () => {
@@ -83,10 +81,18 @@ describe('ProviderEditModal', () => {
 
   it('keeps the Note field editable and saves it when no reason is given', () => {
     const { onSave } = renderModal({ actor: actor({ contactsRestricted: false, note: '' }), noteUnavailableReason: null });
+    fireEvent.click(screen.getByText('Ajouter une note interne'));
     const note = screen.getByLabelText('Note sur Marie Guide');
     expect(note).not.toHaveAttribute('readonly');
     fireEvent.change(note, { target: { value: 'Référent terrain' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceActorLinkItem).note).toBe('Référent terrain');
+  });
+
+  it('preserves a locked note byte-for-byte while role and visibility change', () => {
+    const { onSave } = renderModal({ actor: actor({ note: '  Source protégée  ', validFrom: '2025-01-01', validTo: '2027-12-31' }), noteUnavailableReason: 'Note non modifiable.' });
+    fireEvent.click(screen.getByRole('button', { name: 'Guide' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
+    expect(onSave.mock.calls[0][0]).toMatchObject({ note: '  Source protégée  ', validFrom: '2025-01-01', validTo: '2027-12-31', roleCode: 'guide' });
   });
 });

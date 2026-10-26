@@ -8,16 +8,21 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
 jest.mock('../../services/moderation', () => ({
   submitPendingChange: jest.fn(),
 }));
-jest.mock('../../services/notification-delivery', () => ({
-  pingNotifyDrain: jest.fn(),
+jest.mock('../../services/write-compatibility', () => ({
+  readWriteCompatibility: jest.fn().mockResolvedValue({ compatible: true, clientVersion: 1, minimumClientVersion: 1, serverWriteContractVersion: 1 }),
 }));
+
+jest.mock('../../services/notification-delivery', () => ({ pingNotifyDrain: jest.fn() }));
 
 import { planSaveBatch, useEditorSave } from './useEditorSave';
 import { saveWorkspaceModule, invalidateObjectWorkspaceCaches } from '../../hooks/useExplorerQueries';
 import { submitPendingChange } from '../../services/moderation';
 import { pingNotifyDrain } from '../../services/notification-delivery';
 import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../services/object-workspace';
-import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { parseObjectWorkspace, type ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { LEGAL_SUMMARY_UNAVAILABLE } from '../../services/object-workspace-safety';
+import { readWriteCompatibility } from '../../services/write-compatibility';
+import { useSessionStore } from '../../store/session-store';
 
 const mockSaveModule = saveWorkspaceModule as jest.Mock;
 const mockInvalidate = invalidateObjectWorkspaceCaches as jest.Mock;
@@ -57,7 +62,7 @@ describe('planSaveBatch — canonical writer (default)', () => {
       location: perm(false),
       media: perm(false, true),
     } as unknown as ObjectWorkspacePermissions;
-    const plan = planSaveBatch(['contacts', 'location', 'media'], permissions, true);
+    const plan = planSaveBatch(['contacts', 'location', 'media'], permissions, true, makeModules());
     expect(plan.writable).toEqual(['contacts', 'media']);
     expect(plan.proposals).toEqual([]);
     expect(plan.blocked).toEqual([{ module: 'location', reason: 'Lecture seule' }]);
@@ -65,7 +70,7 @@ describe('planSaveBatch — canonical writer (default)', () => {
 
   it('defaults canWriteCanonicalDirect to true (backward compatible)', () => {
     const permissions = { contacts: perm(true) } as unknown as ObjectWorkspacePermissions;
-    const plan = planSaveBatch(['contacts'], permissions);
+    const plan = planSaveBatch(['contacts'], permissions, undefined, makeModules());
     expect(plan.writable).toEqual(['contacts']);
     expect(plan.proposals).toEqual([]);
   });
@@ -79,11 +84,11 @@ describe('planSaveBatch — canonical writer (default)', () => {
 });
 
 describe('planSaveBatch — contributor (no direct canonical write)', () => {
-  it('routes EVERY dirty module to a proposal, nothing blocked (Option B, 22 sections)', () => {
+  it('routes every available dirty module to a proposal regardless of permission flags', () => {
     // Permissions are ignored in contributor mode — even modules a canonical writer cannot direct-write.
     const permissions = {} as ObjectWorkspacePermissions;
     const dirty: WorkspaceModuleId[] = ['contacts', 'characteristics', 'tags', 'itinerary', 'location'];
-    const plan = planSaveBatch(dirty, permissions, false);
+    const plan = planSaveBatch(dirty, permissions, false, makeModules());
     expect(plan.proposals).toEqual(dirty);
     expect(plan.writable).toEqual([]);
     expect(plan.blocked).toEqual([]);
@@ -92,6 +97,7 @@ describe('planSaveBatch — contributor (no direct canonical write)', () => {
 
 function makeModules(): ObjectWorkspaceModules {
   return {
+    ...parseObjectWorkspace({ id: 'HOTRUN0000000001', name: 'Test', raw: {} }, ['fr']),
     characteristics: {
       selectedLanguages: [],
       selectedPaymentCodes: ['cash'],
@@ -102,12 +108,85 @@ function makeModules(): ObjectWorkspaceModules {
   } as unknown as ObjectWorkspaceModules;
 }
 
+describe('planSaveBatch — degraded reads are blocked before routing', () => {
+  it.each([true, false])('blocks unavailable modules for canonical=%s', (canonical) => {
+    const draft = makeModules();
+    draft.rooms.unavailableReason = 'Équipements non chargés';
+    const permissions = { rooms: perm(true), contacts: perm(true) } as ObjectWorkspacePermissions;
+    const plan = planSaveBatch(['rooms', 'contacts'], permissions, canonical, draft);
+    expect(plan.blocked).toEqual([{ module: 'rooms', reason: 'Équipements non chargés' }]);
+    expect(canonical ? plan.writable : plan.proposals).toEqual(['contacts']);
+  });
+
+  it('blocks a restored draft if its baseline still indicates a failed load', () => {
+    const baseline = makeModules();
+    baseline.menus.unavailableReason = 'Plats non chargés';
+    const plan = planSaveBatch(['menus'], {} as ObjectWorkspacePermissions, false, makeModules(), baseline);
+    expect(plan.proposals).toEqual([]);
+    expect(plan.blocked).toEqual([{ module: 'menus', reason: 'Plats non chargés' }]);
+  });
+
+  it('requires the actual module snapshot instead of accepting permission flags alone', () => {
+    const plan = planSaveBatch(['rooms'], { rooms: perm(true) } as ObjectWorkspacePermissions);
+    expect(plan.writable).toEqual([]);
+    expect(plan.blocked[0].reason).toMatch(/pas chargées/);
+  });
+
+  it('blocks a malformed module before a contributor can propose it', () => {
+    const draft = makeModules();
+    draft.rooms.items = null as unknown as typeof draft.rooms.items;
+    expect(planSaveBatch(['rooms'], {} as ObjectWorkspacePermissions, false, draft).blocked[0].reason).toMatch(/incomplètes/);
+  });
+
+  it('allows readable legal records when only the compliance summary is unavailable', () => {
+    const draft = makeModules();
+    draft.legal.unavailableReason = LEGAL_SUMMARY_UNAVAILABLE;
+    expect(planSaveBatch(['legal'], { legal: perm(true) } as ObjectWorkspacePermissions, true, draft).writable).toEqual(['legal']);
+  });
+});
+
 describe('useEditorSave.save — fork routing', () => {
   beforeEach(() => {
     mockSaveModule.mockReset().mockResolvedValue(undefined);
     mockInvalidate.mockReset();
     mockSubmit.mockReset().mockResolvedValue('pc-id');
     mockPing.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('checks compatibility once and prevents every direct/proposal write on an older server', async () => {
+    const previousDemoMode = useSessionStore.getState().demoMode;
+    useSessionStore.setState({ demoMode: false });
+    (readWriteCompatibility as jest.Mock).mockResolvedValueOnce({
+      compatible: false,
+      clientVersion: 2,
+      minimumClientVersion: 1,
+      serverWriteContractVersion: 1,
+      reason: 'versions incompatibles',
+    });
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['contacts'], {} as ObjectWorkspacePermissions, makeModules(), { canWriteCanonicalDirect: false });
+    });
+    expect(outcome.failed).toEqual([{ module: 'contacts', message: 'versions incompatibles' }]);
+    expect(mockSaveModule).not.toHaveBeenCalled();
+    expect(mockSubmit).not.toHaveBeenCalled();
+    expect(mockPing).not.toHaveBeenCalled();
+    useSessionStore.setState({ demoMode: previousDemoMode });
+  });
+
+  it.each([true, false])('never writes or submits a degraded module for canonical=%s', async (canonical) => {
+    const draft = makeModules();
+    draft.rooms.unavailableReason = 'Lits non chargés';
+    const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['rooms'], { rooms: perm(true) } as ObjectWorkspacePermissions, draft, { canWriteCanonicalDirect: canonical });
+    });
+    expect(outcome.blocked).toEqual([{ module: 'rooms', reason: 'Lits non chargés' }]);
+    expect(mockSaveModule).not.toHaveBeenCalled();
+    expect(mockSubmit).not.toHaveBeenCalled();
+    expect(mockPing).not.toHaveBeenCalled();
   });
 
   it('canonical writer writes directly and never submits a proposal', async () => {
@@ -204,7 +283,6 @@ describe('useEditorSave.save — fork routing', () => {
     });
 
     expect(outcome.submitted).toEqual(['contacts']);
-    expect(mockPing).toHaveBeenCalledTimes(1);
     expect(outcome.failed).toEqual([{ module: 'characteristics', message: 'réseau' }]);
     expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(true);
     expect(mockInvalidate).not.toHaveBeenCalled();
@@ -228,21 +306,20 @@ describe('useEditorSave.save — fork routing', () => {
       { module: 'contacts', message: 'réseau' },
     ]);
     expect(queue.client.getQueryState(queue.queueKey)?.isInvalidated).toBe(false);
-    expect(mockPing).not.toHaveBeenCalled();
     expect(mockInvalidate).not.toHaveBeenCalled();
   });
+});
 
+
+describe('production notification delivery stays asynchronous', () => {
   it('finishes a submitted save without waiting for the email relay', async () => {
-    mockPing.mockReturnValue(new Promise<void>(() => {}));
+    mockSubmit.mockReset().mockResolvedValue('pc-id');
+    mockPing.mockReset().mockReturnValue(new Promise<void>(() => {}));
     const { result } = renderHook(() => useEditorSave('HOTRUN0000000001'), { wrapper });
-
     await act(async () => {
-      const outcome = await result.current.save(['contacts'], {} as ObjectWorkspacePermissions, makeModules(), {
-        canWriteCanonicalDirect: false,
-      });
+      const outcome = await result.current.save(['contacts'], {} as ObjectWorkspacePermissions, makeModules(), { canWriteCanonicalDirect: false });
       expect(outcome.submitted).toEqual(['contacts']);
     });
-
     expect(result.current.saving).toBe(false);
     expect(mockPing).toHaveBeenCalledTimes(1);
   });

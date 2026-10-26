@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Chip, ChipSet, Disclosure, Fs } from '../primitives';
+import { Chip, ChipSet, ConfirmDialog, Disclosure, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import { ModuleUnavailableNotice } from './blocks/block-notes';
 import { PlaceEditModal } from '../widgets/PlaceEditModal';
@@ -51,19 +51,17 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
   const readOnly = !canEdit;
   const canEditZones = permissions.location.canEditZones;
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-  function reindex(items: typeof places.items) {
-    return items.map((item, index) => ({ ...item, position: index }));
-  }
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
 
   function savePlace(index: number, next: (typeof places.items)[number]) {
-    const items = reindex(places.items.map((item, itemIndex) => (itemIndex === index ? next : item)));
+    const items = places.items.map((item, itemIndex) => (itemIndex === index ? next : item));
     editor.replaceModule('places', { ...places, items });
     setEditingIndex(null);
   }
 
   function addPlace() {
-    const items = reindex([...places.items, createEmptyPlaceItem(places.items.length)]);
+    const nextPosition = Math.max(-1, ...places.items.map((item) => item.position)) + 1;
+    const items = [...places.items, createEmptyPlaceItem(nextPosition)];
     editor.replaceModule('places', { ...places, items });
     setEditingIndex(items.length - 1);
   }
@@ -71,7 +69,7 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
   function removePlace(index: number) {
     editor.replaceModule('places', {
       ...places,
-      items: reindex(places.items.filter((_, itemIndex) => itemIndex !== index)),
+      items: places.items.filter((_, itemIndex) => itemIndex !== index),
     });
     setEditingIndex(null);
   }
@@ -126,9 +124,9 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
               >
                 {place.label || `Site ${index + 1}`}
               </button>
-              <span className="pill-mini">{place.visibility}</span>
+              <span className="pill-mini">{place.rawVisibility === null && !place.visibilityEdited ? 'Non définie' : place.visibility}</span>
               {!readOnly && (
-                <button type="button" className="del" onClick={() => removePlace(index)}>
+                <button type="button" className="del" onClick={() => setDeletingIndex(index)}>
                   Supprimer
                 </button>
               )}
@@ -178,6 +176,17 @@ export function SectionPlaces({ editor, permissions, archetype, folded }: Sectio
           readOnly={readOnly}
           onSave={(next) => savePlace(editingIndex, next)}
           onClose={() => setEditingIndex(null)}
+        />
+      )}
+      {deletingIndex != null && (
+        <ConfirmDialog
+          open
+          title="Supprimer ce site ?"
+          message={`Le site « ${places.items[deletingIndex]?.label || `Site ${deletingIndex + 1}`} » et ses adresses, descriptions et médias associés seront supprimés lors de l’enregistrement de la fiche.`}
+          confirmLabel="Supprimer le site"
+          tone="danger"
+          onCancel={() => setDeletingIndex(null)}
+          onConfirm={() => { removePlace(deletingIndex); setDeletingIndex(null); }}
         />
       )}
     </Fs>

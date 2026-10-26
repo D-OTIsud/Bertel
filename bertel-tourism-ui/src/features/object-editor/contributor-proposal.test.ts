@@ -8,7 +8,6 @@ import { MODULE_KEY_MAP } from './editor-state';
 import {
   buildCharacteristicsRpcPayload,
   buildPlacesRpcPayload,
-  buildRoomsRpcPayload,
   buildSustainabilityRpcPayload,
   buildTagsRpcPayload,
   buildOpeningsPayload,
@@ -16,6 +15,7 @@ import {
   type WorkspaceModuleId,
 } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { LEGAL_SUMMARY_UNAVAILABLE } from '../../services/object-workspace-safety';
 
 const OBJECT_ID = 'HOTRUN0000000001';
 
@@ -47,7 +47,7 @@ function makeModules(): ObjectWorkspaceModules {
       actors: [],
     },
     contacts: { channels: [{ kind: 'email', value: 'a@b.re' }] },
-    legal: { siret: '12345678900011' },
+    legal: { siret: '12345678900011', records: [] },
     itinerary: { stages: [] },
     location: { places: [] },
     places: { unavailableReason: null, items: [] },
@@ -56,32 +56,49 @@ function makeModules(): ObjectWorkspaceModules {
 }
 
 describe('contributor-proposal — auto-dispatch registry', () => {
-  it('the 7 auto-dispatch modules carry the exact §120-whitelisted RPC names', () => {
+  it('the 6 auto-dispatch modules carry the exact §120-whitelisted RPC names', () => {
     expect(AUTO_DISPATCH_ROUTES.characteristics?.rpc).toBe('save_object_commercial');
     expect(AUTO_DISPATCH_ROUTES.openings?.rpc).toBe('save_object_openings');
     expect(AUTO_DISPATCH_ROUTES.sustainability?.rpc).toBe('save_object_workspace_sustainability');
     expect(AUTO_DISPATCH_ROUTES.tags?.rpc).toBe('save_object_workspace_tags');
     expect(AUTO_DISPATCH_ROUTES.relationships?.rpc).toBe('save_object_relations');
     expect(AUTO_DISPATCH_ROUTES.places?.rpc).toBe('save_object_places');
-    expect(AUTO_DISPATCH_ROUTES.rooms?.rpc).toBe('save_object_rooms');
+    expect(AUTO_DISPATCH_ROUTES.rooms).toBeUndefined();
   });
 
-  it('only those 7 modules are auto-dispatchable', () => {
+  it('only those 6 modules are auto-dispatchable', () => {
     const auto = (Object.keys(AUTO_DISPATCH_ROUTES) as WorkspaceModuleId[]).filter(isAutoDispatchModule);
     expect(new Set(auto)).toEqual(
-      new Set(['characteristics', 'openings', 'sustainability', 'tags', 'relationships', 'places', 'rooms']),
+      new Set(['characteristics', 'openings', 'sustainability', 'tags', 'relationships', 'places']),
     );
   });
 
-  it('itinéraire and lieux are NOT auto-dispatch (manual_apply by decision)', () => {
+  it('itinéraire, lieux and chambres require manual application', () => {
     expect(isAutoDispatchModule('itinerary')).toBe(false);
     expect(isAutoDispatchModule('location')).toBe(false);
+    expect(isAutoDispatchModule('rooms')).toBe(false);
   });
 
   it('every module id has a representative target table', () => {
     for (const module of Object.keys(MODULE_KEY_MAP) as WorkspaceModuleId[]) {
       expect(MODULE_TARGET_TABLE[module]).toBeTruthy();
     }
+  });
+});
+
+describe('buildContributorSubmission — complete baseline and draft', () => {
+  it.each(['baseline', 'draft'] as const)('rejects a failed %s read even when the other slice is complete', (source) => {
+    const baseline = makeModules();
+    const draft = makeModules();
+    const incomplete = source === 'baseline' ? baseline : draft;
+    incomplete.openings = { ...incomplete.openings, unavailableReason: 'Horaires non chargés.' };
+    expect(() => buildContributorSubmission(OBJECT_ID, 'openings', baseline, draft)).toThrow('Horaires non chargés.');
+  });
+
+  it('keeps the legal compliance-summary exception when the records are loaded', () => {
+    const baseline = makeModules();
+    baseline.legal = { ...baseline.legal, unavailableReason: LEGAL_SUMMARY_UNAVAILABLE };
+    expect(() => buildContributorSubmission(OBJECT_ID, 'legal', baseline, makeModules())).not.toThrow();
   });
 });
 
@@ -96,7 +113,6 @@ describe('buildContributorSubmission — auto-dispatch sections', () => {
     ['tags', 'save_object_workspace_tags', buildTagsRpcPayload(draft.tags)],
     ['relationships', 'save_object_relations', buildRelationshipsRpcPayload(draft.relationships)],
     ['places', 'save_object_places', buildPlacesRpcPayload(draft.places)],
-    ['rooms', 'save_object_rooms', buildRoomsRpcPayload(draft.rooms)],
   ];
 
   it.each(cases)('%s stores the exact RPC envelope (rpc=%s) with manual_apply=false', (module, rpc, payload) => {
@@ -127,7 +143,7 @@ describe('buildContributorSubmission — manual_apply sections', () => {
   const draft = makeModules();
   const baseline = makeModules();
 
-  it.each(['contacts', 'legal', 'itinerary', 'location'] as WorkspaceModuleId[])(
+  it.each(['contacts', 'legal', 'itinerary', 'location', 'rooms'] as WorkspaceModuleId[])(
     '%s is manual_apply with a null rpc (approve cannot auto-dispatch)',
     (module) => {
       const submission = buildContributorSubmission(OBJECT_ID, module, baseline, draft);

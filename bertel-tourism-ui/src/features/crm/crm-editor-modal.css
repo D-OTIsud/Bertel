@@ -1,0 +1,70 @@
+.object-editor.ed-record-modal .crm-edit-title input { height: 46px; font-size: 15px; font-weight: 600; }
+.object-editor.ed-record-modal .crm-edit-kinds {
+  display: flex; flex-wrap: wrap; gap: 3px; padding: 3px;
+  border-radius: 10px; background: var(--surface-2, #e8edf1);
+}
+.object-editor.ed-record-modal .crm-edit-kinds button {
+  display: inline-flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: 7px;
+  min-height: 36px; padding: 7px 10px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink-3, #5f6d74); font: inherit; font-size: 12px; cursor: pointer;
+}
+.object-editor.ed-record-modal .crm-edit-kinds button.is-active {
+  color: var(--ink, #18313b); background: #fff; box-shadow: 0 1px 3px rgb(15 40 50 / 12%);
+}
+.crm-edit-section { display: grid; gap: 10px; }
+.object-editor.ed-record-modal .crm-edit-section h3 { margin: 0; }
+.crm-edit-section h3 small { color: var(--ink-3, #5f6d74); font-size: 11px; font-weight: 500; }
+.object-editor.ed-record-modal .crm-edit-textarea {
+  display: block; width: 100%; min-height: 122px; padding: 11px 12px; resize: vertical;
+  border: 1px solid var(--line-soft, #d5dde2); border-radius: 10px; background: #fff;
+  color: var(--ink, #18313b); font: inherit; font-size: 13px; line-height: 1.55;
+}
+.object-editor.ed-record-modal .crm-edit-textarea:focus,
+.object-editor.ed-record-modal .crm-edit-details textarea:focus,
+.object-editor.ed-record-modal .crm-edit-details input:focus {
+  border-color: var(--accent, #176b6a); outline: 0; box-shadow: 0 0 0 3px rgb(23 107 106 / 12%);
+}
+.crm-edit-note { margin: 0; color: var(--ink-3, #5f6d74); font-size: 11.5px; line-height: 1.5; }
+.crm-edit-details { border-top: 1px solid var(--line-soft, #e5ebee); padding-top: 12px; }
+.crm-edit-details > summary {
+  width: fit-content; color: var(--accent, #176b6a); font-size: 12px; font-weight: 650; cursor: pointer;
+}
+.crm-edit-details > summary::marker { color: var(--ink-3, #5f6d74); }
+.crm-edit-details__content { display: grid; gap: 14px; padding-top: 14px; }
+.crm-edit-sentiments { display: grid; gap: 8px; }
+.crm-edit-sentiments > span { color: var(--ink-2, #3a525c); font-size: 12px; font-weight: 600; }
+.crm-edit-sentiments small { color: var(--ink-3, #8a979d); font-weight: 500; }
+.crm-edit-sentiments > div, .crm-edit-quick-dates { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.object-editor.ed-record-modal .crm-edit-sentiments button,
+.object-editor.ed-record-modal .crm-edit-quick-dates > button {
+  min-height: 34px; padding: 6px 10px; border: 1px solid var(--line-soft, #d5dde2); border-radius: 999px;
+  background: #fff; color: var(--ink-2, #3a525c); font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.object-editor.ed-record-modal .crm-edit-sentiments button:hover,
+.object-editor.ed-record-modal .crm-edit-quick-dates > button:hover { border-color: var(--accent, #176b6a); }
+.object-editor.ed-record-modal .crm-edit-sentiments button.is-active,
+.object-editor.ed-record-modal .crm-edit-quick-dates > button.is-active {
+  border-color: var(--accent, #176b6a); background: rgb(23 107 106 / 9%); color: var(--accent-strong, #0d4f4e);
+}
+.crm-edit-date { position: relative; display: inline-flex; min-height: 34px; align-items: center; padding: 6px 10px; border: 1px solid var(--line-soft, #d5dde2); border-radius: 999px; color: var(--ink-2, #3a525c); font-size: 11.5px; cursor: pointer; }
+.crm-edit-date input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.crm-edit-success { display: flex; gap: 8px; align-items: center; padding: 12px; border: 1px solid rgb(42 122 69 / 18%); border-radius: 10px; background: rgb(42 122 69 / 7%); color: #245e35; font-size: 13px; font-weight: 650; }
+.crm-edit-next-step { display: grid; justify-items: start; gap: 10px; padding: 4px 0; }
+.crm-edit-next-step p { margin: 0; color: var(--ink-3, #5f6d74); font-size: 12px; line-height: 1.5; }
+.crm-edit-followup { display: grid; gap: 18px; }
+.crm-edit-preview__meta { margin-bottom: 7px; color: var(--ink-3, #5f6d74); font-size: 11px; font-weight: 650; }
+.crm-edit-preview strong { display: block; color: var(--ink, #18313b); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+.crm-edit-preview p { margin: 7px 0 0; color: var(--ink-2, #3a525c); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.crm-edit-preview--spaced { margin-top: 10px; }
+.crm-edit-preview__tag { display: inline-flex; margin-top: 9px; padding: 4px 8px; border-radius: 999px; background: rgb(23 107 106 / 9%); color: var(--accent-strong, #0d4f4e); font-size: 10.5px; font-weight: 650; }
+.crm-edit-preview__task { display: flex; gap: 10px; align-items: flex-start; }
+.crm-edit-preview__checkbox { flex: 0 0 17px; height: 17px; margin-top: 1px; border: 1.5px solid #c3ccd1; border-radius: 5px; }
+.crm-edit-documents > summary { color: var(--ink-2, #3a525c); }
+.crm-edit-documents .crm-field { padding-top: 12px; }
+.object-editor.ed-record-modal .crm-edit-date:focus-within { outline: 2px solid var(--accent, #176b6a); outline-offset: 2px; }
+@media (max-width: 540px) {
+  .object-editor.ed-record-modal .crm-edit-kinds button { flex-basis: calc(50% - 4px); }
+  .object-editor.ed-record-modal .crm-edit-quick-dates > button,
+  .crm-edit-date { min-height: 38px; }
+  .object-editor.ed-record-modal .crm-edit-sentiments > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { EditorModal, Field, Input, Select, Textarea } from '../primitives';
+import { Chip, ChipSet, Disclosure, EditorModal, Field, Input, Select, Textarea } from '../primitives';
 import { DocumentUploadField } from './DocumentUploadField';
 import { getSupabaseClient } from '../../../lib/supabase';
 import {
   LEGAL_DOCUMENT_STATUS_OPTIONS,
   LEGAL_VALIDITY_OPTIONS,
   buildReferenceValueJson,
+  computeLegalExpiryFlag,
+  formatLegalValidity,
   isLegalRecordForever,
   readLegalReference,
 } from '../sections/legal-edit';
@@ -82,6 +84,7 @@ export function LegalDocumentEditModal({
   // alors son hint plutôt que d'afficher une ligne vide).
   const selectedTypeDescription =
     typeOptions.find((option) => option.code === draft.typeCode)?.description ?? '';
+  const expiry = computeLegalExpiryFlag(draft, new Date().toISOString().slice(0, 10));
 
   // Preserve an imported status the everyday set does not cover (suspended/revoked/requested).
   const statusOptions = LEGAL_DOCUMENT_STATUS_OPTIONS.some((option) => option.v === draft.status)
@@ -104,18 +107,41 @@ export function LegalDocumentEditModal({
     <EditorModal
       open={open}
       title={mode === 'edit' ? 'Modifier le document' : 'Ajouter un document'}
+      eyebrow="Dossier administratif"
       onClose={onClose}
       onSave={() => onSave(draft)}
       saveDisabled={saveDisabled}
+      saveLabel={mode === 'add' ? 'Ajouter' : 'Appliquer'}
       size="lg"
+      footerNote={saveDisabled ? 'Document à compléter' : 'Prêt à appliquer au brouillon'}
+      aside={<>
+        <h3>Dossier administratif</h3>
+        <div className="ed-record-modal__preview">
+          <strong>{draft.typeLabel || 'Nouveau document'}</strong>
+          {readLegalReference(draft) && <p>{readLegalReference(draft)}</p>}
+          <p>{formatLegalValidity(draft)}</p>
+          <p><span className={`pill ${expiry.tone === 'expired' ? 'bad' : expiry.tone === 'warn' ? 'warn' : 'ok'}`}>{expiry.label}</span></p>
+        </div>
+        <h3>Avant d’appliquer</h3>
+        <ul className="ed-record-modal__checks">
+          <li data-complete={Boolean(draft.typeCode)}>{draft.typeCode ? '✓' : '○'} Type de document</li>
+          <li data-complete={!saveDisabled}>{saveDisabled ? '○' : '✓'} Validité</li>
+          <li data-complete={Boolean(draft.documentId)}>{draft.documentId ? '✓' : '!'} Justificatif · recommandé</li>
+        </ul>
+      </>}
     >
       <Field label="Type de document" required hint={selectedTypeDescription || undefined}>
+        <ChipSet>
+          {typeOptions.slice(0, 8).map((option) => <Chip key={option.id} label={option.label} on={draft.typeCode === option.code} onClick={() => selectType(option.code)} />)}
+        </ChipSet>
+        <Disclosure title="Autre document…" defaultOpen={!typeOptions.slice(0, 8).some((option) => option.code === draft.typeCode)}>
         <Select
           aria-label="Type de document"
           value={draft.typeCode}
           options={typeSelectOptions}
           onChange={selectType}
         />
+        </Disclosure>
       </Field>
 
       <Field label="N° / référence">
@@ -129,20 +155,10 @@ export function LegalDocumentEditModal({
 
       <div className="grid-2">
         <Field label="Validité">
-          <Select
-            aria-label="Mode de validité"
-            value={isForever ? 'forever' : 'fixed_end_date'}
-            options={LEGAL_VALIDITY_OPTIONS.map((option) => ({ v: option.v, l: option.l }))}
-            onChange={(mode) => set({ validityMode: mode, validTo: mode === 'forever' ? '' : draft.validTo })}
-          />
-        </Field>
-        <Field label="Statut">
-          <Select
-            aria-label="Statut du document"
-            value={draft.status || 'active'}
-            options={statusOptions.map((option) => ({ v: option.v, l: option.l }))}
-            onChange={(status) => set({ status })}
-          />
+          <div className="ed-modal__segmented" role="group" aria-label="Mode de validité">
+            {LEGAL_VALIDITY_OPTIONS.map((option) => <button key={option.v} type="button" aria-pressed={(isForever ? 'forever' : 'fixed_end_date') === option.v}
+              onClick={() => set({ validityMode: option.v, validTo: option.v === 'forever' ? '' : draft.validTo })}>{option.l}</button>)}
+          </div>
         </Field>
       </div>
 
@@ -174,6 +190,7 @@ export function LegalDocumentEditModal({
         </p>
       )}
 
+      <Disclosure title="Ajouter une note interne" defaultOpen={Boolean(draft.note)}>
       <Field label="Note">
         <Textarea
           value={draft.note}
@@ -183,6 +200,13 @@ export function LegalDocumentEditModal({
           onChange={(note) => set({ note })}
         />
       </Field>
+      </Disclosure>
+
+      <Disclosure title="Statut administratif" defaultOpen={Boolean(draft.status && draft.status !== 'active')}>
+        <Field label="Statut">
+          <Select aria-label="Statut du document" value={draft.status || 'active'} options={statusOptions.map((option) => ({ v: option.v, l: option.l }))} onChange={(status) => set({ status })} />
+        </Field>
+      </Disclosure>
 
       {/* Justificatif (ref_document) — optional. Shows the attached file with a remove action,
           or the upload field once an access token is resolved. Mirrors §08 classifications. */}

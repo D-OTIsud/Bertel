@@ -23,8 +23,9 @@ import { Check, Mail, MapPin, Phone, Plus, StickyNote } from 'lucide-react';
 import { listCrmAssignees, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CRM_SENTIMENT_OPTIONS } from './crm-view-utils';
-import { CrmModal } from './CrmModal';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
+import { EditorModal } from '../object-editor/primitives/EditorModal';
+import './crm-editor-modal.css';
 
 // Kinds du composer v2 : Appel / E-mail / Visite terrain / Note interne.
 const COMPOSER_KINDS = [
@@ -36,6 +37,12 @@ const COMPOSER_KINDS = [
 
 // Titre par défaut d'une relance quand aucun sujet n'est choisi (éditable).
 const DEFAULT_TASK_TITLE = 'Suivi de l’interaction';
+
+function dateInputOffset(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 export function CrmInteractionModal({
   actorId,
@@ -170,229 +177,166 @@ export function CrmInteractionModal({
 
   const isComposing = savedInteractionId === null;
 
+  const selectedTopicLabel = topics.find((topic) => topic.code === topicCode)?.name;
+  const selectedSentiment = CRM_SENTIMENT_OPTIONS.find((item) => item.code === sentimentCode)?.name;
+  const selectedContextName = fixedContext?.objectName ?? contexts?.find((item) => item.objectId === ctx)?.objectName ?? 'Établissement à choisir';
+  const kindLabel = COMPOSER_KINDS.find((item) => item.code === kind)?.label ?? 'Interaction';
+  const footerNote = isComposing
+    ? canConsign ? 'Prêt à enregistrer.' : !objectId ? 'Choisissez un établissement et résumez l’échange.' : 'Ajoutez un compte rendu pour continuer.'
+    : addingRelance ? 'La relance sera liée à cette interaction déjà enregistrée.' : 'Interaction enregistrée.';
+  const preview = (
+    <>
+      <h3>{isComposing ? 'Aperçu de l’interaction' : addingRelance ? 'Aperçu de la relance' : 'Interaction enregistrée'}</h3>
+      {isComposing ? (
+        <div className="crm-edit-preview">
+          <div className="crm-edit-preview__meta">{kindLabel} · {selectedContextName}</div>
+          <strong>{selectedTopicLabel ?? 'Nouvelle interaction'}</strong>
+          <p>{body.trim() || 'Le compte rendu apparaîtra ici au fil de la saisie.'}</p>
+          {selectedSentiment && <span className="crm-edit-preview__tag">Ressenti : {selectedSentiment}</span>}
+          <span className="crm-edit-preview__tag">{effectiveStatus === 'new' ? 'À traiter' : 'Déjà traitée'}</span>
+        </div>
+      ) : (
+        <div className="crm-edit-preview">
+          <div className="crm-edit-preview__meta">{kindLabel} · {selectedContextName}</div>
+          <strong>{selectedTopicLabel || body.trim().slice(0, 48) || 'Interaction enregistrée'}</strong>
+          <p>{body.trim() || 'Aucun compte rendu.'}</p>
+          <span className="crm-edit-preview__tag">Enregistrée</span>
+        </div>
+      )}
+      {addingRelance && (
+        <div className="crm-edit-preview crm-edit-preview--spaced">
+          <div className="crm-edit-preview__meta">Relance à créer</div>
+          <strong>{effectiveTaskTitle.trim() || DEFAULT_TASK_TITLE}</strong>
+          <p>{taskDue ? `Échéance : ${taskDue}` : 'Sans échéance'}</p>
+          <p>{selectedAssignees.length} personne{selectedAssignees.length > 1 ? 's' : ''} assignée{selectedAssignees.length > 1 ? 's' : ''}</p>
+        </div>
+      )}
+      <h3>Avant d’enregistrer</h3>
+      <ul className="ed-record-modal__checks">
+        <li data-complete={Boolean(objectId)}><span aria-hidden>{objectId ? '✓' : '○'}</span> Établissement</li>
+        <li data-complete={Boolean(body.trim())}><span aria-hidden>{body.trim() ? '✓' : '○'}</span> Compte rendu</li>
+        {addingRelance && <li data-complete={!assigneesMissing}><span aria-hidden>{assigneesMissing ? '○' : '✓'}</span> Personne(s) assignée(s)</li>}
+      </ul>
+    </>
+  );
+
   return (
-    <CrmModal title="Nouvelle interaction" onClose={onClose}>
+    <EditorModal
+      open
+      className="crm-app"
+      title={savedInteractionId ? 'Interaction enregistrée' : 'Nouvelle interaction'}
+      eyebrow="Relation professionnels"
+      onClose={onClose}
+      onSave={() => {
+        if (isComposing) interactionMutation.mutate();
+        else if (addingRelance) taskMutation.mutate();
+        else onClose();
+      }}
+      saveLabel={isComposing ? 'Enregistrer l’interaction' : addingRelance ? 'Enregistrer la relance' : 'Terminer'}
+      saveDisabled={isComposing ? !canConsign : addingRelance ? !canSaveRelance : false}
+      size="xl"
+      aside={preview}
+      footerNote={footerNote}
+    >
       {isComposing ? (
         <>
-          <div className="composer__kinds">
+          <div className="crm-edit-kinds" role="group" aria-label="Type d’échange">
             {COMPOSER_KINDS.map(({ code, label, Icon }) => (
-              <button
-                key={code}
-                type="button"
-                className={'kind-chip' + (kind === code ? ' is-on' : '')}
-                aria-pressed={kind === code}
-                onClick={() => setKind(code)}
-              >
-                <Icon size={12} aria-hidden /> {label}
+              <button key={code} type="button" className={kind === code ? 'is-active' : ''} aria-pressed={kind === code} onClick={() => setKind(code)}>
+                <Icon size={14} aria-hidden /> {label}
               </button>
             ))}
           </div>
-
-          {fixedContext ? (
-            <label className="crm-field">
-              Contexte
-              <span className="crm-field__static">{fixedContext.objectName}</span>
-            </label>
-          ) : (
-            <label className="crm-field">
-              Établissement
-              {/* §66 — plus de « Contexte : général » : un établissement est requis. */}
-              <SearchSelect
-                aria-label="Contexte"
-                value={ctx}
-                options={(contexts ?? []).map((object) => ({ code: object.objectId, label: object.objectName }))}
-                onChange={setCtx}
-                placeholder="— Établissement —"
-                searchPlaceholder="Rechercher un établissement…"
-              />
-            </label>
-          )}
-
+          <label className="crm-field">
+            Avec quel établissement ?
+            {fixedContext ? <span className="crm-field__static">{fixedContext.objectName}</span> : (
+              <SearchSelect aria-label="Contexte" value={ctx} options={(contexts ?? []).map((object) => ({ code: object.objectId, label: object.objectName }))} onChange={setCtx} placeholder="— Rechercher un établissement —" searchPlaceholder="Rechercher un établissement…" />
+            )}
+          </label>
           {fixedContext && (actorOptions?.length ?? 0) > 0 && (
-            <label className="crm-field">
-              Acteur (optionnel)
-              <SearchSelect
-                aria-label="Acteur"
-                value={pickedActor}
-                options={(actorOptions ?? []).map((actor) => ({ code: actor.actorId, label: actor.displayName }))}
-                onChange={setPickedActor}
-                allowClear
-                clearLabel="— Aucun acteur —"
-                placeholder="— Aucun acteur —"
-                searchPlaceholder="Rechercher un acteur…"
-              />
-            </label>
+            <details className="crm-edit-details">
+              <summary>Préciser l’interlocuteur</summary>
+              <label className="crm-field">
+                Interlocuteur (facultatif)
+                <SearchSelect aria-label="Acteur" value={pickedActor} options={(actorOptions ?? []).map((actor) => ({ code: actor.actorId, label: actor.displayName }))} onChange={setPickedActor} allowClear clearLabel="— Aucun interlocuteur —" placeholder="— Aucun interlocuteur —" searchPlaceholder="Rechercher un interlocuteur…" />
+              </label>
+            </details>
           )}
-
-          <div className="crm-row2">
-            <label className="crm-field">
-              Sujet
-              <SearchSelect
-                aria-label="Sujet normalisé"
-                value={topicCode}
-                options={topics.map((topic) => ({ code: topic.code, label: topic.name }))}
-                onChange={setTopicCode}
-                allowClear
-                clearLabel="— Aucun sujet —"
-                placeholder="— Sujet —"
-                searchPlaceholder="Rechercher un sujet…"
-              />
-            </label>
-            <label className="crm-field">
-              Sentiment
-              <select
-                className="crm-select"
-                aria-label="Sentiment"
-                value={sentimentCode}
-                onChange={(event) => setSentimentCode(event.target.value)}
-              >
-                <option value="">— Sentiment —</option>
-                {CRM_SENTIMENT_OPTIONS.map((sentiment) => (
-                  <option key={sentiment.code} value={sentiment.code}>
-                    {sentiment.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {/* Chantier 2026-08-28 — suite à donner. Position initiale dérivée du sujet ; le
-              choix de l'agent prime dès qu'il touche le bouton. */}
-          <div className="crm-field" role="group" aria-label="Suite à donner">
-            <span>Suite à donner</span>
-            <div className="composer__kinds">
-              <button
-                type="button"
-                className={'kind-chip' + (effectiveStatus === 'new' ? ' is-on' : '')}
-                aria-pressed={effectiveStatus === 'new'}
-                onClick={() => {
-                  setStatusTouched(true);
-                  setStatusChoice('new');
-                }}
-              >
-                <Plus size={12} aria-hidden /> À traiter
-              </button>
-              <button
-                type="button"
-                className={'kind-chip' + (effectiveStatus === 'resolved' ? ' is-on' : '')}
-                aria-pressed={effectiveStatus === 'resolved'}
-                onClick={() => {
-                  setStatusTouched(true);
-                  setStatusChoice('resolved');
-                }}
-              >
-                <Check size={12} aria-hidden /> Déjà traitée
-              </button>
+          <section className="ed-modal__section crm-edit-section">
+            <h3>Que s’est-il dit ?</h3>
+            <textarea
+              className="crm-edit-textarea"
+              aria-label="Compte rendu"
+              rows={5}
+              placeholder={kind === 'note' ? 'Ce qu’il faut retenir…' : 'Ce qui a été demandé, ce qui a été répondu…'}
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && canConsign) interactionMutation.mutate(); }}
+            />
+          </section>
+          <details className="crm-edit-details">
+            <summary>Détails facultatifs <span>{[topicCode, sentimentCode].filter(Boolean).length || ''}</span></summary>
+            <div className="crm-edit-details__content">
+              <label className="crm-field">
+                Sujet
+                <SearchSelect aria-label="Sujet normalisé" value={topicCode} options={topics.map((topic) => ({ code: topic.code, label: topic.name }))} onChange={setTopicCode} allowClear clearLabel="— Aucun sujet —" placeholder="— Sujet —" searchPlaceholder="Rechercher un sujet…" />
+              </label>
+              <div className="crm-edit-sentiments" role="group" aria-label="Ressenti de l’interlocuteur">
+                <span>Ressenti de l’interlocuteur <small>· facultatif</small></span>
+                <div>
+                  {CRM_SENTIMENT_OPTIONS.map((sentiment) => (
+                    <button key={sentiment.code} type="button" aria-pressed={sentimentCode === sentiment.code} className={sentimentCode === sentiment.code ? 'is-active' : ''} onClick={() => setSentimentCode(sentimentCode === sentiment.code ? '' : sentiment.code)}>
+                      {sentiment.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="crm-field__note">
-              {effectiveStatus === 'new'
-                ? 'Restera dans les demandes actives jusqu’à ce qu’elle soit marquée traitée.'
-                : 'Simple compte rendu : rien ne reste à faire.'}
-            </p>
-          </div>
-
-          {/* PO point 2 : champ multi-lignes (5 lignes — c'est un modal, autant utiliser la
-              place). Ctrl/Cmd+Entrée consigne (Entrée seul = retour à la ligne, normal pour un
-              textarea) ; le bouton Consigner reste la voie principale. */}
-          <textarea
-            className="note note--area"
-            rows={5}
-            placeholder="Consigner une interaction… (résumé)"
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && canConsign) interactionMutation.mutate();
-            }}
-          />
-
-          <div className="composer__row composer__row--end">
-            <button type="button" className="crm-btn primary" disabled={!canConsign} onClick={() => interactionMutation.mutate()}>
-              <Plus size={12} aria-hidden /> Consigner
-            </button>
-          </div>
-
-          {interactionMutation.isError && (
-            <div className="inline-alert" role="alert">
-              Échec de la consignation : {(interactionMutation.error as Error).message}
+          </details>
+          <section className="ed-modal__section crm-edit-section">
+            <h3>Suite à donner</h3>
+            <div className="ed-modal__segmented" role="group" aria-label="Suite à donner">
+              <button type="button" aria-pressed={effectiveStatus === 'resolved'} onClick={() => { setStatusTouched(true); setStatusChoice('resolved'); }}>Déjà traitée</button>
+              <button type="button" aria-pressed={effectiveStatus === 'new'} onClick={() => { setStatusTouched(true); setStatusChoice('new'); }}>À traiter</button>
             </div>
-          )}
+            <p className="crm-edit-note">{effectiveStatus === 'new' ? 'Restera dans les demandes actives jusqu’à ce qu’elle soit marquée traitée.' : 'Simple compte rendu : rien ne reste à faire.'}</p>
+          </section>
+          {interactionMutation.isError && <div className="inline-alert" role="alert">Échec de la consignation : {(interactionMutation.error as Error).message}</div>}
         </>
       ) : (
         <>
-          {/* Phase 5.2 — état de confirmation : l'interaction est consignée. On propose la
-              relance comme une affordance SÉPARÉE (plus de formulaire imbriqué). */}
-          <div className="crm-saved-banner motion-status-enter" role="status">
-            <Check size={15} aria-hidden /> Interaction enregistrée.
-          </div>
-
+          <div className="crm-edit-success" role="status"><Check size={16} aria-hidden /> Interaction enregistrée.</div>
           {!addingRelance ? (
-            <div className="composer__row composer__row--end">
-              <button type="button" className="crm-btn" onClick={onClose}>
-                Terminer
-              </button>
-              <button type="button" className="crm-btn primary" onClick={() => setAddingRelance(true)}>
-                <Plus size={12} aria-hidden /> Ajouter une relance
-              </button>
+            <div className="crm-edit-next-step">
+              <p>La demande est enregistrée. Vous pouvez ajouter une relance maintenant ou terminer.</p>
+              <button type="button" className="btn primary" onClick={() => setAddingRelance(true)}><Plus size={14} aria-hidden /> Ajouter une relance</button>
             </div>
           ) : (
-            <div className="crm-followup__fields">
+            <div className="crm-edit-followup">
               <label className="crm-field">
-                Titre de la tâche
-                <input
-                  aria-label="Titre de la tâche"
-                  placeholder="Titre de la tâche"
-                  value={effectiveTaskTitle}
-                  onChange={(event) => {
-                    setTaskTitleTouched(true);
-                    setTaskTitle(event.target.value);
-                  }}
-                />
+                Que faut-il faire ?
+                <input aria-label="Titre de la tâche" placeholder="Titre de la tâche" value={effectiveTaskTitle} onChange={(event) => { setTaskTitleTouched(true); setTaskTitle(event.target.value); }} />
               </label>
-              <div className="crm-row2">
-                <label className="crm-field">
-                  Échéance
-                  <input aria-label="Échéance" type="date" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} />
-                </label>
-                <label className="crm-field">
-                  Attribuer à
-                  <SearchMultiSelect
-                    aria-label="Attribuer à"
-                    values={selectedAssignees}
-                    options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))}
-                    onChange={setPickedAssignees}
-                    placeholder="— Choisir une ou plusieurs personnes —"
-                    searchPlaceholder="Rechercher une personne…"
-                    emptyLabel={
-                      assigneesQuery.isLoading
-                        ? 'Chargement des personnes…'
-                        : assigneesQuery.isError
-                          ? 'Impossible de charger les personnes.'
-                          : 'Aucune personne assignable'
-                    }
-                  />
-                </label>
+              <div className="crm-edit-quick-dates" role="group" aria-label="Échéance rapide">
+                {[
+                  { label: 'Aujourd’hui', value: dateInputOffset(0) },
+                  { label: 'Demain', value: dateInputOffset(1) },
+                  { label: 'Dans 1 semaine', value: dateInputOffset(7) },
+                  { label: 'Sans échéance', value: '' },
+                ].map((option) => <button key={option.label} type="button" aria-pressed={taskDue === option.value} className={taskDue === option.value ? 'is-active' : ''} onClick={() => setTaskDue(option.value)}>{option.label}</button>)}
+                <label className="crm-edit-date">Choisir une date…<input aria-label="Échéance" type="date" value={taskDue} onChange={(event) => setTaskDue(event.target.value)} /></label>
               </div>
+              <label className="crm-field">
+                Attribuer à
+                <SearchMultiSelect aria-label="Attribuer à" values={selectedAssignees} options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))} onChange={setPickedAssignees} placeholder="— Choisir une ou plusieurs personnes —" searchPlaceholder="Rechercher une personne…" emptyLabel={assigneesQuery.isLoading ? 'Chargement des personnes…' : assigneesQuery.isError ? 'Impossible de charger les personnes.' : 'Aucune personne assignable'} />
+              </label>
               {taskTitleMissing && <p className="crm-field__hint">Renseignez un titre de tâche.</p>}
-              {assigneesMissing && !assigneesQuery.isLoading && (
-                <p className="crm-field__hint">Choisissez au moins une personne.</p>
-              )}
-              <div className="composer__row composer__row--end">
-                <button type="button" className="crm-btn" onClick={onClose}>
-                  Plus tard
-                </button>
-                <button type="button" className="crm-btn primary" disabled={!canSaveRelance} onClick={() => taskMutation.mutate()}>
-                  <Check size={12} aria-hidden /> Enregistrer la relance
-                </button>
-              </div>
-              {taskMutation.isError && (
-                <div className="inline-alert" role="alert">
-                  Échec de la relance : {(taskMutation.error as Error).message}
-                </div>
-              )}
+              {assigneesMissing && !assigneesQuery.isLoading && <p className="crm-field__hint">Choisissez au moins une personne.</p>}
+              {taskMutation.isError && <div className="inline-alert" role="alert">Échec de la relance : {(taskMutation.error as Error).message}</div>}
             </div>
           )}
         </>
       )}
-    </CrmModal>
+    </EditorModal>
   );
 }

@@ -7,7 +7,7 @@
  * code must skip every existing unit-N suffix.
  */
 
-import type { ObjectWorkspaceRoomBed } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspaceRoomBed, ObjectWorkspaceRoomTypeItem } from '../../../../services/object-workspace-parser';
 
 /** Curated « most common in rooms » amenity codes, in display order (§74). Surfaced flat above
  *  the collapsible category groups so the universal room amenities (Wi-Fi, clim, sèche-cheveux,
@@ -52,6 +52,44 @@ export function nextRoomCode(items: { code: string }[]): string {
     return match ? Math.max(max, Number.parseInt(match[1], 10)) : max;
   }, 0);
   return `unit-${maxSuffix + 1}`;
+}
+
+/** New rooms get a client UUID at draft creation so a save retry updates the same row. */
+export function createRoomDraft(items: ObjectWorkspaceRoomTypeItem[]): ObjectWorkspaceRoomTypeItem {
+  const index = items.length;
+  return {
+    recordId: globalThis.crypto.randomUUID(),
+    isNew: true,
+    code: nextRoomCode(items),
+    name: '',
+    rawName: null,
+    extra: null,
+    nameTranslations: {},
+    description: '',
+    descriptionTranslations: {},
+    capacityAdults: '',
+    capacityChildren: '',
+    capacityTotal: '',
+    sizeSqm: '',
+    bedConfig: '',
+    bedConfigTranslations: {},
+    quantity: '',
+    floorLevel: '',
+    viewTypeId: '',
+    viewTypeCode: '',
+    viewTypeLabel: '',
+    roomTypeId: '',
+    roomTypeCode: '',
+    roomTypeLabel: '',
+    basePrice: '',
+    currency: 'EUR',
+    accessible: false,
+    published: true,
+    position: String(index + 1),
+    amenityCodes: [],
+    mediaIds: [],
+    beds: [],
+  };
 }
 
 /** Rewrite 1-based `position` from the new array order after a drag (the saver persists it). */

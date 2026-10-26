@@ -9,8 +9,11 @@ import type { ObjectWorkspacePermissions, WorkspaceModuleId } from '../../servic
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { submitPendingChange } from '../../services/moderation';
 import { pingNotifyDrain } from '../../services/notification-delivery';
+import { workspaceSaveBlockedReason } from '../../services/object-workspace-safety';
 import { MODULE_KEY_MAP } from './editor-state';
 import { buildContributorSubmission } from './contributor-proposal';
+import { readWriteCompatibility, type WriteCompatibility } from '../../services/write-compatibility';
+import { useSessionStore } from '../../store/session-store';
 
 export interface SaveBatchPlan {
   /** Modules written directly via the per-module save-RPC (canonical writer). */
@@ -23,9 +26,9 @@ export interface SaveBatchPlan {
 /**
  * Pure: split the dirty modules into direct writes, moderation proposals, and blocked.
  *
- * P1.3 fork — when `canWriteCanonicalDirect` is false the caller is a contributor: EVERY dirty
- * module is routed to a moderation proposal (Option B, all 22 sections) and nothing is blocked
- * here (the backend `user_can_write_object_canonical` gate is the real security on apply). When
+ * A missing or degraded module is blocked before either write path, including moderation.
+ * When `canWriteCanonicalDirect` is false, every remaining dirty module is routed to a proposal
+ * (the backend `user_can_write_object_canonical` gate is the real security on apply). When
  * the caller IS a canonical writer, the historical per-module split applies (direct write when the
  * module is directly writable or proposal-preparable, otherwise blocked).
  */
@@ -33,14 +36,23 @@ export function planSaveBatch(
   dirtyModules: WorkspaceModuleId[],
   permissions: ObjectWorkspacePermissions,
   canWriteCanonicalDirect = true,
+  draft?: ObjectWorkspaceModules,
+  baseline?: ObjectWorkspaceModules,
 ): SaveBatchPlan {
   const writable: WorkspaceModuleId[] = [];
   const proposals: WorkspaceModuleId[] = [];
   const blocked: { module: WorkspaceModuleId; reason: string }[] = [];
 
   for (const module of dirtyModules) {
+    const key = MODULE_KEY_MAP[module];
+    const unavailable = workspaceSaveBlockedReason(module, draft?.[key])
+      ?? (baseline ? workspaceSaveBlockedReason(module, baseline[key]) : null);
+    if (unavailable) {
+      blocked.push({ module, reason: unavailable });
+      continue;
+    }
     if (!canWriteCanonicalDirect) {
-      // Contributor: every edit becomes a moderation proposal, regardless of per-module flags.
+      // Contributor: only safely loaded edits become proposals, regardless of permission flags.
       proposals.push(module);
       continue;
     }
@@ -123,14 +135,27 @@ export function useEditorSave(objectId: string) {
     ): Promise<EditorSaveResult> => {
       const canWriteCanonicalDirect = options.canWriteCanonicalDirect ?? true;
       const baseline = options.baseline ?? draft;
-      const plan = planSaveBatch(dirtyModules, permissions, canWriteCanonicalDirect);
+      const plan = planSaveBatch(dirtyModules, permissions, canWriteCanonicalDirect, draft, baseline);
       const saved: WorkspaceModuleId[] = [];
       const submitted: WorkspaceModuleId[] = [];
       const failed: { module: WorkspaceModuleId; message: string }[] = [];
       setSaving(true);
       try {
+        let compatibility: WriteCompatibility | undefined;
+        if (!useSessionStore.getState().demoMode && (plan.writable.length > 0 || plan.proposals.length > 0)) {
+          compatibility = await readWriteCompatibility();
+          if (!compatibility.compatible) {
+            const reason = compatibility.reason ?? 'Écriture bloquée : vérification de compatibilité impossible.';
+            return {
+              saved,
+              submitted,
+              failed: [...plan.writable, ...plan.proposals].map((module) => ({ module, message: reason })),
+              blocked: plan.blocked,
+            };
+          }
+        }
         const writes = await Promise.allSettled(
-          plan.writable.map((module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions))),
+          plan.writable.map((module) => saveWorkspaceModule(objectId, buildSaveArg(module, draft, permissions), compatibility)),
         );
         writes.forEach((result, index) => {
           const module = plan.writable[index];
@@ -167,7 +192,7 @@ export function useEditorSave(objectId: string) {
       }
       if (submitted.length > 0) {
         void queryClient.invalidateQueries({ queryKey: ['pending-changes'] });
-        // All sections have settled: one delivery request for the batch, including partial success.
+        // Preserve the deployed one-shot notification for a settled proposal batch.
         void pingNotifyDrain();
       }
       return { saved, submitted, failed, blocked: plan.blocked };

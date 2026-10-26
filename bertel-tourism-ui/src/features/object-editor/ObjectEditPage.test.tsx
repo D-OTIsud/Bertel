@@ -16,7 +16,10 @@ jest.mock('../../hooks/useExplorerQueries', () => ({
   useRestoreObjectVersionMutation: () => ({}),
 }));
 jest.mock('../../store/ui-store', () => ({ useUiStore: () => jest.fn() }));
-jest.mock('../../store/session-store', () => ({ useSessionStore: () => ['fr'] }));
+jest.mock('../../store/session-store', () => ({
+  useSessionStore: (selector: (state: { langPrefs: string[]; userId: null }) => unknown) =>
+    selector({ langPrefs: ['fr'], userId: null }),
+}));
 jest.mock('../../hooks/useToast', () => ({ useToast: () => jest.fn() }));
 jest.mock('./useUnsavedDraftGuard', () => ({ useUnsavedDraftGuard: () => ({ confirmLeave: jest.fn() }) }));
 jest.mock('./useEditorSave', () => ({ useEditorSave: () => ({ save: jest.fn(), saving: false }) }));

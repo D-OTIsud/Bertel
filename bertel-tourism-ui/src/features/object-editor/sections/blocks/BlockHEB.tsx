@@ -11,9 +11,9 @@ import type {
 import { ModuleUnavailableNotice } from './block-notes';
 import { EnvironmentChips, GroupPolicyButton, PetPolicyInline, StayPolicyButton } from '../capacity-controls';
 import {
+  createRoomDraft,
   computeRoomsCapacitySum,
   computeUnitCount,
-  nextRoomCode,
   reindexRoomPositions,
   roomCouchages,
   syncCapacityWithRooms,
@@ -56,44 +56,10 @@ function repHeader(columns: string, labels: string[]) {
   );
 }
 
-function createRoom(items: ObjectWorkspaceRoomTypeItem[]): ObjectWorkspaceRoomTypeItem {
-  const index = items.length;
-  return {
-    recordId: null,
-    // UNIQUE(object_id, code) + delete-reinsert saver: a collision aborts mid-rewrite.
-    code: nextRoomCode(items),
-    name: '',
-    nameTranslations: {},
-    description: '',
-    descriptionTranslations: {},
-    capacityAdults: '',
-    capacityChildren: '',
-    capacityTotal: '',
-    sizeSqm: '',
-    bedConfig: '',
-    bedConfigTranslations: {},
-    quantity: '',
-    floorLevel: '',
-    viewTypeId: '',
-    viewTypeCode: '',
-    viewTypeLabel: '',
-    roomTypeId: '',
-    roomTypeCode: '',
-    roomTypeLabel: '',
-    basePrice: '',
-    currency: 'EUR',
-    accessible: false,
-    published: true,
-    position: String(index + 1),
-    amenityCodes: [],
-    mediaIds: [],
-    beds: [],
-  };
-}
-
 function createMeetingRoom(): ObjectWorkspaceMeetingRoomItem {
   return {
     recordId: null,
+    uid: globalThis.crypto.randomUUID(),
     name: '',
     nameTranslations: {},
     areaM2: '',
@@ -197,7 +163,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
             type="button"
             className="rep-add"
             style={{ alignSelf: 'flex-end', marginTop: 0 }}
-            onClick={() => setCreatingRoom(createRoom(rooms.items))}
+            onClick={() => setCreatingRoom(createRoomDraft(rooms.items))}
           >
             + Ajouter un descriptif de chambre
           </button>
@@ -294,7 +260,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
           <button
             type="button"
             className="rep-add"
-            onClick={() => setCreatingRoom(createRoom(rooms.items))}
+            onClick={() => setCreatingRoom(createRoomDraft(rooms.items))}
           >
             + Ajouter une chambre
           </button>

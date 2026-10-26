@@ -8,7 +8,7 @@
  *
  * Deux régimes (Option B = les 22 sections sont proposables) :
  *
- *  1. AUTO-DISPATCH (7 sections à writer uniforme `(p_object_id, p_payload)`) : on stocke l'enveloppe
+ *  1. AUTO-DISPATCH (6 sections à writer uniforme `(p_object_id, p_payload)`) : on stocke l'enveloppe
  *     EXACTE attendue par le writer whitelisté côté §120 (`metadata.rpc`), pour que l'approbation
  *     puisse la ré-invoquer telle quelle. `manual_apply = false`.
  *        characteristics → save_object_commercial
@@ -17,7 +17,6 @@
  *        tags            → save_object_workspace_tags
  *        relationships   → save_object_relations
  *        places          → save_object_places
- *        rooms           → save_object_rooms
  *     (NB : la whitelist backend contient aussi `save_object_itinerary_nested`, mais la décision PO
  *      range l'itinéraire en `manual_apply` car son writer n'est pas alimentable sans contexte
  *      additionnel — cf. registre ci-dessous.)
@@ -35,7 +34,6 @@ import type { SubmitPendingChangeInput } from '../../services/moderation';
 import {
   buildCharacteristicsRpcPayload,
   buildPlacesRpcPayload,
-  buildRoomsRpcPayload,
   buildSustainabilityRpcPayload,
   buildTagsRpcPayload,
   buildOpeningsPayload,
@@ -43,6 +41,7 @@ import {
   type WorkspaceModuleId,
 } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { assertWorkspaceSaveAvailable } from '../../services/object-workspace-safety';
 import { MODULE_KEY_MAP } from './editor-state';
 import { moduleLabel } from './save-issues';
 
@@ -58,7 +57,7 @@ interface AutoDispatchRoute {
 }
 
 /**
- * The 5 sections whose save goes through a uniform `(p_object_id text, p_payload jsonb)` writer that
+ * The 6 sections whose save goes through a uniform `(p_object_id text, p_payload jsonb)` writer that
  * is whitelisted by `api.approve_pending_change` (§120). For these, a contributor's proposal carries
  * the precise RPC payload so the moderator's approval re-dispatches it verbatim.
  */
@@ -86,10 +85,6 @@ export const AUTO_DISPATCH_ROUTES: Partial<Record<WorkspaceModuleId, AutoDispatc
   places: {
     rpc: 'save_object_places',
     buildPayload: (draft) => buildPlacesRpcPayload(draft.places),
-  },
-  rooms: {
-    rpc: 'save_object_rooms',
-    buildPayload: (draft) => buildRoomsRpcPayload(draft.rooms),
   },
 };
 
@@ -130,7 +125,7 @@ export const MODULE_TARGET_TABLE: Record<WorkspaceModuleId, string> = {
   provider: 'actor_object_role',
 };
 
-/** TRUE when a contributor's edit to this module is auto-dispatchable on approval (one of the 5). */
+/** TRUE when a contributor's edit to this module is auto-dispatchable on approval (one of the 6). */
 export function isAutoDispatchModule(module: WorkspaceModuleId): boolean {
   return Boolean(AUTO_DISPATCH_ROUTES[module]);
 }
@@ -152,7 +147,7 @@ function summarizeModuleValue(value: unknown): string {
 /**
  * Build the `submit_pending_change` envelope for one dirty module proposed by a contributor.
  *
- * - `payload`: for the 5 auto sections, the exact whitelisted-RPC payload (re-dispatched on approve);
+ * - `payload`: for the 6 auto sections, the exact whitelisted-RPC payload (re-dispatched on approve);
  *   otherwise the raw module draft slice (informational — approve cannot auto-apply it).
  * - `metadata`: `{ rpc, section, manual_apply, field, before, after }`. `rpc` is null for manual
  *   sections (so approve refuses to auto-apply). `before`/`after` are the baseline vs draft slice
@@ -165,6 +160,9 @@ export function buildContributorSubmission(
   draft: ObjectWorkspaceModules,
 ): SubmitPendingChangeInput {
   const moduleKey = MODULE_KEY_MAP[module];
+  // A restored draft must not conceal a failed fresh read, or bypass the shared save guard.
+  assertWorkspaceSaveAvailable(module, baseline[moduleKey]);
+  assertWorkspaceSaveAvailable(module, draft[moduleKey]);
   const route = AUTO_DISPATCH_ROUTES[module];
   const before = summarizeModuleValue(baseline[moduleKey]);
   const after = summarizeModuleValue(draft[moduleKey]);

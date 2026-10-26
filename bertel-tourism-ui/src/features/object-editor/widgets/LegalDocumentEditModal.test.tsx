@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { LegalDocumentEditModal } from './LegalDocumentEditModal';
 import { buildNewDocumentRecord } from '../sections/legal-edit';
 import type { ObjectWorkspaceLegalTypeOption } from '../../../services/object-workspace-parser';
@@ -51,10 +51,8 @@ function renderModal() {
 describe('LegalDocumentEditModal', () => {
   it('propose les types du catalogue juridique', () => {
     renderModal();
-    const select = screen.getByRole('combobox', { name: 'Type de document' });
-    expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual(
-      expect.arrayContaining(['Extrait KBIS', "Statuts d'association"]),
-    );
+    expect(screen.getByRole('button', { name: 'Extrait KBIS' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Statuts d'association" })).toBeInTheDocument();
   });
 
   it('affiche la description du type sélectionné — « quand demander cette pièce »', () => {
@@ -64,9 +62,7 @@ describe('LegalDocumentEditModal', () => {
 
   it('remplace cette aide quand on change de type', () => {
     renderModal();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Type de document' }), {
-      target: { value: 'statuts_association' },
-    });
+    fireEvent.click(screen.getByRole('button', { name: "Statuts d'association" }));
     expect(screen.getByText(/exploitants associatifs/)).toBeInTheDocument();
     expect(screen.queryByText(/Demandé de moins de 3 mois/)).not.toBeInTheDocument();
   });

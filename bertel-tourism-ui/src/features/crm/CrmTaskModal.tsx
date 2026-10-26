@@ -22,11 +22,18 @@ import { deleteTaskDocument, getTaskDocumentUrl, uploadTaskDocument } from '../.
 import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
-import { CrmModal } from './CrmModal';
 import { formatDocumentSize, toDateInputValue } from './crm-view-utils';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
+import { EditorModal } from '../object-editor/primitives/EditorModal';
+import './crm-editor-modal.css';
+
+function dateInputOffset(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le
@@ -116,6 +123,7 @@ export function CrmTaskModal({
 
   const [title, setTitle] = useState(task?.title ?? '');
   const [description, setDescription] = useState(task?.description ?? '');
+  const [detailsOpen, setDetailsOpen] = useState(Boolean(task?.description));
   // Auto-sélection PO point 3 : en mode select avec UN SEUL établissement, on le pré-coche
   // (le champ est requis ⇒ formulaire plus proche du submit). Sinon vide (choix explicite).
   // En édition, l'établissement vient de la tâche elle-même (verrouillé, cf. rendu plus bas).
@@ -240,164 +248,112 @@ export function CrmTaskModal({
     (Boolean(task) || Boolean(resolvedObject)) &&
     selectedAssignees.length > 0 &&
     !createMutation.isPending;
+  const assigneesMissing = selectedAssignees.length === 0;
+
+  const resolvedObjectName = task?.objectName ?? fixedObject?.objectName ?? resolvedObject?.objectName ?? 'Établissement à choisir';
+  const dueDateLabel = dueAt ? new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(new Date(`${dueAt}T12:00:00`)) : 'Sans échéance';
+  const selectedAssigneeNames = assignees.filter((assignee) => selectedAssignees.includes(assignee.userId)).map((assignee) => assignee.displayName);
+  const footerNote = task
+    ? canSubmit ? 'Modifications prêtes à enregistrer.' : 'Ajoutez un titre et assignez au moins une personne.'
+    : !title.trim() ? 'Ajoutez un titre à la tâche.' : !resolvedObject ? 'Choisissez un établissement.' : assigneesMissing ? 'Choisissez au moins une personne.' : 'Prêt à créer.';
+  const preview = (
+    <>
+      <h3>{task ? 'Dans la liste des tâches' : 'Aperçu de la tâche'}</h3>
+      <div className="crm-edit-preview">
+        <div className="crm-edit-preview__task">
+          <span className="crm-edit-preview__checkbox" aria-hidden />
+          <div>
+            <strong>{title.trim() || 'Nouvelle tâche'}</strong>
+            <p>{resolvedObjectName}</p>
+          </div>
+        </div>
+        {description.trim() && <p>{description.trim()}</p>}
+        <span className="crm-edit-preview__tag">{dueDateLabel}</span>
+        {selectedAssigneeNames.length > 0 && <p>{selectedAssigneeNames.join(' · ')}</p>}
+      </div>
+      <h3>Avant d’enregistrer</h3>
+      <ul className="ed-record-modal__checks">
+        <li data-complete={Boolean(title.trim())}><span aria-hidden>{title.trim() ? '✓' : '○'}</span> Tâche</li>
+        <li data-complete={Boolean(task || resolvedObject)}><span aria-hidden>{task || resolvedObject ? '✓' : '○'}</span> Établissement</li>
+        <li data-complete={selectedAssignees.length > 0}><span aria-hidden>{selectedAssignees.length > 0 ? '✓' : '○'}</span> Personne(s) <span>{selectedAssignees.length || ''}</span></li>
+      </ul>
+      {relatedInteractionId && <p className="crm-edit-note">Cette tâche sera liée à l’interaction déjà enregistrée.</p>}
+    </>
+  );
 
   return (
-    <CrmModal
-      // Le titre DIT le lien : c'est la seule chose qui distingue ce formulaire du formulaire
-      // libre, et l'établissement en lecture seule serait autrement inexpliqué.
+    <EditorModal
+      open
+      className="crm-app"
       title={task ? 'Modifier la tâche' : relatedInteractionId ? 'Nouvelle tâche liée à la demande' : 'Nouvelle tâche'}
+      eyebrow="Relation professionnels"
       onClose={onClose}
-      footer={
-        <>
-          <button type="button" className="crm-btn" onClick={onClose}>
-            Annuler
-          </button>
-          <button type="button" className="crm-btn primary" disabled={!canSubmit} onClick={() => createMutation.mutate()}>
-            {task ? 'Enregistrer' : 'Créer'}
-          </button>
-        </>
-      }
+      onSave={() => createMutation.mutate()}
+      saveLabel={task ? 'Enregistrer' : 'Créer la tâche'}
+      saveDisabled={!canSubmit}
+      size="xl"
+      aside={preview}
+      footerNote={footerNote}
     >
-      <label className="crm-field">
-        Titre
-        <input
-          aria-label="Titre de la tâche"
-          placeholder="Titre de la tâche"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-        />
+      <label className="crm-field crm-edit-title">
+        Que faut-il faire ?
+        <input aria-label="Titre de la tâche" placeholder="ex. Rappeler pour les tarifs 2027" value={title} onChange={(event) => setTitle(event.target.value)} />
       </label>
-
-      <label className="crm-field">
-        Description
-        <textarea
-          aria-label="Description de la tâche"
-          placeholder="Décrire la tâche (optionnel)"
-          rows={3}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-      </label>
-
+      <details className="crm-edit-details" open={detailsOpen} onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
+        <summary>{detailsOpen ? 'Masquer les détails' : '+ Ajouter des détails'}</summary>
+        <label className="crm-field">
+          Description
+          <textarea aria-label="Description de la tâche" placeholder="Décrire la tâche (facultatif)" rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
+        </label>
+      </details>
       <label className="crm-field">
         Établissement
         {task || fixedObject ? (
-          // Lecture seule assumée : en édition comme depuis une demande, l'établissement
-          // n'est PAS modifiable ici (le serveur accepterait un déplacement en édition, mais
-          // on ne l'offre pas — cf. docstring de `task`) ; le serveur refuserait tout autre
-          // choix pour `fixedObject` (22023). On ne rend PAS un picker désactivé — SearchSelect
-          // n'a pas de prop `disabled`, et lui en ajouter une toucherait un composant partagé
-          // bien au-delà du CRM.
           <span className="crm-field__static">{task ? task.objectName : fixedObject!.objectName}</span>
         ) : (
-          <SearchSelect
-            aria-label="Établissement"
-            value={objectId}
-            options={objectOptions.map((object) => ({ code: object.objectId, label: object.objectName }))}
-            onChange={setObjectId}
-            placeholder="— Choisir un établissement —"
-            searchPlaceholder="Rechercher un établissement…"
-          />
+          <SearchSelect aria-label="Établissement" value={objectId} options={objectOptions.map((object) => ({ code: object.objectId, label: object.objectName }))} onChange={setObjectId} placeholder="— Rechercher un établissement —" searchPlaceholder="Rechercher un établissement…" />
         )}
       </label>
-
-      <label className="crm-field">
-        Échéance
-        <input aria-label="Échéance" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} />
-      </label>
-
-      {/* 16w — assignation MULTIPLE. Le champ reste rendu même en chargement/erreur : le
-          masquer ferait disparaître une contrainte de soumission sans l'expliquer. */}
-      <label className="crm-field">
-        Attribuer à
-        <SearchMultiSelect
-          aria-label="Attribuer à"
-          values={selectedAssignees}
-          options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))}
-          onChange={setPickedAssignees}
-          placeholder="— Choisir une ou plusieurs personnes —"
-          searchPlaceholder="Rechercher une personne…"
-          emptyLabel={
-            assigneesQuery.isLoading
-              ? 'Chargement des personnes…'
-              : assigneesQuery.isError
-                ? 'Impossible de charger les personnes.'
-                : 'Aucune personne assignable'
-          }
-        />
-      </label>
-      {selectedAssignees.length === 0 && !assigneesQuery.isLoading && (
-        <p className="crm-field__hint">Choisissez au moins une personne.</p>
-      )}
-
-      {/* Task 9 — pièces jointes : SEULEMENT en édition, la tâche n'a pas encore d'id à la
-          création (rien à quoi ancrer un fichier). Boutons désactivés tant que le jeton de
-          session n'est pas lu : sans lui l'appel partirait sans Authorization (401 muet). */}
+      <section className="ed-modal__section crm-edit-section">
+        <h3>Pour quand ?</h3>
+        <div className="crm-edit-quick-dates" role="group" aria-label="Échéance rapide">
+          {[
+            { label: 'Aujourd’hui', value: dateInputOffset(0) },
+            { label: 'Demain', value: dateInputOffset(1) },
+            { label: 'Dans 1 semaine', value: dateInputOffset(7) },
+            { label: 'Sans échéance', value: '' },
+          ].map((option) => <button key={option.label} type="button" aria-pressed={dueAt === option.value} className={dueAt === option.value ? 'is-active' : ''} onClick={() => setDueAt(option.value)}>{option.label}</button>)}
+          <label className="crm-edit-date">Choisir une date…<input aria-label="Échéance" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} /></label>
+        </div>
+      </section>
+      <section className="ed-modal__section crm-edit-section">
+        <h3>Qui s’en occupe ? <small>· une ou plusieurs personnes</small></h3>
+        <SearchMultiSelect aria-label="Attribuer à" values={selectedAssignees} options={assignees.map((assignee) => ({ code: assignee.userId, label: assignee.displayName }))} onChange={setPickedAssignees} placeholder="— Choisir une ou plusieurs personnes —" searchPlaceholder="Rechercher une personne…" emptyLabel={assigneesQuery.isLoading ? 'Chargement des personnes…' : assigneesQuery.isError ? 'Impossible de charger les personnes.' : 'Aucune personne assignable'} />
+        {assigneesMissing && !assigneesQuery.isLoading && <p className="crm-field__hint">Choisissez au moins une personne.</p>}
+      </section>
       {task ? (
-        <div className="crm-field">
-          Pièces jointes
-          <ul className="crm-doc-list">
-            {task.documents.map((doc) => (
-              <li key={doc.id} className="crm-doc-list__row">
-                <span className="crm-doc-list__title">{doc.title}</span>
-                <span className="crm-doc-list__size">{formatDocumentSize(doc.sizeBytes)}</span>
-                <button
-                  type="button"
-                  className="crm-btn sm"
-                  aria-label={`Ouvrir « ${doc.title} »`}
-                  disabled={!accessToken || documentPending}
-                  onClick={() => openMutation.mutate(doc.id)}
-                >
-                  <ExternalLink size={11} aria-hidden /> Ouvrir
-                </button>
-                <button
-                  type="button"
-                  className="crm-btn sm crm-btn--danger-ghost"
-                  aria-label={`Supprimer « ${doc.title} »`}
-                  disabled={!accessToken || documentPending}
-                  onClick={() => {
-                    if (window.confirm(`Supprimer « ${doc.title} » ? Le fichier sera définitivement effacé.`)) {
-                      deleteMutation.mutate(doc.id);
-                    }
-                  }}
-                >
-                  <Trash2 size={11} aria-hidden /> Supprimer
-                </button>
-              </li>
-            ))}
-            {task.documents.length === 0 && <li className="crm-field__hint">Aucune pièce jointe.</li>}
-          </ul>
-          <input
-            ref={fileInputRef}
-            type="file"
-            aria-label="Ajouter un document"
-            accept={CRM_DOCUMENT_ACCEPT}
-            style={{ display: 'none' }}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = '';
-              if (file) uploadMutation.mutate(file);
-            }}
-          />
-          <button
-            type="button"
-            className="crm-btn sm"
-            disabled={!accessToken || documentPending}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload size={11} aria-hidden /> Ajouter un document
-          </button>
-          {documentError && <div className="inline-alert" role="alert">{documentError}</div>}
-        </div>
+        <details className="crm-edit-details crm-edit-documents">
+          <summary>Pièces jointes · {task.documents.length}</summary>
+          <div className="crm-field">
+            <ul className="crm-doc-list">
+              {task.documents.map((doc) => (
+                <li key={doc.id} className="crm-doc-list__row">
+                  <span className="crm-doc-list__title">{doc.title}</span><span className="crm-doc-list__size">{formatDocumentSize(doc.sizeBytes)}</span>
+                  <button type="button" className="crm-btn sm" aria-label={`Ouvrir « ${doc.title} »`} disabled={!accessToken || documentPending} onClick={() => openMutation.mutate(doc.id)}><ExternalLink size={11} aria-hidden /> Ouvrir</button>
+                  <button type="button" className="crm-btn sm crm-btn--danger-ghost" aria-label={`Supprimer « ${doc.title} »`} disabled={!accessToken || documentPending} onClick={() => { if (window.confirm(`Supprimer « ${doc.title} » ? Le fichier sera définitivement effacé.`)) deleteMutation.mutate(doc.id); }}><Trash2 size={11} aria-hidden /> Supprimer</button>
+                </li>
+              ))}
+              {task.documents.length === 0 && <li className="crm-field__hint">Aucune pièce jointe.</li>}
+            </ul>
+            <input ref={fileInputRef} type="file" aria-label="Ajouter un document" accept={CRM_DOCUMENT_ACCEPT} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) uploadMutation.mutate(file); }} />
+            <button type="button" className="crm-btn sm" disabled={!accessToken || documentPending} onClick={() => fileInputRef.current?.click()}><Upload size={11} aria-hidden /> Ajouter un document</button>
+            {documentError && <div className="inline-alert" role="alert">{documentError}</div>}
+          </div>
+        </details>
       ) : (
-        <p className="crm-field__hint">Enregistrez la tâche pour joindre des documents.</p>
+        <p className="crm-edit-note">Enregistrez la tâche pour joindre des documents.</p>
       )}
-
-      {createMutation.isError && (
-        <div className="inline-alert" role="alert">
-          {task ? 'Échec de l’enregistrement' : 'Échec de la création'} : {(createMutation.error as Error).message}
-        </div>
-      )}
-    </CrmModal>
+      {createMutation.isError && <div className="inline-alert" role="alert">{task ? 'Échec de l’enregistrement' : 'Échec de la création'} : {(createMutation.error as Error).message}</div>}
+    </EditorModal>
   );
 }

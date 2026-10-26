@@ -37,7 +37,7 @@ describe('MediaEditModal', () => {
     );
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Nouvelle façade' } });
     fireEvent.change(screen.getByLabelText('Crédit / auteur'), { target: { value: 'OTI Sud' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.title).toBe('Nouvelle façade');
     expect(saved.credit).toBe('OTI Sud');
@@ -55,7 +55,7 @@ describe('MediaEditModal', () => {
     );
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'EN' })); });
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Front view' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.title).toBe('Façade');                  // base FR untouched
     expect(saved.titleTranslations.en).toBe('Front view');
@@ -75,7 +75,7 @@ describe('MediaEditModal', () => {
     );
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Nouvelle façade' } });
     fireEvent.change(screen.getByLabelText('Description (texte alternatif)'), { target: { value: 'Vue de la façade' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.title).toBe('Nouvelle façade');
     expect(saved.titleTranslations.fr).toBe('Nouvelle façade');
@@ -93,7 +93,7 @@ describe('MediaEditModal', () => {
       />,
     );
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.title).toBe('');
     expect(saved.titleTranslations.fr).toBeUndefined();
@@ -113,7 +113,7 @@ describe('MediaEditModal', () => {
     expect(screen.getByDisplayValue('— Visibilité non définie —')).toBeInTheDocument();
     // Audience vocabulary (§52): Publique / Partenaires / Interne — 'private' = Interne.
     fireEvent.change(screen.getByLabelText('Visibilité'), { target: { value: 'private' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.visibility).toBe('private');
   });
@@ -128,7 +128,7 @@ describe('MediaEditModal', () => {
         onClose={() => {}} onSave={onSave}
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.visibility).toBe('');
   });
@@ -142,10 +142,10 @@ describe('MediaEditModal', () => {
         onClose={() => {}} onSave={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeDisabled();
     const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
     fireEvent.click(uploadBtn);
-    expect(screen.getByRole('button', { name: 'Enregistrer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ })).toBeEnabled();
   });
 
   it('renders a non-authorable type (document) read-only, without upload or type select', async () => {
@@ -167,7 +167,7 @@ describe('MediaEditModal', () => {
     expect(screen.queryByRole('button', { name: 'mock-upload' })).not.toBeInTheDocument();
     // Metadata stays editable and saves.
     fireEvent.change(screen.getByLabelText('Titre'), { target: { value: 'Menu du restaurant' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     expect((onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem).title).toBe('Menu du restaurant');
   });
 
@@ -202,7 +202,7 @@ describe('MediaEditModal', () => {
     );
     const uploadBtn = await screen.findByRole('button', { name: 'mock-upload' });
     fireEvent.click(uploadBtn);
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceMediaItem;
     expect(saved.url).toBe('https://cdn.test/x.jpg');
     expect(saved.width).toBe('800');

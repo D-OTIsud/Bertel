@@ -36,11 +36,24 @@ const mod: Pick<ObjectWorkspaceRoomsModule, 'roomTypeOptions' | 'viewTypeOptions
 };
 
 describe('RoomEditModal', () => {
+  it('suggests capacity and a real catalog bed only for an untouched new room type', () => {
+    const onSave = jest.fn();
+    render(<RoomEditModal open room={{ ...room, recordId: 'd55e9454-b5f8-40aa-b209-29a54002c124', isNew: true, name: '', capacityTotal: '', capacityAdults: '', capacityChildren: '', beds: [], quantity: '' }} module={mod} onClose={() => {}} onSave={onSave} />);
+    expect(screen.getByLabelText('Nom / libellé')).toHaveValue('');
+    fireEvent.change(screen.getByLabelText('Nom / libellé'), { target: { value: 'Double vue mer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Chambre double' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Double vue mer', capacityTotal: '2', quantity: '1',
+      beds: [{ bedTypeId: 'bt-double', bedTypeCode: 'double', bedTypeLabel: 'Lit double', quantity: '1' }],
+    }));
+  });
+
   it('edits the room type and returns the patched room on save', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
     fireEvent.change(screen.getByLabelText('Type de chambre'), { target: { value: 'double' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.roomTypeCode).toBe('double');
   });
@@ -68,7 +81,7 @@ describe('RoomEditModal', () => {
     expect((screen.getByLabelText('Enfants') as HTMLInputElement).value).toBe('0');
     fireEvent.change(screen.getByLabelText('Adultes'), { target: { value: '1' } });
     expect((screen.getByLabelText('Enfants') as HTMLInputElement).value).toBe('3');
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved).toMatchObject({ capacityTotal: '4', capacityAdults: '1', capacityChildren: '3' });
   });
@@ -88,7 +101,7 @@ describe('RoomEditModal', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByRole('button', { name: 'Wi-Fi' })); // flat, no category to open
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['wifi']);
   });
@@ -98,7 +111,7 @@ describe('RoomEditModal', () => {
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByRole('button', { name: /Services/ })); // expand the category
     fireEvent.click(screen.getByRole('button', { name: 'Conciergerie' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.amenityCodes).toEqual(['concierge']);
   });
@@ -123,7 +136,7 @@ describe('RoomEditModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /Ajouter un lit/i }));
     fireEvent.change(screen.getByLabelText('Type de lit 1'), { target: { value: 'double' } });
     fireEvent.change(screen.getByLabelText('Nombre de lits 1'), { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.beds).toEqual([
       { bedTypeId: 'bt-double', bedTypeCode: 'double', bedTypeLabel: 'Lit double', quantity: '2' },
@@ -136,15 +149,16 @@ describe('RoomEditModal', () => {
     expect(screen.getByAltText('Vue terrasse')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retirer la photo Vue terrasse' })).toBeInTheDocument();
     // The section header reflects the linked count.
-    expect(screen.getByText('Photos & médias (1)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Photos et médias.*1/ })).toBeInTheDocument();
   });
 
   it('links an existing establishment photo to the room', () => {
     const onSave = jest.fn();
     render(<RoomEditModal open room={room} module={mod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Photos et médias' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier une photo' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier la photo Salle de bain' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.mediaIds).toEqual(['m2']);
   });
@@ -154,7 +168,7 @@ describe('RoomEditModal', () => {
     const withMedia = { ...room, mediaIds: ['m1', 'm2'] };
     render(<RoomEditModal open room={withMedia} module={mod} onClose={() => {}} onSave={onSave} />);
     fireEvent.click(screen.getByRole('button', { name: 'Retirer la photo Vue terrasse' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+    fireEvent.click(screen.getByRole('button', { name: /^(Ajouter|Appliquer)$/ }));
     const saved = onSave.mock.calls[0][0] as ObjectWorkspaceRoomTypeItem;
     expect(saved.mediaIds).toEqual(['m2']);
   });
@@ -163,6 +177,7 @@ describe('RoomEditModal', () => {
     const onSave = jest.fn();
     const emptyMod = { ...mod, mediaOptions: [] };
     render(<RoomEditModal open room={room} module={emptyMod} onClose={() => {}} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Photos et médias' }));
     fireEvent.click(screen.getByRole('button', { name: 'Lier une photo' }));
     expect(screen.getByText(/Ajoutez des photos dans la/i)).toBeInTheDocument();
   });

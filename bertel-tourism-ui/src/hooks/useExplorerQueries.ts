@@ -1,5 +1,7 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { assertWorkspaceSaveAvailable } from '../services/object-workspace-safety';
+import { assertWriteCompatible, readWriteCompatibility, type WriteCompatibility } from '../services/write-compatibility';
 import { useExplorerStore } from '../store/explorer-store';
 import { useSessionStore } from '../store/session-store';
 import { useDebouncedValue } from './useDebouncedValue';
@@ -451,7 +453,17 @@ export function useLocationReferenceOptionsQuery() {
  * the end via `invalidateObjectWorkspaceCaches` — the previous per-module mutation awaited a
  * full workspace refetch after EVERY module, which was the bulk of the save latency.
  */
-export async function saveWorkspaceModule(objectId: string, input: SaveWorkspaceModuleInput): Promise<void> {
+export async function saveWorkspaceModule(objectId: string, input: SaveWorkspaceModuleInput, compatibility?: WriteCompatibility): Promise<void> {
+  // Validate before dispatch so direct callers cannot bypass the editor batch guard.
+  if (input.moduleId === 'general-info') {
+    if (input.value) assertWorkspaceSaveAvailable('general-info', input.value);
+    if (input.taxonomyValue) assertWorkspaceSaveAvailable('taxonomy', input.taxonomyValue);
+  } else {
+    assertWorkspaceSaveAvailable(input.moduleId, input.value);
+  }
+  if (!useSessionStore.getState().demoMode) {
+    assertWriteCompatible(compatibility ?? await readWriteCompatibility());
+  }
   if (input.moduleId === 'general-info') {
     if (input.value) {
       await saveObjectWorkspaceGeneralInfo(objectId, input.value);
@@ -583,6 +595,9 @@ export function usePublishObjectWorkspaceMutation(objectId: string | null) {
         throw new Error("Aucune fiche active pour gerer la publication.");
       }
 
+      if (!useSessionStore.getState().demoMode) {
+        assertWriteCompatible(await readWriteCompatibility());
+      }
       return publishObjectWorkspace(objectId, publish);
     },
     onSuccess: () => {

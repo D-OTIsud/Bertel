@@ -1,0 +1,65 @@
+/* Catalog-backed record forms follow the supplied classification, membership and menu models. */
+.ed-catalog-section + .ed-catalog-section { padding-top: 18px; border-top: 1px solid var(--line-soft); }
+.ed-catalog-section h3 { margin: 0 0 10px; color: var(--ink); font-size: 13px; font-weight: 650; }
+.ed-catalog-section h3 small { margin-left: 6px; color: var(--ink-3); font-size: 12px; font-weight: 400; }
+.ed-catalog-group + .ed-catalog-group { margin-top: 12px; }
+.ed-catalog-group > p { margin: 0 0 6px; font-size: 12px; color: var(--ink-3); }
+.ed-catalog-summary { padding: 12px; border-radius: 12px; background: var(--bg-tint, var(--surface-2)); color: var(--ink); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.ed-catalog-summary > small { color: var(--ink-3); font-size: 11px; }
+.ed-catalog-summary p { margin: 5px 0 0; color: var(--ink-3); font-size: 12px; }
+.ed-catalog-summary__line { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ed-catalog-details > summary { color: var(--accent); cursor: pointer; font-size: 12px; }
+.ed-catalog-details[open] > summary { margin-bottom: 12px; }
+.ed-catalog-details .field + .field { margin-top: 12px; }
+.ed-catalog-link { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; color: var(--accent); font-size: 12px; cursor: pointer; }
+.ed-catalog-danger { color: var(--danger, var(--red)); }
+.ed-catalog-name-price { display: grid; grid-template-columns: minmax(0, 1fr) 160px; align-items: start; gap: 12px; }
+.ed-catalog-section .chip { min-height: 31px; }
+.ed-membership-steps { display: grid; grid-template-columns: repeat(3, 1fr); margin: 14px 0; }
+.ed-membership-org { margin: 0; font-size: 12px; color: var(--ink); }
+.ed-membership-org span { color: var(--ink-3); }
+.ed-membership-options { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+.ed-membership-options > .chip-set { display: contents; }
+.ed-membership-options > details > summary { display: flex; align-items: center; min-height: 31px; padding: 4px 11px; border: 1px dashed var(--line); border-radius: 999px; }
+.ed-membership-options > details[open] { flex-basis: 100%; }
+.ed-membership-options > details[open] > summary { width: fit-content; margin-bottom: 12px; }
+.ed-membership-steps button { position: relative; display: grid; justify-items: center; gap: 7px; padding: 0; border: 0; background: transparent; color: var(--ink-3); font-size: 12px; cursor: pointer; }
+.ed-membership-steps button::before { position: absolute; top: 15px; right: 50%; width: 100%; height: 2px; background: var(--line-soft); content: ''; }
+.ed-membership-steps button:first-child::before { display: none; }
+.ed-membership-steps button > span { position: relative; z-index: 1; display: grid; place-items: center; width: 30px; height: 30px; border: 2px solid var(--line); border-radius: 50%; background: var(--surface); }
+.ed-membership-steps button[aria-pressed=true] { color: var(--accent); }
+.ed-membership-steps button[aria-pressed=true] > span { color: var(--surface); border-color: var(--accent); background: var(--accent); }
+.ed-membership-steps button:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 6px; }
+.ed-provider-note { width: 100%; min-height: 72px; resize: vertical; }
+.object-editor .ed-provider-role .tog { display: flex; margin-top: 12px; flex-direction: row-reverse; justify-content: flex-end; }
+.object-editor .ed-dish-availability .tog { display: flex; flex-direction: row-reverse; justify-content: flex-end; padding: 0; border: 0; background: transparent; }
+.ed-dish-description .md-editor__content { min-height: 64px; max-height: 180px; overflow-y: auto; }
+.ed-dish-description .md-editor--loading { min-height: 96px; }
+.ed-dish-description .md-editor__toolbar { padding-block: 3px; }
+.ed-menu-layout { display: grid; grid-template-columns: minmax(250px, 35%) minmax(0, 1fr); margin: -22px -24px; }
+.ed-menu-list { padding: 22px 16px; background: var(--bg-tint, var(--surface-2)); border-right: 1px solid var(--line-soft); }
+.ed-menu-panel { min-width: 0; padding: 22px 24px; display: grid; align-content: start; gap: 18px; }
+.ed-menu-panel__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 11px; font-weight: 650; text-transform: uppercase; color: var(--ink-3); }
+.ed-menu-panel__header button { text-transform: none; font-weight: 400; }
+.ed-menu-group { margin-top: 22px; }
+.ed-menu-group__heading { display: flex; justify-content: space-between; gap: 10px; margin: 0 4px 7px; color: var(--ink-3); font-size: 11px; text-transform: uppercase; }
+.ed-menu-group__heading span { text-transform: none; }
+.ed-menu-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; padding: 10px; border: 1px solid transparent; border-radius: 10px; background: transparent; text-align: left; color: var(--ink); cursor: pointer; }
+.ed-menu-row[aria-pressed=true] { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 1px var(--accent); }
+.ed-menu-row strong { display: block; font-size: 13px; font-weight: 550; }
+.ed-menu-row small { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-3); }
+.ed-menu-row > span:last-child { font-size: 12px; white-space: nowrap; }
+.ed-menu-add { margin: 7px 10px 0; }
+.ed-menu-extra-sections { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.ed-menu-extra-sections > p { margin: 0 0 8px; font-size: 12px; color: var(--ink-3); }
+.ed-menu-names { margin-top: 8px; }
+.ed-menu-names .chip { font-size: 11px; min-height: 28px; }
+@media (max-width: 760px) {
+  .ed-menu-layout { display: block; margin: -22px -16px; }
+  .ed-menu-list { border-right: 0; border-bottom: 1px solid var(--line-soft); padding: 18px 16px; }
+  .ed-menu-panel { padding: 20px 16px; }
+}
+@media (max-width: 480px) {
+  .ed-catalog-name-price { grid-template-columns: minmax(0, 1fr); }
+  .ed-catalog-name-price > .field:last-child { max-width: 180px; }
+}

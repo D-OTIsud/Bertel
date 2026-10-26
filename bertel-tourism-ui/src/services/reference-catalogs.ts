@@ -13,9 +13,9 @@ export type RefCodeRow = {
 };
 
 /**
- * Les 27 domaines `ref_code` que le chargeur de l'editeur lisait jusqu'ici en 27
- * requetes separees (une par `.eq('domain', …)` ou `.in('domain', […])`), soit
- * ~23 allers-retours mesures par ouverture de fiche en production.
+ * Les 28 domaines `ref_code` du chargeur de l'editeur sont regroupés dans le cache.
+ * Cela évite les requêtes séparées par domaine ; `weekday` sert à conserver les
+ * jours et notes des horaires canoniques, dans le même appel de catalogue.
  *
  * Liste regenerable — ATTENTION, la commande naive qui ne cherche que `.eq(...)`
  * rate `social_network` / `distribution_channel`, charges par `.in(...)` :
@@ -54,6 +54,7 @@ export const REF_CODE_DOMAINS = [
   'season_type',
   'social_network',
   'view_type',
+  'weekday',
 ] as const;
 
 /**
@@ -106,7 +107,7 @@ export type ReferenceCatalogs = {
 };
 
 /**
- * Charge en UN appel tous les codes de reference des 27 domaines, plus une
+ * Charge en UN appel tous les codes de reference des 28 domaines, plus une
  * requete par table de reference, et regroupe le tout. Chaque domaine et chaque
  * table declares rendent TOUJOURS un tableau (vide si aucune ligne) : les
  * appelants n'ont pas a gerer `undefined`.

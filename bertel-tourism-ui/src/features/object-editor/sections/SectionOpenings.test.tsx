@@ -102,4 +102,17 @@ describe('SectionOpenings', () => {
     expect(screen.getByRole('button', { name: '+ Ajouter une période' })).toBeInTheDocument();
     expect(screen.getByText(/Aucune période/i)).toBeInTheDocument();
   });
+
+  it('routes marked hours exceptions to their own form while unmarked periods remain ordinary', () => {
+    const modules = fullModulesFixture();
+    const base = modules.openings.periods[0];
+    modules.openings.periods.push({ ...base, recordId: 'exception', label: 'Noël', recurrence: 'fixed', allYears: false,
+      startDate: '2026-12-24', endDate: '2026-12-24', extra: { exception_kind: 'modified' } });
+    setup(modules);
+    expect(screen.getByText('1 période(s)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier Noël' }));
+    expect(screen.getByText('Horaires exceptionnels')).toBeInTheDocument();
+    expect(screen.queryByText('modal-edit')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appliquer' })).toBeDisabled();
+  });
 });

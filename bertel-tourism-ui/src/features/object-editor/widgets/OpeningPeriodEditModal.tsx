@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EditorModal, Field, Input, ScheduleEditor, Select } from '../primitives';
+import { Chip, ChipSet, Disclosure, EditorModal, Field, Input, ScheduleEditor, Select } from '../primitives';
 import { validatePeriodDraft } from '../sections/opening-period-edit';
 import {
   decodeCyclicFields,
@@ -9,7 +9,18 @@ import {
   type CyclicFields,
   type RecurrencePeriod,
 } from '../sections/opening-recurrence';
-import { scheduleRowsFromPeriod } from '../sections/blocks/opening-schedule';
+import {
+  openingPeriodEditingReason,
+  openingPeriodNotes,
+  scheduleRowsFromPeriod,
+} from '../sections/blocks/opening-schedule';
+import {
+  buildRibbonSegments,
+  formatPeriodRange,
+  MONTHS,
+  periodWeekSummary,
+} from '../sections/blocks/opening-period-meta';
+import { formatScheduleTime } from '../primitives/schedule-time';
 import type {
   ObjectWorkspaceOpeningPeriod,
   ObjectWorkspaceOpeningPeriodTypeOption,
@@ -28,16 +39,27 @@ interface OpeningPeriodEditModalProps {
 }
 
 const RECURRENCE_OPTIONS: { v: ObjectWorkspaceOpeningPeriod['recurrence']; l: string }[] = [
-  { v: 'cyclic', l: 'Cyclique (chaque année)' },
-  { v: 'fixed', l: 'Dates fixes' },
+  { v: 'cyclic', l: 'Chaque année' },
+  { v: 'fixed', l: 'Une seule fois' },
   { v: 'always', l: "Toute l'année" },
 ];
 
 const MONTH_OPTIONS = [
   { v: '', l: '— Mois —' },
-  ...['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'].map(
-    (l, i) => ({ v: String(i + 1), l }),
-  ),
+  ...[
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ].map((l, i) => ({ v: String(i + 1), l })),
 ];
 
 const DAY_OPTIONS = [
@@ -66,9 +88,20 @@ export function OpeningPeriodEditModal({
   onSave,
 }: OpeningPeriodEditModalProps) {
   const [draft, setDraft] = useState(initialDraft);
-  const set = (patch: Partial<ObjectWorkspaceOpeningPeriod>) => setDraft((current) => ({ ...current, ...patch }));
+  const set = (patch: Partial<ObjectWorkspaceOpeningPeriod>) =>
+    setDraft((current) => ({ ...current, ...patch }));
 
   const validation = validatePeriodDraft(draft);
+  const editingReason = openingPeriodEditingReason(draft);
+  const notes = openingPeriodNotes(draft);
+  const previewPeriods = [
+    ...existingPeriods.filter(
+      (period) =>
+        period !== initialDraft && (!initialDraft.recordId || period.recordId !== initialDraft.recordId),
+    ),
+    draft,
+  ];
+  const segments = buildRibbonSegments(previewPeriods);
 
   // Overlap validation: a period must not partially cross another same-layer period.
   // ObjectWorkspaceOpeningPeriod structurally satisfies RecurrencePeriod (recurrence,
@@ -77,9 +110,8 @@ export function OpeningPeriodEditModal({
     ? existingPeriods.filter((pp) => pp.recordId !== initialDraft.recordId)
     : existingPeriods) as unknown as RecurrencePeriod[];
   const conflicts = findPeriodConflicts(draft as unknown as RecurrencePeriod, others);
-  const overlapError = conflicts.length > 0
-    ? `Cette période recoupe : ${conflicts.map((c) => c.label).join(', ')}.`
-    : null;
+  const overlapError =
+    conflicts.length > 0 ? `Cette période recoupe : ${conflicts.map((c) => c.label).join(', ')}.` : null;
 
   const typeSelectOptions = [
     { v: '', l: '— Aucun —' },
@@ -110,45 +142,101 @@ export function OpeningPeriodEditModal({
     <EditorModal
       open={open}
       title={mode === 'edit' ? 'Modifier la période' : 'Ajouter une période'}
+      eyebrow="Horaires · Période d’ouverture"
       onClose={onClose}
-      onSave={() => onSave(draft)}
-      saveDisabled={!validation.canSave || Boolean(overlapError)}
+      onSave={() =>
+        onSave({
+          ...draft,
+          weekdays: draft.weekdays.map((day) => ({
+            ...day,
+            slots: day.slots.map((slot) => ({
+              start: formatScheduleTime(slot.start) ?? slot.start,
+              end: formatScheduleTime(slot.end) ?? slot.end,
+            })),
+          })),
+        })
+      }
+      saveDisabled={!validation.canSave || Boolean(overlapError) || Boolean(editingReason)}
+      saveLabel={mode === 'add' ? 'Ajouter' : 'Appliquer'}
       size="lg"
+      footerNote={
+        editingReason
+          ? 'Période conservée sans modification'
+          : validation.dateError || validation.timeError || overlapError || 'Prêt à appliquer au brouillon'
+      }
+      aside={
+        <>
+          <h3>Votre année</h3>
+          <div className="ed-record-modal__preview">
+            <div className="ed-modal__calendar">
+              {MONTHS.map((month) => (
+                <span key={month}>{month.slice(0, 1)}</span>
+              ))}
+            </div>
+            {previewPeriods.map((period, index) => (
+              <div key={period.recordId ?? index}>
+                <div className="ed-modal__calendar" aria-hidden>
+                  {MONTHS.map((month, monthIndex) => (
+                    <i
+                      key={month}
+                      data-active={segments.some(
+                        (segment) =>
+                          segment.periodIndex === index &&
+                          segment.start < monthIndex + 1 &&
+                          segment.end > monthIndex,
+                      )}
+                    />
+                  ))}
+                </div>
+                <p>
+                  {period.label ||
+                    (index === previewPeriods.length - 1 ? 'Nouvelle période' : `Période ${index + 1}`)}
+                </p>
+              </div>
+            ))}
+          </div>
+          <h3>Sur la fiche</h3>
+          <div className="ed-record-modal__preview">
+            <strong>{draft.label || 'Nouvelle période'}</strong>
+            <p>{formatPeriodRange(draft)}</p>
+            <p>{periodWeekSummary(draft)}</p>
+          </div>
+          <h3>Avant d’appliquer</h3>
+          <ul className="ed-record-modal__checks">
+            <li data-complete={validation.canSave}>{validation.canSave ? '✓' : '○'} Dates</li>
+            <li data-complete={!overlapError}>{overlapError ? '○' : '✓'} Pas de chevauchement</li>
+            <li data-complete={!editingReason}>{editingReason ? '○' : '✓'} Horaires conservés</li>
+          </ul>
+        </>
+      }
     >
-      <Field label="Nom de la période (optionnel)">
-        <Input aria-label="Nom de la période" value={draft.label} placeholder="ex. Vacances de juillet" onChange={(label) => set({ label })} />
-      </Field>
-
-      <Field label="Récurrence" hint="Cyclique = revient chaque année ; Dates fixes = une seule occurrence ; Toute l’année = sans dates.">
-        <Select
-          aria-label="Récurrence"
-          value={draft.recurrence}
-          options={RECURRENCE_OPTIONS.map((o) => ({ v: o.v, l: o.l }))}
-          onChange={(r) => {
-            const recurrence = r as ObjectWorkspaceOpeningPeriod['recurrence'];
-            // Reset dates + the cyclic picker. A year-round period carries no season étiquette,
-            // so drop the type when switching to "Toute l'année" (nothing to label).
-            setCyclic(EMPTY_CYCLIC_FIELDS);
-            set({
-              recurrence,
-              startDate: '',
-              endDate: '',
-              ...(recurrence === 'always' ? { seasonTypeCode: '' } : {}),
-            });
-          }}
-        />
-      </Field>
-
-      {draft.recurrence !== 'always' && (
-        <Field label="Type / étiquette (optionnel)" hint="Haute / Mi / Hors saison — pour colorer et nommer la période.">
-          <Select
-            aria-label="Type de période"
-            value={draft.seasonTypeCode}
-            options={typeSelectOptions}
-            onChange={selectType}
-          />
-        </Field>
-      )}
+      <section className="ed-modal__section">
+        <h3>Quand ?</h3>
+        <div className="ed-modal__segmented" role="group" aria-label="Récurrence">
+          {RECURRENCE_OPTIONS.map((option) => (
+            <button
+              key={option.v}
+              type="button"
+              aria-pressed={draft.recurrence === option.v}
+              onClick={() => {
+                const r = option.v;
+                const recurrence = r as ObjectWorkspaceOpeningPeriod['recurrence'];
+                // Reset dates + the cyclic picker. A year-round period carries no season étiquette,
+                // so drop the type when switching to "Toute l'année" (nothing to label).
+                setCyclic(EMPTY_CYCLIC_FIELDS);
+                set({
+                  recurrence,
+                  startDate: '',
+                  endDate: '',
+                  ...(recurrence === 'always' ? { seasonTypeCode: '' } : {}),
+                });
+              }}
+            >
+              {option.l}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {draft.recurrence === 'cyclic' && (
         <>
@@ -203,10 +291,20 @@ export function OpeningPeriodEditModal({
         <>
           <div className="grid-2" style={{ gap: 10 }}>
             <Field label="Date de début">
-              <Input type="date" aria-label="Date de début" value={draft.startDate} onChange={(startDate) => set({ startDate })} />
+              <Input
+                type="date"
+                aria-label="Date de début"
+                value={draft.startDate}
+                onChange={(startDate) => set({ startDate })}
+              />
             </Field>
             <Field label="Date de fin">
-              <Input type="date" aria-label="Date de fin" value={draft.endDate} onChange={(endDate) => set({ endDate })} />
+              <Input
+                type="date"
+                aria-label="Date de fin"
+                value={draft.endDate}
+                onChange={(endDate) => set({ endDate })}
+              />
             </Field>
           </div>
           {validation.dateError && (
@@ -228,25 +326,71 @@ export function OpeningPeriodEditModal({
         </p>
       )}
 
+      {draft.recurrence !== 'always' && (
+        <Field label="Saison" hint="Facultatif · colore la période dans le calendrier.">
+          <div role="group" aria-label="Type de période">
+            <ChipSet>
+              {typeSelectOptions
+                .filter((option) => option.v)
+                .map((option) => (
+                  <Chip
+                    key={option.v}
+                    label={option.l}
+                    on={draft.seasonTypeCode === option.v}
+                    onClick={() => selectType(draft.seasonTypeCode === option.v ? '' : option.v)}
+                  />
+                ))}
+            </ChipSet>
+          </div>
+        </Field>
+      )}
+      <Disclosure title="Donner un nom à la période" defaultOpen={Boolean(draft.label)}>
+        <Field label="Nom de la période (optionnel)">
+          <Input
+            aria-label="Nom de la période"
+            value={draft.label}
+            placeholder="ex. Vacances de juillet"
+            onChange={(label) => set({ label })}
+          />
+        </Field>
+      </Disclosure>
+
       <Field
         label="Horaires hebdomadaires"
         hint="Cliquez un jour pour l’ouvrir, puis saisissez les plages. Laissez les heures vides = ouvert sans horaire précis (ex. hôtel, location)."
       >
-        <ScheduleEditor
-          rows={scheduleRowsFromPeriod(draft)}
-          colA="Plage 1"
-          colB="Plage 2"
-          onChange={(rows) =>
-            set({
-              weekdays: rows.map((row) => ({
-                code: row.code,
-                label: row.label,
-                slots: row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot)),
-              })),
-            })
-          }
-        />
+        <fieldset disabled={Boolean(editingReason)} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <ScheduleEditor
+            rows={scheduleRowsFromPeriod(draft)}
+            colA="Plage 1"
+            colB="Plage 2"
+            onChange={(rows) =>
+              set({
+                weekdays: rows.map((row) => ({
+                  code: row.code,
+                  label: row.label,
+                  slots: row.slots.filter((slot): slot is NonNullable<typeof slot> => Boolean(slot)),
+                })),
+              })
+            }
+          />
+        </fieldset>
       </Field>
+      {notes.map(({ days, note }) => (
+        <p key={note} className="muted" style={{ fontSize: 12, margin: '6px 0', whiteSpace: 'pre-wrap' }}>
+          {days} — {note}
+        </p>
+      ))}
+      {editingReason && (
+        <p role="status" className="muted" style={{ fontSize: 12 }}>
+          {editingReason}
+        </p>
+      )}
+      {validation.timeError && (
+        <p role="alert" className="muted" style={{ color: 'var(--red)' }}>
+          {validation.timeError}
+        </p>
+      )}
     </EditorModal>
   );
 }

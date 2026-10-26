@@ -37,6 +37,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import { MODULE_KEY_MAP } from '../object-editor/editor-state';
+import { mergeDraftAgainstServer } from '../object-editor/draft-recovery';
 import { restoreCatalogOptions, stripCatalogOptions } from '../object-editor/io/object-io-serialize';
 import { parsePortalDraft, portalDraftFingerprint, serializePortalDraft } from './portal-draft-schema';
 import { PORTAL_MODULES, PORTAL_RUBRICS } from './portal-rubrics';
@@ -276,6 +277,7 @@ export function writePortalDraft(
       fingerprint: fingerprintOf(serverModules, carriedModules(dirtySlices)),
       note,
       modules: stripSlices(dirtySlices),
+      baseline: stripSlices(Object.fromEntries(carriedModules(dirtySlices).map((module) => [module, (serverModules as unknown as Record<string, unknown>)[MODULE_KEY_MAP[module]]]))),
       savedAt: new Date().toISOString(),
     }),
   );
@@ -306,17 +308,30 @@ export function readPortalDraft(
   // L'office a travaillé sur CES tranches depuis la prise : les rejouer écraserait son
   // travail. On les écarte — et on les NOMME. Le MESSAGE, lui, reste : un texte libre
   // n'écrase rien, et c'est souvent la seule chose que le partenaire ait écrite.
-  if (payload.fingerprint !== fingerprintOf(serverModules, carried)) {
-    return { draft: {}, note: payload.note, savedAt: payload.savedAt, droppedModules: carried };
-  }
-
   const draft: PortalSlices = {};
   const live = serverModules as unknown as Record<string, unknown>;
+  const currentFingerprint = fingerprintOf(serverModules, carried);
+  const conflicts: WorkspaceModuleId[] = [];
   for (const module of carried) {
     const key = MODULE_KEY_MAP[module];
-    draft[module] = restoreCatalogOptions(payload.modules[module], live[key], key);
+    const local = payload.modules[module];
+    if (payload.fingerprint !== currentFingerprint) {
+      const base = payload.baseline?.[module];
+      if (base === undefined) {
+        // v1 drafts have no baseline for a safe merge. Preserve the partner's intent and
+        // clearly flag the affected slice; never silently throw away what they typed.
+        draft[module] = restoreCatalogOptions(local, live[key], key);
+        conflicts.push(module);
+        continue;
+      }
+      const merged = mergeDraftAgainstServer(base, local, stripSlices({ [module]: live[key] })[module]);
+      draft[module] = restoreCatalogOptions(merged.value, live[key], key);
+      if (merged.conflicts.length) conflicts.push(module);
+    } else {
+      draft[module] = restoreCatalogOptions(local, live[key], key);
+    }
   }
-  return { draft, note: payload.note, savedAt: payload.savedAt, droppedModules: [] };
+  return { draft, note: payload.note, savedAt: payload.savedAt, droppedModules: conflicts };
 }
 
 // ══════════════════════ Instantané de ce qui a été ENVOYÉ ═══════════════════
@@ -560,6 +575,8 @@ export interface UsePortalDraftResult {
   savedAt: string | null;
   /** Efface le brouillon local ET le message (envoi réussi, ou abandon explicite). */
   clear: () => void;
+  /** Acknowledge a conflicted portal slice after the partner reviewed and validated it. */
+  resolveConflict: (module: WorkspaceModuleId) => void;
 }
 
 /**
@@ -604,7 +621,6 @@ export function usePortalDraft({
       // inexpliquée.
       if (hasPortalDraft(userId, objectId)) {
         setDiscarded(true);
-        clearPortalDraft(userId, objectId);
       }
       return;
     }
@@ -690,5 +706,13 @@ export function usePortalDraft({
     setCleared((value) => value + 1);
   }, [userId, objectId]);
 
-  return { note, setNote, discarded, discardedModules, savedAt, clear };
+  const resolveConflict = useCallback((module: WorkspaceModuleId) => {
+    setDiscardedModules((previous) => {
+      const next = previous.filter((entry) => entry !== module);
+      if (next.length === 0) setDiscarded(false);
+      return next;
+    });
+  }, []);
+
+  return { note, setNote, discarded, discardedModules, savedAt, clear, resolveConflict };
 }

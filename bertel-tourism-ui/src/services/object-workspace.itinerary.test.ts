@@ -85,10 +85,10 @@ describe('buildItineraryStagesPayload', () => {
     expect(buildItineraryStagesPayload({ ...baseInput, stages })).toEqual([
       {
         id: 'stage-1', name: 'Col de Bellevue', description: 'Point haut', position: '1',
-        extra: { kind: 'panorama' }, lng: '55.5', lat: '-21',
+        extra: { kind: 'panorama' }, name_i18n: null, description_i18n: null, lng: '55.5', lat: '-21',
         media: [{ media_id: 'm1', position: 0 }, { media_id: 'm2', position: 1 }],
       },
-      { name: 'Nouvelle etape', description: '', position: '2', extra: {}, media: [] },
+      { name: 'Nouvelle etape', description: '', position: '2', extra: {}, name_i18n: null, description_i18n: null, media: [] },
     ]);
   });
 
@@ -109,6 +109,19 @@ describe('buildItineraryStagesPayload', () => {
     const payload = buildItineraryStagesPayload(module);
     expect(payload![0].description).toBe(RAW);
   });
+
+  it('preserves stage metadata and translation maps while merging kind into extra', () => {
+    const module = { unavailableReason: null, stages: [{ recordId: 'stg-1', name: 'Sommet', rawName: 'Sommet', nameTranslations: { en: 'Summit' }, description: 'texte', descriptionTranslations: { en: 'text' }, position: '1', kind: 'panorama', extra: { marker: 'x', kind: 'old' }, lng: '', lat: '', mediaIds: [] }] } as unknown as Parameters<typeof buildItineraryStagesPayload>[0];
+    expect(buildItineraryStagesPayload(module)?.[0]).toMatchObject({
+      name_i18n: { en: 'Summit' }, description_i18n: { en: 'text' }, extra: { marker: 'x', kind: 'panorama' },
+    });
+  });
+
+  it('removes the former kind when the stage kind is cleared and preserves other metadata', () => {
+    const module = { ...baseInput, stages: [{ ...stages[0], kind: '', extra: { kind: 'panorama', marker: 'legacy' } }] };
+    expect(buildItineraryStagesPayload(module)?.[0].extra).toEqual({ marker: 'legacy' });
+    expect(module.stages[0].extra).toEqual({ kind: 'panorama', marker: 'legacy' });
+  });
 });
 
 describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
@@ -121,6 +134,7 @@ describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
       requiredEquipment: 'Chaussures',
       infoPlaces: 'Source à mi-parcours',
       childFriendly: true,
+      infoTranslations: { access_i18n: { en: 'From the pass' } },
     })).toEqual({
       access: 'Depuis le col',
       ambiance: 'Forêt',
@@ -128,6 +142,7 @@ describe('buildItineraryInfoPayload (§111 B5 — object_iti_info)', () => {
       required_equipment: 'Chaussures',
       info_places: 'Source à mi-parcours',
       is_child_friendly: true,
+      access_i18n: { en: 'From the pass' },
     });
   });
 

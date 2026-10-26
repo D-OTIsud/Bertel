@@ -162,13 +162,17 @@ export function buildRibbonSegments(periods: ObjectWorkspaceOpeningPeriod[]): Op
     }));
   }
 
-  return dated.map((entry) => ({
-    kind: entry.kind,
-    periodIndex: entry.periodIndex,
-    start: entry.start ?? 0,
-    end: entry.end ?? 12,
-    abbr: entry.label.slice(0, 10),
-  }));
+  return dated.flatMap((entry) => {
+    const segment = {
+      kind: entry.kind, periodIndex: entry.periodIndex,
+      start: entry.start ?? 0, end: entry.end ?? 12, abbr: entry.label.slice(0, 10),
+    };
+    // A recurring November–March period occupies both ends of the calendar.
+    if (periods[entry.periodIndex].recurrence === 'cyclic' && segment.end < segment.start) {
+      return [{ ...segment, end: 12 }, { ...segment, start: 0 }];
+    }
+    return [segment];
+  });
 }
 
 export function todayMonthFraction(): number {

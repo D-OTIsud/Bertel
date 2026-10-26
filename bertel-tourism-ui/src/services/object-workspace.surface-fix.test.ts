@@ -61,11 +61,11 @@ describe('buildPlacesRpcPayload', () => {
         recordId: '11111111-1111-4111-8111-111111111111',
         label: 'Départ',
         position: 0,
-        descriptionRecordId: null,
+        descriptionRecordId: '22222222-2222-4222-8222-222222222222',
         description: { baseValue: 'RDV', values: {} },
         visibility: 'partners',
         location: {
-          recordId: null,
+          recordId: '33333333-3333-4333-8333-333333333333',
           address1: '1 rue Test',
           address1Suite: '',
           address2: '',
@@ -129,13 +129,28 @@ describe('buildRoomsRpcPayload', () => {
       mediaOptions: [],
       unavailableReason: null,
     };
-    const payload = buildRoomsRpcPayload(input) as { rooms: Record<string, unknown>[] };
+    const payload = buildRoomsRpcPayload(input) as { write_contract: string; deleted_ids: string[]; rooms: Record<string, unknown>[] };
+    expect(payload.write_contract).toBe('rooms-reconcile-v1');
+    expect(payload.deleted_ids).toEqual([]);
     expect(payload.rooms[0]).toMatchObject({
       code: 'dbl',
       room_type_code: 'double',
       view_type_code: 'sea',
       amenity_codes: ['wifi'],
     });
+  });
+
+  it('deletes only rows omitted from the loaded baseline and rejects unknown IDs', () => {
+    const input = {
+      knownRoomIds: ['11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'],
+      items: [{ recordId: '11111111-1111-4111-8111-111111111111', name: '', rawName: null, code: 'dbl', nameTranslations: {}, description: '', descriptionTranslations: {}, capacityAdults: '', capacityChildren: '', capacityTotal: '', sizeSqm: '', bedConfig: '', bedConfigTranslations: {}, quantity: '1', floorLevel: '', viewTypeId: '', viewTypeCode: '', viewTypeLabel: '', roomTypeId: '', roomTypeCode: '', roomTypeLabel: '', basePrice: '', currency: '', accessible: false, published: true, position: '1', amenityCodes: [], mediaIds: [], beds: [] }],
+    } as unknown as ObjectWorkspaceRoomsModule;
+    const payload = buildRoomsRpcPayload(input) as { deleted_ids: string[]; rooms: Record<string, unknown>[] };
+    expect(payload.deleted_ids).toEqual(['22222222-2222-4222-8222-222222222222']);
+    expect(payload.rooms[0].name).toBe('');
+    const newId = '33333333-3333-4333-8333-333333333333';
+    const withNewDraft = buildRoomsRpcPayload({ ...input, items: [{ ...input.items[0], recordId: newId }] }) as { rooms: Record<string, unknown>[] };
+    expect(withNewDraft.rooms[0].id).toBe(newId);
   });
 
   it('sends every RoomEditModal-editable field — none silently discarded (SURF3 full-column fix)', () => {

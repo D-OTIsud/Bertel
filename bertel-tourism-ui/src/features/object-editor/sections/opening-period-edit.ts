@@ -1,4 +1,5 @@
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
+import { formatScheduleTime } from '../primitives/schedule-time';
 
 /**
  * Pure helpers for the §14 Périodes d'ouverture add/edit modal (parallel to
@@ -102,6 +103,7 @@ export function addClosedWeekday(closedDays: readonly string[], code: string): s
 export interface PeriodValidation {
   canSave: boolean;
   dateError: string | null;
+  timeError: string | null;
 }
 
 /** Save gate for the modal: coherent dates for the chosen recurrence. The period TYPE is
@@ -110,8 +112,15 @@ export interface PeriodValidation {
  *  (cyclic ranges legitimately wrap the year — handled by encodeCyclicRange). */
 export function validatePeriodDraft(period: ObjectWorkspaceOpeningPeriod): PeriodValidation {
   const dateError = periodDateError(period);
-  const canSave = dateError === null;
-  return { canSave, dateError };
+  const timeError = period.weekdays.some((day) =>
+    day.slots.some(
+      (slot) => formatScheduleTime(slot.start) === null || formatScheduleTime(slot.end) === null,
+    ),
+  )
+    ? 'Renseignez des heures valides, par exemple 9h30 ou 14:00.'
+    : null;
+  const canSave = dateError === null && timeError === null;
+  return { canSave, dateError, timeError };
 }
 
 function periodDateError(period: ObjectWorkspaceOpeningPeriod): string | null {

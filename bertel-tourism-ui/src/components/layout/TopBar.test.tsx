@@ -3,7 +3,7 @@
 // Écrire la recherche CRM dans le store Explorer casserait la conservation de la recherche
 // Explorer au retour sur l'Explorer.
 import type { ReactNode } from 'react';
-import { render as rtlRender, screen, fireEvent } from '@testing-library/react';
+import { render as rtlRender, screen, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TopBar } from './TopBar';
 import { useExplorerStore } from '../../store/explorer-store';
@@ -83,7 +83,7 @@ describe('TopBar — cible du champ de recherche', () => {
 
     pathnameMock.mockReturnValue('/dashboard');
     render(<TopBar />);
-    expect(screen.getByLabelText('Rechercher une fiche')).toHaveValue('saint-pierre');
+    expect(screen.getByLabelText('Rechercher une fiche dans Explorer')).toHaveValue('saint-pierre');
   });
 });
 
@@ -139,5 +139,75 @@ describe('TopBar — menu de concordances directes', () => {
     expect(screen.queryByRole('listbox')).toBeNull();
     expect(screen.getByLabelText('Rechercher un acteur')).not.toHaveAttribute('role', 'combobox');
     expect(searchObjectsByNameMock).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('TopBar — destination Explorer depuis le Dashboard', () => {
+  it('annonce sa cible, garde les saisies distinctes et offre un lien Explorer explicite', () => {
+    pathnameMock.mockReturnValue('/dashboard');
+    useCrmSearchStore.setState({ search: 'acteur conservé' });
+    render(<TopBar />);
+
+    const input = screen.getByLabelText('Rechercher une fiche dans Explorer');
+    expect(input).toHaveAttribute('placeholder', 'Rechercher une fiche dans Explorer');
+    fireEvent.change(input, { target: { value: 'cilaos' } });
+    expect(useExplorerStore.getState().common.search).toBe('cilaos');
+    expect(useCrmSearchStore.getState().search).toBe('acteur conservé');
+    expect(screen.getByRole('link', { name: 'Ouvrir Explorer' })).toHaveAttribute('href', '/explorer');
+  });
+
+  it('garde la consultation par suggestion au clavier et la palette de commandes', async () => {
+    pathnameMock.mockReturnValue('/dashboard');
+    searchObjectsByNameMock.mockResolvedValue([{
+      id: 'HLORUN00000001CA', name: 'Le Jardin Créole', type: 'HLO',
+      status: 'published', city: 'Saint-Joseph', imageUrl: null,
+    }]);
+    useExplorerStore.getState().setSearch('jardin');
+    useUiStore.getState().setCommandPaletteOpen(false);
+    render(<TopBar />);
+    const input = screen.getByLabelText('Rechercher une fiche dans Explorer');
+    fireEvent.focus(input);
+    await screen.findByRole('option', { name: /Le Jardin Créole/ });
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(useUiStore.getState().drawerObjectId).toBe('HLORUN00000001CA');
+    expect(useExplorerStore.getState().common.search).toBe('jardin');
+    expect(screen.queryByRole('listbox')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir la palette de commandes (Ctrl+K)' }));
+    expect(useUiStore.getState().commandPaletteOpen).toBe(true);
+  });
+});
+
+describe('TopBar — horloge informative', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('rend la même date et heure sans bouton et actualise chaque minute', () => {
+    jest.useFakeTimers();
+    const clearIntervalSpy = jest.spyOn(window, 'clearInterval');
+    const now = new Date('2026-10-28T10:24:00Z');
+    jest.setSystemTime(now);
+    pathnameMock.mockReturnValue('/explorer');
+    const { container, unmount } = render(<TopBar />);
+    const clock = container.querySelector('time');
+    const formatDate = (date: Date) => new Intl.DateTimeFormat('fr-FR', {
+      weekday: 'short', day: 'numeric', month: 'short',
+    }).format(date);
+    const formatTime = (date: Date) => new Intl.DateTimeFormat('fr-FR', {
+      hour: '2-digit', minute: '2-digit',
+    }).format(date);
+    expect(clock).toHaveTextContent(`${formatDate(now)} · ${formatTime(now)}`);
+    expect(clock).toHaveAttribute('datetime', now.toISOString());
+    expect(clock).not.toHaveAttribute('tabindex');
+    expect(screen.queryByRole('button', { name: `${formatDate(now)} · ${formatTime(now)}` })).toBeNull();
+    act(() => jest.advanceTimersByTime(59_999));
+    expect(clock).toHaveAttribute('datetime', now.toISOString());
+    act(() => jest.advanceTimersByTime(1));
+    const next = new Date(now.getTime() + 60_000);
+    expect(clock).toHaveTextContent(`${formatDate(next)} · ${formatTime(next)}`);
+    expect(clock).toHaveAttribute('datetime', next.toISOString());
+    unmount();
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    clearIntervalSpy.mockRestore();
   });
 });

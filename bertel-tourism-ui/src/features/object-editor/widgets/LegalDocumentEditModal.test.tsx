@@ -55,15 +55,17 @@ describe('LegalDocumentEditModal', () => {
     expect(screen.getByRole('button', { name: "Statuts d'association" })).toBeInTheDocument();
   });
 
-  it('affiche la description du type sélectionné — « quand demander cette pièce »', () => {
+  it('rend accessible la description du type sélectionné — « quand demander cette pièce »', () => {
     renderModal();
-    expect(screen.getByText(/Demandé de moins de 3 mois/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aide : Type de document' }))
+      .toHaveAccessibleDescription(TYPE_OPTIONS[0].description);
   });
 
   it('remplace cette aide quand on change de type', () => {
     renderModal();
     fireEvent.click(screen.getByRole('button', { name: "Statuts d'association" }));
-    expect(screen.getByText(/exploitants associatifs/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aide : Type de document' }))
+      .toHaveAccessibleDescription(TYPE_OPTIONS[1].description);
     expect(screen.queryByText(/Demandé de moins de 3 mois/)).not.toBeInTheDocument();
   });
 

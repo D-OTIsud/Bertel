@@ -319,6 +319,8 @@ export interface ItineraryTrackGeoJson {
 export interface ItinerarySummary {
   distanceKm: string;
   durationHours: string;
+  /** Exact source minutes when supplied; durationHours remains a legacy display field. */
+  durationMinutes?: number;
   difficulty: string;
   elevationGain: string;
   isLoop: boolean | null;
@@ -1577,16 +1579,19 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
     ?? (trackFormat.toLowerCase() === 'geojson'
       ? parseItineraryTrackGeojson(itinerary.track ?? raw.track ?? details.track)
       : null);
+  const sourceDurationMinutes = Number(itinerary.duration_min ?? raw.duration_min);
+  const durationMinutes = Number.isFinite(sourceDurationMinutes) && sourceDurationMinutes > 0
+    ? sourceDurationMinutes : undefined;
 
   const summary: ItinerarySummary = {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
     // object_iti now stores duration in minutes (duration_min); convert to display hours.
     // Legacy raw.duration_h / total_duration_h (already hours) remain a fallback.
     durationHours: ((): string => {
-      const minutes = Number(itinerary.duration_min ?? raw.duration_min);
-      if (Number.isFinite(minutes) && minutes > 0) return String(Math.round((minutes / 60) * 100) / 100);
+      if (durationMinutes != null) return String(Math.round((durationMinutes / 60) * 100) / 100);
       return readString(raw.duration_h, readString(raw.total_duration_h));
     })(),
+    ...(durationMinutes != null ? { durationMinutes } : {}),
     difficulty: readNamedValue(itinerary.difficulty, readString(itinerary.difficulty_level, readNamedValue(raw.difficulty, readString(raw.difficulty_level)))),
     elevationGain: readString(itinerary.elevation_gain, readString(raw.elevation_gain, readString(raw.elevation_gain_m))),
     isLoop: loopValue,

@@ -1,4 +1,5 @@
 import { buildItineraryStages } from './itinerary-stages';
+import { parseMedia } from './utils';
 
 describe('buildItineraryStages', () => {
   it('renvoie vide sans étape', () => {
@@ -79,5 +80,100 @@ describe('buildItineraryStages', () => {
     });
     expect(rows.map((r) => r.name)).toEqual(['A', 'B']);
     expect(rows.map((r) => r.positionLabel)).toEqual(['Étape 1', 'Étape 2']);
+  });
+
+  it('résout les media_id du RPC dans l’ordre des liens, indépendamment de la galerie objet', () => {
+    const media = parseMedia({ media: [
+      { id: 'first', url: 'https://example.com/first.jpg', title: 'Départ', description: 'Le sentier au départ', credit: 'Office de tourisme', is_main: true },
+      { id: 'second', url: 'https://example.com/second.jpg', title: 'Sommet', position: 2 },
+      { id: 'unlinked', url: 'https://example.com/other.jpg', title: 'Autre photo' },
+    ] });
+    const rows = buildItineraryStages({ stages: [
+      { name: 'A', media: [
+        { id: 'junction-2', media_id: 'second', position: 0 },
+        { id: 'junction-1', media_id: 'first', position: 1 },
+      ] },
+      { name: 'B', media: [{ id: 'junction-3', media_id: 'first' }] },
+      { name: 'Sans photo' },
+    ] }, media);
+
+    expect(rows[0].photos).toEqual([
+      { id: 'second', url: 'https://example.com/second.jpg', title: 'Sommet' },
+      { id: 'first', url: 'https://example.com/first.jpg', title: 'Départ', description: 'Le sentier au départ', credit: 'Office de tourisme' },
+    ]);
+    expect(rows[1].photos.map((photo) => photo.id)).toEqual(['first']);
+    expect(rows[2].photos).toEqual([]);
+  });
+
+  it('ne remplace pas un média lié absent par une photo objet ou une URL du lien', () => {
+    const media = parseMedia({ media: [{ id: 'other', url: 'https://example.com/other.jpg' }] });
+    const rows = buildItineraryStages({ stages: [
+      { name: 'Sans lien', media: [] },
+      { name: 'Supprimé ou inaccessible', media: [
+        { id: 'other', media_id: 'missing', url: 'https://example.com/stale.jpg' },
+      ] },
+    ] }, media);
+    expect(rows.map((row) => row.photos)).toEqual([[], []]);
+    expect(buildItineraryStages({ stages: [{ name: 'Sans galerie', media: [{ media_id: 'other' }] }] })[0].photos).toEqual([]);
+  });
+
+  it('projette les photos intégrées et leurs formats réels sans altérer les textes', () => {
+    const rows = buildItineraryStages({ stages: [{
+      description: 'Suivre le balisage.',
+      description_md: 'Suivre **le balisage**.',
+      media: [
+        { id: 'cdn', url: 'https://images.example.com/photo-123?width=600', type_code: 'photo', title: 'Vue du cirque' },
+        { id: 'nested', secure_url: 'https://example.com/nested', media_type: { code: 'photo' }, name: 'La forêt' },
+        { url: 'https://example.com/trail.AVIF?token=abc#photo', alt_text: 'Le sentier' },
+        { id: 'gif', url: 'http://example.com/view.gif' },
+      ],
+    }] });
+    expect(rows[0]).toMatchObject({ name: '', positionLabel: 'Étape 1', description: 'Suivre le balisage.', descriptionMd: 'Suivre **le balisage**.' });
+    expect(rows[0].photos).toEqual([
+      { id: 'cdn', url: 'https://images.example.com/photo-123?width=600', title: 'Vue du cirque' },
+      { id: 'nested', url: 'https://example.com/nested', title: 'La forêt' },
+      { id: 'https://example.com/trail.AVIF?token=abc#photo', url: 'https://example.com/trail.AVIF?token=abc#photo', title: 'Le sentier', description: 'Le sentier' },
+      { id: 'gif', url: 'http://example.com/view.gif', title: 'Media' },
+    ]);
+  });
+
+  it('écarte les médias privés, partenaires, non publiés, non images et les URL invalides', () => {
+    const unavailable = [
+      { id: 'private', url: 'https://example.com/private.jpg', visibility: 'private' },
+      { id: 'partners', url: 'https://example.com/partners.jpg', visibility: 'partners' },
+      { id: 'video', url: 'https://example.com/video.jpg', type_code: 'video' },
+      { id: 'pdf', url: 'https://example.com/guide.pdf' },
+      { id: 'script', url: 'javascript:alert(1)', type_code: 'photo' },
+      { id: 'invalid', url: 'https://', type_code: 'photo' },
+      { id: 'relative', url: '/photo.jpg' },
+      { id: 'protocol', url: 'https:photo.jpg', type_code: 'photo' },
+      { id: 'blank', url: '', type_code: 'photo' },
+    ];
+    const media = parseMedia({ media: unavailable });
+    const rows = buildItineraryStages({ stages: [
+      { name: 'Liens', media: unavailable.map((item) => ({ media_id: item.id })) },
+      { name: 'Intégrés', media: [...unavailable,
+        { id: 'unpublished', url: 'https://example.com/draft.jpg', is_published: false },
+        { id: 'public', url: 'https://example.com/public.webp', visibility: null },
+      ] },
+    ] }, media);
+    expect(rows[0].photos).toEqual([]);
+    expect(rows[1].photos.map((photo) => photo.id)).toEqual(['public']);
+  });
+
+  it('déduplique les photos par identifiant ou URL sans changer leur ordre', () => {
+    const media = parseMedia({ media: [{ id: 'linked', url: 'https://example.com/a.jpg', title: 'A' }] });
+    const rows = buildItineraryStages({ stages: [{ media: [
+      { media_id: 'linked' },
+      { media_id: 'linked' },
+      { id: 'same-url', url: 'https://example.com/a.jpg' },
+      { id: 'b', url: 'https://example.com/b.png' },
+      { id: 'b', url: 'https://example.com/b-copy.png' },
+      { url: 'https://example.com/c.webp' },
+    ] }] }, media);
+    expect(rows[0].photos.map((photo) => photo.url)).toEqual([
+      'https://example.com/a.jpg', 'https://example.com/b.png', 'https://example.com/c.webp',
+    ]);
+    expect(rows[0].name).toBe('');
   });
 });

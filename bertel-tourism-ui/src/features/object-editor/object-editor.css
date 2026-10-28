@@ -223,6 +223,9 @@
   font-size: theme('fontSize.lg.0'); font-weight: 700;
   letter-spacing: -0.005em;
   line-height: theme('fontSize.lg.1.lineHeight');
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  overflow-wrap: anywhere;
 }
 .object-editor .fs__head h3 small {
   display: block;

@@ -9340,6 +9340,14 @@ a {
   background: var(--bg);
 }
 
+.drawer-panel > .crm-app {
+  height: 100%;
+}
+
+.drawer-panel > .crm-app > .drawer-shell__inner {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
 .drawer-header {
   padding: 1rem 1.25rem 0.85rem;
   background: var(--surface);

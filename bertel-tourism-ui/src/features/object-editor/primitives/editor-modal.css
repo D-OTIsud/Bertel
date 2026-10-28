@@ -54,6 +54,10 @@
   font-weight: 700;
   letter-spacing: -0.02em;
 }
+.ed-record-modal .ed-record-modal__title:where(:not(.crm-app *)) {
+  font-size: theme('fontSize.xl.0');
+  line-height: theme('fontSize.xl.1.lineHeight');
+}
 .ed-record-modal__description {
   margin: 6px 0 0;
   color: var(--ink-3);
@@ -172,8 +176,10 @@
   flex-shrink: 0;
 }
 .ed-record-modal__actions .btn {
-  min-height: 38px;
   padding-inline: 16px;
+}
+.crm-app .ed-record-modal__actions .btn {
+  min-height: 38px;
   border-radius: 10px;
 }
 .ed-record-modal .ed-modal__section {

@@ -16,10 +16,11 @@ import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import { mockObjectDetails } from '../data/mock';
 import { getObjectItineraryGpx } from './rpc';
+import { parseTrackFile } from '../features/object-editor/sections/blocks/gpx-import';
 
 const mockGetApiClient = getApiClient as jest.Mock;
 const mockGetState = useSessionStore.getState as jest.Mock;
-const mockDetails = mockObjectDetails as Record<string, { raw: Record<string, unknown> }>;
+const mockDetails = mockObjectDetails as Record<string, { name?: string; raw: Record<string, unknown> }>;
 
 describe('getObjectItineraryGpx (PLAN 4.5)', () => {
   const rpc = jest.fn();
@@ -64,11 +65,52 @@ describe('getObjectItineraryGpx (PLAN 4.5)', () => {
     await expect(getObjectItineraryGpx('ITIRUN1', ['fr'])).rejects.toBeTruthy();
   });
 
-  it('mode démo : renvoie la trace mock si non vide', async () => {
+  it('mode démo : préserve une trace GPX existante', async () => {
     mockGetState.mockReturnValue({ demoMode: true });
-    mockDetails['ITIRUN1'] = { raw: { itinerary: { track: 'MOCK_GPX' } } };
-    await expect(getObjectItineraryGpx('ITIRUN1', ['fr'])).resolves.toBe('MOCK_GPX');
+    const gpx = '<?xml version="1.0"?><gpx version="1.1"><trk><trkseg><trkpt lat="-21.1" lon="55.4"/><trkpt lat="-21.2" lon="55.5"/></trkseg></trk></gpx>';
+    mockDetails['ITIRUN1'] = { raw: { itinerary: { track: gpx, track_format: 'gpx' } } };
+    await expect(getObjectItineraryGpx('ITIRUN1', ['fr'])).resolves.toBe(gpx);
     expect(mockGetApiClient).not.toHaveBeenCalled();
+  });
+
+  it('mode démo : convertit le GeoJSON en GPX lisible, avec coordonnées, altitude et étapes réelles', async () => {
+    mockGetState.mockReturnValue({ demoMode: true });
+    const coordinates = [[55.4, -21.1, 125], [55.45, -21.15, 180], [55.5, -21.2, 150]];
+    mockDetails['ITIRUN1'] = {
+      name: 'Sentier & <remparts>',
+      raw: {
+        itinerary: { track_format: 'geojson', track: JSON.stringify({ type: 'LineString', coordinates }) },
+        itinerary_details: { stages: [
+          { name: 'Cascade <aval>', lng: 55.5, lat: -21.2, position: 2 },
+          { name: 'Départ & parking', lng: 55.4, lat: -21.1, position: 1 },
+          { name: 'Étape sans GPS', lng: null, lat: null },
+          { name: 'Coordonnées invalides', lng: 200, lat: -21.1 },
+        ] },
+      },
+    };
+
+    const gpx = await getObjectItineraryGpx('ITIRUN1', ['fr']);
+    const xml = new DOMParser().parseFromString(gpx, 'application/xml');
+    expect(xml.querySelector('parsererror')).toBeNull();
+    expect(xml.documentElement.localName).toBe('gpx');
+    expect(xml.documentElement.namespaceURI).toBe('http://www.topografix.com/GPX/1/1');
+    expect(xml.querySelector('trk > name')?.textContent).toBe('Sentier & <remparts>');
+    expect(Array.from(xml.querySelectorAll('wpt')).map((point) => [point.getAttribute('lon'), point.getAttribute('lat'), point.querySelector('name')?.textContent]))
+      .toEqual([['55.4', '-21.1', 'Départ & parking'], ['55.5', '-21.2', 'Cascade <aval>']]);
+    expect(parseTrackFile(gpx, 'parcours.gpx')).toEqual({ type: 'LineString', coordinates });
+    expect(mockGetApiClient).not.toHaveBeenCalled();
+  });
+
+  it('mode démo : accepte le GeoJSON du détail et préserve ses segments séparés', async () => {
+    mockGetState.mockReturnValue({ demoMode: true });
+    mockDetails['ITIRUN1'] = { raw: { itinerary_details: { track_geojson: {
+      type: 'MultiLineString',
+      coordinates: [[[55.4, -21.1], [55.45, -21.15]], [[55.46, -21.16], [55.5, -21.2]]],
+    } } } };
+    const xml = new DOMParser().parseFromString(await getObjectItineraryGpx('ITIRUN1', ['fr']), 'application/xml');
+    expect(xml.querySelector('parsererror')).toBeNull();
+    expect(xml.querySelectorAll('trkseg')).toHaveLength(2);
+    expect(xml.querySelectorAll('trkpt')).toHaveLength(4);
   });
 
   it('mode démo : lève une erreur si aucune trace mock', async () => {

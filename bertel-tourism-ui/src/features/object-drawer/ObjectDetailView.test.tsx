@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useSessionStore } from '../../store/session-store';
 import type { ObjectDetail } from '../../types/domain';
+import { getObjectItineraryGpx } from '../../services/rpc';
 import { ObjectDetailView } from './ObjectDetailView';
 
 const mockMutateAsync = jest.fn();
@@ -13,6 +14,12 @@ const mockPrivateNoteAccess = {
   isSuccess: true,
   isError: false,
 };
+const mockGetObjectItineraryGpx = getObjectItineraryGpx as jest.Mock;
+
+jest.mock('../../services/rpc', () => ({
+  ...jest.requireActual('../../services/rpc'),
+  getObjectItineraryGpx: jest.fn(),
+}));
 
 jest.mock('react-map-gl/maplibre', () => ({
   Map: ({ children, initialViewState }: { children?: ReactNode; initialViewState?: unknown }) => (
@@ -71,6 +78,7 @@ describe('ObjectDetailView', () => {
     mockMutateAsync.mockReset();
     mockUpdateMutateAsync.mockReset();
     mockDeleteMutateAsync.mockReset();
+    mockGetObjectItineraryGpx.mockReset();
     mockPrivateNoteAccess.data = true;
     mockPrivateNoteAccess.isSuccess = true;
     mockPrivateNoteAccess.isError = false;
@@ -316,6 +324,99 @@ describe('ObjectDetailView', () => {
     expect(within(dialog).getByText('le bassin').tagName).toBe('STRONG');
     expect(dialog.querySelector('[src="https://example.com/start.jpg"]')).toBeNull();
     expect(dialog.querySelector('[src="https://example.com/overview.jpg"]')).toBeNull();
+  });
+
+  describe('itinerary map GPX download', () => {
+    const createObjectURL = jest.fn<string, [Blob]>(() => 'blob:itinerary-gpx');
+    const revokeObjectURL = jest.fn();
+    let originalCreateObjectURL: PropertyDescriptor | undefined;
+    let originalRevokeObjectURL: PropertyDescriptor | undefined;
+    let anchorClick: jest.SpyInstance;
+    let downloadedAnchor: HTMLAnchorElement | null;
+    const track = { type: 'LineString', coordinates: [[55.4, -21.1], [55.5, -21.2]] };
+    const makeItinerary = (raw: Record<string, unknown>) => ({
+      id: 'iti-download', name: "Boucle de l'Été", type: 'ITI', raw,
+    }) as ObjectDetail;
+
+    beforeEach(() => {
+      originalCreateObjectURL = Object.getOwnPropertyDescriptor(URL, 'createObjectURL');
+      originalRevokeObjectURL = Object.getOwnPropertyDescriptor(URL, 'revokeObjectURL');
+      createObjectURL.mockClear();
+      revokeObjectURL.mockClear();
+      downloadedAnchor = null;
+      Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+      Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+      anchorClick = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedAnchor = this;
+      });
+    });
+
+    afterEach(() => {
+      anchorClick.mockRestore();
+      if (originalCreateObjectURL) Object.defineProperty(URL, 'createObjectURL', originalCreateObjectURL);
+      else Reflect.deleteProperty(URL, 'createObjectURL');
+      if (originalRevokeObjectURL) Object.defineProperty(URL, 'revokeObjectURL', originalRevokeObjectURL);
+      else Reflect.deleteProperty(URL, 'revokeObjectURL');
+    });
+
+    it('fetches only on map download click, disables duplicate requests, and downloads the GPX with a safe name and cleanup', async () => {
+      let resolveGpx!: (track: string) => void;
+      mockGetObjectItineraryGpx.mockReturnValue(new Promise<string>((resolve) => { resolveGpx = resolve; }));
+      renderDetail(makeItinerary({ itinerary_details: { track_geojson: track } }));
+      const hero = screen.getByRole('region', { name: 'Carte du parcours' });
+      const download = within(hero).getByRole('button', { name: 'Télécharger le GPX' });
+      expect(download).toHaveAttribute('title', 'Télécharger le GPX');
+      expect(mockGetObjectItineraryGpx).not.toHaveBeenCalled();
+      expect(createObjectURL).not.toHaveBeenCalled();
+
+      fireEvent.click(download);
+      expect(mockGetObjectItineraryGpx).toHaveBeenCalledWith('iti-download', ['fr']);
+      expect(within(hero).getByRole('button', { name: 'Préparation du GPX…' })).toBeDisabled();
+      fireEvent.click(download);
+      expect(mockGetObjectItineraryGpx).toHaveBeenCalledTimes(1);
+      const payload = '<?xml version="1.0"?><gpx><trk><name>Été</name></trk></gpx>';
+      await act(async () => resolveGpx(payload));
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      const blob = createObjectURL.mock.calls[0][0];
+      expect(blob.type).toBe('application/gpx+xml;charset=utf-8');
+      const text = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsText(blob);
+      });
+      expect(text).toBe(payload);
+      expect(anchorClick).toHaveBeenCalledTimes(1);
+      expect(downloadedAnchor).toHaveAttribute('download', 'boucle-de-l-ete.gpx');
+      expect(downloadedAnchor).toHaveAttribute('href', 'blob:itinerary-gpx');
+      expect((downloadedAnchor as HTMLAnchorElement | null)?.isConnected).toBe(false);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:itinerary-gpx');
+      expect(within(hero).getByRole('button', { name: 'Télécharger le GPX' })).toBeEnabled();
+    });
+
+    it('omits the map action without a trail, permits retry, and ignores a response after the drawer unmounts', async () => {
+      const withoutTrack = renderDetail(makeItinerary({ itinerary_details: { stages: [{ name: 'Repère seul', lng: 55.4, lat: -21.1 }] } }));
+      expect(within(screen.getByRole('region', { name: 'Carte du parcours' })).queryByRole('button', { name: /GPX/ })).not.toBeInTheDocument();
+      expect(mockGetObjectItineraryGpx).not.toHaveBeenCalled();
+      withoutTrack.unmount();
+
+      let resolveRetry!: (track: string) => void;
+      mockGetObjectItineraryGpx.mockRejectedValueOnce(new Error('GPX indisponible'))
+        .mockReturnValueOnce(new Promise<string>((resolve) => { resolveRetry = resolve; }));
+      const detail = renderDetail(makeItinerary({ itinerary_details: { track_geojson: track } }));
+      const hero = screen.getByRole('region', { name: 'Carte du parcours' });
+      fireEvent.click(within(hero).getByRole('button', { name: 'Télécharger le GPX' }));
+      const retry = await within(hero).findByRole('button', { name: 'Réessayer le téléchargement GPX' });
+      expect(retry).toBeEnabled();
+      expect(createObjectURL).not.toHaveBeenCalled();
+      fireEvent.click(retry);
+      expect(mockGetObjectItineraryGpx).toHaveBeenCalledTimes(2);
+      expect(within(hero).getByRole('button', { name: 'Préparation du GPX…' })).toBeDisabled();
+      detail.unmount();
+      await act(async () => resolveRetry('<gpx>stale response</gpx>'));
+      expect(createObjectURL).not.toHaveBeenCalled();
+      expect(anchorClick).not.toHaveBeenCalled();
+    });
   });
 
   it('4.3 : affiche les faits d’une activité encadrée (ASC, object_act)', () => {

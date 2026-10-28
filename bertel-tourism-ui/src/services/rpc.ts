@@ -5,6 +5,8 @@ import type { AuditQuestion, BackendObjectTypeCode, ExplorerBucketKey, ExplorerF
 import { buildBucketRpcFilters, canMergeExplorerBuckets, dedupeExplorerCards, getEffectiveBackendTypesForBucket, getEffectiveSelectedBuckets, sortExplorerCards } from '../utils/facets';
 import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
+import { parseItiTrack } from './iti-tracks';
+import { escapeHtml } from '../lib/safe-output';
 
 interface ExplorerPageInput {
   cursor?: string | null;
@@ -868,6 +870,34 @@ function readItineraryTrackFromPayload(payload: unknown): string {
   return typeof track === 'string' && track.trim() !== '' ? track : '';
 }
 
+/** Export demo map geometry as GPX without changing production RPC behavior. */
+function demoItineraryGpx(objectId: string): string {
+  const detail = mockObjectDetails[objectId];
+  const raw = detail?.raw ?? {};
+  const existingTrack = readItineraryTrackFromPayload(raw);
+  // Preserve a fixture's existing GPX; a map's GeoJSON needs real conversion.
+  if (/<gpx(?:\s|\/?>)/i.test(existingTrack)) return existingTrack;
+  const itinerary = raw.itinerary && typeof raw.itinerary === 'object' ? raw.itinerary as Record<string, unknown> : {};
+  const details = raw.itinerary_details && typeof raw.itinerary_details === 'object'
+    ? raw.itinerary_details as Record<string, unknown> : {};
+  const parsed = parseItiTrack(objectId, {
+    ...raw,
+    itinerary: { ...itinerary, track: details.track_geojson ?? itinerary.track ?? raw.track ?? details.track },
+  });
+  const validCoordinate = (coordinate: unknown): coordinate is number[] => Array.isArray(coordinate)
+    && typeof coordinate[0] === 'number' && Number.isFinite(coordinate[0]) && Math.abs(coordinate[0]) <= 180
+    && typeof coordinate[1] === 'number' && Number.isFinite(coordinate[1]) && Math.abs(coordinate[1]) <= 90;
+  const segments = parsed.lines.flatMap((line) => line.type === 'MultiLineString' ? line.coordinates : [line.coordinates])
+    .filter((coordinates) => coordinates.length >= 2 && coordinates.every(validCoordinate));
+  if (!segments.length) throw new Error('Trace GPX indisponible pour cet itinéraire.');
+  const waypoints = parsed.stages.filter((stage) => validCoordinate([stage.lng, stage.lat]))
+    .map((stage) => `<wpt lat="${stage.lat}" lon="${stage.lng}">${stage.name ? `<name>${escapeHtml(stage.name)}</name>` : ''}</wpt>`).join('');
+  const trackSegments = segments.map((coordinates) => `<trkseg>${coordinates.map(([lng, lat, elevation]) =>
+    `<trkpt lat="${lat}" lon="${lng}">${Number.isFinite(elevation) ? `<ele>${elevation}</ele>` : ''}</trkpt>`).join('')}</trkseg>`).join('');
+  const name = detail?.name || parsed.name;
+  return `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Bertel" xmlns="http://www.topografix.com/GPX/1/1">${waypoints}<trk>${name ? `<name>${escapeHtml(name)}</name>` : ''}${trackSegments}</trk></gpx>`;
+}
+
 /**
  * Charge PARESSEUSEMENT la trace GPX d'un itinéraire (PLAN 4.5) — jamais au
  * chargement du drawer, uniquement sur action utilisateur. Appelle
@@ -880,9 +910,7 @@ export async function getObjectItineraryGpx(objectId: string, langPrefs: string[
   const client = requireRpcClient();
 
   if (session.demoMode || !client) {
-    const mockTrack = readItineraryTrackFromPayload(mockObjectDetails[objectId]?.raw);
-    if (mockTrack) return mockTrack;
-    throw new Error('Trace GPX indisponible pour cet itinéraire.');
+    return demoItineraryGpx(objectId);
   }
 
   const { data, error } = await client.schema('api').rpc('get_object_resource', {

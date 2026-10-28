@@ -172,7 +172,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
   const toast = useToast();
   const openDrawer = useUiStore((state) => state.openDrawer);
   const userId = useSessionStore((state) => state.userId);
-  const editor = useObjectEditorState(objectId, resource.modules, userId);
+  const editor = useObjectEditorState(objectId, resource.modules, userId, resource.nonApplicableModules);
   const langPrefs = useSessionStore((state) => state.langPrefs);
   const { confirmLeave } = useUnsavedDraftGuard(editor.isDirty);
   const { save, saving } = useEditorSave(objectId);
@@ -403,6 +403,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     const result = await save(dirty, resource.permissions, editor.draft, {
       canWriteCanonicalDirect,
       baseline: editor.baseline,
+      nonApplicableModules: resource.nonApplicableModules,
     });
     // Only canonical writes establish persisted room IDs. Proposal submission is not a save.
     editor.commitModules(

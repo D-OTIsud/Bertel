@@ -1,4 +1,4 @@
-import { facetUnavailableReason, TYPE_SPECIFIC_MODULE_FACETS } from './object-workspace';
+import { facetUnavailableReason, getNonApplicableWorkspaceModules, TYPE_SPECIFIC_MODULE_FACETS } from './object-workspace';
 
 const ROWS = [
   { facetTable: 'object_room_type', objectType: 'HOT' },
@@ -7,6 +7,13 @@ const ROWS = [
 ];
 
 describe('facetUnavailableReason (§46 registry gating)', () => {
+  it('excludes only the modules ruled out by the registry, including the meeting-room save ID', () => {
+    const rows = [...ROWS, { facetTable: 'object_meeting_room', objectType: 'HOT' }, { facetTable: 'object_iti', objectType: 'ITI' }];
+    expect(getNonApplicableWorkspaceModules('ITI', rows)).toEqual(['rooms', 'meeting-rooms', 'menus']);
+    expect(getNonApplicableWorkspaceModules('ITI', [])).toEqual([]);
+    expect(getNonApplicableWorkspaceModules('', rows)).toEqual([]);
+    expect(getNonApplicableWorkspaceModules('HOT', rows)).toEqual(['menus', 'itinerary']);
+  });
   it('returns null when the type is applicable', () => {
     expect(facetUnavailableReason('object_room_type', 'HOT', ROWS)).toBeNull();
   });

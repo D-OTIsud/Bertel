@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
-import { cloneModules, getDirtySections, type EditorSnapshot } from './editor-state';
+import { cloneModules, getDirtySections, MODULE_KEY_MAP, type EditorSnapshot } from './editor-state';
 import { mergeDraftAgainstServer } from './draft-recovery';
 import { restoreCatalogOptions, stripCatalogOptions } from './io/object-io-serialize';
 
 const LOCAL_DRAFT_SCHEMA = 1;
+const NO_EXCLUDED_MODULES: readonly WorkspaceModuleId[] = [];
 function localDraftKey(userId: string, objectId: string): string {
   return `object-editor-draft:${encodeURIComponent(userId)}:${encodeURIComponent(objectId)}`;
 }
@@ -69,7 +70,12 @@ function copyModule<K extends keyof ObjectWorkspaceModules>(
   target[key] = source[key];
 }
 
-export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceModules, userId: string | null = null): ObjectEditorState {
+export function useObjectEditorState(
+  objectId: string,
+  modules: ObjectWorkspaceModules,
+  userId: string | null = null,
+  nonApplicableModules: readonly WorkspaceModuleId[] = NO_EXCLUDED_MODULES,
+): ObjectEditorState {
   const identityKey = JSON.stringify([objectId, userId]);
   const freshSnapshot = useMemo<EditorSnapshot>(() => ({
     objectId,
@@ -85,7 +91,10 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
   // Do not render the previous account's in-memory draft for even one committed render
   // while the account-change effect is waiting to hydrate the next identity.
   const snapshot = stateMatchesIdentity ? editorState.snapshot : freshSnapshot;
-  const recoveryConflicts = stateMatchesIdentity ? editorState.recoveryConflicts : [];
+  const nonApplicableKeys = nonApplicableModules.map((module) => MODULE_KEY_MAP[module]);
+  const recoveryConflicts = stateMatchesIdentity ? editorState.recoveryConflicts.filter((path) =>
+    !nonApplicableKeys.some((key) => path === key || path.startsWith(`${key}.`) || path.startsWith(`${key}[`)),
+  ) : [];
   const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -96,7 +105,11 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
     if (stored) {
       const cleanBase = stripCatalogOptions(modules);
       const merged = mergeDraftAgainstServer(stored.baseline, stored.draft, cleanBase);
-      const restored = restoreCatalogOptions(merged.value, modules) as ObjectWorkspaceModules;
+      // The helper restores ONE module. Restoring the whole workspace left every nested
+      // catalog empty, so untouched sections became dirty after recovering a draft.
+      const restored = Object.fromEntries(Object.entries(modules).map(([key, module]) => [
+        key, restoreCatalogOptions(merged.value[key as keyof ObjectWorkspaceModules], module, key),
+      ])) as unknown as ObjectWorkspaceModules;
       recoveredSnapshot = { objectId, baseline: cloneModules(modules), draft: restored };
       conflicts = merged.conflicts;
     }
@@ -109,6 +122,8 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
   useEffect(() => {
     if (!userId || hydratedKey !== identityKey || !stateMatchesIdentity) return;
     try {
+      // Retain edits to a now-inapplicable module in local recovery storage, while the
+      // visible dirty/save state below excludes it. No hidden draft data is discarded.
       const isDirty = Object.values(getDirtySections(snapshot)).some(Boolean);
       const key = localDraftKey(userId, objectId);
       if (!isDirty) window.localStorage.removeItem(key);
@@ -233,7 +248,7 @@ export function useObjectEditorState(objectId: string, modules: ObjectWorkspaceM
     });
   }, [freshSnapshot, identityKey]);
 
-  const dirtySections = useMemo(() => getDirtySections(snapshot), [snapshot]);
+  const dirtySections = useMemo(() => getDirtySections(snapshot, nonApplicableModules), [snapshot, nonApplicableModules]);
   const isDirty = useMemo(() => Object.values(dirtySections).some(Boolean), [dirtySections]);
 
   return { objectId: snapshot.objectId, draft: snapshot.draft, baseline: snapshot.baseline, dirtySections, isDirty, recoveryConflicts, patchModule, replaceModule, resetModule, commitModules, setSavedStatus };

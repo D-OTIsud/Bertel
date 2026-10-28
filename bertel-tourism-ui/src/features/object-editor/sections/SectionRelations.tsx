@@ -4,6 +4,7 @@ import type { SectionProps } from './section-types';
 import { RelationPicker } from '../widgets/RelationPicker';
 import type { ObjectSearchResult } from '../useObjectSearch';
 import type { ObjectWorkspaceRelatedObjectItem } from '../../../services/object-workspace-parser';
+import { useUiStore } from '../../../store/ui-store';
 
 // Canonical codes from ref_object_relation_type — api.save_object_relations validates relation_type_code
 // against that table, and loaded relations carry these codes, so the editor must offer exactly them.
@@ -21,6 +22,7 @@ const RELATION_TYPE_OPTIONS = [
 
 export function SectionRelations({ editor, folded, objectId = '' }: SectionProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const openDrawer = useUiStore((state) => state.openDrawer);
   const relationships = editor.draft.relationships;
   const outgoing = relationships.relatedObjects.filter((item) => item.direction !== 'in');
   const incoming = relationships.relatedObjects.filter((item) => item.direction === 'in');
@@ -127,7 +129,7 @@ export function SectionRelations({ editor, folded, objectId = '' }: SectionProps
             <strong style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 600 }}>{item.name}</strong>
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-3)' }}>{item.type}</span>
             <span style={{ fontSize: 11, color: 'var(--ink-3)' }}>{item.note || '—'}</span>
-            <button type="button" className="icbtn" title="Ouvrir la fiche" aria-label="Ouvrir la fiche">
+            <button type="button" className="icbtn" title="Ouvrir la fiche" aria-label="Ouvrir la fiche" onClick={() => openDrawer(item.id)}>
               ↗
             </button>
           </div>

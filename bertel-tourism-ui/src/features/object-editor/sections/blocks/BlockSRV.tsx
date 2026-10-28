@@ -1,6 +1,7 @@
 import { ChipMultiSelect, Fs } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { OwnedElsewhereNote } from './block-notes';
+import { EDITOR_SECTION_REFERENCES } from '../../section-config';
 
 export function BlockSRV({ editor, folded }: SectionProps) {
   const characteristics = editor.draft.characteristics;
@@ -8,12 +9,14 @@ export function BlockSRV({ editor, folded }: SectionProps) {
   const services = characteristics.amenityGroups.flatMap((group) => group.options);
   const selectedCount = characteristics.selectedAmenityCodes.length;
   const langCount = characteristics.selectedLanguages.length;
+  const languagesSection = EDITOR_SECTION_REFERENCES.languages;
+  const openingsSection = EDITOR_SECTION_REFERENCES.openings;
 
   return (
     <Fs
       num="06"
       title="Prestations au comptoir"
-      sub="Prestations délivrées au comptoir — langues gérées en §12, horaires en §14"
+      sub={`Prestations délivrées au comptoir — ${languagesSection.label} (§${languagesSection.num}), ${openingsSection.label} (§${openingsSection.num})`}
       folded={folded}
       pill={{
         tone: selectedCount > 0 ? 'ok' : 'warn',
@@ -36,9 +39,9 @@ export function BlockSRV({ editor, folded }: SectionProps) {
         }
       />
 
-      {/* §48 single-owner: languages are edited in §12, opening hours in §14 (last-edit-wins trap otherwise) */}
-      <OwnedElsewhereNote num="12" label="Paiements & langues" summary={`${langCount} langue(s)`} />
-      <OwnedElsewhereNote num="14" label="Périodes d'ouverture" summary={`${openings.periods.length} période(s)`} />
+      {/* The shared destinations also drive the numbered editor navigation. */}
+      <OwnedElsewhereNote {...languagesSection} summary={`${langCount} langue(s)`} />
+      <OwnedElsewhereNote {...openingsSection} summary={`${openings.periods.length} période(s)`} />
     </Fs>
   );
 }

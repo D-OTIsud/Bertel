@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import { useUiStore } from '../../store/ui-store';
 import { ObjectDrawerShell } from '../../features/object-drawer/ObjectDrawerShell';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
@@ -11,6 +12,7 @@ interface ObjectDrawerProps {
 export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
   const closeDrawer = useUiStore((state) => state.closeDrawer);
   const open = Boolean(objectId);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) closeDrawer(); }}>
@@ -19,6 +21,18 @@ export function ObjectDrawer({ objectId }: ObjectDrawerProps) {
         showClose={false}
         aria-describedby={undefined}
         className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
+        onOpenAutoFocus={() => {
+          const active = document.activeElement;
+          returnFocusRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+        }}
+        onCloseAutoFocus={(event) => {
+          const target = returnFocusRef.current;
+          returnFocusRef.current = null;
+          if (target?.isConnected) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
       >
         <SheetTitle className="sr-only">Fiche objet</SheetTitle>
         <SheetDescription className="sr-only">Panneau lateral de detail d un objet touristique. Le bouton Modifier ouvre la page d edition pleine ecran.</SheetDescription>

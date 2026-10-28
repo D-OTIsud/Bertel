@@ -1,6 +1,27 @@
-import { makeSections } from './section-config';
+import { EDITOR_SECTION_REFERENCES, makeSections } from './section-config';
+import type { ArchetypeCode } from './archetypes';
 
 describe('makeSections', () => {
+  it.each([
+    ['HEB', 'Chambres & capacité'], ['RES', 'Cuisine & service'], ['ASC', 'Fiche activité'],
+    ['ITI', 'Tracé & étapes'], ['VIS', 'Visite & médiation'], ['SRV', 'Prestations'], ['FMA', 'Dates & programmation'],
+  ] as [ArchetypeCode, string][])('conserve l’inventaire ordonné du registre pour %s', (archetype, typeLabel) => {
+    const groups = makeSections(archetype);
+    expect(groups.map((group) => group.group)).toEqual(['Identité', 'Caractéristiques', 'Tarifs & ouverture', 'Liens & territoire', 'Gestion']);
+    const items = groups.flatMap((group) => group.items);
+    expect(items.map(({ num, label }) => `${num} ${label}`)).toEqual([
+      '01 Identité & taxonomie', '02 Localisation', '03 Contacts', '04 Descriptions & langues parlées',
+      '05 Médias', `06 ${typeLabel}`, ...(archetype === 'HEB' ? [] : ['07 Capacité & accueil']),
+      '08 Classifications', '09 Accessibilité', '10 Démarche durable', '11 Tags & étiquettes',
+      '13 Tarifs, paiement & extras', "14 Périodes d'ouverture", '15 Liens vers fiches',
+      `16 ${archetype === 'ITI' ? 'Lieux & étapes' : 'Sites secondaires'}`, '17 Rattachements',
+      '18 Juridique', '19 Suivi prestataire', '21 Publication', '22 Identifiants externes',
+    ]);
+    for (const reference of Object.values(EDITOR_SECTION_REFERENCES)) {
+      expect(items.find((section) => section.num === reference.num)).toEqual(reference);
+    }
+  });
+
   it('produces 20 sections for ITI (includes section 16 Lieux & étapes; §20 retired in §90)', () => {
     const flat = makeSections('ITI').flatMap((g) => g.items);
     expect(flat).toHaveLength(20);

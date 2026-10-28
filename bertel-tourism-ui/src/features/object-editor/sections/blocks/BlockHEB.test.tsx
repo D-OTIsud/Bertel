@@ -157,7 +157,7 @@ describe('BlockHEB room edit modal', () => {
     // Equipment is inline + grouped by collapsible category — expand the family, then click « Clim ».
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Climatisation & chauffage/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items[0].amenityCodes).toContain('ac');
   });
@@ -171,7 +171,7 @@ describe('BlockHEB meeting-room edit modal', () => {
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la salle/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Vidéoprojecteur' })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.meetingRooms.items[0].equipmentCodes).toContain('projector');
   });
@@ -190,7 +190,7 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la salle/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Capacité en U'), { target: { value: '24' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.meetingRooms.items[0].capacityU).toBe('24');
   });
@@ -202,7 +202,7 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     // Total is the anchor: set it to 4, then adults = 3 rebalances children to 1 (sum stays 4).
     act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '4' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Adultes'), { target: { value: '3' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items[0].capacityTotal).toBe('4');
     expect(result.current.draft.rooms.items[0].capacityAdults).toBe('3');
@@ -231,7 +231,8 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     // Add now goes through the modal: open then save.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Nom / libellé'), { target: { value: 'Nouvelle chambre' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
 
     const codes = result.current.draft.rooms.items.map((item) => item.code);
@@ -311,7 +312,7 @@ describe('rooms-utils', () => {
 });
 
 describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => {
-  it('adding a room opens the modal; Enregistrer appends, Annuler appends nothing', () => {
+  it('adding a room opens the modal; Ajouter appends, Annuler appends nothing', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     const before = result.current.draft.rooms.items.length;
@@ -327,24 +328,26 @@ describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => 
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items).toHaveLength(before);
 
-    // Enregistrer: the configured row is appended.
+    // Ajouter: the configured row is appended.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
+    act(() => { fireEvent.change(screen.getByLabelText('Nom / libellé'), { target: { value: 'Chambre familiale' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '2' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.rooms.items).toHaveLength(before + 1);
     expect(result.current.draft.rooms.items[before].capacityTotal).toBe('2');
   });
 
-  it('adding a salle opens the modal; Enregistrer appends', () => {
+  it('adding a salle opens the modal; Ajouter appends', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     const before = result.current.draft.meetingRooms.items.length;
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une salle/i })); });
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    act(() => { fireEvent.change(screen.getByLabelText('Nom de la salle'), { target: { value: 'Nouvelle salle' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Capacité en U'), { target: { value: '18' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     expect(result.current.draft.meetingRooms.items).toHaveLength(before + 1);
     expect(result.current.draft.meetingRooms.items[before].capacityU).toBe('18');
@@ -360,7 +363,7 @@ describe('BlockHEB — capacity auto-sync + PMR liaison', () => {
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '3' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
 
     expect(result.current.draft.capacityPolicies.capacityItems[0].value).toBe('36');
@@ -372,7 +375,7 @@ describe('BlockHEB — capacity auto-sync + PMR liaison', () => {
     modules.rooms.items[0].accessible = true;
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
     render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
-    expect(screen.getByText(/chambre\(s\) PMR/i)).toBeInTheDocument();
+    expect(screen.getByText(/chambre\(s\) PMR/i)).toHaveTextContent('équipements dans Accessibilité (§09)');
   });
 
   it('shows no PMR note when no room is accessible', () => {

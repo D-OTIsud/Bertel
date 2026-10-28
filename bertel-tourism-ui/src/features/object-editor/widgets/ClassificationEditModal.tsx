@@ -12,6 +12,7 @@ import type {
   ObjectWorkspaceDistinctionSchemeOption,
 } from '../../../services/object-workspace-parser';
 import './catalog-modals.css';
+import { EDITOR_SECTION_REFERENCES } from '../section-config';
 
 // Category labels for the collapsible référentiel picker (SearchSelect groups).
 const DISPLAY_GROUP_LABELS: Record<string, string> = {
@@ -186,7 +187,7 @@ export function ClassificationEditModal({
             {currentScheme.displayGroup === 'accessibility_labels' && (
               <p className="muted" style={{ marginTop: 6 }}>
                 La couverture par type de handicap (moteur, auditif, visuel, mental) se gère dans la section
-                Accessibilité (§10).
+                {EDITOR_SECTION_REFERENCES.accessibility.label} (§{EDITOR_SECTION_REFERENCES.accessibility.num}).
               </p>
             )}
           </div>

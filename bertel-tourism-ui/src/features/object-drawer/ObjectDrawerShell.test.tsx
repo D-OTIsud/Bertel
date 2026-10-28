@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ObjectDrawerShell } from './ObjectDrawerShell';
 import { useSessionStore } from '../../store/session-store';
+import { registerNavigationGuard } from '../../lib/navigation-guard';
 
 // Le tiroir est en LECTURE SEULE : il ne doit consommer que le chargeur léger
 // (1 RPC), jamais le chargeur d'espace de travail (~85 requêtes) qui n'existe
@@ -39,8 +40,9 @@ jest.mock('../../hooks/usePresenceRoom', () => ({
 }));
 
 const mockPrefetch = jest.fn();
+const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), prefetch: (...args: unknown[]) => mockPrefetch(...args) }),
+  useRouter: () => ({ push: (...args: unknown[]) => mockPush(...args), prefetch: (...args: unknown[]) => mockPrefetch(...args) }),
 }));
 
 jest.mock('./ObjectDetailView', () => ({
@@ -59,10 +61,64 @@ describe('ObjectDrawerShell', () => {
     detailSpy.mockClear();
     workspaceSpy.mockClear();
     mockPrefetch.mockClear();
+    mockPush.mockClear();
     prefetchWorkspaceSpy.mockClear();
     mockDetailData = baseDetailData;
     // `canEditObjects` gate le prechargement ET le bouton « Modifier ».
     useSessionStore.setState({ role: 'tourism_agent', canEditObjects: true });
+  });
+
+  test.each([false, true])('respecte le verdict de la garde (%s) avant de quitter pour modifier la fiche liée', (allowed) => {
+    const guard = jest.fn(() => allowed);
+    const unregister = registerNavigationGuard(guard);
+    const onClose = jest.fn();
+    try {
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={onClose} />, { wrapper });
+      fireEvent.click(screen.getByRole('button', { name: /modifier/i }));
+      expect(guard).toHaveBeenCalledTimes(1);
+      if (allowed) {
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(mockPush).toHaveBeenCalledWith('/objects/RESRUN0000000001/edit');
+      } else {
+        expect(onClose).not.toHaveBeenCalled();
+        expect(mockPush).not.toHaveBeenCalled();
+        expect(screen.getByTestId('detail-view')).toBeInTheDocument();
+      }
+    } finally { unregister(); }
+  });
+
+  test.each([false, true])('respecte le verdict de la garde (%s) avant l’administration des organisations', (allowed) => {
+    const unregister = registerNavigationGuard(() => allowed);
+    const onClose = jest.fn();
+    mockDetailData = { ...baseDetailData, type: 'ORG' };
+    try {
+      render(<ObjectDrawerShell objectId="org-1" onClose={onClose} />, { wrapper });
+      fireEvent.click(screen.getByRole('button', { name: /ouvrir l.administration/i }));
+      if (allowed) {
+        expect(onClose).toHaveBeenCalledTimes(1);
+        expect(mockPush).toHaveBeenCalledWith('/team');
+      } else {
+        expect(onClose).not.toHaveBeenCalled();
+        expect(mockPush).not.toHaveBeenCalled();
+      }
+    } finally { unregister(); }
+  });
+
+  test('revient de l’aperçu courant sans demander de quitter un éditeur qui reste monté', () => {
+    const previousUrl = window.location.href;
+    window.history.replaceState({}, '', '/objects/RESRUN0000000001/edit');
+    const guard = jest.fn(() => false);
+    const unregister = registerNavigationGuard(guard);
+    const onClose = jest.fn();
+    try {
+      render(<ObjectDrawerShell objectId="RESRUN0000000001" onClose={onClose} />, { wrapper });
+      fireEvent.click(screen.getByRole('button', { name: /modifier/i }));
+      expect(guard).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    } finally {
+      unregister();
+      window.history.replaceState({}, '', previousUrl);
+    }
   });
 
   test('consomme le chargeur léger et jamais le chargeur d espace de travail', () => {

@@ -109,7 +109,7 @@ describe('SectionAttachments — §17 adhésions (modale + état vide)', () => {
     const view = render(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une adhésion/i })); });
     view.rerender(<SectionAttachments editor={result.current} permissions={allowAll} objectId="o1" />);
-    expect(screen.getByRole('button', { name: /Enregistrer/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Ajouter$/ })).toBeInTheDocument();
   });
 
   it('no longer renders the "Campagnes disponibles" chipset', () => {

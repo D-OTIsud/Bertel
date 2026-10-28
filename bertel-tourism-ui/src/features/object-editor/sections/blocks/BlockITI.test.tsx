@@ -148,9 +148,10 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
 
   it('§C2: Modifier opens the detailed stage modal (type select, name, corridor slider)', () => {
     render(<ItiHarness />);
-    expect(screen.queryByText("Étape / point d'intérêt")).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Modifier l’étape' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
-    expect(screen.getByText("Étape / point d'intérêt")).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Modifier l’étape' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Autre type d’étape…' }));
     expect(screen.getByRole('combobox', { name: "Type d'étape" })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Belvédère du Maïdo')).toBeInTheDocument();
     // corridor slider present because the fixture has an imported trace

@@ -148,6 +148,8 @@ export interface ObjectWorkspaceResource {
   detail: ObjectDetail;
   modules: ObjectWorkspaceModules;
   permissions: ObjectWorkspacePermissions;
+  /** Type/facet applicability from the current reference registry; distinct from load failures. */
+  nonApplicableModules?: readonly WorkspaceModuleId[];
 }
 
 /**
@@ -4081,6 +4083,12 @@ export function facetUnavailableReason(
   return `Module non applicable au type ${objectType} (référentiel ref_facet_applicability).`;
 }
 
+export function getNonApplicableWorkspaceModules(objectType: string, rows: FacetApplicabilityRow[]): WorkspaceModuleId[] {
+  return (Object.keys(TYPE_SPECIFIC_MODULE_FACETS) as Array<keyof typeof TYPE_SPECIFIC_MODULE_FACETS>)
+    .filter((key) => facetUnavailableReason(TYPE_SPECIFIC_MODULE_FACETS[key], objectType, rows) !== null)
+    .map((key) => key === 'meetingRooms' ? 'meeting-rooms' : key);
+}
+
 function getFacetApplicabilityRows(catalogs: ReferenceCatalogs): FacetApplicabilityRow[] {
   const session = useSessionStore.getState();
   if (session.demoMode) return [];
@@ -4250,6 +4258,7 @@ export async function getObjectWorkspaceResource(
     detail,
     modules,
     permissions,
+    nonApplicableModules: getNonApplicableWorkspaceModules(objectType, facetRows),
   };
 }
 

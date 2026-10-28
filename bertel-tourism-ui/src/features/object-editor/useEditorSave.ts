@@ -26,7 +26,8 @@ export interface SaveBatchPlan {
 /**
  * Pure: split the dirty modules into direct writes, moderation proposals, and blocked.
  *
- * A missing or degraded module is blocked before either write path, including moderation.
+ * Registry-inapplicable modules are excluded from the batch. An applicable module that is
+ * missing or degraded is blocked before either write path, including moderation.
  * When `canWriteCanonicalDirect` is false, every remaining dirty module is routed to a proposal
  * (the backend `user_can_write_object_canonical` gate is the real security on apply). When
  * the caller IS a canonical writer, the historical per-module split applies (direct write when the
@@ -38,12 +39,16 @@ export function planSaveBatch(
   canWriteCanonicalDirect = true,
   draft?: ObjectWorkspaceModules,
   baseline?: ObjectWorkspaceModules,
+  nonApplicableModules: readonly WorkspaceModuleId[] = [],
 ): SaveBatchPlan {
   const writable: WorkspaceModuleId[] = [];
   const proposals: WorkspaceModuleId[] = [];
   const blocked: { module: WorkspaceModuleId; reason: string }[] = [];
 
   for (const module of dirtyModules) {
+    // This list comes from the workspace's type/facet registry, not from read errors
+    // or permission denials. Inapplicable sections must never be written or proposed.
+    if (nonApplicableModules.includes(module)) continue;
     const key = MODULE_KEY_MAP[module];
     const unavailable = workspaceSaveBlockedReason(module, draft?.[key])
       ?? (baseline ? workspaceSaveBlockedReason(module, baseline[key]) : null);
@@ -76,6 +81,7 @@ export interface EditorSaveResult {
 }
 
 export interface EditorSaveOptions {
+  nonApplicableModules?: readonly WorkspaceModuleId[];
   /** False ⇒ contributor: route every dirty module to the moderation proposal flow. Default true. */
   canWriteCanonicalDirect?: boolean;
   /** Saved snapshot used to build the before/after diff stored on each proposal. Defaults to draft. */
@@ -135,7 +141,7 @@ export function useEditorSave(objectId: string) {
     ): Promise<EditorSaveResult> => {
       const canWriteCanonicalDirect = options.canWriteCanonicalDirect ?? true;
       const baseline = options.baseline ?? draft;
-      const plan = planSaveBatch(dirtyModules, permissions, canWriteCanonicalDirect, draft, baseline);
+      const plan = planSaveBatch(dirtyModules, permissions, canWriteCanonicalDirect, draft, baseline, options.nonApplicableModules);
       const saved: WorkspaceModuleId[] = [];
       const submitted: WorkspaceModuleId[] = [];
       const failed: { module: WorkspaceModuleId; message: string }[] = [];

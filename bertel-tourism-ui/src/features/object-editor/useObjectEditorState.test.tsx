@@ -1,6 +1,9 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useObjectEditorState } from './useObjectEditorState';
 import type { ObjectWorkspaceModules } from '../../services/object-workspace-parser';
+import { fullModulesFixture } from './sections/section-fixture.test-utils';
+import { cloneModules } from './editor-state';
+import { stripCatalogOptions } from './io/object-io-serialize';
 
 function fixtureModules(): ObjectWorkspaceModules {
   return {
@@ -13,6 +16,52 @@ function fixtureModules(): ObjectWorkspaceModules {
 }
 
 describe('useObjectEditorState', () => {
+  it('keeps stale hidden edits in recovery storage without blocking the itinerary', async () => {
+    const modules = fullModulesFixture();
+    const draft = cloneModules(modules);
+    draft.rooms.items[0].name = 'Ancien brouillon conservé';
+    window.localStorage.setItem('object-editor-draft:account-hidden:ITI2', JSON.stringify({
+      schemaVersion: 1, objectId: 'ITI2', baseline: stripCatalogOptions(modules), draft: stripCatalogOptions(draft),
+    }));
+    const { result } = renderHook(() => useObjectEditorState('ITI2', modules, 'account-hidden', ['rooms']));
+    await waitFor(() => expect(result.current.draft.rooms.items[0].name).toBe('Ancien brouillon conservé'));
+    expect(result.current.isDirty).toBe(false);
+    expect(result.current.dirtySections.rooms).toBe(false);
+    const stored = JSON.parse(window.localStorage.getItem('object-editor-draft:account-hidden:ITI2')!);
+    expect(stored.draft.rooms.items[0].name).toBe('Ancien brouillon conservé');
+  });
+
+  it('keeps applicable recovery conflicts while excluding conflicts in an inapplicable module', async () => {
+    const baseline = fullModulesFixture();
+    const draft = cloneModules(baseline);
+    const modules = cloneModules(baseline);
+    draft.rooms.items[0].name = 'Chambre locale';
+    modules.rooms.items[0].name = 'Chambre serveur';
+    draft.itinerary.access = 'Accès local';
+    modules.itinerary.access = 'Accès serveur';
+    window.localStorage.setItem('object-editor-draft:account-conflict:ITI3', JSON.stringify({
+      schemaVersion: 1, objectId: 'ITI3', baseline: stripCatalogOptions(baseline), draft: stripCatalogOptions(draft),
+    }));
+    const { result } = renderHook(() => useObjectEditorState('ITI3', modules, 'account-conflict', ['rooms']));
+    await waitFor(() => expect(result.current.draft.itinerary.access).toBe('Accès local'));
+    expect(result.current.recoveryConflicts).toEqual(['itinerary.access']);
+    expect(result.current.draft.rooms.items[0].name).toBe('Chambre locale');
+  });
+  it('restores every module catalog without marking untouched itinerary sections dirty', async () => {
+    const modules = fullModulesFixture();
+    const draft = cloneModules(modules);
+    draft.itinerary.stages[0].description = 'Étape du brouillon à conserver';
+    window.localStorage.setItem('object-editor-draft:account-iti:ITI1', JSON.stringify({
+      schemaVersion: 1, objectId: 'ITI1', baseline: stripCatalogOptions(modules), draft: stripCatalogOptions(draft),
+    }));
+    const { result } = renderHook(() => useObjectEditorState('ITI1', modules, 'account-iti'));
+    await waitFor(() => expect(result.current.draft.itinerary.stages[0].description).toBe('Étape du brouillon à conserver'));
+    expect(result.current.draft.rooms.roomTypeOptions).toEqual(modules.rooms.roomTypeOptions);
+    expect(result.current.draft.itinerary.stageKindOptions).toEqual(modules.itinerary.stageKindOptions);
+    expect(result.current.draft.cuisine.options).toEqual(modules.cuisine.options);
+    expect(result.current.draft.taxonomy.domains).toEqual(modules.taxonomy.domains);
+    expect(Object.entries(result.current.dirtySections).filter(([, dirty]) => dirty).map(([key]) => key)).toEqual(['itinerary']);
+  });
   it('starts clean with draft equal to baseline', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fixtureModules()));
     expect(result.current.isDirty).toBe(false);

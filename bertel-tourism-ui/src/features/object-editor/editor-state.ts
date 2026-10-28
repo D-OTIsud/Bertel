@@ -104,7 +104,10 @@ export const READONLY_MODULES = new Set<WorkspaceModuleId>([
   'provider',
 ]);
 
-export function getDirtySections(snapshot: EditorSnapshot | null): Partial<Record<WorkspaceModuleId, boolean>> {
+export function getDirtySections(
+  snapshot: EditorSnapshot | null,
+  nonApplicableModules: readonly WorkspaceModuleId[] = [],
+): Partial<Record<WorkspaceModuleId, boolean>> {
   if (!snapshot) {
     return {};
   }
@@ -113,6 +116,10 @@ export function getDirtySections(snapshot: EditorSnapshot | null): Partial<Recor
   const publicationDirty = isPublicationSettingsDirty(snapshot);
   const dirty: Partial<Record<WorkspaceModuleId, boolean>> = {};
   for (const [moduleId, key] of Object.entries(MODULE_KEY_MAP) as [WorkspaceModuleId, keyof ObjectWorkspaceModules][]) {
+    if (nonApplicableModules.includes(moduleId)) {
+      dirty[moduleId] = false;
+      continue;
+    }
     if (moduleId === 'general-info') {
       dirty[moduleId] = generalInfoDirty;
       continue;

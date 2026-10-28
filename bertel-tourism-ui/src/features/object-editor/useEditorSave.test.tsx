@@ -109,6 +109,17 @@ function makeModules(): ObjectWorkspaceModules {
 }
 
 describe('planSaveBatch — degraded reads are blocked before routing', () => {
+  it.each([true, false])('ignores registry-inapplicable modules without masking an itinerary read failure for canonical=%s', (canonical) => {
+    const draft = makeModules();
+    draft.rooms.unavailableReason = 'Module non applicable au type ITI';
+    draft.meetingRooms.unavailableReason = 'Module non applicable au type ITI';
+    draft.menus.unavailableReason = 'Module non applicable au type ITI';
+    draft.itinerary.unavailableReason = 'Étapes non chargées';
+    const plan = planSaveBatch(['rooms', 'meeting-rooms', 'menus', 'itinerary'], {} as ObjectWorkspacePermissions, canonical, draft, draft, ['rooms', 'meeting-rooms', 'menus']);
+    expect(plan.writable).toEqual([]);
+    expect(plan.proposals).toEqual([]);
+    expect(plan.blocked).toEqual([{ module: 'itinerary', reason: 'Étapes non chargées' }]);
+  });
   it.each([true, false])('blocks unavailable modules for canonical=%s', (canonical) => {
     const draft = makeModules();
     draft.rooms.unavailableReason = 'Équipements non chargés';
@@ -151,6 +162,19 @@ describe('useEditorSave.save — fork routing', () => {
     mockInvalidate.mockReset();
     mockSubmit.mockReset().mockResolvedValue('pc-id');
     mockPing.mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each([true, false])('never writes or submits a registry-inapplicable module for canonical=%s', async (canonical) => {
+    const draft = makeModules();
+    draft.rooms.unavailableReason = 'Module non applicable au type ITI';
+    const { result } = renderHook(() => useEditorSave('ITI1'), { wrapper });
+    let outcome!: Awaited<ReturnType<typeof result.current.save>>;
+    await act(async () => {
+      outcome = await result.current.save(['rooms'], {} as ObjectWorkspacePermissions, draft, { canWriteCanonicalDirect: canonical, nonApplicableModules: ['rooms'] });
+    });
+    expect(outcome).toEqual({ saved: [], submitted: [], failed: [], blocked: [] });
+    expect(mockSaveModule).not.toHaveBeenCalled();
+    expect(mockSubmit).not.toHaveBeenCalled();
   });
 
   it('checks compatibility once and prevents every direct/proposal write on an older server', async () => {

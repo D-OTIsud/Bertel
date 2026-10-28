@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
@@ -57,6 +57,12 @@ export default function DashboardPage() {
   const srv = useDashboardExplorerStore((s) => s.srv);
 
   const references = useExplorerReferencesQuery();
+  // Like Explorer, match the server markup before exposing a restored reference cache.
+  const [referencesHydrated, setReferencesHydrated] = useState(false);
+  useEffect(() => {
+    setReferencesHydrated(true);
+  }, []);
+  const filtersReferences = referencesHydrated ? references.data : undefined;
 
   const params = useMemo(
     () => dashboardStatsParams(
@@ -106,7 +112,7 @@ export default function DashboardPage() {
         <aside className="dashboard-filters-sidebar filter-context-sidebar">
           <DashboardPeriodSection />
           <FiltersPanel
-            references={references.data}
+            references={filtersReferences}
             useStore={useDashboardExplorerStore}
             typeSpecificFacets={selectedBuckets.length === 1}
             // §205 — pas d'« Archivé » ici : buildDashboardStatsParams restreint

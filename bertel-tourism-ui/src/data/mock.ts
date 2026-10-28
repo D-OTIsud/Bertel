@@ -365,6 +365,40 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
     raw: {
       description: 'Itineraire forestier avec denivele moyen et panorama volcanique.',
       location: { lat: -21.12931941062737, lon: 55.455478307663036, address: 'Depart au belvedere, Cilaos' },
+      // Illustrations de démo uniquement : elles ne documentent pas le lieu réel.
+      media: [
+        {
+          id: 'demo-iti-landscape',
+          type_code: 'photo',
+          url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1100&q=85',
+          title: 'Illustration — paysage et point de vue',
+          description: 'Photo d’illustration : paysage et point de vue',
+          credit: 'Unsplash — illustration de démonstration',
+          visibility: 'public',
+          is_main: true,
+          position: 0,
+        },
+        {
+          id: 'demo-iti-waterfall',
+          type_code: 'photo',
+          url: 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?auto=format&fit=crop&w=1100&q=85',
+          title: 'Illustration — cascade et végétation',
+          description: 'Photo d’illustration : cascade et végétation',
+          credit: 'Unsplash — illustration de démonstration',
+          visibility: 'public',
+          position: 1,
+        },
+        {
+          id: 'demo-iti-forest',
+          type_code: 'photo',
+          url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1100&q=85',
+          title: 'Illustration — sentier en forêt',
+          description: 'Photo d’illustration : sentier en forêt',
+          credit: 'Unsplash — illustration de démonstration',
+          visibility: 'public',
+          position: 2,
+        },
+      ],
       itinerary: {
         distance_km: 8.4,
         duration_min: 192,
@@ -387,9 +421,24 @@ export const mockObjectDetails: Record<string, ObjectDetail> = {
       },
       itinerary_details: {
         stages: [
-          { id: 'stage-1', position: 1, name: 'Belvedere de depart', lat: -21.1293, lng: 55.4555 },
-          { id: 'stage-2', position: 2, name: 'Premiere cascade', lat: -21.1342, lng: 55.4741 },
-          { id: 'stage-3', position: 3, name: 'Retour par la foret', lat: -21.1431, lng: 55.4643 },
+          {
+            id: 'stage-1', position: 1, name: 'Belvedere de depart', lat: -21.1293, lng: 55.4555,
+            description: 'Point de départ du parcours, au belvédère.',
+            media: [{ id: 'demo-stage-1-landscape', media_id: 'demo-iti-landscape', position: 0 }],
+          },
+          {
+            id: 'stage-2', position: 2, name: 'Premiere cascade', lat: -21.1342, lng: 55.4741,
+            description: 'La cascade marque une pause au cœur du parcours. Depuis le sentier, une ouverture dans la végétation permet de profiter du point de vue.',
+            media: [
+              { id: 'demo-stage-2-waterfall', media_id: 'demo-iti-waterfall', position: 0 },
+              { id: 'demo-stage-2-forest', media_id: 'demo-iti-forest', position: 1 },
+            ],
+          },
+          {
+            id: 'stage-3', position: 3, name: 'Retour par la foret', lat: -21.1431, lng: 55.4643,
+            description: 'Dernière étape avant le retour au départ.',
+            media: [],
+          },
         ],
       },
     },

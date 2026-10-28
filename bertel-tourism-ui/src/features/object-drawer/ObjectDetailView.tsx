@@ -25,10 +25,10 @@ import {
   Pin,
   Phone,
   Plus,
+  Play,
   ShieldCheck,
   Tag,
   Trash2,
-  X,
 } from 'lucide-react';
 import { Map, Marker, NavigationControl } from 'react-map-gl/maplibre';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -38,6 +38,8 @@ import { buildEventDisplayData, type EventDateRange, type EventDisplayData } fro
 import { buildRestaurantMenuData } from './restaurant-menu';
 import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
 import { ItineraryHeroMap } from './ItineraryHeroMap';
+import { ItineraryMetrics } from './ItineraryMetrics';
+import { DetailMediaLightbox } from './DetailMediaLightbox';
 import { buildActivityFacts } from './activity-facts';
 import { CopyButton } from '../../components/common/CopyButton';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
@@ -90,7 +92,7 @@ import {
   type TaxonomyItem,
 } from './utils';
 import { measureAmenitiesLineClamp } from './amenities-line-clamp';
-import { getArchetypeMeta, TYPE_LABEL, type ArchetypeMeta, type ArchetypeCode } from '../object-editor/archetypes';
+import { getArchetypeMeta, TYPE_LABEL, type ArchetypeCode } from '../object-editor/archetypes';
 import { ObjectDocumentsCard } from './ObjectDocumentsCard';
 
 // §48: FMA is no longer rendered as an itinerary — events fall through to GenericDetailView
@@ -166,7 +168,7 @@ interface ResolvedDrawerSection {
   label: string;
   placement: DrawerSectionPlacement;
   count?: number;
-  render: () => ReactNode;
+  render: (openGallery: (index: number) => void) => ReactNode;
 }
 
 function DetailTabs({ items, objectId }: { items: DetailTabItem[]; objectId: string }) {
@@ -444,22 +446,6 @@ function getWrappedIndex(index: number, total: number): number {
   }
 
   return ((index % total) + total) % total;
-}
-
-function toItineraryStats(itinerary: ItinerarySummary | null): StatDef[] {
-  if (!itinerary) {
-    return [];
-  }
-
-  const stats: Array<StatDef | null> = [
-    itinerary.distanceKm ? { value: `${itinerary.distanceKm} km`, label: 'Distance' } : null,
-    itinerary.durationHours ? { value: `${itinerary.durationHours} h`, label: 'Duree' } : null,
-    itinerary.difficulty ? { value: itinerary.difficulty, label: 'Difficulte' } : null,
-    itinerary.elevationGain ? { value: `+${itinerary.elevationGain} m`, label: 'Denivele' } : null,
-    itinerary.isLoop === true ? { value: 'Oui', label: 'Boucle' } : null,
-  ];
-
-  return stats.filter((item): item is StatDef => item !== null);
 }
 
 function buildPracticalFacts(preview: PreviewData): PracticalFact[] {
@@ -818,19 +804,6 @@ function Section({
   );
 }
 
-function TypeRibbon({ meta }: { meta: ArchetypeMeta }) {
-  return (
-    <div className="detail-type-ribbon" role="presentation">
-      <span className="detail-type-ribbon__dot" aria-hidden />
-      <span className="detail-type-ribbon__label">
-        <strong>{meta.codeName}</strong>
-        <span className="detail-type-ribbon__family"> · {meta.family}</span>
-      </span>
-      <span className="detail-type-ribbon__codes">{meta.covers}</span>
-    </div>
-  );
-}
-
 /** KPI row matching fiche-detail mockup (label kicker above value). */
 function KpiStrip({
   stats,
@@ -1003,151 +976,56 @@ function HeroBlock({
   );
 }
 
-function GalleryLightbox({
-  data,
-  media,
-  activeIndex,
-  open,
-  onOpenChange,
-  onChange,
-}: {
-  data: ObjectDetail;
-  media: MediaItem[];
-  activeIndex: number;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onChange: (index: number) => void;
-}) {
-  const total = media.length;
-  const activeMedia = total > 0 ? media[getWrappedIndex(activeIndex, total)] : null;
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+function selectItineraryVisualMedia(media: MediaItem[]): MediaItem[] {
+  return media.flatMap((item) => {
+    const url = item.url.trim();
+    if (!url) return [];
+    const type = item.typeCode.trim().toLowerCase();
+    const isVideo = type === 'video' || type.startsWith('video/')
+      || (!type && /\.(mp4|webm|ogv|mov)(\?|#|$)/i.test(url));
+    const isPhoto = type === 'photo' || type === 'image' || type.startsWith('image/')
+      || (!type && /\.(jpe?g|png|webp|gif|avif|svg)(\?|#|$)/i.test(url));
+    return isVideo || isPhoto ? [{ ...item, url, typeCode: isVideo ? 'video' : 'photo' }] : [];
+  });
+}
 
-  if (!total || !activeMedia) {
-    return null;
-  }
-
-  const goToPrevious = () => onChange(getWrappedIndex(activeIndex - 1, total));
-  const goToNext = () => onChange(getWrappedIndex(activeIndex + 1, total));
+function ItineraryMediaGallery({ media, onOpen }: { media: MediaItem[]; onOpen: (index: number) => void }) {
+  if (!media.length) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="detail-gallery-dialog"
-        showClose={false}
-        onKeyDown={(event) => {
-          if (event.defaultPrevented || total < 2 || event.altKey || event.ctrlKey || event.metaKey) {
-            return;
-          }
-
-          if (event.key === 'ArrowLeft') {
-            event.preventDefault();
-            goToPrevious();
-            return;
-          }
-
-          if (event.key === 'ArrowRight') {
-            event.preventDefault();
-            goToNext();
-          }
-        }}
-      >
-        <DialogTitle className="sr-only">Galerie photo de {data.name}</DialogTitle>
-        <DialogDescription className="sr-only">
-          Visionneuse plein ecran des photos disponibles pour cette fiche.
-        </DialogDescription>
-        <div className="detail-gallery-modal">
-          <button
-            type="button"
-            className="detail-gallery-modal__close"
-            onClick={() => onOpenChange(false)}
-            aria-label="Fermer la galerie"
-          >
-            <X size={20} />
-          </button>
-          <div
-            className="detail-gallery-modal__frame"
-            onTouchStart={(event) => setTouchStartX(event.changedTouches[0]?.clientX ?? null)}
-            onTouchEnd={(event) => {
-              const endX = event.changedTouches[0]?.clientX ?? null;
-              if (touchStartX == null || endX == null) {
-                return;
-              }
-
-              const delta = endX - touchStartX;
-              setTouchStartX(null);
-
-              if (Math.abs(delta) < 40) {
-                return;
-              }
-
-              if (delta > 0) {
-                goToPrevious();
-                return;
-              }
-
-              goToNext();
-            }}
-          >
-            {activeMedia.typeCode === 'video' ? (
-              <video className="detail-gallery-modal__image" src={activeMedia.url} controls preload="metadata" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                className="detail-gallery-modal__image"
-                src={activeMedia.url}
-                alt={activeMedia.description || activeMedia.title || data.name}
-              />
-            )}
-            {total > 1 && (
-              <>
-                <button
-                  type="button"
-                  className="detail-gallery-modal__nav detail-gallery-modal__nav--prev"
-                  onClick={goToPrevious}
-                  aria-label="Image precedente dans la galerie"
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <button
-                  type="button"
-                  className="detail-gallery-modal__nav detail-gallery-modal__nav--next"
-                  onClick={goToNext}
-                  aria-label="Image suivante dans la galerie"
-                >
-                  <ChevronRight size={20} />
-                </button>
-              </>
-            )}
-          </div>
-          <div className="detail-gallery-modal__footer">
-            <div className="detail-gallery-modal__meta">
-              <strong>{activeMedia.title || data.name}</strong>
-              {activeMedia.credit && <span>Photo {activeMedia.credit}</span>}
-            </div>
-            {media.length > 1 && (
-              <div className="detail-gallery-modal__thumbs">
-                {media.map((item, index) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`detail-gallery-modal__thumb${index === activeIndex ? ' detail-gallery-modal__thumb--active' : ''}`}
-                    onClick={() => onChange(index)}
-                    aria-label={`Voir la photo ${index + 1} en grand`}
-                  >
-                    {item.typeCode === 'video' ? (
-                      <video src={item.url} preload="metadata" muted />
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.url} alt={item.description || item.title || `Photo ${index + 1}`} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+    <section className="detail-section detail-itinerary-gallery" aria-label="Photos et vidéos">
+      <div className="detail-section__header">
+        <div className="detail-section__heading">
+          <h3 className="detail-section__title">Photos et vidéos</h3>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+      <div className="detail-section__body detail-itinerary-gallery__grid">
+        {media.map((item, index) => {
+          const isVideo = item.typeCode === 'video';
+          const mediaLabel = isVideo ? 'la vidéo' : 'la photo';
+          return (
+            <button
+              key={`${item.id}-${index}`}
+              type="button"
+              className="detail-itinerary-gallery__item"
+              aria-label={`Ouvrir ${mediaLabel} ${index + 1}${item.title ? ` : ${item.title}` : ''}`}
+              onClick={() => onOpen(index)}
+            >
+              {isVideo ? (
+                <>
+                  <video className="detail-itinerary-gallery__image" src={item.url} preload="none" muted playsInline aria-hidden="true" />
+                  <span className="detail-itinerary-gallery__video-badge" aria-hidden="true"><Play size={16} /> Vidéo</span>
+                </>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="detail-itinerary-gallery__image" src={item.url} alt={item.description || item.title || ''} loading="lazy" decoding="async" />
+              )}
+              {item.title ? <span className="detail-itinerary-gallery__caption">{item.title}</span> : null}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -2268,21 +2146,6 @@ function AmenitiesSection({
   );
 }
 
-function ItineraryStatsSection({ itinerary }: { itinerary: ItinerarySummary | null }) {
-  const stats = toItineraryStats(itinerary);
-
-  if (!stats.length) {
-    return null;
-  }
-
-  const visibleStats = stats.slice(0, 5);
-  return (
-    <Section title="Le parcours">
-      <KpiStrip stats={visibleStats} fiveColumns={visibleStats.length === 5} />
-    </Section>
-  );
-}
-
 function RoomList({ rooms }: { rooms: RoomTypeItem[] }) {
   if (!rooms.length) {
     return null;
@@ -2904,39 +2767,6 @@ function WeekScheduleSection({ openings }: { openings: OpeningItem[] }) {
   );
 }
 
-/**
- * Étapes RÉELLES de l'itinéraire (impl. 4.3) — depuis `object_iti_stage` (nom,
- * type, description). Remplace l'ancienne fabrication par interpolation de
- * distances. Rendu seulement si des étapes réelles existent (sinon null).
- */
-function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
-  if (stages.length === 0) {
-    return null;
-  }
-  return (
-    <Section id="detail-section-stages" title="Étapes de l'itinéraire" kicker="Le parcours">
-      <ol className="detail-waypoints">
-        {stages.map((stage, idx) => (
-          <li key={stage.key} id={stage.anchorId} className="detail-waypoint" tabIndex={-1}>
-            <span className="detail-waypoint__num" aria-hidden>
-              {idx + 1}
-            </span>
-            <div className="detail-waypoint__body">
-              {/* §4.6 : « Étape n » = métadonnée d'ordre (dim) ; le nom réel n'est rendu que s'il existe. */}
-              <span className="detail-waypoint__position">{stage.positionLabel}</span>
-              {stage.name ? <strong className="detail-waypoint__name">{stage.name}</strong> : null}
-              {stage.descriptionMd ? (
-                <MarkdownContent markdown={stage.descriptionMd} className="detail-waypoint__desc" />
-              ) : stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
-            </div>
-            {stage.kindLabel ? <span className="detail-waypoint__meta">{stage.kindLabel}</span> : null}
-          </li>
-        ))}
-      </ol>
-    </Section>
-  );
-}
-
 function PracticalSection({ facts, openings }: { facts: PracticalFact[]; openings: OpeningItem[] }) {
   const checkIn = extractCheckInLine(openings);
   const rows: PracticalFact[] = checkIn ? [...facts, { label: 'Check-in', value: checkIn }] : facts;
@@ -3260,6 +3090,8 @@ function buildItineraryPracticalNotes(itinerary: ItinerarySummary | null): Pract
   }
 
   return ([
+    itinerary.difficulty ? { label: 'Difficulté', value: itinerary.difficulty } : null,
+    itinerary.elevationGain ? { label: 'Dénivelé positif', value: `+${itinerary.elevationGain} m` } : null,
     itinerary.practices.length > 0 ? { label: 'Pratiques', value: itinerary.practices.join(' · ') } : null,
     itinerary.info.length > 0 ? { label: 'Conseils', value: itinerary.info.join(' · ') } : null,
     itinerary.track
@@ -3327,13 +3159,15 @@ function DetailScaffold({
   mainSections,
   asideSections,
   itineraryStages,
+  galleryMedia,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
   tabItems: DetailTabItem[];
-  mainSections: ReactNode[];
+  mainSections: (openGallery: (index: number) => void) => ReactNode[];
   asideSections: ReactNode[];
   itineraryStages: ItineraryStageRow[];
+  galleryMedia: MediaItem[];
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -3341,37 +3175,40 @@ function DetailScaffold({
   useEffect(() => {
     setActiveMediaIndex(0);
     setLightboxOpen(false);
-  }, [data.id, preview.media.length]);
+  }, [data.id, galleryMedia.length]);
 
-  const visibleMain = mainSections.filter(Boolean);
+  const openGalleryAt = (index: number) => {
+    setActiveMediaIndex(index);
+    setLightboxOpen(true);
+  };
+  const visibleMain = mainSections(openGalleryAt).filter(Boolean);
   const visibleAside = asideSections.filter(Boolean);
   const archetype = getArchetypeMeta(preview.typeCode || data.type || '');
 
   return (
     <div className={cn('object-detail-view', archetype && archetype.accent)}>
-      <GalleryLightbox
-        data={data}
-        media={preview.media}
+      <DetailMediaLightbox
+        name={data.name}
+        media={galleryMedia}
         activeIndex={activeMediaIndex}
         open={lightboxOpen}
         onOpenChange={setLightboxOpen}
         onChange={setActiveMediaIndex}
       />
       <DetailTabs items={tabItems} objectId={data.id} />
-      {archetype && <TypeRibbon meta={archetype} />}
-      <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
+      {archetype?.archetype === 'ITI' ? (
+        <ItineraryHeroMap
+          key={data.id}
+          name={data.name}
+          track={preview.itinerary?.trackGeojson ?? null}
+          stages={itineraryStages}
+          location={preview.location}
+          metrics={<ItineraryMetrics itinerary={preview.itinerary} stageCount={itineraryStages.length} />}
+        />
+      ) : null}
+      <div className={cn('detail-layout', visibleAside.length === 0 && 'detail-layout--single', archetype?.archetype === 'ITI' && 'detail-layout--itinerary')}>
         <div className="detail-main">
-          {archetype?.archetype === 'ITI' ? (
-            <ItineraryHeroMap
-              key={data.id}
-              name={data.name}
-              track={preview.itinerary?.trackGeojson ?? null}
-              stages={itineraryStages}
-              location={preview.location}
-              mediaCount={preview.media.length}
-              onOpenGallery={() => setLightboxOpen(true)}
-            />
-          ) : (
+          {archetype?.archetype !== 'ITI' ? (
             <HeroBlock
               data={data}
               preview={preview}
@@ -3379,7 +3216,7 @@ function DetailScaffold({
               onChange={setActiveMediaIndex}
               onOpenGallery={() => setLightboxOpen(true)}
             />
-          )}
+          ) : null}
           {visibleMain.map((section, index) => (
             <Fragment key={`main-${index}`}>{section}</Fragment>
           ))}
@@ -3856,6 +3693,7 @@ const FALLBACK_DRAWER_SECTIONS = ARCHETYPE_SECTIONS.SRV;
 function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const parsed = useMemo(() => parseObjectDetail(raw), [raw]);
   const preview = useMemo(() => buildPreviewData(data, parsed), [data, parsed]);
+  const itineraryMedia = useMemo(() => selectItineraryVisualMedia(preview.media), [preview.media]);
   const canSeeActors = useActorVisibility(preview.organizations);
 
   // Lien « carte d'acteur → fiche CRM » (2026-08-28). DEUX gardes, aucune requête réseau :
@@ -3920,7 +3758,10 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   // de disponibilité (onglet) ET par le rendu (section) — pas de dérive possible.
   const restaurantMenu = useMemo(() => buildRestaurantMenuData(raw), [raw]);
   const activityFacts = useMemo(() => buildActivityFacts(raw), [raw]);
-  const itineraryStages = useMemo(() => buildItineraryStages(parsed.itinerary.details), [parsed.itinerary.details]);
+  const itineraryStages = useMemo(
+    () => buildItineraryStages(parsed.itinerary.details, preview.media),
+    [parsed.itinerary.details, preview.media],
+  );
   const itineraryPracticalNotes = useMemo(
     () => buildItineraryPracticalNotes(preview.itinerary),
     [preview.itinerary],
@@ -3956,10 +3797,10 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
       case 'apercu-iti':
         return {
           key: 'apercu', id: 'detail-section-overview', label: 'Aperçu', placement: 'main',
-          render: () => (
+          render: (openGallery) => (
             <ApercuRegion key="apercu">
-              <ItineraryStatsSection itinerary={preview.itinerary} />
               <OverviewSection preview={preview} />
+              <ItineraryMediaGallery media={itineraryMedia} onOpen={openGallery} />
               <TaxonomySection groups={taxonomyGroups} />
             </ApercuRegion>
           ),
@@ -4005,7 +3846,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
         return itineraryStages.length > 0
           ? {
               key: 'stages', id: 'detail-section-stages', label: 'Étapes', placement: 'main',
-              render: () => <WaypointListSection key="waypoints" stages={itineraryStages} />,
+              render: () => null,
             }
           : null;
       case 'profile':
@@ -4078,7 +3919,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     .map((kind) => mainSectionFor(kind))
     .filter((section): section is ResolvedDrawerSection => section !== null);
 
-  // The itinerary hero is the route map; its photos remain available through the gallery button.
+  // The itinerary hero is the route map; photos also appear below its description.
   const heroSection: ResolvedDrawerSection | null = archetype?.archetype === 'ITI'
     ? { key: 'route', id: 'detail-section-hero', label: 'Parcours', placement: 'main', render: () => null }
     : preview.media.length > 0
@@ -4094,7 +3935,9 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   // Sections d'aside sans onglet (ordre historique de buildAsideSections, moins la carte
   // horaires devenue `hoursSection`).
   const asideExtras: ResolvedDrawerSection[] = [
-    { key: 'documents', id: '', label: '', placement: 'aside', render: () => <ObjectDocumentsCard objectId={data.id} /> },
+    ...(archetype?.archetype === 'ITI' ? [] : [
+      { key: 'documents', id: '', label: '', placement: 'aside' as const, render: () => <ObjectDocumentsCard objectId={data.id} /> },
+    ]),
     { key: 'map', id: '', label: '', placement: 'aside', render: () => <LocationMapSection preview={preview} /> },
     { key: 'contact', id: '', label: '', placement: 'aside', render: () => <ContactSection contacts={preview.contacts} /> },
     { key: 'web-channels', id: '', label: '', placement: 'aside', render: () => <WebChannelsSection channels={preview.webChannels} /> },
@@ -4132,8 +3975,9 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
   const tabItems: DetailTabItem[] = sections
     .filter((section) => Boolean(section.label))
     .map((section) => ({ id: section.id, label: section.label, count: section.count }));
-  const mainSections = sections.filter((section) => section.placement === 'main').map((section) => section.render());
-  const asideSections = sections.filter((section) => section.placement === 'aside').map((section) => section.render());
+  const mainSections = (openGallery: (index: number) => void) => sections
+    .filter((section) => section.placement === 'main').map((section) => section.render(openGallery));
+  const asideSections = sections.filter((section) => section.placement === 'aside').map((section) => section.render(() => {}));
 
   return (
     <DetailScaffold
@@ -4143,6 +3987,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
       mainSections={mainSections}
       asideSections={asideSections}
       itineraryStages={itineraryStages}
+      galleryMedia={archetype?.archetype === 'ITI' ? itineraryMedia : preview.media}
     />
   );
 }

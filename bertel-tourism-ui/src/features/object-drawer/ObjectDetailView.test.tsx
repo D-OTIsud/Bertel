@@ -26,6 +26,7 @@ jest.mock('react-map-gl/maplibre', () => ({
   ),
   Layer: () => <div data-testid="detail-map-layer" />,
   NavigationControl: () => <div data-testid="detail-map-zoom" />,
+  AttributionControl: () => <div data-testid="detail-map-attribution" />,
 }));
 
 jest.mock('../../hooks/useExplorerQueries', () => ({
@@ -154,15 +155,16 @@ describe('ObjectDetailView', () => {
       raw: { itinerary_details: { stages: [{ id: 's1', name: 'Cascade Niagara', description: 'Belvédère', extra: { kind: 'viewpoint' } }] } },
     } as ObjectDetail;
     renderDetail(data);
-    expect(screen.getByText("Étapes de l'itinéraire")).toBeInTheDocument();
-    expect(screen.getByText('Cascade Niagara')).toBeInTheDocument();
-    expect(screen.getByText('Belvédère')).toBeInTheDocument();
+    expect(screen.getByText("Étapes du parcours")).toBeInTheDocument();
+    const steps = screen.getByRole('complementary', { name: 'Étapes du parcours' });
+    expect(within(steps).getByText('Cascade Niagara')).toBeInTheDocument();
+    expect(within(steps).getByText('Belvédère')).toBeInTheDocument();
   });
 
   it('4.3 : aucune étape fabriquée pour un ITI sans étapes réelles', () => {
     const data: ObjectDetail = { id: 'iti-2', name: 'Sentier', type: 'ITI', raw: {} } as ObjectDetail;
     renderDetail(data);
-    expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
+    expect(screen.queryByText("Étapes du parcours")).not.toBeInTheDocument();
   });
 
   it('shows the saved trail in the itinerary hero and links numbered points to the matching descriptions', () => {
@@ -197,8 +199,9 @@ describe('ObjectDetailView', () => {
     expect(stageDescription).toHaveTextContent('Vue sur les remparts.');
     expect(within(stageDescription).getByText('les remparts').tagName).toBe('STRONG');
     fireEvent.click(summitMarker);
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
-    expect(stageDescription).toHaveFocus();
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    expect(within(stageDescription).getByRole('button', { name: 'Sélectionner l’étape 3 : Sommet' })).toHaveFocus();
+    expect(summitMarker).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Parcours' })).toHaveAttribute('aria-controls', 'detail-section-hero');
   });
 
@@ -217,10 +220,9 @@ describe('ObjectDetailView', () => {
     } as ObjectDetail);
     const hero = screen.getByRole('region', { name: 'Carte du parcours' });
     expect(within(hero).queryByTestId('detail-map-source')).not.toBeInTheDocument();
-    expect(within(hero).getByText(/Tracé non renseigné/)).toBeInTheDocument();
     expect(within(hero).getAllByTestId('detail-marker')).toHaveLength(1);
     expect(within(hero).getByRole('button', { name: 'Étape 2 : Cascade' })).toHaveTextContent('2');
-    expect(screen.getByText('Prendre le sentier de droite.')).toBeInTheDocument();
+    expect(within(screen.getByRole('complementary', { name: 'Étapes du parcours' })).getByText('Prendre le sentier de droite.')).toBeInTheDocument();
     expect(screen.getByText('Position incorrecte')).toBeInTheDocument();
   });
 
@@ -235,9 +237,85 @@ describe('ObjectDetailView', () => {
     expect(within(hero).queryByTestId('detail-marker')).not.toBeInTheDocument();
     expect(within(hero).queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByText('Pas encore de photo principale.')).not.toBeInTheDocument();
-    fireEvent.click(within(hero).getByRole('button', { name: 'Voir les photos (1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir la photo 1 : Le sentier' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('dialog').querySelector('img')).toHaveAttribute('src', 'https://example.com/trail.jpg');
+  });
+
+  it('places the ITI visual gallery after the description and opens the right asset after excluding audio and PDFs', () => {
+    renderDetail({
+      id: 'iti-visual-gallery', name: 'Sentier des images', type: 'ITI',
+      raw: {
+        descriptions: { description: 'Un parcours à découvrir en images.' },
+        media: [
+          { id: 'audio', type_code: 'audio', url: 'https://example.com/guide.mp3', title: 'Guide audio', position: 1 },
+          { id: 'pdf', type_code: 'brochure_pdf', url: 'https://example.com/guide.pdf', title: 'Brochure du sentier', position: 2 },
+          { id: 'photo', type_code: 'photo', url: 'https://example.com/trail.jpg', title: 'Vue du sentier', position: 3 },
+          { id: 'video', type_code: 'video', url: 'https://example.com/trail.mp4', title: 'Au fil du sentier', position: 4 },
+        ],
+      },
+    } as ObjectDetail);
+
+    const gallery = screen.getByRole('region', { name: 'Photos et vidéos' });
+    const description = screen.getByRole('heading', { name: 'Description' }).closest('article');
+    expect(description).toHaveTextContent('Un parcours à découvrir en images.');
+    expect(description?.nextElementSibling).toBe(gallery);
+    expect(within(gallery).getAllByRole('button')).toHaveLength(2);
+    expect(within(gallery).queryByText('Guide audio')).not.toBeInTheDocument();
+    expect(within(gallery).queryByText('Brochure du sentier')).not.toBeInTheDocument();
+    expect(within(gallery).getByRole('img', { name: 'Vue du sentier' })).toHaveAttribute('loading', 'lazy');
+    expect(gallery.querySelector('video')).toHaveAttribute('preload', 'none');
+
+    fireEvent.click(within(gallery).getByRole('button', { name: 'Ouvrir la vidéo 2 : Au fil du sentier' }));
+    const dialog = screen.getByRole('dialog');
+    const frame = dialog.querySelector('.detail-gallery-modal__frame')!;
+    expect(frame.querySelector('video')).toHaveAttribute('src', 'https://example.com/trail.mp4');
+    expect(frame.querySelector('img')).toBeNull();
+    expect(dialog.querySelectorAll('.detail-gallery-modal__thumb')).toHaveLength(2);
+    expect(dialog.querySelector('[src="https://example.com/guide.mp3"]')).toBeNull();
+    expect(dialog.querySelector('[src="https://example.com/guide.pdf"]')).toBeNull();
+    fireEvent.keyDown(dialog, { key: 'ArrowLeft' });
+    expect(frame.querySelector('img')).toHaveAttribute('src', 'https://example.com/trail.jpg');
+  });
+
+  it('resolves stage media IDs to their own photos and keeps each stage lightbox isolated from the main gallery', () => {
+    renderDetail({
+      id: 'iti-stage-gallery', name: 'Sentier des cascades', type: 'ITI',
+      raw: {
+        media: [
+          { id: 'unrelated-photo', type_code: 'photo', url: 'https://example.com/overview.jpg', title: 'Vue générale', is_main: true },
+          { id: 'cascade-photo', type_code: 'photo', url: 'https://example.com/cascade.jpg', title: 'Photo de la cascade' },
+          { id: 'start-photo', type_code: 'photo', url: 'https://example.com/start.jpg', title: 'Photo du départ' },
+        ],
+        itinerary_details: {
+          stages: [
+            { id: 'start', name: 'Départ', description: 'Au parking.', media: [{ id: 'start-link', media_id: 'start-photo' }] },
+            { id: 'cascade', name: 'Cascade', description_md: 'Contourner **le bassin**.', media: [{ id: 'cascade-link', media_id: 'cascade-photo' }] },
+          ],
+        },
+      },
+    } as ObjectDetail);
+
+    const getStageCard = () => screen.getByRole('article', { name: 'Détail de l’étape sélectionnée' });
+    expect(within(getStageCard()).getByRole('img')).toHaveAttribute('src', 'https://example.com/start.jpg');
+    fireEvent.click(within(getStageCard()).getByRole('button', { name: 'Agrandir les photos de cette étape' }));
+    let dialog = screen.getByRole('dialog');
+    expect(within(dialog).getAllByRole('img')).toHaveLength(1);
+    expect(within(dialog).getByRole('img')).toHaveAttribute('src', 'https://example.com/start.jpg');
+    expect(dialog).toHaveTextContent('Au parking.');
+    expect(dialog.querySelector('[src="https://example.com/overview.jpg"]')).toBeNull();
+    expect(dialog.querySelector('[src="https://example.com/cascade.jpg"]')).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fermer la galerie' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sélectionner l’étape 2 : Cascade' }));
+    expect(within(getStageCard()).getByRole('img')).toHaveAttribute('src', 'https://example.com/cascade.jpg');
+    fireEvent.click(within(getStageCard()).getByRole('button', { name: 'Agrandir les photos de cette étape' }));
+    dialog = screen.getByRole('dialog');
+    expect(within(dialog).getAllByRole('img')).toHaveLength(1);
+    expect(within(dialog).getByRole('img')).toHaveAttribute('src', 'https://example.com/cascade.jpg');
+    expect(within(dialog).getByText('le bassin').tagName).toBe('STRONG');
+    expect(dialog.querySelector('[src="https://example.com/start.jpg"]')).toBeNull();
+    expect(dialog.querySelector('[src="https://example.com/overview.jpg"]')).toBeNull();
   });
 
   it('4.3 : affiche les faits d’une activité encadrée (ASC, object_act)', () => {
@@ -1058,9 +1136,10 @@ describe('ObjectDetailView', () => {
     expect(screen.getByRole('heading', { name: 'Sentier des trois remparts' })).toBeInTheDocument();
     // §5 : « Avant de partir » est désormais un onglet ET un titre de section ⇒ getAllByText.
     expect(screen.getAllByText('Avant de partir').length).toBeGreaterThan(0);
-    const distanceKpi = screen.getByText('Distance').closest('.detail-kpi');
-    expect(distanceKpi).toHaveTextContent('12.5km');
-    expect(screen.getByText('Duree')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Distance : 12,5 km' })).toHaveTextContent('12,5km');
+    expect(screen.getByRole('button', { name: 'Durée : 4 h 12 min' })).toBeInTheDocument();
+    expect(screen.getByText('Difficulté')).toBeInTheDocument();
+    expect(screen.getByText('Dénivelé positif')).toBeInTheDocument();
     expect(screen.getAllByText('Randonnee').length).toBeGreaterThan(0);
     expect(screen.getByText('Disponible (gpx)')).toBeInTheDocument();
     expect(screen.getByText('A voir aussi')).toBeInTheDocument();
@@ -1393,11 +1472,11 @@ describe('ObjectDetailView', () => {
         expect(screen.queryByText('Prochaine date')).not.toBeInTheDocument();
       }
 
-      // Étapes de l'itinéraire (ITI uniquement) — titre de section (l'onglet s'appelle « Étapes »).
+      // Étapes du parcours (ITI uniquement) — titre de section (l'onglet s'appelle « Étapes »).
       if (expected.itinerary) {
-        expect(screen.getByText("Étapes de l'itinéraire")).toBeInTheDocument();
+        expect(screen.getByText("Étapes du parcours")).toBeInTheDocument();
       } else {
-        expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
+        expect(screen.queryByText("Étapes du parcours")).not.toBeInTheDocument();
       }
     });
   });

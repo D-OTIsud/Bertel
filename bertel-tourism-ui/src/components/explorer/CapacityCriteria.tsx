@@ -76,7 +76,7 @@ export function CapacityCriteria({
             </div>
             <button
               type="button"
-              className="-mr-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-ink-3 transition hover:bg-surface2 hover:text-ink"
+              className="filter-context-action -mr-1 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-ink-3 transition hover:bg-surface2 hover:text-ink"
               aria-label={`Retirer le critère ${metric.name}`}
               onClick={() => onChange(metric.code, undefined, undefined)}
             >
@@ -87,11 +87,11 @@ export function CapacityCriteria({
       ))}
 
       {addable.length > 0 ? (
-        <label className="flex items-center gap-2 rounded-[8px] border border-dashed border-lineStrong px-2.5 py-1.5 text-[12px] text-ink-2 transition focus-within:border-teal hover:border-teal">
+        <label className="flex items-center gap-2 rounded-[8px] border border-dashed border-lineStrong px-2.5 py-1.5 text-sm leading-5 text-ink-2 transition focus-within:border-teal hover:border-teal">
           <Plus className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden="true" />
           <span className="sr-only">Ajouter un critère de capacité</span>
           <select
-            className="w-full cursor-pointer border-0 bg-transparent p-0 text-[12px] text-ink-2 focus:outline-none"
+            className="filter-context-input min-h-10 h-auto w-full cursor-pointer border-0 bg-transparent p-0 focus:outline-none"
             value=""
             onChange={(event) => {
               const code = event.target.value;
@@ -119,7 +119,7 @@ export function CapacityCriteria({
           </select>
         </label>
       ) : rows.length === 0 ? (
-        <p className="text-[12px] leading-snug text-ink-3">
+        <p className="text-sm leading-5 text-ink-3">
           Aucun critère de capacité pour les types sélectionnés.
         </p>
       ) : null}

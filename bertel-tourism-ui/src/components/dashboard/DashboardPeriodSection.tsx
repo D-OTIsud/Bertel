@@ -15,15 +15,15 @@ export function DashboardPeriodSection() {
   const clearPeriod = useDashboardFilterStore((s) => s.clearPeriod);
   return (
     <FilterColumnGroup label="Fiches mises à jour">
-      <div className="space-y-3">
+      <div className="filter-context-period space-y-3">
         <div>
-          <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Préréglages</span>
+          <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Préréglages</span>
           <div className="chip-grid">
             {DATE_PRESETS.map(({ label, days }) => {
               const from = isoNDaysAgo(days);
               const active = updatedAtFrom === from && updatedAtTo === isoToday();
               return (
-                <button key={label} type="button" className={active ? 'chip chip--active' : 'chip'}
+                <button key={label} type="button" className={active ? 'chip chip--active min-h-10' : 'chip min-h-10'}
                   onClick={() => (active ? clearPeriod() : setPeriod(from, isoToday()))}>
                   {label}
                 </button>
@@ -32,7 +32,7 @@ export function DashboardPeriodSection() {
           </div>
         </div>
         <div>
-          <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Plage personnalisée</span>
+          <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Plage personnalisée</span>
           <div className="dashboard-filter-date-grid">
             <div>
               <label className="facet-title" htmlFor="dash-period-from">Du</label>

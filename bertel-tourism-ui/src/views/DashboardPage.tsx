@@ -103,7 +103,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-0 p-4">
       <div className="dashboard-layout">
-        <aside className="dashboard-filters-sidebar">
+        <aside className="dashboard-filters-sidebar filter-context-sidebar">
           <DashboardPeriodSection />
           <FiltersPanel
             references={references.data}

@@ -1,4 +1,10 @@
-# Socle — intégration locale du lot 2, 28 octobre 2026
+# Convergence éditeur et correctifs CRM — rapport historique de la tranche locale
+
+**Portée de ce rapport.** Les campagnes ci-dessous ont été réalisées dans `socle-convergence-lot1`, sur une base issue du snapshot local `1e9405a`. Elles restent des preuves historiques de cette cible. La [PR #56](https://github.com/D-OTIsud/Bertel/pull/56) est un portage distinct sur `master` au commit `3c10fbd`, avec conservation des modèles de modales plus récents. Ses tests et limites sont rapportés séparément dans la PR, par SHA. Aucun total de ce document ne vaut validation automatique du portage.
+
+**État du programme.** Cette tranche couvre les styles d'éditeur et les corrections fonctionnelles énumérées ci-dessous. Elle ne clôture ni le lot 2 complet du programme de convergence, ni les lots de l'audit de simplification. La purge de code/CSS mort, l'unification générale des confirmations et boutons, `PageHeader`, les gardes transverses, la consolidation des alias et seuils responsive, ainsi que les autres surfaces restent ouverts. Les sujets métier de l'audit (présélections tarifaires, complétude `subPlaces`, duplication de la garde de liens) ne sont pas livrés par cette PR et doivent être recalés sur la cible avant correction.
+
+**Changements fonctionnels à examiner séparément du CSS.** Le catalogue de classification autorise désormais les labels d'accessibilité depuis le dialogue ouvert en §08 ; le tiroir de consultation consulte la garde de navigation de l'éditeur hôte avant de changer de page. Ces comportements sont explicitement signalés dans la PR pour revue. Ils ne sont pas des conséquences implicites d'une harmonisation de styles.
 
 Intégration par Sol 6.1 et vérification indépendante par le parent, dans le worktree `socle-convergence-lot1`. Référence avant modification : `24874dd`, après correction du retrait du bloc période. Le checkout principal, les anciennes maquettes et les données serveur ne sont pas modifiés. Aucun déploiement ni fusion.
 

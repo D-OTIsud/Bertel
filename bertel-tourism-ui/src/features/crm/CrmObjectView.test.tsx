@@ -171,11 +171,12 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     // Acteur optionnel parmi les acteurs liés (SearchSelect : ouvrir puis cliquer l'option).
     // Le popover du picker est portalisé sous <body> : le déclencheur reste dans le dialogue,
     // ses options se cherchent via le listbox référencé par `aria-controls`.
+    fireEvent.click(within(dialog).getByText('Préciser l’interlocuteur'));
     const actorTrigger = within(dialog).getByRole('combobox', { name: 'Acteur' });
     fireEvent.click(actorTrigger);
     fireEvent.click(pickerListbox(actorTrigger).getByRole('option', { name: 'SARL Basalte & Lagon' }));
-    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point annuel.' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Compte rendu' }), { target: { value: 'Point annuel.' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer l’interaction' }));
     await waitFor(() =>
       expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({
         actorId: 'actor-2',
@@ -197,7 +198,7 @@ describe('CrmObjectView (§61 — vue établissement)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
-    const field = within(dialog).getByPlaceholderText(/consigner une interaction/i);
+    const field = within(dialog).getByRole('textbox', { name: 'Compte rendu' });
     expect(field.tagName).toBe('TEXTAREA');
     expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(4);
   });
@@ -294,11 +295,11 @@ describe('CrmObjectView — créer une tâche depuis une demande', () => {
     // L'établissement n'est PAS un picker : il est imposé par la demande (le serveur refuse
     // un autre objet, 22023). On assère donc son ABSENCE en tant que combobox.
     expect(within(dialog).queryByRole('combobox', { name: 'Établissement' })).not.toBeInTheDocument();
-    expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
+    expect(within(dialog).getByText('Établissement', { selector: 'label' })).toHaveTextContent('Hotel Basalte & Lagon');
 
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
     await within(dialog).findByLabelText('Attribuer à');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
 
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
@@ -314,7 +315,7 @@ describe('CrmObjectView — créer une tâche depuis une demande', () => {
     const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée/i });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
     await within(dialog).findByLabelText('Attribuer à');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ actorId: 'actor-1' })),
     );
@@ -330,7 +331,7 @@ describe('CrmObjectView — créer une tâche depuis une demande', () => {
     const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée/i });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Suivi adhésion' } });
     await within(dialog).findByLabelText('Attribuer à');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() => expect(crmMock.saveCrmTask).toHaveBeenCalled());
     expect(crmMock.saveCrmTask.mock.calls[0][0]).not.toHaveProperty('actorId');
     expect(crmMock.saveCrmTask.mock.calls[0][0]).toMatchObject({ relatedInteractionId: 'i2' });

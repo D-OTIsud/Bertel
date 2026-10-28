@@ -383,10 +383,11 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
     fireEvent.click(within(dialog).getByRole('button', { name: /e-mail/i }));
     pickInDialog(dialog, 'Contexte', 'Le Comptoir des Epices');
+    fireEvent.click(within(dialog).getByText('Détails facultatifs'));
     pickInDialog(dialog, 'Sujet normalisé', 'Demande de visite');
-    fireEvent.change(within(dialog).getByLabelText('Sentiment'), { target: { value: 'positif' } });
-    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Demande de RDV photo.' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Positif' }));
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Compte rendu' }), { target: { value: 'Demande de RDV photo.' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer l’interaction' }));
     await waitFor(() =>
       expect(crmMock.saveCrmInteraction).toHaveBeenCalledWith({
         actorId: 'actor-1',
@@ -404,7 +405,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     // Refresh après écriture : la fiche est rechargée depuis le RPC. Phase 5.2 — le modal
     // RESTE ouvert (état de confirmation + « Ajouter une relance ») ; « Terminer » le ferme.
     await waitFor(() => expect(crmMock.listActorCrm).toHaveBeenCalledTimes(2));
-    expect(await within(dialog).findByText(/interaction enregistrée/i)).toBeInTheDocument();
+    expect(await within(dialog).findByRole('status')).toHaveTextContent('Interaction enregistrée.');
     fireEvent.click(within(dialog).getByRole('button', { name: /terminer/i }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
@@ -415,7 +416,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await screen.findByText('Appel tarifs');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle interaction/i }));
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
-    const field = within(dialog).getByPlaceholderText(/consigner une interaction/i);
+    const field = within(dialog).getByRole('textbox', { name: 'Compte rendu' });
     expect(field.tagName).toBe('TEXTAREA');
     expect(Number(field.getAttribute('rows'))).toBeGreaterThanOrEqual(4);
   });
@@ -430,10 +431,10 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
     // Plus d'option « général » dans le select.
     expect(within(dialog).queryByRole('option', { name: /général/i })).not.toBeInTheDocument();
-    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Point établissement.' } });
-    expect(within(dialog).getByRole('button', { name: /consigner/i })).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Compte rendu' }), { target: { value: 'Point établissement.' } });
+    expect(within(dialog).getByRole('button', { name: 'Enregistrer l’interaction' })).toBeDisabled();
     pickInDialog(dialog, 'Contexte', 'Hotel Basalte & Lagon');
-    fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer l’interaction' }));
     await waitFor(() => expect(crmMock.saveCrmInteraction).toHaveBeenCalled());
     expect(crmMock.saveCrmInteraction.mock.calls[0][0]).toEqual({
       actorId: 'actor-1',
@@ -453,10 +454,10 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Nouvelle interaction' });
     // §66 : un établissement est requis pour pouvoir consigner.
     pickInDialog(dialog, 'Contexte', 'Hotel Basalte & Lagon');
-    fireEvent.change(within(dialog).getByPlaceholderText(/consigner une interaction/i), { target: { value: 'Texte conservé' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /consigner/i }));
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Compte rendu' }), { target: { value: 'Texte conservé' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Enregistrer l’interaction' }));
     expect(await within(dialog).findByText(/refus RLS/)).toBeInTheDocument();
-    expect(within(dialog).getByPlaceholderText(/consigner une interaction/i)).toHaveValue('Texte conservé');
+    expect(within(dialog).getByRole('textbox', { name: 'Compte rendu' })).toHaveValue('Texte conservé');
   });
 
   // Rectif PO point 3 + assignation PO point 4 : nouvelle tâche DEPUIS la fiche, ancrée
@@ -472,7 +473,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     // Assignation par défaut = utilisateur courant (usr-local-marie) ; attendre la liste chargée.
     const trigger = await within(dialog).findByRole('combobox', { name: 'Attribuer à' });
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
         objectId: 'obj-2',
@@ -497,7 +498,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     await waitFor(() => expect(trigger).toHaveTextContent('Marie D.'));
     fireEvent.click(trigger);
     fireEvent.click(pickerListbox(trigger).getByRole('option', { name: 'Jean P.' }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
         expect.objectContaining({ assigneeIds: ['usr-local-marie', 'usr-local-jean'] }),
@@ -519,7 +520,7 @@ describe('CrmActorFiche (§61 — fiche acteur 360°)', () => {
     // du SearchSelect affiche le nom de l'unique établissement).
     expect(within(dialog).getByRole('combobox', { name: 'Établissement' })).toHaveTextContent('Hotel Basalte & Lagon');
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(expect.objectContaining({ objectId: 'obj-1' })),
     );
@@ -912,11 +913,11 @@ describe('CrmActorFiche — créer une tâche depuis une demande', () => {
     const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
     // Établissement imposé : pas de picker (le serveur refuserait un autre objet, 22023).
     expect(within(dialog).queryByRole('combobox', { name: 'Établissement' })).not.toBeInTheDocument();
-    expect(within(dialog).getByText('Hotel Basalte & Lagon')).toBeInTheDocument();
+    expect(within(dialog).getByText('Établissement', { selector: 'label' })).toHaveTextContent('Hotel Basalte & Lagon');
 
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Rappeler' } });
     await within(dialog).findByLabelText('Attribuer à');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
 
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(

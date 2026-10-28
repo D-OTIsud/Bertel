@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronDown } from 'lucide-react';
 import { fold } from './fold';
 import { usePickerPopover } from './usePickerPopover';
 
@@ -188,7 +189,7 @@ export function SearchSelect({
         onClick={() => setOpen((o) => !o)}
       >
         <span className="picker__trigger-label">{triggerLabel}</span>
-        <span className="picker__chevron" aria-hidden>▾</span>
+        <ChevronDown className="picker__chevron" size={20} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {mounted && open && createPortal(

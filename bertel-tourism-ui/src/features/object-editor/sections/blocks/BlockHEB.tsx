@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { Field, Fs, Input, Repeater, SortableList, StatCard, ChipMultiSelect } from '../../primitives';
 import { RoomEditModal } from '../../widgets/RoomEditModal';
+import { EDITOR_SECTION_REFERENCES } from '../../section-config';
 import { MeetingRoomEditModal } from '../../widgets/MeetingRoomEditModal';
 import type { SectionProps } from '../section-types';
 import type {
@@ -266,7 +267,7 @@ export function BlockHEB({ editor, folded, typeCode }: SectionProps) {
           </button>
           {accessibleRoomsCount > 0 && (
             <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
-              ♿ {accessibleRoomsCount} chambre(s) PMR — équipements en §10.
+              ♿ {accessibleRoomsCount} chambre(s) PMR — équipements dans {EDITOR_SECTION_REFERENCES.accessibility.label} (§{EDITOR_SECTION_REFERENCES.accessibility.num}).
             </p>
           )}
           </>

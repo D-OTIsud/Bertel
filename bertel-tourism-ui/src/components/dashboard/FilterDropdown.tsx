@@ -2,6 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { ChevronDown } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -185,7 +186,7 @@ export function FilterDropdown<T extends string>({
         aria-haspopup="listbox"
       >
         <span className="filter-dropdown__label">{label}</span>
-        <span className="filter-dropdown__chevron" aria-hidden>▾</span>
+        <ChevronDown className="filter-dropdown__chevron" size={20} strokeWidth={2} aria-hidden="true" />
       </button>
 
       {loadError && (

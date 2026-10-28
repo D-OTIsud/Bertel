@@ -56,7 +56,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
   // §08 surfaces EVERY distinction family — classements, quality, sustainability AND
   // accessibility (Tourisme & Handicap). Accessibility schemes are offered with their value
   // forced to 'granted'; the granted_* sub-values are the per-disability coverage, which stays
-  // edited in §10 (the §08 modal never touches disabilityTypesCovered → coverage is preserved).
+  // edited in §09 (the §08 modal never touches disabilityTypesCovered → coverage is preserved).
   const accessibilityCodes = new Set(
     distinctions.schemeOptions.filter((scheme) => scheme.isAccessibility).map((scheme) => scheme.code),
   );
@@ -69,7 +69,7 @@ export function SectionClassification({ editor, folded }: SectionProps) {
   );
 
   // Combined view across both module arms (distinctionGroups + the accessibilityLabels arm
-  // that §10 also edits). commit() splits it back so a T&H row lands in accessibilityLabels
+  // that §09 also edits). commit() splits it back so a T&H row lands in accessibilityLabels
   // (one arm only — no double-write in the saver).
   const rows = [
     ...distinctions.distinctionGroups.flatMap((group) => group.items),

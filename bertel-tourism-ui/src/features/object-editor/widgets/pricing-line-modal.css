@@ -37,7 +37,7 @@
   color: var(--accent-deep, var(--accent)); background: var(--accent-tint);
 }
 .object-editor.plm .plm__title {
-  margin: 0; font-size: 20px; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
+  margin: 0; font-size: theme('fontSize.xl.0'); line-height: theme('fontSize.xl.1.lineHeight'); font-weight: 700; letter-spacing: -0.01em; color: var(--ink);
 }
 .object-editor.plm .plm__close {
   display: inline-grid; place-items: center; flex: none;

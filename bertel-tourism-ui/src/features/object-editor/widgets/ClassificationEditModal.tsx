@@ -12,6 +12,7 @@ import type {
   ObjectWorkspaceDistinctionSchemeOption,
 } from '../../../services/object-workspace-parser';
 import './catalog-modals.css';
+import { EDITOR_SECTION_REFERENCES } from '../section-config';
 
 // Category labels for the collapsible référentiel picker (SearchSelect groups).
 const DISPLAY_GROUP_LABELS: Record<string, string> = {
@@ -32,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 interface ClassificationEditModalProps {
   open: boolean;
   mode: 'add' | 'edit';
-  /** §08 schemes only (caller filters out accessibility — that lives in §10). */
+  /** All distinction families for §08; disability-type coverage is edited in §09. */
   schemes: ObjectWorkspaceDistinctionSchemeOption[];
   /** Held rows — fully-used schemes are dropped from the add picker (single held / multi all-taken). */
   existingItems: ObjectWorkspaceDistinctionItem[];
@@ -82,7 +83,6 @@ export function ClassificationEditModal({
 
   // Grouped choices follow the model. Already-held single labels stay out of the add choices.
   const referentialOptions = schemes
-    .filter((scheme) => !scheme.isAccessibility)
     .filter((scheme) => !isSchemeFullyUsed(scheme, existingItems))
     .map((scheme) => ({
       ...scheme,
@@ -186,7 +186,7 @@ export function ClassificationEditModal({
             {currentScheme.displayGroup === 'accessibility_labels' && (
               <p className="muted" style={{ marginTop: 6 }}>
                 La couverture par type de handicap (moteur, auditif, visuel, mental) se gère dans la section
-                Accessibilité (§10).
+                {EDITOR_SECTION_REFERENCES.accessibility.label} (§{EDITOR_SECTION_REFERENCES.accessibility.num}).
               </p>
             )}
           </div>

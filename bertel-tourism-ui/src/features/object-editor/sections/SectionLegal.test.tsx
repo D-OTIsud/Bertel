@@ -105,7 +105,7 @@ describe('SectionLegal', () => {
     expect(screen.queryByLabelText('N° de taxe de séjour')).toBeNull();
   });
 
-  it('adds a legal document via the modal ("Ajouter un document" → "Enregistrer")', () => {
+  it('adds a legal document via the modal ("Ajouter un document" → "Ajouter")', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} />);
 
@@ -123,7 +123,7 @@ describe('SectionLegal', () => {
     expect(screen.getByText(/responsabilité civile professionnelle/)).toBeInTheDocument();
 
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
     });
 
     const documentsAfter = result.current.draft.legal.records.filter((record) => !['siret', 'siren', 'raison_sociale', 'vat_number'].includes(record.typeCode));
@@ -151,7 +151,7 @@ describe('SectionLegal', () => {
     expect(screen.getByText('Document obligatoire expiré')).toBeInTheDocument();
   });
 
-  it('opens the edit modal on a document row and commits changes via "Enregistrer"', () => {
+  it('opens the edit modal on a document row and commits changes via "Appliquer"', () => {
     const insurance: ObjectWorkspaceLegalModule['records'][number] = {
       recordId: 'r-li', typeId: 'id-li', typeCode: 'attestation_assurance', typeLabel: "Attestation d'assurance", category: 'insurance',
       isPublic: false, isRequired: true, valueJson: '', documentId: '', documentUrl: '', documentTitle: '',
@@ -171,7 +171,7 @@ describe('SectionLegal', () => {
       fireEvent.change(screen.getByLabelText('Référence du document'), { target: { value: 'POL-2026-99' } });
     });
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
     });
 
     const saved = result.current.draft.legal.records.find((r) => r.typeCode === 'attestation_assurance');

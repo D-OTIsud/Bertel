@@ -12,6 +12,13 @@ import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
  * controls (toggles, pricing rows) must stay editable.
  */
 describe('BlockASC — honest controls (T1a)', () => {
+  it('renvoie les opérateurs et encadrants vers le suivi prestataire 19', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    render(<BlockASC editor={result.current} permissions={allowAll} />);
+    expect(screen.getByText('§19 Suivi prestataire')).toBeInTheDocument();
+    expect(screen.queryByText('§ Rattachements')).not.toBeInTheDocument();
+  });
+
   it('renders no inert "Public & niveau" audience TriState controls', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockASC editor={result.current} permissions={allowAll} />);

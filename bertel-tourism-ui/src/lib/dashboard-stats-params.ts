@@ -10,6 +10,12 @@ export interface DashboardStatsParams {
 }
 export interface DashboardPeriod { updatedAtFrom?: string; updatedAtTo?: string }
 
+/** Dashboard's own default; an explicit published/draft pair must stay explicit. */
+export function resolveDashboardStatuses(configured: readonly ExplorerStatusFilter[]): ExplorerStatusFilter[] {
+  const statuses = configured.filter((status) => status === 'published' || status === 'draft');
+  return statuses.length > 0 ? statuses : ['published'];
+}
+
 // Clés de facettes SPÉCIFIQUES par type — honnêtes seulement en mono-bucket (§7).
 // En multi/zéro-bucket, elles sont retirées du payload (le garde EXISTS du RPC
 // exclurait tous les objets des autres types). `bbox` = repli carte, hors Dashboard.
@@ -57,13 +63,11 @@ export function dashboardStatsParams(filters: ExplorerFilters, period: Dashboard
   // existe dans le vocabulaire Explorer mais reste hors périmètre des KPI — le
   // panneau du Dashboard masque la chip (includeArchivedStatus={false}) et ce
   // filtre écarte toute valeur résiduelle (URL, état partagé).
-  const statuses = (normalized.common.statuses ?? []).filter(
-    (s): s is ExplorerStatusFilter => s === 'published' || s === 'draft',
-  );
+  const statuses = resolveDashboardStatuses(normalized.common.statuses);
 
   return {
     p_types: pTypes,
-    p_status: statuses.length > 0 ? statuses : ['published'],
+    p_status: statuses,
     p_filters: pFilters,
     p_updated_at_from: period.updatedAtFrom ?? null,
     p_updated_at_to: period.updatedAtTo ?? null,

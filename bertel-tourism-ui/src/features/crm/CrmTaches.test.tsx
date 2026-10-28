@@ -504,7 +504,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await waitFor(() =>
       expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       // 16w : assignés par défaut = utilisateur courant, envoyés en TABLEAU.
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith({
@@ -531,7 +531,7 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
       expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
     );
     toggleAssignee('Jean P.'); // s'AJOUTE à Marie (pré-sélectionnée), il ne la remplace pas
-    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(
         expect.objectContaining({ assigneeIds: ['usr-local-marie', 'usr-local-jean'] }),
@@ -553,9 +553,10 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
       expect(screen.getByRole('combobox', { name: 'Attribuer à' })).toHaveTextContent('Marie D.'),
     );
     toggleAssignee('Marie D.'); // on décoche la seule personne sélectionnée
-    expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled();
-    expect(screen.getByText('Choisissez au moins une personne.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Créer' }));
+    expect(screen.getByRole('button', { name: 'Créer la tâche' })).toBeDisabled();
+    const assignmentFields = screen.getByRole('combobox', { name: 'Attribuer à' }).closest('section') as HTMLElement;
+    expect(within(assignmentFields).getByText('Choisissez au moins une personne.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Créer la tâche' }));
     expect(crmMock.saveCrmTask).not.toHaveBeenCalled();
   });
 
@@ -567,9 +568,9 @@ describe('CrmTaches (§61 — kanban Tâches & relances)', () => {
     await screen.findByText('Rappeler le directeur');
     fireEvent.click(screen.getByRole('button', { name: /nouvelle tâche/i }));
     fireEvent.change(screen.getByLabelText('Titre de la tâche'), { target: { value: 'Tâche orpheline' } });
-    expect(screen.getByRole('button', { name: 'Créer' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Créer la tâche' })).toBeDisabled();
     pickEstablishment('Hotel Basalte & Lagon');
-    expect(screen.getByRole('button', { name: 'Créer' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Créer la tâche' })).toBeEnabled();
   });
 
   // Assertion verrouillée par revue : un échec d'écriture est VISIBLE.

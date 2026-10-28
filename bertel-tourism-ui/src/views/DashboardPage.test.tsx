@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import DashboardPage from './DashboardPage';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
-import { useDashboardExplorerStore } from '../store/explorer-store';
+import { useDashboardExplorerStore, useExplorerStore } from '../store/explorer-store';
 import {
   getDashboardCrmActivity,
   getDashboardCrmOpen,
@@ -151,7 +151,7 @@ describe('DashboardPage — onglets', () => {
 
   it('monte le panneau de filtres Explorer + la section Période', async () => {
     renderPage();
-    expect(await screen.findByText('Période')).toBeInTheDocument();
+    expect(await screen.findByText('Fiches mises à jour')).toBeInTheDocument();
     // Un groupe transverse de l'Explorer est présent.
     expect(screen.getByText('Localisation')).toBeInTheDocument();
   });
@@ -184,5 +184,37 @@ describe('DashboardPage — onglets', () => {
     // Le compteur CRM est global (queryKey sans filtres) : il ne doit PAS être
     // rappelé, alors qu'un getter dépendant des filtres l'a bien été.
     expect(crmOpenMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([0, 1])('le reset %i efface critères et période en préservant onglet, sélection et Explorer', async (entry) => {
+    act(() => {
+      useDashboardFilterStore.setState({ updatedAtFrom: '2026-01-01', updatedAtTo: '2026-10-28', activeTab: 'offer' });
+      useDashboardExplorerStore.getState().setCities(['Le Tampon']);
+      useDashboardExplorerStore.setState({ selectedObjectIds: ['dashboard-selection'] });
+      useExplorerStore.getState().setCities(['Salazie']);
+      useExplorerStore.setState({ selectedObjectIds: ['explorer-selection'] });
+    });
+    renderPage();
+    await screen.findByRole('heading', { name: 'Distinctions' });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Réinitialiser' })[entry]);
+    expect(useDashboardFilterStore.getState()).toMatchObject({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'offer' });
+    expect(useDashboardExplorerStore.getState().common.cities).toEqual([]);
+    expect(useDashboardExplorerStore.getState().selectedObjectIds).toEqual(['dashboard-selection']);
+    expect(useExplorerStore.getState().common.cities).toEqual(['Salazie']);
+    expect(useExplorerStore.getState().selectedObjectIds).toEqual(['explorer-selection']);
+    expect(screen.queryByRole('button', { name: 'Retirer le filtre : Fiches mises à jour' })).not.toBeInTheDocument();
+    expect(screen.getByText('Statut appliqué : Publié')).toBeInTheDocument();
+  });
+
+  it('le retrait de période garde les critères d’objets', async () => {
+    act(() => {
+      useDashboardFilterStore.getState().setPeriod('2026-01-01', null);
+      useDashboardExplorerStore.getState().setCities(['Le Tampon']);
+    });
+    renderPage();
+    await screen.findByText('Corpus par type');
+    fireEvent.click(screen.getByRole('button', { name: 'Retirer le filtre : Fiches mises à jour' }));
+    expect(useDashboardFilterStore.getState().updatedAtFrom).toBeNull();
+    expect(useDashboardExplorerStore.getState().common.cities).toEqual(['Le Tampon']);
   });
 });

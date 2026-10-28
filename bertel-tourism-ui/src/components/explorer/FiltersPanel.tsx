@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { Check, ChevronDown, Info, Search, X } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -7,7 +7,6 @@ import type {
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   ExplorerBucketKey,
-  ExplorerFilters,
   ExplorerAccommodationFamily,
   ExplorerReferences,
   ExplorerStatusFilter,
@@ -46,6 +45,8 @@ import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 import { RangeSlider } from '@/components/ui/range-slider';
 import { buildExplorerActiveChips } from './explorer-active-chips';
+import { deriveExplorerFilterContext } from '../../lib/explorer-filter-context';
+import { resolveDashboardStatuses } from '../../lib/dashboard-stats-params';
 import {
   accommodationBreadcrumb,
   buildAccommodationTaxonomyTree,
@@ -106,6 +107,10 @@ interface FiltersPanelProps {
    *  Le Dashboard passe false : buildDashboardStatsParams restreint p_status à
    *  published/draft (§7), la chip serait un contrôle mort là-bas. */
   includeArchivedStatus?: boolean;
+  contextPage?: 'explorer' | 'dashboard';
+  onReset?: () => void;
+  periodActive?: boolean;
+  resetButtonRef?: Ref<HTMLButtonElement>;
 }
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
@@ -180,7 +185,7 @@ function filterSustainabilityActions(
   );
 }
 
-export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true }: FiltersPanelProps) {
+export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true, contextPage = 'explorer', onReset, periodActive = false, resetButtonRef }: FiltersPanelProps) {
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
@@ -254,7 +259,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const showEvt = isBucketSelected(selectedBuckets, 'EVT');
   const showVis = isBucketSelected(selectedBuckets, 'VIS');
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
-  const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
+  const effectiveStatuses = contextPage === 'dashboard'
+    ? resolveDashboardStatuses(statuses)
+    : resolveExplorerStatuses(statuses, canEditObjects);
   // §205 — le Dashboard n'offre pas « Archivé » (ses stats restreignent p_status
   // à published/draft) ; l'Exploreur offre le vocabulaire complet.
   const statusOptions = includeArchivedStatus
@@ -273,7 +280,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
    *
    * Le sélecteur renvoie un NOMBRE : pas de nouvelle référence à chaque rendu.
    */
-  const activeFilterCount = useStore((s) => buildExplorerActiveChips(s as unknown as ExplorerFilters).length);
+  const context = deriveExplorerFilterContext(
+    { selectedBuckets, common, hot, res, iti, evt, vis, srv },
+    { page: contextPage, canEditObjects },
+    buildExplorerActiveChips({ selectedBuckets, common, hot, res, iti, evt, vis, srv }),
+  );
+  const activeFilterCount = context.applied.length + (periodActive ? 1 : 0);
 
   const accessibilityDisabilityTypes: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> =
     references?.accessibilityDisabilityTypes?.length
@@ -340,7 +352,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
   const bucketChipClass = (active: boolean) =>
     cn(
-      'inline-flex min-h-[28px] items-center rounded-[8px] border px-2.5 py-1 text-[12px] font-semibold transition',
+      'filter-context-action inline-flex min-h-10 items-center rounded-shellMd border px-2.5 py-1 text-sm leading-5 font-semibold transition',
       active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink hover:border-lineStrong hover:bg-surface2',
     );
 
@@ -351,7 +363,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   // un chargement ; une fois chargées, un domaine absent est « indisponible »
   // (jamais un « Chargement… » menteur qui ne finit pas).
   const taxonomyCatalogFallback = (
-    <p className="text-[12px] leading-snug text-ink-3">
+    <p className="text-sm leading-5 text-ink-3">
       {references ? 'Catalogue de sous-catégories indisponible.' : 'Chargement du catalogue…'}
     </p>
   );
@@ -364,7 +376,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
    */
   const taxonomyChipClass = (active: boolean) =>
     cn(
-      'inline-flex min-h-[26px] items-center rounded-[8px] border px-2 py-0.5 text-[12px] font-medium transition',
+      'filter-context-action inline-flex min-h-10 items-center rounded-shellMd border px-2 py-0.5 text-sm leading-5 font-medium transition',
       active ? 'border-teal bg-teal text-white shadow-s' : 'border-line bg-surface text-ink-2 hover:border-lineStrong hover:bg-surface2',
     );
 
@@ -417,7 +429,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
    */
   const typeRowClass = (active: boolean) =>
     cn(
-      'mb-1.5 flex w-full items-center gap-2 rounded-[8px] border px-2.5 py-1.5 text-left text-[12px] font-semibold transition',
+      'filter-context-action min-h-10 mb-1.5 flex w-full items-center gap-2 rounded-shellMd border px-2.5 py-1.5 text-left text-sm leading-5 font-semibold transition',
       active
         ? 'border-line bg-surface2 text-ink hover:border-lineStrong'
         : 'border-line bg-surface text-ink-3 hover:border-lineStrong hover:text-ink',
@@ -565,7 +577,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         <div key={familyCode} className="border-b border-line last:border-b-0">
           <button
             type="button"
-            className="group flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+            className="filter-context-action group flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
             onClick={() => setOpenAccommodationFamily((current) => current === familyCode ? null : familyCode)}
             aria-expanded={expanded}
             aria-controls={`accommodation-family-${familyCode}`}
@@ -575,7 +587,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               aria-hidden="true"
               className={cn('h-3.5 w-3.5 shrink-0 text-ink-3 transition-transform', expanded && 'rotate-180')}
             />
-            <span className="min-w-0 flex-1 text-[12px] font-semibold text-ink">{familyLabel}</span>
+            <span className="min-w-0 flex-1 text-sm leading-5 font-semibold text-ink">{familyLabel}</span>
             {selectedCount > 0 ? (
               <span className="rounded-full bg-teal/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal">
                 {selectedCount}
@@ -616,7 +628,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                         {renderChip(nature.entry, breadcrumb)}
                         <button
                           type="button"
-                          className="inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition hover:bg-surface2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+                          className="filter-context-action inline-flex h-6 w-6 items-center justify-center rounded-md text-ink-3 transition hover:bg-surface2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
                           onClick={() => setOpenAccommodationSubtrees((current) => (
                             current.includes(natureKey)
                               ? current.filter((key) => key !== natureKey)
@@ -702,7 +714,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <Search aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-3" />
           <Input
             id="accommodation-taxonomy-search"
-            className="h-8 pl-8 pr-8 text-[12px]"
+            className="filter-context-input min-h-10 h-auto pl-10 pr-14"
             value={accommodationQuery}
             onChange={(event) => setAccommodationQuery(event.target.value)}
             placeholder="Rechercher un type ou un ancien terme…"
@@ -710,7 +722,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           {accommodationQuery ? (
             <button
               type="button"
-              className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-3 hover:bg-surface2 hover:text-ink"
+              className="filter-context-action absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-3 hover:bg-surface2 hover:text-ink"
               onClick={() => setAccommodationQuery('')}
               aria-label="Effacer la recherche d'hébergement"
             >
@@ -724,17 +736,17 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">
               Famille d'hébergement
             </span>
-            <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
+            <div className="overflow-hidden rounded-shellMd border border-line bg-surface">
               {familyBlocks}
             </div>
           </div>
         ) : null}
 
         {unitTypeOptions.length > 0 ? (
-          <div className="overflow-hidden rounded-[9px] border border-line bg-surface">
+          <div className="overflow-hidden rounded-shellMd border border-line bg-surface">
             <button
               type="button"
-              className="flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
+              className="filter-context-action flex min-h-9 w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/30"
               onClick={() => setShowAccommodationComplements((current) => !current)}
               aria-expanded={showComplements}
               aria-controls="accommodation-complementary-filters"
@@ -743,7 +755,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 aria-hidden="true"
                 className={cn('h-3.5 w-3.5 shrink-0 text-ink-3 transition-transform', showComplements && 'rotate-180')}
               />
-              <span className="flex-1 text-[12px] font-semibold text-ink-2">Critères complémentaires</span>
+              <span className="flex-1 text-sm leading-5 font-semibold text-ink-2">Critères complémentaires</span>
               {complementarySelectedCount > 0 ? (
                 <span className="rounded-full bg-teal/10 px-1.5 py-0.5 text-[10px] font-semibold text-teal">
                   {complementarySelectedCount}
@@ -785,10 +797,10 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         ) : null}
 
-        {!hasResults ? <p className="text-[12px] text-ink-3">Aucun terme ne correspond à cette recherche.</p> : null}
+        {!hasResults ? <p className="text-sm leading-5 text-ink-3">Aucun terme ne correspond à cette recherche.</p> : null}
 
         {isSubtypeNarrowed(hot.subtypes, HOT_BUCKET_TYPES) ? (
-          <div className="rounded-[8px] border border-warn-border bg-warn-bg px-2 py-1.5 text-[12px] leading-snug text-warn-ink">
+          <div className="rounded-shellMd border border-warn-border bg-warn-bg px-2 py-1.5 text-sm leading-5 text-warn-ink">
             Un ancien filtre de type de fiche est actif. Utilisez les filtres actifs pour le retirer si les résultats semblent incomplets.
           </div>
         ) : null}
@@ -827,7 +839,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const renderAccessibilityDetails = () => (
     <div className="mt-3 space-y-3 border-t border-line pt-3">
       <div>
-        <span className="mb-2 block text-[12px] font-semibold text-ink-2">Types de handicap</span>
+        <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Types de handicap</span>
         <div className="flex flex-wrap gap-2">
           {accessibilityDisabilityTypes.map((option) => {
             const active = accessibilityDisabilityTypesAny.includes(option.code);
@@ -848,7 +860,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
       {visibleAccessibilityAmenities.length > 0 ? (
         <div>
-          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Aménagements précis</span>
+          <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Aménagements précis</span>
           <div className="flex flex-wrap gap-2">
             {visibleAccessibilityAmenities.map((amenity) => {
               const active = accessibilityAmenityCodesAny.includes(amenity.code);
@@ -868,7 +880,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         </div>
       ) : (
-        <p className="text-[12px] leading-snug text-ink-3">
+        <p className="text-sm leading-5 text-ink-3">
           {accessibilityAmenities.length > 0
             ? accessibilityDisabilityTypesAny.length > 0
               ? 'Aucun aménagement ne correspond à ce type.'
@@ -883,7 +895,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
     <div className="mt-3 space-y-3 border-t border-line pt-3">
       {sustainabilityCategories.length > 0 ? (
         <div>
-          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Axes durables</span>
+          <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Axes durables</span>
           <div className="flex flex-wrap gap-2">
             {sustainabilityCategories.map((category) => {
               const active = sustainabilityCategoryCodesAny.includes(category.code);
@@ -903,12 +915,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         </div>
       ) : (
-        <p className="text-[12px] leading-snug text-ink-3">Chargement des axes durables…</p>
+        <p className="text-sm leading-5 text-ink-3">Chargement des axes durables…</p>
       )}
 
       {visibleSustainabilityActions.length > 0 ? (
         <div>
-          <span className="mb-2 block text-[12px] font-semibold text-ink-2">Actions engagées</span>
+          <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Actions engagées</span>
           <div className="flex flex-wrap gap-2">
             {visibleSustainabilityActions.map((action) => {
               const active = sustainabilityActionCodesAny.includes(action.code);
@@ -928,19 +940,19 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           </div>
         </div>
       ) : sustainabilityCategories.length > 0 ? (
-        <p className="text-[12px] leading-snug text-ink-3">Choisissez un axe pour afficher les actions associées.</p>
+        <p className="text-sm leading-5 text-ink-3">Choisissez un axe pour afficher les actions associées.</p>
       ) : null}
     </div>
   );
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
-      <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
-        <div className="flex items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
+    <div className="filter-context-panel flex min-h-0 min-w-0 flex-col border-r border-line bg-surface">
+      <div className="flex min-h-14 flex-none flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-4 py-2">
+        <div className="flex min-w-0 flex-wrap items-baseline gap-2 font-display text-sm leading-5 font-bold tracking-tight text-ink">
           Filtres
-          <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} actifs</span>
+          <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} appliqués{context.memorized.length > 0 ? ` · ${context.memorized.length} mémorisés` : ''}</span>
         </div>
-        <button type="button" onClick={resetAll} className="text-[12px] font-semibold text-orange-2 hover:text-orange">
+        <button ref={resetButtonRef} type="button" onClick={onReset ?? resetAll} className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange">
           Réinitialiser
         </button>
       </div>
@@ -989,7 +1001,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                       const isEditorDefault =
                         sanitized.length === editorDefault.length &&
                         editorDefault.every((code) => sanitized.includes(code));
-                      setStatuses(isEditorDefault ? [] : sanitized);
+                      setStatuses(contextPage === 'dashboard' ? sanitized : isEditorDefault ? [] : sanitized);
                     }}
                     aria-pressed={active}
                   >
@@ -1009,7 +1021,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Remplissage">
             <div className="space-y-3">
               <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">
+                <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">
                   Essentiels visiteur manquants
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -1036,7 +1048,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 </div>
               </div>
               <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Il manque</span>
+                <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Il manque</span>
                 <FilterDropdown<string>
                   mode="multi"
                   placeholder="N'importe quel essentiel"
@@ -1055,7 +1067,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
         <FilterColumnGroup label="Localisation">
           <div className="space-y-3">
             <div>
-              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Ville</span>
+              <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Ville</span>
               <FilterDropdown<string>
                 mode="multi"
                 placeholder="Toutes les communes"
@@ -1068,7 +1080,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               />
             </div>
             <div>
-              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Lieu-dit</span>
+              <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Lieu-dit</span>
               <FilterDropdown<string>
                 mode="single"
                 placeholder="Tous les lieux-dits"
@@ -1090,7 +1102,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               {/* §175 — « Distinctions » (et non « Classement / label ») : le mot « classement »
                   est réservé au classement officiel de l'État. Les labels (Gîtes de France,
                   Clévacances, durabilité, accessibilité…) sont des distinctions, pas des classements. */}
-              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Distinctions</span>
+              <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Distinctions</span>
               <FilterDropdown<string>
                 mode="single"
                 placeholder="Toutes les distinctions"
@@ -1105,7 +1117,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
             {rankedLabelSchemeCode && rankedSchemeIsGraded ? (
               <div>
-                <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Niveau</span>
+                <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Niveau</span>
                 <GradeBar
                   values={rankedLabelValues}
                   unit={schemeUnit(rankedLabelSchemeCode)}
@@ -1116,7 +1128,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             ) : null}
 
             {rankedLabelSchemeCode && !rankedSchemeIsGraded ? (
-              <label className="flex cursor-pointer items-start gap-2 text-[13px] text-ink">
+              <label className="flex cursor-pointer items-start gap-2 text-sm leading-5 text-ink">
                 <input
                   type="checkbox"
                   className="mt-0.5 accent-teal"
@@ -1125,7 +1137,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 />
                 <span>
                   <span className="font-medium">Inclure les démarches équivalentes</span>
-                  <span className="mt-0.5 block text-[12px] leading-snug text-ink-3">
+                  <span className="mt-0.5 block text-sm leading-5 text-ink-3">
                     Affiche aussi les fiches sans le label mais avec des actions/équipements compatibles (2ᵉ section).
                   </span>
                 </span>
@@ -1172,7 +1184,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     <button
                       key={tag.slug}
                       type="button"
-                      className="inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-[12px] font-semibold transition hover:opacity-90"
+                      className="filter-context-action inline-flex items-center gap-1 rounded-[6px] px-2 py-0.5 text-sm leading-5 font-semibold transition hover:opacity-90"
                       style={tag.color ? tagChipStyle(tag.color) : undefined}
                       aria-label={`Retirer le tag ${tag.name}`}
                       title={`Retirer le tag ${tag.name}`}
@@ -1183,12 +1195,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     </button>
                   ))}
                 </div>
-                <button type="button" className="text-[12px] font-semibold text-orange-2 hover:text-orange" onClick={clearTags}>
+                <button type="button" className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange" onClick={clearTags}>
                   Effacer les tags
                 </button>
               </>
             ) : (
-              <p className="text-[12px] leading-snug text-ink-3">
+              <p className="text-sm leading-5 text-ink-3">
                 Vous pouvez aussi cliquer sur un tag coloré dans la liste des résultats.
               </p>
             )}
@@ -1222,9 +1234,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 choisi (« les restaurants encore ouverts à 18 h »). Exclusif avec
                 « Ouvert maintenant » (le store gère l'exclusion). */}
             <div>
-              <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Ouvert à… (date et heure)</span>
+              <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Ouvert à… (date et heure)</span>
               <div className="flex items-center gap-2">
-                <Input
+                <Input className="filter-context-input min-h-10 h-auto"
                   type="datetime-local"
                   value={common.openAt ?? ''}
                   onChange={(event) => setOpenAt(event.target.value || null)}
@@ -1233,7 +1245,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                 {common.openAt ? (
                   <button
                     type="button"
-                    className="text-[12px] font-semibold text-orange-2 hover:text-orange"
+                    className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange"
                     onClick={() => setOpenAt(null)}
                   >
                     Effacer
@@ -1284,7 +1296,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Hébergements" collapsible count={hotSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'hébergement</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type d'hébergement</span>
                 {ENABLE_SEMANTIC_ACCOMMODATION_LAYOUT
                   ? (renderAccommodationTaxonomy() ?? renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype))
                   : renderTypeTree(HOT_BUCKET_TYPES, hot.subtypes, toggleHotSubtype)}
@@ -1299,7 +1311,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
               {references?.hotCapacityMetrics.length ? (
                 <div>
-                  <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Capacités détaillées</span>
+                  <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Capacités détaillées</span>
                   <CapacityCriteria
                     metrics={references.hotCapacityMetrics}
                     filters={hot.capacityFilters}
@@ -1316,9 +1328,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               {/* §159 — MICE = besoin expert, replié par défaut (le badge de la
                   section garde tout critère actif visible, §152). */}
               <details>
-                <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Séminaires & réunions (MICE)</summary>
+                <summary className="cursor-pointer text-sm leading-5 font-semibold text-ink-2">Séminaires & réunions (MICE)</summary>
                 <div className="filters-panel__range-grid mt-2">
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCount)}
@@ -1326,7 +1338,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Nb. salles min"
                     aria-label="Nombre minimal de salles de réunion"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minAreaM2)}
@@ -1334,7 +1346,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Surface min m2"
                     aria-label="Surface minimale de salle en mètres carrés"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCapTheatre)}
@@ -1344,7 +1356,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Cap. théâtre min"
                     aria-label="Capacité minimale en configuration théâtre"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCapClassroom)}
@@ -1364,7 +1376,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Restaurants" collapsible count={resSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de restauration</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type de restauration</span>
                 {renderTaxonomyChips('RES') ?? taxonomyCatalogFallback}
               </div>
 
@@ -1376,7 +1388,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
               {references?.resCapacityMetrics.length ? (
                 <div>
-                  <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Capacités détaillées</span>
+                  <span className="mb-1.5 block text-sm leading-5 font-semibold text-ink-2">Capacités détaillées</span>
                   <CapacityCriteria
                     metrics={references.resCapacityMetrics}
                     filters={res.capacityFilters}
@@ -1397,7 +1409,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             concept existe dans le modèle (principe §150), même à 0 objet publié. */}
         {typeSpecificFacets && showAct ? (
           <FilterColumnGroup label="Activités" collapsible count={actSectionCount || undefined}>
-            <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'activité</span>
+            <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type d'activité</span>
             {domainsForType(references, 'ASC').length + domainsForType(references, 'ACT').length > 0 ? (
               <div className="space-y-3">
                 {(['ASC', 'ACT'] as BackendObjectTypeCode[]).map((type) =>
@@ -1421,20 +1433,20 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Événements" collapsible count={evtSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'événement</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type d'événement</span>
                 {renderTaxonomyChips('FMA') ?? taxonomyCatalogFallback}
               </div>
               {/* §157 — plage de dates (recouvrement avec [début, fin] de l'événement). */}
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Dates</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Dates</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="date"
                     value={evt.eventFrom ?? ''}
                     onChange={(event) => setEvtEventRange(event.target.value || null, evt.eventTo)}
                     aria-label="Événements à partir du"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="date"
                     value={evt.eventTo ?? ''}
                     onChange={(event) => setEvtEventRange(evt.eventFrom, event.target.value || null)}
@@ -1450,12 +1462,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           <FilterColumnGroup label="Itinéraires" collapsible count={itiSectionCount || undefined}>
             <div className="space-y-4">
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type d'itinéraire</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type d'itinéraire</span>
                 {renderTaxonomyChips('ITI') ?? taxonomyCatalogFallback}
               </div>
 
               <div>
-                <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de parcours</span>
+                <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type de parcours</span>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { label: 'Tous', value: null as boolean | null },
@@ -1501,7 +1513,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div className="facet-group">
                 <span className="facet-title">Distance (km)</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(iti.distanceMinKm)}
@@ -1509,7 +1521,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Min"
                     aria-label="Distance minimale en kilomètres"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     value={renderNumber(iti.distanceMaxKm)}
@@ -1523,7 +1535,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div className="facet-group">
                 <span className="facet-title">Durée (h)</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     step="0.5"
@@ -1532,7 +1544,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Min"
                     aria-label="Durée minimale en heures"
                   />
-                  <Input
+                  <Input className="filter-context-input min-h-10 h-auto"
                     type="number"
                     min={0}
                     step="0.5"
@@ -1546,7 +1558,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
               {references?.itiPractices.length ? (
                 <div>
-                  <span className="mb-2 block text-[12px] font-semibold text-ink-2">Pratiques</span>
+                  <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Pratiques</span>
                   <div className="flex flex-wrap gap-2">
                     {references.itiPractices.map((practice) => {
                       const active = iti.practicesAny.includes(practice.code);
@@ -1571,14 +1583,14 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
 
         {typeSpecificFacets && showVis ? (
           <FilterColumnGroup label="Site & visite" collapsible count={visSectionCount || undefined}>
-            <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de visite</span>
+            <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type de visite</span>
             {renderTypeTree(EXPLORER_BUCKET_TYPE_MAP.VIS, vis.subtypes, toggleVisSubtype)}
           </FilterColumnGroup>
         ) : null}
 
         {typeSpecificFacets && showSrv ? (
           <FilterColumnGroup label="Services" collapsible count={srvSectionCount || undefined}>
-            <span className="mb-2 block text-[12px] font-semibold text-ink-2">Type de service</span>
+            <span className="mb-2 block text-sm leading-5 font-semibold text-ink-2">Type de service</span>
             {renderTypeTree(EXPLORER_BUCKET_TYPE_MAP.SRV, srv.subtypes, toggleSrvSubtype)}
           </FilterColumnGroup>
         ) : null}

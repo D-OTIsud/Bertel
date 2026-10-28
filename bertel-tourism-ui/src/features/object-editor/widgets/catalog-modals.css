@@ -33,7 +33,7 @@
 .ed-provider-note { width: 100%; min-height: 72px; resize: vertical; }
 .object-editor .ed-provider-role .tog { display: flex; margin-top: 12px; flex-direction: row-reverse; justify-content: flex-end; }
 .object-editor .ed-dish-availability .tog { display: flex; flex-direction: row-reverse; justify-content: flex-end; padding: 0; border: 0; background: transparent; }
-.ed-dish-description .md-editor__content { min-height: 64px; max-height: 180px; overflow-y: auto; }
+.object-editor .ed-dish-description .md-editor__content { min-height: 64px; max-height: 180px; overflow-y: auto; }
 .ed-dish-description .md-editor--loading { min-height: 96px; }
 .ed-dish-description .md-editor__toolbar { padding-block: 3px; }
 .object-editor.ed-record-modal.ed-menu-modal { max-width: 1040px; }
@@ -59,6 +59,12 @@
 .ed-menu-extra-sections > p { margin: 0 0 8px; font-size: 12px; color: var(--ink-3); }
 .ed-menu-names { margin-top: 8px; }
 .ed-menu-names .chip { font-size: 11px; min-height: 28px; }
+@media (pointer: coarse) {
+  .object-editor .ed-catalog-section .chip,
+  .object-editor .ed-menu-names .chip {
+    min-height: 44px;
+  }
+}
 @media (max-width: 760px) {
   .object-editor.ed-menu-modal .ed-record-modal__layout { display: flex; height: auto; flex: 1; }
   .object-editor.ed-menu-modal .ed-modal__body { overflow-y: auto; }

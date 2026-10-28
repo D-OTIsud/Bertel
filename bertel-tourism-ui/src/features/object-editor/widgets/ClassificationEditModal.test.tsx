@@ -56,6 +56,15 @@ function renderAdd(over: Partial<Parameters<typeof ClassificationEditModal>[0]> 
 }
 
 describe('ClassificationEditModal', () => {
+  it('renvoie la couverture des handicaps vers Accessibilité 09', () => {
+    renderAdd({
+      schemes: [{ ...grantedLabel, displayGroup: 'accessibility_labels' }],
+      draft: { ...createClassificationDraft(), schemeCode: grantedLabel.code },
+    });
+    expect(screen.getByText(/La couverture par type de handicap/)).toHaveTextContent('Accessibilité (§09)');
+    expect(screen.queryByText(/Accessibilité \(§10\)/)).not.toBeInTheDocument();
+  });
+
   it('groups the référentiel picker into collapsible categories', () => {
     renderAdd();
     expect(screen.getByText('Classements officiels')).toBeInTheDocument();

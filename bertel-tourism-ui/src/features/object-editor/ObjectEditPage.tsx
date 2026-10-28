@@ -359,8 +359,8 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
     dirtySections: editor.dirtySections,
   });
   const sectionCompletions = useMemo(
-    () => computeSectionCompletions(editor.draft, navItems),
-    [editor.draft, navItems],
+    () => computeSectionCompletions(editor.draft, navItems, meta.archetype),
+    [editor.draft, navItems, meta.archetype],
   );
   // Complétude « perçue visiteur » type-aware (80 % essentiels / 15 % complémentaire / 5 % bonus) —
   // spec docs/superpowers/specs/2026-06-18-completude-par-type-design.md.
@@ -421,7 +421,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       presence.broadcastSaved(result.saved);
     }
 
-    const issues = saveResultToIssues(result);
+    const issues = saveResultToIssues(result, meta.archetype);
     if (result.failed.length > 0) {
       // §48 — keep the terse save-bar message; the modal carries the full per-section detail.
       setStatusMessage(`${result.failed.length} section(s) en échec : ${result.failed[0].message}`);

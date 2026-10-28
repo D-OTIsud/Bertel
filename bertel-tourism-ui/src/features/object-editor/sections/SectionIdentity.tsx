@@ -519,7 +519,7 @@ export function SectionIdentity({ editor, objectId, folded, archetype, typeCode 
       {/* §201 — axe « Type d'unité », MULTI-VALUÉ et distinct de la nature. Placé
           juste sous elle parce que c'est là que la confusion se joue : « Bulle »
           n'est pas un type d'établissement, c'est ce dans quoi on dort. */}
-      {taxonomy.unitTypes.options.length > 0 ? (
+      {archetype === 'HEB' && taxonomy.unitTypes.options.length > 0 ? (
         <div style={{ marginBottom: 12 }}>
           <Field label="Type d'unité">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label="Type d'unité">

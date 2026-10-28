@@ -1,315 +1,155 @@
 import { useRef, useState } from 'react';
-import { Chip, ChipSet, EditorModal, Field, Fs, Input, ReferenceSelect, SortableList, StatCard, Toggle } from '../../primitives';
+import { ArrowDown, ArrowUp, Plus } from 'lucide-react';
+import { Chip, ChipSet, Disclosure, EditorModal, Field, Fs, Input, ReferenceSelect, SortableList, StatCard, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice } from './block-notes';
 import { formatDurationShort, stepMetric } from './iti-metrics';
 import { ItiTraceMap } from '../../widgets/ItiTraceMap';
-import { StageEditModal } from '../../widgets/StageEditModal';
+import { ItineraryStageEditor } from '../../widgets/ItineraryStageEditor';
 import { AssociatedObjectModal } from '../../widgets/AssociatedObjectModal';
+import { itineraryStagePoint } from '../../widgets/itinerary-map-utils';
+import { isInsideCorridor } from './corridor';
+import { EnvironmentChips } from '../capacity-controls';
+import { SectionOpenings } from '../SectionOpenings';
 import type { ObjectWorkspaceItineraryStageSummary } from '../../../../services/object-workspace-parser';
-
-// handle · type/position badge · name+meta · actions
-const STAGE_CARD_COLS = '14px 30px 1fr auto';
+import '../../itinerary-editor.css';
 
 function stageDndId(stage: ObjectWorkspaceItineraryStageSummary, index: number): string {
   return stage.recordId ?? stage.uid ?? `stage-${index}`;
 }
 
-export function BlockITI({ editor, folded }: SectionProps) {
+export function BlockITI(props: SectionProps) {
+  const { editor, permissions, folded } = props;
   const itinerary = editor.draft.itinerary;
-  // §111 B4: practices are edited in a modal (button → modal), like the other multi-selects.
   const [practicesOpen, setPracticesOpen] = useState(false);
   const [practicesDraft, setPracticesDraft] = useState<string[]>([]);
-  // §111 C: index of the stage being edited in the StageEditModal (null = closed).
-  const [editingStage, setEditingStage] = useState<number | null>(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [stageDraft, setStageDraft] = useState<ObjectWorkspaceItineraryStageSummary | null>(null);
+  const [placing, setPlacing] = useState(false);
+  const [corridorM, setCorridorM] = useState(50);
+  const [positionError, setPositionError] = useState('');
   const [assocOpen, setAssocOpen] = useState(false);
   const tmpUid = useRef(0);
+  const canEdit = permissions.itinerary.canDirectWrite || permissions.itinerary.canPrepareProposal || permissions.itinerary.canSubmitProposal;
+  const canEditCharacteristics = permissions.characteristics.canDirectWrite || permissions.characteristics.canPrepareProposal;
+  const hasTrack = Boolean(itinerary.trackGeojson);
+  const isNewStage = editingIndex === itinerary.stages.length;
+  const selectedPracticeLabels = itinerary.practiceOptions.filter((option) => itinerary.practiceCodes.includes(option.code)).map((option) => option.label);
 
-  function patch(patchValue: Partial<typeof itinerary>) {
-    editor.patchModule('itinerary', patchValue);
+  function patch(value: Partial<typeof itinerary>) { if (canEdit) editor.patchModule('itinerary', value); }
+  function cancelStage() { setStageDraft(null); setEditingIndex(null); setPlacing(false); setPositionError(''); }
+  function editStage(index: number) {
+    if (stageDraft) return;
+    const stage = itinerary.stages[index];
+    if (!stage) return;
+    setEditingIndex(index); setStageDraft({ ...stage, mediaIds: [...stage.mediaIds] });
+    setPlacing(false); setPositionError(''); setCorridorM(50);
   }
-
   function addStage() {
-    const next = itinerary.stages.length;
-    patch({
-      stages: [
-        ...itinerary.stages,
-        { recordId: null, uid: `tmp-${tmpUid.current++}`, name: '', description: '', position: String(next + 1), kind: '', lng: '', lat: '', mediaIds: [] },
-      ],
-    });
-    setEditingStage(next);
+    if (!canEdit) return;
+    setEditingIndex(itinerary.stages.length);
+    setStageDraft({ recordId: null, uid: `iti-draft-${tmpUid.current++}`, name: '', description: '', position: String(itinerary.stages.length + 1), kind: '', lng: '', lat: '', mediaIds: [] });
+    setPlacing(false); setPositionError(''); setCorridorM(50);
   }
-
-  function openPractices() {
-    setPracticesDraft(itinerary.practiceCodes);
-    setPracticesOpen(true);
+  function placePoint(lng: number, lat: number): boolean {
+    if (!stageDraft || !canEdit) return false;
+    const line = itinerary.trackGeojson?.coordinates;
+    if (line && line.length > 1 && !isInsideCorridor(lng, lat, line, corridorM)) {
+      setPositionError(`Le point est à plus de ${corridorM} m du tracé. Rapprochez-le du parcours ou ajustez la tolérance.`);
+      return false;
+    }
+    setStageDraft({ ...stageDraft, lng: lng.toFixed(6), lat: lat.toFixed(6) });
+    setPositionError(''); setPlacing(false);
+    return true;
   }
-
-  function togglePracticeDraft(code: string) {
-    setPracticesDraft((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
+  function saveStage() {
+    if (!canEdit || !stageDraft?.name.trim() || editingIndex === null) return;
+    const point = itineraryStagePoint(stageDraft);
+    if ((stageDraft.lng.trim() || stageDraft.lat.trim()) && !point) return;
+    const line = itinerary.trackGeojson?.coordinates;
+    if (point && line && line.length > 1 && !isInsideCorridor(point[0], point[1], line, corridorM)) {
+      setPositionError(`Le point est à plus de ${corridorM} m du tracé. Vérifiez sa position avant de valider.`); return;
+    }
+    const next = { ...stageDraft, name: stageDraft.name.trim() };
+    const stages = isNewStage ? [...itinerary.stages, next] : itinerary.stages.map((stage, index) => index === editingIndex ? next : stage);
+    patch({ stages: stages.map((stage, index) => ({ ...stage, position: String(index + 1) })) });
+    cancelStage();
   }
-
-  const selectedPracticeLabels = itinerary.practiceOptions
-    .filter((option) => itinerary.practiceCodes.includes(option.code))
-    .map((option) => option.label);
-
-  function updateStage(index: number, patchValue: Partial<(typeof itinerary.stages)[number]>) {
-    patch({
-      stages: itinerary.stages.map((stage, stageIndex) =>
-        stageIndex === index ? { ...stage, ...patchValue } : stage,
-      ),
-    });
+  function reorder(stages: ObjectWorkspaceItineraryStageSummary[]) {
+    if (canEdit && !stageDraft) patch({ stages: stages.map((stage, index) => ({ ...stage, position: String(index + 1) })) });
   }
-
-  // traceEditable is loader-hardcoded false — no editable-trace state exists today (§48).
-  const traceLabel = itinerary.geometrySummary ? 'Trace GPX importée' : 'Aucune trace — import requis';
+  function moveStage(index: number, direction: number) {
+    const target = index + direction;
+    if (target < 0 || target >= itinerary.stages.length) return;
+    const next = [...itinerary.stages]; [next[index], next[target]] = [next[target], next[index]]; reorder(next);
+  }
+  const displayedStages = stageDraft && editingIndex !== null
+    ? isNewStage ? [...itinerary.stages, stageDraft] : itinerary.stages.map((stage, index) => index === editingIndex ? stageDraft : stage)
+    : itinerary.stages;
 
   return (
-    <Fs
-      num="06"
-      title="Tracé, étapes & praticabilité"
-      sub="GPX, distance, dénivelé, durée, balisage, type de boucle, waypoints, conditions et équipement"
-      folded={folded}
-      pill={itinerary.unavailableReason ? { tone: 'warn', label: 'Non applicable' } : { tone: itinerary.geometrySummary ? 'ok' : 'warn', label: traceLabel }}
-    >
-      {/* §46 type-gated itinerary module — the WHOLE section body edits `itinerary`,
-          so the notice replaces everything when gated */}
-      {itinerary.unavailableReason ? (
-        <ModuleUnavailableNotice reason={itinerary.unavailableReason} />
-      ) : (
-        <>
-          {/* §111 B1: real GPX/KML import (drag&drop + button) + MapLibre trace map. The import calls
-              api.set_itinerary_track, which writes object_iti.geom and auto-derives the metrics fed
-              back into the steppers below. The « Boucle » strip moved to « Infos pratiques ». */}
-          <ItiTraceMap
-            objectId={editor.objectId}
-            initialTrack={itinerary.trackGeojson}
-            stages={itinerary.stages}
-            onImported={(r) => patch({
-              distanceKm: r.distanceKm,
-              elevationPositiveM: r.elevationGain,
-              elevationNegativeM: r.elevationLoss,
-              trackGeojson: r.trackGeojson,
-            })}
-          />
-
-          <div className="grid-4" style={{ marginBottom: 14 }}>
-            <StatCard
-              label="Distance"
-              value={itinerary.distanceKm || '0'}
-              suffix="km"
-              hasStep
-              onStep={(delta) => patch({ distanceKm: stepMetric(itinerary.distanceKm, delta, { step: 0.5, decimals: 1 }) })}
-            />
-            <StatCard
-              label="Durée a/r"
-              value={formatDurationShort(itinerary.durationMin)}
-              hasStep
-              onStep={(delta) => patch({ durationMin: stepMetric(itinerary.durationMin, delta, { step: 15 }) })}
-            />
-            <StatCard
-              label="Dénivelé +"
-              value={itinerary.elevationPositiveM || '0'}
-              suffix="m"
-              hasStep
-              onStep={(delta) => patch({ elevationPositiveM: stepMetric(itinerary.elevationPositiveM, delta, { step: 10 }) })}
-            />
-            <StatCard
-              label="Dénivelé −"
-              value={itinerary.elevationNegativeM || '0'}
-              suffix="m"
-              hasStep
-              onStep={(delta) => patch({ elevationNegativeM: stepMetric(itinerary.elevationNegativeM, delta, { step: 10 }) })}
-            />
-          </div>
-
-          <div className="grid-3" style={{ marginBottom: 14 }}>
-            <Field label="Difficulté" hint="Niveau 1 (très facile) à 5 (très difficile)">
-              <ReferenceSelect
-                value={itinerary.difficultyLevel}
-                options={itinerary.difficultyOptions}
-                onChange={(difficultyLevel) => patch({ difficultyLevel })}
-                allowEmpty
-                emptyLabel="Non renseigné"
-                aria-label="Difficulté"
-              />
-            </Field>
-            <Field label="Statut d'ouverture">
-              <ReferenceSelect
-                value={itinerary.openStatus}
-                options={itinerary.openStatusOptions}
-                onChange={(openStatus) => patch({ openStatus })}
-                aria-label="Statut d'ouverture"
-              />
-            </Field>
-            <Field label="Pratiques">
-              <button
-                type="button"
-                className="select"
-                style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
-                onClick={openPractices}
-              >
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selectedPracticeLabels.length > 0 ? 'inherit' : 'var(--ink-4)' }}>
-                  {selectedPracticeLabels.length > 0 ? selectedPracticeLabels.join(', ') : 'Ajouter des pratiques'}
-                </span>
-                <span aria-hidden style={{ color: 'var(--accent)', fontWeight: 600 }}>+</span>
-              </button>
-            </Field>
-          </div>
-
-          {/* §111 B5: Infos pratiques (object_iti_info) — previously editable nowhere.
-              The is_loop toggle lives here too (a boolean characteristic, like is_child_friendly),
-              though it persists in object_iti, not object_iti_info. */}
-          <div className="chip-group__label">Infos pratiques</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 10 }}>
-            <Field label="Accès" hint="Comment rejoindre le départ">
-              <Input value={itinerary.access} onChange={(access) => patch({ access })} />
-            </Field>
-            <Field label="Ambiance">
-              <Input value={itinerary.ambiance} onChange={(ambiance) => patch({ ambiance })} />
-            </Field>
-            <Field label="Parking conseillé">
-              <Input value={itinerary.recommendedParking} onChange={(recommendedParking) => patch({ recommendedParking })} />
-            </Field>
-            <Field label="Équipement requis">
-              <Input value={itinerary.requiredEquipment} onChange={(requiredEquipment) => patch({ requiredEquipment })} />
-            </Field>
-            <Field label="Informations sur les lieux">
-              <Input value={itinerary.infoPlaces} onChange={(infoPlaces) => patch({ infoPlaces })} />
-            </Field>
-          </div>
-          {/* §111: côte à côte, not full-width stacked bars. */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-            <Toggle label="Tracé en boucle" on={itinerary.loop} onChange={(loop) => patch({ loop })} />
-            <Toggle label="Adapté aux enfants" on={itinerary.childFriendly} onChange={(childFriendly) => patch({ childFriendly })} />
-          </div>
-
-          <div className="chip-group__label">Étapes & points d'intérêt sur le parcours</div>
-          {itinerary.stages.length > 0 && (
-            <SortableList
-              items={itinerary.stages}
-              getId={(stage) => stageDndId(stage, itinerary.stages.indexOf(stage))}
-              onReorder={(next) => patch({ stages: next.map((stage, i) => ({ ...stage, position: String(i + 1) })) })}
-              columns={STAGE_CARD_COLS}
-              renderItem={(stage, index) => {
-                const kindLabel = itinerary.stageKindOptions.find((option) => option.code === stage.kind)?.label ?? 'Étape';
-                const meta = [
-                  kindLabel,
-                  stage.lng && stage.lat ? 'point GPS' : null,
-                  stage.mediaIds.length > 0 ? `${stage.mediaIds.length} photo(s)` : null,
-                ].filter(Boolean).join(' · ');
-                return (
-                  <>
-                    <div className="wp-num" aria-hidden>{index + 1}</div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {stage.name || `Étape ${index + 1}`}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{meta}</div>
-                    </div>
-                    <div className="rep-row__act" style={{ display: 'flex', gap: 6 }}>
-                      <button type="button" className="btn sm" onClick={() => setEditingStage(index)}>Modifier</button>
-                      <button
-                        type="button"
-                        className="del"
-                        aria-label={`Supprimer ${stage.name || `l'étape ${index + 1}`}`}
-                        onClick={() => patch({ stages: itinerary.stages.filter((_, i) => i !== index) })}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </>
-                );
-              }}
-            />
-          )}
-          <button type="button" className="rep-add" onClick={addStage}>
-            + Ajouter une étape / un POI
-          </button>
-
-          {editingStage != null && itinerary.stages[editingStage] && (
-            <StageEditModal
-              key={stageDndId(itinerary.stages[editingStage], editingStage)}
-              open
-              stage={itinerary.stages[editingStage]}
-              stageKindOptions={itinerary.stageKindOptions}
-              mediaOptions={itinerary.mediaOptions}
-              trackGeojson={itinerary.trackGeojson}
-              onSave={(updated) => { updateStage(editingStage, updated); setEditingStage(null); }}
-              onClose={() => setEditingStage(null)}
-            />
-          )}
-
-          {/* §111 C3: objets liés — existing tourism objects attached to the itinerary with a role. */}
-          <div className="chip-group__label" style={{ marginTop: 14 }}>Objets liés</div>
-          {itinerary.associatedObjects.length > 0 && (
-            <div className="repeater">
-              {itinerary.associatedObjects.map((assoc, index) => {
-                const roleLabel = itinerary.assocRoleOptions.find((option) => option.id === assoc.roleId)?.label ?? '';
-                return (
-                  <div key={`${assoc.associatedObjectId}-${index}`} className="rep-row" style={{ gridTemplateColumns: '34px 1fr auto' }}>
-                    <span className={`rpick__type type-${assoc.targetType.toLowerCase()}`}>{assoc.targetType}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {assoc.targetName || assoc.associatedObjectId}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-4)' }}>{[roleLabel, assoc.note].filter(Boolean).join(' · ')}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="del"
-                      aria-label={`Détacher ${assoc.targetName || assoc.associatedObjectId}`}
-                      onClick={() => patch({ associatedObjects: itinerary.associatedObjects.filter((_, i) => i !== index) })}
-                    >
-                      ×
+    <Fs num="06" title="Tracé, étapes & praticabilité" sub="Le parcours, ses points de passage et ses conditions d’accès" folded={folded}
+      pill={itinerary.unavailableReason ? { tone: 'warn', label: 'Non applicable' } : { tone: hasTrack ? 'ok' : 'warn', label: hasTrack ? 'Tracé importé' : 'Aucune trace — import requis' }}>
+      {itinerary.unavailableReason ? <ModuleUnavailableNotice reason={itinerary.unavailableReason} /> : <>
+        <ItiTraceMap key={editor.objectId} objectId={editor.objectId} initialTrack={itinerary.trackGeojson} stages={displayedStages}
+          readOnly={!permissions.itinerary.canDirectWrite} importDisabled={Boolean(stageDraft)} selectedStageIndex={stageDraft ? editingIndex : null}
+          onSelectStage={editStage} placementActive={placing} placementError={positionError} onPlacePoint={placePoint}
+          onImported={(result) => patch({ distanceKm: result.distanceKm, elevationPositiveM: result.elevationGain, elevationNegativeM: result.elevationLoss,
+            trackGeojson: result.trackGeojson, geometrySummary: result.trackGeojson ? 'Tracé importé' : '' })}>
+          <div className="iti-stage-panel">
+            {stageDraft ? <ItineraryStageEditor key={stageDndId(stageDraft, editingIndex ?? 0)} stage={stageDraft} isNew={isNewStage}
+              kindOptions={itinerary.stageKindOptions} mediaOptions={itinerary.mediaOptions} hasTrack={hasTrack} corridorM={corridorM}
+              placementActive={placing} positionMessage={positionError} readOnly={!canEdit}
+              onChange={(value) => { setStageDraft({ ...stageDraft, ...value }); setPositionError(''); }} onCorridorChange={(meters) => { setCorridorM(meters); setPositionError(''); }}
+              onTogglePlacement={() => { setPlacing(!placing); setPositionError(''); }} onSave={saveStage} onCancel={cancelStage}
+              onDelete={() => { if (canEdit && editingIndex !== null && !isNewStage) patch({ stages: itinerary.stages.filter((_, index) => index !== editingIndex).map((stage, index) => ({ ...stage, position: String(index + 1) })) }); cancelStage(); }} /> : <>
+              <header className="iti-stage-panel__header"><div><h3>Étapes du parcours <span>{itinerary.stages.length}</span></h3><p>La même numérotation sur la carte et la fiche.</p></div></header>
+              <div className="iti-stage-panel__list">
+                {itinerary.stages.length === 0 ? <p className="iti-stage-panel__empty">Ajoutez les points de départ, étapes et points d’intérêt du parcours.</p> : <SortableList
+                  items={itinerary.stages} getId={(stage) => stageDndId(stage, itinerary.stages.indexOf(stage))} onReorder={reorder} columns="14px minmax(0, 1fr) auto"
+                  renderItem={(stage, index) => <>
+                    <button type="button" className="iti-stage-select" aria-label={`Modifier l’étape ${index + 1} : ${stage.name || 'Sans nom'}`} onClick={() => editStage(index)}>
+                      <span className="iti-stage-number">{index + 1}</span><span><strong>{stage.name || `Étape ${index + 1}`}</strong><small>{itinerary.stageKindOptions.find((option) => option.code === stage.kind)?.label || 'Étape'} · {itineraryStagePoint(stage) ? 'point GPS' : 'À positionner'}</small></span>
                     </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <button type="button" className="rep-add" onClick={() => setAssocOpen(true)}>
-            + Ajouter un objet lié
-          </button>
-
-          <AssociatedObjectModal
-            open={assocOpen}
-            objectId={editor.objectId}
-            roleOptions={itinerary.assocRoleOptions}
-            trackGeojson={itinerary.trackGeojson}
-            onSave={(assoc) => { patch({ associatedObjects: [...itinerary.associatedObjects, assoc] }); setAssocOpen(false); }}
-            onClose={() => setAssocOpen(false)}
-          />
-
-          {/* §48: TRAIL_SEASON mock removed (§34 pattern — inert hardcoded constant, no onChange).
-              SeasonPicker primitive retained for the future per-object seasonality profile feature.
-              statusNote persists via the nested RPC — kept. */}
-          <Field label="Note de fermeture saisonnière" hint="Affiché en bandeau quand le sentier est fermé">
-            <Input value={itinerary.statusNote} onChange={(statusNote) => patch({ statusNote })} />
-          </Field>
-
-          <EditorModal
-            open={practicesOpen}
-            title="Pratiques de l'itinéraire"
-            onClose={() => setPracticesOpen(false)}
-            onSave={() => {
-              patch({ practiceCodes: practicesDraft });
-              setPracticesOpen(false);
-            }}
-          >
-            <ChipSet>
-              {itinerary.practiceOptions.map((option) => (
-                <Chip
-                  key={option.code}
-                  label={option.label}
-                  on={practicesDraft.includes(option.code)}
-                  onClick={() => togglePracticeDraft(option.code)}
-                />
-              ))}
-            </ChipSet>
-          </EditorModal>
-        </>
-      )}
+                    <div className="iti-stage-order"><button type="button" className="iti-icon-button" aria-label={`Monter ${stage.name || `l’étape ${index + 1}`}`} disabled={!canEdit || index === 0} onClick={() => moveStage(index, -1)}><ArrowUp size={13} aria-hidden /></button><button type="button" className="iti-icon-button" aria-label={`Descendre ${stage.name || `l’étape ${index + 1}`}`} disabled={!canEdit || index === itinerary.stages.length - 1} onClick={() => moveStage(index, 1)}><ArrowDown size={13} aria-hidden /></button></div>
+                  </>} />}
+              </div>
+              <footer className="iti-stage-panel__footer"><button type="button" className="btn sm primary" disabled={!canEdit} onClick={addStage}><Plus size={14} aria-hidden /> Ajouter une étape</button></footer>
+            </>}
+          </div>
+        </ItiTraceMap>
+        <fieldset className="iti-embedded-fields" disabled={!canEdit}>
+        <div className="grid-4 iti-route-metrics">
+          <StatCard label="Distance" value={itinerary.distanceKm || '0'} suffix="km" hasStep onStep={(delta) => patch({ distanceKm: stepMetric(itinerary.distanceKm, delta, { step: .5, decimals: 1 }) })} />
+          <StatCard label="Durée" value={formatDurationShort(itinerary.durationMin)} hasStep onStep={(delta) => patch({ durationMin: stepMetric(itinerary.durationMin, delta, { step: 15 }) })} />
+          <StatCard label="Dénivelé +" value={itinerary.elevationPositiveM || '0'} suffix="m" hasStep onStep={(delta) => patch({ elevationPositiveM: stepMetric(itinerary.elevationPositiveM, delta, { step: 10 }) })} />
+          <StatCard label="Dénivelé −" value={itinerary.elevationNegativeM || '0'} suffix="m" hasStep onStep={(delta) => patch({ elevationNegativeM: stepMetric(itinerary.elevationNegativeM, delta, { step: 10 }) })} />
+        </div>
+        <div className="grid-3 iti-route-characteristics">
+          <Field label="Difficulté" hint="Niveau 1 (très facile) à 5 (très difficile)"><ReferenceSelect value={itinerary.difficultyLevel} options={itinerary.difficultyOptions} onChange={(difficultyLevel) => patch({ difficultyLevel })} allowEmpty emptyLabel="Non renseigné" aria-label="Difficulté" /></Field>
+          <Field label="Pratiques"><button type="button" className="select iti-practices" onClick={() => { setPracticesDraft(itinerary.practiceCodes); setPracticesOpen(true); }}><span>{selectedPracticeLabels.length ? selectedPracticeLabels.join(', ') : 'Ajouter des pratiques'}</span><Plus size={14} aria-hidden /></button></Field>
+          <Toggle label="Tracé en boucle" on={itinerary.loop} onChange={(loop) => patch({ loop })} />
+        </div>
+        </fieldset>
+        <Disclosure title="Praticabilité & fermetures" summary={itinerary.openStatusOptions.find((option) => option.code === itinerary.openStatus)?.label || 'Statut et restrictions'}>
+          <fieldset className="iti-embedded-fields" disabled={!canEdit}>
+          <div className="grid-2"><Field label="Statut d’ouverture"><ReferenceSelect value={itinerary.openStatus} options={itinerary.openStatusOptions} onChange={(openStatus) => patch({ openStatus })} aria-label="Statut d'ouverture" /></Field><Field label="Note de fermeture saisonnière" hint="Affichée quand le sentier est fermé"><Input value={itinerary.statusNote} onChange={(statusNote) => patch({ statusNote })} /></Field></div>
+          </fieldset>
+          <SectionOpenings {...props} archetype="ITI" embedded />
+        </Disclosure>
+        <Disclosure title="Conseils & accès au départ" summary="Parking, équipement, environnement, enfants">
+          <fieldset className="iti-embedded-fields" disabled={!canEdit}><div className="grid-2"><Field label="Accès" hint="Comment rejoindre le départ"><Input value={itinerary.access} onChange={(access) => patch({ access })} /></Field><Field label="Parking conseillé"><Input value={itinerary.recommendedParking} onChange={(recommendedParking) => patch({ recommendedParking })} /></Field><Field label="Ambiance"><Input value={itinerary.ambiance} onChange={(ambiance) => patch({ ambiance })} /></Field><Field label="Équipement requis"><Input value={itinerary.requiredEquipment} onChange={(requiredEquipment) => patch({ requiredEquipment })} /></Field><Field label="Informations sur les lieux"><Input value={itinerary.infoPlaces} onChange={(infoPlaces) => patch({ infoPlaces })} /></Field><Toggle label="Adapté aux enfants" on={itinerary.childFriendly} onChange={(childFriendly) => patch({ childFriendly })} /></div></fieldset>
+          <fieldset className="iti-embedded-fields" disabled={!canEditCharacteristics}><EnvironmentChips characteristics={editor.draft.characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} /></fieldset>
+        </Disclosure>
+        <Disclosure title="Objets liés" summary={`${itinerary.associatedObjects.length} fiche(s)`} defaultOpen={itinerary.associatedObjects.length > 0}>
+          {itinerary.associatedObjects.map((assoc, index) => <div key={`${assoc.associatedObjectId}-${index}`} className="iti-associated-row"><div><strong>{assoc.targetName || assoc.associatedObjectId}</strong><small>{[itinerary.assocRoleOptions.find((option) => option.id === assoc.roleId)?.label, assoc.note].filter(Boolean).join(' · ')}</small></div><button type="button" className="del" aria-label={`Détacher ${assoc.targetName || assoc.associatedObjectId}`} disabled={!canEdit} onClick={() => patch({ associatedObjects: itinerary.associatedObjects.filter((_, i) => i !== index) })}>×</button></div>)}
+          <button type="button" className="rep-add" disabled={!canEdit} onClick={() => setAssocOpen(true)}>+ Ajouter un objet lié</button>
+        </Disclosure>
+        <AssociatedObjectModal open={assocOpen} objectId={editor.objectId} roleOptions={itinerary.assocRoleOptions} trackGeojson={itinerary.trackGeojson} onSave={(assoc) => { patch({ associatedObjects: [...itinerary.associatedObjects, assoc] }); setAssocOpen(false); }} onClose={() => setAssocOpen(false)} />
+        <EditorModal open={practicesOpen} title="Pratiques de l'itinéraire" onClose={() => setPracticesOpen(false)} onSave={() => { patch({ practiceCodes: practicesDraft }); setPracticesOpen(false); }}>
+          <ChipSet>{itinerary.practiceOptions.map((option) => <Chip key={option.code} label={option.label} on={practicesDraft.includes(option.code)} onClick={() => setPracticesDraft((previous) => previous.includes(option.code) ? previous.filter((code) => code !== option.code) : [...previous, option.code])} />)}</ChipSet>
+        </EditorModal>
+      </>}
     </Fs>
   );
 }

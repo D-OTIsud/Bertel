@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen } from '@testing-library/react';
+import type { ObjectWorkspaceModules } from '../../../../services/object-workspace-parser';
+import type { ObjectWorkspacePermissions } from '../../../../services/object-workspace';
 import { useObjectEditorState } from '../../useObjectEditorState';
 import { BlockITI } from './BlockITI';
 import { allowAll, fullModulesFixture } from '../section-fixture.test-utils';
@@ -28,7 +30,7 @@ describe('BlockITI — honest controls (§48)', () => {
     // the §48 "géométrie gérée par l'import de données" disabled placeholder no longer exists
     expect(screen.queryByText(/import de données/i)).not.toBeInTheDocument();
     // the import is now actionable (set_itinerary_track pipeline)
-    expect(screen.getByRole('button', { name: 'Importer un fichier' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remplacer le tracé' })).toBeInTheDocument();
   });
 
   it('renders the honest empty-trace pill and the import prompt when no geometry', () => {
@@ -39,7 +41,7 @@ describe('BlockITI — honest controls (§48)', () => {
     render(<BlockITI editor={result.current} permissions={allowAll} />);
 
     // the import zone invites a drop when there is no trace
-    expect(screen.getByText('Glissez un fichier GPX / KML')).toBeInTheDocument();
+    expect(screen.getByText('Glissez un fichier GPX / KML sur la carte.')).toBeInTheDocument();
     // the pill must be the honest "no trace" label
     expect(screen.getByText('Aucune trace — import requis')).toBeInTheDocument();
   });
@@ -61,7 +63,7 @@ describe('BlockITI — honest controls (§48)', () => {
     // §46 gate: notice rendered exactly once
     expect(screen.getAllByText(/Module non applicable au type RES/).length).toBe(1);
     // Add buttons absent when gated (Repeater renders "+ {label}")
-    expect(screen.queryByText(/Ajouter une étape \/ un POI/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ajouter une étape' })).not.toBeInTheDocument();
     // Gated pill present
     expect(screen.getByText('Non applicable')).toBeInTheDocument();
   });
@@ -70,9 +72,9 @@ describe('BlockITI — honest controls (§48)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockITI editor={result.current} permissions={allowAll} />);
 
-    expect(screen.getByText(/Ajouter une étape \/ un POI/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter une étape' })).toBeInTheDocument();
     // the real import zone is present (B1 replaced the §48 disabled-with-reason placeholder)
-    expect(screen.getByRole('button', { name: 'Importer un fichier' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remplacer le tracé' })).toBeInTheDocument();
   });
 });
 
@@ -82,12 +84,61 @@ describe('BlockITI — honest controls (§48)', () => {
  * INTEGER / enum column) become DB-vocab selects (iti_difficulty / iti_open_status).
  * Harness component so a patch re-renders the block (editor is recreated on change).
  */
-function ItiHarness() {
-  const editor = useObjectEditorState('o1', fullModulesFixture());
-  return <BlockITI editor={editor} permissions={allowAll} folded={false} />;
+function ItiHarness({ modules = fullModulesFixture(), permissions = allowAll }: { modules?: ObjectWorkspaceModules; permissions?: ObjectWorkspacePermissions }) {
+  const editor = useObjectEditorState('o1', modules);
+  return <><BlockITI editor={editor} permissions={permissions} folded={false} /><output data-testid="saved-stages">{JSON.stringify(editor.draft.itinerary.stages)}</output></>;
 }
 
 describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
+  it('cancels a new stage without adding an empty row or altering existing stages', () => {
+    render(<ItiHarness />);
+    const before = screen.getByTestId('saved-stages').textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Ajouter une étape' }));
+    fireEvent.change(screen.getByLabelText(/Nom de l’étape/), { target: { value: 'Brouillon' } });
+    expect(screen.getByTestId('saved-stages').textContent).toBe(before);
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByTestId('saved-stages').textContent).toBe(before);
+    expect(screen.queryByRole('form')).not.toBeInTheDocument();
+  });
+
+  it('commits a stage while preserving its translations, metadata and attached media', () => {
+    const modules = fullModulesFixture();
+    modules.itinerary.stages[0] = { ...modules.itinerary.stages[0], mediaIds: ['media-1'], nameTranslations: { en: 'Viewpoint' }, extra: { source: 'import' } };
+    render(<ItiHarness modules={modules} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Étape 1 : Belvédère du Maïdo' }));
+    fireEvent.change(screen.getByLabelText(/Nom de l’étape/), { target: { value: 'Nouveau belvédère' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Valider l’étape' }));
+    expect(JSON.parse(screen.getByTestId('saved-stages').textContent!)[0]).toMatchObject({ name: 'Nouveau belvédère', recordId: 'st1', mediaIds: ['media-1'], nameTranslations: { en: 'Viewpoint' }, extra: { source: 'import' } });
+  });
+
+  it('rejects manual coordinates outside the trail corridor without saving them', () => {
+    render(<ItiHarness />);
+    const before = screen.getByTestId('saved-stages').textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier l’étape 1 : Belvédère du Maïdo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Coordonnées GPS' }));
+    fireEvent.change(screen.getByLabelText('Latitude'), { target: { value: '-22' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Valider l’étape' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('plus de 50 m');
+    expect(screen.getByTestId('saved-stages').textContent).toBe(before);
+  });
+
+  it('renumbers stages after keyboard-accessible reordering', () => {
+    const modules = fullModulesFixture();
+    modules.itinerary.stages.push({ ...modules.itinerary.stages[0], recordId: 'st2', name: 'Cascade', position: '2' });
+    render(<ItiHarness modules={modules} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Monter Cascade' }));
+    expect(JSON.parse(screen.getByTestId('saved-stages').textContent!).map((s: { name: string; position: string }) => [s.name, s.position])).toEqual([['Cascade', '1'], ['Belvédère du Maïdo', '2']]);
+    expect(screen.getByRole('button', { name: 'Étape 1 : Cascade' })).toBeInTheDocument();
+  });
+
+  it('keeps public numbering contiguous after removing an intermediate stage', () => {
+    const modules = fullModulesFixture();
+    modules.itinerary.stages.push({ ...modules.itinerary.stages[0], recordId: 'st2', name: 'Cascade', position: '5' });
+    render(<ItiHarness modules={modules} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier l’étape 1 : Belvédère du Maïdo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Retirer cette étape' }));
+    expect(JSON.parse(screen.getByTestId('saved-stages').textContent!)).toEqual([expect.objectContaining({ name: 'Cascade', position: '1' })]);
+  });
   it('renders Difficulté and Statut d\'ouverture as DB-vocab selects, not free-text inputs', () => {
     render(<ItiHarness />);
     const difficulty = screen.getByRole('combobox', { name: 'Difficulté' });
@@ -96,6 +147,7 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     expect(screen.getByRole('option', { name: 'Très difficile' })).toBeInTheDocument();
     // ReferenceSelect is stale-safe: a legacy free-text value is preserved, not blanked.
     expect((difficulty as HTMLSelectElement).value).toBe('modéré');
+    fireEvent.click(screen.getByRole('button', { name: /Praticabilité & fermetures/ }));
     expect(screen.getByRole('combobox', { name: "Statut d'ouverture" }).tagName).toBe('SELECT');
   });
 
@@ -115,7 +167,7 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
 
   it('§B5: renders the Infos pratiques block with the relocated Boucle + child-friendly toggles', () => {
     render(<ItiHarness />);
-    expect(screen.getByText('Infos pratiques')).toBeInTheDocument();
+    expect(screen.getByText('Conseils & accès au départ')).toBeInTheDocument();
     // object_iti_info field round-trips its value
     expect(screen.getByDisplayValue('Depuis le parking du col')).toBeInTheDocument();
     // is_loop is now grouped here as a boolean characteristic, next to is_child_friendly
@@ -143,16 +195,17 @@ describe('BlockITI — §06 selects + steppers (§111 B2/B3)', () => {
     expect(screen.getByText('Belvédère du Maïdo')).toBeInTheDocument();
     // explicit type + GPS-point meta (replaces the old position-derived D/A)
     expect(screen.getByText(/Panorama · point GPS/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Modifier' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modifier l’étape 1 : Belvédère du Maïdo' })).toBeInTheDocument();
   });
 
-  it('§C2: Modifier opens the detailed stage modal (type select, name, corridor slider)', () => {
+  it('edits the selected stage beside the same map, with the corridor control', () => {
     render(<ItiHarness />);
     expect(screen.queryByRole('dialog', { name: 'Modifier l’étape' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Modifier' }));
-    expect(screen.getByRole('dialog', { name: 'Modifier l’étape' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Autre type d’étape…' }));
-    expect(screen.getByRole('combobox', { name: "Type d'étape" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Modifier l’étape 1 : Belvédère du Maïdo' }));
+    expect(screen.getByRole('form', { name: 'Modifier l’étape' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('iti-trace-map')).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Type d’étape' })).toBeInTheDocument();
     expect(screen.getByDisplayValue('Belvédère du Maïdo')).toBeInTheDocument();
     // corridor slider present because the fixture has an imported trace
     expect(screen.getByLabelText('Largeur du corridor en mètres')).toBeInTheDocument();

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { Fs } from '../primitives';
+import { Disclosure, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
 import { OpeningPeriodsEditor } from './OpeningPeriodsEditor';
@@ -15,7 +15,7 @@ function closureLabel(closure: ObjectWorkspaceOpeningPeriod): string {
   return closure.label || formatPeriodRange(closure);
 }
 
-export function SectionOpenings({ editor, folded }: SectionProps) {
+export function SectionOpenings({ editor, permissions, folded, embedded = false }: SectionProps & { embedded?: boolean }) {
   const openings = editor.draft.openings;
   const periods = openings.periods;
   const [adding, setAdding] = useState(false);
@@ -65,26 +65,20 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
   // valid (closures are excluded). Empty subset → 0, harmless for the empty-state view.
   const currentIndex = currentPeriodIndex(openPeriods);
 
-  return (
-    <Fs
-      num="14"
-      title="Périodes d'ouverture"
-      sub="Saisons, exceptions, jours fériés et horaires par jour"
-      folded={folded}
-      pill={{ tone: 'ok', label: `${openPeriods.length} période(s)` }}
-    >
-      <OpeningPeriodsEditor
+  const regularPeriods = <OpeningPeriodsEditor
         periods={openPeriods}
         periodTypeOptions={openings.periodTypeOptions}
         currentIndex={currentIndex}
         onAdd={() => setAdding(true)}
         onEdit={(index) => setEditingIndex(index)}
         onDelete={handleDelete}
-      />
+      />;
+  const content = <>
+      {embedded ? <Disclosure title="Périodes d’accès régulières" summary={`${openPeriods.length} période(s)`}>{regularPeriods}</Disclosure> : regularPeriods}
 
       <div className="op-closures">
         <div className="chip-group__label" style={{ margin: '16px 0 6px' }}>
-          Exceptions
+          {embedded ? 'Fermetures et exceptions datées' : 'Exceptions'}
         </div>
         {closures.length === 0 ? (
           <p className="muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
@@ -182,6 +176,11 @@ export function SectionOpenings({ editor, folded }: SectionProps) {
           }}
         />
       )}
-    </Fs>
-  );
+    </>;
+  if (embedded) {
+    const canEdit = permissions.openings.canDirectWrite || permissions.openings.canPrepareProposal || permissions.openings.canSubmitProposal;
+    return <fieldset className="iti-embedded-fields" disabled={!canEdit}>{content}</fieldset>;
+  }
+  return <Fs num="14" title="Périodes d'ouverture" sub="Saisons, exceptions, jours fériés et horaires par jour" folded={folded}
+    pill={{ tone: 'ok', label: `${openPeriods.length} période(s)` }}>{content}</Fs>;
 }

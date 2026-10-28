@@ -72,6 +72,7 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
   const access = permissions.legal;
   const canWrite = Boolean(access?.canDirectWrite) && !legal.unavailableReason;
   const isAccommodation = archetype === 'HEB';
+  const isItinerary = archetype === 'ITI';
   const today = new Date().toISOString().slice(0, 10);
 
   const siret = readLegalScalar(legal.records, 'siret');
@@ -118,15 +119,17 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
     ? { tone: 'req' as const, label: 'Document obligatoire expiré' }
     : requiredExpiring
       ? { tone: 'warn' as const, label: 'Document obligatoire à renouveler' }
-      : siret
+      : isItinerary
+        ? { tone: 'ok' as const, label: `${documentEntries.length} document(s)` }
+        : siret
         ? { tone: 'ok' as const, label: 'SIRET renseigné' }
         : { tone: 'warn' as const, label: 'SIRET manquant' };
 
   return (
     <Fs
       num="18"
-      title="Juridique"
-      sub="Identité juridique de l'établissement (SIRET/SIREN, raison sociale) et documents légaux"
+      title={isItinerary ? 'Réglementation & documents' : 'Juridique'}
+      sub={isItinerary ? 'Autorisations, arrêtés et documents relatifs au parcours' : "Identité juridique de l'établissement (SIRET/SIREN, raison sociale) et documents légaux"}
       folded={folded}
       pill={pill}
     >
@@ -147,6 +150,7 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
         </p>
       )}
 
+      {!isItinerary && <>
       <div className="chip-group__label" style={{ marginTop: 0 }}>Identité de la personne morale</div>
       {canWrite ? (
         <>
@@ -229,9 +233,10 @@ export function SectionLegal({ editor, permissions, archetype, folded }: Section
         </>
       )}
 
-      <div className="chip-group__label" style={{ marginTop: 16 }}>Documents légaux</div>
+      </>}
+      <div className="chip-group__label" style={{ marginTop: 16 }}>{isItinerary ? 'Documents du parcours' : 'Documents légaux'}</div>
       <p style={{ fontSize: 12, color: 'var(--ink-4)', margin: '0 0 8px' }}>
-        Licences, assurances, certificats… On enregistre le type, la référence, la validité et le justificatif
+        {isItinerary ? 'Arrêtés, autorisations et justificatifs du parcours. On enregistre le type, la référence, la validité et le justificatif' : 'Licences, assurances, certificats… On enregistre le type, la référence, la validité et le justificatif'}{' '}
         (PDF ou image, 10 Mo max). Un document obligatoire expiré est signalé en rouge.
       </p>
 

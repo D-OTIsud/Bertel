@@ -17,7 +17,7 @@ describe('section registry', () => {
     // §182: section 16 (Sites secondaires) is shown for every archetype, not just ITI/VIS —
     // HEB and RES gain one section each versus their pre-§182 counts (18/19 → 19/20).
     expect(getRegisteredSections('HEB')).toHaveLength(19);
-    expect(getRegisteredSections('ITI')).toHaveLength(20);
+    expect(getRegisteredSections('ITI')).toHaveLength(18);
     expect(getRegisteredSections('RES')).toHaveLength(20);
   });
 

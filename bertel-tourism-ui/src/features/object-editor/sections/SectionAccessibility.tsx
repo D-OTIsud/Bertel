@@ -17,7 +17,7 @@ const DISABILITY_TYPES = [
   { code: 'cognitive', label: 'Mental' },
 ];
 
-export function SectionAccessibility({ editor, permissions, folded }: SectionProps) {
+export function SectionAccessibility({ editor, permissions, archetype, folded }: SectionProps) {
   const distinctions = editor.draft.distinctions;
   const characteristics = editor.draft.characteristics;
   const descriptions = editor.draft.descriptions;
@@ -86,8 +86,8 @@ export function SectionAccessibility({ editor, permissions, folded }: SectionPro
   return (
     <Fs
       num="09"
-      title="Accessibilité"
-      sub="Équipements PMR (ref_amenity famille accessibility), label Tourisme & Handicap, texte adapté multilingue"
+      title={archetype === 'ITI' ? 'Accessibilité du parcours' : 'Accessibilité'}
+      sub={archetype === 'ITI' ? 'Conditions de cheminement, équipements adaptés et informations par handicap' : 'Équipements PMR (ref_amenity famille accessibility), label Tourisme & Handicap, texte adapté multilingue'}
       folded={folded}
       pill={{
         tone: selectedAccessibilityCount > 0 ? 'ok' : 'warn',

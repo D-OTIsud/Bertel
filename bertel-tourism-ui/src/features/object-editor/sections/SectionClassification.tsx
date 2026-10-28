@@ -51,14 +51,16 @@ function repHeader(columns: string, labels: string[]) {
   );
 }
 
-export function SectionClassification({ editor, folded }: SectionProps) {
+export function SectionClassification({ editor, archetype, folded }: SectionProps) {
+  const isItinerary = archetype === 'ITI';
   const distinctions = editor.draft.distinctions;
   // §08 surfaces EVERY distinction family — classements, quality, sustainability AND
   // accessibility (Tourisme & Handicap). Accessibility schemes are offered with their value
   // forced to 'granted'; the granted_* sub-values are the per-disability coverage, which stays
   // edited in §09 (the §08 modal never touches disabilityTypesCovered → coverage is preserved).
   const accessibilityCodes = new Set(
-    distinctions.schemeOptions.filter((scheme) => scheme.isAccessibility).map((scheme) => scheme.code),
+    [...distinctions.schemeOptions.filter((scheme) => scheme.isAccessibility).map((scheme) => scheme.code),
+      ...distinctions.accessibilityLabels.map((item) => item.schemeCode)],
   );
   const isAccessibilityRow = (item: ObjectWorkspaceDistinctionItem) => accessibilityCodes.has(item.schemeCode);
 
@@ -76,10 +78,15 @@ export function SectionClassification({ editor, folded }: SectionProps) {
     ...distinctions.accessibilityLabels,
   ];
 
-  const granted = rows.filter((item) => statusBucket(item) === 'granted').length;
-  const pending = rows.filter((item) => statusBucket(item) === 'pending').length;
-  const expired = rows.filter((item) => statusBucket(item) === 'expired').length;
-  const nextExpiry = rows
+  const allowedCodes = new Set(schemes.map((scheme) => scheme.code));
+  // Keep legacy rows in the module; changing a visible label must never remove them.
+  const visibleEntries = rows.map((item, index) => ({ item, index }))
+    .filter(({ item }) => !isItinerary || allowedCodes.has(item.schemeCode));
+  const visibleRows = visibleEntries.map(({ item }) => item);
+  const granted = visibleRows.filter((item) => statusBucket(item) === 'granted').length;
+  const pending = visibleRows.filter((item) => statusBucket(item) === 'pending').length;
+  const expired = visibleRows.filter((item) => statusBucket(item) === 'expired').length;
+  const nextExpiry = visibleRows
     .map((item) => item.validUntil)
     .filter(Boolean)
     .sort()[0];
@@ -102,8 +109,8 @@ export function SectionClassification({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="08"
-      title="Classifications & distinctions"
-      sub="Étoiles, labels, marques, statuts et dates de validité."
+      title={isItinerary ? 'Labels & homologations' : 'Classifications & distinctions'}
+      sub={isItinerary ? 'Labels applicables au parcours, statuts et dates de validité' : 'Étoiles, labels, marques, statuts et dates de validité.'}
       folded={folded}
       pill={
         gated
@@ -139,16 +146,15 @@ export function SectionClassification({ editor, folded }: SectionProps) {
         <ModuleUnavailableNotice reason={distinctions.unavailableReason ?? ''} />
       ) : (
         <>
-          {rows.length === 0 ? (
+          {visibleRows.length === 0 ? (
             <p className="muted" style={{ margin: '4px 0 12px' }}>
-              Aucune classification ou label renseigné. Ajoutez une étoile, un classement officiel ou un label de
-              qualité.
+              {isItinerary ? 'Aucun label ou homologation renseigné pour ce parcours. Cette rubrique est facultative.' : 'Aucune classification ou label renseigné. Ajoutez une étoile, un classement officiel ou un label de qualité.'}
             </p>
           ) : (
             <>
               {repHeader(CLASS_COLS, ['Référentiel', 'Valeur attribuée', 'Statut', 'Acquis le', "Valable jusqu'au", ''])}
               <div className="repeater">
-                {rows.map((item, index) => {
+                {visibleEntries.map(({ item, index }) => {
                   const bucket = statusBucket(item);
                   return (
                     <div
@@ -192,8 +198,8 @@ export function SectionClassification({ editor, folded }: SectionProps) {
             </>
           )}
 
-          <button type="button" className="rep-add" onClick={() => setAdding(true)}>
-            + Ajouter une classification
+          <button type="button" className="rep-add" disabled={schemes.length === 0} onClick={() => setAdding(true)}>
+            {isItinerary ? '+ Ajouter un label ou une homologation' : '+ Ajouter une classification'}
           </button>
 
           {adding && (

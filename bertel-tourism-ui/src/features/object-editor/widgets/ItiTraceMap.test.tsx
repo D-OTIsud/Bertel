@@ -1,9 +1,15 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { ItiTraceMap } from './ItiTraceMap';
 
+let mockMapProps: any;
+const mockFitBounds = jest.fn();
 jest.mock('react-map-gl/maplibre', () => ({
-  Map: ({ children }: { children?: ReactNode }) => <div data-testid="map">{children}</div>,
+  Map: require('react').forwardRef((props: { children?: ReactNode }, ref: unknown) => {
+    require('react').useImperativeHandle(ref, () => ({ fitBounds: mockFitBounds }));
+    mockMapProps = props;
+    return <div data-testid="map">{props.children}</div>;
+  }),
   Source: ({ children }: { children?: ReactNode }) => <>{children}</>,
   Layer: () => null,
   Marker: ({ children }: { children?: ReactNode }) => <div data-testid="marker">{children}</div>,
@@ -20,7 +26,48 @@ jest.mock('../../../services/object-workspace', () => ({
 }));
 
 describe('ItiTraceMap (§111 B1)', () => {
-  beforeEach(() => saveTrackMock.mockReset());
+  beforeEach(() => { saveTrackMock.mockReset(); mockFitBounds.mockClear(); });
+
+  it('prevents a file drop from navigating away or importing while the track is locked', () => {
+    const onImported = jest.fn();
+    const view = render(<ItiTraceMap objectId="ITI1" initialTrack={null} onImported={onImported} importDisabled />);
+    const prevented = !fireEvent.drop(view.getByRole('group', { name: 'Carte du parcours et de ses étapes' }), { dataTransfer: { files: [{ name: 'track.gpx' }] } });
+    expect(prevented).toBe(true);
+    expect(view.getByRole('button', { name: 'Importer un fichier' })).toBeDisabled();
+    expect(saveTrackMock).not.toHaveBeenCalled();
+    expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it('shows corridor errors on the active placement map where the user clicked', () => {
+    const { getByRole } = render(<ItiTraceMap objectId="ITI1" initialTrack={null} onImported={jest.fn()} placementActive placementError="Le point est à plus de 50 m du tracé." />);
+    expect(getByRole('alert')).toHaveTextContent('plus de 50 m');
+    expect(getByRole('alert')).toHaveClass('iti-trace-map__notice');
+  });
+
+  it('fits the whole route on load and resize, and only places points in explicit placement mode', () => {
+    const onPlacePoint = jest.fn();
+    const line = { type: 'LineString', coordinates: [[55.3, -21.4], [55.6, -21.1]] };
+    const view = render(<ItiTraceMap objectId="ITI1" initialTrack={line} onImported={jest.fn()} onPlacePoint={onPlacePoint} />);
+    act(() => { mockMapProps.onLoad(); mockMapProps.onResize(); mockMapProps.onClick({ lngLat: { lng: 55.4, lat: -21.2 } }); });
+    expect(mockFitBounds).toHaveBeenLastCalledWith([55.3, -21.4, 55.6, -21.1], expect.objectContaining({ maxZoom: 16, duration: 0 }));
+    expect(onPlacePoint).not.toHaveBeenCalled();
+    view.rerender(<ItiTraceMap objectId="ITI1" initialTrack={line} onImported={jest.fn()} onPlacePoint={onPlacePoint} placementActive />);
+    act(() => mockMapProps.onClick({ lngLat: { lng: 55.4, lat: -21.2 } }));
+    expect(onPlacePoint).toHaveBeenCalledWith(55.4, -21.2);
+  });
+
+  it('keeps the current track when a replacement cannot be saved', async () => {
+    saveTrackMock.mockRejectedValue(new Error('Enregistrement impossible'));
+    const line = { type: 'LineString', coordinates: [[55.5, -21], [55.51, -21]] };
+    const onImported = jest.fn();
+    const { container, findByRole, getByRole } = render(<ItiTraceMap objectId="ITI1" initialTrack={line} onImported={onImported} />);
+    const file = { name: 'new.gpx', text: () => Promise.resolve('<gpx><trk><trkseg><trkpt lat="-21" lon="55.5"/><trkpt lat="-21" lon="55.51"/></trkseg></trk></gpx>') } as File;
+    fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } });
+    expect(await findByRole('alert')).toHaveTextContent('Enregistrement impossible');
+    expect(getByRole('button', { name: 'Remplacer le tracé' })).toBeEnabled();
+    expect(mockMapProps.initialViewState.bounds).toEqual([55.5, -21, 55.51, -21]);
+    expect(onImported).not.toHaveBeenCalled();
+  });
 
   it('imports a GPX, calls set_itinerary_track, and reports the geometry + metrics to the draft', async () => {
     saveTrackMock.mockResolvedValue({ distanceKm: '3.1', elevationGain: '130', elevationLoss: '30', hasElevation: true });

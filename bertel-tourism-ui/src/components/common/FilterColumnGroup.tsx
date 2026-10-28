@@ -33,7 +33,7 @@ export function FilterColumnGroup({
   // bouton serait « Hebergements 2 » — un nombre nu sans contexte pour les AT.
   const countBadge =
     count != null ? (
-      <span className="rounded-[6px] bg-surface2 px-2 py-0.5 text-[11px] font-semibold text-ink-4">
+      <span className="rounded-[6px] bg-surface2 px-2 py-0.5 text-xs font-semibold text-ink-4">
         {count}
         {collapsible ? <span className="sr-only"> critère{count > 1 ? 's' : ''} actif{count > 1 ? 's' : ''}</span> : null}
       </span>
@@ -41,8 +41,8 @@ export function FilterColumnGroup({
 
   if (!collapsible) {
     return (
-      <section className="border-b border-line py-3.5 last:border-0">
-        <div className="mb-2.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3">
+      <section className="filter-column-group border-b border-line py-3.5 last:border-0">
+        <div className="mb-2.5 flex items-center justify-between text-sm leading-5 font-bold uppercase tracking-[0.08em] text-ink-3">
           <span>{label}</span>
           {countBadge}
         </div>
@@ -52,11 +52,11 @@ export function FilterColumnGroup({
   }
 
   return (
-    <section className="border-b border-line py-3.5 last:border-0">
+    <section className="filter-column-group border-b border-line py-3.5 last:border-0">
       <button
         type="button"
         className={cn(
-          'flex w-full items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-[0.08em] text-ink-3 transition hover:text-ink',
+          'filter-context-action min-h-10 flex w-full items-center justify-between gap-2 text-sm leading-5 font-bold uppercase tracking-[0.08em] text-ink-3 transition hover:text-ink',
           open && 'mb-2.5',
         )}
         aria-expanded={open}

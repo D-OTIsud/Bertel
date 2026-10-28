@@ -64,21 +64,20 @@ describe('SectionOpenings', () => {
   });
 
   it('deletes a period after confirmation', () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     const { hook, rerender } = setup();
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Supprimer Standard' })); });
+    expect(hook.result.current.draft.openings.periods).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
     rerender();
     expect(hook.result.current.draft.openings.periods).toHaveLength(0);
-    confirmSpy.mockRestore();
   });
 
   it('keeps the period when the delete confirmation is declined', () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
     const { hook, rerender } = setup();
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Supprimer Standard' })); });
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
     rerender();
     expect(hook.result.current.draft.openings.periods).toHaveLength(1);
-    confirmSpy.mockRestore();
   });
 
   it('shows the compact row summary (range + week summary) without expanding', () => {

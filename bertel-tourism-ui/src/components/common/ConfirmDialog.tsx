@@ -6,8 +6,36 @@
 // `.object-editor` (qui dépend de classes `.btn` indisponibles hors éditeur). Un seul design
 // system app-wide.
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+
+/** Keep nested editor confirmations in the same Radix focus/dismissal stack. */
+function EditorConfirmShell({ open, title, className, onOpenChange, footer, children }: {
+  open: boolean; title: string; className?: string;
+  onOpenChange: (open: boolean) => void; footer: ReactNode; children: ReactNode;
+}) {
+  const opener = useRef<HTMLElement | null>(null);
+  const scope = useRef<HTMLElement | null>(null);
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className={`object-editor${className ? ` ${className}` : ''}`}
+      onOpenAutoFocus={(event) => {
+        opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        scope.current = opener.current?.closest('section') ?? null;
+        const cancel = event.target instanceof HTMLElement ? event.target.querySelector<HTMLButtonElement>('[data-confirm-cancel]:not([disabled])') : null;
+        if (cancel) { event.preventDefault(); cancel.focus(); }
+      }}
+      onCloseAutoFocus={(event) => {
+        const target = opener.current?.isConnected ? opener.current
+          : scope.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]');
+        if (target?.isConnected) { event.preventDefault(); target.focus(); }
+      }}>
+      <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+      {children}
+      <DialogFooter>{footer}</DialogFooter>
+    </DialogContent>
+  </Dialog>;
+}
 
 export function ConfirmDialog({
   open,
@@ -20,6 +48,7 @@ export function ConfirmDialog({
   confirmGate,
   attestation,
   className,
+  appearance = 'default',
   onCancel,
   onConfirm,
 }: {
@@ -63,6 +92,8 @@ export function ConfirmDialog({
    * le pied vit hors du corps.
    */
   className?: string;
+  /** Reuse the editor's Radix shell while sharing confirmation content and guards. */
+  appearance?: 'default' | 'editor';
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -103,16 +134,17 @@ export function ConfirmDialog({
       : attestationMissing
         ? attestationHintId
         : undefined;
+  const Shell = appearance === 'editor' ? EditorConfirmShell : Modal;
 
   return (
-    <Modal
+    <Shell
       title={title}
       open={open}
       className={className}
       onOpenChange={(next) => { if (!next) onCancel(); }}
       footer={
         <>
-          <button type="button" className="ghost-button" onClick={onCancel} disabled={busy}>
+          <button type="button" data-confirm-cancel className={appearance === 'editor' ? 'btn' : 'ghost-button'} onClick={onCancel} disabled={busy}>
             {cancelLabel}
           </button>
           {busy && (
@@ -122,7 +154,7 @@ export function ConfirmDialog({
           )}
           <button
             type="button"
-            className={tone === 'danger' ? 'primary-button primary-button--danger' : 'primary-button'}
+            className={appearance === 'editor' ? (tone === 'danger' ? 'btn danger' : 'btn primary') : (tone === 'danger' ? 'primary-button primary-button--danger' : 'primary-button')}
             aria-disabled={confirmBlocked || undefined}
             aria-describedby={confirmReasonId}
             onClick={() => {
@@ -138,7 +170,9 @@ export function ConfirmDialog({
         </>
       }
     >
-      <p className="confirm-message">{message}</p>
+      {appearance === 'editor'
+        ? <DialogDescription asChild><p className="confirm-dialog__message">{message}</p></DialogDescription>
+        : <p className="confirm-message">{message}</p>}
       {attestation && (
         <div className="confirm-attestation">
           <label htmlFor={attestationInputId} className="confirm-attestation__label">
@@ -192,6 +226,6 @@ export function ConfirmDialog({
           </p>
         </div>
       )}
-    </Modal>
+    </Shell>
   );
 }

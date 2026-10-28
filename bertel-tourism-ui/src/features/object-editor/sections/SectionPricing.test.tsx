@@ -12,8 +12,9 @@ describe('SectionPricing (§84 modal redesign)', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une ligne tarifaire/i })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
-    // The default draft already carries a public (first kind) → Enregistrer is enabled.
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    // The default draft already carries a public (first kind); the amount is the only thing left to fill.
+    act(() => { fireEvent.change(screen.getByLabelText('Montant'), { target: { value: '18' } }); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.pricing.prices).toHaveLength(2);
@@ -40,8 +41,9 @@ describe('SectionPricing (§84 modal redesign)', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter une remise/i })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
+    act(() => { fireEvent.change(screen.getByLabelText('Conditions'), { target: { value: 'Groupes' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Remise en pourcentage'), { target: { value: '15' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.pricing.discounts).toHaveLength(1);

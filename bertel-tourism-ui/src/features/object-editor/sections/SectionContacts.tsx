@@ -11,6 +11,7 @@ import type {
 import { resolveWebPlatform } from '../../../lib/web-platform';
 import { reindexContactPositions } from './contacts-reorder';
 import { createContactDraft, createWebChannelDraft, reconcileContactPrimary } from './contacts-edit';
+import { EDITOR_SECTION_REFERENCES } from '../section-config';
 
 // Display-row column templates (the leading 14px is the SortableList drag handle).
 const CONTACT_COLS = '14px 132px minmax(0, 1fr) 116px auto auto auto auto';
@@ -263,7 +264,7 @@ export function SectionContacts({ editor, folded }: SectionProps) {
           <p className="contacts-notice contacts-notice--linked">
             {contacts.relatedActorContactsCount ?? 0} contact(s) d’acteurs et{' '}
             {contacts.relatedOrganizationContactsCount ?? 0} contact(s) d’organisations liés sont
-            aussi publiés sur la fiche — gérés via les sections 17 (Rattachements) et 18 (Fournisseur).
+            aussi publiés sur la fiche — gérés via les sections {EDITOR_SECTION_REFERENCES.attachments.num} ({EDITOR_SECTION_REFERENCES.attachments.label}) et {EDITOR_SECTION_REFERENCES.provider.num} ({EDITOR_SECTION_REFERENCES.provider.label}).
           </p>
         )}
       </div>

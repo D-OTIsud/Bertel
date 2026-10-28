@@ -42,11 +42,13 @@ describe('BlockSRV — single-owner surfaces (§48)', () => {
     expect(screen.getByText(/Géré dans la section 14/)).toBeInTheDocument();
   });
 
-  it('no longer edits languages in §05 (owned by §12)', () => {
+  it('renvoie les langues vers la rubrique 04 active et conserve les horaires en 14', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(<BlockSRV editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText('Langues parlées au comptoir')).not.toBeInTheDocument();
-    expect(screen.getByText(/Géré dans la section 12/)).toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 04 — Descriptions & langues parlées/)).toBeInTheDocument();
+    expect(screen.getByText(/Géré dans la section 14 — Périodes d'ouverture/)).toBeInTheDocument();
+    expect(screen.queryByText(/§12|section 12/)).not.toBeInTheDocument();
   });
 });

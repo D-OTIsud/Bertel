@@ -11,6 +11,7 @@ import { useSessionStore } from '../../store/session-store';
 import { resolveTypeLabel } from '../../utils/labels';
 import { ObjectDetailView } from './ObjectDetailView';
 import { parseTaxonomyEyebrow } from './utils';
+import { confirmNavigation } from '../../lib/navigation-guard';
 
 /**
  * Delai avant le prechargement automatique de l'editeur, en millisecondes.
@@ -159,11 +160,16 @@ export function ObjectDrawerShell({ objectId, onClose }: ObjectDrawerShellProps)
     if (!objectId) {
       return;
     }
+    const destination = `/objects/${objectId}/edit`;
+    // The editor's own preview returns to the route already mounted underneath.
+    const isCurrentEditor = window.location.pathname.replace(/\/$/, '') === destination;
+    if (!isCurrentEditor && !confirmNavigation()) return;
     onClose();
-    router.push(`/objects/${objectId}/edit`);
+    router.push(destination);
   }
 
   function openTeamAdmin() {
+    if (!confirmNavigation()) return;
     onClose(); // ferme le drawer AVANT de naviguer
     router.push('/team');
   }

@@ -10647,6 +10647,7 @@ select.filter-context-input:focus-visible,
   width: 100%;
   height: auto;
   padding: 0.5rem;
+  padding-inline-end: 12px;
   border: 1px solid var(--line);
   border-radius: theme('borderRadius.shellMd');
   background: var(--bg);
@@ -10677,10 +10678,17 @@ select.filter-context-input:focus-visible,
 }
 
 .filter-dropdown__chevron {
-  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  display: block;
   margin-left: 0.25rem;
-  font-size: 0.7rem;
-  color: var(--text-muted);
+  color: var(--ink-2);
+}
+
+.filter-dropdown__trigger[aria-expanded="true"] > .filter-dropdown__chevron {
+  transform: rotate(180deg);
+  color: var(--theme-primary, var(--teal));
 }
 
 .filter-dropdown__menu {
@@ -13576,6 +13584,7 @@ select.filter-context-input:focus-visible,
 .picker__trigger {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   width: 100%; min-height: 34px; padding: 6px 10px;
+  padding-inline-end: 12px;
   border: 1px solid var(--line); border-radius: var(--r-md);
   background: var(--surface); color: var(--ink);
   font-size: 13px; font-weight: 500; text-align: left; cursor: pointer;
@@ -13584,7 +13593,11 @@ select.filter-context-input:focus-visible,
 .picker__trigger:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
 .picker__trigger.is-empty .picker__trigger-label { color: var(--ink-4); }
 .picker__trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.picker__chevron { flex: none; font-size: 10px; color: var(--ink-4); }
+.picker__chevron { width: 20px; height: 20px; flex: 0 0 20px; display: block; color: var(--ink-2); }
+.picker__trigger[aria-expanded="true"] > .picker__chevron {
+  transform: rotate(180deg);
+  color: var(--theme-primary, var(--teal));
+}
 
 /* Le panneau est PORTALISÉ sous <body> et positionné en `fixed` par usePickerPopover :
    position/top/left/z-index/pointer-events viennent du style inline, PAS d'ici (un

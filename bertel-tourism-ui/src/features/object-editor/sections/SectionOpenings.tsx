@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { Disclosure, Fs } from '../primitives';
+import { ConfirmDialog, Disclosure, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type { ObjectWorkspaceOpeningPeriod } from '../../../services/object-workspace-parser';
 import { OpeningPeriodsEditor } from './OpeningPeriodsEditor';
@@ -22,6 +22,24 @@ export function SectionOpenings({ editor, permissions, folded, embedded = false 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [addingClosure, setAddingClosure] = useState(false);
   const [editingClosure, setEditingClosure] = useState<ObjectWorkspaceOpeningPeriod | null>(null);
+  const [deletion, setDeletion] = useState<{ target: ObjectWorkspaceOpeningPeriod; message: string } | null>(null);
+  const pendingDeletion = useRef<typeof deletion>(null);
+  const latestPeriods = useRef(periods);
+  latestPeriods.current = periods;
+
+  function requestDeletion(target: ObjectWorkspaceOpeningPeriod, message: string) {
+    pendingDeletion.current = { target, message };
+    setDeletion(pendingDeletion.current);
+  }
+  function cancelDeletion() { pendingDeletion.current = null; setDeletion(null); }
+  function confirmDeletion() {
+    const pending = pendingDeletion.current;
+    cancelDeletion(); // Consume synchronously, before any second activation can mutate the draft.
+    if (!pending) return;
+    const current = latestPeriods.current;
+    const index = current.findIndex((row) => pending.target.recordId ? row.recordId === pending.target.recordId : row === pending.target);
+    if (index !== -1) replace(current.filter((_, rowIndex) => rowIndex !== index));
+  }
 
   // This marker only selects the editor; SQL priority comes from dates/rank, never extra.
   const openPeriods = periods.filter((period) => !period.isClosure && !isOpeningHoursException(period));
@@ -39,10 +57,7 @@ export function SectionOpenings({ editor, permissions, folded, embedded = false 
       return;
     }
     const label = target.label || `Période ${openIndex + 1}`;
-    if (!window.confirm(`Supprimer la période « ${label} » ?`)) {
-      return;
-    }
-    replace(periods.filter((period) => period !== target));
+    requestDeletion(target, `Supprimer la période « ${label} » ?`);
   }
 
   function handleEditSave(period: ObjectWorkspaceOpeningPeriod) {
@@ -55,10 +70,7 @@ export function SectionOpenings({ editor, permissions, folded, embedded = false 
   }
 
   function deleteClosure(closure: ObjectWorkspaceOpeningPeriod) {
-    if (!window.confirm(`Supprimer ${closure.isClosure ? 'la fermeture' : 'l’exception'} « ${closureLabel(closure)} » ?`)) {
-      return;
-    }
-    replace(periods.filter((period) => period !== closure));
+    requestDeletion(closure, `Supprimer ${closure.isClosure ? 'la fermeture' : 'l’exception'} « ${closureLabel(closure)} » ?`);
   }
 
   // currentPeriodIndex is computed over the open subset so the "en cours" highlight stays
@@ -122,6 +134,9 @@ export function SectionOpenings({ editor, permissions, folded, embedded = false 
           <Plus size={14} aria-hidden style={{ verticalAlign: 'middle' }} /> Ajouter une exception
         </button>
       </div>
+
+      <ConfirmDialog open={deletion !== null} title="Confirmer la suppression" message={deletion?.message ?? ''}
+        confirmLabel="Supprimer" tone="danger" onCancel={cancelDeletion} onConfirm={confirmDeletion} />
 
       {adding && (
         <OpeningPeriodEditModal

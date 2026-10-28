@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ConfirmDialog, Fs } from '../primitives';
+import { ConfirmDialog, Disclosure, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
   ObjectWorkspaceDiscountItem,
@@ -11,6 +11,7 @@ import { PricingLineEditModal } from '../widgets/PricingLineEditModal';
 import { DiscountEditModal } from '../widgets/DiscountEditModal';
 import { createPricingDraft } from './pricing-row';
 import { createDiscountRow } from './discount-row';
+import { GroupPolicyButton, PetPolicyInline } from './capacity-controls';
 
 /**
  * §13 Tarifs & extras — modal-driven (parallel to §14 openings / §08 classifications).
@@ -23,7 +24,8 @@ import { createDiscountRow } from './discount-row';
  * Booking policy needs its own model (decision log §84). PaymentChips is the §83 payment
  * block (object_payment_method) the PO relocated into §13.
  */
-export function SectionPricing({ editor, folded }: SectionProps) {
+export function SectionPricing({ editor, permissions, archetype, folded }: SectionProps) {
+  const isItinerary = archetype === 'ITI';
   const pricing = editor.draft.pricing;
   const [addingPrice, setAddingPrice] = useState(false);
   const [editingPriceIndex, setEditingPriceIndex] = useState<number | null>(null);
@@ -73,33 +75,27 @@ export function SectionPricing({ editor, folded }: SectionProps) {
     requestDeletion({ kind: 'discount', target, message: `Supprimer « ${label} » ?` });
   }
 
+  const prices = <>
+      <PriceList pricing={pricing} onAdd={() => setAddingPrice(true)} onEdit={setEditingPriceIndex} onDelete={deletePrice} />
+      <PaymentChips characteristics={editor.draft.characteristics} onChange={(next) => editor.replaceModule('characteristics', next)} />
+      <div className="chip-group__label" style={{ marginTop: 16 }}>Remises &amp; réductions</div>
+      <DiscountList discounts={pricing.discounts} onAdd={() => setAddingDiscount(true)} onEdit={setEditingDiscountIndex} onDelete={deleteDiscount} />
+    </>;
   return (
     <Fs
       num="13"
-      title="Tarifs, paiement & extras"
-      sub="Tarifs, options, paiement, saisons, publics et conditions"
+      title={isItinerary ? 'Accès & conditions' : 'Tarifs, paiement & extras'}
+      sub={isItinerary ? 'Animaux, groupes et éventuels droits d’accès au parcours' : 'Tarifs, options, paiement, saisons, publics et conditions'}
       folded={folded}
       pill={{ tone: 'ok', label: `${pricing.prices.length} ligne(s) · ${pricing.discounts.length} remise(s)` }}
     >
-      <PriceList
-        pricing={pricing}
-        onAdd={() => setAddingPrice(true)}
-        onEdit={(index) => setEditingPriceIndex(index)}
-        onDelete={deletePrice}
-      />
-
-      <PaymentChips
-        characteristics={editor.draft.characteristics}
-        onChange={(next) => editor.replaceModule('characteristics', next)}
-      />
-
-      <div className="chip-group__label" style={{ marginTop: 16 }}>Remises &amp; réductions</div>
-      <DiscountList
-        discounts={pricing.discounts}
-        onAdd={() => setAddingDiscount(true)}
-        onEdit={(index) => setEditingDiscountIndex(index)}
-        onDelete={deleteDiscount}
-      />
+      {isItinerary ? <>
+        <fieldset className="iti-embedded-fields" disabled={!permissions.capacityPolicies.canDirectWrite && !permissions.capacityPolicies.canPrepareProposal}>
+          <PetPolicyInline capacity={editor.draft.capacityPolicies} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+          <GroupPolicyButton capacity={editor.draft.capacityPolicies} onChange={(next) => editor.replaceModule('capacityPolicies', next)} />
+        </fieldset>
+        <Disclosure title="Droits d’accès & tarifs éventuels" summary={`${pricing.prices.length} tarif(s)`} defaultOpen={pricing.prices.length > 0 || pricing.discounts.length > 0}>{prices}</Disclosure>
+      </> : prices}
 
       <ConfirmDialog open={deletion !== null} title="Confirmer la suppression" message={deletion?.message ?? ''}
         confirmLabel="Supprimer" tone="danger" onCancel={cancelDeletion} onConfirm={confirmDeletion} />

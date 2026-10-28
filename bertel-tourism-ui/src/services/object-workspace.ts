@@ -2,7 +2,7 @@ import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectDetail } from '../types/domain';
 import { mockPendingChanges, mockPublicationCards } from '../data/mock';
-import type { ReferenceCatalogs } from './reference-catalogs';
+import { classificationSchemeAppliesTo, type ReferenceCatalogs } from './reference-catalogs';
 import {
   type ObjectWorkspaceCapacityItem,
   type ObjectWorkspaceCapacityPoliciesModule,
@@ -1387,6 +1387,7 @@ async function getObjectWorkspaceDistinctionsModule(
   objectId: string,
   baseModule: ObjectWorkspaceDistinctionsModule,
   catalogs: ReferenceCatalogs,
+  objectType: string,
 ): Promise<ObjectWorkspaceDistinctionsModule> {
   const session = useSessionStore.getState();
   if (session.demoMode) {
@@ -1511,7 +1512,10 @@ async function getObjectWorkspaceDistinctionsModule(
     .filter((group) => group.items.length > 0);
 
   const allDistinctionSchemesForOptions = [...distinctionSchemes, ...accessibilitySchemes];
-  const schemeOptions: ObjectWorkspaceDistinctionSchemeOption[] = allDistinctionSchemesForOptions.map((scheme) => ({
+  const applicabilityUnavailable = catalogs.failedTables?.includes('ref_classification_scheme_applicability') === true;
+  const schemeOptions: ObjectWorkspaceDistinctionSchemeOption[] = allDistinctionSchemesForOptions
+    .filter((scheme) => !applicabilityUnavailable && classificationSchemeAppliesTo(scheme.id, objectType, catalogs))
+    .map((scheme) => ({
     id: scheme.id,
     code: scheme.code,
     label: scheme.label,
@@ -1560,7 +1564,7 @@ async function getObjectWorkspaceDistinctionsModule(
     ),
     accessibilityAmenityCoverage,
     schemeOptions,
-    unavailableReason,
+    unavailableReason: applicabilityUnavailable ? 'Les labels adaptés à ce type de fiche ne peuvent pas être chargés. Réessayez le chargement de la fiche.' : unavailableReason,
   };
 }
 
@@ -4151,7 +4155,7 @@ export async function getObjectWorkspaceResource(
     crmFollowUpModule,
   ] = await Promise.all([
     getObjectWorkspaceTaxonomyModule(objectId, parsedModules.taxonomy, catalogs, detail.type ?? ''),
-    getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs),
+    getObjectWorkspaceDistinctionsModule(objectId, parsedModules.distinctions, catalogs, detail.type ?? ''),
     getObjectWorkspacePublicationModule(objectId, detail, parsedModules.publication),
     getObjectWorkspaceSyncIdentifiersModule(objectId, parsedModules.syncIdentifiers),
     getObjectWorkspaceOpeningsModule(objectId, parsedModules.openings, catalogs),

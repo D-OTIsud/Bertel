@@ -90,6 +90,7 @@ export const REFERENCE_TABLE_SELECT = {
   // (le contrat de `useReferenceCatalogsQuery` — staleTime 1 h + meta.persist —
   // est inchange). Ne PAS aller chercher les logos par une requete dediee.
   ref_classification_scheme: 'id, code, name, description, selection, position, display_group, is_distinction, icon_url',
+  ref_classification_scheme_applicability: 'scheme_id, object_type',
   ref_classification_value: 'id, scheme_id, code, name, ordinal, metadata, icon_url',
   ref_sustainability_action: 'id, code, label, description, category_id, position',
   ref_sustainability_action_category: 'id, code, name, description, position',
@@ -104,7 +105,15 @@ export const REFERENCE_TABLES = Object.keys(REFERENCE_TABLE_SELECT) as ReadonlyA
 export type ReferenceCatalogs = {
   refCodeByDomain: Record<string, RefCodeRow[]>;
   tables: Record<string, Record<string, unknown>[]>;
+  failedTables?: string[];
 };
+
+/** No restriction rows for a scheme means universal applicability (manifest 16n). */
+export function classificationSchemeAppliesTo(schemeId: string, objectType: string, catalogs: ReferenceCatalogs): boolean {
+  const restrictions = (catalogs.tables.ref_classification_scheme_applicability ?? [])
+    .filter((row) => row.scheme_id === schemeId);
+  return !objectType || restrictions.length === 0 || restrictions.some((row) => String(row.object_type).toUpperCase() === objectType.toUpperCase());
+}
 
 /**
  * Charge en UN appel tous les codes de reference des 28 domaines, plus une
@@ -124,6 +133,7 @@ export async function fetchReferenceCatalogs(): Promise<ReferenceCatalogs> {
     refCodeByDomain[domain] = [];
   }
   const tables: Record<string, Record<string, unknown>[]> = {};
+  const failedTables: string[] = [];
   for (const table of REFERENCE_TABLES) {
     tables[table] = [];
   }
@@ -156,10 +166,11 @@ export async function fetchReferenceCatalogs(): Promise<ReferenceCatalogs> {
   REFERENCE_TABLES.forEach((table, index) => {
     const result = tableResults[index] as { data?: unknown; error?: unknown } | undefined;
     if (result?.error) {
+      failedTables.push(table);
       return; // degrade : catalogue vide pour cette table, jamais un chargement casse
     }
     tables[table] = (result?.data ?? []) as Record<string, unknown>[];
   });
 
-  return { refCodeByDomain, tables };
+  return { refCodeByDomain, tables, ...(failedTables.length > 0 ? { failedTables } : {}) };
 }

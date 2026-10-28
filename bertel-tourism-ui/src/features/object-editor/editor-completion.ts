@@ -183,7 +183,17 @@ function isFilled(value: CompletionValue): boolean {
   return value != null;
 }
 
-export function computeSectionCompletion(num: string, draft: ObjectWorkspaceModules): number {
+export function computeSectionCompletion(num: string, draft: ObjectWorkspaceModules, archetype?: ArchetypeCode): number {
+  if (archetype === 'ITI') {
+    if (num === '02') {
+      const located = hasText(draft.location.main.latitude) && hasText(draft.location.main.longitude);
+      const commune = hasText(draft.location.main.city) || hasText(draft.location.main.codeInsee);
+      return Number(located) * 50 + Number(commune) * 50;
+    }
+    if (num === '06') return measureTypeBlock(draft, archetype) * 100;
+    // Labels and admission charges are optional for a public trail.
+    if (num === '08' || num === '13') return 100;
+  }
   const rule = SECTION_COMPLETION_RULES[num];
   if (!rule || rule.fields.length === 0) {
     return 100;
@@ -286,7 +296,7 @@ function measureTypeBlock(draft: ObjectWorkspaceModules, archetype: ArchetypeCod
           hasText(activity.difficultyLevel),
       );
     case 'ITI':
-      return bool01(hasText(itinerary.geometrySummary) || itinerary.stages.length > 0);
+      return bool01(Boolean(itinerary.trackGeojson) || hasText(itinerary.geometrySummary));
     case 'VIS':
       return bool01(
         VISIT_MODE_CODES.some((code) => characteristics.selectedAmenityCodes.includes(code)) ||
@@ -332,14 +342,15 @@ const ESSENTIAL_DIMENSIONS: VisitorDimension[] = [
 ];
 
 const COMPLEMENTARY_DIMENSIONS: VisitorDimension[] = [
-  { id: 'pricing', measure: (d) => bool01(d.pricing.prices.length > 0), applicable: (_d, a) => a !== 'SRV' },
-  { id: 'opening', measure: (d) => bool01(d.openings.periods.length > 0) },
+  { id: 'pricing', measure: (d) => bool01(d.pricing.prices.length > 0), applicable: (d, a) => a !== 'SRV' && (a !== 'ITI' || d.pricing.prices.length > 0) },
+  { id: 'opening', measure: (d) => bool01(d.openings.periods.length > 0), applicable: (_d, a) => a !== 'ITI' },
+  { id: 'trailStatus', measure: (d) => bool01(hasText(d.itinerary.openStatus) || hasText(d.itinerary.statusNote)), applicable: (_d, a) => a === 'ITI' },
   { id: 'links', measure: (d) => bool01(d.relationships.relatedObjects.length > 0) },
   {
     id: 'attachments',
     measure: (d) => bool01(d.relationships.organizationLinks.length > 0 || d.memberships.items.length > 0),
   },
-  { id: 'legal', measure: (d) => bool01(d.legal.records.length > 0) },
+  { id: 'legal', measure: (d) => bool01(d.legal.records.length > 0), applicable: (d, a) => a !== 'ITI' || d.legal.records.length > 0 },
   {
     id: 'externalIds',
     measure: (d) => bool01(d.syncIdentifiers.externalIdentifiers.length > 0 || d.syncIdentifiers.origins.length > 0),
@@ -411,9 +422,10 @@ export function computeCompletionStatus(
 export function computeSectionCompletions(
   draft: ObjectWorkspaceModules,
   items: SectionItem[],
+  archetype?: ArchetypeCode,
 ): SectionCompletion[] {
   return items.map((item) => {
-    const pct = computeSectionCompletion(item.num, draft);
+    const pct = computeSectionCompletion(item.num, draft, archetype);
     return {
       num: item.num,
       label: item.label,
@@ -430,6 +442,10 @@ export function computeNavHint(
   pct: number,
   archetype?: ArchetypeCode,
 ): string {
+  if (archetype === 'ITI' && num === '06') {
+    return draft.itinerary.trackGeojson || hasText(draft.itinerary.geometrySummary) ? 'Tracé' : 'Sans tracé';
+  }
+  if (archetype === 'ITI' && (num === '08' || num === '13')) return 'Facultatif';
   if (num === '04') {
     const langs = draft.descriptions.availableLanguages;
     const object = draft.descriptions.object;

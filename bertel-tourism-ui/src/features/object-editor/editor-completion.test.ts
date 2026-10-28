@@ -20,6 +20,20 @@ function withPhotos(draft: ObjectWorkspaceModules, count: number): ObjectWorkspa
 }
 
 describe('editor completion — per-section scoring (nav rows)', () => {
+  it('scores itinerary geometry and departure without requiring lodging, labels or admission prices', () => {
+    const draft = fullModulesFixture();
+    draft.rooms.items = [];
+    draft.capacityPolicies.capacityItems = [];
+    draft.location.main.address1 = '';
+    draft.location.main.postcode = '';
+    draft.itinerary.geometrySummary = '';
+    expect(computeSectionCompletion('02', draft, 'ITI')).toBe(100);
+    expect(computeSectionCompletion('06', draft, 'ITI')).toBe(100);
+    draft.itinerary.trackGeojson = null;
+    expect(computeSectionCompletion('06', draft, 'ITI')).toBe(0);
+    expect(computeSectionCompletion('08', draft, 'ITI')).toBe(100);
+    expect(computeSectionCompletion('13', draft, 'ITI')).toBe(100);
+  });
   it('scores an empty descriptions module low', () => {
     const draft = fullModulesFixture();
     draft.descriptions.object.chapo = { baseValue: '', values: {} };

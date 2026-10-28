@@ -1532,7 +1532,7 @@ function parseItineraryProfiles(rawProfiles: unknown): ItineraryProfilePoint[] {
  * Valide une trace GeoJSON (PLAN 3.4) : uniquement LineString avec ≥ 2 paires de
  * coordonnées finies. Toute anomalie ⇒ null.
  */
-function parseItineraryTrackGeojson(rawGeo: unknown): ItineraryTrackGeoJson | null {
+export function parseItineraryTrackGeojson(rawGeo: unknown): ItineraryTrackGeoJson | null {
   if (typeof rawGeo === 'string') {
     try {
       rawGeo = JSON.parse(rawGeo);

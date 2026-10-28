@@ -28,7 +28,7 @@ function formatShortDate(value: string) {
  * il n'y a plus d'entrée object-wide séparée. À la fermeture, refreshCrm() resynchronise les KPIs ;
  * providerFollowUp est un module READONLY pour la save bar ⇒ replaceModule ne crée pas de dirty fantôme.
  */
-export function SectionCrm({ editor, permissions, objectId, folded }: SectionProps) {
+export function SectionCrm({ editor, permissions, objectId, archetype, folded }: SectionProps) {
   const followUp = editor.draft.providerFollowUp;
   const interactions = followUp.interactions;
   const topics = followUp.topics;
@@ -79,13 +79,13 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
   }
 
   const prestataireCount = relationships.actors.length;
-  const pillLabel = `${prestataireCount} prestataire(s)`;
+  const pillLabel = `${prestataireCount} ${archetype === 'ITI' ? 'gestionnaire(s)' : 'prestataire(s)'}`;
 
   return (
     <Fs
       num="19"
-      title="Suivi prestataire (CRM)"
-      sub="Prestataires rattachés à la fiche et suivi relationnel (interactions, sujets normalisés) · pilotage OTI"
+      title={archetype === 'ITI' ? 'Gestionnaires & suivi' : 'Suivi prestataire (CRM)'}
+      sub={archetype === 'ITI' ? 'Structures responsables du parcours et suivi des échanges' : 'Prestataires rattachés à la fiche et suivi relationnel (interactions, sujets normalisés) · pilotage OTI'}
       folded={folded}
       pill={{ tone: prestataireCount > 0 ? 'ok' : 'warn', label: pillLabel }}
     >
@@ -107,6 +107,7 @@ export function SectionCrm({ editor, permissions, objectId, folded }: SectionPro
       )}
 
       <ProviderCards
+        itinerary={archetype === 'ITI'}
         relationships={relationships}
         canWrite={canWriteActors}
         onChange={replaceActors}

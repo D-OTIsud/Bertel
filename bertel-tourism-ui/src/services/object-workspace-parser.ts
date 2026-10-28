@@ -1,4 +1,4 @@
-import { formatOpeningTime } from '../features/object-drawer/utils';
+import { formatOpeningTime, parseItineraryTrackGeojson } from '../features/object-drawer/utils';
 import type { CrmInteractionReply, ObjectDetail } from '../types/domain';
 
 interface GenericRecord {
@@ -2455,11 +2455,11 @@ export function parseWorkspaceItineraryModule(raw: Record<string, unknown>): Obj
   ].filter(Boolean).join(' · ');
 
   const infoRecord = readRecord(details.info);
-  const trackGeojsonRaw = details.track_geojson;
-  const trackGeojson =
-    trackGeojsonRaw && typeof trackGeojsonRaw === 'object' && 'coordinates' in (trackGeojsonRaw as object)
-      ? (trackGeojsonRaw as { type: string; coordinates: number[][] })
-      : null;
+  const trackFormat = readString(itinerary.track_format, readString(raw.track_format, readString(details.track_format)));
+  const trackGeojson = parseItineraryTrackGeojson(details.track_geojson)
+    ?? (trackFormat.toLowerCase() === 'geojson'
+      ? parseItineraryTrackGeojson(itinerary.track ?? raw.track ?? details.track)
+      : null);
 
   return {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),

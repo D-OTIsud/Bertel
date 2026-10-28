@@ -11427,8 +11427,10 @@ select.filter-context-input:focus-visible,
   padding: 0;
   cursor: pointer;
   font: inherit;
+  white-space: nowrap;
   border-radius: var(--radius-pill, 999px);
 }
+.type-cell-btn .type-pill svg { flex-shrink: 0; }
 .type-cell-btn--active { outline: 2px solid var(--teal); outline-offset: 2px; }
 
 .meter-cell { display: inline-flex; align-items: center; gap: 0.55rem; }
@@ -11559,6 +11561,7 @@ select.filter-context-input:focus-visible,
   border: 0;
   cursor: pointer;
   font: inherit;
+  text-align: left;
   color: inherit;
   padding: 0;
 }

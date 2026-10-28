@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Disclosure, Fs } from '../primitives';
+import { useRef, useState } from 'react';
+import { ConfirmDialog, Disclosure, Fs } from '../primitives';
 import type { SectionProps } from './section-types';
 import type {
   ObjectWorkspaceDiscountItem,
@@ -31,6 +31,29 @@ export function SectionPricing({ editor, permissions, archetype, folded }: Secti
   const [editingPriceIndex, setEditingPriceIndex] = useState<number | null>(null);
   const [addingDiscount, setAddingDiscount] = useState(false);
   const [editingDiscountIndex, setEditingDiscountIndex] = useState<number | null>(null);
+  const [deletion, setDeletion] = useState<
+    { kind: 'price'; target: ObjectWorkspacePriceItem; message: string }
+    | { kind: 'discount'; target: ObjectWorkspaceDiscountItem; message: string } | null
+  >(null);
+  const pendingDeletion = useRef<typeof deletion>(null);
+  const latestPricing = useRef(pricing);
+  latestPricing.current = pricing;
+
+  function requestDeletion(next: NonNullable<typeof deletion>) { pendingDeletion.current = next; setDeletion(next); }
+  function cancelDeletion() { pendingDeletion.current = null; setDeletion(null); }
+  function confirmDeletion() {
+    const pending = pendingDeletion.current;
+    cancelDeletion();
+    if (!pending) return;
+    const current = latestPricing.current;
+    if (pending.kind === 'price') {
+      const index = current.prices.findIndex((row) => pending.target.recordId ? row.recordId === pending.target.recordId : row === pending.target);
+      if (index !== -1) editor.replaceModule('pricing', { ...current, prices: current.prices.filter((_, rowIndex) => rowIndex !== index) });
+    } else {
+      const index = current.discounts.findIndex((row) => pending.target.recordId ? row.recordId === pending.target.recordId : row === pending.target);
+      if (index !== -1) editor.replaceModule('pricing', { ...current, discounts: current.discounts.filter((_, rowIndex) => rowIndex !== index) });
+    }
+  }
 
   function replacePrices(next: ObjectWorkspacePriceItem[]) {
     editor.replaceModule('pricing', { ...pricing, prices: next });
@@ -40,18 +63,16 @@ export function SectionPricing({ editor, permissions, archetype, folded }: Secti
   }
 
   function deletePrice(index: number) {
-    const label = pricing.prices[index]?.kindLabel || `la ligne ${index + 1}`;
-    if (!window.confirm(`Supprimer ${label} ?`)) {
-      return;
-    }
-    replacePrices(pricing.prices.filter((_, priceIndex) => priceIndex !== index));
+    const target = pricing.prices[index];
+    if (!target) return;
+    const label = target.kindLabel || `la ligne ${index + 1}`;
+    requestDeletion({ kind: 'price', target, message: `Supprimer ${label} ?` });
   }
   function deleteDiscount(index: number) {
-    const label = pricing.discounts[index]?.conditions || `la remise ${index + 1}`;
-    if (!window.confirm(`Supprimer « ${label} » ?`)) {
-      return;
-    }
-    replaceDiscounts(pricing.discounts.filter((_, discountIndex) => discountIndex !== index));
+    const target = pricing.discounts[index];
+    if (!target) return;
+    const label = target.conditions || `la remise ${index + 1}`;
+    requestDeletion({ kind: 'discount', target, message: `Supprimer « ${label} » ?` });
   }
 
   const prices = <>
@@ -75,6 +96,9 @@ export function SectionPricing({ editor, permissions, archetype, folded }: Secti
         </fieldset>
         <Disclosure title="Droits d’accès & tarifs éventuels" summary={`${pricing.prices.length} tarif(s)`} defaultOpen={pricing.prices.length > 0 || pricing.discounts.length > 0}>{prices}</Disclosure>
       </> : prices}
+
+      <ConfirmDialog open={deletion !== null} title="Confirmer la suppression" message={deletion?.message ?? ''}
+        confirmLabel="Supprimer" tone="danger" onCancel={cancelDeletion} onConfirm={confirmDeletion} />
 
       {addingPrice && (
         <PricingLineEditModal

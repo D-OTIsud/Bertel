@@ -4793,6 +4793,79 @@ a {
 }
 
 /* ---------- Waypoint list (ITI) ---------- */
+.detail-itinerary-hero__map {
+  height: var(--detail-hero-mosaic-height, 360px);
+  min-height: 280px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+.detail-itinerary-hero__marker {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--accent, #2a7a45);
+  color: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 25%);
+  font: 700 13px var(--font-display), sans-serif;
+  cursor: pointer;
+}
+
+.detail-itinerary-hero__marker:focus-visible,
+.detail-itinerary-hero__gallery:focus-visible,
+.detail-waypoint:focus {
+  outline: 2px solid var(--accent, var(--theme-primary));
+  outline-offset: 4px;
+}
+
+.detail-itinerary-hero__footer,
+.detail-itinerary-hero__legend,
+.detail-itinerary-hero__gallery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-itinerary-hero__footer {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding-top: 6px;
+}
+
+.detail-itinerary-hero__legend {
+  margin: 0;
+  min-height: 36px;
+  color: var(--ink-2);
+  font-size: 0.78rem;
+}
+
+.detail-itinerary-hero__legend svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.detail-itinerary-hero__gallery {
+  min-height: 36px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-deep, var(--theme-primary));
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detail-itinerary-hero__gallery:hover {
+  text-decoration: underline;
+}
+
 .detail-waypoints {
   list-style: none;
   margin: 0;

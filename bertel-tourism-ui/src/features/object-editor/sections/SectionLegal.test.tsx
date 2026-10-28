@@ -120,7 +120,8 @@ describe('SectionLegal', () => {
     expect(screen.getByLabelText('Type de document')).toBeInTheDocument();
     // La section passe bien les options COMPLÈTES à la modale : l'aide §209 du type présélectionné
     // est rendue (sans elle, le catalogue arriverait amputé de sa description).
-    expect(screen.getByText(/responsabilité civile professionnelle/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aide : Type de document' }))
+      .toHaveAccessibleDescription(/responsabilité civile professionnelle/);
 
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));

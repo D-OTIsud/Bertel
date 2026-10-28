@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Fs, Field, Input, Readout, EditorModal } from '../primitives';
 import type { SectionProps } from './section-types';
+import { getArchetypeMeta, type ArchetypeCode } from '../archetypes';
 import type {
   ObjectWorkspaceTaxonomyAssignment,
   ObjectWorkspaceTaxonomyDomain,
   ObjectWorkspaceTaxonomyNodeOption,
   ObjectWorkspaceTaxonomyPathNode,
 } from '../../../services/object-workspace-parser';
+
+const IDENTITY_COPY: Record<ArchetypeCode, { subject: string; name: string; nature: string }> = {
+  HEB: { subject: 'de l’hébergement', name: 'Nom commercial', nature: 'd’hébergement' },
+  RES: { subject: 'du restaurant', name: 'Nom commercial', nature: 'de restaurant' },
+  ASC: { subject: 'de l’activité', name: 'Nom de l’activité', nature: 'd’activité' },
+  ITI: { subject: 'de l’itinéraire', name: 'Nom de l’itinéraire', nature: 'd’itinéraire' },
+  VIS: { subject: 'du site de visite', name: 'Nom du site de visite', nature: 'de site de visite' },
+  SRV: { subject: 'du service', name: 'Nom du service', nature: 'de service' },
+  FMA: { subject: 'de l’événement', name: 'Nom de l’événement', nature: 'd’événement' },
+};
 
 function toTaxonomyPathNode(
   node: ObjectWorkspaceTaxonomyNodeOption,
@@ -190,7 +201,9 @@ function TaxonomyModal({
   domain,
   onClose,
   onApply,
+  nature,
 }: {
+  nature: string;
   open: boolean;
   domain: ObjectWorkspaceTaxonomyDomain | null;
   onClose: () => void;
@@ -343,7 +356,7 @@ function TaxonomyModal({
   return (
     <EditorModal
       open={open}
-      title="Choisir la nature d’hébergement"
+      title={`Choisir la nature ${nature}`}
       onClose={onClose}
       onSave={handleSave}
       saveLabel="Valider la sélection"
@@ -352,7 +365,7 @@ function TaxonomyModal({
       <div className="object-editor taxo2">
         {!domain ? (
           <p className="identity-taxo__notice">
-            Aucune nature d’hébergement n'est définie pour ce type de fiche.
+            Aucune nature {nature} n'est définie pour ce type de fiche.
           </p>
         ) : (
           <>
@@ -373,7 +386,7 @@ function TaxonomyModal({
                     type="text"
                     className="taxo2-search__input"
                     placeholder="Rechercher une nature ou un ancien libellé…"
-                    aria-label="Rechercher une nature d’hébergement"
+                    aria-label={`Rechercher une nature ${nature}`}
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                   />
@@ -385,7 +398,7 @@ function TaxonomyModal({
               </>
             ) : (
               <p className="identity-taxo__notice">
-                Les options de nature d’hébergement ne sont pas disponibles pour ce type de fiche.
+                Les options de nature {nature} ne sont pas disponibles pour ce type de fiche.
                 La valeur actuelle reste affichée en lecture seule.
               </p>
             )}
@@ -396,9 +409,11 @@ function TaxonomyModal({
   );
 }
 
-/** Section 01 — commercial name and accommodation nature.
+/** Section 01 — name and taxonomy, with vocabulary matching the object's archetype.
  *  Publication status moved to the editor rail; legal name is edited in §18 Fournisseur. */
-export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
+export function SectionIdentity({ editor, objectId, folded, archetype, typeCode }: SectionProps) {
+  const resolvedArchetype = archetype ?? getArchetypeMeta(typeCode)?.archetype;
+  const copy = resolvedArchetype ? IDENTITY_COPY[resolvedArchetype] : { subject: 'de la fiche', name: 'Nom', nature: 'de fiche' };
   const [taxonomyOpen, setTaxonomyOpen] = useState(false);
   const info = editor.draft.generalInfo;
   const taxonomy = editor.draft.taxonomy;
@@ -421,16 +436,16 @@ export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
   return (
     <Fs
       num="01"
-      title="Identité de l’hébergement"
-      sub="Nom commercial et nature d’hébergement"
+      title={`Identité ${copy.subject}`}
+      sub="Nom et classification"
       folded={folded}
       pill={{ tone: 'ok', label: 'OK' }}
     >
       <div className="grid-2-1" style={{ marginBottom: 12 }}>
         <Field
-          label="Nom commercial"
+          label={copy.name}
           required
-          error={String(info.name ?? '').trim() ? undefined : 'Le nom commercial est obligatoire.'}
+          error={String(info.name ?? '').trim() ? undefined : `${copy.name} : ce champ est obligatoire.`}
         >
           <Input value={info.name} onChange={(name) => editor.patchModule('generalInfo', { name })} lg />
         </Field>
@@ -440,19 +455,19 @@ export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <Field label="Nature d'hébergement">
+        <Field label={`Nature ${copy.nature}`}>
           <button
             type="button"
             className="identity-taxo-trigger"
             aria-label={
               taxonomyPath
-                ? `Modifier la nature d’hébergement (actuelle : ${taxonomyPath})`
-                : 'Modifier la nature d’hébergement'
+                ? `Modifier la nature ${copy.nature} (actuelle : ${taxonomyPath})`
+                : `Modifier la nature ${copy.nature}`
             }
             onClick={() => setTaxonomyOpen(true)}
           >
             <span className={`identity-taxo-trigger__value${taxonomyPath ? '' : ' is-empty'}`}>
-              {taxonomyPath || 'Définir la nature d’hébergement…'}
+              {taxonomyPath || `Définir la nature ${copy.nature}…`}
             </span>
             <span className="identity-taxo-trigger__caret" aria-hidden="true">▾</span>
           </button>
@@ -548,6 +563,7 @@ export function SectionIdentity({ editor, objectId, folded }: SectionProps) {
 
       <TaxonomyModal
         open={taxonomyOpen}
+        nature={copy.nature}
         domain={taxonomyDomain}
         onClose={() => setTaxonomyOpen(false)}
         onApply={applyTaxonomyAssignment}

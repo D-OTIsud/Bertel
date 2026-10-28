@@ -2,6 +2,7 @@ import { fireEvent, render, renderHook, screen, within } from '@testing-library/
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionIdentity } from './SectionIdentity';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
+import type { ArchetypeCode } from '../archetypes';
 import type {
   ObjectWorkspaceModules,
   ObjectWorkspaceTaxonomyAssignment,
@@ -124,10 +125,39 @@ const nestedAssignment: ObjectWorkspaceTaxonomyAssignment = {
 };
 
 describe('SectionIdentity', () => {
+  it.each([
+    ['HEB', 'de l’hébergement', 'Nom commercial', 'd’hébergement'],
+    ['RES', 'du restaurant', 'Nom commercial', 'de restaurant'],
+    ['ASC', 'de l’activité', 'Nom de l’activité', 'd’activité'],
+    ['ITI', 'de l’itinéraire', 'Nom de l’itinéraire', 'd’itinéraire'],
+    ['VIS', 'du site de visite', 'Nom du site de visite', 'de site de visite'],
+    ['SRV', 'du service', 'Nom du service', 'de service'],
+    ['FMA', 'de l’événement', 'Nom de l’événement', 'd’événement'],
+  ] as [ArchetypeCode, string, string, string][])('adapts identity and taxonomy vocabulary for %s', (archetype, subject, name, nature) => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
+    render(<SectionIdentity archetype={archetype} editor={result.current} permissions={allowAll} />);
+    expect(screen.getByRole('heading', { name: `Identité ${subject} Nom et classification` })).toBeInTheDocument();
+    expect(screen.getByLabelText(new RegExp(`^${name}`))).toHaveValue('Domaine du Bel Air');
+    expect(screen.getByText(`Nature ${nature}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: `Modifier la nature ${nature} (actuelle : Hôtel)` }));
+    expect(screen.getByRole('dialog', { name: `Choisir la nature ${nature}` })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: `Rechercher une nature ${nature}` })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Hôtel.*Actuelle/ })).toBeInTheDocument();
+  });
+
+  it('uses the canonical type mapping and an honest generic fallback', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const { rerender } = render(<SectionIdentity typeCode="ITI" editor={result.current} permissions={allowAll} />);
+    expect(screen.getByRole('heading', { name: /Identité de l’itinéraire/ })).toBeInTheDocument();
+    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    expect(screen.getByRole('heading', { name: /Identité de la fiche/ })).toBeInTheDocument();
+    expect(screen.queryByText(/hébergement/)).not.toBeInTheDocument();
+  });
+
   it('renders the commercial name and ID OTI without exposing the technical object type', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     render(
-      <SectionIdentity
+      <SectionIdentity archetype="HEB"
         editor={result.current}
         permissions={allowAll}
         objectId="HLORUN00000000TV"
@@ -145,15 +175,15 @@ describe('SectionIdentity', () => {
 
   it('uses the canonical accommodation vocabulary with no "taxonomie" jargon', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText(/taxonomie/i)).not.toBeInTheDocument();
-    expect(screen.getByText("Nature d'hébergement")).toBeInTheDocument();
+    expect(screen.getByText('Nature d’hébergement')).toBeInTheDocument();
   });
 
   it('does not expose technical compatibility explanations in the editing form', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} typeCode="HOT" />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} typeCode="HOT" />);
 
     expect(screen.queryByText(/Seules les natures compatibles/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/conversion de type de fiche/i)).not.toBeInTheDocument();
@@ -162,7 +192,7 @@ describe('SectionIdentity', () => {
 
   it('no longer shows the publication status — it moved to the editor rail', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText('Statut publication')).not.toBeInTheDocument();
     expect(screen.queryByText('Publié — en ligne')).not.toBeInTheDocument();
@@ -170,7 +200,7 @@ describe('SectionIdentity', () => {
 
   it('opens a modal when the taxonomy field is clicked', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
@@ -179,7 +209,7 @@ describe('SectionIdentity', () => {
 
   it('shows the current taxonomy path inside the modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -190,7 +220,7 @@ describe('SectionIdentity', () => {
 
   it('highlights the full selected taxonomy path in the tree', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -201,7 +231,7 @@ describe('SectionIdentity', () => {
 
   it('shows an unavailable message and a disabled validate button when taxonomy options are not exposed', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy()));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -211,7 +241,7 @@ describe('SectionIdentity', () => {
 
   it('lets an assignable taxonomy node update the draft assignment', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    const { rerender } = render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -224,13 +254,13 @@ describe('SectionIdentity', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Valider la sélection' }));
 
     expect(result.current.dirtySections.taxonomy).toBe(true);
-    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    rerender(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
     expect(screen.getByText('Hôtel ▸ Gîte rural')).toBeInTheDocument();
   });
 
   it('titles the redesigned modal "Choisir la nature d’hébergement"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(screen.getByText('Choisir la nature d’hébergement')).toBeInTheDocument();
@@ -238,7 +268,7 @@ describe('SectionIdentity', () => {
 
   it('n’expose pas la description de catalogue comme infobulle utilisateur', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -249,7 +279,7 @@ describe('SectionIdentity', () => {
 
   it('badges the saved assignment as "Actuelle"', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(within(screen.getByRole('dialog')).getByText('Actuelle')).toBeInTheDocument();
@@ -257,7 +287,7 @@ describe('SectionIdentity', () => {
 
   it('filters the tree with the search box', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -271,7 +301,7 @@ describe('SectionIdentity', () => {
 
   it('retrouve un libellé canonique avec son ancien libellé (alias de reprise)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -287,7 +317,7 @@ describe('SectionIdentity', () => {
 
   it('checks the parent radio when a child is selected (the whole path reads as selected)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -297,7 +327,7 @@ describe('SectionIdentity', () => {
 
   it('narrows the selection to the parent when the parent row is clicked', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(nestedAssignableNodes, nestedAssignment)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     const dialog = screen.getByRole('dialog');
@@ -308,7 +338,7 @@ describe('SectionIdentity', () => {
 
   it('no longer shows a redundant "Modifier" button (the modal is already the edit surface)', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithTaxonomy(editableTaxonomyNodes)));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: /nature d.hébergement/i }));
     expect(within(screen.getByRole('dialog')).queryByRole('button', { name: /Modifier/i })).not.toBeInTheDocument();
@@ -342,10 +372,10 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
       unavailableReason: null,
     };
     const { result } = renderHook(() => useObjectEditorState('o1', modules));
-    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    const { rerender } = render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Hôtel boutique' }));
-    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    rerender(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.taxonomy.positionings?.selectedCodes).toEqual([
       'family_hotel',
@@ -356,12 +386,12 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
 
   it('permet de porter DEUX unités à la fois — la nature reste intacte', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
-    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    const { rerender } = render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.getByText("Type d'unité")).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bulle' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'Lodge' }));
-    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    rerender(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual(['bubble', 'lodge']);
     // Une reprise de FORME ne déplace jamais l'établissement.
@@ -370,10 +400,10 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
 
   it('retire une unité au second clic', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes(UNIT_TYPES)));
-    const { rerender } = render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    const { rerender } = render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Bulle' }));
-    rerender(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    rerender(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
     expect(result.current.draft.taxonomy.unitTypes.selectedCodes).toEqual([]);
   });
 
@@ -381,7 +411,7 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes({
       options: [], selectedCodes: [], unavailableReason: "Le catalogue des types d'unité n'est pas encore disponible sur cette base.",
     })));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText(/catalogue des types d.unité n.est pas encore disponible/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Type d.unité/i)).not.toBeInTheDocument();
@@ -392,7 +422,7 @@ describe("§201 — types d'unité (axe multi-valué)", () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithUnitTypes({
       options: [], selectedCodes: [], unavailableReason: null,
     })));
-    render(<SectionIdentity editor={result.current} permissions={allowAll} />);
+    render(<SectionIdentity archetype="HEB" editor={result.current} permissions={allowAll} />);
 
     expect(screen.queryByText(/Type d.unité/)).not.toBeInTheDocument();
   });

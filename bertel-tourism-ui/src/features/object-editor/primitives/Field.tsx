@@ -1,5 +1,7 @@
 import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
 
+import { FieldHelp } from './FieldHelp';
+
 interface FieldProps {
   label: string;
   hint?: string;
@@ -11,7 +13,7 @@ interface FieldProps {
 
 /**
  * D2 (revue UX) : label réellement associé (htmlFor/id), hint lisible par tous
- * (paragraphe + aria-describedby, plus seulement un title au survol) et erreur
+ * (description accessible + aide au focus, au survol et au toucher) et erreur
  * inline annoncée (role=alert + aria-invalid) — le tout injecté sur l'enfant
  * via cloneElement, donc sans changer les appelants.
  * Plafond : l'enfant doit transmettre id/aria-* à son contrôle natif
@@ -47,13 +49,11 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
           {required && <span className="sr-only"> (obligatoire)</span>}
         </label>
         {hint && (
-          <span className="help" aria-hidden="true" title={hint}>
-            ?
-          </span>
+          <FieldHelp label={label} hint={hint} hintId={hintId!} />
         )}
       </div>
       {hint && (
-        <p id={hintId} className="field__hint">
+        <p id={hintId} className="sr-only">
           {hint}
         </p>
       )}

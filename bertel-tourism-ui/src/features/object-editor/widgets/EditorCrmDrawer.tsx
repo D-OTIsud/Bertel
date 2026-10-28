@@ -8,6 +8,7 @@
 // LOCAL dans SectionCrm — PAS le useUiStore mono-slot de l'aperçu fiche.
 
 import { X } from 'lucide-react';
+import { useRef } from 'react';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { CrmEstablishmentPanel } from '../../crm/CrmEstablishmentPanel';
 
@@ -25,13 +26,21 @@ export function EditorCrmDrawer({
   /** Ouvre le tiroir directement sur la fiche de cet acteur (carte prestataire §19). */
   initialActorId?: string | null;
 }) {
+  const contentRef = useRef<HTMLDivElement>(null);
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent
+        ref={contentRef}
         side="right"
         showClose={false}
         aria-describedby={undefined}
         className="drawer-panel w-full max-w-[1180px] overflow-hidden border-0 p-0 sm:max-w-[1180px]"
+        onEscapeKeyDown={(event) => {
+          const nestedModal = event.target instanceof Element ? event.target.closest('.crm-modal') : null;
+          // Radix receives Escape in capture before the nested CRM React handler.
+          // Keep that handler in charge of closing its own modal, then the Sheet.
+          if (nestedModal && contentRef.current?.contains(nestedModal)) event.preventDefault();
+        }}
       >
         <SheetTitle className="sr-only">Suivi CRM de l&apos;établissement</SheetTitle>
         <SheetDescription className="sr-only">

@@ -25,6 +25,18 @@ describe('CrmModal', () => {
     expect(screen.getByLabelText('Premier champ')).toHaveFocus();
   });
 
+  it('ne tente pas de rendre le focus à un déclencheur supprimé', () => {
+    const opener = document.createElement('button');
+    document.body.appendChild(opener);
+    opener.focus();
+    const { unmount } = render(<CrmModal title="Test modal" onClose={jest.fn()}><input aria-label="Champ" /></CrmModal>);
+    const focus = jest.spyOn(opener, 'focus');
+    opener.remove();
+    unmount();
+    expect(focus).not.toHaveBeenCalled();
+    focus.mockRestore();
+  });
+
   it('Escape, clic overlay et bouton Fermer appellent onClose', () => {
     const onClose = jest.fn();
     const { container } = render(

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ProviderCards } from './ProviderCards';
 import {
   ACTOR_NOTE_RESTRICTED_REASON,
@@ -81,9 +81,9 @@ describe('ProviderCards — §19 prestataire authoring', () => {
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Marie Guide/ })); });
     act(() => {
-      fireEvent.change(screen.getByLabelText('Rôle de Marie Guide'), { target: { value: 'guide' } });
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Guide' }));
     });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0][0]).toMatchObject({ roleCode: 'guide', roleId: 'guide', roleLabel: 'Guide' });

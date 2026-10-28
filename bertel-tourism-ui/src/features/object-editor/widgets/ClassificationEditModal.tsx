@@ -33,7 +33,7 @@ const STATUS_LABELS: Record<string, string> = {
 interface ClassificationEditModalProps {
   open: boolean;
   mode: 'add' | 'edit';
-  /** §08 schemes only (caller filters out accessibility — that lives in §10). */
+  /** All distinction families for §08; disability-type coverage is edited in §09. */
   schemes: ObjectWorkspaceDistinctionSchemeOption[];
   /** Held rows — fully-used schemes are dropped from the add picker (single held / multi all-taken). */
   existingItems: ObjectWorkspaceDistinctionItem[];
@@ -83,7 +83,6 @@ export function ClassificationEditModal({
 
   // Grouped choices follow the model. Already-held single labels stay out of the add choices.
   const referentialOptions = schemes
-    .filter((scheme) => !scheme.isAccessibility)
     .filter((scheme) => !isSchemeFullyUsed(scheme, existingItems))
     .map((scheme) => ({
       ...scheme,

@@ -27,10 +27,15 @@ export function useExplorerUrlSync() {
   const searchParamsString = searchParams?.toString() ?? '';
   const replaceFiltersFromUrl = useExplorerStore((state) => state.replaceFiltersFromUrl);
   const lastUrlRef = useRef<string | null>(null);
+  const pendingRestorationRef = useRef(false);
 
   // 1. URL -> Store : On lit l'URL au chargement ou lors d'un "Précédent / Suivant"
   useEffect(() => {
     const filterParams = filtersView(searchParamsString);
+    // router.replace est asynchrone : StrictMode peut rejouer l'effet avec l'URL
+    // encore nue. Attendre sa confirmation évite d'effacer l'état à restaurer.
+    if (pendingRestorationRef.current && !filterParams) return;
+    pendingRestorationRef.current = false;
     if (lastUrlRef.current === filterParams) return;
 
     // Retour sur l'Explorer par la navigation (lien `/explorer` NU) alors que la
@@ -47,6 +52,7 @@ export function useExplorerUrlSync() {
       const restored = buildSearchParams(useExplorerStore.getState()).toString();
       if (restored && restored !== DEFAULT_FILTER_PARAMS) {
         lastUrlRef.current = restored;
+        pendingRestorationRef.current = true;
         router.replace(`/explorer?${restored}`, { scroll: false });
         return;
       }

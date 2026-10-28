@@ -1,4 +1,4 @@
-import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { useObjectEditorState } from '../useObjectEditorState';
 import { SectionClassification } from './SectionClassification';
 import { allowAll, fullModulesFixture } from './section-fixture.test-utils';
@@ -86,28 +86,19 @@ describe('SectionClassification', () => {
     act(() => {
       fireEvent.click(screen.getByRole('button', { name: /Ajouter une classification/i }));
     });
-    act(() => {
-      fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-    });
     // T&H is surfaced here too (§71 follow-up), under the Accessibilité category.
+    expect(screen.getByRole('button', { name: 'Tourisme & Handicap' })).toBeInTheDocument();
     act(() => {
-      fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'handicap' } });
-    });
-    expect(screen.getByRole('option', { name: 'Tourisme & Handicap' })).toBeInTheDocument();
-    act(() => {
-      fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'hotel' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Classement hôtelier' }));
     });
     act(() => {
-      fireEvent.click(screen.getByRole('option', { name: 'Classement hôtelier' }));
+      fireEvent.click(within(screen.getByRole('group', { name: 'Valeur attribuée' })).getByRole('button', { name: '4 étoiles' }));
     });
     act(() => {
-      fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '4' } });
+      fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-01-01' } });
     });
     act(() => {
-      fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
-    });
-    act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
     });
 
     view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
@@ -125,20 +116,14 @@ describe('SectionClassification', () => {
       fireEvent.click(screen.getByRole('button', { name: /Ajouter une classification/i }));
     });
     act(() => {
-      fireEvent.click(screen.getByRole('combobox', { name: 'Référentiel' }));
-    });
-    act(() => {
-      fireEvent.change(screen.getByLabelText('Rechercher'), { target: { value: 'handicap' } });
-    });
-    act(() => {
-      fireEvent.click(screen.getByRole('option', { name: 'Tourisme & Handicap' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Tourisme & Handicap' }));
     });
     // Value auto-resolves to 'granted' (read-only); acquisition date required for a granted label.
     act(() => {
-      fireEvent.change(screen.getByLabelText('Acquis le'), { target: { value: '2025-01-01' } });
+      fireEvent.change(screen.getByLabelText('Obtenu le'), { target: { value: '2025-01-01' } });
     });
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Ajouter' }));
     });
 
     view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
@@ -147,9 +132,27 @@ describe('SectionClassification', () => {
     expect(d.accessibilityLabels).toHaveLength(1);
     expect(d.accessibilityLabels[0].schemeCode).toBe('th');
     expect(d.accessibilityLabels[0].valueCode).toBe('granted');
+    expect(d.accessibilityLabels[0]).toMatchObject({ schemeId: 'sch-acc', valueId: 'a1', awardedAt: '2025-01-01' });
+    expect(d.accessibilityLabels[0].disabilityTypesCovered).toEqual([]);
   });
 
-  it('editing a held T&H row in §08 preserves the §10 disability-type coverage (no wipe)', () => {
+  it('keeps an already-held T&H choice out of the add catalog without changing its coverage', () => {
+    const m = modulesWithSchemes();
+    m.distinctions.accessibilityLabels = [classRow({
+      recordId: 'thr', schemeId: 'sch-acc', schemeCode: 'th', schemeLabel: 'Tourisme & Handicap',
+      valueId: 'a1', valueCode: 'granted', valueLabel: 'Obtenu', disabilityTypesCovered: ['motor', 'visual'],
+    })];
+    const { result } = renderHook(() => useObjectEditorState('o1', m));
+    render(<SectionClassification editor={result.current} permissions={allowAll} />);
+    fireEvent.click(screen.getByRole('button', { name: /Ajouter une classification/i }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'Tourisme & Handicap' })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Classement hôtelier' })).toBeInTheDocument();
+    expect(result.current.draft.distinctions.accessibilityLabels).toHaveLength(1);
+    expect(result.current.draft.distinctions.accessibilityLabels[0].disabilityTypesCovered).toEqual(['motor', 'visual']);
+  });
+
+  it('editing a held T&H row in §08 preserves the §09 disability-type coverage (no wipe)', () => {
     const m = modulesWithSchemes();
     m.distinctions.accessibilityLabels = [
       {
@@ -179,14 +182,14 @@ describe('SectionClassification', () => {
       fireEvent.change(screen.getByLabelText("Valable jusqu'au"), { target: { value: '2028-01-01' } });
     });
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
     });
 
     view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);
     const acc = result.current.draft.distinctions.accessibilityLabels;
     expect(acc).toHaveLength(1);
     expect(acc[0].validUntil).toBe('2028-01-01');
-    // CRITICAL: the §10 coverage is untouched (the §08 modal never edits disabilityTypesCovered).
+    // CRITICAL: the §09 coverage is untouched (the §08 modal never edits disabilityTypesCovered).
     expect(acc[0].disabilityTypesCovered).toEqual(['motor', 'visual']);
   });
 
@@ -216,10 +219,10 @@ describe('SectionClassification', () => {
       fireEvent.click(screen.getByRole('button', { name: /Modifier/i }));
     });
     act(() => {
-      fireEvent.change(screen.getByLabelText('Valeur attribuée'), { target: { value: '5' } });
+      fireEvent.click(within(screen.getByRole('group', { name: 'Valeur attribuée' })).getByRole('button', { name: '5 étoiles' }));
     });
     act(() => {
-      fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Appliquer' }));
     });
 
     view.rerender(<SectionClassification editor={result.current} permissions={allowAll} />);

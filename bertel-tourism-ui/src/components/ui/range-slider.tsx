@@ -56,9 +56,9 @@ export function RangeSlider({ label, min, max, onChange, bounds, unit, step = 1 
   return (
     <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-[12px] font-semibold text-ink-2">{label}</span>
+        <span className="text-sm leading-5 font-semibold text-ink-2">{label}</span>
         {bounds ? (
-          <span className="text-[11px] text-ink-3">
+          <span className="text-xs leading-4 text-ink-3">
             {min == null && max == null
               ? `${bounds.min}–${bounds.max}${suffix} observés`
               : `${min ?? bounds.min}–${max ?? bounds.max}${suffix}`}
@@ -114,6 +114,7 @@ export function RangeSlider({ label, min, max, onChange, bounds, unit, step = 1 
 
       <div className={cn('filters-panel__range-grid', bounds ? null : 'mt-0')}>
         <Input
+          className="filter-context-input min-h-10 h-auto"
           type="number"
           inputMode="numeric"
           min={bounds?.min}
@@ -125,6 +126,7 @@ export function RangeSlider({ label, min, max, onChange, bounds, unit, step = 1 
           onChange={(event) => onChange(parseInput(event.target.value), max)}
         />
         <Input
+          className="filter-context-input min-h-10 h-auto"
           type="number"
           inputMode="numeric"
           min={bounds?.min}
@@ -138,7 +140,7 @@ export function RangeSlider({ label, min, max, onChange, bounds, unit, step = 1 
       </div>
 
       {!bounds ? (
-        <p className="mt-1 text-[11px] leading-snug text-ink-3">
+        <p className="mt-1 text-xs leading-4 text-ink-3">
           Aucune valeur saisie pour l&apos;instant sur ce critère : le filtre reste disponible, sans échelle de référence.
         </p>
       ) : null}

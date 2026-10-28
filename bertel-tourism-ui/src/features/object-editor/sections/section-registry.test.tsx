@@ -58,7 +58,7 @@ describe('section registry', () => {
     // Open the edit modal for the existing media item, change a field, and save.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier le média/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Crédit / auteur'), { target: { value: 'OTI' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<SectionMedia editor={result.current} permissions={allowAll} objectId="o1" />);
     expect(result.current.dirtySections.media).toBe(true);
 
@@ -66,7 +66,7 @@ describe('section registry', () => {
     // §84 — the amount is edited in the modal now, not inline. Open the seeded "Adulte" line.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier Adulte/i })); });
     act(() => { fireEvent.change(screen.getByLabelText('Montant'), { target: { value: '15' } }); });
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Enregistrer' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
     expect(result.current.dirtySections.pricing).toBe(true);
   });

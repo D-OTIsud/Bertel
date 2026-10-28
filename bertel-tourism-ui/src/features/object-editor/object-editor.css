@@ -57,8 +57,9 @@
 .object-editor .edit-top__crumbs strong { color: var(--ink-2); font-weight: 600; }
 .object-editor .edit-top__title {
   font-family: var(--font-display);
-  font-weight: 700; font-size: 22px;
+  font-weight: 700; font-size: theme('fontSize.2xl.0');
   letter-spacing: -0.01em; color: var(--ink);
+  line-height: theme('fontSize.2xl.1.lineHeight');
 }
 .object-editor .edit-top__right { display: flex; align-items: center; gap: 8px; }
 .object-editor .edit-top__save {
@@ -135,7 +136,7 @@
   margin-bottom: 12px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: theme('borderRadius.shellXl');
   padding: 10px 8px 8px;
   box-shadow: var(--shadow-s);
 }
@@ -146,7 +147,7 @@
   width: 100%;
   padding: 7px 8px;
   font-size: 12.5px;
-  border-radius: 8px;
+  border-radius: theme('borderRadius.shellMd');
   color: var(--ink-2);
   cursor: pointer;
   margin-bottom: 1px;
@@ -203,7 +204,7 @@
 .object-editor .fs {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-lg);
+  border-radius: theme('borderRadius.shellXl');
   margin-bottom: 16px;
   overflow: hidden;
   box-shadow: var(--shadow-s);
@@ -219,8 +220,12 @@
 .object-editor .fs__head h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 15px; font-weight: 700;
+  font-size: theme('fontSize.lg.0'); font-weight: 700;
   letter-spacing: -0.005em;
+  line-height: theme('fontSize.lg.1.lineHeight');
+  hyphens: auto;
+  hyphenate-limit-chars: 6 3 3;
+  overflow-wrap: anywhere;
 }
 .object-editor .fs__head h3 small {
   display: block;
@@ -229,8 +234,9 @@
      the 4.5:1 WCAG 1.4.3 floor for normal text, so it read as faint). Bump to
      --ink-2 (the house rule for ≤11.5px body text) + a touch more size/weight
      so each section descriptor is legible without competing with the title. */
-  font-size: 12px; font-weight: 550;
+  font-size: theme('fontSize.sm.0'); font-weight: 550;
   color: var(--ink-2); margin-top: 3px; letter-spacing: 0;
+  line-height: theme('fontSize.sm.1.lineHeight');
 }
 .object-editor .fs__num {
   width: 26px; height: 26px;
@@ -264,8 +270,9 @@
   padding: 8px 18px;
 }
 .object-editor .fs--rapide-folded .fs__head h3 {
-  font-size: 13px;
+  font-size: theme('fontSize.lg.0');
   font-weight: 600;
+  line-height: theme('fontSize.lg.1.lineHeight');
 }
 .object-editor .fs--rapide-folded .fs__head h3 small {
   display: none;
@@ -278,8 +285,9 @@
 .object-editor .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .object-editor .field__label {
   display: flex; align-items: center; gap: 6px;
-  font-size: 11.5px; font-weight: 600;
+  font-size: theme('fontSize.sm.0'); font-weight: 600;
   color: var(--ink-2); letter-spacing: 0.01em;
+  line-height: theme('fontSize.sm.1.lineHeight');
 }
 .object-editor .field__label .req { color: var(--red); }
 .object-editor .field__label .help {
@@ -291,8 +299,8 @@
   cursor: help;
 }
 /* D2 : hint visible (plus seulement un title au survol) + erreur inline. */
-.object-editor .field__hint { margin: 0; font-size: 11px; line-height: 1.35; color: var(--ink-3); }
-.object-editor .field__error { margin: 0; font-size: 12px; font-weight: 600; color: var(--red); }
+.object-editor .field__hint { margin: 0; font-size: theme('fontSize.sm.0'); line-height: 1.5; color: var(--ink-3); }
+.object-editor .field__error { margin: 0; font-weight: 600; color: var(--red); }
 /* Chantier 2026-08-28 n°4, lot B — la bordure rouge seule se confond avec un simple survol sur
    un formulaire dense. Le halo la rend repérable en balayant la page. `--red-soft` est un token
    EXISTANT (rgba littérale) : aucun `rgba(var(--…-rgb), α)` n'est introduit ici — cette forme est
@@ -307,15 +315,17 @@
 .object-editor .input,
 .object-editor .textarea,
 .object-editor .select {
-  width: 100%; height: 36px;
+  width: 100%; height: auto;
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 8px;
+  border-radius: theme('borderRadius.shellMd');
   padding: 0 11px;
-  font-size: 13px; color: var(--ink);
+  font-size: theme('fontSize.base.0'); color: var(--ink);
   outline: 0;
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
   font-family: var(--font-sans);
+  line-height: theme('fontSize.base.1.lineHeight');
+  min-height: 2.5rem;
 }
 .object-editor .input:focus,
 .object-editor .textarea:focus,
@@ -325,8 +335,8 @@
 }
 .object-editor .input::placeholder,
 .object-editor .textarea::placeholder { color: var(--ink-4); }
-.object-editor .input.mono { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
-.object-editor .input.lg { height: 42px; font-size: 14.5px; font-weight: 600; }
+.object-editor .input.mono { font-family: var(--font-mono); letter-spacing: 0.02em; }
+.object-editor .input.lg { height: 42px; font-weight: 600; }
 .object-editor .input.has-prefix { padding-left: 32px; }
 .object-editor .input.has-suffix { padding-right: 56px; }
 /* Champ honnêtement désactivé (invariant « visibly disabled with a stated reason ») : `readOnly`
@@ -370,8 +380,8 @@
 .object-editor .readout.is-empty .readout__value { color: var(--ink-4); font-style: italic; }
 .object-editor .textarea {
   height: auto; min-height: 84px;
-  padding: 9px 11px; line-height: 1.5;
-  resize: vertical; font-size: 12.5px;
+  padding: 9px 11px; line-height: theme('fontSize.base.1.lineHeight');
+  resize: vertical; font-size: theme('fontSize.base.0');
 }
 .object-editor .textarea.rich { min-height: 120px; }
 .object-editor .select {
@@ -406,7 +416,7 @@
 }
 .object-editor .field__error {
   display: flex; align-items: center; gap: 5px;
-  font-size: 10.5px; color: var(--red); font-weight: 600; margin-top: 2px;
+  font-size: theme('fontSize.sm.0'); line-height: 1.5; color: var(--red); font-weight: 600; margin-top: 2px;
 }
 
 /* Grid helpers */
@@ -688,8 +698,9 @@
 }
 .object-editor .stat-card__value {
   font-family: var(--font-display);
-  font-size: 18px; font-weight: 700;
+  font-size: theme('fontSize.3xl.0'); font-weight: 700;
   color: var(--ink); letter-spacing: -0.01em;
+  line-height: theme('fontSize.3xl.1.lineHeight');
 }
 .object-editor .stat-card__suffix {
   font-family: var(--font-mono);
@@ -746,16 +757,18 @@
 .object-editor .rep-add {
   display: inline-flex; align-items: center; gap: 7px;
   align-self: flex-start; margin-top: 8px;
-  height: 34px; padding: 0 15px;
-  border-radius: 9px;
+  height: auto; padding: 0 15px;
+  border-radius: theme('borderRadius.shellMd');
   border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
-  font-size: 12.5px; font-weight: 650; letter-spacing: 0.01em;
+  font-size: theme('fontSize.sm.0'); font-weight: 650; letter-spacing: 0.01em;
   color: var(--accent-deep);
   background: color-mix(in srgb, var(--accent) 11%, var(--surface));
   box-shadow: var(--shadow-s);
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease,
               box-shadow 0.16s ease, transform 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: theme('fontSize.sm.1.lineHeight');
+  min-height: 2.5rem;
 }
 .object-editor .rep-add:hover {
   background: var(--accent);
@@ -811,13 +824,11 @@
 /* Repeater rows — dense controls (contacts, classifications, etc.). */
 .object-editor .rep-row .select,
 .object-editor .rep-row .input {
-  height: 34px;
-  font-size: 12.5px;
+  height: auto;
+  font-size: theme('fontSize.base.0');
   font-family: var(--font-sans);
   font-weight: 400;
-}
-.object-editor .rep-row .input.mono {
-  font-size: 12px;
+  line-height: theme('fontSize.base.1.lineHeight');
 }
 
 /* Section 03 — Contacts: clear state when contact-type reference data is missing. */
@@ -948,7 +959,7 @@
 .object-editor .edit-side .card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: theme('borderRadius.shellXl');
   padding: 12px 14px;
   box-shadow: var(--shadow-s);
 }
@@ -1020,7 +1031,7 @@
 }
 .object-editor .icbtn:hover { background: var(--surface-2); color: var(--ink); }
 
-/* Buttons */
+/* Buttons. CRM consumers retain their original geometry and type below. */
 .object-editor .btn {
   display: inline-flex; align-items: center; gap: 6px;
   height: 32px; padding: 0 14px;
@@ -1032,10 +1043,39 @@
   cursor: pointer;
   transition: background-color var(--motion-fast, 160ms) ease, transform var(--motion-instant, 90ms) ease;
 }
+.object-editor .btn:where(:not(.crm-app *)) {
+  height: auto;
+  min-height: 2.5rem;
+  border-radius: theme('borderRadius.shellMd');
+  font-size: theme('fontSize.sm.0');
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
 .object-editor .btn:hover { background: var(--surface-2); }
 .object-editor .btn:active { transform: scale(0.98); }
 .object-editor .btn:disabled:active { transform: none; }
 .object-editor .btn.sm { height: 28px; padding: 0 10px; font-size: 11.5px; }
+.object-editor .btn.sm:where(:not(.crm-app *)),
+.object-editor .rep-row .btn:where(:not(.crm-app *)),
+.object-editor .rep-row .rep-add {
+  height: auto;
+  min-height: 2.25rem;
+  font-size: theme('fontSize.sm.0');
+  line-height: theme('fontSize.sm.1.lineHeight');
+}
+
+@media (pointer: coarse) {
+  .object-editor .btn:where(:not(.crm-app *)),
+  .object-editor .btn.sm:where(:not(.crm-app *)),
+  .object-editor .rep-row .btn:where(:not(.crm-app *)),
+  .object-editor .rep-add,
+  .object-editor .rep-row .rep-add,
+  .object-editor .chip:where(:not(.crm-app *)),
+  .object-editor .chip.size-sm:where(:not(.crm-app *)),
+  .object-editor .tog:where(:not(.crm-app *)) {
+    min-height: 44px;
+  }
+}
+
 .object-editor .btn.primary {
   background: var(--accent); border-color: var(--accent); color: #fff;
 }
@@ -2333,6 +2373,14 @@
 }
 
 @media (max-width: 760px) {
+  .object-editor .fs__head {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+  .object-editor .fs__head .meta {
+    grid-column: 2;
+    margin-left: 0;
+  }
   .object-editor .edit-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   .object-editor .edit-nav { display: none; }
   .object-editor .edit-nav__mobile-select {
@@ -2548,6 +2596,12 @@
 .md-editor__btn.is-on { background: var(--surface, #fff); color: var(--ink, #222); border-color: var(--line, #e3e3e3); }
 .md-editor__btn:disabled { opacity: 0.4; cursor: default; }
 .md-editor__content { min-height: 220px; padding: 12px 14px; outline: none; }
+.object-editor .md-editor__content:where(:not(.crm-app *)) {
+  min-height: 2.5rem;
+  font-size: theme('fontSize.base.0');
+  line-height: theme('fontSize.base.1.lineHeight');
+  color: var(--ink);
+}
 .md-editor__content:focus { outline: none; }
 
 /* ============================================================================

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
@@ -40,6 +40,11 @@ export default function DashboardPage() {
   const activeTab = useDashboardFilterStore((s) => s.activeTab);
   const updatedAtFrom = useDashboardFilterStore((s) => s.updatedAtFrom);
   const updatedAtTo = useDashboardFilterStore((s) => s.updatedAtTo);
+  const resetButtonRef = useRef<HTMLButtonElement>(null);
+  const resetFilters = useCallback(() => {
+    useDashboardExplorerStore.getState().resetAll();
+    useDashboardFilterStore.getState().clearPeriod();
+  }, []);
 
   // État de filtre riche = instance Explorer indépendante du Dashboard.
   const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
@@ -52,6 +57,12 @@ export default function DashboardPage() {
   const srv = useDashboardExplorerStore((s) => s.srv);
 
   const references = useExplorerReferencesQuery();
+  // Like Explorer, match the server markup before exposing a restored reference cache.
+  const [referencesHydrated, setReferencesHydrated] = useState(false);
+  useEffect(() => {
+    setReferencesHydrated(true);
+  }, []);
+  const filtersReferences = referencesHydrated ? references.data : undefined;
 
   const params = useMemo(
     () => dashboardStatsParams(
@@ -98,20 +109,32 @@ export default function DashboardPage() {
   return (
     <div className="min-h-0 p-4">
       <div className="dashboard-layout">
-        <aside className="dashboard-filters-sidebar">
+        <aside className="dashboard-filters-sidebar filter-context-sidebar">
           <DashboardPeriodSection />
           <FiltersPanel
-            references={references.data}
+            references={filtersReferences}
             useStore={useDashboardExplorerStore}
             typeSpecificFacets={selectedBuckets.length === 1}
             // §205 — pas d'« Archivé » ici : buildDashboardStatsParams restreint
             // p_status à published/draft, la chip serait un contrôle mort.
             includeArchivedStatus={false}
+            contextPage="dashboard"
+            onReset={resetFilters}
+            periodActive={Boolean(updatedAtFrom || updatedAtTo)}
+            resetButtonRef={resetButtonRef}
           />
         </aside>
 
         <main className="dashboard-main">
-          <ExplorerActiveFilters useStore={useDashboardExplorerStore} showExplorerBridge />
+          <ExplorerActiveFilters
+            useStore={useDashboardExplorerStore}
+            showExplorerBridge
+            contextPage="dashboard"
+            period={{ updatedAtFrom: updatedAtFrom ?? undefined, updatedAtTo: updatedAtTo ?? undefined }}
+            onClearPeriod={useDashboardFilterStore.getState().clearPeriod}
+            onReset={resetFilters}
+            returnFocusRef={resetButtonRef}
+          />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
             {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} />}

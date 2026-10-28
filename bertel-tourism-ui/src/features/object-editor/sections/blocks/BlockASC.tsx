@@ -1,6 +1,7 @@
 import { ChipMultiSelect, Field, Fs, Input, ReferenceSelect, Toggle } from '../../primitives';
 import type { SectionProps } from '../section-types';
 import { ModuleUnavailableNotice, OwnedElsewhereNote } from './block-notes';
+import { EDITOR_SECTION_REFERENCES } from '../../section-config';
 
 export function BlockASC({ editor, folded }: SectionProps) {
   const activity = editor.draft.activity;
@@ -120,7 +121,7 @@ export function BlockASC({ editor, folded }: SectionProps) {
                 <Input value={actor.id} mono readOnly onChange={() => undefined} />
                 <span className="pill-mini">{actor.isPrimary ? 'Principal' : '—'}</span>
                 <span className="pill-mini" style={{ color: 'var(--ink-4)' }}>
-                  § Rattachements
+                  §{EDITOR_SECTION_REFERENCES.provider.num} {EDITOR_SECTION_REFERENCES.provider.label}
                 </span>
               </div>
             ))}

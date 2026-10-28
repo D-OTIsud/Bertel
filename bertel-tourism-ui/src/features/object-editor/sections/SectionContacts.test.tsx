@@ -193,6 +193,8 @@ describe('SectionContacts — review round (sub-title, liaison note, reorder)', 
     expect(note).toHaveTextContent('2 contact(s) d’acteurs');
     expect(note).toHaveTextContent('1 contact(s) d’organisations');
     expect(note).toHaveTextContent(/Rattachements/);
+    expect(note).toHaveTextContent('17 (Rattachements) et 19 (Suivi prestataire)');
+    expect(note).not.toHaveTextContent('18 (Fournisseur)');
   });
 
   it('shows no liaison note when there are no linked contacts', () => {

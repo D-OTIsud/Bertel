@@ -1,4 +1,4 @@
-import { dashboardStatsParams } from './dashboard-stats-params';
+import { dashboardStatsParams, resolveDashboardStatuses } from './dashboard-stats-params';
 import { DEFAULT_EXPLORER_FILTERS } from '../utils/facets';
 
 const base = DEFAULT_EXPLORER_FILTERS;
@@ -57,4 +57,13 @@ it('statuts restreints à published/draft (défaut published si vide)', () => {
 it('« archived » (§205) est écarté — hors périmètre des KPI Dashboard', () => {
   const withArchived = { ...base, selectedBuckets: [], common: { ...base.common, statuses: ['published', 'archived'] } };
   expect(dashboardStatsParams(withArchived as any, {}).p_status).toEqual(['published']);
+});
+
+it('shares Dashboard defaults without compacting the explicit pair or mutating its input', () => {
+  expect(resolveDashboardStatuses([])).toEqual(['published']);
+  expect(resolveDashboardStatuses(['archived'])).toEqual(['published']);
+  const configured = Object.freeze(['published', 'draft', 'archived'] as const);
+  expect(resolveDashboardStatuses(configured)).toEqual(['published', 'draft']);
+  expect(configured).toEqual(['published', 'draft', 'archived']);
+  expect(resolveDashboardStatuses(['draft'])).toEqual(['draft']);
 });

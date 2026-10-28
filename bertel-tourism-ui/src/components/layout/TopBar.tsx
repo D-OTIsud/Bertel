@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, Fragment, type KeyboardEvent } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, Search } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowUpRight, Menu, Search } from 'lucide-react';
 import { useObjectDrawerStore } from '../../store/object-drawer-store';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useCrmSearchStore } from '../../store/crm-search-store';
@@ -38,15 +39,61 @@ function pageLabelFromPath(pathname: string | null): string {
 // l'Explorer, la recherche CRM ne doit pas l'écraser (et réciproquement).
 const CRM_SEARCH_PLACEHOLDER = 'Rechercher un acteur : nom, prénom, établissement, téléphone, e-mail…';
 const EXPLORER_SEARCH_PLACEHOLDER = 'Rechercher : nom, ville, équipement, plat, label...';
+const DASHBOARD_SEARCH_LABEL = 'Rechercher une fiche dans Explorer';
 
 function isCrmPath(pathname: string | null): boolean {
   return pathname === '/crm' || Boolean(pathname?.startsWith('/crm/'));
+}
+
+// L'horloge actualise seulement son propre contenu ; la recherche et ses menus
+// n'ont pas à être rendus de nouveau à chaque minute.
+function TopBarClock() {
+  const [now, setNow] = useState(() => new Date());
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setNow(new Date());
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const dateLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }).format(now),
+    [now],
+  );
+  const timeLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(now),
+    [now],
+  );
+  const safeTimeLabel = isMounted ? timeLabel : '--:--';
+  const safeDateLabel = isMounted ? dateLabel : '--';
+
+  return (
+    <time
+      className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink lg:inline-flex"
+      dateTime={isMounted ? now.toISOString() : undefined}
+      suppressHydrationWarning
+    >
+      {safeDateLabel} · {safeTimeLabel}
+    </time>
+  );
 }
 
 export function TopBar() {
   const pathname = usePathname();
   const pageLabel = pageLabelFromPath(pathname);
   const isCrm = isCrmPath(pathname);
+  const isDashboard = pathname === '/dashboard' || Boolean(pathname?.startsWith('/dashboard/'));
   const explorerSearch = useExplorerStore((state) => state.common.search);
   const setExplorerSearch = useExplorerStore((state) => state.setSearch);
   const crmSearch = useCrmSearchStore((state) => state.search);
@@ -133,36 +180,6 @@ export function TopBar() {
     }
   };
 
-  const [now, setNow] = useState(() => new Date());
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    setNow(new Date());
-    const timer = window.setInterval(() => setNow(new Date()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const dateLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat('fr-FR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-      }).format(now),
-    [now],
-  );
-  const timeLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(now),
-    [now],
-  );
-  const safeTimeLabel = isMounted ? timeLabel : '--:--';
-  const safeDateLabel = isMounted ? dateLabel : '--';
-
   return (
     <Fragment>
       {drawerObjectId ? (
@@ -203,8 +220,8 @@ export function TopBar() {
             onFocus={() => setSuggestionsOpen(true)}
             onBlur={closeSuggestions}
             onKeyDown={handleSearchKeyDown}
-            placeholder={isCrm ? CRM_SEARCH_PLACEHOLDER : EXPLORER_SEARCH_PLACEHOLDER}
-            aria-label={isCrm ? 'Rechercher un acteur' : 'Rechercher une fiche'}
+            placeholder={isCrm ? CRM_SEARCH_PLACEHOLDER : isDashboard ? DASHBOARD_SEARCH_LABEL : EXPLORER_SEARCH_PLACEHOLDER}
+            aria-label={isCrm ? 'Rechercher un acteur' : isDashboard ? DASHBOARD_SEARCH_LABEL : 'Rechercher une fiche'}
             role={isCrm ? undefined : 'combobox'}
             aria-expanded={isCrm ? undefined : suggestionsVisible}
             aria-controls={isCrm ? undefined : SUGGESTIONS_LISTBOX_ID}
@@ -215,6 +232,15 @@ export function TopBar() {
             }
             className="h-auto border-0 bg-transparent px-0 text-sm shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
           />
+          {isDashboard ? (
+            <Link
+              href="/explorer"
+              className="inline-flex shrink-0 items-center gap-1 rounded-shell px-1.5 py-1 text-xs font-semibold text-teal hover:bg-teal-tint focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal"
+              aria-label="Ouvrir Explorer"
+            >
+              Explorer <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          ) : null}
           {/* D24 : le raccourci affiché n'est plus décoratif — il ouvre la palette. */}
           <button
             type="button"
@@ -239,13 +265,7 @@ export function TopBar() {
         <div className="flex items-center gap-2">
           <CreateObjectButton />
           <LivePresenceIndicator />
-          <button
-            type="button"
-            className="hidden h-7 shrink-0 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-semibold text-ink hover:bg-surface2 lg:inline-flex"
-            suppressHydrationWarning
-          >
-            {safeDateLabel} · {safeTimeLabel}
-          </button>
+          <TopBarClock />
         </div>
       </header>
     </Fragment>

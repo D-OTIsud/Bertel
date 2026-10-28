@@ -66,7 +66,8 @@ describe('BlockRES — §06 menus : carte dépliable (lecture) + modale (éditio
 
     // editing is done in the modal, opened from the card's "Modifier le menu".
     fireEvent.click(screen.getByRole('button', { name: /Modifier le menu/ }));
-    expect(screen.getByText(/Menu — Carte midi/)).toBeInTheDocument(); // MenuEditModal
+    expect(screen.getByRole('dialog', { name: 'Modifier le menu' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Nom du menu')).toHaveValue('Carte midi');
   });
 
   it('opens the create modal from "Ajouter un menu"', () => {
@@ -77,7 +78,8 @@ describe('BlockRES — §06 menus : carte dépliable (lecture) + modale (éditio
 
     expect(screen.getByText(/Aucun menu pour le moment/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Ajouter un menu/ }));
-    expect(screen.getByText(/Menu — Sans titre/)).toBeInTheDocument(); // MenuEditModal (new)
+    expect(screen.getByRole('dialog', { name: 'Ajouter un menu' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Nom du menu')).toHaveValue('');
   });
 });
 

@@ -194,7 +194,7 @@ describe('CrmTimelineView — créer une tâche depuis une demande', () => {
     const dialog = await screen.findByRole('dialog', { name: /nouvelle tâche liée à la demande/i });
     fireEvent.change(within(dialog).getByLabelText('Titre de la tâche'), { target: { value: 'Relancer la photo' } });
     await within(dialog).findByLabelText('Attribuer à');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Créer la tâche' }));
 
     await waitFor(() =>
       expect(crmMock.saveCrmTask).toHaveBeenCalledWith(

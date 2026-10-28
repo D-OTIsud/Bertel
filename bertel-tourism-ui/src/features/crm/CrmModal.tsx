@@ -36,8 +36,12 @@ export function CrmModal({
     // Focus initial : premier champ du formulaire (à défaut, le bouton ✕).
     const card = cardRef.current;
     if (!card) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusables = [...card.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)];
     (focusables.find((el) => !el.classList.contains('crm-modal__close')) ?? focusables[0])?.focus();
+    return () => {
+      if (opener?.isConnected) opener.focus();
+    };
   }, []);
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {

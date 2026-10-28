@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useExplorerUrlSync } from './useExplorerUrlSync';
 import { useExplorerStore } from '../store/explorer-store';
+import type { GeoPolygon } from '../types/domain';
 
 let mockSearch = new URLSearchParams();
 const replace = jest.fn();
@@ -44,5 +45,63 @@ describe('useExplorerUrlSync — persistance de la recherche entre les pages', (
 
     expect(useExplorerStore.getState().common.search).toBe('');
     expect(replace).not.toHaveBeenCalled();
+  });
+
+  it('conserve la recherche et la zone en StrictMode pendant la restauration, puis accepte un retour vers une URL nue', () => {
+    const polygon: GeoPolygon = { type: 'Polygon', coordinates: [[[55, -21], [56, -21], [56, -22], [55, -21]]] };
+    const bbox: [number, number, number, number] = [55, -22, 56, -21];
+    act(() => {
+      useExplorerStore.getState().setSearch('jardin');
+      useExplorerStore.getState().setPolygon(polygon, bbox);
+    });
+
+    const { rerender } = renderHook(() => useExplorerUrlSync(), { reactStrictMode: true });
+
+    expect(useExplorerStore.getState().common.search).toBe('jardin');
+    expect(useExplorerStore.getState().common.polygon).toEqual(polygon);
+    expect(useExplorerStore.getState().common.bbox).toEqual(bbox);
+    expect(replace).toHaveBeenCalledTimes(1);
+    const restoredUrl = new URL(String(replace.mock.calls[0][0]), window.location.origin);
+    expect(restoredUrl.searchParams.get('search')).toBe('jardin');
+    rerender();
+    expect(useExplorerStore.getState().common.search).toBe('jardin');
+    expect(replace).toHaveBeenCalledTimes(1);
+
+    // Le routeur confirme ensuite l'URL demandée, sans reparser et perdre la zone locale.
+    mockSearch = restoredUrl.searchParams;
+    rerender();
+    expect(useExplorerStore.getState().common.search).toBe('jardin');
+    expect(useExplorerStore.getState().common.polygon).toEqual(polygon);
+    expect(useExplorerStore.getState().common.bbox).toEqual(bbox);
+
+    // Un vrai Précédent après cette confirmation doit toujours appliquer l'URL nue.
+    mockSearch = new URLSearchParams();
+    rerender();
+    expect(useExplorerStore.getState().common.search).toBe('');
+    expect(useExplorerStore.getState().common.polygon).toBeNull();
+    expect(useExplorerStore.getState().common.bbox).toBeNull();
+  });
+
+  it('accepte une réinitialisation explicite après confirmation de la restauration', () => {
+    jest.useFakeTimers();
+    try {
+      act(() => useExplorerStore.getState().setSearch('jardin'));
+      const { rerender, unmount } = renderHook(() => useExplorerUrlSync(), { reactStrictMode: true });
+      const restoredUrl = new URL(String(replace.mock.calls[0][0]), window.location.origin);
+      mockSearch = restoredUrl.searchParams;
+      rerender();
+
+      act(() => useExplorerStore.getState().resetAll());
+      expect(useExplorerStore.getState().common.search).toBe('');
+      act(() => jest.advanceTimersByTime(300));
+      const resetUrl = new URL(String(replace.mock.calls.at(-1)?.[0]), window.location.origin);
+      expect(resetUrl.searchParams.has('search')).toBe(false);
+      mockSearch = new URLSearchParams();
+      rerender();
+      expect(useExplorerStore.getState().common.search).toBe('');
+      unmount();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

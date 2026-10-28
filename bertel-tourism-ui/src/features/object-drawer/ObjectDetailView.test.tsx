@@ -15,8 +15,16 @@ const mockPrivateNoteAccess = {
 };
 
 jest.mock('react-map-gl/maplibre', () => ({
-  Map: ({ children }: { children?: ReactNode }) => <div data-testid="detail-map">{children}</div>,
-  Marker: ({ children }: { children?: ReactNode }) => <div data-testid="detail-marker">{children}</div>,
+  Map: ({ children, initialViewState }: { children?: ReactNode; initialViewState?: unknown }) => (
+    <div data-testid="detail-map" data-initial-view-state={JSON.stringify(initialViewState)}>{children}</div>
+  ),
+  Marker: ({ children, longitude, latitude }: { children?: ReactNode; longitude: number; latitude: number }) => (
+    <div data-testid="detail-marker" data-longitude={longitude} data-latitude={latitude}>{children}</div>
+  ),
+  Source: ({ children, data }: { children?: ReactNode; data: unknown }) => (
+    <div data-testid="detail-map-source" data-geojson={JSON.stringify(data)}>{children}</div>
+  ),
+  Layer: () => <div data-testid="detail-map-layer" />,
   NavigationControl: () => <div data-testid="detail-map-zoom" />,
 }));
 
@@ -155,6 +163,81 @@ describe('ObjectDetailView', () => {
     const data: ObjectDetail = { id: 'iti-2', name: 'Sentier', type: 'ITI', raw: {} } as ObjectDetail;
     renderDetail(data);
     expect(screen.queryByText("Étapes de l'itinéraire")).not.toBeInTheDocument();
+  });
+
+  it('shows the saved trail in the itinerary hero and links numbered points to the matching descriptions', () => {
+    const track = { type: 'LineString', coordinates: [[55.4, -21.1], [55.45, -21.15], [55.5, -21.2]] };
+    renderDetail({
+      id: 'iti-trail', name: 'Boucle du Piton', type: 'ITI',
+      raw: {
+        itinerary_details: {
+          track_geojson: track,
+          stages: [
+            { id: 'start', name: 'Parking', lng: 55.4, lat: -21.1, description: 'Départ du sentier.' },
+            { id: 'forest', name: 'Forêt', description: 'Traverser la forêt.' },
+            { id: 'summit', name: 'Sommet', lng: 55.6, lat: -21.3, description_md: 'Vue sur **les remparts**.' },
+          ],
+        },
+      },
+    } as ObjectDetail);
+
+    const hero = screen.getByRole('region', { name: 'Carte du parcours' });
+    expect(within(hero).getByRole('heading', { name: 'Boucle du Piton' })).toBeInTheDocument();
+    expect(hero.querySelector('.detail-hero__mosaic')).toBeNull();
+    expect(JSON.parse(within(hero).getByTestId('detail-map-source').getAttribute('data-geojson')!))
+      .toEqual({ type: 'Feature', geometry: track, properties: {} });
+    expect(JSON.parse(within(hero).getByTestId('detail-map').getAttribute('data-initial-view-state')!).bounds)
+      .toEqual([55.4, -21.3, 55.6, -21.1]);
+    expect(within(hero).getAllByTestId('detail-marker')).toHaveLength(2);
+    expect(within(hero).getByRole('button', { name: 'Étape 1 : Parking' })).toHaveTextContent('1');
+    const summitMarker = within(hero).getByRole('button', { name: 'Étape 3 : Sommet' });
+    expect(summitMarker).toHaveTextContent('3');
+    const stageDescription = document.getElementById(summitMarker.getAttribute('aria-controls')!)!;
+    expect(stageDescription).toHaveTextContent('Étape 3');
+    expect(stageDescription).toHaveTextContent('Vue sur les remparts.');
+    expect(within(stageDescription).getByText('les remparts').tagName).toBe('STRONG');
+    fireEvent.click(summitMarker);
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ block: 'center' });
+    expect(stageDescription).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Parcours' })).toHaveAttribute('aria-controls', 'detail-section-hero');
+  });
+
+  it('shows located stages even without a trail and leaves stages without GPS in the description', () => {
+    renderDetail({
+      id: 'iti-points', name: 'Sentier', type: 'ITI',
+      raw: {
+        itinerary_details: {
+          stages: [
+            { name: 'Passage', description: 'Prendre le sentier de droite.' },
+            { name: 'Cascade', lng: 55.5, lat: -21.1 },
+            { name: 'Position incorrecte', lng: 200, lat: -21.1 },
+          ],
+        },
+      },
+    } as ObjectDetail);
+    const hero = screen.getByRole('region', { name: 'Carte du parcours' });
+    expect(within(hero).queryByTestId('detail-map-source')).not.toBeInTheDocument();
+    expect(within(hero).getByText(/Tracé non renseigné/)).toBeInTheDocument();
+    expect(within(hero).getAllByTestId('detail-marker')).toHaveLength(1);
+    expect(within(hero).getByRole('button', { name: 'Étape 2 : Cascade' })).toHaveTextContent('2');
+    expect(screen.getByText('Prendre le sentier de droite.')).toBeInTheDocument();
+    expect(screen.getByText('Position incorrecte')).toBeInTheDocument();
+  });
+
+  it('keeps the itinerary map when no geographic data exists and keeps photos available in the gallery', () => {
+    renderDetail({
+      id: 'iti-photos', name: 'Sentier photographié', type: 'ITI',
+      raw: { media: [{ id: 'photo', url: 'https://example.com/trail.jpg', title: 'Le sentier' }] },
+    } as ObjectDetail);
+    const hero = screen.getByRole('region', { name: 'Carte du parcours' });
+    expect(within(hero).getByTestId('detail-map')).toBeInTheDocument();
+    expect(within(hero).queryByTestId('detail-map-source')).not.toBeInTheDocument();
+    expect(within(hero).queryByTestId('detail-marker')).not.toBeInTheDocument();
+    expect(within(hero).queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pas encore de photo principale.')).not.toBeInTheDocument();
+    fireEvent.click(within(hero).getByRole('button', { name: 'Voir les photos (1)' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByRole('dialog').querySelector('img')).toHaveAttribute('src', 'https://example.com/trail.jpg');
   });
 
   it('4.3 : affiche les faits d’une activité encadrée (ASC, object_act)', () => {

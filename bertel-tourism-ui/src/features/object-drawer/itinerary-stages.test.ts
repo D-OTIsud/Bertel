@@ -40,6 +40,28 @@ describe('buildItineraryStages', () => {
     const rows = buildItineraryStages({ stages: [{ id: 'p', lng: 55.5, lat: -21.1 }] });
     expect(rows).toHaveLength(1);
     expect(rows[0].name).toBe('');
+    expect(rows[0].coordinates).toEqual([55.5, -21.1]);
+  });
+
+  it('conserve les descriptions Markdown même sans description aplatie', () => {
+    const rows = buildItineraryStages({ stages: [{ description_md: 'Suivre **le balisage**.' }] });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].descriptionMd).toBe('Suivre **le balisage**.');
+  });
+
+  it('ne place que des coordonnées GPS valides et conserve les étapes descriptives sans position', () => {
+    const rows = buildItineraryStages({
+      stages: [
+        { name: 'Origine', lng: 0, lat: 0 },
+        { name: 'Sans position', lng: null, lat: null },
+        { name: 'Partiel', lng: 55.5 },
+        { name: 'Infini', lng: Infinity, lat: -21 },
+        { name: 'Hors limites', lng: 181, lat: 91 },
+      ],
+    });
+    expect(rows).toHaveLength(5);
+    expect(rows.map((row) => row.coordinates)).toEqual([[0, 0], null, null, null, null]);
+    expect(new Set(rows.map((row) => row.anchorId)).size).toBe(5);
   });
 
   it('conserve une étape n’ayant que des médias', () => {

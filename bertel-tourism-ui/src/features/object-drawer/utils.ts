@@ -1533,6 +1533,13 @@ function parseItineraryProfiles(rawProfiles: unknown): ItineraryProfilePoint[] {
  * coordonnées finies. Toute anomalie ⇒ null.
  */
 function parseItineraryTrackGeojson(rawGeo: unknown): ItineraryTrackGeoJson | null {
+  if (typeof rawGeo === 'string') {
+    try {
+      rawGeo = JSON.parse(rawGeo);
+    } catch {
+      return null;
+    }
+  }
   if (!isRecord(rawGeo) || rawGeo.type !== 'LineString') return null;
   const coords = rawGeo.coordinates;
   if (!Array.isArray(coords) || coords.length < 2) return null;
@@ -1541,7 +1548,7 @@ function parseItineraryTrackGeojson(rawGeo: unknown): ItineraryTrackGeoJson | nu
     if (!Array.isArray(pair) || pair.length < 2) return null;
     const lon = finiteNum(pair[0]);
     const lat = finiteNum(pair[1]);
-    if (lon === null || lat === null) return null;
+    if (lon === null || lat === null || Math.abs(lon) > 180 || Math.abs(lat) > 90) return null;
     coordinates.push([lon, lat]);
   }
   return { type: 'LineString', coordinates };
@@ -1565,7 +1572,11 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
   );
 
   const profiles = parseItineraryProfiles(details.profiles);
-  const trackGeojson = parseItineraryTrackGeojson(details.track_geojson);
+  const trackFormat = readString(itinerary.track_format, readString(raw.track_format, readString(details.track_format)));
+  const trackGeojson = parseItineraryTrackGeojson(details.track_geojson)
+    ?? (trackFormat.toLowerCase() === 'geojson'
+      ? parseItineraryTrackGeojson(itinerary.track ?? raw.track ?? details.track)
+      : null);
 
   const summary: ItinerarySummary = {
     distanceKm: readString(itinerary.distance_km, readString(raw.distance_km, readString(raw.length_km, readString(raw.total_length_km)))),
@@ -1580,7 +1591,7 @@ export function parseItinerarySummary(raw: Record<string, unknown>): ItinerarySu
     elevationGain: readString(itinerary.elevation_gain, readString(raw.elevation_gain, readString(raw.elevation_gain_m))),
     isLoop: loopValue,
     track: readString(itinerary.track, readString(raw.track, readString(details.track))),
-    trackFormat: readString(itinerary.track_format, readString(raw.track_format, readString(details.track_format))),
+    trackFormat,
     practices,
     info,
     sectionsCount: readList(details.sections).length,

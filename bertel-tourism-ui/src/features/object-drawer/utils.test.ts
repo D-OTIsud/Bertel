@@ -594,10 +594,28 @@ describe('parseItinerarySummary — profils & trace (PLAN 3.4)', () => {
     expect(s?.trackGeojson).toEqual({ type: 'LineString', coordinates: [[55.5, -21.1], [55.6, -21.2]] });
   });
 
+  it('lit aussi la trace GeoJSON sérialisée du contrat itinerary.track', () => {
+    const geometry = { type: 'LineString', coordinates: [[55.5, -21.1], [55.6, -21.2]] };
+    expect(parseItinerarySummary({
+      itinerary: { track_format: 'geojson', track: JSON.stringify(geometry) },
+    })?.trackGeojson).toEqual(geometry);
+  });
+
+  it('préfère la géométrie dédiée et ignore une trace malformée ou un autre format', () => {
+    const geometry = { type: 'LineString', coordinates: [[55.5, -21.1], [55.6, -21.2]] };
+    expect(parseItinerarySummary({
+      itinerary_details: { track_geojson: geometry },
+      itinerary: { track_format: 'geojson', track: 'invalid' },
+    })?.trackGeojson).toEqual(geometry);
+    expect(parseItinerarySummary({ itinerary: { track_format: 'geojson', track: 'invalid' } })?.trackGeojson).toBeNull();
+    expect(parseItinerarySummary({ itinerary: { track_format: 'gpx', track: '<gpx />' } })?.trackGeojson).toBeNull();
+  });
+
   it('rejette une géométrie invalide (non LineString / < 2 paires / coord non finie)', () => {
     expect(summaryOf({ track_geojson: { type: 'Point', coordinates: [55, -21] } })?.trackGeojson ?? null).toBeNull();
     expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55, -21]] } })?.trackGeojson ?? null).toBeNull();
     expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55, -21], ['x', -22]] } })?.trackGeojson ?? null).toBeNull();
+    expect(summaryOf({ track_geojson: { type: 'LineString', coordinates: [[55, -21], [181, 91]] } })?.trackGeojson ?? null).toBeNull();
   });
 
   it('un profil OU une géométrie suffit à produire un résumé non nul', () => {

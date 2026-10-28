@@ -26,7 +26,7 @@ function sameTag(a: ObjectWorkspaceTagItem, b: ObjectWorkspaceTagItem): boolean 
   return a.tagId && b.tagId ? a.tagId === b.tagId : a.slug === b.slug;
 }
 
-export function SectionTags({ editor, permissions, objectId, typeCode, folded }: SectionProps) {
+export function SectionTags({ editor, permissions, objectId, typeCode, archetype, folded }: SectionProps) {
   const module = editor.draft.tags;
   const displayed = module.displayed;
   const writable = permissions?.tags?.canDirectWrite ?? false;
@@ -149,7 +149,7 @@ export function SectionTags({ editor, permissions, objectId, typeCode, folded }:
           )}
 
           <p className="muted" style={{ marginTop: 12, fontSize: 11.5 }}>
-            Les classements certifiés (étoiles, labels) priment sur ces tags dans l’espace limité de la carte.
+            {archetype === 'ITI' ? 'Les labels du parcours priment sur ces tags dans l’espace limité de la carte.' : 'Les classements certifiés (étoiles, labels) priment sur ces tags dans l’espace limité de la carte.'}
           </p>
         </div>
 

@@ -4,7 +4,7 @@ import type { ArchetypeCode } from './archetypes';
 describe('makeSections', () => {
   it.each([
     ['HEB', 'Chambres & capacité'], ['RES', 'Cuisine & service'], ['ASC', 'Fiche activité'],
-    ['ITI', 'Tracé & étapes'], ['VIS', 'Visite & médiation'], ['SRV', 'Prestations'], ['FMA', 'Dates & programmation'],
+    ['VIS', 'Visite & médiation'], ['SRV', 'Prestations'], ['FMA', 'Dates & programmation'],
   ] as [ArchetypeCode, string][])('conserve l’inventaire ordonné du registre pour %s', (archetype, typeLabel) => {
     const groups = makeSections(archetype);
     expect(groups.map((group) => group.group)).toEqual(['Identité', 'Caractéristiques', 'Tarifs & ouverture', 'Liens & territoire', 'Gestion']);
@@ -14,7 +14,7 @@ describe('makeSections', () => {
       '05 Médias', `06 ${typeLabel}`, ...(archetype === 'HEB' ? [] : ['07 Capacité & accueil']),
       '08 Classifications', '09 Accessibilité', '10 Démarche durable', '11 Tags & étiquettes',
       '13 Tarifs, paiement & extras', "14 Périodes d'ouverture", '15 Liens vers fiches',
-      `16 ${archetype === 'ITI' ? 'Lieux & étapes' : 'Sites secondaires'}`, '17 Rattachements',
+      '16 Sites secondaires', '17 Rattachements',
       '18 Juridique', '19 Suivi prestataire', '21 Publication', '22 Identifiants externes',
     ]);
     for (const reference of Object.values(EDITOR_SECTION_REFERENCES)) {
@@ -22,9 +22,14 @@ describe('makeSections', () => {
     }
   });
 
-  it('produces 20 sections for ITI (includes section 16 Lieux & étapes; §20 retired in §90)', () => {
+  it('uses itinerary sections, with closures in 06 and no lodging capacity section', () => {
     const flat = makeSections('ITI').flatMap((g) => g.items);
-    expect(flat).toHaveLength(20);
+    expect(flat).toHaveLength(18);
+    expect(makeSections('ITI').map((g) => g.group)).toEqual(['Présentation', 'Le parcours', 'Référencement', 'Gestion']);
+    expect(flat).toContainEqual({ num: '06', label: 'Tracé, étapes & praticabilité' });
+    expect(flat).toContainEqual({ num: '08', label: 'Labels & homologations' });
+    expect(flat).toContainEqual({ num: '13', label: 'Accès & conditions' });
+    expect(flat.some((s) => s.num === '07' || s.num === '14')).toBe(false);
     expect(flat.some((s) => s.num === '16')).toBe(true);
     expect(flat.some((s) => s.num === '20')).toBe(false);
   });

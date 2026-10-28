@@ -39,7 +39,7 @@ const ACTION_ICON: Record<StatusActionKind, LucideIcon> = {
   restore: RotateCcw,
 };
 
-export function SectionPublication({ editor, permissions, objectId, folded }: SectionProps) {
+export function SectionPublication({ editor, permissions, objectId, archetype, folded }: SectionProps) {
   const publication = editor.draft.publication;
   const generalInfo = editor.draft.generalInfo;
   const memberships = editor.draft.memberships;
@@ -82,7 +82,7 @@ export function SectionPublication({ editor, permissions, objectId, folded }: Se
   const confirm = pendingAction ? STATUS_ACTION_CONFIRM[pendingAction.kind] : null;
 
   return (
-    <Fs num="21" title="Publication & cycle de vie" sub="Statut, visibilité commerciale, dates clés" folded={folded} pill={pill}>
+    <Fs num="21" title="Publication & cycle de vie" sub={archetype === 'ITI' ? 'Statut, visibilité de la fiche et dates clés' : 'Statut, visibilité commerciale, dates clés'} folded={folded} pill={pill}>
       {/* État courant — carte lisible (remplace l'ancien faux champ read-only). */}
       <div className={`lifecycle-state lifecycle-state--${pill.tone}`}>
         <span className="lifecycle-state__dot" aria-hidden />
@@ -99,7 +99,7 @@ export function SectionPublication({ editor, permissions, objectId, folded }: Se
       </div>
 
       <div className="grid-3" style={{ marginTop: 14 }}>
-        <Field label="Visibilité commerciale">
+        <Field label={archetype === 'ITI' ? 'Visibilité de la fiche' : 'Visibilité commerciale'}>
           <Select
             value={generalInfo.commercialVisibility}
             options={VISIBILITY_OPTIONS}

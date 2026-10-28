@@ -1,8 +1,8 @@
 import type { ArchetypeCode } from './archetypes';
 
 /**
- * The 22-section definition that drives the editor's left nav and the order of
- * section cards in the main column. Section 16 (Lieux & étapes / Sites secondaires)
+ * Type-specific sections drive the editor's nav and the order of cards.
+ * Section 16 (Territoire traversé / Sites secondaires)
  * is shown for every archetype (plan §182: sites secondaires are a general-purpose
  * concept, not ITI/VIS-specific).
  */
@@ -37,6 +37,36 @@ const TYPE_BLOCK_LABEL: Record<ArchetypeCode, string> = {
 };
 
 export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
+  if (archetype === 'ITI') {
+    return [
+      { group: 'Présentation', items: [
+        { num: '01', label: 'Identité de l’itinéraire' },
+        { num: '02', label: 'Départ & accès' },
+        { num: '03', label: 'Contacts' },
+        { num: '04', label: 'Descriptions & traductions' },
+        { num: '05', label: 'Photos & vidéos' },
+      ] },
+      { group: 'Le parcours', items: [
+        { num: '06', label: 'Tracé, étapes & praticabilité' },
+        { num: '09', label: 'Accessibilité du parcours' },
+        { num: '13', label: 'Accès & conditions' },
+        { num: '16', label: 'Territoire traversé' },
+        { num: '15', label: 'Fiches liées' },
+      ] },
+      { group: 'Référencement', items: [
+        { num: '08', label: 'Labels & homologations' },
+        { num: '10', label: 'Préservation du milieu' },
+        { num: '11', label: 'Tags & étiquettes' },
+      ] },
+      { group: 'Gestion', items: [
+        { num: '17', label: 'Organisations' },
+        { num: '18', label: 'Réglementation & documents' },
+        { num: '19', label: 'Gestionnaires & suivi' },
+        { num: '21', label: 'Publication' },
+        { num: '22', label: 'Identifiants sources' },
+      ] },
+    ];
+  }
   const isHeb = archetype === 'HEB';
   return [
     {
@@ -75,7 +105,7 @@ export function makeSections(archetype: ArchetypeCode): SectionGroup[] {
       group: 'Liens & territoire',
       items: [
         { num: '15', label: 'Liens vers fiches' },
-        { num: '16', label: archetype === 'ITI' ? 'Lieux & étapes' : 'Sites secondaires' },
+        { num: '16', label: 'Sites secondaires' },
         { ...EDITOR_SECTION_REFERENCES.attachments },
       ],
     },

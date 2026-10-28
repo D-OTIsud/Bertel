@@ -17,6 +17,7 @@ function initialsOf(name: string): string {
 }
 
 interface ProviderCardsProps {
+  itinerary?: boolean;
   relationships: ObjectWorkspaceRelationshipsModule;
   canWrite: boolean;
   /** Persist the next actor-link list (drives `editor.replaceModule('relationships', …)`). */
@@ -40,7 +41,7 @@ interface ProviderCardsProps {
  * l'authoring acteur (hors §17). Persisté par api.save_object_relations (arme actors).
  * Gate : permissions.relationships + actorWriteUnavailableReason (no-write-trap).
  */
-export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, openCountByActor = {} }: ProviderCardsProps) {
+export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, openCountByActor = {}, itinerary = false }: ProviderCardsProps) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [detachIndex, setDetachIndex] = useState<number | null>(null);
@@ -55,7 +56,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
 
   return (
     <div>
-      <div className="chip-group__label" style={{ marginTop: 0 }}>Prestataires rattachés</div>
+      <div className="chip-group__label" style={{ marginTop: 0 }}>{itinerary ? 'Gestionnaires du parcours' : 'Prestataires rattachés'}</div>
 
       {reason && (
         <p className="provider-readonly">
@@ -64,7 +65,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
       )}
 
       {actors.length === 0 ? (
-        <p className="provider-empty">Aucun prestataire rattaché à cette fiche.</p>
+        <p className="provider-empty">{itinerary ? 'Aucun gestionnaire rattaché à ce parcours.' : 'Aucun prestataire rattaché à cette fiche.'}</p>
       ) : (
         <div className="provider-grid">
           {actors.map((actor, index) => {
@@ -118,7 +119,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
                     type="button"
                     className="provider-act"
                     aria-label={`Modifier ${actor.displayName}`}
-                    title="Modifier le prestataire"
+                    title={itinerary ? 'Modifier le gestionnaire' : 'Modifier le prestataire'}
                     onClick={() => setEditIndex(index)}
                   >
                     <Pencil size={15} aria-hidden />
@@ -129,7 +130,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
                     type="button"
                     className="provider-act provider-act--danger"
                     aria-label={`Détacher ${actor.displayName}`}
-                    title="Détacher le prestataire"
+                    title={itinerary ? 'Détacher le gestionnaire' : 'Détacher le prestataire'}
                     onClick={() => setDetachIndex(index)}
                   >
                     <Trash2 size={15} aria-hidden />
@@ -149,7 +150,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
           </p>
         ) : (
           <button type="button" className="rep-add" style={{ marginTop: 10 }} onClick={() => setPickerOpen(true)}>
-            + Rattacher un nouveau prestataire
+            {itinerary ? '+ Rattacher un gestionnaire' : '+ Rattacher un nouveau prestataire'}
           </button>
         )
       )}
@@ -158,7 +159,7 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
       <Dialog open={pickerOpen} onOpenChange={(next: boolean) => { if (!next) setPickerOpen(false); }}>
         <DialogContent className="object-editor">
           <DialogHeader>
-            <DialogTitle>Rattacher un prestataire</DialogTitle>
+            <DialogTitle>{itinerary ? 'Rattacher un gestionnaire' : 'Rattacher un prestataire'}</DialogTitle>
           </DialogHeader>
           <div className="ed-modal__body">
             <ActorPicker
@@ -191,11 +192,11 @@ export function ProviderCards({ relationships, canWrite, onChange, onOpenActor, 
       {/* Detach — confirmation. */}
       <ConfirmDialog
         open={detachingActor !== undefined}
-        title="Détacher le prestataire"
+        title={itinerary ? 'Détacher le gestionnaire' : 'Détacher le prestataire'}
         message={
           <>
             Voulez-vous vraiment détacher <strong>{detachingActor?.displayName}</strong> de cette fiche ?
-            Le prestataire (et son historique CRM) n'est pas supprimé — seul son rattachement à cet objet est retiré.
+            {itinerary ? 'Le gestionnaire et son historique sont conservés ; seul son rattachement au parcours est retiré.' : "Le prestataire (et son historique CRM) n'est pas supprimé — seul son rattachement à cet objet est retiré."}
           </>
         }
         confirmLabel="Détacher"

@@ -27,6 +27,14 @@ function setup(modules: ObjectWorkspaceModules = fullModulesFixture()) {
 }
 
 describe('SectionOpenings', () => {
+  it('embeds closures inside the itinerary route block without creating a second section 14', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    const { container } = render(<SectionOpenings editor={result.current} permissions={allowAll} archetype="ITI" embedded />);
+    expect(container.querySelector('#section-14')).toBeNull();
+    expect(screen.getByText('Fermetures et exceptions datées')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Périodes d’accès régulières/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(result.current.draft.openings.periods).toHaveLength(1);
+  });
   it('opens the add modal and appends a period on save', () => {
     const { hook, rerender } = setup();
     const before = hook.result.current.draft.openings.periods.length;

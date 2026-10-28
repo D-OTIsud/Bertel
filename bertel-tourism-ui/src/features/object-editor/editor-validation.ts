@@ -88,10 +88,10 @@ function isContactValueWellFormed(kindCode: string, value: string): boolean {
 }
 
 const VALIDATION_RULES: ValidationRule[] = [
-  ({ draft }) =>
+  ({ draft, archetype }) =>
     hasText(draft.generalInfo.name)
       ? null
-      : { section: '01', message: 'Le nom commercial est obligatoire avant publication.', tone: 'req' },
+      : { section: '01', message: archetype === 'ITI' ? 'Le nom de l’itinéraire est obligatoire avant publication.' : 'Le nom commercial est obligatoire avant publication.', tone: 'req' },
   ({ permissions }) =>
     canUsePublicationGate(permissions)
       ? null
@@ -115,11 +115,11 @@ const VALIDATION_RULES: ValidationRule[] = [
       ? null
       : { section: '04', message: "L'accroche est obligatoire avant publication.", tone: 'req' };
   },
-  ({ draft }) => {
+  ({ draft, archetype }) => {
     // Each spoken language should have a complete translation (accroche + descriptif).
     // Non-blocking: missing translations can be drafted with AI in the descriptions section.
     const characteristics = draft.characteristics;
-    if (characteristics.unavailableReason) {
+    if (archetype === 'ITI' || characteristics.unavailableReason) {
       return null;
     }
     const object = draft.descriptions.object;
@@ -141,7 +141,7 @@ const VALIDATION_RULES: ValidationRule[] = [
         };
   },
   ({ archetype, draft }) =>
-    archetype === 'ITI' && !hasText(draft.itinerary.geometrySummary)
+    archetype === 'ITI' && !draft.itinerary.trackGeojson && !hasText(draft.itinerary.geometrySummary)
       ? { section: '06', message: 'Un itinéraire doit disposer d’une trace ou d’un résumé de tracé.', tone: 'req' }
       : null,
   ({ archetype, draft }) =>
@@ -154,10 +154,10 @@ const VALIDATION_RULES: ValidationRule[] = [
   // §64 — plus de warn « ajoutez un type de chambre » : les chambres sont un détail OPTIONNEL
   // (485/497 HEB sont des locatifs entiers sans découpage par chambre). La capacité d'accueil
   // (capacité max en §06) est la donnée porteuse, pas l'inventaire des chambres.
-  ({ draft }) => {
+  ({ draft, archetype }) => {
     // A PMR room declared in §05 should be reflected in the §10 accessibility equipment
     // (the Explorer accessibility facet reads the amenity codes, not the room flag).
-    if (draft.rooms.unavailableReason || !draft.rooms.items.some((item) => item.accessible)) {
+    if (archetype !== 'HEB' || draft.rooms.unavailableReason || !draft.rooms.items.some((item) => item.accessible)) {
       return null;
     }
     const accessibilityCodes = new Set(
@@ -200,8 +200,8 @@ const VALIDATION_RULES: ValidationRule[] = [
           tone: 'warn',
         };
   },
-  ({ draft }) =>
-    draft.openings.periods.length > 0
+  ({ draft, archetype }) =>
+    archetype === 'ITI' || draft.openings.periods.length > 0
       ? null
       : { section: '14', message: 'Renseignez une période d’ouverture ou une règle de disponibilité.', tone: 'warn' },
 ];

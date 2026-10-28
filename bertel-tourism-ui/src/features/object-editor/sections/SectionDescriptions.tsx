@@ -20,7 +20,7 @@ const emptyOverlay = (): ObjectWorkspaceDescriptionScope => ({
 });
 
 /** Section 04 — multilingual descriptions: default (shared) layer + per-organisation personalised overlay. */
-export function SectionDescriptions({ editor, permissions, folded }: SectionProps) {
+export function SectionDescriptions({ editor, permissions, archetype, folded }: SectionProps) {
   const { translation } = useServiceAvailability();
   const descriptions = editor.draft.descriptions;
   const characteristics = editor.draft.characteristics;
@@ -89,17 +89,17 @@ export function SectionDescriptions({ editor, permissions, folded }: SectionProp
   return (
     <Fs
       num="04"
-      title="Descriptions"
+      title={archetype === 'ITI' ? 'Descriptions & traductions' : 'Descriptions'}
       sub="Accroche et descriptif — par langue, version par défaut ou personnalisée"
       folded={folded}
       pill={{ tone: 'ok', label: onOrg ? 'Personnalisée' : 'Par défaut' }}
     >
-      <div className="desc-langs">
+      {archetype !== 'ITI' && <div className="desc-langs">
         <SpokenLanguagesField
           characteristics={characteristics}
           onChange={(next) => editor.replaceModule('characteristics', next)}
         />
-      </div>
+      </div>}
 
       <div className="desc-selectors">
         {scopeTabs.length > 1 ? (

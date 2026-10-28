@@ -34,6 +34,14 @@ const readOnlyPermissions = new Proxy(
 ) as ObjectWorkspacePermissions;
 
 describe('SectionPlaces — multi-place module', () => {
+  it('keeps itinerary stages exclusively in the route editor', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
+    renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="ITI" />);
+    expect(screen.getByText('Territoire traversé')).toBeInTheDocument();
+    expect(screen.queryByText("Étapes d'itinéraire")).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Belvédère du Maïdo')).not.toBeInTheDocument();
+    expect(result.current.draft.itinerary.stages).toHaveLength(1);
+  });
   it('lists secondary sites and opens the edit modal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     renderSection(<SectionPlaces editor={result.current} permissions={allowAll} archetype="HEB" />);

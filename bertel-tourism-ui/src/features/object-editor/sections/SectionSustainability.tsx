@@ -23,7 +23,7 @@ function initialExpandedByCategory(
  * Categories and actions come from `ref_sustainability_action_*` (enriched in
  * `getObjectWorkspaceSustainabilityModule`); labels/descriptions from API i18n.
  */
-export function SectionSustainability({ editor, folded }: SectionProps) {
+export function SectionSustainability({ editor, archetype, folded }: SectionProps) {
   const module = editor.draft.sustainability;
   const [expandedByCategory, setExpandedByCategory] = useState<Record<string, boolean>>(() =>
     initialExpandedByCategory(module.categories),
@@ -71,8 +71,8 @@ export function SectionSustainability({ editor, folded }: SectionProps) {
   return (
     <Fs
       num="10"
-      title="Démarche durable"
-      sub="Actions concrètes déclarées par l'établissement, distinctes des labels officiels"
+      title={archetype === 'ITI' ? 'Préservation du milieu' : 'Démarche durable'}
+      sub={archetype === 'ITI' ? 'Actions de préservation et pratiques responsables sur le parcours' : "Actions concrètes déclarées par l'établissement, distinctes des labels officiels"}
       folded={folded}
       pill={{ tone: selectedActions > 0 ? 'ok' : 'warn', label: `${selectedActions} action(s)` }}
     >

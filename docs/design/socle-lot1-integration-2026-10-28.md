@@ -1,4 +1,8 @@
-# Convergence — intégration du premier lot
+# Convergence filtres — rapport historique de la tranche locale
+
+**Portée de ce rapport.** Les résultats ci-dessous concernent la branche locale `codex/socle-convergence-lot1`, construite sur la baseline `1e9405a` contenant du travail préexistant. Ils ne valident pas automatiquement son portage sur `master`. Le terme « lot 1 » désigne ici le chantier de filtres du plan de convergence révisé le 28 octobre, et non le lot de suppression de code/CSS mort de l'audit de simplification. Cette tranche ne clôture pas le programme de convergence.
+
+**Portage distinct.** La [PR #56](https://github.com/D-OTIsud/Bertel/pull/56) part de `master` au commit `3c10fbd` et reprend uniquement les commits de convergence après la baseline. Le snapshot `1e9405a` est exclu de la branche publiée. Ses nouvelles vérifications sont identifiées dans la PR et ses checks par leur SHA ; les 250 tests et comparaisons historiques de ce document ne sont pas présentés comme un rejeu sur cette nouvelle base. La PR reste non fusionnée au moment de cette correction de provenance.
 
 ## P0 : source et baseline
 

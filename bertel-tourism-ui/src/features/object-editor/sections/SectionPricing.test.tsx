@@ -51,15 +51,15 @@ describe('SectionPricing (§84 modal redesign)', () => {
   });
 
   it('deletes the seeded tariff line after confirmation', () => {
-    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
     const { result } = renderHook(() => useObjectEditorState('o1', fullModulesFixture()));
     const view = render(<SectionPricing editor={result.current} permissions={allowAll} />);
 
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Supprimer Adulte/i })); });
+    expect(result.current.draft.pricing.prices).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
     view.rerender(<SectionPricing editor={result.current} permissions={allowAll} />);
 
     expect(result.current.draft.pricing.prices).toHaveLength(0);
-    confirmSpy.mockRestore();
   });
 
   it('renders the payment block and marks characteristics dirty on change', () => {

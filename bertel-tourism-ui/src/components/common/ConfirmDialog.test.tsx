@@ -86,3 +86,35 @@ describe('ConfirmDialog — confirmGate (saisie-pour-confirmer)', () => {
     expect(screen.getByRole('button', { name: 'Supprimer' })).toHaveAttribute('aria-disabled', 'true');
   });
 });
+
+describe.each(['default', 'editor'] as const)('ConfirmDialog shared guards: %s', (appearance) => {
+  it('preserves gate, attestation, busy and retry behavior in either shell', () => {
+    const onConfirm = jest.fn();
+    const onChange = jest.fn();
+    const props = {
+      open: true, title: 'Confirmer la suppression', message: 'La ligne sera supprimée.', appearance,
+      onCancel: jest.fn(), onConfirm, confirmLabel: 'Supprimer',
+      confirmGate: { expected: ['SUPPRIMER'], label: 'Saisir SUPPRIMER' },
+      attestation: { label: 'Je certifie', checked: false, required: true, hint: 'Certification nécessaire.', onChange },
+    };
+    const view = render(<ConfirmDialog {...props} />);
+    const confirm = screen.getByRole('button', { name: 'Supprimer' });
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Saisir SUPPRIMER'), { target: { value: 'SUPPRIMER' } });
+    fireEvent.click(confirm);
+    expect(screen.getByRole('alert')).toHaveTextContent('Cochez la certification');
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Je certifie' }));
+    expect(onChange).toHaveBeenCalledWith(true);
+    view.rerender(<ConfirmDialog {...props} attestation={{ ...props.attestation, checked: true }} busy />);
+    fireEvent.click(confirm);
+    expect(onConfirm).not.toHaveBeenCalled();
+    expect(confirm).toHaveAccessibleDescription('Traitement en cours…');
+    view.rerender(<ConfirmDialog {...props} attestation={{ ...props.attestation, checked: true }} />);
+    fireEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    // Existing async consumers may leave the dialog open after failure and retry.
+    fireEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+});

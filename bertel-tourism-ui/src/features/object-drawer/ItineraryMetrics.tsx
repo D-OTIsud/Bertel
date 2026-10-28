@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Clock3, MapPin, Repeat2, Route, type LucideIcon } from 'lucide-react';
 import type { ItinerarySummary } from './utils';
 
@@ -40,6 +40,20 @@ function ItineraryMetric({ metric }: { metric: Metric }) {
   const showTooltip = (hovered || focused) && !dismissed;
   const Icon = metric.icon;
 
+  useEffect(() => {
+    if (!showTooltip) return;
+    // Radix handles Escape at document capture, before React button handlers.
+    // Consume only a visible tooltip's Escape before it reaches the drawer.
+    const dismissTooltip = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      setDismissed(true);
+    };
+    window.addEventListener('keydown', dismissTooltip, true);
+    return () => window.removeEventListener('keydown', dismissTooltip, true);
+  }, [showTooltip]);
+
   return (
     <li
       className="detail-itinerary-metrics__item"
@@ -53,12 +67,6 @@ function ItineraryMetric({ metric }: { metric: Metric }) {
         aria-describedby={showTooltip ? tooltipId : undefined}
         onFocus={() => { setFocused(true); setDismissed(false); }}
         onBlur={() => setFocused(false)}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape' && showTooltip) {
-            event.preventDefault();
-            setDismissed(true);
-          }
-        }}
       >
         <Icon className="detail-itinerary-metrics__icon" size={17} aria-hidden="true" />
         <span className="detail-itinerary-metrics__value">

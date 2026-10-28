@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { FiltersPanel } from '../components/explorer/FiltersPanel';
 import { ResultsList } from '../components/explorer/ResultsList';
 import { NameMatchBand } from '../components/explorer/NameMatchBand';
@@ -50,6 +50,8 @@ const panelLabels: Record<ExplorerPanelKey, string> = {
 
 export default function ExplorerPage() {
   const isCompactExplorer = useMediaQuery(COMPACT_EXPLORER_BREAKPOINT);
+  const filtersTabRef = useRef<HTMLButtonElement>(null);
+  const resetButtonRef = useRef<HTMLButtonElement>(null);
   const [activeMobilePanel, setActiveMobilePanel] = useState<ExplorerPanelKey>('results');
   // D16 : mode de vue (Liste / Table / Carte / Split) — préférence persistée.
   // Le mobile garde ses onglets (la table est un outil desktop, repli D17 <960px).
@@ -162,7 +164,7 @@ export default function ExplorerPage() {
           />
         </div>
       ) : null}
-      <ExplorerActiveFilters />
+      <ExplorerActiveFilters returnFocusRef={isCompactExplorer ? filtersTabRef : resetButtonRef} />
       <Sheet
         open={mobileSheetOpen}
         onOpenChange={(open) => {
@@ -201,6 +203,7 @@ export default function ExplorerPage() {
             {(['filters', 'results', 'map'] as ExplorerPanelKey[]).map((panel) => (
               <button
                 key={panel}
+                ref={panel === 'filters' ? filtersTabRef : undefined}
                 type="button"
                 className={activeMobilePanel === panel ? 'chip chip--active explorer-mobile-tab' : 'chip explorer-mobile-tab'}
                 onClick={() => setActiveMobilePanel(panel)}
@@ -222,7 +225,7 @@ export default function ExplorerPage() {
             GRID_BY_MODE[viewMode],
           )}
         >
-          <FiltersPanel references={filtersReferences} />
+          <FiltersPanel references={filtersReferences} resetButtonRef={resetButtonRef} />
           {viewMode === 'split' || viewMode === 'liste' ? (
             <ResultsList
               cards={cards}

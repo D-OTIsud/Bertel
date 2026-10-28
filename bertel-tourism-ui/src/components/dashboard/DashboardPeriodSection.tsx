@@ -9,9 +9,12 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 const isoNDaysAgo = (days: number) => { const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10); };
 
 export function DashboardPeriodSection() {
-  const { updatedAtFrom, updatedAtTo, setPeriod, clearPeriod } = useDashboardFilterStore();
+  const updatedAtFrom = useDashboardFilterStore((s) => s.updatedAtFrom);
+  const updatedAtTo = useDashboardFilterStore((s) => s.updatedAtTo);
+  const setPeriod = useDashboardFilterStore((s) => s.setPeriod);
+  const clearPeriod = useDashboardFilterStore((s) => s.clearPeriod);
   return (
-    <FilterColumnGroup label="Période">
+    <FilterColumnGroup label="Fiches mises à jour">
       <div className="space-y-3">
         <div>
           <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Préréglages</span>

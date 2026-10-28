@@ -42,13 +42,13 @@ describe('ExplorerActiveFilters', () => {
     expect(useExplorerStore.getState().common.cities).toEqual(['Salazie']);
   });
 
-  it('« Tout effacer » remet le store à l’état par défaut', () => {
+  it('« Réinitialiser » remet le store à l’état par défaut', () => {
     act(() => {
       useExplorerStore.getState().setSearch('x');
       useExplorerStore.getState().setPmr(true);
     });
     render(<ExplorerActiveFilters />);
-    fireEvent.click(screen.getByRole('button', { name: 'Tout effacer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser' }));
     expect(useExplorerStore.getState().common.search).toBe(DEFAULT_EXPLORER_FILTERS.common.search);
     expect(useExplorerStore.getState().common.pmr).toBe(false);
   });
@@ -103,5 +103,34 @@ describe('ExplorerActiveFilters — création de liste dynamique (revue finale)'
       expect.objectContaining({ queryKey: ['my-lists', 'org-1', 'user-1'] }),
     );
     invalidateSpy.mockRestore();
+  });
+
+  it('annonce les limites et snapshotte les critères Dashboard appliqués dans le format natif', async () => {
+    jest.mocked(createDynamicList).mockResolvedValue('dashboard-list');
+    act(() => {
+      useDashboardExplorerStore.getState().resetAll();
+      useDashboardExplorerStore.getState().toggleBucket('HOT');
+      useDashboardExplorerStore.getState().setHotCapacityFilter('beds', 20, 60);
+      useDashboardExplorerStore.getState().toggleBucket('RES');
+      useDashboardExplorerStore.getState().setStatuses(['published', 'draft']);
+      useSessionStore.setState({ canEditObjects: true });
+    });
+    render(<ExplorerActiveFilters useStore={useDashboardExplorerStore} contextPage="dashboard"
+      period={{ updatedAtFrom: '2026-01-01' }} />);
+    const button = screen.getByRole('button', { name: /Liste dynamique/ });
+    expect(button).toHaveAccessibleDescription(/période et statut de publication non transmis/);
+    fireEvent.click(button);
+    await waitFor(() => expect(createDynamicList).toHaveBeenCalledTimes(1));
+    const [name, payload, url] = jest.mocked(createDynamicList).mock.calls[0];
+    expect(name).toBe('Liste dynamique · critères supportés');
+    expect(payload.buckets).toHaveLength(2);
+    for (const bucket of payload.buckets) {
+      expect(bucket.filters).not.toHaveProperty('capacity_filters');
+      expect(bucket.filters).not.toHaveProperty('status');
+      expect(bucket.filters).not.toHaveProperty('updated_at_from');
+    }
+    expect(url).not.toBeNull();
+    expect(new URLSearchParams(url!.split('?')[1]).get('status')).toBe('published,draft');
+    expect(useDashboardExplorerStore.getState().hot.capacityFilters).toEqual([{ code: 'beds', min: 20, max: 60 }]);
   });
 });

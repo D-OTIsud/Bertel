@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { Check, ChevronDown, Info, Search, X } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
 import { useSessionStore } from '../../store/session-store';
@@ -7,7 +7,6 @@ import type {
   AccessibilityDisabilityTypeCode,
   BackendObjectTypeCode,
   ExplorerBucketKey,
-  ExplorerFilters,
   ExplorerAccommodationFamily,
   ExplorerReferences,
   ExplorerStatusFilter,
@@ -46,6 +45,8 @@ import { tagChipStyle } from '../../utils/explorer-card';
 import { cn } from '@/lib/utils';
 import { RangeSlider } from '@/components/ui/range-slider';
 import { buildExplorerActiveChips } from './explorer-active-chips';
+import { deriveExplorerFilterContext } from '../../lib/explorer-filter-context';
+import { resolveDashboardStatuses } from '../../lib/dashboard-stats-params';
 import {
   accommodationBreadcrumb,
   buildAccommodationTaxonomyTree,
@@ -106,6 +107,10 @@ interface FiltersPanelProps {
    *  Le Dashboard passe false : buildDashboardStatsParams restreint p_status à
    *  published/draft (§7), la chip serait un contrôle mort là-bas. */
   includeArchivedStatus?: boolean;
+  contextPage?: 'explorer' | 'dashboard';
+  onReset?: () => void;
+  periodActive?: boolean;
+  resetButtonRef?: Ref<HTMLButtonElement>;
 }
 
 function readCapacityValue(filters: Array<{ code: string; min?: number; max?: number }>, code: string, key: 'min' | 'max'): number | undefined {
@@ -180,7 +185,7 @@ function filterSustainabilityActions(
   );
 }
 
-export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true }: FiltersPanelProps) {
+export function FiltersPanel({ references, useStore = useExplorerStore, typeSpecificFacets = true, includeArchivedStatus = true, contextPage = 'explorer', onReset, periodActive = false, resetButtonRef }: FiltersPanelProps) {
   const [accommodationQuery, setAccommodationQuery] = useState('');
   const [openAccommodationFamily, setOpenAccommodationFamily] = useState<string | null>('locatif');
   const [showAccommodationComplements, setShowAccommodationComplements] = useState(false);
@@ -254,7 +259,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
   const showEvt = isBucketSelected(selectedBuckets, 'EVT');
   const showVis = isBucketSelected(selectedBuckets, 'VIS');
   const showSrv = isBucketSelected(selectedBuckets, 'SRV');
-  const effectiveStatuses = resolveExplorerStatuses(statuses, canEditObjects);
+  const effectiveStatuses = contextPage === 'dashboard'
+    ? resolveDashboardStatuses(statuses)
+    : resolveExplorerStatuses(statuses, canEditObjects);
   // §205 — le Dashboard n'offre pas « Archivé » (ses stats restreignent p_status
   // à published/draft) ; l'Exploreur offre le vocabulaire complet.
   const statusOptions = includeArchivedStatus
@@ -273,7 +280,12 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
    *
    * Le sélecteur renvoie un NOMBRE : pas de nouvelle référence à chaque rendu.
    */
-  const activeFilterCount = useStore((s) => buildExplorerActiveChips(s as unknown as ExplorerFilters).length);
+  const context = deriveExplorerFilterContext(
+    { selectedBuckets, common, hot, res, iti, evt, vis, srv },
+    { page: contextPage, canEditObjects },
+    buildExplorerActiveChips({ selectedBuckets, common, hot, res, iti, evt, vis, srv }),
+  );
+  const activeFilterCount = context.applied.length + (periodActive ? 1 : 0);
 
   const accessibilityDisabilityTypes: Array<{ code: AccessibilityDisabilityTypeCode; label: string }> =
     references?.accessibilityDisabilityTypes?.length
@@ -417,7 +429,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
    */
   const typeRowClass = (active: boolean) =>
     cn(
-      'mb-1.5 flex w-full items-center gap-2 rounded-[8px] border px-2.5 py-1.5 text-left text-[12px] font-semibold transition',
+      'filter-context-action min-h-10 mb-1.5 flex w-full items-center gap-2 rounded-shellMd border px-2.5 py-1.5 text-left text-sm leading-5 font-semibold transition',
       active
         ? 'border-line bg-surface2 text-ink hover:border-lineStrong'
         : 'border-line bg-surface text-ink-3 hover:border-lineStrong hover:text-ink',
@@ -938,9 +950,9 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
       <div className="flex h-14 flex-none items-center justify-between gap-2 border-b border-line bg-surface px-4">
         <div className="flex items-baseline gap-2 font-display text-[13px] font-bold tracking-tight text-ink">
           Filtres
-          <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} actifs</span>
+          <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} appliqués{context.memorized.length > 0 ? ` · ${context.memorized.length} mémorisés` : ''}</span>
         </div>
-        <button type="button" onClick={resetAll} className="text-[12px] font-semibold text-orange-2 hover:text-orange">
+        <button ref={resetButtonRef} type="button" onClick={onReset ?? resetAll} className="text-[12px] font-semibold text-orange-2 hover:text-orange">
           Réinitialiser
         </button>
       </div>
@@ -989,7 +1001,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                       const isEditorDefault =
                         sanitized.length === editorDefault.length &&
                         editorDefault.every((code) => sanitized.includes(code));
-                      setStatuses(isEditorDefault ? [] : sanitized);
+                      setStatuses(contextPage === 'dashboard' ? sanitized : isEditorDefault ? [] : sanitized);
                     }}
                     aria-pressed={active}
                   >
@@ -1224,7 +1236,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
             <div>
               <span className="mb-1.5 block text-[12px] font-semibold text-ink-2">Ouvert à… (date et heure)</span>
               <div className="flex items-center gap-2">
-                <Input
+                <Input 
                   type="datetime-local"
                   value={common.openAt ?? ''}
                   onChange={(event) => setOpenAt(event.target.value || null)}
@@ -1318,7 +1330,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <details>
                 <summary className="cursor-pointer text-[12px] font-semibold text-ink-2">Séminaires & réunions (MICE)</summary>
                 <div className="filters-panel__range-grid mt-2">
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCount)}
@@ -1326,7 +1338,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Nb. salles min"
                     aria-label="Nombre minimal de salles de réunion"
                   />
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minAreaM2)}
@@ -1334,7 +1346,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Surface min m2"
                     aria-label="Surface minimale de salle en mètres carrés"
                   />
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCapTheatre)}
@@ -1344,7 +1356,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Cap. théâtre min"
                     aria-label="Capacité minimale en configuration théâtre"
                   />
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(hot.meetingRoom.minCapClassroom)}
@@ -1428,13 +1440,13 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div>
                 <span className="mb-2 block text-[12px] font-semibold text-ink-2">Dates</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input 
                     type="date"
                     value={evt.eventFrom ?? ''}
                     onChange={(event) => setEvtEventRange(event.target.value || null, evt.eventTo)}
                     aria-label="Événements à partir du"
                   />
-                  <Input
+                  <Input 
                     type="date"
                     value={evt.eventTo ?? ''}
                     onChange={(event) => setEvtEventRange(evt.eventFrom, event.target.value || null)}
@@ -1501,7 +1513,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div className="facet-group">
                 <span className="facet-title">Distance (km)</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(iti.distanceMinKm)}
@@ -1509,7 +1521,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Min"
                     aria-label="Distance minimale en kilomètres"
                   />
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     value={renderNumber(iti.distanceMaxKm)}
@@ -1523,7 +1535,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               <div className="facet-group">
                 <span className="facet-title">Durée (h)</span>
                 <div className="filters-panel__range-grid">
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     step="0.5"
@@ -1532,7 +1544,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
                     placeholder="Min"
                     aria-label="Durée minimale en heures"
                   />
-                  <Input
+                  <Input 
                     type="number"
                     min={0}
                     step="0.5"

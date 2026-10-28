@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardFilterStore } from '../store/dashboard-filter-store';
 import { useDashboardExplorerStore } from '../store/explorer-store';
@@ -40,6 +40,11 @@ export default function DashboardPage() {
   const activeTab = useDashboardFilterStore((s) => s.activeTab);
   const updatedAtFrom = useDashboardFilterStore((s) => s.updatedAtFrom);
   const updatedAtTo = useDashboardFilterStore((s) => s.updatedAtTo);
+  const resetButtonRef = useRef<HTMLButtonElement>(null);
+  const resetFilters = useCallback(() => {
+    useDashboardExplorerStore.getState().resetAll();
+    useDashboardFilterStore.getState().clearPeriod();
+  }, []);
 
   // État de filtre riche = instance Explorer indépendante du Dashboard.
   const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
@@ -107,11 +112,23 @@ export default function DashboardPage() {
             // §205 — pas d'« Archivé » ici : buildDashboardStatsParams restreint
             // p_status à published/draft, la chip serait un contrôle mort.
             includeArchivedStatus={false}
+            contextPage="dashboard"
+            onReset={resetFilters}
+            periodActive={Boolean(updatedAtFrom || updatedAtTo)}
+            resetButtonRef={resetButtonRef}
           />
         </aside>
 
         <main className="dashboard-main">
-          <ExplorerActiveFilters useStore={useDashboardExplorerStore} showExplorerBridge />
+          <ExplorerActiveFilters
+            useStore={useDashboardExplorerStore}
+            showExplorerBridge
+            contextPage="dashboard"
+            period={{ updatedAtFrom: updatedAtFrom ?? undefined, updatedAtTo: updatedAtTo ?? undefined }}
+            onClearPeriod={useDashboardFilterStore.getState().clearPeriod}
+            onReset={resetFilters}
+            returnFocusRef={resetButtonRef}
+          />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
             {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} />}

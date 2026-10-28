@@ -14,11 +14,12 @@ interface ItineraryHeroMapProps {
   stages: ItineraryStageRow[];
   location: ParsedLocation | null;
   metrics?: ReactNode;
+  downloadAction?: ReactNode;
 }
 
 const ROUTE_PADDING = { top: 58, right: 58, bottom: 58, left: 42 };
 
-export function ItineraryHeroMap({ name, track, stages, location, metrics }: ItineraryHeroMapProps) {
+export function ItineraryHeroMap({ name, track, stages, location, metrics, downloadAction }: ItineraryHeroMapProps) {
   const mapRef = useRef<MapRef>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLElement>(null);
@@ -94,7 +95,7 @@ export function ItineraryHeroMap({ name, track, stages, location, metrics }: Iti
       <h1 className="sr-only">{name}</h1>
       <div className={`detail-itinerary-hero__workspace${stages.length === 0 ? ' detail-itinerary-hero__workspace--map-only' : ''}`}>
         <div className="detail-itinerary-hero__map-column">
-          <div id="detail-itinerary-map" className="detail-itinerary-hero__map" ref={mapContainerRef} tabIndex={-1} role="group" aria-label="Carte du sentier">
+          <div id="detail-itinerary-map" className={`detail-itinerary-hero__map${downloadAction ? ' detail-itinerary-hero__map--download' : ''}`} ref={mapContainerRef} tabIndex={-1} role="group" aria-label="Carte du sentier">
             <Map
               ref={mapRef}
               mapStyle={DEFAULT_APP_MAP_STYLE}
@@ -144,6 +145,7 @@ export function ItineraryHeroMap({ name, track, stages, location, metrics }: Iti
               <NavigationControl position="bottom-right" showCompass={false} visualizePitch={false} />
               <AttributionControl position="top-right" compact />
             </Map>
+            {downloadAction ? <div className="detail-itinerary-hero__download">{downloadAction}</div> : null}
             {bounds ? (
               <button type="button" className="detail-itinerary-hero__fit" ref={fitButtonRef} onClick={fitRoute}>
                 <LocateFixed size={15} aria-hidden />Tout le parcours

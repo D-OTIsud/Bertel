@@ -3171,6 +3171,7 @@ function DetailScaffold({
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const langPrefs = useSessionStore((state) => state.langPrefs);
 
   useEffect(() => {
     setActiveMediaIndex(0);
@@ -3204,6 +3205,9 @@ function DetailScaffold({
           stages={itineraryStages}
           location={preview.location}
           metrics={<ItineraryMetrics itinerary={preview.itinerary} stageCount={itineraryStages.length} />}
+          downloadAction={preview.itinerary?.trackGeojson
+            ? <ItineraryGpxDownload objectId={data.id} name={data.name} langPrefs={langPrefs} compact />
+            : null}
         />
       ) : null}
       <div className={cn('detail-layout', visibleAside.length === 0 && 'detail-layout--single', archetype?.archetype === 'ITI' && 'detail-layout--itinerary')}>
@@ -3585,51 +3589,69 @@ function ItineraryGpxDownload({
   objectId,
   name,
   langPrefs,
+  compact = false,
 }: {
   objectId: string;
   name: string;
   langPrefs: string[];
+  compact?: boolean;
 }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const requestEpoch = useRef(0);
+  useEffect(() => {
+    setStatus('idle');
+    return () => { requestEpoch.current += 1; };
+  }, [objectId]);
 
   const handleDownload = async () => {
     if (status === 'loading') {
       return; // un seul appel en vol
     }
     setStatus('loading');
+    const epoch = ++requestEpoch.current;
     try {
       const track = await getObjectItineraryGpx(objectId, langPrefs);
+      if (epoch !== requestEpoch.current) return;
       if (typeof window !== 'undefined') {
         const blob = new Blob([track], { type: 'application/gpx+xml;charset=utf-8' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.download = `${slugForFilename(name)}.gpx`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        try {
+          document.body.appendChild(link);
+          link.click();
+        } finally {
+          link.remove();
+          window.URL.revokeObjectURL(url);
+        }
       }
       setStatus('idle');
     } catch {
-      setStatus('error');
+      if (epoch === requestEpoch.current) setStatus('error');
     }
   };
 
+  const label = status === 'loading' ? 'Préparation du GPX…'
+    : status === 'error' ? 'Réessayer le téléchargement GPX' : 'Télécharger le GPX';
+
   return (
-    <div className="detail-gpx-action">
+    <div className={`detail-gpx-action${compact ? ' detail-gpx-action--compact' : ''}`}>
       <button
         type="button"
         className="detail-gpx-action__button"
         onClick={handleDownload}
         disabled={status === 'loading'}
+        aria-label={compact ? label : undefined}
+        aria-busy={status === 'loading'}
+        title={compact ? label : undefined}
       >
-        <Download size={16} aria-hidden />
-        {status === 'loading'
+        {status === 'loading' ? <Loader2 size={16} aria-hidden className="animate-spin motion-reduce:animate-none" /> : <Download size={16} aria-hidden />}
+        {!compact && (status === 'loading'
           ? 'Préparation du GPX…'
           : status === 'error'
             ? 'Réessayer'
-            : 'Télécharger le GPX'}
+            : 'Télécharger le GPX')}
       </button>
       {status === 'error' ? (
         <span className="detail-gpx-action__error" role="alert">Impossible de générer le GPX.</span>

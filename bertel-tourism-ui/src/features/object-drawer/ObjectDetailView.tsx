@@ -37,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { buildEventDisplayData, type EventDateRange, type EventDisplayData } from './event-occurrences';
 import { buildRestaurantMenuData } from './restaurant-menu';
 import { buildItineraryStages, type ItineraryStageRow } from './itinerary-stages';
+import { ItineraryHeroMap } from './ItineraryHeroMap';
 import { buildActivityFacts } from './activity-facts';
 import { CopyButton } from '../../components/common/CopyButton';
 import { MarkdownContent } from '../../components/markdown/MarkdownContent';
@@ -2916,7 +2917,7 @@ function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
     <Section id="detail-section-stages" title="Étapes de l'itinéraire" kicker="Le parcours">
       <ol className="detail-waypoints">
         {stages.map((stage, idx) => (
-          <li key={stage.key} className="detail-waypoint">
+          <li key={stage.key} id={stage.anchorId} className="detail-waypoint" tabIndex={-1}>
             <span className="detail-waypoint__num" aria-hidden>
               {idx + 1}
             </span>
@@ -2924,7 +2925,9 @@ function WaypointListSection({ stages }: { stages: ItineraryStageRow[] }) {
               {/* §4.6 : « Étape n » = métadonnée d'ordre (dim) ; le nom réel n'est rendu que s'il existe. */}
               <span className="detail-waypoint__position">{stage.positionLabel}</span>
               {stage.name ? <strong className="detail-waypoint__name">{stage.name}</strong> : null}
-              {stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
+              {stage.descriptionMd ? (
+                <MarkdownContent markdown={stage.descriptionMd} className="detail-waypoint__desc" />
+              ) : stage.description ? <p className="detail-waypoint__desc">{stage.description}</p> : null}
             </div>
             {stage.kindLabel ? <span className="detail-waypoint__meta">{stage.kindLabel}</span> : null}
           </li>
@@ -3323,12 +3326,14 @@ function DetailScaffold({
   tabItems,
   mainSections,
   asideSections,
+  itineraryStages,
 }: {
   data: ObjectDetail;
   preview: PreviewData;
   tabItems: DetailTabItem[];
   mainSections: ReactNode[];
   asideSections: ReactNode[];
+  itineraryStages: ItineraryStageRow[];
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -3356,13 +3361,25 @@ function DetailScaffold({
       {archetype && <TypeRibbon meta={archetype} />}
       <div className={`detail-layout${visibleAside.length === 0 ? ' detail-layout--single' : ''}`}>
         <div className="detail-main">
-          <HeroBlock
-            data={data}
-            preview={preview}
-            activeIndex={activeMediaIndex}
-            onChange={setActiveMediaIndex}
-            onOpenGallery={() => setLightboxOpen(true)}
-          />
+          {archetype?.archetype === 'ITI' ? (
+            <ItineraryHeroMap
+              key={data.id}
+              name={data.name}
+              track={preview.itinerary?.trackGeojson ?? null}
+              stages={itineraryStages}
+              location={preview.location}
+              mediaCount={preview.media.length}
+              onOpenGallery={() => setLightboxOpen(true)}
+            />
+          ) : (
+            <HeroBlock
+              data={data}
+              preview={preview}
+              activeIndex={activeMediaIndex}
+              onChange={setActiveMediaIndex}
+              onOpenGallery={() => setLightboxOpen(true)}
+            />
+          )}
           {visibleMain.map((section, index) => (
             <Fragment key={`main-${index}`}>{section}</Fragment>
           ))}
@@ -4061,10 +4078,12 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     .map((kind) => mainSectionFor(kind))
     .filter((section): section is ResolvedDrawerSection => section !== null);
 
-  // Médias : onglet SEUL (cible = le hero rendu par DetailScaffold) — pas de 2e section.
-  const mediaSection: ResolvedDrawerSection | null = preview.media.length > 0
-    ? { key: 'media', id: 'detail-section-hero', label: 'Médias', placement: 'main', count: preview.media.length, render: () => null }
-    : null;
+  // The itinerary hero is the route map; its photos remain available through the gallery button.
+  const heroSection: ResolvedDrawerSection | null = archetype?.archetype === 'ITI'
+    ? { key: 'route', id: 'detail-section-hero', label: 'Parcours', placement: 'main', render: () => null }
+    : preview.media.length > 0
+      ? { key: 'media', id: 'detail-section-hero', label: 'Médias', placement: 'main', count: preview.media.length, render: () => null }
+      : null;
   // Horaires : reste dans l'ASIDE (OpeningsAsideSection porte l'ancre) ; l'onglet y pointe.
   const hoursSection: ResolvedDrawerSection | null = preview.openings.length > 0
     ? {
@@ -4094,8 +4113,8 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
       sections.push(hoursSection);
     }
     sections.push(descriptor);
-    if (descriptor.id === 'detail-section-overview' && mediaSection) {
-      sections.push(mediaSection);
+    if (descriptor.id === 'detail-section-overview' && heroSection) {
+      sections.push(heroSection);
     }
   }
   if (hoursSection && !sections.includes(hoursSection)) {
@@ -4104,8 +4123,8 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
     if (idx === -1) sections.push(hoursSection);
     else sections.splice(idx, 0, hoursSection);
   }
-  if (mediaSection && !sections.includes(mediaSection)) {
-    sections.unshift(mediaSection);
+  if (heroSection && !sections.includes(heroSection)) {
+    sections.unshift(heroSection);
   }
   sections.push(...asideExtras);
 
@@ -4123,6 +4142,7 @@ function ConfigDrivenDetailView({ data, raw }: DetailViewProps) {
       tabItems={tabItems}
       mainSections={mainSections}
       asideSections={asideSections}
+      itineraryStages={itineraryStages}
     />
   );
 }

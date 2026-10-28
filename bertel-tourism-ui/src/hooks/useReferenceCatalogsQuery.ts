@@ -1,7 +1,7 @@
 import { useQuery, type QueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { fetchReferenceCatalogs, type ReferenceCatalogs } from '../services/reference-catalogs';
 
-export const REFERENCE_CATALOGS_QUERY_KEY = ['reference-catalogs'] as const;
+export const REFERENCE_CATALOGS_QUERY_KEY = ['reference-catalogs', 2] as const;
 
 /**
  * Les catalogues `ref_*` sont IDENTIQUES pour toutes les fiches et pour tous les

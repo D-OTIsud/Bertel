@@ -72,6 +72,19 @@ function modulesWithSchemes(groups: ObjectWorkspaceDistinctionGroup[] = []) {
 }
 
 describe('SectionClassification', () => {
+  it('hides inapplicable legacy lodging classifications on ITI and preserves them when a trail label changes', () => {
+    const oldHotelRow = classRow({ recordId: 'legacy' });
+    const trailRow = classRow({ recordId: 'trail-label', schemeId: 'sch-acc', schemeCode: 'th', schemeLabel: 'Tourisme & Handicap' });
+    const modules = modulesWithSchemes([{ schemeCode: 'hot_stars', schemeLabel: 'Classement hôtelier', items: [oldHotelRow] }]);
+    modules.distinctions.schemeOptions = modules.distinctions.schemeOptions.filter((scheme) => scheme.code === 'th');
+    modules.distinctions.accessibilityLabels = [trailRow];
+    const { result } = renderHook(() => useObjectEditorState('o1', modules));
+    render(<SectionClassification editor={result.current} permissions={allowAll} archetype="ITI" />);
+    expect(screen.queryByText('Classement hôtelier')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer Tourisme & Handicap' }));
+    expect(result.current.draft.distinctions.distinctionGroups[0].items).toEqual([oldHotelRow]);
+    expect(result.current.draft.distinctions.accessibilityLabels).toEqual([]);
+  });
   it('shows an empty state and an add affordance when nothing is held', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithSchemes()));
     render(<SectionClassification editor={result.current} permissions={allowAll} />);

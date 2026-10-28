@@ -1,6 +1,7 @@
 import type { Issue } from './editor-validation';
 import type { EditorSaveResult } from './useEditorSave';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
+import type { ArchetypeCode } from './archetypes';
 
 /**
  * Human label per workspace module — used to title save/permission errors in the
@@ -93,23 +94,34 @@ export const MODULE_SECTION_NUMS: Record<WorkspaceModuleId, string[]> = {
   provider: ['18'],
 };
 
-export function moduleSectionNums(module: WorkspaceModuleId): string[] {
+export function moduleSectionNums(module: WorkspaceModuleId, archetype?: ArchetypeCode): string[] {
+  if (archetype === 'ITI') {
+    if (module === 'openings') return ['06'];
+    if (module === 'capacity-policies') return ['13'];
+    if (module === 'characteristics') return ['06', '09', '13'];
+  }
   return MODULE_SECTION_NUMS[module] ?? [];
 }
 
 /** Convert a batched save result into req-tone Issues, labelled by module. */
-export function saveResultToIssues(result: EditorSaveResult): Issue[] {
+export function saveResultToIssues(result: EditorSaveResult, archetype?: ArchetypeCode): Issue[] {
+  const itineraryLabels: Partial<Record<WorkspaceModuleId, string>> = {
+    'capacity-policies': 'Accès & conditions', openings: 'Praticabilité & fermetures',
+    legal: 'Réglementation & documents', distinctions: 'Labels & homologations',
+    descriptions: 'Descriptions & traductions', 'provider-follow-up': 'Gestionnaires & suivi',
+  };
+  const labelFor = (module: WorkspaceModuleId) => (archetype === 'ITI' ? itineraryLabels[module] : undefined) ?? moduleLabel(module);
   const failed: Issue[] = result.failed.map((entry) => ({
-    section: moduleLabel(entry.module),
+    section: labelFor(entry.module),
     message: entry.message,
     tone: 'req',
-    nums: moduleSectionNums(entry.module),
+    nums: moduleSectionNums(entry.module, archetype),
   }));
   const blocked: Issue[] = result.blocked.map((entry) => ({
-    section: moduleLabel(entry.module),
+    section: labelFor(entry.module),
     message: `Lecture seule : ${entry.reason}`,
     tone: 'req',
-    nums: moduleSectionNums(entry.module),
+    nums: moduleSectionNums(entry.module, archetype),
   }));
   return [...failed, ...blocked];
 }

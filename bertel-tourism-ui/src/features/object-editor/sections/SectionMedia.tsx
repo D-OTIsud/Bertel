@@ -32,7 +32,7 @@ function titleFallback(item: ObjectWorkspaceMediaItem) {
   return 'sans titre';
 }
 
-export function SectionMedia({ editor, permissions: _permissions, objectId, folded }: SectionProps) {
+export function SectionMedia({ editor, permissions: _permissions, objectId, archetype, folded }: SectionProps) {
   const media = editor.draft.media;
   const [editing, setEditing] = useState<string | null>(null);
   // In-memory draft for the "+ Ajouter un média" flow. The new item lives here
@@ -74,8 +74,8 @@ export function SectionMedia({ editor, permissions: _permissions, objectId, fold
   return (
     <Fs
       num="05"
-      title="Médias"
-      sub="Photos (≥ 4 recommandées) et vidéos — les documents (menus, certificats…) s'ajoutent depuis leurs sections"
+      title={archetype === 'ITI' ? 'Photos & vidéos' : 'Médias'}
+      sub={archetype === 'ITI' ? 'Paysages, accès et points d’intérêt du parcours — les photos des étapes se rattachent depuis le bloc 6' : "Photos (≥ 4 recommandées) et vidéos — les documents (menus, certificats…) s'ajoutent depuis leurs sections"}
       folded={folded}
       pill={{ tone: pillTone, label: pillLabel }}
     >

@@ -121,6 +121,7 @@ describe('editor publication validation', () => {
   it('requires an itinerary trace for ITI objects', () => {
     const draft = fullModulesFixture();
     draft.itinerary.geometrySummary = '';
+    draft.itinerary.trackGeojson = null;
 
     const result = validateForPublication(draft, allowAll, 'ITI');
 
@@ -129,6 +130,17 @@ describe('editor publication validation', () => {
       message: expect.stringContaining('itinéraire'),
       tone: 'req',
     });
+  });
+
+  it('does not ask for lodging or weekly opening data on an itinerary', () => {
+    const draft = fullModulesFixture();
+    draft.openings.periods = [];
+    draft.rooms.items = [{ ...draft.rooms.items[0], accessible: true }];
+    draft.characteristics.selectedAmenityCodes = [];
+    const result = validateForPublication(draft, allowAll, 'ITI');
+    expect(result.warnings.some((issue) => /chambre|période d’ouverture|Langues parlées/i.test(issue.message))).toBe(false);
+    draft.itinerary.geometrySummary = '';
+    expect(validateForPublication(draft, allowAll, 'ITI').blockers.some((issue) => issue.section === '06')).toBe(false);
   });
 
   it('requires a commune of location (§02)', () => {

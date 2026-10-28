@@ -18,7 +18,8 @@ function foldCommuneLabel(value: string): string {
 }
 
 /** Section 02 — address, commune, GPS. object_zone (multi-commune) is edited on itinerary sections, not here. */
-export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
+export function SectionLocation({ editor, typeCode, archetype, folded }: SectionProps) {
+  const isItinerary = archetype === 'ITI';
   const location = editor.draft.location;
   const main = location.main;
   // Commune is a strict ref_commune select when the catalog is loaded (§41 seed);
@@ -121,13 +122,13 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
   return (
     <Fs
       num="02"
-      title="Localisation"
-      sub="Adresse postale, commune, lieu-dit, coordonnées GPS"
+      title={isItinerary ? 'Départ & accès' : 'Localisation'}
+      sub={isItinerary ? 'Localisation du point de départ et indications pour le rejoindre' : 'Adresse postale, commune, lieu-dit, coordonnées GPS'}
       folded={folded}
       pill={{ tone: hasCoords ? 'ok' : 'warn', label: hasCoords ? 'Géocodé' : 'GPS manquant' }}
     >
       <div className="grid-2" style={{ marginBottom: 12 }}>
-        <Field label="Adresse" required hint="Tapez pour obtenir les suggestions de la Base Adresse Nationale">
+        <Field label={isItinerary ? 'Adresse du départ, si disponible' : 'Adresse'} required={!isItinerary} hint="Tapez pour obtenir les suggestions de la Base Adresse Nationale">
           <AddressBanCombobox
             value={main.address1}
             onChange={(v) => patch({ address1: v })}
@@ -139,13 +140,13 @@ export function SectionLocation({ editor, typeCode, folded }: SectionProps) {
           <LocationFormattedInput
             value={main.address2}
             onChange={(v) => patch({ address2: v })}
-            placeholder="Appartement n° 3…"
+            placeholder={isItinerary ? 'Parking, entrée du sentier…' : 'Appartement n° 3…'}
           />
         </Field>
       </div>
 
       <div className="grid-2" style={{ marginBottom: 12 }}>
-        <Field label="Code postal" required>
+        <Field label="Code postal" required={!isItinerary}>
           <Input value={main.postcode} onChange={(v) => patch({ postcode: v })} mono />
         </Field>
         <Field label="Commune" required>

@@ -10,6 +10,13 @@ import { MODULE_KEY_MAP } from './editor-state';
 import type { EditorSaveResult } from './useEditorSave';
 
 describe('save-issues', () => {
+  it('routes itinerary policy and closure save errors to visible sections', () => {
+    const issues = saveResultToIssues({ saved: [], submitted: [], blocked: [], failed: [
+      { module: 'openings', message: 'Date invalide' }, { module: 'capacity-policies', message: 'Condition invalide' },
+    ] }, 'ITI');
+    expect(issues[0]).toMatchObject({ section: 'Praticabilité & fermetures', nums: ['06'] });
+    expect(issues[1]).toMatchObject({ section: 'Accès & conditions', nums: ['13'] });
+  });
   it('maps failed and blocked modules to req issues labelled by module', () => {
     const result: EditorSaveResult = {
       saved: [],

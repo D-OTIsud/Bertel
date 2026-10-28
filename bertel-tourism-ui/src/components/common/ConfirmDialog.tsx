@@ -21,13 +21,14 @@ function EditorConfirmShell({ open, title, className, onOpenChange, footer, chil
     <DialogContent className={`object-editor${className ? ` ${className}` : ''}`}
       onOpenAutoFocus={(event) => {
         opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        scope.current = opener.current?.closest('section') ?? null;
+        scope.current = opener.current?.closest('fieldset, section') ?? null;
         const cancel = event.target instanceof HTMLElement ? event.target.querySelector<HTMLButtonElement>('[data-confirm-cancel]:not([disabled])') : null;
         if (cancel) { event.preventDefault(); cancel.focus(); }
       }}
       onCloseAutoFocus={(event) => {
-        const target = opener.current?.isConnected ? opener.current
-          : scope.current?.querySelector<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]');
+        const available = (element: HTMLElement) => !element.matches(':disabled') && !element.closest('[hidden], details:not([open])');
+        const target = opener.current?.isConnected && available(opener.current) ? opener.current
+          : [...(scope.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]') ?? [])].find(available);
         if (target?.isConnected) { event.preventDefault(); target.focus(); }
       }}>
       <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>

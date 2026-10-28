@@ -61,6 +61,14 @@ function modulesWithLegal(overrides: Partial<ObjectWorkspaceLegalModule> = {}): 
 }
 
 describe('SectionLegal', () => {
+  it('shows route documents on ITI without asking for business identity, preserving existing records', () => {
+    const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
+    render(<SectionLegal editor={result.current} permissions={allowAll} archetype="ITI" />);
+    expect(screen.getByText('Réglementation & documents')).toBeInTheDocument();
+    expect(screen.queryByLabelText('SIRET')).not.toBeInTheDocument();
+    expect(screen.queryByText(/SIRET manquant/)).not.toBeInTheDocument();
+    expect(result.current.draft.legal.records[0].recordId).toBe('r-siret');
+  });
   it('renders the Juridique heading and the editable SIRET from object_legal', () => {
     const { result } = renderHook(() => useObjectEditorState('o1', modulesWithLegal()));
     render(<SectionLegal editor={result.current} permissions={allowAll} />);

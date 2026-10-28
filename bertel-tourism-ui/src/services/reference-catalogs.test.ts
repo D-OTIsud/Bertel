@@ -3,10 +3,12 @@ import {
   REF_CODE_DOMAINS,
   REFERENCE_TABLES,
   REFERENCE_TABLE_SELECT,
+  classificationSchemeAppliesTo,
 } from './reference-catalogs';
 
 const inSpy = jest.fn();
 const selectSpy = jest.fn();
+let mockFailedTable: string | null = null;
 const rows = [
   { id: '1', code: 'phone', name: 'Téléphone', domain: 'contact_kind', position: 1 },
   { id: '2', code: 'email', name: 'Courriel', domain: 'contact_kind', position: 2 },
@@ -21,7 +23,7 @@ jest.mock('../lib/supabase', () => ({
     from: (table: string) => ({
       select: (columns: string) => {
         selectSpy(table, columns);
-        const terminal = Promise.resolve({ data: table === 'ref_code' ? rows : [], error: null });
+        const terminal = Promise.resolve({ data: table === 'ref_code' ? rows : [], error: table === mockFailedTable ? new Error('Catalogue indisponible') : null });
         return Object.assign(terminal, {
           in: (column: string, values: string[]) => {
             inSpy(table, column, values);
@@ -40,9 +42,25 @@ jest.mock('../lib/supabase', () => ({
 }));
 
 describe('fetchReferenceCatalogs', () => {
+  test('filters lodging classifications on itineraries using the authoritative applicability catalog', () => {
+    const catalogs = { refCodeByDomain: {}, tables: { ref_classification_scheme_applicability: [
+      { scheme_id: 'hotel-stars', object_type: 'HOT' }, { scheme_id: 'trail-label', object_type: 'ITI' },
+    ] } };
+    expect(classificationSchemeAppliesTo('hotel-stars', 'ITI', catalogs)).toBe(false);
+    expect(classificationSchemeAppliesTo('trail-label', 'iti', catalogs)).toBe(true);
+    expect(classificationSchemeAppliesTo('new-unrestricted', 'ITI', catalogs)).toBe(true);
+  });
   beforeEach(() => {
     inSpy.mockClear();
     selectSpy.mockClear();
+    mockFailedTable = null;
+  });
+
+  test('distinguishes a failed applicability lookup from a successfully loaded empty universal catalog', async () => {
+    mockFailedTable = 'ref_classification_scheme_applicability';
+    const catalogs = await fetchReferenceCatalogs();
+    expect(catalogs.failedTables).toEqual(['ref_classification_scheme_applicability']);
+    expect(catalogs.tables.ref_classification_scheme_applicability).toEqual([]);
   });
 
   test('couvre les domaines ref_code, dont weekday, en UN seul appel', async () => {

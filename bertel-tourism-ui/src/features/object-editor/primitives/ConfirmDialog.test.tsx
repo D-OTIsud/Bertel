@@ -14,6 +14,22 @@ function NestedConfirmation({ onParentClose }: { onParentClose: () => void }) {
   </EditorModal>;
 }
 
+function EmbeddedConfirmation() {
+  const [open, setOpen] = useState(false);
+  const [present, setPresent] = useState(true);
+  return <section>
+    <button type="button">Ouvrir la carte</button>
+    <fieldset>
+      <div hidden><button type="button">Période repliée</button></div>
+      {present && <button type="button" onClick={() => setOpen(true)}>Supprimer la fermeture</button>}
+      <button type="button">Ajouter une exception</button>
+      <ConfirmDialog open={open} title="Supprimer la fermeture" message="Supprimer cette fermeture ?"
+        confirmLabel="Supprimer" onCancel={() => setOpen(false)}
+        onConfirm={() => { setPresent(false); setOpen(false); }} />
+    </fieldset>
+  </section>;
+}
+
 describe('ConfirmDialog', () => {
   it('renders the title, message and labelled actions when open', () => {
     render(
@@ -74,5 +90,16 @@ describe('ConfirmDialog', () => {
     expect(opener).toHaveFocus();
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onParentClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns focus to visible embedded controls when deleting the opener, without jumping to the enclosing map', async () => {
+    render(<EmbeddedConfirmation />);
+    const opener = screen.getByRole('button', { name: 'Supprimer la fermeture' });
+    opener.focus();
+    fireEvent.click(opener);
+    fireEvent.click(screen.getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(opener).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ajouter une exception' })).toHaveFocus();
   });
 });

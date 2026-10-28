@@ -10407,6 +10407,10 @@ a {
   scrollbar-color: var(--line) transparent;
 }
 
+.dashboard-filters-sidebar > .filter-column-group {
+  padding-inline: theme('spacing.4');
+}
+
 .dashboard-filters-sidebar::-webkit-scrollbar { width: 4px; }
 .dashboard-filters-sidebar::-webkit-scrollbar-track { background: transparent; }
 .dashboard-filters-sidebar::-webkit-scrollbar-thumb {

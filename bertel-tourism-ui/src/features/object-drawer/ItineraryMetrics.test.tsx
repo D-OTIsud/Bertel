@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { ItineraryMetrics } from './ItineraryMetrics';
 import { parseItinerarySummary, type ItinerarySummary } from './utils';
 
@@ -37,6 +38,32 @@ describe('ItineraryMetrics', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Distance');
     fireEvent.blur(distance);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('dismisses the tooltip before its parent Radix dialog and lets the next Escape close the dialog', () => {
+    const onOpenChange = jest.fn();
+    render(
+      <Dialog defaultOpen onOpenChange={onOpenChange}>
+        <DialogContent onOpenAutoFocus={(event) => event.preventDefault()}>
+          <DialogTitle>Fiche du parcours</DialogTitle>
+          <DialogDescription>Informations sur le parcours sélectionné.</DialogDescription>
+          <ItineraryMetrics itinerary={itinerary} stageCount={3} />
+        </DialogContent>
+      </Dialog>,
+    );
+    const distance = screen.getByRole('button', { name: 'Distance : 12,5 km' });
+    act(() => distance.focus());
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Distance');
+
+    fireEvent.keyDown(distance, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Fiche du parcours' })).toBeInTheDocument();
+    expect(distance).toHaveFocus();
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(distance, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('does not invent absent facts and distinguishes a known non-loop from an unknown loop', () => {

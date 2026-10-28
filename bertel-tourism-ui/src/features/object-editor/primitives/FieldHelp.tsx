@@ -46,14 +46,16 @@ export function FieldHelp({ label, hint, hintId }: { label: string; hint: string
     }
     function escape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
+        event.preventDefault();
         event.stopPropagation();
         anchor.current?.focus();
         setOpen(false);
       }
     }
     document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape, true);
-    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape, true); };
+    // Run before Radix's document capture listener so Escape dismisses only this help.
+    window.addEventListener('keydown', escape, true);
+    return () => { document.removeEventListener('pointerdown', outside); window.removeEventListener('keydown', escape, true); };
   }, [open]);
 
   return <>
@@ -74,7 +76,7 @@ export function FieldHelp({ label, hint, hintId }: { label: string; hint: string
       <div ref={bubble} aria-hidden="true" data-field-help={hintId}
         onMouseEnter={show} onMouseLeave={leave}
         className="fixed z-[1000] w-72 max-w-[calc(100vw-24px)] rounded-lg bg-ink px-3 py-2.5 text-left text-sm font-normal leading-snug text-white shadow-xl"
-        style={{ left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? 'visible' : 'hidden' }}>
+        style={{ pointerEvents: 'auto', left: position?.left ?? 0, top: position?.top ?? 0, visibility: position ? 'visible' : 'hidden' }}>
         {hint}
       </div>, document.body,
     )}

@@ -21,6 +21,9 @@ import { buildExplorerActiveChips, type ActiveChip } from './explorer-active-chi
 import { cn } from '@/lib/utils';
 import { queryClient } from '@/app/query-client';
 import { ExplorerBridgeButton } from '../dashboard/ExplorerBridgeButton';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { ExplorerFilterPopover } from './ExplorerFilterPopover';
+import './explorer-active-filters.css';
 
 /**
  * Barre de filtres actifs de l'Explorateur (impl. 3.2) : une pastille retirable
@@ -86,6 +89,7 @@ export function ExplorerActiveFilters({
   const canCreateDynamicList = useSessionStore(canCreateLists);
   const canEditObjects = useSessionStore((s) => s.canEditObjects);
   const scopeId = useId();
+  const compactActions = useMediaQuery('(max-width: 767px)');
   const chipRefs = useRef(new Map<string, HTMLButtonElement>());
   const stripRef = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<number | null>(null);
@@ -304,27 +308,22 @@ export function ExplorerActiveFilters({
     );
   };
 
-  return (
-    <div ref={stripRef} tabIndex={-1} className="active-filter-strip explorer-active-filters" role="region" aria-label="Filtres actifs">
-      <div className="explorer-active-filters__applied">
-        <span className="explorer-active-filters__label">Critères appliqués · {context.applied.length + (periodActive ? 1 : 0)}</span>
-        {context.applied.map(renderChip)}
-        {contextPage === 'dashboard' && !context.applied.some((chip) => chip.group === 'status') && (
-          <span className="active-filter-strip__empty">
-            Statut appliqué : {context.effectiveStatuses.map((code) => EXPLORER_STATUS_OPTIONS.find((option) => option.code === code)?.label ?? code).join(', ')}
-          </span>
-        )}
-        {periodActive && <button type="button" className="active-filter-chip" onClick={() => { pendingFocus.current = 0; onClearPeriod?.(); }} aria-label="Retirer le filtre : Fiches mises à jour">
-          Fiches mises à jour · {period?.updatedAtFrom ?? 'début'} → {period?.updatedAtTo ?? 'aujourd’hui'} ✕
-        </button>}
-      </div>
-      {context.memorized.length > 0 && <div className="explorer-active-filters__memorized">
-        <span className="explorer-active-filters__label">Valeurs mémorisées — non appliquées à cette vue · {context.memorized.length}</span>
-        {context.memorized.map(renderChip)}
-      </div>}
-      {chips.length > 0 && canCreateDynamicList && (
-        <>
-        <span id={scopeId} className="active-filter-strip__scope">Liste dynamique : critères appliqués supportés ; période et statut de publication non transmis.</span>
+  const dynamicScope = 'Liste dynamique : critères appliqués supportés ; période et statut de publication non transmis.';
+  const bridgeScope = 'Vers Explorer : critères appliqués supportés et statut effectif ; période et valeurs mémorisées non transmises.';
+  const hasDynamicAction = chips.length > 0 && canCreateDynamicList;
+  const hasResetAction = chips.length > 0 || periodActive;
+  const actionScope = <>
+    {hasDynamicAction && <p>{dynamicScope}</p>}
+    {showExplorerBridge && <p>{bridgeScope}</p>}
+  </>;
+  const scopeInfo = (hasDynamicAction || showExplorerBridge) && (
+    <ExplorerFilterPopover label="Informations sur les actions des critères">
+      {actionScope}
+    </ExplorerFilterPopover>
+  );
+  const actionButtons = (
+    <>
+      {hasDynamicAction && (
         <button
           type="button"
           className="ghost-button active-filter-strip__reset"
@@ -335,14 +334,48 @@ export function ExplorerActiveFilters({
         >
           {savingDynamic ? 'Création…' : '★ Liste dynamique'}
         </button>
-        </>
       )}
-      {chips.length > 0 || periodActive ? (
+      {!compactActions && scopeInfo}
+      {hasResetAction && (
         <button type="button" className="ghost-button active-filter-strip__reset" onClick={() => { pendingFocus.current = 0; (onReset ?? resetAll)(); }}>
           Réinitialiser
         </button>
-      ) : null}
+      )}
       {showExplorerBridge && <ExplorerBridgeButton />}
+      {compactActions && (hasDynamicAction || showExplorerBridge) && (
+        <div className="explorer-filter-popover__scope">{actionScope}</div>
+      )}
+    </>
+  );
+
+  return (
+    <div ref={stripRef} tabIndex={-1} className="active-filter-strip explorer-active-filters" role="region" aria-label="Filtres actifs">
+      <div className="explorer-active-filters__scroll">
+        <div className="explorer-active-filters__applied">
+          <span className="explorer-active-filters__label">
+            Critères<span className="sr-only"> appliqués</span> · {context.applied.length + (periodActive ? 1 : 0)}
+          </span>
+          {context.applied.map(renderChip)}
+          {contextPage === 'dashboard' && !context.applied.some((chip) => chip.group === 'status') && (
+            <span className="active-filter-strip__empty">
+              Statut appliqué : {context.effectiveStatuses.map((code) => EXPLORER_STATUS_OPTIONS.find((option) => option.code === code)?.label ?? code).join(', ')}
+            </span>
+          )}
+          {periodActive && <button type="button" className="active-filter-chip" onClick={() => { pendingFocus.current = 0; onClearPeriod?.(); }} aria-label="Retirer le filtre : Fiches mises à jour">
+            Fiches mises à jour · {period?.updatedAtFrom ?? 'début'} → {period?.updatedAtTo ?? 'aujourd’hui'} ✕
+          </button>}
+        </div>
+        {context.memorized.length > 0 && <div className="explorer-active-filters__memorized">
+          <span className="explorer-active-filters__label" title="Valeurs mémorisées — non appliquées à cette vue">Mémorisés · {context.memorized.length}</span>
+          {context.memorized.map(renderChip)}
+        </div>}
+      </div>
+      {hasDynamicAction && <span id={scopeId} className="sr-only">{dynamicScope}</span>}
+      <div className="explorer-active-filters__actions">
+        {compactActions
+          ? <ExplorerFilterPopover label="Actions sur les critères" actions>{actionButtons}</ExplorerFilterPopover>
+          : actionButtons}
+      </div>
     </div>
   );
 }

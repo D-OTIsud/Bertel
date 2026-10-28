@@ -1,43 +1,22 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Manrope, Sora, IBM_Plex_Mono, Kaushan_Script, Poppins } from 'next/font/google';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import '@/fonts.css';
 import '@/styles.css';
 import '@/features/lists/oti-template.css';
 import { Providers } from '@/components/Providers';
 
-// audit S5 : polices auto-hébergées via next/font (fin du `@import` Google Fonts bloquant).
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-sans',
-  display: 'swap',
-});
-const sora = Sora({
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  variable: '--font-display',
-  display: 'swap',
-});
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
-  display: 'swap',
-});
-// Polices brandées du rendu public OTI (module Listes) — script + display.
-const kaushanScript = Kaushan_Script({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-kaushan',
-  display: 'swap',
-});
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['600', '700', '800'],
-  variable: '--font-poppins',
-  display: 'swap',
-});
+// The same eight Latin assets previously preloaded by next/font/google.
+const LATIN_FONT_PRELOADS = [
+  '/fonts/manrope/8760c4774489e4ba-s.p.woff2',
+  '/fonts/sora/3dc379dc9b5dec12-s.p.woff2',
+  '/fonts/ibm-plex-mono/d3ebbfd689654d3a-s.p.woff2',
+  '/fonts/ibm-plex-mono/98e207f02528a563-s.p.woff2',
+  '/fonts/kaushan-script/e6df576ec67d906e-s.p.woff2',
+  '/fonts/poppins/0484562807a97172-s.p.woff2',
+  '/fonts/poppins/b957ea75a84b6ea7-s.p.woff2',
+  '/fonts/poppins/7db6c35d839a711c-s.p.woff2',
+];
 
 export const metadata: Metadata = {
   title: 'Bertel — Gouvernance touristique',
@@ -50,10 +29,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${manrope.variable} ${sora.variable} ${ibmPlexMono.variable} ${kaushanScript.variable} ${poppins.variable}`}
-    >
+    <html lang="fr" className="app-fonts">
+      <head>
+        {LATIN_FONT_PRELOADS.map((href) => (
+          <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
+        ))}
+      </head>
       <body>
         <Script src="/runtime-config.js" strategy="beforeInteractive" />
         <Providers>{children}</Providers>

@@ -1,0 +1,425 @@
+{
+  "description": "Unmodified WOFF2 assets and exact generated font-face data from the last successful Google-font build; vendored to remove external font requests during builds.",
+  "sourceBuildCss": "c22887471a04aa20.css",
+  "sourceBuildCssSha256": "91c5cfdf3179a4df6dd1fb59c3e9587bde1b244a35268e810951ea9ace37f554",
+  "fontFaceCount": 64,
+  "variables": {
+    "--font-sans": "\"Manrope\",\"Manrope Fallback\"",
+    "--font-display": "\"Sora\",\"Sora Fallback\"",
+    "--font-mono": "\"IBM Plex Mono\",\"IBM Plex Mono Fallback\"",
+    "--font-kaushan": "\"Kaushan Script\",\"Kaushan Script Fallback\"",
+    "--font-poppins": "\"Poppins\",\"Poppins Fallback\""
+  },
+  "licenses": [
+    {
+      "family": "Manrope",
+      "license": "SIL Open Font License 1.1",
+      "file": "manrope/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt"
+    },
+    {
+      "family": "Sora",
+      "license": "SIL Open Font License 1.1",
+      "file": "sora/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/sora/OFL.txt"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "license": "SIL Open Font License 1.1",
+      "file": "ibm-plex-mono/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/ibmplexmono/OFL.txt"
+    },
+    {
+      "family": "Kaushan Script",
+      "license": "SIL Open Font License 1.1",
+      "file": "kaushan-script/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/kaushanscript/OFL.txt"
+    },
+    {
+      "family": "Poppins",
+      "license": "SIL Open Font License 1.1",
+      "file": "poppins/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/OFL.txt"
+    }
+  ],
+  "assets": [
+    {
+      "family": "Manrope",
+      "subset": "cyrillic-ext",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/a1f87af3f44fadbb-s.woff2",
+      "sourceBuildAsset": "a1f87af3f44fadbb-s.woff2",
+      "preload": false,
+      "bytes": 2584,
+      "sha256": "347c589d57130c68f9829c2cd24969eed590328078ff921ca6000a56e5a2cc84"
+    },
+    {
+      "family": "Manrope",
+      "subset": "cyrillic",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/86f65e8637cc94e3-s.woff2",
+      "sourceBuildAsset": "86f65e8637cc94e3-s.woff2",
+      "preload": false,
+      "bytes": 14368,
+      "sha256": "93bef303b8220d2f59dbe8db119891c9f38d94f48a26d373c28256fb2b50cba7"
+    },
+    {
+      "family": "Manrope",
+      "subset": "greek",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/39f449c8730c2295-s.woff2",
+      "sourceBuildAsset": "39f449c8730c2295-s.woff2",
+      "preload": false,
+      "bytes": 9308,
+      "sha256": "6b478f45d63e18352735fd427e92ae4704800a998ec3337c01b59e4f6ef87d44"
+    },
+    {
+      "family": "Manrope",
+      "subset": "vietnamese",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/9fabb9c65b63d798-s.woff2",
+      "sourceBuildAsset": "9fabb9c65b63d798-s.woff2",
+      "preload": false,
+      "bytes": 8356,
+      "sha256": "ddbf28cebf2fbbf800d307f020689bed6d1a96c5a22aed50fee23bf7de80d0f1"
+    },
+    {
+      "family": "Manrope",
+      "subset": "latin-ext",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/f9e1dbe9676d9bb6-s.woff2",
+      "sourceBuildAsset": "f9e1dbe9676d9bb6-s.woff2",
+      "preload": false,
+      "bytes": 15212,
+      "sha256": "27eccb1f8944bc26f6511601bac9284786feb5e5bbb0c8035ff09ac63aaf7c52"
+    },
+    {
+      "family": "Manrope",
+      "subset": "latin",
+      "weights": [
+        "400",
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "manrope/8760c4774489e4ba-s.p.woff2",
+      "sourceBuildAsset": "8760c4774489e4ba-s.p.woff2",
+      "preload": true,
+      "bytes": 24436,
+      "sha256": "8bd97e6bbbc1f602a8f791530eed1064c9a357d5731bbc76e3fc587fb068728f"
+    },
+    {
+      "family": "Sora",
+      "subset": "latin-ext",
+      "weights": [
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "sora/c5f10e9e72d35c52-s.woff2",
+      "sourceBuildAsset": "c5f10e9e72d35c52-s.woff2",
+      "preload": false,
+      "bytes": 12116,
+      "sha256": "8d9b4a4136bf8cf8b00c65978e7801c372d14ed901fa387cc7352a40b96cd006"
+    },
+    {
+      "family": "Sora",
+      "subset": "latin",
+      "weights": [
+        "500",
+        "600",
+        "700",
+        "800"
+      ],
+      "file": "sora/3dc379dc9b5dec12-s.p.woff2",
+      "sourceBuildAsset": "3dc379dc9b5dec12-s.p.woff2",
+      "preload": true,
+      "bytes": 25240,
+      "sha256": "3902474d3ece89c8580d5ef3325cf58753e6e45a86f9957b4dacc4fce2e7fde1"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "cyrillic-ext",
+      "weights": [
+        "400"
+      ],
+      "file": "ibm-plex-mono/58f386aa6b1a2a92-s.woff2",
+      "sourceBuildAsset": "58f386aa6b1a2a92-s.woff2",
+      "preload": false,
+      "bytes": 4348,
+      "sha256": "c6f09ee0e0a24b7c85ecb2a601eb99332f65b1f6b37c31e0bbe73fb307625eca"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "cyrillic",
+      "weights": [
+        "400"
+      ],
+      "file": "ibm-plex-mono/011e180705008d6f-s.woff2",
+      "sourceBuildAsset": "011e180705008d6f-s.woff2",
+      "preload": false,
+      "bytes": 5476,
+      "sha256": "7b59d6bf7f8b8408ac28f27d01dca9a890abeae77045d343b1d8ccb089a92e54"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "vietnamese",
+      "weights": [
+        "400"
+      ],
+      "file": "ibm-plex-mono/7ba5fb2a8c88521c-s.woff2",
+      "sourceBuildAsset": "7ba5fb2a8c88521c-s.woff2",
+      "preload": false,
+      "bytes": 4000,
+      "sha256": "0a8b854cc18641bd1b8222afa7ec82a75e59bc6501f777744ec87db1b6cd7a2c"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "latin-ext",
+      "weights": [
+        "400"
+      ],
+      "file": "ibm-plex-mono/92eeb95d069020cc-s.woff2",
+      "sourceBuildAsset": "92eeb95d069020cc-s.woff2",
+      "preload": false,
+      "bytes": 8860,
+      "sha256": "f1050dc5317b43434c0aeda599d4624c774ffc162e87a8cf204b949b6a85816d"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "latin",
+      "weights": [
+        "400"
+      ],
+      "file": "ibm-plex-mono/d3ebbfd689654d3a-s.p.woff2",
+      "sourceBuildAsset": "d3ebbfd689654d3a-s.p.woff2",
+      "preload": true,
+      "bytes": 10052,
+      "sha256": "c36f509c0a8f9f85f29cb44bc8701d8a9e0b14c499e77a884f789ead7093a7ac"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "cyrillic-ext",
+      "weights": [
+        "500"
+      ],
+      "file": "ibm-plex-mono/ef4d5661765d0e49-s.woff2",
+      "sourceBuildAsset": "ef4d5661765d0e49-s.woff2",
+      "preload": false,
+      "bytes": 4336,
+      "sha256": "311098be73eac339128f0b5a6e33d72645b6f87488541fdf467c402152d297fd"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "cyrillic",
+      "weights": [
+        "500"
+      ],
+      "file": "ibm-plex-mono/d29838c109ef09b4-s.woff2",
+      "sourceBuildAsset": "d29838c109ef09b4-s.woff2",
+      "preload": false,
+      "bytes": 5500,
+      "sha256": "d524dc8ff6dbf7ed69772f3b2ff4affaf5a89b5762b270e36c3f21da0d4e39f5"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "vietnamese",
+      "weights": [
+        "500"
+      ],
+      "file": "ibm-plex-mono/e40af3453d7c920a-s.woff2",
+      "sourceBuildAsset": "e40af3453d7c920a-s.woff2",
+      "preload": false,
+      "bytes": 4036,
+      "sha256": "b2529fba93fd07a50ffb8fc3d103eb04b0c298d4f6564d2833c44fde286de7e4"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "latin-ext",
+      "weights": [
+        "500"
+      ],
+      "file": "ibm-plex-mono/99dcf268bda04fe5-s.woff2",
+      "sourceBuildAsset": "99dcf268bda04fe5-s.woff2",
+      "preload": false,
+      "bytes": 8848,
+      "sha256": "77f03e26f981c582bdba3a7abed4baa2d3149211c01366bb3ab3ba7622ec4ae5"
+    },
+    {
+      "family": "IBM Plex Mono",
+      "subset": "latin",
+      "weights": [
+        "500"
+      ],
+      "file": "ibm-plex-mono/98e207f02528a563-s.p.woff2",
+      "sourceBuildAsset": "98e207f02528a563-s.p.woff2",
+      "preload": true,
+      "bytes": 10060,
+      "sha256": "a76f53ca6612e7b3828eec2311098675b7f9849ae4169a8bcef6302aec02a6c0"
+    },
+    {
+      "family": "Kaushan Script",
+      "subset": "latin-ext",
+      "weights": [
+        "400"
+      ],
+      "file": "kaushan-script/25a54a5e2b29b921-s.woff2",
+      "sourceBuildAsset": "25a54a5e2b29b921-s.woff2",
+      "preload": false,
+      "bytes": 12872,
+      "sha256": "73654d3fe0e2b8e394bc3b91fd33e558b53661615003af83888c82f730aacb9c"
+    },
+    {
+      "family": "Kaushan Script",
+      "subset": "latin",
+      "weights": [
+        "400"
+      ],
+      "file": "kaushan-script/e6df576ec67d906e-s.p.woff2",
+      "sourceBuildAsset": "e6df576ec67d906e-s.p.woff2",
+      "preload": true,
+      "bytes": 23704,
+      "sha256": "1db40898e9699ebae04058704b061365c5a535951afa311eda1e328af4096d7f"
+    },
+    {
+      "family": "Poppins",
+      "subset": "devanagari",
+      "weights": [
+        "600"
+      ],
+      "file": "poppins/29e7bbdce9332268-s.woff2",
+      "sourceBuildAsset": "29e7bbdce9332268-s.woff2",
+      "preload": false,
+      "bytes": 39384,
+      "sha256": "6d8ef422be4d827037f6f2d5766a0808018876fa5e9aa9a92787fad9d1f17938"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin-ext",
+      "weights": [
+        "600"
+      ],
+      "file": "poppins/c3bc380753a8436c-s.woff2",
+      "sourceBuildAsset": "c3bc380753a8436c-s.woff2",
+      "preload": false,
+      "bytes": 5552,
+      "sha256": "72efc6a32cfd37c557108628cffa01153c480c3d4cde556744406e50b9d8e9f7"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin",
+      "weights": [
+        "600"
+      ],
+      "file": "poppins/0484562807a97172-s.p.woff2",
+      "sourceBuildAsset": "0484562807a97172-s.p.woff2",
+      "preload": true,
+      "bytes": 7992,
+      "sha256": "872e862918591a9e824dc03ed92f05729435ffbb8ebbb10eff7eda26592b1798"
+    },
+    {
+      "family": "Poppins",
+      "subset": "devanagari",
+      "weights": [
+        "700"
+      ],
+      "file": "poppins/29a4aea02fdee119-s.woff2",
+      "sourceBuildAsset": "29a4aea02fdee119-s.woff2",
+      "preload": false,
+      "bytes": 39204,
+      "sha256": "6eb8802d7319fcd48850eb38e41ed6ea12d917faafdfac7dae5614a517dc2b54"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin-ext",
+      "weights": [
+        "700"
+      ],
+      "file": "poppins/a1386beebedccca4-s.woff2",
+      "sourceBuildAsset": "a1386beebedccca4-s.woff2",
+      "preload": false,
+      "bytes": 5448,
+      "sha256": "2477683a4b1200680780a759cc1b93b816410362dc5f4c74ebfeafa212bcb74d"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin",
+      "weights": [
+        "700"
+      ],
+      "file": "poppins/b957ea75a84b6ea7-s.p.woff2",
+      "sourceBuildAsset": "b957ea75a84b6ea7-s.p.woff2",
+      "preload": true,
+      "bytes": 7848,
+      "sha256": "197a3cbd7290c242c5c765268cdd69a9a39867fdc80cd13071f243a81c56fb76"
+    },
+    {
+      "family": "Poppins",
+      "subset": "devanagari",
+      "weights": [
+        "800"
+      ],
+      "file": "poppins/28485c0de2075f40-s.woff2",
+      "sourceBuildAsset": "28485c0de2075f40-s.woff2",
+      "preload": false,
+      "bytes": 39088,
+      "sha256": "a8ad4aa5049a5198b7013b83880fa162539757fbc00310197c83fcaf054fed56"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin-ext",
+      "weights": [
+        "800"
+      ],
+      "file": "poppins/5fb25f343c7550ca-s.woff2",
+      "sourceBuildAsset": "5fb25f343c7550ca-s.woff2",
+      "preload": false,
+      "bytes": 5484,
+      "sha256": "db859b9cbc7a91707aeb8829f8e9df1d21b6354dac9481b89c4186bb23c842df"
+    },
+    {
+      "family": "Poppins",
+      "subset": "latin",
+      "weights": [
+        "800"
+      ],
+      "file": "poppins/7db6c35d839a711c-s.p.woff2",
+      "sourceBuildAsset": "7db6c35d839a711c-s.p.woff2",
+      "preload": true,
+      "bytes": 7816,
+      "sha256": "4ef5511d8e7b39ae3f98ffed14d6071d7914e0c145fee5a79bb43aa962ff0fc4"
+    }
+  ]
+}

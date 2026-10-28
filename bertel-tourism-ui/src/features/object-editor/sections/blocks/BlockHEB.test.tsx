@@ -155,6 +155,7 @@ describe('BlockHEB room edit modal', () => {
     const view = render(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Modifier la chambre/i })); });
     // Equipment is inline + grouped by collapsible category — expand the family, then click « Clim ».
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Tous les équipements…' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Climatisation & chauffage/i })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Clim' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Appliquer' })); });
@@ -231,7 +232,7 @@ describe('BlockHEB — §05 review fixes (2026-06-11)', () => {
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
     // Add now goes through the modal: open then save.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
-    act(() => { fireEvent.change(screen.getByLabelText('Nom / libellé'), { target: { value: 'Nouvelle chambre' } }); });
+    act(() => { fireEvent.change(screen.getByLabelText('Nom affiché sur la fiche'), { target: { value: 'Nouvelle chambre' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);
 
@@ -330,7 +331,7 @@ describe('BlockHEB — add opens the edit modal directly (no ghost row)', () => 
 
     // Ajouter: the configured row is appended.
     act(() => { fireEvent.click(screen.getByRole('button', { name: /Ajouter un descriptif de chambre/i })); });
-    act(() => { fireEvent.change(screen.getByLabelText('Nom / libellé'), { target: { value: 'Chambre familiale' } }); });
+    act(() => { fireEvent.change(screen.getByLabelText('Nom affiché sur la fiche'), { target: { value: 'Chambre familiale' } }); });
     act(() => { fireEvent.change(screen.getByLabelText('Couchages (total)'), { target: { value: '2' } }); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Ajouter' })); });
     view.rerender(<BlockHEB editor={result.current} permissions={allowAll} archetype="HEB" />);

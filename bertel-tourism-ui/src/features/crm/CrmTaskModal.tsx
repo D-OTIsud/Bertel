@@ -23,18 +23,13 @@ import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { useSessionStore } from '../../store/session-store';
 import { formatDocumentSize, toDateInputValue } from './crm-view-utils';
+import { dateInputOffset } from './crm-date-input';
 import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
 import { EditorModal } from '../object-editor/primitives/EditorModal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import './crm-editor-modal.css';
-
-function dateInputOffset(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 /**
  * Création d'une tâche DEPUIS une demande (carte du fil). Enveloppe `CrmTaskModal` avec le

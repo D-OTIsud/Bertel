@@ -1,4 +1,9 @@
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import {
+  readCoercingString as readString,
+  readPermissiveBoolean as readBoolean,
+  readTrimmedStringList as readStringList,
+} from '../lib/json-read';
 import { useSessionStore } from '../store/session-store';
 import type { ObjectDetail } from '../types/domain';
 import { mockPendingChanges, mockPublicationCards } from '../data/mock';
@@ -297,41 +302,8 @@ export function createMembershipTier(objectId: string, name: string): Promise<Wo
   return createMembershipRef('create_membership_tier', objectId, name);
 }
 
-function readString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  return fallback;
-}
-
-function readBoolean(value: unknown): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'string') {
-    return ['true', '1', 'yes', 'oui'].includes(value.trim().toLowerCase());
-  }
-  if (typeof value === 'number') {
-    return value === 1;
-  }
-  return false;
-}
-
 function readRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function readStringList(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => readString(entry).trim())
-    .filter(Boolean);
 }
 
 // P2.1 (§120) — résumé lisible d'une suggestion à partir des colonnes dérivées par

@@ -40,11 +40,6 @@ export function resolveArchetype(code: string | null | undefined): ArchetypeCode
   return getArchetypeMeta(code)?.archetype ?? null;
 }
 
-/** Libellé FR de l'archétype d'un type (« Hébergement », « Site & visite »…). */
-export function resolveArchetypeLabel(code: string | null | undefined): string {
-  return getArchetypeMeta(code)?.codeName ?? resolveTypeLabel(code);
-}
-
 /**
  * Classe accent de la pastille de type : `acc-<archétype>` (acc-heb…acc-fma).
  * Couleur identique sur les 3 surfaces (cartes Explorer, carte géo, fiches),

@@ -4,6 +4,7 @@ import type { ExplorerTableSort } from '../../store/explorer-view-store';
 import { resolveTypeLabel } from '../../utils/labels';
 import { essentialLabel, remplissageDetail } from '../../utils/remplissage';
 import { csvCell } from '@/lib/safe-output';
+import { STATUS_LABELS } from '../../lib/object-status-labels';
 
 /**
  * D17 — registre des colonnes de la vue Table de l'Explorer : une définition
@@ -15,13 +16,6 @@ import { csvCell } from '@/lib/safe-output';
  * Champ absent = appelant non éditeur, PAS « fiche complète » : la colonne rend
  * alors « — » et trie en dernier. Une fiche complète porte un tableau vide.
  */
-
-const STATUS_LABELS: Record<string, string> = {
-  published: 'Publiée',
-  draft: 'Brouillon',
-  hidden: 'Hors ligne',
-  archived: 'Archivée',
-};
 
 const STATUS_BADGE: Record<string, string> = {
   published: 'badge--ok',

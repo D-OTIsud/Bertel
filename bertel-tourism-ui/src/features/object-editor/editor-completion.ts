@@ -3,6 +3,7 @@ import type { ObjectWorkspacePermissions } from '../../services/object-workspace
 import type { ArchetypeCode } from './archetypes';
 import type { SectionItem } from './section-config';
 import { validateForPublication } from './editor-validation';
+import { hasText } from './editor-text';
 
 export type SectionCompletionStatus = 'ok' | 'warn';
 
@@ -18,10 +19,6 @@ type CompletionSelector = (draft: ObjectWorkspaceModules) => CompletionValue;
 
 interface CompletionRule {
   fields: CompletionSelector[];
-}
-
-function hasText(value: string | null | undefined): boolean {
-  return String(value ?? '').trim().length > 0;
 }
 
 function hasTranslatableText(field: WorkspaceTranslatableField): boolean {

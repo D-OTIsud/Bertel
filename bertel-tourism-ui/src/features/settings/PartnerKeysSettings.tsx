@@ -1,8 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, KeyRound, Plus, RefreshCw, ShieldAlert } from 'lucide-react';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { useSessionStore } from '../../store/session-store';
 import {
   issuePartnerKey,
   listPartnerKeys,
@@ -23,6 +25,12 @@ function formatDate(iso: string | null): string {
  * server-side; this is the UI convenience). Issue returns the raw `bk_live_…` key ONCE.
  */
 export function PartnerKeysSettings() {
+  const userId = useSessionStore((state) => state.userId);
+  const orgId = useSessionStore((state) => state.orgId);
+  const role = useSessionStore((state) => state.role);
+  const identity = JSON.stringify([userId, orgId, role]);
+  const identityRef = useRef(identity);
+  identityRef.current = identity;
   const [keys, setKeys] = useState<PartnerKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,20 +38,65 @@ export function PartnerKeysSettings() {
   const [issuing, setIssuing] = useState(false);
   const [issued, setIssued] = useState<IssuedPartnerKey | null>(null);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<{ id: string; label: string; keyPrefix: string; identity: string } | null>(null);
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+  const revokeLockRef = useRef(false);
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
+  const loadingRef = useRef(true);
+  const loadSequenceRef = useRef(0);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const openerRef = useRef<HTMLButtonElement | null>(null);
+  const restoreFocusRef = useRef(false);
+
+  function isCurrentIdentity(expected: string) {
+    const session = useSessionStore.getState();
+    return identityRef.current === expected && JSON.stringify([session.userId, session.orgId, session.role]) === expected;
+  }
+
+  useEffect(() => {
+    if (revokeTarget || !restoreFocusRef.current) return;
+    // Follow actual removal, since React may commit later than the exit animation's timer.
+    const observer = new MutationObserver(restoreFocus);
+    function restoreFocus() {
+      if (document.querySelector('[role="dialog"][aria-label="Révoquer la clé partenaire ?"]')) return;
+      restoreFocusRef.current = false;
+      observer.disconnect();
+      if (document.activeElement !== document.body) return;
+      const opener = openerRef.current;
+      if (opener?.isConnected && !opener.disabled) opener.focus();
+      else headingRef.current?.focus();
+    }
+    observer.observe(document.body, { childList: true, subtree: true });
+    restoreFocus();
+    return () => observer.disconnect();
+  }, [revokeTarget]);
 
   const load = useCallback(async () => {
+    const sequence = ++loadSequenceRef.current;
+    loadingRef.current = true;
     setLoading(true);
     setError(null);
     try {
-      setKeys(await listPartnerKeys());
+      const fresh = await listPartnerKeys();
+      if (sequence !== loadSequenceRef.current || !isCurrentIdentity(identity)) return;
+      keysRef.current = fresh;
+      setKeys(fresh);
     } catch (err) {
-      setError((err as Error).message);
+      if (sequence === loadSequenceRef.current && isCurrentIdentity(identity)) setError((err as Error).message);
     } finally {
-      setLoading(false);
+      if (sequence === loadSequenceRef.current && isCurrentIdentity(identity)) {
+        loadingRef.current = false;
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [identity]);
 
   useEffect(() => {
+    keysRef.current = [];
+    setKeys([]);
+    setRevokeTarget(null);
+    setRevokeError(null);
     void load();
   }, [load]);
 
@@ -67,18 +120,37 @@ export function PartnerKeysSettings() {
     }
   };
 
-  const handleRevoke = async (key: PartnerKey) => {
-    if (!window.confirm(`Révoquer la clé « ${key.label} » (${key.keyPrefix}…) ? Effet immédiat, irréversible.`)) {
+  const handleRevoke = async () => {
+    const target = revokeTarget;
+    if (!target || revokeLockRef.current || !isCurrentIdentity(target.identity)) return;
+    if (loadingRef.current || error) {
+      setRevokeError('Attendez le chargement des clés puis réessayez.');
       return;
     }
-    setRevokingId(key.id);
+    const key = keysRef.current.find((candidate) => candidate.id === target.id && candidate.isActive);
+    if (!key || key.label !== target.label || key.keyPrefix !== target.keyPrefix) {
+      setRevokeError('Cette clé a changé ou n’est plus active. Fermez cette fenêtre et vérifiez les accès partenaires.');
+      return;
+    }
+    revokeLockRef.current = true;
+    setRevokingId(target.id);
+    setRevokeError(null);
     try {
-      await revokePartnerKey(key.id);
+      await revokePartnerKey(target.id);
+      if (!isCurrentIdentity(target.identity)) return;
       toast.success('Clé révoquée.');
+      // Keep membership safe even if the refresh fails after a successful revocation.
+      keysRef.current = keysRef.current.map((candidate) => candidate.id === target.id ? { ...candidate, isActive: false } : candidate);
+      setKeys(keysRef.current);
       await load();
+      if (isCurrentIdentity(target.identity)) setRevokeTarget(null);
     } catch (err) {
-      toast.error((err as Error).message);
+      if (isCurrentIdentity(target.identity)) {
+        setRevokeError((err as Error).message);
+        toast.error((err as Error).message);
+      }
     } finally {
+      revokeLockRef.current = false;
       setRevokingId(null);
     }
   };
@@ -165,7 +237,7 @@ export function PartnerKeysSettings() {
       <section className="settings-admin__key-list" aria-labelledby="partner-keys-list-heading">
         <div className="settings-admin__section-head">
           <div>
-            <h3 id="partner-keys-list-heading">Accès partenaires</h3>
+            <h3 id="partner-keys-list-heading" ref={headingRef} tabIndex={-1}>Accès partenaires</h3>
             <p>Consultez les derniers usages et révoquez les clés qui ne sont plus nécessaires.</p>
           </div>
           {!loading && !error && <span className="badge badge--info badge--xs">{activeKeyCount} active{activeKeyCount > 1 ? 's' : ''}</span>}
@@ -205,7 +277,13 @@ export function PartnerKeysSettings() {
                   <button
                     type="button"
                     className="ghost-button"
-                    onClick={() => void handleRevoke(key)}
+                    onClick={(event) => {
+                      if (revokeLockRef.current) return;
+                      openerRef.current = event.currentTarget;
+                      restoreFocusRef.current = true;
+                      setRevokeError(null);
+                      setRevokeTarget({ id: key.id, label: key.label, keyPrefix: key.keyPrefix, identity });
+                    }}
                     disabled={revokingId === key.id}
                   >
                     {revokingId === key.id ? 'Révocation…' : 'Révoquer'}
@@ -226,6 +304,20 @@ export function PartnerKeysSettings() {
       )}
       </section>
       </div>
+      <ConfirmDialog
+        open={revokeTarget !== null && revokeTarget.identity === identity}
+        title="Révoquer la clé partenaire ?"
+        message={<>
+          Révoquer la clé de « {revokeTarget?.label} » ({revokeTarget?.keyPrefix}…) ? Son accès sera coupé immédiatement. Cette action est irréversible.
+          {revokeError && <span className="block text-red-600" role="alert">{revokeError}</span>}
+        </>}
+        confirmLabel="Révoquer"
+        cancelLabel="Annuler"
+        tone="danger"
+        busy={revokingId !== null}
+        onCancel={() => { if (!revokeLockRef.current) setRevokeTarget(null); }}
+        onConfirm={() => void handleRevoke()}
+      />
     </section>
   );
 }

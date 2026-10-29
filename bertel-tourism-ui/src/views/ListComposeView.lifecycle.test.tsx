@@ -5,11 +5,13 @@
 //     envoyer, partager et dupliquer restent bloqués tant qu'elle n'est pas acceptée à la une.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import ListComposeView from './ListComposeView';
 import { useServiceAvailability } from '@/hooks/useServiceAvailability';
 import {
   duplicateList,
+  deleteList,
   ensureListShareLink,
   getList,
   listsQueryKeys,
@@ -44,7 +46,8 @@ jest.mock('@/features/object-editor/useObjectSearch', () => ({
 }));
 jest.mock('@/hooks/useServiceAvailability', () => ({ useServiceAvailability: jest.fn() }));
 
-jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn() }) }));
+const mockPush = jest.fn();
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 
 jest.mock('@/features/lists/OtiTemplate', () => ({
   __esModule: true,
@@ -541,5 +544,201 @@ describe('ListComposeView — confirmation avant duplication d’un brouillon ab
     await waitFor(() => expect(duplicateList).toHaveBeenCalledWith('list-1'));
     expect(updateList).not.toHaveBeenCalled();
     expect(setListItems).not.toHaveBeenCalled();
+  });
+});
+
+describe('ListComposeView — shared list deletion confirmation', () => {
+  beforeEach(() => {
+    useSessionStore.setState({ userId: 'user-A', orgId: 'org-1', userName: 'A', email: 'a@example.com', avatarUrl: null, canEditObjects: true });
+    jest.mocked(getList).mockResolvedValue(baseDetail({ createdBy: 'user-A' }));
+    jest.mocked(deleteList).mockReset().mockResolvedValue(undefined);
+    jest.mocked(updateList).mockReset();
+  });
+
+  function setup() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = renderWithClient(client);
+    return { client, ...view };
+  }
+
+  async function openDelete() {
+    const trigger = await screen.findByRole('button', { name: 'Supprimer la liste' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    return screen.findByRole('dialog', { name: 'Supprimer la liste ?' });
+  }
+
+  it.each(['cancel', 'escape', 'outside'] as const)('%s closes with cancel initially focused and restores the opener without deletion', async (method) => {
+    setup();
+    const dialog = await openDelete();
+    expect(dialog).toHaveTextContent('Nom par défaut');
+    expect(within(dialog).getByRole('button', { name: 'Annuler' })).toHaveFocus();
+    expect(within(dialog).getByRole('button', { name: 'Supprimer' })).toHaveClass('primary-button--danger');
+    if (method === 'cancel') fireEvent.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    if (method === 'escape') fireEvent.keyDown(dialog, { key: 'Escape' });
+    if (method === 'outside') fireEvent.mouseDown(dialog.parentElement!);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Supprimer la liste' })).toHaveFocus();
+    expect(deleteList).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('opening and cancelling preserves blur autosave without flushing additional drafts', async () => {
+    const user = userEvent.setup();
+    jest.mocked(updateList).mockResolvedValue(baseDetail({ name: 'Nom saisi' }));
+    setup();
+    const name = await screen.findByLabelText('Nom de la liste');
+    await user.click(name);
+    await user.clear(name);
+    await user.type(name, 'Nom saisi');
+    await user.click(screen.getByRole('button', { name: 'Supprimer la liste' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Nom saisi');
+    await user.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    expect(updateList).toHaveBeenCalledWith('list-1', { name: 'Nom saisi' });
+    expect(screen.getByLabelText('Nom de la liste')).toHaveValue('Nom saisi');
+    expect(setListItems).not.toHaveBeenCalled();
+    expect(deleteList).not.toHaveBeenCalled();
+  });
+
+  it('waits for queued and in-flight autosaves, blocks repeated activation and busy dismissal, then navigates', async () => {
+    let resolveSave!: (value: ObjectListDetail) => void;
+    jest.mocked(updateList).mockImplementationOnce(() => new Promise((resolve) => { resolveSave = resolve; }))
+      .mockResolvedValueOnce(baseDetail({ name: 'Nom saisi', recipientLabel: 'Pour Camille' }));
+    let resolveDelete!: () => void;
+    jest.mocked(deleteList).mockImplementation(() => new Promise((resolve) => { resolveDelete = resolve; }));
+    setup();
+    const name = await screen.findByLabelText('Nom de la liste');
+    fireEvent.change(name, { target: { value: 'Nom saisi' } });
+    fireEvent.blur(name);
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    const recipient = screen.getByLabelText('Destinataire');
+    fireEvent.change(recipient, { target: { value: 'Pour Camille' } });
+    fireEvent.blur(recipient);
+    const dialog = await openDelete();
+    const confirm = within(dialog).getByRole('button', { name: 'Supprimer' });
+    act(() => { confirm.click(); confirm.click(); });
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    fireEvent.mouseDown(dialog.parentElement!);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Fermer' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Annuler' })).toBeDisabled();
+    expect(name).toBeDisabled();
+    expect(deleteList).not.toHaveBeenCalled();
+    await act(async () => resolveSave(baseDetail({ name: 'Nom saisi' })));
+    await waitFor(() => expect(deleteList).toHaveBeenCalledTimes(1));
+    expect(updateList).toHaveBeenNthCalledWith(2, 'list-1', { recipient_label: 'Pour Camille' });
+    expect(deleteList).toHaveBeenCalledWith('list-1');
+    expect(jest.mocked(updateList).mock.invocationCallOrder[1]).toBeLessThan(jest.mocked(deleteList).mock.invocationCallOrder[0]);
+    expect(mockPush).not.toHaveBeenCalled();
+    await act(async () => resolveDelete());
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/listes'));
+  });
+
+  it('a pending autosave failure blocks the first delete, retains drafts and permits an explicit retry', async () => {
+    let rejectSave!: (reason: Error) => void;
+    jest.mocked(updateList).mockImplementation(() => new Promise((_, reject) => { rejectSave = reject; }));
+    setup();
+    const name = await screen.findByLabelText('Nom de la liste');
+    fireEvent.change(name, { target: { value: 'Brouillon conservé' } });
+    fireEvent.blur(name);
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    const dialog = await openDelete();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    await act(async () => rejectSave(new Error('Sauvegarde hors ligne')));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Une sauvegarde a échoué');
+    expect(deleteList).not.toHaveBeenCalled();
+    expect(name).toHaveValue('Brouillon conservé');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(deleteList).toHaveBeenCalledTimes(1));
+    expect(updateList).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps deletion errors inside the dialog and allows retry without native confirmation', async () => {
+    jest.mocked(deleteList).mockRejectedValueOnce(new Error('Suppression hors ligne')).mockResolvedValueOnce(undefined);
+    setup();
+    const dialog = await openDelete();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('Suppression hors ligne');
+    expect(mockPush).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(deleteList).toHaveBeenCalledTimes(2));
+    expect(deleteList).toHaveBeenNthCalledWith(2, 'list-1');
+  });
+
+  it('rechecks cached rights after a save wait and returns focus safely when deletion is disabled', async () => {
+    let resolveSave!: (value: ObjectListDetail) => void;
+    jest.mocked(updateList).mockImplementation(() => new Promise((resolve) => { resolveSave = resolve; }));
+    const { client } = setup();
+    const name = await screen.findByLabelText('Nom de la liste');
+    fireEvent.change(name, { target: { value: 'Nom saisi' } });
+    fireEvent.blur(name);
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    const dialog = await openDelete();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    await act(async () => resolveSave(baseDetail({ canEdit: false, name: 'Nom saisi' })));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('droits actuels');
+    expect(client.getQueryData<ObjectListDetail>(listsQueryKeys.detail('list-1', 'user-A', 'org-1'))?.canEdit).toBe(false);
+    expect(deleteList).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Annuler' }));
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Retour aux listes' })).toHaveFocus());
+  });
+
+  it.each(['user', 'org', 'list'] as const)('an obsolete confirmation cannot delete after a %s change while waiting', async (change) => {
+    let resolveSave!: (value: ObjectListDetail) => void;
+    jest.mocked(updateList).mockImplementation(() => new Promise((resolve) => { resolveSave = resolve; }));
+    const { client, rerender } = setup();
+    const name = await screen.findByLabelText('Nom de la liste');
+    fireEvent.change(name, { target: { value: 'Nom saisi' } });
+    fireEvent.blur(name);
+    await waitFor(() => expect(updateList).toHaveBeenCalledTimes(1));
+    const dialog = await openDelete();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    act(() => {
+      if (change === 'user') useSessionStore.setState({ userId: 'user-B' });
+      if (change === 'org') useSessionStore.setState({ orgId: 'org-2' });
+      if (change === 'list') rerender(<QueryClientProvider client={client}><ListComposeView listId="list-2" /></QueryClientProvider>);
+    });
+    await act(async () => resolveSave(baseDetail({ name: 'Nom saisi' })));
+    expect(deleteList).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('rechecks a vanished cached target at execution without falling back to stale detail', async () => {
+    const { client } = setup();
+    const dialog = await openDelete();
+    act(() => client.setQueryData(listsQueryKeys.detail('list-1', 'user-A', 'org-1'), baseDetail({ id: 'different-list' })));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('droits actuels');
+    expect(deleteList).not.toHaveBeenCalled();
+  });
+
+  it.each(['user', 'list'] as const)('a completed old deletion leaves the new %s draft guarded and does not navigate or change its cache', async (change) => {
+    let finishDelete!: () => void;
+    jest.mocked(deleteList).mockImplementation(() => new Promise((resolve) => { finishDelete = resolve; }));
+    jest.mocked(getList).mockImplementation(async (id) => baseDetail({
+      id, name: id === 'list-2' || useSessionStore.getState().userId === 'user-B' ? 'Liste B' : 'Nom par défaut',
+    }));
+    const { client, rerender } = setup();
+    const dialog = await openDelete();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(deleteList).toHaveBeenCalledWith('list-1'));
+    act(() => {
+      if (change === 'user') useSessionStore.setState({ userId: 'user-B' });
+      else rerender(<QueryClientProvider client={client}><ListComposeView listId="list-2" /></QueryClientProvider>);
+    });
+    const nameB = await screen.findByDisplayValue('Liste B');
+    const bKey = listsQueryKeys.detail(change === 'list' ? 'list-2' : 'list-1', change === 'user' ? 'user-B' : 'user-A', 'org-1');
+    const cachedB = client.getQueryData(bKey);
+    await act(async () => finishDelete());
+    await waitFor(() => expect(nameB).not.toBeDisabled());
+    fireEvent.change(nameB, { target: { value: 'Brouillon B protégé' } });
+    const unload = new Event('beforeunload', { cancelable: true });
+    act(() => window.dispatchEvent(unload));
+    expect(unload.defaultPrevented).toBe(true);
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(client.getQueryData(bKey)).toEqual(cachedB);
+    expect(updateList).not.toHaveBeenCalled();
   });
 });

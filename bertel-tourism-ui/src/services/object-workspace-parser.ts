@@ -1,5 +1,10 @@
 import { formatOpeningTime, parseItineraryTrackGeojson } from '../features/object-drawer/utils';
 import type { CrmInteractionReply, ObjectDetail } from '../types/domain';
+import {
+  readCoercingString,
+  readPermissiveBoolean as readBoolean,
+  readTrimmedStringList as readStringList,
+} from '../lib/json-read';
 
 interface GenericRecord {
   [key: string]: unknown;
@@ -1283,13 +1288,7 @@ function readArray(value: unknown): GenericRecord[] {
 }
 
 export function readString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  return fallback;
+  return readCoercingString(value, fallback);
 }
 
 function pickFirstText(...values: unknown[]): string {
@@ -1303,19 +1302,6 @@ function pickFirstText(...values: unknown[]): string {
   return '';
 }
 
-function readBoolean(value: unknown): boolean {
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (typeof value === 'string') {
-    return ['true', '1', 'yes', 'oui'].includes(value.trim().toLowerCase());
-  }
-  if (typeof value === 'number') {
-    return value === 1;
-  }
-  return false;
-}
-
 function readPosition(value: unknown, fallback = 0): number {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -1327,16 +1313,6 @@ function readPosition(value: unknown, fallback = 0): number {
   }
 
   return fallback;
-}
-
-function readStringList(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => readString(entry).trim())
-    .filter(Boolean);
 }
 
 function readTextMap(value: unknown): Record<string, string> {

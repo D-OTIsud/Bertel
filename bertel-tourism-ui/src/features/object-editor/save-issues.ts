@@ -2,6 +2,7 @@ import type { Issue } from './editor-validation';
 import type { EditorSaveResult } from './useEditorSave';
 import type { WorkspaceModuleId } from '../../services/object-workspace';
 import type { ArchetypeCode } from './archetypes';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Human label per workspace module — used to title save/permission errors in the
@@ -130,7 +131,7 @@ export function saveResultToIssues(result: EditorSaveResult, archetype?: Archety
 export function publishErrorToIssue(error: unknown): Issue {
   return {
     section: 'Publication',
-    message: error instanceof Error ? error.message : 'Publication impossible.',
+    message: strictErrorMessage(error, 'Publication impossible.'),
     tone: 'req',
     // `section` reste le LIBELLÉ (aucune ancre `section-Publication` n'existe) ; le saut passe
     // par le numéro réel du §21, vérifié sur SectionPublication.tsx.

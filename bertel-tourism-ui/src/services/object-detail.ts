@@ -1,4 +1,5 @@
 import type { ObjectDetail } from '../types/domain';
+import { readCoercingString as readString } from '../lib/json-read';
 
 interface ObjectRecord {
   [key: string]: unknown;
@@ -17,16 +18,6 @@ function isRecord(value: unknown): value is ObjectRecord {
 
 function readRecord(value: unknown): ObjectRecord {
   return isRecord(value) ? value : {};
-}
-
-function readString(value: unknown, fallback = ''): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (typeof value === 'number') {
-    return String(value);
-  }
-  return fallback;
 }
 
 function readArray(value: unknown): unknown[] {

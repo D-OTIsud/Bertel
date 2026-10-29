@@ -2,6 +2,7 @@ import { readNamedValue } from '../../features/object-drawer/utils';
 import type { OpeningItem, TaxonomyItem } from '../../features/object-drawer/utils';
 import type { ParsedObjectDetail } from '../object-detail-parser';
 import { resolveTypeLabel } from '../../utils/labels';
+import { STATUS_LABELS } from '../../lib/object-status-labels';
 
 /**
  * §208 — REGISTRE UNIQUE des colonnes d'export Excel de l'Exploreur.
@@ -151,11 +152,6 @@ export function openingToText(o: OpeningItem): string {
   const period = o.allYears ? "Toute l'année" : joinParts([dateFr(o.startDate), dateFr(o.endDate)], ' → ');
   return joinParts([o.label !== period ? o.label : '', period, days, (o.details ?? []).join(', ')], ' — ');
 }
-
-/** Vocabulaire statut — même contenu que table-columns.tsx:19 (non exporté là-bas ; la vue Table reste intouchée). */
-const STATUS_LABELS: Record<string, string> = {
-  published: 'Publiée', draft: 'Brouillon', hidden: 'Hors ligne', archived: 'Archivée',
-};
 
 /** Types de handicap (`domain.ts:81`) — aucune table de libellés côté serveur pour ces 4 codes. */
 const DISABILITY_LABELS: Record<string, string> = {

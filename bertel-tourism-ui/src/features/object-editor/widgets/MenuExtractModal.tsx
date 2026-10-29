@@ -14,6 +14,7 @@ import {
 import { rasterizePdfToImages } from '../../../lib/pdf-rasterize';
 import { useServiceAvailability } from '../../../hooks/useServiceAvailability';
 import { getServiceAvailability } from '../../../services/service-availability';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 interface Props {
   open: boolean;
@@ -42,7 +43,7 @@ const ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp';
 const MAX_ANALYZE_IMAGES = 8;
 
 function errMsg(err: unknown): string {
-  return err instanceof Error ? err.message : 'Erreur inattendue.';
+  return strictErrorMessage(err, 'Erreur inattendue.');
 }
 
 /**

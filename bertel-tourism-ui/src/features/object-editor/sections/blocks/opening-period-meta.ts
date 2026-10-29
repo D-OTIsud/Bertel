@@ -180,11 +180,6 @@ export function todayMonthFraction(): number {
   return now.getMonth() + (now.getDate() - 1) / 31;
 }
 
-export function todayWeekdayIndex(): number {
-  const day = new Date().getDay();
-  return day === 0 ? 6 : day - 1;
-}
-
 export function currentPeriodIndex(periods: ObjectWorkspaceOpeningPeriod[]): number {
   // The "en cours" badge tracks the period whose bucket is active; fall back to the first
   // non-closure period, then 0, so an object without an active bucket still renders.

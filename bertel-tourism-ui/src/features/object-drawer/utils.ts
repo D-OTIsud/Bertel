@@ -1,4 +1,3 @@
-import type { ObjectDetail } from '../../types/domain';
 import { resolveWebPlatform } from '../../lib/web-platform';
 
 interface GenericRecord {
@@ -352,14 +351,6 @@ function readList(value: unknown): unknown[] {
 
 export function readArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? (value.filter(isRecord) as Array<Record<string, unknown>>) : [];
-}
-
-export function readObjectRecord(detail: ObjectDetail | undefined, objectId: string | null): Record<string, unknown> {
-  if (!detail || detail.id !== objectId) {
-    return {};
-  }
-
-  return (detail.raw ?? {}) as Record<string, unknown>;
 }
 
 export function readString(value: unknown, fallback = ''): string {

@@ -20,26 +20,6 @@ interface CompletionRule {
   fields: CompletionSelector[];
 }
 
-export const SCORE_SECTION_NUMS = [
-  '01',
-  '02',
-  '03',
-  '04',
-  '05',
-  '06',
-  '07',
-  '08',
-  '09',
-  '12',
-  '13',
-  '14',
-  '15',
-  '17',
-  '19',
-  '21',
-  '22',
-];
-
 function hasText(value: string | null | undefined): boolean {
   return String(value ?? '').trim().length > 0;
 }

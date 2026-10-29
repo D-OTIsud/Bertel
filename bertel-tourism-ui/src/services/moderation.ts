@@ -6,19 +6,13 @@
 // metadata->>'rpc' (whitelisté). Le front ne dispatche RIEN — il dépose juste l'enveloppe
 // (payload + metadata.rpc) via submit, puis approuve/rejette par id.
 import { getApiClient } from '../lib/supabase';
+import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { mapDatabaseError } from './api-error';
 import { useSessionStore } from '../store/session-store';
 import { mockPendingChanges } from '../data/mock';
 import type { PendingChangeItem } from '../types/domain';
 
 type GenericRecord = Record<string, unknown>;
-
-function readString(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value : fallback;
-}
-function readNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
 
 /** Mappe une ligne d'api.list_pending_changes vers la forme domaine PendingChangeItem. */
 export function parsePendingChange(row: GenericRecord): PendingChangeItem {

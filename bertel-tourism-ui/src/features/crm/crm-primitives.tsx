@@ -186,12 +186,10 @@ export function AgAv({ name, md }: { name: string | null; md?: boolean }) {
 
 /** Les 4 accents KPI cyclés (peps PO point 1) — barre + valeur colorées, surface calme. */
 export type KpiAccent = 'teal' | 'orange' | 'blue' | 'plum';
-export const KPI_ACCENTS: KpiAccent[] = ['teal', 'orange', 'blue', 'plum'];
 
 /**
  * Carte indicateur (bandeau KPI / stats fiche). `accent` colore la barre de gauche et la
- * valeur ; non fourni = teal (compat). Les vues passent KPI_ACCENTS[i % 4] pour répartir
- * la gamme au lieu du tout-teal monochrome.
+ * valeur ; non fourni = teal (compat).
  */
 export function Kpi({
   label,

@@ -94,6 +94,7 @@ import {
 import { measureAmenitiesLineClamp } from './amenities-line-clamp';
 import { getArchetypeMeta, TYPE_LABEL, type ArchetypeCode } from '../object-editor/archetypes';
 import { ObjectDocumentsCard } from './ObjectDocumentsCard';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 // §48: FMA is no longer rendered as an itinerary — events fall through to GenericDetailView
 // (no trail/GPX panels); the editor gives them BlockFMA (object_fma dates/occurrences).
@@ -1251,9 +1252,7 @@ function TeamNotesSection({
       setDraftPinned(false);
       setComposerOpen(false);
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "Impossible d'enregistrer cette note pour le moment.";
+      const message = strictErrorMessage(error, "Impossible d'enregistrer cette note pour le moment.");
       setErrorMessage(message);
     }
   };
@@ -1291,9 +1290,7 @@ function TeamNotesSection({
       }));
       cancelEditingNote();
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "Impossible de modifier cette note pour le moment.";
+      const message = strictErrorMessage(error, "Impossible de modifier cette note pour le moment.");
       setEditErrorMessage(message);
     }
   };
@@ -1320,9 +1317,7 @@ function TeamNotesSection({
         },
       }));
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "Impossible d'archiver cette note pour le moment.";
+      const message = strictErrorMessage(error, "Impossible d'archiver cette note pour le moment.");
       setEditErrorMessage(message);
     }
   };
@@ -1351,9 +1346,7 @@ function TeamNotesSection({
         cancelEditingNote();
       }
     } catch (error) {
-      const message = error instanceof Error
-        ? error.message
-        : "Impossible de supprimer cette note pour le moment.";
+      const message = strictErrorMessage(error, "Impossible de supprimer cette note pour le moment.");
       setEditErrorMessage(message);
     }
   };

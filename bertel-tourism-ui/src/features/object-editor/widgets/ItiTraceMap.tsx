@@ -10,6 +10,7 @@ import { saveObjectWorkspaceItineraryTrack } from '../../../services/object-work
 import type { ObjectWorkspaceItineraryStageSummary } from '../../../services/object-workspace-parser';
 import { ConfirmDialog } from '../primitives';
 import { itineraryMapBounds, itineraryStagePoint } from './itinerary-map-utils';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 export interface ItiTraceImport {
   distanceKm: string;
@@ -73,7 +74,7 @@ export function ItiTraceMap({ objectId, initialTrack, stages = [], onImported, o
       setTrack(line); setFilename(file.name);
       onImported({ distanceKm: metrics.distanceKm, elevationGain: metrics.elevationGain, elevationLoss: metrics.elevationLoss, trackGeojson: line });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Import impossible. Réessayez avec un fichier GPX ou KML.');
+      setError(strictErrorMessage(cause, 'Import impossible. Réessayez avec un fichier GPX ou KML.'));
     } finally { busyRef.current = false; setBusy(false); }
   }
   async function clearTrack() {
@@ -84,7 +85,7 @@ export function ItiTraceMap({ objectId, initialTrack, stages = [], onImported, o
       setTrack(null); setFilename('');
       onImported({ distanceKm: '', elevationGain: '', elevationLoss: '', trackGeojson: null });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Le tracé n’a pas pu être retiré. Réessayez.');
+      setError(strictErrorMessage(cause, 'Le tracé n’a pas pu être retiré. Réessayez.'));
     } finally { busyRef.current = false; setBusy(false); setConfirmClear(false); }
   }
   function onDrop(event: DragEvent<HTMLDivElement>) {

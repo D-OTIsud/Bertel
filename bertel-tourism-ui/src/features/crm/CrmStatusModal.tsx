@@ -26,6 +26,7 @@ import {
   type AnyCrmInteractionStatus,
   type CrmInteractionStatus,
 } from './crm-status';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 const MS_PER_DAY = 86_400_000;
 
@@ -88,7 +89,7 @@ export function CrmStatusModal({
       await onChangeStatus(rootId, choice);
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Échec de la mise à jour du statut.');
+      setError(strictErrorMessage(caught, 'Échec de la mise à jour du statut.'));
     } finally {
       setSaving(false);
     }

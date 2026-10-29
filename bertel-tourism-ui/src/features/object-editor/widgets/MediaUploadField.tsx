@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Field } from '../primitives';
 import { uploadMedia, type UploadedMedia } from '../../../services/media-upload';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 interface Props {
   objectId: string;
@@ -40,7 +41,7 @@ export function MediaUploadField({ objectId, accessToken, kind = 'photo', onUplo
       onUploaded(result);
       setStatus('idle');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec du téléversement.');
+      setError(strictErrorMessage(err, 'Échec du téléversement.'));
       setStatus('error');
     }
   }

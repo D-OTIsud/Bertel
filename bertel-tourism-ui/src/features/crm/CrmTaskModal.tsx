@@ -14,7 +14,7 @@
 // membre de l'ORG ; un ensemble vide est refusé côté serveur ET côté bouton).
 // Toujours ouvert sous gating write_crm_notes (boutons d'ouverture désactivés sinon).
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { ExternalLink, Trash2, Upload } from 'lucide-react';
 import { listCrmAssignees, saveCrmTask } from '../../services/crm';
@@ -27,6 +27,7 @@ import type { CrmTimelineCardItem } from './crm-primitives';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import type { CrmTask } from '../../types/domain';
 import { EditorModal } from '../object-editor/primitives/EditorModal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import './crm-editor-modal.css';
 
 function dateInputOffset(days: number) {
@@ -218,6 +219,10 @@ export function CrmTaskModal({
   // l'attrape. L'état local, lui, reste correct par construction quel que soit le nombre
   // de mutations futures.
   const [documentError, setDocumentError] = useState<string | null>(null);
+  const [deletion, setDeletion] = useState<{ taskId: string; documentId: string; title: string } | null>(null);
+  const deleteInFlight = useRef(false);
+  const documentsRef = useRef<HTMLElement>(null);
+  const deleteFocus = useRef<{ opener: HTMLButtonElement; taskId: string; host: HTMLElement | null } | null>(null);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadTaskDocument({ taskId: task!.id, file, accessToken: accessToken! }),
@@ -226,10 +231,14 @@ export function CrmTaskModal({
     onError: (error) => setDocumentError((error as Error).message),
   });
   const deleteMutation = useMutation({
-    mutationFn: (documentId: string) => deleteTaskDocument({ taskId: task!.id, documentId, accessToken: accessToken! }),
+    mutationFn: (input: { taskId: string; documentId: string; accessToken: string }) => deleteTaskDocument(input),
     onMutate: () => setDocumentError(null),
-    onSuccess: () => onSaved(),
+    onSuccess: (_result, input) => {
+      setDeletion((current) => current?.taskId === input.taskId && current.documentId === input.documentId ? null : current);
+      onSaved();
+    },
     onError: (error) => setDocumentError((error as Error).message),
+    onSettled: () => { deleteInFlight.current = false; },
   });
   const openMutation = useMutation({
     mutationFn: (documentId: string) => getTaskDocumentUrl({ taskId: task!.id, documentId, accessToken: accessToken! }),
@@ -238,6 +247,33 @@ export function CrmTaskModal({
     onError: (error) => setDocumentError((error as Error).message),
   });
   const documentPending = uploadMutation.isPending || deleteMutation.isPending || openMutation.isPending;
+  const deleteContext = useRef({ task, accessToken, documentPending });
+  deleteContext.current = { task, accessToken, documentPending };
+  function confirmDeletion() {
+    if (!deletion || deleteInFlight.current) return;
+    const current = deleteContext.current;
+    if (current.task?.id !== deletion.taskId || !current.task.documents.some((document) => document.id === deletion.documentId)) {
+      setDocumentError('Ce document n’est plus disponible pour la suppression. Fermez cette confirmation et actualisez la liste.');
+      return;
+    }
+    if (!current.accessToken) { setDocumentError('Session expirée. Reconnectez-vous pour supprimer ce document.'); return; }
+    if (current.documentPending) return;
+    deleteInFlight.current = true;
+    deleteMutation.mutate({ taskId: deletion.taskId, documentId: deletion.documentId, accessToken: current.accessToken });
+  }
+  useEffect(() => {
+    if (deletion || !deleteFocus.current) return;
+    const focus = deleteFocus.current;
+    const timer = window.setTimeout(() => {
+      const active = document.activeElement;
+      // Radix restores the opener first; refreshed props may subsequently remove
+      // it. Keep focus in the attachment section in that case (or after token loss).
+      if (active !== document.body && active !== focus.opener && active !== focus.host) return;
+      if (focus.taskId === task?.id && focus.opener.isConnected && !focus.opener.disabled) focus.opener.focus();
+      else (documentsRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])') ?? documentsRef.current)?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [deletion, task, accessToken, documentPending]);
 
   // Au moins une personne : la garde est ici ET côté serveur (22023). On ne soumet jamais
   // un tableau vide « pour voir ». `resolvedObject` n'est requis qu'à la CRÉATION — en
@@ -334,13 +370,18 @@ export function CrmTaskModal({
       {task ? (
         <details className="crm-edit-details crm-edit-documents">
           <summary>Pièces jointes · {task.documents.length}</summary>
-          <div className="crm-field">
+          <section ref={documentsRef} tabIndex={-1} aria-label="Pièces jointes de la tâche" className="crm-field">
             <ul className="crm-doc-list">
               {task.documents.map((doc) => (
                 <li key={doc.id} className="crm-doc-list__row">
                   <span className="crm-doc-list__title">{doc.title}</span><span className="crm-doc-list__size">{formatDocumentSize(doc.sizeBytes)}</span>
                   <button type="button" className="crm-btn sm" aria-label={`Ouvrir « ${doc.title} »`} disabled={!accessToken || documentPending} onClick={() => openMutation.mutate(doc.id)}><ExternalLink size={11} aria-hidden /> Ouvrir</button>
-                  <button type="button" className="crm-btn sm crm-btn--danger-ghost" aria-label={`Supprimer « ${doc.title} »`} disabled={!accessToken || documentPending} onClick={() => { if (window.confirm(`Supprimer « ${doc.title} » ? Le fichier sera définitivement effacé.`)) deleteMutation.mutate(doc.id); }}><Trash2 size={11} aria-hidden /> Supprimer</button>
+                  <button type="button" className="crm-btn sm crm-btn--danger-ghost" aria-label={`Supprimer « ${doc.title} »`} disabled={!accessToken || documentPending} onClick={(event) => {
+                    deleteFocus.current = { opener: event.currentTarget, taskId: task.id,
+                      host: event.currentTarget.closest<HTMLElement>('[role="dialog"][data-state="open"]') };
+                    setDocumentError(null);
+                    setDeletion({ taskId: task.id, documentId: doc.id, title: doc.title });
+                  }}><Trash2 size={11} aria-hidden /> Supprimer</button>
                 </li>
               ))}
               {task.documents.length === 0 && <li className="crm-field__hint">Aucune pièce jointe.</li>}
@@ -348,12 +389,28 @@ export function CrmTaskModal({
             <input ref={fileInputRef} type="file" aria-label="Ajouter un document" accept={CRM_DOCUMENT_ACCEPT} style={{ display: 'none' }} onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) uploadMutation.mutate(file); }} />
             <button type="button" className="crm-btn sm" disabled={!accessToken || documentPending} onClick={() => fileInputRef.current?.click()}><Upload size={11} aria-hidden /> Ajouter un document</button>
             {documentError && <div className="inline-alert" role="alert">{documentError}</div>}
-          </div>
+          </section>
         </details>
       ) : (
         <p className="crm-edit-note">Enregistrez la tâche pour joindre des documents.</p>
       )}
       {createMutation.isError && <div className="inline-alert" role="alert">{task ? 'Échec de l’enregistrement' : 'Échec de la création'} : {(createMutation.error as Error).message}</div>}
+      <div onKeyDown={(event) => { if (deletion) event.stopPropagation(); }}>
+        <ConfirmDialog
+          open={Boolean(deletion)}
+          appearance="editor"
+          title="Supprimer le document"
+          message={<>
+            Supprimer « {deletion?.title} » ? Le fichier sera définitivement effacé.
+            {documentError && <span className="inline-alert" role="alert">{documentError}</span>}
+          </>}
+          confirmLabel="Supprimer"
+          tone="danger"
+          busy={deleteMutation.isPending}
+          onCancel={() => { if (!deleteInFlight.current) setDeletion(null); }}
+          onConfirm={confirmDeletion}
+        />
+      </div>
     </EditorModal>
   );
 }

@@ -6,7 +6,7 @@
 // Parsing défensif au même standard que services/crm.ts : une ligne malformée est IGNORÉE,
 // elle ne fait pas tomber toute la boîte.
 import { getApiClient } from '../lib/supabase';
-import { readNullableString } from '../lib/json-read';
+import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { isSubmissionOutcome, type SubmissionOutcome } from '../lib/submission-outcome';
 import { useSessionStore } from '../store/session-store';
 
@@ -15,10 +15,6 @@ import { useSessionStore } from '../store/session-store';
 export type { SubmissionOutcome };
 
 type GenericRecord = Record<string, unknown>;
-
-function readString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */
 export type AppNotificationKind = 'crm_task_assigned' | 'fiche_submission_reviewed' | 'list_feature_requested' | 'pending_change_submitted';

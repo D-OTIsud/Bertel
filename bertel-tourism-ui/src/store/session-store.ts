@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { env } from '../lib/env';
 import type { UserRole } from '../types/domain';
+import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
 
 type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
 
@@ -11,14 +12,6 @@ type SessionStatus = 'booting' | 'ready' | 'guest' | 'error';
 // renommage aurait rendu muet. Une constante partagée, pas un mot deviné.
 export const GUEST_SIGNED_OUT_MESSAGE = 'Vous êtes déconnecté.';
 export const GUEST_SIGN_IN_MESSAGE = 'Connectez-vous pour accéder à votre espace.';
-
-// Initiales (≤ 2) dérivées du nom — repli d'avatar quand aucune photo. Même logique que
-// useBootstrapSession/ProfileDrawer/Sidebar (dette pré-existante à consolider un jour).
-function initialsFromName(name: string): string {
-  const parts = name.split(' ').map((p) => p.trim()).filter(Boolean).slice(0, 2);
-  if (parts.length === 0) return '--';
-  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('');
-}
 
 interface SessionState {
   status: SessionStatus;

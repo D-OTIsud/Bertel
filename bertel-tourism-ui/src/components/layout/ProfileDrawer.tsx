@@ -22,20 +22,11 @@ import { ProfileEditModal } from '../../features/settings/ProfileEditModal';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import type { CrmTask } from '../../types/domain';
+import { shellAvatarInitials as initialsFromName } from '../../utils/avatar-initials';
 
 interface ProfileDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-function initialsFromName(value: string | null | undefined): string {
-  const parts = String(value ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
-  if (parts.length === 0) return 'BT';
-  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
 /**

@@ -8,6 +8,7 @@
 //   * DYNAMIQUE — filtres Explorer sauvegardés (filters jsonb), ré-résolus live à chaque accès.
 // La page publique (lien) et l'email consomment api.get_public_list_by_token (publié-only, sans PII).
 import { getApiClient } from '../lib/supabase';
+import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { getServiceAvailability } from './service-availability';
 import { mapDatabaseError, readApiErrorMessage } from './api-error';
 import { readErrorMessage } from '../lib/db-error-message';
@@ -170,12 +171,6 @@ export interface ListItemInput {
 }
 
 // ---------- helpers de lecture ----------
-function readString(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value : fallback;
-}
-function readNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
 function readNumber(value: unknown, fallback = 0): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }

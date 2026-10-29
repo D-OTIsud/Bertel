@@ -6,6 +6,7 @@
 // Parsing défensif au même standard que services/crm.ts : une ligne malformée est IGNORÉE,
 // elle ne fait pas tomber toute la boîte.
 import { getApiClient } from '../lib/supabase';
+import { readNullableString } from '../lib/json-read';
 import { isSubmissionOutcome, type SubmissionOutcome } from '../lib/submission-outcome';
 import { useSessionStore } from '../store/session-store';
 
@@ -17,10 +18,6 @@ type GenericRecord = Record<string, unknown>;
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value : '';
-}
-
-function readNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 /** Espèces de notification rendues par l'UI. Le serveur en refuse toute autre (CHECK). */

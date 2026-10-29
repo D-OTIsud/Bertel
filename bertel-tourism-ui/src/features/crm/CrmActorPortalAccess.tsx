@@ -34,13 +34,14 @@ import {
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { useSessionStore } from '../../store/session-store';
 import { CRM_READ_ONLY_REASON, formatShort } from './crm-view-utils';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 const NO_EMAIL_REASON = 'Ajoutez d’abord une adresse e-mail à cet acteur.';
 const ALREADY_LINKED_REASON =
   'Cet acteur est déjà rattaché à un compte interne — un administrateur doit défaire ce lien avant d’ouvrir un accès.';
 
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : 'Une erreur est survenue.';
+  return strictErrorMessage(error, 'Une erreur est survenue.');
 }
 
 interface PortalAccessProps {

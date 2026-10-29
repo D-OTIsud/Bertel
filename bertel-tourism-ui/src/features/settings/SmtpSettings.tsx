@@ -12,6 +12,7 @@ import {
   type SmtpSettingsInput,
 } from '../../services/smtp-settings';
 import './settings-panels.css';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 const EMPTY: SmtpSettingsInput = {
   enabled: true, host: '', port: 587, secure: false, fromEmail: '',
@@ -35,7 +36,7 @@ async function accessToken() {
 }
 
 function errorText(error: unknown) {
-  return error instanceof Error ? error.message : 'Impossible de terminer cette opération.';
+  return strictErrorMessage(error, 'Impossible de terminer cette opération.');
 }
 
 export function SmtpSettings() {

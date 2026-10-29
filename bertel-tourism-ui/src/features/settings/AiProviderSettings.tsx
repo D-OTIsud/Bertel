@@ -16,6 +16,7 @@ import {
 import { EmptyState } from '../../components/common/EmptyState';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import './settings-panels.css';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Super-admin settings section for the platform AI provider (menu extraction and translation). Add/edit a
@@ -42,7 +43,7 @@ const EMPTY = {
 };
 
 function message(err: unknown): string {
-  return err instanceof Error ? err.message : 'Erreur inattendue.';
+  return strictErrorMessage(err, 'Erreur inattendue.');
 }
 
 export function AiProviderSettings() {

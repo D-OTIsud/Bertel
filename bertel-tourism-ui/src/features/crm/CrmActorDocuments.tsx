@@ -19,6 +19,7 @@ import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { CRM_READ_ONLY_REASON, formatDocumentSize, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 interface LinkedObjectOption {
   objectId: string;
@@ -33,7 +34,7 @@ interface PromotionDraft {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Une erreur est survenue.';
+  return strictErrorMessage(error, 'Une erreur est survenue.');
 }
 
 /** Zone d'ajout dédiée au rail droit de l'onglet Documents. */

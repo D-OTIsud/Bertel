@@ -34,6 +34,7 @@ import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
 import type { OtiMapSnapshot } from '@/features/lists/oti-map-utils';
 import ChannelFrame from '@/features/lists/ChannelFrame';
 import { Modal } from '@/components/common/Modal';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CopyEmailsModal } from '@/components/explorer/CopyEmailsModal';
 import { ACCENT_INK } from '@/features/lists/type-meta';
 import { useObjectSearch, type ObjectSearchResult } from '@/features/object-editor/useObjectSearch';
@@ -168,6 +169,12 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // modifiables pendant le flush lent et peuvent déclencher une autosave APRÈS le snapshot lu par
   // `flushPendingEdits` (revue finale — point 2).
   const [duplicating, setDuplicating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; identity: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteOpenerRef = useRef<HTMLButtonElement | null>(null);
+  const backLinkRef = useRef<HTMLAnchorElement | null>(null);
+  const restoreDeleteFocusRef = useRef(false);
   const [drag, setDrag] = useState<{ from: number | null; over: number | null }>({ from: null, over: null });
   const [addQuery, setAddQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -181,6 +188,9 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // architecte, §listes 2026-09-07).
   const hydratedIdentityKey = useRef<string | null>(null);
   const currentIdentityKey = `${listId}:${userId ?? ''}:${orgId ?? ''}`;
+  const identityRef = useRef(currentIdentityKey);
+  identityRef.current = currentIdentityKey;
+  const saveFailuresRef = useRef(0);
   // File RÉELLE (pas un simple pointeur) : un thunk ne démarre — donc n'appelle le réseau —
   // qu'une fois le précédent réglé. Un pointeur écrasé par l'appel suivant (ancienne version)
   // laisse une sauvegarde lente répondre APRÈS une plus récente et écraser du contenu approuvé
@@ -190,6 +200,26 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // Verrou synchrone (pas un state) : bloque la ré-entrance même dans le même tick, avant que
   // React n'ait eu la chance de committer `sending`/`langSwitching`.
   const actionLockRef = useRef(false);
+  useEffect(() => {
+    setDeleteTarget(null);
+    setDeleteError(null);
+  }, [currentIdentityKey]);
+  useEffect(() => {
+    if (deleteTarget || !restoreDeleteFocusRef.current) return;
+    const observer = new MutationObserver(restoreFocus);
+    function restoreFocus() {
+      if (document.querySelector('[role="dialog"][aria-label="Supprimer la liste ?"]')) return;
+      restoreDeleteFocusRef.current = false;
+      observer.disconnect();
+      if (document.activeElement !== document.body) return;
+      const opener = deleteOpenerRef.current;
+      if (opener?.isConnected && !opener.disabled) opener.focus();
+      else backLinkRef.current?.focus();
+    }
+    observer.observe(document.body, { childList: true, subtree: true });
+    restoreFocus();
+    return () => observer.disconnect();
+  }, [deleteTarget]);
   const lastMovedRef = useRef<{ id: string; dir: 'up' | 'down' } | null>(null);
   const itemsListRef = useRef<HTMLUListElement | null>(null);
   // `saveItems.onSuccess` a besoin des items LES PLUS RÉCENTS, pas de ceux capturés par la
@@ -246,7 +276,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     const started = saveQueueRef.current.then(run);
     saveQueueRef.current = started.then(
       () => undefined,
-      () => undefined,
+      () => { saveFailuresRef.current += 1; },
     );
     return started;
   }
@@ -398,13 +428,53 @@ export default function ListComposeView({ listId }: { listId: string }) {
     onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Duplication impossible.'),
   });
   const remove = useMutation({
-    mutationFn: () => deleteList(listId),
-    onSuccess: () => {
+    mutationFn: (target: { id: string; identity: string }) => deleteList(target.id),
+    onSuccess: (_, target) => {
+      if (!isCurrentDeleteIdentity(target)) return;
       invalidateGrids();
       router.push('/listes');
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Suppression impossible. Réessayez.'),
+    onError: (e, target) => {
+      if (isCurrentDeleteIdentity(target)) setErrorMessage(e instanceof Error ? e.message : 'Suppression impossible. Réessayez.');
+    },
   });
+
+  function isCurrentDeleteIdentity(target: { id: string; identity: string }) {
+    const session = useSessionStore.getState();
+    return identityRef.current === target.identity &&
+      `${target.id}:${session.userId ?? ''}:${session.orgId ?? ''}` === target.identity;
+  }
+
+  async function confirmDelete() {
+    const target = deleteTarget;
+    if (!target || actionLockRef.current || !isCurrentDeleteIdentity(target)) return;
+    actionLockRef.current = true;
+    setDeleting(true);
+    setDeleteError(null);
+    const failuresBeforeWait = saveFailuresRef.current;
+    try {
+      // Join the existing queue, without saving or discarding additional local drafts.
+      await enqueueSave(async () => {
+        if (!isCurrentDeleteIdentity(target)) return;
+        const fresh = queryClient.getQueryData<ObjectListDetail>(listKey);
+        if (fresh?.id !== target.id || !fresh.canEdit) {
+          throw new Error('Cette liste ne peut plus être supprimée avec vos droits actuels.');
+        }
+        if (saveFailuresRef.current !== failuresBeforeWait) {
+          throw new Error('Une sauvegarde a échoué. Vos modifications sont conservées ici. Réessayez pour confirmer la suppression.');
+        }
+        await remove.mutateAsync(target);
+        if (isCurrentDeleteIdentity(target)) setDeleteTarget(null);
+      });
+    } catch (error) {
+      if (isCurrentDeleteIdentity(target)) {
+        setDeleteError(error instanceof Error ? error.message : 'Suppression impossible. Réessayez.');
+      }
+    } finally {
+      setDeleting(false);
+      actionLockRef.current = false;
+    }
+  }
 
   // Palette « Ajouter un lieu » (listes statiques) — même recherche nom/commune que les pickers §15/§19.
   const objectSearch = useObjectSearch(addQuery, { enabled: detail?.kind === 'static' });
@@ -428,7 +498,8 @@ export default function ListComposeView({ listId }: { listId: string }) {
       template !== detail.template
     : false;
   // Une suppression réussie ne doit jamais laisser la garde bloquer le départ programmé.
-  const isDirty = hydrated && !remove.isSuccess && (dirtyMeta || (!isDynamic && dirtyItems));
+  const deletedCurrentList = remove.isSuccess && remove.variables != null && isCurrentDeleteIdentity(remove.variables);
+  const isDirty = hydrated && !deletedCurrentList && (dirtyMeta || (!isDynamic && dirtyItems));
   useUnsavedDraftGuard(isDirty, { message: LIST_UNSAVED_LEAVE_MESSAGE });
 
   if (detailQuery.isLoading) {
@@ -715,7 +786,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // leur snapshot : aucune frappe ne doit pouvoir arriver après la lecture figée par
   // `flushPendingEdits` (MET-02/A11Y-07 §changeListLang ; `duplicating` couvre le flush ET
   // `duplicateList`, point 2 revue finale — drag/drop et palette d'ajout en dépendent aussi).
-  const locked = sending || langSwitching || duplicating;
+  const locked = sending || langSwitching || duplicating || deleting;
   // can_edit obligatoire pour TOUTE écriture (nom, destinataire, intro, notes, ordre,
   // ajout/retrait, modèle, langue persistée, carte, couverture, suppression, réglages du lien) —
   // §listes 2026-09-07 « Interface attendue ». Les canaux d'aperçu/impression/envoi/copie de
@@ -729,7 +800,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       {/* Barre d'action */}
       <header className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Link href="/listes" className="grid h-9 w-9 place-items-center rounded-lg border text-ink/70 hover:bg-ink/5" aria-label="Retour aux listes">
+          <Link ref={backLinkRef} href="/listes" className="grid h-9 w-9 place-items-center rounded-lg border text-ink/70 hover:bg-ink/5" aria-label="Retour aux listes">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
@@ -935,7 +1006,13 @@ export default function ListComposeView({ listId }: { listId: string }) {
           <button
             type="button"
             disabled={locked || readOnly || remove.isPending}
-            onClick={() => window.confirm('Supprimer définitivement cette liste ?') && remove.mutate()}
+            onClick={(event) => {
+              if (actionLockRef.current) return;
+              deleteOpenerRef.current = event.currentTarget;
+              restoreDeleteFocusRef.current = true;
+              setDeleteError(null);
+              setDeleteTarget({ id: listId, identity: currentIdentityKey, name: name || detail.name });
+            }}
             className="grid h-9 w-9 place-items-center rounded-lg border text-red-500 hover:bg-red-50 disabled:opacity-40"
             aria-label="Supprimer la liste"
           >
@@ -1389,6 +1466,21 @@ export default function ListComposeView({ listId }: { listId: string }) {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null && deleteTarget.identity === currentIdentityKey}
+        title="Supprimer la liste ?"
+        message={<>
+          Supprimer définitivement la liste « {deleteTarget?.name} » ? Cette action est irréversible.
+          {deleteError && <span className="block text-red-600" role="alert">{deleteError}</span>}
+        </>}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        tone="danger"
+        busy={deleting}
+        onCancel={() => { if (!actionLockRef.current) setDeleteTarget(null); }}
+        onConfirm={() => void confirmDelete()}
+      />
 
       {/* Modal de partage : lien public à copier + désactivation explicite. */}
       <Modal title="Partager par lien" open={shareOpen} onOpenChange={setShareOpen}>

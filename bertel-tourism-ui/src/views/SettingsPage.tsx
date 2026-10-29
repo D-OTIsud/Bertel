@@ -1,6 +1,8 @@
 "use client";
 
-import Link from 'next/link';
+import { SettingsLegalPane } from '../features/settings/SettingsLegalPane';
+import { SettingsDiagnosticPane } from '../features/settings/SettingsDiagnosticPane';
+import { SettingsPreferencesPane } from '../features/settings/SettingsPreferencesPane';
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,10 +35,6 @@ import { useUiStore } from '../store/ui-store';
 import type { ObjectTypeCode, UserRole } from '../types/domain';
 
 const roles: UserRole[] = ['super_admin', 'tourism_agent', 'owner'];
-
-// 7.1 — libellés complets des langues d'interface (fidélité maquette : « Français » plutôt
-// que « FR »). L'ordre suit l'ordre d'affichage des chips.
-const LANGUAGE_LABELS: Record<string, string> = { fr: 'Français', en: 'English', de: 'Deutsch' };
 
 function buildDrafts(markerStyles: ReturnType<typeof useUiStore.getState>['markerStyles']): Record<ObjectTypeCode, string> {
   return objectTypeOptions.reduce((acc, item) => {
@@ -691,31 +689,7 @@ export default function SettingsPage() {
       )}
 
       {activeSection === 'preferences' && (
-      <section className="settings-pane">
-        <div className="settings-pane__head">
-          <div>
-            <h2>Préférences</h2>
-            <p>Vos réglages personnels d’interface.</p>
-          </div>
-        </div>
-        <div className="settings-pane__demo">
-          <div className="pref__label">Langue de l’interface</div>
-          <div className="chip-grid">
-            {['fr', 'en', 'de'].map((lang) => (
-              <button
-                key={lang}
-                type="button"
-                className={langPrefs.includes(lang) ? 'chip chip--active' : 'chip'}
-                aria-pressed={langPrefs.includes(lang)}
-                onClick={() => toggleLanguage(lang)}
-              >
-                {LANGUAGE_LABELS[lang] ?? lang.toUpperCase()}
-              </button>
-            ))}
-          </div>
-          <p className="pref__hint">Au moins une langue reste active. Enregistré sur votre profil.</p>
-        </div>
-      </section>
+      <SettingsPreferencesPane langPrefs={langPrefs} toggleLanguage={toggleLanguage} />
 
       )}
 
@@ -724,63 +698,14 @@ export default function SettingsPage() {
           demandes d'effacement) est owner/super-admin only ⇒ lien réservé à ces rôles (pas de
           lien mort pour un agent). Voir décision log « pages légales » Partie B. */}
       {activeSection === 'legal' && (
-      <section className="settings-pane">
-        <div className="settings-pane__head">
-          <div>
-            <h2>Mentions légales</h2>
-            <p>Documents de référence : confidentialité, conditions d’utilisation et analyse d’impact (RGPD).</p>
-          </div>
-        </div>
-        <div className="settings-pane__demo">
-          <ul className="legal-links">
-            <li>
-              <a href="/legal/rgpd.html" target="_blank" rel="noopener noreferrer">Politique de confidentialité</a>
-              <span className="pref__hint">Traitement des données personnelles, base légale et durées de conservation (RGPD).</span>
-            </li>
-            <li>
-              <a href="/legal/cgu.html" target="_blank" rel="noopener noreferrer">Conditions générales d’utilisation</a>
-              <span className="pref__hint">Règles d’accès et d’usage de la plateforme.</span>
-            </li>
-            <li>
-              <a href="/legal/dpia.html" target="_blank" rel="noopener noreferrer">Analyse d’impact (AIPD)</a>
-              <span className="pref__hint">Évaluation des risques du traitement sur la vie privée.</span>
-            </li>
-          </ul>
-          <p className="pref__hint">
-            Pour exercer vos droits (accès, rectification, effacement), consultez la{' '}
-            <a href="/legal/rgpd.html" target="_blank" rel="noopener noreferrer">politique de confidentialité</a>{' '}
-            ou contactez le responsable de traitement. En cas de désaccord persistant, vous pouvez saisir la{' '}
-            <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">CNIL</a>.
-          </p>
-          {(role === 'owner' || role === 'super_admin') && (
-            <p className="pref__hint">
-              Administration : le module{' '}
-              <Link href="/rgpd">RGPD &amp; droits des personnes</Link>{' '}
-              permet de traiter les demandes d’effacement.
-            </p>
-          )}
-        </div>
-      </section>
+      <SettingsLegalPane role={role} />
 
       )}
 
       {/* 7.1 : diagnostic plateforme en libellé clair — l'URL Supabase brute n'est jamais
           exposée (juste configuré/non). Un diagnostic replié figure aussi dans « Session & rôle ». */}
       {activeSection === 'diagnostic' && (
-      <section className="settings-pane">
-        <div className="settings-pane__head">
-          <div>
-            <h2>Diagnostic</h2>
-            <p>État technique de l’environnement (lecture seule).</p>
-          </div>
-        </div>
-        <div className="diag__body" style={{ maxWidth: 640 }}>
-          <div className="diag__line"><span className="muted">Environnement Supabase</span><span className="mono">{env.supabaseUrl ? 'configuré' : 'à renseigner'}</span></div>
-          <div className="diag__line"><span className="muted">Mode démonstration</span><span className="mono">{demoMode ? 'oui' : 'non'}</span></div>
-          <div className="diag__line"><span className="muted">Marque active</span><span className="mono">{theme.brandName}</span></div>
-          <div className="diag__line"><span className="muted">Source du logo</span><span className="mono">{logoSourceLabel}</span></div>
-        </div>
-      </section>
+      <SettingsDiagnosticPane env={env} demoMode={demoMode} theme={theme} logoSourceLabel={logoSourceLabel} />
 
       )}
 

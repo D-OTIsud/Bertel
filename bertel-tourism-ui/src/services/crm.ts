@@ -2,7 +2,7 @@
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
-import { readNullableString } from '../lib/json-read';
+import { readNullableString, readStrictString as readString } from '../lib/json-read';
 import { pingNotifyDrain } from './notification-delivery';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
@@ -27,10 +27,6 @@ const TASK_STATUSES: CrmTaskStatus[] = ['todo', 'in_progress', 'done', 'canceled
 const TASK_PRIORITIES: CrmTaskPriority[] = ['low', 'medium', 'high', 'urgent'];
 
 type GenericRecord = Record<string, unknown>;
-
-function readString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
 
 /**
  * `assignees` (16w) — tolérant : clé absente, null ou malformée ⇒ []. Une entrée sans

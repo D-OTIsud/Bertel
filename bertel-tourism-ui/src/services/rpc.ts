@@ -7,6 +7,7 @@ import { normalizeExplorerCards } from '../utils/explorer-card';
 import { normalizeObjectDetailPayload } from './object-detail';
 import { parseItiTrack } from './iti-tracks';
 import { escapeHtml } from '../lib/safe-output';
+import { withAbort } from '../lib/with-abort';
 
 interface ExplorerPageInput {
   cursor?: string | null;
@@ -279,22 +280,6 @@ async function fetchAllExplorerBucketCards(bucket: ExplorerBucketKey, filters: E
   } while (cursor);
 
   return cards;
-}
-
-/**
- * Branche le signal d'abandon de TanStack Query sur un builder PostgREST.
- *
- * `abortSignal` n'existe que sur le builder supabase-js ; le typage du retour de `.rpc()`
- * est un `PromiseLike` étendu, d'où la garde souple plutôt qu'un cast aveugle : si une
- * montée de version retirait la méthode, on dégrade en « pas d'annulation » au lieu de
- * planter la requête.
- */
-function withAbort<T extends PromiseLike<unknown>>(builder: T, signal?: AbortSignal): T {
-  if (!signal) {
-    return builder;
-  }
-  const withSignal = builder as T & { abortSignal?: (s: AbortSignal) => T };
-  return typeof withSignal.abortSignal === 'function' ? withSignal.abortSignal(signal) : builder;
 }
 
 async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {

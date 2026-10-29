@@ -1,5 +1,6 @@
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
+import { withAbort } from '../lib/with-abort';
 
 /** Une fiche trouvee par son NOM — juste de quoi la reconnaitre et y aller. */
 export interface NameMatch {
@@ -95,22 +96,4 @@ function normalizeNameMatches(data: unknown): NameMatch[] {
       },
     ];
   });
-}
-
-/**
- * Branche le signal d'abandon de TanStack Query sur le builder PostgREST quand
- * celui-ci l'accepte : une frappe suivante doit ARRETER la requete precedente,
- * sinon elle continue de consommer du CPU serveur pour un resultat que plus
- * personne n'affichera (incident 2026-08-07).
- *
- * ponytail: copie du helper prive homonyme de `rpc.ts` (non exporte, et ce
- * fichier-la n'est pas dans le perimetre de cette passe). A fusionner en un
- * seul helper partage a la premiere occasion de toucher `rpc.ts`.
- */
-function withAbort<T extends PromiseLike<unknown>>(builder: T, signal?: AbortSignal): T {
-  if (!signal) {
-    return builder;
-  }
-  const withSignal = builder as T & { abortSignal?: (s: AbortSignal) => T };
-  return typeof withSignal.abortSignal === 'function' ? withSignal.abortSignal(signal) : builder;
 }

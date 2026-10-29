@@ -49,6 +49,7 @@ import type { HistoryRailItem } from './widgets/HistoryRail';
 import { useEditorScrollSpy } from './useEditorScrollSpy';
 import './object-editor.css';
 import './editor-print.css';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /** Full-page object editor. Fetches the workspace resource, then hands off to
  *  EditorReady so the editor hooks only run once data is present. */
@@ -302,7 +303,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       setVersionsModalOpen(false);
       setStatusMessage(`Version v${versionNumber} restaurée — une nouvelle version a été créée.`);
     } catch (error) {
-      setStatusMessage(error instanceof Error ? error.message : 'Restauration impossible.');
+      setStatusMessage(strictErrorMessage(error, 'Restauration impossible.'));
     }
   }
 
@@ -341,7 +342,7 @@ function EditorReady({ resource, objectId, meta }: { resource: ObjectWorkspaceRe
       setStatusMessage(isArchived ? 'Fiche restaurée.' : 'Fiche archivée.');
     } catch (error) {
       setArchiveConfirmOpen(false);
-      setStatusMessage(error instanceof Error ? error.message : 'Changement de statut impossible.');
+      setStatusMessage(strictErrorMessage(error, 'Changement de statut impossible.'));
     }
   }
 

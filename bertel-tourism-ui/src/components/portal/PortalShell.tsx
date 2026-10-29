@@ -31,6 +31,7 @@ import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import { useToast } from '../../hooks/useToast';
 import { clearAllPortalDrafts, hasUnsentPortalWork } from '../../features/portal/usePortalDraft';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 export function PortalShell({ children }: { children: React.ReactNode }) {
   const brandName = useThemeStore((state) => state.theme.brandName);
@@ -59,7 +60,7 @@ export function PortalShell({ children }: { children: React.ReactNode }) {
       // Échec réseau : le partenaire reste connecté. On ne touche à RIEN — la purge suit
       // une déconnexion réussie, jamais l'inverse, sinon une coupure détruit tout le
       // travail non encore envoyé à l'office.
-      toast.error(error instanceof Error ? error.message : 'La déconnexion a échoué. Réessayez.');
+      toast.error(strictErrorMessage(error, 'La déconnexion a échoué. Réessayez.'));
       return;
     }
     clearAllPortalDrafts(account);

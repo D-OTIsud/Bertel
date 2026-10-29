@@ -10,6 +10,7 @@ import {
   updateObjectCarte,
   type CarteDocument,
 } from '../../../services/object-cartes';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 interface MenuPdfCartesProps {
   objectId: string;
@@ -47,7 +48,7 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
       setCartes(await listObjectCartes(objectId));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Chargement des cartes impossible.');
+      setError(strictErrorMessage(err, 'Chargement des cartes impossible.'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,7 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
       await updateObjectCarte(objectId, documentId, patch);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Enregistrement impossible.');
+      setError(strictErrorMessage(err, 'Enregistrement impossible.'));
       void reload();
     }
   }
@@ -86,7 +87,7 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
       await linkObjectCarte(objectId, documentId, cartes.length + 1);
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Rattachement de la carte impossible.');
+      setError(strictErrorMessage(err, 'Rattachement de la carte impossible.'));
     }
   }
 
@@ -95,7 +96,7 @@ export function MenuPdfCartes({ objectId, canEdit, reloadToken = 0, hideUploader
       await unlinkObjectCarte(objectId, documentId);
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Suppression impossible.');
+      setError(strictErrorMessage(err, 'Suppression impossible.'));
     }
   }
 

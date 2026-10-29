@@ -36,6 +36,7 @@ import { EmptyState } from '../components/common/EmptyState';
 import { Modal } from '../components/common/Modal';
 import { diffWords } from '../lib/diff-words';
 import type { PendingChangeItem } from '../types/domain';
+import { strictErrorMessage } from '../lib/strict-error-message';
 
 /** D6 — rendu du diff : Avant = same+del (<del> rouge), Après = same+ins (<ins> vert). */
 function DiffText({ before, after, side }: { before: string; after: string; side: 'before' | 'after' }) {
@@ -135,7 +136,7 @@ export default function ModerationPage() {
     },
     onError: (error) => {
       closeApprove();
-      setActionError(error instanceof Error ? error.message : "Échec de l'approbation.");
+      setActionError(strictErrorMessage(error, "Échec de l'approbation."));
     },
   });
 
@@ -153,7 +154,7 @@ export default function ModerationPage() {
     onError: (error) => {
       closeApproveGroup();
       setActionNotice(null);
-      setActionError(error instanceof Error ? error.message : "Échec de l'approbation de l’envoi.");
+      setActionError(strictErrorMessage(error, "Échec de l'approbation de l’envoi."));
     },
   });
 
@@ -168,7 +169,7 @@ export default function ModerationPage() {
       closeReject();
       refresh();
     },
-    onError: (error) => setNoteError(error instanceof Error ? error.message : 'Échec du refus.'),
+    onError: (error) => setNoteError(strictErrorMessage(error, 'Échec du refus.')),
   });
 
   function closeApprove() {

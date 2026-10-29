@@ -28,6 +28,7 @@ import {
 } from './crm-status';
 import type { AnyCrmInteractionStatus } from './crm-status';
 import { CrmStatusModal } from './CrmStatusModal';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Callbacks d'écriture du fil (§65/§66) — fournis par les consommateurs qui ont la query +
@@ -306,7 +307,7 @@ function TlReplyComposer({
       setSentimentCode('');
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Échec de l'envoi de la réponse.");
+      setError(strictErrorMessage(caught, "Échec de l'envoi de la réponse."));
     } finally {
       setBusy(false);
     }
@@ -411,7 +412,7 @@ function TlCommentEditor({
       await onSave(body.trim(), sentimentCode || null);
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Échec de l'enregistrement.");
+      setError(strictErrorMessage(caught, "Échec de l'enregistrement."));
     } finally {
       setBusy(false);
     }
@@ -503,7 +504,7 @@ function TlDeleteConfirm({
     try {
       await onConfirm();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Échec de la suppression.');
+      setError(strictErrorMessage(caught, 'Échec de la suppression.'));
     } finally {
       setBusy(false);
     }

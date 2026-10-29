@@ -5,6 +5,7 @@ import type { ObjectWorkspaceExternalIdentifierItem } from '../../../services/ob
 import { ExternalIdEditModal } from '../widgets/ExternalIdEditModal';
 import { createExternalIdDraft, isCanonicalSourceSystem } from './external-id-edit';
 import { useUpsertExternalIdMutation, useDeleteExternalIdMutation } from '../../../hooks/useExplorerQueries';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 const SOURCE_LABELS: Record<string, string> = {
   OTI: 'ID OTI (canonical)',
@@ -75,7 +76,7 @@ export function SectionSync({ editor, permissions, objectId, folded }: SectionPr
       setFeedback('Identifiant externe enregistré.');
     } catch (error) {
       setModal(null);
-      setFeedback(error instanceof Error ? error.message : "Enregistrement impossible.");
+      setFeedback(strictErrorMessage(error, "Enregistrement impossible."));
     }
   }
 
@@ -88,7 +89,7 @@ export function SectionSync({ editor, permissions, objectId, folded }: SectionPr
       setFeedback('Identifiant externe supprimé.');
     } catch (error) {
       setPendingDelete(null);
-      setFeedback(error instanceof Error ? error.message : 'Suppression impossible.');
+      setFeedback(strictErrorMessage(error, 'Suppression impossible.'));
     }
   }
 

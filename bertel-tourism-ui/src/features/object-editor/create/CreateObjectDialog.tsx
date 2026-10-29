@@ -46,6 +46,7 @@ import {
   accommodationFamilyDescription,
   accommodationNatureDescription,
 } from '../../../utils/accommodation-help';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 interface CreateObjectDialogProps {
   open: boolean;
@@ -401,7 +402,7 @@ export function CreateObjectDialog({ open, onClose, onCreated, onOpenExisting }:
     try {
       id = await createObject({ type: effectiveType, name: name.trim() });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Création impossible pour le moment.');
+      setError(strictErrorMessage(err, 'Création impossible pour le moment.'));
       setBusy(false);
       return;
     }

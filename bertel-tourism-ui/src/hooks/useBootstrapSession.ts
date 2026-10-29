@@ -8,6 +8,7 @@ import type { UserRole } from '../types/domain';
 import { isSandboxMode } from '../lib/sandbox-mode';
 import { leaveSandbox } from '../services/sandbox';
 import { clearServiceAvailabilityForSessionTransition } from '../services/service-availability';
+import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -129,20 +130,6 @@ function normalizeRole(value: unknown): UserRole | null {
   return value === 'super_admin' || value === 'tourism_agent' || value === 'owner' || value === 'actor'
     ? value
     : null;
-}
-
-function initialsFromName(name: string): string {
-  const parts = name
-    .split(' ')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  if (parts.length === 0) {
-    return '--';
-  }
-
-  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
 export function useBootstrapSession() {

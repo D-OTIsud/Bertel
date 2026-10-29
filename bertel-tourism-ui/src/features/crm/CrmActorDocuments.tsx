@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, ExternalLink, FileText, Trash2, Upload } from 'lucide-react';
 import {
@@ -18,6 +18,7 @@ import { CRM_DOCUMENT_ACCEPT } from '../../services/document-accept';
 import { useSupabaseAccessToken } from '../../hooks/useSupabaseAccessToken';
 import { CRM_READ_ONLY_REASON, formatDocumentSize, formatShort } from './crm-view-utils';
 import { CrmModal } from './CrmModal';
+import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 
 interface LinkedObjectOption {
   objectId: string;
@@ -133,6 +134,13 @@ export function CrmActorDocuments({
   const [promotion, setPromotion] = useState<PromotionDraft | null>(null);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
+  const [deletion, setDeletion] = useState<{
+    actorId: string; documentId: string; title: string;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteInFlight = useRef(false);
+  const documentsRef = useRef<HTMLElement>(null);
+  const deleteFocus = useRef<{ opener: HTMLButtonElement; actorId: string; host: HTMLElement | null } | null>(null);
 
   const supportQuery = useQuery({
     queryKey: ['crm-actor-support', actorId],
@@ -146,11 +154,15 @@ export function CrmActorDocuments({
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['crm-actor-support', actorId] });
 
   const deleteMutation = useMutation({
-    mutationFn: async (documentId: string) => {
-      if (!accessToken) throw new Error('Session expirée.');
-      await deleteActorDocument({ actorId, documentId, accessToken });
+    mutationFn: async (input: { actorId: string; documentId: string; accessToken: string }) => {
+      await deleteActorDocument(input);
     },
-    onSuccess: () => void refresh(),
+    onSuccess: (_result, input) => {
+      setDeletion((current) => current?.actorId === input.actorId && current.documentId === input.documentId ? null : current);
+      void queryClient.invalidateQueries({ queryKey: ['crm-actor-support', input.actorId] });
+    },
+    onError: (error) => setDeleteError(errorMessage(error)),
+    onSettled: () => { deleteInFlight.current = false; },
   });
 
   const promoteMutation = useMutation({
@@ -190,16 +202,50 @@ export function CrmActorDocuments({
   }
 
   const documents = supportQuery.data?.documents ?? [];
+  // Read the latest owner, session and query at the final click, never the snapshot
+  // that opened the confirmation. Mutation variables then keep that owner stable.
+  const deleteContext = useRef({ actorId, accessToken, canWrite, documents });
+  deleteContext.current = { actorId, accessToken, canWrite, documents };
+  function confirmDeletion() {
+    if (!deletion || deleteInFlight.current) return;
+    const current = deleteContext.current;
+    if (current.actorId !== deletion.actorId || !current.documents.some((document) => document.documentId === deletion.documentId && document.status === 'active')) {
+      setDeleteError('Ce document n’est plus disponible pour la suppression. Fermez cette confirmation et actualisez la liste.');
+      return;
+    }
+    if (!current.canWrite) { setDeleteError(CRM_READ_ONLY_REASON); return; }
+    if (!current.accessToken) { setDeleteError('Session expirée. Reconnectez-vous pour supprimer ce document.'); return; }
+    deleteInFlight.current = true;
+    setDeleteError(null);
+    deleteMutation.mutate({ actorId: deletion.actorId, documentId: deletion.documentId, accessToken: current.accessToken });
+  }
+
+  // The house Modal restores focus after its exit animation. If a refreshed row
+  // disappears later, recover again without stealing focus from another action.
+  useEffect(() => {
+    if (deletion || !deleteFocus.current) return;
+    const focus = deleteFocus.current;
+    const timer = window.setTimeout(() => {
+      const active = document.activeElement;
+      if (active !== document.body && active !== focus.opener && active !== focus.host) return;
+      if (focus.actorId === actorId && focus.opener.isConnected && !focus.opener.disabled) focus.opener.focus();
+      else {
+        const target = documentsRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])');
+        (target ?? documentsRef.current)?.focus();
+      }
+    }, 240);
+    return () => window.clearTimeout(timer);
+  }, [deletion, documents, actorId, canWrite, accessToken]);
   const documentTypes = documentTypesQuery.data ?? [];
   const selectedPromotionType = promotion?.roleCode || documentTypes[0]?.code || '';
   const canPromote = Boolean(
     promotion && promotion.objectId && selectedPromotionType && promotion.title.trim() && !promoteMutation.isPending,
   );
-  const mutationError = deleteMutation.error ?? promoteMutation.error;
+  const mutationError = deleteError ?? promoteMutation.error;
 
   return (
     <>
-      <section className="crm-panel crm-actor-docs" aria-labelledby="crm-actor-documents-title">
+      <section ref={documentsRef} tabIndex={-1} className="crm-panel crm-actor-docs" aria-labelledby="crm-actor-documents-title">
         <div className="crm-panel__head">
           <FileText size={15} aria-hidden />
           <h3 id="crm-actor-documents-title">Documents d&apos;accompagnement</h3>
@@ -272,10 +318,11 @@ export function CrmActorDocuments({
                           className="crm-btn sm crm-btn--danger-ghost"
                           disabled={!canWrite || deleteMutation.isPending}
                           aria-label={`Supprimer ${document.title}`}
-                          onClick={() => {
-                            if (window.confirm(`Supprimer définitivement « ${document.title} » ?`)) {
-                              deleteMutation.mutate(document.documentId);
-                            }
+                          onClick={(event) => {
+                            deleteFocus.current = { opener: event.currentTarget, actorId,
+                              host: event.currentTarget.closest<HTMLElement>('[role="dialog"][data-state="open"]') };
+                            setDeleteError(null);
+                            setDeletion({ actorId, documentId: document.documentId, title: document.title });
                           }}
                         >
                           <Trash2 size={11} aria-hidden />
@@ -288,10 +335,29 @@ export function CrmActorDocuments({
             </ul>
           )}
           {(openError || mutationError) && (
-            <div className="inline-alert" role="alert">{openError ?? errorMessage(mutationError)}</div>
+            <div className="inline-alert" role="alert">{openError ?? deleteError ?? errorMessage(mutationError)}</div>
           )}
         </div>
       </section>
+
+      {/* Portal events also bubble through custom CRM modals: keep their Escape
+          handler from closing the parent while the confirmation owns the key. */}
+      <div onKeyDown={(event) => { if (deletion) event.stopPropagation(); }}>
+        <ConfirmDialog
+          open={Boolean(deletion)}
+          appearance={deleteFocus.current?.host ? 'editor' : 'default'}
+          title="Supprimer le document"
+          message={<>
+            Supprimer « {deletion?.title} » ? Le fichier sera définitivement effacé.
+            {deleteError && <span className="inline-alert" role="alert">{deleteError}</span>}
+          </>}
+          confirmLabel="Supprimer"
+          tone="danger"
+          busy={deleteMutation.isPending}
+          onCancel={() => { if (!deleteInFlight.current) setDeletion(null); }}
+          onConfirm={confirmDeletion}
+        />
+      </div>
 
       {promotion && (
         <CrmModal

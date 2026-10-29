@@ -23,6 +23,7 @@ import { Check, Mail, MapPin, Phone, Plus, StickyNote } from 'lucide-react';
 import { listCrmAssignees, saveCrmInteraction, saveCrmTask } from '../../services/crm';
 import { useSessionStore } from '../../store/session-store';
 import { CRM_SENTIMENT_OPTIONS } from './crm-view-utils';
+import { dateInputOffset } from './crm-date-input';
 import { SearchMultiSelect, SearchSelect } from '../../components/ui/pickers';
 import { EditorModal } from '../object-editor/primitives/EditorModal';
 import './crm-editor-modal.css';
@@ -37,12 +38,6 @@ const COMPOSER_KINDS = [
 
 // Titre par défaut d'une relance quand aucun sujet n'est choisi (éditable).
 const DEFAULT_TASK_TITLE = 'Suivi de l’interaction';
-
-function dateInputOffset(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 export function CrmInteractionModal({
   actorId,

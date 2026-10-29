@@ -40,6 +40,14 @@ import { AddressBanCombobox } from '../object-editor/widgets/AddressBanCombobox'
 import { geocodeAddress, type GeocodeHit } from '../object-editor/widgets/geocode-address';
 import { useObjectSearch } from '../object-editor/useObjectSearch';
 import { CrmModal } from './CrmModal';
+import {
+  composeActorAddressValue as composeAddressValue,
+  composeDisplayName as composeActorDisplayName,
+  formatActorAddressFromHit as formatAddressFromHit,
+  parseActorAddressValue as parseAddressValue,
+  type StructuredActorAddress,
+} from './crm-actor-formatters';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /** kind_code des canaux qui sont des ADRESSES POSTALES (édités dans le bloc « Adresses », pas les canaux). */
 const ADDRESS_KIND = 'address';
@@ -50,40 +58,16 @@ function normChannelValue(value: string): string {
   return value.trim().toLowerCase();
 }
 
-interface StructuredActorAddress {
-  address1: string;
-  postcode: string;
-  city: string;
-}
-
-function compactAddressPart(value: string): string {
-  return value.replace(/\s+/g, ' ').trim();
-}
-
 export function formatActorAddressFromHit(hit: GeocodeHit): string {
-  return composeActorAddressValue({ address1: hit.name, postcode: hit.postcode, city: hit.city });
+  return formatAddressFromHit(hit);
 }
 
 export function parseActorAddressValue(value: string): StructuredActorAddress {
-  const compact = compactAddressPart(value);
-  if (!compact) {
-    return { address1: '', postcode: '', city: '' };
-  }
-  const match = compact.match(/^(.*?)(?:,\s*|\s+)(\d{5})\s+(.+)$/);
-  if (!match) {
-    return { address1: compact, postcode: '', city: '' };
-  }
-  return {
-    address1: compactAddressPart(match[1].replace(/,$/, '')),
-    postcode: match[2],
-    city: compactAddressPart(match[3]),
-  };
+  return parseAddressValue(value);
 }
 
 export function composeActorAddressValue(address: StructuredActorAddress): string {
-  const address1 = compactAddressPart(address.address1);
-  const cityLine = compactAddressPart([address.postcode, address.city].filter(Boolean).join(' '));
-  return [address1, cityLine].filter(Boolean).join(', ');
+  return composeAddressValue(address);
 }
 
 function isStructuredActorAddressValue(value: string): boolean {
@@ -118,7 +102,7 @@ const GENDER_OPTIONS: Array<{ value: string; label: string }> = [
  * le champ n'est PAS éditable directement (rendu en lecture seule comme aperçu).
  */
 export function composeDisplayName(gender: string, firstName: string, lastName: string): string {
-  return [gender.trim(), firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
+  return composeActorDisplayName(gender, firstName, lastName);
 }
 
 /**
@@ -833,7 +817,7 @@ export function CrmActorNewModal({
           await uploadActorPhoto(actorId, photoFile);
           sentPhotoRef.current = true;
         } catch (err) {
-          setPhotoError(err instanceof Error ? err.message : 'Échec du téléversement du portrait.');
+          setPhotoError(strictErrorMessage(err, 'Échec du téléversement du portrait.'));
         }
       }
       return actorId;

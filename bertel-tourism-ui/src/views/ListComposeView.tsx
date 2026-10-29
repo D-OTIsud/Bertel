@@ -33,6 +33,14 @@ import {
 import OtiTemplate, { itemsToOtiPois } from '@/features/lists/OtiTemplate';
 import type { OtiMapSnapshot } from '@/features/lists/oti-map-utils';
 import ChannelFrame from '@/features/lists/ChannelFrame';
+import {
+  buildDraftMetaPatch,
+  buildLanguageSwitchPatch,
+  currentListIntro,
+  currentListName,
+  listItemDraftSignature,
+  listItemsDiffer as itemsDiffer,
+} from '@/features/lists/compose/list-draft';
 import { Modal } from '@/components/common/Modal';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { CopyEmailsModal } from '@/components/explorer/CopyEmailsModal';
@@ -59,7 +67,6 @@ import {
   shareList,
   updateList,
   type ListAccent,
-  type ListPatch,
   type ListTemplate,
   type ObjectListDetail,
   type ObjectListItem,
@@ -91,14 +98,6 @@ const LIST_UNSAVED_LEAVE_MESSAGE =
  */
 const PROPOSAL_REVIEW_ONLY_TITLE =
   "Cette liste est une proposition en cours d'examen : l'impression, l'envoi, le partage et la duplication seront disponibles si elle est acceptée à la une.";
-
-/** Editable name/intro for the list's CURRENT composition language (A11Y-07 — name_en support). */
-function currentListName(detail: ObjectListDetail): string {
-  return detail.lang === 'en' ? (detail.nameEn ?? '') : detail.name;
-}
-function currentListIntro(detail: ObjectListDetail): string {
-  return detail.lang === 'en' ? (detail.introEn ?? '') : (detail.introFr ?? '');
-}
 
 /**
  * Bouton « E-mails » de la barre d'en-tête. Passe le `listId`, JAMAIS les ids
@@ -488,8 +487,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
   // parasite dès l'arrivée des données.
   const hydrated = detail != null && hydratedIdentityKey.current === currentIdentityKey;
   const dirtyItems = detail
-    ? JSON.stringify(items.map((i) => [i.objectId, i.noteFr, i.noteEn])) !==
-      JSON.stringify(detail.items.map((i) => [i.objectId, i.noteFr, i.noteEn]))
+    ? listItemDraftSignature(items) !== listItemDraftSignature(detail.items)
     : false;
   const dirtyMeta = detail
     ? name !== currentListName(detail) ||
@@ -632,12 +630,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
         if (!isDynamic && outgoingDirtyItems) {
           await saveItems.mutateAsync(snapshotItems);
         }
-        const patch: ListPatch = { lang: l };
-        const outgoingName = currentListName(outgoing);
-        const outgoingIntro = currentListIntro(outgoing);
-        if (snapshotName !== outgoingName) patch[outgoing.lang === 'en' ? 'name_en' : 'name'] = snapshotName;
-        if (snapshotIntro !== outgoingIntro) patch[outgoing.lang === 'en' ? 'intro_en' : 'intro_fr'] = snapshotIntro;
-        if (snapshotRecipient !== (outgoing.recipientLabel ?? '')) patch.recipient_label = snapshotRecipient;
+        const patch = buildLanguageSwitchPatch(outgoing, l, snapshotName, snapshotIntro, snapshotRecipient);
         return updateMeta.mutateAsync(patch);
       });
       if (!fresh) return;
@@ -673,9 +666,6 @@ export default function ListComposeView({ listId }: { listId: string }) {
     const snapshotItems = items;
     const snapshotTemplate = template;
     const fallbackDetail = detail as ObjectListDetail;
-    const itemsDiffer = (a: ObjectListItem[], b: ObjectListItem[]) =>
-      JSON.stringify(a.map((i) => [i.objectId, i.noteFr, i.noteEn])) !==
-      JSON.stringify(b.map((i) => [i.objectId, i.noteFr, i.noteEn]));
     return enqueueSave(async () => {
       const base = queryClient.getQueryData<ObjectListDetail>(listKey) ?? fallbackDetail;
       const baseName = currentListName(base);
@@ -689,11 +679,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
           (!isDynamic && itemsDiffer(snapshotItems, base.items))
         );
       }
-      const metaPatch: ListPatch = {};
-      if (snapshotName !== baseName) metaPatch[base.lang === 'en' ? 'name_en' : 'name'] = snapshotName;
-      if (snapshotRecipient !== (base.recipientLabel ?? '')) metaPatch.recipient_label = snapshotRecipient;
-      if (snapshotIntro !== baseIntro) metaPatch[base.lang === 'en' ? 'intro_en' : 'intro_fr'] = snapshotIntro;
-      if (snapshotTemplate !== base.template) metaPatch.template = snapshotTemplate;
+      const metaPatch = buildDraftMetaPatch(base, baseName, baseIntro, snapshotName, snapshotRecipient, snapshotIntro, snapshotTemplate);
       if (Object.keys(metaPatch).length > 0) await updateMeta.mutateAsync(metaPatch);
       const afterMeta = queryClient.getQueryData<ObjectListDetail>(listKey) ?? base;
       if (!isDynamic && itemsDiffer(snapshotItems, afterMeta.items)) await saveItems.mutateAsync(snapshotItems);

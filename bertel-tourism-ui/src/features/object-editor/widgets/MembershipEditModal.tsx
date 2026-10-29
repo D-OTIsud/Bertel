@@ -8,6 +8,7 @@ import type {
 } from '../../../services/object-workspace-parser';
 import { applyMembershipPatch, buildNewMembership } from '../sections/membership-edit';
 import './catalog-modals.css';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 const STATUSES = [
   { code: 'prospect', label: 'Prospect' },
@@ -146,7 +147,7 @@ export function MembershipEditModal({
           : { tierCode: created.code, tierId: created.id, tierLabel: created.label },
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Création impossible.');
+      setError(strictErrorMessage(e, 'Création impossible.'));
     } finally {
       setBusy(false);
     }

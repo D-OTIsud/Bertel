@@ -4,6 +4,7 @@ import { Input } from '../primitives';
 import { tagChipStyle } from '../../../utils/explorer-card';
 import { createWorkspaceTag } from '../../../services/object-workspace';
 import type { ObjectWorkspaceTagItem } from '../../../services/object-workspace-parser';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 /**
  * Curated, on-brand hue anchors (hex). Deliberately muted, not neon: each renders through
@@ -124,7 +125,7 @@ export function TagPickerModal({
       onAdd(created);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Création impossible.');
+      setError(strictErrorMessage(e, 'Création impossible.'));
     } finally {
       setBusy(false);
     }

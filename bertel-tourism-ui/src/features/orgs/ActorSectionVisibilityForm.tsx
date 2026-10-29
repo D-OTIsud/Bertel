@@ -29,6 +29,7 @@ import {
 import { PORTAL_RUBRICS, resolvePortalArchetype } from '../portal/portal-rubrics';
 import { TYPE_ARCHETYPES, TYPE_LABEL } from '../object-editor/archetypes';
 import { SkeletonBlock } from '../../components/common/SkeletonBlock';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Les types de fiche qu'un partenaire peut se voir confier — ceux, et seulement ceux, pour
@@ -71,7 +72,7 @@ export function ActorSectionVisibilityForm({ orgId }: { orgId: string }) {
       // afficherait un réglage que la fiche du partenaire n'a pas encore.
       queryClient.invalidateQueries({ queryKey: actorVisibilityKeys.matrix(orgId, objectType) }),
     onError: (err: unknown) =>
-      setError(err instanceof Error ? err.message : 'Le réglage n’a pas pu être enregistré.'),
+      setError(strictErrorMessage(err, 'Le réglage n’a pas pu être enregistré.')),
   });
 
   return (

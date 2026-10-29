@@ -30,6 +30,7 @@ import { MemberProfileModal } from '@/features/team/MemberProfileModal';
 import { businessRoleLabel, reviewRoleChange } from '@/features/team/permission-presets';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ShieldCheck } from 'lucide-react';
+import { strictErrorMessage } from '../lib/strict-error-message';
 
 export default function TeamAdminPage() {
   const role = useSessionStore((s) => s.role);
@@ -87,7 +88,7 @@ export default function TeamAdminPage() {
     if (!effectiveOrgId) { setLoading(false); return; }
     setLoading(true);
     try { setMembers(await listOrgMembers(effectiveOrgId)); setError(null); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
+    catch (e) { setError(strictErrorMessage(e, 'Erreur de chargement')); }
     finally { setLoading(false); }
     // Recharge la matrice rôle → permissions : le tiroir d'un membre en dépend pour dire
     // quels droits lui viennent de son rôle.

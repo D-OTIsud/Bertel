@@ -24,6 +24,7 @@ import { ExplorerBridgeButton } from '../dashboard/ExplorerBridgeButton';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { ExplorerFilterPopover } from './ExplorerFilterPopover';
 import './explorer-active-filters.css';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Barre de filtres actifs de l'Explorateur (impl. 3.2) : une pastille retirable
@@ -125,7 +126,7 @@ export function ExplorerActiveFilters({
       void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(orgId, userId) });
       router.push(`/listes/${id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Création de la liste dynamique impossible.');
+      toast.error(strictErrorMessage(e, 'Création de la liste dynamique impossible.'));
     } finally {
       setSavingDynamic(false);
     }

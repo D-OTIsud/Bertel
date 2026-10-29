@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../../components/ui/dialog';
 import { Field, Input } from '../primitives';
 import { requestObjectDeletion } from '../../../services/object-delete';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 /** Pure : le bouton destructeur n'est actif que si le texte saisi == nom de la fiche (trim, non vide). */
 export function deleteConfirmEnabled(typed: string, name: string): boolean {
@@ -37,7 +38,7 @@ export function DeleteObjectModal({ open, objectId, objectName, accessToken, onC
       reset();
       onDeleted();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Suppression impossible.');
+      setError(strictErrorMessage(e, 'Suppression impossible.'));
       setPending(false);
     }
   }

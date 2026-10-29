@@ -16,6 +16,7 @@ import { MAX_PRINT_SELECTION, preloadImages, selectionDetailToOtiPoi } from './s
 import { CopyEmailsModal } from './CopyEmailsModal';
 import { canCreateLists } from '../../store/session-selectors';
 import { cn } from '@/lib/utils';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 /**
  * Floating selection bar over the map (and the liste/table views).
@@ -62,7 +63,7 @@ export function SelectionBar() {
       void queryClient.invalidateQueries({ queryKey: listsQueryKeys.myLists(orgId, userId) });
       router.push(`/listes/${id}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Création de la liste impossible.');
+      toast.error(strictErrorMessage(e, 'Création de la liste impossible.'));
     } finally {
       setCreating(false);
     }

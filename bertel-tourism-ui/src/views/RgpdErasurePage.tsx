@@ -28,6 +28,7 @@ import {
   type ErasureMode,
   type ErasureResult,
 } from '@/services/rgpd';
+import { strictErrorMessage } from '../lib/strict-error-message';
 
 interface DoneState {
   result: ErasureResult;
@@ -108,7 +109,7 @@ export default function RgpdErasurePage() {
         toast.warning("Effacement enregistré, nettoyage incomplet — voir le rapport ci-dessous.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Échec de l'effacement.");
+      toast.error(strictErrorMessage(err, "Échec de l'effacement."));
     } finally {
       setBusy(false);
       setPendingConfirm(false);
@@ -133,7 +134,7 @@ export default function RgpdErasurePage() {
         toast.warning('Nettoyage repris — toujours incomplet, voir le rapport.');
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Échec de la reprise.');
+      toast.error(strictErrorMessage(err, 'Échec de la reprise.'));
     } finally {
       setResuming(false);
     }

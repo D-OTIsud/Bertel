@@ -73,6 +73,7 @@ import {
 } from '@/services/lists';
 import { CoverImage } from '@/features/lists/CoverImage';
 import { cn } from '@/lib/utils';
+import { strictErrorMessage } from '../lib/strict-error-message';
 
 type Channel = 'email' | 'pdf' | 'web';
 const TEMPLATES: Array<{ k: ListTemplate; label: string }> = [
@@ -320,7 +321,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
     // MET-03 — un refus réseau/autorisation doit rester visible : la valeur locale reste
     // affichée (write-trap sinon), mais l'utilisateur doit savoir qu'elle n'est PAS enregistrée.
     onError: (e) =>
-      setErrorMessage(e instanceof Error ? e.message : "Échec de l'enregistrement. Vos modifications sont conservées ici ; réessayez."),
+      setErrorMessage(strictErrorMessage(e, "Échec de l'enregistrement. Vos modifications sont conservées ici ; réessayez.")),
   });
   const saveItems = useMutation({
     // La liste à persister est passée en argument (pas lue de la closure) : l'auto-save
@@ -348,7 +349,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       }
     },
     onError: (e) =>
-      setErrorMessage(e instanceof Error ? e.message : 'Enregistrement des lieux impossible. Réessayez.'),
+      setErrorMessage(strictErrorMessage(e, 'Enregistrement des lieux impossible. Réessayez.')),
   });
   // Active/désactive le lien public. La réponse porte déjà le token : patch synchrone du
   // cache pour que le modal affiche le lien sans attendre un refetch.
@@ -362,7 +363,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       );
       invalidateGrids();
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Partage impossible. Réessayez.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Partage impossible. Réessayez.')),
   });
   // Membre non-éditeur : génère/réutilise le lien SANS pouvoir forcer sa réactivation (contrat
   // `ensure_list_share_link` — §listes 2026-09-07). Mêmes effets de cache que `share`.
@@ -376,7 +377,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       );
       invalidateGrids();
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Partage indisponible. Réessayez.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Partage indisponible. Réessayez.')),
   });
   // Une action de cycle de vie peut faire perdre l'accès en lecture à l'appelant (refus d'une
   // proposition qu'il examinait, retrait d'une liste à la une qu'il ne possédait pas) : le RPC
@@ -396,19 +397,19 @@ export default function ListComposeView({ listId }: { listId: string }) {
       if (fresh) queryClient.setQueryData(listKey, fresh);
       invalidateGrids();
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Proposition à la une impossible.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Proposition à la une impossible.')),
   });
   const toggleFeatured = useMutation({
     mutationFn: (featured: boolean) => setListFeatured(listId, featured),
     onSuccess: applyLifecycleResult,
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Mise à la une impossible.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Mise à la une impossible.')),
   });
   // Proposition d'UN COLLÈGUE en attente : `set_list_featured(true)` est refusé par la base pour
   // une liste qui n'appartient pas à l'admin (elle n'accepte que review_list_feature).
   const review = useMutation({
     mutationFn: (accept: boolean) => reviewListFeature(listId, accept),
     onSuccess: applyLifecycleResult,
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Traitement de la proposition impossible.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Traitement de la proposition impossible.')),
   });
   const restore = useMutation({
     mutationFn: () => restoreList(listId),
@@ -416,7 +417,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       if (fresh) queryClient.setQueryData(listKey, fresh);
       void queryClient.invalidateQueries({ queryKey: myListsKey });
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Restauration impossible.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Restauration impossible.')),
   });
   const duplicate = useMutation({
     mutationFn: () => duplicateList(listId),
@@ -424,7 +425,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       void queryClient.invalidateQueries({ queryKey: myListsKey });
       router.push(`/listes/${newId}`);
     },
-    onError: (e) => setErrorMessage(e instanceof Error ? e.message : 'Duplication impossible.'),
+    onError: (e) => setErrorMessage(strictErrorMessage(e, 'Duplication impossible.')),
   });
   const remove = useMutation({
     mutationFn: (target: { id: string; identity: string }) => deleteList(target.id),
@@ -434,7 +435,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       router.push('/listes');
     },
     onError: (e, target) => {
-      if (isCurrentDeleteIdentity(target)) setErrorMessage(e instanceof Error ? e.message : 'Suppression impossible. Réessayez.');
+      if (isCurrentDeleteIdentity(target)) setErrorMessage(strictErrorMessage(e, 'Suppression impossible. Réessayez.'));
     },
   });
 
@@ -467,7 +468,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       });
     } catch (error) {
       if (isCurrentDeleteIdentity(target)) {
-        setDeleteError(error instanceof Error ? error.message : 'Suppression impossible. Réessayez.');
+        setDeleteError(strictErrorMessage(error, 'Suppression impossible. Réessayez.'));
       }
     } finally {
       setDeleting(false);
@@ -638,7 +639,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       setName(currentListName(fresh));
       setIntro(currentListIntro(fresh));
     } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : 'Échec du changement de langue. Réessayez.');
+      setErrorMessage(strictErrorMessage(e, 'Échec du changement de langue. Réessayez.'));
     } finally {
       setLangSwitching(false);
       actionLockRef.current = false;
@@ -721,7 +722,7 @@ export default function ListComposeView({ listId }: { listId: string }) {
       );
     } catch (e) {
       setErrorMessage(
-        e instanceof Error ? e.message : "Échec de l'envoi. Vos modifications restent affichées ici ; réessayez.",
+        strictErrorMessage(e, "Échec de l'envoi. Vos modifications restent affichées ici ; réessayez."),
       );
     } finally {
       setSending(false);

@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { getOrgBranding, saveOrgBranding, type OrgBrandingRaw } from '@/services/branding';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 const EMPTY_RAW: OrgBrandingRaw = {
   brandName: null, logoStoragePath: null, logoPublicUrl: null, logoMimeType: null,
@@ -33,7 +34,7 @@ export function OrgBrandingForm({ orgId, onSaved }: { orgId: string; onSaved?: (
     try {
       const snap = await getOrgBranding(orgId);
       setRaw(snap.raw); setResolved(snap.resolved); setError(null);
-    } catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
+    } catch (e) { setError(strictErrorMessage(e, 'Erreur de chargement')); }
   }, [orgId]);
   useEffect(() => { void reload(); }, [reload]);
 
@@ -50,7 +51,7 @@ export function OrgBrandingForm({ orgId, onSaved }: { orgId: string; onSaved?: (
       toast.success(reset ? 'Thème de l’organisation réinitialisé.' : 'Branding de l’organisation enregistré.');
       onSaved?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Enregistrement impossible.');
+      toast.error(strictErrorMessage(e, 'Enregistrement impossible.'));
     } finally { setBusy(false); setConfirmReset(false); }
   }
 

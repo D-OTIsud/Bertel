@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 import { translateWithAi, type AiTranslationInput } from '../../services/ai-translate';
 import { useServiceAvailability } from '../../hooks/useServiceAvailability';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 export interface AiTranslateButtonProps extends AiTranslationInput {
   existingValues?: Record<string, string>;
@@ -64,7 +65,7 @@ function TranslationAction({
       const translations = await translateWithAi({ objectId, sourceLanguage, targetLanguage, fields: selectedFields }, controller.signal);
       if (!controller.signal.aborted) onResult.current(translations);
     } catch (cause) {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'La traduction a échoué. Réessayez.');
+      if (!controller.signal.aborted) setError(strictErrorMessage(cause, 'La traduction a échoué. Réessayez.'));
     } finally {
       if (!controller.signal.aborted) {
         request.current = null;

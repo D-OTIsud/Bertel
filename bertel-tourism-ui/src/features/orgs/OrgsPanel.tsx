@@ -7,6 +7,7 @@ import { listOrgs, type OrgSummary } from '../../services/orgs';
 import { CreateOrgDialog } from './CreateOrgDialog';
 import { Modal } from '@/components/common/Modal';
 import { OrgBrandingForm } from './OrgBrandingForm';
+import { strictErrorMessage } from '../../lib/strict-error-message';
 
 const SCOPE_LABEL: Record<string, string> = {
   own_objects_only: 'Ses fiches uniquement',
@@ -25,7 +26,7 @@ export function OrgsPanel() {
   const reload = useCallback(async () => {
     setLoading(true);
     try { setOrgs(await listOrgs()); setError(null); }
-    catch (e) { setError(e instanceof Error ? e.message : 'Erreur de chargement'); }
+    catch (e) { setError(strictErrorMessage(e, 'Erreur de chargement')); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void reload(); }, [reload]);

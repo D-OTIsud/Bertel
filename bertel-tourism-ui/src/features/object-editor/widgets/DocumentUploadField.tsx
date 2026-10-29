@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Field } from '../primitives';
 import { uploadDocument, type UploadedDocument } from '../../../services/document-upload';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 interface Props {
   objectId: string;
@@ -33,7 +34,7 @@ export function DocumentUploadField({ objectId, accessToken, onUploaded }: Props
       onUploaded(result);
       setStatus('idle');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Échec du téléversement.');
+      setError(strictErrorMessage(err, 'Échec du téléversement.'));
       setStatus('error');
     }
   }

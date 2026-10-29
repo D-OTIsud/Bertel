@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { enterSandbox, leaveSandbox } from '@/services/sandbox';
+import { strictErrorMessage } from '../lib/strict-error-message';
 
 export default function SandboxEntryPage() {
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +15,7 @@ export default function SandboxEntryPage() {
       // Recharge les clients et caches avec le stockage dédié au test.
       if (!cancelled) window.location.replace('/explorer');
     }).catch((cause: unknown) => {
-      if (!cancelled) setError(cause instanceof Error ? cause.message : 'Connexion au test impossible.');
+      if (!cancelled) setError(strictErrorMessage(cause, 'Connexion au test impossible.'));
     });
     return () => { cancelled = true; };
   }, [attempt]);

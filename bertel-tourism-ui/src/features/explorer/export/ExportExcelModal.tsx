@@ -15,6 +15,7 @@ import {
 import { runSelectionXlsxExport } from '../../../services/export/export-workbook';
 import { fetchActorExportCapabilities } from '../../../services/export/export-actor-contacts';
 import { cn } from '@/lib/utils';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 /**
  * §208 — modale de l'export Excel de la sélection. L'offre de colonnes est
@@ -161,7 +162,7 @@ export function ExportExcelModal({ open, onOpenChange }: { open: boolean; onOpen
       onOpenChange(false);
     } catch (error) {
       if (!controller.signal.aborted) {
-        toast.error(error instanceof Error ? error.message : "L'export a échoué.");
+        toast.error(strictErrorMessage(error, "L'export a échoué."));
       }
     } finally {
       abortRef.current = null;

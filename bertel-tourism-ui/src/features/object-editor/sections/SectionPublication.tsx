@@ -7,6 +7,7 @@ import { useSetObjectStatusMutation } from '../../../hooks/useExplorerQueries';
 import { getApiClient } from '../../../lib/supabase';
 import { DeleteObjectModal } from '../widgets/DeleteObjectModal';
 import { computeStatusActions, STATUS_ACTION_CONFIRM, type StatusAction, type StatusActionKind } from './status-actions';
+import { strictErrorMessage } from '../../../lib/strict-error-message';
 
 const VISIBILITY_OPTIONS = [
   { v: 'active', l: 'Complète' },
@@ -75,7 +76,7 @@ export function SectionPublication({ editor, permissions, objectId, archetype, f
       await setStatus.mutateAsync(target);
       editor.setSavedStatus(target);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Changement de statut impossible.');
+      setError(strictErrorMessage(e, 'Changement de statut impossible.'));
     }
   }
 

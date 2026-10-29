@@ -2,6 +2,7 @@
 // (spec docs/superpowers/specs/2026-06-11-crm-module-design.md). Les tables crm_* ne sont
 // PAS lisibles en PostgREST direct : ne jamais ajouter de client.from('crm_...') ici.
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
+import { readNullableString } from '../lib/json-read';
 import { pingNotifyDrain } from './notification-delivery';
 import { useSessionStore } from '../store/session-store';
 import { mockCrmDirectory, mockCrmTasks, mockCrmTimeline } from '../data/mock';
@@ -29,10 +30,6 @@ type GenericRecord = Record<string, unknown>;
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value : '';
-}
-
-function readNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 /**

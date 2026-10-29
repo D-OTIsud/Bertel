@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CrmTaskModal } from './CrmTaskModal';
@@ -34,17 +34,19 @@ const mockedSave = jest.mocked(saveCrmTask);
 
 function renderModal(props: Partial<React.ComponentProps<typeof CrmTaskModal>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const content = (overrides = props) => (
     <QueryClientProvider client={client}>
       <CrmTaskModal
         picker="select"
         objectOptions={[{ objectId: 'OBJ1', objectName: 'Hôtel Test' }]}
         onClose={jest.fn()}
         onSaved={jest.fn()}
-        {...props}
+        {...overrides}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(content());
+  return { ...result, rerenderModal: (overrides: typeof props) => result.rerender(content({ ...props, ...overrides })) };
 }
 
 async function openAttachments() {
@@ -183,11 +185,15 @@ describe('CrmTaskModal — pièces jointes', () => {
   it('édition : liste les documents et supprime avec confirmation', async () => {
     const onSaved = jest.fn();
     const onClose = jest.fn();
-    window.confirm = jest.fn().mockReturnValue(true);
     renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
     await openAttachments();
     expect(screen.getByText('Devis.pdf')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    const confirmation = screen.getByRole('dialog', { name: 'Supprimer le document' });
+    expect(confirmation).toHaveTextContent('Supprimer « Devis.pdf » ? Le fichier sera définitivement effacé.');
+    expect(within(confirmation).getByRole('button', { name: 'Annuler' })).toHaveFocus();
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+    await userEvent.click(within(confirmation).getByRole('button', { name: 'Supprimer' }));
     await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalledWith({
       taskId: 't-9', documentId: 'd-1', accessToken: 'token-test',
     }));
@@ -200,11 +206,117 @@ describe('CrmTaskModal — pièces jointes', () => {
   });
 
   it('édition : suppression refusée à la confirmation → aucun appel', async () => {
-    window.confirm = jest.fn().mockReturnValue(false);
-    renderModal({ task: taskWithDoc, objectOptions: [] });
+    const onClose = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onClose });
+    await openAttachments();
+    const opener = screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' });
+    await userEvent.click(opener);
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Supprimer le document' })).getByRole('button', { name: 'Annuler' }));
+    await waitFor(() => expect(opener).toHaveFocus());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+  });
+
+  it('Escape ferme seulement la confirmation, conserve le brouillon et restaure le focus', async () => {
+    const onClose = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onClose });
+    await userEvent.type(screen.getByLabelText('Titre de la tâche'), ' modifié');
+    await openAttachments();
+    const opener = screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' });
+    await userEvent.click(opener);
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Supprimer le document' })).not.toBeInTheDocument());
+    expect(opener).toHaveFocus();
+    expect(screen.getByLabelText('Titre de la tâche')).toHaveValue('Titre initial modifié');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+  });
+
+  it('un clic sur le fond ferme seulement la confirmation, conserve la tâche et son brouillon', async () => {
+    const onClose = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onClose });
+    await userEvent.type(screen.getByLabelText('Titre de la tâche'), ' modifié');
+    await openAttachments();
+    const opener = screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' });
+    await userEvent.click(opener);
+    const confirmation = screen.getByRole('dialog', { name: 'Supprimer le document' });
+    await userEvent.click(confirmation.previousElementSibling!);
+    await waitFor(() => expect(opener).toHaveFocus());
+    expect(screen.getByLabelText('Titre de la tâche')).toHaveValue('Titre initial modifié');
+    expect(onClose).not.toHaveBeenCalled();
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+  });
+
+  it('conserve l’identifiant choisi après réordonnancement des pièces jointes', async () => {
+    const otherDocument = { ...taskWithDoc.documents[0], id: 'd-other', title: 'Plan.pdf' };
+    const { rerenderModal } = renderModal({ task: { ...taskWithDoc, documents: [...taskWithDoc.documents, otherDocument] }, objectOptions: [] });
+    await openAttachments();
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Plan.pdf »' }));
+    rerenderModal({ task: { ...taskWithDoc, documents: [otherDocument, ...taskWithDoc.documents] } });
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Supprimer le document' })).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(deleteTaskDocument).toHaveBeenCalledWith({ taskId: 't-9', documentId: 'd-other', accessToken: 'token-test' }));
+    expect(deleteTaskDocument).toHaveBeenCalledTimes(1);
+  });
+
+  it('revalide le jeton puis permet de réessayer avec le jeton courant', async () => {
+    const { rerenderModal } = renderModal({ task: taskWithDoc, objectOptions: [] });
     await openAttachments();
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    mockAccessToken.mockReturnValue(null);
+    rerenderModal({});
+    const confirmation = screen.getByRole('dialog', { name: 'Supprimer le document' });
+    await userEvent.click(within(confirmation).getByRole('button', { name: 'Supprimer' }));
+    expect(within(confirmation).getByRole('alert')).toHaveTextContent('Session expirée');
     expect(deleteTaskDocument).not.toHaveBeenCalled();
+    mockAccessToken.mockReturnValue('token-renouvelé');
+    rerenderModal({});
+    await userEvent.click(within(confirmation).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(deleteTaskDocument).toHaveBeenCalledWith({ taskId: 't-9', documentId: 'd-1', accessToken: 'token-renouvelé' }));
+  });
+
+  it.each(['owner', 'document'] as const)('refuse une cible obsolète après changement de %s', async (change) => {
+    const { rerenderModal } = renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    rerenderModal({ task: change === 'owner' ? { ...taskWithDoc, id: 't-other' } : { ...taskWithDoc, documents: [] } });
+    const confirmation = screen.getByRole('dialog', { name: 'Supprimer le document' });
+    await userEvent.click(within(confirmation).getByRole('button', { name: 'Supprimer' }));
+    expect(within(confirmation).getByRole('alert')).toHaveTextContent('n’est plus disponible');
+    expect(deleteTaskDocument).not.toHaveBeenCalled();
+  });
+
+  it('garde l’erreur visible, réessaie la même cible et bloque deux activations synchrones', async () => {
+    let resolveDelete!: () => void;
+    jest.mocked(deleteTaskDocument).mockRejectedValueOnce(new Error('Suppression refusée'))
+      .mockImplementationOnce(() => new Promise<void>((resolve) => { resolveDelete = resolve; }));
+    const onSaved = jest.fn();
+    const onClose = jest.fn();
+    renderModal({ task: taskWithDoc, objectOptions: [], onSaved, onClose });
+    await openAttachments();
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    const confirmation = screen.getByRole('dialog', { name: 'Supprimer le document' });
+    const confirm = within(confirmation).getByRole('button', { name: 'Supprimer' });
+    await userEvent.click(confirm);
+    expect(await within(confirmation).findByRole('alert')).toHaveTextContent('Suppression refusée');
+    expect(onSaved).not.toHaveBeenCalled();
+    act(() => { fireEvent.click(confirm); fireEvent.click(confirm); });
+    await waitFor(() => expect(deleteTaskDocument).toHaveBeenCalledTimes(2));
+    expect(confirm).toHaveAttribute('aria-disabled', 'true');
+    expect(onSaved).not.toHaveBeenCalled();
+    await act(async () => resolveDelete());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(jest.mocked(deleteTaskDocument).mock.calls.every(([input]) => input.documentId === 'd-1' && input.taskId === 't-9')).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('après rafraîchissement supprimant la ligne, le focus reste sur une action voisine', async () => {
+    const { rerenderModal } = renderModal({ task: taskWithDoc, objectOptions: [] });
+    await openAttachments();
+    await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Supprimer le document' })).getByRole('button', { name: 'Supprimer' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Supprimer le document' })).not.toBeInTheDocument());
+    rerenderModal({ task: { ...taskWithDoc, documents: [] } });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Ajouter un document' })).toHaveFocus());
   });
 
   it('édition : upload un fichier choisi', async () => {
@@ -243,7 +355,6 @@ describe('CrmTaskModal — pièces jointes', () => {
   // puis une suppression réussie, et vérifier que la bannière d'erreur a disparu.
   it('séquence upload échoué puis suppression réussie → la bannière d’erreur disparaît', async () => {
     jest.mocked(uploadTaskDocument).mockRejectedValueOnce(new Error('Fichier trop volumineux'));
-    window.confirm = jest.fn().mockReturnValue(true);
     renderModal({ task: taskWithDoc, objectOptions: [] });
     await openAttachments();
 
@@ -252,6 +363,7 @@ describe('CrmTaskModal — pièces jointes', () => {
     expect(await screen.findByText('Fichier trop volumineux')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Supprimer « Devis.pdf »' }));
+    await userEvent.click(within(screen.getByRole('dialog', { name: 'Supprimer le document' })).getByRole('button', { name: 'Supprimer' }));
     await waitFor(() => expect(jest.mocked(deleteTaskDocument)).toHaveBeenCalled());
 
     expect(screen.queryByText('Fichier trop volumineux')).not.toBeInTheDocument();

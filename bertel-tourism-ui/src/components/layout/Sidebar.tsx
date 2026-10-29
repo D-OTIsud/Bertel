@@ -9,22 +9,13 @@ import { listPendingChanges } from '../../services/rpc';
 import { useSessionStore } from '../../store/session-store';
 import { useThemeStore } from '../../store/theme-store';
 import { cn } from '@/lib/utils';
+import { shellAvatarInitials as initialsFromName } from '../../utils/avatar-initials';
 
 function isActivePath(pathname: string | null, target: string): boolean {
   if (!pathname) {
     return false;
   }
   return pathname === target || pathname.startsWith(`${target}/`);
-}
-
-function initialsFromName(value: string | null | undefined): string {
-  const parts = String(value ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2);
-  if (parts.length === 0) return 'BT';
-  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
 interface SidebarProps {

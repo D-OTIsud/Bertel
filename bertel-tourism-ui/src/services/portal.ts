@@ -18,18 +18,11 @@
  * disent systématiquement si quelque chose a été perdu.
  */
 import { getApiClient } from '../lib/supabase';
+import { readStrictString as readString, readNullableString } from '../lib/json-read';
 import { mapDatabaseError } from './api-error';
 import type { SubmitPendingChangeInput } from './moderation';
 
 type GenericRecord = Record<string, unknown>;
-
-function readString(value: unknown, fallback = ''): string {
-  return typeof value === 'string' ? value : fallback;
-}
-
-function readNullableString(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null;
-}
 
 function readRecord(value: unknown): GenericRecord | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as GenericRecord) : null;

@@ -1,0 +1,346 @@
+/* Modal/drawer MAISON générique (remplace les primitives shadcn Dialog/Sheet — unification
+   S3). Même mécanique visuelle que .crm-modal mais hors scope .crm-app (settings/team…). */
+.app-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(24, 49, 59, 0.38);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.app-modal {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-m);
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+.app-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.app-modal__head h3 {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+.app-modal__close {
+  display: grid;
+  place-items: center;
+  /* D1 : cible tactile 44px (WCAG 2.5.8) ; marges négatives = encombrement visuel inchangé (26px). */
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  flex-shrink: 0;
+  margin: -9px -12px -9px -9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.app-modal__close:hover { background: var(--surface-2); color: var(--ink); }
+.app-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+.app-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line-soft);
+}
+.app-modal-overlay--drawer { place-items: stretch end; padding: 0; }
+.app-modal--drawer {
+  width: 440px;
+  max-width: 440px;
+  height: 100%;
+  max-height: 100vh;
+  border: 0;
+  border-left: 1px solid var(--line-soft);
+  border-radius: 0;
+  box-shadow: -24px 0 48px -28px rgba(16, 30, 36, 0.5);
+}
+.app-modal--drawer .app-modal__body { flex: 1; gap: 18px; }
+.app-modal--drawer .app-modal__foot { position: sticky; bottom: 0; background: var(--surface-2); }
+@media (max-width: 760px) {
+  .app-modal--drawer { width: 100%; max-width: 100%; }
+}
+
+/* §208 — variante large (sélecteur de colonnes d'export). */
+.app-modal--wide { max-width: 720px; }
+
+/* Modales d'extraction Explorer — composition métier fondée uniquement sur les
+   tokens et primitives globaux. Les couleurs suivent donc le thème ORG. */
+.export-modal__intro,
+.copy-emails-modal p {
+  margin: 0;
+}
+.export-modal__intro,
+.export-modal__summary,
+.copy-emails-modal__breakdown,
+.copy-emails-modal__status {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.export-modal__summary {
+  margin-right: auto;
+  min-width: 0;
+}
+.export-modal__presets,
+.copy-emails-modal__separators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.export-modal__preset {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.export-modal__preset.is-active {
+  background: var(--accent-soft);
+  border-color: var(--theme-primary);
+  color: var(--theme-primary);
+  box-shadow: none;
+}
+.export-modal__columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+}
+.export-modal__column {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-block: 3px;
+  color: var(--ink);
+  font-size: 12.5px;
+}
+.export-modal__column.is-locked { color: var(--ink-4); }
+.export-modal__column input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--theme-primary);
+}
+.export-modal__trace-badge {
+  flex: none;
+  border-radius: 6px;
+  padding: 1px 6px;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.export-modal__notice,
+.copy-emails-modal__privacy,
+.copy-emails-modal__notice {
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-ink);
+  padding: 12px;
+}
+.export-modal__purpose,
+.copy-emails-modal__field {
+  gap: 6px;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.export-modal__purpose .textarea,
+.copy-emails-modal__field .textarea,
+.copy-emails-modal__addresses {
+  border-color: var(--line);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.export-modal__purpose .textarea:focus,
+.copy-emails-modal__field .textarea:focus,
+.copy-emails-modal__addresses:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+  outline: 0;
+}
+.export-modal__notice .pref__hint { display: block; margin-top: 6px; }
+.copy-emails-modal__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.copy-emails-modal__privacy,
+.copy-emails-modal__notice { font-size: 12px; }
+.copy-emails-modal__summary {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.copy-emails-modal__separator {
+  min-height: 32px;
+  padding: 5px 10px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.copy-emails-modal__addresses {
+  min-height: 132px;
+  resize: vertical;
+  font-family: var(--font-mono);
+}
+.copy-emails-modal__status--error,
+.copy-emails-modal__copy-error {
+  color: var(--danger-ink);
+}
+.copy-emails-modal__missing-summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.copy-emails-modal__missing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+.copy-emails-modal__missing-link {
+  color: var(--theme-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.copy-emails-modal__missing-link:hover { text-decoration: underline; }
+
+@media (max-width: 600px) {
+  .app-modal-overlay { padding: 12px; }
+  .app-modal { max-height: calc(100dvh - 24px); }
+  .app-modal__head,
+  .app-modal__body,
+  .app-modal__foot { padding-inline: 14px; }
+  .app-modal__foot { flex-wrap: wrap; }
+  .export-modal__summary { flex-basis: 100%; }
+  .export-modal__columns { grid-template-columns: minmax(0, 1fr); }
+  .export-modal__preset { flex: 1 1 calc(50% - 4px); }
+  .copy-emails-modal .app-modal__foot > .ghost-button,
+  .copy-emails-modal .app-modal__foot > .primary-button {
+    flex: 1 1 0;
+  }
+}
+
+/* Motion pass — presence-phase transitions (usePresence via Modal.tsx). Overlay
+   fades; centered modal fades+lifts+scales; drawer fades+slides from the right.
+   Exit uses --ease-premium-in, enter uses --ease-premium-out (D1). */
+.app-modal-overlay {
+  opacity: 1;
+  transition: opacity 160ms var(--ease-premium-out);
+}
+.app-modal-overlay[data-motion-phase='entering'] {
+  opacity: 0;
+}
+.app-modal-overlay[data-motion-phase='exiting'] {
+  opacity: 0;
+  transition-duration: 140ms;
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity var(--motion-base) var(--ease-premium-out), transform var(--motion-base) var(--ease-premium-out);
+}
+.app-modal[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+}
+.app-modal[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md)) scale(0.985);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+.app-modal--drawer {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--motion-surface) var(--ease-premium-out), transform var(--motion-surface) var(--ease-premium-out);
+}
+.app-modal--drawer[data-motion-phase='entering'] {
+  opacity: 0;
+  transform: translateX(18px);
+}
+.app-modal--drawer[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateX(18px);
+  transition-timing-function: var(--ease-premium-in);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-modal-overlay,
+  .app-modal,
+  .app-modal--drawer {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* D12 — drawer panel fallback shell (while lazy JS chunk loads). */
+.drawer-panel-fallback {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 100%;
+  max-width: 1180px;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  z-index: 50;
+}
+
+/* 7.4 — révélation du mot de passe temporaire d'invitation (vocabulaire maison). */
+
+
+
+
+
+
+
+.audit-layout {
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+}
+
+.legal-card__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.room-card__grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel-card--nested {
+  /* Recessed: sits inside an already-solid .panel-card, so it drops one level. */
+  background: var(--surface-2);
+}
+
+.panel-card--warning {
+  border-color: rgba(214, 147, 58, 0.4);
+  background: #fdf4e6;
+}

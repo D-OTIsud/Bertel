@@ -7,10 +7,10 @@
  * le texte de la règle — c'est peu, mais c'est ce qui empêche une régression muette entre
  * deux recettes manuelles.
  */
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { readStylesheet } from '../../styles.test-utils';
 
-const css = readFileSync(join(__dirname, '..', '..', 'styles.css'), 'utf8');
+const css = readStylesheet(join(__dirname, '..', '..', 'styles.css'));
 
 /**
  * Le corps d'une règle, retrouvé par son sélecteur EXACT en début de ligne — pas par une

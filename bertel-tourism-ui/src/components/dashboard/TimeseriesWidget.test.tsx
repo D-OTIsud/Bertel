@@ -30,6 +30,13 @@ const metrics = [
 ];
 
 describe('TimeseriesWidget', () => {
+  it('ne charge ni ne présente les relevés globaux comme un historique prestataires', () => {
+    mockedSeries.mockClear();
+    wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled providerOnly />);
+    expect(screen.getByText(/Historique indisponible pour ce périmètre/)).toBeInTheDocument();
+    expect(mockedSeries).not.toHaveBeenCalled();
+    expect(screen.queryByText(/n’obéit pas au panneau de filtres/)).not.toBeInTheDocument();
+  });
   beforeEach(() => {
     mockedSeries.mockReset();
     mockedSeries.mockResolvedValue({ points });

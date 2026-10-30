@@ -11,7 +11,7 @@ import { dashboardStatsParams, type DashboardStatsParams } from './dashboard-sta
 
 /** Domain identities, independent from the component that supplies their labels. */
 export type FilterCriterionGroup =
-  | 'search' | 'bucket' | 'city' | 'lieuDit' | 'pmr' | 'pets' | 'openNow'
+  | 'providerOnly' | 'search' | 'bucket' | 'city' | 'lieuDit' | 'pmr' | 'pets' | 'openNow'
   | 'sustainable' | 'tag' | 'status' | 'rankedLabel' | 'rankedLabelExact'
   | 'rankedLabelValues' | 'zone' | 'environment' | 'openAt' | 'evtDates'
   | 'amenityFamilies' | 'accommodationUnitTypes' | 'accommodationPositionings'
@@ -81,6 +81,7 @@ interface CriterionRule {
 
 /** Exhaustive by construction: new native chip groups must acquire a rule. */
 export const FILTER_CRITERION_RULES = {
+  providerOnly: { values: (f) => flag(f.common.providerOnly, 'providerOnly') },
   search: { values: (f) => flag(f.common.search.trim(), 'search') },
   bucket: { values: (f, c) => f.selectedBuckets.filter((bucket) => bucket === c.value) },
   city: { values: (f, c) => strings(f.common.cities).filter((city) => city === c.value.trim()) },
@@ -148,6 +149,7 @@ function effectiveSnapshot(raw: ExplorerFilters, options: ExplorerFilterContextO
   };
   const common = effective.common;
 
+  common.providerOnly = has('has_provider') && raw.common.providerOnly === true;
   common.statuses = dashboardParams ? dashboardParams.p_status as ExplorerStatusFilter[] : query.common.statuses;
   if (options.page === 'dashboard') common.search = '';
   common.cities = values<string>('city_any');

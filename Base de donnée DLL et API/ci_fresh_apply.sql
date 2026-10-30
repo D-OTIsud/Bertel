@@ -627,6 +627,10 @@ ROLLBACK;
 \ir ../supabase/migrations/20260911152231_internal_pending_change_notifications.sql
 \ir tests/test_internal_pending_change_notifications.sql
 
+\echo '== provider scope and per-account preference =='
+\ir ../supabase/migrations/20261030123304_provider_scope_preference.sql
+\ir tests/test_provider_scope_preference.sql
+
 \echo '== MV refresh (non-concurrent) =='
 REFRESH MATERIALIZED VIEW internal.mv_ref_data_json;
 REFRESH MATERIALIZED VIEW internal.mv_filtered_objects;

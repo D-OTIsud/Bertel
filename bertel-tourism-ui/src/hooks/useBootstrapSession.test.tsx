@@ -3,6 +3,9 @@ import { AuthSessionMissingError } from '@supabase/supabase-js';
 import { useBootstrapSession } from './useBootstrapSession';
 import { getApiClient, getSupabaseClient } from '../lib/supabase';
 import { GUEST_SIGN_IN_MESSAGE, GUEST_SIGNED_OUT_MESSAGE, useSessionStore } from '../store/session-store';
+import { getOrCreateUserProfile } from '../services/user-profile';
+import { useProviderScopeStore } from '../store/provider-scope-store';
+import { useDashboardExplorerStore, useExplorerStore } from '../store/explorer-store';
 
 jest.mock('../lib/supabase', () => ({ getSupabaseClient: jest.fn(), getApiClient: jest.fn() }));
 jest.mock('../services/user-profile', () => ({
@@ -24,6 +27,23 @@ function makeAuthClient(getUserResult: unknown) {
 describe('useBootstrapSession', () => {
   beforeEach(() => {
     useSessionStore.setState({ demoMode: false, status: 'booting', errorMessage: null });
+  });
+
+  it('restaure le périmètre enregistré avant de rendre la session disponible', async () => {
+    jest.mocked(getOrCreateUserProfile).mockResolvedValueOnce({
+      id: 'usr-remembered', display_name: 'Compte test', role: 'tourism_agent',
+      avatar_url: null, locale: 'fr', timezone: 'Indian/Reunion', lang_prefs: ['fr'],
+      preferences: { provider_only: true },
+    });
+    jest.mocked(getSupabaseClient).mockReturnValue(makeSignedInClient({
+      id: 'usr-remembered', email: 'remembered@example.com', app_metadata: { role: 'tourism_agent' },
+    }));
+    jest.mocked(getApiClient).mockReturnValue({ schema: () => ({ rpc: jest.fn().mockResolvedValue({ data: false, error: null }) }) } as unknown as NonNullable<ReturnType<typeof getApiClient>>);
+    renderHook(() => useBootstrapSession());
+    await waitFor(() => expect(useSessionStore.getState().status).toBe('ready'));
+    expect(useProviderScopeStore.getState().userId).toBe('usr-remembered');
+    expect(useExplorerStore.getState().common.providerOnly).toBe(true);
+    expect(useDashboardExplorerStore.getState().common.providerOnly).toBe(true);
   });
 
   it("visiteur sans session (AuthSessionMissingError) => statut 'guest', pas 'error' (redirection /login)", async () => {

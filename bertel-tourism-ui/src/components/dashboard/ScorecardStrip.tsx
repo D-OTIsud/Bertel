@@ -6,8 +6,9 @@ import type { DashboardScorecards, DashboardCrmOpen } from '../../types/dashboar
 
 interface Props {
   data: DashboardScorecards;
-  /** Compteur CRM GLOBAL. Absent tant que la requête n'a pas répondu. */
+  /** Compteur CRM global ou limité aux prestataires. Absent avant la réponse. */
   crmOpen?: DashboardCrmOpen;
+  providerOnly?: boolean;
 }
 
 const nf = new Intl.NumberFormat('fr-FR');
@@ -50,7 +51,7 @@ function crmAttnState(crmOpen: DashboardCrmOpen | undefined): CrmAttnState {
  * deux secondaires (complétude, classés/labellisés) + une carte d'attention dédiée
  * aux demandes en cours qui mène au CRM. Contraste d'échelle = critère d'acceptation.
  */
-export function ScorecardStrip({ data, crmOpen }: Props) {
+export function ScorecardStrip({ data, crmOpen, providerOnly = false }: Props) {
   const attnState = crmAttnState(crmOpen);
   return (
     <section className="dashboard-summary" aria-label="Résumé du tableau de bord">
@@ -79,9 +80,8 @@ export function ScorecardStrip({ data, crmOpen }: Props) {
         <span className="summary-stat__sub">{Math.round(data.distinctions_pct)} % du corpus</span>
       </article>
 
-      {/* Compteur CRM GLOBAL — il n'obéit pas au panneau de filtres (décision PO 2026-08-30),
-          et la carte le dit, parce qu'un chiffre non filtré au milieu de chiffres filtrés
-          doit s'annoncer. pending_change n'est plus lu : la table est vide depuis toujours.
+      {/* Le compteur CRM suit le périmètre prestataires, sans les autres facettes.
+          Le libellé annonce ce périmètre au milieu des statistiques d'objets.
           `attnState === 'unknown'` (chargement ou erreur, non couvert par WidgetFrame ici) rend
           un état NEUTRE, jamais le « À jour · 0 » sain — c'est l'écran que ce lot supprime. */}
       <article
@@ -113,10 +113,9 @@ export function ScorecardStrip({ data, crmOpen }: Props) {
         </span>
         {crmOpen && (
           <>
-            {/* « Tout le périmètre » : un chiffre non filtré au milieu de chiffres filtrés doit
-                s'annoncer. */}
+            {/* Annoncer le périmètre effectivement compté. */}
             <span className="summary-attn__breakdown">
-              {`Tout le périmètre · ${nf.format(crmOpen.recent_interactions)} demande${
+              {`${providerOnly ? 'Avec prestataire uniquement' : 'Tout le périmètre'} · ${nf.format(crmOpen.recent_interactions)} demande${
                 crmOpen.recent_interactions > 1 ? 's' : ''
               } de moins de 90 jours, ${nf.format(crmOpen.open_tasks)} tâche${
                 crmOpen.open_tasks > 1 ? 's' : ''

@@ -126,9 +126,9 @@ export async function getDashboardDistinctionOverview(
 
 /**
  * Compteur GLOBAL des éléments CRM ouverts (carte d'attention du bandeau).
- * Sans paramètre : la carte n'obéit pas au panneau de filtres (décision PO 2026-08-30).
+ * Le périmètre prestataires est optionnel ; les autres facettes ne filtrent pas l'activité.
  */
-export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
+export async function getDashboardCrmOpen(providerOnly = false): Promise<DashboardCrmOpen> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     return {
@@ -140,7 +140,7 @@ export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_crm_open');
+    .rpc(providerOnly ? 'get_dashboard_provider_crm_open' : 'get_dashboard_crm_open');
 
   if (error) throw error;
   return data as DashboardCrmOpen;
@@ -148,11 +148,10 @@ export async function getDashboardCrmOpen(): Promise<DashboardCrmOpen> {
 
 /**
  * Rythme de saisie de l'équipe sur 12 semaines + table des contributeurs.
- * Sans paramètre : série GLOBALE, elle n'obéit pas au panneau de filtres (même raison que
- * getDashboardCrmOpen — « comment l'équipe a travaillé » n'a pas de sens restreint à une
- * sélection d'objets). Manifeste 17h.
+ * Série globale par défaut, ou limitée aux objets avec prestataire. Les autres
+ * facettes ne filtrent pas l'activité. La formule jours-éditeur de 17h est conservée.
  */
-export async function getDashboardTeamActivity(): Promise<DashboardTeamActivity> {
+export async function getDashboardTeamActivity(providerOnly = false): Promise<DashboardTeamActivity> {
   const { demoMode } = useSessionStore.getState();
   // Mode démo : la forme VIDE, jamais des données inventées — un rythme d'équipe fabriqué se
   // lirait comme un vrai et n'a aucune valeur de démonstration.
@@ -163,7 +162,7 @@ export async function getDashboardTeamActivity(): Promise<DashboardTeamActivity>
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_team_activity');
+    .rpc(providerOnly ? 'get_dashboard_provider_team_activity' : 'get_dashboard_team_activity');
 
   if (error) throw error;
   return data as DashboardTeamActivity;
@@ -171,9 +170,9 @@ export async function getDashboardTeamActivity(): Promise<DashboardTeamActivity>
 
 /**
  * Arriéré CRM par âge et par sujet, flux mensuel, temps de traitement net.
- * Sans paramètre, série GLOBALE (voir getDashboardTeamActivity). Manifeste 17h.
+ * Même périmètre optionnel que getDashboardTeamActivity. Manifeste 17h.
  */
-export async function getDashboardCrmActivity(): Promise<DashboardCrmActivity> {
+export async function getDashboardCrmActivity(providerOnly = false): Promise<DashboardCrmActivity> {
   const { demoMode } = useSessionStore.getState();
   if (demoMode) {
     return {
@@ -189,7 +188,7 @@ export async function getDashboardCrmActivity(): Promise<DashboardCrmActivity> {
   const client = requireDashboardRpcClient();
   const { data, error } = await client
     .schema('api')
-    .rpc('get_dashboard_crm_activity');
+    .rpc(providerOnly ? 'get_dashboard_provider_crm_activity' : 'get_dashboard_crm_activity');
 
   if (error) throw error;
   return data as DashboardCrmActivity;

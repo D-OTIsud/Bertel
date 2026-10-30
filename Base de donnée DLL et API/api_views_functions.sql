@@ -1607,6 +1607,13 @@ AS $$
       )
   ) accessibility_evidence ON TRUE
   WHERE (p_types IS NULL OR src.object_type = ANY(p_types))
+    -- provider_scope_filter : EXISTS évite les doublons si plusieurs prestataires sont liés.
+    AND ((params.filters->>'has_provider') IS DISTINCT FROM 'true' OR EXISTS (
+      SELECT 1 FROM public.actor_object_role provider_link
+      WHERE provider_link.object_id = src.object_id
+        AND (provider_link.valid_from IS NULL OR provider_link.valid_from <= (now() AT TIME ZONE 'Indian/Reunion')::date)
+        AND (provider_link.valid_to IS NULL OR provider_link.valid_to >= (now() AT TIME ZONE 'Indian/Reunion')::date)
+    ))
     AND (p_status IS NULL OR src.status = ANY(p_status))
     AND (NOT (params.filters ? 'commercial_visibility') OR src.commercial_visibility = (params.filters->>'commercial_visibility'))
     AND (params.commercial_visibility_any IS NULL OR src.commercial_visibility = ANY(params.commercial_visibility_any))

@@ -97,6 +97,7 @@ function renderPage() {
 describe('DashboardPage — onglets', () => {
   beforeEach(() => {
     useDashboardFilterStore.setState({ updatedAtFrom: null, updatedAtTo: null, activeTab: 'quality' });
+    useDashboardExplorerStore.getState().setProviderOnly(false);
     act(() => useDashboardExplorerStore.getState().resetAll());
   });
 
@@ -154,6 +155,23 @@ describe('DashboardPage — onglets', () => {
     expect(await screen.findByText('Fiches mises à jour')).toBeInTheDocument();
     // Un groupe transverse de l'Explorer est présent.
     expect(screen.getByText('Localisation')).toBeInTheDocument();
+  });
+
+  it('recalcule aussi le CRM et l’activité au changement de périmètre prestataires', async () => {
+    const open = jest.mocked(getDashboardCrmOpen);
+    const team = jest.mocked(getDashboardTeamActivity);
+    const crm = jest.mocked(getDashboardCrmActivity);
+    open.mockClear(); team.mockClear(); crm.mockClear();
+    renderPage();
+    await screen.findByText('5');
+    fireEvent.click(screen.getByRole('tab', { name: 'Activité équipe' }));
+    await waitFor(() => expect(team).toHaveBeenCalledWith(false));
+    act(() => useDashboardExplorerStore.getState().setProviderOnly(true));
+    await waitFor(() => expect(open).toHaveBeenCalledWith(true));
+    await waitFor(() => expect(team).toHaveBeenCalledWith(true));
+    expect(crm).toHaveBeenCalledWith(true);
+    expect(screen.getByText(/Avec prestataire uniquement ·/)).toBeInTheDocument();
+    expect(screen.getByText(/Historique indisponible pour ce périmètre/)).toBeInTheDocument();
   });
 
   it('affiche le compteur CRM global dans le bandeau', async () => {

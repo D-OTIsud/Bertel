@@ -1,6 +1,7 @@
 import { useState, type Ref } from 'react';
 import { Check, ChevronDown, Info, Search, X } from 'lucide-react';
 import { useExplorerStore } from '../../store/explorer-store';
+import { ProviderScopeToggle } from './ProviderScopeToggle';
 import { useSessionStore } from '../../store/session-store';
 import type {
   AccessibilityAmenityRef,
@@ -952,7 +953,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
           Filtres
           <span className="font-sans text-xs font-medium text-ink-3">{activeFilterCount} appliqués{context.memorized.length > 0 ? ` · ${context.memorized.length} mémorisés` : ''}</span>
         </div>
-        <button ref={resetButtonRef} type="button" onClick={onReset ?? resetAll} className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange">
+        <button ref={resetButtonRef} type="button" onClick={onReset ?? resetAll} title="Réinitialiser les filtres en conservant le choix du périmètre prestataires" className="filter-context-action text-sm leading-5 font-semibold text-orange-2 hover:text-orange">
           Réinitialiser
         </button>
       </div>
@@ -972,6 +973,7 @@ export function FiltersPanel({ references, useStore = useExplorerStore, typeSpec
               </button>
             ))}
           </div>
+          <ProviderScopeToggle useStore={useStore} />
         </FilterColumnGroup>
 
         {/* §205 — groupe réservé aux éditeurs et plus. Le masquage n'est PAS la

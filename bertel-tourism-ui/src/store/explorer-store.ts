@@ -31,6 +31,7 @@ interface ExplorerState extends ExplorerFilters {
 
   toggleBucket: (bucket: ExplorerBucketKey) => void;
   setSearch: (search: string) => void;
+  setProviderOnly: (enabled: boolean) => void;
   setCities: (cities: string[]) => void;
   setLieuDit: (lieuDit: string) => void;
   setPmr: (value: boolean) => void;
@@ -154,6 +155,8 @@ function mergeFilters(current: ExplorerFilters, partial: Partial<ExplorerFilters
     common: {
       ...currentBase.common,
       ...partial.common,
+      // Une URL ancienne sans ce critère conserve la préférence du compte.
+      providerOnly: partial.common?.providerOnly ?? current.common.providerOnly ?? false,
       statuses: partial.common?.statuses ?? currentBase.common.statuses,
       ...(replace ? { polygon: fallback.common.polygon, bbox: fallback.common.bbox } : {}),
     },
@@ -199,6 +202,8 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
   visibleObjectIds: [],
   selectedCardId: null,
   hoveredCardId: null,
+
+  setProviderOnly: (providerOnly) => set((state) => ({ common: { ...state.common, providerOnly } })),
 
   toggleBucket: (bucket) =>
     set((state) => {
@@ -508,7 +513,10 @@ const createExplorerStore = () => create<ExplorerState>((set) => ({
     }),
   setPolygon: (polygon, bbox = null) => set((state) => ({ common: { ...state.common, polygon, bbox } })),
   resetSpatialFilter: () => set((state) => ({ common: { ...state.common, polygon: null, bbox: null } })),
-  resetAll: () => set(DEFAULT_EXPLORER_FILTERS),
+  resetAll: () => set((state) => ({
+    ...DEFAULT_EXPLORER_FILTERS,
+    common: { ...DEFAULT_EXPLORER_FILTERS.common, providerOnly: state.common.providerOnly ?? false },
+  })),
   setFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, false)),
   replaceFiltersFromUrl: (partial) => set((state) => mergeFilters(state, partial, true)),
 }));

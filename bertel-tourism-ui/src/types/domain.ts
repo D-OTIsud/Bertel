@@ -165,6 +165,8 @@ export type MissingEssentialCode =
   | 'tags';
 
 export interface ExplorerCommonFilters {
+  /** Périmètre prestataires ; absent dans les anciennes URLs/listes enregistrées. */
+  providerOnly?: boolean;
   search: string;
   /**
    * §109 — search breadth. 'global' (the Explorer default) matches the aggregated

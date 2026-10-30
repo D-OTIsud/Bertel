@@ -1,0 +1,66 @@
+{
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "migration": {
+    "name": "provider_scope_preference",
+    "version": "20261030123304"
+  },
+  "checked_at": "2026-10-30T12:34:40.895143+00:00",
+  "published": {
+    "off": 835,
+    "explicit_false": 835,
+    "on": 758,
+    "scorecards": 758
+  },
+  "readers": {
+    "definitions_signatures_and_privileges_unchanged": 5,
+    "objects_compared": 12,
+    "objects_without_actor": 5,
+    "get_object_resource_payloads_identical": true,
+    "get_object_with_deep_data_payloads_identical": true
+  },
+  "crm_provider_real": {
+    "total": 170,
+    "open_tasks": 1,
+    "open_interactions": 169,
+    "recent_interactions": 2,
+    "backlog_interactions": 167
+  },
+  "crm_provider_test": {
+    "total": 359,
+    "open_tasks": 89,
+    "open_interactions": 270,
+    "recent_interactions": 36,
+    "backlog_interactions": 234
+  },
+  "checks": {
+    "jest_suites": 5,
+    "jest_tests": 122,
+    "jest_passed": true,
+    "typecheck_passed": true,
+    "isolated_database_created": false,
+    "business_fixtures_inserted": false
+  },
+  "old_global_activity_functions_unchanged": true,
+  "new_function_advisors": [
+    {
+      "name": "authenticated_security_definer_function_executable",
+      "level": "WARN",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable",
+      "affected_functions": [
+        "api.get_dashboard_provider_crm_open()",
+        "api.get_dashboard_provider_crm_activity()",
+        "api.get_dashboard_provider_team_activity()"
+      ]
+    }
+  ],
+  "frontend_published_at_database_verification": false,
+  "source_release": {
+    "target_branch": "master",
+    "base_commit": "fe858c7",
+    "typecheck_passed": true,
+    "production_build_passed": true,
+    "jest_suites": 12,
+    "jest_tests": 120,
+    "object_reader_services_changed": false
+  }
+}

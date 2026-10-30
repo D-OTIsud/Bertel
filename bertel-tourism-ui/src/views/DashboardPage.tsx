@@ -143,7 +143,7 @@ export default function DashboardPage() {
                 eyebrow="Qualité"
                 title="Remplissage dans le temps"
                 providerOnly={providerOnly}
-                subtitle="Relevés quotidiens du périmètre réel ou test, séparés depuis le 30 octobre 2026."
+                subtitle="Relevés quotidiens du périmètre réel ou test, selon l’historique disponible pour chaque indicateur."
                 scope="global"
                 enabled={activeTab === 'quality'}
                 metrics={[

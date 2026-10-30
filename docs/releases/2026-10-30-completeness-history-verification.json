@@ -1,0 +1,117 @@
+{
+  "project_ref": "ryycrdhlkmzpxwwwwupy",
+  "migration": "20261030141523_restore_verified_completeness_history",
+  "migration_sha256": "eefa0df4d53db15b023697f98a05f09919ff777e929f7afafcf17b87cda26a54",
+  "integration_base": "35564dc3c69afd33bbffd5f879e663cc87f9249f",
+  "provenance": {
+    "audit_first_object_event": "2026-04-11T12:30:00.09449+00:00",
+    "first_test_event": "2026-09-04T03:18:02.304466+00:00",
+    "capture_job": [
+      {
+        "name": "capture-metric-snapshots",
+        "active": true,
+        "command": "SELECT api.capture_metric_snapshots()",
+        "schedule": "0 3 * * *"
+      }
+    ],
+    "capture_acl_before_realm_fix": "{postgres=X/postgres,service_role=X/postgres}",
+    "validated_legacy_global_days": 133,
+    "published_denominator_timestamp_type_sum_and_weighted_average_mismatches": 0,
+    "invalid_complete_pct_pairs": 0,
+    "restored_days": 132,
+    "restored_rows": 3224,
+    "exact_copy_mismatches": 0
+  },
+  "preserved_archives": {
+    "hash": "75a3208ee25f665cadd3ed67037dac9a",
+    "count": 6564
+  },
+  "preserved_current_scoped_snapshots": {
+    "hash": "db9851a7d1e1c6260e5a6fa4f62e968f",
+    "count": 118
+  },
+  "protected_readers": [
+    {
+      "acl": "{=X/postgres,postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "signature": "api.get_object_cards_batch(text[],text[])",
+      "definition_hash": "847d243ce2049c84f5916ebb8071dfec"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_resource_adapted(text,text[])",
+      "definition_hash": "67b1df0161320511016aa5ea221a251d"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_resource(text,text[],text,jsonb)",
+      "definition_hash": "1304633713f7440803641dba22681192"
+    },
+    {
+      "acl": "{postgres=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "signature": "api.get_object_resources_batch(text[],text[],text,jsonb)",
+      "definition_hash": "95ee309b84f3424eb33a46680b6be761"
+    },
+    {
+      "acl": null,
+      "signature": "api.get_object_with_deep_data(text,text[],jsonb)",
+      "definition_hash": "a836af591b70806c87eaefd2871f693d"
+    }
+  ],
+  "old_series_result_type": "TABLE(bucket date, value numeric, denominator integer)",
+  "quality_by_realm": [
+    {
+      "is_test": null,
+      "last_date": "2026-10-30",
+      "first_date": "2026-06-19",
+      "daily_snapshots": 133
+    },
+    {
+      "is_test": false,
+      "last_date": "2026-10-30",
+      "first_date": "2026-06-19",
+      "daily_snapshots": 133
+    },
+    {
+      "is_test": true,
+      "last_date": "2026-10-30",
+      "first_date": "2026-10-30",
+      "daily_snapshots": 1
+    }
+  ],
+  "real": {
+    "first_snapshot_date": "2026-06-19",
+    "last_snapshot_date": "2026-10-30",
+    "weekly_points": 20,
+    "elapsed_days": 133
+  },
+  "test": {
+    "first_snapshot_date": "2026-10-30",
+    "last_snapshot_date": "2026-10-30",
+    "weekly_points": 1,
+    "elapsed_days": 0
+  },
+  "crm_counts_unchanged": {
+    "real": {
+      "total": 170,
+      "open_tasks": 1,
+      "open_interactions": 169,
+      "recent_interactions": 2,
+      "backlog_interactions": 167
+    },
+    "test": {
+      "total": 359,
+      "open_tasks": 89,
+      "open_interactions": 270,
+      "recent_interactions": 36,
+      "backlog_interactions": 234
+    }
+  },
+  "checks": {
+    "typecheck": "passed",
+    "frontend_tests": 45,
+    "frontend_suites": 4,
+    "production_build": "passed",
+    "sql": "test_completeness_history.sql executed on Bertel V3; BEGIN/ROLLBACK",
+    "new_security_advisor_findings": []
+  }
+}

@@ -674,6 +674,12 @@ _For every function: what it **returns** (output), **how to reach it**, and **wh
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_series`
 - **object types served:** —
 
+### `api.get_metric_snapshot_series_with_bounds(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_from date DEFAULT NULL::date, p_to date DEFAULT NULL::date, p_grain text DEFAULT 'month'::text)`
+- **returns:** `jsonb`
+- **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_series_with_bounds`
+- **object types served:** —
+- _Realm-scoped metric series plus exact first/last source snapshot dates. Weekly buckets never define history duration; legacy tabular reader stays compatible._
+
 ### `api.get_metric_snapshot_yoy(p_metric_key text, p_scope text DEFAULT 'global'::text, p_scope_key text DEFAULT ''::text, p_years integer DEFAULT 3)` _(DEFINER)_
 - **returns:** `TABLE(yr integer, mon integer, value numeric)`
 - **access:** PostgREST RPC — `POST /rest/v1/rpc/get_metric_snapshot_yoy`

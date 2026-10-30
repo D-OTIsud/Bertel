@@ -582,10 +582,18 @@
 }
 
 /* Compact 2-column grouping for the trailing visibility/cover cluster */
-
-
+.object-editor .ed-modal__group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.object-editor .ed-modal__group > * {
+  min-width: 0;
+}
 @media (max-width: 520px) {
-
+  .object-editor .ed-modal__group {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Preview image inside the modal */
@@ -1449,7 +1457,6 @@
   gap: 10px;
   margin-bottom: 10px;
 }
-
 .object-editor .rpick {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
@@ -2015,7 +2022,6 @@
   font-weight: 700;
   font-size: 11px;
 }
-
 .object-editor .chan-row {
   display: grid;
   grid-template-columns: 32px 1fr auto auto auto;

@@ -4,12 +4,13 @@ Cette proposition conserve les apparences existantes et reste en attente de vali
 
 ## CSS
 
-- Suppression de 220 règles sans classe requise retrouvée dans les sources, soit 1 193 lignes de règles dans les fichiers d’origine : 215 règles globales et 5 dans l’éditeur.
+- Suppression de 217 règles sans classe requise retrouvée dans les sources, soit 1 182 lignes de règles dans les fichiers d’origine : 215 règles globales et 2 dans l’éditeur.
 - L’audit tient compte des classes construites dynamiquement, des variantes, des bibliothèques, des tests, des stories, des prototypes HTML et du SQL. Il conserve les sélecteurs incertains et les règles dont une branche peut encore correspondre.
 - Les candidats des zones dashboard et CRM sont conservés par précaution pour le travail parallèle.
+- Un second contrôle porte sur les 1 686 fichiers source du dossier de travail d’origine, y compris ses modifications locales. Il conserve aussi les trois règles `.ed-modal__group` utilisées par sa version de `MediaEditModal`, même si cette version n’est pas encore dans master. Aucune des 217 suppressions retenues ne présente de conflit avec ces sources.
 - Le fichier global devient une entrée de 27 imports ordonnés. Les déclarations conservées, leur ordre et les conditions de leurs règles sont identiques après expansion des imports. La vérification compare les arbres CSS, indépendamment des commentaires et des espaces.
 - Le détail des suppressions, les candidats conservés et les empreintes des fichiers figurent dans [le relevé d’audit](css-cleanup-2026-10-30.json). Les empreintes utilisent des fins de ligne LF ; celle du CSS global après nettoyage concerne les feuilles concaténées dans l’ordre des imports.
-- `scripts/audit-css-usage.mjs` reste un outil de lecture : il produit des candidats, sans suppression automatique.
+- `scripts/audit-css-usage.mjs` reste un outil de lecture : il produit des candidats, sans suppression automatique. L’option `--source-project=chemin/vers/autre-copie/bertel-tourism-ui` ajoute les usages d’une autre copie du dépôt.
 
 ## Modales
 

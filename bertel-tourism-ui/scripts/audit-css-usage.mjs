@@ -41,7 +41,7 @@ export function unusedSelectors(selector, mayBeUsed) {
   return missing.every((item) => item.missing.length > 0) ? missing : null;
 }
 
-function sourceUsage(project) {
+export function sourceUsage(project) {
   const repo = path.resolve(project, '..');
   const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], {
     cwd: repo, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024,
@@ -107,8 +107,14 @@ export function stylesheetSources(project, files) {
   return [...sources.values()];
 }
 
-export function auditStyles(project, files) {
-  const usage = sourceUsage(project);
+export function auditStyles(project, files, additionalSourceProjects = []) {
+  const sources = [...new Set([project, ...additionalSourceProjects].map((directory) => path.resolve(directory)))].map(sourceUsage);
+  const usage = {
+    mayBeUsed: (name) => sources.some((source) => source.mayBeUsed(name)),
+    files: sources.reduce((sum, source) => sum + source.files, 0),
+    prefixes: [...new Set(sources.flatMap((source) => source.prefixes))],
+    suffixes: [...new Set(sources.flatMap((source) => source.suffixes))],
+  };
   const candidates = [];
   for (const { file: relative, root } of stylesheetSources(project, files)) {
     root.walkRules((rule) => {
@@ -119,15 +125,18 @@ export function auditStyles(project, files) {
         selector: rule.selector, missing: [...new Set(selectors.flatMap((item) => item.missing))] });
     });
   }
-  return { scannedSourceFiles: usage.files, candidates, dynamicPrefixes: usage.prefixes, dynamicSuffixes: usage.suffixes };
+  return { scannedSourceFiles: usage.files, scannedSourceProjects: sources.length, candidates, dynamicPrefixes: usage.prefixes, dynamicSuffixes: usage.suffixes };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const project = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const result = auditStyles(project, ['src/styles.css', 'src/features/object-editor/object-editor.css']);
-  const output = process.argv[2];
+  const args = process.argv.slice(2);
+  // Additional workspaces can include useful uncommitted UI that must also retain its styles.
+  const additionalSources = args.filter((arg) => arg.startsWith('--source-project=')).map((arg) => path.resolve(arg.slice('--source-project='.length)));
+  const result = auditStyles(project, ['src/styles.css', 'src/features/object-editor/object-editor.css'], additionalSources);
+  const output = args.find((arg) => !arg.startsWith('--'));
   if (output) fs.writeFileSync(path.resolve(output), JSON.stringify(result, null, 2) + '\n');
   const summary = Object.groupBy(result.candidates, (item) => item.file);
-  console.log(JSON.stringify({ scannedSourceFiles: result.scannedSourceFiles,
+  console.log(JSON.stringify({ scannedSourceFiles: result.scannedSourceFiles, scannedSourceProjects: result.scannedSourceProjects,
     candidates: Object.fromEntries(Object.entries(summary).map(([file, rules]) => [file, { rules: rules.length, lines: rules.reduce((sum, rule) => sum + rule.endLine - rule.line + 1, 0) }])) }, null, 2));
 }

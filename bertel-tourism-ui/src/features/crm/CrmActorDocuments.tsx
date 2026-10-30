@@ -230,7 +230,9 @@ export function CrmActorDocuments({
     const focus = deleteFocus.current;
     const timer = window.setTimeout(() => {
       const active = document.activeElement;
-      if (active !== document.body && active !== focus.opener && active !== focus.host) return;
+      const parentRecovered = active instanceof HTMLElement && active.matches('[role="dialog"]')
+        && documentsRef.current && active.contains(documentsRef.current);
+      if (active !== document.body && active !== focus.opener && active !== focus.host && !parentRecovered) return;
       if (focus.actorId === actorId && focus.opener.isConnected && !focus.opener.disabled) focus.opener.focus();
       else {
         const target = documentsRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])');
@@ -323,7 +325,7 @@ export function CrmActorDocuments({
                           aria-label={`Supprimer ${document.title}`}
                           onClick={(event) => {
                             deleteFocus.current = { opener: event.currentTarget, actorId,
-                              host: event.currentTarget.closest<HTMLElement>('[role="dialog"][data-state="open"]') };
+                              host: event.currentTarget.closest<HTMLElement>('[role="dialog"][data-state="open"]:not(.crm-modal):not(.app-modal)') };
                             setDeleteError(null);
                             setDeletion({ actorId, documentId: document.documentId, title: document.title });
                           }}

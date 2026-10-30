@@ -10,11 +10,11 @@
     },
     {
       "file": "src/features/object-editor/object-editor.css",
-      "removedRules": 5,
-      "removedRuleLines": 16,
+      "removedRules": 2,
+      "removedRuleLines": 5,
       "remainingRulesIdenticalAndInOrder": true,
       "beforeSha256": "5c6aca43682a497faa79198ce1cf2eaa126b85385c63d5a40ae8eb270e830f18",
-      "afterSha256": "02d61b2918c54140254f95537e54e2edf304a03a98dd7f7dba657309e74976ff"
+      "afterSha256": "4f75339463448715d0948f22599a42dc605c8523011008590eb560653f782b59"
     }
   ],
   "retainedForConcurrentWork": [
@@ -125,6 +125,36 @@
       "missing": [
         "note--area"
       ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 585,
+      "endLine": 589,
+      "selector": ".object-editor .ed-modal__group",
+      "missing": [
+        "ed-modal__group"
+      ],
+      "reason": "Referenced in the original workspace, including its uncommitted work."
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 590,
+      "endLine": 592,
+      "selector": ".object-editor .ed-modal__group > *",
+      "missing": [
+        "ed-modal__group"
+      ],
+      "reason": "Referenced in the original workspace, including its uncommitted work."
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 594,
+      "endLine": 596,
+      "selector": ".object-editor .ed-modal__group",
+      "missing": [
+        "ed-modal__group"
+      ],
+      "reason": "Referenced in the original workspace, including its uncommitted work."
     }
   ],
   "removed": [
@@ -2092,33 +2122,6 @@
       "selector": ".perm-drawer__preset",
       "missing": [
         "perm-drawer__preset"
-      ]
-    },
-    {
-      "file": "src/features/object-editor/object-editor.css",
-      "line": 585,
-      "endLine": 589,
-      "selector": ".object-editor .ed-modal__group",
-      "missing": [
-        "ed-modal__group"
-      ]
-    },
-    {
-      "file": "src/features/object-editor/object-editor.css",
-      "line": 590,
-      "endLine": 592,
-      "selector": ".object-editor .ed-modal__group > *",
-      "missing": [
-        "ed-modal__group"
-      ]
-    },
-    {
-      "file": "src/features/object-editor/object-editor.css",
-      "line": 594,
-      "endLine": 596,
-      "selector": ".object-editor .ed-modal__group",
-      "missing": [
-        "ed-modal__group"
       ]
     },
     {

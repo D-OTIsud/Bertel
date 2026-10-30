@@ -1,71 +1,20 @@
 'use client';
 
-// Modal accessible MAISON (vocabulaire de l'app, pas shadcn) — overlay + carte surface,
-// role="dialog" + aria-modal, fermeture Escape / clic overlay / bouton ✕, focus initial sur
-// le premier champ + focus-trap Tab léger. `variant="drawer"` = tiroir latéral droit pleine
-// hauteur (footer collant). Même mécanique que CrmModal mais générique (settings/team), pour
-// remplacer les primitives shadcn Dialog/Sheet (unification S3, un seul design system).
-// D1 (revue UX) : scroll-lock du body + restauration du focus au déclencheur à la fermeture +
-// focusables robustes (tabindex/summary/contenteditable, re-capture du focus échappé).
-// Motion pass : Modal possède désormais son propre cycle de montage (open/onOpenChange) via
-// usePresence — l'appelant ne fait plus `if (!open) return null` avant de le rendre, sinon
-// l'animation de sortie n'a jamais l'occasion de jouer.
-
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { createPortal } from 'react-dom';
+import { useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { usePresence } from '../../hooks/usePresence';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogPortal,
+  DialogPrimitiveContent,
+  DialogPrimitiveOverlay,
+  DialogPrimitiveTitle,
+} from '../ui/dialog';
+import { focusDialogControl, restoreDialogOpener } from '../ui/dialog-focus';
 
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]),' +
-  ' textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), details > summary,' +
-  ' [contenteditable]:not([contenteditable="false"])';
-
-// Must match the CARD's own CSS transition-duration below (not the overlay's
-// shorter 140ms) — usePresence unmounts BOTH nodes at once, so the timer has
-// to wait for the SLOWER of the two, or the card gets ripped out mid-fade.
-// Centered .app-modal transitions over --motion-base (220ms); .app-modal--drawer
-// over --motion-surface (280ms).
-const MODAL_EXIT_MS_BY_VARIANT: Record<'modal' | 'drawer', number> = {
-  modal: 220,
-  drawer: 280,
-};
-
-function getFocusables(root: HTMLElement): HTMLElement[] {
-  const all = [...root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
-    (el) => !el.hasAttribute('aria-hidden'),
-  );
-  // offsetParent === null ⇒ élément masqué (display:none…). jsdom renvoie null
-  // partout : repli sur la liste complète pour rester testable.
-  const visible = all.filter((el) => el.offsetParent !== null);
-  return visible.length > 0 ? visible : all;
-}
-
-// Motion pass gotcha: usePresence keeps a closing Modal mounted through its exit
-// animation, so a second Modal can now mount WHILE the first is still exiting (e.g.
-// CommandPalette closes itself and opens ShortcutHelpModal in the same handler).
-// Both instances' effects touch shared global state (body scroll, focus) — a naive
-// per-instance lock/restore lets the first modal's DELAYED cleanup unlock scroll and
-// steal focus out from under the second, still-open modal. Reference-count the lock
-// so only the last modal to close actually restores it.
-let scrollLockCount = 0;
-let scrollLockPrevOverflow = '';
-
-function lockBodyScroll() {
-  if (scrollLockCount === 0) {
-    scrollLockPrevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-  }
-  scrollLockCount += 1;
-}
-
-function unlockBodyScroll() {
-  scrollLockCount = Math.max(0, scrollLockCount - 1);
-  if (scrollLockCount === 0) {
-    document.body.style.overflow = scrollLockPrevOverflow;
-  }
-}
+// Match the existing card transitions. The shared dialog stays mounted until they finish.
+const MODAL_EXIT_MS_BY_VARIANT: Record<'modal' | 'drawer', number> = { modal: 220, drawer: 280 };
 
 export function Modal({
   open,
@@ -83,108 +32,50 @@ export function Modal({
   children: ReactNode;
   footer?: ReactNode;
   variant?: 'modal' | 'drawer';
-  /** 'wide' = 720px (sélecteur de colonnes d'export §208) — la carte centrée par défaut fait 520px. */
+  /** The wide selector remains 720px; the default centered card remains 520px. */
   size?: 'default' | 'wide';
-  /** Classe de contexte pour composer une modale métier avec les tokens de styles.css. */
   className?: string;
 }) {
   const { shouldRender, phase } = usePresence(open, MODAL_EXIT_MS_BY_VARIANT[variant]);
   const cardRef = useRef<HTMLDivElement>(null);
-  const returnFocusRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!shouldRender) return;
-    // D1 : mémorise le déclencheur + verrouille le scroll du body (compteur partagé ⇒
-    // les modales empilées/qui se chevauchent pendant l'animation de sortie se
-    // déverrouillent dans le bon ordre — voir le commentaire sur scrollLockCount).
-    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    lockBodyScroll();
-
-    const card = cardRef.current;
-    if (card) {
-      const focusables = getFocusables(card);
-      (focusables.find((el) => !el.classList.contains('app-modal__close')) ?? focusables[0])?.focus();
-    }
-
-    return () => {
-      unlockBodyScroll();
-      // React's passive-effect cleanup runs AFTER the DOM subtree is already
-      // detached, so by the time we get here `card` no longer contains anything —
-      // even in the normal single-modal case, `document.activeElement` has already
-      // reverted to `document.body`. That reversion (nothing else has claimed
-      // focus) is exactly the signal to restore focus to the trigger. If instead
-      // activeElement is some OTHER, real element, a second modal opened while
-      // this one was still exiting and has already taken focus — don't steal it
-      // back.
-      const nothingElseClaimedFocus = !document.activeElement || document.activeElement === document.body;
-      if (nothingElseClaimedFocus) {
-        returnFocusRef.current?.focus();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mount (shouldRender false->true transition), not per phase change.
-  }, [shouldRender]);
-
-  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.key === 'Escape') {
-      event.stopPropagation();
-      onOpenChange(false);
-      return;
-    }
-    if (event.key !== 'Tab') return;
-    const card = cardRef.current;
-    if (!card) return;
-    const focusables = getFocusables(card);
-    if (focusables.length === 0) return;
-    const first = focusables[0];
-    const last = focusables[focusables.length - 1];
-    const active = document.activeElement as HTMLElement | null;
-    // `!card.contains(active)` : un focus échappé de la carte est ramené dans la boucle.
-    if (event.shiftKey && (active === first || !card.contains(active))) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && (active === last || !card.contains(active))) {
-      event.preventDefault();
-      first.focus();
-    }
-  }
+  const openerRef = useRef<HTMLElement | null>(null);
 
   if (!shouldRender || typeof document === 'undefined') return null;
 
-  // Le portail est indispensable lorsque le déclencheur vit dans un élément
-  // transformé (ex. SelectionBar avec translate-x). Sans lui, `position: fixed`
-  // se cale sur cet ancêtre au lieu du viewport : la carte paraît attachée à la
-  // barre et le scrim ne couvre qu'une partie de l'écran.
-  return createPortal(
-    <div
-      className={variant === 'drawer' ? 'app-modal-overlay app-modal-overlay--drawer' : 'app-modal-overlay'}
-      data-motion-phase={phase}
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onOpenChange(false);
-      }}
-    >
-      <div
-        ref={cardRef}
-        className={cn(
-          variant === 'drawer' ? 'app-modal app-modal--drawer' : 'app-modal',
-          size === 'wide' && 'app-modal--wide',
-          className,
-        )}
-        data-motion-phase={phase}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onKeyDown={handleKeyDown}
-      >
-        <div className="app-modal__head">
-          <h3>{title}</h3>
-          <button type="button" className="app-modal__close" aria-label="Fermer" onClick={() => onOpenChange(false)}>
-            <X size={14} aria-hidden />
-          </button>
-        </div>
-        <div className="app-modal__body">{children}</div>
-        {footer && <div className="app-modal__foot">{footer}</div>}
-      </div>
-    </div>,
-    document.body,
+  return (
+    <Dialog open={shouldRender} onOpenChange={onOpenChange}>
+      <DialogPortal>
+        <DialogPrimitiveOverlay asChild>
+          <div
+            className={variant === 'drawer' ? 'app-modal-overlay app-modal-overlay--drawer' : 'app-modal-overlay'}
+            data-motion-phase={phase}
+            onMouseDown={(event) => { if (event.target === event.currentTarget) onOpenChange(false); }}
+          >
+            <DialogPrimitiveContent asChild ref={cardRef} aria-modal="true" aria-describedby={undefined}
+              onPointerDownOutside={(event) => event.preventDefault()}
+              onOpenAutoFocus={(event) => {
+                openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                focusDialogControl(event, cardRef.current, 'app-modal__close');
+              }}
+              onCloseAutoFocus={(event) => restoreDialogOpener(event, openerRef.current)}>
+              <div className={cn(
+                variant === 'drawer' ? 'app-modal app-modal--drawer' : 'app-modal',
+                size === 'wide' && 'app-modal--wide',
+                className,
+              )} data-motion-phase={phase} aria-label={title}>
+                <div className="app-modal__head">
+                  <DialogPrimitiveTitle asChild><h3>{title}</h3></DialogPrimitiveTitle>
+                  <button type="button" className="app-modal__close" aria-label="Fermer" onClick={() => onOpenChange(false)}>
+                    <X size={14} aria-hidden />
+                  </button>
+                </div>
+                <div className="app-modal__body">{children}</div>
+                {footer && <div className="app-modal__foot">{footer}</div>}
+              </div>
+            </DialogPrimitiveContent>
+          </div>
+        </DialogPrimitiveOverlay>
+      </DialogPortal>
+    </Dialog>
   );
 }

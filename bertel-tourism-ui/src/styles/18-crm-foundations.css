@@ -1,0 +1,625 @@
+/* ==== CRM (§61, design v2 acteur-centré 2026-06-11) ====
+   Porté du prototype crm.css (Temp/crm_design2) — UNIQUEMENT les classes
+   consommées par src/views/CrmPage.tsx et src/features/crm.
+   Tout est scopé sous .crm-app pour ne pas fuiter (.chip → .crm-chip,
+   .btn → .crm-btn). Tokens : réutilise --surface, --ink-N, --line, --shadow-s
+   du thème ; les tokens absents du global (--r-md, --r-lg, --font-...)
+   sont déclarés ici. */
+
+.crm-app {
+  /* Tokens absents de la feuille globale (même convention que .object-editor). */
+  --r-md: 12px;
+  --r-lg: 16px;
+  --font-display: var(--font-display), var(--font-sans), system-ui, sans-serif;
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, 'SFMono-Regular', monospace;
+  --accent: var(--teal);
+  --accent-deep: #0d4f4e;
+  --accent-tint: var(--teal-tint);
+  /* ---- Peps PO point 1 : gamme d'accents CRM-locale (hors thème) ----
+     Garde-fou org-theme : on ne touche JAMAIS --bg/--surface/le canvas. Ces hues ne
+     pilotent que des ACCENTS (liserés, valeurs KPI, tons sentiment, pastilles) sur des
+     surfaces calmes. --teal/--orange-strong/--green/--red existent déjà au global ; on
+     déclare ici l'ambre (clé du fix : interrogatif n'est plus gris), le prune et le bleu
+     (ce dernier était posé en dur #1e7491 dans la timeline — token unifié). Chaque hue a
+     son tint (fond pastel ~14-16 %) ET un ton de texte foncé lisible (AA sur blanc). */
+  --crm-orange: #c96d3b;          /* = --accent-brand-strong */
+  --crm-orange-ink: #93501f;
+  --crm-orange-tint: rgba(201, 109, 59, 0.16);
+  --crm-blue: #1e7491;
+  --crm-blue-ink: #0e5872;
+  --crm-blue-tint: rgba(30, 116, 145, 0.15);
+  --crm-plum: #6c4f8a;
+  --crm-plum-ink: #4d3866;
+  --crm-plum-tint: rgba(108, 79, 138, 0.16);
+  --crm-amber: #c98a1f;
+  --crm-amber-ink: #8a5c10;
+  --crm-amber-tint: rgba(214, 160, 45, 0.18);
+  --crm-green-ink: #1a6b48;
+  --crm-red-ink: #93392a;
+  --crm-red-tint: rgba(200, 92, 72, 0.14);
+  --crm-green-vivid: #1f9d63;       /* très positif : vert plus vif que --green */
+  --crm-green-vivid-tint: rgba(31, 157, 99, 0.18);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+/* ---------- Sub-header : titre + onglets + actions ---------- */
+.crm-app .crm-sub {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  row-gap: 10px;
+  flex-wrap: wrap;
+  padding: 18px 28px 0;
+  flex: none;
+}
+.crm-app .crm-sub__title {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+}
+.crm-app .crm-sub__title small {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.crm-app .crm-sub__actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+.crm-app .crm-tabs {
+  display: inline-flex;
+  background: var(--surface-2);
+  border: 1px solid var(--line-soft);
+  padding: 3px;
+  border-radius: 999px;
+  gap: 2px;
+}
+.crm-app .crm-tabs button {
+  height: 30px;
+  padding: 0 16px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+.crm-app .crm-tabs button:hover { color: var(--ink); }
+/* Contraste (rectif PO point 2) : onglet actif PLEIN accent, texte blanc. */
+.crm-app .crm-tabs button.is-on {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: var(--shadow-s);
+}
+.crm-app .crm-tabs button .n {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-4);
+  background: var(--bg-tint);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.crm-app .crm-tabs button.is-on .n { background: rgba(255, 255, 255, 0.22); color: #fff; }
+
+/* ---------- Scroll body ---------- */
+.crm-app .crm-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 28px 40px;
+}
+.crm-app .crm-loading {
+  padding: 36px 28px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.crm-app .crm-loading-skeleton { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.crm-app .crm-loading-skeleton__row { display: flex; gap: 12px; }
+.crm-app .crm-loading-skeleton--kanban { flex-direction: row; }
+.crm-app .crm-loading-skeleton__column { display: flex; flex: 1; flex-direction: column; gap: 10px; }
+
+/* ---------- Boutons maison (le .btn du prototype, scopé) ---------- */
+.crm-app .crm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  font-family: inherit;
+}
+.crm-app .crm-btn:hover { border-color: var(--line-strong); color: var(--ink); }
+.crm-app .crm-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.crm-app .crm-btn.primary:hover { filter: brightness(1.06); }
+.crm-app .crm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.crm-app .crm-btn:active { transform: scale(0.98); }
+.crm-app .crm-btn:disabled:active,
+.crm-app .crm-btn[aria-disabled='true']:active { transform: none; }
+.crm-app .crm-load-more { margin-top: 12px; }
+
+/* ---------- KPI strip ---------- */
+.crm-app .crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+/* Peps PO point 1 : KPI multi-accents. Chaque carte porte un accent DISTINCT (barre
+   gauche épaissie à 4px + valeur colorée) cyclé teal / orange / bleu / prune par les vues
+   (KPI_ACCENTS). Surface calme inchangée — seul l'accent claque. */
+.crm-app .crm-kpi {
+  --kpi-accent: var(--accent);
+  --kpi-value: var(--accent-deep);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-left: 4px solid var(--kpi-accent);
+  border-radius: var(--r-lg);
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: var(--shadow-s);
+}
+.crm-app .crm-kpi--teal { --kpi-accent: var(--teal); --kpi-value: var(--accent-deep); }
+.crm-app .crm-kpi--orange { --kpi-accent: var(--crm-orange); --kpi-value: var(--crm-orange-ink); }
+.crm-app .crm-kpi--blue { --kpi-accent: var(--crm-blue); --kpi-value: var(--crm-blue-ink); }
+.crm-app .crm-kpi--plum { --kpi-accent: var(--crm-plum); --kpi-value: var(--crm-plum-ink); }
+.crm-app .crm-kpi__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-4);
+}
+.crm-app .crm-kpi__value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--kpi-value);
+  line-height: 1.15;
+}
+.crm-app .crm-kpi__hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ---------- Toolbar : recherche + filtres ---------- */
+.crm-app .crm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+/* Bouton flottant « Nouvel acteur » (rectif PO) : action proéminente, flottante en bas à droite,
+   accent plein + ombre élevée. Accent only (garde-fou org-theme). */
+.crm-app .crm-fab {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 50px;
+  padding: 0 22px 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 22px -6px color-mix(in srgb, var(--accent) 55%, transparent), var(--shadow-m);
+  cursor: pointer;
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+}
+.crm-app .crm-fab:hover {
+  transform: translateY(-2px);
+  background: var(--accent-deep);
+  box-shadow: 0 12px 28px -6px color-mix(in srgb, var(--accent) 60%, transparent), var(--shadow-m);
+}
+.crm-app .crm-fab:active { transform: translateY(0); }
+.crm-app .crm-fab:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 2px; }
+/* Sur écran étroit : FAB rond, label masqué (l'icône + aria-label suffisent). */
+@media (max-width: 720px) {
+  .crm-app .crm-fab { right: 16px; bottom: 16px; height: 52px; width: 52px; padding: 0; justify-content: center; }
+  .crm-app .crm-fab__label { display: none; }
+}
+/* .crm-search retiré (PO 2026-07-27) : la recherche acteurs vit dans le champ de la TopBar,
+   il n'y a plus de champ local dans l'annuaire — 0 consommateur restant. */
+.crm-app .crm-toolbar__sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; }
+/* 16w — barre de filtres du kanban : personne + fenêtre d'échéance + sans-échéance. */
+.crm-app .crm-toolbar--tasks { gap: 8px 12px; }
+.crm-app .crm-filter { display: inline-flex; align-items: center; gap: 6px; }
+.crm-app .crm-filter__label { font-size: 11px; font-weight: 600; color: var(--ink-3); }
+.crm-app .crm-filter--check { font-size: 12px; color: var(--ink-3); gap: 5px; }
+.crm-app .crm-filter--check input { accent-color: var(--accent); }
+.crm-app .crm-input-date {
+  height: 30px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--bg-tint); color: var(--ink);
+  font-size: 12px;
+}
+.crm-app .crm-input-date:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.crm-app .crm-toolbar--tasks .crm-select { height: 30px; font-size: 12px; }
+.crm-app .crm-toolbar__right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.crm-app .chip-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.crm-app .crm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  font-family: inherit;
+}
+.crm-app .crm-chip:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
+/* Peps PO point 1 : chips inactives à fin liseré d'accent + texte teinté (plus de gris mort) ;
+   active = pleine accent (déjà). */
+.crm-app .crm-chip { border-color: var(--teal-tint); color: var(--accent-deep); }
+.crm-app .crm-chip.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.crm-app .topic-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-deep);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Teintes de SUJET (rectif PO v5 point 1) — « pilules sujets de teintes différentes ».
+   `.topic-pill` reprend la forme de `.topic-chip` ; la modif `.topic--N` (N = topicTintOf(code),
+   0..7, stable par code) pose un fond pastel doux + un texte foncé AA-lisible. Palette de 8
+   accents HARMONIEUX (la gamme CRM teal/orange/blue/green/plum/amber + un bleu-soft et un rust),
+   pas un arc-en-ciel : même sujet = même couleur dans toutes les vues. Accents only (fonds
+   pastel + texte teinté) — aucun override de canvas, garde-fou org-theme respecté. */
+.crm-app .topic-pill { background: var(--teal-tint); color: var(--accent-deep); }
+.crm-app .topic-pill.topic--0 { background: var(--teal-tint); color: var(--accent-deep); }
+.crm-app .topic-pill.topic--1 { background: var(--crm-orange-tint); color: var(--crm-orange-ink); }
+.crm-app .topic-pill.topic--2 { background: var(--crm-blue-tint); color: var(--crm-blue-ink); }
+.crm-app .topic-pill.topic--3 { background: var(--green-soft); color: var(--crm-green-ink); }
+.crm-app .topic-pill.topic--4 { background: var(--crm-plum-tint); color: var(--crm-plum-ink); }
+.crm-app .topic-pill.topic--5 { background: var(--crm-amber-tint); color: var(--crm-amber-ink); }
+/* topic--6 = ardoise (slate) : hue franchement distincte du bleu (topic--2) — l'ancien
+   rgba(31,116,145,…) n'était que le même bleu à alpha plus faible (collision visuelle).
+   Fond ardoise pastel + encre slate-700 foncée (contraste AA largement au-dessus de 4.5:1). */
+.crm-app .topic-pill.topic--6 { background: rgba(71, 85, 105, 0.18); color: #334155; }
+.crm-app .topic-pill.topic--7 { background: var(--crm-red-tint); color: var(--crm-red-ink); }
+
+/* ---------- Annuaire : liste acteurs ---------- */
+.crm-app .crm-list {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-s);
+  overflow: hidden;
+}
+.crm-app .crm-list__head,
+.crm-app .crm-row {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.5fr) minmax(170px, 1.1fr) minmax(150px, 1fr) 110px minmax(130px, 1fr) 30px;
+  gap: 14px;
+  align-items: center;
+  padding: 0 20px;
+}
+.crm-app .crm-list__head {
+  height: 42px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-4);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-tint);
+}
+.crm-app .crm-row {
+  width: 100%;
+  min-height: 66px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.crm-app .crm-row:last-child { border-bottom: 0; }
+.crm-app .crm-row:hover { background: var(--surface-2); }
+.crm-app .crm-row:hover .crm-row__go { color: var(--accent-deep); transform: translateX(2px); }
+.crm-app .crm-row__go { color: var(--ink-4); transition: transform 0.12s ease, background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease; }
+
+.crm-app .crm-row__id { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.crm-app .crm-row__name { min-width: 0; }
+.crm-app .crm-row__name strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crm-app .crm-cell { font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.crm-app .crm-cell small { display: block; font-size: 10.5px; color: var(--ink-4); margin-top: 1px; }
+.crm-app .ctx-stack { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.crm-app .more-n { font-size: 10.5px; color: var(--ink-4); font-weight: 600; }
+.crm-app .crm-list__empty {
+  padding: 36px 20px;
+  text-align: center;
+  color: var(--ink-4);
+  font-size: 13px;
+}
+
+/* Avatar acteur/objet — carré arrondi teinté (teinte inline par hash) */
+.crm-app .pav {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.crm-app .pav.lg { width: 56px; height: 56px; border-radius: 16px; font-size: 18px; }
+/* Portrait acteur (PO point 4) : la photo remplit la tuile (même rayon/taille que les
+   initiales) ; object-fit cover évite toute déformation quel que soit le ratio source. */
+.crm-app .pav--photo { padding: 0; overflow: hidden; background: var(--surface-2); }
+.crm-app .pav--photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Pastille type d'objet */
+.crm-app .type-tag {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+/* Tag de contexte objet (interactions / tâches) */
+.crm-app .ctx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 21px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  font-family: inherit;
+}
+.crm-app .ctx-tag i { width: 5px; height: 5px; border-radius: 999px; flex: none; }
+.crm-app .ctx-tag.none {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  cursor: default;
+}
+.crm-app button.ctx-tag:not(.none):hover { filter: brightness(0.93); }
+.crm-app button.ctx-tag:disabled { cursor: default; }
+
+/* Petit pill générique (compteurs hero, badge principal, lecture seule) */
+.crm-app .pill-mini {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.crm-app .pill-mini.principal { background: var(--accent-tint); color: var(--accent-deep); }
+/* Task 9 — badge trombone kanban : SEUL usage cliquable de .pill-mini dans le CRM (ouvre le
+   modal d'édition, même gating d'écriture que le crayon), donc reset des chromes bouton natifs. */
+.crm-app button.pill-mini { border: 0; cursor: pointer; font-family: inherit; gap: 3px; }
+.crm-app button.pill-mini:hover:not(:disabled) { filter: brightness(0.94); }
+.crm-app button.pill-mini:disabled { cursor: not-allowed; opacity: 0.62; }
+.crm-app .crm-readonly-pill {
+  background: rgba(214, 147, 58, 0.16);
+  color: #8a5c1d;
+  white-space: normal;
+  height: auto;
+  min-height: 22px;
+  padding: 2px 9px;
+}
+
+/* ---------- Fiche 360 / vue établissement ---------- */
+.crm-app .crm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin-bottom: 12px;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 8px 5px 4px;
+  font-family: inherit;
+}
+.crm-app .crm-back:hover { background: var(--surface-2); color: var(--ink); }
+
+.crm-app .crm-hero {
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-s);
+  padding: 22px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.crm-app .crm-hero__main { min-width: 0; flex: 1; }
+.crm-app .crm-hero__name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.crm-app .crm-hero__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.crm-app .crm-hero__pills { display: flex; align-items: center; gap: 7px; margin-top: 12px; flex-wrap: wrap; }
+.crm-app .crm-hero__actions { display: flex; align-items: center; gap: 8px; flex: none; }
+/* Rectif PO v5 point 6 : nom + bouton « Modifier » sur une même ligne, dans le bloc principal. */
+.crm-app .crm-hero__id { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.crm-app .crm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* ---------- Fiche acteur deux colonnes (rectif PO §66+) ----------
+   Desktop (≥ 961px) : la colonne main (actions + timeline) à GAUCHE, le rail (carte acteur +
+   KPI + listes) à DROITE dans une colonne fixe. Sous 960px la grille s'effondre en 1 colonne et
+   le rail remonte AVANT la colonne main (order) ⇒ sur mobile la carte acteur arrive en premier.
+   Accents/layout uniquement — aucun override du canvas (garde-fou org-theme). */
+.crm-app .crm-actor-grid {
+  display: grid;
+  /* Actions + timeline À GAUCHE (1fr, colonne large), rail acteur + indicateurs À DROITE (360px,
+     sidebar) — orientation préférée du PO (le rail à droite fait moins chargé). Sur mobile la
+     grille s'effondre en 1 colonne et le rail repasse EN PREMIER (order, cf. media query). */
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+.crm-app .crm-actor-grid__main { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.crm-app .crm-actor-grid__side { min-width: 0; }
+
+/* Navigation interne de la fiche : la bibliothèque documentaire est une vue dédiée. */
+.crm-app .crm-actor-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  margin-bottom: 14px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--line-soft);
+  overflow-x: auto;
+}
+.crm-app .crm-actor-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 38px;
+  margin-bottom: -1px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.crm-app .crm-actor-tabs button:hover { color: var(--ink); }
+.crm-app .crm-actor-tabs button.is-on { border-bottom-color: var(--accent); color: var(--accent-deep); }
+.crm-app .crm-actor-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px 4px 0 0;
+}
+.crm-app .crm-actor-tabs .n {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+}

@@ -395,6 +395,8 @@ describe('ModerationPage — D9 : attestation du report manuel', () => {
     fireEvent.click(within(first).getByRole('button', { name: /Certifier et valider/ }));
     await waitFor(() => expect(mock.approvePendingChange).toHaveBeenCalledWith('pc-a', null, true));
 
+    // The shared dialog keeps the underlying page inaccessible until its exit transition ends.
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Approuver la suggestion/ })).not.toBeInTheDocument());
     fireEvent.click(screen.getAllByRole('button', { name: /^Approuver$/ })[1]);
     const next = await screen.findByRole('dialog', { name: /Approuver la suggestion/ });
     expect(within(next).getByRole('checkbox', { name: /j.ai reporté ces modifications/i })).not.toBeChecked();

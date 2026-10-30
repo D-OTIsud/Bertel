@@ -1457,10 +1457,6 @@
   gap: 10px;
   margin-bottom: 10px;
 }
-.object-editor .toolbar-note {
-  font-size: 11px;
-  color: var(--ink-4);
-}
 .object-editor .rpick {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
@@ -2026,7 +2022,6 @@
   font-weight: 700;
   font-size: 11px;
 }
-.object-editor .wp-name-input { font-weight: 600; }
 .object-editor .chan-row {
   display: grid;
   grid-template-columns: 32px 1fr auto auto auto;

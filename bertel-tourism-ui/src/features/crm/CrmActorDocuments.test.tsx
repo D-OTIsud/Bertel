@@ -29,23 +29,23 @@ const firstDocument: ActorSupportDocument = {
 const secondDocument = { ...firstDocument, documentId: 'doc-2', title: 'Plan.pdf' };
 const snapshot = (documents = [firstDocument, secondDocument]) => ({ defaultRole: null, documents });
 
-function renderDocuments({ nested = false, canWrite = true } = {}) {
+function renderDocuments({ nested = false, crmOnly = false, canWrite = true } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   client.setQueryData(['crm-actor-support', 'actor-1'], snapshot());
   const onClose = jest.fn();
   const onDrawerClose = jest.fn();
   const content = (actorId = 'actor-1', writable = canWrite) => {
     const documents = <CrmActorDocuments actorId={actorId} canWrite={writable} objects={[]} />;
+    const crm = <div className="crm-app"><CrmModal title="Fiche acteur" onClose={onClose}>
+      <input aria-label="Brouillon acteur" defaultValue="Marie" />{documents}
+    </CrmModal></div>;
     return <QueryClientProvider client={client}>
       {nested ? <Sheet open onOpenChange={onDrawerClose}>
         <SheetContent aria-describedby={undefined}>
           <SheetTitle>Suivi CRM</SheetTitle>
-          <div className="crm-app"><CrmModal title="Fiche acteur" onClose={onClose}>
-            <input aria-label="Brouillon acteur" defaultValue="Marie" />
-            {documents}
-          </CrmModal></div>
+          {crm}
         </SheetContent>
-      </Sheet> : documents}
+      </Sheet> : crmOnly ? crm : documents}
     </QueryClientProvider>;
   };
   const result = render(content());
@@ -77,6 +77,13 @@ it('rend la confirmation partagée avec le nom, la conséquence et Annuler initi
   await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Supprimer le document' })).not.toBeInTheDocument());
   expect(opener).toHaveFocus();
   expect(deleteActorDocument).not.toHaveBeenCalled();
+});
+
+it('conserve l’apparence de confirmation application dans une fiche CRM hors Sheet', async () => {
+  renderDocuments({ crmOnly: true });
+  const { confirmation } = await requestDeletion();
+  expect(confirmation).toHaveClass('app-modal');
+  expect(within(confirmation).getByRole('button', { name: 'Annuler' })).toHaveFocus();
 });
 
 it.each([false, true])('Escape conserve le parent et le brouillon (Sheet=%s)', async (nested) => {

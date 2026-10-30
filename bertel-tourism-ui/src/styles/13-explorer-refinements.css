@@ -1,0 +1,188 @@
+/* Crisp card radii — sharp, not bulky */
+
+.hero-panel,
+.filters-panel,
+.results-panel,
+.panel-card,
+.split-card,
+.timeline-item,
+.kanban-column,
+.kanban-card,
+.marker-settings-card,
+.theme-preview-card,
+.theme-form-card,
+.legal-card,
+.media-card,
+.dropzone-card,
+.result-card {
+  border-radius: 8px;
+}
+
+.stat-card,
+.profile-drawer__card,
+.object-drawer-nav__item,
+.checklist-row {
+  border-radius: 6px;
+}
+
+.result-card__media,
+.media-card__image,
+.panel-heading--overlay > *,
+.theme-preview-card__logo,
+.theme-preview-card__logo--fallback {
+  border-radius: 6px;
+}
+
+.result-card__label-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  height: 20px;
+  padding: 0 0.5rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  min-width: 0;
+  max-width: min(9.5rem, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Explorer label chips: soft tints aligned with app theme (not saturated random colors). */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@media (prefers-reduced-motion: reduce) {
+
+}
+
+@media (max-width: 1180px) {
+
+  .explorer-layout--mobile .filters-panel,
+  .explorer-layout--mobile .results-panel,
+  .explorer-layout--mobile .panel-card--map,
+  .explorer-layout--mobile .map-panel--column {
+    min-height: clamp(280px, calc(100dvh - 190px), 520px);
+  }
+}
+
+/* Map Markers */
+.map-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.map-marker-pin:hover {
+  transform: scale(1.15) translateY(-2px);
+  z-index: 10;
+}
+
+.map-marker-pin--selected .map-marker-pin__img {
+  filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--accent-brand) 58%, transparent))
+    drop-shadow(0 12px 18px rgba(24, 49, 59, 0.2));
+}
+
+.map-marker-pin__img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Explorer map: clustered results — anneau de composition par type, plus grand = plus dense */
+.map-cluster-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  /* L'anneau de composition (conic-gradient) est posé EN LIGNE par cluster
+     (MapPanel). Ce fond plein n'est que le repli quand la composition n'est pas
+     résoluble (cluster sans type connu). La couleur encode le TYPE, plus le nombre. */
+  background: var(--theme-primary);
+  border: 2px solid var(--theme-surface);
+  box-shadow: 0 4px 12px rgba(24, 49, 59, 0.18);
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+/* Densité → TAILLE seulement (le nombre de fiches groupées). */
+.map-cluster-pin--density-small {
+  width: 38px;
+  height: 38px;
+  font-size: 0.82rem;
+}
+
+.map-cluster-pin--density-medium {
+  width: 44px;
+  height: 44px;
+  font-size: 0.86rem;
+}
+
+.map-cluster-pin--density-large {
+  width: 50px;
+  height: 50px;
+  font-size: 0.92rem;
+}
+
+/* Disque intérieur posé sur l'anneau — porte le compteur (mockup .cluster__inner).
+   L'écart (12px) laisse voir l'anneau de composition tout autour. */
+.map-cluster-pin__count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  border-radius: 50%;
+  background: var(--theme-surface);
+  color: var(--ink);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.map-cluster-pin:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(24, 49, 59, 0.22);
+  filter: brightness(1.04) saturate(1.03);
+}
+
+/* (.map-hover-card pointer-events lifted onto .map-hover-card-wrap.) */

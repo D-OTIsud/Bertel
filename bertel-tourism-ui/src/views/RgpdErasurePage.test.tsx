@@ -110,7 +110,7 @@ describe('RgpdErasurePage', () => {
     expect(toast.success).not.toHaveBeenCalled();
     // Le formulaire n'est PAS réinitialisé sur un résultat non complet (permet de retenter/suivre).
     expect(screen.getByLabelText(/Identifiant du sujet/i)).toHaveValue(VALID_UUID);
-    expect(screen.getByRole('button', { name: /reprendre/i })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /reprendre/i })).toBeInTheDocument();
   });
 
   it('le bouton de reprise appelle resumeErasureCleanup avec le operationId sauvegardé, jamais requestErasure à nouveau', async () => {
@@ -130,7 +130,7 @@ describe('RgpdErasurePage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Anonymiser' }));
     await waitFor(() => expect(requestErasureMock).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(screen.getByRole('button', { name: /reprendre/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /reprendre/i }));
     await waitFor(() => expect(resumeErasureCleanupMock).toHaveBeenCalledTimes(1));
     expect(resumeErasureCleanupMock).toHaveBeenCalledWith('op-resume-me', 'tok');
     expect(requestErasureMock).toHaveBeenCalledTimes(1); // jamais rappelé

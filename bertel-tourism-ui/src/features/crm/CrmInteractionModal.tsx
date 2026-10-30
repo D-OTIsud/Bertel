@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Modal « Nouvelle interaction » (§61 rectif PO point 3 ; §66 décision 1 ; Phase 5.2) — le
 // composer inline de la fiche acteur déménage ici, et la vue établissement gagne le même
@@ -101,7 +103,7 @@ export function CrmInteractionModal({
 
   // Assignables (PO point 4) — défaut = utilisateur courant. Chargé seulement quand on ouvre
   // la relance (le select n'apparaît qu'alors).
-  const assigneesQuery = useQuery({ queryKey: ['crm-assignees'], queryFn: listCrmAssignees, enabled: addingRelance });
+  const assigneesQuery = useQuery({ queryKey: crmQueryKeys.assignees, queryFn: listCrmAssignees, enabled: addingRelance });
   const assignees = assigneesQuery.data ?? [];
 
   const objectId = fixedContext ? fixedContext.objectId : ctx || undefined;
@@ -158,7 +160,7 @@ export function CrmInteractionModal({
         relatedInteractionId: savedInteractionId as string,
       }),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+      void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks });
       onSaved();
       onClose();
     },

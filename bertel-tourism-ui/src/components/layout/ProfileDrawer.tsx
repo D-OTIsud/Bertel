@@ -1,4 +1,6 @@
 'use client';
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Hub personnel (spec 2026-07-03) — le tiroir de la pastille utilisateur devient un espace
 // personnel : identité éditable (ProfileEditModal), collègues en ligne (presence globale
@@ -54,7 +56,7 @@ export function ProfileDrawer({ open, onOpenChange }: ProfileDrawerProps) {
 
   // Mêmes clés de cache que CrmPage / le badge Sidebar (aucune double charge réseau) ;
   // fetch uniquement panneau ouvert. Query en erreur ⇒ data undefined ⇒ bloc masqué.
-  const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks, enabled: open, staleTime: 60_000 });
+  const tasksQuery = useQuery({ queryKey: crmQueryKeys.tasks, queryFn: listCrmTasks, enabled: open, staleTime: 60_000 });
   const moderationVisible = visibleNavItems(role, demoMode, canEditObjects).some((item) => item.to === '/moderation');
   const pendingQuery = useQuery({
     queryKey: ['pending-changes', 'pending'],

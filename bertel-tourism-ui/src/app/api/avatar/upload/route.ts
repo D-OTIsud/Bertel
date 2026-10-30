@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../media/upload/process-image';
 import { authorizeAdminRoute, sharesActiveOrg } from '../../admin/_authorize';
@@ -171,10 +172,7 @@ async function handlePostAuthenticated(
   } else {
     const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
     const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-    const asCaller = createClient(supabaseUrl, anon, {
-      global: { headers: { Authorization: `Bearer ${jwt}` } },
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    const asCaller = createCallerClient(supabaseUrl, anon, jwt);
     ({ error: profErr } = await asCaller.from('app_user_profile').update({ avatar_url: url }).eq('id', userId));
   }
   if (profErr) {

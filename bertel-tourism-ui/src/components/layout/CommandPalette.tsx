@@ -1,4 +1,6 @@
 'use client';
+import { stripCombiningMarks } from '../../lib/text-fold';
+
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,10 +27,8 @@ interface PaletteEntry {
 }
 
 function normalize(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+  return stripCombiningMarks(value
+    .toLowerCase())
     .trim();
 }
 

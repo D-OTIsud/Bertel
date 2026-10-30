@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../lib/crm-query-keys';
+
 
 // Modération P2.1 (§120) — file de suggestions terrain (`pending_change`) câblée aux RPCs
 // api.list/approve/reject_pending_change (services/rpc → services/moderation). Vue split avant /
@@ -122,7 +124,7 @@ export default function ModerationPage() {
     // Le trigger de résolution (§8) tourne sur pending_change : la dernière ligne tranchée —
     // unitaire ou groupée — bascule la tâche CRM de l'envoi en `done`. Un kanban laissé sur son
     // cache afficherait une tâche déjà close.
-    void queryClient.invalidateQueries({ queryKey: ['crm-tasks'] });
+    void queryClient.invalidateQueries({ queryKey: crmQueryKeys.tasks });
   }
 
   const approveMutation = useMutation({

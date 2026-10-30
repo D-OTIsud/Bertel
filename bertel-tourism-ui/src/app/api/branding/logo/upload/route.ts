@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { processImage, MediaProcessingError, MAX_INPUT_BYTES } from '../../../media/upload/process-image';
 import {
@@ -100,10 +101,7 @@ async function handlePostAuthenticated(
   // (ou superuser). Sans : super-admin plateforme (branding global, inchangé).
   const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
   const anon = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim();
-  const asCaller = createClient(supabaseUrl, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(supabaseUrl, anon, jwt);
   const probe = orgObjectId
     ? await asCaller.schema('api').rpc('user_can_manage_org_branding', { p_org_object_id: orgObjectId })
     : await asCaller.schema('api').rpc('is_platform_admin');

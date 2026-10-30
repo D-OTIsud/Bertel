@@ -1,3 +1,4 @@
+import { readTrimmedString as readString } from '../lib/json-read';
 import { getApiClient } from '../lib/supabase';
 import { useSessionStore } from '../store/session-store';
 
@@ -18,10 +19,6 @@ export interface ObjectDocument {
 export interface ObjectDocumentsResult {
   authorized: boolean;
   documents: ObjectDocument[];
-}
-
-function readString(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
 }
 
 function readNullableString(value: unknown): string | null {

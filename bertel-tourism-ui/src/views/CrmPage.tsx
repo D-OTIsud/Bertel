@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../lib/crm-query-keys';
+
 
 // Page /crm (§61, design v2 acteur-centré 2026-06-11) — shell du module CRM.
 // Modèle : l'ACTEUR (personne/organisation) est l'entité CRM principale ; l'objet
@@ -117,9 +119,9 @@ export default function CrmPage() {
 
   // Requêtes partagées (mêmes clés que les vues → une seule charge réseau) :
   // compteurs d'onglets + résolution du libellé de retour de la vue établissement.
-  const directoryQuery = useQuery({ queryKey: ['crm-directory'], queryFn: () => listCrmDirectory() });
-  const tasksQuery = useQuery({ queryKey: ['crm-tasks'], queryFn: listCrmTasks });
-  const canWriteQuery = useQuery({ queryKey: ['crm-can-write'], queryFn: userCanWriteCrmNotes });
+  const directoryQuery = useQuery({ queryKey: crmQueryKeys.directory(), queryFn: () => listCrmDirectory() });
+  const tasksQuery = useQuery({ queryKey: crmQueryKeys.tasks, queryFn: listCrmTasks });
+  const canWriteQuery = useQuery({ queryKey: crmQueryKeys.canWrite, queryFn: userCanWriteCrmNotes });
   // Salon de présence du CRM : on n'en garde que l'indicateur « est en train d'écrire ».
   // Le compteur « X live » du header est désormais alimenté par useGlobalPresence (site-wide).
   const { typingUsers } = usePresenceRoom('crm:tasks');

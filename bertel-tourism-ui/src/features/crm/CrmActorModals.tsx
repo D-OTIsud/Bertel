@@ -1,4 +1,6 @@
 "use client";
+import { crmQueryKeys } from '../../lib/crm-query-keys';
+
 
 // Modals d'authoring acteur (§61 rectifs PO points 4+5 ; §66 civilité + nom composé + e-mail requis).
 // IDENTITÉ (§66) : le « Nom affiché » n'est PLUS éditable — il est COMPOSÉ depuis civilité +
@@ -292,7 +294,7 @@ export function CrmActorEditModal({
     lastName: string | null;
   } | null>(null);
 
-  const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
+  const kindsQuery = useQuery({ queryKey: crmQueryKeys.contactKinds, queryFn: listContactKinds });
   const kinds = kindsQuery.data ?? [];
 
   const saveMutation = useMutation({
@@ -721,9 +723,9 @@ export function CrmActorNewModal({
   const sentChannelKeysRef = useRef<Set<string>>(new Set());
   const sentPhotoRef = useRef(false);
 
-  const kindsQuery = useQuery({ queryKey: ['crm-contact-kinds'], queryFn: listContactKinds });
+  const kindsQuery = useQuery({ queryKey: crmQueryKeys.contactKinds, queryFn: listContactKinds });
   const kinds = kindsQuery.data ?? [];
-  const rolesQuery = useQuery({ queryKey: ['crm-actor-roles'], queryFn: listActorRoles });
+  const rolesQuery = useQuery({ queryKey: crmQueryKeys.actorRoles, queryFn: listActorRoles });
   const roles = rolesQuery.data ?? [];
 
   // L'annuaire CRM ne contient que les établissements qui ont DÉJÀ un acteur. Il reste utile
@@ -746,7 +748,7 @@ export function CrmActorNewModal({
   // Suggestions de contacts (PO point 2) : dès que l'établissement résout, on propose ses
   // contacts connus. Clé par objectId ; 42501/vide → [] (le bloc se masque, pas d'erreur).
   const suggestionsQuery = useQuery({
-    queryKey: ['crm-contact-suggestions', resolvedObject?.objectId],
+    queryKey: crmQueryKeys.contactSuggestions(resolvedObject?.objectId),
     queryFn: () => listObjectContactSuggestions(resolvedObject!.objectId),
     enabled: Boolean(resolvedObject),
   });

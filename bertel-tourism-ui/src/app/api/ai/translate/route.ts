@@ -1,9 +1,21 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 import { resolveActiveAiProvider } from '@/lib/ai-provider.server';
-import { acquireLease, BodyTooLargeError, readBoundedJson, SEMAPHORE_RETRY_AFTER_SECONDS } from '@/lib/request-body.server';
-import { MAX_TRANSLATION_BODY_BYTES, translateFields, TranslationError, translationRequestSchema, type TranslationRequest } from './translation';
+import {
+  acquireLease,
+  BodyTooLargeError,
+  readBoundedJson,
+  SEMAPHORE_RETRY_AFTER_SECONDS,
+} from '@/lib/request-body.server';
+import {
+  MAX_TRANSLATION_BODY_BYTES,
+  translateFields,
+  TranslationError,
+  translationRequestSchema,
+  type TranslationRequest,
+} from './translation';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -58,10 +70,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           : errorResponse('bad_request', 'Vérifiez les langues et les textes à traduire (30 000 caractères maximum).', 400);
       }
 
-      const caller = createClient(url, anon, {
-        global: { headers: { Authorization: `Bearer ${jwt}` } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      }).schema('api');
+      const caller = createCallerClient(url, anon, jwt).schema('api');
       const canonical = await caller.rpc('user_can_write_object_canonical', { p_object_id: body.objectId });
       if (canonical.error) return errorResponse('forbidden', 'Vous ne pouvez pas traduire cette fiche.', 403);
       let allowed = canonical.data === true;

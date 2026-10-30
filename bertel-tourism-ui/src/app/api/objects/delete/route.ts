@@ -1,5 +1,6 @@
+import { createCallerClient } from '@/lib/supabase-caller.server';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { type SupabaseClient } from '@supabase/supabase-js';
 import { engineErrorDetail } from '@/lib/db-error-message';
 import { getServerSupabaseClient } from '@/lib/supabase-server';
 
@@ -100,10 +101,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!jwt) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 
   // Client anon porteur du JWT : sert à valider le JWT ET à exécuter le RPC superuser-gated.
-  const asCaller = createClient(url, anon, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
+  const asCaller = createCallerClient(url, anon, jwt);
   const { data: userData, error: userErr } = await asCaller.auth.getUser(jwt);
   if (userErr || !userData?.user) return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
 

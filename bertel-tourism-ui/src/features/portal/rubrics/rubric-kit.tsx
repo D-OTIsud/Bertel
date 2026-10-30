@@ -14,7 +14,41 @@
  * `useEffect` de resynchronisation laisserait passer un rendu avec les valeurs de la
  * rubrique précédente : le partenaire verrait son téléphone dans le champ « e-mail ».
  */
-import { useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Info } from 'lucide-react';
+
+/** Une aide au clic et au clavier. Le texte référencé reste lisible par les aides
+ * techniques même lorsque la bulle visuelle est fermée ; les erreurs restent visibles. */
+export function PortalHelp({ label, children, id }: { label: string; children: ReactNode; id?: string }) {
+  const generated = useId();
+  const contentId = id ?? `portal-help-${generated}`;
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Node && !root.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [open]);
+
+  return <span className="portal-help" ref={root} onBlur={(event) => {
+    if (event.relatedTarget instanceof Node && !event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+  }} onKeyDown={(event) => {
+    if (event.key === 'Escape' && open) {
+      event.preventDefault(); event.stopPropagation(); setOpen(false); button.current?.focus();
+    }
+  }}>
+    <button ref={button} type="button" className="portal-help__button" aria-label={`Aide : ${label}`}
+      aria-controls={contentId} aria-expanded={open} onClick={() => setOpen((value) => !value)}>
+      <Info size={18} aria-hidden />
+    </button>
+    <span className="portal-help__content" role="note" id={contentId} hidden={!open}>{children}</span>
+  </span>;
+}
 
 /** Les attributs que le champ doit reprendre pour que l'aide et l'erreur soient lues. */
 export interface PortalFieldSlots {
@@ -44,12 +78,10 @@ export function PortalField({
 
   return (
     <div className="auth-field portal-field">
-      <label htmlFor={id}>{label}</label>
-      {hint ? (
-        <p className="auth-field__hint" id={hintId}>
-          {hint}
-        </p>
-      ) : null}
+      <div className="portal-field__label">
+        <label htmlFor={id}>{label}</label>
+        {hint ? <PortalHelp id={hintId} label={typeof label === 'string' ? label : 'Ce champ'}>{hint}</PortalHelp> : null}
+      </div>
       {children({
         id,
         'aria-describedby': describedBy,

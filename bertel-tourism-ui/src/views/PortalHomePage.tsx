@@ -89,7 +89,10 @@ export function PortalHomePage() {
   const prenom = firstName(userName);
   return (
     <section className="portal-home">
-      <h1 className="portal-h1">{prenom ? `Bonjour ${prenom},` : 'Bonjour,'}</h1>
+      <h1 className="portal-h1">
+        <span className="portal-home__greeting">{prenom ? `Bonjour ${prenom},` : 'Bonjour,'}</span>
+        <span className="portal-home__title">Vos fiches</span>
+      </h1>
       <p className="portal-lead">Voici vos fiches. Ouvrez une fiche pour la compléter ou la mettre à jour.</p>
       {fiches.length === 0 ? (
         <EmptyState

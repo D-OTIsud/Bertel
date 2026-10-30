@@ -1,341 +1,204 @@
 'use client';
 
-/**
- * « Vos horaires » — DEUX écrans dans la rubrique, jamais une grille 7 × 5 sur un téléphone.
- *
- *   1. « Quels jours êtes-vous ouvert ? » — sept cases et trois raccourcis.
- *   2. « À quelles heures ? » — un choix entre « les mêmes heures », « ça dépend du jour »
- *      et « sans horaires fixes ».
- *
- * « Sans horaires fixes » écrit la SENTINELLE `[{ start: '', end: '' }]`, jamais `slots: []`
- * qui se relit FERMÉ : c'est le cas de 26 % des tranches ouvertes en production. Tout ça vit
- * dans `portal-bindings` (`desiredSlots`) — l'écran n'a qu'à dire `fixedHours: false`.
- */
+/** Une carte pour les jours qui partagent leurs horaires. La saisie par jour conserve
+ * aussi les jours sans horaires fixes et les créneaux complexes gérés par l'office. */
 import { useEffect } from 'react';
-import { PortalChoice, PortalRubricActions, focusPortalField, useRubricForm } from './rubric-kit';
-import { readWeekHours, setWeekHours, type WeekDayHours, type WeekHours } from '../portal-bindings';
+import { Plus, Trash2 } from 'lucide-react';
+import { PortalChoice, PortalRubricActions, focusPortalField, useRubricForm, type PortalFormCache } from './rubric-kit';
+import { MAX_EDITABLE_SLOTS_PER_DAY, PORTAL_DAY_READONLY_REASON, readWeekHours, setWeekHours, type WeekDayHours, type WeekHours } from '../portal-bindings';
 import { OPENING_WEEKDAYS } from '../../object-editor/sections/opening-period-edit';
 import type { PortalRubricFormProps } from './types';
 import type { ObjectWorkspaceOpeningsModule, ObjectWorkspaceOpeningSlot } from '../../../services/object-workspace-parser';
 
-type HoursMode = 'same' | 'per-day' | 'none';
-
 interface HoursForm {
-  step: 1 | 2;
-  open: Record<string, boolean>;
-  mode: HoursMode;
-  /** Les créneaux appliqués à TOUS les jours ouverts en mode « les mêmes heures ». */
-  same: ObjectWorkspaceOpeningSlot[];
-  perDay: Record<string, ObjectWorkspaceOpeningSlot[]>;
-  error: string | null;
+  hours: WeekHours;
+  individual: boolean;
+  error: { message: string; fieldId: string } | null;
 }
 
-const EMPTY_SLOT: ObjectWorkspaceOpeningSlot = { start: '', end: '' };
-const RANGE_ERROR = 'Indiquez une heure de fin après l’heure de début.';
-const MISSING_END = 'Indiquez aussi l’heure de fermeture.';
-const MISSING_START = 'Indiquez aussi l’heure d’ouverture.';
-
-const SHORTCUTS: { label: string; codes: string[] }[] = [
+const emptySlot = (): ObjectWorkspaceOpeningSlot => ({ start: '', end: '' });
+const SHORTCUTS = [
   { label: 'Tous les jours', codes: OPENING_WEEKDAYS.map((day) => day.code) },
   { label: 'Du lundi au vendredi', codes: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'] },
+  { label: 'Du mardi au samedi', codes: ['tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] },
   { label: 'Le week-end', codes: ['saturday', 'sunday'] },
 ];
 
-function filled(slots: readonly ObjectWorkspaceOpeningSlot[]): ObjectWorkspaceOpeningSlot[] {
-  return slots.filter((slot) => slot.start.trim() && slot.end.trim());
+/** Une saisie commencée avant la mise à jour doit rester récupérable. On garde la même
+ * clé de cache, que « Quitter sans garder » sait effacer, en convertissant l'ancien formulaire. */
+function compatibleCache(cache: PortalFormCache | undefined, openings: ObjectWorkspaceOpeningsModule): PortalFormCache | undefined {
+  if (!cache) return undefined;
+  return {
+    get(key) {
+      const saved = cache.get(key);
+      if (!saved || typeof saved !== 'object') return undefined;
+      if ('hours' in saved) return saved;
+      const old = saved as { open?: Record<string, boolean>; mode?: string; same?: ObjectWorkspaceOpeningSlot[]; perDay?: Record<string, ObjectWorkspaceOpeningSlot[]> };
+      if (!old.open || !['same', 'per-day', 'none'].includes(old.mode ?? '')) return undefined;
+      const hours = readWeekHours(openings).hours;
+      for (const { code } of OPENING_WEEKDAYS) {
+        if (hours[code].readOnly) continue;
+        const slots = (old.mode === 'same' ? old.same : old.perDay?.[code]) ?? [emptySlot()];
+        hours[code] = { ...hours[code], open: Boolean(old.open[code]), fixedHours: old.mode !== 'none', slots };
+      }
+      return { hours, individual: old.mode === 'per-day', error: null } satisfies HoursForm;
+    },
+    set: (key, value) => cache.set(key, value),
+    delete: (key) => cache.delete(key),
+  };
 }
 
-function signature(slots: readonly ObjectWorkspaceOpeningSlot[]): string {
-  return filled(slots)
-    .map((slot) => `${slot.start}-${slot.end}`)
-    .join('|');
+function dayLabel(codes: string[]): string {
+  const days = OPENING_WEEKDAYS.filter((day) => codes.includes(day.code));
+  if (days.length === 7) return 'Tous les jours';
+  if (days.length === 1) return days[0].label;
+  const indexes = days.map((day) => OPENING_WEEKDAYS.findIndex((entry) => entry.code === day.code));
+  const consecutive = indexes.every((value, index) => index === 0 || value === indexes[index - 1] + 1);
+  return consecutive ? 'Du ' + days[0].label.toLowerCase() + ' au ' + days[days.length - 1].label.toLowerCase() : days.map((day) => day.label).join(', ');
 }
 
-function readForm(openings: ObjectWorkspaceOpeningsModule): HoursForm {
-  const { hours } = readWeekHours(openings);
-  const open: Record<string, boolean> = {};
-  const perDay: Record<string, ObjectWorkspaceOpeningSlot[]> = {};
+function groupsOf(form: HoursForm): string[][] {
+  const groups = new Map<string, string[]>();
   for (const { code } of OPENING_WEEKDAYS) {
-    const entry: WeekDayHours | undefined = hours[code];
-    open[code] = Boolean(entry?.open);
-    const slots = filled(entry?.slots ?? []);
-    perDay[code] = slots.length > 0 ? slots : [EMPTY_SLOT];
+    const entry = form.hours[code];
+    if (!entry?.open) continue;
+    const key = form.individual || entry.readOnly ? code : JSON.stringify([entry.fixedHours, entry.slots]);
+    groups.set(key, [...(groups.get(key) ?? []), code]);
   }
-
-  const openCodes = OPENING_WEEKDAYS.map((day) => day.code).filter((code) => open[code]);
-  const withHours = openCodes.filter((code) => signature(perDay[code]) !== '');
-  const signatures = new Set(openCodes.map((code) => signature(perDay[code])));
-  const mode: HoursMode =
-    openCodes.length === 0 ? 'same' : withHours.length === 0 ? 'none' : signatures.size === 1 ? 'same' : 'per-day';
-  const same = mode === 'same' && openCodes.length > 0 ? perDay[openCodes[0]] : [EMPTY_SLOT];
-
-  return { step: 1, open, mode, same: same.length > 0 ? same : [EMPTY_SLOT], perDay, error: null };
+  return [...groups.values()];
 }
 
-/** Ce que l'écran annonce, traduit en `WeekHours`. Un jour ouvert n'obtient jamais
- *  `slots: []` — `desiredSlots` pose la sentinelle pour lui. */
-function toWeekHours(form: HoursForm): WeekHours {
-  const hours: WeekHours = {};
-  for (const { code } of OPENING_WEEKDAYS) {
-    const isOpen = Boolean(form.open[code]);
-    const slots = form.mode === 'same' ? form.same : form.perDay[code] ?? [EMPTY_SLOT];
-    hours[code] = {
-      open: isOpen,
-      fixedHours: form.mode !== 'none' && filled(slots).length > 0,
-      slots: form.mode === 'none' ? [EMPTY_SLOT] : slots,
-    };
-  }
-  return hours;
-}
-
-/** Les créneaux que l'écran affiche VRAIMENT, chacun avec le préfixe d'id de ses deux
- *  champs — sans lui, on saurait qu'il y a une erreur sans savoir OÙ mettre le focus. */
-function editableSlots(form: HoursForm): { idPrefix: string; slot: ObjectWorkspaceOpeningSlot }[] {
-  if (form.mode === 'same') {
-    return form.same.map((slot, index) => ({ idPrefix: `portal-same-${index}`, slot }));
-  }
-  if (form.mode === 'per-day') {
-    return OPENING_WEEKDAYS.filter((day) => form.open[day.code]).flatMap((day) =>
-      (form.perDay[day.code] ?? [EMPTY_SLOT]).map((slot, index) => ({
-        idPrefix: `portal-${day.code}-${index}`,
-        slot,
-      })),
-    );
-  }
-  return [];
-}
-
-/**
- * Ce qui empêche d'enregistrer, et OÙ.
- *
- * ═══════════════════════════════════════════════════════════════════════════════════
- * UN CRÉNEAU À MOITIÉ SAISI EST UNE ERREUR, PAS UN SILENCE.
- * ═══════════════════════════════════════════════════════════════════════════════════
- * `toWeekHours` calcule `fixedHours = filled(slots).length > 0` : une seule borne ⇒
- * `filled = []` ⇒ `fixedHours: false`, et `desiredSlots` pose la sentinelle. Le
- * restaurateur qui tape « 09:00 », est interrompu et valide voyait son horaire devenir
- * « ouvert sans horaires fixes » — sans message, sans champ en erreur, retour direct au
- * hub. Un créneau ENTIÈREMENT vide, lui, reste licite : c'est le mode « sans horaires
- * fixes » qui le porte, et « Ajouter une pause » laisse légitimement le second vide.
- */
-function rangeError(form: HoursForm): { message: string; fieldId: string } | null {
-  for (const { idPrefix, slot } of editableSlots(form)) {
-    const start = slot.start.trim();
-    const end = slot.end.trim();
-    if (start && !end) return { message: MISSING_END, fieldId: `${idPrefix}-end` };
-    if (!start && end) return { message: MISSING_START, fieldId: `${idPrefix}-start` };
-    if (start && end && end <= start) return { message: RANGE_ERROR, fieldId: `${idPrefix}-end` };
+function validate(form: HoursForm): HoursForm['error'] {
+  for (const codes of groupsOf(form)) {
+    const entry = form.hours[codes[0]];
+    if (entry.readOnly || !entry.fixedHours) continue;
+    let complete = false;
+    for (const [index, slot] of entry.slots.entries()) {
+      const field = 'portal-hours-' + codes[0] + '-' + index;
+      if (slot.start && !slot.end) return { message: 'Indiquez aussi l’heure de fermeture.', fieldId: field + '-end' };
+      if (!slot.start && slot.end) return { message: 'Indiquez aussi l’heure d’ouverture.', fieldId: field + '-start' };
+      if (slot.start && slot.end) {
+        complete = true;
+        if (slot.end <= slot.start) return { message: 'Indiquez une heure de fin après l’heure de début.', fieldId: field + '-end' };
+        if (entry.slots.some((other, otherIndex) => otherIndex < index && other.start && other.end && other.start < slot.end && slot.start < other.end)) {
+          return { message: 'Les deux créneaux ne doivent pas se chevaucher.', fieldId: field + '-start' };
+        }
+      }
+    }
+    if (!complete) return { message: 'Indiquez un créneau ou cochez « Ouvert, sans horaires fixes ».', fieldId: 'portal-hours-' + codes[0] + '-0-start' };
   }
   return null;
 }
 
-// `rubric` n'est pas lu : la lecture seule (calendrier saisonnier, motif de tranche) est
-// portée par `PortalRubricScreen`, qui remplace le formulaire par la phrase AVANT de le
-// monter. Une seconde garde ici serait du code mort — et deux endroits à tenir.
 export function HoursRubric({ editor, formKey, onDone, onCancel, onDirtyChange, formCache }: PortalRubricFormProps) {
-  const openings = editor.draft.openings as ObjectWorkspaceOpeningsModule;
-  const { form, setForm, dirty } = useRubricForm<HoursForm>(formKey, () => readForm(openings), formCache);
-
+  const openings = editor.draft.openings;
+  const { form, setForm, dirty } = useRubricForm<HoursForm>(formKey, () => ({
+    hours: readWeekHours(openings).hours, individual: false, error: null,
+  }), compatibleCache(formCache, openings));
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
 
-  const openCodes = OPENING_WEEKDAYS.filter((day) => form.open[day.code]);
-
-  function setSlot(list: ObjectWorkspaceOpeningSlot[], index: number, patch: Partial<ObjectWorkspaceOpeningSlot>) {
-    return list.map((slot, position) => (position === index ? { ...slot, ...patch } : slot));
+  function chooseDays(codes: string[]) {
+    setForm((previous) => {
+      const template: WeekDayHours = Object.values(previous.hours).find((entry) => entry.open && !entry.readOnly)
+        ?? { open: true, fixedHours: true, slots: [emptySlot()] };
+      const hours = { ...previous.hours };
+      for (const { code } of OPENING_WEEKDAYS) {
+        const current = hours[code];
+        // Le writer protège également ces jours : le raccourci ne promet pas de les fermer.
+        if (current?.readOnly) continue;
+        const open = codes.includes(code);
+        hours[code] = { ...(open && !current?.open ? template : current), open };
+      }
+      return { ...previous, hours, error: null };
+    });
   }
 
-  function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (form.step === 1) {
-      setForm((previous) => ({ ...previous, step: 2 }));
-      return;
-    }
-    const error = rangeError(form);
-    if (error) {
-      setForm((previous) => ({ ...previous, error: error.message }));
-      // Le focus reste sinon sur « Valider » : au clavier comme au lecteur d'écran, il
-      // faudrait retrouver la borne manquante à l'aveugle, parmi sept paires identiques.
-      focusPortalField(error.fieldId);
-      return;
-    }
-    editor.replaceModule('openings', setWeekHours(openings, toWeekHours(form)));
-    onDone();
+  function update(codes: string[], patch: Partial<WeekDayHours>) {
+    setForm((previous) => ({
+      ...previous, error: null,
+      hours: Object.fromEntries(Object.entries(previous.hours).map(([code, entry]) => [
+        code, codes.includes(code) && !entry.readOnly ? { ...entry, ...patch } : entry,
+      ])),
+    }));
   }
+
+  const groups = groupsOf(form);
+  const closed = OPENING_WEEKDAYS.filter(({ code }) => !form.hours[code]?.open);
 
   return (
-    <form className="portal-form" onSubmit={handleSubmit} noValidate>
-      {form.step === 1 ? (
-        <fieldset className="portal-fieldset">
-          <legend>Quels jours êtes-vous ouvert ?</legend>
-          <div className="portal-shortcuts">
-            {SHORTCUTS.map((shortcut) => (
-              <button
-                key={shortcut.label}
-                type="button"
-                className="portal-pill"
-                onClick={() =>
-                  setForm((previous) => ({
-                    ...previous,
-                    open: Object.fromEntries(OPENING_WEEKDAYS.map((day) => [day.code, shortcut.codes.includes(day.code)])),
-                  }))
-                }
-              >
-                {shortcut.label}
-              </button>
-            ))}
-          </div>
-          {OPENING_WEEKDAYS.map((day) => (
-            <PortalChoice
-              key={day.code}
-              type="checkbox"
-              checked={Boolean(form.open[day.code])}
-              onChange={(checked) => setForm((previous) => ({ ...previous, open: { ...previous.open, [day.code]: checked } }))}
-            >
-              {day.label}
+    <form className="portal-form" noValidate onSubmit={(event) => {
+      event.preventDefault();
+      const error = validate(form);
+      if (error) {
+        setForm((previous) => ({ ...previous, error }));
+        focusPortalField(error.fieldId);
+        return;
+      }
+      editor.replaceModule('openings', setWeekHours(openings, form.hours));
+      onDone();
+    }}>
+      <fieldset className="portal-fieldset">
+        <legend>Quels jours êtes-vous ouvert ?</legend>
+        <div className="portal-shortcuts">
+          {SHORTCUTS.map(({ label, codes }) => (
+            <button key={label} type="button" className="portal-pill"
+              aria-pressed={OPENING_WEEKDAYS.every(({ code }) => Boolean(form.hours[code]?.open) === codes.includes(code))}
+              onClick={() => chooseDays(codes)}>{label}</button>
+          ))}
+        </div>
+        <div className="portal-days">
+          {OPENING_WEEKDAYS.map(({ code, label }) => (
+            <PortalChoice key={code} type="checkbox" checked={Boolean(form.hours[code]?.open)} disabled={form.hours[code]?.readOnly}
+              onChange={(checked) => chooseDays(OPENING_WEEKDAYS.filter((day) => day.code === code ? checked : form.hours[day.code]?.open).map((day) => day.code))}>
+              {label}
             </PortalChoice>
           ))}
-          <div className="portal-rubric-actions">
-            <button type="submit" className="primary-button">
-              Suivant
-            </button>
-            <button type="button" className="ghost-button" onClick={onCancel}>
-              Retour sans changer
-            </button>
-          </div>
-        </fieldset>
-      ) : (
-        <>
-          <fieldset className="portal-fieldset">
-            <legend>À quelles heures ?</legend>
-            <PortalChoice
-              type="radio"
-              name="portal-hours-mode"
-              checked={form.mode === 'same'}
-              onChange={() => setForm((previous) => ({ ...previous, mode: 'same', error: null }))}
-            >
-              Les mêmes heures tous les jours ouverts
-            </PortalChoice>
-            <PortalChoice
-              type="radio"
-              name="portal-hours-mode"
-              checked={form.mode === 'per-day'}
-              onChange={() => setForm((previous) => ({ ...previous, mode: 'per-day', error: null }))}
-            >
-              Ça dépend du jour
-            </PortalChoice>
-            <PortalChoice
-              type="radio"
-              name="portal-hours-mode"
-              checked={form.mode === 'none'}
-              onChange={() => setForm((previous) => ({ ...previous, mode: 'none', error: null }))}
-            >
-              Sans horaires fixes (sur rendez-vous)
-            </PortalChoice>
-          </fieldset>
-
-          {form.mode === 'same' ? (
-            <div className="portal-week">
-              {form.same.map((slot, index) => (
-                <SlotPair
-                  key={index}
-                  idPrefix={`portal-same-${index}`}
-                  context={form.same.length > 1 ? `, créneau ${index + 1}` : ''}
-                  slot={slot}
-                  onChange={(patch) => setForm((previous) => ({ ...previous, same: setSlot(previous.same, index, patch), error: null }))}
-                />
-              ))}
-              {form.same.length < 2 ? (
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => setForm((previous) => ({ ...previous, same: [...previous.same, EMPTY_SLOT] }))}
-                >
-                  Ajouter une pause (fermeture le midi)
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-
-          {form.mode === 'per-day' ? (
-            <div className="portal-week">
-              {openCodes.map((day) => (
-                <div className="portal-week__day" key={day.code}>
-                  <p className="portal-week__name">{day.label}</p>
-                  {(form.perDay[day.code] ?? [EMPTY_SLOT]).map((slot, index) => (
-                    <SlotPair
-                      key={index}
-                      idPrefix={`portal-${day.code}-${index}`}
-                      context={`, ${day.label}`}
-                      slot={slot}
-                      onChange={(patch) =>
-                        setForm((previous) => ({
-                          ...previous,
-                          perDay: { ...previous.perDay, [day.code]: setSlot(previous.perDay[day.code] ?? [EMPTY_SLOT], index, patch) },
-                          error: null,
-                        }))
-                      }
-                    />
-                  ))}
-                </div>
-              ))}
-              {openCodes.length === 0 ? <p className="muted">Vous n’avez coché aucun jour d’ouverture.</p> : null}
-            </div>
-          ) : null}
-
-          {form.error ? (
-            <p className="field-error" role="alert">
-              {form.error}
-            </p>
-          ) : null}
-
-          <button type="button" className="ghost-button" onClick={() => setForm((previous) => ({ ...previous, step: 1 }))}>
-            Revenir aux jours
-          </button>
-          <PortalRubricActions onCancel={onCancel} />
-        </>
-      )}
+        </div>
+      </fieldset>
+      <fieldset className="portal-fieldset portal-week">
+        <legend>À quelles heures ?</legend>
+        {groups.map((codes) => {
+          const entry = form.hours[codes[0]];
+          const label = dayLabel(codes);
+          const slots = entry.slots.length ? entry.slots : [emptySlot()];
+          return (
+            <section className="portal-week__day" key={codes[0]} aria-label={label}>
+              <h3 className="portal-week__name">{label}</h3>
+              {entry.readOnly ? <p className="notice">{PORTAL_DAY_READONLY_REASON}</p> : <>
+                <PortalChoice type="checkbox" checked={!entry.fixedHours} onChange={(checked) => update(codes, { fixedHours: !checked })}>
+                  Ouvert, sans horaires fixes
+                </PortalChoice>
+                {entry.fixedHours ? <>
+                  {slots.map((slot, index) => {
+                    const prefix = 'portal-hours-' + codes[0] + '-' + index;
+                    return <div className="portal-slot" key={index}>
+                      <label htmlFor={prefix + '-start'}>de<span className="sr-only"> quelle heure, {label}, créneau {index + 1}</span></label>
+                      <input id={prefix + '-start'} type="time" className="portal-input portal-input--time" value={slot.start}
+                        aria-invalid={form.error?.fieldId === prefix + '-start' || undefined} aria-describedby={form.error?.fieldId === prefix + '-start' ? 'portal-hours-error' : undefined}
+                        onChange={(event) => update(codes, { slots: slots.map((item, position) => position === index ? { ...item, start: event.target.value } : item) })} />
+                      <label htmlFor={prefix + '-end'}>à<span className="sr-only"> quelle heure, {label}, créneau {index + 1}</span></label>
+                      <input id={prefix + '-end'} type="time" className="portal-input portal-input--time" value={slot.end}
+                        aria-invalid={form.error?.fieldId === prefix + '-end' || undefined} aria-describedby={form.error?.fieldId === prefix + '-end' ? 'portal-hours-error' : undefined}
+                        onChange={(event) => update(codes, { slots: slots.map((item, position) => position === index ? { ...item, end: event.target.value } : item) })} />
+                      {slots.length > 1 ? <button type="button" className="ghost-button portal-slot__remove" aria-label={'Retirer le créneau ' + (index + 1) + ' (' + label + ')'}
+                        onClick={() => update(codes, { slots: slots.filter((_, position) => position !== index) })}><Trash2 size={18} aria-hidden /></button> : null}
+                    </div>;
+                  })}
+                  {slots.length < MAX_EDITABLE_SLOTS_PER_DAY ? <button type="button" className="ghost-button" onClick={() => update(codes, { slots: [...slots, emptySlot()] })}>
+                    <Plus size={18} aria-hidden /> Ajouter un créneau
+                  </button> : null}
+                </> : null}
+              </>}
+            </section>
+          );
+        })}
+        {groups.length > 0 && !form.individual ? <button type="button" className="ghost-button" onClick={() => setForm((previous) => ({ ...previous, individual: true }))}>
+          Horaires différents selon les jours ?
+        </button> : null}
+        {closed.length > 0 ? <p className="muted">Fermé : {closed.map((day) => day.label.toLowerCase()).join(', ')}.</p> : null}
+      </fieldset>
+      {form.error ? <p className="field-error" id="portal-hours-error" role="alert">{form.error.message}</p> : null}
+      <PortalRubricActions onCancel={onCancel} />
     </form>
-  );
-}
-
-/**
- * Une paire d'heures. Le libellé VISIBLE reste « de » / « à » — c'est ce qui se lit le
- * mieux —, mais le nom ACCESSIBLE porte le contexte : sept paires « de »/« à » identiques
- * ne se distinguent pas au lecteur d'écran, qui annonce sept fois le même champ.
- */
-function SlotPair({
-  idPrefix,
-  context,
-  slot,
-  onChange,
-}: {
-  idPrefix: string;
-  context: string;
-  slot: ObjectWorkspaceOpeningSlot;
-  onChange: (patch: Partial<ObjectWorkspaceOpeningSlot>) => void;
-}) {
-  return (
-    <div className="portal-slot">
-      <label htmlFor={`${idPrefix}-start`}>
-        de<span className="sr-only"> quelle heure{context}</span>
-      </label>
-      <input
-        id={`${idPrefix}-start`}
-        className="portal-input portal-input--time"
-        type="time"
-        value={slot.start}
-        onChange={(event) => onChange({ start: event.target.value })}
-      />
-      <label htmlFor={`${idPrefix}-end`}>
-        à<span className="sr-only"> quelle heure{context}</span>
-      </label>
-      <input
-        id={`${idPrefix}-end`}
-        className="portal-input portal-input--time"
-        type="time"
-        value={slot.end}
-        onChange={(event) => onChange({ end: event.target.value })}
-      />
-    </div>
   );
 }

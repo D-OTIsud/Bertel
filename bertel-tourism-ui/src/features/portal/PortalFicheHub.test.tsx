@@ -143,6 +143,14 @@ function renderHub(over: Record<string, unknown> = {}) {
   return props;
 }
 
+test('l’ordinateur dispose d’une navigation et de cartes de synthèse sur le même arbre', () => {
+  const props = renderHub();
+  const nav = screen.getByRole('navigation', { name: 'Navigation de votre fiche' });
+  expect(within(nav).getByRole('link', { name: 'Vue d’ensemble' })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('region', { name: 'Les rubriques en résumé' })).toBeInTheDocument();
+  expect(within(nav).getAllByRole('listitem')).toHaveLength(props.rubrics.length);
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useServiceAvailability).mockReturnValue({ translation: false, imageAnalysis: false, email: true });

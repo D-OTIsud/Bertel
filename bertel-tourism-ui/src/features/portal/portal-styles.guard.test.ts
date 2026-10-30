@@ -8,9 +8,15 @@
  * deux recettes manuelles.
  */
 import { join } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { readStylesheet } from '../../styles.test-utils';
 
 const css = readStylesheet(join(__dirname, '..', '..', 'styles.css'));
+
+test('les couleurs du portail passent par les jetons des organisations', () => {
+  const portalCss = readFileSync(join(__dirname, '..', '..', 'styles', '25-portal.css'), 'utf8');
+  expect(portalCss).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(\s*\d/i);
+});
 
 /**
  * Le corps d'une règle, retrouvé par son sélecteur EXACT en début de ligne — pas par une
@@ -42,6 +48,8 @@ describe('portail — les cibles tactiles ne repassent pas sous 48 px', () => {
     ['.portal-input--time', 'les champs heure de « Vos horaires »'],
     ['.portal-pill', 'les raccourcis de jours'],
     ['.portal-choice', 'les cases et boutons radio'],
+    ['.portal-back', 'les liens de retour'],
+    ['.portal-help__button', 'les aides au clic'],
   ])('%s tient sa hauteur (%s)', (selector) => {
     const match = /min-height:\s*(\d+)px/.exec(ruleBody(selector));
     expect(match).not.toBeNull();

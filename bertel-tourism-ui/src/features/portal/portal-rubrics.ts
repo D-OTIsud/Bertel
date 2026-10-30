@@ -251,7 +251,7 @@ function weekHoursSummary(draft: ObjectWorkspaceModules): string {
   const { hours } = readWeekHours(slice(draft, 'openings') as never);
   const open = Object.entries(hours).filter(([, entry]) => entry.open);
   if (open.length === 0) return '';
-  const days = open.length === 7 ? 'Ouvert tous les jours' : `Ouvert ${open.length} jours sur 7`;
+  const days = open.length === 7 ? 'Ouvert tous les jours' : `Ouvert ${open.length} jour${open.length > 1 ? 's' : ''} sur 7`;
   const detail = weekHoursDetail(hours);
   return detail ? `${days} · ${detail}` : days;
 }

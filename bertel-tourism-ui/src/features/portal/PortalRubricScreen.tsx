@@ -36,7 +36,7 @@ import { PricingRubric } from './rubrics/PricingRubric';
 import { SeasonRubric } from './rubrics/SeasonRubric';
 import { WelcomeRubric } from './rubrics/WelcomeRubric';
 import { formatPortalDate } from './portal-format';
-import type { PortalFormCache } from './rubrics/rubric-kit';
+import { PortalHelp, type PortalFormCache } from './rubrics/rubric-kit';
 import type { BuiltPortalRubric, PortalRubricId } from './portal-rubrics';
 import type { ArchetypeCode } from '../object-editor/archetypes';
 import type { ObjectEditorState } from '../object-editor/useObjectEditorState';
@@ -173,10 +173,12 @@ export function PortalRubricScreen({
         <ArrowLeft size={18} aria-hidden /> Retour à la fiche
       </Link>
 
-      <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
-        {rubric.title}
-      </h2>
-      <p className="portal-lead">{RUBRIC_HELP[rubric.id]}</p>
+      <div className="portal-rubric__heading">
+        <h2 className="portal-h1" id="portal-rubric-title" tabIndex={-1} ref={headingRef}>
+          {rubric.title}
+        </h2>
+        {rubric.id !== 'hours' && rubric.id !== 'welcome' ? <PortalHelp label={rubric.title}>{RUBRIC_HELP[rubric.id]}</PortalHelp> : null}
+      </div>
 
       {waiting ? (
         <div className="notice">

@@ -89,12 +89,29 @@ function sourceUsage(project) {
   return { mayBeUsed, files: files.length, prefixes: [...prefixes], suffixes: [...suffixes] };
 }
 
+/** Follow local imports once, without treating remote or conditional imports as removable CSS. */
+export function stylesheetSources(project, files) {
+  const sources = new Map();
+  const visit = (relative) => {
+    const absolute = path.resolve(project, relative);
+    if (sources.has(absolute)) return;
+    const source = fs.readFileSync(absolute, 'utf8');
+    const root = postcss.parse(source, { from: absolute });
+    sources.set(absolute, { file: path.relative(project, absolute).replaceAll('\\', '/'), root });
+    root.walkAtRules('import', (rule) => {
+      const local = /^(?:"(\.[^"\r\n]+)"|'(\.[^'\r\n]+)')\s*$/.exec(rule.params.trim());
+      if (local) visit(path.relative(project, path.resolve(path.dirname(absolute), local[1] ?? local[2])));
+    });
+  };
+  files.forEach(visit);
+  return [...sources.values()];
+}
+
 export function auditStyles(project, files) {
   const usage = sourceUsage(project);
   const candidates = [];
-  for (const relative of files) {
-    const source = fs.readFileSync(path.join(project, relative), 'utf8');
-    postcss.parse(source, { from: relative }).walkRules((rule) => {
+  for (const { file: relative, root } of stylesheetSources(project, files)) {
+    root.walkRules((rule) => {
       for (let parent = rule.parent; parent; parent = parent.parent) if (parent.type === 'atrule' && /keyframes$/i.test(parent.name)) return;
       const selectors = unusedSelectors(rule.selector, usage.mayBeUsed);
       if (!selectors) return;

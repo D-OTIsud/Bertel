@@ -1,0 +1,2145 @@
+{
+  "reports": [
+    {
+      "file": "src/styles.css",
+      "removedRules": 215,
+      "removedRuleLines": 1177,
+      "remainingRulesIdenticalAndInOrder": true,
+      "beforeSha256": "b62c16e0317cea81a0c4a2d21f1a620b0e16295a374265c6e37551f1f38c51e0",
+      "afterSha256": "84aa4afb4eaf7f40fc640dc97ca2d4f0bcc856252249a7ba5851c6773bde9094"
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "removedRules": 5,
+      "removedRuleLines": 16,
+      "remainingRulesIdenticalAndInOrder": true,
+      "beforeSha256": "5c6aca43682a497faa79198ce1cf2eaa126b85385c63d5a40ae8eb270e830f18",
+      "afterSha256": "02d61b2918c54140254f95537e54e2edf304a03a98dd7f7dba657309e74976ff"
+    }
+  ],
+  "retainedForConcurrentWork": [
+    {
+      "file": "src/styles.css",
+      "line": 1464,
+      "endLine": 1466,
+      "selector": ".stat-card--compact strong",
+      "missing": [
+        "stat-card--compact"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10023,
+      "endLine": 10028,
+      "selector": ".dashboard-kpi",
+      "missing": [
+        "dashboard-kpi"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10251,
+      "endLine": 10256,
+      "selector": ".city-list__row",
+      "missing": [
+        "city-list__row"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10258,
+      "endLine": 10263,
+      "selector": ".city-list__rank",
+      "missing": [
+        "city-list__rank"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10265,
+      "endLine": 10272,
+      "selector": ".city-list__name",
+      "missing": [
+        "city-list__name"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10274,
+      "endLine": 10279,
+      "selector": ".city-list__bar-wrap",
+      "missing": [
+        "city-list__bar-wrap"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10281,
+      "endLine": 10287,
+      "selector": ".city-list__bar",
+      "missing": [
+        "city-list__bar"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10289,
+      "endLine": 10294,
+      "selector": ".city-list__count",
+      "missing": [
+        "city-list__count"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10296,
+      "endLine": 10301,
+      "selector": ".city-list__delta",
+      "missing": [
+        "city-list__delta"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10610,
+      "endLine": 10612,
+      "selector": ".filter-dropdown__label--placeholder",
+      "missing": [
+        "filter-dropdown__label--placeholder"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 12426,
+      "endLine": 12426,
+      "selector": ".crm-app .composer__row",
+      "missing": [
+        "composer__row"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 12471,
+      "endLine": 12479,
+      "selector": ".crm-app textarea.note--area",
+      "missing": [
+        "note--area"
+      ]
+    }
+  ],
+  "removed": [
+    {
+      "file": "src/styles.css",
+      "line": 404,
+      "endLine": 404,
+      "selector": ".label-logo--more",
+      "missing": [
+        "label-logo--more"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1564,
+      "endLine": 1569,
+      "selector": ".panel-heading--overlay",
+      "missing": [
+        "panel-heading--overlay"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1571,
+      "endLine": 1578,
+      "selector": ".panel-heading--overlay > *",
+      "missing": [
+        "panel-heading--overlay"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1580,
+      "endLine": 1582,
+      "selector": ".panel-heading--overlay .segmented-control",
+      "missing": [
+        "panel-heading--overlay",
+        "segmented-control"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1704,
+      "endLine": 1709,
+      "selector": ".range-field",
+      "missing": [
+        "range-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1754,
+      "endLine": 1756,
+      "selector": ".result-card__title-row .label-stack",
+      "missing": [
+        "label-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 1864,
+      "endLine": 1866,
+      "selector": ".open-pill",
+      "missing": [
+        "open-pill"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2366,
+      "endLine": 2368,
+      "selector": ".kanban-column__header",
+      "missing": [
+        "kanban-column__header"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2370,
+      "endLine": 2377,
+      "selector": ".kanban-column__header span",
+      "missing": [
+        "kanban-column__header"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2379,
+      "endLine": 2381,
+      "selector": ".kanban-card__meta",
+      "missing": [
+        "kanban-card__meta"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2421,
+      "endLine": 2434,
+      "selector": ".drawer__panel-area select",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2436,
+      "endLine": 2439,
+      "selector": ".drawer__panel-area select:disabled",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2441,
+      "endLine": 2443,
+      "selector": ".drawer__panel-area select option",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2473,
+      "endLine": 2483,
+      "selector": ".drawer-header__chip",
+      "missing": [
+        "drawer-header__chip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2485,
+      "endLine": 2488,
+      "selector": ".drawer-header__chip:nth-child(4n + 1)",
+      "missing": [
+        "drawer-header__chip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2490,
+      "endLine": 2493,
+      "selector": ".drawer-header__chip:nth-child(4n + 2)",
+      "missing": [
+        "drawer-header__chip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2495,
+      "endLine": 2498,
+      "selector": ".drawer-header__chip:nth-child(4n + 3)",
+      "missing": [
+        "drawer-header__chip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2500,
+      "endLine": 2503,
+      "selector": ".drawer-header__chip:nth-child(4n + 4)",
+      "missing": [
+        "drawer-header__chip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2558,
+      "endLine": 2562,
+      "selector": ".drawer-header__mode-eyebrow",
+      "missing": [
+        "drawer-header__mode-eyebrow"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2589,
+      "endLine": 2592,
+      "selector": ".drawer-header__icon-btn--active,\r\n.drawer-header__icon-btn--active:hover",
+      "missing": [
+        "drawer-header__icon-btn--active"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2736,
+      "endLine": 2739,
+      "selector": ".drawer-loading-nav__item",
+      "missing": [
+        "drawer-loading-nav__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2741,
+      "endLine": 2745,
+      "selector": ".drawer-loading-card--panel-title",
+      "missing": [
+        "drawer-loading-card--panel-title"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2747,
+      "endLine": 2750,
+      "selector": ".drawer-loading-card--panel-field",
+      "missing": [
+        "drawer-loading-card--panel-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2752,
+      "endLine": 2755,
+      "selector": ".drawer-loading-card--panel-textarea",
+      "missing": [
+        "drawer-loading-card--panel-textarea"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2789,
+      "endLine": 2793,
+      "selector": ".drawer__content--modular",
+      "missing": [
+        "drawer__content--modular"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2845,
+      "endLine": 2856,
+      "selector": ".object-drawer-nav",
+      "missing": [
+        "object-drawer-nav"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2858,
+      "endLine": 2866,
+      "selector": ".object-drawer-nav__item",
+      "missing": [
+        "object-drawer-nav__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2868,
+      "endLine": 2871,
+      "selector": ".object-drawer-nav__header",
+      "missing": [
+        "object-drawer-nav__header"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2873,
+      "endLine": 2883,
+      "selector": ".object-drawer-nav__index",
+      "missing": [
+        "object-drawer-nav__index"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2885,
+      "endLine": 2887,
+      "selector": ".object-drawer-nav__item strong",
+      "missing": [
+        "object-drawer-nav__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2889,
+      "endLine": 2894,
+      "selector": ".drawer__panel-area",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2896,
+      "endLine": 2900,
+      "selector": ".drawer__panel-area > .drawer-form-stack,\r\n.drawer__panel-area > .drawer-form-stack > .panel-card--nested,\r\n.drawer__panel-area > .drawer-form-stack > section.drawer-form-stack",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-form-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2902,
+      "endLine": 2904,
+      "selector": ".drawer__panel-area > .drawer-form-stack",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-form-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2906,
+      "endLine": 2913,
+      "selector": ".drawer__panel-area .panel-card--nested",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2915,
+      "endLine": 2921,
+      "selector": ".drawer__panel-area > .drawer-form-stack > .panel-card--nested",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-form-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2923,
+      "endLine": 2926,
+      "selector": ".drawer__panel-area .panel-heading",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2928,
+      "endLine": 2930,
+      "selector": ".drawer__panel-area .panel-heading > div",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2932,
+      "endLine": 2937,
+      "selector": ".drawer__panel-area .panel-heading h2,\r\n.drawer__panel-area .panel-heading h3,\r\n.drawer__panel-area .panel-card--nested > h3,\r\n.drawer__panel-area .panel-card--nested > strong",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2939,
+      "endLine": 2944,
+      "selector": ".drawer__panel-area .panel-heading p,\r\n.drawer__panel-area .panel-card--nested > p,\r\n.drawer__panel-area .panel-card--nested > small",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2946,
+      "endLine": 2948,
+      "selector": ".drawer__panel-area .stack-list.text-right",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2950,
+      "endLine": 2954,
+      "selector": ".drawer__panel-area .drawer-grid",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2956,
+      "endLine": 2962,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions)",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2964,
+      "endLine": 2973,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > label,\r\n.drawer__panel-area .field-block:not(label):not(.inline-actions) > span:first-child",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2975,
+      "endLine": 2977,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > :is(input, select, textarea, .drawer-reference-field, .stack-list, .drawer-choice-list)",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2979,
+      "endLine": 2986,
+      "selector": ".drawer__panel-area :is(h2, h3, h4, p, small, strong, label, span),\r\n.drawer__panel-area :is(input, select, textarea),\r\n.drawer-long-value-field,\r\n.drawer-media-summary-card,\r\n.drawer-contact-editor-card",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-long-value-field",
+        "drawer-media-summary-card",
+        "drawer-contact-editor-card"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2988,
+      "endLine": 2991,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > :is(input, select)",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2993,
+      "endLine": 2995,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > textarea",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 2997,
+      "endLine": 3001,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > :is(input, select, textarea),\r\n.drawer__panel-area .field-block:not(label):not(.inline-actions) > .drawer-reference-field > :is(input, select, textarea)",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-reference-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3003,
+      "endLine": 3009,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > small",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3011,
+      "endLine": 3013,
+      "selector": ".drawer__panel-area .field-block--wide",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3015,
+      "endLine": 3021,
+      "selector": ".drawer__panel-area label.field-block",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3023,
+      "endLine": 3030,
+      "selector": ".drawer__panel-area label.field-block > span:first-child",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3032,
+      "endLine": 3035,
+      "selector": ".drawer__panel-area label.field-block > input[type='checkbox']",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3037,
+      "endLine": 3042,
+      "selector": ".drawer__panel-area .inline-actions.field-block",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3044,
+      "endLine": 3047,
+      "selector": ".drawer-choice-list",
+      "missing": [
+        "drawer-choice-list"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3049,
+      "endLine": 3059,
+      "selector": ".drawer-choice-item",
+      "missing": [
+        "drawer-choice-item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3061,
+      "endLine": 3064,
+      "selector": ".drawer-choice-item:has(input:checked)",
+      "missing": [
+        "drawer-choice-item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3066,
+      "endLine": 3068,
+      "selector": ".drawer-choice-item input[type='checkbox']",
+      "missing": [
+        "drawer-choice-item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3070,
+      "endLine": 3074,
+      "selector": ".drawer-choice-item span",
+      "missing": [
+        "drawer-choice-item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3429,
+      "endLine": 3429,
+      "selector": ".auth-hero__domains",
+      "missing": [
+        "auth-hero__domains"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 3598,
+      "endLine": 3600,
+      "selector": ".quick-list",
+      "missing": [
+        "quick-list"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 4161,
+      "endLine": 4161,
+      "selector": ".invite-temp-row",
+      "missing": [
+        "invite-temp-row"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 4162,
+      "endLine": 4171,
+      "selector": ".invite-temp-code",
+      "missing": [
+        "invite-temp-code"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 4173,
+      "endLine": 4175,
+      "selector": ".drawer-grid",
+      "missing": [
+        "drawer-grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 4177,
+      "endLine": 4179,
+      "selector": ".drawer-grid--stacked",
+      "missing": [
+        "drawer-grid--stacked"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 5839,
+      "endLine": 5842,
+      "selector": ".detail-map-card__coords",
+      "missing": [
+        "detail-map-card__coords"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 5977,
+      "endLine": 5983,
+      "selector": ".detail-hero__frame",
+      "missing": [
+        "detail-hero__frame"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 5997,
+      "endLine": 5999,
+      "selector": ".detail-hero--placeholder .detail-hero__frame",
+      "missing": [
+        "detail-hero__frame"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6016,
+      "endLine": 6030,
+      "selector": ".detail-hero__content",
+      "missing": [
+        "detail-hero__content"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6032,
+      "endLine": 6047,
+      "selector": ".detail-hero__nav",
+      "missing": [
+        "detail-hero__nav"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6049,
+      "endLine": 6051,
+      "selector": ".detail-hero__nav--prev",
+      "missing": [
+        "detail-hero__nav--prev"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6053,
+      "endLine": 6055,
+      "selector": ".detail-hero__nav--next",
+      "missing": [
+        "detail-hero__nav--next"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6057,
+      "endLine": 6070,
+      "selector": ".detail-hero__dots",
+      "missing": [
+        "detail-hero__dots"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6072,
+      "endLine": 6077,
+      "selector": ".detail-hero__dot",
+      "missing": [
+        "detail-hero__dot"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6079,
+      "endLine": 6082,
+      "selector": ".detail-hero__dot--active",
+      "missing": [
+        "detail-hero__dot--active"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6084,
+      "endLine": 6101,
+      "selector": ".detail-hero__gallery-cta",
+      "missing": [
+        "detail-hero__gallery-cta"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6113,
+      "endLine": 6117,
+      "selector": ".detail-hero__copy",
+      "missing": [
+        "detail-hero__copy"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6119,
+      "endLine": 6127,
+      "selector": ".detail-hero__caption",
+      "missing": [
+        "detail-hero__caption"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6140,
+      "endLine": 6147,
+      "selector": ".detail-hero__title",
+      "missing": [
+        "detail-hero__title"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6149,
+      "endLine": 6155,
+      "selector": ".detail-hero__subtitle",
+      "missing": [
+        "detail-hero__subtitle"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6200,
+      "endLine": 6202,
+      "selector": ".detail-chip-strip--hero",
+      "missing": [
+        "detail-chip-strip--hero"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6218,
+      "endLine": 6222,
+      "selector": ".detail-chip--hero",
+      "missing": [
+        "detail-chip--hero"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6239,
+      "endLine": 6246,
+      "selector": ".detail-overview__title",
+      "missing": [
+        "detail-overview__title"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6626,
+      "endLine": 6630,
+      "selector": ".detail-stats-strip",
+      "missing": [
+        "detail-stats-strip"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6632,
+      "endLine": 6643,
+      "selector": ".detail-stat",
+      "missing": [
+        "detail-stat"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6645,
+      "endLine": 6651,
+      "selector": ".detail-stat__value",
+      "missing": [
+        "detail-stat__value"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6653,
+      "endLine": 6659,
+      "selector": ".detail-stat__label",
+      "missing": [
+        "detail-stat__label"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 6667,
+      "endLine": 6672,
+      "selector": ".detail-column-block",
+      "missing": [
+        "detail-column-block"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7010,
+      "endLine": 7016,
+      "selector": ".detail-price-amount",
+      "missing": [
+        "detail-price-amount"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7018,
+      "endLine": 7023,
+      "selector": ".detail-contact-value",
+      "missing": [
+        "detail-contact-value"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7109,
+      "endLine": 7114,
+      "selector": ".drawer-location-form-grid",
+      "missing": [
+        "drawer-location-form-grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7116,
+      "endLine": 7122,
+      "selector": ".drawer-inline-field",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7124,
+      "endLine": 7131,
+      "selector": ".drawer-inline-field label",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7133,
+      "endLine": 7135,
+      "selector": ".drawer-inline-field input",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7137,
+      "endLine": 7141,
+      "selector": ".drawer-reference-field",
+      "missing": [
+        "drawer-reference-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7143,
+      "endLine": 7149,
+      "selector": ".drawer-reference-field__hint,\r\n.drawer-location-reference-status",
+      "missing": [
+        "drawer-reference-field__hint",
+        "drawer-location-reference-status"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7151,
+      "endLine": 7153,
+      "selector": ".drawer-inline-field--full",
+      "missing": [
+        "drawer-inline-field--full"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7155,
+      "endLine": 7157,
+      "selector": ".drawer-inline-field--compact",
+      "missing": [
+        "drawer-inline-field--compact"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7190,
+      "endLine": 7197,
+      "selector": ".drawer-inline-field .workspace-field-label-row > span",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7357,
+      "endLine": 7363,
+      "selector": ".drawer-location-preview-inline",
+      "missing": [
+        "drawer-location-preview-inline"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7365,
+      "endLine": 7371,
+      "selector": ".drawer-location-preview-inline span",
+      "missing": [
+        "drawer-location-preview-inline"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7373,
+      "endLine": 7376,
+      "selector": ".drawer-location-reference-status",
+      "missing": [
+        "drawer-location-reference-status"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7378,
+      "endLine": 7381,
+      "selector": ".drawer-location-map-card",
+      "missing": [
+        "drawer-location-map-card"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7383,
+      "endLine": 7388,
+      "selector": ".drawer-location-map-toolbar",
+      "missing": [
+        "drawer-location-map-toolbar"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7390,
+      "endLine": 7392,
+      "selector": ".drawer-location-map-card__canvas",
+      "missing": [
+        "drawer-location-map-card__canvas"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7394,
+      "endLine": 7399,
+      "selector": ".drawer-location-map-note",
+      "missing": [
+        "drawer-location-map-note"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7401,
+      "endLine": 7411,
+      "selector": ".drawer-location-pin",
+      "missing": [
+        "drawer-location-pin"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7413,
+      "endLine": 7416,
+      "selector": ".drawer-location-pin__glyph",
+      "missing": [
+        "drawer-location-pin__glyph"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7419,
+      "endLine": 7423,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions),\r\n  .drawer__panel-area label.field-block",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7425,
+      "endLine": 7428,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > label,\r\n  .drawer__panel-area .field-block:not(label):not(.inline-actions) > span:first-child",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7430,
+      "endLine": 7432,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > small",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7434,
+      "endLine": 7436,
+      "selector": ".drawer__panel-area .stack-list.text-right",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7438,
+      "endLine": 7441,
+      "selector": ".drawer-location-form-grid,\r\n  .drawer-location-map-toolbar",
+      "missing": [
+        "drawer-location-form-grid",
+        "drawer-location-map-toolbar"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7443,
+      "endLine": 7446,
+      "selector": ".drawer-inline-field",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7448,
+      "endLine": 7450,
+      "selector": ".drawer-inline-field label",
+      "missing": [
+        "drawer-inline-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7452,
+      "endLine": 7455,
+      "selector": ".drawer-location-preview-inline",
+      "missing": [
+        "drawer-location-preview-inline"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7457,
+      "endLine": 7459,
+      "selector": ".drawer-location-preview-inline span",
+      "missing": [
+        "drawer-location-preview-inline"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7469,
+      "endLine": 7479,
+      "selector": ".detail-media-rail",
+      "missing": [
+        "detail-media-rail"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7481,
+      "endLine": 7488,
+      "selector": ".detail-media-rail__grid",
+      "missing": [
+        "detail-media-rail__grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7490,
+      "endLine": 7503,
+      "selector": ".detail-media-thumb",
+      "missing": [
+        "detail-media-thumb"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7505,
+      "endLine": 7513,
+      "selector": ".detail-media-thumb__image,\r\n.detail-media-thumb__placeholder",
+      "missing": [
+        "detail-media-thumb__image",
+        "detail-media-thumb__placeholder"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7515,
+      "endLine": 7519,
+      "selector": ".detail-media-thumb__veil",
+      "missing": [
+        "detail-media-thumb__veil"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7708,
+      "endLine": 7710,
+      "selector": ".detail-fact-card strong",
+      "missing": [
+        "detail-fact-card"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7767,
+      "endLine": 7771,
+      "selector": ".detail-gallery",
+      "missing": [
+        "detail-gallery"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7773,
+      "endLine": 7780,
+      "selector": ".detail-gallery__item",
+      "missing": [
+        "detail-gallery__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7782,
+      "endLine": 7791,
+      "selector": ".detail-gallery__image,\r\n.detail-gallery__placeholder",
+      "missing": [
+        "detail-gallery__image",
+        "detail-gallery__placeholder"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7793,
+      "endLine": 7796,
+      "selector": ".detail-gallery__caption",
+      "missing": [
+        "detail-gallery__caption"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 7853,
+      "endLine": 7856,
+      "selector": ".detail-contact-value,\r\n.detail-overview__location",
+      "missing": [
+        "detail-contact-value",
+        "detail-overview__location"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8375,
+      "endLine": 8377,
+      "selector": ".list-sentinel",
+      "missing": [
+        "list-sentinel"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8379,
+      "endLine": 8390,
+      "selector": ".fab-button",
+      "missing": [
+        "fab-button"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8392,
+      "endLine": 8398,
+      "selector": ".mobile-sheet",
+      "missing": [
+        "mobile-sheet"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8433,
+      "endLine": 8436,
+      "selector": ".object-drawer-nav",
+      "missing": [
+        "object-drawer-nav"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8494,
+      "endLine": 8497,
+      "selector": ".detail-hero__frame",
+      "missing": [
+        "detail-hero__frame"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8503,
+      "endLine": 8508,
+      "selector": ".detail-media-rail__grid",
+      "missing": [
+        "detail-media-rail__grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 8510,
+      "endLine": 8513,
+      "selector": ".detail-contact-value",
+      "missing": [
+        "detail-contact-value"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9175,
+      "endLine": 9184,
+      "selector": ".label-stack",
+      "missing": [
+        "label-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9186,
+      "endLine": 9188,
+      "selector": ".label-stack--skeleton .label-stack__deck",
+      "missing": [
+        "label-stack--skeleton",
+        "label-stack__deck"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9190,
+      "endLine": 9200,
+      "selector": ".label-stack__deck",
+      "missing": [
+        "label-stack__deck"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9202,
+      "endLine": 9217,
+      "selector": ".label-stack__badge",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9219,
+      "endLine": 9223,
+      "selector": ".label-stack__badge:hover,\r\n.label-stack__badge:focus-visible",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9225,
+      "endLine": 9228,
+      "selector": ".label-stack__badge:focus-visible",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9231,
+      "endLine": 9235,
+      "selector": ".label-stack__badge[data-tone='0']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9237,
+      "endLine": 9241,
+      "selector": ".label-stack__badge[data-tone='1']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9243,
+      "endLine": 9247,
+      "selector": ".label-stack__badge[data-tone='2']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9249,
+      "endLine": 9253,
+      "selector": ".label-stack__badge[data-tone='3']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9255,
+      "endLine": 9259,
+      "selector": ".label-stack__badge[data-tone='4']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9261,
+      "endLine": 9265,
+      "selector": ".label-stack__badge[data-tone='5']",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9267,
+      "endLine": 9273,
+      "selector": ".label-stack__badge--overflow",
+      "missing": [
+        "label-stack__badge--overflow"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9275,
+      "endLine": 9279,
+      "selector": ".label-stack__badge--overflow:hover,\r\n.label-stack__badge--overflow:focus-visible",
+      "missing": [
+        "label-stack__badge--overflow"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9282,
+      "endLine": 9284,
+      "selector": ".label-stack__badge",
+      "missing": [
+        "label-stack__badge"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9462,
+      "endLine": 9465,
+      "selector": ".drawer__content--modular",
+      "missing": [
+        "drawer__content--modular"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9472,
+      "endLine": 9483,
+      "selector": ".object-drawer-nav",
+      "missing": [
+        "object-drawer-nav"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9485,
+      "endLine": 9493,
+      "selector": ".object-drawer-nav__sect",
+      "missing": [
+        "object-drawer-nav__sect"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9495,
+      "endLine": 9497,
+      "selector": ".object-drawer-nav__sect:first-child",
+      "missing": [
+        "object-drawer-nav__sect"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9499,
+      "endLine": 9512,
+      "selector": ".object-drawer-nav__item",
+      "missing": [
+        "object-drawer-nav__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9514,
+      "endLine": 9517,
+      "selector": ".object-drawer-nav__item:hover",
+      "missing": [
+        "object-drawer-nav__item"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9519,
+      "endLine": 9524,
+      "selector": ".object-drawer-nav__item--active,\r\n.object-drawer-nav__item--active:hover",
+      "missing": [
+        "object-drawer-nav__item--active"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9526,
+      "endLine": 9535,
+      "selector": ".object-drawer-nav__item--active::before",
+      "missing": [
+        "object-drawer-nav__item--active"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9537,
+      "endLine": 9544,
+      "selector": ".object-drawer-nav__item .object-drawer-nav__label",
+      "missing": [
+        "object-drawer-nav__item",
+        "object-drawer-nav__label"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9546,
+      "endLine": 9551,
+      "selector": ".object-drawer-nav__item .object-drawer-nav__stat",
+      "missing": [
+        "object-drawer-nav__item",
+        "object-drawer-nav__stat"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9553,
+      "endLine": 9555,
+      "selector": ".object-drawer-nav__item .object-drawer-nav__stat--ok",
+      "missing": [
+        "object-drawer-nav__item",
+        "object-drawer-nav__stat--ok"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9557,
+      "endLine": 9559,
+      "selector": ".object-drawer-nav__item .object-drawer-nav__stat--warn",
+      "missing": [
+        "object-drawer-nav__item",
+        "object-drawer-nav__stat--warn"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9561,
+      "endLine": 9563,
+      "selector": ".object-drawer-nav__item .object-drawer-nav__stat--req",
+      "missing": [
+        "object-drawer-nav__item",
+        "object-drawer-nav__stat--req"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9565,
+      "endLine": 9567,
+      "selector": ".drawer__panel-area > .drawer-form-stack",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-form-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9569,
+      "endLine": 9575,
+      "selector": ".drawer__panel-area > .drawer-form-stack > .panel-card--nested",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-form-stack"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9577,
+      "endLine": 9582,
+      "selector": ".drawer__panel-area .panel-card--nested",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9584,
+      "endLine": 9587,
+      "selector": ".drawer__panel-area .panel-heading",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9589,
+      "endLine": 9592,
+      "selector": ".drawer__panel-area .drawer-grid",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-grid"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9594,
+      "endLine": 9597,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions)",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9599,
+      "endLine": 9606,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > label,\r\n.drawer__panel-area .field-block:not(label):not(.inline-actions) > span:first-child",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9608,
+      "endLine": 9613,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > small",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9615,
+      "endLine": 9618,
+      "selector": ".drawer__panel-area label.field-block",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9620,
+      "endLine": 9622,
+      "selector": ".drawer__panel-area .field-block--wide",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9624,
+      "endLine": 9629,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > :is(input, select, textarea),\r\n.drawer__panel-area .field-block:not(label):not(.inline-actions) > .drawer-reference-field > :is(input, select, textarea)",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-reference-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9631,
+      "endLine": 9636,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > :is(input, select, textarea):focus,\r\n.drawer__panel-area .field-block:not(label):not(.inline-actions) > .drawer-reference-field > :is(input, select, textarea):focus",
+      "missing": [
+        "drawer__panel-area",
+        "drawer-reference-field"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9638,
+      "endLine": 9642,
+      "selector": ".drawer-long-value-field input,\r\n.drawer-media-summary-card p,\r\n.drawer-contact-editor-card h3",
+      "missing": [
+        "drawer-long-value-field",
+        "drawer-media-summary-card",
+        "drawer-contact-editor-card"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9922,
+      "endLine": 9924,
+      "selector": ".detail-gallery",
+      "missing": [
+        "detail-gallery"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9926,
+      "endLine": 9931,
+      "selector": ".detail-gallery__image,\r\n.detail-gallery__placeholder",
+      "missing": [
+        "detail-gallery__image",
+        "detail-gallery__placeholder"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 9939,
+      "endLine": 9941,
+      "selector": ".object-drawer-nav",
+      "missing": [
+        "object-drawer-nav"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10011,
+      "endLine": 10014,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions),\r\n  .drawer__panel-area label.field-block",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 10016,
+      "endLine": 10018,
+      "selector": ".drawer__panel-area .field-block:not(label):not(.inline-actions) > small",
+      "missing": [
+        "drawer__panel-area"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11103,
+      "endLine": 11105,
+      "selector": ".taxo__path strong.taxo__path-current",
+      "missing": [
+        "taxo__path-current"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11107,
+      "endLine": 11109,
+      "selector": ".taxo__path-sep",
+      "missing": [
+        "taxo__path-sep"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11111,
+      "endLine": 11113,
+      "selector": ".taxo__path-empty",
+      "missing": [
+        "taxo__path-empty"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11128,
+      "endLine": 11133,
+      "selector": ".taxo__search-icon",
+      "missing": [
+        "taxo__search-icon"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11156,
+      "endLine": 11159,
+      "selector": ".taxo__rows",
+      "missing": [
+        "taxo__rows"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11176,
+      "endLine": 11178,
+      "selector": ".taxo__rows > .taxo__row:last-child",
+      "missing": [
+        "taxo__rows"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11184,
+      "endLine": 11189,
+      "selector": ".taxo__row--cat",
+      "missing": [
+        "taxo__row--cat"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11191,
+      "endLine": 11193,
+      "selector": ".taxo__row--cat:hover",
+      "missing": [
+        "taxo__row--cat"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11195,
+      "endLine": 11199,
+      "selector": ".taxo__row--on,\r\n.taxo__row--on:hover",
+      "missing": [
+        "taxo__row--on"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11201,
+      "endLine": 11204,
+      "selector": ".taxo__row--folder",
+      "missing": [
+        "taxo__row--folder"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11206,
+      "endLine": 11217,
+      "selector": ".taxo__caret",
+      "missing": [
+        "taxo__caret"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11219,
+      "endLine": 11221,
+      "selector": ".taxo__row--collapsed .taxo__caret",
+      "missing": [
+        "taxo__row--collapsed",
+        "taxo__caret"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11223,
+      "endLine": 11231,
+      "selector": ".taxo__radio",
+      "missing": [
+        "taxo__radio"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11233,
+      "endLine": 11236,
+      "selector": ".taxo__row--on .taxo__radio",
+      "missing": [
+        "taxo__row--on",
+        "taxo__radio"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11238,
+      "endLine": 11244,
+      "selector": ".taxo__row--on .taxo__radio::after",
+      "missing": [
+        "taxo__row--on",
+        "taxo__radio"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11246,
+      "endLine": 11250,
+      "selector": ".taxo__spacer",
+      "missing": [
+        "taxo__spacer"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11252,
+      "endLine": 11258,
+      "selector": ".taxo__label",
+      "missing": [
+        "taxo__label"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11260,
+      "endLine": 11264,
+      "selector": ".taxo__meta",
+      "missing": [
+        "taxo__meta"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 11300,
+      "endLine": 11303,
+      "selector": ".savebar__status",
+      "missing": [
+        "savebar__status"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13791,
+      "endLine": 13799,
+      "selector": ".app-sidebar__dot",
+      "missing": [
+        "app-sidebar__dot"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13924,
+      "endLine": 13929,
+      "selector": ".app-switch",
+      "missing": [
+        "app-switch"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13930,
+      "endLine": 13934,
+      "selector": ".app-switch::after",
+      "missing": [
+        "app-switch"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13935,
+      "endLine": 13935,
+      "selector": ".app-switch[aria-checked=\"true\"]",
+      "missing": [
+        "app-switch"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13936,
+      "endLine": 13936,
+      "selector": ".app-switch[aria-checked=\"true\"]::after",
+      "missing": [
+        "app-switch"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13937,
+      "endLine": 13937,
+      "selector": ".app-switch:disabled",
+      "missing": [
+        "app-switch"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13995,
+      "endLine": 13995,
+      "selector": ".ai-base-url",
+      "missing": [
+        "ai-base-url"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13996,
+      "endLine": 13996,
+      "selector": ".ai-provider-delete",
+      "missing": [
+        "ai-provider-delete"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13997,
+      "endLine": 13997,
+      "selector": ".ai-provider-form",
+      "missing": [
+        "ai-provider-form"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13998,
+      "endLine": 13998,
+      "selector": ".ai-provider-form__title",
+      "missing": [
+        "ai-provider-form__title"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 13999,
+      "endLine": 13999,
+      "selector": ".ai-provider-form__narrow",
+      "missing": [
+        "ai-provider-form__narrow"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 14000,
+      "endLine": 14000,
+      "selector": ".ai-provider-form__check",
+      "missing": [
+        "ai-provider-form__check"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 14015,
+      "endLine": 14015,
+      "selector": ".invite-success-line",
+      "missing": [
+        "invite-success-line"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 14016,
+      "endLine": 14016,
+      "selector": ".invite-success-line > svg",
+      "missing": [
+        "invite-success-line"
+      ]
+    },
+    {
+      "file": "src/styles.css",
+      "line": 14035,
+      "endLine": 14035,
+      "selector": ".perm-drawer__preset",
+      "missing": [
+        "perm-drawer__preset"
+      ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 585,
+      "endLine": 589,
+      "selector": ".object-editor .ed-modal__group",
+      "missing": [
+        "ed-modal__group"
+      ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 590,
+      "endLine": 592,
+      "selector": ".object-editor .ed-modal__group > *",
+      "missing": [
+        "ed-modal__group"
+      ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 594,
+      "endLine": 596,
+      "selector": ".object-editor .ed-modal__group",
+      "missing": [
+        "ed-modal__group"
+      ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 1460,
+      "endLine": 1463,
+      "selector": ".object-editor .toolbar-note",
+      "missing": [
+        "toolbar-note"
+      ]
+    },
+    {
+      "file": "src/features/object-editor/object-editor.css",
+      "line": 2029,
+      "endLine": 2029,
+      "selector": ".object-editor .wp-name-input",
+      "missing": [
+        "wp-name-input"
+      ]
+    }
+  ],
+  "sourceBaseCommit": "dc8ce32e043ba2ba0b925239cc088560a3150130",
+  "note": "SHA-256 uses LF line endings; global afterSha256 hashes the expanded ordered CSS chunks. Rule-line counts use the original source ranges; whitespace and import-entry lines are excluded."
+}

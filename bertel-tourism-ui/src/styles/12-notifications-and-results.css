@@ -1,0 +1,304 @@
+/* ── Boîte de réception (16w) — même langage que les tâches du hub personnel. Le non-lu se
+   lit à DEUX signaux : la pastille colorée ET la graisse ; la couleur seule ne suffit pas. */
+.notif-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.notif-item {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Même teinte de survol que .profile-drawer__task (littérale, comme sa voisine). */
+.notif-item:hover { background: rgba(24, 49, 59, 0.05); }
+.notif-item__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 500;
+}
+.notif-item.is-unread .notif-item__title { font-weight: 700; }
+.notif-item__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+.notif-item__meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding: 0;
+  }
+
+  .workspace {
+    padding: 0.8rem 0.8rem 1rem;
+  }
+}
+
+.explorer-mobile-tabs,
+.explorer-layout__mobile-panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.explorer-workspace {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+}
+
+.explorer-layout--mobile {
+  display: grid;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  gap: 0.85rem;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.explorer-mobile-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.explorer-mobile-tab {
+  justify-content: center;
+}
+
+.explorer-layout__mobile-panel {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.explorer-workspace .panel-heading {
+  margin-bottom: 0.75rem;
+  gap: 0.75rem;
+}
+
+.explorer-workspace .facet-group,
+.explorer-workspace .field-block {
+  gap: 0.75rem;
+}
+
+.explorer-workspace .chip-grid,
+.explorer-workspace .inline-actions,
+.explorer-workspace .results-panel__meta,
+.explorer-workspace .result-card__title-row,
+.explorer-workspace .field-block__header {
+  gap: 0.7rem;
+}
+
+.explorer-workspace .result-card__title-row {
+  /* Keep title and label row compact */
+  row-gap: 0.25rem;
+}
+
+/* CSS MORT SUPPRIMÉ (audit filtres 2026-07-27 §3.5).
+   `.explorer-workspace` est bien posée (ExplorerPage), mais `.filters-panel` ne l'est plus
+   depuis la refonte §142 : toutes les règles descendantes étaient inertes. Elles ont
+   longtemps expliqué un symptôme visible — la compaction des `.chip` ne s'appliquant pas,
+   la section Itinéraires affichait des pastilles nettement plus grosses que le reste du
+   panneau. Les trois groupes ITI sont passés au système local (`bucketChipClass`) et
+   l'intention de compaction vit maintenant dans le composant.
+   Retirées ici : `.filters-panel .chip-grid`, `.filters-panel .chip/.ghost-button`,
+   `.filters-panel__content`, `.filters-panel__subsection .facet-group`,
+   `.filters-panel .switch-row`, `.filters-panel__reset` (+`:hover`, qui codait en dur
+   #b34b3d hors tokens).
+   CONSERVÉES ci-dessous : les classes BEM AUTONOMES, réellement appliquées par le
+   composant (`filters-panel__metric-stack`, `__metric-row`, `__range-grid`). */
+
+.filters-panel__range-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+/* Plage min/max : deux input[range] natifs superposés (RangeSlider). La piste est
+   dessinée par le composant ; ici on ne garde QUE la poignée, pour que les deux
+   contrôles restent focusables et pilotables au clavier sans se masquer l'un l'autre.
+   `pointer-events: none` sur la piste + `auto` sur la poignée = chaque poignée reste
+   saisissable même là où les deux inputs se recouvrent. */
+.range-slider__thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+}
+
+.range-slider__thumb:focus-visible {
+  outline: none;
+}
+
+.range-slider__thumb::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.range-slider__thumb::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--teal);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.range-slider__thumb:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+
+.range-slider__thumb:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--teal-tint);
+}
+
+@media (max-width: 760px) {
+  .filters-panel__range-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.map-panel__header-actions-wrap {
+  position: absolute;
+  top: 1rem;
+  right: 4.75rem;
+  left: auto;
+  z-index: 3;
+}
+
+/* DES-02 : le placement (plus de centrage absolu, header `flex-wrap`) vit dans
+   MapPanel.tsx — cette classe ne porte plus que l'espacement des boutons. */
+.map-panel__toolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.map-panel__tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-s);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.map-panel__tool-button:hover {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+}
+
+.map-panel__tool-button:active {
+  transform: scale(0.98);
+}
+
+.map-panel__tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.map-panel__tool-button:disabled:hover {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.map-panel__tool-button--active {
+  color: #fffdf8;
+  background: var(--theme-primary);
+  border-color: transparent;
+  box-shadow: var(--shadow-s);
+}
+
+.map-panel__tool-button--active:hover {
+  background: color-mix(in srgb, var(--theme-primary) 84%, black 16%);
+}
+
+.map-panel__lasso-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.map-panel__lasso-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.map-panel__lasso-fill {
+  fill: color-mix(in srgb, var(--accent-brand) 20%, transparent);
+  stroke: none;
+}
+
+.map-panel__lasso-line {
+  fill: none;
+  stroke: var(--accent-brand);
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 7 5;
+}
+
+.map-panel__lasso-toast {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  z-index: 31;
+  max-width: min(22rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  pointer-events: none;
+  border: 1px solid rgba(24, 49, 59, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.94);
+  box-shadow: var(--shadow-s);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+}

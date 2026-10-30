@@ -1,0 +1,301 @@
+/* audit S5 : polices chargées via next/font (voir src/app/layout.tsx) — plus de
+   `@import` Google Fonts bloquant. Familles exposées en variables CSS :
+   --font-sans (Manrope), --font-display (Sora), --font-mono (IBM Plex Mono). */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --theme-primary: #176b6a;
+  --theme-primary-rgb: 23 107 106;
+  --theme-accent: #f28b54;
+  --theme-accent-rgb: 242 139 84;
+  --theme-text: #18313b;
+  --theme-text-rgb: 24 49 59;
+  --theme-bg: #eef1f4;
+  --theme-bg-rgb: 238 241 244;
+  --theme-surface: #ffffff;
+  --theme-surface-rgb: 255 255 255;
+  --bg: #eef1f4;             /* page background — cool off-white (de-creamed 2026-06-08) */
+  --bg-strong: #e2e7ec;
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-strong: #ffffff;
+  --surface: #ffffff;        /* solid surface (menus, cards, sidebars) — white, pops vs --bg */
+  --surface-soft: #edf5f4;
+  --line: rgba(24, 49, 59, 0.10);
+  --text: #18313b;
+  --text-muted: #5c6a71;     /* audit S7 : était #66767d (4.44:1) -> 5.1:1 sur blanc */
+  --accent-soft: #fbe7dc;
+  --accent-brand: #f28b54;
+  --accent-brand-strong: #c96d3b;
+  --teal: #176b6a;
+  --warning: #d6933a;
+  --shadow-soft: 0 18px 48px rgba(24, 49, 59, 0.08);
+  --shadow: 0 30px 80px rgba(24, 49, 59, 0.14);
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--panel-strong);
+  --card-foreground: var(--text);
+  --popover: var(--panel-strong);
+  --popover-foreground: var(--text);
+  --primary: var(--theme-primary);
+  --primary-foreground: #fffdf8;
+  --secondary: var(--surface-soft);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-soft);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--text);
+  --destructive: #c85c48;
+  --destructive-foreground: #fffdf8;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--theme-primary);
+  --radius: 8px;
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --shell-chrome-height: 140px;
+  --workspace-padding-y: 2.25rem;
+  /* Design reskin tokens (Tailwind theme); alias theme-driven values where applicable */
+  --sidebar-w: 64px;
+  --bg-tint: #f3f6f8;
+  --surface-2: #e8edf1;
+  --line-soft: rgba(24, 49, 59, 0.06);
+  --line-strong: rgba(24, 49, 59, 0.18);
+  --ink: var(--text);
+  --ink-2: #3a525c;
+  --ink-3: #586770;          /* audit S7 : était #6a7a82 (4.27:1) -> ~4.9:1 */
+  --ink-4: #5f6d74;          /* audit S7 : était #94a1a8 (2.97:1, retiré du texte) -> ~5.0:1 */
+  --teal-soft: #e2efee;
+  --teal-tint: rgba(23, 107, 106, 0.08);
+  --orange-soft: #fbe7dc;
+  --brand-green: #2ca36f;
+  --brand-green-soft: rgba(44, 163, 111, 0.14);
+  --brand-red: #c85c48;
+  --brand-warn: #d6933a;
+  /* Aliases used by object-editor.css (design prototype tokens) */
+  --green: var(--brand-green);
+  --green-soft: var(--brand-green-soft);
+  --warn: var(--brand-warn);
+  --red: var(--brand-red);
+  /* D13 : fonds doux des pastilles de statut — mêmes valeurs que les rgba en dur
+     qu'ils remplacent (parité visuelle exacte), dérivés des couleurs de marque. */
+  --warn-soft: rgba(214, 147, 58, 0.14);
+  --red-soft: rgba(200, 92, 72, 0.14);
+  /* Familles sémantiques (refonte RGPD §p2 — encart périmètre, alertes, chips).
+     Dérivées des couleurs de marque ; contrastes texte/fond vérifiés AA. */
+  --info-bg: #e9f0f7;
+  --info-border: #cdddea;
+  --info-ink: #21465e;       /* ≈ 8.2:1 sur --info-bg */
+  --info-accent: #327090;    /* = bleu de glow du body */
+  --danger-bg: #fbece9;
+  --danger-border: #eccabf;
+  --danger-ink: #8f3322;     /* ≈ 6.5:1 sur --danger-bg */
+  --danger-strong: var(--red);
+  --warn-bg: #fbf0dd;
+  --warn-border: #ecd3a6;
+  --warn-ink: #7a4e12;       /* ≈ 6.0:1 sur --warn-bg */
+  --warn-strong: var(--warning);
+  --shadow-s: 0 1px 0 rgba(24, 49, 59, 0.04), 0 6px 16px -8px rgba(24, 49, 59, 0.10);
+  --shadow-m: 0 1px 0 rgba(24, 49, 59, 0.04), 0 14px 30px -16px rgba(24, 49, 59, 0.18);
+  --shadow-l: 0 24px 60px -20px rgba(24, 49, 59, 0.30);
+
+  /* Accents par archétype — source unique consommée par les pastilles de type,
+     les cartes Explorer, la carte géo et les fiches drawer (refonte UI/UX 2026-06). */
+  --acc-heb: #176b6a;   /* Hébergement   teal   */
+  --acc-res: #d8602f;   /* Restauration  corail */
+  --acc-asc: #2f6fb0;   /* Activité      bleu   */
+  --acc-iti: #2f8f4e;   /* Itinéraire    vert   */
+  --acc-vis: #7d5aa6;   /* Site & visite prune  */
+  --acc-srv: #8a6b4f;   /* Service       rouille*/
+  --acc-fma: #c98a1e;   /* Événement     ambre  */
+
+  /* Classement (étoiles / clés / épis) — cocarde dorée */
+  --gold: #c79a3a;
+  --gold-deep: #6f5410;
+  --gold-star: #e6a407;
+
+  /* Couleurs officielles des labels (pour la pastille-logo) */
+  --lbl-clef-verte: #2e8b57;
+  --lbl-ecolabel:   #1c7f6b;
+  --lbl-th:         #0a6cb0;
+  --lbl-qualite:    #b3373b;
+  --lbl-excellence: #b9892f;
+  --orange-soft: var(--accent-soft);   /* audit S6 : doublon exact de --accent-soft, aliasé */
+
+  /* Motion foundations (premium UI motion pass) — one timing/easing system for
+     modals, drawers, status banners, button feedback, and skeleton reveals. */
+  --motion-instant: 90ms;
+  --motion-fast: 160ms;
+  --motion-base: 220ms;
+  --motion-surface: 280ms;
+  --motion-exit: 180ms;
+  --ease-premium-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-premium-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-distance-sm: 4px;
+  --motion-distance-md: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  color: var(--text);
+  /* Brand mesh — subtle radial glows (teal top-left, orange top-right,
+     blue bottom-right) over a cool off-white base (de-creamed 2026-06-08). */
+  background:
+    radial-gradient(ellipse 60% 40% at 8% 0%, rgba(23, 107, 106, 0.1), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgba(242, 139, 84, 0.1), transparent 55%),
+    radial-gradient(ellipse 50% 60% at 100% 100%, rgba(50, 112, 144, 0.08), transparent 55%),
+    linear-gradient(180deg, var(--bg-tint) 0%, var(--bg) 100%);
+  /* audit S5 : retrait de `background-attachment: fixed` (repaint du mesh 4 couches au scroll). */
+  background-attachment: scroll;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* ============================================================================
+   Fondations refonte UI/UX 2026-06 (audit S1/S8 + primitives de distinction).
+   - Anneau de focus visible universel (S1) : seule la sidebar en avait un.
+   - Garde-fou mouvement global (S8) : respecte « réduire les animations » de l'OS.
+   - Pastilles de type + primitives classement/labels/tags partagées par les
+     cartes Explorer (3.1), la carte géo (3.3) et les fiches drawer (4.x).
+   Les icônes sont fournies par lucide-react côté TSX (pas de police d'icônes).
+   ========================================================================== */
+
+/* Anneau de focus visible — correctif central de l'audit (S1).
+   :where() = spécificité nulle : la règle est un DÉFAUT que toute utilité
+   surclasse (`outline-none` d'un input à wrapper focus-within, `rounded-full`
+   d'une pill). Sans :where(), déclarée après @tailwind utilities elle gagnait
+   par ordre source et doublait l'indicateur des champs texte — qui matchent
+   :focus-visible même au clic souris. */
+:where(:focus-visible) {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Mouvement : garde-fou global (S8). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Motion primitives (premium UI motion pass) — shared entrance/exit/feedback
+   animations. Consumed by RouteMotion, status banners, chips/badges, and the
+   editor's success pulse. `usePresence`-driven exits use the sibling
+   `[data-motion-phase]` selectors defined next to each consumer (Modal,
+   OfflineBanner, PeerSavedBanner) rather than a generic exit class here,
+   since each surface's exit transform differs (fade vs. slide vs. scale). */
+.motion-page-enter {
+  animation: motion-page-enter-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-page-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-sm)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-status-enter {
+  animation: motion-status-enter-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-status-enter-keyframes {
+  from { opacity: 0; transform: translateY(var(--motion-distance-md)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.motion-pop {
+  animation: motion-pop-keyframes var(--motion-fast) var(--ease-premium-out) both;
+}
+@keyframes motion-pop-keyframes {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.motion-content-reveal {
+  animation: motion-content-reveal-keyframes var(--motion-base) var(--ease-premium-out) both;
+}
+@keyframes motion-content-reveal-keyframes {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* One restrained pulse — no bounce, no color change (color is carried by the
+   caller's own success icon/text, e.g. EditorTopbar's check icon). */
+.motion-success {
+  animation: motion-success-keyframes var(--motion-base) var(--ease-premium-out);
+}
+@keyframes motion-success-keyframes {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.motion-spin {
+  animation: motion-spin-keyframes 0.9s linear infinite;
+}
+@keyframes motion-spin-keyframes {
+  to { transform: rotate(360deg); }
+}
+
+/* D1 (writing-plans spec): transforms/animations must be REMOVED under
+   reduced motion, not merely shortened by the blanket .01ms duration above —
+   a translateY/scale animation at .01ms still paints one transformed frame.
+   Spinners/shimmer stop too (matches the manual QA acceptance criterion). */
+@media (prefers-reduced-motion: reduce) {
+  .motion-page-enter,
+  .motion-status-enter,
+  .motion-pop,
+  .motion-content-reveal,
+  .motion-success,
+  .motion-spin {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

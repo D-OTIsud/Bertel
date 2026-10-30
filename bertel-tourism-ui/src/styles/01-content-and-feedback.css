@@ -1,0 +1,948 @@
+/* Pastille de type : couleur = archétype (une seule source via --acc-*). */
+.type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  color: var(--accent-type, var(--teal));
+  background: color-mix(in srgb, var(--accent-type, var(--teal)) 12%, white);
+}
+.type-pill svg { width: 13px; height: 13px; }
+.acc-heb { --accent-type: var(--acc-heb); }
+.acc-res { --accent-type: var(--acc-res); }
+.acc-asc { --accent-type: var(--acc-asc); }
+.acc-iti { --accent-type: var(--acc-iti); }
+.acc-vis { --accent-type: var(--acc-vis); }
+.acc-srv { --accent-type: var(--acc-srv); }
+.acc-fma { --accent-type: var(--acc-fma); }
+
+/* Miniature avec débordement autorisé pour que le signet chevauche le bord. */
+.thumb { position: relative; display: block; }
+
+/* Cocarde classement, à cheval en haut-gauche (étoiles/clés/épis).
+   Pas de fond : pictos dorés détourés par un liseré couleur du fond de page. */
+.thumb__rating {
+  position: absolute;
+  top: -5px;
+  left: -2px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  line-height: 1;
+}
+.thumb__rating svg {
+  width: 14px;
+  height: 14px;
+  fill: var(--theme-primary);
+  stroke: #ffffff;
+  stroke-width: 3px;
+  paint-order: stroke fill;
+}
+.thumb__rating .unit {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--gold-deep);
+  margin-left: 2px;
+  -webkit-text-stroke: 1.5px var(--bg);
+  paint-order: stroke fill;
+}
+
+/* Logo-pastilles de label, à cheval en bas-droite (empilées). */
+.thumb__labels { position: absolute; right: -6px; bottom: -6px; z-index: 2; display: flex; }
+.thumb__labels .label-logo + .label-logo { margin-left: -8px; }
+
+/* §174 — barre de niveaux de classement (étoiles/épis/clés), filtre Explorer.
+   Toggle par niveau : sélectionné = rempli/coloré + légèrement agrandi ; survol
+   agrandit ; clic = pop bref. Anime `transform` uniquement (compositor-friendly).
+   Couleur du niveau sélectionné alignée sur la cocarde réelle .thumb__rating
+   (var(--theme-primary) — le même remplissage d'étoile que sur les cartes résultat). */
+.grade-bar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.grade-star { display: inline-flex; align-items: center; justify-content: center; min-width: 2.5rem; min-height: 2.5rem; background: none; border: 0; padding: 3px; line-height: 1; color: var(--ink-4); cursor: pointer; transition: transform .14s ease, color .14s ease; }
+.grade-star svg { width: 20px; height: 20px; display: block; }
+.grade-star:hover { transform: scale(1.25); color: var(--ink-3); }
+.grade-star.grade-on { color: var(--rating-star, var(--theme-primary)); }
+/* Sélectionné = picto PLEIN (fill, pas seulement le trait) — même rendu que la cocarde .thumb__rating. */
+.grade-star.grade-on svg { fill: currentColor; }
+.grade-star:active { transform: scale(.9); }
+.grade-cat { min-width: 2.5rem; min-height: 2.5rem; border: .5px solid var(--line); background: var(--surface); border-radius: theme('borderRadius.shellMd'); padding: 6px 8px; font-size: theme('fontSize.sm.0'); line-height: theme('fontSize.sm.1.lineHeight'); color: var(--ink-2); cursor: pointer; transition: transform .14s ease; }
+.grade-cat:hover { transform: scale(1.06); }
+.grade-cat.grade-on { border-color: var(--teal); color: var(--teal-2, #0d4f4e); background: var(--teal-soft); }
+.grade-cat:active { transform: scale(.96); }
+.grade-star:focus-visible,
+.grade-cat:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (pointer: coarse) {
+  .grade-star,
+  .grade-cat {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+
+/* Pastille-logo de label (disque coloré + picto). */
+.label-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.25);
+}
+.label-logo svg { width: 14px; height: 14px; }
+
+.lbl-clef-verte { background: var(--lbl-clef-verte); }
+.lbl-ecolabel   { background: var(--lbl-ecolabel); }
+.lbl-th         { background: var(--lbl-th); }
+.lbl-qualite    { background: var(--lbl-qualite); }
+.lbl-excellence { background: var(--lbl-excellence); }
+
+/* Classement en toutes lettres sur la ligne texte (pas d'icônes étoiles). */
+.class-text {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold-deep);
+}
+
+/* Puce-label avec logo + texte (corps de carte / section fiche). Sans indicateur d'état. */
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px 3px 4px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.label-chip__logo {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+}
+.label-chip__logo svg { width: 12px; height: 12px; }
+
+/* Tag coloré (couche d'affichage §09). */
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--tag, #5c6a71) 13%, white);
+  color: color-mix(in srgb, var(--tag, #5c6a71) 72%, black);
+}
+
+/* Ligne récap classement + labels + tags dans une carte. */
+.distinction-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.distinction-row .sep { width: 1px; height: 14px; background: var(--line); margin: 0 2px; }
+
+/* Bandeau « highlights » de distinctions (fiche). */
+.distinction-highlights { display: flex; gap: 10px; flex-wrap: wrap; }
+.distinction-highlight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.distinction-highlight__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: none;
+}
+.distinction-highlight__kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.distinction-highlight__label { font-weight: 700; font-size: 14px; }
+
+/* ---- Texte atténué (utilisé app-wide mais non défini auparavant) ---- */
+.muted { color: var(--text-muted); }
+
+/* ---- Badges d'état (refonte UI/UX 2026-06) ---- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+.badge--ok { background: var(--brand-green-soft); color: #1a6b48; }
+.badge--warn { background: rgba(214, 147, 58, 0.16); color: #8a5a12; }
+.badge--danger { background: rgba(200, 92, 72, 0.14); color: #9a3322; }
+.badge--info { background: rgba(45, 111, 176, 0.12); color: #1d5f8a; }
+/* État neutre (ex. « Fermé ») : gris lisible. NE PAS utiliser la classe Tailwind
+   `text-muted` ici — elle mappe sur --muted (un fond quasi-blanc), d'où le texte
+   illisible corrigé en 2026-06-23. --text-muted ne donne que 4,29:1 sur --surface-2
+   sous le thème actif (échec AA) ; --ink-3 = 4,96:1 (AA OK) tout en restant discret. */
+.badge--muted { background: var(--surface-2); color: var(--ink-3); }
+
+/* ---- État vide qui enseigne (EmptyState : no-data / filtered / coming-soon) ---- */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 24px;
+  max-width: 460px;
+  margin: 0 auto;
+  gap: 6px;
+}
+.ui-empty__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--teal-tint);
+  color: var(--teal);
+  margin-bottom: 8px;
+}
+.ui-empty__icon svg { width: 26px; height: 26px; }
+.ui-empty--filtered .ui-empty__icon { background: var(--surface-2); color: var(--text-muted); }
+.ui-empty--coming-soon .ui-empty__icon { background: rgba(45, 111, 176, 0.12); color: #1d5f8a; }
+.ui-empty__title { font-size: 16px; font-weight: 700; }
+.ui-empty__text { color: var(--text-muted); font-size: 14px; margin-bottom: 8px; max-width: 42ch; }
+.ui-empty .primary-button,
+.ui-empty .ghost-button { margin-top: 4px; }
+
+/* ---- Bannière d'erreur (EmptyState mode=error) : garde le reste de la page utilisable ---- */
+.ui-empty-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--brand-red);
+  background: rgba(200, 92, 72, 0.1);
+  border-radius: var(--radius-md);
+}
+.ui-empty-banner__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  color: var(--brand-red);
+}
+.ui-empty-banner__icon svg { width: 20px; height: 20px; }
+.ui-empty-banner__body { flex: 1 1 auto; min-width: 0; }
+.ui-empty-banner__title { display: block; font-weight: 700; color: var(--text); }
+.ui-empty-banner__text { margin-top: 2px; font-size: 13px; color: var(--text-muted); }
+
+/* ---- Survol croisé liste↔carte (D20) : marqueur surligné quand sa carte est survolée ---- */
+.map-marker-pin--hovered {
+  transform: scale(1.18);
+  filter: drop-shadow(0 2px 6px rgba(24, 49, 59, 0.45));
+  z-index: 5;
+}
+
+/* ---- Modération : diff avant/après + métadonnées (D6) ---- */
+.mod-diff { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.mod-diff del {
+  text-decoration: line-through;
+  background: rgba(200, 92, 72, 0.14);
+  color: #9a3322;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.mod-diff ins {
+  text-decoration: none;
+  background: rgba(47, 133, 90, 0.16);
+  color: #1f6b45;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.mod-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mod-meta__subject { font-size: 13px; color: var(--text); }
+.mod-meta__byline { font-size: 12px; color: var(--text-muted); }
+
+/* ---- Modération 18a/D9 : envoi groupé + rubriques à reporter à la main ---- */
+/* La mention « report manuel » n'est PAS décorative : c'est le seul endroit où l'agent apprend,
+   AVANT de cliquer, qu'approuver n'écrira rien. Elle doit donc porter son propre contraste. */
+.mod-meta__manual { font-size: 12px; font-weight: 600; color: #9a5b12; }
+.mod-submission { display: flex; flex-direction: column; gap: 12px; padding: 14px; }
+.mod-submission__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mod-submission__note {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--line);
+  background: var(--bg-tint);
+  font-size: 13px;
+  color: var(--text);
+}
+.mod-scope { margin: 0.5rem 0 0; font-size: 12px; color: var(--text-muted); }
+/* Compte rendu d'un geste groupé : ce n'est ni une erreur ni une décoration, c'est le seul
+   endroit qui dit ce que le RPC a fait. Il doit se distinguer de .form-error sans crier. */
+.mod-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #1f6b45;
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+}
+.mod-scope a { color: inherit; text-decoration: underline; }
+
+/* ---- Palette de commandes ⌘K (D24) ---- */
+.palette { display: flex; flex-direction: column; gap: 10px; min-width: min(520px, 78vw); }
+.palette__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg-tint);
+  color: var(--text-muted);
+}
+.palette__search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+  outline: none;
+}
+.palette__spinner { font-size: 11px; color: var(--text-muted); }
+.palette__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.palette__group {
+  margin: 8px 0 3px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.palette__empty { padding: 14px 4px; font-size: 13px; color: var(--text-muted); }
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.palette__item.is-highlighted { background: var(--surface-2); }
+.palette__item-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--teal-tint, rgba(23, 107, 106, 0.1));
+  color: var(--teal);
+  flex: none;
+}
+.palette__item-body { display: flex; flex-direction: column; min-width: 0; }
+.palette__item-label { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.palette__item-caption {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Feuille des raccourcis (D24) */
+.shortcut-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.shortcut-table td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+.shortcut-table td:first-child { width: 40%; }
+.shortcut-table kbd {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+}
+
+/* ---- Étapes numérotées d'un tracé ITI actif (D18) ---- */
+.iti-stage-pin {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 2px solid #327090; /* couleur ITI par défaut ; la ligne suit markerStyles */
+  color: #18313b;
+  font-size: 10.5px;
+  font-weight: 800;
+  box-shadow: 0 1px 4px rgba(24, 49, 59, 0.3);
+  cursor: default;
+}
+
+/* ---- Sélecteur de vue Explorer (D16 : Liste / Table / Carte / Split) ---- */
+.view-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.view-switch__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+/* Variante icônes seules (ExplorerViewSwitch dans le header résultats) — la base
+   .view-switch reste partagée avec des groupes à libellés (fond de carte). */
+.view-switch--icons .view-switch__btn { padding: 0 8px; }
+.view-switch__btn:hover { color: var(--text); }
+.view-switch__btn.is-on {
+  background: var(--surface);
+  color: var(--theme-primary);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
+}
+
+/* Indicateur glissant — opt-in via .view-switch--indicator, mesuré en JS
+   (largeur des boutons dérivée du padding, pas une hypothèse 25%/bouton).
+   Task 23 audit: `width` retiré de la transition (icon-only buttons de même
+   classe/padding ⇒ offsetWidth identique pour les 4 boutons, donc `width`
+   n'anime jamais réellement — seul `transform` doit être animé ; la valeur
+   `width` posée en style inline reste appliquée instantanément, sans
+   transition, ce qui respecte l'invariant « pas de transition sur
+   width/height/top/left » du plan). */
+.view-switch--indicator {
+  position: relative;
+}
+.view-switch--indicator .view-switch__btn {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  box-shadow: none;
+  transition: color 140ms ease;
+}
+.view-switch--indicator .view-switch__btn.is-on {
+  background: transparent;
+  box-shadow: none;
+}
+.view-switch__indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px rgba(24, 49, 59, 0.12);
+  transition: transform 180ms var(--ease-premium-out);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-switch__indicator {
+    transition: none !important;
+  }
+}
+
+/* ---- Vue Table dense de l'Explorer (D17) ---- */
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.results-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.results-table tbody td {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 7px 10px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+.results-table--compact tbody td { padding: 3px 10px; font-size: 12px; }
+.results-table tbody tr { cursor: pointer; }
+.results-table tbody tr:hover { background: var(--bg-tint); }
+.results-table tbody tr.is-selected { background: rgba(23, 107, 106, 0.07); }
+.results-table__check-col { width: 34px; text-align: center; }
+.results-table__num { text-align: right; }
+.results-table__dim { color: var(--text-muted); font-size: 11px; }
+.results-table__labels { display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.results-table__sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.results-table__sort:hover { color: var(--text); }
+.results-table__open {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.results-table__open:hover { color: var(--theme-primary); text-decoration: underline; }
+.results-table__tool { font-size: 12px; padding: 0.25rem 0.55rem; }
+.results-table tbody tr.results-table__group-row { cursor: default; }
+.results-table tbody tr.results-table__group-row:hover { background: transparent; }
+.results-table__group-cell {
+  position: sticky; top: 33px; z-index: 1;
+  background: var(--bg-tint);
+  border-bottom: 1px solid var(--line);
+  padding: 5px 10px !important;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-muted); white-space: nowrap;
+}
+
+/* Gestionnaire de colonnes (popover maison, D17) */
+.column-manager {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  width: 230px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.column-manager__title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.column-manager__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.column-manager__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.column-manager__check { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; padding: 3px 0; cursor: pointer; }
+.column-manager__order { display: inline-flex; gap: 2px; }
+.column-manager__reset { margin-top: 8px; font-size: 12px; width: 100%; justify-content: center; }
+
+/* ---- Anneaux de focus clavier des widgets custom (D8, WCAG 2.4.11) ----
+   NB `explorer-result-card`, PAS `.result-card` : cette dernière est une classe
+   legacy encore stylée plus bas (grille 160px/1fr…) — collision constatée. */
+.explorer-result-card[role='button']:focus-visible { outline: 2px solid var(--theme-primary); outline-offset: 2px; }
+/* DES-01 : le clamp 2 lignes du titre est porté par la classe Tailwind `line-clamp-2`
+   directement sur le `<h3>` (ResultCardView.tsx) — pas de règle CSS dédiée ici. */
+.map-hover-card__tag[role='button']:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ---- Skip-link (D11, WCAG 2.4.1) : visible uniquement au focus clavier ---- */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  color: var(--theme-primary);
+  font-weight: 700;
+  text-decoration: none;
+  z-index: 9999;
+  border-radius: 0 0 6px 0;
+  box-shadow: var(--shadow-soft);
+}
+.skip-link:focus-visible { top: 0; }
+/* Le <main> reçoit le focus programmatique (tabIndex=-1) : pas d'anneau — la cible est la page. */
+.workspace:focus { outline: none; }
+
+/* ---- Écran de repli des limites d'erreur (D4 : app/error.tsx + ErrorBoundary) ---- */
+.error-fallback {
+  min-height: 60vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.error-fallback__card {
+  max-width: 460px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.error-fallback__icon { color: var(--brand-red); }
+.error-fallback__title { font-family: var(--font-display), var(--font-sans), sans-serif; font-size: 19px; font-weight: 700; }
+.error-fallback__text { font-size: 14px; color: var(--text-muted); max-width: 42ch; }
+.error-fallback__ref { font-size: 12px; color: var(--text-muted); }
+.error-fallback__ref code { font-family: var(--font-mono), monospace; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; }
+.error-fallback__actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.error-fallback__actions .ghost-button { text-decoration: none; }
+
+/* ---- Bandeau hors-ligne global (D4) : discret, bas d'écran, au-dessus du contenu ---- */
+.offline-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn-ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft);
+}
+.offline-banner[data-motion-phase='exiting'] {
+  opacity: 0;
+  transform: translateY(var(--motion-distance-md));
+  transition: opacity 140ms var(--ease-premium-in), transform 140ms var(--ease-premium-in);
+}
+
+/* ---- Squelettes : pas de spinner central, calqués sur la grille de la carte (impl. 3.1) ---- */
+.skel {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--bg-tint) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: skel-shimmer 1.4s ease infinite;
+  border-radius: 6px;
+}
+@keyframes skel-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+.skel-card {
+  display: grid;
+  grid-template-columns: 92px 1fr 32px;
+  gap: 14px;
+  padding: 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-s);
+}
+.skel-card__media { width: 92px; height: 70px; border-radius: var(--radius-sm); }
+.skel-lines { display: flex; flex-direction: column; gap: 9px; padding-top: 3px; }
+.skel-line { height: 12px; }
+.skel-pill { height: 18px; width: 96px; border-radius: var(--radius-pill); }
+.skel-star { height: 22px; width: 22px; border-radius: 6px; margin: 4px auto 0; }
+
+/* ---- Légende de la carte (impl. 3.3) : ancrée bas-gauche, décode les 7 archétypes ---- */
+.map-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  width: 182px;
+  padding: 10px 12px;
+  /* Fond blanc translucide + léger flou : la légende reste lisible sur tout
+     fond de carte (satellite/plan/topo) sans masquer la carte (demande PO). */
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  box-shadow: var(--shadow-s);
+}
+.map-legend__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.map-legend__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 3px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.map-legend__dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: #fff;
+}
+.map-legend__dot svg { width: 12px; height: 12px; }
+
+/* ---- Barre de filtres actifs de l'Explorateur (impl. 3.2) ---- */
+.explorer-active-filters {
+  flex: none;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.explorer-active-filters__label {
+  font-size: theme('fontSize.xs.0');
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: 4px;
+  align-self: center;
+  line-height: theme('fontSize.xs.1.lineHeight');
+}
+
+/* ---- Bloc « Prochaines dates » d'un événement (impl. 4.1) ---- */
+.detail-event-list { display: flex; flex-direction: column; gap: 8px; }
+.detail-event-list__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.detail-event-list__icon { color: var(--acc-fma); flex: none; align-self: flex-start; margin-top: 1px; }
+.detail-event-list__state { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--brand-red); align-self: flex-start; }
+.detail-event-list__row--cancelled .detail-event-list__date { text-decoration: line-through; color: var(--text-muted); }
+/* §4.1 : corps d'une ligne (date + note optionnelle) et sous-titre « Dates passées ». */
+.detail-event-list__body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.detail-event-list__note { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.detail-event-list__subhead {
+  margin: 14px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.detail-event-list--past .detail-event-list__date { color: var(--ink-2); }
+
+/* §4.1 : bloc « Prochaine date » (hero-ish, distinct de la liste complète). */
+.detail-event-next { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.detail-event-next__date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.detail-event-next__icon { color: var(--acc-fma); flex: none; }
+.detail-event-next__end { font-weight: 600; color: var(--ink-2); }
+.detail-event-next__location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.detail-event-recurrence {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--acc-fma) 12%, white);
+  color: var(--acc-fma);
+}
+.detail-event-next__actions { margin-top: 2px; }
+.detail-event-next__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--acc-fma);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  transition: filter 0.14s ease;
+}
+.detail-event-next__cta:hover { filter: brightness(0.94); }
+
+/* ---- Bloc « Cuisine & carte » d'un restaurant (impl. 4.2) ---- */
+.detail-cuisine-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.detail-cuisine-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--acc-res) 12%, white);
+  color: var(--acc-res);
+}
+.detail-menu { margin-bottom: 14px; }
+.detail-menu__title { margin: 0 0 6px; font-size: 14px; font-weight: 700; }
+/* §4.3 : description d'un menu (peut exister sans aucune section). */
+.detail-menu__description { margin: 0 0 8px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.detail-menu__section { margin-bottom: 10px; }
+.detail-menu__section-name {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.detail-menu__dishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+/* §4.3 : plat = colonne (nom+prix, puis description, puis puces régimes/allergènes). */
+.detail-menu__dish { display: flex; flex-direction: column; gap: 3px; }
+.detail-menu__dish-head { display: flex; align-items: baseline; gap: 8px; }
+.detail-menu__dish-name { font-size: 14px; color: var(--ink); }
+.detail-menu__dish-price { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.detail-menu__dish-description { margin: 0; font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+/* §4.3 : deux jeux de puces distincts (régimes ≠ allergènes). */
+.detail-menu__tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.detail-menu__tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+}
+.detail-menu__tag--diet { color: var(--acc-iti); background: color-mix(in srgb, var(--acc-iti) 12%, white); }
+.detail-menu__tag--allergen { color: var(--brand-red); background: color-mix(in srgb, var(--brand-red) 10%, white); }
+
+/* ---- Faits d'activité (impl. 4.3) ---- */
+.detail-facts { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.detail-facts__row { display: flex; align-items: baseline; gap: 10px; }
+.detail-facts__label { flex: none; min-width: 130px; font-size: 12px; font-weight: 700; color: var(--text-muted); margin: 0; }
+.detail-facts__value { font-size: 14px; color: var(--ink); margin: 0; }
+
+input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--theme-primary);
+}
+
+input[type='color'] {
+  padding: 0.3rem;
+}
+
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(24, 49, 59, 0.18);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(24, 49, 59, 0.28);
+}

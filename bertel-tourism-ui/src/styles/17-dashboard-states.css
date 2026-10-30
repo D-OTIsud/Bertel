@@ -1,0 +1,195 @@
+/* ── Dashboard — états de widget (WidgetFrame) ─────────────────────────────── */
+.kpi-panel--state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 140px;
+}
+.dashboard-widget-state { color: var(--ink-3); font-size: 0.8rem; }
+.dashboard-widget-state--error { color: var(--destructive); }
+.dashboard-widget-skeleton { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+
+/* ── Dashboard — onglets par vocation ──────────────────────────────────────── */
+.dashboard-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: 4px 0 12px;
+}
+.dashboard-tab {
+  min-height: 2.5rem;
+  padding: 8px 14px;
+  font-size: theme('fontSize.sm.0');
+  line-height: theme('fontSize.sm.1.lineHeight');
+  font-weight: 600;
+  color: var(--ink-3);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  transition: color var(--motion-fast) ease, border-bottom-color var(--motion-fast) ease;
+}
+.dashboard-tab:hover { color: var(--ink-1); }
+.dashboard-tab--active {
+  color: var(--ink-1);
+  border-bottom-color: var(--teal);
+}
+
+@media (pointer: coarse) {
+  .dashboard-tab {
+    min-height: 2.75rem;
+  }
+}
+
+/* ── Dashboard — filtres avancés ───────────────────────────────────────────── */
+/* Fix 5 — règle .dashboard-filter-error dupliquée supprimée ; la règle préexistante (~ligne 7905) reste active. */
+
+/* ── Complétude par type — pastille de type cliquable + jauge (impl. 5.1) ──── */
+.type-cell-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  white-space: nowrap;
+  border-radius: var(--radius-pill, 999px);
+}
+.type-cell-btn .type-pill svg { flex-shrink: 0; }
+.type-cell-btn--active { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.meter-cell { display: inline-flex; align-items: center; gap: 0.55rem; }
+.meter {
+  width: 120px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.meter__fill { display: block; height: 100%; border-radius: 999px; background: var(--teal); }
+.meter__pct { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+/* D7 : zone écrite (Bon/Moyen/Faible) — la couleur de la jauge n'est plus le seul encodage. */
+.meter__zone { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; }
+.completeness-table__meter-col { min-width: 190px; }
+
+.timeseries-chart { display: block; overflow: visible; }
+.timeseries-chart__grid { stroke: var(--line); stroke-width: 1; }
+.timeseries-chart__axis { font-size: 11px; font-weight: 600; fill: var(--text-muted); }
+
+.timeseries-metrics { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.timeseries-metrics__btn {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.timeseries-metrics__btn[aria-pressed='true'] {
+  background: var(--teal);
+  border-color: transparent;
+  color: #fffdf8;
+}
+.timeseries-value { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.35rem; }
+.timeseries-value strong {
+  font-family: var(--font-display), sans-serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.timeseries-value span { font-size: 0.78rem; color: var(--text-muted); }
+.timeseries-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--line-soft);
+}
+.timeseries-note {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.timeseries-note svg { width: 13px; height: 13px; flex: none; margin-top: 1px; color: var(--warn); }
+
+.below-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.below-toggle:hover { border-color: var(--teal); color: var(--teal); }
+.below-toggle svg { width: 12px; height: 12px; transition: transform 180ms ease; }
+.below-toggle[aria-expanded='true'] {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: var(--teal-tint);
+}
+.below-toggle[aria-expanded='true'] svg { transform: rotate(90deg); }
+
+.below-row > td { padding: 0; background: var(--bg-tint); }
+.below-list { display: flex; flex-direction: column; gap: 0.55rem; padding: 0.8rem 0.9rem; }
+.below-list__head { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); }
+.below-list__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.below-item {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr auto auto;
+  align-items: center;
+  gap: 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0.4rem 0.7rem;
+}
+.below-item__score { font-size: 0.8rem; font-weight: 800; text-align: right; }
+.below-item__name { font-size: 0.82rem; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.below-item__missing { display: flex; flex-wrap: wrap; gap: 0.25rem; justify-content: flex-end; }
+.below-item__tag {
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--red-soft);
+  color: var(--danger-ink);
+  white-space: nowrap;
+}
+.below-item__edit {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--teal);
+  text-decoration: none;
+  border: 1px solid rgb(var(--theme-primary-rgb) / 0.3);
+  border-radius: 6px;
+  padding: 0.2rem 0.55rem;
+  white-space: nowrap;
+}
+.below-item__edit:hover { background: var(--teal-tint); }
+
+.actualisation-table__type-btn {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  padding: 0;
+}
+.actualisation-table__type-btn:hover { color: var(--teal); }
+.actualisation-table__type-btn--active { color: var(--teal); font-weight: 700; }

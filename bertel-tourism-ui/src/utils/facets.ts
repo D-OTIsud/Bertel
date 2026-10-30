@@ -90,6 +90,7 @@ export const HEADLINE_CAPACITY_METRIC: Partial<Record<ExplorerBucketKey, string>
 };
 
 export const DEFAULT_COMMON_FILTERS: ExplorerCommonFilters = {
+  providerOnly: false,
   search: '',
   cities: [],
   lieuDit: '',
@@ -166,6 +167,7 @@ export function normalizeExplorerFilters(
     selectedBuckets: filters.selectedBuckets ?? base.selectedBuckets,
     common: {
       ...common,
+      providerOnly: common.providerOnly === true,
       cities: common.cities ?? [],
       accessibilityDisabilityTypesAny: common.accessibilityDisabilityTypesAny ?? [],
       accessibilityAmenityCodesAny: common.accessibilityAmenityCodesAny ?? [],
@@ -275,6 +277,7 @@ function hasMeetingRoomFilter(filter: MeetingRoomFilter): boolean {
  */
 export function hasServerOnlyFilters(filters: ExplorerFilters): boolean {
   const { common, hot, res, iti, evt } = normalizeExplorerFilters(filters);
+  if (common.providerOnly) return true;
   if (evt.eventFrom || evt.eventTo) {
     return true;
   }
@@ -582,6 +585,8 @@ export function buildBucketRpcFilters(filters: ExplorerFilters, bucket: Explorer
   const payload: Record<string, unknown> = {};
   const normalizedFilters = normalizeExplorerFilters(filters);
   const { common } = normalizedFilters;
+
+  if (common.providerOnly) payload.has_provider = true;
 
   // §109 — broaden text search to the aggregated search_document by default (Explorer).
   // Editor object pickers pass searchScope='name' to keep name/city-only matching.

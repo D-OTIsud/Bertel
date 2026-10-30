@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useProviderScopeStore } from './provider-scope-store';
 import { env } from '../lib/env';
 import type { UserRole } from '../types/domain';
 import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
@@ -166,6 +167,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     }),
   setBooting: () => set((state) => ({ status: state.status === 'ready' ? 'ready' : 'booting', errorMessage: null })),
   setGuest: (message = null) => {
+    useProviderScopeStore.getState().clear();
     set({
       status: 'guest',
       errorMessage: message,
@@ -185,6 +187,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     });
   },
   setSessionError: (message) => {
+    useProviderScopeStore.getState().clear();
     set({
       status: 'error',
       errorMessage: message,

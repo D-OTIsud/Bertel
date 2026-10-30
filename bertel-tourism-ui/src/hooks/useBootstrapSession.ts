@@ -9,6 +9,8 @@ import { isSandboxMode } from '../lib/sandbox-mode';
 import { leaveSandbox } from '../services/sandbox';
 import { clearServiceAvailabilityForSessionTransition } from '../services/service-availability';
 import { sessionAvatarInitials as initialsFromName } from '../utils/avatar-initials';
+import { useProviderScopeStore } from '../store/provider-scope-store';
+import { readDemoProviderPreference } from '../services/provider-preference';
 
 // Resolves the user's "can edit any object" capability from the SQL helper
 // `api.current_user_can_edit_objects()`. Returns false if the helper is
@@ -141,6 +143,7 @@ export function useBootstrapSession() {
 
   useEffect(() => {
     if (demoMode) {
+      useProviderScopeStore.getState().initialize(useSessionStore.getState().userId ?? 'demo', readDemoProviderPreference());
       return undefined;
     }
 
@@ -196,6 +199,8 @@ export function useBootstrapSession() {
         langPrefs: fallbackLangPrefs,
       });
       const profileRole = normalizeRole(profile?.role);
+      if (cancelled) return;
+      useProviderScopeStore.getState().initialize(user.id, profile?.preferences?.provider_only === true);
       const role = profileRole ?? metadataRole;
       if (!role) {
         setSessionError('Le role utilisateur est absent (session Supabase et table app_user_profile).');

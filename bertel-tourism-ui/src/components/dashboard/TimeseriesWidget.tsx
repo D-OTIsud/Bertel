@@ -15,6 +15,7 @@ interface MetricOption {
 }
 
 interface Props {
+  providerOnly?: boolean;
   eyebrow: string;
   title: string;
   subtitle: string;
@@ -48,11 +49,11 @@ function historyDepthDays(firstBucketDate: string): number {
  * tout le reste de l'écran), et l'historique est jeune (une courbe presque plate
  * est la réalité du corpus, pas une panne d'affichage).
  */
-export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, enabled }: Props) {
+export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, enabled, providerOnly = false }: Props) {
   const [active, setActive] = useState(metrics[0].key);
   const metric = metrics.find((m) => m.key === active) ?? metrics[0];
 
-  const query = useMetricSnapshotSeries({ metricKey: metric.key, scope, grain: 'week' }, enabled);
+  const query = useMetricSnapshotSeries({ metricKey: metric.key, scope, grain: 'week' }, enabled && !providerOnly);
 
   // Chaque métrique porte sa PROPRE clé de requête : basculer le sélecteur
   // changerait donc `status` en "pending" le temps du fetch si on ne faisait
@@ -73,6 +74,15 @@ export function TimeseriesWidget({ eyebrow, title, subtitle, metrics, scope, ena
   const first = points[0];
   const delta = last && first ? last.value - first.value : 0;
   const historyDays = first ? historyDepthDays(first.bucket_date) : null;
+
+  if (providerOnly) {
+    return (
+      <article className="kpi-panel kpi-panel--wide">
+        <div className="panel-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div></div>
+        <p className="text-[13px] text-ink-3">Historique indisponible pour ce périmètre : les relevés passés ne distinguent pas les objets rattachés à un prestataire.</p>
+      </article>
+    );
+  }
 
   return (
     <WidgetFrame

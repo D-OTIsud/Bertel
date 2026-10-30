@@ -111,6 +111,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
 
   const itiPractices = searchParams.get('itiPractices')?.split(',').filter(Boolean) ?? undefined;
   const commonPatch = {
+    ...(['true', 'false'].includes(searchParams.get('providerOnly') ?? '') && {
+      providerOnly: searchParams.get('providerOnly') === 'true',
+    }),
     ...(searchParams.get('search') != null && { search: searchParams.get('search') ?? '' }),
     // Support both 'cities' (multi, new) and legacy 'city' (single, old bookmarks).
     ...(searchParams.get('cities') != null && {
@@ -196,6 +199,9 @@ export function parseSearchParams(searchParams: URLSearchParams): Partial<Explor
       common: {
         ...DEFAULT_EXPLORER_FILTERS.common,
         ...commonPatch,
+        // undefined signifie « utiliser la préférence », même si l'URL porte
+        // d'autres filtres. Un false explicite doit en revanche être respecté.
+        providerOnly: 'providerOnly' in commonPatch ? commonPatch.providerOnly : undefined,
       },
     }),
     ...(hotSubtypes !== undefined || parseCapacityFilters(searchParams.get('hotCapacity')) !== undefined
@@ -243,6 +249,9 @@ function parseOptionalNumber(s: string | null): number | undefined {
 export function buildSearchParams(filters: ExplorerFilters): URLSearchParams {
   const normalizedFilters = normalizeExplorerFilters(filters);
   const p = new URLSearchParams();
+  // Un lien partagé reste fidèle même si son destinataire a la préférence
+  // inverse. Ouvrir un lien ne change jamais la préférence personnelle.
+  p.set('providerOnly', String(normalizedFilters.common.providerOnly === true));
   if (normalizedFilters.selectedBuckets.length > 0) {
     p.set('buckets', normalizedFilters.selectedBuckets.join(','));
   }

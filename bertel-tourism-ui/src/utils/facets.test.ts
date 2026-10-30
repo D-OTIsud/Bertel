@@ -769,6 +769,7 @@ describe('buildBucketRpcFilters — aucun critère muet', () => {
   /** Une valeur non-défaut, plausible, pour chaque critère commun. */
   const ACTIVE_COMMON: ExplorerFilters['common'] = {
     ...DEFAULT_EXPLORER_FILTERS.common,
+    providerOnly: true,
     search: 'gite',
     cities: ['Saint-Paul'],
     lieuDit: 'Bois-Rouge',

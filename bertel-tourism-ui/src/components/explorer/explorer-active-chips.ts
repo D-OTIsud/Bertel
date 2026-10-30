@@ -17,6 +17,7 @@ import { resolveSchemeLabel } from '../../utils/labels';
 import { REMPLISSAGE_BUCKET_OPTIONS, essentialLabel } from '../../utils/remplissage';
 
 export type ActiveChipGroup =
+  | 'providerOnly'
   | 'search'
   | 'bucket'
   | 'city'
@@ -96,6 +97,8 @@ function rangeLabel(min?: number, max?: number, unit = ''): string {
 export function buildExplorerActiveChips(filters: ExplorerFilters): ActiveChip[] {
   const c = filters.common;
   const chips: ActiveChip[] = [];
+
+  if (c.providerOnly) chips.push({ key: 'providerOnly', group: 'providerOnly', value: 'true', label: 'Avec prestataire uniquement' });
 
   const search = String(c.search ?? '').trim();
   if (search) {

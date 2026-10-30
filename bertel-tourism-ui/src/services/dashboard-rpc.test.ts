@@ -28,6 +28,19 @@ describe('dashboard-rpc getters', () => {
     }));
   }
 
+  it('utilise les trois RPC prestataires quand le toggle est actif', async () => {
+    mockClient();
+    const { getDashboardCrmOpen, getDashboardCrmActivity, getDashboardTeamActivity } = await import('./dashboard-rpc');
+    await getDashboardCrmOpen(true);
+    await getDashboardCrmActivity(true);
+    await getDashboardTeamActivity(true);
+    expect(rpc.mock.calls).toEqual([
+      ['get_dashboard_provider_crm_open'],
+      ['get_dashboard_provider_crm_activity'],
+      ['get_dashboard_provider_team_activity'],
+    ]);
+  });
+
   it('getDashboardScorecards passe les params tels quels au RPC', async () => {
     mockClient();
     const { getDashboardScorecards } = await import('./dashboard-rpc');

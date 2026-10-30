@@ -11,6 +11,7 @@ import type {
 } from '../../types/domain';
 import { DEFAULT_EXPLORER_FILTERS, EXPLORER_STATUS_OPTIONS } from '../../utils/facets';
 import { useExplorerStore } from '../../store/explorer-store';
+import { useProviderScopeStore } from '../../store/provider-scope-store';
 import { useSessionStore } from '../../store/session-store';
 import { canCreateLists } from '../../store/session-selectors';
 import { buildSearchParams } from '../../lib/explorer-search-params';
@@ -134,6 +135,9 @@ export function ExplorerActiveFilters({
 
   const remove = (chip: ActiveChip) => {
     switch (chip.group) {
+      case 'providerOnly':
+        void useProviderScopeStore.getState().setEnabled(false);
+        break;
       case 'search':
         setSearch('');
         break;

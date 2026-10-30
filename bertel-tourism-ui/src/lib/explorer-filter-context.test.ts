@@ -23,6 +23,7 @@ function full(): ExplorerFilters {
   const f = fresh();
   f.selectedBuckets = ['HOT', 'RES', 'ACT', 'EVT', 'ITI', 'VIS', 'SRV'];
   Object.assign(f.common, {
+    providerOnly: true,
     search: 'chambre', cities: ['Le Tampon'], lieuDit: 'Bourg-Murat',
     pmr: true, petsAccepted: true, openNow: true, sustainable: true,
     accessibilityDisabilityTypesAny: ['motor'], accessibilityAmenityCodesAny: ['ramp'],
@@ -52,6 +53,16 @@ function derive(filters: ExplorerFilters, page: ExplorerFilterContextOptions['pa
 function applications(context: ReturnType<typeof derive>): Record<string, string> {
   return Object.fromEntries([...context.applied, ...context.memorized].map((criterion) => [criterion.key, criterion.application]));
 }
+
+it.each(['explorer', 'dashboard'] as const)('conserve le périmètre prestataire appliqué et transférable sur %s', (page) => {
+  const filters = fresh();
+  filters.common.providerOnly = true;
+  const context = derive(filters, page);
+  expect(applications(context).providerOnly).toBe('applied');
+  expect(context.transferableFilters.common.providerOnly).toBe(true);
+  expect(buildSearchParams(context.transferableFilters).get('providerOnly')).toBe('true');
+  if (page === 'dashboard') expect(context.dashboardParams?.p_filters.has_provider).toBe(true);
+});
 
 it('covers every native chip identity exactly once without depending on its display label', () => {
   expect(nativeGroupsCovered && noInventedGroups).toBe(true);

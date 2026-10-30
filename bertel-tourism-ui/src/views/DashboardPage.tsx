@@ -49,6 +49,7 @@ export default function DashboardPage() {
   // État de filtre riche = instance Explorer indépendante du Dashboard.
   const selectedBuckets = useDashboardExplorerStore((s) => s.selectedBuckets);
   const common = useDashboardExplorerStore((s) => s.common);
+  const providerOnly = common.providerOnly === true;
   const hot = useDashboardExplorerStore((s) => s.hot);
   const iti = useDashboardExplorerStore((s) => s.iti);
   const res = useDashboardExplorerStore((s) => s.res);
@@ -74,32 +75,26 @@ export default function DashboardPage() {
 
   // Héro permanent ; les widgets d'onglet ne fetchent que quand leur onglet est visible.
   const scorecards = useDashboardQuery('scorecards', params, getDashboardScorecards);
-  // Compteur CRM global : la carte n'obéit pas au panneau de filtres (« Tout le
-  // périmètre »), et le fetcher ne prend aucun paramètre. Faire entrer `params`
-  // dans la queryKey relancerait un appel réseau à chaque changement de filtre
-  // pour un résultat strictement identique — d'où une clé dédiée, sans filtres.
+  // Le périmètre prestataires agit aussi sur l'activité. Les autres facettes
+  // restent propres aux objets : elles n'entrent pas dans ces clés de cache.
   const crmOpen = useQuery({
-    queryKey: ['dashboard', 'crm-open'],
-    queryFn: getDashboardCrmOpen,
+    queryKey: ['dashboard', 'crm-open', providerOnly],
+    queryFn: () => getDashboardCrmOpen(providerOnly),
     staleTime: DASHBOARD_STALE_TIME_MS,
   });
   const typeBreakdown = useDashboardQuery('type-breakdown', params, getDashboardTypeBreakdown, activeTab === 'quality');
   const actualisation = useDashboardQuery('actualisation', params, getDashboardActualisation, activeTab === 'quality');
   const completeness = useDashboardQuery('completeness', params, getDashboardCompleteness, activeTab === 'quality');
-  // Deux séries GLOBALES de plus, même raisonnement que crm-open ci-dessus : elles ne
-  // répondent pas à « quels objets » mais à « comment l'équipe a travaillé », une question
-  // qui n'a pas de sens restreinte à une sélection. Leur clé ne porte donc pas `params`.
-  // `enabled` garde le FETCH : les hooks vivent au niveau page et sont évalués sur tous les
-  // onglets, alors que les widgets ne sont montés que sur celui-ci.
+  // Même périmètre que la carte CRM ; fetch uniquement sur l'onglet visible.
   const teamActivity = useQuery({
-    queryKey: ['dashboard', 'team-activity'],
-    queryFn: getDashboardTeamActivity,
+    queryKey: ['dashboard', 'team-activity', providerOnly],
+    queryFn: () => getDashboardTeamActivity(providerOnly),
     staleTime: DASHBOARD_STALE_TIME_MS,
     enabled: activeTab === 'activity',
   });
   const crmActivity = useQuery({
-    queryKey: ['dashboard', 'crm-activity'],
-    queryFn: getDashboardCrmActivity,
+    queryKey: ['dashboard', 'crm-activity', providerOnly],
+    queryFn: () => getDashboardCrmActivity(providerOnly),
     staleTime: DASHBOARD_STALE_TIME_MS,
     enabled: activeTab === 'activity',
   });
@@ -137,7 +132,7 @@ export default function DashboardPage() {
           />
 
           <WidgetFrame isPending={scorecards.isPending} error={scorecards.error} onRetry={() => scorecards.refetch()}>
-            {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} />}
+            {scorecards.data && <ScorecardStrip data={scorecards.data} crmOpen={crmOpen.data} providerOnly={providerOnly} />}
           </WidgetFrame>
 
           <DashboardTabs />
@@ -147,6 +142,7 @@ export default function DashboardPage() {
               <TimeseriesWidget
                 eyebrow="Qualité"
                 title="Remplissage dans le temps"
+                providerOnly={providerOnly}
                 subtitle="Relevé quotidien figé depuis le 19 juin 2026 — la seule façon de comparer une date à l’autre."
                 scope="global"
                 enabled={activeTab === 'quality'}
@@ -189,6 +185,7 @@ export default function DashboardPage() {
               <TimeseriesWidget
                 eyebrow="Offre"
                 title="Corpus dans le temps"
+                providerOnly={providerOnly}
                 subtitle="Croissance nette du corpus, tous statuts, relevée chaque nuit."
                 scope="global"
                 enabled={activeTab === 'offer'}
@@ -218,9 +215,11 @@ export default function DashboardPage() {
           {activeTab === 'activity' && (
             <section role="tabpanel" id="dashboard-panel-activity" aria-labelledby="dashboard-tab-activity">
             <div className="dashboard-panel">
+              {providerOnly && <p className="text-[12px] text-ink-3">Activité sur les objets avec prestataire et échanges directement liés à ces prestataires. Les autres filtres ne s’appliquent pas à ces indicateurs d’activité.</p>}
               <TimeseriesWidget
                 eyebrow="Activité"
                 title="Demandes ouvertes dans le temps"
+                providerOnly={providerOnly}
                 subtitle="Le gros de ce qui reste à traiter, relevé chaque nuit."
                 scope="global"
                 enabled={activeTab === 'activity'}

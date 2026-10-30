@@ -1,5 +1,9 @@
 # Dashboard : même périmètre réel/test avec ou sans prestataire
 
+Complément : l'[historique fiable de remplissage](2026-10-30-completeness-history.md)
+a ensuite été réintégré sélectivement au réel depuis le 19 juin 2026. Les archives
+d'origine et les autres règles de séparation décrites ici sont conservées.
+
 La carte « À traiter » affichait 128 sans filtre et 3 avec prestataire : les anciennes
 RPC d'activité additionnaient le réel et le test, alors que les nouvelles RPC
 prestataires respectaient déjà le périmètre du compte. Les 125 éléments de test

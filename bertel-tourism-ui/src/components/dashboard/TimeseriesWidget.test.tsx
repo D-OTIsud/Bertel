@@ -18,6 +18,7 @@ const points = [
   { bucket_date: '2026-07-31', value: 91.4, denominator: 839 },
   { bucket_date: '2026-08-30', value: 91.4, denominator: 843 },
 ];
+const bounds = { firstSnapshotDate: '2026-06-30', lastSnapshotDate: '2026-08-30' };
 
 function wrap(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -39,7 +40,7 @@ describe('TimeseriesWidget', () => {
   });
   beforeEach(() => {
     mockedSeries.mockReset();
-    mockedSeries.mockResolvedValue({ points });
+    mockedSeries.mockResolvedValue({ points, ...bounds });
   });
 
   it('dit que la série est globale et n’obéit pas aux filtres', async () => {
@@ -62,7 +63,7 @@ describe('TimeseriesWidget', () => {
       jest.useRealTimers();
     });
 
-    it('dérive la note du premier bucket_date à aujourd’hui, jamais de points.length', async () => {
+    it('mesure la durée entre les dates sources, jamais le nombre de points', async () => {
       // 3 points seulement (grain hebdo mocké), mais le premier relevé date du 2026-06-30 :
       // 61 jours réels d'historique — un compte de points afficherait « 3 relevés », mensonge
       // que ce correctif supprime.
@@ -71,8 +72,32 @@ describe('TimeseriesWidget', () => {
       expect(screen.queryByText(/3 relevés? d’historique/)).not.toBeInTheDocument();
     });
 
+    it('ne transforme pas un relevé du vendredi en quatre jours à partir du lundi', async () => {
+      jest.setSystemTime(new Date('2026-10-30T12:00:00Z'));
+      mockedSeries.mockResolvedValue({
+        points: [{ bucket_date: '2026-10-26', value: 93.7, denominator: 735 }],
+        firstSnapshotDate: '2026-10-30', lastSnapshotDate: '2026-10-30',
+      });
+      wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage" subtitle="Relevés quotidiens." metrics={metrics} scope="global" enabled />);
+      expect(await screen.findByText(/Premier relevé disponible/)).toBeInTheDocument();
+      expect(screen.queryByText(/4 jours d’historique/)).not.toBeInTheDocument();
+    });
+
+    it('compte du 19 juin au 30 octobre sans arrondir à la semaine ni prolonger au jour du navigateur', async () => {
+      jest.setSystemTime(new Date('2026-11-15T12:00:00Z'));
+      mockedSeries.mockResolvedValue({
+        points: [
+          { bucket_date: '2026-06-15', value: 92.3, denominator: 361 },
+          { bucket_date: '2026-10-26', value: 93.7, denominator: 735 },
+        ],
+        firstSnapshotDate: '2026-06-19', lastSnapshotDate: '2026-10-30',
+      });
+      wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage" subtitle="Relevés quotidiens." metrics={metrics} scope="global" enabled />);
+      expect(await screen.findByText(/133 jours d’historique/)).toBeInTheDocument();
+    });
+
     it('n’affiche pas la note de profondeur quand le registre ne renvoie aucun point', async () => {
-      mockedSeries.mockResolvedValue({ points: [] });
+      mockedSeries.mockResolvedValue({ points: [], firstSnapshotDate: null, lastSnapshotDate: null });
       wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
       expect(await screen.findByText(/Aucun relevé/)).toBeInTheDocument();
       expect(screen.queryByText(/d’historique/)).not.toBeInTheDocument();
@@ -92,7 +117,7 @@ describe('TimeseriesWidget', () => {
   });
 
   it('affiche l’état vide quand le registre ne renvoie rien', async () => {
-    mockedSeries.mockResolvedValue({ points: [] });
+    mockedSeries.mockResolvedValue({ points: [], firstSnapshotDate: null, lastSnapshotDate: null });
     wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
     expect(await screen.findByText(/Aucun relevé/)).toBeInTheDocument();
   });
@@ -110,7 +135,8 @@ describe('TimeseriesWidget', () => {
       if (args.metricKey === 'corpus_count') {
         return corpusPromise;
       }
-      return { points: [{ bucket_date: '2026-08-30', value: 92.3, denominator: 361 }] };
+      return { points: [{ bucket_date: '2026-08-30', value: 92.3, denominator: 361 }],
+        firstSnapshotDate: '2026-08-30', lastSnapshotDate: '2026-08-30' };
     });
 
     wrap(<TimeseriesWidget eyebrow="Qualité" title="Remplissage dans le temps" subtitle="Relevé chaque nuit." metrics={metrics} scope="global" enabled />);
@@ -133,7 +159,8 @@ describe('TimeseriesWidget', () => {
     // confusion que ce correctif supprime.
     expect(screen.queryByText('92,3', valueSelector)).not.toBeInTheDocument();
 
-    resolveCorpus({ points: [{ bucket_date: '2026-08-30', value: 843, denominator: null }] });
+    resolveCorpus({ points: [{ bucket_date: '2026-08-30', value: 843, denominator: null }],
+      firstSnapshotDate: '2026-08-30', lastSnapshotDate: '2026-08-30' });
 
     expect(await screen.findByText('843', valueSelector)).toBeInTheDocument();
   });

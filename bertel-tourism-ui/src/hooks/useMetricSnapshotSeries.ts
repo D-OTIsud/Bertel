@@ -16,7 +16,7 @@ export function useMetricSnapshotSeries(
   enabled = true,
 ): UseQueryResult<MetricSnapshotSeries> {
   return useQuery<MetricSnapshotSeries>({
-    queryKey: ['metric-snapshot', args],
+    queryKey: ['metric-snapshot', 'with-bounds', args],
     queryFn: () => getMetricSnapshotSeries(args),
     staleTime: METRIC_SERIES_STALE_TIME_MS,
     enabled,

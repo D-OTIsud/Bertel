@@ -27,7 +27,7 @@ describe('metric-snapshot-rpc', () => {
     await getMetricSnapshotSeries(ARGS);
 
     expect(schema).toHaveBeenCalledWith('api');
-    expect(rpc).toHaveBeenCalledWith('get_metric_snapshot_series', expect.objectContaining({
+    expect(rpc).toHaveBeenCalledWith('get_metric_snapshot_series_with_bounds', expect.objectContaining({
       p_metric_key: 'completeness_avg',
       p_scope: 'global',
       p_grain: 'week',
@@ -40,7 +40,7 @@ describe('metric-snapshot-rpc', () => {
 
     await getMetricSnapshotSeries({ metricKey: 'corpus_count', scope: 'global' });
 
-    expect(rpc).toHaveBeenCalledWith('get_metric_snapshot_series', expect.objectContaining({ p_grain: 'month' }));
+    expect(rpc).toHaveBeenCalledWith('get_metric_snapshot_series_with_bounds', expect.objectContaining({ p_grain: 'month' }));
   });
 
   it('propage l’erreur RPC au lieu de l’avaler', async () => {
@@ -55,22 +55,18 @@ describe('metric-snapshot-rpc', () => {
     mockClient(true);
     const { getMetricSnapshotSeries } = await import('./metric-snapshot-rpc');
 
-    await expect(getMetricSnapshotSeries(ARGS)).resolves.toEqual({ points: [] });
+    await expect(getMetricSnapshotSeries(ARGS)).resolves.toEqual({ points: [], firstSnapshotDate: null, lastSnapshotDate: null });
     expect(rpc).not.toHaveBeenCalled();
   });
 
-  // Écart de contrat serveur (résolu 2026-08-30) : la RPC rend un tableau de
-  // lignes NU (colonne `bucket`), pas une enveloppe { points: [...] }. Ce test
-  // part du format serveur mesuré en direct et vérifie que le service l'adapte
-  // au contrat client `{ points: [{ bucket_date, value, denominator }] }`.
-  it('adapte le tableau de lignes du serveur (bucket) au contrat client (bucket_date)', async () => {
+  it('adapte les points et conserve les dates sources distinctes des buckets', async () => {
     mockClient();
     rpc.mockResolvedValue({
-      data: [
+      data: { points: [
         { bucket: '2026-06-01', value: 92.3, denominator: 361 },
         { bucket: '2026-07-01', value: 91.4, denominator: 839 },
         { bucket: '2026-08-01', value: 91.4, denominator: 843 },
-      ],
+      ], first_snapshot_date: '2026-06-19', last_snapshot_date: '2026-08-30' },
       error: null,
     });
     const { getMetricSnapshotSeries } = await import('./metric-snapshot-rpc');
@@ -78,6 +74,8 @@ describe('metric-snapshot-rpc', () => {
     const result = await getMetricSnapshotSeries(ARGS);
 
     expect(result).toEqual({
+      firstSnapshotDate: '2026-06-19',
+      lastSnapshotDate: '2026-08-30',
       points: [
         { bucket_date: '2026-06-01', value: 92.3, denominator: 361 },
         { bucket_date: '2026-07-01', value: 91.4, denominator: 839 },
@@ -91,6 +89,6 @@ describe('metric-snapshot-rpc', () => {
     rpc.mockResolvedValue({ data: null, error: null });
     const { getMetricSnapshotSeries } = await import('./metric-snapshot-rpc');
 
-    await expect(getMetricSnapshotSeries(ARGS)).resolves.toEqual({ points: [] });
+    await expect(getMetricSnapshotSeries(ARGS)).resolves.toEqual({ points: [], firstSnapshotDate: null, lastSnapshotDate: null });
   });
 });

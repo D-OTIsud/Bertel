@@ -63,7 +63,7 @@ import type {
 const PORTAL_LANGUAGE = 'fr';
 
 /** Au-delà de deux créneaux, un jour n'est plus saisissable sans risquer d'en jeter un. */
-const MAX_EDITABLE_SLOTS_PER_DAY = 2;
+export const MAX_EDITABLE_SLOTS_PER_DAY = 2;
 
 export const PORTAL_DAY_READONLY_REASON =
   'Cet horaire comporte plusieurs services : l’office le gère pour vous.';

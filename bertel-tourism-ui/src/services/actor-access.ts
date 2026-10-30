@@ -79,6 +79,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   // faire. « Aucun compte n'a été créé » compte : sans cette précision, l'agent réessaie et
   // tombe sur un 409.
   profile_read_failed: 'Impossible de vérifier l’accès portail pour l’instant. Réessayez dans un instant.',
+  smtp_not_configured: 'Configurez et activez le relais de votre office dans Paramètres › Mon organisation › Envoi d’e-mails avant d’inviter un partenaire.',
+  invitation_context_failed: 'Impossible de préparer l’invitation. Aucun e-mail n’a été envoyé et l’accès existant n’a pas été modifié.',
+  mail_failed: 'L’e-mail n’a pas pu être envoyé et le nouveau compte a été annulé. Vérifiez le relais de votre office, puis réessayez.',
+  account_cleanup_failed: 'L’invitation n’a pas été envoyée et le nouveau compte n’a pas pu être supprimé. Contactez un administrateur avant de réessayer.',
   create_failed: 'L’invitation n’a pas pu être envoyée. Aucun compte n’a été créé — réessayez.',
   profile_failed: 'L’invitation a échoué et le compte a été annulé. Réessayez ; si cela persiste, signalez-le.',
   // Le renvoi supprime l'ancien compte AVANT d'en créer un neuf. S'il échoue APRÈS cette

@@ -4,6 +4,7 @@ import { Modal } from './Modal';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CrmModal } from '../../features/crm/CrmModal';
 import { EditorModal } from '../../features/object-editor/primitives/EditorModal';
+import { Sheet, SheetContent, SheetTitle } from '../ui/sheet';
 import { Field } from '../../features/object-editor/primitives/Field';
 import { Input } from '../../features/object-editor/primitives/Input';
 import '../../features/object-editor/object-editor.css';
@@ -75,6 +76,42 @@ function EditorExample({ confirmation = false }: { confirmation?: boolean }) {
   );
 }
 
+function MixedExample({ crm = false }: { crm?: boolean }) {
+  const [parent, setParent] = useState(true);
+  const [editor, setEditor] = useState(false);
+  const body = <>
+    <button type="button" className={crm ? 'crm-btn primary' : 'primary-button'} onClick={() => setEditor(true)}>Modifier une période</button>
+    <EditorModal open={editor} title="Période depuis une autre fenêtre" onClose={() => setEditor(false)} onSave={() => setEditor(false)}>
+      <Field label="Nom de la période"><Input value="Saison principale" onChange={() => undefined} /></Field>
+    </EditorModal>
+  </>;
+  return <main className={crm ? 'crm-app' : undefined} style={{ minHeight: '100vh', padding: 24 }}>
+    {crm ? parent && <CrmModal title="Prestataire" onClose={() => setParent(false)}>{body}</CrmModal>
+      : <Modal open={parent} title="Fenêtre de l’application" onOpenChange={setParent}>{body}</Modal>}
+  </main>;
+}
+
+function SheetWithCrmExample() {
+  const [sheet, setSheet] = useState(true);
+  const [crm, setCrm] = useState(true);
+  const [confirmation, setConfirmation] = useState(false);
+  const [name, setName] = useState('Camille Payet');
+  return <Sheet open={sheet} onOpenChange={setSheet}>
+    <SheetContent aria-describedby={undefined} className="drawer-panel w-full max-w-[1180px] sm:max-w-[1180px]">
+      <SheetTitle>Suivi CRM</SheetTitle>
+      <div className="crm-app">
+        <button type="button" className="crm-btn" onClick={() => setCrm(true)}>Modifier le prestataire</button>
+        {crm && <CrmModal title="Fiche prestataire" onClose={() => setCrm(false)}>
+          <label className="crm-field"><span>Nom affiché</span><input className="crm-input" value={name} onChange={(event) => setName(event.target.value)} /></label>
+          <button type="button" className="crm-btn" onClick={() => setConfirmation(true)}>Demander confirmation</button>
+          <ConfirmDialog open={confirmation} title="Confirmer l’action" message="Exemple local sans enregistrement."
+            onCancel={() => setConfirmation(false)} onConfirm={() => setConfirmation(false)} />
+        </CrmModal>}
+      </div>
+    </SheetContent>
+  </Sheet>;
+}
+
 const meta: Meta = {
   title: 'Interface/Modales',
   parameters: { layout: 'fullscreen', controls: { disable: true } },
@@ -89,3 +126,6 @@ export const Crm: Story = { render: () => <CrmExample /> };
 export const CrmDrawer: Story = { render: () => <CrmExample drawer /> };
 export const Editor: Story = { render: () => <EditorExample /> };
 export const Confirmation: Story = { render: () => <EditorExample confirmation /> };
+export const ApplicationWithEditor: Story = { render: () => <MixedExample /> };
+export const CrmWithEditor: Story = { render: () => <MixedExample crm /> };
+export const SheetWithCrm: Story = { render: () => <SheetWithCrmExample /> };

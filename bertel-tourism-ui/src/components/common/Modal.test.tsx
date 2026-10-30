@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { Modal } from './Modal';
 
-describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
+describe('Modal (apparence maison, moteur de dialogue partagé)', () => {
   it('rend un dialog nommé (aria-modal) avec corps + footer', () => {
     render(
       <Modal title="Inviter un membre" open onOpenChange={jest.fn()} footer={<button type="button">Valider</button>}>
@@ -49,12 +49,12 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
         <input aria-label="C" />
       </Modal>,
     );
-    expect(document.body.style.overflow).toBe('hidden');
+    expect(getComputedStyle(document.body).overflow).toBe('hidden');
     unmount();
     expect(document.body.style.overflow).toBe('');
   });
 
-  it('D1 : focus initial sur le premier champ, puis restauration au déclencheur à la fermeture', () => {
+  it('D1 : focus initial sur le premier champ, puis restauration au déclencheur à la fermeture', async () => {
     const trigger = document.createElement('button');
     trigger.textContent = 'Ouvrir';
     document.body.appendChild(trigger);
@@ -68,7 +68,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     expect(screen.getByLabelText('Premier champ')).toHaveFocus();
 
     unmount();
-    expect(trigger).toHaveFocus();
+    await waitFor(() => expect(trigger).toHaveFocus());
     trigger.remove();
   });
 
@@ -81,10 +81,10 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     );
     const dialog = screen.getByRole('dialog', { name: 'T' });
 
-    // Focus échappé (body) : Tab doit ramener sur le premier focusable de la carte.
+    // The shared engine immediately recovers an attempted blur, before the next Tab.
     (document.activeElement as HTMLElement | null)?.blur();
     fireEvent.keyDown(dialog, { key: 'Tab' });
-    expect(screen.getByRole('button', { name: 'Fermer' })).toHaveFocus();
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
 
     // Depuis le dernier focusable, Tab reboucle sur le premier.
     screen.getByLabelText('Champ').focus();
@@ -184,7 +184,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
       jest.advanceTimersByTime(20);
     });
     expect(screen.getByLabelText('Champ B')).toHaveFocus();
-    expect(document.body.style.overflow).toBe('hidden');
+    expect(getComputedStyle(document.body).overflow).toBe('hidden');
 
     // A's exit timer fires and it unmounts — its delayed cleanup must not steal
     // focus back to its own trigger or unlock scroll while B is still open.
@@ -194,7 +194,7 @@ describe('Modal (primitive maison, remplace shadcn Dialog/Sheet)', () => {
     expect(screen.queryByRole('dialog', { name: 'A' })).not.toBeInTheDocument();
     expect(screen.getByRole('dialog', { name: 'B' })).toBeInTheDocument();
     expect(screen.getByLabelText('Champ B')).toHaveFocus();
-    expect(document.body.style.overflow).toBe('hidden');
+    expect(getComputedStyle(document.body).overflow).toBe('hidden');
 
     jest.useRealTimers();
   });

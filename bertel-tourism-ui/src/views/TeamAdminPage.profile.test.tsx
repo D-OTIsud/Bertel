@@ -137,7 +137,8 @@ describe('TeamAdminPage — câblage de la modale de profil (Task 6)', () => {
 
     // Déclenche un reload SANS toucher à la modale : changer le rôle métier recharge le roster
     // (`changeBusinessRole` appelle `reload()` inconditionnellement).
-    fireEvent.change(screen.getByRole('combobox', { name: 'Rôle métier de Alice' }), { target: { value: 'viewer' } });
+    // Simulate a background roster change; the shared modal correctly hides the page from assistive technology.
+    fireEvent.change(screen.getByLabelText('Rôle métier de Alice'), { target: { value: 'viewer' } });
 
     // Si `editingProfile` était figé sur l'objet capturé au clic, le titre resterait
     // "Profil de Alice" pour toujours, même après le rechargement du roster.
